@@ -159,14 +159,26 @@ if (__name__ == '__main__'):
     x = ReactiveVal(1)
     x.set(2)
 
-    # Reactive expression
-    r = reactive(lambda: x.get() + 10)
+    # Reactive expression below is equivalent to:
+    # r = reactive(lambda: x.get() + 10)
+    @reactive
+    def r() -> int:
+        return x.get() + 10
 
     x.set(3)
 
-    observe(lambda: print(r() + 100))
+    # Observer below is equivalent to:
+    # observe(lambda: print(r() + 100))
+    @observe
+    def xx() -> None:
+        print(r() + 100)
+
+    # A second observer
+    @observe
+    def xx() -> None:
+        print(r() + 200)
 
     x.set(4)
 
-    # Should print '114'
+    # Should print '114' and '214'
     react.flush_react()
