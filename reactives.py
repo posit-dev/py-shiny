@@ -27,6 +27,14 @@ class ReactiveVal:
         self._value = value
         self._dependents = Dependents()
 
+    def __call__(self, *args):
+        if args:
+            if len(args) > 1:
+                raise TypeError("ReactiveVal can only be called with one argument")
+            self.set(args[0])
+        else:
+            return self.get()
+
     def get(self):
         self._dependents.register()
         return self._value
@@ -148,7 +156,7 @@ class Observer:
 
 if (__name__ == '__main__'):
     x = ReactiveVal(1)
-    x.set(2)
+    x(2)
 
     r_count = 0
     @Reactive
@@ -156,9 +164,9 @@ if (__name__ == '__main__'):
         print("Executing user reactive function")
         global r_count
         r_count += 1
-        return x.get() + r_count*10
+        return x() + r_count*10
 
-    x.set(3)
+    x(3)
 
     o_count = 0
     @Observer
@@ -168,7 +176,7 @@ if (__name__ == '__main__'):
         o_count += 1
         print(r() + o_count*100)
 
-    x.set(4)
+    x(4)
 
     # Should print '114'
     react.flush_react()
@@ -176,6 +184,6 @@ if (__name__ == '__main__'):
     # Should do nothing
     react.flush_react()
 
-    x.set(5)
+    x(5)
     # Should print '225'
     react.flush_react()
