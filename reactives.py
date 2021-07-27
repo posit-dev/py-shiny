@@ -41,7 +41,7 @@ class ReactiveVal:
 
 
 
-class Observable:
+class Reactive:
     def __init__(self, func: callable) -> None:
         # TODO: Check number of args for func
         self._func = func
@@ -51,6 +51,9 @@ class Observable:
         self._most_recent_ctx_id = ""
         self._ctx = None
 
+    def __call__(self):
+        return self.get_value()
+
     def get_value(self):
         self._dependents.register()
 
@@ -58,7 +61,6 @@ class Observable:
             self.update_value()
 
         return self._value
-
 
     def update_value(self) -> None:
         self._ctx = react.Context()
@@ -87,11 +89,6 @@ class Observable:
         self._value = self._func()
 
 
-def reactive(func: callable) -> callable:
-    o = Observable(func)
-    return lambda: o.get_value()
-
-
 
 class Observer:
     def __init__(self, func: callable) -> None:
@@ -103,6 +100,9 @@ class Observer:
 
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
+
+    # def __call__(self) -> None:
+
 
     def _create_context(self) -> react.Context:
         ctx = react.Context()
@@ -146,22 +146,13 @@ class Observer:
 
 
 
-def observe(func: callable) -> Observer:
-    o = Observer(func)
-    return o
-
-
-
-
 if (__name__ == '__main__'):
     x = ReactiveVal(1)
     x.set(2)
 
     r_count = 0
-    # Reactive expression below is equivalent to:
-    # r = reactive(lambda: x.get() + 10)
-    @reactive
-    def r() -> int:
+    @Reactive
+    def r():
         print("Executing user reactive function")
         global r_count
         r_count += 1
@@ -170,10 +161,8 @@ if (__name__ == '__main__'):
     x.set(3)
 
     o_count = 0
-    # Observer below is equivalent to:
-    # observe(lambda: print(r() + 100))
-    @observe
-    def xx() -> None:
+    @Observer
+    def xx():
         print("Executing user observer function")
         global o_count
         o_count += 1
