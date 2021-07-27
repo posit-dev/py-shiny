@@ -97,6 +97,11 @@ class Reactive:
         self._value = self._func()
 
 
+class ReactiveValues:
+    def __init__(self, **kwargs) -> None:
+        for key, value in kwargs.items():
+            setattr(self, key, ReactiveVal(value))
+
 
 class Observer:
     def __init__(self, func: callable) -> None:
@@ -187,3 +192,5 @@ if (__name__ == '__main__'):
     x(5)
     # Should print '225'
     react.flush_react()
+
+    rv = ReactiveValues(a=1, b=2, x=3)
