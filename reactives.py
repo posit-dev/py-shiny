@@ -99,8 +99,19 @@ class Reactive:
 
 class ReactiveValues:
     def __init__(self, **kwargs) -> None:
+        self._dict = {}
         for key, value in kwargs.items():
-            setattr(self, key, ReactiveVal(value))
+            self._dict[key] = ReactiveVal(value)
+
+    def __setitem__(self, key, value) -> None:
+        self._dict[key] = value
+
+    def __getitem__(self, key):
+        return self._dict[key]
+
+    def __delitem__(self, key) -> None:
+        del self._dict[key]
+
 
 
 class Observer:
