@@ -195,13 +195,13 @@ if (__name__ == '__main__'):
     x(4)
 
     # Should print '114'
-    react.flush_react()
+    react.flush()
 
     # Should do nothing
-    react.flush_react()
+    react.flush()
 
     x(5)
     # Should print '225'
-    react.flush_react()
+    react.flush()
 
     rv = ReactiveValues(a=1, b=2, x=3)

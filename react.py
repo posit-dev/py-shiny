@@ -106,5 +106,5 @@ def get_current_context() -> Context:
     return _reactive_environment.current_context()
 
 
-def flush_react() -> None:
+def flush() -> None:
     _reactive_environment.flush()
