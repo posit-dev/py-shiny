@@ -104,10 +104,14 @@ class ReactiveValues:
             self._dict[key] = ReactiveVal(value)
 
     def __setitem__(self, key, value) -> None:
-        self._dict[key] = value
+        if (key in self._dict):
+            self._dict[key](value)
+        else:
+            self._dict[key] = ReactiveVal(value)
+
 
     def __getitem__(self, key):
-        return self._dict[key]
+        return self._dict[key]()
 
     def __delitem__(self, key) -> None:
         del self._dict[key]
