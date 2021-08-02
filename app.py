@@ -29,12 +29,15 @@ def server(input: ReactiveValues, output: Outputs):
         print("Executing reactive r()")
         return input["n"] * 2
 
-    # @output.renderer
-    # @render_text
-    @Observer
-    def txt():
-        print("Executing render_text")
-        print("r() is ", r())
+    @output.set("txt")
+    def _():
+        print("Executing output txt")
+        return f"r() is {r()}"
+
+    @output.set("txt2")
+    def _():
+        print("Executing output txt2")
+        return f"r() is {r()}"
 
 
 app = ShinyApp(ui, server)

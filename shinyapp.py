@@ -33,14 +33,19 @@ class ShinyApp:
 
             line = line.decode('latin1').rstrip()
 
-            print("_handle_incoming: data read: " + line)
-            writer.write(("Server received: " + line + "\n").encode('latin-1'))
+            print("RECV: " + line)
 
             vals = json.loads(line)
-            print(vals)
             for (key, val) in vals.items():
                 session.input[key] = val
 
             react.flush()
+
+            for message in session.get_messages():
+                message_str = json.dumps(message) + "\n"
+                print("SEND: " + message_str, end = "")
+                writer.write(message_str.encode('utf-8'))
+
+            session.clear_messages()
 
         writer.close()
