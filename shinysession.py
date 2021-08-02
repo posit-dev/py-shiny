@@ -24,19 +24,21 @@ class ShinySession:
 
 class Outputs:
     def __init__(self, session: ShinySession):
-        self._fns = {}
+        self._output_obervers = {}
         self._session = session
 
     def set(self, name):
         def set_fn(fn):
-            # TODO: Support replacing a function
-            self._fns[name] = fn
+            if name in self._output_obervers:
+                self._output_obervers[name].destroy()
 
             @Observer
-            def _():
+            def obs():
                 message = {}
                 message[name] = fn()
                 self._session.add_message(message)
+
+            self._output_obervers[name] = obs
 
             return None
 
