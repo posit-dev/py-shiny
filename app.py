@@ -14,12 +14,13 @@ from shinyapp import ShinyApp
 from shinysession import Outputs
 from ui import *
 
+
+
 ui = fluid_page(
     "Shiny app demo",
     text_output("txt"),
     slider_input("n")
 )
-
 
 def server(input: ReactiveValues, output: Outputs):
     print("Running user server function")
@@ -42,4 +43,5 @@ def server(input: ReactiveValues, output: Outputs):
 
 app = ShinyApp(ui, server)
 
-app.run()
+if __name__ == "__main__":
+    app.run()
