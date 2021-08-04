@@ -3,7 +3,7 @@ from shinysession import ShinySession
 import json
 import react
 
-from fastapi import FastAPI, WebSocket
+from fastapi import BackgroundTasks, FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
 import uvicorn
 
@@ -17,6 +17,8 @@ class ShinyApp:
         self._sessions: dict[int, ShinySession] = {}
         self._last_session_id: int = 0    # Counter for generating session IDs
 
+        self._sessions_needing_flush: dict[int, ShinySession] = {}
+
     def create_session(self) -> ShinySession:
         self._last_session_id += 1
         id = self._last_session_id
@@ -29,11 +31,27 @@ class ShinyApp:
             session = session.id
 
         print(f"remove_session: {session}")
-
         del self._sessions[session]
 
     def run(self) -> None:
         uvicorn.run(self._app, host = "0.0.0.0", port = 8000)
+
+    def request_flush(self, session) -> None:
+        # TODO: Until we have reactive domains, because we can't yet keep track
+        # of which sessions need a flush.
+        pass
+        # self._sessions_needing_flush[session.id] = session
+
+    async def flush_pending_sessions(self) -> None:
+        react.flush()
+
+        # TODO: Until we have reactive domains, flush all sessions (because we
+        # can't yet keep track of which ones need a flush)
+        for id, session in self._sessions.items():
+            await session.flush()
+        # for id, session in self._sessions_needing_flush.items():
+        #     await session.flush()
+        #     del self._sessions_needing_flush[id]
 
 
 # Create a FastAPI app, given the app's server function.

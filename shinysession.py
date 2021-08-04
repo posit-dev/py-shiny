@@ -7,10 +7,12 @@ class ShinySession:
     def __init__(self, app: 'ShinyApp', id: int) -> None:
         self._app = app
         self.id: int = id
-        self._message_queue: list[str] = []
 
         self.input = ReactiveValues()
         self.output = Outputs(self)
+
+        self._message_queue: list[str] = []
+        self._websocket = None
 
         self._app.server(self.input, self.output)
 
@@ -24,10 +26,24 @@ class ShinySession:
     def clear_messages(self) -> None:
         self._message_queue.clear()
 
+
+    def request_flush(self) -> None:
+        self._app.request_flush(self)
+
+    async def flush(self) -> None:
+        for message in self.get_messages():
+            message_str = json.dumps(message) + "\n"
+            print("SEND: " + message_str, end = "")
+            await self._websocket.send_text(message_str)
+
+        self.clear_messages()
+
+
     async def listen(self, websocket: WebSocket) -> None:
+        self._websocket = websocket
         try:
             while True:
-                line = await websocket.receive_text()
+                line = await self._websocket.receive_text()
                 if not line:
                     break
 
@@ -37,14 +53,9 @@ class ShinySession:
                 for (key, val) in vals.items():
                     self.input[key] = val
 
-                react.flush()
+                self.request_flush()
 
-                for message in self.get_messages():
-                    message_str = json.dumps(message) + "\n"
-                    print("SEND: " + message_str, end = "")
-                    await websocket.send_text(message_str)
-
-                self.clear_messages()
+                await self._app.flush_pending_sessions()
 
         except WebSocketDisconnect:
             pass

@@ -112,11 +112,16 @@ class ReactiveValues:
 
 
     def __getitem__(self, key):
+        # Auto-populate key if accessed but not yet set. Needed to take reactive
+        # dependencies on input values that haven't been received from client
+        # yet.
+        if key not in self._dict:
+            self._dict[key] = ReactiveVal(None)
+
         return self._dict[key]()
 
     def __delitem__(self, key) -> None:
         del self._dict[key]
-
 
 
 class Observer:
