@@ -1,5 +1,7 @@
 import react
+import json
 from reactives import ReactiveValues, Observer
+from fastapi import WebSocket
 
 class ShinySession:
     def __init__(self, server: callable) -> None:
@@ -20,6 +22,30 @@ class ShinySession:
 
     def clear_messages(self):
         self._message_queue = []
+
+
+    async def listen(self, websocket: WebSocket) -> None:
+
+        while True:
+            line = await websocket.receive_text()
+            if not line:
+                break
+
+            print("RECV: " + line)
+
+            vals = json.loads(line)
+            for (key, val) in vals.items():
+                self.input[key] = val
+
+            react.flush()
+
+            for message in self.get_messages():
+                message_str = json.dumps(message) + "\n"
+                print("SEND: " + message_str, end = "")
+                await websocket.send_text(message_str)
+
+            self.clear_messages()
+
 
 
 class Outputs:

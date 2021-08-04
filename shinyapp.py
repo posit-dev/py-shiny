@@ -65,25 +65,6 @@ def create_fastapi_app(server: callable) -> FastAPI:
     async def websocket_endpoint(websocket: WebSocket):
         await websocket.accept()
         session = ShinySession(server)
-
-        while True:
-            line = await websocket.receive_text()
-            if not line:
-                break
-
-            print("RECV: " + line)
-
-            vals = json.loads(line)
-            for (key, val) in vals.items():
-                session.input[key] = val
-
-            react.flush()
-
-            for message in session.get_messages():
-                message_str = json.dumps(message) + "\n"
-                print("SEND: " + message_str, end = "")
-                await websocket.send_text(message_str)
-
-            session.clear_messages()
+        await session.listen(websocket)
 
     return app
