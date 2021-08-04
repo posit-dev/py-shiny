@@ -12,10 +12,10 @@ import uvicorn
 class ShinyApp:
     def __init__(self, ui, server: callable) -> None:
         self.ui = ui
-        self.server = server
-        self._app = create_fastapi_app(self)
-        self._sessions = {}
-        self._last_session_id = 0    # Counter for generating session IDs
+        self.server: callable = server
+        self._app: FastAPI = create_fastapi_app(self)
+        self._sessions: dict[int, ShinySession] = {}
+        self._last_session_id: int = 0    # Counter for generating session IDs
 
     def create_session(self) -> ShinySession:
         self._last_session_id += 1

@@ -6,8 +6,8 @@ from fastapi import WebSocket, WebSocketDisconnect
 class ShinySession:
     def __init__(self, app: 'ShinyApp', id: int) -> None:
         self._app = app
-        self.id = id
-        self._message_queue = []
+        self.id: int = id
+        self._message_queue: list[str] = []
 
         self.input = ReactiveValues()
         self.output = Outputs(self)
@@ -15,15 +15,14 @@ class ShinySession:
         self._app.server(self.input, self.output)
 
     # Pending messages
-    def add_message(self, message):
+    def add_message(self, message: str):
         self._message_queue.append(message)
 
-    def get_messages(self):
+    def get_messages(self) -> list[str]:
         return self._message_queue
 
-    def clear_messages(self):
-        self._message_queue = []
-
+    def clear_messages(self) -> None:
+        self._message_queue.clear()
 
     async def listen(self, websocket: WebSocket) -> None:
         try:
