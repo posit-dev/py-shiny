@@ -1,18 +1,17 @@
-import react
 import json
 from reactives import ReactiveValues, Observer
-from fastapi import WebSocket, WebSocketDisconnect
+from iomanager import IOHandle
 
 class ShinySession:
-    def __init__(self, app: 'ShinyApp', id: int) -> None:
+    def __init__(self, app: 'ShinyApp', id: int, iohandle: IOHandle) -> None:
         self._app = app
         self.id: int = id
+        self._iohandle = iohandle
 
         self.input = ReactiveValues()
         self.output = Outputs(self)
 
         self._message_queue: list[str] = []
-        self._websocket = None
 
         self._app.server(self.input, self.output)
 
@@ -34,31 +33,22 @@ class ShinySession:
         for message in self.get_messages():
             message_str = json.dumps(message) + "\n"
             print("SEND: " + message_str, end = "")
-            await self._websocket.send_text(message_str)
+            await self._iohandle.send(message_str)
 
         self.clear_messages()
 
 
-    async def listen(self, websocket: WebSocket) -> None:
-        self._websocket = websocket
-        try:
-            while True:
-                line = await self._websocket.receive_text()
-                if not line:
-                    break
+    async def handle_incoming_message(self, message: str) -> None:
+        """This is called by the iohandle when an incoming message arrives."""
+        print("RECV: " + message)
 
-                print("RECV: " + line)
+        vals = json.loads(message)
+        for (key, val) in vals.items():
+            self.input[key] = val
 
-                vals = json.loads(line)
-                for (key, val) in vals.items():
-                    self.input[key] = val
+        self.request_flush()
 
-                self.request_flush()
-
-                await self._app.flush_pending_sessions()
-
-        except WebSocketDisconnect:
-            pass
+        await self._app.flush_pending_sessions()
 
 
 class Outputs:
