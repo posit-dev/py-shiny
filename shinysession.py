@@ -1,17 +1,18 @@
 import react
 import json
 from reactives import ReactiveValues, Observer
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketDisconnect
 
 class ShinySession:
-    def __init__(self, server: callable) -> None:
+    def __init__(self, app: 'ShinyApp', id: int) -> None:
+        self._app = app
+        self.id = id
         self._message_queue = []
 
         self.input = ReactiveValues()
         self.output = Outputs(self)
-        self._server = server
 
-        self._server(self.input, self.output)
+        self._app.server(self.input, self.output)
 
     # Pending messages
     def add_message(self, message):
@@ -25,27 +26,29 @@ class ShinySession:
 
 
     async def listen(self, websocket: WebSocket) -> None:
+        try:
+            while True:
+                line = await websocket.receive_text()
+                if not line:
+                    break
 
-        while True:
-            line = await websocket.receive_text()
-            if not line:
-                break
+                print("RECV: " + line)
 
-            print("RECV: " + line)
+                vals = json.loads(line)
+                for (key, val) in vals.items():
+                    self.input[key] = val
 
-            vals = json.loads(line)
-            for (key, val) in vals.items():
-                self.input[key] = val
+                react.flush()
 
-            react.flush()
+                for message in self.get_messages():
+                    message_str = json.dumps(message) + "\n"
+                    print("SEND: " + message_str, end = "")
+                    await websocket.send_text(message_str)
 
-            for message in self.get_messages():
-                message_str = json.dumps(message) + "\n"
-                print("SEND: " + message_str, end = "")
-                await websocket.send_text(message_str)
+                self.clear_messages()
 
-            self.clear_messages()
-
+        except WebSocketDisconnect:
+            pass
 
 
 class Outputs:
