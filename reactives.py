@@ -1,11 +1,13 @@
+from typing import Optional, Any
+from react import Context
 import react
 
 class Dependents:
     def __init__(self) -> None:
-        self._dependents = {}
+        self._dependents: dict[Context] = {}
 
     def register(self) -> None:
-        ctx = react.get_current_context()
+        ctx: Context = react.get_current_context()
         if (ctx.id not in self._dependents):
             self._dependents[ctx.id] = ctx
 
@@ -50,54 +52,6 @@ class ReactiveVal:
 
 
 
-class Reactive:
-    def __init__(self, func: callable) -> None:
-        # TODO: Check number of args for func
-        self._func = func
-        self._dependents = Dependents()
-        self._invalidated = True
-        self._running = False
-        self._most_recent_ctx_id = ""
-        self._ctx = None
-
-    def __call__(self):
-        return self.get_value()
-
-    def get_value(self):
-        self._dependents.register()
-
-        if (self._invalidated or self._running):
-            self.update_value()
-
-        return self._value
-
-    def update_value(self) -> None:
-        self._ctx = react.Context()
-        self._most_recent_ctx_id = self._ctx.id
-
-        self._ctx.on_invalidate(self._on_invalidate_cb)
-
-        self._invalidated = False
-
-        was_running = self._running
-        self._running = True
-
-        self._ctx.run(self._run_func)
-
-        # TODO: This should be guaranteed to run; maybe use try?
-        self._running = was_running
-
-    def _on_invalidate_cb(self) -> None:
-        self._invalidated = True
-        self._value = None  # Allow old value to be GC'd
-        self._dependents.invalidate()
-        self._ctx = None    # Allow context to be GC'd
-
-    def _run_func(self) -> None:
-        # TODO: Wrap in try-catch
-        self._value = self._func()
-
-
 class ReactiveValues:
     def __init__(self, **kwargs) -> None:
         self._dict = {}
@@ -124,22 +78,80 @@ class ReactiveValues:
         del self._dict[key]
 
 
+
+class Reactive:
+    def __init__(self, func: callable) -> None:
+        # TODO: Check number of args for func
+        self._func: callable = func
+        self._dependents: Dependents = Dependents()
+        self._invalidated: bool = True
+        self._running: bool = False
+        self._most_recent_ctx_id: str = ""
+        self._ctx: Optional[Context] = None
+
+        self._value: any = None
+        self._error: bool = False
+
+    def __call__(self) -> Any:
+        return self.get_value()
+
+    def get_value(self) -> Any:
+        self._dependents.register()
+
+        if (self._invalidated or self._running):
+            self.update_value()
+
+        if (self._error):
+            raise self._value
+
+        return self._value
+
+    def update_value(self) -> None:
+        self._ctx = Context()
+        self._most_recent_ctx_id = self._ctx.id
+
+        self._ctx.on_invalidate(self._on_invalidate_cb)
+
+        self._invalidated = False
+
+        was_running = self._running
+        self._running = True
+
+        self._ctx.run(self._run_func)
+
+        # TODO: This should be guaranteed to run; maybe use try?
+        self._running = was_running
+
+    def _on_invalidate_cb(self) -> None:
+        self._invalidated = True
+        self._value = None  # Allow old value to be GC'd
+        self._dependents.invalidate()
+        self._ctx = None    # Allow context to be GC'd
+
+    def _run_func(self) -> None:
+        self._error = False
+        try:
+            self._value = self._func()
+        except Exception as err:
+            self._error = True
+            self._value = err
+
+
+
 class Observer:
     def __init__(self, func: callable) -> None:
         # TODO: Check number of args for func
-        self._func = func
-        self._invalidate_callbacks = []
-        self._destroyed = False
-        self._ctx = None
+        self._func: callable = func
+        self._invalidate_callbacks: list[callable] = []
+        self._destroyed: bool = False
+        self._ctx: Optional[Context] = None
 
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
 
-    # def __call__(self) -> None:
 
-
-    def _create_context(self) -> react.Context:
-        ctx = react.Context()
+    def _create_context(self) -> Context:
+        ctx = Context()
 
         # Store the context explicitly in Observer object
         # TODO: More explanation here
