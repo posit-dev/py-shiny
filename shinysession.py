@@ -42,7 +42,12 @@ class ShinySession:
         """This is called by the iohandle when an incoming message arrives."""
         print("RECV: " + message)
 
-        vals = json.loads(message)
+        try:
+            vals = json.loads(message)
+        except json.JSONDecodeError:
+            print("ERROR: Invalid JSON message")
+            return
+
         for (key, val) in vals.items():
             self.input[key] = val
 
