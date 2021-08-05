@@ -63,7 +63,7 @@ class FastAPIIOManager(IOManager):
     <!DOCTYPE html>
     <html>
         <head>
-            <title>Chat</title>
+            <title>WebSocket App</title>
         </head>
         <body>
             <h1>WebSocket App</h1>
