@@ -1,28 +1,6 @@
 from typing import Optional, Any
-from react import Context
+from react import Context, Dependents
 import react
-
-class Dependents:
-    def __init__(self) -> None:
-        self._dependents: dict[Context] = {}
-
-    def register(self) -> None:
-        ctx: Context = react.get_current_context()
-        if (ctx.id not in self._dependents):
-            self._dependents[ctx.id] = ctx
-
-        def on_invalidate_cb() -> None:
-            if (ctx.id in self._dependents):
-                del self._dependents[ctx.id]
-
-        ctx.on_invalidate(on_invalidate_cb)
-
-    def invalidate(self) -> None:
-        # TODO: Check sort order
-        for id in sorted(self._dependents.keys()):
-            ctx = self._dependents[id]
-            ctx.invalidate()
-
 
 
 class ReactiveVal:
