@@ -1,14 +1,15 @@
-from typing import Union
-from shinysession import ShinySession
+from typing import Union, Callable, Any
+from shinysession import ShinySession, Outputs
+from reactives import ReactiveValues
 import react
 from iomanager import IOManager, IOHandle, FastAPIIOManager, TCPIOManager
 
 
 
 class ShinyApp:
-    def __init__(self, ui, server: callable) -> None:
-        self.ui = ui
-        self.server: callable = server
+    def __init__(self, ui: Any, server: Callable[[ReactiveValues, Outputs], None]) -> None:
+        self.ui: Any = ui
+        self.server: Callable[[ReactiveValues, Outputs], None] = server
         self._sessions: dict[int, ShinySession] = {}
         self._last_session_id: int = 0    # Counter for generating session IDs
 
@@ -28,7 +29,7 @@ class ShinyApp:
         print(f"remove_session: {session}")
         del self._sessions[session]
 
-    def run(self, iotype = "websocket") -> None:
+    def run(self, iotype: str = "websocket") -> None:
         if (iotype == "websocket"):
             self._iomanager: IOManager = FastAPIIOManager(self)
         elif (iotype == "tcp"):
@@ -38,7 +39,7 @@ class ShinyApp:
 
         self._iomanager.run()
 
-    def request_flush(self, session) -> None:
+    def request_flush(self, session: ShinySession) -> None:
         # TODO: Until we have reactive domains, because we can't yet keep track
         # of which sessions need a flush.
         pass

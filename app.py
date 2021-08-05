@@ -8,7 +8,6 @@
 #   {"n":4}
 
 
-import asyncio
 from reactives import Reactive, ReactiveVal, ReactiveValues, Observer
 from shinyapp import ShinyApp
 from shinysession import Outputs

@@ -1,3 +1,7 @@
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from shinyapp import ShinyApp
+
 class IOHandle:
     """Abstract class for a session to send messages."""
     async def send(self, message: str) -> None:

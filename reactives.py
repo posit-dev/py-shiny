@@ -1,14 +1,14 @@
-from typing import Optional, Any
+from typing import Optional, Any, Callable
 from react import Context, Dependents
 import react
 
 
 class ReactiveVal:
-    def __init__(self, value) -> None:
-        self._value = value
-        self._dependents = Dependents()
+    def __init__(self, value: Any) -> None:
+        self._value: Any = value
+        self._dependents: Dependents = Dependents()
 
-    def __call__(self, *args):
+    def __call__(self, *args: Optional[Any]) -> Any:
         if args:
             if len(args) > 1:
                 raise TypeError("ReactiveVal can only be called with one argument")
@@ -16,11 +16,11 @@ class ReactiveVal:
         else:
             return self.get()
 
-    def get(self):
+    def get(self) -> Any:
         self._dependents.register()
         return self._value
 
-    def set(self, value) -> None:
+    def set(self, value: Any) -> bool:
         if (self._value is value):
             return False
 
@@ -31,43 +31,42 @@ class ReactiveVal:
 
 
 class ReactiveValues:
-    def __init__(self, **kwargs) -> None:
-        self._dict = {}
+    def __init__(self, **kwargs: Any) -> None:
+        self._map: dict[str, Any] = {}
         for key, value in kwargs.items():
-            self._dict[key] = ReactiveVal(value)
+            self._map[key] = ReactiveVal(value)
 
-    def __setitem__(self, key, value) -> None:
-        if (key in self._dict):
-            self._dict[key](value)
+    def __setitem__(self, key: str, value: Any) -> None:
+        if (key in self._map):
+            self._map[key](value)
         else:
-            self._dict[key] = ReactiveVal(value)
+            self._map[key] = ReactiveVal(value)
 
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
         # yet.
-        if key not in self._dict:
-            self._dict[key] = ReactiveVal(None)
+        if key not in self._map:
+            self._map[key] = ReactiveVal(None)
 
-        return self._dict[key]()
+        return self._map[key]()
 
-    def __delitem__(self, key) -> None:
-        del self._dict[key]
+    def __delitem__(self, key: str) -> None:
+        del self._map[key]
 
 
 
 class Reactive:
-    def __init__(self, func: callable) -> None:
-        # TODO: Check number of args for func
-        self._func: callable = func
+    def __init__(self, func: Callable[[], Any]) -> None:
+        self._func: Callable[[], Any] = func
         self._dependents: Dependents = Dependents()
         self._invalidated: bool = True
         self._running: bool = False
-        self._most_recent_ctx_id: str = ""
+        self._most_recent_ctx_id: int = -1
         self._ctx: Optional[Context] = None
 
-        self._value: any = None
+        self._value: Any = None
         self._error: bool = False
 
     def __call__(self) -> Any:
@@ -117,10 +116,10 @@ class Reactive:
 
 
 class Observer:
-    def __init__(self, func: callable) -> None:
+    def __init__(self, func: Callable[[], None]) -> None:
         # TODO: Check number of args for func
-        self._func: callable = func
-        self._invalidate_callbacks: list[callable] = []
+        self._func: Callable[[], None] = func
+        self._invalidate_callbacks: list[Callable[[], None]] = []
         self._destroyed: bool = False
         self._ctx: Optional[Context] = None
 
@@ -159,7 +158,7 @@ class Observer:
         ctx = self._create_context()
         ctx.run(self._func)
 
-    def on_invalidate(self, callback: callable) -> None:
+    def on_invalidate(self, callback: Callable[[], None]) -> None:
         self._invalidate_callbacks.append(callback)
 
     def destroy(self) -> None:

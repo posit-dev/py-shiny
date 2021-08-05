@@ -1,25 +1,30 @@
 import json
 from reactives import ReactiveValues, Observer
 from iomanager import IOHandle
+from typing import TYPE_CHECKING, Callable, Any
+
+if TYPE_CHECKING:
+    from shinyapp import ShinyApp
+
 
 class ShinySession:
     def __init__(self, app: 'ShinyApp', id: int, iohandle: IOHandle) -> None:
-        self._app = app
+        self._app: 'ShinyApp' = app
         self.id: int = id
         self._iohandle = iohandle
 
         self.input = ReactiveValues()
         self.output = Outputs(self)
 
-        self._message_queue: list[str] = []
+        self._message_queue: list[dict[str, str]] = []
 
         self._app.server(self.input, self.output)
 
     # Pending messages
-    def add_message(self, message: str):
+    def add_message(self, message: dict[str, str]) -> None:
         self._message_queue.append(message)
 
-    def get_messages(self) -> list[str]:
+    def get_messages(self) -> list[dict[str, str]]:
         return self._message_queue
 
     def clear_messages(self) -> None:
@@ -31,7 +36,7 @@ class ShinySession:
 
     async def flush(self) -> None:
         for message in self.get_messages():
-            message_str = json.dumps(message) + "\n"
+            message_str: str = json.dumps(message) + "\n"
             print("SEND: " + message_str, end = "")
             await self._iohandle.send(message_str)
 
@@ -58,17 +63,17 @@ class ShinySession:
 
 class Outputs:
     def __init__(self, session: ShinySession):
-        self._output_obervers = {}
-        self._session = session
+        self._output_obervers: dict[str, Observer] = {}
+        self._session: ShinySession = session
 
-    def set(self, name):
-        def set_fn(fn):
+    def set(self, name: str):
+        def set_fn(fn: Callable[[], Any]):
             if name in self._output_obervers:
                 self._output_obervers[name].destroy()
 
             @Observer
             def obs():
-                message = {}
+                message: dict[str, str] = {}
                 message[name] = fn()
                 self._session.add_message(message)
 
@@ -77,7 +82,3 @@ class Outputs:
             return None
 
         return set_fn
-
-    def get(self, name):
-        return self._fns[name]
-

@@ -1,15 +1,15 @@
-from typing import Optional
+from typing import Callable, Optional
 
 class Context:
     """A reactive context"""
 
     def __init__(self) -> None:
-        self.id = _reactive_environment.next_id()
-        self._invalidated = False
-        self._invalidate_callbacks = []
-        self._flush_callbacks = []
+        self.id: int = _reactive_environment.next_id()
+        self._invalidated: bool = False
+        self._invalidate_callbacks: list[Callable[[], None]] = []
+        self._flush_callbacks: list[Callable[[], None]] = []
 
-    def run(self, func: callable) -> None:
+    def run(self, func: Callable[[], None]) -> None:
         """Run the provided function in this context"""
         env = _reactive_environment
         env.run_with(self, func)
@@ -29,7 +29,7 @@ class Context:
 
         self._invalidate_callbacks.clear()
 
-    def on_invalidate(self, func: callable) -> None:
+    def on_invalidate(self, func: Callable[[], None]) -> None:
         """Register a function to be called when this context is invalidated"""
         if (self._invalidated):
             func()
@@ -41,7 +41,7 @@ class Context:
         next time flushReact() called."""
         _reactive_environment.add_pending_flush(self)
 
-    def on_flush(self, func: callable) -> None:
+    def on_flush(self, func: Callable[[], None]) -> None:
         """Register a function to be called when this context is flushed."""
         self._flush_callbacks.append(func)
 
@@ -58,7 +58,7 @@ class Context:
 
 class Dependents:
     def __init__(self) -> None:
-        self._dependents: dict[Context] = {}
+        self._dependents: dict[int, Context] = {}
 
     def register(self) -> None:
         ctx: Context = get_current_context()
@@ -82,9 +82,9 @@ class ReactiveEnvironment:
     """The reactive environment"""
 
     def __init__(self) -> None:
-        self._current_context = None
-        self._next_id = 0
-        self._pending_flush = []
+        self._current_context: Optional[Context] = None
+        self._next_id: int = 0
+        self._pending_flush: list[Context] = []
 
     def next_id(self) -> int:
         """Return the next available id"""
@@ -98,7 +98,7 @@ class ReactiveEnvironment:
             raise Exception("No current context")
         return self._current_context
 
-    def run_with(self, ctx: Context, contextFunc: callable) -> None:
+    def run_with(self, ctx: Context, contextFunc: Callable[[], None]) -> None:
         # Using a stack for the contexts may be easier to debug
         old_context = self._current_context
         self._current_context = ctx
