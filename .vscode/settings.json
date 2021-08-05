@@ -1,0 +1,4 @@
+{
+    "files.trimTrailingWhitespace": true,
+    "python.analysis.typeCheckingMode": "strict"
+}
