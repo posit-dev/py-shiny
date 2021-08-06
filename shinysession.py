@@ -11,10 +11,10 @@ class ShinySession:
     def __init__(self, app: 'ShinyApp', id: int, iohandler: IOHandler) -> None:
         self._app: 'ShinyApp' = app
         self.id: int = id
-        self._iohandler = iohandler
+        self._iohandler: IOHandler = iohandler
 
-        self.input = ReactiveValues()
-        self.output = Outputs(self)
+        self.input: ReactiveValues = ReactiveValues()
+        self.output: Outputs = Outputs(self)
 
         self._message_queue: list[dict[str, str]] = []
 
