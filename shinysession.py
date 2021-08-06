@@ -1,6 +1,6 @@
 import json
 from reactives import ReactiveValues, Observer
-from iomanager import IOHandle
+from iomanager import IOHandler
 from typing import TYPE_CHECKING, Callable, Any
 
 if TYPE_CHECKING:
@@ -8,10 +8,10 @@ if TYPE_CHECKING:
 
 
 class ShinySession:
-    def __init__(self, app: 'ShinyApp', id: int, iohandle: IOHandle) -> None:
+    def __init__(self, app: 'ShinyApp', id: int, iohandler: IOHandler) -> None:
         self._app: 'ShinyApp' = app
         self.id: int = id
-        self._iohandle = iohandle
+        self._iohandler = iohandler
 
         self.input = ReactiveValues()
         self.output = Outputs(self)
@@ -38,13 +38,13 @@ class ShinySession:
         for message in self.get_messages():
             message_str: str = json.dumps(message) + "\n"
             print("SEND: " + message_str, end = "")
-            await self._iohandle.send(message_str)
+            await self._iohandler.send(message_str)
 
         self.clear_messages()
 
 
     async def handle_incoming_message(self, message: str) -> None:
-        """This is called by the iohandle when an incoming message arrives."""
+        """This is called by the iohandler when an incoming message arrives."""
         print("RECV: " + message)
 
         try:

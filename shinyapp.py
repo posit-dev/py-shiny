@@ -2,7 +2,7 @@ from typing import Union, Callable, Any
 from shinysession import ShinySession, Outputs
 from reactives import ReactiveValues
 import react
-from iomanager import IOManager, IOHandle, FastAPIIOManager, TCPIOManager
+from iomanager import IOManager, IOHandler, FastAPIIOManager, TCPIOManager
 
 
 
@@ -15,10 +15,10 @@ class ShinyApp:
 
         self._sessions_needing_flush: dict[int, ShinySession] = {}
 
-    def create_session(self, iohandle: IOHandle) -> ShinySession:
+    def create_session(self, iohandler: IOHandler) -> ShinySession:
         self._last_session_id += 1
         id = self._last_session_id
-        session = ShinySession(self, id, iohandle)
+        session = ShinySession(self, id, iohandler)
         self._sessions[id] = session
         return session
 

@@ -1,14 +1,17 @@
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from shinyapp import ShinyApp
+    from shinysession import ShinySession
 
-class IOHandle:
-    """Abstract class for a session to send messages."""
+class IOHandler:
+    """Abstract class to serve a session and send/receive messages to the
+    client."""
     async def send(self, message: str) -> None:
         pass
 
 class IOManager:
-    """Abstract class for handling I/O and spawning ShinySessions."""
+    """Abstract class for handling incoming connections and spawning
+    ShinySessions."""
     def __init__(self, app: 'ShinyApp') -> None:
         pass
 
@@ -20,48 +23,55 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 import uvicorn
 
-class FastAPIIOHandle(IOHandle):
+class FastAPIIOHandler(IOHandler):
     def __init__(self, websocket: WebSocket) -> None:
         self._websocket: WebSocket = websocket
+
+    def register_session(self, session: 'ShinySession') -> None:
+        self._session: ShinySession = session
 
     async def send(self, message: str) -> None:
         await self._websocket.send_text(message)
 
+    async def serve(self) -> None:
+        try:
+            while True:
+                message: str = await self._websocket.receive_text()
+                if not message:
+                    break
+
+                await self._session.handle_incoming_message(message)
+
+        except WebSocketDisconnect:
+            pass
 
 class FastAPIIOManager(IOManager):
     """Implementation of I/O manager which listens on a HTTP port to serve a web
     page, and then listens for WebSocket connections to spawn ShinySessions."""
     def __init__(self, shinyapp: 'ShinyApp') -> None:
-        self._shinyapp = shinyapp
-        self._app = FastAPI()
+        self._shinyapp: ShinyApp = shinyapp
+        self._fastapi_app: FastAPI = FastAPI()
 
-        @self._app.get("/")
+        @self._fastapi_app.get("/")
         async def get():
             return HTMLResponse(self.html)
 
-        @self._app.websocket("/ws")
+        @self._fastapi_app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket):
             await websocket.accept()
-            iohandle = FastAPIIOHandle(websocket)
-            session = self._shinyapp.create_session(iohandle)
 
-            try:
-                while True:
-                    message = await websocket.receive_text()
-                    if not message:
-                        break
+            iohandler = FastAPIIOHandler(websocket)
+            session = shinyapp.create_session(iohandler)
+            iohandler.register_session(session)
 
-                    await session.handle_incoming_message(message)
-
-            except WebSocketDisconnect:
-                pass
+            await iohandler.serve()
 
             # Unregister the session when done.
-            self._shinyapp.remove_session(session)
+            shinyapp.remove_session(session)
 
 
     def run(self) -> None:
-        uvicorn.run(self._app, host = "0.0.0.0", port = 8000)
+        uvicorn.run(self._fastapi_app, host = "0.0.0.0", port = 8000)
 
     html = """
     <!DOCTYPE html>
@@ -103,12 +113,28 @@ class FastAPIIOManager(IOManager):
 import asyncio
 from asyncio import StreamReader, StreamWriter
 
-class TCPIOHandle(IOHandle):
-    def __init__(self, writer: StreamWriter) -> None:
+class TCPIOHandler(IOHandler):
+    def __init__(self, reader: StreamReader, writer: StreamWriter) -> None:
+        self._reader: StreamReader = reader
         self._writer: StreamWriter = writer
+
+    def register_session(self, session: 'ShinySession') -> None:
+        self._session: ShinySession = session
 
     async def send(self, message: str) -> None:
         self._writer.write(message.encode('utf-8'))
+
+    async def serve(self) -> None:
+        while True:
+            line: bytes = await self._reader.readline()
+            if not line:
+                break
+
+            message: str = line.decode('latin1').rstrip()
+
+            await self._session.handle_incoming_message(message)
+
+        self._writer.close()
 
 
 class TCPIOManager(IOManager):
@@ -121,7 +147,7 @@ class TCPIOManager(IOManager):
         asyncio.run(self._run())
 
     async def _run(self) -> None:
-        server = await asyncio.start_server(self._handle_incoming, '127.0.0.1', 8888)
+        server = await asyncio.start_server(self._handle_incoming_connection, '127.0.0.1', 8888)
 
         addr = server.sockets[0].getsockname()
         print(f'Serving on {addr}')
@@ -130,21 +156,13 @@ class TCPIOManager(IOManager):
         async with server:
             await server.serve_forever()
 
-    async def _handle_incoming(self, reader: StreamReader, writer: StreamWriter) -> None:
+    async def _handle_incoming_connection(self, reader: StreamReader, writer: StreamWriter) -> None:
         # When incoming connection arrives, spawn a session
-        iohandle = TCPIOHandle(writer)
-        session = self._shinyapp.create_session(iohandle)
+        iohandler = TCPIOHandler(reader, writer)
+        session = self._shinyapp.create_session(iohandler)
+        iohandler.register_session(session)
 
-        while True:
-            line = await reader.readline()
-            if not line:
-                break
-
-            line = line.decode('latin1').rstrip()
-
-            await session.handle_incoming_message(line)
-
-        writer.close()
+        await iohandler.serve()
 
         # Unregister the session when done.
         self._shinyapp.remove_session(session)
