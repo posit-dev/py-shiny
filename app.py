@@ -13,6 +13,11 @@ from shinyapp import ShinyApp
 from shinysession import Outputs
 from ui import *
 
+# For plot rendering
+import render
+import numpy as np
+import matplotlib.pyplot as plt
+
 
 
 ui = fluid_page(
@@ -49,6 +54,24 @@ def server(input: ReactiveValues, output: Outputs):
     @output.set("shared_txt")
     def _():
         return f"shared_val() is {shared_val()}"
+
+
+    @output.set("plot")
+    @render.plot
+    def _():
+        np.random.seed(19680801)
+
+        # example data
+        mu = 100  # mean of distribution
+        sigma = 15  # standard deviation of distribution
+        x = mu + sigma * np.random.randn(437)
+
+        fig, ax = plt.subplots()
+
+        # the histogram of the data
+        ax.hist(x, input["n"], density=True)
+
+        return fig
 
 
 app = ShinyApp(ui, server)

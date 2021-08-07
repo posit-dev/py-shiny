@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -21,9 +20,10 @@
   <div class="container-fluid">
     <div class="form-group shiny-input-container">
       <label class="control-label" id="n-label" for="n">n</label>
-      <input class="js-range-slider" id="n" data-skin="shiny" data-min="1" data-max="20" data-from="5" data-step="1" data-grid="true" data-grid-num="9.5" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-data-type="number"/>
+      <input class="js-range-slider" id="n" data-skin="shiny" data-min="1" data-max="100" data-from="20" data-step="1" data-grid="true" data-grid-num="9.5" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-data-type="number"/>
     </div>
     <pre id="txt" class="shiny-text-output noplaceholder"></pre>
+    <div id="plot" class="shiny-plot-output" style="width:100%;height:400px;"></div>
   </div>
 </body>
 </html>
