@@ -61,16 +61,21 @@ class ShinySession:
         for value in self.get_messages():
             values.update(value)
 
-        message: dict[str, Any] = {"errors": {}, "values": values, "inputMessages": []}
+        message: dict[str, Any] = {
+            "errors": {},
+            "values": values,
+            "inputMessages": []
+        }
 
-        message_str: str = json.dumps(message) + "\n"
-        print(
-            "SEND: " + re.sub('(?m)base64,[a-zA-Z0-9+/=]+', '[base64 data]', message_str),
-            end = ""
-        )
-        await self._conn.send(message_str)
-
-        self.clear_messages()
+        try:
+            message_str: str = json.dumps(message) + "\n"
+            print(
+                "SEND: " + re.sub('(?m)base64,[a-zA-Z0-9+/=]+', '[base64 data]', message_str),
+                end = ""
+            )
+            await self._conn.send(message_str)
+        finally:
+            self.clear_messages()
 
 
     async def _handle_incoming_message(self, message: str) -> None:
