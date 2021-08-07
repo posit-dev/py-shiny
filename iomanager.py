@@ -24,7 +24,8 @@ class IOManager:
 
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 class IOHandlerDisconnect(Exception):
@@ -51,11 +52,18 @@ class FastAPIIOManager(IOManager):
         self._shinyapp: ShinyApp = shinyapp
         self._fastapi_app: FastAPI = FastAPI()
 
-        @self._fastapi_app.get("/")
-        async def get():
-            return HTMLResponse(self.html)
+        # @self._fastapi_app.get("/")
+        # async def get():
+        #     return HTMLResponse(self.html)
 
-        @self._fastapi_app.websocket("/ws")
+        self._fastapi_app.mount("/shared", StaticFiles(directory = "www/shared", html = True), name = "shared")
+
+        self._fastapi_app.mount("/www", StaticFiles(directory = "www"), name = "wwwroot")
+        @self._fastapi_app.get("/")
+        async def read_index():
+            return FileResponse("www/index.html")
+
+        @self._fastapi_app.websocket("/websocket/")
         async def websocket_endpoint(websocket: WebSocket):
             await websocket.accept()
 
@@ -82,7 +90,7 @@ class FastAPIIOManager(IOManager):
             <ul id='messages'>
             </ul>
             <script>
-                var ws = new WebSocket("ws://localhost:8000/ws");
+                var ws = new WebSocket("ws://localhost:8000/websocket");
                 ws.onmessage = function(event) {
                     var messages = document.getElementById('messages')
                     var message = document.createElement('li')

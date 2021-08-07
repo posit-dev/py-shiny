@@ -21,6 +21,11 @@ class ShinySession:
         self._app.server(self.input, self.output)
 
     async def serve(self) -> None:
+        # SEND {"config":{"workerId":"","sessionId":"9d55970c321d821bb2c1b28da609e60b","user":null}}
+        await self._iohandler.send(
+            json.dumps({"config": {"workerId": "", "sessionId": str(self.id), "user": None}})
+        )
+
         try:
             while True:
                 message: str = await self._iohandler.receive()
@@ -51,6 +56,8 @@ class ShinySession:
 
     async def flush(self) -> None:
         for message in self.get_messages():
+            message: dict[str, Any] = {"errors": {}, "values": message, "inputMessages": []}
+
             message_str: str = json.dumps(message) + "\n"
             print("SEND: " + message_str, end = "")
             await self._iohandler.send(message_str)
@@ -63,13 +70,19 @@ class ShinySession:
         print("RECV: " + message)
 
         try:
-            vals = json.loads(message)
+            msg = json.loads(message)
         except json.JSONDecodeError:
             print("ERROR: Invalid JSON message")
             return
 
-        for (key, val) in vals.items():
-            self.input[key] = val
+        if msg["method"] in ["init", "update"]:
+            data: dict[str, Any] = msg["data"]
+            for (key, val) in data.items():
+                if ":" in key:
+                    key = key.split(":")[0]
+
+                print(f"{key}: {val}")
+                self.input[key] = val
 
         self.request_flush()
 

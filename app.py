@@ -34,7 +34,7 @@ def server(input: ReactiveValues, output: Outputs):
 
     @output.set("txt")
     def _():
-        return f"r() is {r()}"
+        return f"n*2 is {r()}"
 
     # This observer watches n, and changes shared_val, which is shared across
     # all running sessions.
