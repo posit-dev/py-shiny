@@ -56,15 +56,19 @@ class ShinySession:
         self._app.request_flush(self)
 
     async def flush(self) -> None:
-        for message in self.get_messages():
-            message: dict[str, Any] = {"errors": {}, "values": message, "inputMessages": []}
+        values: dict[str, str] = {}
 
-            message_str: str = json.dumps(message) + "\n"
-            print(
-                "SEND: " + re.sub('(?m)base64,[a-zA-Z0-9+/=]+', '[base64 data]', message_str),
-                end = ""
-            )
-            await self._conn.send(message_str)
+        for value in self.get_messages():
+            values.update(value)
+
+        message: dict[str, Any] = {"errors": {}, "values": values, "inputMessages": []}
+
+        message_str: str = json.dumps(message) + "\n"
+        print(
+            "SEND: " + re.sub('(?m)base64,[a-zA-Z0-9+/=]+', '[base64 data]', message_str),
+            end = ""
+        )
+        await self._conn.send(message_str)
 
         self.clear_messages()
 
