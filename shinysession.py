@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 class ShinySession:
     def __init__(self, app: 'ShinyApp', id: int, conn: Connection) -> None:
-        self._app: 'ShinyApp' = app
+        self._app: ShinyApp = app
         self.id: int = id
         self._conn: Connection = conn
 
