@@ -10,7 +10,7 @@ def plot(fn: Callable[[], Any]) -> Callable[[], Any]:
         fig = fn()
         if (isinstance(fig, matplotlib.figure.Figure)):
             tmpfile = tempfile.mkstemp(suffix = ".png")[1]
-            print(tmpfile)
+
             try:
                 fig.savefig(tmpfile)
 
@@ -23,17 +23,8 @@ def plot(fn: Callable[[], Any]) -> Callable[[], Any]:
             finally:
                 os.remove(tmpfile)
 
-
         else:
             raise Exception("Unsupported figure type: " + str(type(fig)))
 
 
-    return wrapper
-
-
-def render_text(fn):
-    def wrapper():
-        print("render_text")
-        fn()
-        print("done")
     return wrapper
