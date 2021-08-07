@@ -60,17 +60,10 @@ def server(input: ReactiveValues, output: Outputs):
     @render.plot
     def _():
         np.random.seed(19680801)
-
-        # example data
-        mu = 100  # mean of distribution
-        sigma = 15  # standard deviation of distribution
-        x = mu + sigma * np.random.randn(437)
+        x = 100 + 15 * np.random.randn(437)
 
         fig, ax = plt.subplots()
-
-        # the histogram of the data
         ax.hist(x, input["n"], density=True)
-
         return fig
 
 
