@@ -85,7 +85,6 @@ class ShinySession:
                 if ":" in key:
                     key = key.split(":")[0]
 
-                print(f"{key}: {val}")
                 self.input[key] = val
 
         self.request_flush()
