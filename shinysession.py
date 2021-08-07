@@ -1,6 +1,6 @@
 import json
 from reactives import ReactiveValues, Observer
-from iomanager import IOHandler
+from iomanager import IOHandler, IOHandlerDisconnect
 from typing import TYPE_CHECKING, Callable, Any
 
 if TYPE_CHECKING:
@@ -19,6 +19,21 @@ class ShinySession:
         self._message_queue: list[dict[str, str]] = []
 
         self._app.server(self.input, self.output)
+
+    async def serve(self) -> None:
+        try:
+            while True:
+                message: str = await self._iohandler.receive()
+                if not message:
+                    break
+
+                await self._handle_incoming_message(message)
+
+        except IOHandlerDisconnect:
+            pass
+
+        self._app.remove_session(self)
+
 
     # Pending messages
     def add_message(self, message: dict[str, str]) -> None:
@@ -43,8 +58,8 @@ class ShinySession:
         self.clear_messages()
 
 
-    async def handle_incoming_message(self, message: str) -> None:
-        """This is called by the iohandler when an incoming message arrives."""
+    async def _handle_incoming_message(self, message: str) -> None:
+        """This is called when an incoming message arrives."""
         print("RECV: " + message)
 
         try:
