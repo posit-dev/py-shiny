@@ -1,21 +1,28 @@
 from typing import Callable, Any
-
-import matplotlib.figure
+import os
+import tempfile
 import base64
+import matplotlib.figure
 
 def plot(fn: Callable[[], Any]) -> Callable[[], Any]:
 
     def wrapper() -> Any:
         fig = fn()
         if (isinstance(fig, matplotlib.figure.Figure)):
-            tempfilename = "shiny_render_plot.png"
-            fig.savefig(tempfilename)
+            tmpfile = tempfile.mkstemp(suffix = ".png")[1]
+            print(tmpfile)
+            try:
+                fig.savefig(tmpfile)
 
-            with open(tempfilename, "rb") as image_file:
-                data = base64.b64encode(image_file.read())
-                data_str = data.decode("utf-8")
+                with open(tmpfile, "rb") as image_file:
+                    data = base64.b64encode(image_file.read())
+                    data_str = data.decode("utf-8")
 
-            return { "src": "data:image/png;base64," + data_str }
+                return { "src": "data:image/png;base64," + data_str }
+
+            finally:
+                os.remove(tmpfile)
+
 
         else:
             raise Exception("Unsupported figure type: " + str(type(fig)))
