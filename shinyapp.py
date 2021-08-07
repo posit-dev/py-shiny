@@ -5,7 +5,6 @@ import react
 from connmanager import ConnectionManager, Connection, FastAPIConnectionManager, TCPConnectionManager
 
 
-
 class ShinyApp:
     def __init__(self, ui: Any, server: Callable[[ReactiveValues, Outputs], None]) -> None:
         self.ui: Any = ui
@@ -36,6 +35,9 @@ class ShinyApp:
             self._conn_manager: ConnectionManager = TCPConnectionManager(self._on_connect_cb)
         else:
             raise ValueError(f"Unknown conn_type {conn_type}")
+
+        if type(self.ui) is str:
+            self._conn_manager.set_ui_path(self.ui)
 
         self._conn_manager.run()
 

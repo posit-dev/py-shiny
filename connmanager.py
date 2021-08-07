@@ -1,4 +1,5 @@
-from typing import Callable, Awaitable
+from typing import Callable, Awaitable, Optional
+import os
 
 class Connection:
     """Abstract class to serve a session and send/receive messages to the
@@ -11,11 +12,14 @@ class Connection:
 
 
 class ConnectionManager:
-    """Abstract class for handling incoming connections."""
+    """Base class for handling incoming connections."""
     def __init__(self, on_connect_cb: Callable[[Connection], Awaitable[None]]) -> None:
         raise NotImplementedError
 
     def run(self) -> None:
+        raise NotImplementedError
+
+    def set_ui_path(self, path: str) -> None:
         raise NotImplementedError
 
 
@@ -45,19 +49,23 @@ class FastAPIConnectionManager(ConnectionManager):
     """Implementation of ConnectionManager which listens on a HTTP port to serve a web
     page, and also listens for WebSocket connections."""
     def __init__(self, on_connect_cb: Callable[[Connection], Awaitable[None]]) -> None:
+        self._ui_path: Optional[str] = None
         self._on_connect_cb: Callable[[Connection], Awaitable[None]] = on_connect_cb
         self._fastapi_app: FastAPI = FastAPI()
 
-        # @self._fastapi_app.get("/")
-        # async def get():
-        #     return HTMLResponse(self.html)
-
-        self._fastapi_app.mount("/shared", StaticFiles(directory = "www/shared", html = True), name = "shared")
-
-        self._fastapi_app.mount("/www", StaticFiles(directory = "www"), name = "wwwroot")
         @self._fastapi_app.get("/")
-        async def read_index():
-            return FileResponse("www/index.html")
+        async def get():
+            if self._ui_path is None:
+                return HTMLResponse(self.html)
+            else:
+                return FileResponse(os.path.join(self._ui_path, "index.html"))
+
+
+        self._fastapi_app.mount(
+            "/shared",
+            StaticFiles(directory = os.path.join(os.path.dirname(__file__), "www/shared")),
+            name = "shared"
+        )
 
         @self._fastapi_app.websocket("/websocket/")
         async def websocket_endpoint(websocket: WebSocket):
@@ -69,6 +77,11 @@ class FastAPIConnectionManager(ConnectionManager):
 
     def run(self) -> None:
         uvicorn.run(self._fastapi_app, host = "0.0.0.0", port = 8000)
+
+
+    def set_ui_path(self, path: str) -> None:
+        self._ui_path = path
+
 
     html = """
     <!DOCTYPE html>
@@ -135,6 +148,11 @@ class TCPConnectionManager(ConnectionManager):
 
     def run(self) -> None:
         asyncio.run(self._run())
+
+    def set_ui_path(self, path: str) -> None:
+        """TCPConnectionManager doesn't serve files; it only listens for
+        communication with the session."""
+        pass
 
     async def _run(self) -> None:
         server = await asyncio.start_server(self._handle_incoming_connection, '127.0.0.1', 8888)

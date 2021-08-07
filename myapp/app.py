@@ -7,24 +7,21 @@
 #   {"n":1}
 #   {"n":4}
 
+# Add parent directory to path, so we can find the prism module.
+# (This is just a temporary fix)
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from reactives import Reactive, ReactiveVal, ReactiveValues, Observer
 from shinyapp import ShinyApp
 from shinysession import Outputs
-from ui import *
 
 # For plot rendering
 import render
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-
-ui = fluid_page(
-    "Shiny app demo",
-    text_output("txt"),
-    slider_input("n")
-)
 
 shared_val = ReactiveVal(None)
 
@@ -67,7 +64,9 @@ def server(input: ReactiveValues, output: Outputs):
         return fig
 
 
-app = ShinyApp(ui, server)
+ui_path = os.path.join(os.path.dirname(__file__), "www")
+
+app = ShinyApp(ui_path, server)
 
 if __name__ == "__main__":
     app.run()
