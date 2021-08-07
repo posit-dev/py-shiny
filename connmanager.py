@@ -1,6 +1,6 @@
 from typing import Callable, Awaitable
 
-class IOHandler:
+class Connection:
     """Abstract class to serve a session and send/receive messages to the
     client."""
     async def send(self, message: str) -> None:
@@ -10,10 +10,9 @@ class IOHandler:
         raise NotImplementedError
 
 
-class IOManager:
-    """Abstract class for handling incoming connections and spawning
-    ShinySessions."""
-    def __init__(self, on_connect_cb: Callable[[IOHandler], Awaitable[None]]) -> None:
+class ConnectionManager:
+    """Abstract class for handling incoming connections."""
+    def __init__(self, on_connect_cb: Callable[[Connection], Awaitable[None]]) -> None:
         raise NotImplementedError
 
     def run(self) -> None:
@@ -25,11 +24,11 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
-class IOHandlerDisconnect(Exception):
-    """Raised when the IOHandler is disconnected."""
+class ConnectionDisconnect(Exception):
+    """Raised when the Connection is disconnected."""
     pass
 
-class FastAPIIOHandler(IOHandler):
+class FastAPIConnection(Connection):
     def __init__(self, websocket: WebSocket) -> None:
         self._websocket: WebSocket = websocket
 
@@ -40,13 +39,13 @@ class FastAPIIOHandler(IOHandler):
         try:
             return await self._websocket.receive_text()
         except WebSocketDisconnect:
-            raise IOHandlerDisconnect
+            raise ConnectionDisconnect
 
-class FastAPIIOManager(IOManager):
-    """Implementation of I/O manager which listens on a HTTP port to serve a web
-    page, and then listens for WebSocket connections to spawn ShinySessions."""
-    def __init__(self, on_connect_cb: Callable[[IOHandler], Awaitable[None]]) -> None:
-        self._on_connect_cb: Callable[[IOHandler], Awaitable[None]] = on_connect_cb
+class FastAPIConnectionManager(ConnectionManager):
+    """Implementation of ConnectionManager which listens on a HTTP port to serve a web
+    page, and also listens for WebSocket connections."""
+    def __init__(self, on_connect_cb: Callable[[Connection], Awaitable[None]]) -> None:
+        self._on_connect_cb: Callable[[Connection], Awaitable[None]] = on_connect_cb
         self._fastapi_app: FastAPI = FastAPI()
 
         # @self._fastapi_app.get("/")
@@ -64,8 +63,8 @@ class FastAPIIOManager(IOManager):
         async def websocket_endpoint(websocket: WebSocket):
             await websocket.accept()
 
-            iohandler = FastAPIIOHandler(websocket)
-            await self._on_connect_cb(iohandler)
+            conn = FastAPIConnection(websocket)
+            await self._on_connect_cb(conn)
 
 
     def run(self) -> None:
@@ -111,7 +110,7 @@ class FastAPIIOManager(IOManager):
 import asyncio
 from asyncio import StreamReader, StreamWriter
 
-class TCPIOHandler(IOHandler):
+class TCPConnection(Connection):
     def __init__(self, reader: StreamReader, writer: StreamWriter) -> None:
         self._reader: StreamReader = reader
         self._writer: StreamWriter = writer
@@ -122,18 +121,17 @@ class TCPIOHandler(IOHandler):
     async def receive(self) -> str:
         data: bytes = await self._reader.readline()
         if not data:
-            raise IOHandlerDisconnect
+            raise ConnectionDisconnect
 
         message: str = data.decode('latin1').rstrip()
         return message
 
 
+class TCPConnectionManager(ConnectionManager):
+    """Implementation of ConnectionManager which listens on a TCP port."""
 
-class TCPIOManager(IOManager):
-    """Implementation of I/O manager which listens on a TCP port to spawn
-    ShinySessions."""
-    def __init__(self, on_connect_cb: Callable[[IOHandler], Awaitable[None]]) -> None:
-        self._on_connect_cb: Callable[[IOHandler], Awaitable[None]] = on_connect_cb
+    def __init__(self, on_connect_cb: Callable[[Connection], Awaitable[None]]) -> None:
+        self._on_connect_cb: Callable[[Connection], Awaitable[None]] = on_connect_cb
 
     def run(self) -> None:
         asyncio.run(self._run())
@@ -150,5 +148,5 @@ class TCPIOManager(IOManager):
 
     async def _handle_incoming_connection(self, reader: StreamReader, writer: StreamWriter) -> None:
         # When incoming connection arrives, spawn a session
-        iohandler = TCPIOHandler(reader, writer)
-        await self._on_connect_cb(iohandler)
+        conn = TCPConnection(reader, writer)
+        await self._on_connect_cb(conn)

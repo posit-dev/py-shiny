@@ -2,7 +2,7 @@ from typing import Union, Callable, Any
 from shinysession import ShinySession, Outputs
 from reactives import ReactiveValues
 import react
-from iomanager import IOManager, IOHandler, FastAPIIOManager, TCPIOManager
+from connmanager import ConnectionManager, Connection, FastAPIConnectionManager, TCPConnectionManager
 
 
 
@@ -15,10 +15,10 @@ class ShinyApp:
 
         self._sessions_needing_flush: dict[int, ShinySession] = {}
 
-    def create_session(self, iohandler: IOHandler) -> ShinySession:
+    def create_session(self, conn: Connection) -> ShinySession:
         self._last_session_id += 1
         id = self._last_session_id
-        session = ShinySession(self, id, iohandler)
+        session = ShinySession(self, id, conn)
         self._sessions[id] = session
         return session
 
@@ -29,20 +29,20 @@ class ShinyApp:
         print(f"remove_session: {session}")
         del self._sessions[session]
 
-    def run(self, iotype: str = "websocket") -> None:
-        if (iotype == "websocket"):
-            self._iomanager: IOManager = FastAPIIOManager(self._on_connect_cb)
-        elif (iotype == "tcp"):
-            self._iomanager: IOManager = TCPIOManager(self._on_connect_cb)
+    def run(self, conn_type: str = "websocket") -> None:
+        if (conn_type == "websocket"):
+            self._conn_manager: ConnectionManager = FastAPIConnectionManager(self._on_connect_cb)
+        elif (conn_type == "tcp"):
+            self._conn_manager: ConnectionManager = TCPConnectionManager(self._on_connect_cb)
         else:
-            raise ValueError(f"Unknown iotype {iotype}")
+            raise ValueError(f"Unknown conn_type {conn_type}")
 
-        self._iomanager.run()
+        self._conn_manager.run()
 
-    async def _on_connect_cb(self, iohandler: IOHandler) -> None:
-        """Callback passed to the IOManager which is invoked when a new
+    async def _on_connect_cb(self, conn: Connection) -> None:
+        """Callback passed to the ConnectionManager, which is invoked when a new
         connection is established."""
-        session = self.create_session(iohandler)
+        session = self.create_session(conn)
         await session.serve()
 
     def request_flush(self, session: ShinySession) -> None:

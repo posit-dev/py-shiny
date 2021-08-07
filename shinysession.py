@@ -1,6 +1,6 @@
 import json
 from reactives import ReactiveValues, Observer
-from iomanager import IOHandler, IOHandlerDisconnect
+from connmanager import Connection, ConnectionDisconnect
 from typing import TYPE_CHECKING, Callable, Any
 
 if TYPE_CHECKING:
@@ -8,10 +8,10 @@ if TYPE_CHECKING:
 
 
 class ShinySession:
-    def __init__(self, app: 'ShinyApp', id: int, iohandler: IOHandler) -> None:
+    def __init__(self, app: 'ShinyApp', id: int, conn: Connection) -> None:
         self._app: 'ShinyApp' = app
         self.id: int = id
-        self._iohandler: IOHandler = iohandler
+        self._conn: Connection = conn
 
         self.input: ReactiveValues = ReactiveValues()
         self.output: Outputs = Outputs(self)
@@ -22,19 +22,19 @@ class ShinySession:
 
     async def serve(self) -> None:
         # SEND {"config":{"workerId":"","sessionId":"9d55970c321d821bb2c1b28da609e60b","user":null}}
-        await self._iohandler.send(
+        await self._conn.send(
             json.dumps({"config": {"workerId": "", "sessionId": str(self.id), "user": None}})
         )
 
         try:
             while True:
-                message: str = await self._iohandler.receive()
+                message: str = await self._conn.receive()
                 if not message:
                     break
 
                 await self._handle_incoming_message(message)
 
-        except IOHandlerDisconnect:
+        except ConnectionDisconnect:
             pass
 
         self._app.remove_session(self)
@@ -60,7 +60,7 @@ class ShinySession:
 
             message_str: str = json.dumps(message) + "\n"
             print("SEND: " + message_str, end = "")
-            await self._iohandler.send(message_str)
+            await self._conn.send(message_str)
 
         self.clear_messages()
 

@@ -79,4 +79,4 @@ app = ShinyApp(ui, server)
 if __name__ == "__main__":
     app.run()
     # Alternately, to listen on a TCP port:
-    # app.run(iotype = "tcp")
+    # app.run(conn_type = "tcp")
