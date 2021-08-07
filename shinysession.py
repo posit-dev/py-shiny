@@ -1,4 +1,5 @@
 import json
+import re
 from reactives import ReactiveValues, Observer
 from connmanager import Connection, ConnectionDisconnect
 from typing import TYPE_CHECKING, Callable, Any
@@ -59,7 +60,10 @@ class ShinySession:
             message: dict[str, Any] = {"errors": {}, "values": message, "inputMessages": []}
 
             message_str: str = json.dumps(message) + "\n"
-            print("SEND: " + message_str, end = "")
+            print(
+                "SEND: " + re.sub('(?m)base64,[a-zA-Z0-9+/=]+', '[base64 data]', message_str),
+                end = ""
+            )
             await self._conn.send(message_str)
 
         self.clear_messages()
