@@ -31,13 +31,19 @@ class ShinyApp:
 
     def run(self, iotype: str = "websocket") -> None:
         if (iotype == "websocket"):
-            self._iomanager: IOManager = FastAPIIOManager(self)
+            self._iomanager: IOManager = FastAPIIOManager(self._on_connect_cb)
         elif (iotype == "tcp"):
-            self._iomanager: IOManager = TCPIOManager(self)
+            self._iomanager: IOManager = TCPIOManager(self._on_connect_cb)
         else:
             raise ValueError(f"Unknown iotype {iotype}")
 
         self._iomanager.run()
+
+    async def _on_connect_cb(self, iohandler: IOHandler) -> None:
+        """Callback passed to the IOManager which is invoked when a new
+        connection is established."""
+        session = self.create_session(iohandler)
+        await session.serve()
 
     def request_flush(self, session: ShinySession) -> None:
         # TODO: Until we have reactive domains, because we can't yet keep track

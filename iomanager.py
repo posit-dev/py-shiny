@@ -1,7 +1,4 @@
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from shinyapp import ShinyApp
-    from shinysession import ShinySession
+from typing import Callable, Awaitable
 
 class IOHandler:
     """Abstract class to serve a session and send/receive messages to the
@@ -16,7 +13,7 @@ class IOHandler:
 class IOManager:
     """Abstract class for handling incoming connections and spawning
     ShinySessions."""
-    def __init__(self, app: 'ShinyApp') -> None:
+    def __init__(self, on_connect_cb: Callable[[IOHandler], Awaitable[None]]) -> None:
         raise NotImplementedError
 
     def run(self) -> None:
@@ -48,8 +45,8 @@ class FastAPIIOHandler(IOHandler):
 class FastAPIIOManager(IOManager):
     """Implementation of I/O manager which listens on a HTTP port to serve a web
     page, and then listens for WebSocket connections to spawn ShinySessions."""
-    def __init__(self, shinyapp: 'ShinyApp') -> None:
-        self._shinyapp: ShinyApp = shinyapp
+    def __init__(self, on_connect_cb: Callable[[IOHandler], Awaitable[None]]) -> None:
+        self._on_connect_cb: Callable[[IOHandler], Awaitable[None]] = on_connect_cb
         self._fastapi_app: FastAPI = FastAPI()
 
         # @self._fastapi_app.get("/")
@@ -68,8 +65,7 @@ class FastAPIIOManager(IOManager):
             await websocket.accept()
 
             iohandler = FastAPIIOHandler(websocket)
-            session = shinyapp.create_session(iohandler)
-            await session.serve()
+            await self._on_connect_cb(iohandler)
 
 
     def run(self) -> None:
@@ -136,8 +132,8 @@ class TCPIOHandler(IOHandler):
 class TCPIOManager(IOManager):
     """Implementation of I/O manager which listens on a TCP port to spawn
     ShinySessions."""
-    def __init__(self, shinyapp: 'ShinyApp') -> None:
-        self._shinyapp = shinyapp
+    def __init__(self, on_connect_cb: Callable[[IOHandler], Awaitable[None]]) -> None:
+        self._on_connect_cb: Callable[[IOHandler], Awaitable[None]] = on_connect_cb
 
     def run(self) -> None:
         asyncio.run(self._run())
@@ -155,5 +151,4 @@ class TCPIOManager(IOManager):
     async def _handle_incoming_connection(self, reader: StreamReader, writer: StreamWriter) -> None:
         # When incoming connection arrives, spawn a session
         iohandler = TCPIOHandler(reader, writer)
-        session = self._shinyapp.create_session(iohandler)
-        await session.serve()
+        await self._on_connect_cb(iohandler)
