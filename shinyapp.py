@@ -45,7 +45,7 @@ class ShinyApp:
         """Callback passed to the ConnectionManager, which is invoked when a new
         connection is established."""
         session = self.create_session(conn)
-        await session.serve()
+        await session.run()
 
     def request_flush(self, session: ShinySession) -> None:
         # TODO: Until we have reactive domains, because we can't yet keep track

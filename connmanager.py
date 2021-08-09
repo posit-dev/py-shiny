@@ -28,8 +28,8 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
-class ConnectionDisconnect(Exception):
-    """Raised when the Connection is disconnected."""
+class ConnectionClosed(Exception):
+    """Raised when the Connection is closed."""
     pass
 
 class FastAPIConnection(Connection):
@@ -43,7 +43,7 @@ class FastAPIConnection(Connection):
         try:
             return await self._websocket.receive_text()
         except WebSocketDisconnect:
-            raise ConnectionDisconnect
+            raise ConnectionClosed
 
 class FastAPIConnectionManager(ConnectionManager):
     """Implementation of ConnectionManager which listens on a HTTP port to serve a web
@@ -134,7 +134,7 @@ class TCPConnection(Connection):
     async def receive(self) -> str:
         data: bytes = await self._reader.readline()
         if not data:
-            raise ConnectionDisconnect
+            raise ConnectionClosed
 
         message: str = data.decode('latin1').rstrip()
         return message
