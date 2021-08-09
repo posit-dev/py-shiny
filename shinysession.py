@@ -24,9 +24,7 @@ class ShinySession:
 
     async def run(self) -> None:
         # SEND {"config":{"workerId":"","sessionId":"9d55970c321d821bb2c1b28da609e60b","user":null}}
-        await self._conn.send(
-            json.dumps({"config": {"workerId": "", "sessionId": str(self.id), "user": None}})
-        )
+        await self.send_message({"config": {"workerId": "", "sessionId": str(self.id), "user": None}})
 
         # Start the producer and consumer coroutines.
         await asyncio.gather(
@@ -80,16 +78,22 @@ class ShinySession:
 
 
     # Pending messages
-    def add_message(self, message: dict[str, str]) -> None:
+    def add_message_out(self, message: dict[str, Any]) -> None:
         self._message_queue_out.append(message)
 
-    def get_messages(self) -> list[dict[str, str]]:
+    def get_messages_out(self) -> list[dict[str, Any]]:
         return self._message_queue_out
 
-    def clear_messages(self) -> None:
+    def clear_messages_out(self) -> None:
         self._message_queue_out.clear()
 
+
     async def send_message(self, message: dict[str, Any]) -> None:
+        message_str: str = json.dumps(message) + "\n"
+        print(
+            "SEND: " + re.sub('(?m)base64,[a-zA-Z0-9+/=]+', '[base64 data]', message_str),
+            end = ""
+        )
         await self._conn.send(json.dumps(message))
 
     def request_flush(self) -> None:
@@ -98,7 +102,7 @@ class ShinySession:
     async def flush(self) -> None:
         values: dict[str, str] = {}
 
-        for value in self.get_messages():
+        for value in self.get_messages_out():
             values.update(value)
 
         message: dict[str, Any] = {
@@ -108,14 +112,9 @@ class ShinySession:
         }
 
         try:
-            message_str: str = json.dumps(message) + "\n"
-            print(
-                "SEND: " + re.sub('(?m)base64,[a-zA-Z0-9+/=]+', '[base64 data]', message_str),
-                end = ""
-            )
-            await self._conn.send(message_str)
+            await self.send_message(message)
         finally:
-            self.clear_messages()
+            self.clear_messages_out()
 
 
 
@@ -132,8 +131,9 @@ class Outputs:
             @Observer
             def obs():
                 message: dict[str, str] = {}
+                message: dict[str, Any] = {}
                 message[name] = fn()
-                self._session.add_message(message)
+                self._session.add_message_out(message)
 
             self._output_obervers[name] = obs
 
