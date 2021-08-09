@@ -1,6 +1,6 @@
 from typing import Optional, Any, Callable
-from react import Context, Dependents
-import react
+from reactcore import Context, Dependents
+import reactcore
 
 
 class ReactiveVal:
@@ -194,13 +194,13 @@ if (__name__ == '__main__'):
     x(4)
 
     # Should print '114'
-    react.flush()
+    reactcore.flush()
 
     # Should do nothing
-    react.flush()
+    reactcore.flush()
 
     x(5)
     # Should print '225'
-    react.flush()
+    reactcore.flush()
 
     rv = ReactiveValues(a=1, b=2, x=3)

@@ -1,7 +1,7 @@
 from typing import Union, Callable, Any
 from shinysession import ShinySession, Outputs
 from reactives import ReactiveValues
-import react
+import reactcore
 from connmanager import ConnectionManager, Connection, FastAPIConnectionManager, TCPConnectionManager
 
 
@@ -54,7 +54,7 @@ class ShinyApp:
         # self._sessions_needing_flush[session.id] = session
 
     async def flush_pending_sessions(self) -> None:
-        react.flush()
+        reactcore.flush()
 
         # TODO: Until we have reactive domains, flush all sessions (because we
         # can't yet keep track of which ones need a flush)
