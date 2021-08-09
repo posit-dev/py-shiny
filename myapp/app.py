@@ -1,11 +1,8 @@
 # To run this app:
 #   python3 app.py
 
-# Point web browser to:
+# Then point web browser to:
 #   http://localhost:8000/
-# Then send JSON messages, e.g.:
-#   {"n":1}
-#   {"n":4}
 
 # Add parent directory to path, so we can find the prism module.
 # (This is just a temporary fix)
@@ -22,12 +19,10 @@ import render
 import numpy as np
 import matplotlib.pyplot as plt
 
-
+# A ReactiveVal which is shared across all sessions.
 shared_val = ReactiveVal(None)
 
 def server(input: ReactiveValues, output: Outputs):
-    print("Running user server function")
-
     @Reactive
     def r():
         if input["n"] is None:
