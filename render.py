@@ -4,10 +4,13 @@ import tempfile
 import base64
 import matplotlib.figure
 
-def plot(fn: Callable[[], Any]) -> Callable[[], Any]:
+class Plot:
+    def __init__(self, fn: Callable[[], Any]) -> None:
+        self._fn = fn
 
-    def wrapper() -> Any:
-        fig = fn()
+    def __call__(self) -> Any:
+        fig = self._fn()
+
         if (isinstance(fig, matplotlib.figure.Figure)):
             tmpfile = tempfile.mkstemp(suffix = ".png")[1]
 
@@ -26,5 +29,3 @@ def plot(fn: Callable[[], Any]) -> Callable[[], Any]:
         else:
             raise Exception("Unsupported figure type: " + str(type(fig)))
 
-
-    return wrapper
