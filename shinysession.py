@@ -3,6 +3,7 @@ import re
 from reactives import ReactiveValues, Observer
 from connmanager import Connection, ConnectionClosed
 import asyncio
+import inspect
 from typing import TYPE_CHECKING, Callable, Any, Optional
 if TYPE_CHECKING:
     from shinyapp import ShinyApp
@@ -124,15 +125,22 @@ class Outputs:
         self._session: ShinySession = session
 
     def set(self, name: str):
-        def set_fn(fn: Callable[[], Any]):
+        def set_fn(fn: Callable[[Optional[ShinySession], Optional[str]], Any]):
+
+            # If input function doesn't take session and name parameters, wrap
+            # it with a function that does.
+            if len(inspect.getfullargspec(fn).args) == 0:
+                orig_fn: Callable[[], Any] = fn
+                def fn(session: ShinySession, name: str) -> Any:
+                    return orig_fn()
+
             if name in self._output_obervers:
                 self._output_obervers[name].destroy()
 
             @Observer
             def obs():
-                message: dict[str, str] = {}
                 message: dict[str, Any] = {}
-                message[name] = fn()
+                message[name] = fn(self._session, name)
                 self._session.add_message_out(message)
 
             self._output_obervers[name] = obs
