@@ -3,8 +3,8 @@ import re
 from reactives import ReactiveValues, Observer
 from connmanager import Connection, ConnectionClosed
 import asyncio
-import inspect
-from typing import TYPE_CHECKING, Callable, Any, Optional
+import render
+from typing import TYPE_CHECKING, Callable, Any, Optional, Union
 if TYPE_CHECKING:
     from shinyapp import ShinyApp
 
@@ -120,19 +120,18 @@ class ShinySession:
 
 
 class Outputs:
-    def __init__(self, session: ShinySession):
+    def __init__(self, session: ShinySession) -> None:
         self._output_obervers: dict[str, Observer] = {}
         self._session: ShinySession = session
 
-    def set(self, name: str):
-        def set_fn(fn: Callable[[Optional[ShinySession], Optional[str]], Any]):
+    def set(self, name: str) -> Callable[[Union[Callable[[], Any], render.RenderFunction]], None]:
+        def set_fn(fn: Union[Callable[[], Any], render.RenderFunction]) -> None:
 
-            # If input function doesn't take session and name parameters, wrap
-            # it with a function that does.
-            if len(inspect.getfullargspec(fn).args) == 0:
-                orig_fn: Callable[[], Any] = fn
-                def fn(session: ShinySession, name: str) -> Any:
-                    return orig_fn()
+            # fn is either a regular function or a RenderFunction object. If
+            # it's the latter, we can give it a bit of metadata, which can be
+            # used by the
+            if isinstance(fn, render.RenderFunction):
+                fn.set_metadata(self._session, name)
 
             if name in self._output_obervers:
                 self._output_obervers[name].destroy()
@@ -140,7 +139,7 @@ class Outputs:
             @Observer
             def obs():
                 message: dict[str, Any] = {}
-                message[name] = fn(self._session, name)
+                message[name] = fn()
                 self._session.add_message_out(message)
 
             self._output_obervers[name] = obs
