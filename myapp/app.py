@@ -49,7 +49,7 @@ def server(input: ReactiveValues, output: Outputs):
 
 
     @output.set("plot")
-    @render.Plot
+    @render.plot(alt = "A histogram")
     def _():
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(437)

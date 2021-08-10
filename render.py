@@ -2,7 +2,7 @@ import os
 import tempfile
 import base64
 import matplotlib.figure
-from typing import TYPE_CHECKING, Callable, Any
+from typing import TYPE_CHECKING, Callable, Any, Optional
 if TYPE_CHECKING:
     from shinysession import ShinySession
 
@@ -25,8 +25,9 @@ class RenderFunction:
 class Plot(RenderFunction):
     _ppi: float = 96
 
-    def __init__(self, fn: Callable[[], Any]) -> None:
+    def __init__(self, fn: Callable[[], Any], alt: Optional[str] = None) -> None:
         self._fn = fn
+        self._alt: Optional[str] = alt
 
     def __call__(self) -> Any:
 
@@ -51,14 +52,25 @@ class Plot(RenderFunction):
                     data = base64.b64encode(image_file.read())
                     data_str = data.decode("utf-8")
 
-                return {
+                res = {
                     "src": "data:image/png;base64," + data_str,
                     "width": width,
-                    "height": height
+                    "height": height,
                 }
+                if self._alt is not None:
+                    res["alt"] = self._alt
+
+                return res
 
             finally:
                 os.remove(tmpfile)
 
         else:
             raise Exception("Unsupported figure type: " + str(type(fig)))
+
+
+def plot(alt: Optional[str] = None):
+    def wrapper(fn: Callable[[], Any]) -> Plot:
+        return Plot(fn, alt = alt)
+
+    return wrapper
