@@ -23,14 +23,19 @@ class ConnectionManager:
         raise NotImplementedError
 
 
+class ConnectionClosed(Exception):
+    """Raised when a Connection is closed from the other side."""
+    pass
+
+
+# =============================================================================
+# FastAPIConnection / FastAPIConnectionManager
+# =============================================================================
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
-
-class ConnectionClosed(Exception):
-    """Raised when the Connection is closed."""
-    pass
 
 class FastAPIConnection(Connection):
     def __init__(self, websocket: WebSocket) -> None:
@@ -118,7 +123,9 @@ class FastAPIConnectionManager(ConnectionManager):
     """
 
 
-
+# =============================================================================
+# TCPConnection / TCPConnectionManager
+# =============================================================================
 
 import asyncio
 from asyncio import StreamReader, StreamWriter
