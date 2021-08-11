@@ -24,19 +24,20 @@ shared_val = ReactiveVal(None)
 
 def server(input: ReactiveValues, output: Outputs):
     @Reactive
-    def r():
+    async def r():
         if input["n"] is None:
             return
         return input["n"] * 2
 
     @output.set("txt")
-    def _():
-        return f"n*2 is {r()}"
+    async def _():
+        val = await r()
+        return f"n*2 is {val}"
 
     # This observer watches n, and changes shared_val, which is shared across
     # all running sessions.
     @Observer
-    def _():
+    async def _():
         if input["n"] is None:
             return
         shared_val( input["n"] * 10 )

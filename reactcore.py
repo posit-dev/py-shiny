@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable, Optional, Awaitable
 
 class Context:
     """A reactive context"""
@@ -7,12 +7,12 @@ class Context:
         self.id: int = _reactive_environment.next_id()
         self._invalidated: bool = False
         self._invalidate_callbacks: list[Callable[[], None]] = []
-        self._flush_callbacks: list[Callable[[], None]] = []
+        self._flush_callbacks: list[Callable[[], Awaitable[None]]] = []
 
-    def run(self, func: Callable[[], None]) -> None:
+    async def run(self, func: Callable[[], Awaitable[None]]) -> None:
         """Run the provided function in this context"""
         env = _reactive_environment
-        env.run_with(self, func)
+        await env.run_with(self, func)
 
     def invalidate(self) -> None:
         """Invalidate this context. It will immediately call the callbacks
@@ -41,15 +41,15 @@ class Context:
         next time flushReact() called."""
         _reactive_environment.add_pending_flush(self)
 
-    def on_flush(self, func: Callable[[], None]) -> None:
+    def on_flush(self, func: Callable[[], Awaitable[None]]) -> None:
         """Register a function to be called when this context is flushed."""
         self._flush_callbacks.append(func)
 
-    def execute_flush_callbacks(self) -> None:
+    async def execute_flush_callbacks(self) -> None:
         """Execute all flush callbacks"""
         for cb in self._flush_callbacks:
             try:
-                cb()
+                await cb()
             finally:
                 pass
 
@@ -100,18 +100,18 @@ class ReactiveEnvironment:
         # The Context at the top of the stack.
         return self._context_stack[-1]
 
-    def run_with(self, ctx: Context, contextFunc: Callable[[], None]) -> None:
+    async def run_with(self, ctx: Context, contextFunc: Callable[[], Awaitable[None]]) -> None:
         self._context_stack.append(ctx)
         try:
-            contextFunc()
+            await contextFunc()
         finally:
             self._context_stack.pop()
 
-    def flush(self) -> None:
+    async def flush(self) -> None:
         """Flush all pending operations"""
         for ctx in self._pending_flush:
             try:
-                ctx.execute_flush_callbacks()
+                await ctx.execute_flush_callbacks()
             finally:
                 pass
 
@@ -128,5 +128,5 @@ def get_current_context() -> Context:
     return _reactive_environment.current_context()
 
 
-def flush() -> None:
-    _reactive_environment.flush()
+async def flush() -> None:
+    await _reactive_environment.flush()

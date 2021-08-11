@@ -4,6 +4,7 @@ from reactives import ReactiveValues, Observer
 from connmanager import Connection, ConnectionClosed
 import asyncio
 import render
+import inspect
 from typing import TYPE_CHECKING, Callable, Any, Optional, Union
 if TYPE_CHECKING:
     from shinyapp import ShinyApp
@@ -137,10 +138,28 @@ class Outputs:
                 self._output_obervers[name].destroy()
 
             @Observer
-            def obs():
+            async def obs():
+                await self._session.send_message({
+                    "recalculating": {
+                        "name": name,
+                        "status": "recalculating"
+                    }
+                })
+
                 message: dict[str, Any] = {}
-                message[name] = fn()
+                if inspect.iscoroutinefunction(fn):
+                    val = await fn()
+                else:
+                    val = fn()
+                message[name] = val
                 self._session.add_message_out(message)
+
+                await self._session.send_message({
+                    "recalculating": {
+                        "name": name,
+                        "status": "recalculated"
+                    }
+                })
 
             self._output_obervers[name] = obs
 

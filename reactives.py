@@ -1,4 +1,4 @@
-from typing import Optional, Any, Callable
+from typing import Optional, Any, Callable, Awaitable
 from reactcore import Context, Dependents
 import reactcore
 
@@ -58,8 +58,8 @@ class ReactiveValues:
 
 
 class Reactive:
-    def __init__(self, func: Callable[[], Any]) -> None:
-        self._func: Callable[[], Any] = func
+    def __init__(self, func: Callable[[], Awaitable[Any]]) -> None:
+        self._func: Callable[[], Awaitable[Any]] = func
         self._dependents: Dependents = Dependents()
         self._invalidated: bool = True
         self._running: bool = False
@@ -70,21 +70,21 @@ class Reactive:
         self._value: Any = None
         self._error: bool = False
 
-    def __call__(self) -> Any:
-        return self.get_value()
+    async def __call__(self) -> Any:
+        return await self.get_value()
 
-    def get_value(self) -> Any:
+    async def get_value(self) -> Any:
         self._dependents.register()
 
         if (self._invalidated or self._running):
-            self.update_value()
+            await self.update_value()
 
         if (self._error):
             raise self._value
 
         return self._value
 
-    def update_value(self) -> None:
+    async def update_value(self) -> None:
         self._ctx = Context()
         self._most_recent_ctx_id = self._ctx.id
 
@@ -96,7 +96,7 @@ class Reactive:
         was_running = self._running
         self._running = True
 
-        self._ctx.run(self._run_func)
+        await self._ctx.run(self._run_func)
 
         # TODO: This should be guaranteed to run; maybe use try?
         self._running = was_running
@@ -107,10 +107,10 @@ class Reactive:
         self._dependents.invalidate()
         self._ctx = None    # Allow context to be GC'd
 
-    def _run_func(self) -> None:
+    async def _run_func(self) -> None:
         self._error = False
         try:
-            self._value = self._func()
+            self._value = await self._func()
         except Exception as err:
             self._error = True
             self._value = err
@@ -118,9 +118,8 @@ class Reactive:
 
 
 class Observer:
-    def __init__(self, func: Callable[[], None]) -> None:
-        # TODO: Check number of args for func
-        self._func: Callable[[], None] = func
+    def __init__(self, func: Callable[[], Awaitable[None]]) -> None:
+        self._func: Callable[[], Awaitable[None]] = func
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._destroyed: bool = False
         self._ctx: Optional[Context] = None
@@ -148,19 +147,19 @@ class Observer:
             # TODO: Wrap this stuff up in a continue callback, depending on if suspended?
             ctx.add_pending_flush()
 
-        def on_flush_cb() -> None:
+        async def on_flush_cb() -> None:
             if not self._destroyed:
-                self.run()
+                await self.run()
 
         ctx.on_invalidate(on_invalidate_cb)
         ctx.on_flush(on_flush_cb)
 
         return ctx
 
-    def run(self) -> None:
+    async def run(self) -> None:
         ctx = self._create_context()
         self._exec_count += 1
-        ctx.run(self._func)
+        await ctx.run(self._func)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
         self._invalidate_callbacks.append(callback)
@@ -179,7 +178,7 @@ if (__name__ == '__main__'):
 
     r_count = 0
     @Reactive
-    def r():
+    async def r():
         print("Executing user reactive function")
         global r_count
         r_count += 1
@@ -189,22 +188,25 @@ if (__name__ == '__main__'):
 
     o_count = 0
     @Observer
-    def xx():
+    async def xx():
         print("Executing user observer function")
         global o_count
         o_count += 1
-        print(r() + o_count*100)
+        r_val = await r()
+        # print(r_val)
+        print(r_val + o_count*100)
 
     x(4)
 
+    import asyncio
     # Should print '114'
-    reactcore.flush()
+    asyncio.run(reactcore.flush())
 
     # Should do nothing
-    reactcore.flush()
+    asyncio.run(reactcore.flush())
 
-    x(5)
-    # Should print '225'
-    reactcore.flush()
+    # x(5)
+    # # Should print '225'
+    # reactcore.flush()
 
-    rv = ReactiveValues(a=1, b=2, x=3)
+    # rv = ReactiveValues(a=1, b=2, x=3)

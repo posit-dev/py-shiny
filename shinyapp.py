@@ -54,7 +54,7 @@ class ShinyApp:
         # self._sessions_needing_flush[session.id] = session
 
     async def flush_pending_sessions(self) -> None:
-        reactcore.flush()
+        await reactcore.flush()
 
         # TODO: Until we have reactive domains, flush all sessions (because we
         # can't yet keep track of which ones need a flush)
