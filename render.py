@@ -2,6 +2,7 @@ import os
 import tempfile
 import base64
 import matplotlib.figure
+import matplotlib.pyplot
 from typing import TYPE_CHECKING, Callable, Any, Optional
 if TYPE_CHECKING:
     from shinysession import ShinySession
@@ -63,6 +64,7 @@ class Plot(RenderFunction):
                 return res
 
             finally:
+                matplotlib.pyplot.close(fig)
                 os.remove(tmpfile)
 
         else:
