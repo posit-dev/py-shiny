@@ -82,7 +82,7 @@ class ReactiveEnvironment:
     """The reactive environment"""
 
     def __init__(self) -> None:
-        self._current_context: Optional[Context] = None
+        self._context_stack: list[Context] = []
         self._next_id: int = 0
         self._pending_flush: list[Context] = []
 
@@ -94,18 +94,18 @@ class ReactiveEnvironment:
 
     def current_context(self) -> Context:
         """Return the current Context object"""
-        if (self._current_context is None):
+        if not self._context_stack:
             raise Exception("No current context")
-        return self._current_context
+
+        # The Context at the top of the stack.
+        return self._context_stack[-1]
 
     def run_with(self, ctx: Context, contextFunc: Callable[[], None]) -> None:
-        # Using a stack for the contexts may be easier to debug
-        old_context = self._current_context
-        self._current_context = ctx
+        self._context_stack.append(ctx)
         try:
             contextFunc()
         finally:
-            self._current_context = old_context
+            self._context_stack.pop()
 
     def flush(self) -> None:
         """Flush all pending operations"""
