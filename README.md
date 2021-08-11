@@ -8,7 +8,7 @@ This repository contains an implementation of Shiny for Python.
 First, clone this repository. Then run:
 
 ```sh
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 To run an example app:
