@@ -1,45 +1,38 @@
-# To run this app:
-#   python3 app.py
+from htmltools import *
 
-# Connect from another terminal:
-#   nc localhost 8888
-# Then send JSON messages, e.g.:
-#   {"n":1}
-#   {"n":4}
+# keyword args must come after positional args!
+html = div(
+    span("Hello htmltools!"),
+    id = "foo",
+    # class is a keyword, so we support the JSX className
+    className = "bar",
+    # Any '_' is translated to '-'
+    data_foo = "bar"
+)
+print(html)
 
-from reactives import Reactive, ReactiveValues
-from shinyapp import ShinyApp
-from shinysession import Outputs
-from ui import *
+# Similar to R, common tags (e.g., div(), span()) are 'exported' at the
+# top-level of the module, but tags contains all the tags
+tags.video().render()
 
-ui = page.fluid(   
+
+dep = html_dependency(
+    name = "foo",
+    version = "1.0",
+    package = "prism",
+    src = "www"
+)
+
+
+from ui import input, output, page
+ui = page.fluid(
     output.text("txt"),
     input.slider("n", "Choose n", 0, 100, 50),
     title = "Prism demo"
 )
-
 print(ui)
 
 
-def server(input: ReactiveValues, output: Outputs):
-    print("Running user server function")
-
-    @Reactive
-    def r():
-        print("Executing reactive r()")
-        return input["n"] * 2
-
-    @output.set("txt")
-    def _():
-        print("Executing output txt")
-        return f"r() is {r()}"
-
-    @output.set("txt2")
-    def _():
-        print("Executing output txt2")
-        return f"r() is {r()}"
 
 
-app = ShinyApp(ui, server)
 
-app.run()

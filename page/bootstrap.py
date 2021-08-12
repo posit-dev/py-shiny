@@ -1,8 +1,9 @@
 
-import dominate as dom
+from dominate.document import document
 import dominate.tags as tags
+from typing import Optional, Any
 
-def fluid(*args, title = None, theme = None, lang = None, **kwargs):
+def fluid(*args: Any, title: Optional[str] = None, theme: Optional[str] = None, lang: Optional[str] = None, **kwargs: Any) -> document:
     return bootstrap(
         tags.div(className = "container-fluid", *args, *kwargs),
         title = title,
@@ -10,11 +11,11 @@ def fluid(*args, title = None, theme = None, lang = None, **kwargs):
         lang = lang
     )
 
-def bootstrap(*args, title = None, theme = None, lang = None, **kwargs):
+def bootstrap(*args: Any, title: Optional[str] = None, theme: Optional[str] = None, lang: Optional[str] = None, **kwargs: Any) -> document:
     if not title:
       title = ''
-    
-    doc = dom.document(title=title)
+
+    doc = document(title=title)
 
     if lang:
       doc.set_attribute(lang, lang)
@@ -28,5 +29,5 @@ def bootstrap(*args, title = None, theme = None, lang = None, **kwargs):
     for arg in args:
       if arg:
         doc += arg
-    
+
     return doc

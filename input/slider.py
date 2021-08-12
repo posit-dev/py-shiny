@@ -1,10 +1,13 @@
+from typing import Optional, Tuple
 import dominate.tags as tags
 import datetime
 import math
 from .utils import shiny_input_label
+import numpy
 
-def slider(id, label, min, max, value, step = None, round = False, 
-           ticks = True, animate = False, width = None, sep = ",", pre = None, 
+def slider(id: str, label: str, min: float, max: float, value: Tuple[float, float],
+           step: Optional[float] = None, round: bool = False,
+           ticks = True, animate = False, width = None, sep = ",", pre = None,
            post = None, time_format = None, timezone = None, drag_range = True):
 
     value = value if isinstance(value, list) else [value]
@@ -54,7 +57,7 @@ def slider(id, label, min, max, value, step = None, round = False,
       "data_timezone": timezone
     }
 
-    if len(value) == 2: 
+    if len(value) == 2:
       props["data_type"] = "double"
       props["data_to"] = value[1]
       props["data_drag_interval"] = drag_range
@@ -63,7 +66,7 @@ def slider(id, label, min, max, value, step = None, round = False,
       props["data_time_format"] = "%F" if data_type == "date" else "%F %T"
 
     if width: props["style"] = "width:{width};"
-    
+
     # 1. ionRangeSlider wants attr = 'true'/'false'
     # 2. drop attr='None' (dominate should really do this automatically)
     props = {
@@ -93,9 +96,9 @@ def slider_type(x):
   return "number"
 
 
-import numpy
+
 def find_step_size(min, max):
-  # TODO: this is a naive version of shiny::findStepSize() that might be susceptible to 
+  # TODO: this is a naive version of shiny::findStepSize() that might be susceptible to
   # rounding errors? https://github.com/rstudio/shiny/pull/1956
   range = max - min
   if range < 2 or isinstance(min, float) or isinstance(max, float):
