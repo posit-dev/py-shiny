@@ -1,4 +1,9 @@
 from typing import Union, Callable, Any
+import re
+
+from fastapi import Request, Response
+from fastapi.responses import JSONResponse
+
 from .shinysession import ShinySession, Outputs
 from .reactives import ReactiveValues
 from . import reactcore
@@ -9,19 +14,19 @@ class ShinyApp:
     def __init__(self, ui: Any, server: Callable[[ReactiveValues, Outputs], None]) -> None:
         self.ui: Any = ui
         self.server: Callable[[ReactiveValues, Outputs], None] = server
-        self._sessions: dict[int, ShinySession] = {}
+        self._sessions: dict[str, ShinySession] = {}
         self._last_session_id: int = 0    # Counter for generating session IDs
 
         self._sessions_needing_flush: dict[int, ShinySession] = {}
 
     def create_session(self, conn: Connection) -> ShinySession:
         self._last_session_id += 1
-        id = self._last_session_id
+        id = str(self._last_session_id)
         session = ShinySession(self, id, conn)
         self._sessions[id] = session
         return session
 
-    def remove_session(self, session: Union[ShinySession, int]) -> None:
+    def remove_session(self, session: Union[ShinySession, str]) -> None:
         if (isinstance(session, ShinySession)):
             session = session.id
 
@@ -30,7 +35,8 @@ class ShinyApp:
 
     def run(self, conn_type: str = "websocket") -> None:
         if (conn_type == "websocket"):
-            self._conn_manager: ConnectionManager = FastAPIConnectionManager(self._on_connect_cb)
+            self._conn_manager: ConnectionManager = \
+                FastAPIConnectionManager(self._on_connect_cb, self._on_session_request_cb)
         elif (conn_type == "tcp"):
             self._conn_manager: ConnectionManager = TCPConnectionManager(self._on_connect_cb)
         else:
@@ -45,7 +51,22 @@ class ShinyApp:
         """Callback passed to the ConnectionManager, which is invoked when a new
         connection is established."""
         session = self.create_session(conn)
+
         await session.run()
+
+    async def _on_session_request_cb(self, request: Request) -> Response:
+        matches = re.search("^/session/([0-9a-f]+)(/.*)$", request.url.path)
+        if matches is None:
+            # Exact same response as a "normal" 404 from FastAPI.
+            return JSONResponse({"detail":"Not Found"}, status_code=404)
+
+        session_id = matches.group(1)
+        subpath = matches.group(2)
+
+        if session_id in self._sessions:
+            return JSONResponse({"session_id":session_id, "subpath":subpath}, status_code=200)
+        else:
+            return JSONResponse({"detail":"Not Found"}, status_code=404)
 
     def request_flush(self, session: ShinySession) -> None:
         # TODO: Until we have reactive domains, because we can't yet keep track

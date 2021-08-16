@@ -22,7 +22,6 @@ class ConnectionManager:
     def set_ui_path(self, path: str) -> None:
         raise NotImplementedError
 
-
 class ConnectionClosed(Exception):
     """Raised when a Connection is closed from the other side."""
     pass
@@ -32,7 +31,7 @@ class ConnectionClosed(Exception):
 # FastAPIConnection / FastAPIConnectionManager
 # =============================================================================
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
@@ -53,24 +52,32 @@ class FastAPIConnection(Connection):
 class FastAPIConnectionManager(ConnectionManager):
     """Implementation of ConnectionManager which listens on a HTTP port to serve a web
     page, and also listens for WebSocket connections."""
-    def __init__(self, on_connect_cb: Callable[[Connection], Awaitable[None]]) -> None:
+    def __init__(
+        self,
+        on_connect_cb: Callable[[Connection], Awaitable[None]],
+        on_session_request_cb: Callable[[Request], Awaitable[Response]]
+    ) -> None:
         self._ui_path: Optional[str] = None
         self._on_connect_cb: Callable[[Connection], Awaitable[None]] = on_connect_cb
+        self._on_session_request_cb: Callable[[Request], Awaitable[Response]] = on_session_request_cb
         self._fastapi_app: FastAPI = FastAPI()
 
         @self._fastapi_app.get("/")
-        async def get():
+        async def get() -> Response:
             if self._ui_path is None:
                 return HTMLResponse(self.html)
             else:
                 return FileResponse(os.path.join(self._ui_path, "index.html"))
-
 
         self._fastapi_app.mount(
             "/shared",
             StaticFiles(directory = os.path.join(os.path.dirname(__file__), "www/shared")),
             name = "shared"
         )
+
+        @self._fastapi_app.api_route("/session/{path:path}", methods=["GET", "POST"])
+        async def route_session_request(request: Request, path: str) -> Response:
+            return await self._on_session_request_cb(request)
 
         @self._fastapi_app.websocket("/websocket/")
         async def websocket_endpoint(websocket: WebSocket):
@@ -86,6 +93,7 @@ class FastAPIConnectionManager(ConnectionManager):
 
     def set_ui_path(self, path: str) -> None:
         self._ui_path = path
+
 
 
     html = """

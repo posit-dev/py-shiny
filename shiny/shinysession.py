@@ -14,9 +14,9 @@ from . import render
 
 
 class ShinySession:
-    def __init__(self, app: 'ShinyApp', id: int, conn: Connection) -> None:
+    def __init__(self, app: 'ShinyApp', id: str, conn: Connection) -> None:
         self._app: ShinyApp = app
-        self.id: int = id
+        self.id: str = id
         self._conn: Connection = conn
 
         self.input: ReactiveValues = ReactiveValues()
@@ -61,7 +61,9 @@ class ShinySession:
             # closed. This is needed so that the consumer knows to stop.
             self._message_queue_in.put_nowait(None)
 
-
+    # ==========================================================================
+    # Inbound message handling
+    # ==========================================================================
     async def _message_queue_in_consumer(self) -> None:
         while True:
             message = await self._message_queue_in.get()
@@ -70,20 +72,61 @@ class ShinySession:
             if message is None:
                 return
 
-            if message["method"] in ["init", "update"]:
-                data: dict[str, Any] = message["data"]
-                for (key, val) in data.items():
-                    if ":" in key:
-                        key = key.split(":")[0]
+            if message["method"] == "init":
+                self._manage_inputs(message["data"])
 
-                    self.input[key] = val
+            elif message["method"] == "update":
+                self._manage_inputs(message["data"])
+
+            else:
+                 self._dispatch(message)
 
             self.request_flush()
 
             await self._app.flush_pending_sessions()
 
 
-    # Pending messages
+    def _manage_inputs(self, data: dict[str, Any]) -> None:
+        for (key, val) in data.items():
+            if ":" in key:
+                key = key.split(":")[0]
+
+            self.input[key] = val
+
+    def _dispatch(self, message: dict[str, Any]) -> None:
+        if "method" not in message:
+            self._send_error_response("Message does not contain 'method'.")
+            return
+
+        try:
+            method = "_handle_message_" + message["method"]
+            func = getattr(self, method)
+        except AttributeError:
+            self._send_error_response("Unknown method: " + message["method"])
+            return
+
+        try:
+            # TODO: handle `blobs`
+            func(*message["args"])
+        except Exception as e:
+            self._send_error_response("Error" + str(e))
+
+    def _handle_message_uploadInit(self, file_infos: list[dict[str, Any]]) -> None:
+        print("uploadInit")
+        print(file_infos)
+
+        # TODO: Don't alter message in place?
+        for fi in file_infos:
+            if "type" not in fi:
+                # TODO: Infer file type
+                fi["type"] = "application/octet-stream"
+
+        print(file_infos)
+
+
+    # ==========================================================================
+    # Outbound message handling
+    # ==========================================================================
     def add_message_out(self, message: dict[str, Any]) -> None:
         self._message_queue_out.append(message)
 
@@ -102,6 +145,13 @@ class ShinySession:
         )
         await self._conn.send(json.dumps(message))
 
+    def _send_error_response(self, message_str: str) -> None:
+        print("_send_error_response: " + message_str)
+        pass
+
+    # ==========================================================================
+    # Flush
+    # ==========================================================================
     def request_flush(self) -> None:
         self._app.request_flush(self)
 
