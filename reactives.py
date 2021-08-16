@@ -210,3 +210,47 @@ if (__name__ == '__main__'):
     # reactcore.flush()
 
     # rv = ReactiveValues(a=1, b=2, x=3)
+
+
+    # =========================================================================
+    # Async reactivity tests
+
+    x = ReactiveVal(1)
+
+    r_count = 0
+    o_count = 0
+
+    async def react_chain(n):
+
+        @Reactive
+        async def r():
+            global r_count
+            r_count += 1
+            print(f"Reactive r{n}")
+            await asyncio.sleep(0)
+            return x() + 10
+
+        @Observer
+        async def o():
+            global o_count
+            o_count += 1
+            print(f"Observer o{n}")
+            val = await r()
+            print(val + n * 100)
+
+        await reactcore.flush()
+
+
+    async def go():
+        await asyncio.gather(
+            react_chain(1),
+            react_chain(2)
+        )
+
+    asyncio.run(go())
+
+    print(f"r_count: {r_count}")
+    print(f"o_count: {o_count}")
+
+    assert r_count == 2
+    assert o_count == 2
