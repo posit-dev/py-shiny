@@ -65,6 +65,7 @@ class Reactive:
         self._running: bool = False
         self._most_recent_ctx_id: int = -1
         self._ctx: Optional[Context] = None
+        self._exec_count: int = 0
 
         self._value: Any = None
         self._error: bool = False
@@ -89,6 +90,7 @@ class Reactive:
 
         self._ctx.on_invalidate(self._on_invalidate_cb)
 
+        self._exec_count += 1
         self._invalidated = False
 
         was_running = self._running
@@ -122,6 +124,7 @@ class Observer:
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._destroyed: bool = False
         self._ctx: Optional[Context] = None
+        self._exec_count: int = 0
 
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
@@ -156,6 +159,7 @@ class Observer:
 
     def run(self) -> None:
         ctx = self._create_context()
+        self._exec_count += 1
         ctx.run(self._func)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
