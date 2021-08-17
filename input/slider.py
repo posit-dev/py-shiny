@@ -1,16 +1,20 @@
-from typing import Optional, Tuple
-import dominate.tags as tags
-import datetime
-import math
+from typing import Optional, Union, Tuple
+from htmltools import tags, tag
+from datetime import date, datetime
 from .utils import shiny_input_label
+import math
 import numpy
 
-def slider(id: str, label: str, min: float, max: float, value: Tuple[float, float],
-           step: Optional[float] = None, round: bool = False,
-           ticks = True, animate = False, width = None, sep = ",", pre = None,
-           post = None, time_format = None, timezone = None, drag_range = True):
+SliderVal = Union[float, date, datetime]
+SliderVals = Union[SliderVal, Tuple[SliderVal, SliderVal]]
 
-    value = value if isinstance(value, list) else [value]
+def slider(id: str, label: str, min: SliderVal, max: SliderVal, value: SliderVals,
+           step: Optional[SliderVal] = None, round: bool = False, ticks: bool = True,
+           animate: bool = False, width: Optional[str] = None,
+           sep = ",", pre = None, post = None, time_format: Optional[str] = None,
+           timezone: Optional[str] = None, drag_range: bool = True) -> tag:
+
+    value = value if isinstance(value, tuple) else (value, )
 
     # TODO: validate min/max/value?
     data_type = get_slider_type(min, max, value)
@@ -19,7 +23,7 @@ def slider(id: str, label: str, min: float, max: float, value: Tuple[float, floa
       step = find_step_size(min, max)
 
     # Convert values to milliseconds since epoch (this is the value JS uses)
-    if data_type[0:4] == "date":
+    if data_type == "date":
       # TODO: Find step size in ms
       #step  = to_ms(max) - to_ms(max - step)
       min   = min.timestamp() * 1000
@@ -73,25 +77,27 @@ def slider(id: str, label: str, min: float, max: float, value: Tuple[float, floa
       k: str(v).lower() if isinstance(v, bool) else v for k, v in props.items() if v is not None
     }
 
-    container = tags.div(className = "form-group shiny-input-container")
-    container += shiny_input_label(id, label)
-    container += tags.input_(props)
+    container = tags.div(
+      shiny_input_label(id, label),
+      tags.input(**props),
+      className = "form-group shiny-input-container"
+    )
 
     return container
 
 
-def get_slider_type(min, max, value):
-    vals = [min, max] + value
+def get_slider_type(min: SliderVal, max: SliderVal, value: SliderVals) -> str:
+    vals = (min, max) + value
     type = set(map(slider_type, vals))
     if len(type) == 1 :
       return type.pop()
     else :
       raise Exception(f"slider()'s `min`, `max`, and `value` arguments must be all the same type, but were given multiple: {type}")
 
-def slider_type(x):
-  if isinstance(x, datetime.date):
+def slider_type(x: SliderVal) -> str:
+  if isinstance(x, date):
       return "date"
-  if isinstance(x, datetime.datetime):
+  if isinstance(x, datetime):
       return "datetime"
   return "number"
 
