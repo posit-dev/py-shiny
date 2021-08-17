@@ -9,16 +9,16 @@ def wrap_async(fn: Callable[[], Union[T, Awaitable[T]]]) -> Tuple[Callable[[], A
     Wrap a synchronous function that returns T, and return an async function
     that wraps the original function. If input is an async function, simply
     return the function. This also returns a boolean indicating whether the
-    function was wrapped.
+    input function was async.
     """
     if inspect.iscoroutinefunction(fn):
-        return typing.cast(Callable[[], Awaitable[T]], fn), False
+        return typing.cast(Callable[[], Awaitable[T]], fn), True
     else:
         fn_sync = typing.cast(Callable[[], T], fn)
         async def fn_async() -> T:
             return fn_sync()
 
-        return fn_async, True
+        return fn_async, False
 
 
 def run_coro(coro: Coroutine[Any, Any, T]) -> T:

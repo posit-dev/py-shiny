@@ -42,7 +42,6 @@ class ReactiveValues:
         else:
             self._map[key] = ReactiveVal(value)
 
-
     def __getitem__(self, key: str) -> Any:
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
@@ -60,7 +59,7 @@ class ReactiveValues:
 class Reactive:
     def __init__(self, func: Callable[[], Union[Any, Awaitable[Any]]]) -> None:
         self._func: Callable[[], Awaitable[None]]
-        self._func, self._create_task = utils.wrap_async(func)
+        self._func, self._is_async = utils.wrap_async(func)
 
         self._dependents: Dependents = Dependents()
         self._invalidated: bool = True
@@ -72,8 +71,13 @@ class Reactive:
         self._value: Any = None
         self._error: bool = False
 
-    async def __call__(self) -> Any:
-        return await self.get_value()
+    def __call__(self) -> Union[Any, Awaitable[Any]]:
+        if self._is_async:
+            # Return the Coroutine object
+            return self.get_value()
+        else:
+            # Run the Coroutine until completion, and then return the value.
+            return utils.run_coro(self.get_value())
 
     async def get_value(self) -> Any:
         self._dependents.register()
@@ -99,7 +103,7 @@ class Reactive:
         self._running = True
 
         try:
-            await self._ctx.run(self._run_func, self._create_task)
+            await self._ctx.run(self._run_func, create_task=self._is_async)
         finally:
             self._running = was_running
 
@@ -121,7 +125,7 @@ class Reactive:
 class Observer:
     def __init__(self, func: Callable[[], Union[None, Awaitable[None]]]) -> None:
         self._func: Callable[[], Awaitable[None]]
-        self._func, self._create_task = utils.wrap_async(func)
+        self._func, self._is_async = utils.wrap_async(func)
 
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._destroyed: bool = False
@@ -163,7 +167,7 @@ class Observer:
         ctx = self._create_context()
         self._exec_count += 1
 
-        await ctx.run(self._func, self._create_task)
+        await ctx.run(self._func, create_task=self._is_async)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
         self._invalidate_callbacks.append(callback)
@@ -202,7 +206,8 @@ if (__name__ == '__main__'):
         print("Executing user observer function")
         global o_count
         o_count += 1
-        print(await r() + o_count*100)
+        val = r()
+        print(val + o_count*100)
 
     x(4)
 
@@ -216,14 +221,11 @@ if (__name__ == '__main__'):
     # Should print '225'
     asyncio.run(reactcore.flush())
 
-    # rv = ReactiveValues(a=1, b=2, x=3)
 
 
     print("================================")
     print("Async reactivity")
     print("================================")
-    # =========================================================================
-    # Async reactivity tests
 
     import asyncio
 
