@@ -1,7 +1,7 @@
-from typing import Optional, Any, Callable, Awaitable
+from typing import Optional, Any, Callable, Awaitable, Union
 from reactcore import Context, Dependents
 import reactcore
-
+import utils
 
 class ReactiveVal:
     def __init__(self, value: Any) -> None:
@@ -58,8 +58,10 @@ class ReactiveValues:
 
 
 class Reactive:
-    def __init__(self, func: Callable[[], Awaitable[Any]]) -> None:
-        self._func: Callable[[], Awaitable[Any]] = func
+    def __init__(self, func: Callable[[], Union[Any, Awaitable[Any]]]) -> None:
+        self._func: Callable[[], Awaitable[None]]
+        self._func, self._create_task = utils.wrap_async(func)
+
         self._dependents: Dependents = Dependents()
         self._invalidated: bool = True
         self._running: bool = False
@@ -96,10 +98,10 @@ class Reactive:
         was_running = self._running
         self._running = True
 
-        await self._ctx.run(self._run_func)
-
-        # TODO: This should be guaranteed to run; maybe use try?
-        self._running = was_running
+        try:
+            await self._ctx.run(self._run_func, self._create_task)
+        finally:
+            self._running = was_running
 
     def _on_invalidate_cb(self) -> None:
         self._invalidated = True
@@ -116,10 +118,11 @@ class Reactive:
             self._value = err
 
 
-
 class Observer:
-    def __init__(self, func: Callable[[], Awaitable[None]]) -> None:
-        self._func: Callable[[], Awaitable[None]] = func
+    def __init__(self, func: Callable[[], Union[None, Awaitable[None]]]) -> None:
+        self._func: Callable[[], Awaitable[None]]
+        self._func, self._create_task = utils.wrap_async(func)
+
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._destroyed: bool = False
         self._ctx: Optional[Context] = None
@@ -159,7 +162,8 @@ class Observer:
     async def run(self) -> None:
         ctx = self._create_context()
         self._exec_count += 1
-        await ctx.run(self._func)
+
+        await ctx.run(self._func, self._create_task)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
         self._invalidate_callbacks.append(callback)
@@ -173,47 +177,55 @@ class Observer:
 
 
 if (__name__ == '__main__'):
+    import asyncio
+
+    print("================================")
+    print("Synchronous reactivity")
+    print("================================")
+
     x = ReactiveVal(1)
     x(2)
 
     r_count = 0
     @Reactive
-    async def r():
+    def r():
         print("Executing user reactive function")
         global r_count
         r_count += 1
         return x() + r_count*10
 
-    x(3)
+    # x(3)
 
     o_count = 0
     @Observer
-    async def xx():
+    def xx():
         print("Executing user observer function")
         global o_count
         o_count += 1
-        r_val = await r()
-        # print(r_val)
-        print(r_val + o_count*100)
+        print(await r() + o_count*100)
 
     x(4)
 
-    import asyncio
     # Should print '114'
     asyncio.run(reactcore.flush())
 
     # Should do nothing
     asyncio.run(reactcore.flush())
 
-    # x(5)
-    # # Should print '225'
-    # reactcore.flush()
+    x(5)
+    # Should print '225'
+    asyncio.run(reactcore.flush())
 
     # rv = ReactiveValues(a=1, b=2, x=3)
 
 
+    print("================================")
+    print("Async reactivity")
+    print("================================")
     # =========================================================================
     # Async reactivity tests
+
+    import asyncio
 
     x = ReactiveVal(1)
 
@@ -226,19 +238,22 @@ if (__name__ == '__main__'):
         async def r():
             global r_count
             r_count += 1
-            print(f"Reactive r{n}")
+            print(f"Reactive r{n} 1")
             await asyncio.sleep(0)
+            print(f"Reactive r{n} 2")
             return x() + 10
 
         @Observer
         async def o():
             global o_count
             o_count += 1
-            print(f"Observer o{n}")
+            print(f"Observer o{n} 1")
+            await asyncio.sleep(0)
+            print(f"Observer o{n} 2")
             val = await r()
             print(val + n * 100)
 
-        await reactcore.flush()
+        # await reactcore.flush()
 
 
     async def go():
@@ -247,10 +262,16 @@ if (__name__ == '__main__'):
             react_chain(2)
         )
 
+        await reactcore.flush()
+
+        x(5)
+        await reactcore.flush()
+
+
     asyncio.run(go())
 
     print(f"r_count: {r_count}")
     print(f"o_count: {o_count}")
 
-    assert r_count == 2
-    assert o_count == 2
+    assert r_count == 4
+    assert o_count == 4

@@ -1,4 +1,6 @@
 from typing import Callable, Optional, Awaitable
+from contextvars import ContextVar
+import asyncio
 
 class Context:
     """A reactive context"""
@@ -9,10 +11,10 @@ class Context:
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._flush_callbacks: list[Callable[[], Awaitable[None]]] = []
 
-    async def run(self, func: Callable[[], Awaitable[None]]) -> None:
+    async def run(self, func: Callable[[], Awaitable[None]], create_task: bool) -> None:
         """Run the provided function in this context"""
         env = _reactive_environment
-        await env.run_with(self, func)
+        await env.run_with(self, func, create_task)
 
     def invalidate(self) -> None:
         """Invalidate this context. It will immediately call the callbacks
@@ -82,7 +84,7 @@ class ReactiveEnvironment:
     """The reactive environment"""
 
     def __init__(self) -> None:
-        self._context_stack: list[Context] = []
+        self._current_context: ContextVar[Optional[Context]] = ContextVar("current_context", default = None)
         self._next_id: int = 0
         self._pending_flush: list[Context] = []
 
@@ -94,28 +96,40 @@ class ReactiveEnvironment:
 
     def current_context(self) -> Context:
         """Return the current Context object"""
-        if not self._context_stack:
+        ctx = self._current_context.get()
+        if ctx is None:
             raise Exception("No current context")
+        return ctx
 
-        # The Context at the top of the stack.
-        return self._context_stack[-1]
+    async def run_with(self, ctx: Context, context_func: Callable[[], Awaitable[None]], create_task: bool) -> None:
 
-    async def run_with(self, ctx: Context, contextFunc: Callable[[], Awaitable[None]]) -> None:
-        self._context_stack.append(ctx)
-        try:
-            await contextFunc()
-        finally:
-            self._context_stack.pop()
+        async def wrapper() -> None:
+            old = self._current_context.set(ctx)
+            try:
+                await context_func()
+            finally:
+                self._current_context.reset(old)
+
+        if not create_task:
+            await wrapper()
+        else:
+            await asyncio.create_task(wrapper())
 
     async def flush(self) -> None:
         """Flush all pending operations"""
-        for ctx in self._pending_flush:
+
+        # tasks: list[Coroutine[Any, Any, None]] = []
+        while self._pending_flush:
+            # Take the first element
+            ctx = self._pending_flush.pop(0)
+
             try:
                 await ctx.execute_flush_callbacks()
             finally:
                 pass
 
-        self._pending_flush.clear()
+        # await asyncio.gather(*tasks)
+
 
     def add_pending_flush(self, ctx: Context) -> None:
         self._pending_flush.append(ctx)
