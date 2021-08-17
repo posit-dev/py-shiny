@@ -9,6 +9,7 @@ First, clone this repository. Then run:
 
 ```sh
 pip install -r requirements.txt
+make install
 ```
 
 To run an example app:

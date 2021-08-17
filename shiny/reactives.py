@@ -1,7 +1,8 @@
 from typing import Optional, Any, Callable, Awaitable, Union
-from reactcore import Context, Dependents
-import reactcore
-import utils
+
+from .reactcore import Context, Dependents
+from . import reactcore
+from . import utils
 
 class ReactiveVal:
     def __init__(self, value: Any) -> None:

@@ -1,8 +1,8 @@
 from typing import Union, Callable, Any
-from shinysession import ShinySession, Outputs
-from reactives import ReactiveValues
-import reactcore
-from connmanager import ConnectionManager, Connection, FastAPIConnectionManager, TCPConnectionManager
+from .shinysession import ShinySession, Outputs
+from .reactives import ReactiveValues
+from . import reactcore
+from .connmanager import ConnectionManager, Connection, FastAPIConnectionManager, TCPConnectionManager
 
 
 class ShinyApp:
