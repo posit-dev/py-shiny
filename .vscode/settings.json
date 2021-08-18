@@ -2,6 +2,6 @@
     "files.trimTrailingWhitespace": true,
     "python.analysis.typeCheckingMode": "strict",
     "files.exclude": {
-        "__pycache__": true
+        "**/__pycache__": true
     }
 }
