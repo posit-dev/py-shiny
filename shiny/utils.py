@@ -1,4 +1,4 @@
-from typing import Callable, Awaitable, Union, TypeVar, Tuple, Coroutine, Any
+from typing import Callable, Awaitable, Union, TypeVar, Coroutine, Any
 import inspect
 import typing
 
@@ -33,6 +33,9 @@ def run_coro_sync(coro: Coroutine[Any, Any, T]) -> T:
     loop. Note that a `yield` in a (non-awaited) generator function will not
     give up control.
     """
+    if not inspect.iscoroutine(coro):
+        raise TypeError("run_coro_sync requires a Coroutine object.")
+
     try:
         coro.send(None)
     except StopIteration as e:
