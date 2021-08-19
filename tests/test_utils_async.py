@@ -4,8 +4,7 @@
 
 import pytest
 import asyncio
-from typing import Any, Iterator
-import types
+from typing import Iterator
 
 from shiny.utils import run_coro_sync
 
@@ -18,15 +17,6 @@ def range_sync(n: int) -> Iterator[int]:
     while num < n:
         yield num
         num += 1
-
-@types.coroutine
-def sleep0() -> None:
-    """
-    This is essentially the same as `asyncio.sleep(0)`. Because it's decorated
-    with `@types.coroutine` AND has a `yield`, when called with `await
-    sleep0()`, it actually gives up control.
-    """
-    yield
 
 async def make_list_sync(n: int) -> list[int]:
     """
@@ -42,7 +32,7 @@ async def make_list_async(n: int) -> list[int]:
     """An `async` function that gives up control."""
     x: list[int] = []
     for i in range_sync(n):
-        await sleep0()
+        await asyncio.sleep(0)
         x.append(i)
     return x
 
@@ -56,17 +46,14 @@ def test_run_coro_sync():
     res = run_coro_sync(make_list_sync(3))
     assert res == [0, 1, 2]
 
-    # Should error because the sleep0() gives up control.
+    # Should error because the asyncio.sleep() gives up control.
     with pytest.raises(RuntimeError):
         run_coro_sync(make_list_async(1))
 
     with pytest.raises(RuntimeError):
         run_coro_sync(make_list_async(3))
 
-    # Same with a direct call to sleep0() or asyncio.sleep()
-    with pytest.raises(RuntimeError):
-       run_coro_sync(sleep0())
-
+    # Same with a direct call to asyncio.sleep()
     with pytest.raises(RuntimeError):
        run_coro_sync(asyncio.sleep(0))
 
@@ -84,7 +71,7 @@ def test_run_coro_async():
         res = await make_list_async(3)
         assert res == [0, 1, 2]
 
-        await sleep0()
+        await asyncio.sleep(0)
 
         # Calling run_coro_sync() should be the same as when called normally
         # (from a regular function, not an async function run by asyncio.run()).
@@ -94,7 +81,57 @@ def test_run_coro_async():
         with pytest.raises(RuntimeError):
             run_coro_sync(make_list_async(3))
         with pytest.raises(RuntimeError):
-            run_coro_sync(sleep0())
-
+            run_coro_sync(asyncio.sleep(0))
 
     asyncio.run(async_main())
+
+
+def test_run_coro_sync_type_check():
+    # Should raise an error if passed a regular generator (as opposed to a
+    # coroutine object).
+    with pytest.raises(TypeError):
+        run_coro_sync(range_sync(0))
+
+
+def test_async_generator():
+    # run_coro_sync() can't run async generators, but it can run async functions
+    # which call async generators.
+
+    # An async generator
+    async def async_gen_range(n):
+        for i in range(n):
+            yield i
+
+    # An async function which uses the generator
+    async def main(n):
+        x: list[int] = []
+        async for i in async_gen_range(n):
+            x.append(i)
+        return x
+
+    # Running the async function works fine.
+    res = run_coro_sync(main(3))
+    assert res == [0, 1, 2]
+
+    # Attempting to run the async generator results in an error, because it
+    # doesn't return a coroutine object.
+    with pytest.raises(TypeError):
+        run_coro_sync(async_gen_range(3))
+
+
+
+def test_create_task():
+    # Should be OK to call create_task().
+    async def create_task_wrapper():
+        async def inner():
+            asyncio.create_task(make_list_async(3))
+        run_coro_sync(inner())
+    asyncio.run(create_task_wrapper())
+
+    # Should not be OK to await a task, because it doesn't complete immediately.
+    async def create_task_wrapper():
+        async def inner():
+            await asyncio.create_task(make_list_async(3))
+        run_coro_sync(inner())
+    with pytest.raises(RuntimeError):
+        asyncio.run(create_task_wrapper())
