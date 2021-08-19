@@ -1,4 +1,5 @@
 from typing import Optional, Any, Callable, Awaitable, Union
+import inspect
 
 from .reactcore import Context, Dependents
 from . import reactcore
@@ -58,9 +59,12 @@ class ReactiveValues:
 
 
 class Reactive:
-    def __init__(self, func: Callable[[], Union[Any, Awaitable[Any]]]) -> None:
-        self._func: Callable[[], Awaitable[None]]
-        self._func, self._is_async = utils.wrap_async(func)
+    def __init__(self, func: Callable[[], Any]) -> None:
+        if inspect.iscoroutinefunction(func):
+            raise TypeError("Reactive requires a non-async function")
+
+        self._func: Callable[[], Any] = utils.wrap_async(func)
+        self._is_async: bool = False
 
         self._dependents: Dependents = Dependents()
         self._invalidated: bool = True
@@ -72,13 +76,10 @@ class Reactive:
         self._value: Any = None
         self._error: bool = False
 
-    def __call__(self) -> Union[Any, Awaitable[Any]]:
-        if self._is_async:
-            # Return the Coroutine object
-            return self.get_value()
-        else:
-            # Run the Coroutine until completion, and then return the value.
-            return utils.run_coro(self.get_value())
+    def __call__(self) -> Any:
+        # Run the Coroutine (synchronously), and then return the value.
+        # If the Coroutine yields control, then an error will be raised.
+        return utils.run_coro_sync(self.get_value())
 
     async def get_value(self) -> Any:
         self._dependents.register()
@@ -123,10 +124,28 @@ class Reactive:
             self._value = err
 
 
+class ReactiveAsync(Reactive):
+    def __init__(self, func: Callable[[], Awaitable[Any]]) -> None:
+        if not inspect.iscoroutinefunction(func):
+            raise TypeError("ReactiveAsync requires an async function")
+
+        # Init the Reactive base class with a placeholder synchronous function
+        # so it won't throw an error, then replace it with the async function.
+        super().__init__(lambda: None)
+        self._func: Callable[[], Awaitable[Any]] = func
+        self._is_async = True
+
+    async def __call__(self) -> Any:
+        return await self.get_value()
+
+
 class Observer:
     def __init__(self, func: Callable[[], Union[None, Awaitable[None]]]) -> None:
-        self._func: Callable[[], Awaitable[None]]
-        self._func, self._is_async = utils.wrap_async(func)
+        if inspect.iscoroutinefunction(func):
+            raise TypeError("Observer requires a non-async function")
+
+        self._func: Callable[[], Awaitable[None]] = utils.wrap_async(func)
+        self._is_async: bool = False
 
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._destroyed: bool = False
@@ -178,6 +197,18 @@ class Observer:
 
         if (self._ctx is not None):
             self._ctx.invalidate()
+
+
+class ObserverAsync(Observer):
+    def __init__(self, func: Callable[[], Awaitable[None]]) -> None:
+        if not inspect.iscoroutinefunction(func):
+            raise TypeError("ObserverAsync requires an async function")
+
+        # Init the Observer base class with a placeholder synchronous function
+        # so it won't throw an error, then replace it with the async function.
+        super().__init__(lambda: None)
+        self._func: Callable[[], Awaitable[None]] = func
+        self._is_async = True
 
 
 
@@ -237,7 +268,7 @@ if (__name__ == '__main__'):
 
     async def react_chain(n):
 
-        @Reactive
+        @ReactiveAsync
         async def r():
             global r_count
             r_count += 1
@@ -246,7 +277,7 @@ if (__name__ == '__main__'):
             print(f"Reactive r{n} 2")
             return x() + 10
 
-        @Observer
+        @ObserverAsync
         async def o():
             global o_count
             o_count += 1
@@ -254,6 +285,7 @@ if (__name__ == '__main__'):
             await asyncio.sleep(0)
             print(f"Observer o{n} 2")
             val = await r()
+            print(f"Observer o{n} 3")
             print(val + n * 100)
 
         # await reactcore.flush()
