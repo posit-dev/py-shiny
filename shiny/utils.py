@@ -16,6 +16,10 @@ def wrap_async(fn: Callable[[], Union[T, Awaitable[T]]]) -> Callable[[], Awaitab
     return fn_async
 
 
+# See https://stackoverflow.com/a/59780868/412655 for an excellent explanation
+# of how this stuff works.
+# For a more in-depth explanation, see
+# https://snarky.ca/how-the-heck-does-async-await-work-in-python-3-5/.
 def run_coro_sync(coro: Coroutine[Any, Any, T]) -> T:
     """
     Run a coroutine that is in fact synchronous. Given a coroutine (which is
@@ -23,15 +27,14 @@ def run_coro_sync(coro: Coroutine[Any, Any, T]) -> T:
     coroutine for one iteration. If the coroutine completes, then return the
     value. If it does not complete, then it will throw a `RuntimeError`.
 
-    What it means to be "in fact synchronous": the coroutine must not give up
+    What it means to be "in fact synchronous": the coroutine must not yield
     control to the event loop. A coroutine may have an `await` expression in it,
-    and that may call another function that has an `await`, but not all `await`s
-    actually give up control. Things that do actually give up control are, for
-    example, `asyncio.sleep()`, and functions that wait for I/O. Similarly, a
-    `yield` statement in an awaited function (which must be decorated with
-    `@types.coroutine` to be awaitable) also will give up control to the event
-    loop. Note that a `yield` in a (non-awaited) generator function will not
-    give up control.
+    and that may call another function that has an `await`, but the chain will
+    only yield control if a `yield` statement bubbles through `await`s all the
+    way up. For example, `await asyncio.sleep(0)` will have a `yield` which
+    bubbles up to the next level. Note that a `yield` in a generator used the
+    regular way (not with `await`) will not bubble up, since it is not awaited
+    on.
     """
     if not inspect.iscoroutine(coro):
         raise TypeError("run_coro_sync requires a Coroutine object.")
