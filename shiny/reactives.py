@@ -4,7 +4,6 @@ import inspect
 from .reactcore import Context, Dependents
 from . import reactcore
 from . import utils
-from . import shinysession
 if TYPE_CHECKING:
     from .shinysession import ShinySession
 
@@ -62,6 +61,7 @@ class ReactiveValues:
 
 
 class Reactive:
+
     def __init__(self, func: Callable[[], Any]) -> None:
         if inspect.iscoroutinefunction(func):
             raise TypeError("Reactive requires a non-async function")
@@ -217,6 +217,9 @@ class ObserverAsync(Observer):
         self._func: Callable[[], Awaitable[None]] = func
         self._is_async = True
 
+
+# Import here at the bottom seems to fix a circular dependency problem.
+from . import shinysession
 
 
 if (__name__ == '__main__'):
