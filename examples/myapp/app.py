@@ -9,9 +9,14 @@
 import os
 import sys
 
+# This will load the shiny module dynamically, without having to install it.
+# This makes the debug/run cycle quicker.
+shiny_module_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, shiny_module_dir)
+
 from shiny.reactives import Reactive, ReactiveVal, ReactiveValues, Observer
 from shiny.shinyapp import ShinyApp
-from shiny.shinysession import Outputs
+from shiny.shinysession import Outputs, get_current_session
 
 # For plot rendering
 import shiny.render as render
@@ -23,20 +28,20 @@ shared_val = ReactiveVal(None)
 
 def server(input: ReactiveValues, output: Outputs):
     @Reactive
-    async def r():
+    def r():
         if input["n"] is None:
             return
         return input["n"] * 2
 
     @output.set("txt")
     async def _():
-        val = await r()
-        return f"n*2 is {val}"
+        val = r()
+        return f"n*2 is {val}, session id is {get_current_session().id}"
 
     # This observer watches n, and changes shared_val, which is shared across
     # all running sessions.
     @Observer
-    async def _():
+    def _():
         if input["n"] is None:
             return
         shared_val( input["n"] * 10 )
