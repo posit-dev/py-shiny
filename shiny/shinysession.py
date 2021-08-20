@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Callable, Any, Optional, Union
 if TYPE_CHECKING:
     from shinyapp import ShinyApp
 
-from .reactives import ReactiveValues, Observer
+from .reactives import ReactiveValues, Observer, ObserverAsync
 from .connmanager import Connection, ConnectionClosed
 from . import render
 
@@ -141,8 +141,8 @@ class Outputs:
             if name in self._output_obervers:
                 self._output_obervers[name].destroy()
 
-            @Observer
-            async def obs():
+            @ObserverAsync
+            async def output_obs():
                 await self._session.send_message({
                     "recalculating": {
                         "name": name,
@@ -165,7 +165,7 @@ class Outputs:
                     }
                 })
 
-            self._output_obervers[name] = obs
+            self._output_obervers[name] = output_obs
 
             return None
 
