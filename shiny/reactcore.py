@@ -1,5 +1,6 @@
 from typing import Callable, Optional, Awaitable
 from contextvars import ContextVar
+from asyncio import Task
 import asyncio
 
 class Context:
@@ -118,17 +119,23 @@ class ReactiveEnvironment:
     async def flush(self) -> None:
         """Flush all pending operations"""
 
-        # tasks: list[Coroutine[Any, Any, None]] = []
+        tasks: list[Task[None]] = []
         while self._pending_flush:
             # Take the first element
             ctx = self._pending_flush.pop(0)
 
             try:
-                await ctx.execute_flush_callbacks()
+                task: Task[None] = asyncio.create_task(ctx.execute_flush_callbacks())
+                tasks.append(task)
+
+                # Alternate method instead of storing the tasks in a list and
+                # calling gather() on them later, just run each observer in
+                # sequence.
+                # await ctx.execute_flush_callbacks()
             finally:
                 pass
 
-        # await asyncio.gather(*tasks)
+        await asyncio.gather(*tasks)
 
 
     def add_pending_flush(self, ctx: Context) -> None:
