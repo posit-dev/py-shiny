@@ -2,7 +2,8 @@ import json
 import re
 import asyncio
 import inspect
-
+from contextvars import ContextVar, Token
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Callable, Any, Optional, Union
 if TYPE_CHECKING:
     from shinyapp import ShinyApp
@@ -24,7 +25,8 @@ class ShinySession:
         self._message_queue_in: asyncio.Queue[Optional[dict[str, Any]]] = asyncio.Queue()
         self._message_queue_out: list[dict[str, str]] = []
 
-        self._app.server(self.input, self.output)
+        with session_context(self):
+            self._app.server(self.input, self.output)
 
     async def run(self) -> None:
         # SEND {"config":{"workerId":"","sessionId":"9d55970c321d821bb2c1b28da609e60b","user":null}}
@@ -168,3 +170,21 @@ class Outputs:
             return None
 
         return set_fn
+
+
+# ==============================================================================
+# Context manager for current session (AKA current reactive domain)
+# ==============================================================================
+_current_session: ContextVar[Optional[ShinySession]] = \
+    ContextVar("current_session", default = None)
+
+def get_current_session() -> Optional[ShinySession]:
+    return _current_session.get()
+
+@contextmanager
+def session_context(session: Optional[ShinySession]):
+    token: Token[Union[ShinySession, None]] = _current_session.set(session)
+    try:
+        yield
+    finally:
+        _current_session.reset(token)

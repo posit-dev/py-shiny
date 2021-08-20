@@ -1,9 +1,12 @@
-from typing import Optional, Any, Callable, Awaitable, Union
+from typing import TYPE_CHECKING, Optional, Any, Callable, Awaitable, Union
 import inspect
 
 from .reactcore import Context, Dependents
 from . import reactcore
 from . import utils
+from . import shinysession
+if TYPE_CHECKING:
+    from .shinysession import ShinySession
 
 class ReactiveVal:
     def __init__(self, value: Any) -> None:
@@ -72,6 +75,7 @@ class Reactive:
         self._most_recent_ctx_id: int = -1
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
+        self._session: Optional[ShinySession] = shinysession.get_current_session()
 
         self._value: Any = None
         self._error: bool = False
@@ -104,10 +108,11 @@ class Reactive:
         was_running = self._running
         self._running = True
 
-        try:
-            await self._ctx.run(self._run_func, create_task=self._is_async)
-        finally:
-            self._running = was_running
+        with shinysession.session_context(self._session):
+            try:
+                await self._ctx.run(self._run_func, create_task=self._is_async)
+            finally:
+                self._running = was_running
 
     def _on_invalidate_cb(self) -> None:
         self._invalidated = True
@@ -151,6 +156,7 @@ class Observer:
         self._destroyed: bool = False
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
+        self._session: Optional[ShinySession] = shinysession.get_current_session()
 
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
@@ -187,7 +193,8 @@ class Observer:
         ctx = self._create_context()
         self._exec_count += 1
 
-        await ctx.run(self._func, create_task=self._is_async)
+        with shinysession.session_context(self._session):
+            await ctx.run(self._func, create_task=self._is_async)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
         self._invalidate_callbacks.append(callback)
