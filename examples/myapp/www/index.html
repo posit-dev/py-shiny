@@ -24,6 +24,21 @@
           <label class="control-label" id="n-label" for="n">n</label>
           <input class="js-range-slider" id="n" data-skin="shiny" data-min="1" data-max="100" data-from="20" data-step="1" data-grid="true" data-grid-num="9.5" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-data-type="number"/>
         </div>
+        <div class="form-group shiny-input-container">
+          <label class="control-label" id="file1-label" for="file1">Choose File</label>
+          <div class="input-group">
+            <label class="input-group-btn input-group-prepend">
+              <span class="btn btn-default btn-file">
+                Browse...
+                <input id="file1" name="file1" type="file" style="position: absolute !important; top: -99999px !important; left: -99999px !important;" multiple="multiple"/>
+              </span>
+            </label>
+            <input type="text" class="form-control" placeholder="No file selected" readonly="readonly"/>
+          </div>
+          <div id="file1_progress" class="progress active shiny-file-input-progress">
+            <div class="progress-bar"></div>
+          </div>
+        </div>
       </form>
     </div>
     <div class="col-sm-8" role="main">

@@ -4,7 +4,7 @@ import re
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 
-from .shinysession import ShinySession, Outputs
+from .shinysession import ShinySession, Outputs, session_context
 from .reactives import ReactiveValues
 from . import reactcore
 from .connmanager import ConnectionManager, Connection, FastAPIConnectionManager, TCPConnectionManager
@@ -64,7 +64,9 @@ class ShinyApp:
         subpath = matches.group(2)
 
         if session_id in self._sessions:
-            return JSONResponse({"session_id":session_id, "subpath":subpath}, status_code=200)
+            session: ShinySession = self._sessions[session_id]
+            with session_context(session):
+                return await session.handle_request(request, subpath)
         else:
             return JSONResponse({"detail":"Not Found"}, status_code=404)
 

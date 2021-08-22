@@ -1,6 +1,22 @@
 from typing import Callable, Awaitable, Union, TypeVar, Coroutine, Any
 import inspect
 import typing
+import secrets
+
+# ==============================================================================
+# Misc utility functions
+# ==============================================================================
+def rand_hex(bytes: int) -> str:
+    """
+    Creates a random hexadecimal string of size `bytes`. The length in
+    characters will be bytes*2.
+    """
+    format_str = "{{:0{}x}}".format(bytes*2)
+    return format_str.format(secrets.randbits(bytes * 8))
+
+# ==============================================================================
+# Async-related functions
+# ==============================================================================
 
 T = TypeVar("T")
 

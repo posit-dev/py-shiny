@@ -4,14 +4,18 @@ import asyncio
 import inspect
 from contextvars import ContextVar, Token
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Callable, Any, Optional, Union
+from typing import TYPE_CHECKING, Callable, Any, Optional, Union, Awaitable
+
 if TYPE_CHECKING:
     from shinyapp import ShinyApp
+
+from fastapi import Request, Response
+from fastapi.responses import JSONResponse, HTMLResponse
 
 from .reactives import ReactiveValues, Observer, ObserverAsync
 from .connmanager import Connection, ConnectionClosed
 from . import render
-
+from .fileupload import FileUploadManager
 
 class ShinySession:
     def __init__(self, app: 'ShinyApp', id: str, conn: Connection) -> None:
@@ -24,6 +28,9 @@ class ShinySession:
 
         self._message_queue_in: asyncio.Queue[Optional[dict[str, Any]]] = asyncio.Queue()
         self._message_queue_out: list[dict[str, str]] = []
+
+        self._message_handlers: dict[str, Callable[..., Awaitable[dict[str, Any]]]] = self._create_message_handlers()
+        self._file_upload_manager: FileUploadManager = FileUploadManager()
 
         with session_context(self):
             self._app.server(self.input, self.output)
@@ -79,7 +86,7 @@ class ShinySession:
                 self._manage_inputs(message["data"])
 
             else:
-                 self._dispatch(message)
+                 await self._dispatch(message)
 
             self.request_flush()
 
@@ -93,35 +100,89 @@ class ShinySession:
 
             self.input[key] = val
 
-    def _dispatch(self, message: dict[str, Any]) -> None:
+    # ==========================================================================
+    # Message handlers
+    # ==========================================================================
+
+    async def _dispatch(self, message: dict[str, Any]) -> None:
         if "method" not in message:
             self._send_error_response("Message does not contain 'method'.")
             return
 
         try:
-            method = "_handle_message_" + message["method"]
-            func = getattr(self, method)
+            func = self._message_handlers[message["method"]]
         except AttributeError:
             self._send_error_response("Unknown method: " + message["method"])
             return
 
         try:
             # TODO: handle `blobs`
-            func(*message["args"])
+            value: dict[str, Any] = await func(*message["args"])
         except Exception as e:
-            self._send_error_response("Error" + str(e))
+            self._send_error_response("Error: " + str(e))
+            return
 
-    def _handle_message_uploadInit(self, file_infos: list[dict[str, Any]]) -> None:
-        print("uploadInit")
-        print(file_infos)
+        await self._send_response(message, value)
 
-        # TODO: Don't alter message in place?
-        for fi in file_infos:
-            if "type" not in fi:
-                # TODO: Infer file type
-                fi["type"] = "application/octet-stream"
+    async def _send_response(self, message: dict[str, Any], value: dict[str, Any]) -> None:
+        if "tag" not in message:
+            raise Warning("Tried to send response for untagged message; method: " +
+                          str(message['method']))
 
-        print(file_infos)
+        await self.send_message({
+            "response": {
+                "tag": message["tag"],
+                "value": value
+            }
+        })
+
+    # This is called during __init__.
+    def _create_message_handlers(self) -> dict[str, Callable[..., Awaitable[dict[str, Any]]]]:
+        async def uploadInit(file_infos: list[dict[str, Union[str, int]]]) -> dict[str, Any]:
+            with session_context(self):
+                print("uploadInit")
+                print(file_infos)
+
+                # TODO: Don't alter message in place?
+                for fi in file_infos:
+                    if "type" not in fi:
+                        # TODO: Infer file type
+                        fi["type"] = "application/octet-stream"
+
+                job_id = self._file_upload_manager.create_upload_operation(file_infos)
+                worker_id = ""
+                return {
+                    "jobId": job_id,
+                    "uploadUrl": f"session/{self.id}/upload/{job_id}?w={worker_id}"
+                }
+
+        async def uploadEnd(job_id: str, input_id: str) -> dict[str, Any]:
+            return {}
+
+        return {
+            "uploadInit": uploadInit,
+            "uploadEnd": uploadEnd,
+        }
+
+    # ==========================================================================
+    # Handling /session/{id}/{subpath} requests
+    # ==========================================================================
+    async def handle_request(self, request: Request, subpath: str) -> Response:
+        matches = re.search("^/([a-z]+)/(.*)$", subpath)
+
+        if not matches:
+            return HTMLResponse("<h1>Bad Request</h1>", 400)
+
+        if matches[1] == "upload" and request.method == "POST":
+            # check that upload operation exists
+            job_id = matches[2]
+            if not self._file_upload_manager.has_upload_operation(job_id):
+                return HTMLResponse("<h1>Bad Request</h1>", 400)
+
+            async for chunk in request.stream():
+                self._file_upload_manager.write_chunk(job_id, chunk)
+
+        return JSONResponse({"session_id":self.id, "subpath":subpath}, status_code=200)
 
 
     # ==========================================================================

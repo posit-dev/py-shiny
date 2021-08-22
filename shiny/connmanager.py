@@ -75,8 +75,8 @@ class FastAPIConnectionManager(ConnectionManager):
             name = "shared"
         )
 
-        @self._fastapi_app.api_route("/session/{path:path}", methods=["GET", "POST"])
-        async def route_session_request(request: Request, path: str) -> Response:
+        @self._fastapi_app.api_route("/session/{rest_of_path:path}", methods=["GET", "POST"])
+        async def route_session_request(request: Request) -> Response:
             return await self._on_session_request_cb(request)
 
         @self._fastapi_app.websocket("/websocket/")
