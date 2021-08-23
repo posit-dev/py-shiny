@@ -1,7 +1,7 @@
 library(htmltools)
 library(bslib)
 
-www <- file.path(getwd(), "www")
+www <- file.path(getwd(), "shiny", "www")
 unlink(www, recursive = TRUE)
 dir.create(www)
 
@@ -25,6 +25,6 @@ unlink(Sys.glob(file.path(www, "shared", "jquery*")))
 deps <- bs_theme_dependencies(bs_theme(version = 5))
 withr::with_options(
   list(htmltools.dir.version = FALSE),
-  lapply(deps, copyDependencyToDir, "www/shared")
+  lapply(deps, copyDependencyToDir, "shiny/www/shared")
 )
 
