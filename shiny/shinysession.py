@@ -2,6 +2,7 @@ import json
 import re
 import asyncio
 import inspect
+import warnings
 from contextvars import ContextVar, Token
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Callable, Any, Optional, Union, Awaitable
@@ -117,17 +118,18 @@ class ShinySession:
 
         try:
             # TODO: handle `blobs`
-            value: dict[str, Any] = await func(*message["args"])
+            value: Any = await func(*message["args"])
         except Exception as e:
             self._send_error_response("Error: " + str(e))
             return
 
         await self._send_response(message, value)
 
-    async def _send_response(self, message: dict[str, Any], value: dict[str, Any]) -> None:
+    async def _send_response(self, message: dict[str, Any], value: Any) -> None:
         if "tag" not in message:
-            raise Warning("Tried to send response for untagged message; method: " +
-                          str(message['method']))
+            warnings.warn("Tried to send response for untagged message; method: " +
+                          str(message["method"]))
+            return
 
         await self.send_message({
             "response": {
@@ -137,7 +139,7 @@ class ShinySession:
         })
 
     # This is called during __init__.
-    def _create_message_handlers(self) -> dict[str, Callable[..., Awaitable[dict[str, Any]]]]:
+    def _create_message_handlers(self) -> dict[str, Callable[..., Awaitable[Any]]]:
         async def uploadInit(file_infos: list[dict[str, Union[str, int]]]) -> dict[str, Any]:
             with session_context(self):
                 print("uploadInit")
@@ -156,8 +158,15 @@ class ShinySession:
                     "uploadUrl": f"session/{self.id}/upload/{job_id}?w={worker_id}"
                 }
 
-        async def uploadEnd(job_id: str, input_id: str) -> dict[str, Any]:
-            return {}
+        async def uploadEnd(job_id: str, input_id: str) -> None:
+            upload_op = self._file_upload_manager.get_upload_operation(job_id)
+            if upload_op is None:
+                warnings.warn("Received uploadEnd message for non-existent upload operation.")
+                return None
+            file_data = upload_op.finish()
+            self.input[input_id] = file_data
+            # Explicitly return None to signal that the message was handled.
+            return None
 
         return {
             "uploadInit": uploadInit,
@@ -176,11 +185,13 @@ class ShinySession:
         if matches[1] == "upload" and request.method == "POST":
             # check that upload operation exists
             job_id = matches[2]
-            if not self._file_upload_manager.has_upload_operation(job_id):
+            upload_op = self._file_upload_manager.get_upload_operation(job_id)
+            if not upload_op:
                 return HTMLResponse("<h1>Bad Request</h1>", 400)
 
-            async for chunk in request.stream():
-                self._file_upload_manager.write_chunk(job_id, chunk)
+            with upload_op:
+                async for chunk in request.stream():
+                    upload_op.write_chunk(chunk)
 
         return JSONResponse({"session_id":self.id, "subpath":subpath}, status_code=200)
 

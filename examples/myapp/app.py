@@ -36,7 +36,8 @@ def server(input: ReactiveValues, output: Outputs):
     @output.set("txt")
     async def _():
         val = r()
-        return f"n*2 is {val}, session id is {get_current_session().id}"
+        return f"n*2 is {val}, session id is {get_current_session().id}\n" + \
+               f"input file1 is {input['file1']}"
 
     # This observer watches n, and changes shared_val, which is shared across
     # all running sessions.
@@ -62,6 +63,14 @@ def server(input: ReactiveValues, output: Outputs):
         fig, ax = plt.subplots()
         ax.hist(x, input["n"], density=True)
         return fig
+
+    @output.set("file_content")
+    def _():
+        filename =input["file1"]
+        if filename is None:
+            return
+        with open(filename, "r") as f:
+            return f.read()
 
 
 ui_path = os.path.join(os.path.dirname(__file__), "www")
