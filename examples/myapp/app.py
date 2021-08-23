@@ -36,8 +36,7 @@ def server(input: ReactiveValues, output: Outputs):
     @output.set("txt")
     async def _():
         val = r()
-        return f"n*2 is {val}, session id is {get_current_session().id}\n" + \
-               f"input file1 is {input['file1']}"
+        return f"n*2 is {val}, session id is {get_current_session().id}"
 
     # This observer watches n, and changes shared_val, which is shared across
     # all running sessions.
@@ -66,11 +65,17 @@ def server(input: ReactiveValues, output: Outputs):
 
     @output.set("file_content")
     def _():
-        filename =input["file1"]
-        if filename is None:
+        file_infos = input["file1"]
+        if not file_infos:
             return
-        with open(filename, "r") as f:
-            return f.read()
+
+        out_str = ""
+        for file_info in file_infos:
+            out_str += "====== " + file_info["name"] + " ======\n"
+            with open(file_info["datapath"], "r") as f:
+                out_str += f.read()
+
+        return out_str
 
 
 ui_path = os.path.join(os.path.dirname(__file__), "www")

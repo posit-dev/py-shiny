@@ -189,6 +189,9 @@ class ShinySession:
             if not upload_op:
                 return HTMLResponse("<h1>Bad Request</h1>", 400)
 
+            # The FileUploadOperation can have multiple files; each one will
+            # have a separate POST request. Each call to  `with upload_op` will
+            # open up each file (in sequence) for writing.
             with upload_op:
                 async for chunk in request.stream():
                     upload_op.write_chunk(chunk)
