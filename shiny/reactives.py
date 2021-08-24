@@ -145,7 +145,7 @@ class ReactiveAsync(Reactive):
 
 
 class Observer:
-    def __init__(self, func: Callable[[], Union[None, Awaitable[None]]]) -> None:
+    def __init__(self, func: Callable[[], None]) -> None:
         if inspect.iscoroutinefunction(func):
             raise TypeError("Observer requires a non-async function")
 
@@ -223,6 +223,28 @@ class ObserverAsync(Observer):
         self._is_async = True
 
 
+def isolate(func: Callable[[], Any]) -> Any:
+    # The Any in func's type definition also encompasses Awaitable[Any], so add
+    # a runtime check to make sure that this hasn't been called with an async
+    # function.
+    if inspect.iscoroutinefunction(func):
+        raise TypeError("isolate() requires a non-async function")
+
+    func_async: Callable[[], Awaitable[Any]] = utils.wrap_async(func)
+    ctx: Context = reactcore.Context()
+    try:
+        return utils.run_coro_sync(ctx.run(func_async, create_task=False))
+    finally:
+        ctx.invalidate()
+
+async def isolateAsync(func: Callable[[], Awaitable[Any]]) -> Awaitable[Any]:
+    ctx: Context = reactcore.Context()
+    try:
+        return await ctx.run(func, create_task=True)
+    finally:
+        ctx.invalidate()
+
+
 # Import here at the bottom seems to fix a circular dependency problem.
 from . import shinysession
 
@@ -233,7 +255,7 @@ if (__name__ == '__main__'):
     print("================================")
     print("Synchronous reactivity")
     print("================================")
-
+    from shiny.reactives import *
     x = ReactiveVal(1)
     x(2)
 

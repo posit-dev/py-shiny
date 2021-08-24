@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Awaitable
+from typing import Callable, Optional, Awaitable, Any
 from contextvars import ContextVar
 from asyncio import Task
 import asyncio
@@ -12,10 +12,10 @@ class Context:
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._flush_callbacks: list[Callable[[], Awaitable[None]]] = []
 
-    async def run(self, func: Callable[[], Awaitable[None]], create_task: bool) -> None:
+    async def run(self, func: Callable[[], Awaitable[None]], create_task: bool) -> Any:
         """Run the provided function in this context"""
         env = _reactive_environment
-        await env.run_with(self, func, create_task)
+        return await env.run_with(self, func, create_task)
 
     def invalidate(self) -> None:
         """Invalidate this context. It will immediately call the callbacks
@@ -102,7 +102,12 @@ class ReactiveEnvironment:
             raise Exception("No current context")
         return ctx
 
-    async def run_with(self, ctx: Context, context_func: Callable[[], Awaitable[None]], create_task: bool) -> None:
+    async def run_with(
+        self,
+        ctx: Context,
+        context_func: Callable[[], Awaitable[None]],
+        create_task: bool
+    ) -> Any:
 
         async def wrapper() -> None:
             old = self._current_context.set(ctx)
@@ -112,9 +117,9 @@ class ReactiveEnvironment:
                 self._current_context.reset(old)
 
         if not create_task:
-            await wrapper()
+            return await wrapper()
         else:
-            await asyncio.create_task(wrapper())
+            return await asyncio.create_task(wrapper())
 
     async def flush(self) -> None:
         """Flush all pending operations"""
