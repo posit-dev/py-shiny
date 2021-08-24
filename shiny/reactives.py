@@ -158,6 +158,9 @@ class Observer:
         self._exec_count: int = 0
         self._session: Optional[ShinySession] = shinysession.get_current_session()
 
+        if self._session is not None:
+            self._session.on_ended(self._on_session_ended_cb)
+
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
 
@@ -205,6 +208,8 @@ class Observer:
         if (self._ctx is not None):
             self._ctx.invalidate()
 
+    def _on_session_ended_cb(self) -> None:
+        self.destroy()
 
 class ObserverAsync(Observer):
     def __init__(self, func: Callable[[], Awaitable[None]]) -> None:

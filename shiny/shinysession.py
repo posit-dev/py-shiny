@@ -32,6 +32,7 @@ class ShinySession:
 
         self._message_handlers: dict[str, Callable[..., Awaitable[dict[str, Any]]]] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
+        self._on_ended_callbacks: list[Callable[[], None]] = []
 
         with session_context(self):
             self._app.server(self.input, self.output)
@@ -46,7 +47,12 @@ class ShinySession:
             self._message_queue_in_consumer()
         )
 
-        # Session has closed; unregister from the app.
+        # When we get here, session has closed. Do cleanup stuff.
+        for cb in self._on_ended_callbacks:
+            try:
+                cb()
+            except Exception as e:
+                print("Error in session on_ended callback: " + str(e))
         self._app.remove_session(self)
 
 
@@ -247,6 +253,11 @@ class ShinySession:
         finally:
             self.clear_messages_out()
 
+    # ==========================================================================
+    # On session ended
+    # ==========================================================================
+    def on_ended(self, cb: Callable[[], None]) -> None:
+        self._on_ended_callbacks.append(cb)
 
 
 class Outputs:
