@@ -1,4 +1,4 @@
-from typing import Union, Callable, Any
+from typing import Union, Callable
 import re
 
 from fastapi import Request, Response
@@ -11,8 +11,8 @@ from .connmanager import ConnectionManager, Connection, FastAPIConnectionManager
 
 
 class ShinyApp:
-    def __init__(self, ui: Any, server: Callable[[ReactiveValues, Outputs], None]) -> None:
-        self.ui: Any = ui
+    def __init__(self, ui: object, server: Callable[[ReactiveValues, Outputs], None]) -> None:
+        self.ui: object = ui
         self.server: Callable[[ReactiveValues, Outputs], None] = server
         self._sessions: dict[str, ShinySession] = {}
         self._last_session_id: int = 0    # Counter for generating session IDs

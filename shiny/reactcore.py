@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Awaitable, Any
+from typing import Callable, Optional, Awaitable
 from contextvars import ContextVar
 from asyncio import Task
 import asyncio
@@ -12,7 +12,7 @@ class Context:
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._flush_callbacks: list[Callable[[], Awaitable[None]]] = []
 
-    async def run(self, func: Callable[[], Awaitable[None]], create_task: bool) -> Any:
+    async def run(self, func: Callable[[], Awaitable[object]], create_task: bool) -> object:
         """Run the provided function in this context"""
         env = _reactive_environment
         return await env.run_with(self, func, create_task)
@@ -105,9 +105,9 @@ class ReactiveEnvironment:
     async def run_with(
         self,
         ctx: Context,
-        context_func: Callable[[], Awaitable[None]],
+        context_func: Callable[[], Awaitable[object]],
         create_task: bool
-    ) -> Any:
+    ) -> object:
 
         async def wrapper() -> None:
             old = self._current_context.set(ctx)

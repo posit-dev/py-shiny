@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Any, Callable, Awaitable, Union
+from typing import TYPE_CHECKING, Optional, Callable, Awaitable
 import inspect
 
 from .reactcore import Context, Dependents
@@ -8,11 +8,11 @@ if TYPE_CHECKING:
     from .shinysession import ShinySession
 
 class ReactiveVal:
-    def __init__(self, value: Any) -> None:
-        self._value: Any = value
+    def __init__(self, value: object) -> None:
+        self._value: object = value
         self._dependents: Dependents = Dependents()
 
-    def __call__(self, *args: Optional[Any]) -> Any:
+    def __call__(self, *args: Optional[object]) -> object:
         if args:
             if len(args) > 1:
                 raise TypeError("ReactiveVal can only be called with one argument")
@@ -20,11 +20,11 @@ class ReactiveVal:
         else:
             return self.get()
 
-    def get(self) -> Any:
+    def get(self) -> object:
         self._dependents.register()
         return self._value
 
-    def set(self, value: Any) -> bool:
+    def set(self, value: object) -> bool:
         if (self._value is value):
             return False
 
@@ -33,20 +33,19 @@ class ReactiveVal:
         return True
 
 
-
 class ReactiveValues:
-    def __init__(self, **kwargs: Any) -> None:
-        self._map: dict[str, Any] = {}
+    def __init__(self, **kwargs: object) -> None:
+        self._map: dict[str, ReactiveVal] = {}
         for key, value in kwargs.items():
             self._map[key] = ReactiveVal(value)
 
-    def __setitem__(self, key: str, value: Any) -> None:
+    def __setitem__(self, key: str, value: object) -> None:
         if (key in self._map):
             self._map[key](value)
         else:
             self._map[key] = ReactiveVal(value)
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key: str) -> object:
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
         # yet.
@@ -62,11 +61,11 @@ class ReactiveValues:
 
 class Reactive:
 
-    def __init__(self, func: Callable[[], Any]) -> None:
+    def __init__(self, func: Callable[[], object]) -> None:
         if inspect.iscoroutinefunction(func):
             raise TypeError("Reactive requires a non-async function")
 
-        self._func: Callable[[], Any] = utils.wrap_async(func)
+        self._func: Callable[[], object] = utils.wrap_async(func)
         self._is_async: bool = False
 
         self._dependents: Dependents = Dependents()
@@ -77,15 +76,15 @@ class Reactive:
         self._exec_count: int = 0
         self._session: Optional[ShinySession] = shinysession.get_current_session()
 
-        self._value: Any = None
+        self._value: object = None
         self._error: bool = False
 
-    def __call__(self) -> Any:
+    def __call__(self) -> object:
         # Run the Coroutine (synchronously), and then return the value.
         # If the Coroutine yields control, then an error will be raised.
         return utils.run_coro_sync(self.get_value())
 
-    async def get_value(self) -> Any:
+    async def get_value(self) -> object:
         self._dependents.register()
 
         if (self._invalidated or self._running):
@@ -130,17 +129,17 @@ class Reactive:
 
 
 class ReactiveAsync(Reactive):
-    def __init__(self, func: Callable[[], Awaitable[Any]]) -> None:
+    def __init__(self, func: Callable[[], Awaitable[object]]) -> None:
         if not inspect.iscoroutinefunction(func):
             raise TypeError("ReactiveAsync requires an async function")
 
         # Init the Reactive base class with a placeholder synchronous function
         # so it won't throw an error, then replace it with the async function.
         super().__init__(lambda: None)
-        self._func: Callable[[], Awaitable[Any]] = func
+        self._func: Callable[[], Awaitable[object]] = func
         self._is_async = True
 
-    async def __call__(self) -> Any:
+    async def __call__(self) -> object:
         return await self.get_value()
 
 
@@ -223,21 +222,21 @@ class ObserverAsync(Observer):
         self._is_async = True
 
 
-def isolate(func: Callable[[], Any]) -> Any:
-    # The Any in func's type definition also encompasses Awaitable[Any], so add
-    # a runtime check to make sure that this hasn't been called with an async
-    # function.
+def isolate(func: Callable[[], object]) -> object:
+    # The `object` in func's type definition also encompasses Awaitable[object],
+    # so add a runtime check to make sure that this hasn't been called with an
+    # async function.
     if inspect.iscoroutinefunction(func):
         raise TypeError("isolate() requires a non-async function")
 
-    func_async: Callable[[], Awaitable[Any]] = utils.wrap_async(func)
+    func_async: Callable[[], Awaitable[object]] = utils.wrap_async(func)
     ctx: Context = reactcore.Context()
     try:
         return utils.run_coro_sync(ctx.run(func_async, create_task=False))
     finally:
         ctx.invalidate()
 
-async def isolateAsync(func: Callable[[], Awaitable[Any]]) -> Awaitable[Any]:
+async def isolateAsync(func: Callable[[], Awaitable[object]]) -> object:
     ctx: Context = reactcore.Context()
     try:
         return await ctx.run(func, create_task=True)

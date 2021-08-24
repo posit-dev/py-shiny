@@ -5,7 +5,7 @@ import inspect
 import warnings
 from contextvars import ContextVar, Token
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Callable, Any, Optional, Union, Awaitable
+from typing import TYPE_CHECKING, Callable, Optional, Union, Awaitable
 
 if TYPE_CHECKING:
     from shinyapp import ShinyApp
@@ -27,10 +27,10 @@ class ShinySession:
         self.input: ReactiveValues = ReactiveValues()
         self.output: Outputs = Outputs(self)
 
-        self._message_queue_in: asyncio.Queue[Optional[dict[str, Any]]] = asyncio.Queue()
+        self._message_queue_in: asyncio.Queue[Optional[dict[str, object]]] = asyncio.Queue()
         self._message_queue_out: list[dict[str, str]] = []
 
-        self._message_handlers: dict[str, Callable[..., Awaitable[dict[str, Any]]]] = self._create_message_handlers()
+        self._message_handlers: dict[str, Callable[..., Awaitable[dict[str, object]]]] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks: list[Callable[[], None]] = []
 
@@ -100,7 +100,7 @@ class ShinySession:
             await self._app.flush_pending_sessions()
 
 
-    def _manage_inputs(self, data: dict[str, Any]) -> None:
+    def _manage_inputs(self, data: dict[str, object]) -> None:
         for (key, val) in data.items():
             if ":" in key:
                 key = key.split(":")[0]
@@ -111,7 +111,7 @@ class ShinySession:
     # Message handlers
     # ==========================================================================
 
-    async def _dispatch(self, message: dict[str, Any]) -> None:
+    async def _dispatch(self, message: dict[str, object]) -> None:
         if "method" not in message:
             self._send_error_response("Message does not contain 'method'.")
             return
@@ -124,14 +124,14 @@ class ShinySession:
 
         try:
             # TODO: handle `blobs`
-            value: Any = await func(*message["args"])
+            value: object = await func(*message["args"])
         except Exception as e:
             self._send_error_response("Error: " + str(e))
             return
 
         await self._send_response(message, value)
 
-    async def _send_response(self, message: dict[str, Any], value: Any) -> None:
+    async def _send_response(self, message: dict[str, object], value: object) -> None:
         if "tag" not in message:
             warnings.warn("Tried to send response for untagged message; method: " +
                           str(message["method"]))
@@ -145,8 +145,8 @@ class ShinySession:
         })
 
     # This is called during __init__.
-    def _create_message_handlers(self) -> dict[str, Callable[..., Awaitable[Any]]]:
-        async def uploadInit(file_infos: list[dict[str, Union[str, int]]]) -> dict[str, Any]:
+    def _create_message_handlers(self) -> dict[str, Callable[..., Awaitable[object]]]:
+        async def uploadInit(file_infos: list[dict[str, Union[str, int]]]) -> dict[str, object]:
             with session_context(self):
                 print("uploadInit")
                 print(file_infos)
@@ -208,17 +208,17 @@ class ShinySession:
     # ==========================================================================
     # Outbound message handling
     # ==========================================================================
-    def add_message_out(self, message: dict[str, Any]) -> None:
+    def add_message_out(self, message: dict[str, str]) -> None:
         self._message_queue_out.append(message)
 
-    def get_messages_out(self) -> list[dict[str, Any]]:
+    def get_messages_out(self) -> list[dict[str, str]]:
         return self._message_queue_out
 
     def clear_messages_out(self) -> None:
         self._message_queue_out.clear()
 
 
-    async def send_message(self, message: dict[str, Any]) -> None:
+    async def send_message(self, message: dict[str, object]) -> None:
         message_str: str = json.dumps(message) + "\n"
         print(
             "SEND: " + re.sub('(?m)base64,[a-zA-Z0-9+/=]+', '[base64 data]', message_str),
@@ -242,7 +242,7 @@ class ShinySession:
         for value in self.get_messages_out():
             values.update(value)
 
-        message: dict[str, Any] = {
+        message: dict[str, object] = {
             "errors": {},
             "values": values,
             "inputMessages": []
@@ -265,8 +265,8 @@ class Outputs:
         self._output_obervers: dict[str, Observer] = {}
         self._session: ShinySession = session
 
-    def set(self, name: str) -> Callable[[Union[Callable[[], Any], render.RenderFunction]], None]:
-        def set_fn(fn: Union[Callable[[], Any], render.RenderFunction]) -> None:
+    def set(self, name: str) -> Callable[[Union[Callable[[], object], render.RenderFunction]], None]:
+        def set_fn(fn: Union[Callable[[], object], render.RenderFunction]) -> None:
 
             # fn is either a regular function or a RenderFunction object. If
             # it's the latter, we can give it a bit of metadata, which can be
@@ -286,7 +286,7 @@ class Outputs:
                     }
                 })
 
-                message: dict[str, Any] = {}
+                message: dict[str, object] = {}
                 if inspect.iscoroutinefunction(fn):
                     val = await fn()
                 else:

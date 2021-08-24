@@ -3,15 +3,15 @@ import tempfile
 import base64
 import matplotlib.figure
 import matplotlib.pyplot
-from typing import TYPE_CHECKING, Callable, Any, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 if TYPE_CHECKING:
     from shinysession import ShinySession
 
 class RenderFunction:
-    def __init__(self, fn: Callable[[], Any]) -> None:
+    def __init__(self, fn: Callable[[], object]) -> None:
         raise NotImplementedError
 
-    def __call__(self) -> Any:
+    def __call__(self) -> object:
         raise NotImplementedError
 
     def set_metadata(self, session: 'ShinySession', name: str) -> None:
@@ -26,11 +26,11 @@ class RenderFunction:
 class Plot(RenderFunction):
     _ppi: float = 96
 
-    def __init__(self, fn: Callable[[], Any], alt: Optional[str] = None) -> None:
+    def __init__(self, fn: Callable[[], object], alt: Optional[str] = None) -> None:
         self._fn = fn
         self._alt: Optional[str] = alt
 
-    def __call__(self) -> Any:
+    def __call__(self) -> object:
 
         # Reactively read some information about the plot.
         pixelratio = self._session.input[f".clientdata_pixelratio"]
@@ -72,7 +72,7 @@ class Plot(RenderFunction):
 
 
 def plot(alt: Optional[str] = None):
-    def wrapper(fn: Callable[[], Any]) -> Plot:
+    def wrapper(fn: Callable[[], object]) -> Plot:
         return Plot(fn, alt = alt)
 
     return wrapper

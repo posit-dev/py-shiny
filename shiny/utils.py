@@ -1,6 +1,5 @@
-from typing import Callable, Awaitable, Union, TypeVar, Coroutine, Any
+from typing import Callable, Awaitable, TypeVar, Coroutine
 import inspect
-import typing
 import secrets
 
 # ==============================================================================
@@ -20,14 +19,13 @@ def rand_hex(bytes: int) -> str:
 
 T = TypeVar("T")
 
-def wrap_async(fn: Callable[[], Union[T, Awaitable[T]]]) -> Callable[[], Awaitable[T]]:
+def wrap_async(fn: Callable[[], T]) -> Callable[[], Awaitable[T]]:
     """
     Wrap a synchronous function that returns T, and return an async function
     that wraps the original function.
     """
-    fn_sync = typing.cast(Callable[[], T], fn)
     async def fn_async() -> T:
-        return fn_sync()
+        return fn()
 
     return fn_async
 
@@ -36,7 +34,7 @@ def wrap_async(fn: Callable[[], Union[T, Awaitable[T]]]) -> Callable[[], Awaitab
 # of how this stuff works.
 # For a more in-depth explanation, see
 # https://snarky.ca/how-the-heck-does-async-await-work-in-python-3-5/.
-def run_coro_sync(coro: Coroutine[Any, Any, T]) -> T:
+def run_coro_sync(coro: Coroutine[object, object, T]) -> T:
     """
     Run a coroutine that is in fact synchronous. Given a coroutine (which is
     returned by calling an `async def` function), this function will run the
