@@ -125,22 +125,28 @@ class ReactiveEnvironment:
         """Flush all pending operations"""
 
         tasks: list[Task[None]] = []
+
+        # Double-nest the check for self._pending_flush because it is possible
+        # that running a flush callback (in the gather()) will add another thing
+        # to the pending flush list (like if an observer sets a reactive value,
+        # which in turn invalidates other reactives/observers).
         while self._pending_flush:
-            # Take the first element
-            ctx = self._pending_flush.pop(0)
+            while self._pending_flush:
+                # Take the first element
+                ctx = self._pending_flush.pop(0)
 
-            try:
-                task: Task[None] = asyncio.create_task(ctx.execute_flush_callbacks())
-                tasks.append(task)
+                try:
+                    task: Task[None] = asyncio.create_task(ctx.execute_flush_callbacks())
+                    tasks.append(task)
 
-                # Alternate method instead of storing the tasks in a list and
-                # calling gather() on them later, just run each observer in
-                # sequence.
-                # await ctx.execute_flush_callbacks()
-            finally:
-                pass
+                    # Alternate method instead of storing the tasks in a list and
+                    # calling gather() on them later, just run each observer in
+                    # sequence.
+                    # await ctx.execute_flush_callbacks()
+                finally:
+                    pass
 
-        await asyncio.gather(*tasks)
+            await asyncio.gather(*tasks)
 
 
     def add_pending_flush(self, ctx: Context) -> None:
