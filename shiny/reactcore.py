@@ -24,7 +24,6 @@ class Context:
         if (self._invalidated):
             return
 
-
         self._invalidated = True
 
         for cb in self._invalidate_callbacks:
@@ -99,7 +98,7 @@ class ReactiveEnvironment:
         """Return the current Context object"""
         ctx = self._current_context.get()
         if ctx is None:
-            raise Exception("No current context")
+            raise RuntimeError("No current reactive context")
         return ctx
 
     async def run_with(
@@ -109,10 +108,10 @@ class ReactiveEnvironment:
         create_task: bool
     ) -> object:
 
-        async def wrapper() -> None:
+        async def wrapper() -> object:
             old = self._current_context.set(ctx)
             try:
-                await context_func()
+                return await context_func()
             finally:
                 self._current_context.reset(old)
 
