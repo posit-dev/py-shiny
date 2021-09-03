@@ -236,7 +236,7 @@ def isolate(func: Callable[[], object]) -> object:
     finally:
         ctx.invalidate()
 
-async def isolateAsync(func: Callable[[], Awaitable[object]]) -> object:
+async def isolate_async(func: Callable[[], Awaitable[object]]) -> object:
     ctx: Context = reactcore.Context()
     try:
         return await ctx.run(func, create_task=True)
