@@ -61,13 +61,13 @@ class ReactiveValues:
 
 
 
-class Reactive:
+class Reactive(Generic[T]):
 
-    def __init__(self, func: Callable[[], object]) -> None:
+    def __init__(self, func: Callable[[], T]) -> None:
         if inspect.iscoroutinefunction(func):
             raise TypeError("Reactive requires a non-async function")
 
-        self._func: Callable[[], object] = utils.wrap_async(func)
+        self._func: Callable[[], Awaitable[T]] = utils.wrap_async(func)
         self._is_async: bool = False
 
         self._dependents: Dependents = Dependents()
@@ -78,24 +78,24 @@ class Reactive:
         self._exec_count: int = 0
         self._session: Optional[ShinySession] = shinysession.get_current_session()
 
-        self._value: object = None
-        self._error: bool = False
+        self._value: list[T] = []
+        self._error: list[Exception] = []
 
-    def __call__(self) -> object:
+    def __call__(self) -> T:
         # Run the Coroutine (synchronously), and then return the value.
         # If the Coroutine yields control, then an error will be raised.
         return utils.run_coro_sync(self.get_value())
 
-    async def get_value(self) -> object:
+    async def get_value(self) -> T:
         self._dependents.register()
 
         if (self._invalidated or self._running):
             await self.update_value()
 
         if (self._error):
-            raise self._value
+            raise self._error[0]
 
-        return self._value
+        return self._value[0]
 
     async def update_value(self) -> None:
         self._ctx = Context()
@@ -117,31 +117,30 @@ class Reactive:
 
     def _on_invalidate_cb(self) -> None:
         self._invalidated = True
-        self._value = None  # Allow old value to be GC'd
+        self._value.clear() # Allow old value to be GC'd
         self._dependents.invalidate()
         self._ctx = None    # Allow context to be GC'd
 
     async def _run_func(self) -> None:
-        self._error = False
+        self._error.clear()
         try:
-            self._value = await self._func()
+            self._value[0] = await self._func()
         except Exception as err:
-            self._error = True
-            self._value = err
+            self._error[0] = err
 
 
-class ReactiveAsync(Reactive):
-    def __init__(self, func: Callable[[], Awaitable[object]]) -> None:
+class ReactiveAsync(Reactive[T]):
+    def __init__(self, func: Callable[[], Awaitable[T]]) -> None:
         if not inspect.iscoroutinefunction(func):
             raise TypeError("ReactiveAsync requires an async function")
 
         # Init the Reactive base class with a placeholder synchronous function
         # so it won't throw an error, then replace it with the async function.
         super().__init__(lambda: None)
-        self._func: Callable[[], Awaitable[object]] = func
+        self._func: Callable[[], Awaitable[T]] = func
         self._is_async = True
 
-    async def __call__(self) -> object:
+    async def __call__(self) -> T:
         return await self.get_value()
 
 
@@ -304,7 +303,7 @@ if (__name__ == '__main__'):
     r_count = 0
     o_count = 0
 
-    async def react_chain(n):
+    async def react_chain(n: int):
 
         @ReactiveAsync
         async def r():
