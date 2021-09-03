@@ -1,7 +1,9 @@
-from typing import Callable, Optional, Awaitable
+from typing import Callable, Optional, Awaitable, TypeVar
 from contextvars import ContextVar
 from asyncio import Task
 import asyncio
+
+T = TypeVar("T")
 
 class Context:
     """A reactive context"""
@@ -12,7 +14,7 @@ class Context:
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._flush_callbacks: list[Callable[[], Awaitable[None]]] = []
 
-    async def run(self, func: Callable[[], Awaitable[object]], create_task: bool) -> object:
+    async def run(self, func: Callable[[], Awaitable[T]], create_task: bool) -> T:
         """Run the provided function in this context"""
         env = _reactive_environment
         return await env.run_with(self, func, create_task)
@@ -104,11 +106,11 @@ class ReactiveEnvironment:
     async def run_with(
         self,
         ctx: Context,
-        context_func: Callable[[], Awaitable[object]],
+        context_func: Callable[[], Awaitable[T]],
         create_task: bool
-    ) -> object:
+    ) -> T:
 
-        async def wrapper() -> object:
+        async def wrapper() -> T:
             old = self._current_context.set(ctx)
             try:
                 return await context_func()

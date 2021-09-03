@@ -223,21 +223,21 @@ class ObserverAsync(Observer):
         self._is_async = True
 
 
-def isolate(func: Callable[[], object]) -> object:
+def isolate(func: Callable[[], T]) -> T:
     # The `object` in func's type definition also encompasses Awaitable[object],
     # so add a runtime check to make sure that this hasn't been called with an
     # async function.
     if inspect.iscoroutinefunction(func):
         raise TypeError("isolate() requires a non-async function")
 
-    func_async: Callable[[], Awaitable[object]] = utils.wrap_async(func)
+    func_async: Callable[[], Awaitable[T]] = utils.wrap_async(func)
     ctx: Context = reactcore.Context()
     try:
         return utils.run_coro_sync(ctx.run(func_async, create_task=False))
     finally:
         ctx.invalidate()
 
-async def isolate_async(func: Callable[[], Awaitable[object]]) -> object:
+async def isolate_async(func: Callable[[], Awaitable[T]]) -> T:
     ctx: Context = reactcore.Context()
     try:
         return await ctx.run(func, create_task=True)
