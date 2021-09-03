@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Callable, Awaitable
+from typing import TYPE_CHECKING, Optional, Callable, Awaitable, TypeVar, Union, Generic, Any
 import inspect
 
 from .reactcore import Context, Dependents
@@ -7,24 +7,26 @@ from . import utils
 if TYPE_CHECKING:
     from .shinysession import ShinySession
 
-class ReactiveVal:
-    def __init__(self, value: object) -> None:
-        self._value: object = value
+T = TypeVar("T")
+
+class ReactiveVal(Generic[T]):
+    def __init__(self, value: T) -> None:
+        self._value: T = value
         self._dependents: Dependents = Dependents()
 
-    def __call__(self, *args: Optional[object]) -> object:
+    def __call__(self, *args: Optional[T]) -> Union[T, bool]:
         if args:
             if len(args) > 1:
                 raise TypeError("ReactiveVal can only be called with one argument")
-            self.set(args[0])
+            return self.set(args[0])
         else:
             return self.get()
 
-    def get(self) -> object:
+    def get(self) -> T:
         self._dependents.register()
         return self._value
 
-    def set(self, value: object) -> bool:
+    def set(self, value: T) -> bool:
         if (self._value is value):
             return False
 
@@ -35,7 +37,7 @@ class ReactiveVal:
 
 class ReactiveValues:
     def __init__(self, **kwargs: object) -> None:
-        self._map: dict[str, ReactiveVal] = {}
+        self._map: dict[str, ReactiveVal[Any]] = {}
         for key, value in kwargs.items():
             self._map[key] = ReactiveVal(value)
 
