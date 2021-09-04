@@ -78,6 +78,11 @@ class Reactive(Generic[T]):
         self._exec_count: int = 0
         self._session: Optional[ShinySession] = shinysession.get_current_session()
 
+        # Use lists to hold (optional) value and error, instead of Optional[T],
+        # because it makes typing more straightforward. For example if
+        # .get_value() simply returned self._value, self._value had type
+        # Optional[T], then the return type for get_value() would have to be
+        # Optional[T].
         self._value: list[T] = []
         self._error: list[Exception] = []
 
@@ -124,9 +129,9 @@ class Reactive(Generic[T]):
     async def _run_func(self) -> None:
         self._error.clear()
         try:
-            self._value[0] = await self._func()
+            self._value.append(await self._func())
         except Exception as err:
-            self._error[0] = err
+            self._error.append(err)
 
 
 class ReactiveAsync(Reactive[T]):
