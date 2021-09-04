@@ -4,6 +4,7 @@ import base64
 import matplotlib.figure
 import matplotlib.pyplot
 from typing import TYPE_CHECKING, Callable, Optional
+import typing
 if TYPE_CHECKING:
     from shinysession import ShinySession
 
@@ -33,9 +34,9 @@ class Plot(RenderFunction):
     def __call__(self) -> object:
 
         # Reactively read some information about the plot.
-        pixelratio = self._session.input[f".clientdata_pixelratio"]
-        width = self._session.input[f".clientdata_output_{self._name}_width"]
-        height = self._session.input[f".clientdata_output_{self._name}_height"]
+        pixelratio: float = typing.cast(float, self._session.input[f".clientdata_pixelratio"])
+        width: float = typing.cast(float, self._session.input[f".clientdata_output_{self._name}_width"])
+        height: float = typing.cast(float, self._session.input[f".clientdata_output_{self._name}_height"])
 
         fig = self._fn()
 
