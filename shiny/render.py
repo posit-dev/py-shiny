@@ -6,7 +6,7 @@ import matplotlib.pyplot
 from typing import TYPE_CHECKING, Callable, Optional
 import typing
 if TYPE_CHECKING:
-    from shinysession import ShinySession
+    from .shinysession import ShinySession
 
 class RenderFunction:
     def __init__(self, fn: Callable[[], object]) -> None:

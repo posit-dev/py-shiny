@@ -8,16 +8,16 @@ from contextvars import ContextVar, Token
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Callable, Optional, Union, Awaitable, TypedDict
 
-if TYPE_CHECKING:
-    from shinyapp import ShinyApp
-
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse, HTMLResponse
+
+if TYPE_CHECKING:
+    from .shinyapp import ShinyApp
 
 from .reactives import ReactiveValues, Observer, ObserverAsync
 from .connmanager import Connection, ConnectionClosed
 from . import render
-from .fileupload import FileUploadManager
+from .fileupload import FileInfo, FileUploadManager
 
 # This cast is necessary because if the type checker thinks that if
 # "tag" isn't in `message`, then it's not a ClientMessage object.
@@ -171,7 +171,7 @@ class ShinySession:
 
     # This is called during __init__.
     def _create_message_handlers(self) -> dict[str, Callable[..., Awaitable[object]]]:
-        async def uploadInit(file_infos: list[dict[str, Union[str, int]]]) -> dict[str, object]:
+        async def uploadInit(file_infos: list[FileInfo]) -> dict[str, object]:
             with session_context(self):
                 print("uploadInit")
                 print(file_infos)

@@ -1,4 +1,5 @@
-from typing import Union, Optional, BinaryIO
+from typing import Optional, BinaryIO, TypedDict
+import typing
 import tempfile
 import os
 import copy
@@ -6,8 +7,15 @@ import copy
 from . import utils
 
 # Information about a single file, with a structure like:
-#   {'name': 'mtcars.csv', 'size': 1303, 'type': 'text/csv'}
-FileInfo = dict[str, Union[str, int]]
+#   {'name': 'mtcars.csv', 'size': 1303, 'type': 'text/csv', 'datapath: '/...../mtcars.csv'}
+# The incoming data doesn't include 'datapath'; that field is added by the
+# FileUploadOperation class.
+class FileInfo(TypedDict):
+    name: str
+    size: int
+    type: str
+    datapath: str
+
 
 class FileUploadOperation:
     def __init__(self, parent: 'FileUploadManager', id: str, dir: str, file_infos: list[FileInfo]) -> None:
@@ -15,7 +23,9 @@ class FileUploadOperation:
         self._id: str = id
         self._dir: str = dir
         # Copy file_infos and add a "datapath" entry for each file.
-        self._file_infos: list[FileInfo] = [{**fi, "datapath": ""} for fi in copy.deepcopy(file_infos)]
+        self._file_infos: list[FileInfo] = [
+            typing.cast(FileInfo, {**fi, "datapath": ""}) for fi in copy.deepcopy(file_infos)
+        ]
         self._n_uploaded: int = 0
         self._current_file_obj: Optional[BinaryIO] = None
 
