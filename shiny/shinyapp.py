@@ -81,7 +81,7 @@ class ShinyApp:
 
         # TODO: Until we have reactive domains, flush all sessions (because we
         # can't yet keep track of which ones need a flush)
-        for id, session in self._sessions.items():
+        for _, session in self._sessions.items():
             await session.flush()
         # for id, session in self._sessions_needing_flush.items():
         #     await session.flush()

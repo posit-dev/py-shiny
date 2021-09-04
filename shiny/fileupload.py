@@ -49,7 +49,7 @@ class FileUploadOperation:
     def __enter__(self) -> None:
         self.file_begin()
 
-    def __exit__(self, type, value, trace) -> None:
+    def __exit__(self, type, value, trace) -> None:   # type: ignore
         self.file_end()
 
 
