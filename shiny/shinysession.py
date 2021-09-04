@@ -23,16 +23,17 @@ from .fileupload import FileInfo, FileUploadManager
 # "tag" isn't in `message`, then it's not a ClientMessage object.
 # This will be fixable when TypedDict items can be marked as
 # potentially missing, in Python 3.10, with PEP 655.
-class ClientMessageBase(TypedDict):
+class ClientMessage(TypedDict):
     method: str
 
-class ClientMessageInit(ClientMessageBase):
+class ClientMessageInit(ClientMessage):
     data: dict[str, object]
 
-class ClientMessageUpdate(ClientMessageBase):
+class ClientMessageUpdate(ClientMessage):
     data: dict[str, object]
 
-class ClientMessageOther(ClientMessageBase):
+# For messages where "method" is something other than "init" or "update".
+class ClientMessageOther(ClientMessage):
     args: list[object]
     tag: int
 
@@ -46,7 +47,7 @@ class ShinySession:
         self.input: ReactiveValues = ReactiveValues()
         self.output: Outputs = Outputs(self)
 
-        self._message_queue_in: asyncio.Queue[Optional[ClientMessageBase]] = asyncio.Queue()
+        self._message_queue_in: asyncio.Queue[Optional[ClientMessage]] = asyncio.Queue()
         self._message_queue_out: list[dict[str, object]] = []
 
         self._message_handlers: dict[str, Callable[..., Awaitable[object]]] = self._create_message_handlers()
