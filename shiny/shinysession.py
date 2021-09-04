@@ -3,9 +3,10 @@ import re
 import asyncio
 import inspect
 import warnings
+import typing
 from contextvars import ContextVar, Token
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Callable, Optional, Union, Awaitable
+from typing import TYPE_CHECKING, Callable, Optional, Union, Awaitable, TypedDict
 
 if TYPE_CHECKING:
     from shinyapp import ShinyApp
@@ -18,6 +19,24 @@ from .connmanager import Connection, ConnectionClosed
 from . import render
 from .fileupload import FileUploadManager
 
+# This cast is necessary because if the type checker thinks that if
+# "tag" isn't in `message`, then it's not a ClientMessage object.
+# This will be fixable when TypedDict items can be marked as
+# potentially missing, in Python 3.10, with PEP 655.
+class ClientMessageBase(TypedDict):
+    method: str
+
+class ClientMessageInit(ClientMessageBase):
+    data: dict[str, object]
+
+class ClientMessageUpdate(ClientMessageBase):
+    data: dict[str, object]
+
+class ClientMessageOther(ClientMessageBase):
+    args: list[object]
+    tag: int
+
+
 class ShinySession:
     def __init__(self, app: 'ShinyApp', id: str, conn: Connection) -> None:
         self._app: ShinyApp = app
@@ -27,10 +46,10 @@ class ShinySession:
         self.input: ReactiveValues = ReactiveValues()
         self.output: Outputs = Outputs(self)
 
-        self._message_queue_in: asyncio.Queue[Optional[dict[str, object]]] = asyncio.Queue()
-        self._message_queue_out: list[dict[str, str]] = []
+        self._message_queue_in: asyncio.Queue[Optional[ClientMessageBase]] = asyncio.Queue()
+        self._message_queue_out: list[dict[str, object]] = []
 
-        self._message_handlers: dict[str, Callable[..., Awaitable[dict[str, object]]]] = self._create_message_handlers()
+        self._message_handlers: dict[str, Callable[..., Awaitable[object]]] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks: list[Callable[[], None]] = []
 
@@ -38,7 +57,6 @@ class ShinySession:
             self._app.server(self.input, self.output)
 
     async def run(self) -> None:
-        # SEND {"config":{"workerId":"","sessionId":"9d55970c321d821bb2c1b28da609e60b","user":null}}
         await self.send_message({"config": {"workerId": "", "sessionId": str(self.id), "user": None}})
 
         # Start the producer and consumer coroutines.
@@ -63,12 +81,12 @@ class ShinySession:
                 print("RECV: " + message)
 
                 try:
-                    msg = json.loads(message)
+                    message_obj = json.loads(message)
                 except json.JSONDecodeError:
                     print("ERROR: Invalid JSON message")
                     continue
 
-                self._message_queue_in.put_nowait(msg)
+                self._message_queue_in.put_nowait(message_obj)
 
         except ConnectionClosed:
             # None is a sentinal value signalling that the connection was
@@ -86,14 +104,30 @@ class ShinySession:
             if message is None:
                 return
 
+            if "method" not in message:
+                self._send_error_response("Message does not contain 'method'.")
+                return
+
             if message["method"] == "init":
+                message = typing.cast(ClientMessageInit, message)
                 self._manage_inputs(message["data"])
 
             elif message["method"] == "update":
+                message = typing.cast(ClientMessageUpdate, message)
                 self._manage_inputs(message["data"])
 
             else:
-                 await self._dispatch(message)
+                if "tag" not in message:
+                    warnings.warn("Cannot dispatch message with missing 'tag'; method: " +
+                                message["method"])
+                    return
+                if "args" not in message:
+                    warnings.warn("Cannot dispatch message with missing 'args'; method: " +
+                                message["method"])
+                    return
+
+                message = typing.cast(ClientMessageOther, message)
+                await self._dispatch(message)
 
             self.request_flush()
 
@@ -111,11 +145,7 @@ class ShinySession:
     # Message handlers
     # ==========================================================================
 
-    async def _dispatch(self, message: dict[str, object]) -> None:
-        if "method" not in message:
-            self._send_error_response("Message does not contain 'method'.")
-            return
-
+    async def _dispatch(self, message: ClientMessageOther) -> None:
         try:
             func = self._message_handlers[message["method"]]
         except AttributeError:
@@ -131,12 +161,7 @@ class ShinySession:
 
         await self._send_response(message, value)
 
-    async def _send_response(self, message: dict[str, object], value: object) -> None:
-        if "tag" not in message:
-            warnings.warn("Tried to send response for untagged message; method: " +
-                          str(message["method"]))
-            return
-
+    async def _send_response(self, message: ClientMessageOther, value: object) -> None:
         await self.send_message({
             "response": {
                 "tag": message["tag"],
@@ -208,10 +233,10 @@ class ShinySession:
     # ==========================================================================
     # Outbound message handling
     # ==========================================================================
-    def add_message_out(self, message: dict[str, str]) -> None:
+    def add_message_out(self, message: dict[str, object]) -> None:
         self._message_queue_out.append(message)
 
-    def get_messages_out(self) -> list[dict[str, str]]:
+    def get_messages_out(self) -> list[dict[str, object]]:
         return self._message_queue_out
 
     def clear_messages_out(self) -> None:
@@ -237,7 +262,7 @@ class ShinySession:
         self._app.request_flush(self)
 
     async def flush(self) -> None:
-        values: dict[str, str] = {}
+        values: dict[str, object] = {}
 
         for value in self.get_messages_out():
             values.update(value)
@@ -288,7 +313,8 @@ class Outputs:
 
                 message: dict[str, object] = {}
                 if inspect.iscoroutinefunction(fn):
-                    val = await fn()
+                    fn2 = typing.cast(Callable[[], Awaitable[object]], fn)
+                    val = await fn2()
                 else:
                     val = fn()
                 message[name] = val

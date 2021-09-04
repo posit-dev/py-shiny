@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, Optional, Callable, Awaitable, TypeVar, Union, Generic, Any
+import typing
 import inspect
 
 from .reactcore import Context, Dependents
@@ -141,7 +142,8 @@ class ReactiveAsync(Reactive[T]):
 
         # Init the Reactive base class with a placeholder synchronous function
         # so it won't throw an error, then replace it with the async function.
-        super().__init__(lambda: None)
+        # Need the `cast` to satisfy the type checker.
+        super().__init__(lambda: typing.cast(T, None))
         self._func: Callable[[], Awaitable[T]] = func
         self._is_async = True
 
@@ -320,7 +322,7 @@ if (__name__ == '__main__'):
             return x() + 10
 
         @ObserverAsync
-        async def o():
+        async def _():
             global o_count
             o_count += 1
             print(f"Observer o{n} 1")
