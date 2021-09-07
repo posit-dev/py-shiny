@@ -60,6 +60,25 @@ def test_flush_runs_newly_invalidated_async():
     assert(o2._exec_count == 2)
     assert(o1._exec_count == 1)
 
+# ======================================================================
+# Setting ReactiveVal to same value doesn't invalidate downstream
+# ======================================================================
+
+def test_reactive_val_same_no_invalidate():
+    v = ReactiveVal(1)
+
+    @Observer
+    def o():
+        v()
+
+    asyncio.run(reactcore.flush())
+    assert(o._exec_count == 1)
+
+    v(1)
+    asyncio.run(reactcore.flush())
+    assert(o._exec_count == 1)
+
+test_reactive_val_same_no_invalidate()
 
 # ======================================================================
 # Recursive calls to reactives
