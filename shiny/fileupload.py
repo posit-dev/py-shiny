@@ -7,6 +7,29 @@ import shutil
 
 from . import utils
 
+# File uploads happen through a series of requests. This requires a browser
+# which supports the HTML5 File API.
+#
+# 1. Client tells server that one or more files are about to be uploaded, with
+#    an "uploadInit" message; the server responds with a "jobId" and "uploadUrl"
+#    that the client should use to upload the files. From the server's
+#    perspective, the messages look like this:
+#    RECV {"method":"uploadInit","args":[[{"name":"mtcars.csv","size":1303,"type":"text/csv"}]],"tag":2}
+#    SEND {"response":{"tag":2,"value":{"jobId":"1651ddebfb643a26e6f18aa1","uploadUrl":"session/3cdbe3c4d1318225fee8f2e3417a1c99/upload/1651ddebfb643a26e6f18aa1?w="}}}
+#
+# 2. For each file (sequentially):
+#    b. Client makes a POST request with the file data.
+#    c. Server sends a 200 response to the client.
+#
+# 3. Repeat 2 until all files have been uploaded.
+#
+# 4. Client tells server that all files have been uploaded, along with the
+#    input ID that this data should be associated with. The server responds
+#    with the tag ID and a null message. The messages look like this:
+#    RECV {"method":"uploadEnd","args":["1651ddebfb643a26e6f18aa1","file1"],"tag":3}
+#    SEND {"response":{"tag":3,"value":null}}
+
+
 # Information about a single file, with a structure like:
 #   {'name': 'mtcars.csv', 'size': 1303, 'type': 'text/csv', 'datapath: '/...../mtcars.csv'}
 # The incoming data doesn't include 'datapath'; that field is added by the
