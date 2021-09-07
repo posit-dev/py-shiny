@@ -40,6 +40,9 @@ class ClientMessageOther(ClientMessage):
 
 
 class ShinySession:
+    # ==========================================================================
+    # Initialization
+    # ==========================================================================
     def __init__(self, app: 'ShinyApp', id: str, conn: Connection) -> None:
         self._app: ShinyApp = app
         self.id: str = id
@@ -55,8 +58,17 @@ class ShinySession:
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks: list[Callable[[], None]] = []
 
+        self._register_session_end_callbacks()
+
         with session_context(self):
             self._app.server(self.input, self.output)
+
+    def _register_session_end_callbacks(self) -> None:
+        # This is to be called from the initialization. It registers functions
+        # that are called when a session ends.
+
+        # Clear file upload directories, if present
+        self._on_ended_callbacks.append(self._file_upload_manager.rm_upload_dir)
 
     async def run(self) -> None:
         await self.send_message({"config": {"workerId": "", "sessionId": str(self.id), "user": None}})

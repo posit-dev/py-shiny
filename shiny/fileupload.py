@@ -3,6 +3,7 @@ import typing
 import tempfile
 import os
 import copy
+import shutil
 
 from . import utils
 
@@ -81,3 +82,8 @@ class FileUploadManager:
 
     def on_job_finished(self, job_id: str) -> None:
         del self._operations[job_id]
+
+    # Remove the directories containing file uploads; this is to be called when
+    # a session ends.
+    def rm_upload_dir(self) -> None:
+        shutil.rmtree(self._dir)
