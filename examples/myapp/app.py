@@ -17,6 +17,7 @@ sys.path.insert(0, shiny_module_dir)
 from shiny.reactives import Reactive, ReactiveVal, ReactiveValues, Observer
 from shiny.shinyapp import ShinyApp
 from shiny.shinysession import Outputs, get_current_session
+from shiny.fileupload import FileInfo
 
 # For plot rendering
 import shiny.render as render
@@ -65,7 +66,7 @@ def server(input: ReactiveValues, output: Outputs):
 
     @output.set("file_content")
     def _():
-        file_infos = input["file1"]
+        file_infos: list[FileInfo] = input["file1"]
         if not file_infos:
             return
 
