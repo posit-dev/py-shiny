@@ -60,6 +60,50 @@ def test_flush_runs_newly_invalidated_async():
     assert(o2._exec_count == 2)
     assert(o1._exec_count == 1)
 
+
+# ======================================================================
+# Recursive calls to reactives
+# ======================================================================
+def test_recursive_reactive():
+    v = ReactiveVal(5)
+
+    @Reactive
+    def r():
+        if v() == 0:
+            return 0
+        v(v() - 1)
+        r()
+
+    @Observer
+    def o():
+        r()
+
+    asyncio.run(reactcore.flush())
+    assert o._exec_count == 2
+    assert r._exec_count == 6
+    assert isolate(v) == 0
+
+
+def test_recursive_reactive_async():
+    v = ReactiveVal(5)
+
+    @ReactiveAsync
+    async def r():
+        if v() == 0:
+            return 0
+        v(v() - 1)
+        await r()
+
+    @ObserverAsync
+    async def o():
+        await r()
+
+    asyncio.run(reactcore.flush())
+    assert o._exec_count == 2
+    assert r._exec_count == 6
+    assert isolate(v) == 0
+
+
 # ======================================================================
 # isolate()
 # ======================================================================
