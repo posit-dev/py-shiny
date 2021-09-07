@@ -9,7 +9,8 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Callable, Optional, Union, Awaitable, TypedDict
 
 from fastapi import Request, Response
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi import responses
+from fastapi.responses import JSONResponse, HTMLResponse, PlainTextResponse
 
 if TYPE_CHECKING:
     from .shinyapp import ShinyApp
@@ -228,8 +229,9 @@ class ShinySession:
                 async for chunk in request.stream():
                     upload_op.write_chunk(chunk)
 
-        return JSONResponse({"session_id":self.id, "subpath":subpath}, status_code=200)
+            return PlainTextResponse("OK", 200)
 
+        return HTMLResponse("<h1>Not Found</h1>", 404)
 
     # ==========================================================================
     # Outbound message handling
