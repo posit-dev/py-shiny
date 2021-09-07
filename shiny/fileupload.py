@@ -4,6 +4,7 @@ import tempfile
 import os
 import copy
 import shutil
+import pathlib
 
 from . import utils
 
@@ -56,7 +57,8 @@ class FileUploadOperation:
     # Start uploading one of the files.
     def file_begin(self) -> None:
         file_info: FileInfo = self._file_infos[self._n_uploaded]
-        file_info["datapath"] = os.path.join(self._dir, str(file_info["name"]))
+        file_ext = pathlib.Path(file_info["name"]).suffix
+        file_info["datapath"] = os.path.join(self._dir, str(self._n_uploaded) + file_ext)
         self._current_file_obj = open(file_info["datapath"], "ab")
 
     # Finish uploading one of the files.
@@ -89,12 +91,14 @@ class FileUploadOperation:
 
 class FileUploadManager:
     def __init__(self) -> None:
-        self._dir: str = tempfile.mkdtemp(prefix = "fileupload-")
+        # TODO: Remove basedir when app exits.
+        self._basedir: str = tempfile.mkdtemp(prefix = "fileupload-")
         self._operations: dict[str, FileUploadOperation] = {}
 
     def create_upload_operation(self, file_infos: list[FileInfo]) -> str:
         job_id = utils.rand_hex(12)
-        self._operations[job_id] = FileUploadOperation(self, job_id, self._dir, file_infos)
+        dir = tempfile.mkdtemp(dir = self._basedir)
+        self._operations[job_id] = FileUploadOperation(self, job_id, dir, file_infos)
         return job_id
 
     def get_upload_operation(self, id: str) -> Optional[FileUploadOperation]:
@@ -109,4 +113,4 @@ class FileUploadManager:
     # Remove the directories containing file uploads; this is to be called when
     # a session ends.
     def rm_upload_dir(self) -> None:
-        shutil.rmtree(self._dir)
+        shutil.rmtree(self._basedir)
