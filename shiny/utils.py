@@ -34,7 +34,7 @@ def wrap_async(fn: Callable[[], T]) -> Callable[[], Awaitable[T]]:
 # of how this stuff works.
 # For a more in-depth explanation, see
 # https://snarky.ca/how-the-heck-does-async-await-work-in-python-3-5/.
-def run_coro_sync(coro: Coroutine[object, object, T]) -> T:
+def run_coro_sync(coro: Awaitable[T]) -> T:
     """
     Run a coroutine that is in fact synchronous. Given a coroutine (which is
     returned by calling an `async def` function), this function will run the
