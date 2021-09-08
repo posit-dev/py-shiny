@@ -1,4 +1,5 @@
 from typing import Callable, Awaitable, Optional
+import typing
 import os
 
 class Connection:
@@ -85,6 +86,11 @@ class FastAPIConnectionManager(ConnectionManager):
 
             conn = FastAPIConnection(websocket)
             await self._on_connect_cb(conn)
+
+        if typing.TYPE_CHECKING:
+            # The only purpose of this block is to make the type checker not
+            # warn about these functions not being accessed.
+            [get, route_session_request, websocket_endpoint]
 
 
     def run(self) -> None:
