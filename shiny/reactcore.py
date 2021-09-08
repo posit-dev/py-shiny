@@ -139,15 +139,20 @@ class ReactiveEnvironment:
                 try:
                     task: Task[None] = asyncio.create_task(ctx.execute_flush_callbacks())
                     tasks.append(task)
-
-                    # Alternate method instead of storing the tasks in a list and
-                    # calling gather() on them later, just run each observer in
-                    # sequence.
-                    # await ctx.execute_flush_callbacks()
                 finally:
                     pass
 
             await asyncio.gather(*tasks)
+
+            # # Alternate method: instead of storing the tasks in a list and
+            # # calling gather() on them later, just run each observer in
+            # # sequence.
+            # while self._pending_flush:
+            #     ctx = self._pending_flush.pop(0)
+            #     try:
+            #         await ctx.execute_flush_callbacks()
+            #     finally:
+            #         pass
 
 
     def add_pending_flush(self, ctx: Context) -> None:
