@@ -122,6 +122,78 @@ def test_recursive_reactive_async():
     assert r._exec_count == 6
     assert isolate(v) == 0
 
+# ======================================================================
+# Concurrent async
+# ======================================================================
+def test_async_concurrent():
+    x = ReactiveVal(1)
+
+    exec_order: list[str] = []
+    results: list[int] = []
+
+    async def react_chain(n: int):
+
+        @ReactiveAsync
+        async def r():
+            nonlocal exec_order
+            exec_order.append(f"r{n}-1")
+            await asyncio.sleep(0)
+            exec_order.append(f"r{n}-2")
+            return x() + 10
+
+        @ObserverAsync
+        async def _():
+            nonlocal exec_order
+            exec_order.append(f"o{n}-1")
+            await asyncio.sleep(0)
+            exec_order.append(f"o{n}-2")
+            val = await r()
+            exec_order.append(f"o{n}-3")
+            results.append(val + n * 100)
+
+
+    async def go():
+        await asyncio.gather(
+            react_chain(1),
+            react_chain(2)
+        )
+
+        await reactcore.flush()
+
+        x(5)
+        await reactcore.flush()
+
+
+    asyncio.run(go())
+
+    assert results == [111, 211, 115, 215]
+
+    # This is the order of execution if async observers are run with separate
+    # (interleaved) tasks. When it hits an `asyncio.sleep(0)`, it will yield
+    # control and then the other observer in the other task will run.
+    assert exec_order == [
+        'o1-1', 'o2-1',
+        'o1-2', 'o2-2',
+        'r1-1', 'r2-1',
+        'r1-2', 'r2-2',
+        'o1-3', 'o2-3',
+        'o1-1', 'o2-1',
+        'o1-2', 'o2-2',
+        'r1-1', 'r2-1',
+        'r1-2', 'r2-2',
+        'o1-3', 'o2-3'
+    ]
+
+    # This is the order of execution if the async observers are run
+    # sequentially. The `asyncio.sleep(0)` still yields control, but since there
+    # are no other observers scheduled, it will simply resume at the same point.
+    # assert exec_order == [
+    #     'o1-1', 'o1-2', 'r1-1', 'r1-2', 'o1-3',
+    #     'o2-1', 'o2-2', 'r2-1', 'r2-2', 'o2-3',
+    #     'o1-1', 'o1-2', 'r1-1', 'r1-2', 'o1-3',
+    #     'o2-1', 'o2-2', 'r2-1', 'r2-2', 'o2-3'
+    # ]
+
 
 # ======================================================================
 # isolate()
