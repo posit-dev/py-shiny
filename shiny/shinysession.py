@@ -9,8 +9,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Callable, Optional, Union, Awaitable, TypedDict
 
 from fastapi import Request, Response
-from fastapi import responses
-from fastapi.responses import JSONResponse, HTMLResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 
 if TYPE_CHECKING:
     from .shinyapp import ShinyApp

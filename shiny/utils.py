@@ -1,4 +1,4 @@
-from typing import Callable, Awaitable, TypeVar, Coroutine
+from typing import Callable, Awaitable, TypeVar
 import inspect
 import secrets
 
