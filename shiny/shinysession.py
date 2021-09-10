@@ -1,7 +1,6 @@
 import json
 import re
 import asyncio
-import inspect
 import warnings
 import typing
 from contextvars import ContextVar, Token
@@ -17,6 +16,7 @@ if TYPE_CHECKING:
 from .reactives import ReactiveValues, Observer, ObserverAsync
 from .connmanager import Connection, ConnectionClosed
 from . import render
+from . import utils
 from .fileupload import FileInfo, FileUploadManager
 
 # This cast is necessary because if the type checker thinks that if
@@ -326,7 +326,7 @@ class Outputs:
                 })
 
                 message: dict[str, object] = {}
-                if inspect.iscoroutinefunction(fn):
+                if utils.is_async_callable(fn):
                     fn2 = typing.cast(Callable[[], Awaitable[object]], fn)
                     val = await fn2()
                 else:

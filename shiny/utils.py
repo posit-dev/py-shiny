@@ -30,6 +30,19 @@ def wrap_async(fn: Callable[[], T]) -> Callable[[], Awaitable[T]]:
     return fn_async
 
 
+def is_async_callable(obj: object) -> bool:
+    """
+    Returns True if `obj` is an `async def` function, or if it's an object with
+    a `__call__` method which is an `async def` function.
+    """
+    if inspect.iscoroutinefunction(obj):
+        return True
+    if hasattr(obj, "__call__"):
+        if inspect.iscoroutinefunction(obj.__call__):  # type: ignore
+            return True
+
+    return False
+
 # See https://stackoverflow.com/a/59780868/412655 for an excellent explanation
 # of how this stuff works.
 # For a more in-depth explanation, see
