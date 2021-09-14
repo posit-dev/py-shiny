@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any
 from htmltools import tags, tag
 
 # TODO: implement icon
-def action_button(id: str, label: str, *args: Any, icon: Optional[str] = None, width: Optional[str] = None, **kwargs: Dict[str, str]) -> tag:
+def input_button(id: str, label: str, *args: Any, icon: Optional[str] = None, width: Optional[str] = None, **kwargs: Dict[str, str]) -> tag:
   b = tags.button(
     label, *args,
     id = id, type = "button",
@@ -14,7 +14,7 @@ def action_button(id: str, label: str, *args: Any, icon: Optional[str] = None, w
     b.append_attrs("style", f"width:{width};")
   return b
 
-def action_link(id: str, label: str, *args: Any, icon: Optional[str] = None, **kwargs: Dict[str, str]) -> tag:
+def input_link(id: str, label: str, *args: Any, icon: Optional[str] = None, **kwargs: Dict[str, str]) -> tag:
   # TODO: implement bookmarking (restoreInput())?
   return tags.a(
     label, *args,

@@ -1,4 +1,5 @@
-from typing import Callable, Awaitable, TypeVar
+from htmltools import tags, tag
+from typing import Callable, Awaitable, Union, TypeVar, Coroutine, Any, Optional
 import inspect
 import secrets
 
@@ -72,3 +73,12 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
         return e.value
 
     raise RuntimeError("async function yielded control; it did not finish in one iteration.")
+
+
+def shiny_input_label(id: str, label: Optional[str] = None) -> tag:
+  cls = "control-label" + ("" if label else "shiny-label-null")
+  return tags.label(
+      label, _class_=cls,
+      id=id + "-label",
+      _for_= id
+  )

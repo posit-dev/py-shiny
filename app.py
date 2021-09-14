@@ -1,11 +1,14 @@
 from htmltools import *
-from shiny.page import *
-from shiny.input import *
+from shiny import *
 
-ui = fluid(
+ui = page_fluid(
   h1("Hello Shiny for Python!"),
-  action_button("foo", "Hello!"),
-  slider("bar", "Hello slider", 0, 10, 1)
+  input_button("foo", "Hello!"),
+  #input_slider("bar", "Hello slider", 0, 10, 1),
+  navs_tab_card(
+    nav("A", "tab a"),
+    nav("B", "tab b")
+  )
 )
 
 ui.show()

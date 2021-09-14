@@ -2,8 +2,8 @@
 from htmltools import tags, tag_list, html_document, html_dependency
 from typing import Optional, Any, List
 
-def fluid(*args: Any, title: Optional[str] = None, theme: Optional[str] = None, lang: Optional[str] = None, **kwargs: str) -> html_document:
-  return bootstrap(
+def page_fluid(*args: Any, title: Optional[str] = None, theme: Optional[str] = None, lang: Optional[str] = None, **kwargs: str) -> html_document:
+  return page_bootstrap(
     tags.div(_class_ = "container-fluid", *args, *kwargs),
     title = title,
     theme = theme,
@@ -12,7 +12,7 @@ def fluid(*args: Any, title: Optional[str] = None, theme: Optional[str] = None, 
 
 
 # TODO: port bslib for custom themes?
-def bootstrap(*args: Any, title: Optional[str] = None, theme: Optional[str] = None, lang: Optional[str] = None) -> html_document:
+def page_bootstrap(*args: Any, title: Optional[str] = None, theme: Optional[str] = None, lang: Optional[str] = None) -> html_document:
   page = tag_list(*shiny_deps(), *args)
   head = tags.title(title) if title else None
   return html_document(body = page, head = head, lang = lang)

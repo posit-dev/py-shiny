@@ -8,7 +8,7 @@ import numpy
 SliderVal = Union[float, date, datetime]
 SliderVals = Union[SliderVal, Tuple[SliderVal, SliderVal]]
 
-def slider(id: str, label: str, min: SliderVal, max: SliderVal, value: SliderVals,
+def input_slider(id: str, label: str, min: SliderVal, max: SliderVal, value: SliderVals,
          step: Optional[SliderVal] = None, round: bool = False, ticks: bool = True,
          animate: bool = False, width: Optional[str] = None,
          sep = ",", pre = None, post = None, time_format: Optional[str] = None,
