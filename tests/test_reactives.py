@@ -86,7 +86,7 @@ test_reactive_val_same_no_invalidate()
 def test_recursive_reactive():
     v = ReactiveVal(5)
 
-    @Reactive
+    @reactive()
     def r():
         if v() == 0:
             return 0
@@ -106,7 +106,7 @@ def test_recursive_reactive():
 def test_recursive_reactive_async():
     v = ReactiveVal(5)
 
-    @ReactiveAsync
+    @reactive_async()
     async def r():
         if v() == 0:
             return 0
@@ -133,7 +133,7 @@ def test_async_concurrent():
 
     async def react_chain(n: int):
 
-        @ReactiveAsync
+        @reactive_async()
         async def r():
             nonlocal exec_order
             exec_order.append(f"r{n}-1")
@@ -207,7 +207,7 @@ def test_isolate_basic_without_context():
     # isolate() works with Reactive and ReactiveVal; allows executing without a
     # reactive context.
     v = ReactiveVal(1)
-    @Reactive
+    @reactive()
     def r():
         return v() + 10
 
@@ -222,7 +222,7 @@ def test_isolate_basic_without_context():
 
 def test_isolate_prevents_dependency():
     v = ReactiveVal(1)
-    @Reactive
+    @reactive()
     def r():
         return v() + 10
 
@@ -264,7 +264,7 @@ def test_isolate_async_basic_without_context():
     # isolate_async() works with Reactive and ReactiveVal; allows executing
     # without a reactive context.
     v = ReactiveVal(1)
-    @ReactiveAsync
+    @reactive_async()
     async def r():
         return v() + 10
     async def get_r():
@@ -277,7 +277,7 @@ def test_isolate_async_basic_without_context():
 
 def test_isolate_async_prevents_dependency():
     v = ReactiveVal(1)
-    @ReactiveAsync
+    @reactive_async()
     async def r():
         return v() + 10
 

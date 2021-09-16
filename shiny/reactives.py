@@ -10,6 +10,9 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
+# ==============================================================================
+# ReactiveVal and ReactiveValues
+# ==============================================================================
 class ReactiveVal(Generic[T]):
     def __init__(self, value: T) -> None:
         self._value: T = value
@@ -61,7 +64,9 @@ class ReactiveValues:
         del self._map[key]
 
 
-
+# ==============================================================================
+# Reactive
+# ==============================================================================
 class Reactive(Generic[T]):
 
     def __init__(self, func: Callable[[], T]) -> None:
@@ -151,6 +156,19 @@ class ReactiveAsync(Reactive[T]):
         return await self.get_value()
 
 
+def reactive() -> Callable[[Callable[[], T]], Reactive[T]]:
+    def create_reactive(fn: Callable[[], T]) -> Reactive[T]:
+        return Reactive(fn)
+    return create_reactive
+
+def reactive_async() -> Callable[[Callable[[], Awaitable[T]]], ReactiveAsync[T]]:
+    def create_reactive_async(fn: Callable[[], Awaitable[T]]) -> ReactiveAsync[T]:
+        return ReactiveAsync(fn)
+    return create_reactive_async
+
+# ==============================================================================
+# Observer
+# ==============================================================================
 class Observer:
     def __init__(self, func: Callable[[], None], *, priority: int = 0) -> None:
         if inspect.iscoroutinefunction(func):
@@ -243,7 +261,9 @@ def observer_async(*, priority: int = 0) -> Callable[[Callable[[], Awaitable[Non
         return ObserverAsync(fn, priority = priority)
     return create_observer_async
 
-
+# ==============================================================================
+# Miscellaneous functions
+# ==============================================================================
 def isolate(func: Callable[[], T]) -> T:
     # The `object` in func's type definition also encompasses Awaitable[object],
     # so add a runtime check to make sure that this hasn't been called with an
@@ -281,7 +301,7 @@ if (__name__ == '__main__'):
     x(2)
 
     r_count = 0
-    @Reactive
+    @reactive()
     def r():
         print("Executing user reactive function")
         global r_count
@@ -326,7 +346,7 @@ if (__name__ == '__main__'):
 
     async def react_chain(n: int):
 
-        @ReactiveAsync
+        @reactive_async()
         async def r():
             global r_count
             r_count += 1
