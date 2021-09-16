@@ -14,7 +14,7 @@ import sys
 shiny_module_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 sys.path.insert(0, shiny_module_dir)
 
-from shiny.reactives import Reactive, ReactiveVal, ReactiveValues, Observer
+from shiny.reactives import reactive, ReactiveVal, ReactiveValues, observer
 from shiny.shinyapp import ShinyApp
 from shiny.shinysession import Outputs, get_current_session
 from shiny.fileupload import FileInfo
@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 shared_val = ReactiveVal(None)
 
 def server(input: ReactiveValues, output: Outputs):
-    @Reactive
+    @reactive()
     def r():
         if input["n"] is None:
             return
@@ -41,7 +41,7 @@ def server(input: ReactiveValues, output: Outputs):
 
     # This observer watches n, and changes shared_val, which is shared across
     # all running sessions.
-    @Observer
+    @observer()
     def _():
         if input["n"] is None:
             return
