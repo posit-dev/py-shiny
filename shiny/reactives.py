@@ -152,12 +152,14 @@ class ReactiveAsync(Reactive[T]):
 
 
 class Observer:
-    def __init__(self, func: Callable[[], None]) -> None:
+    def __init__(self, func: Callable[[], None], *, priority: int = 0) -> None:
         if inspect.iscoroutinefunction(func):
             raise TypeError("Observer requires a non-async function")
 
         self._func: Callable[[], Awaitable[None]] = utils.wrap_async(func)
         self._is_async: bool = False
+
+        self._priority: int = priority
 
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._destroyed: bool = False
@@ -219,15 +221,27 @@ class Observer:
         self.destroy()
 
 class ObserverAsync(Observer):
-    def __init__(self, func: Callable[[], Awaitable[None]]) -> None:
+    def __init__(self, func: Callable[[], Awaitable[None]], *, priority: int = 0) -> None:
         if not inspect.iscoroutinefunction(func):
             raise TypeError("ObserverAsync requires an async function")
 
         # Init the Observer base class with a placeholder synchronous function
         # so it won't throw an error, then replace it with the async function.
-        super().__init__(lambda: None)
+        super().__init__(lambda: None, priority=priority)
         self._func: Callable[[], Awaitable[None]] = func
         self._is_async = True
+
+
+def observer(*, priority: int = 0) -> Callable[[Callable[[], None]], Observer]:
+    def create_observer(fn: Callable[[], None]) -> Observer:
+        return Observer(fn, priority = priority)
+    return create_observer
+
+
+def observer_async(*, priority: int = 0) -> Callable[[Callable[[], Awaitable[None]]], ObserverAsync]:
+    def create_observer_async(fn: Callable[[], Awaitable[None]]) -> ObserverAsync:
+        return ObserverAsync(fn, priority = priority)
+    return create_observer_async
 
 
 def isolate(func: Callable[[], T]) -> T:
@@ -277,7 +291,7 @@ if (__name__ == '__main__'):
     # x(3)
 
     o_count = 0
-    @Observer
+    @observer()
     def xx():
         print("Executing user observer function")
         global o_count
@@ -321,7 +335,7 @@ if (__name__ == '__main__'):
             print(f"Reactive r{n} 2")
             return x() + 10
 
-        @ObserverAsync
+        @observer_async()
         async def _():
             global o_count
             o_count += 1
