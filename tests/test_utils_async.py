@@ -98,12 +98,12 @@ def test_async_generator():
     # which call async generators.
 
     # An async generator
-    async def async_gen_range(n):
+    async def async_gen_range(n: int):
         for i in range(n):
             yield i
 
     # An async function which uses the generator
-    async def main(n):
+    async def main(n: int):
         x: list[int] = []
         async for i in async_gen_range(n):
             x.append(i)
@@ -129,9 +129,9 @@ def test_create_task():
     asyncio.run(create_task_wrapper())
 
     # Should not be OK to await a task, because it doesn't complete immediately.
-    async def create_task_wrapper():
+    async def create_task_wrapper2():
         async def inner():
             await asyncio.create_task(make_list_async(3))
         run_coro_sync(inner())
     with pytest.raises(RuntimeError):
-        asyncio.run(create_task_wrapper())
+        asyncio.run(create_task_wrapper2())
