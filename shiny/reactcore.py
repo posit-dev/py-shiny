@@ -124,9 +124,20 @@ class ReactiveEnvironment:
         else:
             return await asyncio.create_task(wrapper())
 
-    async def flush(self) -> None:
+    async def flush(self, *, concurrent: bool = True) -> None:
         """Flush all pending operations"""
+        # Currently, we default to concurrent flush. In the future, we'll
+        # probably remove the option and just do it one way or the other. For a
+        # concurrent flush, there are still some issues that need to be
+        # resolved.
+        if concurrent:
+            await self._flush_concurrent()
+        else:
+            await self._flush_sequential()
 
+
+    async def _flush_concurrent(self) -> None:
+        # Flush observers concurrently, using Tasks.
         tasks: list[Task[None]] = []
 
         # Double-nest the check for self._pending_flush because it is possible
@@ -146,15 +157,16 @@ class ReactiveEnvironment:
 
             await asyncio.gather(*tasks)
 
-            # # Alternate method: instead of storing the tasks in a list and
-            # # calling gather() on them later, just run each observer in
-            # # sequence.
-            # while self._pending_flush:
-            #     _, ctx = self._pending_flush_queue.get()
-            #     try:
-            #         await ctx.execute_flush_callbacks()
-            #     finally:
-            #         pass
+    async def _flush_sequential(self) -> None:
+        # Sequential flush: instead of storing the tasks in a list and
+        # calling gather() on them later, just run each observer in
+        # sequence.
+        while not self._pending_flush_queue.empty():
+            ctx = self._pending_flush_queue.get()
+            try:
+                await ctx.execute_flush_callbacks()
+            finally:
+                pass
 
 
     def add_pending_flush(self, ctx: Context, priority: int) -> None:
@@ -168,5 +180,5 @@ def get_current_context() -> Context:
     return _reactive_environment.current_context()
 
 
-async def flush() -> None:
-    await _reactive_environment.flush()
+async def flush(*, concurrent: bool = True) -> None:
+    await _reactive_environment.flush(concurrent=concurrent)
