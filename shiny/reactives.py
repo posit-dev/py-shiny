@@ -5,6 +5,7 @@ import inspect
 from .reactcore import Context, Dependents
 from . import reactcore
 from . import utils
+from .types import MISSING, MISSING_TYPE
 if TYPE_CHECKING:
     from .shinysession import ShinySession
 
@@ -68,8 +69,12 @@ class ReactiveValues:
 # Reactive
 # ==============================================================================
 class Reactive(Generic[T]):
-
-    def __init__(self, func: Callable[[], T]) -> None:
+    def __init__(
+        self,
+        func: Callable[[], T],
+        *,
+        session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING,
+    ) -> None:
         if inspect.iscoroutinefunction(func):
             raise TypeError("Reactive requires a non-async function")
 
@@ -82,7 +87,12 @@ class Reactive(Generic[T]):
         self._most_recent_ctx_id: int = -1
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
-        self._session: Optional[ShinySession] = shinysession.get_current_session()
+
+        self._session: Optional[ShinySession]
+        if session is MISSING:
+            # If no session is provided, autodetect the current session (this
+            # could be None if outside of a session).
+            self._session = shinysession.get_current_session()
 
         # Use lists to hold (optional) value and error, instead of Optional[T],
         # because it makes typing more straightforward. For example if
@@ -141,14 +151,19 @@ class Reactive(Generic[T]):
 
 
 class ReactiveAsync(Reactive[T]):
-    def __init__(self, func: Callable[[], Awaitable[T]]) -> None:
+    def __init__(
+        self,
+        func: Callable[[], Awaitable[T]],
+        *,
+        session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING,
+    ) -> None:
         if not inspect.iscoroutinefunction(func):
             raise TypeError("ReactiveAsync requires an async function")
 
         # Init the Reactive base class with a placeholder synchronous function
         # so it won't throw an error, then replace it with the async function.
         # Need the `cast` to satisfy the type checker.
-        super().__init__(lambda: typing.cast(T, None))
+        super().__init__(lambda: typing.cast(T, None), session=session)
         self._func: Callable[[], Awaitable[T]] = func
         self._is_async = True
 
@@ -156,21 +171,33 @@ class ReactiveAsync(Reactive[T]):
         return await self.get_value()
 
 
-def reactive() -> Callable[[Callable[[], T]], Reactive[T]]:
+def reactive(*,
+    session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING
+) -> Callable[[Callable[[], T]], Reactive[T]]:
     def create_reactive(fn: Callable[[], T]) -> Reactive[T]:
-        return Reactive(fn)
+        return Reactive(fn, session=session)
     return create_reactive
 
-def reactive_async() -> Callable[[Callable[[], Awaitable[T]]], ReactiveAsync[T]]:
+
+def reactive_async(*,
+    session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING
+) -> Callable[[Callable[[], Awaitable[T]]], ReactiveAsync[T]]:
     def create_reactive_async(fn: Callable[[], Awaitable[T]]) -> ReactiveAsync[T]:
-        return ReactiveAsync(fn)
+        return ReactiveAsync(fn, session=session)
     return create_reactive_async
+
 
 # ==============================================================================
 # Observer
 # ==============================================================================
 class Observer:
-    def __init__(self, func: Callable[[], None], *, priority: int = 0) -> None:
+    def __init__(
+        self,
+        func: Callable[[], None],
+        *,
+        session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING,
+        priority: int = 0
+    ) -> None:
         if inspect.iscoroutinefunction(func):
             raise TypeError("Observer requires a non-async function")
 
@@ -183,8 +210,12 @@ class Observer:
         self._destroyed: bool = False
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
-        self._session: Optional[ShinySession] = shinysession.get_current_session()
 
+        self._session: Optional[ShinySession]
+        if session is MISSING:
+            # If no session is provided, autodetect the current session (this
+            # could be None if outside of a session).
+            self._session = shinysession.get_current_session()
         if self._session is not None:
             self._session.on_ended(self._on_session_ended_cb)
 
@@ -238,28 +269,42 @@ class Observer:
     def _on_session_ended_cb(self) -> None:
         self.destroy()
 
+
 class ObserverAsync(Observer):
-    def __init__(self, func: Callable[[], Awaitable[None]], *, priority: int = 0) -> None:
+    def __init__(
+        self,
+        func: Callable[[], Awaitable[None]],
+        *,
+        session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING,
+        priority: int = 0
+    ) -> None:
         if not inspect.iscoroutinefunction(func):
             raise TypeError("ObserverAsync requires an async function")
 
         # Init the Observer base class with a placeholder synchronous function
         # so it won't throw an error, then replace it with the async function.
-        super().__init__(lambda: None, priority=priority)
+        super().__init__(lambda: None, session=session, priority=priority)
         self._func: Callable[[], Awaitable[None]] = func
         self._is_async = True
 
 
-def observer(*, priority: int = 0) -> Callable[[Callable[[], None]], Observer]:
+def observer(*,
+    priority: int = 0,
+    session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING
+) -> Callable[[Callable[[], None]], Observer]:
     def create_observer(fn: Callable[[], None]) -> Observer:
-        return Observer(fn, priority = priority)
+        return Observer(fn, priority=priority, session=session)
     return create_observer
 
 
-def observer_async(*, priority: int = 0) -> Callable[[Callable[[], Awaitable[None]]], ObserverAsync]:
+def observer_async(*,
+    priority: int = 0,
+    session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING
+) -> Callable[[Callable[[], Awaitable[None]]], ObserverAsync]:
     def create_observer_async(fn: Callable[[], Awaitable[None]]) -> ObserverAsync:
-        return ObserverAsync(fn, priority = priority)
+        return ObserverAsync(fn, priority=priority, session=session)
     return create_observer_async
+
 
 # ==============================================================================
 # Miscellaneous functions
