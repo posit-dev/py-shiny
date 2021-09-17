@@ -208,7 +208,7 @@ class Observer:
                 cb()
 
             # TODO: Wrap this stuff up in a continue callback, depending on if suspended?
-            ctx.add_pending_flush()
+            ctx.add_pending_flush(self._priority)
 
         async def on_flush_cb() -> None:
             if not self._destroyed:

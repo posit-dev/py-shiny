@@ -303,3 +303,104 @@ def test_isolate_async_prevents_dependency():
     asyncio.run(reactcore.flush())
     assert o_val == 12
     assert o._exec_count == 2
+
+# ======================================================================
+# Priority for observers
+# ======================================================================
+def test_observer_priority():
+    v = ReactiveVal(1)
+    results: list[int] = []
+
+    @observer(priority = 1)
+    def o1():
+        nonlocal results
+        v()
+        results.append(1)
+
+    @observer(priority = 2)
+    def o2():
+        nonlocal results
+        v()
+        results.append(2)
+
+    @observer(priority = 1)
+    def o3():
+        nonlocal results
+        v()
+        results.append(3)
+
+    asyncio.run(reactcore.flush())
+    assert results == [2, 1, 3]
+
+    # Add another observer with priority 2. Only this one will run (until we
+    # invalidate others by changing v).
+    @observer(priority = 2)
+    def o4():
+        nonlocal results
+        v()
+        results.append(4)
+
+    results.clear()
+    asyncio.run(reactcore.flush())
+    assert results == [4]
+
+    # Change v and run again, to make sure results are stable
+    results.clear()
+    v(2)
+    asyncio.run(reactcore.flush())
+    assert results == [2, 4, 1, 3]
+
+    results.clear()
+    v(3)
+    asyncio.run(reactcore.flush())
+    assert results == [2, 4, 1, 3]
+
+
+# Same as previous, but with async
+def test_observer_async_priority():
+    v = ReactiveVal(1)
+    results: list[int] = []
+
+    @observer_async(priority = 1)
+    async def o1():
+        nonlocal results
+        v()
+        results.append(1)
+
+    @observer_async(priority = 2)
+    async def o2():
+        nonlocal results
+        v()
+        results.append(2)
+
+    @observer_async(priority = 1)
+    async def o3():
+        nonlocal results
+        v()
+        results.append(3)
+
+    asyncio.run(reactcore.flush())
+    assert results == [2, 1, 3]
+
+    # Add another observer with priority 2. Only this one will run (until we
+    # invalidate others by changing v).
+    @observer_async(priority = 2)
+    async def o4():
+        nonlocal results
+        v()
+        results.append(4)
+
+    results.clear()
+    asyncio.run(reactcore.flush())
+    assert results == [4]
+
+    # Change v and run again, to make sure results are stable
+    results.clear()
+    v(2)
+    asyncio.run(reactcore.flush())
+    assert results == [2, 4, 1, 3]
+
+    results.clear()
+    v(3)
+    asyncio.run(reactcore.flush())
+    assert results == [2, 4, 1, 3]

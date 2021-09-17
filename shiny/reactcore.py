@@ -3,6 +3,8 @@ from contextvars import ContextVar
 from asyncio import Task
 import asyncio
 
+from .datastructures import PriorityQueueFIFO
+
 T = TypeVar("T")
 
 class Context:
@@ -40,10 +42,10 @@ class Context:
         else:
             self._invalidate_callbacks.append(func)
 
-    def add_pending_flush(self) -> None:
+    def add_pending_flush(self, priority: int) -> None:
         """Tell the reactive environment that this context should be flushed the
         next time flushReact() called."""
-        _reactive_environment.add_pending_flush(self)
+        _reactive_environment.add_pending_flush(self, priority)
 
     def on_flush(self, func: Callable[[], Awaitable[None]]) -> None:
         """Register a function to be called when this context is flushed."""
@@ -88,7 +90,7 @@ class ReactiveEnvironment:
     def __init__(self) -> None:
         self._current_context: ContextVar[Optional[Context]] = ContextVar("current_context", default = None)
         self._next_id: int = 0
-        self._pending_flush: list[Context] = []
+        self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
 
     def next_id(self) -> int:
         """Return the next available id"""
@@ -131,10 +133,10 @@ class ReactiveEnvironment:
         # that running a flush callback (in the gather()) will add another thing
         # to the pending flush list (like if an observer sets a reactive value,
         # which in turn invalidates other reactives/observers).
-        while self._pending_flush:
-            while self._pending_flush:
+        while not self._pending_flush_queue.empty():
+            while not self._pending_flush_queue.empty():
                 # Take the first element
-                ctx = self._pending_flush.pop(0)
+                ctx = self._pending_flush_queue.get()
 
                 try:
                     task: Task[None] = asyncio.create_task(ctx.execute_flush_callbacks())
@@ -148,15 +150,15 @@ class ReactiveEnvironment:
             # # calling gather() on them later, just run each observer in
             # # sequence.
             # while self._pending_flush:
-            #     ctx = self._pending_flush.pop(0)
+            #     _, ctx = self._pending_flush_queue.get()
             #     try:
             #         await ctx.execute_flush_callbacks()
             #     finally:
             #         pass
 
 
-    def add_pending_flush(self, ctx: Context) -> None:
-        self._pending_flush.append(ctx)
+    def add_pending_flush(self, ctx: Context, priority: int) -> None:
+        self._pending_flush_queue.put(priority, ctx)
 
 
 
