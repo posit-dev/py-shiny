@@ -1,3 +1,8 @@
+
+__all__ = (
+    'ShinyApp',
+)
+
 from typing import Union, Callable
 import re
 

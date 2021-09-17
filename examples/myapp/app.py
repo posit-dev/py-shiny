@@ -14,9 +14,7 @@ import sys
 shiny_module_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 sys.path.insert(0, shiny_module_dir)
 
-from shiny.reactives import reactive, ReactiveVal, ReactiveValues, observer
-from shiny.shinyapp import ShinyApp
-from shiny.shinysession import Outputs, get_current_session
+from shiny import *
 from shiny.fileupload import FileInfo
 
 # For plot rendering

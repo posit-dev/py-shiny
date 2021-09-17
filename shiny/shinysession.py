@@ -1,3 +1,11 @@
+
+__all__ = (
+    'ShinySession',
+    'Outputs',
+    'get_current_session',
+    'session_context',
+)
+
 import json
 import re
 import asyncio
