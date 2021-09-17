@@ -28,3 +28,14 @@ withr::with_options(
   lapply(deps, copyDependencyToDir, "shiny/www/shared")
 )
 
+# For JSX based nav() implementation
+bslib <- file.path(www, "shared", "bslib")
+dir.create(bslib)
+withr::with_tempdir({
+  cmd <- paste("git clone --depth 1 --branch jsx https://github.com/rstudio/bslib")
+  system(cmd)
+  file.copy(
+    "bslib/inst/navs/dist",
+    bslib, recursive = TRUE
+  )
+})
