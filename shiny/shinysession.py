@@ -312,7 +312,7 @@ class Outputs:
         self._output_obervers: dict[str, Observer] = {}
         self._session: ShinySession = session
 
-    def set(self, name: str) -> Callable[[Union[Callable[[], object], render.RenderFunction]], None]:
+    def __call__(self, name: str) -> Callable[[Union[Callable[[], object], render.RenderFunction]], None]:
         def set_fn(fn: Union[Callable[[], object], render.RenderFunction]) -> None:
 
             # fn is either a regular function or a RenderFunction object. If

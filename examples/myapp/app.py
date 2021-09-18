@@ -32,7 +32,7 @@ def server(session: ShinySession):
             return
         return session.input["n"] * 2
 
-    @session.output.set("txt")
+    @session.output("txt")
     async def _():
         val = r()
         return f"n*2 is {val}, session id is {get_current_session().id}"
@@ -47,12 +47,12 @@ def server(session: ShinySession):
 
     # Print the value of shared_val(). Changing it in one session should cause
     # this to run in all sessions.
-    @session.output.set("shared_txt")
+    @session.output("shared_txt")
     def _():
         return f"shared_val() is {shared_val()}"
 
 
-    @session.output.set("plot")
+    @session.output("plot")
     @render.plot(alt = "A histogram")
     def _():
         np.random.seed(19680801)
@@ -62,7 +62,7 @@ def server(session: ShinySession):
         ax.hist(x, session.input["n"], density=True)
         return fig
 
-    @session.output.set("file_content")
+    @session.output("file_content")
     def _():
         file_infos: list[FileInfo] = session.input["file1"]
         if not file_infos:
