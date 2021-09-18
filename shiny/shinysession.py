@@ -68,7 +68,7 @@ class ShinySession:
         self._register_session_end_callbacks()
 
         with session_context(self):
-            self._app.server(self.input, self.output)
+            self._app.server(self)
 
     def _register_session_end_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions

@@ -9,16 +9,15 @@ import re
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 
-from .shinysession import ShinySession, Outputs, session_context
-from .reactives import ReactiveValues
+from .shinysession import ShinySession, session_context
 from . import reactcore
 from .connmanager import ConnectionManager, Connection, FastAPIConnectionManager, TCPConnectionManager
 
 
 class ShinyApp:
-    def __init__(self, ui: object, server: Callable[[ReactiveValues, Outputs], None]) -> None:
+    def __init__(self, ui: object, server: Callable[[ShinySession], None]) -> None:
         self.ui: object = ui
-        self.server: Callable[[ReactiveValues, Outputs], None] = server
+        self.server: Callable[[ShinySession], None] = server
         self._sessions: dict[str, ShinySession] = {}
         self._last_session_id: int = 0    # Counter for generating session IDs
 
