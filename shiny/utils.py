@@ -82,3 +82,6 @@ def shiny_input_label(id: str, label: Optional[str] = None) -> tag:
       id=id + "-label",
       _for_= id
   )
+
+from sentinels import Sentinel
+missing = Sentinel("missing")

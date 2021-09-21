@@ -11,3 +11,14 @@ ui = page_fluid(
 )
 
 ui.show()
+
+
+ui = page_navbar(
+  nav("a", "tab a"),
+  nav("b", "tab b"),
+  nav_spacer(),
+  nav_menu("menu", nav("c", "tab c"), align="right"),
+  title = "navbar"
+)
+
+ui.show()

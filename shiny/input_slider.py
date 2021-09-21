@@ -1,9 +1,10 @@
 from typing import Optional, Union, Tuple, List
-from htmltools import tags, tag, html_dependency
+from htmltools import tags, tag
 from datetime import date, datetime
 from .utils import shiny_input_label
 import math
 import numpy
+from .html_dependencies import ionrangeslider_deps
 
 SliderVal = Union[float, date, datetime]
 SliderVals = Union[SliderVal, Tuple[SliderVal, SliderVal]]
@@ -79,7 +80,7 @@ def input_slider(id: str, label: str, min: SliderVal, max: SliderVal, value: Sli
   container = tags.div(
     shiny_input_label(id, label),
     tags.input(**props),
-    ionrangeslider_libs(),
+    ionrangeslider_deps(),
     _class_ = "form-group shiny-input-container"
   )
 
@@ -111,22 +112,3 @@ def find_step_size(min: SliderVal, max: SliderVal):
     return steps[1] - steps[0]
   else:
     return 1
-
-def ionrangeslider_libs() -> List[html_dependency]:
-  return [
-    html_dependency(
-      name = "ionrangeslider",
-      version = "2.3.1",
-      package = "shiny",
-      src = "www/shared/ionrangeslider",
-      script = "js/ion.rangeSlider.min.js",
-      stylesheet = "css/ion.rangeSlider.css",
-    ),
-    html_dependency(
-      name = "strftime",
-      version = "0.9.2",
-      package = "shiny",
-      src = "www/shared/strftime",
-      script = "strftime-min.js"
-    )
-  ]
