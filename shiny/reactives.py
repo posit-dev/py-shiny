@@ -106,10 +106,14 @@ class Reactive(Generic[T]):
         self._exec_count: int = 0
 
         self._session: Optional[ShinySession]
-        if session is MISSING:
+        # Use `isinstance(x, MISSING_TYPE)`` instead of `x is MISSING` because
+        # the type checker doesn't know that MISSING is the only instance of
+        # MISSING_TYPE; this saves us from casting later on.
+        if isinstance(session, MISSING_TYPE):
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
-            self._session = shinysession.get_current_session()
+            session = shinysession.get_current_session()
+        self._session = session
 
         # Use lists to hold (optional) value and error, instead of Optional[T],
         # because it makes typing more straightforward. For example if
@@ -229,10 +233,15 @@ class Observer:
         self._exec_count: int = 0
 
         self._session: Optional[ShinySession]
-        if session is MISSING:
+        # Use `isinstance(x, MISSING_TYPE)`` instead of `x is MISSING` because
+        # the type checker doesn't know that MISSING is the only instance of
+        # MISSING_TYPE; this saves us from casting later on.
+        if isinstance(session, MISSING_TYPE):
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
-            self._session = shinysession.get_current_session()
+            session = shinysession.get_current_session()
+        self._session = session
+
         if self._session is not None:
             self._session.on_ended(self._on_session_ended_cb)
 
