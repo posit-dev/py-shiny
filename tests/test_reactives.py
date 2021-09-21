@@ -21,11 +21,11 @@ def test_flush_runs_newly_invalidated():
     v2_result = None
     # In practice, on the first flush, Observers run in the order that they were
     # created. Our test checks that o2 runs _after_ o1.
-    @observer()
+    @observe()
     def o2():
         nonlocal v2_result
         v2_result = v2()
-    @observer()
+    @observe()
     def o1():
         v2(v1())
 
@@ -47,11 +47,11 @@ def test_flush_runs_newly_invalidated_async():
     v2_result = None
     # In practice, on the first flush, Observers run in the order that they were
     # created. Our test checks that o2 runs _after_ o1.
-    @observer_async()
+    @observe_async()
     async def o2():
         nonlocal v2_result
         v2_result = v2()
-    @observer_async()
+    @observe_async()
     async def o1():
         v2(v1())
 
@@ -67,7 +67,7 @@ def test_flush_runs_newly_invalidated_async():
 def test_reactive_val_same_no_invalidate():
     v = ReactiveVal(1)
 
-    @observer()
+    @observe()
     def o():
         v()
 
@@ -93,7 +93,7 @@ def test_recursive_reactive():
         v(v() - 1)
         r()
 
-    @observer()
+    @observe()
     def o():
         r()
 
@@ -113,7 +113,7 @@ def test_recursive_reactive_async():
         v(v() - 1)
         await r()
 
-    @observer_async()
+    @observe_async()
     async def o():
         await r()
 
@@ -140,7 +140,7 @@ def test_async_concurrent():
             exec_order.append(f"r{n}-2")
             return x() + 10
 
-        @observer_async()
+        @observe_async()
         async def _():
             nonlocal exec_order
             exec_order.append(f"o{n}-1")
@@ -201,7 +201,7 @@ def test_async_sequential():
             exec_order.append(f"r{n}-2")
             return x() + 10
 
-        @observer_async()
+        @observe_async()
         async def _():
             nonlocal exec_order
             exec_order.append(f"o{n}-1")
@@ -272,7 +272,7 @@ def test_isolate_prevents_dependency():
 
     v_dep = ReactiveVal(1)  # Use this only for invalidating the observer
     o_val = None
-    @observer()
+    @observe()
     def o():
         nonlocal o_val
         v_dep()
@@ -327,7 +327,7 @@ def test_isolate_async_prevents_dependency():
 
     v_dep = ReactiveVal(1)  # Use this only for invalidating the observer
     o_val = None
-    @observer_async()
+    @observe_async()
     async def o():
         nonlocal o_val
         v_dep()
@@ -355,19 +355,19 @@ def test_observer_priority():
     v = ReactiveVal(1)
     results: list[int] = []
 
-    @observer(priority = 1)
+    @observe(priority = 1)
     def o1():
         nonlocal results
         v()
         results.append(1)
 
-    @observer(priority = 2)
+    @observe(priority = 2)
     def o2():
         nonlocal results
         v()
         results.append(2)
 
-    @observer(priority = 1)
+    @observe(priority = 1)
     def o3():
         nonlocal results
         v()
@@ -378,7 +378,7 @@ def test_observer_priority():
 
     # Add another observer with priority 2. Only this one will run (until we
     # invalidate others by changing v).
-    @observer(priority = 2)
+    @observe(priority = 2)
     def o4():
         nonlocal results
         v()
@@ -405,19 +405,19 @@ def test_observer_async_priority():
     v = ReactiveVal(1)
     results: list[int] = []
 
-    @observer_async(priority = 1)
+    @observe_async(priority = 1)
     async def o1():
         nonlocal results
         v()
         results.append(1)
 
-    @observer_async(priority = 2)
+    @observe_async(priority = 2)
     async def o2():
         nonlocal results
         v()
         results.append(2)
 
-    @observer_async(priority = 1)
+    @observe_async(priority = 1)
     async def o3():
         nonlocal results
         v()
@@ -428,7 +428,7 @@ def test_observer_async_priority():
 
     # Add another observer with priority 2. Only this one will run (until we
     # invalidate others by changing v).
-    @observer_async(priority = 2)
+    @observe_async(priority = 2)
     async def o4():
         nonlocal results
         v()

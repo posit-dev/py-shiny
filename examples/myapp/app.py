@@ -39,7 +39,7 @@ def server(session: ShinySession):
 
     # This observer watches n, and changes shared_val, which is shared across
     # all running sessions.
-    @observer()
+    @observe()
     def _():
         if session.input["n"] is None:
             return

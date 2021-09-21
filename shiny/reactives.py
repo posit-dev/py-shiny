@@ -9,8 +9,8 @@ __all__ = (
     'reactive_async',
     'Observer',
     'ObserverAsync',
-    'observer',
-    'observer_async',
+    'observe',
+    'observe_async',
     'isolate',
     'isolate_async',
 )
@@ -305,7 +305,7 @@ class ObserverAsync(Observer):
         self._is_async = True
 
 
-def observer(*,
+def observe(*,
     priority: int = 0,
     session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING
 ) -> Callable[[Callable[[], None]], Observer]:
@@ -314,7 +314,7 @@ def observer(*,
     return create_observer
 
 
-def observer_async(*,
+def observe_async(*,
     priority: int = 0,
     session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING
 ) -> Callable[[Callable[[], Awaitable[None]]], ObserverAsync]:
@@ -373,7 +373,7 @@ if (__name__ == '__main__'):
     # x(3)
 
     o_count = 0
-    @observer()
+    @observe()
     def xx():
         print("Executing user observer function")
         global o_count
@@ -417,7 +417,7 @@ if (__name__ == '__main__'):
             print(f"Reactive r{n} 2")
             return x() + 10
 
-        @observer_async()
+        @observe_async()
         async def _():
             global o_count
             o_count += 1
