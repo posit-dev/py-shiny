@@ -1,7 +1,7 @@
-from typing import Optional, Union, Tuple, List
 from htmltools import tags, tag
+from .input_utils import *
+from typing import Optional, Union, Tuple, List
 from datetime import date, datetime
-from .utils import shiny_input_label
 import math
 import numpy
 from .html_dependencies import ionrangeslider_deps
@@ -42,8 +42,8 @@ def input_slider(id: str, label: str, min: SliderVal, max: SliderVal, value: Sli
     n_ticks = n_steps / scale_factor
 
   props = {
-    "className": "js-range-slider",
-    "id": id,
+    "_class_": "js-range-slider",
+    "id": id, "style": f"width: {width};" if width else None,
     "data_skin": "shiny",
     "data_min": min, # TODO: do we need to worry about scientific notation (i.e., formatNoSci()?)
     "data_max": max,
@@ -70,21 +70,17 @@ def input_slider(id: str, label: str, min: SliderVal, max: SliderVal, value: Sli
   if not time_format and data_type[0:4] == "date":
     props["data_time_format"] = "%F" if data_type == "date" else "%F %T"
 
-  if width: props["style"] = "width:{width};"
   # 1. ionRangeSlider wants attr = 'true'/'false'
-  # 2. drop attr='None' (dominate should really do this automatically)
   props = {
-    k: str(v).lower() if isinstance(v, bool) else v for k, v in props.items() if v is not None
+    k: str(v).lower() if isinstance(v, bool) else v for k, v in props.items()
   }
 
-  container = tags.div(
+  return div(
     shiny_input_label(id, label),
     tags.input(**props),
     ionrangeslider_deps(),
     _class_ = "form-group shiny-input-container"
   )
-
-  return container
 
 
 def get_slider_type(min: SliderVal, max: SliderVal, value: SliderVals) -> str:

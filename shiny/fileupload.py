@@ -1,4 +1,4 @@
-from typing import Optional, BinaryIO, TypedDict
+from typing import Optional, BinaryIO, TypedDict, List
 import typing
 import tempfile
 import os
@@ -43,7 +43,7 @@ class FileInfo(TypedDict):
 
 
 class FileUploadOperation:
-    def __init__(self, parent: 'FileUploadManager', id: str, dir: str, file_infos: list[FileInfo]) -> None:
+    def __init__(self, parent: 'FileUploadManager', id: str, dir: str, file_infos: List[FileInfo]) -> None:
         self._parent: FileUploadManager = parent
         self._id: str = id
         self._dir: str = dir
@@ -75,7 +75,7 @@ class FileUploadOperation:
         self._current_file_obj.write(chunk)
 
     # End the entire operation, which can consist of multiple files.
-    def finish(self) -> list[FileInfo]:
+    def finish(self) -> List[FileInfo]:
         if self._n_uploaded != len(self._file_infos):
             raise RuntimeError(f"Not all files for FileUploadOperation {self._id} were uploaded.")
         self._parent.on_job_finished(self._id)
@@ -95,7 +95,7 @@ class FileUploadManager:
         self._basedir: str = tempfile.mkdtemp(prefix = "fileupload-")
         self._operations: dict[str, FileUploadOperation] = {}
 
-    def create_upload_operation(self, file_infos: list[FileInfo]) -> str:
+    def create_upload_operation(self, file_infos: List[FileInfo]) -> str:
         job_id = utils.rand_hex(12)
         dir = tempfile.mkdtemp(dir = self._basedir)
         self._operations[job_id] = FileUploadOperation(self, job_id, dir, file_infos)

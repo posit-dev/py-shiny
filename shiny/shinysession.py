@@ -13,7 +13,7 @@ import warnings
 import typing
 from contextvars import ContextVar, Token
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Callable, Optional, Union, Awaitable, TypedDict
+from typing import TYPE_CHECKING, Callable, Optional, Union, Awaitable, TypedDict, Dict, List
 
 from fastapi import Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse
@@ -35,14 +35,14 @@ class ClientMessage(TypedDict):
     method: str
 
 class ClientMessageInit(ClientMessage):
-    data: dict[str, object]
+    data: Dict[str, object]
 
 class ClientMessageUpdate(ClientMessage):
-    data: dict[str, object]
+    data: Dict[str, object]
 
 # For messages where "method" is something other than "init" or "update".
 class ClientMessageOther(ClientMessage):
-    args: list[object]
+    args: List[object]
     tag: int
 
 
@@ -59,11 +59,11 @@ class ShinySession:
         self.output: Outputs = Outputs(self)
 
         self._message_queue_in: asyncio.Queue[Optional[ClientMessage]] = asyncio.Queue()
-        self._message_queue_out: list[dict[str, object]] = []
+        self._message_queue_out: List[Dict[str, object]] = []
 
-        self._message_handlers: dict[str, Callable[..., Awaitable[object]]] = self._create_message_handlers()
+        self._message_handlers: Dict[str, Callable[..., Awaitable[object]]] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
-        self._on_ended_callbacks: list[Callable[[], None]] = []
+        self._on_ended_callbacks: List[Callable[[], None]] = []
 
         self._register_session_end_callbacks()
 
@@ -155,7 +155,7 @@ class ShinySession:
             await self._app.flush_pending_sessions()
 
 
-    def _manage_inputs(self, data: dict[str, object]) -> None:
+    def _manage_inputs(self, data: Dict[str, object]) -> None:
         for (key, val) in data.items():
             if ":" in key:
                 key = key.split(":")[0]
@@ -191,8 +191,8 @@ class ShinySession:
         })
 
     # This is called during __init__.
-    def _create_message_handlers(self) -> dict[str, Callable[..., Awaitable[object]]]:
-        async def uploadInit(file_infos: list[FileInfo]) -> dict[str, object]:
+    def _create_message_handlers(self) -> Dict[str, Callable[..., Awaitable[object]]]:
+        async def uploadInit(file_infos: List[FileInfo]) -> Dict[str, object]:
             with session_context(self):
                 print("uploadInit")
                 print(file_infos)
@@ -255,17 +255,17 @@ class ShinySession:
     # ==========================================================================
     # Outbound message handling
     # ==========================================================================
-    def add_message_out(self, message: dict[str, object]) -> None:
+    def add_message_out(self, message: Dict[str, object]) -> None:
         self._message_queue_out.append(message)
 
-    def get_messages_out(self) -> list[dict[str, object]]:
+    def get_messages_out(self) -> List[Dict[str, object]]:
         return self._message_queue_out
 
     def clear_messages_out(self) -> None:
         self._message_queue_out.clear()
 
 
-    async def send_message(self, message: dict[str, object]) -> None:
+    async def send_message(self, message: Dict[str, object]) -> None:
         message_str: str = json.dumps(message) + "\n"
         print(
             "SEND: " + re.sub('(?m)base64,[a-zA-Z0-9+/=]+', '[base64 data]', message_str),
@@ -284,12 +284,12 @@ class ShinySession:
         self._app.request_flush(self)
 
     async def flush(self) -> None:
-        values: dict[str, object] = {}
+        values: Dict[str, object] = {}
 
         for value in self.get_messages_out():
             values.update(value)
 
-        message: dict[str, object] = {
+        message: Dict[str, object] = {
             "errors": {},
             "values": values,
             "inputMessages": []
@@ -309,7 +309,7 @@ class ShinySession:
 
 class Outputs:
     def __init__(self, session: ShinySession) -> None:
-        self._output_obervers: dict[str, Observer] = {}
+        self._output_obervers: Dict[str, Observer] = {}
         self._session: ShinySession = session
 
     def __call__(self, name: str) -> Callable[[Union[Callable[[], object], render.RenderFunction]], None]:
@@ -333,7 +333,7 @@ class Outputs:
                     }
                 })
 
-                message: dict[str, object] = {}
+                message: Dict[str, object] = {}
                 if utils.is_async_callable(fn):
                     fn2 = typing.cast(Callable[[], Awaitable[object]], fn)
                     val = await fn2()

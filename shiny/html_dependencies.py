@@ -7,7 +7,7 @@ def shiny_deps() -> html_dependency:
     version = "0.0.1",
     package = "shiny",
     src = "www/shared",
-    script = "shiny.min.js",
+    script = "shiny.js",
     stylesheet = "shiny.min.css"
   )
 
@@ -74,3 +74,16 @@ def ionrangeslider_deps() -> List[html_dependency]:
       script = "strftime-min.js"
     )
   ]
+
+
+def datepicker_deps():
+  return html_dependency(
+    name = "bootstrap-datepicker",
+    version = "1.9.0",
+    package = "shiny",
+    src = "www/shared/datepicker",
+    stylesheet = "css/bootstrap-datepicker3.min.css",
+    script = "js/bootstrap-datepicker.min.js",
+    # Need to enable noConflict mode. See #1346.
+    head = "<script>(function() { var datepicker = $.fn.datepicker.noConflict(); $.fn.bsDatepicker = datepicker; })();</script>"
+  )

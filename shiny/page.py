@@ -1,9 +1,9 @@
 from htmltools import tags, tag_list, html_document
 from htmltools.util import flatten
 from typing import Literal, Optional, Any, List
-from .html_dependencies import bootstrap_deps
+from .html_dependencies import bootstrap_deps, shiny_deps
 from .navs import navs_bar
-from .utils import *
+from .input_utils import missing
 
 def page_navbar(*args, title: Optional[str]=None, id: Optional[str]=None, selected: Optional[str]=None,
                 position: Literal["static-top", "fixed-top", "fixed-bottom"]="static-top",
@@ -42,7 +42,7 @@ def page_fluid(*args: Any, title: Optional[str]=None, lang: Optional[str]=None, 
 
 # TODO: implement theme (just Bootswatch for now?)
 def page_bootstrap(*args: Any, title: Optional[str]=None, lang: Optional[str]=None) -> html_document:
-  page=tag_list(*bootstrap_deps(), *args)
+  page=tag_list(bootstrap_deps(), shiny_deps(), *args)
   head=tags.title(title) if title else None
   return html_document(body=page, head=head, lang=lang)
 
