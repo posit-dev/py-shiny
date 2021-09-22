@@ -15,7 +15,7 @@ from .render import RenderFunction
 from .types import MISSING_TYPE, MISSING
 
 
-class ReactiveValuesProxy():
+class ReactiveValuesProxy(ReactiveValues):
     def __init__(self, ns: str, values: ReactiveValues):
         self._ns: str = ns
         self._values: ReactiveValues = values
@@ -33,7 +33,7 @@ class ReactiveValuesProxy():
         del self._values[self._ns_key(key)]
 
 
-class OutputsProxy():
+class OutputsProxy(Outputs):
     def __init__(self, ns: str, outputs: Outputs):
         self._ns: str = ns
         self._outputs: Outputs = outputs
@@ -45,8 +45,10 @@ class OutputsProxy():
         return self._outputs(self._ns_key(name))
 
 
-class ShinySessionProxy():
+class ShinySessionProxy(ShinySession):
     def __init__(self, ns: str, parent_session: ShinySession) -> None:
+        self._ns: str = ns
+        self._parent: ShinySession = parent_session
         self.input: ReactiveValuesProxy = ReactiveValuesProxy(ns, parent_session.input)
         self.output: OutputsProxy = OutputsProxy(ns, parent_session.output)
 
