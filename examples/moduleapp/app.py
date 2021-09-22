@@ -16,7 +16,9 @@ sys.path.insert(0, shiny_module_dir)
 
 from shiny import *
 
-
+# =============================================================================
+# Counter module
+# =============================================================================
 def counter_module_ui(id: str):
     return "<HTML>"
 
@@ -35,7 +37,9 @@ def counter_module_server(session: ShinySessionProxy):
 counter_module = ShinyModule(counter_module_ui, counter_module_server)
 
 
-
+# =============================================================================
+# App that uses module
+# =============================================================================
 def ui():
     counter_module.ui("counter1")
     return "<HTML>"
