@@ -4,15 +4,8 @@ __author__ = """Winston Chang"""
 __email__ = 'winston@rstudio.com'
 __version__ = '0.0.0.9000'
 
+# All objects imported into this scope will be available as shiny.foo
 from .reactives import *
 from .shinyapp import *
 from .shinysession import *
 from .shinymodule import *
-
-
-__all__ = (
-    reactives.__all__ +
-    shinyapp.__all__ +
-    shinysession.__all__ +
-    shinymodule.__all__
-) # type: ignore
