@@ -3,5 +3,6 @@
     "python.analysis.typeCheckingMode": "strict",
     "files.exclude": {
         "**/__pycache__": true
-    }
+    },
+    "editor.tabSize": 4
 }
