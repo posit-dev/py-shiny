@@ -5,6 +5,8 @@ from typing import Optional
 from datetime import date
 import json
 
+__all__ = ["input_date", "input_date_range"]
+
 def input_date(id: str, label: str, value: date=None, min: date=None, max: date=None, format: str="yyyy-mm-dd", startview: str="month", weekstart: int=0,
               language: str="en", width: Optional[str] = None, autoclose: bool = True, datesdisabled: Optional[str] = None, daysofweekdisabled: Optional[str] = None):
   # TODO: needed?

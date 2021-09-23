@@ -3,7 +3,6 @@ from .input_utils import *
 from typing import Optional, List
 
 def input_file(id: str, label: str, multiple: bool=False, accept: Optional[List[str]]=None, width: Optional[str]=None, button_label: str="Browse...", placeholder: str="No file selected"):
-
   btn_file = span(
     button_label,
     tags.input(
@@ -14,7 +13,6 @@ def input_file(id: str, label: str, multiple: bool=False, accept: Optional[List[
     ),
     _class_="btn btn-default btn-file"
   )
-
   return div(
     shiny_input_label(id, label),
     div(

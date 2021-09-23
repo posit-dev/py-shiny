@@ -6,6 +6,8 @@ import math
 import numpy
 from .html_dependencies import ionrangeslider_deps
 
+__all__ = ["input_slider"]
+
 SliderVal = Union[float, date, datetime]
 SliderVals = Union[SliderVal, Tuple[SliderVal, SliderVal]]
 
