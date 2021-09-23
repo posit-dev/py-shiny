@@ -15,9 +15,7 @@ def input_checkbox(id: str, label: str, value: bool=False, width: Optional[str] 
     style=f"width: {width};" if width else None
   )
 
-
 choicesType = Union[Dict[str, str], List[str]]
-
 
 def input_checkbox_group(id: str, label: str, choices: choicesType, choice_names: Optional[List[str]] = None, selected: Optional[str] = None, inline: bool = False, width: Optional[str] = None):
   input_label = shiny_input_label(id, label)
@@ -30,7 +28,6 @@ def input_checkbox_group(id: str, label: str, choices: choicesType, choice_names
     role="group", aria_labelledby=input_label.get_attr("id")
   )
 
-
 def input_radio_buttons(id: str, label: str, choices: choicesType, choice_names: Optional[List[str]] = None, selected: Optional[str] = None, inline: bool = False, width: Optional[str] = None):
   input_label = shiny_input_label(id, label)
   options = generate_options(id=id, type='radio', choices=choices, choice_names=choice_names, selected=selected, inline=inline)
@@ -42,15 +39,16 @@ def input_radio_buttons(id: str, label: str, choices: choicesType, choice_names:
     role="radiogroup", aria_labelledby=input_label.get_attr("id")
   )
 
-
 def generate_options(id, type, choices, choice_names, selected, inline):
   if not choice_names:
     choice_names = list(choices.keys()) if isinstance(choices, dict) else choices
   choices = [v for k, v in choices.items()] if isinstance(choices, dict) else choices
   if type == 'radio' and not selected:
     selected = choices[0]
-  opts = [generate_option(id, type, choices[i], choice_names[i], selected, inline) for i in range(len(choices))]
-  return div(*opts, _class_="shiny-options-group")
+  return div(
+      *[generate_option(id, type, choices[i], choice_names[i], selected, inline) for i in range(len(choices))],
+      _class_="shiny-options-group"
+    )
 
 def generate_option(id, type, choice, choice_name, selected, inline):
   input = tags.input(

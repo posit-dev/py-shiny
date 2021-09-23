@@ -40,14 +40,11 @@ class ShinyApp:
     def run(self, conn_type: str = "websocket") -> None:
         if (conn_type == "websocket"):
             self._conn_manager: ConnectionManager = \
-                FastAPIConnectionManager(self._on_connect_cb, self._on_session_request_cb)
+                FastAPIConnectionManager(self.ui, self._on_connect_cb, self._on_session_request_cb)
         elif (conn_type == "tcp"):
             self._conn_manager: ConnectionManager = TCPConnectionManager(self._on_connect_cb)
         else:
             raise ValueError(f"Unknown conn_type {conn_type}")
-
-        if type(self.ui) is str:
-            self._conn_manager.set_ui_path(self.ui)
 
         self._conn_manager.run()
 

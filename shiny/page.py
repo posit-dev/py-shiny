@@ -42,7 +42,7 @@ def page_fluid(*args: Any, title: Optional[str]=None, lang: Optional[str]=None, 
 
 # TODO: implement theme (just Bootswatch for now?)
 def page_bootstrap(*args: Any, title: Optional[str]=None, lang: Optional[str]=None) -> html_document:
-  page=tag_list(bootstrap_deps(), shiny_deps(), *args)
+  page=tag_list(bootstrap_deps(), *args)
   head=tags.title(title) if title else None
   return html_document(body=page, head=head, lang=lang)
 

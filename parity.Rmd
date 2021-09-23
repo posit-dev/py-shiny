@@ -1,0 +1,189 @@
+---
+title: "Prism UI parity"
+output: html_document
+---
+
+## Page layouts
+
+✓ `fluidPage()` -> `page_fluid()`
+`fillPage()`-> `page_fill()`
+`fixedPage()`-> `page_fixed()`
+✓ `bootstrapPage()`-> `page_bootstrap()`
+`htmlTemplate()`-> `page_template()`
+
+## Layout, panels, other UI
+
+`sidebarLayout()` ->
+`verticalLayout()` ->
+`fluidRow()` ->
+`fixedRow()` ->
+`fillRow()` ->
+`fillCol()` ->
+`column()` ->
+`sidebarPanel()` ->
+`mainPanel()` ->
+`inputPanel()` ->
+`fixedPanel()` ->
+`wellPanel()` ->
+`titlePanel()` ->
+`absolutePanel()` ->
+`conditionalPanel()` ->
+`helpText()` ->
+
+`splitLayout()` (not needed? Use flexbox instead?)
+`flowLayout()` (not needed? Use flexbox instead?)
+
+## Tabs
+
+✓ `navbarPage()` -> `page_navbar()`
+✓ `tabsetPanel()` -> `navs_tab()`/`navs_pill()`
+✓ `navlistPanel()` -> `navs_pill_list()`
+✓ `tabPanel()` -> `nav()`
+✓ `navbarMenu()` -> `nav_menu()`
+`tabPanelBody()` -> `navs_content()`
+`insertTab()`
+`appendTab()`
+`showTab()`
+`removeTab()`
+`hideTab()`
+`prependTab()`
+
+## Inputs
+
+`selectInput()` -> `input_select()`
+`selectizeInput()` -> `input_selectize()`
+✓ `sliderInput()` -> `input_slider()`
+  `animationOptions()`
+✓ `dateInput()` -> `input_date()`
+✓ `dateRangeInput()` -> `input_date_range()`
+✓ `checkboxInput()` -> `input_checkbox()`
+✓ `checkboxGroupInput()` -> `input_checkbox_group()`
+✓ `textInput()` ->  `input_text()`
+✓ `numericInput()` -> `input_numeric()`
+✓ `passwordInput()` -> `input_password()`
+✓ `textAreaInput()` -> `input_text_area()`
+✓ `fileInput()` -> `input_file()`
+
+✓ `actionLink()` -> `input_action_link()`
+✓ `actionButton()` -> `input_action_button()`
+
+`varSelectInput()` (don't implement?)
+`varSelectizeInput()` (don't implement?)
+`submitButton()` (don't implement?)
+
+## Modals
+
+`showModal()`
+`removeModal()`
+`modalDialog()`
+`modalButton()`
+
+## Input handlers
+
+`registerInputHandler()`
+`removeInputHandler()`
+
+## Uploads & downloads
+
+`downloadButton()`
+`downloadLink()`
+`downloadHandler()`
+
+## Output/render
+
+`imageOutput()`/`renderImage()`
+`plotOutput()`/`renderPlot()`
+  sizeGrowthRatio?
+`renderPrint()`/`verbatimTextOutput()`
+`renderText()`/`textOutput()`
+`uiOutput()`/`renderUI()`
+`dataTableOutput()`/`renderDataTable()`
+`tableOutput()`/`renderTable()`
+`outputOptions()`
+
+## Input updating
+
+Requires `session$sendInputMessage()` which requires `session$sendCustomMessage()`
+
+`updateNavbarPage()`
+`updateTabsetPanel()`
+`updateSliderInput()`
+`updateTextInput()`
+`updateNumericInput()`
+`updateNavlistPanel()`
+`updateActionLink()`
+`updateActionButton()`
+`updateDateInput()`
+`updateDateRangeInput()`
+`updateRadioButtons()`
+`updateCheckboxInput()`
+`updateSelectInput()`
+`updateSelectizeInput()`
+`updateCheckboxGroupInput()`
+
+
+## Dynamic UI
+
+`insertUI()`
+  * Wrapper around `session$sendInsertUI()`
+`removeUI()`
+  * Wrapper around `session$sendRemoveUI()`
+
+## Dependencies
+
+`addResourcePath()`
+`removeResourcePath()`
+`resourcePaths()`
+`createWebDependency()`
+`suppressDependencies()`
+
+## Misc
+
+`withMathJax()`
+`markdown()`
+`icon()`
+`showNotification()`
+`removeNotification()`
+`Progress`
+  `incProgress()`
+  `setProgress()`
+  `withProgress()`
+`validateCssUnit()`
+`safeError()`
+`httpResponse()`
+
+## Theming
+
+`getCurrentOutputInfo()`
+`bootstrapLib()`
+`getCurrentTheme()`
+`registerThemeDependency()`
+
+## Query strings
+
+`getQueryString()`
+`parseQueryString()`
+`getUrlHash()`
+`updateQueryString()`
+
+## Validation
+
+`need()`
+`req()`
+`validate()`
+`isTruthy()`
+
+# Inclusion helpers
+
+`includeCSS()`
+`includeScript()`
+`includeMarkdown()`
+`includeHTML()`
+`includeText()`
+
+# Not included (v2?)
+
+* Caching (`bindCache`)
+* Bookmarking
+* Server testing (`testServer`)
+* Testing helpers (snap)

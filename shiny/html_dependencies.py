@@ -76,14 +76,40 @@ def ionrangeslider_deps() -> List[html_dependency]:
   ]
 
 
-def datepicker_deps():
+def datepicker_deps() -> html_dependency:
   return html_dependency(
     name = "bootstrap-datepicker",
     version = "1.9.0",
     package = "shiny",
     src = "www/shared/datepicker",
+    # TODO: pre-compile the Bootstrap 5 version?
     stylesheet = "css/bootstrap-datepicker3.min.css",
     script = "js/bootstrap-datepicker.min.js",
     # Need to enable noConflict mode. See #1346.
     head = "<script>(function() { var datepicker = $.fn.datepicker.noConflict(); $.fn.bsDatepicker = datepicker; })();</script>"
+  )
+
+
+def selectize_deps() -> html_dependency:
+  return html_dependency(
+    name = "selectize",
+    version = "0.12.6",
+    package = "shiny",
+    src = "www/shared/selectize",
+    script = [
+      "js/selectize.min.js",
+      "accessibility/js/selectize-plugin-a11y.min.js"
+    ],
+    # TODO: pre-compile the Bootstrap 5 version?
+    stylesheet = "css/selectize.bootstrap3.css"
+  )
+
+def jqui_deps() -> html_dependency:
+  return html_dependency(
+    name = "jquery-ui",
+    version = "1.12.1",
+    package = "shiny",
+    src = "www/shared/jquery-ui",
+    script = "jquery-ui.min.js",
+    stylesheet = "jquery-ui.min.css"
   )
