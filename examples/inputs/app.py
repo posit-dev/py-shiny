@@ -24,7 +24,8 @@ ui = page_fluid(
     #input_select("select", "input_select()", "Select me"),
 )
 
-def server(input, output):
+
+def server(session: ShinySession):
   pass
 
 app = ShinyApp(ui, server)
