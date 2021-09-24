@@ -1,5 +1,6 @@
 {
     "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
     "python.analysis.typeCheckingMode": "strict",
     "files.exclude": {
         "**/__pycache__": true
