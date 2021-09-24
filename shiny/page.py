@@ -1,7 +1,7 @@
-from htmltools import tags, tag_list, html_document
+from htmltools import *
 from htmltools.util import flatten
-from typing import Literal, Optional, Any, List
-from .html_dependencies import bootstrap_deps, shiny_deps
+from typing import Literal, Optional, Any
+from .html_dependencies import bootstrap_deps
 from .navs import navs_bar
 from .input_utils import missing
 
@@ -35,10 +35,18 @@ def page_navbar(*args, title: Optional[str]=None, id: Optional[str]=None, select
 
 def page_fluid(*args: Any, title: Optional[str]=None, lang: Optional[str]=None, **kwargs: str) -> html_document:
   return page_bootstrap(
-    tags.div(_class_="container-fluid", *args, *kwargs),
+    div(*args,  _class_="container-fluid", *kwargs),
     title=title,
     lang=lang
   )
+
+
+def page_fixed(*args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str) -> html_document:
+    return page_bootstrap(
+      div(*args, _class_="container", **kwargs),
+      title=title,
+      lang=lang
+    )
 
 # TODO: implement theme (just Bootswatch for now?)
 def page_bootstrap(*args: Any, title: Optional[str]=None, lang: Optional[str]=None) -> html_document:

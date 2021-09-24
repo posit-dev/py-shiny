@@ -109,7 +109,7 @@ def jqui_deps() -> html_dependency:
     name = "jquery-ui",
     version = "1.12.1",
     package = "shiny",
-    src = "www/shared/jquery-ui",
+    src = "www/shared/jqueryui",
     script = "jquery-ui.min.js",
     stylesheet = "jquery-ui.min.css"
   )

@@ -108,13 +108,13 @@ class FastAPIConnectionManager(ConnectionManager):
 
 
 def create_web_dependency(api: FastAPI, dep: html_dependency, scrub_file: bool=True):
-    if not dep.src.get("href", None):
+    if dep.src.get("href", None) is None:
         prefix = dep.name + "-" + str(dep.version)
         f = dep.src["file"]
         path = os.path.join(package_dir(dep.package), f) if dep.package else f
         api.mount('/' + prefix, StaticFiles(directory=path), name=prefix)
         dep.src["href"] = prefix
-    if scrub_file:
+    if scrub_file and "file" in dep.src:
         del dep.src["file"]
     return dep
 

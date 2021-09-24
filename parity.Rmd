@@ -5,37 +5,38 @@ output: html_document
 
 ## Page layouts
 
+✓ `navbarPage()` -> `page_navbar()`
 ✓ `fluidPage()` -> `page_fluid()`
-`fillPage()`-> `page_fill()`
-`fixedPage()`-> `page_fixed()`
+✓ `fixedPage()`-> `page_fixed()`
 ✓ `bootstrapPage()`-> `page_bootstrap()`
+`fillPage()`-> `page_fill()`
 `htmlTemplate()`-> `page_template()`
 
 ## Layout, panels, other UI
 
-`sidebarLayout()` ->
-`verticalLayout()` ->
-`fluidRow()` ->
-`fixedRow()` ->
-`fillRow()` ->
-`fillCol()` ->
-`column()` ->
-`sidebarPanel()` ->
-`mainPanel()` ->
-`inputPanel()` ->
-`fixedPanel()` ->
-`wellPanel()` ->
-`titlePanel()` ->
-`absolutePanel()` ->
-`conditionalPanel()` ->
-`helpText()` ->
+✓ `sidebarLayout()` -> `layout_sidebar()`
+✓ `sidebarPanel()` -> `panel_sidebar()`
+✓ `mainPanel()` -> `panel_main()`
+✓ `titlePanel()` -> `panel_title()`
+✓ `wellPanel()` -> `panel_well()`
+✓ `absolutePanel()` -> `panel_absolute()`
+✓ `fixedPanel()` -> `panel_fixed()`
+✓ `conditionalPanel()` -> `panel_conditional()`
+  * Needs `NS()`
+✓ `fluidRow()` / `fixedRow()` -> `row()`
+✓ `column()` -> `col()`
+✓ `helpText()` -> `help_text()`
+`fillRow()` -> `row_fill()`
+`fillCol()` -> `col_fill()`
+`inputPanel()` -> `panel_inputs()`
+  * Needs `flowLayout()`
 
-`splitLayout()` (not needed? Use flexbox instead?)
+`verticalLayout()` ->
+`splitLayout()` (Replace these with a flexbox wrapper?)
 `flowLayout()` (not needed? Use flexbox instead?)
 
 ## Tabs
 
-✓ `navbarPage()` -> `page_navbar()`
 ✓ `tabsetPanel()` -> `navs_tab()`/`navs_pill()`
 ✓ `navlistPanel()` -> `navs_pill_list()`
 ✓ `tabPanel()` -> `nav()`
@@ -134,7 +135,7 @@ Requires `session$sendInputMessage()` which requires `session$sendCustomMessage(
 `addResourcePath()`
 `removeResourcePath()`
 `resourcePaths()`
-`createWebDependency()`
+✓ `createWebDependency()`
 `suppressDependencies()`
 
 ## Misc

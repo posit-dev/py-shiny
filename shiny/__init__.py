@@ -19,6 +19,7 @@ from .input_password import *
 from .input_slider import *
 from .input_text import *
 
-from .output_text import *
+from .output import *
 from .navs import *
 from .page import *
+from .bootstrap import *
