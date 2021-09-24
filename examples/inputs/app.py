@@ -32,6 +32,7 @@ ui = page_fluid(
             #input_select("select", "input_select()", "Select me"),
          ),
          panel_main(
+             output_image("image", inline = True),
              output_plot("plot"),
              panel_fixed(
                  panel_well(
@@ -65,11 +66,16 @@ def server(s: ShinySession):
   def _():
       np.random.seed(19680801)
       x = 100 + 15 * np.random.randn(437)
-
       fig, ax = plt.subplots()
       ax.hist(x, s.input["n"], density=True)
       return fig
 
+  @s.output("image")
+  @render.image()
+  def _():
+    from pathlib import Path
+    dir = Path(__file__).resolve().parent
+    return {"src": dir / "rstudio-logo.png", "width": "150px"}
 
 
 app = ShinyApp(ui, server)

@@ -92,12 +92,11 @@ output: html_document
 
 ## Output/render
 
-`imageOutput()`/`renderImage()`
-`plotOutput()`/`renderPlot()`
-  sizeGrowthRatio?
+✓ `imageOutput()`/`renderImage()`
+✓ `plotOutput()`/`renderPlot()`
+`uiOutput()` / `renderUI()`
 `renderPrint()`/`verbatimTextOutput()`
 `renderText()`/`textOutput()`
-`uiOutput()`/`renderUI()`
 `dataTableOutput()`/`renderDataTable()`
 `tableOutput()`/`renderTable()`
 `outputOptions()`
