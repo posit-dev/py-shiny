@@ -29,6 +29,9 @@ setup(
     keywords='shiny',
     name='shiny',
     packages=find_packages(include=['shiny', 'shiny.*']),
+    package_data = {
+        'htmltools': ['py.typed'],
+    },
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/rstudio/prism',
