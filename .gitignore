@@ -105,3 +105,6 @@ ENV/
 .vscode/
 .ideas/
 ui-tags.ipynb
+
+typings/
+
