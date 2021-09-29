@@ -1,4 +1,8 @@
-from typing import Callable, Awaitable, Union, TypeVar, Coroutine, Any, Optional
+from typing import TYPE_CHECKING, Callable, Awaitable, TypeVar, Any, Optional
+
+from htmltools.tags import tag_list
+if TYPE_CHECKING:
+    from .shinysession import ShinySession
 import inspect
 import secrets
 
@@ -72,3 +76,18 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
         return e.value
 
     raise RuntimeError("async function yielded control; it did not finish in one iteration.")
+
+
+def process_deps(ui, s: Optional['ShinySession'] = None):
+    if s is None:
+        from .shinysession import get_current_session
+        s = get_current_session()
+
+    from .connmanager import create_web_dependency
+    def register_dep(d):
+      return create_web_dependency(s._app._conn_manager._fastapi_app, d)
+
+    if not isinstance(ui, tag_list):
+        ui = tag_list(ui)
+    res = ui.render(process_dep=register_dep)
+    return res

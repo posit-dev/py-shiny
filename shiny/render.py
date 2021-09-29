@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from .shinysession import ShinySession
 
 from . import utils
+from htmltools import tag_list
 
 
 UserRenderFunction = Callable[[], object]
@@ -162,5 +163,41 @@ def image(delete_file: bool=False):
             return ImageAsync(fn, delete_file)
         else:
             return Image(fn, delete_file=delete_file)
+
+    return wrapper
+
+
+UiRenderFunc = Callable[[], Optional[tag_list]]
+UiRenderFuncAsync = Callable[[], Awaitable[ImgReturn]]
+class Ui(RenderFunction):
+    def __init__(self, fn: UiRenderFunc) -> None:
+        self._fn: UiRenderFuncAsync = utils.wrap_async(fn)
+
+    def __call__(self) -> object:
+        return utils.run_coro_sync(self.run())
+
+    async def run(self) -> object:
+        ui: Optional[tag_list] = await self._fn()
+        if ui is None:
+            return None
+        return utils.process_deps(ui, self._session)
+
+class UiAsync(Ui, RenderFunctionAsync):
+    def __init__(self, fn: UiRenderFuncAsync) -> None:
+        if not inspect.iscoroutinefunction(fn):
+            raise TypeError("PlotAsync requires an async function")
+        super().__init__(lambda: None)
+        self._fn: UiRenderFuncAsync = fn
+
+    async def __call__(self) -> object:
+        return await self.run()
+
+def ui(delete_file: bool =False):
+    def wrapper(fn: Union[UiRenderFunc, UiRenderFuncAsync]) -> tag_list:
+        if inspect.iscoroutinefunction(fn):
+            fn = typing.cast(UiRenderFuncAsync, fn)
+            return UiAsync(fn, delete_file)
+        else:
+            return Ui(fn)
 
     return wrapper

@@ -4,6 +4,7 @@ from typing import Literal, Optional, Any
 from .html_dependencies import bootstrap_deps
 from .navs import navs_bar
 from .input_utils import missing
+from warnings import warn
 
 def page_navbar(*args, title: Optional[str]=None, id: Optional[str]=None, selected: Optional[str]=None,
                 position: Literal["static-top", "fixed-top", "fixed-bottom"]="static-top",
@@ -19,7 +20,7 @@ def page_navbar(*args, title: Optional[str]=None, id: Optional[str]=None, select
     if window_title:
       window_title=tags.title(" ".join(window_title))
     else:
-      raise Warning("Unable to infer a `window_title` default from `title`. Consider providing a character string to `window_title`.")
+      warn("Unable to infer a `window_title` default from `title`. Consider providing a character string to `window_title`.")
       window_title=None
 
   return html_document(

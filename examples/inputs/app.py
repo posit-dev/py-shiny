@@ -28,7 +28,7 @@ ui = page_fluid(
                 {"Choice 1": "a", "Choice 2": "b"},
                 selected="b", inline=True
             ),
-            input_radio_buttons("radio", "input_radio()", {"Choice 1": "a", "Choice 2": "b"})
+            input_radio_buttons("radio", "input_radio()", {"Choice 1": "a", "Choice 2": "b"}),
             #input_select("select", "input_select()", "Select me"),
          ),
          panel_main(
@@ -47,7 +47,7 @@ ui = page_fluid(
                   right = "50px"
              ),
              output_text("date_val"),
-             output_text("date_rng_val")
+             output_ui("date_rng_val")
          )
     )
 )
@@ -58,8 +58,9 @@ def server(s: ShinySession):
       return f"The date is {s.input['date']}"
 
   @s.output("date_rng_val")
-  def _() -> str:
-      return f"The date range is {s.input['date_rng']}"
+  @render.ui()
+  def _():
+      return tags.i(f"The date range is {s.input['date_rng']}")
 
   @s.output("plot")
   @render.plot(alt="A histogram")
@@ -76,6 +77,22 @@ def server(s: ShinySession):
     from pathlib import Path
     dir = Path(__file__).resolve().parent
     return {"src": dir / "rstudio-logo.png", "width": "150px"}
+
+  @observe()
+  def _():
+      if s.input['btn'] > 0:
+          modal_show(modal("Hello there!", easy_close=True))
+
+  @observe()
+  def _():
+      if s.input['link'] > 0:
+          notification_show("A notification!")
+          p = Progress()
+          import time
+          for i in range(30):
+              p.set(i/30, message="Computing")
+              time.sleep(0.1)
+          p.close()
 
 
 app = ShinyApp(ui, server)

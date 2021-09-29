@@ -11,7 +11,7 @@ def output_image(id: str, width: str = "100%", height: str = "400px", inline: bo
   style = None if inline else css(width=width, height=height)
   return func(id=id, _class_="shiny-image-output", style=style)
 
-def output_text(id: str, container: Optional[Callable[[], tag]] = None, inline: bool = False) -> tag:
+def output_text(id: str, inline: bool = False, container: Optional[Callable[[], tag_list]] = None) -> tag_list:
   if not container:
     container = tags.span if inline else tags.div
 
@@ -20,3 +20,8 @@ def output_text(id: str, container: Optional[Callable[[], tag]] = None, inline: 
 def output_text_verbatim(id: str, placeholder: bool = False) -> tag:
   cls = "class-text-output" + (" noplaceholder" if not placeholder else "")
   return tags.pre(id = id, _class_ = cls)
+
+def output_ui(id: str, inline: bool = False, container: Optional[Callable[[], tag_list]] = None, **kwargs) -> tag_list:
+    if not container:
+        container = tags.span if inline else tags.div
+    return container(id=id, _class_="shiny-html-output", **kwargs)
