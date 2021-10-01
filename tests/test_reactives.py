@@ -6,7 +6,15 @@ import pytest
 import asyncio
 
 import shiny.reactcore as reactcore
-from shiny.reactives import *
+from shiny.reactives import (
+    ReactiveVal,
+    observe,
+    observe_async,
+    reactive,
+    reactive_async,
+    isolate,
+    isolate_async,
+)
 
 
 def test_flush_runs_newly_invalidated():
@@ -25,14 +33,15 @@ def test_flush_runs_newly_invalidated():
     def o2():
         nonlocal v2_result
         v2_result = v2()
+
     @observe()
     def o1():
         v2(v1())
 
     asyncio.run(reactcore.flush())
-    assert(v2_result == 1)
-    assert(o2._exec_count == 2)
-    assert(o1._exec_count == 1)
+    assert v2_result == 1
+    assert o2._exec_count == 2
+    assert o1._exec_count == 1
 
 
 def test_flush_runs_newly_invalidated_async():
@@ -51,18 +60,21 @@ def test_flush_runs_newly_invalidated_async():
     async def o2():
         nonlocal v2_result
         v2_result = v2()
+
     @observe_async()
     async def o1():
         v2(v1())
 
     asyncio.run(reactcore.flush())
-    assert(v2_result == 1)
-    assert(o2._exec_count == 2)
-    assert(o1._exec_count == 1)
+    assert v2_result == 1
+    assert o2._exec_count == 2
+    assert o1._exec_count == 1
+
 
 # ======================================================================
 # Setting ReactiveVal to same value doesn't invalidate downstream
 # ======================================================================
+
 
 def test_reactive_val_same_no_invalidate():
     v = ReactiveVal(1)
@@ -72,11 +84,12 @@ def test_reactive_val_same_no_invalidate():
         v()
 
     asyncio.run(reactcore.flush())
-    assert(o._exec_count == 1)
+    assert o._exec_count == 1
 
     v(1)
     asyncio.run(reactcore.flush())
-    assert(o._exec_count == 1)
+    assert o._exec_count == 1
+
 
 test_reactive_val_same_no_invalidate()
 
@@ -122,6 +135,7 @@ def test_recursive_reactive_async():
     assert r._exec_count == 6
     assert isolate(v) == 0
 
+
 # ======================================================================
 # Concurrent/sequential async
 # ======================================================================
@@ -131,7 +145,6 @@ def test_async_concurrent():
     exec_order: list[str] = []
 
     async def react_chain(n: int):
-
         @reactive_async()
         async def r():
             nonlocal exec_order
@@ -150,23 +163,19 @@ def test_async_concurrent():
             exec_order.append(f"o{n}-3")
             results.append(val + n * 100)
 
-
     async def go():
-        await asyncio.gather(
-            react_chain(1),
-            react_chain(2)
-        )
+        await asyncio.gather(react_chain(1), react_chain(2))
 
         await reactcore.flush()
 
         x(5)
         await reactcore.flush()
 
-
     asyncio.run(go())
 
     assert results == [111, 211, 115, 215]
 
+    # fmt: off
     # This is the order of execution if async observers are run with separate
     # (interleaved) tasks. When it hits an `asyncio.sleep(0)`, it will yield
     # control and then the other observer in the other task will run.
@@ -182,6 +191,7 @@ def test_async_concurrent():
         'r1-2', 'r2-2',
         'o1-3', 'o2-3'
     ]
+    # fmt: on
 
 
 def test_async_sequential():
@@ -192,7 +202,6 @@ def test_async_sequential():
     exec_order: list[str] = []
 
     async def react_chain(n: int):
-
         @reactive_async()
         async def r():
             nonlocal exec_order
@@ -211,18 +220,13 @@ def test_async_sequential():
             exec_order.append(f"o{n}-3")
             results.append(val + n * 100)
 
-
     async def go():
-        await asyncio.gather(
-            react_chain(1),
-            react_chain(2)
-        )
+        await asyncio.gather(react_chain(1), react_chain(2))
 
         await reactcore.flush(concurrent=False)
 
         x(5)
         await reactcore.flush(concurrent=False)
-
 
     asyncio.run(go())
 
@@ -231,12 +235,14 @@ def test_async_sequential():
     # This is the order of execution if the async observers are run
     # sequentially. The `asyncio.sleep(0)` still yields control, but since there
     # are no other observers scheduled, it will simply resume at the same point.
+    # fmt: off
     assert exec_order == [
         'o1-1', 'o1-2', 'r1-1', 'r1-2', 'o1-3',
         'o2-1', 'o2-2', 'r2-1', 'r2-2', 'o2-3',
         'o1-1', 'o1-2', 'r1-1', 'r1-2', 'o1-3',
         'o2-1', 'o2-2', 'r2-1', 'r2-2', 'o2-3'
     ]
+    # fmt: on
 
 
 # ======================================================================
@@ -247,10 +253,12 @@ def test_isolate_basic_value():
     assert isolate(lambda: 123) == 123
     assert isolate(lambda: None) is None
 
+
 def test_isolate_basic_without_context():
     # isolate() works with Reactive and ReactiveVal; allows executing without a
     # reactive context.
     v = ReactiveVal(1)
+
     @reactive()
     def r():
         return v() + 10
@@ -264,14 +272,17 @@ def test_isolate_basic_without_context():
     assert isolate(r) == 11
     assert isolate(get_r) == 11
 
+
 def test_isolate_prevents_dependency():
     v = ReactiveVal(1)
+
     @reactive()
     def r():
         return v() + 10
 
     v_dep = ReactiveVal(1)  # Use this only for invalidating the observer
     o_val = None
+
     @observe()
     def o():
         nonlocal o_val
@@ -293,14 +304,17 @@ def test_isolate_prevents_dependency():
     assert o_val == 12
     assert o._exec_count == 2
 
+
 # ======================================================================
 # isolate_async()
 # ======================================================================
 def test_isolate_async_basic_value():
     async def f():
         return 123
+
     async def go():
         assert await isolate_async(f) == 123
+
     asyncio.run(go())
 
 
@@ -308,25 +322,31 @@ def test_isolate_async_basic_without_context():
     # isolate_async() works with Reactive and ReactiveVal; allows executing
     # without a reactive context.
     v = ReactiveVal(1)
+
     @reactive_async()
     async def r():
         return v() + 10
+
     async def get_r():
         return await r()
+
     async def go():
         assert await isolate_async(r) == 11
         assert await isolate_async(get_r) == 11
+
     asyncio.run(go())
 
 
 def test_isolate_async_prevents_dependency():
     v = ReactiveVal(1)
+
     @reactive_async()
     async def r():
         return v() + 10
 
     v_dep = ReactiveVal(1)  # Use this only for invalidating the observer
     o_val = None
+
     @observe_async()
     async def o():
         nonlocal o_val
@@ -348,6 +368,7 @@ def test_isolate_async_prevents_dependency():
     assert o_val == 12
     assert o._exec_count == 2
 
+
 # ======================================================================
 # Priority for observers
 # ======================================================================
@@ -355,19 +376,19 @@ def test_observer_priority():
     v = ReactiveVal(1)
     results: list[int] = []
 
-    @observe(priority = 1)
+    @observe(priority=1)
     def o1():
         nonlocal results
         v()
         results.append(1)
 
-    @observe(priority = 2)
+    @observe(priority=2)
     def o2():
         nonlocal results
         v()
         results.append(2)
 
-    @observe(priority = 1)
+    @observe(priority=1)
     def o3():
         nonlocal results
         v()
@@ -378,7 +399,7 @@ def test_observer_priority():
 
     # Add another observer with priority 2. Only this one will run (until we
     # invalidate others by changing v).
-    @observe(priority = 2)
+    @observe(priority=2)
     def o4():
         nonlocal results
         v()
@@ -405,19 +426,19 @@ def test_observer_async_priority():
     v = ReactiveVal(1)
     results: list[int] = []
 
-    @observe_async(priority = 1)
+    @observe_async(priority=1)
     async def o1():
         nonlocal results
         v()
         results.append(1)
 
-    @observe_async(priority = 2)
+    @observe_async(priority=2)
     async def o2():
         nonlocal results
         v()
         results.append(2)
 
-    @observe_async(priority = 1)
+    @observe_async(priority=1)
     async def o3():
         nonlocal results
         v()
@@ -428,7 +449,7 @@ def test_observer_async_priority():
 
     # Add another observer with priority 2. Only this one will run (until we
     # invalidate others by changing v).
-    @observe_async(priority = 2)
+    @observe_async(priority=2)
     async def o4():
         nonlocal results
         v()
