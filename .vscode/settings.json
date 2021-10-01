@@ -2,8 +2,14 @@
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true,
     "python.analysis.typeCheckingMode": "strict",
+    "python.formatting.provider": "black",
+    "editor.formatOnSave": true,
+    "python.linting.flake8Enabled": true,
     "files.exclude": {
         "**/__pycache__": true
     },
-    "editor.tabSize": 4
+    "editor.tabSize": 4,
+    "editor.rulers": [
+        88
+    ],
 }

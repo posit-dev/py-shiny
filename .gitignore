@@ -101,10 +101,5 @@ ENV/
 # mypy
 .mypy_cache/
 
-# IDE settings
-.vscode/
-.ideas/
-ui-tags.ipynb
-
 typings/
 

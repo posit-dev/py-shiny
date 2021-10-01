@@ -20,3 +20,11 @@ python3 myapp/app.py
 
 Then visit the app by pointing a web browser to http://localhost:8000/.
 
+
+## Development
+
+If you want to do development on htmltools, run:
+
+```sh
+pip install -r requirements-dev.txt
+```
