@@ -1,21 +1,30 @@
 """Reactive components"""
 
 __all__ = (
-    'ReactiveVal',
-    'ReactiveValues',
-    'Reactive',
-    'ReactiveAsync',
-    'reactive',
-    'reactive_async',
-    'Observer',
-    'ObserverAsync',
-    'observe',
-    'observe_async',
-    'isolate',
-    'isolate_async',
+    "ReactiveVal",
+    "ReactiveValues",
+    "Reactive",
+    "ReactiveAsync",
+    "reactive",
+    "reactive_async",
+    "Observer",
+    "ObserverAsync",
+    "observe",
+    "observe_async",
+    "isolate",
+    "isolate_async",
 )
 
-from typing import TYPE_CHECKING, Optional, Callable, Awaitable, TypeVar, Union, Generic, Any
+from typing import (
+    TYPE_CHECKING,
+    Optional,
+    Callable,
+    Awaitable,
+    TypeVar,
+    Union,
+    Generic,
+    Any,
+)
 import typing
 import inspect
 
@@ -23,6 +32,7 @@ from .reactcore import Context, Dependents
 from . import reactcore
 from . import utils
 from .types import MISSING, MISSING_TYPE
+
 if TYPE_CHECKING:
     from .shinysession import ShinySession
 
@@ -49,7 +59,7 @@ class ReactiveVal(Generic[T]):
         return self._value
 
     def set(self, value: T) -> bool:
-        if (self._value is value):
+        if self._value is value:
             return False
 
         self._value = value
@@ -64,7 +74,7 @@ class ReactiveValues:
             self._map[key] = ReactiveVal(value)
 
     def __setitem__(self, key: str, value: object) -> None:
-        if (key in self._map):
+        if key in self._map:
             self._map[key](value)
         else:
             self._map[key] = ReactiveVal(value)
@@ -90,7 +100,7 @@ class Reactive(Generic[T]):
         self,
         func: Callable[[], T],
         *,
-        session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING,
+        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
     ) -> None:
         if inspect.iscoroutinefunction(func):
             raise TypeError("Reactive requires a non-async function")
@@ -131,10 +141,10 @@ class Reactive(Generic[T]):
     async def get_value(self) -> T:
         self._dependents.register()
 
-        if (self._invalidated or self._running):
+        if self._invalidated or self._running:
             await self.update_value()
 
-        if (self._error):
+        if self._error:
             raise self._error[0]
 
         return self._value[0]
@@ -159,9 +169,9 @@ class Reactive(Generic[T]):
 
     def _on_invalidate_cb(self) -> None:
         self._invalidated = True
-        self._value.clear() # Allow old value to be GC'd
+        self._value.clear()  # Allow old value to be GC'd
         self._dependents.invalidate()
-        self._ctx = None    # Allow context to be GC'd
+        self._ctx = None  # Allow context to be GC'd
 
     async def _run_func(self) -> None:
         self._error.clear()
@@ -176,7 +186,7 @@ class ReactiveAsync(Reactive[T]):
         self,
         func: Callable[[], Awaitable[T]],
         *,
-        session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING,
+        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
     ) -> None:
         if not inspect.iscoroutinefunction(func):
             raise TypeError("ReactiveAsync requires an async function")
@@ -192,19 +202,21 @@ class ReactiveAsync(Reactive[T]):
         return await self.get_value()
 
 
-def reactive(*,
-    session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING
+def reactive(
+    *, session: Union[MISSING_TYPE, "ShinySession", None] = MISSING
 ) -> Callable[[Callable[[], T]], Reactive[T]]:
     def create_reactive(fn: Callable[[], T]) -> Reactive[T]:
         return Reactive(fn, session=session)
+
     return create_reactive
 
 
-def reactive_async(*,
-    session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING
+def reactive_async(
+    *, session: Union[MISSING_TYPE, "ShinySession", None] = MISSING
 ) -> Callable[[Callable[[], Awaitable[T]]], ReactiveAsync[T]]:
     def create_reactive_async(fn: Callable[[], Awaitable[T]]) -> ReactiveAsync[T]:
         return ReactiveAsync(fn, session=session)
+
     return create_reactive_async
 
 
@@ -216,8 +228,8 @@ class Observer:
         self,
         func: Callable[[], None],
         *,
-        session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING,
-        priority: int = 0
+        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
+        priority: int = 0,
     ) -> None:
         if inspect.iscoroutinefunction(func):
             raise TypeError("Observer requires a non-async function")
@@ -247,7 +259,6 @@ class Observer:
 
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
-
 
     def _create_context(self) -> Context:
         ctx = Context()
@@ -289,7 +300,7 @@ class Observer:
     def destroy(self) -> None:
         self._destroyed = True
 
-        if (self._ctx is not None):
+        if self._ctx is not None:
             self._ctx.invalidate()
 
     def _on_session_ended_cb(self) -> None:
@@ -301,8 +312,8 @@ class ObserverAsync(Observer):
         self,
         func: Callable[[], Awaitable[None]],
         *,
-        session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING,
-        priority: int = 0
+        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
+        priority: int = 0,
     ) -> None:
         if not inspect.iscoroutinefunction(func):
             raise TypeError("ObserverAsync requires an async function")
@@ -314,21 +325,21 @@ class ObserverAsync(Observer):
         self._is_async = True
 
 
-def observe(*,
-    priority: int = 0,
-    session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING
+def observe(
+    *, priority: int = 0, session: Union[MISSING_TYPE, "ShinySession", None] = MISSING
 ) -> Callable[[Callable[[], None]], Observer]:
     def create_observer(fn: Callable[[], None]) -> Observer:
         return Observer(fn, priority=priority, session=session)
+
     return create_observer
 
 
-def observe_async(*,
-    priority: int = 0,
-    session: Union[MISSING_TYPE, 'ShinySession', None] = MISSING
+def observe_async(
+    *, priority: int = 0, session: Union[MISSING_TYPE, "ShinySession", None] = MISSING
 ) -> Callable[[Callable[[], Awaitable[None]]], ObserverAsync]:
     def create_observer_async(fn: Callable[[], Awaitable[None]]) -> ObserverAsync:
         return ObserverAsync(fn, priority=priority, session=session)
+
     return create_observer_async
 
 
@@ -349,6 +360,7 @@ def isolate(func: Callable[[], T]) -> T:
     finally:
         ctx.invalidate()
 
+
 async def isolate_async(func: Callable[[], Awaitable[T]]) -> T:
     ctx: Context = reactcore.Context()
     try:
@@ -361,34 +373,37 @@ async def isolate_async(func: Callable[[], Awaitable[T]]) -> T:
 from . import shinysession
 
 
-if (__name__ == '__main__'):
+if __name__ == "__main__":
     import asyncio
 
     print("================================")
     print("Synchronous reactivity")
     print("================================")
     from shiny.reactives import *
+
     x = ReactiveVal(1)
     x(2)
 
     r_count = 0
+
     @reactive()
     def r():
         print("Executing user reactive function")
         global r_count
         r_count += 1
-        return x() + r_count*10
+        return x() + r_count * 10
 
     # x(3)
 
     o_count = 0
+
     @observe()
     def xx():
         print("Executing user observer function")
         global o_count
         o_count += 1
         val = r()
-        print(val + o_count*100)
+        print(val + o_count * 100)
 
     x(4)
 
@@ -402,8 +417,6 @@ if (__name__ == '__main__'):
     # Should print '225'
     asyncio.run(reactcore.flush())
 
-
-
     print("================================")
     print("Async reactivity")
     print("================================")
@@ -416,7 +429,6 @@ if (__name__ == '__main__'):
     o_count = 0
 
     async def react_chain(n: int):
-
         @reactive_async()
         async def r():
             global r_count
@@ -439,18 +451,13 @@ if (__name__ == '__main__'):
 
         # await reactcore.flush()
 
-
     async def go():
-        await asyncio.gather(
-            react_chain(1),
-            react_chain(2)
-        )
+        await asyncio.gather(react_chain(1), react_chain(2))
 
         await reactcore.flush()
 
         x(5)
         await reactcore.flush()
-
 
     asyncio.run(go())
 

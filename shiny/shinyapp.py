@@ -1,7 +1,4 @@
-
-__all__ = (
-    'ShinyApp',
-)
+__all__ = ("ShinyApp",)
 
 from typing import Union, Callable
 import re
@@ -11,7 +8,12 @@ from fastapi.responses import JSONResponse
 
 from .shinysession import ShinySession, session_context
 from . import reactcore
-from .connmanager import ConnectionManager, Connection, FastAPIConnectionManager, TCPConnectionManager
+from .connmanager import (
+    ConnectionManager,
+    Connection,
+    FastAPIConnectionManager,
+    TCPConnectionManager,
+)
 
 
 class ShinyApp:
@@ -19,7 +21,7 @@ class ShinyApp:
         self.ui: object = ui
         self.server: Callable[[ShinySession], None] = server
         self._sessions: dict[str, ShinySession] = {}
-        self._last_session_id: int = 0    # Counter for generating session IDs
+        self._last_session_id: int = 0  # Counter for generating session IDs
 
         self._sessions_needing_flush: dict[int, ShinySession] = {}
 
@@ -31,18 +33,21 @@ class ShinyApp:
         return session
 
     def remove_session(self, session: Union[ShinySession, str]) -> None:
-        if (isinstance(session, ShinySession)):
+        if isinstance(session, ShinySession):
             session = session.id
 
         print(f"remove_session: {session}")
         del self._sessions[session]
 
     def run(self, conn_type: str = "websocket") -> None:
-        if (conn_type == "websocket"):
-            self._conn_manager: ConnectionManager = \
-                FastAPIConnectionManager(self.ui, self._on_connect_cb, self._on_session_request_cb)
-        elif (conn_type == "tcp"):
-            self._conn_manager: ConnectionManager = TCPConnectionManager(self._on_connect_cb)
+        if conn_type == "websocket":
+            self._conn_manager: ConnectionManager = FastAPIConnectionManager(
+                self.ui, self._on_connect_cb, self._on_session_request_cb
+            )
+        elif conn_type == "tcp":
+            self._conn_manager: ConnectionManager = TCPConnectionManager(
+                self._on_connect_cb
+            )
         else:
             raise ValueError(f"Unknown conn_type {conn_type}")
 
@@ -59,7 +64,7 @@ class ShinyApp:
         matches = re.search("^/session/([0-9a-f]+)(/.*)$", request.url.path)
         if matches is None:
             # Exact same response as a "normal" 404 from FastAPI.
-            return JSONResponse({"detail":"Not Found"}, status_code=404)
+            return JSONResponse({"detail": "Not Found"}, status_code=404)
 
         session_id = matches.group(1)
         subpath = matches.group(2)
@@ -69,7 +74,7 @@ class ShinyApp:
             with session_context(session):
                 return await session.handle_request(request, subpath)
         else:
-            return JSONResponse({"detail":"Not Found"}, status_code=404)
+            return JSONResponse({"detail": "Not Found"}, status_code=404)
 
     def request_flush(self, session: ShinySession) -> None:
         # TODO: Until we have reactive domains, because we can't yet keep track

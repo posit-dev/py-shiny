@@ -43,13 +43,16 @@ class FileInfo(TypedDict):
 
 
 class FileUploadOperation:
-    def __init__(self, parent: 'FileUploadManager', id: str, dir: str, file_infos: List[FileInfo]) -> None:
+    def __init__(
+        self, parent: "FileUploadManager", id: str, dir: str, file_infos: List[FileInfo]
+    ) -> None:
         self._parent: FileUploadManager = parent
         self._id: str = id
         self._dir: str = dir
         # Copy file_infos and add a "datapath" entry for each file.
         self._file_infos: list[FileInfo] = [
-            typing.cast(FileInfo, {**fi, "datapath": ""}) for fi in copy.deepcopy(file_infos)
+            typing.cast(FileInfo, {**fi, "datapath": ""})
+            for fi in copy.deepcopy(file_infos)
         ]
         self._n_uploaded: int = 0
         self._current_file_obj: Optional[BinaryIO] = None
@@ -58,7 +61,9 @@ class FileUploadOperation:
     def file_begin(self) -> None:
         file_info: FileInfo = self._file_infos[self._n_uploaded]
         file_ext = pathlib.Path(file_info["name"]).suffix
-        file_info["datapath"] = os.path.join(self._dir, str(self._n_uploaded) + file_ext)
+        file_info["datapath"] = os.path.join(
+            self._dir, str(self._n_uploaded) + file_ext
+        )
         self._current_file_obj = open(file_info["datapath"], "ab")
 
     # Finish uploading one of the files.
@@ -77,7 +82,9 @@ class FileUploadOperation:
     # End the entire operation, which can consist of multiple files.
     def finish(self) -> List[FileInfo]:
         if self._n_uploaded != len(self._file_infos):
-            raise RuntimeError(f"Not all files for FileUploadOperation {self._id} were uploaded.")
+            raise RuntimeError(
+                f"Not all files for FileUploadOperation {self._id} were uploaded."
+            )
         self._parent.on_job_finished(self._id)
         return self._file_infos
 
@@ -85,19 +92,19 @@ class FileUploadOperation:
     def __enter__(self) -> None:
         self.file_begin()
 
-    def __exit__(self, type, value, trace) -> None:   # type: ignore
+    def __exit__(self, type, value, trace) -> None:  # type: ignore
         self.file_end()
 
 
 class FileUploadManager:
     def __init__(self) -> None:
         # TODO: Remove basedir when app exits.
-        self._basedir: str = tempfile.mkdtemp(prefix = "fileupload-")
+        self._basedir: str = tempfile.mkdtemp(prefix="fileupload-")
         self._operations: dict[str, FileUploadOperation] = {}
 
     def create_upload_operation(self, file_infos: List[FileInfo]) -> str:
         job_id = utils.rand_hex(12)
-        dir = tempfile.mkdtemp(dir = self._basedir)
+        dir = tempfile.mkdtemp(dir=self._basedir)
         self._operations[job_id] = FileUploadOperation(self, job_id, dir, file_infos)
         return job_id
 

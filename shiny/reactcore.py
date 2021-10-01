@@ -10,6 +10,7 @@ from .datastructures import PriorityQueueFIFO
 
 T = TypeVar("T")
 
+
 class Context:
     """A reactive context"""
 
@@ -28,7 +29,7 @@ class Context:
         """Invalidate this context. It will immediately call the callbacks
         that have been registered with onInvalidate()."""
 
-        if (self._invalidated):
+        if self._invalidated:
             return
 
         self._invalidated = True
@@ -40,7 +41,7 @@ class Context:
 
     def on_invalidate(self, func: Callable[[], None]) -> None:
         """Register a function to be called when this context is invalidated"""
-        if (self._invalidated):
+        if self._invalidated:
             func()
         else:
             self._invalidate_callbacks.append(func)
@@ -71,11 +72,11 @@ class Dependents:
 
     def register(self) -> None:
         ctx: Context = get_current_context()
-        if (ctx.id not in self._dependents):
+        if ctx.id not in self._dependents:
             self._dependents[ctx.id] = ctx
 
         def on_invalidate_cb() -> None:
-            if (ctx.id in self._dependents):
+            if ctx.id in self._dependents:
                 del self._dependents[ctx.id]
 
         ctx.on_invalidate(on_invalidate_cb)
@@ -91,7 +92,9 @@ class ReactiveEnvironment:
     """The reactive environment"""
 
     def __init__(self) -> None:
-        self._current_context: ContextVar[Optional[Context]] = ContextVar("current_context", default = None)
+        self._current_context: ContextVar[Optional[Context]] = ContextVar(
+            "current_context", default=None
+        )
         self._next_id: int = 0
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
 
@@ -109,12 +112,8 @@ class ReactiveEnvironment:
         return ctx
 
     async def run_with(
-        self,
-        ctx: Context,
-        context_func: Callable[[], Awaitable[T]],
-        create_task: bool
+        self, ctx: Context, context_func: Callable[[], Awaitable[T]], create_task: bool
     ) -> T:
-
         async def wrapper() -> T:
             old = self._current_context.set(ctx)
             try:
@@ -138,7 +137,6 @@ class ReactiveEnvironment:
         else:
             await self._flush_sequential()
 
-
     async def _flush_concurrent(self) -> None:
         # Flush observers concurrently, using Tasks.
         tasks: list[Task[None]] = []
@@ -153,7 +151,9 @@ class ReactiveEnvironment:
                 ctx = self._pending_flush_queue.get()
 
                 try:
-                    task: Task[None] = asyncio.create_task(ctx.execute_flush_callbacks())
+                    task: Task[None] = asyncio.create_task(
+                        ctx.execute_flush_callbacks()
+                    )
                     tasks.append(task)
                 finally:
                     pass
@@ -171,13 +171,12 @@ class ReactiveEnvironment:
             finally:
                 pass
 
-
     def add_pending_flush(self, ctx: Context, priority: int) -> None:
         self._pending_flush_queue.put(priority, ctx)
 
 
-
 _reactive_environment = ReactiveEnvironment()
+
 
 def get_current_context() -> Context:
     return _reactive_environment.current_context()

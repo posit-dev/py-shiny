@@ -2,7 +2,8 @@ from typing import TypeVar, Generic
 from queue import PriorityQueue
 
 
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 class PriorityQueueFIFO(Generic[T]):
     """
@@ -11,6 +12,7 @@ class PriorityQueueFIFO(Generic[T]):
     is kept separate from the priority value (with PriorityQueue, the priority
     is part of the item).
     """
+
     def __init__(self) -> None:
         self._pq: PriorityQueue[tuple[int, int, T]] = PriorityQueue()
         self._counter: int = 0

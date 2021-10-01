@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Callable, Awaitable, TypeVar, Any, Optional
 
 from htmltools.tags import tag_list
+
 if TYPE_CHECKING:
     from .shinysession import ShinySession
 import inspect
@@ -14,8 +15,9 @@ def rand_hex(bytes: int) -> str:
     Creates a random hexadecimal string of size `bytes`. The length in
     characters will be bytes*2.
     """
-    format_str = "{{:0{}x}}".format(bytes*2)
+    format_str = "{{:0{}x}}".format(bytes * 2)
     return format_str.format(secrets.randbits(bytes * 8))
+
 
 # ==============================================================================
 # Async-related functions
@@ -23,11 +25,13 @@ def rand_hex(bytes: int) -> str:
 
 T = TypeVar("T")
 
+
 def wrap_async(fn: Callable[[], T]) -> Callable[[], Awaitable[T]]:
     """
     Wrap a synchronous function that returns T, and return an async function
     that wraps the original function.
     """
+
     async def fn_async() -> T:
         return fn()
 
@@ -46,6 +50,7 @@ def is_async_callable(obj: object) -> bool:
             return True
 
     return False
+
 
 # See https://stackoverflow.com/a/59780868/412655 for an excellent explanation
 # of how this stuff works.
@@ -75,17 +80,21 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
     except StopIteration as e:
         return e.value
 
-    raise RuntimeError("async function yielded control; it did not finish in one iteration.")
+    raise RuntimeError(
+        "async function yielded control; it did not finish in one iteration."
+    )
 
 
-def process_deps(ui, s: Optional['ShinySession'] = None):
+def process_deps(ui, s: Optional["ShinySession"] = None):
     if s is None:
         from .shinysession import get_current_session
+
         s = get_current_session()
 
     from .connmanager import create_web_dependency
+
     def register_dep(d):
-      return create_web_dependency(s._app._conn_manager._fastapi_app, d)
+        return create_web_dependency(s._app._conn_manager._fastapi_app, d)
 
     if not isinstance(ui, tag_list):
         ui = tag_list(ui)

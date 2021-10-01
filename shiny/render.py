@@ -7,6 +7,7 @@ import matplotlib.pyplot
 import inspect
 from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union, TypedDict
 import typing
+
 if TYPE_CHECKING:
     from .shinysession import ShinySession
 
@@ -25,7 +26,7 @@ class RenderFunction:
     def __call__(self) -> object:
         raise NotImplementedError
 
-    def set_metadata(self, session: 'ShinySession', name: str) -> None:
+    def set_metadata(self, session: "ShinySession", name: str) -> None:
         """When RenderFunctions are assigned to Output object slots, this method
         is used to pass along session and name information.
         """
@@ -50,14 +51,20 @@ class Plot(RenderFunction):
 
     async def run(self) -> object:
         # Reactively read some information about the plot.
-        pixelratio: float = typing.cast(float, self._session.input[f".clientdata_pixelratio"])
-        width: float = typing.cast(float, self._session.input[f".clientdata_output_{self._name}_width"])
-        height: float = typing.cast(float, self._session.input[f".clientdata_output_{self._name}_height"])
+        pixelratio: float = typing.cast(
+            float, self._session.input[f".clientdata_pixelratio"]
+        )
+        width: float = typing.cast(
+            float, self._session.input[f".clientdata_output_{self._name}_width"]
+        )
+        height: float = typing.cast(
+            float, self._session.input[f".clientdata_output_{self._name}_height"]
+        )
 
         fig = await self._fn()
 
         if isinstance(fig, matplotlib.figure.Figure):
-            tmpfile = tempfile.mkstemp(suffix = ".png")[1]
+            tmpfile = tempfile.mkstemp(suffix=".png")[1]
 
             try:
                 ppi = self._ppi * pixelratio
@@ -89,7 +96,7 @@ class Plot(RenderFunction):
 
 
 class PlotAsync(Plot, RenderFunctionAsync):
-    def __init__(self, fn: UserRenderFunctionAsync, alt: Optional[str]=None) -> None:
+    def __init__(self, fn: UserRenderFunctionAsync, alt: Optional[str] = None) -> None:
         if not inspect.iscoroutinefunction(fn):
             raise TypeError("PlotAsync requires an async function")
 
@@ -108,7 +115,7 @@ def plot(alt: Optional[str] = None):
             fn = typing.cast(UserRenderFunctionAsync, fn)
             return PlotAsync(fn, alt)
         else:
-            return Plot(fn, alt = alt)
+            return Plot(fn, alt=alt)
 
     return wrapper
 
@@ -118,8 +125,12 @@ class ImgReturn(TypedDict):
     width: str
     height: str
     alt: str
+
+
 ImgRenderFunc = Callable[[], ImgReturn]
 ImgRenderFuncAsync = Callable[[], Awaitable[ImgReturn]]
+
+
 class Image(RenderFunction):
     def __init__(self, fn: ImgRenderFunc, delete_file: bool = False) -> None:
         self._fn: ImgRenderFuncAsync = utils.wrap_async(fn)
@@ -156,7 +167,7 @@ class ImageAsync(Image, RenderFunctionAsync):
         return await self.run()
 
 
-def image(delete_file: bool=False):
+def image(delete_file: bool = False):
     def wrapper(fn: Union[ImgRenderFunc, ImgRenderFuncAsync]) -> Image:
         if inspect.iscoroutinefunction(fn):
             fn = typing.cast(ImgRenderFuncAsync, fn)
@@ -169,6 +180,8 @@ def image(delete_file: bool=False):
 
 UiRenderFunc = Callable[[], Optional[tag_list]]
 UiRenderFuncAsync = Callable[[], Awaitable[ImgReturn]]
+
+
 class Ui(RenderFunction):
     def __init__(self, fn: UiRenderFunc) -> None:
         self._fn: UiRenderFuncAsync = utils.wrap_async(fn)
@@ -182,6 +195,7 @@ class Ui(RenderFunction):
             return None
         return utils.process_deps(ui, self._session)
 
+
 class UiAsync(Ui, RenderFunctionAsync):
     def __init__(self, fn: UiRenderFuncAsync) -> None:
         if not inspect.iscoroutinefunction(fn):
@@ -192,7 +206,8 @@ class UiAsync(Ui, RenderFunctionAsync):
     async def __call__(self) -> object:
         return await self.run()
 
-def ui(delete_file: bool =False):
+
+def ui(delete_file: bool = False):
     def wrapper(fn: Union[UiRenderFunc, UiRenderFuncAsync]) -> tag_list:
         if inspect.iscoroutinefunction(fn):
             fn = typing.cast(UiRenderFuncAsync, fn)
