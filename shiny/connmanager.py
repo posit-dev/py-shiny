@@ -1,4 +1,4 @@
-from typing import Callable, Awaitable, Union
+from typing import Callable, Awaitable
 import typing
 import os
 
@@ -35,10 +35,10 @@ class ConnectionClosed(Exception):
 # =============================================================================
 
 from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
-from htmltools import tag_list, html_document, html_dependency
+from htmltools import tag_list, html_dependency
 from .html_dependencies import shiny_deps
 
 
