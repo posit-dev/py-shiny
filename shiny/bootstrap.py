@@ -7,7 +7,7 @@ ChildType = Union[tag_list, html_dependency, str, None]
 AttrType = Optional[Dict[str, str]]
 
 def row(*args: ChildType, **kwargs: AttrType) -> tag:
-  return div(*args, _class_="row", **kwargs)
+  return div(*args, class_="row", **kwargs)
 
 def column(width: int, *args: ChildType, offset: int=0, **kwargs: AttrType) -> tag:
   if width < 1 or width > 12:
@@ -19,7 +19,7 @@ def column(width: int, *args: ChildType, offset: int=0, **kwargs: AttrType) -> t
     # https://github.com/twbs/bootstrap/blob/74b8fe7/docs/4.3/migration/index.html#L659
     off = str(offset)
     cls += " offset-md-{off} col-sm-offset-{off}"
-  return div(*args, _class_=cls, **kwargs)
+  return div(*args, class_=cls, **kwargs)
 
 
 # TODO: also accept a generic list (and wrap in panel in that case)
@@ -27,26 +27,26 @@ def layout_sidebar(sidebar: ChildType, main: ChildType, position: Literal["left"
   return row(sidebar, main) if position == "left" else row(main, sidebar)
 
 def panel_well(*args: ChildType, **kwargs: AttrType) -> tag:
-  return div(*args, _class_="well", **kwargs)
+  return div(*args, class_="well", **kwargs)
 
 def panel_sidebar(*args: ChildType, width: int = 4, **kwargs: AttrType) -> tag:
   return div(
     # A11y semantic landmark for sidebar
-    tags.form(*args, role="complementary", _class_="well", **kwargs),
-    _class_="col-sm-" + str(width),
+    tags.form(*args, role="complementary", class_="well", **kwargs),
+    class_="col-sm-" + str(width),
   )
 
 def panel_main(*args: ChildType, width: int = 8, **kwargs: AttrType):
   return div(
     # A11y semantic landmark for main region
     *args, role="main",
-    _class_="col-sm-" + str(width),
+    class_="col-sm-" + str(width),
     **kwargs
   )
 
 # TODO: replace `flowLayout()`/`splitLayout()` with a flexbox wrapper?
 #def panel_input(*args: ChildType, **kwargs: AttrType):
-#  return div(flowLayout(...), _class_="shiny-input-panel")
+#  return div(flowLayout(...), class_="shiny-input-panel")
 
 # TODO: do we have an answer for shiny::NS() yet?
 def panel_conditional(condition: str, *args: ChildType, ns: Callable[[str], str] = lambda x: x, **kwargs: AttrType):
@@ -86,7 +86,7 @@ def panel_absolute(*args: ChildType,
     divTag = div(*args, style=style, **kwargs)
     if not draggable:
       return divTag
-    divTag.append(_class_="draggable")
+    divTag.append(class_="draggable")
     deps = jqui_deps()
     deps.stylesheet = []
     return tag_list(
@@ -96,4 +96,4 @@ def panel_absolute(*args: ChildType,
 
 
 def help_text(*args: ChildType, **kwargs: AttrType) -> tag:
-  return span(*args, _class_="help-block", **kwargs)
+  return span(*args, class_="help-block", **kwargs)

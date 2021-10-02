@@ -7,9 +7,9 @@ def numericInput(id: str, label: str, value: valType, min: Optional[valType] = N
   return div(
     shiny_input_label(id, label),
     tags.input(
-      id=id, type="number", _class_="form-control",
+      id=id, type="number", class_="form-control",
       value=value, min=min, max=max, step=step
     ),
-    _class_ = "form-group shiny-input-container",
+    class_ = "form-group shiny-input-container",
     style = f"width: {width};" if width else None,
   )

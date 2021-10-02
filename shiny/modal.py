@@ -8,7 +8,7 @@ def modal_button(label: str) -> tag:
   return tags.button(
       #validateIcon(icon),
       label, type="button",
-      _class_="btn btn-default",
+      class_="btn btn-default",
       data_dismiss="modal",
       data_bs_dismiss="modal",
   )
@@ -18,19 +18,19 @@ def modal(*args, title: Optional[str]=None, footer: Any=modal_button("Dismiss"),
           size: Literal["m", "s", "l", "xl"]="m", easy_close: bool=False, fade: bool=True, **kwargs) -> tag:
 
       if title:
-          title = div(tags.h4(title, _class_="modal-title"), _class_="modal-header")
+          title = div(tags.h4(title, class_="modal-title"), class_="modal-header")
 
       if footer:
-          footer = div(footer, _class_="modal-footer")
+          footer = div(footer, class_="modal-footer")
 
       dialog = div(
           div(
               title,
-              div(*args, _class_="modal-body", **kwargs),
+              div(*args, class_="modal-body", **kwargs),
               footer,
-              _class_="modal-content"
+              class_="modal-content"
           ),
-          _class_="modal-dialog" + ({"s": " modal-sm", "l": " modal-lg", "xl": " modal-xl"}.get(size, ''))
+          class_="modal-dialog" + ({"s": " modal-sm", "l": " modal-lg", "xl": " modal-xl"}.get(size, ''))
       )
 
       # jQuery plugin doesn't work in Bootstrap 5, but vanilla JS doesn't work in Bootstrap 4 :sob:
@@ -50,7 +50,7 @@ def modal(*args, title: Optional[str]=None, footer: Any=modal_button("Dismiss"),
           dialog,
           tags.script(html(js)),
           id="shiny-modal",
-          _class_="modal fade" if fade else "modal",
+          class_="modal fade" if fade else "modal",
           tabindex="-1",
           data_backdrop=backdrop,
           data_bs_backdrop=backdrop,

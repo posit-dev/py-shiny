@@ -6,10 +6,10 @@ def input_text(id: str, label: str, value: str="", width: Optional[str]=None, pl
   return div(
     shiny_input_label(id, label),
     tags.input(
-      id=id, type="text", _class_="form-control",
+      id=id, type="text", class_="form-control",
       value=value, placeholder = placeholder
     ),
-    _class_ = "form-group shiny-input-container",
+    class_ = "form-group shiny-input-container",
     style=f"width: {width};" if width else None
   )
 
@@ -30,13 +30,13 @@ def input_text_area(id: str, label: str, value: str="", width: Optional[str] = N
       raise ValueError("Invalid resize value: " + str(resize))
 
     area = tags.textarea(
-      id=id, _class_="form-control", style=style,
+      id=id, class_="form-control", style=style,
       placeholder=placeholder, rows=rows, cols=cols,
       children=value
     )
 
     return div(
       shiny_input_label(id, label), area,
-      _class_ = "form-group shiny-input-container",
+      class_ = "form-group shiny-input-container",
       style = f"width: {width};" if width else None
     )

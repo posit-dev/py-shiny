@@ -11,9 +11,9 @@ def input_checkbox(id: str, label: str, value: bool=False, width: Optional[str] 
           tags.input(id=id, type="checkbox", checked="checked" if value else None),
           span(label)
       ),
-      _class_="checkbox",
+      class_="checkbox",
     ),
-    _class_="form-group shiny-input-container",
+    class_="form-group shiny-input-container",
     style=f"width: {width};" if width else None
   )
 
@@ -25,7 +25,7 @@ def input_checkbox_group(id: str, label: str, choices: choicesType, choice_names
   return div(
     input_label, options,
     id=id, style=f"width: {width};" if width else None,
-    _class_="form-group shiny-input-checkboxgroup shiny-input-container" + (" shiny-input-container-inline" if inline else ""),
+    class_="form-group shiny-input-checkboxgroup shiny-input-container" + (" shiny-input-container-inline" if inline else ""),
     # https://www.w3.org/TR/wai-aria-practices/examples/checkbox/checkbox-1/checkbox-1.html
     role="group", aria_labelledby=input_label.get_attr("id")
   )
@@ -36,7 +36,7 @@ def input_radio_buttons(id: str, label: str, choices: choicesType, choice_names:
   return div(
     input_label, options,
     id=id, style=f"width: {width};" if width else None,
-    _class_="form-group shiny-input-radiogroup shiny-input-container" + (" shiny-input-container-inline" if inline else ""),
+    class_="form-group shiny-input-radiogroup shiny-input-container" + (" shiny-input-container-inline" if inline else ""),
     # https://www.w3.org/TR/2017/WD-wai-aria-practices-1.1-20170628/examples/radio/radio-1/radio-1.html
     role="radiogroup", aria_labelledby=input_label.get_attr("id")
   )
@@ -49,7 +49,7 @@ def generate_options(id, type, choices, choice_names, selected, inline):
     selected = choices[0]
   return div(
       *[generate_option(id, type, choices[i], choice_names[i], selected, inline) for i in range(len(choices))],
-      _class_="shiny-options-group"
+      class_="shiny-options-group"
     )
 
 def generate_option(id, type, choice, choice_name, selected, inline):
@@ -58,6 +58,6 @@ def generate_option(id, type, choice, choice_name, selected, inline):
     checked="checked" if selected == choice else None
   )
   if inline:
-    return tags.label(input, span(choice_name), _class_=type+"-inline")
+    return tags.label(input, span(choice_name), class_=type+"-inline")
   else:
-    return div(tags.label(input, span(choice_name)), _class_=type)
+    return div(tags.label(input, span(choice_name)), class_=type)

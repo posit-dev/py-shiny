@@ -44,7 +44,7 @@ def input_slider(id: str, label: str, min: SliderVal, max: SliderVal, value: Sli
     n_ticks = n_steps / scale_factor
 
   props = {
-    "_class_": "js-range-slider",
+    "class_": "js-range-slider",
     "id": id, "style": f"width: {width};" if width else None,
     "data_skin": "shiny",
     "data_min": min, # TODO: do we need to worry about scientific notation (i.e., formatNoSci()?)
@@ -81,7 +81,7 @@ def input_slider(id: str, label: str, min: SliderVal, max: SliderVal, value: Sli
     shiny_input_label(id, label),
     tags.input(**props),
     ionrangeslider_deps(),
-    _class_ = "form-group shiny-input-container"
+    class_ = "form-group shiny-input-container"
   )
 
 

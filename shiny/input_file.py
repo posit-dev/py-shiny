@@ -11,19 +11,19 @@ def input_file(id: str, label: str, multiple: bool=False, accept: Optional[List[
       # Don't use "display: none;" style, which causes keyboard accessibility issue; instead use the following workaround: https://css-tricks.com/places-its-tempting-to-use-display-none-but-dont/
       style="position: absolute !important; top: -99999px !important; left: -99999px !important;"
     ),
-    _class_="btn btn-default btn-file"
+    class_="btn btn-default btn-file"
   )
   return div(
     shiny_input_label(id, label),
     div(
-      tags.label(btn_file, _class_="input-group-btn input-group-prepend"),
-      tags.input(type = "text", _class_ = "form-control", placeholder = placeholder, readonly = "readonly"),
-      _class_="input-group"
+      tags.label(btn_file, class_="input-group-btn input-group-prepend"),
+      tags.input(type = "text", class_ = "form-control", placeholder = placeholder, readonly = "readonly"),
+      class_="input-group"
     ),
     div(
-      div(_class_="progress-bar"),
-      id=id+"_progress", _class_="progress active shiny-file-input-progress"
+      div(class_="progress-bar"),
+      id=id+"_progress", class_="progress active shiny-file-input-progress"
     ),
-    _class_="form-group shiny-input-container",
+    class_="form-group shiny-input-container",
     style=f"width: {width};" if width else None
   )

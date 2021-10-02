@@ -39,14 +39,14 @@ def input_select(id: str, label: str, choices, selected: Optional[str] = None, m
 #   selectTag = tags.select(
 #     selectOptions(choices, selected, id, selectize),
 #     id = id, size = size, multiple = "multiple" if multiple else None,
-#     _class_="form-control" if not selectize else None,
+#     class_="form-control" if not selectize else None,
 #   )
 #
 #   # return label and select tag
 #   container = div(
 #     shiny_input_label(id, label),
 #     div(selectTag),
-#     _class_="form-group shiny-input-container",
+#     class_="form-group shiny-input-container",
 #     style=f"width: {width};" if width else None
 #   )
 #

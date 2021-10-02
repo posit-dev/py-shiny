@@ -8,8 +8,8 @@ def passwordInput(id: str, label: str, value: str = "", width: Optional[str] = N
     shiny_input_label(id, label),
     tags.input(
       id=id, type="password", value=value,
-      _class_="form-control", placeholder=placeholder
+      class_="form-control", placeholder=placeholder
     ),
-    _class_ = "form-group shiny-input-container",
+    class_ = "form-group shiny-input-container",
     style = f"width: {width};" if width else "",
   )

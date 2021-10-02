@@ -36,7 +36,7 @@ def page_navbar(*args, title: Optional[str]=None, id: Optional[str]=None, select
 
 def page_fluid(*args: Any, title: Optional[str]=None, lang: Optional[str]=None, **kwargs: str) -> html_document:
   return page_bootstrap(
-    div(*args,  _class_="container-fluid", *kwargs),
+    div(*args,  class_="container-fluid", *kwargs),
     title=title,
     lang=lang
   )
@@ -44,7 +44,7 @@ def page_fluid(*args: Any, title: Optional[str]=None, lang: Optional[str]=None, 
 
 def page_fixed(*args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str) -> html_document:
     return page_bootstrap(
-      div(*args, _class_="container", **kwargs),
+      div(*args, class_="container", **kwargs),
       title=title,
       lang=lang
     )

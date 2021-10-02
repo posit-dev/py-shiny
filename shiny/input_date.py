@@ -21,7 +21,7 @@ def input_date(id: str, label: str, value: date=None, min: date=None, max: date=
       data_date_dates_disabled=json.dumps(datesdisabled),
       data_date_days_of_week_disabled=json.dumps(daysofweekdisabled)
     ),
-    id=id, _class_="shiny-date-input form-group shiny-input-container",
+    id=id, class_="shiny-date-input form-group shiny-input-container",
     style=f"width: {width};" if width else None
   )
 
@@ -39,14 +39,14 @@ def input_date_range(id: str, label: str, start: date = None, end: date = None, 
         date_input_tag(id=id, value=start, min=min, max=max, format=format, startview=startview, weekstart=weekstart, language=language, autoclose=autoclose),
         # input-group-prepend and input-group-append are for bootstrap 4 forward compat
         span(
-          span(separator, _class_="input-group-text"),
-          _class_="input-group-addon input-group-prepend input-group-append"
+          span(separator, class_="input-group-text"),
+          class_="input-group-addon input-group-prepend input-group-append"
         ),
         date_input_tag(id=id, value=end, min=min, max=max, format=format, startview=startview, weekstart=weekstart, language=language, autoclose=autoclose),
         # input-daterange class is needed for dropdown behavior
-        _class_="input-daterange input-group input-group-sm",
+        class_="input-daterange input-group input-group-sm",
       ),
-      id=id, _class_="shiny-date-range-input form-group shiny-input-container",
+      id=id, class_="shiny-date-range-input form-group shiny-input-container",
       style=f"width: {width};" if width else None
     )
 
@@ -54,7 +54,7 @@ def input_date_range(id: str, label: str, start: date = None, end: date = None, 
 def date_input_tag(id, value, min, max, format, startview, weekstart, language, autoclose, **kwargs):
   return tags.input(
     datepicker_deps(),
-    type = "text", _class_ = "form-control",
+    type = "text", class_ = "form-control",
     # `aria-labelledby` attribute is required for accessibility to avoid doubled labels (#2951).
     aria_labelledby = id + "-label",
     # title attribute is announced for screen readers for date format.
