@@ -1,6 +1,9 @@
 from typing import Callable, Awaitable
 import typing
 import os
+import copy
+
+from htmltools.core import TagChild
 
 
 class Connection:
@@ -82,11 +85,20 @@ class FastAPIConnectionManager(ConnectionManager):
             if isinstance(ui, tag_list):
                 ui.append(shiny_deps())
 
-                def register_dep(d):
-                    return create_web_dependency(self._fastapi_app, d)
+                def register_dependency(x: TagChild) -> TagChild:
+                    if isinstance(x, html_dependency):
+                        return create_web_dependency(self._fastapi_app, x)
+                    else:
+                        return x
 
-                res = ui.render(process_dep=register_dep)
+                ui = ui.tagify()
+                ui = ui.walk(register_dependency)
+                # We know that ui.walk(register_dependency) will return a tag_list.
+                ui = typing.cast(tag_list, ui)
+                res = ui.render()
+
                 return HTMLResponse(content=res["html"])
+
             return HTMLResponse(status_code=500, content="Invalid UI object")
 
         # TODO: does this actually prevent noticable overhead compared to processing dependencies individually?
@@ -119,15 +131,20 @@ class FastAPIConnectionManager(ConnectionManager):
         uvicorn.run(self._fastapi_app, host="0.0.0.0", port=8000)
 
 
-def create_web_dependency(api: FastAPI, dep: html_dependency, scrub_file: bool = True):
+def create_web_dependency(
+    api: FastAPI, dep: html_dependency, scrub_file: bool = True
+) -> html_dependency:
+    dep = copy.deepcopy(dep)
     if dep.src.get("href", None) is None:
         prefix = dep.name + "-" + str(dep.version)
         f = dep.src["file"]
         path = os.path.join(package_dir(dep.package), f) if dep.package else f
         api.mount("/" + prefix, StaticFiles(directory=path), name=prefix)
         dep.src["href"] = prefix
+
     if scrub_file and "file" in dep.src:
         del dep.src["file"]
+
     return dep
 
 
