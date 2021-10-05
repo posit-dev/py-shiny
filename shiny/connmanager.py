@@ -3,7 +3,7 @@ import typing
 import os
 import copy
 
-from htmltools.core import TagChild
+from htmltools import TagChild
 
 
 class Connection:

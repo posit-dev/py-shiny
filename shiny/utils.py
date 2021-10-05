@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Callable, Awaitable, TypeVar, Optional, cast
 
-from htmltools import tag_list, html_dependency
-from htmltools.core import TagChild
+from htmltools import tag_list, html_dependency, TagChild
 
 if TYPE_CHECKING:
     from .shinysession import ShinySession
