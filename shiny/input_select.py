@@ -3,23 +3,41 @@ from .input_utils import *
 from typing import Optional, Dict, Any
 from .html_dependencies import selectize_deps, jqui_deps
 
-def input_selectize(id, options: Dict[str, Any] = {}, **kwargs):
-  # Make sure accessibility plugin is included by default
-  if not options.get("plugins", None):
-    options["plugins"] = []
-  if 'selectize-plugin-a11y' not in options["plugins"]:
-    options["plugins"].append('selectize-plugin-a11y')
-  deps = [selectize_deps()]
-  if 'drag_drop' in options["plugins"]:
-    deps.append(jqui_deps())
-  return jsx_tag("inputSelectize")(deps, id = id, options = options, **kwargs)
+
+def input_selectize(id: str, options: Dict[str, Any] = {}, **kwargs):
+    # Make sure accessibility plugin is included by default
+    if not options.get("plugins", None):
+        options["plugins"] = []
+    if "selectize-plugin-a11y" not in options["plugins"]:
+        options["plugins"].append("selectize-plugin-a11y")
+    deps = [selectize_deps()]
+    if "drag_drop" in options["plugins"]:
+        deps.append(jqui_deps())
+    return jsx_tag("InputSelectize")(deps, id=id, options=options, **kwargs)
 
 
-def input_select(id: str, label: str, choices, selected: Optional[str] = None, multiple: bool = False, selectize: bool = True, width: Optional[str] = None, size: Optional[str] = None):
-  return jsx_tag("inputSelect")(
-    selectize_deps(), id=id, label=label, choices=choices, selected=selected,
-    multiple=multiple, selectize=selectize, width=width, size=size
-  )
+def input_select(
+    id: str,
+    label: str,
+    choices,
+    selected: Optional[str] = None,
+    multiple: bool = False,
+    selectize: bool = True,
+    width: Optional[str] = None,
+    size: Optional[str] = None,
+):
+    return jsx_tag("InputSelect")(
+        selectize_deps(),
+        id=id,
+        label=label,
+        choices=choices,
+        selected=selected,
+        multiple=multiple,
+        selectize=selectize,
+        width=width,
+        size=size,
+    )
+
 
 # def input_selectize(id, options: Dict[str, Any]={}, **kwargs):
 #   return selectize_it(id, input_select(id, selectize=False, **kwargs), options)

@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING, Callable, Awaitable, TypeVar, Optional, cast
-
 from htmltools import tag_list, html_dependency, TagChild
 
 if TYPE_CHECKING:
