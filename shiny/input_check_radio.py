@@ -1,13 +1,11 @@
-from htmltools import tags, div, span, css
+from htmltools import tags, Tag, div, span, css
 from typing import Optional, Union, List, Dict
 from .input_utils import *
-
-__all__ = ["input_checkbox", "input_checkbox_group", "input_radio_buttons"]
 
 
 def input_checkbox(
     id: str, label: str, value: bool = False, width: Optional[str] = None
-):
+) -> Tag:
     return div(
         div(
             tags.label(
@@ -34,7 +32,7 @@ def input_checkbox_group(
     selected: Optional[str] = None,
     inline: bool = False,
     width: Optional[str] = None,
-):
+) -> Tag:
     input_label = shiny_input_label(id, label)
     options = generate_options(
         id=id,
@@ -65,7 +63,7 @@ def input_radio_buttons(
     selected: Optional[str] = None,
     inline: bool = False,
     width: Optional[str] = None,
-):
+) -> Tag:
     input_label = shiny_input_label(id, label)
     options = generate_options(
         id=id,

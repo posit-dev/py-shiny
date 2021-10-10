@@ -1,6 +1,6 @@
-from htmltools import tags, div, css
-from .input_utils import *
+from htmltools import tags, Tag, div, css
 from typing import Optional
+from .input_utils import *
 
 
 def passwordInput(
@@ -9,7 +9,7 @@ def passwordInput(
     value: str = "",
     width: Optional[str] = None,
     placeholder: Optional[str] = None,
-) -> tag:
+) -> Tag:
     return div(
         shiny_input_label(id, label),
         tags.input(

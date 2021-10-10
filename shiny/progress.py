@@ -1,4 +1,4 @@
-from typing import Optional, Union, Dict
+from typing import Optional, Dict, Any
 from warnings import warn
 from .utils import run_coro_sync, rand_hex
 from .shinysession import ShinySession, get_current_session
@@ -26,7 +26,7 @@ class Progress:
 
     def set(
         self,
-        value: Union[int, float],
+        value: float,
         message: Optional[str] = None,
         detail: Optional[str] = None,
     ):
@@ -51,7 +51,7 @@ class Progress:
 
     def inc(
         self,
-        amount: Union[int, float] = 0.1,
+        amount: float = 0.1,
         message: Optional[str] = None,
         detail: Optional[str] = None,
     ):
@@ -69,7 +69,7 @@ class Progress:
         self._send_progress("close", {"id": self._id, "style": self._style})
         self._closed = True
 
-    def _send_progress(self, type: str, message: Dict):
+    def _send_progress(self, type: str, message: Dict[str, Any]):
         return run_coro_sync(
             self._session.send_message({"progress": {"type": type, "message": message}})
         )

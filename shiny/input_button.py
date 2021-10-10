@@ -1,14 +1,15 @@
+from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
 from typing import Optional
-from htmltools import tags, tag, css, TagChild, TagAttr
+
 
 # TODO: implement icon
 def input_button(
     id: str,
     label: str,
-    *args: TagChild,
+    *args: TagChildArg,
     width: Optional[str] = None,
-    **kwargs: TagAttr,
-) -> tag:
+    **kwargs: TagAttrArg,
+) -> Tag:
     return tags.button(
         label,
         *args,
@@ -20,5 +21,5 @@ def input_button(
     )
 
 
-def input_link(id: str, label: str, *args: TagChild, **kwargs: TagAttr) -> tag:
+def input_link(id: str, label: str, *args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
     return tags.a(label, *args, id=id, href="#", class_="action-button", **kwargs)

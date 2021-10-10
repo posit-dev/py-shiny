@@ -1,5 +1,5 @@
-from typing import TYPE_CHECKING, Callable, Awaitable, TypeVar, Optional, cast
-from htmltools import tag_list, html_dependency, TagChild
+from typing import TYPE_CHECKING, Callable, Awaitable, TypeVar, Optional, Union
+from htmltools import Tag, TagList, HTMLDependency, TagChild
 
 if TYPE_CHECKING:
     from .shinysession import ShinySession
@@ -84,7 +84,7 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
     )
 
 
-def process_deps(ui: tag_list, s: Optional["ShinySession"] = None):
+def process_deps(ui: Union[Tag, TagList], s: Optional["ShinySession"] = None):
     if s is None:
         from .shinysession import get_current_session
 
@@ -93,14 +93,13 @@ def process_deps(ui: tag_list, s: Optional["ShinySession"] = None):
     from .connmanager import create_web_dependency
 
     def register_dependency(x: TagChild) -> TagChild:
-        if isinstance(x, html_dependency):
+        if isinstance(x, HTMLDependency):
             return create_web_dependency(s._app._conn_manager._fastapi_app, x)
         else:
             return x
 
     ui = ui.tagify()
-    # We know that ui.walk(register_dependency) will return a tag_list.
-    ui = cast(tag_list, ui.walk(register_dependency))
+    ui.walk(register_dependency)
     res = ui.render()
 
     return res

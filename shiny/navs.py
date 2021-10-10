@@ -1,26 +1,26 @@
-from htmltools import jsx_tag, tag, TagChild
-from typing import Optional, Any, Literal, List
+from htmltools import jsx_tag, Tag, TagChildArg, TagAttrArg
+from typing import Optional, Any, Literal, Tuple
 from .html_dependencies import nav_deps
 
 
 def nav(
     title: Any,
-    *args: TagChild,
+    *args: TagChildArg,
     value: Optional[str] = None,
     # icon: Optional[str] = None
-) -> tag:
+) -> Tag:
     if not value:
         value = title
     return nav_tag("Nav", *args, value=value, title=title)
 
 
 def nav_menu(
-    title: TagChild,
-    *args: TagChild,
+    title: TagChildArg,
+    *args: TagChildArg,
     value: Optional[str] = None,
     # icon: Optional[str] = None,
     align: Literal["left", "right"] = "left",
-) -> tag:
+) -> Tag:
     if not value:
         value = str(title)
     return nav_tag("NavMenu", *args, value=value, title=title, align=align)
@@ -30,21 +30,21 @@ def nav_menu(
 #  raise Exception("Not yet implemented")
 
 
-def nav_item(*args: TagChild) -> tag:
+def nav_item(*args: TagChildArg) -> Tag:
     return nav_tag("NavItem", *args)
 
 
-def nav_spacer() -> tag:
+def nav_spacer() -> Tag:
     return nav_tag("NavSpacer")
 
 
 def navs_tab(
-    *args: TagChild,
+    *args: TagChildArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    header: Optional[TagChild] = None,
-    footer: Optional[TagChild] = None,
-) -> tag:
+    header: Optional[TagChildArg] = None,
+    footer: Optional[TagChildArg] = None,
+) -> Tag:
     return nav_tag(
         "Navs",
         *args,
@@ -57,12 +57,12 @@ def navs_tab(
 
 
 def navs_tab_card(
-    *args: TagChild,
+    *args: TagChildArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    header: Optional[TagChild] = None,
-    footer: Optional[TagChild] = None,
-) -> tag:
+    header: Optional[TagChildArg] = None,
+    footer: Optional[TagChildArg] = None,
+) -> Tag:
     return nav_tag(
         "NavsCard",
         *args,
@@ -75,12 +75,12 @@ def navs_tab_card(
 
 
 def navs_pill(
-    *args: TagChild,
+    *args: TagChildArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    header: Optional[TagChild] = None,
-    footer: Optional[TagChild] = None,
-) -> tag:
+    header: Optional[TagChildArg] = None,
+    footer: Optional[TagChildArg] = None,
+) -> Tag:
     return nav_tag(
         "Navs",
         *args,
@@ -93,13 +93,13 @@ def navs_pill(
 
 
 def navs_pill_card(
-    *args: TagChild,
+    *args: TagChildArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    header: Optional[TagChild] = None,
-    footer: Optional[TagChild] = None,
+    header: Optional[TagChildArg] = None,
+    footer: Optional[TagChildArg] = None,
     placement: Literal["above", "below"] = "above",
-) -> tag:
+) -> Tag:
     return nav_tag(
         "NavsCard",
         *args,
@@ -113,15 +113,15 @@ def navs_pill_card(
 
 
 def navs_pill_list(
-    *args: TagChild,
+    *args: TagChildArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    header: Optional[TagChild] = None,
-    footer: Optional[TagChild] = None,
+    header: Optional[TagChildArg] = None,
+    footer: Optional[TagChildArg] = None,
     well: bool = True,
     fluid: bool = True,
-    widths: List[int] = [4, 8],
-) -> tag:
+    widths: Tuple[int, int] = (4, 8),
+) -> Tag:
     return nav_tag(
         "NavsList",
         *args,
@@ -140,18 +140,18 @@ def navs_pill_list(
 
 
 def navs_bar(
-    *args: TagChild,
+    *args: TagChildArg,
     title: Optional[str] = None,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     position: Literal["static-top", "fixed-top", "fixed-bottom"] = "static-top",
-    header: Optional[TagChild] = None,
-    footer: Optional[TagChild] = None,
+    header: Optional[TagChildArg] = None,
+    footer: Optional[TagChildArg] = None,
     bg: Optional[str] = None,
     inverse: Literal["auto", True, False] = "auto",
     collapsible: bool = True,
     fluid: bool = True,
-) -> tag:
+) -> Tag:
     return nav_tag(
         "NavsBar",
         *args,
@@ -168,6 +168,6 @@ def navs_bar(
     )
 
 
-def nav_tag(name: str, *args: TagChild, **kwargs: Any) -> tag:
+def nav_tag(name: str, *args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
     tag = jsx_tag("bslib." + name)
     return tag(nav_deps(), *args, **kwargs)

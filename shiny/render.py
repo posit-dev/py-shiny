@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from .shinysession import ShinySession
 
 from . import utils
-from htmltools import tag_list
+from htmltools import TagList
 
 
 UserRenderFunction = Callable[[], object]
@@ -178,7 +178,7 @@ def image(delete_file: bool = False):
     return wrapper
 
 
-UiRenderFunc = Callable[[], Optional[tag_list]]
+UiRenderFunc = Callable[[], Optional[TagList]]
 UiRenderFuncAsync = Callable[[], Awaitable[ImgReturn]]
 
 
@@ -190,7 +190,7 @@ class Ui(RenderFunction):
         return utils.run_coro_sync(self.run())
 
     async def run(self) -> object:
-        ui: Optional[tag_list] = await self._fn()
+        ui: Optional[TagList] = await self._fn()
         if ui is None:
             return None
         return utils.process_deps(ui, self._session)
@@ -208,7 +208,7 @@ class UiAsync(Ui, RenderFunctionAsync):
 
 
 def ui(delete_file: bool = False):
-    def wrapper(fn: Union[UiRenderFunc, UiRenderFuncAsync]) -> tag_list:
+    def wrapper(fn: Union[UiRenderFunc, UiRenderFuncAsync]) -> TagList:
         if inspect.iscoroutinefunction(fn):
             fn = typing.cast(UiRenderFuncAsync, fn)
             return UiAsync(fn, delete_file)

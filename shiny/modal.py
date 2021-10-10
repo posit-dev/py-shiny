@@ -1,10 +1,10 @@
-from htmltools import tags, tag, div, html, TagChild, TagAttr
-from typing import Optional, Literal
+from htmltools import tags, Tag, div, html, TagChildArg, TagAttrArg
+from typing import Optional, Literal, Any
 from .utils import run_coro_sync, process_deps
 from .shinysession import ShinySession, get_current_session
 
 # TODO: icons
-def modal_button(label: str) -> tag:
+def modal_button(label: str) -> Tag:
     return tags.button(
         # validateIcon(icon),
         label,
@@ -16,24 +16,25 @@ def modal_button(label: str) -> tag:
 
 
 def modal(
-    *args: TagChild,
-    title: Optional[TagChild] = None,
-    footer: TagChild = modal_button("Dismiss"),
+    *args: TagChildArg,
+    title: Optional[str] = None,
+    footer: Any = modal_button("Dismiss"),
     size: Literal["m", "s", "l", "xl"] = "m",
     easy_close: bool = False,
     fade: bool = True,
-    **kwargs: TagAttr
-) -> tag:
+    **kwargs: TagAttrArg
+) -> Tag:
 
+    title_div = None
     if title:
-        title = div(tags.h4(title, class_="modal-title"), class_="modal-header")
+        title_div = div(tags.h4(title, class_="modal-title"), class_="modal-header")
 
     if footer:
         footer = div(footer, class_="modal-footer")
 
     dialog = div(
         div(
-            title,
+            title_div,
             div(*args, class_="modal-body", **kwargs),
             footer,
             class_="modal-content",
@@ -70,7 +71,7 @@ def modal(
     )
 
 
-def modal_show(modal: tag, session: Optional[ShinySession] = None):
+def modal_show(modal: Tag, session: Optional[ShinySession] = None):
     if session is None:
         session = get_current_session()
     if session is None:

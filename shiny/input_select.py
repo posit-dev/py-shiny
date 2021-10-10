@@ -1,10 +1,10 @@
 from htmltools import *
-from .input_utils import *
 from typing import Optional, Dict, Any
+from .input_utils import *
 from .html_dependencies import selectize_deps, jqui_deps
 
 
-def input_selectize(id: str, options: Dict[str, Any] = {}, **kwargs):
+def input_selectize(id: str, options: Dict[str, Any] = {}, **kwargs: TagAttrArg):
     # Make sure accessibility plugin is included by default
     if not options.get("plugins", None):
         options["plugins"] = []

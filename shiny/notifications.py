@@ -1,12 +1,12 @@
 from typing import Dict, Union, Optional, Literal, Any
 from .utils import run_coro_sync, process_deps, rand_hex
 from .shinysession import ShinySession, get_current_session
-from htmltools import tag_list, TagChild
+from htmltools import TagList, TagChildArg
 
 
 def notification_show(
-    ui: TagChild,
-    action: Optional[tag_list] = None,
+    ui: TagChildArg,
+    action: Optional[TagList] = None,
     duration: Optional[Union[int, float]] = 5,
     close_button: bool = True,
     id: Optional[str] = None,

@@ -1,6 +1,6 @@
-from htmltools import tags, div, css
-from .input_utils import *
+from htmltools import tags, Tag, div, css
 from typing import Optional, Union
+from .input_utils import *
 
 valType = Union[int, float]
 
@@ -13,7 +13,7 @@ def numericInput(
     max: Optional[valType] = None,
     step: Optional[valType] = None,
     width: Optional[str] = None,
-):
+) -> Tag:
     return div(
         shiny_input_label(id, label),
         tags.input(

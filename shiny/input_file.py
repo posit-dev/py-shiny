@@ -1,6 +1,6 @@
-from htmltools import tags, div, span, css
-from .input_utils import *
+from htmltools import tags, Tag, div, span, css
 from typing import Optional, List
+from .input_utils import *
 
 
 def input_file(
@@ -11,7 +11,7 @@ def input_file(
     width: Optional[str] = None,
     button_label: str = "Browse...",
     placeholder: str = "No file selected",
-):
+) -> Tag:
     btn_file = span(
         button_label,
         tags.input(

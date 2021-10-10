@@ -1,9 +1,9 @@
-from htmltools import tags, div, span, TagAttr, css
+from htmltools import tags, div, span, TagAttrArg, css
 from typing import Optional
-from .input_utils import *
 from .html_dependencies import datepicker_deps
 from datetime import date
 import json
+from .input_utils import *
 
 __all__ = ["input_date", "input_date_range"]
 
@@ -22,7 +22,7 @@ def input_date(
     autoclose: bool = True,
     datesdisabled: Optional[str] = None,
     daysofweekdisabled: Optional[str] = None,
-):
+) -> Tag:
     # TODO: needed?
     # value = dateYMD(value, "value")
     # min = dateYMD(min, "min")
@@ -63,7 +63,7 @@ def input_date_range(
     separator: str = " to ",
     width: Optional[str] = None,
     autoclose: bool = True,
-):
+) -> Tag:
     # TODO: needed?
     # start = dateYMD(start, "start")
     # end = dateYMD(end, "end")
@@ -118,7 +118,7 @@ def date_input_tag(
     weekstart: int,
     language: str,
     autoclose: bool,
-    **kwargs: TagAttr,
+    **kwargs: TagAttrArg,
 ):
     return tags.input(
         datepicker_deps(),

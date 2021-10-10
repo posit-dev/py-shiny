@@ -1,8 +1,10 @@
-from htmltools import tags, tag, div, css, TagAttr
+from htmltools import tags, Tag, div, css, TagAttrArg
 from typing import Dict, Optional, Union, Tuple
+from typing import Optional, Union, Tuple
 from datetime import date, datetime
 import math
 import numpy
+
 from .html_dependencies import ionrangeslider_deps
 from .input_utils import *
 
@@ -30,7 +32,7 @@ def input_slider(
     time_format: Optional[str] = None,
     timezone: Optional[str] = None,
     drag_range: bool = True,
-) -> tag:
+) -> Tag:
 
     vals: Tuple[SliderVal, SliderVal] = (
         value
@@ -65,17 +67,17 @@ def input_slider(
         scale_factor = math.ceil(n_steps / 10)
         n_ticks = n_steps / scale_factor
 
-    props: Dict[str, TagAttr] = {
+    props: Dict[str, TagAttrArg] = {
         "class_": "js-range-slider",
         "id": id,
         "style": css(width=width),
         "data_skin": "shiny",
         # TODO: do we need to worry about scientific notation (i.e., formatNoSci()?)
-        "data_min": str(min),
-        "data_max": str(max),
-        "data_from": str(vals[0]),
-        "data_step": str(step),
-        "data_grid": str(ticks),
+        "data_min": min,
+        "data_max": max,
+        "data_from": vals[0],
+        "data_step": step,
+        "data_grid": ticks,
         "data_grid_num": n_ticks,
         "data_grid_snap": "false",
         # "data_prettify_separator": sep,

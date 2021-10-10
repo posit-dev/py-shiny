@@ -1,6 +1,6 @@
-from htmltools import tags, div, css
-from .input_utils import *
+from htmltools import tags, Tag, div, css
 from typing import Optional
+from .input_utils import *
 
 
 def input_text(
@@ -9,7 +9,7 @@ def input_text(
     value: str = "",
     width: Optional[str] = None,
     placeholder: Optional[str] = None,
-) -> tag:
+) -> Tag:
     return div(
         shiny_input_label(id, label),
         tags.input(
@@ -34,7 +34,7 @@ def input_text_area(
     rows: Optional[int] = None,
     placeholder: Optional[str] = None,
     resize: Optional[str] = None,
-) -> tag:
+) -> Tag:
 
     if resize and resize not in ["none", "both", "horizontal", "vertical"]:
         raise ValueError("Invalid resize value: " + str(resize))

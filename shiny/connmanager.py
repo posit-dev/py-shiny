@@ -3,8 +3,6 @@ import typing
 import os
 import copy
 
-from htmltools import TagChild
-
 
 class Connection:
     """Abstract class to serve a session and send/receive messages to the
@@ -41,7 +39,7 @@ from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
-from htmltools import tag_list, html_dependency
+from htmltools import Tag, TagList, TagChild, HTMLDependency
 from .html_dependencies import shiny_deps
 
 
@@ -82,19 +80,17 @@ class FastAPIConnectionManager(ConnectionManager):
             ui = self._ui(request) if callable(self._ui) else self._ui
             if isinstance(ui, Response):
                 return ui
-            if isinstance(ui, tag_list):
+            if isinstance(ui, (Tag, TagList)):
                 ui.append(shiny_deps())
 
                 def register_dependency(x: TagChild) -> TagChild:
-                    if isinstance(x, html_dependency):
+                    if isinstance(x, HTMLDependency):
                         return create_web_dependency(self._fastapi_app, x)
                     else:
                         return x
 
                 ui = ui.tagify()
-                ui = ui.walk(register_dependency)
-                # We know that ui.walk(register_dependency) will return a tag_list.
-                ui = typing.cast(tag_list, ui)
+                ui.walk(register_dependency)
                 res = ui.render()
 
                 return HTMLResponse(content=res["html"])
@@ -132,8 +128,8 @@ class FastAPIConnectionManager(ConnectionManager):
 
 
 def create_web_dependency(
-    api: FastAPI, dep: html_dependency, scrub_file: bool = True
-) -> html_dependency:
+    api: FastAPI, dep: HTMLDependency, scrub_file: bool = True
+) -> HTMLDependency:
     dep = copy.deepcopy(dep)
     if dep.src.get("href", None) is None:
         prefix = dep.name + "-" + str(dep.version)

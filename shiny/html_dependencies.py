@@ -1,9 +1,9 @@
-from typing import List
-from htmltools import html_dependency
+from htmltools import HTMLDependency
+from typing import List, Union
 
 
-def shiny_deps() -> html_dependency:
-    return html_dependency(
+def shiny_deps() -> HTMLDependency:
+    return HTMLDependency(
         name="shiny",
         version="0.0.1",
         package="shiny",
@@ -13,8 +13,8 @@ def shiny_deps() -> html_dependency:
     )
 
 
-def bootstrap_deps(bs3compat: bool = True) -> List[html_dependency]:
-    dep = html_dependency(
+def bootstrap_deps(bs3compat: bool = True) -> List[HTMLDependency]:
+    dep = HTMLDependency(
         name="bootstrap",
         version="5.0.1",
         src="www/shared/bootstrap",
@@ -29,8 +29,8 @@ def bootstrap_deps(bs3compat: bool = True) -> List[html_dependency]:
 
 
 # TODO: if we want to support glyphicons we'll need to bundle font files, too
-def bs3compat_deps() -> html_dependency:
-    return html_dependency(
+def bs3compat_deps() -> HTMLDependency:
+    return HTMLDependency(
         name="bs3-compat",
         version="1.0",
         src="www/shared/bs3compat",
@@ -39,8 +39,8 @@ def bs3compat_deps() -> html_dependency:
     )
 
 
-def jquery_deps() -> html_dependency:
-    return html_dependency(
+def jquery_deps() -> HTMLDependency:
+    return HTMLDependency(
         name="jquery",
         version="3.6.0",
         package="shiny",
@@ -49,20 +49,22 @@ def jquery_deps() -> html_dependency:
     )
 
 
-def nav_deps(include_bootstrap: bool = True) -> List[html_dependency]:
-    dep = html_dependency(
+def nav_deps(
+    include_bootstrap: bool = True,
+) -> Union[HTMLDependency, List[HTMLDependency]]:
+    dep = HTMLDependency(
         name="bslib-navs",
         version="1.0",
         package="shiny",
         src="www/shared/bslib/dist",
         script="navs.min.js",
     )
-    return [dep] + bootstrap_deps() if include_bootstrap else [dep]
+    return [dep, *bootstrap_deps()] if include_bootstrap else dep
 
 
-def ionrangeslider_deps() -> List[html_dependency]:
+def ionrangeslider_deps() -> List[HTMLDependency]:
     return [
-        html_dependency(
+        HTMLDependency(
             name="ionrangeslider",
             version="2.3.1",
             package="shiny",
@@ -70,7 +72,7 @@ def ionrangeslider_deps() -> List[html_dependency]:
             script="js/ion.rangeSlider.min.js",
             stylesheet="css/ion.rangeSlider.css",
         ),
-        html_dependency(
+        HTMLDependency(
             name="strftime",
             version="0.9.2",
             package="shiny",
@@ -80,8 +82,8 @@ def ionrangeslider_deps() -> List[html_dependency]:
     ]
 
 
-def datepicker_deps() -> html_dependency:
-    return html_dependency(
+def datepicker_deps() -> HTMLDependency:
+    return HTMLDependency(
         name="bootstrap-datepicker",
         version="1.9.0",
         package="shiny",
@@ -94,8 +96,8 @@ def datepicker_deps() -> html_dependency:
     )
 
 
-def selectize_deps() -> html_dependency:
-    return html_dependency(
+def selectize_deps() -> HTMLDependency:
+    return HTMLDependency(
         name="selectize",
         version="0.12.6",
         package="shiny",
@@ -106,8 +108,8 @@ def selectize_deps() -> html_dependency:
     )
 
 
-def jqui_deps() -> html_dependency:
-    return html_dependency(
+def jqui_deps() -> HTMLDependency:
+    return HTMLDependency(
         name="jquery-ui",
         version="1.12.1",
         package="shiny",
