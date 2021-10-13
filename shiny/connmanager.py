@@ -1,4 +1,4 @@
-from typing import Callable, Awaitable
+from typing import Callable, Awaitable, Optional, cast
 import typing
 import os
 import copy
@@ -39,7 +39,7 @@ from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
-from htmltools import Tag, TagList, TagChild, HTMLDependency
+from htmltools import Tag, TagList, TagChild, HTMLDependency, HTMLDocument
 from .html_dependencies import shiny_deps
 
 
@@ -78,20 +78,29 @@ class FastAPIConnectionManager(ConnectionManager):
         @self._fastapi_app.get("/")
         async def get(request: Request) -> Response:
             ui = self._ui(request) if callable(self._ui) else self._ui
+
             if isinstance(ui, Response):
                 return ui
+
             if isinstance(ui, (Tag, TagList)):
-                ui.append(shiny_deps())
+                ui = HTMLDocument(ui)
+
+            if isinstance(ui, HTMLDocument):
+                ui = cast(HTMLDocument, ui)
+
+                # There should be a better way to get the dependencies into the
+                # document.
+                ui.html.append(shiny_deps())
+                ui = HTMLDocument(ui.html)
 
                 def register_dependency(x: TagChild) -> TagChild:
                     if isinstance(x, HTMLDependency):
-                        return create_web_dependency(self._fastapi_app, x)
-                    else:
-                        return x
+                        return create_web_dependency(self._fastapi_app, x, libdir="lib")
+                    return x
 
                 ui = ui.tagify()
-                ui.walk(register_dependency)
-                res = ui.render()
+                ui.html.walk(register_dependency)
+                res = ui.render(libdir="lib")
 
                 return HTMLResponse(content=res["html"])
 
@@ -128,11 +137,16 @@ class FastAPIConnectionManager(ConnectionManager):
 
 
 def create_web_dependency(
-    api: FastAPI, dep: HTMLDependency, scrub_file: bool = True
+    api: FastAPI,
+    dep: HTMLDependency,
+    libdir: Optional[str] = "lib",
+    scrub_file: bool = True,
 ) -> HTMLDependency:
     dep = copy.deepcopy(dep)
     if dep.src.get("href", None) is None:
         prefix = dep.name + "-" + str(dep.version)
+        if libdir:
+            prefix = os.path.join(libdir, prefix)
         f = dep.src["file"]
         path = os.path.join(package_dir(dep.package), f) if dep.package else f
         api.mount("/" + prefix, StaticFiles(directory=path), name=prefix)

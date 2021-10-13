@@ -48,7 +48,7 @@ def page_navbar(
             collapsible=collapsible,
             fluid=fluid
         ),
-        head=window_title,
+        tags.head(window_title),
         lang=lang,
     )
 
@@ -75,7 +75,7 @@ def page_bootstrap(
 ) -> HTMLDocument:
     page = TagList(bootstrap_deps(), *args)
     head = tags.title(title) if title else None
-    return HTMLDocument(Tag("html", Tag("head", head), Tag("body", page), lang=lang))
+    return HTMLDocument(tags.html(tags.head(head), tags.body(page), lang=lang))
 
 
 def find_characters(x: Any) -> List[str]:

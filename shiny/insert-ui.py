@@ -1,12 +1,12 @@
 from typing import Optional, Literal
-from htmltools import tag_list
+from htmltools import TagList
 from .shinysession import ShinySession, get_current_session
 from .utils import process_deps
 
 
 def ui_insert(
     selector: str,
-    ui: tag_list,
+    ui: TagList,
     where: Literal["beforeEnd", "beforeBegin", "afterBegin", "afterEnd"] = "beforeEnd",
     multiple: bool = False,
     immediate: bool = False,
