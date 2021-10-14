@@ -1,5 +1,18 @@
-from htmltools import *
 from typing import Callable, Literal, Optional
+
+from htmltools import (
+    TagChildArg,
+    TagAttrArg,
+    TagList,
+    Tag,
+    div,
+    tags,
+    h2,
+    css,
+    span,
+    html,
+)
+
 from .html_dependencies import jqui_deps
 
 

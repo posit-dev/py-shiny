@@ -1,10 +1,14 @@
 from typing import TYPE_CHECKING, Callable, Awaitable, TypeVar, Optional, Union
-from htmltools import Tag, TagList, HTMLDependency, TagChild
+import os
+import tempfile
+import importlib
+import inspect
+import secrets
 
 if TYPE_CHECKING:
     from .shinysession import ShinySession
-import inspect
-import secrets
+
+from htmltools import Tag, TagList, HTMLDependency, TagChild
 
 # ==============================================================================
 # Misc utility functions
@@ -84,6 +88,20 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
     )
 
 
+# ==============================================================================
+# System-related functions
+# ==============================================================================
+
+# Return directory that a package lives in.
+def package_dir(package: str) -> str:
+    with tempfile.TemporaryDirectory():
+        pkg_file = importlib.import_module(".", package=package).__file__
+        return os.path.dirname(pkg_file)
+
+
+# ==============================================================================
+# Miscellaneous functions
+# ==============================================================================
 def process_deps(ui: Union[Tag, TagList], s: Optional["ShinySession"] = None):
     if s is None:
         from .shinysession import get_current_session
@@ -94,9 +112,8 @@ def process_deps(ui: Union[Tag, TagList], s: Optional["ShinySession"] = None):
 
     def register_dependency(x: TagChild) -> TagChild:
         if isinstance(x, HTMLDependency):
-            return create_web_dependency(s._app._conn_manager._fastapi_app, x)
-        else:
-            return x
+            create_web_dependency(s._app._conn_manager._fastapi_app, x)
+        return x
 
     ui = ui.tagify()
     ui.walk(register_dependency)

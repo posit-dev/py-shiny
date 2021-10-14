@@ -1,7 +1,5 @@
-from typing import Callable, Awaitable, Optional, cast
+from typing import Callable, Awaitable, cast
 import typing
-import os
-import copy
 
 
 class Connection:
@@ -139,18 +137,6 @@ class FastAPIConnectionManager(ConnectionManager):
 def create_web_dependency(api: FastAPI, dep: HTMLDependency) -> None:
     prefix = dep.name + "-" + str(dep.version)
     api.mount("/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix)
-
-
-# similar to base::system.file()
-# TODO: find proper home for this
-import tempfile
-import importlib
-
-
-def package_dir(package: str) -> str:
-    with tempfile.TemporaryDirectory():
-        pkg_file = importlib.import_module(".", package=package).__file__
-        return os.path.dirname(pkg_file)
 
 
 # =============================================================================
