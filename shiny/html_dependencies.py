@@ -6,10 +6,9 @@ def shiny_deps() -> HTMLDependency:
     return HTMLDependency(
         name="shiny",
         version="0.0.1",
-        package="shiny",
-        src="www/shared",
-        script="shiny.js",
-        stylesheet="shiny.min.css",
+        source={"package": "shiny", "subdir": "www/shared/"},
+        script={"src": "shiny.js"},
+        stylesheet={"href": "shiny.min.css"},
     )
 
 
@@ -17,10 +16,9 @@ def bootstrap_deps(bs3compat: bool = True) -> List[HTMLDependency]:
     dep = HTMLDependency(
         name="bootstrap",
         version="5.0.1",
-        src="www/shared/bootstrap",
-        package="shiny",
-        script="bootstrap.bundle.min.js",
-        stylesheet="bootstrap.min.css",
+        source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
+        script={"src": "bootstrap.bundle.min.js"},
+        stylesheet={"href": "bootstrap.min.css"},
     )
     deps = [jquery_deps(), dep]
     if bs3compat:
@@ -33,9 +31,8 @@ def bs3compat_deps() -> HTMLDependency:
     return HTMLDependency(
         name="bs3-compat",
         version="1.0",
-        src="www/shared/bs3compat",
-        package="shiny",
-        script=["transition.js", "tabs.js", "bs3compat.js"],
+        source={"package": "shiny", "subdir": "www/shared/bs3compat/"},
+        script=[{"src": "transition.js"}, {"src": "tabs.js"}, {"src": "bs3compat.js"}],
     )
 
 
@@ -43,9 +40,8 @@ def jquery_deps() -> HTMLDependency:
     return HTMLDependency(
         name="jquery",
         version="3.6.0",
-        package="shiny",
-        src="www/shared/jquery",
-        script="jquery-3.6.0.min.js",
+        source={"package": "shiny", "subdir": "www/shared/jquery/"},
+        script={"src": "jquery-3.6.0.min.js"},
     )
 
 
@@ -55,9 +51,8 @@ def nav_deps(
     dep = HTMLDependency(
         name="bslib-navs",
         version="1.0",
-        package="shiny",
-        src="www/shared/bslib/dist",
-        script="navs.min.js",
+        source={"package": "shiny", "subdir": "www/shared/bslib/dist/"},
+        script={"src": "navs.min.js"},
     )
     return [dep, *bootstrap_deps()] if include_bootstrap else dep
 
@@ -67,17 +62,15 @@ def ionrangeslider_deps() -> List[HTMLDependency]:
         HTMLDependency(
             name="ionrangeslider",
             version="2.3.1",
-            package="shiny",
-            src="www/shared/ionrangeslider",
-            script="js/ion.rangeSlider.min.js",
-            stylesheet="css/ion.rangeSlider.css",
+            source={"package": "shiny", "subdir": "www/shared/ionrangeslider/"},
+            script={"src": "js/ion.rangeSlider.min.js"},
+            stylesheet={"href": "css/ion.rangeSlider.css"},
         ),
         HTMLDependency(
             name="strftime",
             version="0.9.2",
-            package="shiny",
-            src="www/shared/strftime",
-            script="strftime-min.js",
+            source={"package": "shiny", "subdir": "www/shared/strftime/"},
+            script={"src": "strftime-min.js"},
         ),
     ]
 
@@ -86,11 +79,10 @@ def datepicker_deps() -> HTMLDependency:
     return HTMLDependency(
         name="bootstrap-datepicker",
         version="1.9.0",
-        package="shiny",
-        src="www/shared/datepicker",
+        source={"package": "shiny", "subdir": "www/shared/datepicker/"},
         # TODO: pre-compile the Bootstrap 5 version?
-        stylesheet="css/bootstrap-datepicker3.min.css",
-        script="js/bootstrap-datepicker.min.js",
+        stylesheet={"href": "css/bootstrap-datepicker3.min.css"},
+        script={"src": "js/bootstrap-datepicker.min.js"},
         # Need to enable noConflict mode. See #1346.
         head="<script>(function() { var datepicker = $.fn.datepicker.noConflict(); $.fn.bsDatepicker = datepicker; })();</script>",
     )
@@ -100,11 +92,13 @@ def selectize_deps() -> HTMLDependency:
     return HTMLDependency(
         name="selectize",
         version="0.12.6",
-        package="shiny",
-        src="www/shared/selectize",
-        script=["js/selectize.min.js", "accessibility/js/selectize-plugin-a11y.min.js"],
+        source={"package": "shiny", "subdir": "www/shared/selectize/"},
+        script=[
+            {"src": "js/selectize.min.js"},
+            {"src": "accessibility/js/selectize-plugin-a11y.min.js"},
+        ],
         # TODO: pre-compile the Bootstrap 5 version?
-        stylesheet="css/selectize.bootstrap3.css",
+        stylesheet={"href": "css/selectize.bootstrap3.css"},
     )
 
 
@@ -112,8 +106,7 @@ def jqui_deps() -> HTMLDependency:
     return HTMLDependency(
         name="jquery-ui",
         version="1.12.1",
-        package="shiny",
-        src="www/shared/jqueryui",
-        script="jquery-ui.min.js",
-        stylesheet="jquery-ui.min.css",
+        source={"package": "shiny", "subdir": "www/shared/jqueryui/"},
+        script={"src": "jquery-ui.min.js"},
+        stylesheet={"href": "jquery-ui.min.css"},
     )

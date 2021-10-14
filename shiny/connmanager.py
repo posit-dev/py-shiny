@@ -95,12 +95,12 @@ class FastAPIConnectionManager(ConnectionManager):
 
                 def register_dependency(x: TagChild) -> TagChild:
                     if isinstance(x, HTMLDependency):
-                        return create_web_dependency(self._fastapi_app, x, libdir="lib")
+                        return create_web_dependency(self._fastapi_app, x)
                     return x
 
                 ui = ui.tagify()
                 ui.html.walk(register_dependency)
-                res = ui.render(libdir="lib")
+                res = ui.render()
 
                 return HTMLResponse(content=res["html"])
 
@@ -139,22 +139,9 @@ class FastAPIConnectionManager(ConnectionManager):
 def create_web_dependency(
     api: FastAPI,
     dep: HTMLDependency,
-    libdir: Optional[str] = "lib",
-    scrub_file: bool = True,
 ) -> HTMLDependency:
-    dep = copy.deepcopy(dep)
-    if dep.src.get("href", None) is None:
-        prefix = dep.name + "-" + str(dep.version)
-        if libdir:
-            prefix = os.path.join(libdir, prefix)
-        f = dep.src["file"]
-        path = os.path.join(package_dir(dep.package), f) if dep.package else f
-        api.mount("/" + prefix, StaticFiles(directory=path), name=prefix)
-        dep.src["href"] = prefix
-
-    if scrub_file and "file" in dep.src:
-        del dep.src["file"]
-
+    prefix = dep.name + "-" + str(dep.version)
+    api.mount("/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix)
     return dep
 
 

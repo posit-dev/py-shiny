@@ -70,12 +70,7 @@ def panel_title(title: str, windowTitle: Optional[str] = None) -> TagList:
     if windowTitle is None:
         windowTitle = title
     return TagList(
-        HTMLDependency(
-            "shiny-window-title",
-            "999",
-            src={"href": " "},
-            head=f"<title>{windowTitle}</title>",
-        ),
+        tags.head(tags.title(windowTitle)),
         h2(title),
     )
 
