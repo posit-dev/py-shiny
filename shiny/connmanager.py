@@ -1,26 +1,31 @@
+from abc import ABC, abstractmethod
 from typing import Callable, Awaitable, cast
 import typing
 
 
-class Connection:
+class Connection(ABC):
     """Abstract class to serve a session and send/receive messages to the
     client."""
 
+    @abstractmethod
     async def send(self, message: str) -> None:
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     async def receive(self) -> str:
-        raise NotImplementedError
+        ...
 
 
-class ConnectionManager:
+class ConnectionManager(ABC):
     """Base class for handling incoming connections."""
 
+    @abstractmethod
     def __init__(self, on_connect_cb: Callable[[Connection], Awaitable[None]]) -> None:
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def run(self) -> None:
-        raise NotImplementedError
+        ...
 
 
 class ConnectionClosed(Exception):
