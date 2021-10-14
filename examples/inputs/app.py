@@ -73,7 +73,7 @@ import matplotlib.pyplot as plt
 def server(s: ShinySession):
     @s.output("inputs")
     @render.ui()
-    def _() -> TagList:
+    def _() -> Tag:
         vals = [
             f"<code>input_date()</code> {s.input['date']}",
             f"<code>input_date_range()</code>: {s.input['date_rng']}",
