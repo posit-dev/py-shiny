@@ -95,7 +95,7 @@ class FastAPIConnectionManager(ConnectionManager):
 
                 def register_dependency(x: TagChild) -> TagChild:
                     if isinstance(x, HTMLDependency):
-                        return create_web_dependency(self._fastapi_app, x)
+                        create_web_dependency(self._fastapi_app, x)
                     return x
 
                 ui = ui.tagify()
@@ -136,13 +136,9 @@ class FastAPIConnectionManager(ConnectionManager):
         uvicorn.run(self._fastapi_app, host="0.0.0.0", port=8000)
 
 
-def create_web_dependency(
-    api: FastAPI,
-    dep: HTMLDependency,
-) -> HTMLDependency:
+def create_web_dependency(api: FastAPI, dep: HTMLDependency) -> None:
     prefix = dep.name + "-" + str(dep.version)
     api.mount("/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix)
-    return dep
 
 
 # similar to base::system.file()
