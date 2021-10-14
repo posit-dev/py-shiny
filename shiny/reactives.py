@@ -79,7 +79,7 @@ class ReactiveValues:
         else:
             self._map[key] = ReactiveVal(value)
 
-    def __getitem__(self, key: str) -> object:
+    def __getitem__(self, key: str) -> Any:
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
         # yet.
