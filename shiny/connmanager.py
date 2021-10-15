@@ -42,7 +42,7 @@ from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
-from htmltools import Tag, TagList, TagChild, HTMLDependency, HTMLDocument
+from htmltools import Tag, TagList, HTMLDependency, HTMLDocument
 from .html_dependencies import shiny_deps
 
 
@@ -90,20 +90,12 @@ class FastAPIConnectionManager(ConnectionManager):
 
             if isinstance(ui, HTMLDocument):
                 ui = cast(HTMLDocument, ui)
+                ui.append(shiny_deps())
 
-                # There should be a better way to get the dependencies into the
-                # document.
-                ui.html.append(shiny_deps())
-                ui = HTMLDocument(ui.html)
-
-                def register_dependency(x: TagChild) -> TagChild:
-                    if isinstance(x, HTMLDependency):
-                        create_web_dependency(self._fastapi_app, x)
-                    return x
-
-                ui = ui.tagify()
-                ui.html.walk(register_dependency)
                 res = ui.render()
+
+                for dep in res["dependencies"]:
+                    create_web_dependency(self._fastapi_app, dep)
 
                 return HTMLResponse(content=res["html"])
 
