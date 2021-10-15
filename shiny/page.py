@@ -1,5 +1,4 @@
 from htmltools import tags, Tag, TagList, HTMLDocument, div, TagChildArg
-from htmltools.util import _flatten
 from typing import Literal, Optional, Any, List
 from warnings import warn
 from .html_dependencies import bootstrap_deps
@@ -25,7 +24,7 @@ def page_navbar(
 
     # https://github.com/rstudio/shiny/issues/2310
     if title and window_title is missing:
-        window_title: List[str] = _flatten(find_characters(title))
+        window_title: List[str] = find_characters(title)
         if window_title:
             window_title: Tag = tags.title(" ".join(window_title))
         else:
