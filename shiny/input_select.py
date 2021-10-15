@@ -1,10 +1,13 @@
-from htmltools import *
 from typing import Optional, Dict, Any
-from .input_utils import *
+
+from htmltools import TagAttrArg, JSXTag, jsx_tag_create
+
 from .html_dependencies import selectize_deps, jqui_deps
 
 
-def input_selectize(id: str, options: Dict[str, Any] = {}, **kwargs: TagAttrArg):
+def input_selectize(
+    id: str, options: Dict[str, Any] = {}, **kwargs: TagAttrArg
+) -> JSXTag:
     # Make sure accessibility plugin is included by default
     if not options.get("plugins", None):
         options["plugins"] = []
@@ -13,7 +16,7 @@ def input_selectize(id: str, options: Dict[str, Any] = {}, **kwargs: TagAttrArg)
     deps = [selectize_deps()]
     if "drag_drop" in options["plugins"]:
         deps.append(jqui_deps())
-    return jsx_tag("InputSelectize")(deps, id=id, options=options, **kwargs)
+    return jsx_tag_create("InputSelectize")(deps, id=id, options=options, **kwargs)
 
 
 def input_select(
@@ -25,8 +28,8 @@ def input_select(
     selectize: bool = True,
     width: Optional[str] = None,
     size: Optional[str] = None,
-):
-    return jsx_tag("InputSelect")(
+) -> JSXTag:
+    return jsx_tag_create("InputSelect")(
         selectize_deps(),
         id=id,
         label=label,

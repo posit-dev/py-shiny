@@ -1,4 +1,4 @@
-from htmltools import jsx_tag, Tag, TagChildArg, TagAttrArg
+from htmltools import jsx_tag_create, JSXTag, TagChildArg, TagAttrArg
 from typing import Optional, Any, Literal, Tuple
 from .html_dependencies import nav_deps
 
@@ -8,7 +8,7 @@ def nav(
     *args: TagChildArg,
     value: Optional[str] = None,
     # icon: Optional[str] = None
-) -> Tag:
+) -> JSXTag:
     if not value:
         value = title
     return nav_tag("Nav", *args, value=value, title=title)
@@ -20,7 +20,7 @@ def nav_menu(
     value: Optional[str] = None,
     # icon: Optional[str] = None,
     align: Literal["left", "right"] = "left",
-) -> Tag:
+) -> JSXTag:
     if not value:
         value = str(title)
     return nav_tag("NavMenu", *args, value=value, title=title, align=align)
@@ -30,11 +30,11 @@ def nav_menu(
 #  raise Exception("Not yet implemented")
 
 
-def nav_item(*args: TagChildArg) -> Tag:
+def nav_item(*args: TagChildArg) -> JSXTag:
     return nav_tag("NavItem", *args)
 
 
-def nav_spacer() -> Tag:
+def nav_spacer() -> JSXTag:
     return nav_tag("NavSpacer")
 
 
@@ -44,7 +44,7 @@ def navs_tab(
     selected: Optional[str] = None,
     header: Optional[TagChildArg] = None,
     footer: Optional[TagChildArg] = None,
-) -> Tag:
+) -> JSXTag:
     return nav_tag(
         "Navs",
         *args,
@@ -62,7 +62,7 @@ def navs_tab_card(
     selected: Optional[str] = None,
     header: Optional[TagChildArg] = None,
     footer: Optional[TagChildArg] = None,
-) -> Tag:
+) -> JSXTag:
     return nav_tag(
         "NavsCard",
         *args,
@@ -80,7 +80,7 @@ def navs_pill(
     selected: Optional[str] = None,
     header: Optional[TagChildArg] = None,
     footer: Optional[TagChildArg] = None,
-) -> Tag:
+) -> JSXTag:
     return nav_tag(
         "Navs",
         *args,
@@ -99,7 +99,7 @@ def navs_pill_card(
     header: Optional[TagChildArg] = None,
     footer: Optional[TagChildArg] = None,
     placement: Literal["above", "below"] = "above",
-) -> Tag:
+) -> JSXTag:
     return nav_tag(
         "NavsCard",
         *args,
@@ -121,7 +121,7 @@ def navs_pill_list(
     well: bool = True,
     fluid: bool = True,
     widths: Tuple[int, int] = (4, 8),
-) -> Tag:
+) -> JSXTag:
     return nav_tag(
         "NavsList",
         *args,
@@ -151,7 +151,7 @@ def navs_bar(
     inverse: Literal["auto", True, False] = "auto",
     collapsible: bool = True,
     fluid: bool = True,
-) -> Tag:
+) -> JSXTag:
     return nav_tag(
         "NavsBar",
         *args,
@@ -168,6 +168,6 @@ def navs_bar(
     )
 
 
-def nav_tag(name: str, *args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
-    tag = jsx_tag("bslib." + name)
+def nav_tag(name: str, *args: TagChildArg, **kwargs: TagAttrArg) -> JSXTag:
+    tag = jsx_tag_create("bslib." + name)
     return tag(nav_deps(), *args, **kwargs)
