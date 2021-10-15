@@ -80,18 +80,14 @@ class FastAPIConnectionManager(ConnectionManager):
         # TODO: make routes more configurable?
         @self._fastapi_app.get("/")
         async def get(request: Request) -> Response:
-            ui = self._ui(request) if callable(self._ui) else self._ui
+            ui = self._ui
 
             if isinstance(ui, Response):
                 return ui
 
             if isinstance(ui, (Tag, TagList)):
-                ui = HTMLDocument(ui)
-
-            if isinstance(ui, HTMLDocument):
-                ui = cast(HTMLDocument, ui)
                 ui.append(shiny_deps())
-
+                ui = HTMLDocument(ui)
                 res = ui.render()
 
                 for dep in res["dependencies"]:

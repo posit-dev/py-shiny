@@ -1,4 +1,4 @@
-from htmltools import tags, Tag, TagList, HTMLDocument, div, TagChildArg
+from htmltools import tags, Tag, TagList, div, TagChildArg
 from typing import Literal, Optional, Any, List
 from warnings import warn
 from .html_dependencies import bootstrap_deps
@@ -20,7 +20,7 @@ def page_navbar(
     fluid: bool = True,
     window_title: Optional[str] = missing,
     lang: Optional[str] = None
-) -> HTMLDocument:
+) -> Tag:
 
     # https://github.com/rstudio/shiny/issues/2310
     if title and window_title is missing:
@@ -33,36 +33,38 @@ def page_navbar(
             )
             window_title: None = None
 
-    return HTMLDocument(
-        navs_bar(
-            *args,
-            title=title,
-            id=id,
-            selected=selected,
-            position=position,
-            header=header,
-            footer=footer,
-            bg=bg,
-            inverse=inverse,
-            collapsible=collapsible,
-            fluid=fluid
-        ),
+    return tags.html(
         tags.head(window_title),
+        tags.body(
+            navs_bar(
+                *args,
+                title=title,
+                id=id,
+                selected=selected,
+                position=position,
+                header=header,
+                footer=footer,
+                bg=bg,
+                inverse=inverse,
+                collapsible=collapsible,
+                fluid=fluid
+            )
+        ),
         lang=lang,
     )
 
 
 def page_fluid(
     *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
-) -> HTMLDocument:
+) -> Tag:
     return page_bootstrap(
-        div(*args, class_="container-fluid", *kwargs), title=title, lang=lang
+        div(*args, class_="container-fluid", **kwargs), title=title, lang=lang
     )
 
 
 def page_fixed(
     *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
-) -> HTMLDocument:
+) -> Tag:
     return page_bootstrap(
         div(*args, class_="container", **kwargs), title=title, lang=lang
     )
@@ -71,10 +73,10 @@ def page_fixed(
 # TODO: implement theme (just Bootswatch for now?)
 def page_bootstrap(
     *args: Any, title: Optional[str] = None, lang: Optional[str] = None
-) -> HTMLDocument:
+) -> Tag:
     page = TagList(bootstrap_deps(), *args)
     head = tags.title(title) if title else None
-    return HTMLDocument(tags.html(tags.head(head), tags.body(page), lang=lang))
+    return tags.html(tags.head(head), tags.body(page), lang=lang)
 
 
 def find_characters(x: Any) -> List[str]:
