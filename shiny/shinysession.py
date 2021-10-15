@@ -62,7 +62,7 @@ class ShinySession:
     # Initialization
     # ==========================================================================
     def __init__(self, app: "ShinyApp", id: str, conn: Connection) -> None:
-        self._app: ShinyApp = app
+        self.app: ShinyApp = app
         self.id: str = id
         self._conn: Connection = conn
 
@@ -81,7 +81,7 @@ class ShinySession:
         self._register_session_end_callbacks()
 
         with session_context(self):
-            self._app.server(self)
+            self.app.server(self)
 
     def _register_session_end_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions
@@ -106,7 +106,7 @@ class ShinySession:
                 cb()
             except Exception as e:
                 print("Error in session on_ended callback: " + str(e))
-        self._app.remove_session(self)
+        self.app.remove_session(self)
 
     async def _message_queue_in_producer(self) -> None:
         try:
@@ -169,7 +169,7 @@ class ShinySession:
 
             self.request_flush()
 
-            await self._app.flush_pending_sessions()
+            await self.app.flush_pending_sessions()
 
     def _manage_inputs(self, data: Dict[str, object]) -> None:
         for (key, val) in data.items():
@@ -294,7 +294,7 @@ class ShinySession:
     # Flush
     # ==========================================================================
     def request_flush(self) -> None:
-        self._app.request_flush(self)
+        self.app.request_flush(self)
 
     async def flush(self) -> None:
         values: Dict[str, object] = {}

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Awaitable, cast
+from typing import Callable, Awaitable
 import typing
 
 
@@ -39,11 +39,7 @@ class ConnectionClosed(Exception):
 # =============================================================================
 
 from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 import uvicorn
-from htmltools import Tag, TagList, HTMLDependency, HTMLDocument
-from .html_dependencies import shiny_deps
 
 
 class FastAPIConnection(Connection):
@@ -66,44 +62,22 @@ class FastAPIConnectionManager(ConnectionManager):
 
     def __init__(
         self,
-        ui,
+        on_root_request_cb: Callable[[Request], Awaitable[Response]],
         on_connect_cb: Callable[[Connection], Awaitable[None]],
         on_session_request_cb: Callable[[Request], Awaitable[Response]],
     ) -> None:
-        self._ui = ui
+        self._on_root_request_cb: Callable[
+            [Request], Awaitable[Response]
+        ] = on_root_request_cb
         self._on_connect_cb: Callable[[Connection], Awaitable[None]] = on_connect_cb
         self._on_session_request_cb: Callable[
             [Request], Awaitable[Response]
         ] = on_session_request_cb
         self._fastapi_app: FastAPI = FastAPI()
 
-        # TODO: make routes more configurable?
         @self._fastapi_app.get("/")
         async def get(request: Request) -> Response:
-            ui = self._ui
-
-            if isinstance(ui, Response):
-                return ui
-
-            if isinstance(ui, (Tag, TagList)):
-                ui.append(shiny_deps())
-                ui = HTMLDocument(ui)
-                res = ui.render()
-
-                for dep in res["dependencies"]:
-                    create_web_dependency(self._fastapi_app, dep)
-
-                return HTMLResponse(content=res["html"])
-
-            return HTMLResponse(status_code=500, content="Invalid UI object")
-
-        # TODO: does this actually prevent noticable overhead compared to processing dependencies individually?
-        # (by processing dependencies individually, we might have a shot at sensible static rendering behavior)
-        # self._fastapi_app.mount(
-        #    "/shared",
-        #    StaticFiles(directory = os.path.join(os.path.dirname(__file__), "www/shared")),
-        #    name = "shared"
-        # )
+            return await self._on_root_request_cb(request)
 
         @self._fastapi_app.api_route(
             "/session/{rest_of_path:path}", methods=["GET", "POST"]
@@ -121,15 +95,10 @@ class FastAPIConnectionManager(ConnectionManager):
         if typing.TYPE_CHECKING:
             # The only purpose of this block is to make the type checker not
             # warn about these functions not being accessed.
-            [get, route_session_request, websocket_endpoint]
+            (get, route_session_request, websocket_endpoint)
 
     def run(self) -> None:
         uvicorn.run(self._fastapi_app, host="0.0.0.0", port=8000)
-
-
-def create_web_dependency(api: FastAPI, dep: HTMLDependency) -> None:
-    prefix = dep.name + "-" + str(dep.version)
-    api.mount("/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix)
 
 
 # =============================================================================

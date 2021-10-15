@@ -1,10 +1,13 @@
 __all__ = ("ShinyApp",)
 
-from typing import Union, Callable
+from typing import List, Optional, Union, Dict, Callable
 import re
+import os
 
-from fastapi import Request, Response
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
 
 from .shinysession import ShinySession, session_context
 from . import reactcore
@@ -14,16 +17,23 @@ from .connmanager import (
     FastAPIConnectionManager,
     TCPConnectionManager,
 )
+from .html_dependencies import shiny_deps
 
 
 class ShinyApp:
-    def __init__(self, ui: object, server: Callable[[ShinySession], None]) -> None:
-        self.ui: object = ui
+    LIB_PREFIX = "lib/"
+
+    def __init__(
+        self, ui: Union[Tag, TagList], server: Callable[[ShinySession], None]
+    ) -> None:
+        self.ui: RenderedHTML = _render_ui(ui, lib_prefix=self.LIB_PREFIX)
         self.server: Callable[[ShinySession], None] = server
-        self._sessions: dict[str, ShinySession] = {}
+        self._sessions: Dict[str, ShinySession] = {}
         self._last_session_id: int = 0  # Counter for generating session IDs
 
-        self._sessions_needing_flush: dict[int, ShinySession] = {}
+        self._sessions_needing_flush: Dict[int, ShinySession] = {}
+
+        self._registered_dependencies: Dict[str, HTMLDependency] = {}
 
     def create_session(self, conn: Connection) -> ShinySession:
         self._last_session_id += 1
@@ -42,7 +52,9 @@ class ShinyApp:
     def run(self, conn_type: str = "websocket") -> None:
         if conn_type == "websocket":
             self._conn_manager: ConnectionManager = FastAPIConnectionManager(
-                self.ui, self._on_connect_cb, self._on_session_request_cb
+                self._on_root_request_cb,
+                self._on_connect_cb,
+                self._on_session_request_cb,
             )
         elif conn_type == "tcp":
             self._conn_manager: ConnectionManager = TCPConnectionManager(
@@ -53,14 +65,31 @@ class ShinyApp:
 
         self._conn_manager.run()
 
+    # ==========================================================================
+    # Connection callbacks
+    # ==========================================================================
+    async def _on_root_request_cb(self, request: Request) -> Response:
+        """
+        Callback passed to the ConnectionManager which is invoked when a HTTP
+        request for / occurs.
+        """
+        self._ensure_web_dependencies(self.ui["dependencies"])
+        return HTMLResponse(content=self.ui["html"])
+
     async def _on_connect_cb(self, conn: Connection) -> None:
-        """Callback passed to the ConnectionManager, which is invoked when a new
-        connection is established."""
+        """
+        Callback passed to the ConnectionManager which is invoked when a new
+        connection is established.
+        """
         session = self.create_session(conn)
 
         await session.run()
 
     async def _on_session_request_cb(self, request: Request) -> Response:
+        """
+        Callback passed to the ConnectionManager which is invoked when a HTTP
+        request for /session/* occurs.
+        """
         matches = re.search("^/session/([0-9a-f]+)(/.*)$", request.url.path)
         if matches is None:
             # Exact same response as a "normal" 404 from FastAPI.
@@ -76,6 +105,9 @@ class ShinyApp:
         else:
             return JSONResponse({"detail": "Not Found"}, status_code=404)
 
+    # ==========================================================================
+    # Flush
+    # ==========================================================================
     def request_flush(self, session: ShinySession) -> None:
         # TODO: Until we have reactive domains, because we can't yet keep track
         # of which sessions need a flush.
@@ -92,3 +124,32 @@ class ShinyApp:
         # for id, session in self._sessions_needing_flush.items():
         #     await session.flush()
         #     del self._sessions_needing_flush[id]
+
+    # ==========================================================================
+    # HTML Dependency stuff
+    # ==========================================================================
+    def _ensure_web_dependencies(self, deps: List[HTMLDependency]) -> None:
+        for dep in deps:
+            self.register_web_dependency(dep)
+
+    def register_web_dependency(self, dep: HTMLDependency) -> None:
+        if (
+            dep.name in self._registered_dependencies
+            and dep.version >= self._registered_dependencies[dep.name].version
+        ):
+            return
+
+        prefix = dep.name + "-" + str(dep.version)
+        prefix = os.path.join(ShinyApp.LIB_PREFIX, prefix)
+        if isinstance(self._conn_manager, FastAPIConnectionManager):
+            self._conn_manager._fastapi_app.mount(
+                "/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix
+            )
+        self._registered_dependencies[dep.name] = dep
+
+
+def _render_ui(ui: Union[Tag, TagList], lib_prefix: Optional[str]) -> RenderedHTML:
+    ui.append(shiny_deps())
+    doc = HTMLDocument(ui)
+    res = doc.render(libdir=lib_prefix)
+    return res

@@ -108,11 +108,9 @@ def process_deps(ui: Union[Tag, TagList], s: Optional["ShinySession"] = None):
 
         s = get_current_session()
 
-    from .connmanager import create_web_dependency
-
     def register_dependency(x: TagChild) -> TagChild:
         if isinstance(x, HTMLDependency):
-            create_web_dependency(s._app._conn_manager._fastapi_app, x)
+            s.app.register_web_dependency(x)
         return x
 
     ui = ui.tagify()
