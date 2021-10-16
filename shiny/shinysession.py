@@ -1,9 +1,8 @@
-
 __all__ = (
-    'ShinySession',
-    'Outputs',
-    'get_current_session',
-    'session_context',
+    "ShinySession",
+    "Outputs",
+    "get_current_session",
+    "session_context",
 )
 
 import json
@@ -13,7 +12,16 @@ import warnings
 import typing
 from contextvars import ContextVar, Token
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Callable, Optional, Union, Awaitable, TypedDict
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Optional,
+    Union,
+    Awaitable,
+    TypedDict,
+    Dict,
+    List,
+)
 
 from fastapi import Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse
@@ -34,15 +42,18 @@ from .fileupload import FileInfo, FileUploadManager
 class ClientMessage(TypedDict):
     method: str
 
+
 class ClientMessageInit(ClientMessage):
-    data: dict[str, object]
+    data: Dict[str, object]
+
 
 class ClientMessageUpdate(ClientMessage):
-    data: dict[str, object]
+    data: Dict[str, object]
+
 
 # For messages where "method" is something other than "init" or "update".
 class ClientMessageOther(ClientMessage):
-    args: list[object]
+    args: List[object]
     tag: int
 
 
@@ -50,8 +61,8 @@ class ShinySession:
     # ==========================================================================
     # Initialization
     # ==========================================================================
-    def __init__(self, app: 'ShinyApp', id: str, conn: Connection) -> None:
-        self._app: ShinyApp = app
+    def __init__(self, app: "ShinyApp", id: str, conn: Connection) -> None:
+        self.app: ShinyApp = app
         self.id: str = id
         self._conn: Connection = conn
 
@@ -59,16 +70,18 @@ class ShinySession:
         self.output: Outputs = Outputs(self)
 
         self._message_queue_in: asyncio.Queue[Optional[ClientMessage]] = asyncio.Queue()
-        self._message_queue_out: list[dict[str, object]] = []
+        self._message_queue_out: List[Dict[str, object]] = []
 
-        self._message_handlers: dict[str, Callable[..., Awaitable[object]]] = self._create_message_handlers()
+        self._message_handlers: Dict[
+            str, Callable[..., Awaitable[object]]
+        ] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
-        self._on_ended_callbacks: list[Callable[[], None]] = []
+        self._on_ended_callbacks: List[Callable[[], None]] = []
 
         self._register_session_end_callbacks()
 
         with session_context(self):
-            self._app.server(self)
+            self.app.server(self)
 
     def _register_session_end_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions
@@ -78,12 +91,13 @@ class ShinySession:
         self._on_ended_callbacks.append(self._file_upload_manager.rm_upload_dir)
 
     async def run(self) -> None:
-        await self.send_message({"config": {"workerId": "", "sessionId": str(self.id), "user": None}})
+        await self.send_message(
+            {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
+        )
 
         # Start the producer and consumer coroutines.
         await asyncio.gather(
-            self._message_queue_in_producer(),
-            self._message_queue_in_consumer()
+            self._message_queue_in_producer(), self._message_queue_in_consumer()
         )
 
         # When we get here, session has closed. Do cleanup stuff.
@@ -92,8 +106,7 @@ class ShinySession:
                 cb()
             except Exception as e:
                 print("Error in session on_ended callback: " + str(e))
-        self._app.remove_session(self)
-
+        self.app.remove_session(self)
 
     async def _message_queue_in_producer(self) -> None:
         try:
@@ -139,12 +152,16 @@ class ShinySession:
 
             else:
                 if "tag" not in message:
-                    warnings.warn("Cannot dispatch message with missing 'tag'; method: " +
-                                message["method"])
+                    warnings.warn(
+                        "Cannot dispatch message with missing 'tag'; method: "
+                        + message["method"]
+                    )
                     return
                 if "args" not in message:
-                    warnings.warn("Cannot dispatch message with missing 'args'; method: " +
-                                message["method"])
+                    warnings.warn(
+                        "Cannot dispatch message with missing 'args'; method: "
+                        + message["method"]
+                    )
                     return
 
                 message = typing.cast(ClientMessageOther, message)
@@ -152,10 +169,9 @@ class ShinySession:
 
             self.request_flush()
 
-            await self._app.flush_pending_sessions()
+            await self.app.flush_pending_sessions()
 
-
-    def _manage_inputs(self, data: dict[str, object]) -> None:
+    def _manage_inputs(self, data: Dict[str, object]) -> None:
         for (key, val) in data.items():
             if ":" in key:
                 key = key.split(":")[0]
@@ -183,16 +199,11 @@ class ShinySession:
         await self._send_response(message, value)
 
     async def _send_response(self, message: ClientMessageOther, value: object) -> None:
-        await self.send_message({
-            "response": {
-                "tag": message["tag"],
-                "value": value
-            }
-        })
+        await self.send_message({"response": {"tag": message["tag"], "value": value}})
 
     # This is called during __init__.
-    def _create_message_handlers(self) -> dict[str, Callable[..., Awaitable[object]]]:
-        async def uploadInit(file_infos: list[FileInfo]) -> dict[str, object]:
+    def _create_message_handlers(self) -> Dict[str, Callable[..., Awaitable[object]]]:
+        async def uploadInit(file_infos: List[FileInfo]) -> Dict[str, object]:
             with session_context(self):
                 print("uploadInit")
                 print(file_infos)
@@ -207,13 +218,15 @@ class ShinySession:
                 worker_id = ""
                 return {
                     "jobId": job_id,
-                    "uploadUrl": f"session/{self.id}/upload/{job_id}?w={worker_id}"
+                    "uploadUrl": f"session/{self.id}/upload/{job_id}?w={worker_id}",
                 }
 
         async def uploadEnd(job_id: str, input_id: str) -> None:
             upload_op = self._file_upload_manager.get_upload_operation(job_id)
             if upload_op is None:
-                warnings.warn("Received uploadEnd message for non-existent upload operation.")
+                warnings.warn(
+                    "Received uploadEnd message for non-existent upload operation."
+                )
                 return None
             file_data = upload_op.finish()
             self.input[input_id] = file_data
@@ -255,21 +268,21 @@ class ShinySession:
     # ==========================================================================
     # Outbound message handling
     # ==========================================================================
-    def add_message_out(self, message: dict[str, object]) -> None:
+    def add_message_out(self, message: Dict[str, object]) -> None:
         self._message_queue_out.append(message)
 
-    def get_messages_out(self) -> list[dict[str, object]]:
+    def get_messages_out(self) -> List[Dict[str, object]]:
         return self._message_queue_out
 
     def clear_messages_out(self) -> None:
         self._message_queue_out.clear()
 
-
-    async def send_message(self, message: dict[str, object]) -> None:
+    async def send_message(self, message: Dict[str, object]) -> None:
         message_str: str = json.dumps(message) + "\n"
         print(
-            "SEND: " + re.sub('(?m)base64,[a-zA-Z0-9+/=]+', '[base64 data]', message_str),
-            end = ""
+            "SEND: "
+            + re.sub("(?m)base64,[a-zA-Z0-9+/=]+", "[base64 data]", message_str),
+            end="",
         )
         await self._conn.send(json.dumps(message))
 
@@ -281,18 +294,18 @@ class ShinySession:
     # Flush
     # ==========================================================================
     def request_flush(self) -> None:
-        self._app.request_flush(self)
+        self.app.request_flush(self)
 
     async def flush(self) -> None:
-        values: dict[str, object] = {}
+        values: Dict[str, object] = {}
 
         for value in self.get_messages_out():
             values.update(value)
 
-        message: dict[str, object] = {
+        message: Dict[str, object] = {
             "errors": {},
             "values": values,
-            "inputMessages": []
+            "inputMessages": [],
         }
 
         try:
@@ -309,10 +322,12 @@ class ShinySession:
 
 class Outputs:
     def __init__(self, session: ShinySession) -> None:
-        self._output_obervers: dict[str, Observer] = {}
+        self._output_obervers: Dict[str, Observer] = {}
         self._session: ShinySession = session
 
-    def __call__(self, name: str) -> Callable[[Union[Callable[[], object], render.RenderFunction]], None]:
+    def __call__(
+        self, name: str
+    ) -> Callable[[Union[Callable[[], object], render.RenderFunction]], None]:
         def set_fn(fn: Union[Callable[[], object], render.RenderFunction]) -> None:
 
             # fn is either a regular function or a RenderFunction object. If
@@ -326,14 +341,11 @@ class Outputs:
 
             @ObserverAsync
             async def output_obs():
-                await self._session.send_message({
-                    "recalculating": {
-                        "name": name,
-                        "status": "recalculating"
-                    }
-                })
+                await self._session.send_message(
+                    {"recalculating": {"name": name, "status": "recalculating"}}
+                )
 
-                message: dict[str, object] = {}
+                message: Dict[str, object] = {}
                 if utils.is_async_callable(fn):
                     fn2 = typing.cast(Callable[[], Awaitable[object]], fn)
                     val = await fn2()
@@ -342,12 +354,9 @@ class Outputs:
                 message[name] = val
                 self._session.add_message_out(message)
 
-                await self._session.send_message({
-                    "recalculating": {
-                        "name": name,
-                        "status": "recalculated"
-                    }
-                })
+                await self._session.send_message(
+                    {"recalculating": {"name": name, "status": "recalculated"}}
+                )
 
             self._output_obervers[name] = output_obs
 
@@ -359,11 +368,14 @@ class Outputs:
 # ==============================================================================
 # Context manager for current session (AKA current reactive domain)
 # ==============================================================================
-_current_session: ContextVar[Optional[ShinySession]] = \
-    ContextVar("current_session", default = None)
+_current_session: ContextVar[Optional[ShinySession]] = ContextVar(
+    "current_session", default=None
+)
+
 
 def get_current_session() -> Optional[ShinySession]:
     return _current_session.get()
+
 
 @contextmanager
 def session_context(session: Optional[ShinySession]):

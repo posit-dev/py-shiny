@@ -1,6 +1,16 @@
-from typing import Callable, Awaitable, TypeVar
+from typing import TYPE_CHECKING, Callable, Awaitable, TypeVar, Optional, Union
+import os
+import tempfile
+import importlib
 import inspect
 import secrets
+
+from htmltools.core import RenderedHTML
+
+if TYPE_CHECKING:
+    from .shinysession import ShinySession
+
+from htmltools import Tag, TagList
 
 # ==============================================================================
 # Misc utility functions
@@ -10,8 +20,9 @@ def rand_hex(bytes: int) -> str:
     Creates a random hexadecimal string of size `bytes`. The length in
     characters will be bytes*2.
     """
-    format_str = "{{:0{}x}}".format(bytes*2)
+    format_str = "{{:0{}x}}".format(bytes * 2)
     return format_str.format(secrets.randbits(bytes * 8))
+
 
 # ==============================================================================
 # Async-related functions
@@ -19,11 +30,13 @@ def rand_hex(bytes: int) -> str:
 
 T = TypeVar("T")
 
+
 def wrap_async(fn: Callable[[], T]) -> Callable[[], Awaitable[T]]:
     """
     Wrap a synchronous function that returns T, and return an async function
     that wraps the original function.
     """
+
     async def fn_async() -> T:
         return fn()
 
@@ -42,6 +55,7 @@ def is_async_callable(obj: object) -> bool:
             return True
 
     return False
+
 
 # See https://stackoverflow.com/a/59780868/412655 for an excellent explanation
 # of how this stuff works.
@@ -71,4 +85,38 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
     except StopIteration as e:
         return e.value
 
-    raise RuntimeError("async function yielded control; it did not finish in one iteration.")
+    raise RuntimeError(
+        "async function yielded control; it did not finish in one iteration."
+    )
+
+
+# ==============================================================================
+# System-related functions
+# ==============================================================================
+
+# Return directory that a package lives in.
+def package_dir(package: str) -> str:
+    with tempfile.TemporaryDirectory():
+        pkg_file = importlib.import_module(".", package=package).__file__
+        return os.path.dirname(pkg_file)
+
+
+# ==============================================================================
+# Miscellaneous functions
+# ==============================================================================
+def process_deps(
+    ui: Union[Tag, TagList], s: Optional["ShinySession"] = None
+) -> RenderedHTML:
+    if s is None:
+        from .shinysession import get_current_session
+
+        s = get_current_session()
+
+    if s is None:
+        raise RuntimeError("Can't get current ShinySession.")
+
+    res = ui.render()
+    for dep in res["dependencies"]:
+        s.app.register_web_dependency(dep)
+
+    return res

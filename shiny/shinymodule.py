@@ -1,9 +1,8 @@
-
 __all__ = (
-    'ReactiveValuesProxy',
-    'OutputsProxy',
-    'ShinySessionProxy',
-    'ShinyModule',
+    "ReactiveValuesProxy",
+    "OutputsProxy",
+    "ShinySessionProxy",
+    "ShinyModule",
 )
 
 from typing import Union, Callable
@@ -41,7 +40,9 @@ class OutputsProxy(Outputs):
     def _ns_key(self, key: str) -> str:
         return self._ns + "-" + key
 
-    def __call__(self, name: str) -> Callable[[Union[Callable[[], object], RenderFunction]], None]:
+    def __call__(
+        self, name: str
+    ) -> Callable[[Union[Callable[[], object], RenderFunction]], None]:
         return self._outputs(self._ns_key(name))
 
 
@@ -53,7 +54,6 @@ class ShinySessionProxy(ShinySession):
         self.output: OutputsProxy = OutputsProxy(ns, parent_session.output)
 
 
-
 class ShinyModule:
     def __init__(self, ui: object, server: Callable[[ShinySessionProxy], None]) -> None:
         self._ui: object = ui
@@ -63,10 +63,8 @@ class ShinyModule:
         # Just a placeholder for now
         return ns
 
-    def server(self,
-        ns: str,
-        *,
-        session: Union[MISSING_TYPE, ShinySession] = MISSING
+    def server(
+        self, ns: str, *, session: Union[MISSING_TYPE, ShinySession] = MISSING
     ) -> None:
         self.ns: str = ns
 
