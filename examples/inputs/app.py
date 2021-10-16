@@ -14,7 +14,7 @@ ui = page_fluid(
     panel_title("Hello prism ui"),
     layout_sidebar(
         panel_sidebar(
-            input_slider("id", "input_slider()", 0, 100, 50),
+            input_slider("n", "input_slider()", 0, 100, 50),
             input_date("date", "input_date()"),
             input_date_range("date_rng", "input_date_range()"),
             input_text("txt", "input_text()", placeholder="Input some text"),
