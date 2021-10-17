@@ -21,12 +21,12 @@ from .html_dependencies import shiny_deps
 
 
 class ShinyApp:
-    LIB_PREFIX = "lib/"
+    HREF_LIB_PREFIX = "lib/"
 
     def __init__(
         self, ui: Union[Tag, TagList], server: Callable[[ShinySession], None]
     ) -> None:
-        self.ui: RenderedHTML = _render_ui(ui, lib_prefix=self.LIB_PREFIX)
+        self.ui: RenderedHTML = _render_ui(ui, lib_prefix=self.HREF_LIB_PREFIX)
         self.server: Callable[[ShinySession], None] = server
         self._sessions: Dict[str, ShinySession] = {}
         self._last_session_id: int = 0  # Counter for generating session IDs
@@ -140,7 +140,7 @@ class ShinyApp:
             return
 
         prefix = dep.name + "-" + str(dep.version)
-        prefix = os.path.join(ShinyApp.LIB_PREFIX, prefix)
+        prefix = os.path.join(ShinyApp.HREF_LIB_PREFIX, prefix)
         if isinstance(self._conn_manager, FastAPIConnectionManager):
             self._conn_manager._fastapi_app.mount(
                 "/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix
@@ -151,5 +151,5 @@ class ShinyApp:
 def _render_ui(ui: Union[Tag, TagList], lib_prefix: Optional[str]) -> RenderedHTML:
     ui.append(shiny_deps())
     doc = HTMLDocument(ui)
-    res = doc.render(libdir=lib_prefix)
+    res = doc.render(lib_prefix=lib_prefix)
     return res
