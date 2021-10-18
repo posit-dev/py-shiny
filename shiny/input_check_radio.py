@@ -104,7 +104,7 @@ def generate_options(
             generate_option(id, type, choices[i], choice_names[i], selected, inline)
             for i in range(len(choices))
         ],
-        _class_="shiny-options-group",
+        class_="shiny-options-group",
     )
 
 
@@ -123,6 +123,6 @@ def generate_option(
         checked="checked" if selected == choice else None,
     )
     if inline:
-        return tags.label(input, span(choice_name), _class_=type + "-inline")
+        return tags.label(input, span(choice_name), class_=type + "-inline")
     else:
-        return div(tags.label(input, span(choice_name)), _class_=type)
+        return div(tags.label(input, span(choice_name)), class_=type)
