@@ -1,4 +1,4 @@
-from htmltools import tags, Tag, div, html, TagChildArg, TagAttrArg
+from htmltools import tags, Tag, div, HTML, TagChildArg, TagAttrArg
 from typing import Optional, Literal, Any
 from .utils import run_coro_sync, process_deps
 from .shinysession import ShinySession, get_current_session
