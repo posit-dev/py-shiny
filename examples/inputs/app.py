@@ -8,7 +8,7 @@ sys.path.insert(0, shiny_module_dir)
 
 
 from shiny import *
-from htmltools import tags, html
+from htmltools import tags, HTML
 
 ui = page_fluid(
     panel_title("Hello prism ui"),
@@ -83,7 +83,7 @@ def server(s: ShinySession):
             f"<code>input_checkbox_group()</code>: {s.input['checkbox_group']}",
             f"<code>input_radio()</code>: {s.input['radio']}",
         ]
-        return tags.pre(html("\n".join(vals)))
+        return tags.pre(HTML("\n".join(vals)))
 
     @s.output("plot")
     @render.plot(alt="A histogram")

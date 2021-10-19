@@ -60,7 +60,7 @@ def modal(
 
     return div(
         dialog,
-        tags.script(html(js)),
+        tags.script(HTML(js)),
         id="shiny-modal",
         class_="modal fade" if fade else "modal",
         tabindex="-1",

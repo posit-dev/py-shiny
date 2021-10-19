@@ -10,7 +10,7 @@ from htmltools import (
     h2,
     css,
     span,
-    html,
+    HTML,
 )
 
 from .html_dependencies import jqui_deps
@@ -121,7 +121,7 @@ def panel_absolute(
     divTag.add_class("draggable")
     deps = jqui_deps()
     deps.stylesheet = []
-    return TagList(deps, divTag, tags.script(html('$(".draggable").draggable();')))
+    return TagList(deps, divTag, tags.script(HTML('$(".draggable").draggable();')))
 
 
 def help_text(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
