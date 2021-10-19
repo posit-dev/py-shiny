@@ -384,3 +384,15 @@ def session_context(session: Optional[ShinySession]):
         yield
     finally:
         _current_session.reset(token)
+
+
+def _require_active_session(
+    session: Optional[ShinySession], caller: str
+) -> ShinySession:
+    if session is None:
+        session = get_current_session()
+    if session is None:
+        raise RuntimeError(
+            f"{caller} must be called from within an active shiny session"
+        )
+    return session

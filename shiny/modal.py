@@ -1,7 +1,7 @@
 from htmltools import tags, Tag, div, HTML, TagChildArg, TagAttrArg
 from typing import Optional, Literal, Any
 from .utils import run_coro_sync, process_deps
-from .shinysession import ShinySession, get_current_session
+from .shinysession import ShinySession, _require_active_session
 
 # TODO: icons
 def modal_button(label: str) -> Tag:
@@ -72,10 +72,7 @@ def modal(
 
 
 def modal_show(modal: Tag, session: Optional[ShinySession] = None):
-    if session is None:
-        session = get_current_session()
-    if session is None:
-        raise RuntimeError("No Shiny session found")
+    session = _require_active_session(session, "show_modal")
     ui = process_deps(modal)
     msg = {"html": ui["html"], "deps": ui["dependencies"]}
     return run_coro_sync(
@@ -84,8 +81,7 @@ def modal_show(modal: Tag, session: Optional[ShinySession] = None):
 
 
 def modal_remove(session: Optional[ShinySession] = None):
-    if session is None:
-        session = get_current_session()
+    session = _require_active_session(session, "modal_remove")
     return run_coro_sync(
         session.send_message({"modal": {"type": "remove", "message": None}})
     )
