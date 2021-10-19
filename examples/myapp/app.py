@@ -22,8 +22,24 @@ import shiny.render as render
 import numpy as np
 import matplotlib.pyplot as plt
 
+ui = page_fluid(
+    layout_sidebar(
+        panel_sidebar(
+            input_slider("n", "N", 0, 100, 20),
+            input_file("file1", "Choose file", multiple=True),
+        ),
+        panel_main(
+            output_text_verbatim("txt"),
+            output_text_verbatim("shared_txt"),
+            output_plot("plot"),
+            output_text_verbatim("file_content"),
+        ),
+    ),
+)
+
 # A ReactiveVal which is shared across all sessions.
 shared_val = ReactiveVal(None)
+
 
 def server(session: ShinySession):
     @reactive()
@@ -43,7 +59,7 @@ def server(session: ShinySession):
     def _():
         if session.input["n"] is None:
             return
-        shared_val( session.input["n"] * 10 )
+        shared_val(session.input["n"] * 10)
 
     # Print the value of shared_val(). Changing it in one session should cause
     # this to run in all sessions.
@@ -51,9 +67,8 @@ def server(session: ShinySession):
     def _():
         return f"shared_val() is {shared_val()}"
 
-
     @session.output("plot")
-    @render.plot(alt = "A histogram")
+    @render.plot(alt="A histogram")
     def _():
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(437)
@@ -77,9 +92,7 @@ def server(session: ShinySession):
         return out_str
 
 
-ui_path = os.path.join(os.path.dirname(__file__), "www")
-
-app = ShinyApp(ui_path, server)
+app = ShinyApp(ui, server)
 
 if __name__ == "__main__":
     app.run()
