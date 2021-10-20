@@ -5,7 +5,6 @@ sentinels==1.0.0
 uvicorn==0.14.0
 contextvars==2.4
 fastapi==0.70.0
-secrets==1.0.2
 websockets==9.1
 pytest==3.6.4
 pandas==1.2.4
