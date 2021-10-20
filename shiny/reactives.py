@@ -292,7 +292,11 @@ class Observer:
         self._exec_count += 1
 
         with shinysession.session_context(self._session):
-            await ctx.run(self._func, create_task=self._is_async)
+            try:
+                await ctx.run(self._func, create_task=self._is_async)
+            except Exception as e:
+                if self._session:
+                    await self._session.unhandled_error(e)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
         self._invalidate_callbacks.append(callback)

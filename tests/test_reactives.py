@@ -66,8 +66,6 @@ def test_flush_runs_newly_invalidated_async():
 # ======================================================================
 # Setting ReactiveVal to same value doesn't invalidate downstream
 # ======================================================================
-
-
 def test_reactive_val_same_no_invalidate():
     v = ReactiveVal(1)
 
@@ -461,3 +459,39 @@ def test_observer_async_priority():
     v(3)
     asyncio.run(reactcore.flush())
     assert results == [2, 4, 1, 3]
+
+
+# ======================================================================
+# Destroying observers
+# ======================================================================
+def test_observer_destroy():
+    v = ReactiveVal(1)
+    results: list[int] = []
+
+    @observe()
+    def o1():
+        nonlocal results
+        v()
+        results.append(1)
+
+    asyncio.run(reactcore.flush())
+    assert results == [1]
+
+    v(2)
+    o1.destroy()
+    asyncio.run(reactcore.flush())
+    assert results == [1]
+
+    # Same as above, but destroy before running first time
+    v = ReactiveVal(1)
+    results: list[int] = []
+
+    @observe()
+    def o2():
+        nonlocal results
+        v()
+        results.append(1)
+
+    o2.destroy()
+    asyncio.run(reactcore.flush())
+    assert results == []
