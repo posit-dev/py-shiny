@@ -25,8 +25,11 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: rstudio/py-htmltools
+          token: ${{ secrets.ACCESS_TOKEN }}
       - name: Install htmltools
-        run: make install && popd
+        run: |
+          make install
+          popd
       - name: Install dependencies
         run: |
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
