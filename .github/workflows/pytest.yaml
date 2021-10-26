@@ -20,19 +20,14 @@ jobs:
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
       - name: Navigate up
-        run: |
-          pushd ..
-          ls
+        run: pushd ..
       - name: Checkout htmltools
         uses: actions/checkout@v2
         with:
           repository: rstudio/py-htmltools
+          token: ${{ secrets.ACCESS_TOKEN }}
       - name: Install htmltools
-        run: |
-          pwd
-          make install
-          popd
-          pwd
+        run: make install && popd
       - name: Install dependencies
         run: |
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
