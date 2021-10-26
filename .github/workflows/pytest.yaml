@@ -17,10 +17,15 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Checkout htmltools
+        uses: actions/checkout@v2
+        repo: rstudio/py-htmltools
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
       - name: Install htmltools
         run: |
+          pwd
+          ls
           pushd ..
           git clone --depth 1 https://github.com/rstudio/py-htmltools.git
           pushd py-htmltools
