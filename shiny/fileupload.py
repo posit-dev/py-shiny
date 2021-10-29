@@ -1,10 +1,17 @@
-from typing import Optional, BinaryIO, TypedDict, List
+import sys
+from typing import Optional, BinaryIO, List
 import typing
 import tempfile
 import os
 import copy
 import shutil
 import pathlib
+
+if sys.version_info >= (3, 8):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
+
 
 from . import utils
 

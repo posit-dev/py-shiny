@@ -1,3 +1,4 @@
+import sys
 import os
 import tempfile
 import base64
@@ -5,8 +6,13 @@ import mimetypes
 import matplotlib.figure
 import matplotlib.pyplot
 import inspect
-from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union, TypedDict
+from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union
 import typing
+
+if sys.version_info >= (3, 8):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
     from .shinysession import ShinySession

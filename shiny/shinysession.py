@@ -5,6 +5,7 @@ __all__ = (
     "session_context",
 )
 
+import sys
 import json
 import re
 import asyncio
@@ -18,10 +19,14 @@ from typing import (
     Optional,
     Union,
     Awaitable,
-    TypedDict,
     Dict,
     List,
 )
+
+if sys.version_info >= (3, 8):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 from fastapi import Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse
