@@ -1,6 +1,14 @@
-from htmltools import tags, Tag, TagList, div, TagChildArg
-from typing import Literal, Optional, Any, List
+import sys
+from typing import Optional, Any, List
 from warnings import warn
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
+from htmltools import tags, Tag, TagList, div, TagChildArg
+
 from .html_dependencies import bootstrap_deps
 from .navs import navs_bar
 from .input_utils import missing

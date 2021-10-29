@@ -1,5 +1,13 @@
+import sys
+from typing import Optional, Any
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
 from htmltools import tags, Tag, div, HTML, TagChildArg, TagAttrArg
-from typing import Optional, Literal, Any
+
 from .utils import run_coro_sync, process_deps
 from .shinysession import ShinySession, _require_active_session
 

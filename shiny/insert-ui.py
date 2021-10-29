@@ -1,5 +1,13 @@
-from typing import Optional, Literal
+import sys
+from typing import Optional
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
 from htmltools import TagList
+
 from .shinysession import ShinySession, _require_active_session
 from .utils import process_deps
 

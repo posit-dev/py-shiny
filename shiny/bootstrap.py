@@ -1,4 +1,10 @@
-from typing import Callable, Literal, Optional
+import sys
+from typing import Callable, Optional
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
 
 from htmltools import (
     TagChildArg,

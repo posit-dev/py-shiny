@@ -1,7 +1,15 @@
-from typing import Dict, Union, Optional, Literal, Any
+import sys
+from typing import Dict, Union, Optional, Any
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
+from htmltools import TagList, TagChildArg
+
 from .utils import run_coro_sync, process_deps, rand_hex
 from .shinysession import ShinySession, _require_active_session
-from htmltools import TagList, TagChildArg
 
 
 def notification_show(
