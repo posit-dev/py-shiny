@@ -4,7 +4,6 @@ on: [push]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -13,36 +12,47 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
-      - name: Navigate up
-        run: pushd ..
-      - name: Checkout htmltools
-        uses: actions/checkout@v2
-        with:
-          repository: rstudio/py-htmltools
-          token: ${{ secrets.ACCESS_TOKEN }}
-      - name: Install htmltools
+
+      - name: Setup SSH key for htmltools
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.HTMLTOOLS_SSH_KEY }}"
+
+      - name: Check out and install htmltools
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          git clone git@github.com:rstudio/py-htmltools.git
+          cd py-htmltools
+          pip install -r requirements.txt
           make install
-          popd
+
       - name: Install dependencies
         run: |
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
       - name: Install
         run: |
           make install
+
       - name: Run unit tests
         run: |
           make test
