@@ -55,4 +55,6 @@ jobs:
 
       - name: Run unit tests
         run: |
+          pwd
+          ls -la
           make test
