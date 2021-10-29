@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """Tests for `shiny.reactives` and `shiny.reactcore`."""
 
 import pytest

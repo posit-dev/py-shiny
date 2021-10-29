@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """Tests for `shiny.datastructures`."""
 
 from shiny.datastructures import PriorityQueueFIFO

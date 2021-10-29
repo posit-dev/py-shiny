@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """Tests for `shiny.utils` async-related functions."""
 
 import pytest
