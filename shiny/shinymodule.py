@@ -5,7 +5,9 @@ __all__ = (
     "ShinyModule",
 )
 
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, Any
+
+from htmltools.core import TagChildArg
 
 from .shinysession import ShinySession, Outputs, _require_active_session
 from .reactives import ReactiveValues
@@ -53,16 +55,27 @@ class ShinySessionProxy(ShinySession):
 
 
 class ShinyModule:
-    def __init__(self, ui: object, server: Callable[[ShinySessionProxy], None]) -> None:
-        self._ui: object = ui
+    def __init__(
+        self,
+        ui: Callable[..., TagChildArg],
+        server: Callable[[ShinySessionProxy], None],
+    ) -> None:
+        self._ui: Callable[..., TagChildArg] = ui
         self._server: Callable[[ShinySessionProxy], None] = server
 
-    def ui(self, ns: str):
-        # Just a placeholder for now
-        return ns
+    def ui(self, namespace: str, *args: Any) -> TagChildArg:
+        ns = ShinyModule._make_ns_fn(namespace)
+        return self._ui(ns, *args)
 
     def server(self, ns: str, *, session: Optional[ShinySession] = None) -> None:
         self.ns: str = ns
         session = _require_active_session(session, "ShinyModule")
         session_proxy = ShinySessionProxy(ns, session)
         self._server(session_proxy)
+
+    @staticmethod
+    def _make_ns_fn(namespace: str) -> Callable[[str], str]:
+        def ns_fn(id: str) -> str:
+            return namespace + "-" + id
+
+        return ns_fn
