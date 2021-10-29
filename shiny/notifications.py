@@ -1,7 +1,15 @@
-from typing import Dict, Union, Optional, Literal, Any
-from .utils import run_coro_sync, process_deps, rand_hex
-from .shinysession import ShinySession, get_current_session
+import sys
+from typing import Dict, Union, Optional, Any
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
 from htmltools import TagList, TagChildArg
+
+from .utils import run_coro_sync, process_deps, rand_hex
+from .shinysession import ShinySession, _require_active_session
 
 
 def notification_show(
@@ -13,8 +21,7 @@ def notification_show(
     type: Literal["default", "message", "warning", "error"] = "default",
     session: Optional[ShinySession] = None,
 ):
-    if session is None:
-        session = get_current_session()
+    session = _require_active_session(session, "notification_show")
 
     ui_ = process_deps(ui, session)
     action_ = process_deps(action, session)
@@ -32,14 +39,13 @@ def notification_show(
         payload.update({"duration": duration * 1000})
 
     return run_coro_sync(
-        session.send_message({"notification": {"type": "show", "message": payload}})  # type: ignore
+        session.send_message({"notification": {"type": "show", "message": payload}})
     )
 
 
 def notification_remove(id: str, session: Optional[ShinySession] = None):
-    if session is None:
-        session = get_current_session()
+    session = _require_active_session(session, "notification_show")
     run_coro_sync(
-        session.send_message({"notification": {"type": "remove", "message": None}})  # type: ignore
+        session.send_message({"notification": {"type": "remove", "message": None}})
     )
     return id

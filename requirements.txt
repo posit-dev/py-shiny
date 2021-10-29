@@ -1,10 +1,8 @@
 htmltools==0.0.1
 numpy==1.20.3
 matplotlib==3.4.2
-sentinels==1.0.0
-uvicorn==0.14.0
-contextvars==2.4
 fastapi==0.70.0
-websockets==9.1
-pytest==3.6.4
-pandas==1.2.4
+sentinels==1.0.0
+contextvars==2.4
+python-multipart
+htmltools

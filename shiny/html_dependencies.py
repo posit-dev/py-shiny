@@ -1,4 +1,4 @@
-from htmltools import HTMLDependency
+from htmltools import HTMLDependency, HTML
 from typing import List, Union
 
 
@@ -84,7 +84,9 @@ def datepicker_deps() -> HTMLDependency:
         stylesheet={"href": "css/bootstrap-datepicker3.min.css"},
         script={"src": "js/bootstrap-datepicker.min.js"},
         # Need to enable noConflict mode. See #1346.
-        head="<script>(function() { var datepicker = $.fn.datepicker.noConflict(); $.fn.bsDatepicker = datepicker; })();</script>",
+        head=HTML(
+            "<script>(function() { var datepicker = $.fn.datepicker.noConflict(); $.fn.bsDatepicker = datepicker; })();</script>"
+        ),
     )
 
 

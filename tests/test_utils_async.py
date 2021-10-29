@@ -1,10 +1,8 @@
-#!/usr/bin/env python
-
 """Tests for `shiny.utils` async-related functions."""
 
 import pytest
 import asyncio
-from typing import Iterator
+from typing import Iterator, List
 
 from shiny.utils import run_coro_sync
 
@@ -20,7 +18,7 @@ def range_sync(n: int) -> Iterator[int]:
         num += 1
 
 
-async def make_list_sync(n: int) -> list[int]:
+async def make_list_sync(n: int) -> List[int]:
     """
     An `async` function that is in fact synchronous; it does not actually give
     up control.
@@ -31,7 +29,7 @@ async def make_list_sync(n: int) -> list[int]:
     return x
 
 
-async def make_list_async(n: int) -> list[int]:
+async def make_list_async(n: int) -> List[int]:
     """An `async` function that gives up control."""
     x: list[int] = []
     for i in range_sync(n):

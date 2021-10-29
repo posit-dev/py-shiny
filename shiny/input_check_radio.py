@@ -51,7 +51,7 @@ def input_checkbox_group(
         + (" shiny-input-container-inline" if inline else ""),
         # https://www.w3.org/TR/wai-aria-practices/examples/checkbox/checkbox-1/checkbox-1.html
         role="group",
-        aria_labelledby=input_label.get_attr("id"),
+        aria_labelledby=input_label.attrs.get("id"),
     )
 
 
@@ -82,7 +82,7 @@ def input_radio_buttons(
         + (" shiny-input-container-inline" if inline else ""),
         # https://www.w3.org/TR/2017/WD-wai-aria-practices-1.1-20170628/examples/radio/radio-1/radio-1.html
         role="radiogroup",
-        aria_labelledby=input_label.get_attr("id"),
+        aria_labelledby=input_label.attrs.get("id"),
     )
 
 

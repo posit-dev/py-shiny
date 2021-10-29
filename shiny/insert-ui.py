@@ -1,6 +1,14 @@
-from typing import Optional, Literal
+import sys
+from typing import Optional
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
 from htmltools import TagList
-from .shinysession import ShinySession, get_current_session
+
+from .shinysession import ShinySession, _require_active_session
 from .utils import process_deps
 
 
@@ -12,8 +20,7 @@ def ui_insert(
     immediate: bool = False,
     session: Optional[ShinySession] = None,
 ):
-    if not session:
-        session = get_current_session()
+    session = _require_active_session(session, "ui_insert")
 
     def callback():
         msg = {
@@ -34,8 +41,7 @@ def ui_remove(
     immediate: bool = False,
     session: Optional[ShinySession] = None,
 ):
-    if not session:
-        session = get_current_session()
+    session = _require_active_session(session, "ui_remove")
 
     def callback():
         session.send_message(

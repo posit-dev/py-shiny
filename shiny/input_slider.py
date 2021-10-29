@@ -1,6 +1,5 @@
 from htmltools import tags, Tag, div, css, TagAttrArg
-from typing import Dict, Optional, Union, Tuple
-from typing import Optional, Union, Tuple
+from typing import Dict, Optional, Union, Tuple, cast
 from datetime import date, datetime
 import math
 import numpy
@@ -34,14 +33,9 @@ def input_slider(
     drag_range: bool = True,
 ) -> Tag:
 
-    vals: Tuple[SliderVal, SliderVal] = (
-        value
-        if isinstance(value, tuple)
-        else (
-            value,
-            value,
-        )
-    )
+    vals = value
+    if not isinstance(vals, tuple):
+        vals = cast(SliderTuple, (value, value))
 
     # TODO: validate min/max/value?
     data_type = get_slider_type(min, max, vals)
@@ -73,10 +67,10 @@ def input_slider(
         "style": css(width=width),
         "data_skin": "shiny",
         # TODO: do we need to worry about scientific notation (i.e., formatNoSci()?)
-        "data_min": min,
-        "data_max": max,
-        "data_from": vals[0],
-        "data_step": step,
+        "data_min": str(min),
+        "data_max": str(max),
+        "data_from": str(vals[0]),
+        "data_step": str(step),
         "data_grid": ticks,
         "data_grid_num": n_ticks,
         "data_grid_snap": "false",
@@ -92,7 +86,7 @@ def input_slider(
 
     if isinstance(value, tuple):
         props["data_type"] = "double"
-        props["data_to"] = value[1]
+        props["data_to"] = str(value[1])
         props["data_drag_interval"] = drag_range
 
     if not time_format and data_type[0:4] == "date":

@@ -1,5 +1,13 @@
+import sys
+from typing import Optional, Any, Tuple
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
 from htmltools import jsx_tag_create, JSXTag, TagChildArg, TagAttrArg
-from typing import Optional, Any, Literal, Tuple
+
 from .html_dependencies import nav_deps
 
 

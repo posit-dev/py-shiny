@@ -1,7 +1,7 @@
 from typing import Optional, Dict, Any
 from warnings import warn
 from .utils import run_coro_sync, rand_hex
-from .shinysession import ShinySession, get_current_session
+from .shinysession import ShinySession, _require_active_session
 
 
 class Progress:
@@ -15,11 +15,7 @@ class Progress:
         self.value = None
         self._id = rand_hex(8)
         self._closed = False
-        self._session = get_current_session() if session is None else session
-        if not self._session:
-            raise Exception(
-                "Progress() can only be used within a Shiny session context"
-            )
+        self._session = _require_active_session(session, "Progress")
 
         msg = {"id": self._id, "style": self._style}
         self._send_progress("open", msg)
@@ -55,7 +51,7 @@ class Progress:
         message: Optional[str] = None,
         detail: Optional[str] = None,
     ):
-        if self.value:
+        if self.value is None:
             self.value = self.min
 
         value = min(self.value + amount, self.max)

@@ -5,13 +5,11 @@ __all__ = (
     "ShinyModule",
 )
 
-from typing import Union, Callable
+from typing import Optional, Union, Callable
 
-from . import shinysession
-from .shinysession import ShinySession, Outputs
+from .shinysession import ShinySession, Outputs, _require_active_session
 from .reactives import ReactiveValues
 from .render import RenderFunction
-from .types import MISSING_TYPE, MISSING
 
 
 class ReactiveValuesProxy(ReactiveValues):
@@ -63,18 +61,8 @@ class ShinyModule:
         # Just a placeholder for now
         return ns
 
-    def server(
-        self, ns: str, *, session: Union[MISSING_TYPE, ShinySession] = MISSING
-    ) -> None:
+    def server(self, ns: str, *, session: Optional[ShinySession] = None) -> None:
         self.ns: str = ns
-
-        # Some acrobatics for the type checker
-        if isinstance(session, MISSING_TYPE):
-            cur_session = shinysession.get_current_session()
-            if cur_session is None:
-                raise ValueError("No Shiny session is active.")
-            session = cur_session
-        session2: ShinySession = session
-
-        session_proxy = ShinySessionProxy(ns, session2)
+        session = _require_active_session(session, "ShinyModule")
+        session_proxy = ShinySessionProxy(ns, session)
         self._server(session_proxy)

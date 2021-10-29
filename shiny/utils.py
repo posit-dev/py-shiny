@@ -5,12 +5,13 @@ import importlib
 import inspect
 import secrets
 
-from htmltools.core import RenderedHTML
+from htmltools.core import RenderedHTML, TagChildArg
 
 if TYPE_CHECKING:
     from .shinysession import ShinySession
 
-from htmltools import Tag, TagList
+from htmltools import TagList
+from .shinysession import _require_active_session
 
 # ==============================================================================
 # Misc utility functions
@@ -105,18 +106,12 @@ def package_dir(package: str) -> str:
 # Miscellaneous functions
 # ==============================================================================
 def process_deps(
-    ui: Union[Tag, TagList], s: Optional["ShinySession"] = None
+    ui: TagChildArg, session: Optional["ShinySession"] = None
 ) -> RenderedHTML:
-    if s is None:
-        from .shinysession import get_current_session
+    session = _require_active_session(session, "process_deps")
 
-        s = get_current_session()
-
-    if s is None:
-        raise RuntimeError("Can't get current ShinySession.")
-
-    res = ui.render()
+    res = TagList(ui).render()
     for dep in res["dependencies"]:
-        s.app.register_web_dependency(dep)
+        session.app.register_web_dependency(dep)
 
     return res

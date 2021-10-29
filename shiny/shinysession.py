@@ -5,6 +5,7 @@ __all__ = (
     "session_context",
 )
 
+import sys
 import json
 import re
 import asyncio
@@ -18,10 +19,14 @@ from typing import (
     Optional,
     Union,
     Awaitable,
-    TypedDict,
     Dict,
     List,
 )
+
+if sys.version_info >= (3, 8):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 from fastapi import Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse
@@ -380,3 +385,15 @@ def session_context(session: Optional[ShinySession]):
         yield
     finally:
         _current_session.reset(token)
+
+
+def _require_active_session(
+    session: Optional[ShinySession], caller: str
+) -> ShinySession:
+    if session is None:
+        session = get_current_session()
+    if session is None:
+        raise RuntimeError(
+            f"{caller} must be called from within an active shiny session"
+        )
+    return session
