@@ -56,11 +56,5 @@ jobs:
       - name: Run unit tests
         run: |
           pwd
-          ls -la
-          echo "=========================="
-          ls -la ..
-          echo "=========================="
-          ls -la ../..
-          echo "=========================="
           cd tests
           pytest
