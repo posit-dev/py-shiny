@@ -5,7 +5,7 @@ from .input_utils import *
 valType = Union[int, float]
 
 
-def numericInput(
+def input_numeric(
     id: str,
     label: str,
     value: valType,
