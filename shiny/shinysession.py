@@ -82,6 +82,7 @@ class ShinySession:
         ] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks: List[Callable[[], None]] = []
+        self._has_run_session_end_tasks: bool = False
 
         self._register_session_end_callbacks()
 
@@ -95,25 +96,28 @@ class ShinySession:
         # Clear file upload directories, if present
         self._on_ended_callbacks.append(self._file_upload_manager.rm_upload_dir)
 
-    async def run(self) -> None:
-        await self.send_message(
-            {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
-        )
+    def _run_session_end_tasks(self) -> None:
+        if self._has_run_session_end_tasks:
+            return
+        self._has_run_session_end_tasks = True
 
-        # Start the producer and consumer coroutines.
-        await asyncio.gather(
-            self._message_queue_in_producer(), self._message_queue_in_consumer()
-        )
-
-        # When we get here, session has closed. Do cleanup stuff.
         for cb in self._on_ended_callbacks:
             try:
                 cb()
             except Exception as e:
                 print("Error in session on_ended callback: " + str(e))
+
         self.app.remove_session(self)
 
-    async def _message_queue_in_producer(self) -> None:
+    async def close(self) -> None:
+        await self._conn.close()
+        self._run_session_end_tasks()
+
+    async def run(self) -> None:
+        await self.send_message(
+            {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
+        )
+
         try:
             while True:
                 message: str = await self._conn.receive()
@@ -125,56 +129,41 @@ class ShinySession:
                     print("ERROR: Invalid JSON message")
                     continue
 
-                self._message_queue_in.put_nowait(message_obj)
+                if "method" not in message_obj:
+                    self._send_error_response("Message does not contain 'method'.")
+                    return
+
+                if message_obj["method"] == "init":
+                    message_obj = typing.cast(ClientMessageInit, message_obj)
+                    self._manage_inputs(message_obj["data"])
+
+                elif message_obj["method"] == "update":
+                    message_obj = typing.cast(ClientMessageUpdate, message_obj)
+                    self._manage_inputs(message_obj["data"])
+
+                else:
+                    if "tag" not in message_obj:
+                        warnings.warn(
+                            "Cannot dispatch message with missing 'tag'; method: "
+                            + message_obj["method"]
+                        )
+                        return
+                    if "args" not in message_obj:
+                        warnings.warn(
+                            "Cannot dispatch message with missing 'args'; method: "
+                            + message_obj["method"]
+                        )
+                        return
+
+                    message_obj = typing.cast(ClientMessageOther, message_obj)
+                    await self._dispatch(message_obj)
+
+                self.request_flush()
+
+                await self.app.flush_pending_sessions()
 
         except ConnectionClosed:
-            # None is a sentinal value signalling that the connection was
-            # closed. This is needed so that the consumer knows to stop.
-            self._message_queue_in.put_nowait(None)
-
-    # ==========================================================================
-    # Inbound message handling
-    # ==========================================================================
-    async def _message_queue_in_consumer(self) -> None:
-        while True:
-            message = await self._message_queue_in.get()
-
-            # None is a signal that the connection is closed.
-            if message is None:
-                return
-
-            if "method" not in message:
-                self._send_error_response("Message does not contain 'method'.")
-                return
-
-            if message["method"] == "init":
-                message = typing.cast(ClientMessageInit, message)
-                self._manage_inputs(message["data"])
-
-            elif message["method"] == "update":
-                message = typing.cast(ClientMessageUpdate, message)
-                self._manage_inputs(message["data"])
-
-            else:
-                if "tag" not in message:
-                    warnings.warn(
-                        "Cannot dispatch message with missing 'tag'; method: "
-                        + message["method"]
-                    )
-                    return
-                if "args" not in message:
-                    warnings.warn(
-                        "Cannot dispatch message with missing 'args'; method: "
-                        + message["method"]
-                    )
-                    return
-
-                message = typing.cast(ClientMessageOther, message)
-                await self._dispatch(message)
-
-            self.request_flush()
-
-            await self.app.flush_pending_sessions()
+            self._run_session_end_tasks()
 
     def _manage_inputs(self, data: Dict[str, object]) -> None:
         for (key, val) in data.items():
@@ -323,6 +312,13 @@ class ShinySession:
     # ==========================================================================
     def on_ended(self, cb: Callable[[], None]) -> None:
         self._on_ended_callbacks.append(cb)
+
+    # ==========================================================================
+    # Misc
+    # ==========================================================================
+    async def unhandled_error(self, e: Exception) -> None:
+        print("Unhandled error: " + str(e))
+        await self.close()
 
 
 class Outputs:

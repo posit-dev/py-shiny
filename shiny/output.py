@@ -27,7 +27,7 @@ def output_text(
 
 
 def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
-    cls = "class-text-output" + (" noplaceholder" if not placeholder else "")
+    cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
     return tags.pre(id=id, class_=cls)
 
 

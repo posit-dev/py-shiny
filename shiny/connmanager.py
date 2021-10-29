@@ -15,6 +15,10 @@ class Connection(ABC):
     async def receive(self) -> str:
         ...
 
+    @abstractmethod
+    async def close(self) -> None:
+        ...
+
 
 class ConnectionManager(ABC):
     """Base class for handling incoming connections."""
@@ -54,6 +58,9 @@ class FastAPIConnection(Connection):
             return await self._websocket.receive_text()
         except WebSocketDisconnect:
             raise ConnectionClosed
+
+    async def close(self) -> None:
+        await self._websocket.close()
 
 
 class FastAPIConnectionManager(ConnectionManager):
