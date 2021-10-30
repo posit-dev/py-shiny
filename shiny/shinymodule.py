@@ -69,7 +69,7 @@ class ShinyModule:
 
     def server(self, ns: str, *, session: Optional[ShinySession] = None) -> None:
         self.ns: str = ns
-        session = _require_active_session(session, "ShinyModule")
+        session = _require_active_session(session)
         session_proxy = ShinySessionProxy(ns, session)
         self._server(session_proxy)
 

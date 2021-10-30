@@ -387,13 +387,27 @@ def session_context(session: Optional[ShinySession]):
         _current_session.reset(token)
 
 
-def _require_active_session(
-    session: Optional[ShinySession], caller: str
-) -> ShinySession:
+def _require_active_session(session: Optional[ShinySession]) -> ShinySession:
     if session is None:
         session = get_current_session()
     if session is None:
+        import inspect
+
+        call_stack = inspect.stack()
+        if len(call_stack) > 1:
+            caller = call_stack[1]
+        else:
+            # Uncommon case: this function is called from the top-level, so the caller
+            # is just _require_active_session.
+            caller = call_stack[0]
+
+        calling_fn_name = caller.function
+        if calling_fn_name == "__init__":
+            # If the caller is __init__, then we're most likely in the initialization of
+            # an object. This will get the class name.
+            calling_fn_name = caller.frame.f_locals["self"].__class__.__name__
+
         raise RuntimeError(
-            f"{caller} must be called from within an active shiny session"
+            f"{calling_fn_name}() must be called from within an active Shiny session."
         )
     return session

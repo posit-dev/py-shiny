@@ -21,7 +21,7 @@ def notification_show(
     type: Literal["default", "message", "warning", "error"] = "default",
     session: Optional[ShinySession] = None,
 ):
-    session = _require_active_session(session, "notification_show")
+    session = _require_active_session(session)
 
     ui_ = process_deps(ui, session)
     action_ = process_deps(action, session)
@@ -44,7 +44,7 @@ def notification_show(
 
 
 def notification_remove(id: str, session: Optional[ShinySession] = None):
-    session = _require_active_session(session, "notification_show")
+    session = _require_active_session(session)
     run_coro_sync(
         session.send_message({"notification": {"type": "remove", "message": None}})
     )

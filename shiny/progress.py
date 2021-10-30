@@ -15,7 +15,7 @@ class Progress:
         self.value = None
         self._id = rand_hex(8)
         self._closed = False
-        self._session = _require_active_session(session, "Progress")
+        self._session = _require_active_session(session)
 
         msg = {"id": self._id, "style": self._style}
         self._send_progress("open", msg)

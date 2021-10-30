@@ -108,7 +108,7 @@ def package_dir(package: str) -> str:
 def process_deps(
     ui: TagChildArg, session: Optional["ShinySession"] = None
 ) -> RenderedHTML:
-    session = _require_active_session(session, "process_deps")
+    session = _require_active_session(session)
 
     res = TagList(ui).render()
     for dep in res["dependencies"]:

@@ -20,7 +20,7 @@ def ui_insert(
     immediate: bool = False,
     session: Optional[ShinySession] = None,
 ):
-    session = _require_active_session(session, "ui_insert")
+    session = _require_active_session(session)
 
     def callback():
         msg = {
@@ -41,7 +41,7 @@ def ui_remove(
     immediate: bool = False,
     session: Optional[ShinySession] = None,
 ):
-    session = _require_active_session(session, "ui_remove")
+    session = _require_active_session(session)
 
     def callback():
         session.send_message(
