@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 library(htmltools)
 library(bslib)
 
