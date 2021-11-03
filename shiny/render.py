@@ -120,7 +120,7 @@ def plot(alt: Optional[str] = None):
     def wrapper(fn: Union[UserRenderFunction, UserRenderFunctionAsync]) -> Plot:
         if inspect.iscoroutinefunction(fn):
             fn = typing.cast(UserRenderFunctionAsync, fn)
-            return PlotAsync(fn, alt)
+            return PlotAsync(fn, alt=alt)
         else:
             return Plot(fn, alt=alt)
 
@@ -178,8 +178,9 @@ def image(delete_file: bool = False):
     def wrapper(fn: Union[ImgRenderFunc, ImgRenderFuncAsync]) -> Image:
         if inspect.iscoroutinefunction(fn):
             fn = typing.cast(ImgRenderFuncAsync, fn)
-            return ImageAsync(fn, delete_file)
+            return ImageAsync(fn, delete_file=delete_file)
         else:
+            fn = typing.cast(ImgRenderFunc, fn)
             return Image(fn, delete_file=delete_file)
 
     return wrapper
