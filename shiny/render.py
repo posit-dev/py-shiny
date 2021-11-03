@@ -14,11 +14,12 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import TypedDict
 
+from htmltools import TagChildArg
+
 if TYPE_CHECKING:
     from .shinysession import ShinySession
 
 from . import utils
-from htmltools import TagList
 
 
 UserRenderFunction = Callable[[], object]
@@ -184,11 +185,11 @@ def image(delete_file: bool = False):
     return wrapper
 
 
-UiRenderFunc = Callable[[], Optional[TagList]]
-UiRenderFuncAsync = Callable[[], Awaitable[ImgReturn]]
+UiRenderFunc = Callable[[], TagChildArg]
+UiRenderFuncAsync = Callable[[], Awaitable[TagChildArg]]
 
 
-class Ui(RenderFunction):
+class UI(RenderFunction):
     def __init__(self, fn: UiRenderFunc) -> None:
         self._fn: UiRenderFuncAsync = utils.wrap_async(fn)
 
@@ -196,16 +197,17 @@ class Ui(RenderFunction):
         return utils.run_coro_sync(self.run())
 
     async def run(self) -> object:
-        ui: Optional[TagList] = await self._fn()
+        ui: TagChildArg = await self._fn()
         if ui is None:
             return None
         return utils.process_deps(ui, self._session)
 
 
-class UiAsync(Ui, RenderFunctionAsync):
+class UIAsync(UI, RenderFunctionAsync):
     def __init__(self, fn: UiRenderFuncAsync) -> None:
         if not inspect.iscoroutinefunction(fn):
             raise TypeError("PlotAsync requires an async function")
+
         super().__init__(lambda: None)
         self._fn: UiRenderFuncAsync = fn
 
@@ -213,12 +215,13 @@ class UiAsync(Ui, RenderFunctionAsync):
         return await self.run()
 
 
-def ui(delete_file: bool = False):
-    def wrapper(fn: Union[UiRenderFunc, UiRenderFuncAsync]) -> TagList:
+def ui():
+    def wrapper(fn: Union[UiRenderFunc, UiRenderFuncAsync]) -> UI:
         if inspect.iscoroutinefunction(fn):
             fn = typing.cast(UiRenderFuncAsync, fn)
-            return UiAsync(fn, delete_file)
+            return UIAsync(fn)
         else:
-            return Ui(fn)
+            fn = typing.cast(UiRenderFunc, fn)
+            return UI(fn)
 
     return wrapper

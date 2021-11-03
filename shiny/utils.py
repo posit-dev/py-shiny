@@ -1,16 +1,24 @@
-from typing import TYPE_CHECKING, Callable, Awaitable, TypeVar, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Awaitable,
+    TypeVar,
+    Optional,
+    List,
+    Dict,
+    Any,
+)
 import os
 import tempfile
 import importlib
 import inspect
 import secrets
 
-from htmltools.core import RenderedHTML, TagChildArg
+from htmltools import TagList, TagChildArg
 
 if TYPE_CHECKING:
     from .shinysession import ShinySession
 
-from htmltools import TagList
 from .shinysession import _require_active_session
 
 # ==============================================================================
@@ -107,11 +115,17 @@ def package_dir(package: str) -> str:
 # ==============================================================================
 def process_deps(
     ui: TagChildArg, session: Optional["ShinySession"] = None
-) -> RenderedHTML:
+) -> Dict[str, Any]:
     session = _require_active_session(session)
 
     res = TagList(ui).render()
+    deps: List[Dict[str, Any]] = []
     for dep in res["dependencies"]:
         session.app.register_web_dependency(dep)
+        dep_dict = dep.as_dict(prefix_dir="lib")
+        deps.append(dep_dict)
 
-    return res
+    return {
+        "deps": deps,
+        "html": res["html"],
+    }
