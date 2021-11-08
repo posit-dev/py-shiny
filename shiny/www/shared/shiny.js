@@ -9146,20 +9146,20 @@
     return htmlDependencies[names[idx]] === dep.version;
   }
   function renderDependency(dep_) {
-    var dep = simplifyHtmlDependency(dep_);
+    var dep = normalizeHtmlDependency(dep_);
     var stylesheetLinks = dep.stylesheet.map(function(x) {
       if (!hasOwnProperty(x, "rel"))
         x.rel = "stylesheet";
       if (!hasOwnProperty(x, "type"))
         x.type = "text/css";
       var link = document.createElement("link");
-      for (var _i = 0, _Object$entries = Object.entries(x); _i < _Object$entries.length; _i++) {
-        var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2), attr = _Object$entries$_i[0], val = _Object$entries$_i[1];
+      Object.entries(x).forEach(function(_ref) {
+        var _ref2 = _slicedToArray(_ref, 2), attr = _ref2[0], val = _ref2[1];
         if (attr === "href") {
           val = encodeURI(val);
         }
         link.setAttribute(attr, val ? val : "");
-      }
+      });
       return link;
     });
     if (needsRestyle(dep)) {
@@ -9172,8 +9172,8 @@
     var $head = (0, import_jquery27.default)("head").first();
     dep.meta.forEach(function(x) {
       var meta = document.createElement("meta");
-      for (var _i2 = 0, _Object$entries2 = Object.entries(x); _i2 < _Object$entries2.length; _i2++) {
-        var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2), attr = _Object$entries2$_i[0], val = _Object$entries2$_i[1];
+      for (var _i2 = 0, _Object$entries = Object.entries(x); _i2 < _Object$entries.length; _i2++) {
+        var _Object$entries$_i = _slicedToArray(_Object$entries[_i2], 2), attr = _Object$entries$_i[0], val = _Object$entries$_i[1];
         meta.setAttribute(attr, val);
       }
       $head.append(meta);
@@ -9183,13 +9183,13 @@
     }
     dep.script.forEach(function(x) {
       var script = document.createElement("script");
-      for (var _i3 = 0, _Object$entries3 = Object.entries(x); _i3 < _Object$entries3.length; _i3++) {
-        var _Object$entries3$_i = _slicedToArray(_Object$entries3[_i3], 2), attr = _Object$entries3$_i[0], val = _Object$entries3$_i[1];
+      Object.entries(x).forEach(function(_ref3) {
+        var _ref4 = _slicedToArray(_ref3, 2), attr = _ref4[0], val = _ref4[1];
         if (attr === "src") {
           val = encodeURI(val);
         }
         script.setAttribute(attr, val ? val : "");
-      }
+      });
       $head.append(script);
     });
     dep.attachment.forEach(function(x) {
@@ -9265,7 +9265,7 @@
       }
     });
   }
-  function simplifyHtmlDependency(dep) {
+  function normalizeHtmlDependency(dep) {
     var _dep$src;
     var hrefPrefix = (_dep$src = dep.src) === null || _dep$src === void 0 ? void 0 : _dep$src.href;
     var result = {
@@ -9282,13 +9282,13 @@
       if (Array.isArray(dep.meta)) {
         result.meta = dep.meta;
       } else {
-        for (var _i4 = 0, _Object$entries4 = Object.entries(dep.meta); _i4 < _Object$entries4.length; _i4++) {
-          var _Object$entries4$_i = _slicedToArray(_Object$entries4[_i4], 2), name = _Object$entries4$_i[0], content = _Object$entries4$_i[1];
-          result.meta.push({
-            name: name,
-            content: content
-          });
-        }
+        result.meta = Object.entries(dep.meta).map(function(_ref5) {
+          var _ref6 = _slicedToArray(_ref5, 2), attr = _ref6[0], val = _ref6[1];
+          return {
+            name: attr,
+            content: val
+          };
+        });
       }
     }
     result.stylesheet = asArray(dep.stylesheet).map(function(s) {
@@ -9331,15 +9331,13 @@
         }
       });
     } else {
-      var _tmp = [];
-      for (var _i5 = 0, _Object$entries5 = Object.entries(attachments); _i5 < _Object$entries5.length; _i5++) {
-        var _Object$entries5$_i = _slicedToArray(_Object$entries5[_i5], 2), attr = _Object$entries5$_i[0], val = _Object$entries5$_i[1];
-        _tmp.push({
+      attachments = Object.entries(attachments).map(function(_ref7) {
+        var _ref8 = _slicedToArray(_ref7, 2), attr = _ref8[0], val = _ref8[1];
+        return {
           key: attr,
           href: val
-        });
-      }
-      attachments = _tmp;
+        };
+      });
     }
     result.attachment = attachments.map(function(s) {
       if (hrefPrefix) {
