@@ -6,7 +6,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal
 
-from htmltools import jsx_tag_create, JSXTag, TagChildArg, TagAttrArg
+from htmltools import jsx_tag_create, JSXTag, TagChildArg, JSXTagAttrArg
 
 from .html_dependencies import nav_deps
 
@@ -149,7 +149,7 @@ def navs_pill_list(
 
 def navs_bar(
     *args: TagChildArg,
-    title: Optional[str] = None,
+    title: Optional[TagChildArg] = None,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     position: Literal["static-top", "fixed-top", "fixed-bottom"] = "static-top",
@@ -176,6 +176,6 @@ def navs_bar(
     )
 
 
-def nav_tag(name: str, *args: TagChildArg, **kwargs: TagAttrArg) -> JSXTag:
+def nav_tag(name: str, *args: TagChildArg, **kwargs: JSXTagAttrArg) -> JSXTag:
     tag = jsx_tag_create("bslib." + name)
     return tag(nav_deps(), *args, **kwargs)

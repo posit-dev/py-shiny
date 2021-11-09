@@ -11,7 +11,6 @@ from htmltools import tags, Tag, TagList, div, TagChildArg
 
 from .html_dependencies import bootstrap_deps
 from .navs import navs_bar
-from .input_utils import missing
 
 
 def page_navbar(
@@ -26,23 +25,20 @@ def page_navbar(
     inverse: Literal["auto", True, False] = "auto",
     collapsible: bool = True,
     fluid: bool = True,
-    window_title: Optional[str] = missing,
+    window_title: Optional[str] = None,
     lang: Optional[str] = None
 ) -> Tag:
 
-    # https://github.com/rstudio/shiny/issues/2310
-    if title and window_title is missing:
-        window_title: List[str] = find_characters(title)
-        if window_title:
-            window_title: Tag = tags.title(" ".join(window_title))
-        else:
+    if title is not None and window_title is None:
+        # Try to infer window_title from contents of title
+        window_title = " ".join(find_characters(title))
+        if not window_title:
             warn(
                 "Unable to infer a `window_title` default from `title`. Consider providing a character string to `window_title`."
             )
-            window_title: None = None
 
     return tags.html(
-        tags.head(window_title),
+        tags.head(tags.title(window_title)),
         tags.body(
             navs_bar(
                 *args,
