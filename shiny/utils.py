@@ -122,7 +122,7 @@ def process_deps(
     deps: List[Dict[str, Any]] = []
     for dep in res["dependencies"]:
         session.app.register_web_dependency(dep)
-        dep_dict = dep.as_dict(prefix_dir="lib")
+        dep_dict = dep.as_dict(lib_prefix="lib")
         deps.append(dep_dict)
 
     return {
