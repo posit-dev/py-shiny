@@ -40,3 +40,7 @@ def output_ui(
     if not container:
         container = tags.span if inline else tags.div
     return container(id=id, class_="shiny-html-output", **kwargs)  # type: ignore
+
+
+def output_ipywidget(id: str) -> Tag:
+    return tags.div(id=id, class_="shiny-ipywidget-output")

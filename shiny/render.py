@@ -226,3 +226,48 @@ def ui():
             return UI(fn)
 
     return wrapper
+
+
+from ipywidgets.widgets import DOMWidget
+from .input_ipywidget import _get_ipywidget_html
+from htmltools import tags
+
+IPyWidgetRenderFunc = Callable[[], DOMWidget]
+IPyWidgetRenderFuncAsync = Callable[[], Awaitable[DOMWidget]]
+
+
+class IPyWidget(RenderFunction):
+    def __init__(self, fn: IPyWidgetRenderFunc) -> None:
+        self._fn: IPyWidgetRenderFuncAsync = utils.wrap_async(fn)
+
+    def __call__(self) -> object:
+        return utils.run_coro_sync(self.run())
+
+    async def run(self) -> object:
+        widget: DOMWidget = await self._fn()
+        ui = _get_ipywidget_html(widget)
+        return utils.process_deps(ui, self._session)
+
+
+class IPyWidgetAsync(UI, RenderFunctionAsync):
+    def __init__(self, fn: IPyWidgetRenderFuncAsync) -> None:
+        if not inspect.iscoroutinefunction(fn):
+            raise TypeError("PlotAsync requires an async function")
+
+        super().__init__(lambda: None)
+        self._fn: IPyWidgetRenderFuncAsync = fn
+
+    async def __call__(self) -> object:
+        return await self.run()
+
+
+def ipywidget():
+    def wrapper(fn: Union[IPyWidgetRenderFunc, IPyWidgetRenderFuncAsync]) -> DOMWidget:
+        if inspect.iscoroutinefunction(fn):
+            fn = typing.cast(IPyWidgetRenderFuncAsync, fn)
+            return IPyWidgetAsync(fn)
+        else:
+            fn = typing.cast(IPyWidgetRenderFunc, fn)
+            return IPyWidget(fn)
+
+    return wrapper

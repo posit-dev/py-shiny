@@ -2,14 +2,17 @@ from htmltools import HTMLDependency, HTML
 from typing import List, Union
 
 
-def shiny_deps() -> HTMLDependency:
-    return HTMLDependency(
-        name="shiny",
-        version="0.0.1",
-        source={"package": "shiny", "subdir": "www/shared/"},
-        script={"src": "shiny.js"},
-        stylesheet={"href": "shiny.min.css"},
-    )
+def shiny_deps() -> List[HTMLDependency]:
+    return [
+        HTMLDependency(
+            name="shiny",
+            version="0.0.1",
+            source={"package": "shiny", "subdir": "www/shared/"},
+            script={"src": "shiny.js"},
+            stylesheet={"href": "shiny.min.css"},
+        ),
+        ipywidget_embed_dep(),
+    ]
 
 
 def bootstrap_deps(bs3compat: bool = True) -> List[HTMLDependency]:
@@ -112,3 +115,20 @@ def jqui_deps() -> HTMLDependency:
         script={"src": "jquery-ui.min.js"},
         stylesheet={"href": "jquery-ui.min.css"},
     )
+
+
+def ipywidget_embed_dep() -> List[HTMLDependency]:
+    return [
+        HTMLDependency(
+            name="requirejs",
+            version="2.3.4",
+            source={"package": "shiny", "subdir": "www/shared/require.js"},
+            script={"src": "require.min.js"},
+        ),
+        HTMLDependency(
+            name="ipywidget-embed-manager",
+            version="0.0.1",
+            source={"package": "shiny", "subdir": "ipywidgets/dist"},
+            script={"src": "index.js"},
+        ),
+    ]

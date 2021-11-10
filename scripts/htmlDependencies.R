@@ -4,12 +4,12 @@ library(htmltools)
 library(bslib)
 
 www <- file.path(getwd(), "shiny", "www")
-unlink(www, recursive = TRUE)
+#unlink(www, recursive = TRUE)
 dir.create(www)
 
 # Copy over shiny's www/shared directory
 withr::with_tempdir({
-  cmd <- paste("git clone --depth 1 --branch master https://github.com/rstudio/shiny")
+  cmd <- paste("git clone --depth 1 --branch main https://github.com/rstudio/shiny")
   system(cmd)
   file.copy(
     "shiny/inst/www/shared",
@@ -41,3 +41,10 @@ withr::with_tempdir({
     bslib, recursive = TRUE
   )
 })
+
+require_js <- file.path(www, "shared", "require.js")
+if (!dir.exists(require_js)) dir.create(require_js)
+download.file(
+  "https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js",
+  file.path(require_js, "require.min.js")
+)

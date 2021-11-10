@@ -1,0 +1,34 @@
+{
+  "name": "@jupyter-widgets/prism-embed-manager",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shiny input/output bindings for ipywidgets",
+  "license": "MIT",
+  "author": "Carson Sievert",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "webpack",
+    "build_old": "esbuild src/index.ts --outfile=dist/index.js --format=iife --bundle --sourcemap=inline --target=es2020 --loader:.css=dataurl --loader:.svg=text",
+    "watch": "yarn build --watch",
+    "clean": "rimraf dist",
+    "test": "npm run test:default",
+    "test:default": "echo \"No test specified\""
+  },
+  "dependencies": {
+    "@jupyter-widgets/html-manager": "^0.20.0",
+    "@jupyter-widgets/base": "^0.20.0",
+    "@types/rstudio-shiny": "https://github.com/rstudio/shiny#v1.7.0",
+    "font-awesome": "^4.7.0"
+  },
+  "devDependencies": {
+    "css-loader": "^5.2.6",
+    "file-loader": "^6.2.0",
+    "style-loader": "^2.0.0",
+    "url-loader": "^4.1.1",
+    "webpack": "^5.38.1",
+    "webpack-cli": "^4.9.1",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.2",
+    "ts-loader": "^9.2.6"
+  }
+}

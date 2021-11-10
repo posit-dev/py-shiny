@@ -103,3 +103,4 @@ ENV/
 
 typings/
 
+shiny/ipywidgets/node_modules

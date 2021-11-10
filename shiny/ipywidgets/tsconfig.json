@@ -1,0 +1,16 @@
+{
+  "declaration": true,
+  "compilerOptions": {
+    "target": "ES2017",
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "moduleResolution": "node"
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/__tests__"
+  ]
+}

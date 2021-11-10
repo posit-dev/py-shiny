@@ -35,6 +35,8 @@ ui = page_fluid(
         ),
         panel_main(
             output_plot("plot"),
+            output_ipywidget("IntSlider"),
+            output_ipywidget("ipyleaflet"),
             navs_tab_card(
                 # TODO: output_plot() within a tab not working?
                 nav("Inputs", output_ui("inputs")),
@@ -70,31 +72,31 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def server(s: ShinySession):
-    @s.output("inputs")
+def server(ss: ShinySession):
+    @ss.output("inputs")
     @render.ui()
     def _() -> Tag:
         vals = [
-            f"<code>input_date()</code> {s.input['date']}",
-            f"<code>input_date_range()</code>: {s.input['date_rng']}",
-            f"<code>input_text()</code>: {s.input['txt']}",
-            f"<code>input_text_area()</code>: {s.input['txt_area']}",
-            f"<code>input_checkbox()</code>: {s.input['checkbox']}",
-            f"<code>input_checkbox_group()</code>: {s.input['checkbox_group']}",
-            f"<code>input_radio()</code>: {s.input['radio']}",
+            f"<code>input_date()</code> {ss.input['date']}",
+            f"<code>input_date_range()</code>: {ss.input['date_rng']}",
+            f"<code>input_text()</code>: {ss.input['txt']}",
+            f"<code>input_text_area()</code>: {ss.input['txt_area']}",
+            f"<code>input_checkbox()</code>: {ss.input['checkbox']}",
+            f"<code>input_checkbox_group()</code>: {ss.input['checkbox_group']}",
+            f"<code>input_radio()</code>: {ss.input['radio']}",
         ]
         return tags.pre(HTML("\n".join(vals)))
 
-    @s.output("plot")
+    @ss.output("plot")
     @render.plot(alt="A histogram")
     def _():
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(437)
         fig, ax = plt.subplots()
-        ax.hist(x, s.input["n"], density=True)
+        ax.hist(x, ss.input["n"], density=True)
         return fig
 
-    @s.output("image")
+    @ss.output("image")
     @render.image()
     def _():
         from pathlib import Path
@@ -104,13 +106,13 @@ def server(s: ShinySession):
 
     @observe()
     def _():
-        btn = s.input["btn"]
+        btn = ss.input["btn"]
         if btn and btn > 0:
             modal_show(modal("Hello there!", easy_close=True))
 
     @observe()
     def _():
-        link = s.input["link"]
+        link = ss.input["link"]
         if link and link > 0:
             notification_show("A notification!")
             p = Progress()

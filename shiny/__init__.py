@@ -10,6 +10,7 @@ from .input_button import *
 from .input_check_radio import *
 from .input_date import *
 from .input_file import *
+from .input_ipywidget import *
 from .input_numeric import *
 from .input_password import *
 from .input_slider import *
