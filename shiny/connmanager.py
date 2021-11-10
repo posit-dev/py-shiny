@@ -132,6 +132,10 @@ class TCPConnection(Connection):
         message: str = data.decode("latin1").rstrip()
         return message
 
+    async def close(self) -> None:
+        self._writer.close()
+        await self._writer.wait_closed()
+
 
 class TCPConnectionManager(ConnectionManager):
     """Implementation of ConnectionManager which listens on a TCP port."""
