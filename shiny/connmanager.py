@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Awaitable
+from typing import Callable, Awaitable, Optional
 import typing
 
 
@@ -164,3 +164,79 @@ class TCPConnectionManager(ConnectionManager):
         # When incoming connection arrives, spawn a session
         conn = TCPConnection(reader, writer)
         await self._on_connect_cb(conn)
+
+
+# =============================================================================
+# FunctionCallConnection / FunctionCallConnectionManager
+# =============================================================================
+class FunctionCallConnection(Connection):
+    def __init__(self, send_message: Callable[[str], Awaitable[None]]) -> None:
+        self._in_queue: Optional[asyncio.Queue[str]] = None
+        self._send_message: Callable[[str], Awaitable[None]] = send_message
+
+    async def send(self, message: str) -> None:
+        if not self._send_message:
+            raise Exception("No send callback set")
+        await self._send_message(message)
+
+    async def receive(self) -> str:
+        # Creating this here is a bit of a hack
+        if not self._in_queue:
+            self._in_queue = asyncio.Queue()
+
+        return await self._in_queue.get()
+
+    async def close(self) -> None:
+        pass
+
+
+class FunctionCallExternalInterface:
+    def __init__(self, connection: FunctionCallConnection) -> None:
+        self._conn: FunctionCallConnection = connection
+
+    async def post_message(self, message: str) -> None:
+        """
+        This is for the external system to post a message to the shiny session.
+        """
+        await self._conn._in_queue.put(message)
+
+
+class FunctionCallConnectionManager(ConnectionManager):
+    """
+    Implementation of ConnectionManager which listens to function calls pushing messages
+    on a queue.
+    """
+
+    def __init__(
+        self,
+        on_connect_cb: Callable[[Connection], Awaitable[None]],
+        send_message: Callable[[str], Awaitable[None]],
+    ) -> None:
+        """
+        - on_connect_cb: A callback to execute when the connection is established.
+        - on_message_out_cb: A callback to execute when a message is sent. This should
+            send messages to the external system.
+        """
+        self._on_connect_cb: Callable[[Connection], Awaitable[None]] = on_connect_cb
+        self._send_message: Callable[[str], Awaitable[None]] = send_message
+        self._conn: FunctionCallConnection
+
+    def run(self) -> None:
+        raise NotImplementedError
+
+    def run_bg_task(self) -> FunctionCallExternalInterface:
+        """
+        Run non-blocking, by creating a new task. It must run non-blocking, because
+        the only way to push messages on the queue is by calling a function.
+        """
+        self._conn = FunctionCallConnection(self._send_message)
+        asyncio.create_task(self._run())
+
+        # It would be better to create self._conn in self._run() and then add some sort
+        # of synchronization here, before we create and return the external interface
+        # object, but I'm not sure how to do the synchronization.
+
+        return FunctionCallExternalInterface(self._conn)
+
+    async def _run(self) -> None:
+        await self._on_connect_cb(self._conn)

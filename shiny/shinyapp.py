@@ -1,10 +1,10 @@
 __all__ = ("ShinyApp",)
 
-from typing import List, Optional, Union, Dict, Callable, Literal
+from typing import Awaitable, List, Optional, Union, Dict, Callable, Literal
 import re
 import os
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Request, Response
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
@@ -16,6 +16,8 @@ from .connmanager import (
     Connection,
     FastAPIConnectionManager,
     TCPConnectionManager,
+    FunctionCallConnectionManager,
+    FunctionCallExternalInterface,
 )
 from .html_dependencies import shiny_deps
 
@@ -60,19 +62,25 @@ class ShinyApp:
         self._debug = debug
 
         if conn_type == "websocket":
-            self._conn_manager: ConnectionManager = FastAPIConnectionManager(
+            self._conn_manager = FastAPIConnectionManager(
                 self._on_root_request_cb,
                 self._on_connect_cb,
                 self._on_session_request_cb,
             )
         elif conn_type == "tcp":
-            self._conn_manager: ConnectionManager = TCPConnectionManager(
-                self._on_connect_cb
-            )
+            self._conn_manager = TCPConnectionManager(self._on_connect_cb)
         else:
             raise ValueError(f"Unknown conn_type {conn_type}")
 
         self._conn_manager.run()
+
+    def run_queue(
+        self, send_message_cb: Callable[[str], Awaitable[None]]
+    ) -> FunctionCallExternalInterface:
+        self._conn_manager = FunctionCallConnectionManager(
+            self._on_connect_cb, send_message_cb
+        )
+        return self._conn_manager.run_bg_task()
 
     # ==========================================================================
     # Connection callbacks
