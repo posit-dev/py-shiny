@@ -70,6 +70,9 @@ class Plot(RenderFunction):
 
         fig = await self._fn()
 
+        if fig is None:
+            return None
+
         if isinstance(fig, matplotlib.figure.Figure):
             tmpfile = tempfile.mkstemp(suffix=".png")[1]
 
