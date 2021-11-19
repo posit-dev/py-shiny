@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Awaitable, Optional
+from asyncio.tasks import Task
+from typing import Callable, Awaitable, Optional, Union
 import typing
 
 
@@ -173,9 +174,14 @@ class TCPConnectionManager(ConnectionManager):
 # FunctionCallConnection / FunctionCallConnectionManager
 # =============================================================================
 class FunctionCallConnection(Connection):
-    def __init__(self, send_message: Callable[[str], Awaitable[None]]) -> None:
-        self._in_queue: Optional[asyncio.Queue[str]] = None
-        self._send_message: Callable[[str], Awaitable[None]] = send_message
+    def __init__(
+        self,
+        send_message: Callable[[str], Awaitable[None]],
+        notify_close: Callable[[], Awaitable[None]],
+    ) -> None:
+        self._in_queue: Optional[asyncio.Queue[Union[str, None]]] = None
+        self._send_message: Optional[Callable[[str], Awaitable[None]]] = send_message
+        self._notify_close: Callable[[], Awaitable[None]] = notify_close
 
     async def send(self, message: str) -> None:
         if not self._send_message:
@@ -187,10 +193,19 @@ class FunctionCallConnection(Connection):
         if not self._in_queue:
             self._in_queue = asyncio.Queue()
 
-        return await self._in_queue.get()
+        data = await self._in_queue.get()
+        if data is None:
+            raise ConnectionClosed
+
+        return data
 
     async def close(self) -> None:
-        pass
+        self._send_message = None
+        if self._in_queue:
+            # The None tells the receive() loop to exit.
+            await self._in_queue.put(None)
+
+        await self._notify_close()
 
 
 class FunctionCallExternalInterface:
@@ -203,6 +218,12 @@ class FunctionCallExternalInterface:
         """
         await self._conn._in_queue.put(message)
 
+    async def notify_close(self) -> None:
+        """
+        This is for the external system to notify that the connection has been closed.
+        """
+        await self._conn._in_queue.put(None)
+
 
 class FunctionCallConnectionManager(ConnectionManager):
     """
@@ -214,15 +235,21 @@ class FunctionCallConnectionManager(ConnectionManager):
         self,
         on_connect_cb: Callable[[Connection], Awaitable[None]],
         send_message: Callable[[str], Awaitable[None]],
+        notify_close: Callable[[], Awaitable[None]],
     ) -> None:
         """
         - on_connect_cb: A callback to execute when the connection is established.
-        - on_message_out_cb: A callback to execute when a message is sent. This should
-            send messages to the external system.
+        - send_message: A callback to execute when a message is sent. This should send
+            messages to the external system.
+        - send_close: A callback to execute when the connection is closed from the
+            server side. This callback should notify the external system that the
+            connection is closed.
         """
         self._on_connect_cb: Callable[[Connection], Awaitable[None]] = on_connect_cb
         self._send_message: Callable[[str], Awaitable[None]] = send_message
+        self._notify_close: Callable[[], Awaitable[None]] = notify_close
         self._conn: FunctionCallConnection
+        self._task = Optional[Task[None]]
 
     def run(self) -> None:
         raise NotImplementedError
@@ -232,8 +259,8 @@ class FunctionCallConnectionManager(ConnectionManager):
         Run non-blocking, by creating a new task. It must run non-blocking, because
         the only way to push messages on the queue is by calling a function.
         """
-        self._conn = FunctionCallConnection(self._send_message)
-        asyncio.create_task(self._run())
+        self._conn = FunctionCallConnection(self._send_message, self._notify_close)
+        self._task = asyncio.create_task(self._run())
 
         # It would be better to create self._conn in self._run() and then add some sort
         # of synchronization here, before we create and return the external interface

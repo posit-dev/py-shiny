@@ -75,12 +75,20 @@ class ShinyApp:
         self._conn_manager.run()
 
     def run_queue(
-        self, send_message_cb: Callable[[str], Awaitable[None]]
+        self,
+        send_message_cb: Callable[[str], Awaitable[None]],
+        notify_close_cb: Callable[[], Awaitable[None]],
     ) -> FunctionCallExternalInterface:
         self._conn_manager = FunctionCallConnectionManager(
-            self._on_connect_cb, send_message_cb
+            self._on_connect_cb, send_message_cb, notify_close_cb
         )
         return self._conn_manager.run_bg_task()
+
+    async def stop(self) -> None:
+        # Close all sessions (convert to list to avoid modifying the dict while
+        # iterating over it, which throws an error).
+        for session in list(self._sessions.values()):
+            await session.close()
 
     # ==========================================================================
     # Connection callbacks
