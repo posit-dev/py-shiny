@@ -66,10 +66,13 @@ class ShinySession:
     # ==========================================================================
     # Initialization
     # ==========================================================================
-    def __init__(self, app: "ShinyApp", id: str, conn: Connection) -> None:
+    def __init__(
+        self, app: "ShinyApp", id: str, conn: Connection, debug: bool = False
+    ) -> None:
         self.app: ShinyApp = app
         self.id: str = id
         self._conn: Connection = conn
+        self._debug: bool = debug
 
         self.input: ReactiveValues = ReactiveValues()
         self.output: Outputs = Outputs(self)
@@ -121,7 +124,8 @@ class ShinySession:
         try:
             while True:
                 message: str = await self._conn.receive()
-                print("RECV: " + message)
+                if self._debug:
+                    print("RECV: " + message)
 
                 try:
                     message_obj = json.loads(message)
@@ -273,11 +277,12 @@ class ShinySession:
 
     async def send_message(self, message: Dict[str, object]) -> None:
         message_str: str = json.dumps(message) + "\n"
-        print(
-            "SEND: "
-            + re.sub("(?m)base64,[a-zA-Z0-9+/=]+", "[base64 data]", message_str),
-            end="",
-        )
+        if self._debug:
+            print(
+                "SEND: "
+                + re.sub("(?m)base64,[a-zA-Z0-9+/=]+", "[base64 data]", message_str),
+                end="",
+            )
         await self._conn.send(json.dumps(message))
 
     def _send_error_response(self, message_str: str) -> None:

@@ -1,6 +1,6 @@
 __all__ = ("ShinyApp",)
 
-from typing import List, Optional, Union, Dict, Callable
+from typing import List, Optional, Union, Dict, Callable, Literal
 import re
 import os
 
@@ -28,6 +28,10 @@ class ShinyApp:
     ) -> None:
         self.ui: RenderedHTML = _render_ui(ui, lib_prefix=self.HREF_LIB_PREFIX)
         self.server: Callable[[ShinySession], None] = server
+
+        self._debug: bool = False
+
+        self._conn_manager: ConnectionManager
         self._sessions: Dict[str, ShinySession] = {}
         self._last_session_id: int = 0  # Counter for generating session IDs
 
@@ -38,7 +42,7 @@ class ShinyApp:
     def create_session(self, conn: Connection) -> ShinySession:
         self._last_session_id += 1
         id = str(self._last_session_id)
-        session = ShinySession(self, id, conn)
+        session = ShinySession(self, id, conn, debug=self._debug)
         self._sessions[id] = session
         return session
 
@@ -49,7 +53,11 @@ class ShinyApp:
         print(f"remove_session: {session}")
         del self._sessions[session]
 
-    def run(self, conn_type: str = "websocket") -> None:
+    def run(
+        self, conn_type: Literal["websocket", "tcp"] = "websocket", debug: bool = False
+    ) -> None:
+        self._debug = debug
+
         if conn_type == "websocket":
             self._conn_manager: ConnectionManager = FastAPIConnectionManager(
                 self._on_root_request_cb,
