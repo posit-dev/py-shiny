@@ -28,8 +28,11 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import TypedDict
 
-from fastapi import Request, Response
-from fastapi.responses import HTMLResponse, PlainTextResponse
+PYODIDE = "pyodide" in sys.modules
+
+if not PYODIDE:
+    from fastapi import Request, Response
+    from fastapi.responses import HTMLResponse, PlainTextResponse
 
 if TYPE_CHECKING:
     from .shinyapp import ShinyApp
@@ -239,29 +242,33 @@ class ShinySession:
     # ==========================================================================
     # Handling /session/{id}/{subpath} requests
     # ==========================================================================
-    async def handle_request(self, request: Request, subpath: str) -> Response:
-        matches = re.search("^/([a-z]+)/(.*)$", subpath)
+    if PYODIDE:
+        async def handle_request(self, request: "Request", subpath: str) -> "Response":
+            raise NotImplementedError()
+    else:
+        async def handle_request(self, request: Request, subpath: str) -> Response:
+            matches = re.search("^/([a-z]+)/(.*)$", subpath)
 
-        if not matches:
-            return HTMLResponse("<h1>Bad Request</h1>", 400)
-
-        if matches[1] == "upload" and request.method == "POST":
-            # check that upload operation exists
-            job_id = matches[2]
-            upload_op = self._file_upload_manager.get_upload_operation(job_id)
-            if not upload_op:
+            if not matches:
                 return HTMLResponse("<h1>Bad Request</h1>", 400)
 
-            # The FileUploadOperation can have multiple files; each one will
-            # have a separate POST request. Each call to  `with upload_op` will
-            # open up each file (in sequence) for writing.
-            with upload_op:
-                async for chunk in request.stream():
-                    upload_op.write_chunk(chunk)
+            if matches[1] == "upload" and request.method == "POST":
+                # check that upload operation exists
+                job_id = matches[2]
+                upload_op = self._file_upload_manager.get_upload_operation(job_id)
+                if not upload_op:
+                    return HTMLResponse("<h1>Bad Request</h1>", 400)
 
-            return PlainTextResponse("OK", 200)
+                # The FileUploadOperation can have multiple files; each one will
+                # have a separate POST request. Each call to  `with upload_op` will
+                # open up each file (in sequence) for writing.
+                with upload_op:
+                    async for chunk in request.stream():
+                        upload_op.write_chunk(chunk)
 
-        return HTMLResponse("<h1>Not Found</h1>", 404)
+                return PlainTextResponse("OK", 200)
+
+            return HTMLResponse("<h1>Not Found</h1>", 404)
 
     # ==========================================================================
     # Outbound message handling

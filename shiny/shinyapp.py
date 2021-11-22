@@ -3,10 +3,8 @@ __all__ = ("ShinyApp",)
 from typing import Awaitable, List, Optional, Union, Dict, Callable, Literal
 import re
 import os
+import sys
 
-from fastapi import Request, Response
-from fastapi.responses import JSONResponse, HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
 
 from .shinysession import ShinySession, session_context
@@ -14,13 +12,19 @@ from . import reactcore
 from .connmanager import (
     ConnectionManager,
     Connection,
-    FastAPIConnectionManager,
     TCPConnectionManager,
     FunctionCallConnectionManager,
     FunctionCallExternalInterface,
 )
 from .html_dependencies import shiny_deps
 
+PYODIDE = "pyodide" in sys.modules
+
+if not PYODIDE:
+    from fastapi import Request, Response
+    from fastapi.responses import JSONResponse, HTMLResponse
+    from fastapi.staticfiles import StaticFiles
+    from .connmanager import FastAPIConnectionManager
 
 class ShinyApp:
     HREF_LIB_PREFIX = "lib/"
@@ -93,13 +97,14 @@ class ShinyApp:
     # ==========================================================================
     # Connection callbacks
     # ==========================================================================
-    async def _on_root_request_cb(self, request: Request) -> Response:
-        """
-        Callback passed to the ConnectionManager which is invoked when a HTTP
-        request for / occurs.
-        """
-        self._ensure_web_dependencies(self.ui["dependencies"])
-        return HTMLResponse(content=self.ui["html"])
+    if not PYODIDE:
+        async def _on_root_request_cb(self, request: Request) -> Response:
+            """
+            Callback passed to the ConnectionManager which is invoked when a HTTP
+            request for / occurs.
+            """
+            self._ensure_web_dependencies(self.ui["dependencies"])
+            return HTMLResponse(content=self.ui["html"])
 
     async def _on_connect_cb(self, conn: Connection) -> None:
         """
@@ -110,25 +115,26 @@ class ShinyApp:
 
         await session.run()
 
-    async def _on_session_request_cb(self, request: Request) -> Response:
-        """
-        Callback passed to the ConnectionManager which is invoked when a HTTP
-        request for /session/* occurs.
-        """
-        matches = re.search("^/session/([0-9a-f]+)(/.*)$", request.url.path)
-        if matches is None:
-            # Exact same response as a "normal" 404 from FastAPI.
-            return JSONResponse({"detail": "Not Found"}, status_code=404)
+    if not PYODIDE:
+        async def _on_session_request_cb(self, request: Request) -> Response:
+            """
+            Callback passed to the ConnectionManager which is invoked when a HTTP
+            request for /session/* occurs.
+            """
+            matches = re.search("^/session/([0-9a-f]+)(/.*)$", request.url.path)
+            if matches is None:
+                # Exact same response as a "normal" 404 from FastAPI.
+                return JSONResponse({"detail": "Not Found"}, status_code=404)
 
-        session_id = matches.group(1)
-        subpath = matches.group(2)
+            session_id = matches.group(1)
+            subpath = matches.group(2)
 
-        if session_id in self._sessions:
-            session: ShinySession = self._sessions[session_id]
-            with session_context(session):
-                return await session.handle_request(request, subpath)
-        else:
-            return JSONResponse({"detail": "Not Found"}, status_code=404)
+            if session_id in self._sessions:
+                session: ShinySession = self._sessions[session_id]
+                with session_context(session):
+                    return await session.handle_request(request, subpath)
+            else:
+                return JSONResponse({"detail": "Not Found"}, status_code=404)
 
     # ==========================================================================
     # Flush
