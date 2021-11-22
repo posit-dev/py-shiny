@@ -179,9 +179,15 @@ class FunctionCallConnection(Connection):
         send_message: Callable[[str], Awaitable[None]],
         notify_close: Callable[[], Awaitable[None]],
     ) -> None:
-        self._in_queue: Optional[asyncio.Queue[Union[str, None]]] = None
+        self._in_queue: asyncio.Queue[Union[str, None]]
         self._send_message: Optional[Callable[[str], Awaitable[None]]] = send_message
         self._notify_close: Callable[[], Awaitable[None]] = notify_close
+
+    # This init() method exists because __init__() is called outside of an asyncio.Task,
+    # but the asyncio.Queue() must be created within the Task where it is used. After the
+    # task is launched, this init() method is called to set up the queue..
+    def init(self):
+        self._in_queue = asyncio.Queue()
 
     async def send(self, message: str) -> None:
         if not self._send_message:
@@ -189,10 +195,6 @@ class FunctionCallConnection(Connection):
         await self._send_message(message)
 
     async def receive(self) -> str:
-        # Creating this here is a bit of a hack
-        if not self._in_queue:
-            self._in_queue = asyncio.Queue()
-
         data = await self._in_queue.get()
         if data is None:
             raise ConnectionClosed
@@ -201,9 +203,8 @@ class FunctionCallConnection(Connection):
 
     async def close(self) -> None:
         self._send_message = None
-        if self._in_queue:
-            # The None tells the receive() loop to exit.
-            await self._in_queue.put(None)
+        # The None tells the receive() loop to exit.
+        await self._in_queue.put(None)
 
         await self._notify_close()
 
@@ -259,14 +260,11 @@ class FunctionCallConnectionManager(ConnectionManager):
         Run non-blocking, by creating a new task. It must run non-blocking, because
         the only way to push messages on the queue is by calling a function.
         """
-        self._conn = FunctionCallConnection(self._send_message, self._notify_close)
         self._task = asyncio.create_task(self._run())
-
-        # It would be better to create self._conn in self._run() and then add some sort
-        # of synchronization here, before we create and return the external interface
-        # object, but I'm not sure how to do the synchronization.
+        self._conn = FunctionCallConnection(self._send_message, self._notify_close)
 
         return FunctionCallExternalInterface(self._conn)
 
     async def _run(self) -> None:
+        self._conn.init()
         await self._on_connect_cb(self._conn)
