@@ -50,7 +50,8 @@ class ShinyApp:
         if isinstance(session, ShinySession):
             session = session.id
 
-        print(f"remove_session: {session}")
+        if self._debug:
+            print(f"remove_session: {session}")
         del self._sessions[session]
 
     def run(
