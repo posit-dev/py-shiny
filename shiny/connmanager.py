@@ -42,74 +42,71 @@ class ConnectionClosed(Exception):
 # =============================================================================
 # FastAPIConnection / FastAPIConnectionManager
 # =============================================================================
-# class FastAPIConnection(Connection):
-#     def __init__(self, websocket: WebSocket) -> None:
-#         from fastapi import WebSocket
 
-#         self._websocket = websocket
-
-#     async def send(self, message: str) -> None:
-#         await self._websocket.send_text(message)
-
-#     async def receive(self) -> str:
-#         from fastapi import WebSocketDisconnect
-
-#         try:
-#             return await self._websocket.receive_text()
-#         except WebSocketDisconnect:
-#             raise ConnectionClosed
-
-#     async def close(self) -> None:
-#         await self._websocket.close()
+from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
+import uvicorn
 
 
-# class FastAPIConnectionManager(ConnectionManager):
-#     """Implementation of ConnectionManager which listens on a HTTP port to serve a web
-#     page, and also listens for WebSocket connections."""
+class FastAPIConnection(Connection):
+    def __init__(self, websocket: WebSocket) -> None:
+        self._websocket: WebSocket = websocket
 
-#     def __init__(
-#         self,
-#         on_root_request_cb: Callable[[Request], Awaitable[Response]],
-#         on_connect_cb: Callable[[Connection], Awaitable[None]],
-#         on_session_request_cb: Callable[[Request], Awaitable[Response]],
-#     ) -> None:
-#         from fastapi import FastAPI, Request, Response, WebSocket
+    async def send(self, message: str) -> None:
+        await self._websocket.send_text(message)
 
-#         self._on_root_request_cb: Callable[
-#             [Request], Awaitable[Response]
-#         ] = on_root_request_cb
-#         self._on_connect_cb: Callable[[Connection], Awaitable[None]] = on_connect_cb
-#         self._on_session_request_cb: Callable[
-#             [Request], Awaitable[Response]
-#         ] = on_session_request_cb
-#         self._fastapi_app: FastAPI = FastAPI()
+    async def receive(self) -> str:
+        try:
+            return await self._websocket.receive_text()
+        except WebSocketDisconnect:
+            raise ConnectionClosed
 
-#         @self._fastapi_app.get("/")
-#         async def get(request: Request) -> Response:
-#             return await self._on_root_request_cb(request)
+    async def close(self) -> None:
+        await self._websocket.close()
 
-#         @self._fastapi_app.api_route(
-#             "/session/{rest_of_path:path}", methods=["GET", "POST"]
-#         )
-#         async def route_session_request(request: Request) -> Response:
-#             return await self._on_session_request_cb(request)
 
-#         @self._fastapi_app.websocket("/websocket/")
-#         async def websocket_endpoint(websocket: WebSocket):
-#             await websocket.accept()
+class FastAPIConnectionManager(ConnectionManager):
+    """Implementation of ConnectionManager which listens on a HTTP port to serve a web
+    page, and also listens for WebSocket connections."""
 
-#             conn = FastAPIConnection(websocket)
-#             await self._on_connect_cb(conn)
+    def __init__(
+        self,
+        on_root_request_cb: Callable[[Request], Awaitable[Response]],
+        on_connect_cb: Callable[[Connection], Awaitable[None]],
+        on_session_request_cb: Callable[[Request], Awaitable[Response]],
+    ) -> None:
+        self._on_root_request_cb: Callable[
+            [Request], Awaitable[Response]
+        ] = on_root_request_cb
+        self._on_connect_cb: Callable[[Connection], Awaitable[None]] = on_connect_cb
+        self._on_session_request_cb: Callable[
+            [Request], Awaitable[Response]
+        ] = on_session_request_cb
+        self._fastapi_app: FastAPI = FastAPI()
 
-#         if typing.TYPE_CHECKING:
-#             # The only purpose of this block is to make the type checker not
-#             # warn about these functions not being accessed.
-#             (get, route_session_request, websocket_endpoint)
+        @self._fastapi_app.get("/")
+        async def get(request: Request) -> Response:
+            return await self._on_root_request_cb(request)
 
-#     def run(self) -> None:
-#         import uvicorn
+        @self._fastapi_app.api_route(
+            "/session/{rest_of_path:path}", methods=["GET", "POST"]
+        )
+        async def route_session_request(request: Request) -> Response:
+            return await self._on_session_request_cb(request)
 
-#         uvicorn.run(self._fastapi_app, host="0.0.0.0", port=8000)
+        @self._fastapi_app.websocket("/websocket/")
+        async def websocket_endpoint(websocket: WebSocket):
+            await websocket.accept()
+
+            conn = FastAPIConnection(websocket)
+            await self._on_connect_cb(conn)
+
+        if typing.TYPE_CHECKING:
+            # The only purpose of this block is to make the type checker not
+            # warn about these functions not being accessed.
+            (get, route_session_request, websocket_endpoint)
+
+    def run(self) -> None:
+        uvicorn.run(self._fastapi_app, host="0.0.0.0", port=8000)
 
 
 # =============================================================================
