@@ -29,12 +29,14 @@ class ShinyApp:
     HREF_LIB_PREFIX = "lib/"
 
     def __init__(
-        self, ui: Union[Tag, TagList], server: Callable[[ShinySession], None]
+        self, ui: Union[Tag, TagList], server: Callable[[ShinySession], None],
+        *,
+        debug: bool = False
     ) -> None:
         self.ui: RenderedHTML = _render_ui(ui, lib_prefix=self.HREF_LIB_PREFIX)
         self.server: Callable[[ShinySession], None] = server
 
-        self._debug: bool = False
+        self._debug: bool = debug
 
         self._sessions: Dict[str, ShinySession] = {}
         self._last_session_id: int = 0  # Counter for generating session IDs
@@ -62,9 +64,10 @@ class ShinyApp:
         del self._sessions[session]
 
     def run(
-        self, debug: bool = False
+        self, debug: Optional[bool] = None
     ) -> None:
-        self._debug = debug
+        if debug is not None:
+            self._debug = debug
         uvicorn.run(self, host="0.0.0.0", port=8000)
 
     # ASGI entrypoint. Handles HTTP, WebSocket, and lifespan.
