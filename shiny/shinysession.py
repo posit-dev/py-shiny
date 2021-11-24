@@ -21,18 +21,15 @@ from typing import (
     Awaitable,
     Dict,
     List,
+    cast,
 )
+
+from asgiref.typing import ASGIReceiveCallable, ASGISendCallable, HTTPRequestEvent, HTTPScope, Scope
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
 else:
     from typing_extensions import TypedDict
-
-PYODIDE = "pyodide" in sys.modules
-
-if not PYODIDE:
-    from fastapi import Request, Response
-    from fastapi.responses import HTMLResponse, PlainTextResponse
 
 if TYPE_CHECKING:
     from .shinyapp import ShinyApp
@@ -115,8 +112,8 @@ class ShinySession:
 
         self.app.remove_session(self)
 
-    async def close(self) -> None:
-        await self._conn.close()
+    async def close(self, code: int = 1001) -> None:
+        await self._conn.close(code, None)
         self._run_session_end_tasks()
 
     async def run(self) -> None:
@@ -242,33 +239,58 @@ class ShinySession:
     # ==========================================================================
     # Handling /session/{id}/{subpath} requests
     # ==========================================================================
-    if PYODIDE:
-        async def handle_request(self, request: "Request", subpath: str) -> "Response":
-            raise NotImplementedError()
-    else:
-        async def handle_request(self, request: Request, subpath: str) -> Response:
-            matches = re.search("^/([a-z]+)/(.*)$", subpath)
+    async def handle_request(self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable, subpath: str) -> None:
+        from fastapi.responses import HTMLResponse, PlainTextResponse
+        import starlette.types
 
-            if not matches:
-                return HTMLResponse("<h1>Bad Request</h1>", 400)
+        matches = re.search("^/([a-z]+)/(.*)$", subpath)
 
-            if matches[1] == "upload" and request.method == "POST":
-                # check that upload operation exists
-                job_id = matches[2]
-                upload_op = self._file_upload_manager.get_upload_operation(job_id)
-                if not upload_op:
-                    return HTMLResponse("<h1>Bad Request</h1>", 400)
+        http_scope = cast(HTTPScope, scope)
 
-                # The FileUploadOperation can have multiple files; each one will
-                # have a separate POST request. Each call to  `with upload_op` will
-                # open up each file (in sequence) for writing.
-                with upload_op:
-                    async for chunk in request.stream():
-                        upload_op.write_chunk(chunk)
+        if not matches:
+            return await HTMLResponse("<h1>Bad Request</h1>", 400)(
+                cast(starlette.types.Scope, scope),
+                cast(starlette.types.Receive, receive),
+                cast(starlette.types.Send, send)
+            )
 
-                return PlainTextResponse("OK", 200)
+        if matches[1] == "upload" and http_scope["method"] == "POST":
+            # check that upload operation exists
+            job_id = matches[2]
+            upload_op = self._file_upload_manager.get_upload_operation(job_id)
+            if not upload_op:
+                return await HTMLResponse("<h1>Bad Request</h1>", 400)(
+                    cast(starlette.types.Scope, scope),
+                    cast(starlette.types.Receive, receive),
+                    cast(starlette.types.Send, send)
+                )
 
-            return HTMLResponse("<h1>Not Found</h1>", 404)
+            # The FileUploadOperation can have multiple files; each one will
+            # have a separate POST request. Each call to  `with upload_op` will
+            # open up each file (in sequence) for writing.
+            with upload_op:
+                while True:
+                    event = await receive()
+                    if event["type"] == "http.request":
+                        http_req_event: HTTPRequestEvent = event
+                        upload_op.write_chunk(http_req_event["body"])
+                        if not http_req_event["more_body"]:
+                            break
+                    elif event["type"] == "http.disconnect":
+                        # TODO: Means the upload did not totally complete, should fail somehow
+                        pass
+
+            return await PlainTextResponse("OK", 200)(
+                cast(starlette.types.Scope, scope),
+                cast(starlette.types.Receive, receive),
+                cast(starlette.types.Send, send)
+            )
+
+        return await HTMLResponse("<h1>Not Found</h1>", 404)(
+            cast(starlette.types.Scope, scope),
+            cast(starlette.types.Receive, receive),
+            cast(starlette.types.Send, send)
+        )
 
     # ==========================================================================
     # Outbound message handling
