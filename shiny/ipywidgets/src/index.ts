@@ -1,49 +1,46 @@
-import { HTMLManager } from '@jupyter-widgets/html-manager/lib/htmlmanager';
-import { renderWidgets } from '@jupyter-widgets/html-manager/lib/libembed-amd';
-import { requireLoader } from '@jupyter-widgets/html-manager/lib/libembed-amd';
+import { HTMLManager, requireLoader } from '@jupyter-widgets/html-manager';
+// N.B. for this to work properly, it seems we must include
+// https://unpkg.com/@jupyter-widgets/html-manager@*/dist/libembed-amd.js
+// on the page first, which is why that comes in as a
+import { renderWidgets } from '@jupyter-widgets/html-manager/lib/libembed';
+
 import type { renderContent } from 'rstudio-shiny/srcts/types/src/shiny/render';
 import type { ErrorsMessageValue } from 'rstudio-shiny/srcts/types/src/shiny/shinyapp';
 
-type DataType = Parameters < typeof renderContent > [1];
-
+// Whenever the ipywidget's state changes, let Shiny know about it
 class ShinyHTMLManager extends HTMLManager {
+  input_id: string = null;
+  constructor(options, input_id) {
+    super(options);
+    this.input_id = input_id;
+  }
   set_state(state): ReturnType<typeof HTMLManager.prototype.set_state> {
     console.log("I can has your state!!!!", state, this);
-    //window.Shiny.setInputValue(this.model.get('id'), state);
+    // TODO: is this actually accessible from the session?
+    window.Shiny.setInputValue(this.input_id, state);
     return super.set_state(state);
   }
 }
 
-// Ideally IPyWidgetBinding would extend HTMLOutputBinding, but the implementation isn't exported
-class IPyWidgetBinding extends window.Shiny.OutputBinding {
-  find(scope: HTMLElement): JQuery<HTMLElement> {
-    return $(scope).find(".shiny-ipywidget-output");
+// Register the output binding on the next tick because Shiny wants to come
+// after static HTML dependencies (the libembed dependency doesn't seem to work when
+// rendered dynamically, so I think this is our only option?).
+setTimeout(() => {
+  // Ideally IPyWidgetBinding would extend HTMLOutputBinding,
+  // but the implementation isn't exported
+  class IPyWidgetBinding extends window.Shiny.OutputBinding {
+    find(scope: HTMLElement): JQuery<HTMLElement> {
+      return $(scope).find(".shiny-ipywidget-output");
+    }
+    onValueError(el: HTMLElement, err: ErrorsMessageValue): void {
+      window.Shiny.unbindAll(el);
+      this.renderError(el, err);
+    }
+    renderValue(el: HTMLElement, data: Parameters<typeof renderContent>[1]): void {
+      window.Shiny.renderContent(el, data);
+      renderWidgets(() => new ShinyHTMLManager({ loader: requireLoader }, el.id), el);
+    }
   }
-  onValueError(el: HTMLElement, err: ErrorsMessageValue): void {
-    window.Shiny.unbindAll(el);
-    this.renderError(el, err);
-  }
-  renderValue(el: HTMLElement, data: DataType): void {
-    window.Shiny.renderContent(el, data);
-    console.log("render");
-    renderWidgets(el);
 
-    //renderWidgets(() => new HTMLManager({ loader: requireLoader }), el);
-
-    //renderWidgets(() => new ShinyHTMLManager({ loader: requireLoader }), el);
-  }
-}
-
-
-(window as any).require.config({
-  paths: {
-   '@jupyter-widgets/html-manager': 'https://unpkg.com/@jupyter-widgets/html-manager@0.20.0/dist/embed-amd'
-    //'@jupyter-widgets/base': 'https://unpkg.com/@jupyter-widgets/base@4.0.0/lib/manager-base'
-  }
-});
-//
-//(window as any).require(["@jupyter-widgets/base"]);
-
-window.Shiny.outputBindings.register(new IPyWidgetBinding(), "shiny.ipywidget");
-
-export { IPyWidgetBinding };
+  window.Shiny.outputBindings.register(new IPyWidgetBinding(), "shiny.ipywidget");
+}, 0);

@@ -2,17 +2,14 @@ from htmltools import HTMLDependency, HTML
 from typing import List, Union
 
 
-def shiny_deps() -> List[HTMLDependency]:
-    return [
-        HTMLDependency(
-            name="shiny",
-            version="0.0.1",
-            source={"package": "shiny", "subdir": "www/shared/"},
-            script={"src": "shiny.js"},
-            stylesheet={"href": "shiny.min.css"},
-        ),
-        ipywidget_embed_dep(),
-    ]
+def shiny_deps() -> HTMLDependency:
+    return HTMLDependency(
+        name="shiny",
+        version="0.0.1",
+        source={"package": "shiny", "subdir": "www/shared/"},
+        script={"src": "shiny.js"},
+        stylesheet={"href": "shiny.min.css"},
+    )
 
 
 def bootstrap_deps(bs3compat: bool = True) -> List[HTMLDependency]:
@@ -117,16 +114,28 @@ def jqui_deps() -> HTMLDependency:
     )
 
 
-def ipywidget_embed_dep() -> List[HTMLDependency]:
+import re
+from ipywidgets._version import __html_manager_version__
+
+html_manager_version = re.sub("^\\D*", "", __html_manager_version__)
+
+
+def ipywidget_embed_deps() -> List[HTMLDependency]:
     return [
         HTMLDependency(
             name="requirejs",
             version="2.3.4",
-            source={"package": "shiny", "subdir": "www/shared/require.js"},
+            source={"package": "shiny", "subdir": "ipywidgets/lib"},
             script={"src": "require.min.js"},
         ),
         HTMLDependency(
-            name="ipywidget-embed-manager",
+            name="ipywidget-libembed-amd",
+            version=html_manager_version,
+            source={"package": "shiny", "subdir": "ipywidgets/lib"},
+            script={"src": "libembed-amd.js"},
+        ),
+        HTMLDependency(
+            name="ipywidget-output-binding",
             version="0.0.1",
             source={"package": "shiny", "subdir": "ipywidgets/dist"},
             script={"src": "index.js"},

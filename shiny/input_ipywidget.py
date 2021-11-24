@@ -1,15 +1,20 @@
 from ipywidgets.widgets import DOMWidget
-from ipywidgets.embed import embed_data, dependency_state, embed_snippet
+from ipywidgets.embed import embed_data, dependency_state
 from htmltools import tags, Tag, TagList
-from .html_dependencies import ipywidget_embed_dep
+from .html_dependencies import ipywidget_embed_deps
 import json
 
 
 def input_ipywidget(id: str, widget: DOMWidget) -> Tag:
-    ui = _get_ipywidget_html(widget)
-    return tags.div(ui, id=id, class_="shiny-ipywidget-input shiny-ipywidget")
+    return tags.div(
+        _get_ipywidget_html(widget),
+        ipywidget_embed_deps(),
+        id=id,
+        class_="shiny-ipywidget-input shiny-ipywidget",
+    )
 
 
+# TODO: at least allow a way to customize the CDN
 def _get_ipywidget_html(widget: DOMWidget) -> TagList:
     dat = embed_data(views=widget, state=dependency_state(widget))
     return TagList(
@@ -23,6 +28,4 @@ def _get_ipywidget_html(widget: DOMWidget) -> TagList:
             type="application/vnd.jupyter.widget-view+json",
             data_jupyter_widgets_cdn_only="",
         ),
-        # TODO: bake this logic into Shiny itself and remove this?
-        ipywidget_embed_dep(),
     )

@@ -1,6 +1,7 @@
 uvicorn==0.14.0
 numpy==1.20.3
 matplotlib==3.4.2
+ipywidgets==7.6.5
 fastapi==0.70.0
 contextvars==2.4
 websockets==10.0

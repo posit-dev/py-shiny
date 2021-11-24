@@ -42,9 +42,19 @@ withr::with_tempdir({
   )
 })
 
-require_js <- file.path(www, "shared", "require.js")
-if (!dir.exists(require_js)) dir.create(require_js)
+
+ipy_lib <- file.path(getwd(), "shiny", "ipywidgets", "lib")
+if (!dir.exists(ipy_lib)) dir.create(ipy_lib)
+# From https://github.com/jupyter-widgets/ipywidgets/blob/fbdbd005/python/ipywidgets/ipywidgets/embed.py#L32
 download.file(
   "https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js",
-  file.path(require_js, "require.min.js")
+  file.path(ipy_lib, "require.min.js")
+)
+# From https://github.com/jupyter-widgets/ipywidgets/blob/fbdbd005/python/ipywidgets/ipywidgets/embed.py#L62
+# Note that we also grab libembed-amd, not embed-amd, because our output binding will handle the actual rendering aspect
+# https://github.com/jupyter-widgets/ipywidgets/blob/fbdbd00/packages/html-manager/scripts/concat-amd-build.js#L6
+# TODO: minify the bundle and import the version via `from ipywidgets._version import __html_manager_version__`
+download.file(
+  "https://unpkg.com/@jupyter-widgets/html-manager@0.20.0/dist/libembed-amd.js",
+  file.path(ipy_lib, "libembed-amd.js")
 )

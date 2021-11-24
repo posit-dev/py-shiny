@@ -16,6 +16,7 @@ slider = IntSlider(value=40)
 ui = page_fluid(
     # input_ipywidget("IntSlider", slider),
     output_ipywidget("ipyleaflet"),
+    output_ui("widget_state"),
 )
 
 
@@ -36,6 +37,14 @@ def server(ss: ShinySession):
         m.add_layer(Marker(location=(52.204793, 360.121558)))
 
         return m
+
+    @ss.output("widget_state")
+    @render.ui()
+    def _():
+        try:
+            return tags.pre(HTML(ss.input.ipyleaflet))
+        except:
+            return tags.pre(HTML("No input"))
 
 
 app = ShinyApp(ui, server)
