@@ -24,7 +24,13 @@ from typing import (
     cast,
 )
 
-from asgiref.typing import ASGIReceiveCallable, ASGISendCallable, HTTPRequestEvent, HTTPScope, Scope
+from asgiref.typing import (
+    ASGIReceiveCallable,
+    ASGISendCallable,
+    HTTPRequestEvent,
+    HTTPScope,
+    Scope,
+)
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
@@ -239,7 +245,13 @@ class ShinySession:
     # ==========================================================================
     # Handling /session/{id}/{subpath} requests
     # ==========================================================================
-    async def handle_request(self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable, subpath: str) -> None:
+    async def handle_request(
+        self,
+        scope: Scope,
+        receive: ASGIReceiveCallable,
+        send: ASGISendCallable,
+        subpath: str,
+    ) -> None:
         from fastapi.responses import HTMLResponse, PlainTextResponse
         import starlette.types
 
@@ -251,7 +263,7 @@ class ShinySession:
             return await HTMLResponse("<h1>Bad Request</h1>", 400)(
                 cast(starlette.types.Scope, scope),
                 cast(starlette.types.Receive, receive),
-                cast(starlette.types.Send, send)
+                cast(starlette.types.Send, send),
             )
 
         if matches[1] == "upload" and http_scope["method"] == "POST":
@@ -262,7 +274,7 @@ class ShinySession:
                 return await HTMLResponse("<h1>Bad Request</h1>", 400)(
                     cast(starlette.types.Scope, scope),
                     cast(starlette.types.Receive, receive),
-                    cast(starlette.types.Send, send)
+                    cast(starlette.types.Send, send),
                 )
 
             # The FileUploadOperation can have multiple files; each one will
@@ -283,13 +295,13 @@ class ShinySession:
             return await PlainTextResponse("OK", 200)(
                 cast(starlette.types.Scope, scope),
                 cast(starlette.types.Receive, receive),
-                cast(starlette.types.Send, send)
+                cast(starlette.types.Send, send),
             )
 
         return await HTMLResponse("<h1>Not Found</h1>", 404)(
             cast(starlette.types.Scope, scope),
             cast(starlette.types.Receive, receive),
-            cast(starlette.types.Send, send)
+            cast(starlette.types.Send, send),
         )
 
     # ==========================================================================

@@ -4,7 +4,14 @@ from typing import Any, Awaitable, List, Optional, Union, Dict, Callable, cast
 import re
 import os
 import sys
-from asgiref.typing import ASGIReceiveCallable, ASGIReceiveEvent, ASGISendCallable, ASGISendEvent, Scope, HTTPScope
+from asgiref.typing import (
+    ASGIReceiveCallable,
+    ASGIReceiveEvent,
+    ASGISendCallable,
+    ASGISendEvent,
+    Scope,
+    HTTPScope,
+)
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
 
@@ -25,13 +32,16 @@ if not PYODIDE:
     import starlette.routing
     import uvicorn
 
+
 class ShinyApp:
     HREF_LIB_PREFIX = "lib/"
 
     def __init__(
-        self, ui: Union[Tag, TagList], server: Callable[[ShinySession], None],
+        self,
+        ui: Union[Tag, TagList],
+        server: Callable[[ShinySession], None],
         *,
-        debug: bool = False
+        debug: bool = False,
     ) -> None:
         self.ui: RenderedHTML = _render_ui(ui, lib_prefix=self.HREF_LIB_PREFIX)
         self.server: Callable[[ShinySession], None] = server
@@ -63,22 +73,30 @@ class ShinyApp:
             print(f"remove_session: {session}")
         del self._sessions[session]
 
-    def run(
-        self, debug: Optional[bool] = None
-    ) -> None:
+    def run(self, debug: Optional[bool] = None) -> None:
         if debug is not None:
             self._debug = debug
         uvicorn.run(self, host="0.0.0.0", port=8000)
 
     # ASGI entrypoint. Handles HTTP, WebSocket, and lifespan.
-    async def __call__(self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable) -> None:
+    async def __call__(
+        self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable
+    ) -> None:
         if scope["type"] == "http":
             if scope["method"] == "GET":
                 if scope["path"] == "/":
-                    await self._on_root_request_cb(scope, receive, send);
+                    await self._on_root_request_cb(scope, receive, send)
                     return
+            if re.search("^/session/", scope["path"]):
+                await self._on_session_request_cb(scope, receive, send)
+                return
+
             if self._dependency_handler is not None:
-                await self._dependency_handler(cast(starlette.types.Scope, scope), cast(starlette.types.Receive, receive), cast(starlette.types.Send, send))
+                await self._dependency_handler(
+                    cast(starlette.types.Scope, scope),
+                    cast(starlette.types.Receive, receive),
+                    cast(starlette.types.Send, send),
+                )
         elif scope["type"] == "websocket":
             conn = ASGIConnection(scope, receive, send)
             await conn.accept()
@@ -89,18 +107,22 @@ class ShinyApp:
                 if message["type"] == "lifespan.startup":
                     await send({"type": "lifespan.startup.complete"})
                 elif message["type"] == "lifespan.shutdown":
-                    await self.stop();
+                    await self.stop()
                     await send({"type": "lifespan.shutdown.complete"})
                     return
         else:
             raise Exception(f"Unexpected scope type: {scope['type']}")
 
-    async def call_pyodide(self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable) -> None:
+    async def call_pyodide(
+        self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable
+    ) -> None:
         # TODO: Pretty sure there are objects that need to be destroy()'d here?
         scope = cast(Any, scope).to_py()
+
         async def rcv() -> ASGIReceiveEvent:
             event = await receive()
             return cast(ASGIReceiveEvent, cast(Any, event).to_py())
+
         await self(scope, rcv, send)
 
     async def stop(self) -> None:
@@ -112,7 +134,9 @@ class ShinyApp:
     # ==========================================================================
     # Connection callbacks
     # ==========================================================================
-    async def _on_root_request_cb(self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable) -> None:
+    async def _on_root_request_cb(
+        self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable
+    ) -> None:
         """
         Callback passed to the ConnectionManager which is invoked when a HTTP
         request for / occurs.
@@ -120,7 +144,11 @@ class ShinyApp:
         self._ensure_web_dependencies(self.ui["dependencies"])
         # TODO: Do this without using Flask/Starlette
         resp = HTMLResponse(content=self.ui["html"])
-        await resp(cast(starlette.types.Scope, scope), cast(starlette.types.Receive, receive), cast(starlette.types.Send, send))
+        await resp(
+            cast(starlette.types.Scope, scope),
+            cast(starlette.types.Receive, receive),
+            cast(starlette.types.Send, send),
+        )
 
     async def _on_connect_cb(self, conn: Connection) -> None:
         """
@@ -131,7 +159,9 @@ class ShinyApp:
 
         await session.run()
 
-    async def _on_session_request_cb(self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable) -> None:
+    async def _on_session_request_cb(
+        self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable
+    ) -> None:
         """
         Callback passed to the ConnectionManager which is invoked when a HTTP
         request for /session/* occurs.
@@ -144,7 +174,7 @@ class ShinyApp:
             return await JSONResponse({"detail": "Not Found"}, status_code=404)(
                 cast(starlette.types.Scope, scope),
                 cast(starlette.types.Receive, receive),
-                cast(starlette.types.Send, send)
+                cast(starlette.types.Send, send),
             )
 
         session_id = matches.group(1)
@@ -158,7 +188,7 @@ class ShinyApp:
             return await JSONResponse({"detail": "Not Found"}, status_code=404)(
                 cast(starlette.types.Scope, scope),
                 cast(starlette.types.Receive, receive),
-                cast(starlette.types.Send, send)
+                cast(starlette.types.Send, send),
             )
 
     # ==========================================================================
@@ -204,7 +234,9 @@ class ShinyApp:
         #         "/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix
         #     )
         if not PYODIDE:
-            self._dependency_handler.mount("/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix)
+            self._dependency_handler.mount(
+                "/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix
+            )
         self._registered_dependencies[dep.name] = dep
 
 
