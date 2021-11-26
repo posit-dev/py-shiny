@@ -19,6 +19,11 @@ if TYPE_CHECKING:
 
 from . import utils
 
+__all__ = (
+    "render_plot",
+    "render_image",
+    "render_ui",
+)
 
 UserRenderFunction = Callable[[], object]
 UserRenderFunctionAsync = Callable[[], Awaitable[object]]
@@ -55,7 +60,7 @@ class RenderFunctionAsync(RenderFunction):
         raise NotImplementedError
 
 
-class Plot(RenderFunction):
+class RenderPlot(RenderFunction):
     _ppi: float = 96
 
     def __init__(self, fn: UserRenderFunction, alt: Optional[str] = None) -> None:
@@ -102,7 +107,7 @@ class Plot(RenderFunction):
         raise Exception("Unsupported figure type: " + str(type(fig)))
 
 
-class PlotAsync(Plot, RenderFunctionAsync):
+class RenderPlotAsync(RenderPlot, RenderFunctionAsync):
     def __init__(self, fn: UserRenderFunctionAsync, alt: Optional[str] = None) -> None:
         if not inspect.iscoroutinefunction(fn):
             raise TypeError("PlotAsync requires an async function")
@@ -116,13 +121,13 @@ class PlotAsync(Plot, RenderFunctionAsync):
         return await self.run()
 
 
-def plot(alt: Optional[str] = None):
-    def wrapper(fn: Union[UserRenderFunction, UserRenderFunctionAsync]) -> Plot:
+def render_plot(alt: Optional[str] = None):
+    def wrapper(fn: Union[UserRenderFunction, UserRenderFunctionAsync]) -> RenderPlot:
         if inspect.iscoroutinefunction(fn):
             fn = typing.cast(UserRenderFunctionAsync, fn)
-            return PlotAsync(fn, alt=alt)
+            return RenderPlotAsync(fn, alt=alt)
         else:
-            return Plot(fn, alt=alt)
+            return RenderPlot(fn, alt=alt)
 
     return wrapper
 
@@ -177,7 +182,7 @@ def try_render_plot_matplotlib(
         return "TYPE_MISMATCH"
 
 
-class Image(RenderFunction):
+class RenderImage(RenderFunction):
     def __init__(self, fn: ImgRenderFunc, delete_file: bool = False) -> None:
         self._fn: ImgRenderFuncAsync = utils.wrap_async(fn)
         self._delete_file: bool = delete_file
@@ -200,7 +205,7 @@ class Image(RenderFunction):
                 os.remove(src)
 
 
-class ImageAsync(Image, RenderFunctionAsync):
+class RenderImageAsync(RenderImage, RenderFunctionAsync):
     def __init__(self, fn: ImgRenderFuncAsync, delete_file: bool = False) -> None:
         if not inspect.iscoroutinefunction(fn):
             raise TypeError("PlotAsync requires an async function")
@@ -213,14 +218,14 @@ class ImageAsync(Image, RenderFunctionAsync):
         return await self.run()
 
 
-def image(delete_file: bool = False):
-    def wrapper(fn: Union[ImgRenderFunc, ImgRenderFuncAsync]) -> Image:
+def render_image(delete_file: bool = False):
+    def wrapper(fn: Union[ImgRenderFunc, ImgRenderFuncAsync]) -> RenderImage:
         if inspect.iscoroutinefunction(fn):
             fn = typing.cast(ImgRenderFuncAsync, fn)
-            return ImageAsync(fn, delete_file=delete_file)
+            return RenderImageAsync(fn, delete_file=delete_file)
         else:
             fn = typing.cast(ImgRenderFunc, fn)
-            return Image(fn, delete_file=delete_file)
+            return RenderImage(fn, delete_file=delete_file)
 
     return wrapper
 
@@ -229,7 +234,7 @@ UiRenderFunc = Callable[[], TagChildArg]
 UiRenderFuncAsync = Callable[[], Awaitable[TagChildArg]]
 
 
-class UI(RenderFunction):
+class RenderUI(RenderFunction):
     def __init__(self, fn: UiRenderFunc) -> None:
         self._fn: UiRenderFuncAsync = utils.wrap_async(fn)
 
@@ -243,7 +248,7 @@ class UI(RenderFunction):
         return utils.process_deps(ui, self._session)
 
 
-class UIAsync(UI, RenderFunctionAsync):
+class RenderUIAsync(RenderUI, RenderFunctionAsync):
     def __init__(self, fn: UiRenderFuncAsync) -> None:
         if not inspect.iscoroutinefunction(fn):
             raise TypeError("PlotAsync requires an async function")
@@ -255,13 +260,13 @@ class UIAsync(UI, RenderFunctionAsync):
         return await self.run()
 
 
-def ui():
-    def wrapper(fn: Union[UiRenderFunc, UiRenderFuncAsync]) -> UI:
+def render_ui():
+    def wrapper(fn: Union[UiRenderFunc, UiRenderFuncAsync]) -> RenderUI:
         if inspect.iscoroutinefunction(fn):
             fn = typing.cast(UiRenderFuncAsync, fn)
-            return UIAsync(fn)
+            return RenderUIAsync(fn)
         else:
             fn = typing.cast(UiRenderFunc, fn)
-            return UI(fn)
+            return RenderUI(fn)
 
     return wrapper

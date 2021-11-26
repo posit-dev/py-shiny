@@ -20,6 +20,7 @@ from .notifications import *
 from .output import *
 from .page import *
 from .progress import *
+from .render import *
 from .reactives import *
 from .shinyapp import *
 from .shinysession import *

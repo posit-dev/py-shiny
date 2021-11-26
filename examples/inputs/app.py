@@ -72,7 +72,7 @@ import matplotlib.pyplot as plt
 
 def server(s: ShinySession):
     @s.output("inputs")
-    @render.ui()
+    @render_ui()
     def _() -> Tag:
         vals = [
             f"<code>input_date()</code> {s.input['date']}",
@@ -86,7 +86,7 @@ def server(s: ShinySession):
         return tags.pre(HTML("\n".join(vals)))
 
     @s.output("plot")
-    @render.plot(alt="A histogram")
+    @render_plot(alt="A histogram")
     def _():
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(437)
@@ -95,7 +95,7 @@ def server(s: ShinySession):
         return fig
 
     @s.output("image")
-    @render.image()
+    @render_image()
     def _():
         from pathlib import Path
 

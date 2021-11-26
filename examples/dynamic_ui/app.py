@@ -15,7 +15,6 @@ shiny_module_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 sys.path.insert(0, shiny_module_dir)
 
 from shiny import *
-from shiny.fileupload import FileInfo
 
 # For plot rendering
 import numpy as np
@@ -23,21 +22,13 @@ import matplotlib.pyplot as plt
 
 ui = page_fluid(
     layout_sidebar(
-        panel_sidebar(
-            input_slider("n", "N", 0, 100, 20),
-            input_file("file1", "Choose file", multiple=True),
-        ),
+        panel_sidebar(h2("Dynamic UI"), output_ui("ui")),
         panel_main(
             output_text_verbatim("txt"),
-            output_text_verbatim("shared_txt"),
             output_plot("plot"),
-            output_text_verbatim("file_content"),
         ),
     ),
 )
-
-# A ReactiveVal which is shared across all sessions.
-shared_val = ReactiveVal(None)
 
 
 def server(session: ShinySession):
@@ -52,20 +43,6 @@ def server(session: ShinySession):
         val = r()
         return f"n*2 is {val}, session id is {get_current_session().id}"
 
-    # This observer watches n, and changes shared_val, which is shared across
-    # all running sessions.
-    @observe()
-    def _():
-        if session.input["n"] is None:
-            return
-        shared_val(session.input["n"] * 10)
-
-    # Print the value of shared_val(). Changing it in one session should cause
-    # this to run in all sessions.
-    @session.output("shared_txt")
-    def _():
-        return f"shared_val() is {shared_val()}"
-
     @session.output("plot")
     @render_plot(alt="A histogram")
     def _():
@@ -76,19 +53,10 @@ def server(session: ShinySession):
         ax.hist(x, session.input["n"], density=True)
         return fig
 
-    @session.output("file_content")
+    @session.output("ui")
+    @render_ui()
     def _():
-        file_infos: list[FileInfo] = session.input["file1"]
-        if not file_infos:
-            return
-
-        out_str = ""
-        for file_info in file_infos:
-            out_str += "====== " + file_info["name"] + " ======\n"
-            with open(file_info["datapath"], "r") as f:
-                out_str += f.read()
-
-        return out_str
+        return input_slider("n", "N", 0, 100, 20)
 
 
 app = ShinyApp(ui, server)
