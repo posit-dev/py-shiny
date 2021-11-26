@@ -3,10 +3,8 @@ import os
 import tempfile
 import base64
 import mimetypes
-import matplotlib.figure
-import matplotlib.pyplot
 import inspect
-from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union
+from typing import TYPE_CHECKING, Callable, Literal, Optional, Awaitable, Union
 import typing
 
 if sys.version_info >= (3, 8):
@@ -24,6 +22,17 @@ from . import utils
 
 UserRenderFunction = Callable[[], object]
 UserRenderFunctionAsync = Callable[[], Awaitable[object]]
+
+
+class ImgData(TypedDict):
+    src: str
+    width: Union[str, float]
+    height: Union[str, float]
+    alt: Optional[str]
+
+
+ImgRenderFunc = Callable[[], ImgData]
+ImgRenderFuncAsync = Callable[[], Awaitable[ImgData]]
 
 
 class RenderFunction:
@@ -73,36 +82,24 @@ class Plot(RenderFunction):
         if fig is None:
             return None
 
-        if isinstance(fig, matplotlib.figure.Figure):
-            tmpfile = tempfile.mkstemp(suffix=".png")[1]
+        # Try each type of renderer in turn. The reason we do it this way is to avoid
+        # importing modules that aren't already loaded. That could slow things down, or
+        # worse, cause an error if the module isn't installed.
+        #
+        # Each try_render function should return either an ImgResult, None (which
+        # indicates that the rendering failed), or the string "TYPE_MISMATCH" (which
+        # indicate that `fig` object was not the type of object that the renderer knows
+        # how to handle). In the case of a "TYPE_MISMATCH", it will move on to the next
+        # renderer.
+        result: Union[ImgData, None, Literal["TYPE_MISMATCH"]] = None
+        if "matplotlib" in sys.modules:
+            result = try_render_plot_matplotlib(
+                fig, width, height, pixelratio, self._ppi
+            )
+            if result != "TYPE_MISMATCH":
+                return result
 
-            try:
-                ppi = self._ppi * pixelratio
-                fig.set_dpi(ppi)
-                fig.set_size_inches(width / self._ppi, height / self._ppi)
-
-                fig.savefig(tmpfile)
-
-                with open(tmpfile, "rb") as image_file:
-                    data = base64.b64encode(image_file.read())
-                    data_str = data.decode("utf-8")
-
-                res = {
-                    "src": "data:image/png;base64," + data_str,
-                    "width": width,
-                    "height": height,
-                }
-                if self._alt is not None:
-                    res["alt"] = self._alt
-
-                return res
-
-            finally:
-                matplotlib.pyplot.close(fig)
-                os.remove(tmpfile)
-
-        else:
-            raise Exception("Unsupported figure type: " + str(type(fig)))
+        raise Exception("Unsupported figure type: " + str(type(fig)))
 
 
 class PlotAsync(Plot, RenderFunctionAsync):
@@ -130,15 +127,54 @@ def plot(alt: Optional[str] = None):
     return wrapper
 
 
-class ImgReturn(TypedDict):
-    src: str
-    width: str
-    height: str
-    alt: str
+# Try to render a matplotlib object. If `fig` is not a matplotlib object, return
+# "TYPE_MISMATCH". If there's an error in rendering, return None. If successful in
+# rendering, return an ImgData object.
+def try_render_plot_matplotlib(
+    fig: object,
+    width: float,
+    height: float,
+    pixelratio: float,
+    ppi: float,
+    alt: Optional[str] = None,
+) -> Union[ImgData, None, Literal["TYPE_MISMATCH"]]:
+    import matplotlib.figure
+    import matplotlib.pyplot
 
+    if isinstance(fig, matplotlib.figure.Figure):
+        tmpfile = tempfile.mkstemp(suffix=".png")[1]
 
-ImgRenderFunc = Callable[[], ImgReturn]
-ImgRenderFuncAsync = Callable[[], Awaitable[ImgReturn]]
+        try:
+            fig.set_dpi(ppi * pixelratio)
+            fig.set_size_inches(width / ppi, height / ppi)
+
+            fig.savefig(tmpfile)
+
+            with open(tmpfile, "rb") as image_file:
+                data = base64.b64encode(image_file.read())
+                data_str = data.decode("utf-8")
+
+            res: ImgData = {
+                "src": "data:image/png;base64," + data_str,
+                "width": width,
+                "height": height,
+                "alt": alt,
+            }
+
+            return res
+
+        except Exception as e:
+            # TODO: just let errors propagate?
+            print("Error rendering matplotlib object: " + str(e))
+
+        finally:
+            matplotlib.pyplot.close(fig)
+            os.remove(tmpfile)
+
+        return None
+
+    else:
+        return "TYPE_MISMATCH"
 
 
 class Image(RenderFunction):
@@ -150,7 +186,7 @@ class Image(RenderFunction):
         return utils.run_coro_sync(self.run())
 
     async def run(self) -> object:
-        res: ImgReturn = await self._fn()
+        res: ImgData = await self._fn()
         src: str = res.get("src")
         try:
             with open(src, "rb") as f:
