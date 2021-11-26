@@ -4,8 +4,14 @@ import tempfile
 import base64
 import mimetypes
 import inspect
-from typing import TYPE_CHECKING, Callable, Literal, Optional, Awaitable, Union
+from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union
 import typing
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
