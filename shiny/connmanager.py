@@ -65,7 +65,7 @@ class ASGIConnection(Connection):
     async def receive(self) -> str:
         event = await self._rcv()
         if event["type"] == "websocket.receive":
-            if "text" in event and event["text"] != None:
+            if "text" in event and event["text"] is not None:
                 return event["text"]
             else:
                 # TODO: Log this?
