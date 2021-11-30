@@ -1,19 +1,21 @@
 __all__ = ("ShinyApp",)
 
-from typing import Any, Awaitable, List, Optional, Union, Dict, Callable, cast
+from typing import Any, List, Optional, Union, Dict, Callable, cast
 import re
 import os
 import sys
 from asgiref.typing import (
+    ASGI3Application,
     ASGIReceiveCallable,
     ASGIReceiveEvent,
     ASGISendCallable,
-    ASGISendEvent,
     Scope,
     HTTPScope,
 )
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
+
+from shiny.responses import HTMLResponse, JSONResponse, TextResponse
 
 from .shinysession import ShinySession, session_context
 from . import reactcore
@@ -24,13 +26,6 @@ from .connmanager import (
 from .html_dependencies import shiny_deps
 
 PYODIDE = "pyodide" in sys.modules
-
-if not PYODIDE:
-    from fastapi.responses import JSONResponse, HTMLResponse
-    from fastapi.staticfiles import StaticFiles
-    import starlette.types
-    import starlette.routing
-    import uvicorn
 
 
 class ShinyApp:
@@ -56,6 +51,9 @@ class ShinyApp:
         self._registered_dependencies: Dict[str, HTMLDependency] = {}
         self._dependency_handler: Any = None
         if not PYODIDE:
+            # TODO: Remove starlette dependency
+            import starlette.routing
+
             self._dependency_handler: Any = starlette.routing.Router()
 
     def create_session(self, conn: Connection) -> ShinySession:
@@ -74,6 +72,8 @@ class ShinyApp:
         del self._sessions[session]
 
     def run(self, debug: Optional[bool] = None) -> None:
+        import uvicorn
+
         if debug is not None:
             self._debug = debug
         uvicorn.run(self, host="0.0.0.0", port=8000)
@@ -85,18 +85,18 @@ class ShinyApp:
         if scope["type"] == "http":
             if scope["method"] == "GET":
                 if scope["path"] == "/":
-                    await self._on_root_request_cb(scope, receive, send)
-                    return
+                    return await self._on_root_request_cb(scope, receive, send)
             if re.search("^/session/", scope["path"]):
-                await self._on_session_request_cb(scope, receive, send)
-                return
+                return await self._on_session_request_cb(scope, receive, send)
 
             if self._dependency_handler is not None:
-                await self._dependency_handler(
-                    cast(starlette.types.Scope, scope),
-                    cast(starlette.types.Receive, receive),
-                    cast(starlette.types.Send, send),
+                # TODO: Remove this cast when _dependency_handler is no longer based
+                # on starlette
+                return await cast(ASGI3Application, self._dependency_handler)(
+                    scope, receive, send
                 )
+
+            return await TextResponse("Not found")(scope, receive, send)
         elif scope["type"] == "websocket":
             conn = ASGIConnection(scope, receive, send)
             await conn.accept()
@@ -142,13 +142,8 @@ class ShinyApp:
         request for / occurs.
         """
         self._ensure_web_dependencies(self.ui["dependencies"])
-        # TODO: Do this without using Flask/Starlette
         resp = HTMLResponse(content=self.ui["html"])
-        await resp(
-            cast(starlette.types.Scope, scope),
-            cast(starlette.types.Receive, receive),
-            cast(starlette.types.Send, send),
-        )
+        await resp(scope, receive, send)
 
     async def _on_connect_cb(self, conn: Connection) -> None:
         """
@@ -171,11 +166,8 @@ class ShinyApp:
         matches = re.search("^/session/([0-9a-f]+)(/.*)$", http_scope["path"])
         if matches is None:
             # Exact same response as a "normal" 404 from FastAPI.
-            return await JSONResponse({"detail": "Not Found"}, status_code=404)(
-                cast(starlette.types.Scope, scope),
-                cast(starlette.types.Receive, receive),
-                cast(starlette.types.Send, send),
-            )
+            resp = JSONResponse({"detail": "Not Found"}, status_code=404)
+            return await resp(scope, receive, send)
 
         session_id = matches.group(1)
         subpath = matches.group(2)
@@ -184,12 +176,9 @@ class ShinyApp:
             session: ShinySession = self._sessions[session_id]
             with session_context(session):
                 return await session.handle_request(scope, receive, send, subpath)
-        else:
-            return await JSONResponse({"detail": "Not Found"}, status_code=404)(
-                cast(starlette.types.Scope, scope),
-                cast(starlette.types.Receive, receive),
-                cast(starlette.types.Send, send),
-            )
+
+        resp = JSONResponse({"detail": "Not Found"}, status_code=404)
+        await resp(scope, receive, send)
 
     # ==========================================================================
     # Flush
@@ -227,13 +216,11 @@ class ShinyApp:
 
         prefix = dep.name + "-" + str(dep.version)
         prefix = os.path.join(ShinyApp.HREF_LIB_PREFIX, prefix)
-        # TODO: re-implement this using pure ASGI
-        #
-        # if isinstance(self._conn_manager, FastAPIConnectionManager):
-        #     self._conn_manager._fastapi_app.mount(
-        #         "/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix
-        #     )
+
         if not PYODIDE:
+            # TODO: Remove starlette dependency
+            from starlette.staticfiles import StaticFiles
+
             self._dependency_handler.mount(
                 "/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix
             )
