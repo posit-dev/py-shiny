@@ -1,4 +1,17 @@
-from typing import Any, Iterable, MutableMapping, Optional, Protocol, Tuple
+import sys
+from typing import Any, Iterable, Optional, Tuple
+
+if sys.version_info >= (3, 8):
+    from typing import Protocol
+else:
+    from typing_extensions import Protocol
+
+if sys.version_info >= (3, 9):
+    from collections.abc import MutableMapping
+else:
+    from typing import MutableMapping
+
+
 from asgiref.typing import (
     ASGIReceiveCallable,
     ASGISendCallable,
