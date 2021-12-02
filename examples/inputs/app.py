@@ -32,6 +32,15 @@ ui = page_fluid(
             input_radio_buttons(
                 "radio", "input_radio()", {"Choice 1": "a", "Choice 2": "b"}
             ),
+            input_select(
+                "select",
+                "input_select()",
+                {
+                    "Choice A": "a",
+                    "Group B": {"Choice B1": "b1", "Choice B2": "b2"},
+                    "Group C": ["c1", "c2"],
+                },
+            ),
         ),
         panel_main(
             output_plot("plot"),
@@ -82,6 +91,7 @@ def server(s: ShinySession):
             f"<code>input_checkbox()</code>: {s.input['checkbox']}",
             f"<code>input_checkbox_group()</code>: {s.input['checkbox_group']}",
             f"<code>input_radio()</code>: {s.input['radio']}",
+            f"<code>input_select()</code>: {s.input['select']}",
         ]
         return tags.pre(HTML("\n".join(vals)))
 
