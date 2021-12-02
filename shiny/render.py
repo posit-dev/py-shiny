@@ -110,6 +110,11 @@ class RenderPlot(RenderFunction):
             if result != "TYPE_MISMATCH":
                 return result
 
+        if "PIL" in sys.modules:
+            result = try_render_plot_pil(fig, width, height, pixelratio, self._ppi)
+            if result != "TYPE_MISMATCH":
+                return result
+
         raise Exception("Unsupported figure type: " + str(type(fig)))
 
 
@@ -180,6 +185,48 @@ def try_render_plot_matplotlib(
 
         finally:
             matplotlib.pyplot.close(fig)
+            os.remove(tmpfile)
+
+        return None
+
+    else:
+        return "TYPE_MISMATCH"
+
+
+def try_render_plot_pil(
+    fig: object,
+    width: float,
+    height: float,
+    pixelratio: float,
+    ppi: float,
+    alt: Optional[str] = None,
+) -> Union[ImgData, None, Literal["TYPE_MISMATCH"]]:
+    import PIL.Image
+
+    if isinstance(fig, PIL.Image.Image):
+        tmpfile = tempfile.mkstemp(suffix=".png")[1]
+
+        try:
+            fig.save(tmpfile, format="PNG")
+
+            with open(tmpfile, "rb") as image_file:
+                data = base64.b64encode(image_file.read())
+                data_str = data.decode("utf-8")
+
+            res: ImgData = {
+                "src": "data:image/png;base64," + data_str,
+                "width": width,
+                "height": height,
+                "alt": alt,
+            }
+
+            return res
+
+        except Exception as e:
+            # TODO: just let errors propagate?
+            print("Error rendering PIL object: " + str(e))
+
+        finally:
             os.remove(tmpfile)
 
         return None
