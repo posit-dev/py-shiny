@@ -134,10 +134,22 @@ def ipywidget_embed_deps() -> List[HTMLDependency]:
             source={"package": "shiny", "subdir": "ipywidgets/lib"},
             script={"src": "libembed-amd.js"},
         ),
-        HTMLDependency(
-            name="ipywidget-output-binding",
-            version="0.0.1",
-            source={"package": "shiny", "subdir": "ipywidgets/dist"},
-            script={"src": "index.js"},
-        ),
     ]
+
+
+def ipywidget_output_dep() -> HTMLDependency:
+    return HTMLDependency(
+        name="ipywidget-output-binding",
+        version="0.0.1",
+        source={"package": "shiny", "subdir": "ipywidgets/dist"},
+        script={"src": "output.js"},
+    )
+
+
+def ipywidget_input_dep() -> HTMLDependency:
+    return HTMLDependency(
+        name="ipywidget-input-binding",
+        version="0.0.1",
+        source={"package": "shiny", "subdir": "ipywidgets/dist"},
+        script={"src": "input.js"},
+    )

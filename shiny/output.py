@@ -1,5 +1,6 @@
 from typing import Optional
 from htmltools import tags, Tag, div, css, TagAttrArg, TagFunction
+from .html_dependencies import ipywidget_embed_deps, ipywidget_output_dep
 
 
 def output_plot(
@@ -42,8 +43,10 @@ def output_ui(
     return container(id=id, class_="shiny-html-output", **kwargs)  # type: ignore
 
 
-from .html_dependencies import ipywidget_embed_deps
-
-
 def output_ipywidget(id: str) -> Tag:
-    return tags.div(ipywidget_embed_deps(), id=id, class_="shiny-ipywidget-output")
+    return tags.div(
+        ipywidget_embed_deps(),
+        ipywidget_output_dep(),
+        id=id,
+        class_="shiny-ipywidget-output",
+    )

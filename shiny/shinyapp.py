@@ -17,7 +17,7 @@ from .connmanager import (
     FastAPIConnectionManager,
     TCPConnectionManager,
 )
-from .html_dependencies import shiny_deps
+from .html_dependencies import jquery_deps, shiny_deps
 
 
 class ShinyApp:
@@ -149,7 +149,6 @@ class ShinyApp:
 
 
 def _render_ui(ui: Union[Tag, TagList], lib_prefix: Optional[str]) -> RenderedHTML:
-    ui.append(shiny_deps())
-    doc = HTMLDocument(ui)
+    doc = HTMLDocument(TagList(jquery_deps(), shiny_deps(), ui))
     res = doc.render(lib_prefix=lib_prefix)
     return res
