@@ -1,8 +1,8 @@
-from typing import Optional, Dict, Any, Union, List, cast
+from typing import Optional, Dict, Union, List, cast
 
-from htmltools import Tag, TagAttrArg, JSXTag, jsx_tag_create, tags, div
+from htmltools import Tag, tags, div
 
-from .html_dependencies import selectize_deps, jqui_deps
+from .html_dependencies import selectize_deps
 from .input_utils import shiny_input_label
 
 # This is the canonical format for representing select options.
@@ -10,26 +10,45 @@ SelectInputOptions = Dict[str, Union[str, Dict[str, str]]]
 
 
 def input_selectize(
-    id: str, options: Dict[str, Any] = {}, **kwargs: TagAttrArg
-) -> JSXTag:
-    # Make sure accessibility plugin is included by default
-    if not options.get("plugins", None):
-        options["plugins"] = []
-    if "selectize-plugin-a11y" not in options["plugins"]:
-        options["plugins"].append("selectize-plugin-a11y")
-    deps = [selectize_deps()]
-    if "drag_drop" in options["plugins"]:
-        deps.append(jqui_deps())
-    return jsx_tag_create("InputSelectize")(deps, id=id, options=options, **kwargs)
+    id: str,
+    label: str,
+    choices: Union[List[str], Dict[str, Union[str, List[str], Dict[str, str]]]],
+    *,
+    selected: Optional[str] = None,
+    multiple: bool = False,
+    width: Optional[str] = None,
+    size: Optional[str] = None,
+) -> Tag:
+
+    return input_select(
+        id,
+        label,
+        choices,
+        selected=selected,
+        multiple=multiple,
+        selectize=True,
+        width=width,
+        size=size,
+    )
+    # # Make sure accessibility plugin is included by default
+    # if not options.get("plugins", None):
+    #     options["plugins"] = []
+    # if "selectize-plugin-a11y" not in options["plugins"]:
+    #     options["plugins"].append("selectize-plugin-a11y")
+    # deps = [selectize_deps()]
+    # if "drag_drop" in options["plugins"]:
+    #     deps.append(jqui_deps())
+    # return jsx_tag_create("InputSelectize")(deps, id=id, options=options, **kwargs)
 
 
 def input_select(
     id: str,
     label: str,
     choices: Union[List[str], Dict[str, Union[str, List[str], Dict[str, str]]]],
+    *,
     selected: Optional[str] = None,
     multiple: bool = False,
-    selectize: bool = True,
+    selectize: bool = False,
     width: Optional[str] = None,
     size: Optional[str] = None,
 ) -> Tag:
@@ -39,20 +58,36 @@ def input_select(
 
     return div(
         shiny_input_label(id, label),
-        tags.select(
-            *choices_tags,
-            selectize_deps(),
-            id=id,
-            label=label,
-            class_="form-select",
-            multiple=multiple,
-            width=width,
-            size=size,
+        div(
+            tags.select(
+                *choices_tags,
+                id=id,
+                class_=None if selectize else "form-select",
+                multiple=multiple,
+                width=width,
+                size=size,
+            ),
+            (
+                [
+                    tags.script("{}", type="application/json", data_for=id),
+                    selectize_deps(),
+                ]
+                if selectize
+                else None
+            ),
         ),
         class_="form-group shiny-input-container",
     )
 
 
+# x can be structured like any of the following:
+# - ["a", "b", "c"]
+# - {"Choice A": "a", "Choice B": "b", "Choice C": "c"}
+# - {
+#     "Choice A": "a",
+#     "Group B": {"Choice B1": "b1", "Choice B2": "b2"},
+#     "Group C: ["c1, "c2"]
+#   }
 def _normalize_choices(
     x: Union[List[str], Dict[str, Union[str, List[str], Dict[str, str]]]]
 ) -> SelectInputOptions:
