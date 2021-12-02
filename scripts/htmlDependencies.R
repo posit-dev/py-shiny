@@ -9,7 +9,7 @@ dir.create(www)
 
 # Copy over shiny's www/shared directory
 withr::with_tempdir({
-  cmd <- paste("git clone --depth 1 --branch master https://github.com/rstudio/shiny")
+  cmd <- paste("git clone --depth 1 --branch main https://github.com/rstudio/shiny")
   system(cmd)
   file.copy(
     "shiny/inst/www/shared",
