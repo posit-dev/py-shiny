@@ -1,6 +1,6 @@
 import sys
 import os
-import tempfile
+import io
 import base64
 import mimetypes
 import inspect
@@ -158,16 +158,14 @@ def try_render_plot_matplotlib(
     import matplotlib.pyplot
 
     if isinstance(fig, matplotlib.figure.Figure):
-        tmpfile = tempfile.mkstemp(suffix=".png")[1]
-
         try:
             fig.set_dpi(ppi * pixelratio)
             fig.set_size_inches(width / ppi, height / ppi)
 
-            fig.savefig(tmpfile)
-
-            with open(tmpfile, "rb") as image_file:
-                data = base64.b64encode(image_file.read())
+            with io.BytesIO() as buf:
+                fig.savefig(buf, format="png")
+                buf.seek(0)
+                data = base64.b64encode(buf.read())
                 data_str = data.decode("utf-8")
 
             res: ImgData = {
@@ -185,7 +183,6 @@ def try_render_plot_matplotlib(
 
         finally:
             matplotlib.pyplot.close(fig)
-            os.remove(tmpfile)
 
         return None
 
@@ -204,13 +201,11 @@ def try_render_plot_pil(
     import PIL.Image
 
     if isinstance(fig, PIL.Image.Image):
-        tmpfile = tempfile.mkstemp(suffix=".png")[1]
-
         try:
-            fig.save(tmpfile, format="PNG")
-
-            with open(tmpfile, "rb") as image_file:
-                data = base64.b64encode(image_file.read())
+            with io.BytesIO() as buf:
+                fig.save(buf, format="PNG")
+                buf.seek(0)
+                data = base64.b64encode(buf.read())
                 data_str = data.decode("utf-8")
 
             res: ImgData = {
@@ -225,9 +220,6 @@ def try_render_plot_pil(
         except Exception as e:
             # TODO: just let errors propagate?
             print("Error rendering PIL object: " + str(e))
-
-        finally:
-            os.remove(tmpfile)
 
         return None
 
