@@ -54,6 +54,9 @@ def input_select(
 ) -> Tag:
 
     choices_ = _normalize_choices(choices)
+    if selected is None:
+        selected = _find_first_option(choices_)
+
     choices_tags = _render_choices(choices_, selected)
 
     return div(
@@ -122,3 +125,26 @@ def _render_choices(x: SelectInputOptions, selected: Optional[str] = None) -> Li
             result.append(tags.option(label, value=value, selected=(value == selected)))
 
     return result
+
+
+# Returns the first option in a SelectInputOptions object. For most cases, this is
+# straightforward. In the following, the first option is "a":
+# { "Choice A": "a", "Choice B": "b", "Choice C": "c" }
+#
+# Sometimes the first option is nested within an optgroup. For example, in the
+# following, the first option is "b1":
+# {
+#     "Choice A": {},
+#     "Group B": {"Choice B1": "b1", "Choice B2": "b2"},
+# }
+def _find_first_option(x: SelectInputOptions) -> Optional[str]:
+    for (_label, value) in x.items():
+        if isinstance(value, dict):
+            value = cast(SelectInputOptions, value)
+            result = _find_first_option(value)
+            if result is not None:
+                return result
+        else:
+            return value
+
+    return None
