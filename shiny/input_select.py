@@ -84,9 +84,12 @@ def input_select(
 
 
 # x can be structured like any of the following:
-# - ["a", "b", "c"]
-# - {"Choice A": "a", "Choice B": "b", "Choice C": "c"}
-# - {
+# List:
+#   ["a", "b", "c"]
+# Dictionary:
+#   {"Choice A": "a", "Choice B": "b", "Choice C": "c"}
+# Dictionary with sub-lists or sub-dictionaries (which are optgroups):
+#   {
 #     "Choice A": "a",
 #     "Group B": {"Choice B1": "b1", "Choice B2": "b2"},
 #     "Group C: ["c1, "c2"]
@@ -110,8 +113,6 @@ def _normalize_choices(
 
 
 def _render_choices(x: SelectInputOptions, selected: Optional[str] = None) -> List[Tag]:
-    # TODO: if selected is None, select the first item.
-
     result: List[Tag] = []
     for (label, value) in x.items():
         if isinstance(value, dict):
@@ -134,7 +135,7 @@ def _render_choices(x: SelectInputOptions, selected: Optional[str] = None) -> Li
 # Sometimes the first option is nested within an optgroup. For example, in the
 # following, the first option is "b1":
 # {
-#     "Choice A": {},
+#     "Group A": {},
 #     "Group B": {"Choice B1": "b1", "Choice B2": "b2"},
 # }
 def _find_first_option(x: SelectInputOptions) -> Optional[str]:
