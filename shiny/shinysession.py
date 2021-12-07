@@ -45,6 +45,7 @@ from .connmanager import Connection, ConnectionClosed
 from . import render
 from . import utils
 from .fileupload import FileInfo, FileUploadManager
+from .input_handlers import InputHandlers
 
 # This cast is necessary because if the type checker thinks that if
 # "tag" isn't in `message`, then it's not a ClientMessage object.
@@ -177,10 +178,19 @@ class ShinySession:
 
     def _manage_inputs(self, data: Dict[str, object]) -> None:
         for (key, val) in data.items():
-            if ":" in key:
-                key = key.split(":")[0]
+            keys = key.split(":")
+            if len(keys) > 2:
+                raise ValueError(
+                    "Input name+type is not allowed to contain more than one ':' -- "
+                    + key
+                )
+            if len(keys) == 2:
+                handler = InputHandlers.get(keys[1])
+                if handler is None:
+                    raise ValueError("No input handler registered for type: " + keys[1])
+                val = handler(val, self, keys[0])
 
-            self.input[key] = val
+            self.input[keys[0]] = val
 
     # ==========================================================================
     # Message handlers
