@@ -11,6 +11,7 @@ import re
 import asyncio
 import warnings
 import typing
+import mimetypes
 from contextvars import ContextVar, Token
 from contextlib import contextmanager
 from typing import (
@@ -219,14 +220,13 @@ class ShinySession:
     def _create_message_handlers(self) -> Dict[str, Callable[..., Awaitable[object]]]:
         async def uploadInit(file_infos: List[FileInfo]) -> Dict[str, object]:
             with session_context(self):
-                print("uploadInit")
-                print(file_infos)
+                if self._debug:
+                    print("Upload init: " + str(file_infos))
 
                 # TODO: Don't alter message in place?
                 for fi in file_infos:
                     if "type" not in fi:
-                        # TODO: Infer file type
-                        fi["type"] = "application/octet-stream"
+                        fi["type"] = mimetypes.guess_type(fi["name"])[0]
 
                 job_id = self._file_upload_manager.create_upload_operation(file_infos)
                 worker_id = ""
