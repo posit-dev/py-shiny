@@ -1,6 +1,6 @@
 from htmltools import tags, Tag, div, css, TagAttrArg
 from typing import Dict, Optional, Union, Tuple, cast
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import math
 import numpy
 
@@ -13,6 +13,8 @@ SliderVal = Union[float, date, datetime]
 SliderTuple = Union[Tuple[float, float], Tuple[date, date], Tuple[datetime, datetime]]
 SliderVals = Union[SliderVal, SliderTuple]
 
+# TODO: implement animate/animation_pptions
+
 
 def input_slider(
     id: str,
@@ -21,9 +23,7 @@ def input_slider(
     max: SliderVal,
     value: SliderVals,
     step: Optional[SliderVal] = None,
-    round: bool = False,
     ticks: bool = True,
-    animate: bool = False,
     width: Optional[str] = None,
     sep: str = ",",
     pre: Optional[str] = None,
@@ -44,17 +44,19 @@ def input_slider(
         step = find_step_size(min, max)
 
     # Convert values to milliseconds since epoch (this is the value JS uses)
-    if data_type == "date":
-        # TODO: Find step size in ms
-        # step  = to_ms(max) - to_ms(max - step)
-        min = min.timestamp() * 1000
-        max = max.timestamp() * 1000
-        value = value.timestamp() * 1000
+    if data_type in ["date", "datetime"]:
+        step = to_ms(step)
+        min = to_ms(min)
+        max = to_ms(max)
+        vals = tuple([to_ms(v) for v in vals])
 
     n_ticks = None
     # TODO: Try to get a sane number of tick marks
     if ticks:
-        n_steps = (max - min) / step
+        n_steps = (
+            timedelta_to_numeric(max - min, is_datetime=isinstance(min, datetime))
+            / step
+        )
         # Make sure there are <= 10 steps.
         # n_ticks can be a noninteger, which is good when the range is not an
         # integer multiple of the step size, e.g., min=1, max=10, step=4
@@ -74,8 +76,8 @@ def input_slider(
         "data_grid": ticks,
         "data_grid_num": n_ticks,
         "data_grid_snap": "false",
-        # "data_prettify_separator": sep,
-        # "data_prettify_enabled": sep != "",
+        "data_prettify_separator": sep,
+        "data_prettify_enabled": sep != "",
         "data_prefix": pre,
         "data_postfix": post,
         "data_keyboard": "true",
@@ -86,7 +88,7 @@ def input_slider(
 
     if isinstance(value, tuple):
         props["data_type"] = "double"
-        props["data_to"] = str(value[1])
+        props["data_to"] = str(vals[1])
         props["data_drag_interval"] = drag_range
 
     if not time_format and data_type[0:4] == "date":
@@ -115,19 +117,38 @@ def get_slider_type(min: SliderVal, max: SliderVal, value: SliderVals) -> str:
 
 
 def slider_type(x: SliderVal) -> str:
-    if isinstance(x, date):
-        return "date"
     if isinstance(x, datetime):
         return "datetime"
+    if isinstance(x, date):
+        return "date"
     return "number"
 
 
 def find_step_size(min: SliderVal, max: SliderVal) -> Union[int, float]:
     # TODO: this is a naive version of shiny::findStepSize() that might be susceptible to
     # rounding errors? https://github.com/rstudio/shiny/pull/1956
-    range = max - min
+    range = timedelta_to_numeric(max - min, is_datetime=isinstance(min, datetime))
+
+    # R's < operator does this type coercion automatically
+    if isinstance(range, timedelta):
+        range = range.total_seconds() if isinstance(min, datetime) else range.days
+
     if range < 2 or isinstance(min, float) or isinstance(max, float):
         steps = numpy.linspace(min, max, 100)
         return steps[1] - steps[0]
     else:
         return 1
+
+
+def to_ms(x: SliderVal) -> SliderVal:
+    if isinstance(x, date):
+        return int(x.timestamp() * 1000)
+    return x
+
+
+def timedelta_to_numeric(
+    x: Union[timedelta, float, int], is_datetime: bool = False
+) -> Union[float, int]:
+    if not isinstance(x, timedelta):
+        return x
+    return x.total_seconds() if is_datetime else x.days
