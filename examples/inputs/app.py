@@ -21,6 +21,8 @@ ui = page_fluid(
             input_text_area(
                 "txt_area", "input_text_area()", placeholder="Input some text"
             ),
+            input_numeric("num", "input_numeric()", 20),
+            input_password("password", "input_password()"),
             input_checkbox("checkbox", "input_checkbox()"),
             input_checkbox_group(
                 "checkbox_group",
@@ -41,6 +43,7 @@ ui = page_fluid(
                     "Group C": ["c1", "c2"],
                 },
             ),
+            input_button("button", "input_button()", "Click me"),
         ),
         panel_main(
             output_plot("plot"),
@@ -88,10 +91,13 @@ def server(s: ShinySession):
             f"<code>input_date_range()</code>: {s.input['date_rng']}",
             f"<code>input_text()</code>: {s.input['txt']}",
             f"<code>input_text_area()</code>: {s.input['txt_area']}",
+            f"<code>input_numeric()</code>: {s.input['num']}",
+            f"<code>input_password()</code>: {s.input['password']}",
             f"<code>input_checkbox()</code>: {s.input['checkbox']}",
             f"<code>input_checkbox_group()</code>: {s.input['checkbox_group']}",
             f"<code>input_radio()</code>: {s.input['radio']}",
             f"<code>input_select()</code>: {s.input['select']}",
+            f"<code>input_button()</code>: {s.input['button']}",
         ]
         return tags.pre(HTML("\n".join(vals)))
 
