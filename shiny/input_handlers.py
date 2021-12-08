@@ -1,68 +1,74 @@
-from datetime import datetime
-from typing import TYPE_CHECKING, Callable, Dict, Union, List, Any
+from datetime import date, datetime
+from typing import TYPE_CHECKING, Callable, Dict, Union, List, Any, TypeVar
 
 if TYPE_CHECKING:
     from .shinysession import ShinySession
 
-InputHandlerType = Callable[[Any, "ShinySession", str], Any]
+InputHandlerType = Callable[[Any, str, "ShinySession"], Any]
 
 
 class _InputHandlers(Dict[str, InputHandlerType]):
     def __init__(self):
         super().__init__()
 
-    def register(self, name: str, handler: InputHandlerType, force: bool = False):
-        if name in self and not force:
-            raise Exception(f"Input handler {name} already exists")
-        self[name] = handler
+    def add(self, name: str, force: bool = False) -> Callable[[InputHandlerType], None]:
+        def _(func: InputHandlerType):
+            if name in self and not force:
+                raise ValueError(f"Input handler {name} already registered")
+            self[name] = func
+            return None
 
-    def unregister(self, name: str):
+        return _
+
+    def remove(self, name: str):
         del self[name]
 
 
-InputHandlers = _InputHandlers()
+input_handlers = _InputHandlers()
 
-# Doesn't do anything since it seems weird to case None to some sort of NA?
-def _number_handler(value: str, session: "ShinySession", name: str):
+
+_NumberType = TypeVar("_NumberType", int, float, None)
+
+# Doesn't do anything since it seems weird to coerce None into some sort of NA (like we do in R)?
+@input_handlers.add("shiny.number")
+def _(value: _NumberType, name: str, session: "ShinySession") -> _NumberType:
     return value
 
 
 # TODO: implement when we have bookmarking
-def _password_handler(value: str, session: "ShinySession", name: str):
+@input_handlers.add("shiny.password")
+def _(value: str, name: str, session: "ShinySession") -> str:
     return value
 
 
-def _date_handler(value: Union[str, List[str]], session: "ShinySession", name: str):
+@input_handlers.add("shiny.date")
+def _(
+    value: Union[str, List[str]], name: str, session: "ShinySession"
+) -> Union[date, List[date]]:
     if isinstance(value, str):
         return datetime.strptime(value, "%Y-%m-%d").date()
     return [datetime.strptime(v, "%Y-%m-%d").date() for v in value]
 
 
-def _datetime_handler(
-    value: Union[float, List[float]], session: "ShinySession", name: str
-):
-    if isinstance(value, float):
+@input_handlers.add("shiny.datetime")
+def _(
+    value: Union[int, float, List[int], List[float]], name: str, session: "ShinySession"
+) -> Union[datetime, List[datetime]]:
+    if isinstance(value, (int, float)):
         return datetime.utcfromtimestamp(value)
     return [datetime.utcfromtimestamp(v) for v in value]
-
-
-def _action_btn_handler(value: int, session: "ShinySession", name: str):
-    return ActionButtonValue(value)
 
 
 class ActionButtonValue(int):
     pass
 
 
+@input_handlers.add("shiny.action")
+def _(value: int, name: str, session: "ShinySession") -> ActionButtonValue:
+    return ActionButtonValue(value)
+
+
 # TODO: implement when we have bookmarking
-def _file_handler(value: str, session: "ShinySession", name: str):
+@input_handlers.add("shiny.file")
+def _(value: Any, name: str, session: "ShinySession") -> Any:
     return value
-
-
-# TODO: implement shiny.password & shiny.file once we have bookmarking
-InputHandlers.register("shiny.number", _number_handler)
-InputHandlers.register("shiny.password", _password_handler)
-InputHandlers.register("shiny.date", _date_handler)
-InputHandlers.register("shiny.datetime", _datetime_handler)
-InputHandlers.register("shiny.action", _action_btn_handler)
-InputHandlers.register("shiny.file", _file_handler)
