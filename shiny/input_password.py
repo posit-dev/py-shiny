@@ -3,7 +3,7 @@ from typing import Optional
 from .input_utils import *
 
 
-def passwordInput(
+def input_password(
     id: str,
     label: str,
     value: str = "",
