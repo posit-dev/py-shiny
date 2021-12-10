@@ -42,7 +42,7 @@ def input_slider(
     max_num = _as_numeric(max)
     val_nums = (
         (_as_numeric(value[0]), _as_numeric(value[1]))
-        if isinstance(value, tuple)
+        if isinstance(value, (tuple, list))
         else (_as_numeric(value), _as_numeric(value))
     )
     step_num = _find_step_size(min_num, max_num) if step is None else _as_numeric(step)
@@ -79,7 +79,7 @@ def input_slider(
         "data_timezone": timezone,
     }
 
-    if isinstance(value, tuple):
+    if isinstance(value, (tuple, list)):
         props["data_type"] = "double"
         props["data_to"] = str(val_nums[1])
         props["data_drag_interval"] = drag_range
@@ -87,7 +87,7 @@ def input_slider(
     if not time_format and data_type[0:4] == "date":
         props["data_time_format"] = "%F" if data_type == "date" else "%F %T"
 
-    # 1. ionRangeSlider wants attr = 'true'/'false'
+    # ionRangeSlider wants attr = 'true'/'false'
     props = {k: str(v).lower() if isinstance(v, bool) else v for k, v in props.items()}
 
     return div(
