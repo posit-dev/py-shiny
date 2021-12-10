@@ -23,6 +23,14 @@ class _InputHandlers(Dict[str, InputHandlerType]):
     def remove(self, name: str):
         del self[name]
 
+    def process_value(
+        self, type: str, value: Any, name: str, session: "ShinySession"
+    ) -> Any:
+        handler = self.get(type)
+        if handler is None:
+            raise ValueError("No input handler registered for type: " + type)
+        return handler(value, name, session)
+
 
 input_handlers = _InputHandlers()
 

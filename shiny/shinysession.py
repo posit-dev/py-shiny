@@ -186,10 +186,7 @@ class ShinySession:
                     + key
                 )
             if len(keys) == 2:
-                handler = input_handlers.get(keys[1])
-                if handler is None:
-                    raise ValueError("No input handler registered for type: " + keys[1])
-                val = handler(val, keys[0], self)
+                val = input_handlers.process_value(keys[1], val, keys[0], self)
 
             self.input[keys[0]] = val
 
