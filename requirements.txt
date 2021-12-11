@@ -6,4 +6,3 @@ contextvars==2.4
 websockets==10.0
 python-multipart
 htmltools
-asgiref

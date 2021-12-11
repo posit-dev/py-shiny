@@ -21,16 +21,10 @@ from typing import (
     Awaitable,
     Dict,
     List,
-    cast,
 )
+from starlette.requests import Request
 
-from asgiref.typing import (
-    ASGIReceiveCallable,
-    ASGISendCallable,
-    HTTPRequestEvent,
-    HTTPScope,
-    Scope,
-)
+from starlette.responses import Response, HTMLResponse, PlainTextResponse
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
@@ -243,66 +237,32 @@ class ShinySession:
         }
 
     # ==========================================================================
-    # Handling /session/{id}/{subpath} requests
+    # Handling /session/{session_id}/{subpath} requests
     # ==========================================================================
-    async def handle_request(
-        self,
-        scope: Scope,
-        receive: ASGIReceiveCallable,
-        send: ASGISendCallable,
-        subpath: str,
-    ) -> None:
-        from fastapi.responses import HTMLResponse, PlainTextResponse
-        import starlette.types
-
-        matches = re.search("^/([a-z]+)/(.*)$", subpath)
-
-        http_scope = cast(HTTPScope, scope)
+    async def handle_request(self, request: Request) -> Response:
+        subpath: str = request.path_params["subpath"]  # type: ignore
+        matches = re.search("^([a-z]+)/(.*)$", subpath)
 
         if not matches:
-            return await HTMLResponse("<h1>Bad Request</h1>", 400)(
-                cast(starlette.types.Scope, scope),
-                cast(starlette.types.Receive, receive),
-                cast(starlette.types.Send, send),
-            )
+            return HTMLResponse("<h1>Bad Request</h1>", 400)
 
-        if matches[1] == "upload" and http_scope["method"] == "POST":
+        if matches[1] == "upload" and request.method == "POST":
             # check that upload operation exists
             job_id = matches[2]
             upload_op = self._file_upload_manager.get_upload_operation(job_id)
             if not upload_op:
-                return await HTMLResponse("<h1>Bad Request</h1>", 400)(
-                    cast(starlette.types.Scope, scope),
-                    cast(starlette.types.Receive, receive),
-                    cast(starlette.types.Send, send),
-                )
+                return HTMLResponse("<h1>Bad Request</h1>", 400)
 
             # The FileUploadOperation can have multiple files; each one will
             # have a separate POST request. Each call to  `with upload_op` will
             # open up each file (in sequence) for writing.
             with upload_op:
-                while True:
-                    event = await receive()
-                    if event["type"] == "http.request":
-                        http_req_event: HTTPRequestEvent = event
-                        upload_op.write_chunk(http_req_event["body"])
-                        if not http_req_event["more_body"]:
-                            break
-                    elif event["type"] == "http.disconnect":
-                        # TODO: Means the upload did not totally complete, should fail somehow
-                        pass
+                async for chunk in request.stream():
+                    upload_op.write_chunk(chunk)
 
-            return await PlainTextResponse("OK", 200)(
-                cast(starlette.types.Scope, scope),
-                cast(starlette.types.Receive, receive),
-                cast(starlette.types.Send, send),
-            )
+            return PlainTextResponse("OK", 200)
 
-        return await HTMLResponse("<h1>Not Found</h1>", 404)(
-            cast(starlette.types.Scope, scope),
-            cast(starlette.types.Receive, receive),
-            cast(starlette.types.Send, send),
-        )
+        return HTMLResponse("<h1>Not Found</h1>", 404)
 
     # ==========================================================================
     # Outbound message handling

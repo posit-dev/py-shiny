@@ -1,29 +1,22 @@
 __all__ = ("ShinyApp",)
 
 from typing import Any, List, Optional, Union, Dict, Callable, cast
-import re
 import os
-from asgiref.typing import (
-    ASGI3Application,
-    ASGIReceiveCallable,
-    ASGIReceiveEvent,
-    ASGISendCallable,
-    ASGISendEvent,
-    Scope,
-    HTTPScope,
-)
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
-import starlette.routing
 
-from shiny.responses import HTMLResponse, JSONResponse, TextResponse
+import starlette.routing
+import starlette.websockets
+from starlette.types import Message, Receive, Scope, Send
+from starlette.requests import Request
+from starlette.responses import Response, HTMLResponse, JSONResponse
 
 from .http_staticfiles import StaticFiles
 from .shinysession import ShinySession, session_context
 from . import reactcore
 from .connmanager import (
-    ASGIConnection,
     Connection,
+    StarletteConnection,
 )
 from .html_dependencies import jquery_deps, shiny_deps
 
@@ -51,6 +44,19 @@ class ShinyApp:
         self._registered_dependencies: Dict[str, HTMLDependency] = {}
         self._dependency_handler: Any = starlette.routing.Router()
 
+        self.starlette_app = starlette.routing.Router(
+            routes=[
+                starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
+                starlette.routing.Route("/", self._on_root_request_cb, methods=["GET"]),
+                starlette.routing.Route(
+                    "/session/{session_id}/{subpath:path}",
+                    self._on_session_request_cb,
+                    methods=["GET", "POST"],
+                ),
+                starlette.routing.Mount("/", app=self._dependency_handler),
+            ]
+        )
+
     def create_session(self, conn: Connection) -> ShinySession:
         self._last_session_id += 1
         id = str(self._last_session_id)
@@ -67,57 +73,25 @@ class ShinyApp:
         del self._sessions[session]
 
     def run(self, debug: Optional[bool] = None) -> None:
-        import uvicorn
+        import uvicorn  # type: ignore
 
         if debug is not None:
             self._debug = debug
-        uvicorn.run(self, host="0.0.0.0", port=8000)
+        uvicorn.run(cast(Any, self), host="0.0.0.0", port=8000)
 
     # ASGI entrypoint. Handles HTTP, WebSocket, and lifespan.
-    async def __call__(
-        self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable
-    ) -> None:
-        if scope["type"] == "http":
-            if scope["method"] == "GET":
-                if scope["path"] == "/":
-                    return await self._on_root_request_cb(scope, receive, send)
-            if re.search("^/session/", scope["path"]):
-                return await self._on_session_request_cb(scope, receive, send)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        await self.starlette_app(scope, receive, send)
 
-            return await cast(ASGI3Application, self._dependency_handler)(
-                scope, receive, send
-            )
-
-            return await TextResponse("Not found", status_code=404)(
-                scope, receive, send
-            )
-        elif scope["type"] == "websocket":
-            conn = ASGIConnection(scope, receive, send)
-            await conn.accept()
-            await self._on_connect_cb(conn)
-        elif scope["type"] == "lifespan":
-            while True:
-                message = await receive()
-                if message["type"] == "lifespan.startup":
-                    await send({"type": "lifespan.startup.complete"})
-                elif message["type"] == "lifespan.shutdown":
-                    await self.stop()
-                    await send({"type": "lifespan.shutdown.complete"})
-                    return
-        else:
-            raise Exception(f"Unexpected scope type: {scope['type']}")
-
-    async def call_pyodide(
-        self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable
-    ) -> None:
+    async def call_pyodide(self, scope: Scope, receive: Receive, send: Send) -> None:
         # TODO: Pretty sure there are objects that need to be destroy()'d here?
         scope = cast(Any, scope).to_py()
 
-        async def rcv() -> ASGIReceiveEvent:
+        async def rcv() -> Message:
             event = await receive()
-            return cast(ASGIReceiveEvent, cast(Any, event).to_py())
+            return cast(Message, cast(Any, event).to_py())
 
-        async def snd(event: ASGISendEvent):
+        async def snd(event: Message):
             await send(event)
 
         await self(scope, rcv, snd)
@@ -131,51 +105,38 @@ class ShinyApp:
     # ==========================================================================
     # Connection callbacks
     # ==========================================================================
-    async def _on_root_request_cb(
-        self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable
-    ) -> None:
+    async def _on_root_request_cb(self, request: Request) -> Response:
         """
         Callback passed to the ConnectionManager which is invoked when a HTTP
         request for / occurs.
         """
         self._ensure_web_dependencies(self.ui["dependencies"])
-        resp = HTMLResponse(content=self.ui["html"])
-        await resp(scope, receive, send)
+        return HTMLResponse(content=self.ui["html"])
 
-    async def _on_connect_cb(self, conn: Connection) -> None:
+    async def _on_connect_cb(self, ws: starlette.websockets.WebSocket) -> None:
         """
-        Callback passed to the ConnectionManager which is invoked when a new
-        connection is established.
+        Callback which is invoked when a new WebSocket connection is established.
         """
+        await ws.accept()
+        conn = StarletteConnection(ws)
         session = self.create_session(conn)
 
         await session.run()
 
-    async def _on_session_request_cb(
-        self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable
-    ) -> None:
+    async def _on_session_request_cb(self, request: Request) -> Response:
         """
         Callback passed to the ConnectionManager which is invoked when a HTTP
         request for /session/* occurs.
         """
-
-        http_scope: HTTPScope = cast(HTTPScope, scope)
-        matches = re.search("^/session/([0-9a-f]+)(/.*)$", http_scope["path"])
-        if matches is None:
-            # Exact same response as a "normal" 404 from FastAPI.
-            resp = JSONResponse({"detail": "Not Found"}, status_code=404)
-            return await resp(scope, receive, send)
-
-        session_id = matches.group(1)
-        subpath = matches.group(2)
+        session_id: str = request.path_params["session_id"]  # type: ignore
+        # subpath: str = request.path_params["subpath"]
 
         if session_id in self._sessions:
             session: ShinySession = self._sessions[session_id]
             with session_context(session):
-                return await session.handle_request(scope, receive, send, subpath)
+                return await session.handle_request(request)
 
-        resp = JSONResponse({"detail": "Not Found"}, status_code=404)
-        await resp(scope, receive, send)
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
 
     # ==========================================================================
     # Flush

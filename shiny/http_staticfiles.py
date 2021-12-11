@@ -21,18 +21,14 @@ if "pyodide" not in sys.modules:
 else:
     # Running in wasm mode; must use our own simple StaticFiles
 
-    from typing import Optional, Tuple
-    from asgiref.typing import (
-        ASGIReceiveCallable,
-        ASGISendCallable,
-        Scope,
-    )
+    from typing import Optional, Tuple, MutableMapping, Iterable
+    from starlette.types import Scope, Receive, Send
+    from starlette.responses import PlainTextResponse
     import os
     import os.path
+    import mimetypes
     import pathlib
     import urllib.parse
-
-    from shiny.responses import Error404, FileResponse
 
     class StaticFiles:
         dir: pathlib.Path
@@ -41,9 +37,7 @@ else:
         def __init__(self, directory: str):
             self.dir = pathlib.Path(os.path.realpath(os.path.normpath(directory)))
 
-        async def __call__(
-            self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable
-        ):
+        async def __call__(self, scope: Scope, receive: Receive, send: Send):
             if scope["type"] != "http":
                 raise AssertionError("StaticFiles can't handle non-http request")
             path = scope["path"]
@@ -95,3 +89,59 @@ else:
             return new_dir, path_segment == ""
         else:
             return traverse_url_path(new_dir, path_segments)
+
+    class Error404(PlainTextResponse):
+        def __init__(self):
+            super().__init__("404", status_code=404)  # type: ignore
+
+    class FileResponse:
+        file: os.PathLike[str]
+        headers: Optional[MutableMapping[str, str]]
+        media_type: str
+
+        def __init__(
+            self,
+            file: os.PathLike[str],
+            headers: Optional[MutableMapping[str, str]] = None,
+            media_type: Optional[str] = None,
+        ) -> None:
+            self.headers = headers
+            self.file = file
+
+            if media_type is None:
+                media_type, _ = mimetypes.guess_type(file, strict=False)
+                if media_type is None:
+                    media_type = "application/octet-stream"
+            self.media_type = media_type
+
+        async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": 200,
+                    "headers": convert_headers(self.headers, self.media_type),
+                }
+            )
+            with open(self.file, "rb") as f:
+                data = f.read()
+                await send(
+                    {"type": "http.response.body", "body": data, "more_body": False}
+                )
+
+    def convert_headers(
+        headers: Optional[MutableMapping[str, str]], media_type: Optional[str] = None
+    ) -> Iterable[Tuple[bytes, bytes]]:
+        if headers is None:
+            headers = {}
+
+        header_list = [
+            (k.encode("latin-1"), v.encode("latin-1")) for k, v in headers.items()
+        ]
+        if media_type is not None:
+            header_list += [
+                (
+                    b"Content-Type",
+                    media_type.encode("latin-1"),
+                )
+            ]
+        return header_list
