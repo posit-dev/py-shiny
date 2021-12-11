@@ -3,20 +3,22 @@ __all__ = ("ShinyApp",)
 from typing import Any, List, Optional, Union, Dict, Callable, cast
 import re
 import os
-import sys
 from asgiref.typing import (
     ASGI3Application,
     ASGIReceiveCallable,
     ASGIReceiveEvent,
     ASGISendCallable,
+    ASGISendEvent,
     Scope,
     HTTPScope,
 )
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
+import starlette.routing
 
 from shiny.responses import HTMLResponse, JSONResponse, TextResponse
 
+from .http_staticfiles import StaticFiles
 from .shinysession import ShinySession, session_context
 from . import reactcore
 from .connmanager import (
@@ -24,8 +26,6 @@ from .connmanager import (
     Connection,
 )
 from .html_dependencies import jquery_deps, shiny_deps
-
-PYODIDE = "pyodide" in sys.modules
 
 
 class ShinyApp:
@@ -49,12 +49,7 @@ class ShinyApp:
         self._sessions_needing_flush: Dict[int, ShinySession] = {}
 
         self._registered_dependencies: Dict[str, HTMLDependency] = {}
-        self._dependency_handler: Any = None
-        if not PYODIDE:
-            # TODO: Remove starlette dependency
-            import starlette.routing
-
-            self._dependency_handler: Any = starlette.routing.Router()
+        self._dependency_handler: Any = starlette.routing.Router()
 
     def create_session(self, conn: Connection) -> ShinySession:
         self._last_session_id += 1
@@ -89,14 +84,13 @@ class ShinyApp:
             if re.search("^/session/", scope["path"]):
                 return await self._on_session_request_cb(scope, receive, send)
 
-            if self._dependency_handler is not None:
-                # TODO: Remove this cast when _dependency_handler is no longer based
-                # on starlette
-                return await cast(ASGI3Application, self._dependency_handler)(
-                    scope, receive, send
-                )
+            return await cast(ASGI3Application, self._dependency_handler)(
+                scope, receive, send
+            )
 
-            return await TextResponse("Not found")(scope, receive, send)
+            return await TextResponse("Not found", status_code=404)(
+                scope, receive, send
+            )
         elif scope["type"] == "websocket":
             conn = ASGIConnection(scope, receive, send)
             await conn.accept()
@@ -123,7 +117,10 @@ class ShinyApp:
             event = await receive()
             return cast(ASGIReceiveEvent, cast(Any, event).to_py())
 
-        await self(scope, rcv, send)
+        async def snd(event: ASGISendEvent):
+            await send(event)
+
+        await self(scope, rcv, snd)
 
     async def stop(self) -> None:
         # Close all sessions (convert to list to avoid modifying the dict while
@@ -217,13 +214,9 @@ class ShinyApp:
         prefix = dep.name + "-" + str(dep.version)
         prefix = os.path.join(ShinyApp.HREF_LIB_PREFIX, prefix)
 
-        if not PYODIDE:
-            # TODO: Remove starlette dependency
-            from starlette.staticfiles import StaticFiles
-
-            self._dependency_handler.mount(
-                "/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix
-            )
+        self._dependency_handler.mount(
+            "/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix
+        )
         self._registered_dependencies[dep.name] = dep
 
 
