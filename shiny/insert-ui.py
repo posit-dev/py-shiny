@@ -8,8 +8,7 @@ else:
 
 from htmltools import TagList
 
-from .shinysession import ShinySession, _require_active_session
-from .utils import process_deps
+from .shinysession import ShinySession, _require_active_session, _process_deps
 
 
 def ui_insert(
@@ -27,7 +26,7 @@ def ui_insert(
             "selector": selector,
             "multiple": multiple,
             "where": where,
-            "content": process_deps(ui, session),
+            "content": _process_deps(ui, session),
         }
         session.send_message({"shiny-insert-ui": msg})
 

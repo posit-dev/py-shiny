@@ -8,8 +8,8 @@ else:
 
 from htmltools import TagList, TagChildArg
 
-from .utils import run_coro_sync, process_deps, rand_hex
-from .shinysession import ShinySession, _require_active_session
+from .utils import run_coro_sync, rand_hex
+from .shinysession import ShinySession, _require_active_session, _process_deps
 
 
 def notification_show(
@@ -23,13 +23,13 @@ def notification_show(
 ):
     session = _require_active_session(session)
 
-    ui_ = process_deps(ui, session)
-    action_ = process_deps(action, session)
+    ui_ = _process_deps(ui, session)
+    action_ = _process_deps(action, session)
 
     payload: Dict[str, Any] = {
         "html": ui_["html"],
         "action": action_["html"],
-        "deps": ui_["dependencies"] + action_["dependencies"],
+        "deps": ui_["deps"] + action_["deps"],
         "closeButton": close_button,
         "id": id if id else rand_hex(8),
         "type": type,

@@ -35,6 +35,8 @@ else:
 if TYPE_CHECKING:
     from .shinyapp import ShinyApp
 
+from htmltools import TagChildArg, TagList, HTMLDependency
+
 from .reactives import ReactiveValues, Observer, ObserverAsync
 from .connmanager import Connection, ConnectionClosed
 from . import render
@@ -424,3 +426,27 @@ def _require_active_session(session: Optional[ShinySession]) -> ShinySession:
             f"{calling_fn_name}() must be called from within an active Shiny session."
         )
     return session
+
+
+# ==============================================================================
+# Miscellaneous functions
+# ==============================================================================
+
+
+class _RenderedDeps(TypedDict):
+    deps: List[HTMLDependency]
+    html: str
+
+
+def _process_deps(
+    ui: TagChildArg, session: Optional[ShinySession] = None
+) -> _RenderedDeps:
+
+    session = _require_active_session(session)
+
+    res = TagList(ui).render()
+    deps = res["dependencies"]
+    for dep in deps:
+        session.app.register_web_dependency(dep)
+
+    return {"deps": deps, "html": res["html"]}
