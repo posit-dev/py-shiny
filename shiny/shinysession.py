@@ -11,6 +11,7 @@ import re
 import asyncio
 import warnings
 import typing
+import mimetypes
 from contextvars import ContextVar, Token
 from contextlib import contextmanager
 from typing import (
@@ -39,6 +40,7 @@ from .connmanager import Connection, ConnectionClosed
 from . import render
 from . import utils
 from .fileupload import FileInfo, FileUploadManager
+from .input_handlers import input_handlers
 
 # This cast is necessary because if the type checker thinks that if
 # "tag" isn't in `message`, then it's not a ClientMessage object.
@@ -171,10 +173,16 @@ class ShinySession:
 
     def _manage_inputs(self, data: Dict[str, object]) -> None:
         for (key, val) in data.items():
-            if ":" in key:
-                key = key.split(":")[0]
+            keys = key.split(":")
+            if len(keys) > 2:
+                raise ValueError(
+                    "Input name+type is not allowed to contain more than one ':' -- "
+                    + key
+                )
+            if len(keys) == 2:
+                val = input_handlers.process_value(keys[1], val, keys[0], self)
 
-            self.input[key] = val
+            self.input[keys[0]] = val
 
     # ==========================================================================
     # Message handlers
@@ -203,14 +211,13 @@ class ShinySession:
     def _create_message_handlers(self) -> Dict[str, Callable[..., Awaitable[object]]]:
         async def uploadInit(file_infos: List[FileInfo]) -> Dict[str, object]:
             with session_context(self):
-                print("uploadInit")
-                print(file_infos)
+                if self._debug:
+                    print("Upload init: " + str(file_infos))
 
                 # TODO: Don't alter message in place?
                 for fi in file_infos:
                     if "type" not in fi:
-                        # TODO: Infer file type
-                        fi["type"] = "application/octet-stream"
+                        fi["type"] = mimetypes.guess_type(fi["name"])[0]
 
                 job_id = self._file_upload_manager.create_upload_operation(file_infos)
                 worker_id = ""
