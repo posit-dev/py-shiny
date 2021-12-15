@@ -12,6 +12,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import TypedDict
 
+from typing_extensions import NotRequired
 
 from . import utils
 
@@ -45,7 +46,7 @@ from . import utils
 class FileInfo(TypedDict):
     name: str
     size: int
-    type: str
+    type: NotRequired[str]
     datapath: str
 
 
