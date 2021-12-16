@@ -22,6 +22,7 @@ from typing import (
     Awaitable,
     Dict,
     List,
+    Any,
 )
 from starlette.requests import Request
 
@@ -434,7 +435,7 @@ def _require_active_session(session: Optional[ShinySession]) -> ShinySession:
 
 
 class _RenderedDeps(TypedDict):
-    deps: List[HTMLDependency]
+    deps: List[Dict[str, Any]]
     html: str
 
 
@@ -445,8 +446,10 @@ def _process_deps(
     session = _require_active_session(session)
 
     res = TagList(ui).render()
-    deps = res["dependencies"]
-    for dep in deps:
+    deps: List[Dict[str, Any]] = []
+    for dep in res["dependencies"]:
         session.app.register_web_dependency(dep)
+        dep_dict = dep.as_dict(href_prefix=session.app.HREF_PREFIX)
+        deps.append(dep_dict)
 
     return {"deps": deps, "html": res["html"]}
