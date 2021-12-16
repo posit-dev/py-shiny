@@ -21,6 +21,8 @@ from .html_dependencies import jquery_deps, shiny_deps
 
 
 class ShinyApp:
+    HREF_PREFIX = "lib/"
+
     def __init__(
         self,
         ui: Union[Tag, TagList],
@@ -28,7 +30,7 @@ class ShinyApp:
         *,
         debug: bool = False,
     ) -> None:
-        self.ui: RenderedHTML = _render_page(ui)
+        self.ui: RenderedHTML = _render_page(ui, href_prefix=self.HREF_PREFIX)
         self.server: Callable[[ShinySession], None] = server
 
         self._debug: bool = debug
@@ -169,14 +171,15 @@ class ShinyApp:
         ):
             return
 
+        paths = dep.source_path_map(href_prefix=self.HREF_PREFIX)
         self._dependency_handler.mount(
-            "/" + dep.directory,
-            StaticFiles(directory=dep.get_source_dir()),
-            name=dep.directory,
+            "/" + paths["href"],
+            StaticFiles(directory=paths["source"]),
+            name=dep.name + "-" + str(dep.version),
         )
         self._registered_dependencies[dep.name] = dep
 
 
-def _render_page(ui: Union[Tag, TagList]) -> RenderedHTML:
+def _render_page(ui: Union[Tag, TagList], href_prefix: str) -> RenderedHTML:
     doc = HTMLDocument(TagList(jquery_deps(), shiny_deps(), ui))
-    return doc.render()
+    return doc.render(href_prefix=href_prefix)
