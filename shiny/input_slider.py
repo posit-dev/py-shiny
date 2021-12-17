@@ -2,7 +2,6 @@ from htmltools import tags, Tag, div, css, TagAttrArg
 from typing import Dict, Optional, Union, Tuple, TypeVar
 from datetime import date, datetime, timedelta
 import math
-import numpy
 
 from .html_dependencies import ionrangeslider_deps
 from .input_utils import *
@@ -124,7 +123,10 @@ def _find_step_size(
     range = max - min
 
     if range < 2 or isinstance(min, float) or isinstance(max, float):
-        steps = numpy.linspace(min, max, 100)
-        return steps[1] - steps[0]
+        step = range / 100
+        # Round the step to get rid of any floating point arithmetic errors by
+        # mimicing what signif(digits = 10, step) does in R (see Description of ?signif)
+        # (the basic intuition is that smaller differences need more precision)
+        return round(step, 10 - math.ceil(math.log10(step)))
     else:
         return 1
