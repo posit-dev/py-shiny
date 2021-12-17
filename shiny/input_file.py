@@ -1,5 +1,7 @@
-from htmltools import tags, Tag, div, span, css, TagChildArg
 from typing import Optional, List
+
+from htmltools import tags, Tag, div, span, css, TagChildArg
+
 from .input_utils import shiny_input_label
 
 

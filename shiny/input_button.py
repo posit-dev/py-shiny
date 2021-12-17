@@ -1,5 +1,6 @@
-from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
 from typing import Optional
+
+from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
 
 
 def input_button(

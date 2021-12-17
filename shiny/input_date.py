@@ -1,8 +1,10 @@
-from htmltools import tags, Tag, div, span, TagAttrArg, TagChildArg, css
-from typing import Optional
-from .html_dependencies import datepicker_deps
-from datetime import date
 import json
+from datetime import date
+from typing import Optional
+
+from htmltools import tags, Tag, div, span, TagAttrArg, TagChildArg, css
+
+from .html_dependencies import datepicker_deps
 from .input_utils import shiny_input_label
 
 __all__ = ["input_date", "input_date_range"]

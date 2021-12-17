@@ -1,5 +1,7 @@
-from htmltools import tags, Tag, div, css, TagChildArg
 from typing import Optional, Union
+
+from htmltools import tags, Tag, div, css, TagChildArg
+
 from .input_utils import shiny_input_label
 
 valType = Union[int, float]
