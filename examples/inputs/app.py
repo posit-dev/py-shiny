@@ -47,6 +47,7 @@ ui = page_fluid(
                 },
             ),
             input_button("button", "input_button()", icon=icon_svg("check")),
+            input_file("file", "File upload"),
         ),
         panel_main(
             output_plot("plot"),
@@ -58,9 +59,10 @@ ui = page_fluid(
                 ),
                 nav(
                     "Misc",
-                    # input_link("link", "Show notification/progress"),
-                    # TODO: fix these
-                    # input_file("file", "File upload"),
+                    input_link(
+                        "link", "Show notification/progress", icon=icon_svg("info")
+                    ),
+                    tags.br(),
                     input_button("btn", "Show modal", icon=icon_svg("info-circle")),
                     panel_fixed(
                         panel_well(
