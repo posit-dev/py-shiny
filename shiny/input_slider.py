@@ -1,8 +1,17 @@
-from htmltools import tags, Tag, div, css, TagAttrArg, TagChildArg, HTML
-from typing import Dict, Optional, TypedDict, Union, Tuple, TypeVar
-from typing_extensions import NotRequired
-from datetime import date, datetime, timedelta
 import math
+import sys
+from datetime import date, datetime, timedelta
+
+from htmltools import tags, Tag, div, css, TagAttrArg, TagChildArg, HTML
+from typing import Dict, Optional, Union, Tuple, TypeVar
+
+if sys.version_info >= (3, 8):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
+
+from typing_extensions import NotRequired
+
 
 from .html_dependencies import ionrangeslider_deps
 from .input_utils import shiny_input_label
