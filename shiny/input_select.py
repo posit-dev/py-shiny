@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Union, List, cast
 
-from htmltools import Tag, tags, div
+from htmltools import Tag, tags, div, TagChildArg
 
 from .html_dependencies import selectize_deps
 from .input_utils import shiny_input_label
@@ -11,7 +11,7 @@ SelectInputOptions = Dict[str, Union[str, Dict[str, str]]]
 
 def input_selectize(
     id: str,
-    label: str,
+    label: TagChildArg,
     choices: Union[List[str], Dict[str, Union[str, List[str], Dict[str, str]]]],
     *,
     selected: Optional[str] = None,
@@ -43,7 +43,7 @@ def input_selectize(
 
 def input_select(
     id: str,
-    label: str,
+    label: TagChildArg,
     choices: Union[List[str], Dict[str, Union[str, List[str], Dict[str, str]]]],
     *,
     selected: Optional[str] = None,

@@ -1,16 +1,16 @@
-from htmltools import tags, div, span, TagAttrArg, css
+from htmltools import tags, Tag, div, span, TagAttrArg, TagChildArg, css
 from typing import Optional
 from .html_dependencies import datepicker_deps
 from datetime import date
 import json
-from .input_utils import *
+from .input_utils import shiny_input_label
 
 __all__ = ["input_date", "input_date_range"]
 
 
 def input_date(
     id: str,
-    label: str,
+    label: TagChildArg,
     value: Optional[date] = None,
     min: Optional[date] = None,
     max: Optional[date] = None,
@@ -51,7 +51,7 @@ def input_date(
 
 def input_date_range(
     id: str,
-    label: str,
+    label: TagChildArg,
     start: Optional[date] = None,
     end: Optional[date] = None,
     min: Optional[date] = None,

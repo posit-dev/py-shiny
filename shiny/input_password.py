@@ -1,11 +1,11 @@
-from htmltools import tags, Tag, div, css
+from htmltools import tags, Tag, div, css, TagChildArg
 from typing import Optional
-from .input_utils import *
+from .input_utils import shiny_input_label
 
 
 def input_password(
     id: str,
-    label: str,
+    label: TagChildArg,
     value: str = "",
     width: Optional[str] = None,
     placeholder: Optional[str] = None,
