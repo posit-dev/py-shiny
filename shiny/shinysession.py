@@ -17,6 +17,7 @@ from contextlib import contextmanager
 from typing import (
     TYPE_CHECKING,
     Callable,
+    Literal,
     Optional,
     Union,
     Awaitable,
@@ -82,8 +83,8 @@ class ShinySession:
         self.input: ReactiveValues = ReactiveValues()
         self.output: Outputs = Outputs(self)
 
-        self._message_queue_in: asyncio.Queue[Optional[ClientMessage]] = asyncio.Queue()
-        self._message_queue_out: List[Dict[str, object]] = []
+        self._message_output_values: List[Dict[str, object]] = []
+        self._message_input_messages: List[Dict[str, object]] = []
 
         self._message_handlers: Dict[
             str, Callable[..., Awaitable[object]]
@@ -278,16 +279,32 @@ class ShinySession:
     # ==========================================================================
     # Outbound message handling
     # ==========================================================================
-    def add_message_out(self, message: Dict[str, object]) -> None:
-        self._message_queue_out.append(message)
+    def add_message_out(
+        self, message: Dict[str, object], type: Literal["output", "input"] = "output"
+    ) -> None:
+        if type == "output":
+            self._message_output_values.append(message)
+        elif type == "input":
+            self._message_input_messages.append(message)
 
-    def get_messages_out(self) -> List[Dict[str, object]]:
-        return self._message_queue_out
+    def get_messages_out(
+        self, type: Literal["output", "input"] = "output"
+    ) -> List[Dict[str, object]]:
+        if type == "output":
+            return self._message_output_values
+        elif type == "input":
+            return self._message_input_messages
 
     def clear_messages_out(self) -> None:
-        self._message_queue_out.clear()
+        self.get_messages_out("output").clear()
+        self.get_messages_out("input").clear()
 
-    async def send_message(self, message: Dict[str, object]) -> None:
+    async def send_input_message(self, id: str, message: Dict[str, Any]) -> None:
+        self.add_message_out({"id": id, "message": message}, type="input")
+        await self.flush()
+
+    # https://github.com/python/typing/issues/182#issuecomment-185996450
+    async def send_message(self, message: Dict[str, Any]) -> None:
         message_str: str = json.dumps(message) + "\n"
         if self._debug:
             print(
@@ -316,7 +333,7 @@ class ShinySession:
         message: Dict[str, object] = {
             "errors": {},
             "values": values,
-            "inputMessages": [],
+            "inputMessages": self.get_messages_out("input"),
         }
 
         try:

@@ -18,7 +18,8 @@ __all__ = ["input_slider"]
 
 # TODO: validate value(s) are within (min,max)?
 
-SliderVal = TypeVar("SliderVal", int, float, datetime, date)
+SliderValueArg = TypeVar("SliderValueArg", int, float, datetime, date)
+SliderStepArg = Union[int, float, timedelta]
 
 
 class AnimationOptions(TypedDict):
@@ -31,10 +32,10 @@ class AnimationOptions(TypedDict):
 def input_slider(
     id: str,
     label: TagChildArg,
-    min: SliderVal,
-    max: SliderVal,
-    value: Union[SliderVal, Tuple[SliderVal, SliderVal]],
-    step: Optional[Union[int, float, timedelta]] = None,
+    min: SliderValueArg,
+    max: SliderValueArg,
+    value: Union[SliderValueArg, Tuple[SliderValueArg, SliderValueArg]],
+    step: Optional[SliderStepArg] = None,
     ticks: bool = True,
     animate: Union[bool, AnimationOptions] = False,
     width: Optional[str] = None,
@@ -134,7 +135,7 @@ def input_slider(
     return slider_tag
 
 
-def _slider_type(x: SliderVal) -> str:
+def _slider_type(x: SliderValueArg) -> str:
     if isinstance(x, datetime):
         return "datetime"
     if isinstance(x, date):
@@ -142,7 +143,7 @@ def _slider_type(x: SliderVal) -> str:
     return "number"
 
 
-def _as_numeric(x: Union[int, float, datetime, date, timedelta]) -> Union[int, float]:
+def _as_numeric(x: Union[SliderStepArg, datetime, date]) -> Union[int, float]:
     if isinstance(x, timedelta):
         return x.total_seconds() * 1000
     if isinstance(x, datetime):

@@ -15,6 +15,7 @@ from .input_password import *
 from .input_select import *
 from .input_slider import *
 from .input_text import *
+from .input_update import *
 from .modal import *
 from .navs import *
 from .notifications import *

@@ -6,13 +6,14 @@ from .html_dependencies import selectize_deps
 from .input_utils import shiny_input_label
 
 # This is the canonical format for representing select options.
-SelectInputOptions = Dict[str, Union[str, Dict[str, str]]]
+SelectChoicesArg = Union[List[str], Dict[str, Union[str, List[str], Dict[str, str]]]]
+_SelectChoices = Dict[str, Union[str, Dict[str, str]]]
 
 
 def input_selectize(
     id: str,
     label: TagChildArg,
-    choices: Union[List[str], Dict[str, Union[str, List[str], Dict[str, str]]]],
+    choices: SelectChoicesArg,
     *,
     selected: Optional[str] = None,
     multiple: bool = False,
@@ -44,7 +45,7 @@ def input_selectize(
 def input_select(
     id: str,
     label: TagChildArg,
-    choices: Union[List[str], Dict[str, Union[str, List[str], Dict[str, str]]]],
+    choices: SelectChoicesArg,
     *,
     selected: Optional[str] = None,
     multiple: bool = False,
@@ -96,7 +97,7 @@ def input_select(
 #   }
 def _normalize_choices(
     x: Union[List[str], Dict[str, Union[str, List[str], Dict[str, str]]]]
-) -> SelectInputOptions:
+) -> _SelectChoices:
     if isinstance(x, list):
         return {k: k for k in x}
 
@@ -112,13 +113,13 @@ def _normalize_choices(
     return result  # type: ignore
 
 
-def _render_choices(x: SelectInputOptions, selected: Optional[str] = None) -> List[Tag]:
+def _render_choices(x: _SelectChoices, selected: Optional[str] = None) -> List[Tag]:
     result: List[Tag] = []
     for (label, value) in x.items():
         if isinstance(value, dict):
             # Type checker needs a little help here -- value is already a narrower type
-            # than SelectInputOptions.
-            value = cast(SelectInputOptions, value)
+            # than _SelectChoices.
+            value = cast(_SelectChoices, value)
             result.append(
                 tags.optgroup(*(_render_choices(value, selected)), label=label)
             )
@@ -128,7 +129,7 @@ def _render_choices(x: SelectInputOptions, selected: Optional[str] = None) -> Li
     return result
 
 
-# Returns the first option in a SelectInputOptions object. For most cases, this is
+# Returns the first option in a _SelectChoices object. For most cases, this is
 # straightforward. In the following, the first option is "a":
 # { "Choice A": "a", "Choice B": "b", "Choice C": "c" }
 #
@@ -138,10 +139,10 @@ def _render_choices(x: SelectInputOptions, selected: Optional[str] = None) -> Li
 #     "Group A": {},
 #     "Group B": {"Choice B1": "b1", "Choice B2": "b2"},
 # }
-def _find_first_option(x: SelectInputOptions) -> Optional[str]:
+def _find_first_option(x: _SelectChoices) -> Optional[str]:
     for (_label, value) in x.items():
         if isinstance(value, dict):
-            value = cast(SelectInputOptions, value)
+            value = cast(_SelectChoices, value)
             result = _find_first_option(value)
             if result is not None:
                 return result

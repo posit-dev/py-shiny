@@ -4,16 +4,16 @@ from htmltools import tags, Tag, div, css, TagChildArg
 
 from .input_utils import shiny_input_label
 
-valType = Union[int, float]
+NumericValueArg = Union[int, float]
 
 
 def input_numeric(
     id: str,
     label: TagChildArg,
-    value: valType,
-    min: Optional[valType] = None,
-    max: Optional[valType] = None,
-    step: Optional[valType] = None,
+    value: NumericValueArg,
+    min: Optional[NumericValueArg] = None,
+    max: Optional[NumericValueArg] = None,
+    step: Optional[NumericValueArg] = None,
     width: Optional[str] = None,
 ) -> Tag:
     return div(

@@ -1,20 +1,14 @@
 from typing import (
-    TYPE_CHECKING,
     Callable,
     Awaitable,
     TypeVar,
-    Optional,
-    List,
     Dict,
-    Any,
 )
 import os
 import tempfile
 import importlib
 import inspect
 import secrets
-
-from htmltools import TagList, TagChildArg
 
 # ==============================================================================
 # Misc utility functions
@@ -92,6 +86,10 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
     raise RuntimeError(
         "async function yielded control; it did not finish in one iteration."
     )
+
+
+def drop_none(x: Dict[str, T]) -> Dict[str, T]:
+    return {k: v for k, v in x.items() if v is not None}
 
 
 # ==============================================================================
