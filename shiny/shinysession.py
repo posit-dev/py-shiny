@@ -449,7 +449,7 @@ def _process_deps(
     deps: List[Dict[str, Any]] = []
     for dep in res["dependencies"]:
         session.app.register_web_dependency(dep)
-        dep_dict = dep.as_dict(href_prefix=session.app.HREF_PREFIX)
+        dep_dict = dep.as_dict(lib_prefix=session.app.LIB_PREFIX)
         deps.append(dep_dict)
 
     return {"deps": deps, "html": res["html"]}
