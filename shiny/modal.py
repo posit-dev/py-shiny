@@ -8,8 +8,8 @@ else:
 
 from htmltools import tags, Tag, div, HTML, TagChildArg, TagAttrArg
 
-from .utils import run_coro_sync, process_deps
-from .shinysession import ShinySession, _require_active_session
+from .utils import run_coro_sync
+from .shinysession import ShinySession, _require_active_session, _process_deps
 
 # TODO: icons
 def modal_button(label: str) -> Tag:
@@ -81,8 +81,7 @@ def modal(
 
 def modal_show(modal: Tag, session: Optional[ShinySession] = None):
     session = _require_active_session(session)
-    ui = process_deps(modal)
-    msg = {"html": ui["html"], "deps": ui["dependencies"]}
+    msg = _process_deps(modal)
     return run_coro_sync(
         session.send_message({"modal": {"type": "show", "message": msg}})
     )

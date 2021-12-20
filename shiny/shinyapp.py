@@ -1,7 +1,6 @@
 __all__ = ("ShinyApp",)
 
 from typing import Any, List, Optional, Union, Dict, Callable, cast
-import os
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
 
@@ -22,7 +21,7 @@ from .html_dependencies import jquery_deps, shiny_deps
 
 
 class ShinyApp:
-    HREF_LIB_PREFIX = "lib/"
+    LIB_PREFIX = "lib/"
 
     def __init__(
         self,
@@ -31,7 +30,7 @@ class ShinyApp:
         *,
         debug: bool = False,
     ) -> None:
-        self.ui: RenderedHTML = _render_ui(ui, lib_prefix=self.HREF_LIB_PREFIX)
+        self.ui: RenderedHTML = _render_page(ui, lib_prefix=self.LIB_PREFIX)
         self.server: Callable[[ShinySession], None] = server
 
         self._debug: bool = debug
@@ -172,16 +171,15 @@ class ShinyApp:
         ):
             return
 
-        prefix = dep.name + "-" + str(dep.version)
-        prefix = os.path.join(ShinyApp.HREF_LIB_PREFIX, prefix)
-
+        paths = dep.source_path_map(lib_prefix=self.LIB_PREFIX)
         self._dependency_handler.mount(
-            "/" + prefix, StaticFiles(directory=dep.get_source_dir()), name=prefix
+            "/" + paths["href"],
+            StaticFiles(directory=paths["source"]),
+            name=dep.name + "-" + str(dep.version),
         )
         self._registered_dependencies[dep.name] = dep
 
 
-def _render_ui(ui: Union[Tag, TagList], lib_prefix: Optional[str]) -> RenderedHTML:
+def _render_page(ui: Union[Tag, TagList], lib_prefix: str) -> RenderedHTML:
     doc = HTMLDocument(TagList(jquery_deps(), shiny_deps(), ui))
-    res = doc.render(lib_prefix=lib_prefix)
-    return res
+    return doc.render(lib_prefix=lib_prefix)

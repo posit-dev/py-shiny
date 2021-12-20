@@ -16,11 +16,6 @@ import secrets
 
 from htmltools import TagList, TagChildArg
 
-if TYPE_CHECKING:
-    from .shinysession import ShinySession
-
-from .shinysession import _require_active_session
-
 # ==============================================================================
 # Misc utility functions
 # ==============================================================================
@@ -108,24 +103,3 @@ def package_dir(package: str) -> str:
     with tempfile.TemporaryDirectory():
         pkg_file = importlib.import_module(".", package=package).__file__
         return os.path.dirname(pkg_file)
-
-
-# ==============================================================================
-# Miscellaneous functions
-# ==============================================================================
-def process_deps(
-    ui: TagChildArg, session: Optional["ShinySession"] = None
-) -> Dict[str, Any]:
-    session = _require_active_session(session)
-
-    res = TagList(ui).render()
-    deps: List[Dict[str, Any]] = []
-    for dep in res["dependencies"]:
-        session.app.register_web_dependency(dep)
-        dep_dict = dep.as_dict(lib_prefix="lib")
-        deps.append(dep_dict)
-
-    return {
-        "deps": deps,
-        "html": res["html"],
-    }

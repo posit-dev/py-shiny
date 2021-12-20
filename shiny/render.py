@@ -290,7 +290,10 @@ class RenderUI(RenderFunction):
         ui: TagChildArg = await self._fn()
         if ui is None:
             return None
-        return utils.process_deps(ui, self._session)
+        # TODO: better a better workaround for the circular dependency
+        from .shinysession import _process_deps
+
+        return _process_deps(ui, self._session)
 
 
 class RenderUIAsync(RenderUI, RenderFunctionAsync):
