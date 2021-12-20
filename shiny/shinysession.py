@@ -219,8 +219,9 @@ class ShinySession:
 
                 # TODO: Don't alter message in place?
                 for fi in file_infos:
-                    if "type" not in fi:
-                        fi["type"] = mimetypes.guess_type(fi["name"])[0]
+                    if fi["type"] == "":
+                        type = mimetypes.guess_type(fi["name"])[0]
+                        fi["type"] = type if type else "application/octet-stream"
 
                 job_id = self._file_upload_manager.create_upload_operation(file_infos)
                 worker_id = ""
