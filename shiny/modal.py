@@ -11,10 +11,10 @@ from htmltools import tags, Tag, div, HTML, TagChildArg, TagAttrArg
 from .utils import run_coro_sync
 from .shinysession import ShinySession, _require_active_session, _process_deps
 
-# TODO: icons
-def modal_button(label: str) -> Tag:
+
+def modal_button(label: str, icon: TagChildArg = None) -> Tag:
     return tags.button(
-        # validateIcon(icon),
+        icon,
         label,
         type="button",
         class_="btn btn-default",
