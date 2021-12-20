@@ -216,7 +216,7 @@ class ShinySession:
 
                 # TODO: Don't alter message in place?
                 for fi in file_infos:
-                    if "type" not in fi:
+                    if fi["type"] == "":
                         type = mimetypes.guess_type(fi["name"])[0]
                         fi["type"] = type if type else "application/octet-stream"
 
