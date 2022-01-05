@@ -6,7 +6,7 @@ from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
 
 import starlette.routing
 import starlette.websockets
-from starlette.types import Message, Receive, Scope, Send
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from starlette.requests import Request
 from starlette.responses import Response, HTMLResponse, JSONResponse
 
@@ -48,7 +48,7 @@ class ShinyApp:
                 starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
                 starlette.routing.Route("/", self._on_root_request_cb, methods=["GET"]),
                 starlette.routing.Route(
-                    "/session/{session_id}/{subpath:path}",
+                    "/session/{session_id}/{action}/{subpath:path}",
                     self._on_session_request_cb,
                     methods=["GET", "POST"],
                 ),
@@ -122,18 +122,19 @@ class ShinyApp:
 
         await session.run()
 
-    async def _on_session_request_cb(self, request: Request) -> Response:
+    async def _on_session_request_cb(self, request: Request) -> ASGIApp:
         """
         Callback passed to the ConnectionManager which is invoked when a HTTP
         request for /session/* occurs.
         """
         session_id: str = request.path_params["session_id"]  # type: ignore
-        # subpath: str = request.path_params["subpath"]
+        action: str = request.path_params["action"]  # type: ignore
+        subpath: str = request.path_params["subpath"]  # type: ignore
 
         if session_id in self._sessions:
             session: ShinySession = self._sessions[session_id]
             with session_context(session):
-                return await session.handle_request(request)
+                return await session.handle_request(request, action, subpath)
 
         return JSONResponse({"detail": "Not Found"}, status_code=404)
 

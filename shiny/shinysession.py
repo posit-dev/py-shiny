@@ -5,6 +5,9 @@ __all__ = (
     "session_context",
 )
 
+import functools
+import os
+from pathlib import Path
 import sys
 import json
 import re
@@ -12,12 +15,17 @@ import asyncio
 import warnings
 import typing
 import mimetypes
+import dataclasses
+import urllib.parse
 from contextvars import ContextVar, Token
 from contextlib import contextmanager
 from typing import (
     TYPE_CHECKING,
+    AsyncIterable,
     Callable,
+    Iterable,
     Optional,
+    TypeVar,
     Union,
     Awaitable,
     Dict,
@@ -26,7 +34,14 @@ from typing import (
 )
 from starlette.requests import Request
 
-from starlette.responses import Response, HTMLResponse, PlainTextResponse
+from starlette.responses import (
+    HTMLResponse,
+    PlainTextResponse,
+    StreamingResponse,
+    guess_type,
+)
+from starlette.types import ASGIApp
+
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
@@ -38,7 +53,8 @@ if TYPE_CHECKING:
 
 from htmltools import TagChildArg, TagList, HTMLDependency
 
-from .reactives import ReactiveValues, Observer, ObserverAsync
+from .reactives import ReactiveValues, Observer, ObserverAsync, isolate
+from .http_staticfiles import FileResponse
 from .connmanager import Connection, ConnectionClosed
 from . import render
 from . import utils
@@ -67,6 +83,13 @@ class ClientMessageOther(ClientMessage):
     tag: int
 
 
+@dataclasses.dataclass
+class DownloadHandler:
+    filename: Optional[Union[Callable[[], str], str]]
+    content_type: Optional[Union[Callable[[], str], str]]
+    handler: Callable[[], Union[str, AsyncIterable[bytes], Iterable[bytes]]]
+
+
 class ShinySession:
     # ==========================================================================
     # Initialization
@@ -91,6 +114,7 @@ class ShinySession:
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks: List[Callable[[], None]] = []
         self._has_run_session_end_tasks: bool = False
+        self._downloads: Dict[str, DownloadHandler] = {}
 
         self._register_session_end_callbacks()
 
@@ -248,18 +272,16 @@ class ShinySession:
         }
 
     # ==========================================================================
-    # Handling /session/{session_id}/{subpath} requests
+    # Handling /session/{session_id}/{action}/{subpath} requests
     # ==========================================================================
-    async def handle_request(self, request: Request) -> Response:
-        subpath: str = request.path_params["subpath"]  # type: ignore
-        matches = re.search("^([a-z]+)/(.*)$", subpath)
+    async def handle_request(
+        self, request: Request, action: str, subpath: Optional[str]
+    ) -> ASGIApp:
+        if action == "upload" and request.method == "POST":
+            if subpath is None or subpath == "":
+                return HTMLResponse("<h1>Bad Request</h1>", 400)
 
-        if not matches:
-            return HTMLResponse("<h1>Bad Request</h1>", 400)
-
-        if matches[1] == "upload" and request.method == "POST":
-            # check that upload operation exists
-            job_id = matches[2]
+            job_id = subpath
             upload_op = self._file_upload_manager.get_upload_operation(job_id)
             if not upload_op:
                 return HTMLResponse("<h1>Bad Request</h1>", 400)
@@ -272,6 +294,88 @@ class ShinySession:
                     upload_op.write_chunk(chunk)
 
             return PlainTextResponse("OK", 200)
+
+        elif action == "download" and request.method == "GET" and subpath:
+            matches = re.compile("^([^/?]+)$").match(subpath)
+            if not matches:
+                print("Not a match")
+            if matches:
+                download_id = matches[1]
+                if download_id in self._downloads:
+                    # TODO: This really needs to be `async with session_context`
+                    with session_context(self):
+                        async with isolate():
+                            download = self._downloads[download_id]
+                            filename = read_thunk(download.filename)
+                            content_type = read_thunk(download.content_type)
+                            contents = download.handler()
+
+                            if filename is None:
+                                if isinstance(contents, str):
+                                    filename = os.path.basename(contents)
+                                else:
+                                    filename = "download"
+
+                            if content_type is None:
+                                (content_type, _) = guess_type(filename)
+                            content_disposition_filename = urllib.parse.quote(filename)
+                            if content_disposition_filename != filename:
+                                content_disposition = f"attachment; filename*=utf-8''{content_disposition_filename}"
+                            else:
+                                content_disposition = (
+                                    f'attachment; filename="{filename}"'
+                                )
+
+                            if isinstance(contents, str):
+                                # contents is the path to a file
+                                return FileResponse(
+                                    Path(contents),
+                                    headers={
+                                        "Content-Disposition": content_disposition,
+                                        "Cache-Control": "no-store",
+                                    },
+                                    media_type=content_type,
+                                )
+                            elif isinstance(contents, AsyncIterable):
+
+                                async def wrap_content():
+                                    # TODO: This really needs to be `async with session_context`
+                                    with session_context(self):
+                                        async with isolate():
+                                            async for chunk in contents:
+                                                yield chunk
+
+                                wrapped_contents: AsyncIterable[bytes] = wrap_content()
+
+                                # TODO: This won't work with pyodide, use something else
+                                return StreamingResponse(
+                                    wrapped_contents,
+                                    200,
+                                    headers={
+                                        "Content-Disposition": content_disposition,
+                                        "Cache-Control": "no-store",
+                                    },
+                                    media_type=content_type,  # type: ignore
+                                )
+                            else:  # isinstance(contents, Iterable):
+
+                                async def wrap_content():
+                                    # TODO: This really needs to be `async with session_context`
+                                    with session_context(self):
+                                        async with isolate():
+                                            for chunk in contents:
+                                                yield chunk
+
+                                wrapped_contents: AsyncIterable[bytes] = wrap_content()
+                                return StreamingResponse(
+                                    wrapped_contents,
+                                    200,
+                                    headers={
+                                        "Content-Disposition": content_disposition,
+                                        "Cache-Control": "no-store",
+                                    },
+                                    media_type=content_type,  # type: ignore
+                                )
 
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
@@ -337,6 +441,35 @@ class ShinySession:
         print("Unhandled error: " + str(e))
         await self.close()
 
+    # TODO: probably name should be id
+    def download(
+        self,
+        name: Optional[str] = None,
+        filename: Optional[Union[str, Callable[[], str]]] = None,
+        media_type: Union[None, str, Callable[[], str]] = None,
+    ):
+        def wrapper(
+            fn: Callable[[], Union[str, AsyncIterable[bytes], Iterable[bytes]]]
+        ):
+            if name is None:
+                effective_name = fn.__name__
+            else:
+                effective_name = name
+
+            self._downloads[effective_name] = DownloadHandler(
+                filename=filename,
+                content_type=media_type,
+                handler=fn,
+            )
+
+            @self.output(effective_name)
+            @functools.wraps(fn)
+            def _():
+                # TODO: the `w=` parameter should eventually be a worker ID, if we add those
+                return f"session/{urllib.parse.quote(self.id)}/download/{urllib.parse.quote(effective_name)}?w="
+
+        return wrapper
+
 
 class Outputs:
     def __init__(self, session: ShinySession) -> None:
@@ -395,6 +528,8 @@ def get_current_session() -> Optional[ShinySession]:
     return _current_session.get()
 
 
+# TODO: I don't think this works for async (i.e. `async with session_context():`), see
+#       how isolate() works for an example
 @contextmanager
 def session_context(session: Optional[ShinySession]):
     token: Token[Union[ShinySession, None]] = _current_session.set(session)
@@ -454,3 +589,13 @@ def _process_deps(
         deps.append(dep_dict)
 
     return {"deps": deps, "html": res["html"]}
+
+
+T = TypeVar("T")
+
+
+def read_thunk(thunk: Union[Callable[[], T], T]) -> T:
+    if callable(thunk):
+        return thunk()
+    else:
+        return thunk
