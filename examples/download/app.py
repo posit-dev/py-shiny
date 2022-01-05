@@ -84,7 +84,6 @@ def server(session: ShinySession):
         """
 
         path = os.path.join(os.path.dirname(__file__), "mtcars.csv")
-        print(path)
         return path
 
     @session.download(filename="image.png")
