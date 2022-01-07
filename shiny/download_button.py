@@ -1,5 +1,6 @@
 from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
 from typing import Optional
+from .shinyenv import is_pyodide
 
 
 # TODO: implement icon
@@ -19,7 +20,10 @@ def download_button(
         style=css(width=width),
         href="",
         target="_blank",
-        download=True,
+        # We can't use `download` in pyodide mode, because the browser chooses not to
+        # route the download through the service worker in that case. (Observed by
+        # jcheng on 1/7/2022, using Chrome Version 96.0.4664.110.)
+        download=None if is_pyodide else True,
         **kwargs,
     )
 
@@ -40,6 +44,6 @@ def download_link(
         style=css(width=width),
         href="",
         target="_blank",
-        download=True,
+        download=None if is_pyodide else True,
         **kwargs,
     )
