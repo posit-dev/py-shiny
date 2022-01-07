@@ -86,6 +86,20 @@ class ShinyApp:
         # TODO: Pretty sure there are objects that need to be destroy()'d here?
         scope = cast(Any, scope).to_py()
 
+        # ASGI requires some values to be byte strings, not character strings. Those are
+        # not that easy to create in JavaScript, so we let the JS side pass us strings
+        # and we convert them to bytes here.
+        if "headers" in scope:
+            # JS doesn't have `bytes` so we pass as strings and convert here
+            scope["headers"] = [
+                [value.encode("latin-1") for value in header]
+                for header in scope["headers"]
+            ]
+        if "query_string" in scope and scope["query_string"]:
+            scope["query_string"] = scope["query_string"].encode("latin-1")
+        if "raw_path" in scope and scope["raw_path"]:
+            scope["raw_path"] = scope["raw_path"].encode("latin-1")
+
         async def rcv() -> Message:
             event = await receive()
             return cast(Message, cast(Any, event).to_py())
