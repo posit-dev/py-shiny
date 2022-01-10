@@ -75,6 +75,11 @@ ui = page_fluid(
 
 
 def server(session: ShinySession):
+    class Foo(TypedDict):
+        num_points: int
+        title: str
+    inputs = cast(session.inputs, Foo)
+
     @session.download()
     def download1():
         """

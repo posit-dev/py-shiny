@@ -347,7 +347,6 @@ class ShinySession:
 
                                 wrapped_contents: AsyncIterable[bytes] = wrap_content()
 
-                                # TODO: This won't work with pyodide, use something else
                                 return StreamingResponse(
                                     wrapped_contents,
                                     200,
