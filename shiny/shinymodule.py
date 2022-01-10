@@ -63,9 +63,9 @@ class ShinyModule:
         self._ui: Callable[..., TagChildArg] = ui
         self._server: Callable[[ShinySessionProxy], None] = server
 
-    def ui(self, namespace: str, *arguments: Any) -> TagChildArg:
+    def ui(self, namespace: str, *args: Any) -> TagChildArg:
         ns = ShinyModule._make_ns_fn(namespace)
-        return self._ui(ns, *arguments)
+        return self._ui(ns, *args)
 
     def server(self, ns: str, *, session: Optional[ShinySession] = None) -> None:
         self.ns: str = ns

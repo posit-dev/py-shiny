@@ -13,18 +13,18 @@ from .html_dependencies import nav_deps
 
 def nav(
     title: Any,
-    *arguments: TagChildArg,
+    *args: TagChildArg,
     value: Optional[str] = None,
     icon: TagChildArg = None,
 ) -> JSXTag:
     if not value:
         value = title
-    return nav_tag("Nav", *arguments, value=value, title=TagList(icon, title))
+    return nav_tag("Nav", *args, value=value, title=TagList(icon, title))
 
 
 def nav_menu(
     title: TagChildArg,
-    *arguments: TagChildArg,
+    *args: TagChildArg,
     value: Optional[str] = None,
     icon: TagChildArg = None,
     align: Literal["left", "right"] = "left",
@@ -32,16 +32,16 @@ def nav_menu(
     if not value:
         value = str(title)
     return nav_tag(
-        "NavMenu", *arguments, value=value, title=TagList(icon, title), align=align
+        "NavMenu", *args, value=value, title=TagList(icon, title), align=align
     )
 
 
-# def nav_content(value, *arguments, icon: TagChildArg = None) -> tag:
+# def nav_content(value, *args, icon: TagChildArg = None) -> tag:
 #  raise Exception("Not yet implemented")
 
 
-def nav_item(*arguments: TagChildArg) -> JSXTag:
-    return nav_tag("NavItem", *arguments)
+def nav_item(*args: TagChildArg) -> JSXTag:
+    return nav_tag("NavItem", *args)
 
 
 def nav_spacer() -> JSXTag:
@@ -49,7 +49,7 @@ def nav_spacer() -> JSXTag:
 
 
 def navs_tab(
-    *arguments: TagChildArg,
+    *args: TagChildArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: Optional[TagChildArg] = None,
@@ -57,7 +57,7 @@ def navs_tab(
 ) -> JSXTag:
     return nav_tag(
         "Navs",
-        *arguments,
+        *args,
         type="tabs",
         id=id,
         selected=selected,
@@ -67,7 +67,7 @@ def navs_tab(
 
 
 def navs_tab_card(
-    *arguments: TagChildArg,
+    *args: TagChildArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: Optional[TagChildArg] = None,
@@ -75,7 +75,7 @@ def navs_tab_card(
 ) -> JSXTag:
     return nav_tag(
         "NavsCard",
-        *arguments,
+        *args,
         type="tabs",
         id=id,
         selected=selected,
@@ -85,7 +85,7 @@ def navs_tab_card(
 
 
 def navs_pill(
-    *arguments: TagChildArg,
+    *args: TagChildArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: Optional[TagChildArg] = None,
@@ -93,7 +93,7 @@ def navs_pill(
 ) -> JSXTag:
     return nav_tag(
         "Navs",
-        *arguments,
+        *args,
         type="pills",
         id=id,
         selected=selected,
@@ -103,7 +103,7 @@ def navs_pill(
 
 
 def navs_pill_card(
-    *arguments: TagChildArg,
+    *args: TagChildArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: Optional[TagChildArg] = None,
@@ -112,7 +112,7 @@ def navs_pill_card(
 ) -> JSXTag:
     return nav_tag(
         "NavsCard",
-        *arguments,
+        *args,
         type="pills",
         id=id,
         selected=selected,
@@ -123,7 +123,7 @@ def navs_pill_card(
 
 
 def navs_pill_list(
-    *arguments: TagChildArg,
+    *args: TagChildArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: Optional[TagChildArg] = None,
@@ -134,7 +134,7 @@ def navs_pill_list(
 ) -> JSXTag:
     return nav_tag(
         "NavsList",
-        *arguments,
+        *args,
         id=id,
         selected=selected,
         header=header,
@@ -145,12 +145,12 @@ def navs_pill_list(
     )
 
 
-# def navs_hidden(*arguments, id: Optional[str] = None, selected: Optional[str] = None, header: Any=None, footer: Any=None) -> tag:
-#  return nav_tag("NavsHidden", *arguments, id=id, selected=selected, header=header, footer=footer)
+# def navs_hidden(*args, id: Optional[str] = None, selected: Optional[str] = None, header: Any=None, footer: Any=None) -> tag:
+#  return nav_tag("NavsHidden", *args, id=id, selected=selected, header=header, footer=footer)
 
 
 def navs_bar(
-    *arguments: TagChildArg,
+    *args: TagChildArg,
     title: Optional[TagChildArg] = None,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -164,7 +164,7 @@ def navs_bar(
 ) -> JSXTag:
     return nav_tag(
         "NavsBar",
-        *arguments,
+        *args,
         title=title,
         id=id,
         selected=selected,
@@ -178,6 +178,6 @@ def navs_bar(
     )
 
 
-def nav_tag(name: str, *arguments: TagChildArg, **kwargs: JSXTagAttrArg) -> JSXTag:
+def nav_tag(name: str, *args: TagChildArg, **kwargs: JSXTagAttrArg) -> JSXTag:
     tag = jsx_tag_create("bslib." + name)
-    return tag(nav_deps(), *arguments, **kwargs)
+    return tag(nav_deps(), *args, **kwargs)

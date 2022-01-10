@@ -22,12 +22,12 @@ from htmltools import (
 from .html_dependencies import jqui_deps
 
 
-def row(*arguments: TagChildArg, **kwargs: TagAttrArg) -> Tag:
-    return div(*arguments, class_="row", **kwargs)
+def row(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
+    return div(*args, class_="row", **kwargs)
 
 
 def column(
-    width: int, *arguments: TagChildArg, offset: int = 0, **kwargs: TagAttrArg
+    width: int, *args: TagChildArg, offset: int = 0, **kwargs: TagAttrArg
 ) -> Tag:
     if width < 1 or width > 12:
         raise ValueError("Column width must be between 1 and 12")
@@ -38,7 +38,7 @@ def column(
         # https://github.com/twbs/bootstrap/blob/74b8fe7/docs/4.3/migration/index.html#L659
         off = str(offset)
         cls += f" offset-md-{off} col-sm-offset-{off}"
-    return div(*arguments, class_=cls, **kwargs)
+    return div(*args, class_=cls, **kwargs)
 
 
 # TODO: also accept a generic list (and wrap in panel in that case)
@@ -48,22 +48,22 @@ def layout_sidebar(
     return row(sidebar, main) if position == "left" else row(main, sidebar)
 
 
-def panel_well(*arguments: TagChildArg, **kwargs: TagAttrArg) -> Tag:
-    return div(*arguments, class_="well", **kwargs)
+def panel_well(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
+    return div(*args, class_="well", **kwargs)
 
 
-def panel_sidebar(*arguments: TagChildArg, width: int = 4, **kwargs: TagAttrArg) -> Tag:
+def panel_sidebar(*args: TagChildArg, width: int = 4, **kwargs: TagAttrArg) -> Tag:
     return div(
         # A11y semantic landmark for sidebar
-        tags.form(*arguments, role="complementary", class_="well", **kwargs),
+        tags.form(*args, role="complementary", class_="well", **kwargs),
         class_="col-sm-" + str(width),
     )
 
 
-def panel_main(*arguments: TagChildArg, width: int = 8, **kwargs: TagAttrArg):
+def panel_main(*args: TagChildArg, width: int = 8, **kwargs: TagAttrArg):
     return div(
         # A11y semantic landmark for main region
-        *arguments,
+        *args,
         role="main",
         class_="col-sm-" + str(width),
         **kwargs,
@@ -71,18 +71,18 @@ def panel_main(*arguments: TagChildArg, width: int = 8, **kwargs: TagAttrArg):
 
 
 # TODO: replace `flowLayout()`/`splitLayout()` with a flexbox wrapper?
-# def panel_input(*arguments: TagChild, **kwargs: TagAttr):
+# def panel_input(*args: TagChild, **kwargs: TagAttr):
 #  return div(flowLayout(...), class_="shiny-input-panel")
 
 
 def panel_conditional(
     condition: str,
-    *arguments: TagChildArg,
+    *args: TagChildArg,
     # TODO: do we have an answer for shiny::NS() yet?
     ns: Callable[[str], str] = lambda x: x,
     **kwargs: TagAttrArg,
 ):
-    return div(*arguments, data_display_if=condition, data_ns_prefix=ns(""), **kwargs)
+    return div(*args, data_display_if=condition, data_ns_prefix=ns(""), **kwargs)
 
 
 def panel_title(title: str, windowTitle: Optional[str] = None) -> TagList:
@@ -94,12 +94,12 @@ def panel_title(title: str, windowTitle: Optional[str] = None) -> TagList:
     )
 
 
-def panel_fixed(*arguments: TagChildArg, **kwargs: TagAttrArg) -> TagList:
-    return panel_absolute(*arguments, fixed=True, **kwargs)
+def panel_fixed(*args: TagChildArg, **kwargs: TagAttrArg) -> TagList:
+    return panel_absolute(*args, fixed=True, **kwargs)
 
 
 def panel_absolute(
-    *arguments: TagChildArg,
+    *args: TagChildArg,
     top: Optional[str] = None,
     left: Optional[str] = None,
     right: Optional[str] = None,
@@ -121,7 +121,7 @@ def panel_absolute(
         position="fixed" if fixed else "absolute",
         cursor="move" if draggable else "inherit" if cursor == "auto" else cursor,
     )
-    divTag = div(*arguments, style=style, **kwargs)
+    divTag = div(*args, style=style, **kwargs)
     if not draggable:
         return TagList(divTag)
     divTag.add_class("draggable")
@@ -130,5 +130,5 @@ def panel_absolute(
     return TagList(deps, divTag, tags.script(HTML('$(".draggable").draggable();')))
 
 
-def help_text(*arguments: TagChildArg, **kwargs: TagAttrArg) -> Tag:
-    return span(*arguments, class_="help-block", **kwargs)
+def help_text(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
+    return span(*args, class_="help-block", **kwargs)

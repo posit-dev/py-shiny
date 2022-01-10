@@ -24,7 +24,7 @@ def modal_button(label: str, icon: TagChildArg = None) -> Tag:
 
 
 def modal(
-    *arguments: TagChildArg,
+    *args: TagChildArg,
     title: Optional[str] = None,
     footer: Any = modal_button("Dismiss"),
     size: Literal["m", "s", "l", "xl"] = "m",
@@ -43,7 +43,7 @@ def modal(
     dialog = div(
         div(
             title_div,
-            div(*arguments, class_="modal-body", **kwargs),
+            div(*args, class_="modal-body", **kwargs),
             footer,
             class_="modal-content",
         ),

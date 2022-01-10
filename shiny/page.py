@@ -14,7 +14,7 @@ from .navs import navs_bar
 
 
 def page_navbar(
-    *arguments: TagChildArg,  # Create a type for nav()?
+    *args: TagChildArg,  # Create a type for nav()?
     title: Optional[TagChildArg] = None,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -41,7 +41,7 @@ def page_navbar(
         tags.head(tags.title(window_title)),
         tags.body(
             navs_bar(
-                *arguments,
+                *args,
                 title=title,
                 id=id,
                 selected=selected,
@@ -59,32 +59,26 @@ def page_navbar(
 
 
 def page_fluid(
-    *arguments: Any,
-    title: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs: str
+    *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
 ) -> Tag:
     return page_bootstrap(
-        div(*arguments, class_="container-fluid", **kwargs), title=title, lang=lang
+        div(*args, class_="container-fluid", **kwargs), title=title, lang=lang
     )
 
 
 def page_fixed(
-    *arguments: Any,
-    title: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs: str
+    *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
 ) -> Tag:
     return page_bootstrap(
-        div(*arguments, class_="container", **kwargs), title=title, lang=lang
+        div(*args, class_="container", **kwargs), title=title, lang=lang
     )
 
 
 # TODO: implement theme (just Bootswatch for now?)
 def page_bootstrap(
-    *arguments: Any, title: Optional[str] = None, lang: Optional[str] = None
+    *args: Any, title: Optional[str] = None, lang: Optional[str] = None
 ) -> Tag:
-    page = TagList(bootstrap_deps(), *arguments)
+    page = TagList(bootstrap_deps(), *args)
     head = tags.title(title) if title else None
     return tags.html(tags.head(head), tags.body(page), lang=lang)
 
