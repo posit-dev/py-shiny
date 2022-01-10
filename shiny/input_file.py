@@ -1,11 +1,13 @@
-from htmltools import tags, Tag, div, span, css
 from typing import Optional, List
-from .input_utils import *
+
+from htmltools import tags, Tag, div, span, css, TagChildArg
+
+from .input_utils import shiny_input_label
 
 
 def input_file(
     id: str,
-    label: str,
+    label: TagChildArg,
     multiple: bool = False,
     accept: Optional[List[str]] = None,
     width: Optional[str] = None,

@@ -9,12 +9,15 @@ sys.path.insert(0, shiny_module_dir)
 
 from shiny import *
 from htmltools import tags, HTML
+from fontawesome import icon_svg
 
 ui = page_fluid(
     panel_title("Hello prism ui"),
     layout_sidebar(
         panel_sidebar(
-            input_slider("n", "input_slider()", 0, 100, 50),
+            input_slider(
+                "n", "input_slider()", min=10, max=100, value=50, step=5, animate=True
+            ),
             input_date("date", "input_date()"),
             input_date_range("date_rng", "input_date_range()"),
             input_text("txt", "input_text()", placeholder="Input some text"),
@@ -43,20 +46,24 @@ ui = page_fluid(
                     "Group C": ["c1", "c2"],
                 },
             ),
-            input_button("button", "input_button()", "Click me"),
+            input_button("button", "input_button()", icon=icon_svg("check")),
+            input_file("file", "File upload"),
         ),
         panel_main(
             output_plot("plot"),
             navs_tab_card(
                 # TODO: output_plot() within a tab not working?
-                nav("Inputs", output_ui("inputs")),
-                nav("Image", output_image("image", inline=True)),
+                nav("Inputs", output_ui("inputs"), icon=icon_svg("code")),
+                nav(
+                    "Image", output_image("image", inline=True), icon=icon_svg("image")
+                ),
                 nav(
                     "Misc",
-                    input_link("link", "Show notification/progress"),
-                    # TODO: fix these
-                    # input_file("file", "File upload"),
-                    # input_button("btn", "Show modal")
+                    input_link(
+                        "link", "Show notification/progress", icon=icon_svg("info")
+                    ),
+                    tags.br(),
+                    input_button("btn", "Show modal", icon=icon_svg("info-circle")),
                     panel_fixed(
                         panel_well(
                             "A fixed, draggable, panel",
@@ -71,6 +78,7 @@ ui = page_fluid(
                         top="50px",
                         right="50px",
                     ),
+                    icon=icon_svg("code"),
                 ),
             ),
         ),
@@ -101,13 +109,14 @@ def server(s: ShinySession):
         ]
         return tags.pre(HTML("\n".join(vals)))
 
+    np.random.seed(19680801)
+    x_rand = 100 + 15 * np.random.randn(437)
+
     @s.output("plot")
     @render_plot(alt="A histogram")
     def _():
-        np.random.seed(19680801)
-        x = 100 + 15 * np.random.randn(437)
         fig, ax = plt.subplots()
-        ax.hist(x, s.input["n"], density=True)
+        ax.hist(x_rand, int(s.input["n"]), density=True)
         return fig
 
     @s.output("image")

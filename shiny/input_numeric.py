@@ -1,13 +1,15 @@
-from htmltools import tags, Tag, div, css
 from typing import Optional, Union
-from .input_utils import *
+
+from htmltools import tags, Tag, div, css, TagChildArg
+
+from .input_utils import shiny_input_label
 
 valType = Union[int, float]
 
 
 def input_numeric(
     id: str,
-    label: str,
+    label: TagChildArg,
     value: valType,
     min: Optional[valType] = None,
     max: Optional[valType] = None,

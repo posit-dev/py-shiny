@@ -6,7 +6,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal
 
-from htmltools import jsx_tag_create, JSXTag, TagChildArg, JSXTagAttrArg
+from htmltools import jsx_tag_create, JSXTag, TagList, TagChildArg, JSXTagAttrArg
 
 from .html_dependencies import nav_deps
 
@@ -15,26 +15,28 @@ def nav(
     title: Any,
     *args: TagChildArg,
     value: Optional[str] = None,
-    # icon: Optional[str] = None
+    icon: TagChildArg = None,
 ) -> JSXTag:
     if not value:
         value = title
-    return nav_tag("Nav", *args, value=value, title=title)
+    return nav_tag("Nav", *args, value=value, title=TagList(icon, title))
 
 
 def nav_menu(
     title: TagChildArg,
     *args: TagChildArg,
     value: Optional[str] = None,
-    # icon: Optional[str] = None,
+    icon: TagChildArg = None,
     align: Literal["left", "right"] = "left",
 ) -> JSXTag:
     if not value:
         value = str(title)
-    return nav_tag("NavMenu", *args, value=value, title=title, align=align)
+    return nav_tag(
+        "NavMenu", *args, value=value, title=TagList(icon, title), align=align
+    )
 
 
-# def nav_content(value, *args, icon: Optional[str] = None) -> tag:
+# def nav_content(value, *args, icon: TagChildArg = None) -> tag:
 #  raise Exception("Not yet implemented")
 
 

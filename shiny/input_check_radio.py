@@ -1,10 +1,12 @@
-from htmltools import tags, Tag, div, span, css
 from typing import Optional, Union, List, Dict
-from .input_utils import *
+
+from htmltools import tags, Tag, div, span, css, TagChildArg
+
+from .input_utils import shiny_input_label
 
 
 def input_checkbox(
-    id: str, label: str, value: bool = False, width: Optional[str] = None
+    id: str, label: TagChildArg, value: bool = False, width: Optional[str] = None
 ) -> Tag:
     return div(
         div(
@@ -26,7 +28,7 @@ choicesType = Union[Dict[str, str], List[str]]
 
 def input_checkbox_group(
     id: str,
-    label: str,
+    label: TagChildArg,
     choices: choicesType,
     choice_names: Optional[List[str]] = None,
     selected: Optional[str] = None,
@@ -57,7 +59,7 @@ def input_checkbox_group(
 
 def input_radio_buttons(
     id: str,
-    label: str,
+    label: TagChildArg,
     choices: choicesType,
     choice_names: Optional[List[str]] = None,
     selected: Optional[str] = None,

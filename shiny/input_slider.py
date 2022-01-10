@@ -1,28 +1,42 @@
-from htmltools import tags, Tag, div, css, TagAttrArg
-from typing import Dict, Optional, Union, Tuple, TypeVar
-from datetime import date, datetime, timedelta
 import math
+import sys
+from datetime import date, datetime, timedelta
+from typing import Dict, Optional, Union, Tuple, TypeVar
+
+if sys.version_info >= (3, 8):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
+from typing_extensions import NotRequired
+
+from htmltools import tags, Tag, div, css, TagAttrArg, TagChildArg, HTML
 
 from .html_dependencies import ionrangeslider_deps
-from .input_utils import *
+from .input_utils import shiny_input_label
 
 __all__ = ["input_slider"]
 
-# TODO:
-# 1. implement animate/animation_pptions
-# 2. validate value(s) are within (min,max)?
+# TODO: validate value(s) are within (min,max)?
 
 SliderVal = TypeVar("SliderVal", int, float, datetime, date)
 
 
+class AnimationOptions(TypedDict):
+    interval: NotRequired[int]
+    loop: NotRequired[bool]
+    play_button: NotRequired[TagChildArg]
+    pause_button: NotRequired[TagChildArg]
+
+
 def input_slider(
     id: str,
-    label: str,
+    label: TagChildArg,
     min: SliderVal,
     max: SliderVal,
     value: Union[SliderVal, Tuple[SliderVal, SliderVal]],
     step: Optional[Union[int, float, timedelta]] = None,
     ticks: bool = True,
+    animate: Union[bool, AnimationOptions] = False,
     width: Optional[str] = None,
     sep: str = ",",
     pre: Optional[str] = None,
@@ -89,12 +103,35 @@ def input_slider(
     # ionRangeSlider wants attr = 'true'/'false'
     props = {k: str(v).lower() if isinstance(v, bool) else v for k, v in props.items()}
 
-    return div(
+    slider_tag = div(
         shiny_input_label(id, label),
         tags.input(**props),
         *ionrangeslider_deps(),
         class_="form-group shiny-input-container",
     )
+
+    if animate is False:
+        return slider_tag
+
+    if animate is True:
+        animate = AnimationOptions()
+
+    animate_tag = div(
+        tags.a(
+            tags.span(animate.get("play_button", _play_icon()), class_="play"),
+            tags.span(animate.get("pause_button", _pause_icon()), class_="pause"),
+            href="#",
+            class_="slider-animate-button",
+            data_target_id=id,
+            data_interval=animate.get("interval", 500),
+            data_loop=animate.get("loop", True),
+        ),
+        class_="slider-animate-container",
+    )
+
+    slider_tag.append(animate_tag)
+
+    return slider_tag
 
 
 def _slider_type(x: SliderVal) -> str:
@@ -130,3 +167,21 @@ def _find_step_size(
         return round(step, 10 - math.ceil(math.log10(step)))
     else:
         return 1
+
+
+def _play_icon() -> HTML:
+    try:
+        from fontawesome import icon_svg
+
+        return icon_svg("play")
+    except ImportError:
+        return HTML("&#x23ef;")
+
+
+def _pause_icon() -> HTML:
+    try:
+        from fontawesome import icon_svg
+
+        return icon_svg("pause")
+    except ImportError:
+        return HTML("&#9616;&#9616;")
