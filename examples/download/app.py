@@ -6,17 +6,12 @@
 
 # Add parent directory to path, so we can find the prism module.
 # (This is just a temporary fix)
+import asyncio
 from datetime import date
 import os
-import sys
 import io
 import matplotlib.pyplot as plt
 import numpy as np
-
-# This will load the shiny module dynamically, without having to install it.
-# This makes the debug/run cycle quicker.
-shiny_module_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, shiny_module_dir)
 
 from shiny import *
 
@@ -71,15 +66,18 @@ ui = page_fluid(
             "Demonstrates that filenames can be generated on the fly (and use Unicode characters!).",
         ),
     ),
+    row(
+        make_example(
+            "download4",
+            "Download",
+            "Failed downloads",
+            "Throws an error in the download handler, download should not succeed.",
+        ),
+    ),
 )
 
 
 def server(session: ShinySession):
-    class Foo(TypedDict):
-        num_points: int
-        title: str
-    inputs = cast(session.inputs, Foo)
-
     @session.download()
     def download1():
         """
@@ -112,10 +110,16 @@ def server(session: ShinySession):
     @session.download(
         filename=lambda: f"新型-{date.today().isoformat()}-{np.random.randint(100,999)}.csv"
     )
-    def download3():
-        yield "one,two,three\n".encode("utf-8")
-        yield "1,2,3\n".encode("utf-8")
-        yield "4,5,6\n".encode("utf-8")
+    async def download3():
+        await asyncio.sleep(0.25)
+        yield "one,two,three\n"
+        yield "新,1,2\n"
+        yield "型,4,5\n"
+
+    @session.download(name="download4", filename="failuretest.txt")
+    async def _():
+        yield "hello"
+        raise Exception("This error was caused intentionally")
 
 
 app = ShinyApp(ui, server)

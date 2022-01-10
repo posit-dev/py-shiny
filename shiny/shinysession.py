@@ -51,7 +51,7 @@ else:
 if TYPE_CHECKING:
     from .shinyapp import ShinyApp
 
-from htmltools import TagChildArg, TagList, HTMLDependency
+from htmltools import TagChildArg, TagList
 
 from .reactives import ReactiveValues, Observer, ObserverAsync, isolate
 from .http_staticfiles import FileResponse
@@ -84,10 +84,13 @@ class ClientMessageOther(ClientMessage):
 
 
 @dataclasses.dataclass
-class DownloadHandler:
-    filename: Optional[Union[Callable[[], str], str]]
+class _DownloadHandler:
+    filename: Union[Callable[[], str], str, None]
     content_type: Optional[Union[Callable[[], str], str]]
-    handler: Callable[[], Union[str, AsyncIterable[bytes], Iterable[bytes]]]
+    handler: Callable[
+        [], Union[str, AsyncIterable[Union[bytes, str]], Iterable[Union[bytes, str]]]
+    ]
+    encoding: str
 
 
 class ShinySession:
@@ -114,7 +117,7 @@ class ShinySession:
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks: List[Callable[[], None]] = []
         self._has_run_session_end_tasks: bool = False
-        self._downloads: Dict[str, DownloadHandler] = {}
+        self._downloads: Dict[str, _DownloadHandler] = {}
 
         self._register_session_end_callbacks()
 
@@ -306,8 +309,8 @@ class ShinySession:
                     with session_context(self):
                         async with isolate():
                             download = self._downloads[download_id]
-                            filename = read_thunk(download.filename)
-                            content_type = read_thunk(download.content_type)
+                            filename = read_thunk_opt(download.filename)
+                            content_type = read_thunk_opt(download.content_type)
                             contents = download.handler()
 
                             if filename is None:
@@ -325,56 +328,59 @@ class ShinySession:
                                 content_disposition = (
                                     f'attachment; filename="{filename}"'
                                 )
+                            headers = {
+                                "Content-Disposition": content_disposition,
+                                "Cache-Control": "no-store",
+                            }
 
                             if isinstance(contents, str):
                                 # contents is the path to a file
                                 return FileResponse(
                                     Path(contents),
-                                    headers={
-                                        "Content-Disposition": content_disposition,
-                                        "Cache-Control": "no-store",
-                                    },
+                                    headers=headers,
                                     media_type=content_type,
                                 )
-                            elif isinstance(contents, AsyncIterable):
 
-                                async def wrap_content():
+                            wrapped_contents: AsyncIterable[bytes]
+
+                            if isinstance(contents, AsyncIterable):
+
+                                async def wrap_content_async():
                                     # TODO: This really needs to be `async with session_context`
                                     with session_context(self):
                                         async with isolate():
                                             async for chunk in contents:
-                                                yield chunk
+                                                if isinstance(chunk, str):
+                                                    yield chunk.encode(
+                                                        download.encoding
+                                                    )
+                                                else:
+                                                    yield chunk
 
-                                wrapped_contents: AsyncIterable[bytes] = wrap_content()
+                                wrapped_contents = wrap_content_async()
 
-                                return StreamingResponse(
-                                    wrapped_contents,
-                                    200,
-                                    headers={
-                                        "Content-Disposition": content_disposition,
-                                        "Cache-Control": "no-store",
-                                    },
-                                    media_type=content_type,  # type: ignore
-                                )
                             else:  # isinstance(contents, Iterable):
 
-                                async def wrap_content():
-                                    # TODO: This really needs to be `async with session_context`
+                                async def wrap_content_sync():
+                                    # TODO: Make sure these two `with` statements don't need to be async
                                     with session_context(self):
-                                        async with isolate():
+                                        with isolate():
                                             for chunk in contents:
-                                                yield chunk
+                                                if isinstance(chunk, str):
+                                                    yield chunk.encode(
+                                                        download.encoding
+                                                    )
+                                                else:
+                                                    yield chunk
 
-                                wrapped_contents: AsyncIterable[bytes] = wrap_content()
-                                return StreamingResponse(
-                                    wrapped_contents,
-                                    200,
-                                    headers={
-                                        "Content-Disposition": content_disposition,
-                                        "Cache-Control": "no-store",
-                                    },
-                                    media_type=content_type,  # type: ignore
-                                )
+                                wrapped_contents = wrap_content_sync()
+
+                            return StreamingResponse(
+                                wrapped_contents,
+                                200,
+                                headers=headers,
+                                media_type=content_type,  # type: ignore
+                            )
 
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
@@ -446,19 +452,26 @@ class ShinySession:
         name: Optional[str] = None,
         filename: Optional[Union[str, Callable[[], str]]] = None,
         media_type: Union[None, str, Callable[[], str]] = None,
+        encoding: str = "utf-8",
     ):
         def wrapper(
-            fn: Callable[[], Union[str, AsyncIterable[bytes], Iterable[bytes]]]
+            fn: Callable[
+                [],
+                Union[
+                    str, AsyncIterable[Union[bytes, str]], Iterable[Union[bytes, str]]
+                ],
+            ]
         ):
             if name is None:
                 effective_name = fn.__name__
             else:
                 effective_name = name
 
-            self._downloads[effective_name] = DownloadHandler(
+            self._downloads[effective_name] = _DownloadHandler(
                 filename=filename,
                 content_type=media_type,
                 handler=fn,
+                encoding=encoding,
             )
 
             @self.output(effective_name)
@@ -590,11 +603,23 @@ def _process_deps(
     return {"deps": deps, "html": res["html"]}
 
 
-T = TypeVar("T")
+# Ideally I'd love not to limit the types for T, but if I don't, the type checker has
+# trouble figuring out what `T` is supposed to be when run_thunk is actually used. For
+# now, just keep expanding the possible types, as needed.
+T = TypeVar("T", str, int)
 
 
 def read_thunk(thunk: Union[Callable[[], T], T]) -> T:
     if callable(thunk):
+        return thunk()
+    else:
+        return thunk
+
+
+def read_thunk_opt(thunk: Optional[Union[Callable[[], T], T]]) -> Optional[T]:
+    if thunk is None:
+        return None
+    elif callable(thunk):
         return thunk()
     else:
         return thunk
