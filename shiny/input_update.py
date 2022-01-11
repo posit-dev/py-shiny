@@ -1,5 +1,12 @@
-from typing import Literal, Optional, Union, Tuple, TYPE_CHECKING
+import sys
 from datetime import date
+
+from typing import Optional, Union, Tuple, TYPE_CHECKING
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
 
 from htmltools import TagChildArg
 
@@ -16,7 +23,7 @@ if TYPE_CHECKING:
 # -----------------------------------------------------------------------------
 # input_button.py
 # -----------------------------------------------------------------------------
-async def update_button(
+def update_button(
     id: str,
     *,
     label: Optional[str] = None,
@@ -27,7 +34,7 @@ async def update_button(
     # TODO: supporting a TagChildArg for label would require changes to shiny.js
     # https://github.com/rstudio/shiny/issues/1140
     msg = {"label": label, "icon": _process_deps(icon)["html"]}
-    await session.send_input_message(id, drop_none(msg))
+    session.send_input_message(id, drop_none(msg))
 
 
 update_link = update_button
@@ -35,7 +42,7 @@ update_link = update_button
 # -----------------------------------------------------------------------------
 # input_check_radio.py
 # -----------------------------------------------------------------------------
-async def update_checkbox(
+def update_checkbox(
     id: str,
     *,
     label: Optional[str] = None,
@@ -44,10 +51,10 @@ async def update_checkbox(
 ):
     session = _require_active_session(session)
     msg = {"label": label, "value": value}
-    await session.send_input_message(id, drop_none(msg))
+    session.send_input_message(id, drop_none(msg))
 
 
-async def update_checkbox_group(
+def update_checkbox_group(
     id: str,
     *,
     label: Optional[str] = None,
@@ -56,7 +63,7 @@ async def update_checkbox_group(
     inline: bool = False,
     session: Optional["ShinySession"] = None,
 ):
-    await _update_choice_input(
+    _update_choice_input(
         id=id,
         type="checkbox",
         label=label,
@@ -67,7 +74,7 @@ async def update_checkbox_group(
     )
 
 
-async def update_radio_buttons(
+def update_radio_buttons(
     id: str,
     *,
     label: Optional[str] = None,
@@ -76,7 +83,7 @@ async def update_radio_buttons(
     inline: bool = False,
     session: Optional["ShinySession"] = None,
 ):
-    await _update_choice_input(
+    _update_choice_input(
         id=id,
         type="radio",
         label=label,
@@ -87,7 +94,7 @@ async def update_radio_buttons(
     )
 
 
-async def _update_choice_input(
+def _update_choice_input(
     id: str,
     *,
     type: Literal["checkbox", "radio"],
@@ -104,13 +111,13 @@ async def _update_choice_input(
             id=id, type=type, choices=choices, selected=selected, inline=inline
         )
     msg = {"label": label, "options": _process_deps(options)["html"], "value": selected}
-    await session.send_input_message(id, drop_none(msg))
+    session.send_input_message(id, drop_none(msg))
 
 
 # -----------------------------------------------------------------------------
 # input_date.py
 # -----------------------------------------------------------------------------
-async def update_date(
+def update_date(
     id: str,
     *,
     label: Optional[str] = None,
@@ -127,10 +134,10 @@ async def update_date(
         "min": str(min),
         "max": str(max),
     }
-    await session.send_input_message(id, drop_none(msg))
+    session.send_input_message(id, drop_none(msg))
 
 
-async def update_date_range(
+def update_date_range(
     id: str,
     *,
     label: Optional[str] = None,
@@ -141,20 +148,20 @@ async def update_date_range(
     session: Optional["ShinySession"] = None,
 ):
     session = _require_active_session(session)
+    value = {"start": str(start), "end": str(end)}
     msg = {
         "label": label,
-        "start": str(start),
-        "end": str(end),
+        "value": drop_none(value),
         "min": str(min),
         "max": str(max),
     }
-    await session.send_input_message(id, drop_none(msg))
+    session.send_input_message(id, drop_none(msg))
 
 
 # -----------------------------------------------------------------------------
 # input_numeric.py
 # -----------------------------------------------------------------------------
-async def update_numeric(
+def update_numeric(
     id: str,
     *,
     label: Optional[str] = None,
@@ -172,13 +179,13 @@ async def update_numeric(
         "max": max,
         "step": step,
     }
-    await session.send_input_message(id, drop_none(msg))
+    session.send_input_message(id, drop_none(msg))
 
 
 # -----------------------------------------------------------------------------
 # input_select.py
 # -----------------------------------------------------------------------------
-async def update_select(
+def update_select(
     id: str,
     *,
     label: Optional[str] = None,
@@ -199,13 +206,13 @@ async def update_select(
         "options": options,
         "selected": selected,
     }
-    await session.send_input_message(id, drop_none(msg))
+    session.send_input_message(id, drop_none(msg))
 
 
 # -----------------------------------------------------------------------------
 # input_slider.py
 # -----------------------------------------------------------------------------
-async def update_slider(
+def update_slider(
     id: str,
     *,
     label: Optional[str] = None,
@@ -232,19 +239,10 @@ async def update_slider(
     min_num = None if min is None else _as_numeric(min)
     max_num = None if max is None else _as_numeric(max)
     step_num = None if step is None else _as_numeric(step)
-    val_nums = (
-        None
-        if value is None
-        else (
-            (_as_numeric(value[0]), _as_numeric(value[1]))
-            if isinstance(value, tuple)
-            else (_as_numeric(value), _as_numeric(value))
-        )
-    )
 
     msg = {
         "label": label,
-        "value": val_nums,
+        "value": value,
         "min": min_num,
         "max": max_num,
         "step": step_num,
@@ -252,13 +250,13 @@ async def update_slider(
         "time_format": time_format,
         "timezone": timezone,
     }
-    await session.send_input_message(id, drop_none(msg))
+    session.send_input_message(id, drop_none(msg))
 
 
 # -----------------------------------------------------------------------------
 # input_text.py
 # -----------------------------------------------------------------------------
-async def update_text(
+def update_text(
     id: str,
     *,
     label: TagChildArg = None,
@@ -268,7 +266,7 @@ async def update_text(
 ):
     session = _require_active_session(session)
     msg = {"label": label, "value": value, "placeholder": placeholder}
-    await session.send_input_message(id, drop_none(msg))
+    session.send_input_message(id, drop_none(msg))
 
 
 update_text_area = update_text
@@ -279,9 +277,9 @@ update_text_area = update_text
 # -----------------------------------------------------------------------------
 
 # TODO: provide an alias of `update_navs`?
-async def nav_select(
+def nav_select(
     id: str, selected: Optional[str] = None, session: Optional["ShinySession"] = None
 ):
     session = _require_active_session(session)
     msg = {"value": selected}
-    await session.send_input_message(id, drop_none(msg))
+    session.send_input_message(id, drop_none(msg))

@@ -6,7 +6,9 @@ from .html_dependencies import selectize_deps
 from .input_utils import shiny_input_label
 
 # This is the canonical format for representing select options.
-SelectChoicesArg = Union[List[str], Dict[str, Union[str, List[str], Dict[str, str]]]]
+SelectChoicesArg = Union[
+    List[str], Dict[str, str], Dict[str, List[str]], Dict[str, Dict[str, str]]
+]
 _SelectChoices = Dict[str, Union[str, Dict[str, str]]]
 
 
@@ -95,9 +97,7 @@ def input_select(
 #     "Group B": {"Choice B1": "b1", "Choice B2": "b2"},
 #     "Group C: ["c1, "c2"]
 #   }
-def _normalize_choices(
-    x: Union[List[str], Dict[str, Union[str, List[str], Dict[str, str]]]]
-) -> _SelectChoices:
+def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
     if isinstance(x, list):
         return {k: k for k in x}
 

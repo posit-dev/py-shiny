@@ -90,19 +90,16 @@ ui = page_fluid(
 
 
 def server(sess: ShinySession):
-    @observe_async()
-    async def _():
+    @observe()
+    def _():
         # We'll use these multiple times, so use short var names for
         # convenience.
         c_label = sess.input["control_label"]
         c_num = sess.input["control_num"]
 
-        print(c_label)
-        print(c_num)
-
         # Text =====================================================
         # Change both the label and the text
-        await update_text(
+        update_text(
             "inText",
             label="New " + c_label,
             value="New text " + str(c_num),
@@ -110,10 +107,10 @@ def server(sess: ShinySession):
 
         # Number ===================================================
         # Change the value
-        await update_numeric("inNumber", value=c_num)
+        update_numeric("inNumber", value=c_num)
 
         # Change the label, value, min, and max
-        await update_numeric(
+        update_numeric(
             "inNumber2",
             label="Number " + c_label,
             value=c_num,
@@ -124,26 +121,23 @@ def server(sess: ShinySession):
 
         # Slider input =============================================
         # Only label and value can be set for slider
-        await update_slider("inSlider", label="Slider " + c_label, value=c_num)
+        update_slider("inSlider", label="Slider " + c_label, value=c_num)
 
         # Slider range input =======================================
         # For sliders that pick out a range, pass in a vector of 2
         # values.
-        await update_slider("inSlider2", value=(c_num - 1, c_num + 1))
+        update_slider("inSlider2", value=(c_num - 1, c_num + 1))
 
-        # TODO: an NA means to not change that value (the low or high one)
-        # await update_slider(
-        #    "inSlider3",
-        #    value=(NA, c_num+2)
-        # )
+        # Only change the upper handle
+        update_slider("inSlider3", value=(sess.input["inSlider3"][0], c_num + 2))
 
         # Date input ===============================================
         # Only label and value can be set for date input
-        await update_date("inDate", label="Date " + c_label, value=date(2013, 4, c_num))
+        update_date("inDate", label="Date " + c_label, value=date(2013, 4, c_num))
 
         # Date range input =========================================
         # Only label and value can be set for date range input
-        await update_date_range(
+        update_date_range(
             "inDateRange",
             label="Date range " + c_label,
             start=date(2013, 1, c_num),
@@ -153,59 +147,59 @@ def server(sess: ShinySession):
         )
 
         # # Checkbox ===============================================
-        await update_checkbox("inCheckbox", value=c_num % 2)
+        update_checkbox("inCheckbox", value=c_num % 2)
 
         # Checkbox group ===========================================
         # Create a list of new options, where the name of the items
         # is something like 'option label x A', and the values are
         # 'option-x-A'.
-        opts = zip(
-            [f"option label {c_num} {type}" for type in ["A", "B"]],
-            [f"option-{c_num}-{type}" for type in ["A", "B"]],
-        )
+        opt_labels = [f"option label {c_num} {type}" for type in ["A", "B"]]
+        opt_vals = [f"option-{c_num}-{type}" for type in ["A", "B"]]
+        opts_tuple = tuple(zip(opt_labels, opt_vals))
+        opts_dict = dict(zip(opt_labels, opt_vals))
 
         # Set the label, choices, and selected item
-        await update_checkbox_group(
+        update_checkbox_group(
             "inCheckboxGroup",
             label="Checkbox group " + c_label,
-            choices=tuple(opts),
+            choices=opts_tuple,
             selected=f"option-{c_num}-A",
         )
 
         # Radio group ==============================================
-        await update_radio_buttons(
+        update_radio_buttons(
             "inRadio",
             label="Radio " + c_label,
-            choices=tuple(opts),
+            choices=opts_tuple,
             selected=f"option-{c_num}-A",
         )
         # Select input =============================================
         # Create a list of new options, where the name of the items
         # is something like 'option label x A', and the values are
         # 'option-x-A'.
-        await update_select(
+        update_select(
             "inSelect",
             label="Select " + c_label,
-            choices=dict(opts),
+            choices=opts_dict,
             selected=f"option-{c_num}-A",
         )
 
         # Can also set the label and select an item (or more than
         # one if it's a multi-select)
-        await update_select(
+        update_select(
             "inSelect2",
             label="Select label " + c_label,
-            choices=dict(opts),
+            choices=opts_dict,
             selected=f"option-{c_num}-B",
         )
 
         # Tabset input =============================================
         # Change the selected tab.
         # The tabsetPanel must have been created with an 'id' argument
-        await nav_select("inTabset", selected="panel2" if c_num % 2 else "panel1")
+        nav_select("inTabset", selected="panel2" if c_num % 2 else "panel1")
 
 
-app = ShinyApp(ui, server, debug=True)
+app = ShinyApp(ui, server)
 
 if __name__ == "__main__":
     app.run()
