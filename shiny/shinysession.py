@@ -299,88 +299,83 @@ class ShinySession:
             return PlainTextResponse("OK", 200)
 
         elif action == "download" and request.method == "GET" and subpath:
-            matches = re.compile("^([^/?]+)$").match(subpath)
-            if not matches:
-                print("Not a match")
-            if matches:
-                download_id = matches[1]
-                if download_id in self._downloads:
-                    # TODO: This really needs to be `async with session_context`
-                    with session_context(self):
-                        async with isolate():
-                            download = self._downloads[download_id]
-                            filename = read_thunk_opt(download.filename)
-                            content_type = read_thunk_opt(download.content_type)
-                            contents = download.handler()
+            download_id = subpath
+            if download_id in self._downloads:
+                # TODO: This really needs to be `async with session_context`
+                with session_context(self):
+                    async with isolate():
+                        download = self._downloads[download_id]
+                        filename = read_thunk_opt(download.filename)
+                        content_type = read_thunk_opt(download.content_type)
+                        contents = download.handler()
 
-                            if filename is None:
-                                if isinstance(contents, str):
-                                    filename = os.path.basename(contents)
-                                else:
-                                    filename = "download"
-
-                            if content_type is None:
-                                (content_type, _) = guess_type(filename)
-                            content_disposition_filename = urllib.parse.quote(filename)
-                            if content_disposition_filename != filename:
-                                content_disposition = f"attachment; filename*=utf-8''{content_disposition_filename}"
-                            else:
-                                content_disposition = (
-                                    f'attachment; filename="{filename}"'
-                                )
-                            headers = {
-                                "Content-Disposition": content_disposition,
-                                "Cache-Control": "no-store",
-                            }
-
+                        if filename is None:
                             if isinstance(contents, str):
-                                # contents is the path to a file
-                                return FileResponse(
-                                    Path(contents),
-                                    headers=headers,
-                                    media_type=content_type,
-                                )
+                                filename = os.path.basename(contents)
+                            else:
+                                filename = "download"
 
-                            wrapped_contents: AsyncIterable[bytes]
+                        if content_type is None:
+                            (content_type, _) = guess_type(filename)
+                        content_disposition_filename = urllib.parse.quote(filename)
+                        if content_disposition_filename != filename:
+                            content_disposition = f"attachment; filename*=utf-8''{content_disposition_filename}"
+                        else:
+                            content_disposition = f'attachment; filename="{filename}"'
+                        headers = {
+                            "Content-Disposition": content_disposition,
+                            "Cache-Control": "no-store",
+                        }
 
-                            if isinstance(contents, AsyncIterable):
-
-                                async def wrap_content_async():
-                                    # TODO: This really needs to be `async with session_context`
-                                    with session_context(self):
-                                        async with isolate():
-                                            async for chunk in contents:
-                                                if isinstance(chunk, str):
-                                                    yield chunk.encode(
-                                                        download.encoding
-                                                    )
-                                                else:
-                                                    yield chunk
-
-                                wrapped_contents = wrap_content_async()
-
-                            else:  # isinstance(contents, Iterable):
-
-                                async def wrap_content_sync():
-                                    # TODO: Make sure these two `with` statements don't need to be async
-                                    with session_context(self):
-                                        with isolate():
-                                            for chunk in contents:
-                                                if isinstance(chunk, str):
-                                                    yield chunk.encode(
-                                                        download.encoding
-                                                    )
-                                                else:
-                                                    yield chunk
-
-                                wrapped_contents = wrap_content_sync()
-
-                            return StreamingResponse(
-                                wrapped_contents,
-                                200,
+                        if isinstance(contents, str):
+                            # contents is the path to a file
+                            return FileResponse(
+                                Path(contents),
                                 headers=headers,
-                                media_type=content_type,  # type: ignore
+                                media_type=content_type,
                             )
+
+                        wrapped_contents: AsyncIterable[bytes]
+
+                        if isinstance(contents, AsyncIterable):
+
+                            # Need to wrap the app-author-provided iterator in a
+                            # callback that installs the appropriate context mgrs.
+                            # We already use this context mgrs further up in the
+                            # implementation of handle_request(), but the iterators
+                            # aren't invoked until after handle_request() returns.
+                            async def wrap_content_async() -> AsyncIterable[bytes]:
+                                # TODO: This really needs to be `async with session_context`
+                                with session_context(self):
+                                    async with isolate():
+                                        async for chunk in contents:
+                                            if isinstance(chunk, str):
+                                                yield chunk.encode(download.encoding)
+                                            else:
+                                                yield chunk
+
+                            wrapped_contents = wrap_content_async()
+
+                        else:  # isinstance(contents, Iterable):
+
+                            async def wrap_content_sync() -> AsyncIterable[bytes]:
+                                # TODO: Make sure these two `with` statements don't need to be async
+                                with session_context(self):
+                                    with isolate():
+                                        for chunk in contents:
+                                            if isinstance(chunk, str):
+                                                yield chunk.encode(download.encoding)
+                                            else:
+                                                yield chunk
+
+                            wrapped_contents = wrap_content_sync()
+
+                        return StreamingResponse(
+                            wrapped_contents,
+                            200,
+                            headers=headers,
+                            media_type=content_type,  # type: ignore
+                        )
 
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
