@@ -74,6 +74,14 @@ ui = page_fluid(
             "Throws an error in the download handler, download should not succeed.",
         ),
     ),
+    row(
+        make_example(
+            "download5",
+            "Download",
+            "Undefined download",
+            "This button doesn't have corresponding server code registered to it, download should result in 404 error",
+        ),
+    ),
 )
 
 
