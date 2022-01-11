@@ -313,7 +313,13 @@ class ShinySession:
                             if isinstance(contents, str):
                                 filename = os.path.basename(contents)
                             else:
-                                filename = "download"
+                                warnings.warn(
+                                    "Unable to infer a filename for the "
+                                    f"'{download_id}' download handler; please use "
+                                    "@session.download(filename=) to specify one "
+                                    "manually"
+                                )
+                                filename = download_id
 
                         if content_type is None:
                             (content_type, _) = guess_type(filename)
