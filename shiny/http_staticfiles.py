@@ -131,7 +131,10 @@ else:
                 )
 
                 while True:
-                    data = f.read(4096 * 2)
+                    # In pyodide mode (the only mode in which we use this codepath) the
+                    # `send()` callback has quite a bit of per-call overhead, so use a
+                    # very large chunk size to keep performance adequate.
+                    data = f.read(262144)
                     if len(data) == 0:
                         break
                     await send(
