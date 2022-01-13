@@ -1,5 +1,7 @@
-from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
 from typing import Optional
+
+from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
+
 from .shinyenv import is_pyodide
 
 
