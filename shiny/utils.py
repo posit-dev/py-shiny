@@ -94,6 +94,38 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
     )
 
 
+class Callbacks:
+    def __init__(self) -> None:
+        self._callbacks: Dict[str, Callable[[], None]] = {}
+        self._id: int = 0
+
+    def register(self, fn: Callable[[], None]) -> Callable[[], None]:
+        self._id += 1
+        id = str(self._id)
+        self._callbacks[id] = fn
+
+        def _():
+            del self._callbacks[id]
+
+        return _
+
+    def invoke(self) -> None:
+        # Since executing a callback may cause side-effects (e.g. removing a
+        # callback), we need to make a copy of the callbacks before iterating
+        # over them. Note also that with Python>=3.7, we can assume the dict
+        # is ordered, and so the cbs should be ordered according to the order
+        # in which they were added.
+        cbs = list(self._callbacks.values())
+        for cb in cbs:
+            try:
+                cb()
+            finally:
+                pass
+
+    def count(self) -> int:
+        return len(self._callbacks)
+
+
 # ==============================================================================
 # System-related functions
 # ==============================================================================

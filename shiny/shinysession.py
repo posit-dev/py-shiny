@@ -131,8 +131,8 @@ class ShinySession:
 
         self._register_session_end_callbacks()
 
-        self._flush_callbacks: List[Callable[[], None]] = []
-        self._flushed_callbacks: List[Callable[[], None]] = []
+        self._flush_callbacks = utils.Callbacks()
+        self._flushed_callbacks = utils.Callbacks()
 
         with session_context(self):
             self.app.server(self)
@@ -411,7 +411,7 @@ class ShinySession:
         self._message_queue_out.clear()
 
     def send_insert_ui(
-        self, selector: str, multiple: bool, where: str, content: TagChildArg
+        self, selector: str, multiple: bool, where: str, content: "_RenderedDeps"
     ) -> None:
         msg = {
             "selector": selector,
@@ -443,25 +443,24 @@ class ShinySession:
     # Flush
     # ==========================================================================
     def on_flush(self, func: Callable[[], None], once: bool = True) -> None:
-        """Register a function to be called when this session is flushed."""
-        if once and func in self._flush_callbacks:
-            return
-        else:
-            self._flush_callbacks.append(func)
+        """
+        Registers a function to be called before the next time (if once=True) or every time (if once=False) Shiny flushes the reactive system. Returns a function that can be called with no arguments to cancel the registration.
+        """
+        _callbacks_register(self._flush_callbacks, func, once)
 
     def on_flushed(self, func: Callable[[], None], once: bool = True) -> None:
-        """Register a function to be called when this session is flushed."""
-        if once and func in self._flushed_callbacks:
-            return
-        else:
-            self._flushed_callbacks.append(func)
+        """
+        Registers a function to be called after the next time (if once=TRUE) or every time (if once=FALSE) Shiny flushes the reactive system. Returns a function that can be called with no arguments to cancel the registration.
+        """
+        _callbacks_register(self._flushed_callbacks, func, once)
 
     def request_flush(self) -> None:
         self.app.request_flush(self)
 
     async def flush(self) -> None:
-        _invoke_callbacks(self._flush_callbacks)
-        _invoke_callbacks(self._flushed_callbacks)
+        with session_context(self):
+            self._flush_callbacks.invoke()
+            self._flushed_callbacks.invoke()
 
         values: Dict[str, object] = {}
         for value in self.get_messages_out():
@@ -620,15 +619,6 @@ def _require_active_session(session: Optional[ShinySession]) -> ShinySession:
 # ==============================================================================
 
 
-def _invoke_callbacks(cbs: List[Callable[[], None]]) -> None:
-    for cb in cbs:
-        try:
-            cb()
-        finally:
-            pass
-    cbs.clear()
-
-
 class _RenderedDeps(TypedDict):
     deps: List[Dict[str, Any]]
     html: str
@@ -670,3 +660,19 @@ def read_thunk_opt(thunk: Optional[Union[Callable[[], T], T]]) -> Optional[T]:
         return thunk()
     else:
         return thunk
+
+
+def _callbacks_register(
+    callbacks: utils.Callbacks, func: Callable[[], None], once: bool = True
+) -> None:
+    if not once:
+        callbacks.register(func)
+        return
+
+    def func_once() -> None:
+        nonlocal func_rm
+        func_rm()
+        func()
+
+    func_rm = callbacks.register(func_once)
+    return
