@@ -23,7 +23,7 @@ def counter_module_ui(
     ns: Callable[[str], str], label: str = "Increment counter"
 ) -> TagChildArg:
     return TagList(
-        input_button(id=ns("button"), label=label),
+        input_action_button(id=ns("button"), label=label),
         output_text_verbatim(id=ns("out")),
     )
 

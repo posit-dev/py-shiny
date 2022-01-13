@@ -3,7 +3,7 @@ from typing import Optional
 from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
 
 
-def input_button(
+def input_action_button(
     id: str,
     label: TagChildArg,
     icon: TagChildArg = None,
@@ -21,7 +21,7 @@ def input_button(
     )
 
 
-def input_link(
+def input_action_link(
     id: str,
     label: TagChildArg,
     icon: TagChildArg = None,
