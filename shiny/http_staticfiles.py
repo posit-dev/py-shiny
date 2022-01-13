@@ -11,12 +11,16 @@ not true when running in native Python, we want to be as safe as possible.
 
 import sys
 
+from starlette.background import BackgroundTask
+
 if "pyodide" not in sys.modules:
     # Running in native mode; use starlette StaticFiles
 
     import starlette.staticfiles
+    import starlette.responses
 
     StaticFiles = starlette.staticfiles.StaticFiles  # type: ignore
+    FileResponse = starlette.responses.FileResponse  # type: ignore
 
 else:
     # Running in wasm mode; must use our own simple StaticFiles
@@ -104,9 +108,11 @@ else:
             file: os.PathLike[str],
             headers: Optional[MutableMapping[str, str]] = None,
             media_type: Optional[str] = None,
+            background: Optional[BackgroundTask] = None,
         ) -> None:
             self.headers = headers
             self.file = file
+            self.background = background
 
             if media_type is None:
                 media_type, _ = mimetypes.guess_type(file, strict=False)
@@ -115,18 +121,35 @@ else:
             self.media_type = media_type
 
         async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-            await send(
-                {
-                    "type": "http.response.start",
-                    "status": 200,
-                    "headers": convert_headers(self.headers, self.media_type),
-                }
-            )
             with open(self.file, "rb") as f:
-                data = f.read()
                 await send(
-                    {"type": "http.response.body", "body": data, "more_body": False}
+                    {
+                        "type": "http.response.start",
+                        "status": 200,
+                        "headers": convert_headers(self.headers, self.media_type),
+                    }
                 )
+
+                while True:
+                    # In pyodide mode (the only mode in which we use this codepath) the
+                    # `send()` callback has quite a bit of per-call overhead, so use a
+                    # very large chunk size to keep performance adequate.
+                    data = f.read(262144)
+                    if len(data) == 0:
+                        break
+                    await send(
+                        {
+                            "type": "http.response.body",
+                            "body": data,
+                            "more_body": True,
+                        }
+                    )
+
+                await send(
+                    {"type": "http.response.body", "body": b"", "more_body": False}
+                )
+            if self.background:
+                await self.background()
 
     def convert_headers(
         headers: Optional[MutableMapping[str, str]], media_type: Optional[str] = None
