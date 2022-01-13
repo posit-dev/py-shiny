@@ -3,9 +3,6 @@
 
 # Then point web browser to:
 #   http://localhost:8000/
-
-# Add parent directory to path, so we can find the prism module.
-# (This is just a temporary fix)
 import asyncio
 from datetime import date
 import os
