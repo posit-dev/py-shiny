@@ -83,13 +83,23 @@ class ClientMessageOther(ClientMessage):
     tag: int
 
 
+# This is the type for the function provided by the user to provide the contents of a
+# download. It must be a function that takes no arguments, and returns one of:
+# 1. A string, which will be interpreted as a path
+# 2. A regular Iterable of bytes or strings (i.e. a generator function)
+# 3. An AsyncIterable of bytes or strings (i.e. an async generator function)
+#
+# (Not currently supported is Awaitable[str], could be added easily enough if needed.)
+_DownloadHandler = Callable[
+    [], Union[str, Iterable[Union[bytes, str]], AsyncIterable[Union[bytes, str]]]
+]
+
+
 @dataclasses.dataclass
-class _DownloadHandler:
+class _DownloadInfo:
     filename: Union[Callable[[], str], str, None]
     content_type: Optional[Union[Callable[[], str], str]]
-    handler: Callable[
-        [], Union[str, AsyncIterable[Union[bytes, str]], Iterable[Union[bytes, str]]]
-    ]
+    handler: _DownloadHandler
     encoding: str
 
 
@@ -117,7 +127,7 @@ class ShinySession:
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks: List[Callable[[], None]] = []
         self._has_run_session_end_tasks: bool = False
-        self._downloads: Dict[str, _DownloadHandler] = {}
+        self._downloads: Dict[str, _DownloadInfo] = {}
 
         self._register_session_end_callbacks()
 
@@ -455,20 +465,13 @@ class ShinySession:
         media_type: Union[None, str, Callable[[], str]] = None,
         encoding: str = "utf-8",
     ):
-        def wrapper(
-            fn: Callable[
-                [],
-                Union[
-                    str, AsyncIterable[Union[bytes, str]], Iterable[Union[bytes, str]]
-                ],
-            ]
-        ):
+        def wrapper(fn: _DownloadHandler):
             if name is None:
                 effective_name = fn.__name__
             else:
                 effective_name = name
 
-            self._downloads[effective_name] = _DownloadHandler(
+            self._downloads[effective_name] = _DownloadInfo(
                 filename=filename,
                 content_type=media_type,
                 handler=fn,
