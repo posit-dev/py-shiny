@@ -32,7 +32,7 @@ setup(
     name="shiny",
     packages=find_packages(include=["shiny", "shiny.*"]),
     package_data={
-        "htmltools": ["py.typed"],
+        "shiny": ["py.typed"],
     },
     test_suite="tests",
     tests_require=test_requirements,
