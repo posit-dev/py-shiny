@@ -24,6 +24,7 @@ from typing import (
     Union,
     Generic,
     Any,
+    overload,
 )
 import typing
 import inspect
@@ -46,13 +47,19 @@ class ReactiveVal(Generic[T]):
         self._value: T = value
         self._dependents: Dependents = Dependents()
 
-    def __call__(self, *args: Optional[T]) -> Union[T, bool]:
-        if args:
-            if len(args) > 1:
-                raise TypeError("ReactiveVal can only be called with one argument")
-            return self.set(args[0])
-        else:
+    @overload
+    def __call__(self) -> T:
+        ...
+
+    @overload
+    def __call__(self, value: T) -> bool:
+        ...
+
+    def __call__(self, value: Union[MISSING_TYPE, T] = MISSING) -> Union[T, bool]:
+        if isinstance(value, MISSING_TYPE):
             return self.get()
+        else:
+            return self.set(value)
 
     def get(self) -> T:
         self._dependents.register()
