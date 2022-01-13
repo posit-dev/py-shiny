@@ -131,6 +131,9 @@ class ShinySession:
 
         self._register_session_end_callbacks()
 
+        self._flush_callbacks: List[Callable[[], None]] = []
+        self._flushed_callbacks: List[Callable[[], None]] = []
+
         with session_context(self):
             self.app.server(self)
 
@@ -407,6 +410,21 @@ class ShinySession:
     def clear_messages_out(self) -> None:
         self._message_queue_out.clear()
 
+    def send_insert_ui(
+        self, selector: str, multiple: bool, where: str, content: TagChildArg
+    ) -> None:
+        msg = {
+            "selector": selector,
+            "multiple": multiple,
+            "where": where,
+            "content": content,
+        }
+        utils.run_coro_sync(self.send_message({"shiny-insert-ui": msg}))
+
+    def send_remove_ui(self, selector: str, multiple: bool) -> None:
+        msg = {"selector": selector, "multiple": multiple}
+        utils.run_coro_sync(self.send_message({"shiny-remove-ui": msg}))
+
     async def send_message(self, message: Dict[str, object]) -> None:
         message_str: str = json.dumps(message) + "\n"
         if self._debug:
@@ -424,12 +442,28 @@ class ShinySession:
     # ==========================================================================
     # Flush
     # ==========================================================================
+    def on_flush(self, func: Callable[[], None], once: bool = True) -> None:
+        """Register a function to be called when this session is flushed."""
+        if once and func in self._flush_callbacks:
+            return
+        else:
+            self._flush_callbacks.append(func)
+
+    def on_flushed(self, func: Callable[[], None], once: bool = True) -> None:
+        """Register a function to be called when this session is flushed."""
+        if once and func in self._flushed_callbacks:
+            return
+        else:
+            self._flushed_callbacks.append(func)
+
     def request_flush(self) -> None:
         self.app.request_flush(self)
 
     async def flush(self) -> None:
-        values: Dict[str, object] = {}
+        _invoke_callbacks(self._flush_callbacks)
+        _invoke_callbacks(self._flushed_callbacks)
 
+        values: Dict[str, object] = {}
         for value in self.get_messages_out():
             values.update(value)
 
@@ -584,6 +618,15 @@ def _require_active_session(session: Optional[ShinySession]) -> ShinySession:
 # ==============================================================================
 # Miscellaneous functions
 # ==============================================================================
+
+
+def _invoke_callbacks(cbs: List[Callable[[], None]]) -> None:
+    for cb in cbs:
+        try:
+            cb()
+        finally:
+            pass
+    cbs.clear()
 
 
 class _RenderedDeps(TypedDict):
