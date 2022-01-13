@@ -8,15 +8,15 @@ from .shinyenv import is_pyodide
 # TODO: implement icon
 def download_button(
     id: str,
-    label: str,
-    *args: TagChildArg,
+    label: TagChildArg,
+    icon: TagChildArg = None,
     class_: Optional[str] = None,
     width: Optional[str] = None,
     **kwargs: TagAttrArg,
 ) -> Tag:
     return tags.a(
+        icon,
         label,
-        *args,
         id=id,
         class_=f"btn btn-default shiny-download-link {class_}",
         style=css(width=width),
@@ -36,15 +36,15 @@ def download_button(
 
 def download_link(
     id: str,
-    label: str,
-    *args: TagChildArg,
+    label: TagChildArg,
+    icon: TagChildArg = None,
     class_: Optional[str] = None,
     width: Optional[str] = None,
     **kwargs: TagAttrArg,
 ) -> Tag:
     return tags.a(
+        icon,
         label,
-        *args,
         id=id,
         class_=f"shiny-download-link {class_}",
         style=css(width=width),
