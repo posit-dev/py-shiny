@@ -11,6 +11,7 @@ __all__ = (
     "ObserverAsync",
     "observe",
     "observe_async",
+    "invalidate_later",
     "isolate",
     "isolate_async",
 )
@@ -27,8 +28,9 @@ from typing import (
 )
 import typing
 import inspect
+import time
 
-from .reactcore import Context, Dependents
+from .reactcore import Context, Dependents, get_current_context
 from . import reactcore
 from . import utils
 from .types import MISSING, MISSING_TYPE
@@ -46,7 +48,7 @@ class ReactiveVal(Generic[T]):
         self._value: T = value
         self._dependents: Dependents = Dependents()
 
-    def __call__(self, *args: Optional[T]) -> Union[T, bool]:
+    def __call__(self, *args: T) -> Union[T, bool]:
         if args:
             if len(args) > 1:
                 raise TypeError("ReactiveVal can only be called with one argument")
@@ -345,6 +347,36 @@ def observe_async(
         return ObserverAsync(fn, priority=priority, session=session)
 
     return create_observer_async
+
+
+# ==============================================================================
+# Time functions
+# ==============================================================================
+
+
+def invalidate_later(
+    delay: float,
+    session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
+):
+    when = time.monotonic() + delay
+    ctx = get_current_context()
+
+    def on_deadline():
+        ctx.invalidate()
+
+    if isinstance(session, MISSING_TYPE):
+        # If no session is provided, autodetect the current session (this
+        # could be None if outside of a session).
+        session = shinysession.get_current_session()
+
+    if session is None:
+        # TODO: Use custom class?
+        raise RuntimeError(
+            "Currently, invalidate_later can only be used from within a Shiny session (i.e. inside a server function)"
+        )
+
+    unregister = session.invoke_later(when, on_deadline)
+    ctx.on_invalidate(unregister)
 
 
 # ==============================================================================

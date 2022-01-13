@@ -36,12 +36,14 @@ else:
 if TYPE_CHECKING:
     from .shinyapp import ShinyApp
 
-from htmltools import TagChildArg, TagList, HTMLDependency
+from htmltools import TagChildArg, TagList
 
 from .reactives import ReactiveValues, Observer, ObserverAsync
 from .connmanager import Connection, ConnectionClosed
 from . import render
 from . import utils
+from . import timer
+from . import reactcore
 from .fileupload import FileInfo, FileUploadManager
 from .input_handlers import input_handlers
 
@@ -91,6 +93,7 @@ class ShinySession:
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks: List[Callable[[], None]] = []
         self._has_run_session_end_tasks: bool = False
+        self._timer: timer.Timer = timer.Timer()
 
         self._register_session_end_callbacks()
 
@@ -127,52 +130,81 @@ class ShinySession:
         )
 
         try:
+            recv_task = None
+
             while True:
-                message: str = await self._conn.receive()
-                if self._debug:
-                    print("RECV: " + message)
+                if recv_task is None:
+                    recv_task = asyncio.create_task(self._conn.receive())
 
-                try:
-                    message_obj = json.loads(message)
-                except json.JSONDecodeError:
-                    print("ERROR: Invalid JSON message")
-                    continue
+                timeout = self._timer.next_timeout()
 
-                if "method" not in message_obj:
-                    self._send_error_response("Message does not contain 'method'.")
-                    return
-
-                if message_obj["method"] == "init":
-                    message_obj = typing.cast(ClientMessageInit, message_obj)
-                    self._manage_inputs(message_obj["data"])
-
-                elif message_obj["method"] == "update":
-                    message_obj = typing.cast(ClientMessageUpdate, message_obj)
-                    self._manage_inputs(message_obj["data"])
-
+                if timeout is not None:
+                    timeout_task = asyncio.create_task(asyncio.sleep(timeout))
+                    done, _ = await asyncio.wait(
+                        [recv_task, timeout_task],
+                        return_when=asyncio.tasks.FIRST_COMPLETED,
+                    )
+                    if timeout_task in done:
+                        callbacks = self._timer.take_expired()
+                        for cb in callbacks:
+                            cb()
+                            await reactcore.flush()
+                    if recv_task in done:
+                        if not await self._process_message(recv_task.result()):
+                            return
+                        recv_task = None
+                        await reactcore.flush()
                 else:
-                    if "tag" not in message_obj:
-                        warnings.warn(
-                            "Cannot dispatch message with missing 'tag'; method: "
-                            + message_obj["method"]
-                        )
+                    if not await self._process_message(await recv_task):
                         return
-                    if "args" not in message_obj:
-                        warnings.warn(
-                            "Cannot dispatch message with missing 'args'; method: "
-                            + message_obj["method"]
-                        )
-                        return
-
-                    message_obj = typing.cast(ClientMessageOther, message_obj)
-                    await self._dispatch(message_obj)
-
-                self.request_flush()
+                    recv_task = None
+                    await reactcore.flush()
 
                 await self.app.flush_pending_sessions()
 
         except ConnectionClosed:
             self._run_session_end_tasks()
+
+    async def _process_message(self, message: str) -> bool:
+        if self._debug:
+            print("RECV: " + message)
+
+        try:
+            message_obj = json.loads(message)
+        except json.JSONDecodeError:
+            print("ERROR: Invalid JSON message")
+            return False
+
+        if "method" not in message_obj:
+            self._send_error_response("Message does not contain 'method'.")
+            return False
+
+        if message_obj["method"] == "init":
+            message_obj = typing.cast(ClientMessageInit, message_obj)
+            self._manage_inputs(message_obj["data"])
+
+        elif message_obj["method"] == "update":
+            message_obj = typing.cast(ClientMessageUpdate, message_obj)
+            self._manage_inputs(message_obj["data"])
+
+        else:
+            if "tag" not in message_obj:
+                warnings.warn(
+                    "Cannot dispatch message with missing 'tag'; method: "
+                    + message_obj["method"]
+                )
+                return False
+            if "args" not in message_obj:
+                warnings.warn(
+                    "Cannot dispatch message with missing 'args'; method: "
+                    + message_obj["method"]
+                )
+                return False
+
+            message_obj = typing.cast(ClientMessageOther, message_obj)
+            await self._dispatch(message_obj)
+
+        return True
 
     def _manage_inputs(self, data: Dict[str, object]) -> None:
         for (key, val) in data.items():
@@ -186,6 +218,14 @@ class ShinySession:
                 val = input_handlers.process_value(keys[1], val, keys[0], self)
 
             self.input[keys[0]] = val
+
+    # ==========================================================================
+    # Timers
+    # ==========================================================================
+    def invoke_later(
+        self, abstime: float, callback: Callable[[], None]
+    ) -> Callable[[], None]:
+        return self._timer.register_abs(abstime, callback)
 
     # ==========================================================================
     # Message handlers
