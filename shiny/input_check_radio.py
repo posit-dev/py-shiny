@@ -111,7 +111,7 @@ def _generate_option(
         type=type,
         name=id,
         value=choice[1],
-        checked="checked" if selected == choice else None,
+        checked="checked" if selected == choice[1] else None,
     )
     if inline:
         return tags.label(input, span(choice[0]), class_=type + "-inline")
