@@ -3,6 +3,7 @@ from typing import (
     Awaitable,
     TypeVar,
     Dict,
+    Any,
 )
 import os
 import tempfile
@@ -88,7 +89,7 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
     )
 
 
-def drop_none(x: Dict[str, T]) -> Dict[str, T]:
+def drop_none(x: Dict[str, Any]) -> Dict[str, object]:
     return {k: v for k, v in x.items() if v is not None}
 
 

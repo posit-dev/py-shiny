@@ -297,14 +297,13 @@ class ShinySession:
         self.get_messages_out("output").clear()
         self.get_messages_out("input").clear()
 
-    def send_input_message(self, id: str, message: Dict[str, Any]) -> None:
+    def send_input_message(self, id: str, message: Dict[str, object]) -> None:
         self.add_message_out({"id": id, "message": message}, type="input")
         # TODO: this should be request_flush() instead of flush(),
         # but that's not currently implemented
         utils.run_coro_sync(self.flush())
 
-    # https://github.com/python/typing/issues/182#issuecomment-185996450
-    async def send_message(self, message: Dict[str, Any]) -> None:
+    async def send_message(self, message: Dict[str, object]) -> None:
         message_str: str = json.dumps(message) + "\n"
         if self._debug:
             print(
