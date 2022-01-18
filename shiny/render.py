@@ -31,8 +31,12 @@ __all__ = (
     "render_ui",
 )
 
-UserRenderFunction = Callable[[], object]
-UserRenderFunctionAsync = Callable[[], Awaitable[object]]
+# It would be nice to specify the return type of RenderPlotFunc to be something like:
+#   Union[matplotlib.figure.Figure, PIL.Image.Image]
+# However, if we did that, we'd have to import those modules at load time, which adds
+# a nontrivial amount of overhead. So for now, we're just using `object`.
+RenderPlotFunc = Callable[[], object]
+RenderPlotFuncAsync = Callable[[], Awaitable[object]]
 
 
 class ImgData(TypedDict):
@@ -42,12 +46,12 @@ class ImgData(TypedDict):
     alt: Optional[str]
 
 
-ImgRenderFunc = Callable[[], ImgData]
-ImgRenderFuncAsync = Callable[[], Awaitable[ImgData]]
+RenderImageFunc = Callable[[], ImgData]
+RenderImageFuncAsync = Callable[[], Awaitable[ImgData]]
 
 
 class RenderFunction:
-    def __init__(self, fn: UserRenderFunction) -> None:
+    def __init__(self, fn: Callable[[], object]) -> None:
         raise NotImplementedError
 
     def __call__(self) -> object:
@@ -69,8 +73,8 @@ class RenderFunctionAsync(RenderFunction):
 class RenderPlot(RenderFunction):
     _ppi: float = 96
 
-    def __init__(self, fn: UserRenderFunction, alt: Optional[str] = None) -> None:
-        self._fn: UserRenderFunctionAsync = utils.wrap_async(fn)
+    def __init__(self, fn: RenderPlotFunc, alt: Optional[str] = None) -> None:
+        self._fn: RenderPlotFuncAsync = utils.wrap_async(fn)
         self._alt: Optional[str] = alt
 
     def __call__(self) -> object:
@@ -119,23 +123,26 @@ class RenderPlot(RenderFunction):
 
 
 class RenderPlotAsync(RenderPlot, RenderFunctionAsync):
-    def __init__(self, fn: UserRenderFunctionAsync, alt: Optional[str] = None) -> None:
+    def __init__(self, fn: RenderPlotFuncAsync, alt: Optional[str] = None) -> None:
         if not inspect.iscoroutinefunction(fn):
             raise TypeError("PlotAsync requires an async function")
 
         # Init the Plot base class with a placeholder synchronous function so it
         # won't throw an error, then replace it with the async function.
         super().__init__(lambda: None, alt)
-        self._fn: UserRenderFunctionAsync = fn
+        self._fn: RenderPlotFuncAsync = fn
 
     async def __call__(self) -> object:
         return await self.run()
 
 
-def render_plot(alt: Optional[str] = None):
-    def wrapper(fn: Union[UserRenderFunction, UserRenderFunctionAsync]) -> RenderPlot:
+# TODO: Use more specific types for render_plot
+def render_plot(
+    alt: Optional[str] = None,
+) -> Callable[[Union[RenderPlotFunc, RenderPlotFuncAsync]], RenderPlot]:
+    def wrapper(fn: Union[RenderPlotFunc, RenderPlotFuncAsync]) -> RenderPlot:
         if inspect.iscoroutinefunction(fn):
-            fn = typing.cast(UserRenderFunctionAsync, fn)
+            fn = typing.cast(RenderPlotFuncAsync, fn)
             return RenderPlotAsync(fn, alt=alt)
         else:
             return RenderPlot(fn, alt=alt)
@@ -228,8 +235,8 @@ def try_render_plot_pil(
 
 
 class RenderImage(RenderFunction):
-    def __init__(self, fn: ImgRenderFunc, delete_file: bool = False) -> None:
-        self._fn: ImgRenderFuncAsync = utils.wrap_async(fn)
+    def __init__(self, fn: RenderImageFunc, delete_file: bool = False) -> None:
+        self._fn: RenderImageFuncAsync = utils.wrap_async(fn)
         self._delete_file: bool = delete_file
 
     def __call__(self) -> object:
@@ -251,37 +258,39 @@ class RenderImage(RenderFunction):
 
 
 class RenderImageAsync(RenderImage, RenderFunctionAsync):
-    def __init__(self, fn: ImgRenderFuncAsync, delete_file: bool = False) -> None:
+    def __init__(self, fn: RenderImageFuncAsync, delete_file: bool = False) -> None:
         if not inspect.iscoroutinefunction(fn):
             raise TypeError("PlotAsync requires an async function")
         # Init the Plot base class with a placeholder synchronous function so it
         # won't throw an error, then replace it with the async function.
         super().__init__(lambda: None, delete_file)
-        self._fn: ImgRenderFuncAsync = fn
+        self._fn: RenderImageFuncAsync = fn
 
     async def __call__(self) -> object:
         return await self.run()
 
 
-def render_image(delete_file: bool = False):
-    def wrapper(fn: Union[ImgRenderFunc, ImgRenderFuncAsync]) -> RenderImage:
+def render_image(
+    delete_file: bool = False,
+) -> Callable[[Union[RenderImageFunc, RenderImageFuncAsync]], RenderImage]:
+    def wrapper(fn: Union[RenderImageFunc, RenderImageFuncAsync]) -> RenderImage:
         if inspect.iscoroutinefunction(fn):
-            fn = typing.cast(ImgRenderFuncAsync, fn)
+            fn = typing.cast(RenderImageFuncAsync, fn)
             return RenderImageAsync(fn, delete_file=delete_file)
         else:
-            fn = typing.cast(ImgRenderFunc, fn)
+            fn = typing.cast(RenderImageFunc, fn)
             return RenderImage(fn, delete_file=delete_file)
 
     return wrapper
 
 
-UiRenderFunc = Callable[[], TagChildArg]
-UiRenderFuncAsync = Callable[[], Awaitable[TagChildArg]]
+RenderUIFunc = Callable[[], TagChildArg]
+RenderUIFuncAsync = Callable[[], Awaitable[TagChildArg]]
 
 
 class RenderUI(RenderFunction):
-    def __init__(self, fn: UiRenderFunc) -> None:
-        self._fn: UiRenderFuncAsync = utils.wrap_async(fn)
+    def __init__(self, fn: RenderUIFunc) -> None:
+        self._fn: RenderUIFuncAsync = utils.wrap_async(fn)
 
     def __call__(self) -> object:
         return utils.run_coro_sync(self.run())
@@ -297,24 +306,24 @@ class RenderUI(RenderFunction):
 
 
 class RenderUIAsync(RenderUI, RenderFunctionAsync):
-    def __init__(self, fn: UiRenderFuncAsync) -> None:
+    def __init__(self, fn: RenderUIFuncAsync) -> None:
         if not inspect.iscoroutinefunction(fn):
             raise TypeError("PlotAsync requires an async function")
 
         super().__init__(lambda: None)
-        self._fn: UiRenderFuncAsync = fn
+        self._fn: RenderUIFuncAsync = fn
 
     async def __call__(self) -> object:
         return await self.run()
 
 
-def render_ui():
-    def wrapper(fn: Union[UiRenderFunc, UiRenderFuncAsync]) -> RenderUI:
+def render_ui() -> Callable[[Union[RenderUIFunc, RenderUIFuncAsync]], RenderUI]:
+    def wrapper(fn: Union[RenderUIFunc, RenderUIFuncAsync]) -> RenderUI:
         if inspect.iscoroutinefunction(fn):
-            fn = typing.cast(UiRenderFuncAsync, fn)
+            fn = typing.cast(RenderUIFuncAsync, fn)
             return RenderUIAsync(fn)
         else:
-            fn = typing.cast(UiRenderFunc, fn)
+            fn = typing.cast(RenderUIFunc, fn)
             return RenderUI(fn)
 
     return wrapper
