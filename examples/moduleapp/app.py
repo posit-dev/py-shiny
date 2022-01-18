@@ -34,7 +34,8 @@ def counter_module_server(session: ShinySessionProxy):
     @observe()
     def _():
         session.input["button"]
-        isolate(lambda: count(count() + 1))
+        with isolate():
+            count(count() + 1)
 
     @session.output("out")
     def _() -> str:

@@ -1,3 +1,4 @@
 {
-  "reportImportCycles": false
+  "reportImportCycles": false,
+  "reportUnusedFunction": false
 }
