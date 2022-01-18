@@ -446,13 +446,13 @@ class ShinySession:
         """
         Registers a function to be called before the next time (if once=True) or every time (if once=False) Shiny flushes the reactive system. Returns a function that can be called with no arguments to cancel the registration.
         """
-        _callbacks_register(self._flush_callbacks, func, once)
+        self._flush_callbacks.register(func, once)
 
     def on_flushed(self, func: Callable[[], None], once: bool = True) -> None:
         """
         Registers a function to be called after the next time (if once=TRUE) or every time (if once=FALSE) Shiny flushes the reactive system. Returns a function that can be called with no arguments to cancel the registration.
         """
-        _callbacks_register(self._flushed_callbacks, func, once)
+        self._flushed_callbacks.register(func, once)
 
     def request_flush(self) -> None:
         self.app.request_flush(self)
@@ -660,19 +660,3 @@ def read_thunk_opt(thunk: Optional[Union[Callable[[], T], T]]) -> Optional[T]:
         return thunk()
     else:
         return thunk
-
-
-def _callbacks_register(
-    callbacks: utils.Callbacks, func: Callable[[], None], once: bool = True
-) -> None:
-    if not once:
-        callbacks.register(func)
-        return
-
-    def func_once() -> None:
-        nonlocal func_rm
-        func_rm()
-        func()
-
-    func_rm = callbacks.register(func_once)
-    return

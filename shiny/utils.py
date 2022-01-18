@@ -2,6 +2,7 @@ from typing import (
     TYPE_CHECKING,
     Callable,
     Awaitable,
+    Tuple,
     TypeVar,
     Optional,
     List,
@@ -96,13 +97,15 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
 
 class Callbacks:
     def __init__(self) -> None:
-        self._callbacks: Dict[str, Callable[[], None]] = {}
+        self._callbacks: Dict[str, Tuple[Callable[[], None], bool]] = {}
         self._id: int = 0
 
-    def register(self, fn: Callable[[], None]) -> Callable[[], None]:
+    def register(
+        self, fn: Callable[[], None], once: bool = False
+    ) -> Callable[[], None]:
         self._id += 1
         id = str(self._id)
-        self._callbacks[id] = fn
+        self._callbacks[id] = (fn, once)
 
         def _():
             del self._callbacks[id]
@@ -110,17 +113,14 @@ class Callbacks:
         return _
 
     def invoke(self) -> None:
-        # Since executing a callback may cause side-effects (e.g. removing a
-        # callback), we need to make a copy of the callbacks before iterating
-        # over them. Note also that with Python>=3.7, we can assume the dict
-        # is ordered, and so the cbs should be ordered according to the order
-        # in which they were added.
-        cbs = list(self._callbacks.values())
-        for cb in cbs:
+        ids = list(self._callbacks.keys())
+        for id in ids:
+            fn, once = self._callbacks[id]
             try:
-                cb()
+                fn()
             finally:
-                pass
+                if once:
+                    del self._callbacks[id]
 
     def count(self) -> int:
         return len(self._callbacks)
