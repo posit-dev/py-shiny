@@ -11,7 +11,6 @@ from pathlib import Path
 import sys
 import json
 import re
-import asyncio
 import warnings
 import typing
 import mimetypes
@@ -44,9 +43,9 @@ from starlette.types import ASGIApp
 
 
 if sys.version_info >= (3, 8):
-    from typing import TypedDict
+    from typing import TypedDict, Literal
 else:
-    from typing_extensions import TypedDict
+    from typing_extensions import TypedDict, Literal
 
 if TYPE_CHECKING:
     from .shinyapp import ShinyApp
@@ -118,8 +117,8 @@ class ShinySession:
         self.input: ReactiveValues = ReactiveValues()
         self.output: Outputs = Outputs(self)
 
-        self._message_queue_in: asyncio.Queue[Optional[ClientMessage]] = asyncio.Queue()
-        self._message_queue_out: List[Dict[str, object]] = []
+        self._message_output_values: List[Dict[str, object]] = []
+        self._message_input_messages: List[Dict[str, object]] = []
 
         self._message_handlers: Dict[
             str, Callable[..., Awaitable[object]]
@@ -401,14 +400,31 @@ class ShinySession:
     # ==========================================================================
     # Outbound message handling
     # ==========================================================================
-    def add_message_out(self, message: Dict[str, object]) -> None:
-        self._message_queue_out.append(message)
+    def add_message_out(
+        self, message: Dict[str, object], type: Literal["output", "input"] = "output"
+    ) -> None:
+        if type == "output":
+            self._message_output_values.append(message)
+        elif type == "input":
+            self._message_input_messages.append(message)
 
-    def get_messages_out(self) -> List[Dict[str, object]]:
-        return self._message_queue_out
+    def get_messages_out(
+        self, type: Literal["output", "input"] = "output"
+    ) -> List[Dict[str, object]]:
+        if type == "output":
+            return self._message_output_values
+        elif type == "input":
+            return self._message_input_messages
 
     def clear_messages_out(self) -> None:
-        self._message_queue_out.clear()
+        self.get_messages_out("output").clear()
+        self.get_messages_out("input").clear()
+
+    def send_input_message(self, id: str, message: Dict[str, object]) -> None:
+        self.add_message_out({"id": id, "message": message}, type="input")
+        # TODO: this should be request_flush() instead of flush(),
+        # but that's not currently implemented
+        utils.run_coro_sync(self.flush())
 
     def send_insert_ui(
         self, selector: str, multiple: bool, where: str, content: "_RenderedDeps"
@@ -463,13 +479,13 @@ class ShinySession:
             self._flushed_callbacks.invoke()
 
         values: Dict[str, object] = {}
-        for value in self.get_messages_out():
+        for value in self.get_messages_out("output"):
             values.update(value)
 
         message: Dict[str, object] = {
             "errors": {},
             "values": values,
-            "inputMessages": [],
+            "inputMessages": self.get_messages_out("input"),
         }
 
         try:
