@@ -479,7 +479,7 @@ class ShinySession:
             self._flushed_callbacks.invoke()
 
         values: Dict[str, object] = {}
-        for value in self.get_messages_out():
+        for value in self.get_messages_out("output"):
             values.update(value)
 
         message: Dict[str, object] = {

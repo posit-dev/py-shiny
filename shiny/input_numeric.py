@@ -1,19 +1,17 @@
-from typing import Optional, Union
+from typing import Optional
 
 from htmltools import tags, Tag, div, css, TagChildArg
 
 from .input_utils import shiny_input_label
 
-NumericValueArg = Union[int, float]
-
 
 def input_numeric(
     id: str,
     label: TagChildArg,
-    value: NumericValueArg,
-    min: Optional[NumericValueArg] = None,
-    max: Optional[NumericValueArg] = None,
-    step: Optional[NumericValueArg] = None,
+    value: float,
+    min: Optional[float] = None,
+    max: Optional[float] = None,
+    step: Optional[float] = None,
     width: Optional[str] = None,
 ) -> Tag:
     return div(

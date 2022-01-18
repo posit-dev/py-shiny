@@ -5,10 +5,11 @@ from htmltools import Tag, tags, div, TagChildArg
 from .html_dependencies import selectize_deps
 from .input_utils import shiny_input_label
 
-# This is the canonical format for representing select options.
+
 SelectChoicesArg = Union[
     List[str], Dict[str, str], Dict[str, List[str]], Dict[str, Dict[str, str]]
 ]
+# This is the canonical format for representing select options.
 _SelectChoices = Dict[str, Union[str, Dict[str, str]]]
 
 

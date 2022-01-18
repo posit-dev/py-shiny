@@ -186,7 +186,7 @@ def server(sess: ShinySession):
         # Tabset input =============================================
         # Change the selected tab.
         # The tabsetPanel must have been created with an 'id' argument
-        nav_select("inTabset", selected="panel2" if c_num % 2 else "panel1")
+        update_navs("inTabset", selected="panel2" if c_num % 2 else "panel1")
 
 
 app = ShinyApp(ui, server)

@@ -23,7 +23,7 @@ def input_checkbox(
     )
 
 
-CheckChoicesArg = Union[Sequence[str], Sequence[Tuple[str, str]]]
+CheckChoicesArg = Union[Sequence[str], Sequence[Tuple[TagChildArg, str]]]
 
 
 def input_checkbox_group(
@@ -103,7 +103,7 @@ def _generate_options(
 def _generate_option(
     id: str,
     type: str,
-    choice: Tuple[str, str],
+    choice: Tuple[TagChildArg, str],
     selected: Optional[str],
     inline: bool,
 ):
@@ -119,8 +119,8 @@ def _generate_option(
         return div(tags.label(input, span(choice[0])), class_=type)
 
 
-def _standardize_choices(x: CheckChoicesArg) -> Sequence[Tuple[str, str]]:
-    res: List[Tuple[str, str]] = []
+def _standardize_choices(x: CheckChoicesArg) -> Tuple[Tuple[TagChildArg, str]]:
+    res: List[Tuple[TagChildArg, str]] = []
     for choice in x:
         # TODO: maybe this should use TypeGuard? https://docs.python.org/3/library/typing.html#typing.TypeGuard
         if isinstance(choice, str):

@@ -1,7 +1,7 @@
 import sys
 from datetime import date
 
-from typing import Optional, Union, Tuple, TYPE_CHECKING
+from typing import Optional, Union, Tuple
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -11,14 +11,10 @@ else:
 from htmltools import TagChildArg
 
 from .input_check_radio import CheckChoicesArg, _generate_options
-from .input_numeric import NumericValueArg
 from .input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from .input_slider import SliderValueArg, SliderStepArg, _slider_type, _as_numeric
 from .utils import drop_none
-from .shinysession import _require_active_session, _process_deps
-
-if TYPE_CHECKING:
-    from .shinysession import ShinySession
+from .shinysession import ShinySession, _require_active_session, _process_deps
 
 # -----------------------------------------------------------------------------
 # input_action_button.py
@@ -28,12 +24,12 @@ def update_action_button(
     *,
     label: Optional[str] = None,
     icon: TagChildArg = None,
-    session: Optional["ShinySession"] = None,
+    session: Optional[ShinySession] = None,
 ) -> None:
     session = _require_active_session(session)
     # TODO: supporting a TagChildArg for label would require changes to shiny.js
     # https://github.com/rstudio/shiny/issues/1140
-    msg = {"label": label, "icon": _process_deps(icon)["html"]}
+    msg = {"label": label, "icon": _process_deps(icon)["html"] if icon else None}
     session.send_input_message(id, drop_none(msg))
 
 
@@ -47,7 +43,7 @@ def update_checkbox(
     *,
     label: Optional[str] = None,
     value: Optional[bool] = None,
-    session: Optional["ShinySession"] = None,
+    session: Optional[ShinySession] = None,
 ) -> None:
     session = _require_active_session(session)
     msg = {"label": label, "value": value}
@@ -61,7 +57,7 @@ def update_checkbox_group(
     choices: Optional[CheckChoicesArg] = None,
     selected: Optional[str] = None,
     inline: bool = False,
-    session: Optional["ShinySession"] = None,
+    session: Optional[ShinySession] = None,
 ) -> None:
     _update_choice_input(
         id=id,
@@ -81,7 +77,7 @@ def update_radio_buttons(
     choices: Optional[CheckChoicesArg] = None,
     selected: Optional[str] = None,
     inline: bool = False,
-    session: Optional["ShinySession"] = None,
+    session: Optional[ShinySession] = None,
 ) -> None:
     _update_choice_input(
         id=id,
@@ -102,7 +98,7 @@ def _update_choice_input(
     choices: Optional[CheckChoicesArg] = None,
     selected: Optional[str] = None,
     inline: bool = False,
-    session: Optional["ShinySession"] = None,
+    session: Optional[ShinySession] = None,
 ) -> None:
     session = _require_active_session(session)
     options = None
@@ -124,7 +120,7 @@ def update_date(
     value: Optional[date] = None,
     min: Optional[date] = None,
     max: Optional[date] = None,
-    session: Optional["ShinySession"] = None,
+    session: Optional[ShinySession] = None,
 ) -> None:
 
     session = _require_active_session(session)
@@ -145,7 +141,7 @@ def update_date_range(
     end: Optional[date] = None,
     min: Optional[date] = None,
     max: Optional[date] = None,
-    session: Optional["ShinySession"] = None,
+    session: Optional[ShinySession] = None,
 ) -> None:
     session = _require_active_session(session)
     value = {"start": str(start), "end": str(end)}
@@ -165,11 +161,11 @@ def update_numeric(
     id: str,
     *,
     label: Optional[str] = None,
-    value: Optional[NumericValueArg] = None,
-    min: Optional[NumericValueArg] = None,
-    max: Optional[NumericValueArg] = None,
-    step: Optional[NumericValueArg] = None,
-    session: Optional["ShinySession"] = None,
+    value: Optional[float] = None,
+    min: Optional[float] = None,
+    max: Optional[float] = None,
+    step: Optional[float] = None,
+    session: Optional[ShinySession] = None,
 ) -> None:
     session = _require_active_session(session)
     msg = {
@@ -191,7 +187,7 @@ def update_select(
     label: Optional[str] = None,
     choices: Optional[SelectChoicesArg] = None,
     selected: Optional[str] = None,
-    session: Optional["ShinySession"] = None,
+    session: Optional[ShinySession] = None,
 ) -> None:
     session = _require_active_session(session)
 
@@ -224,7 +220,7 @@ def update_slider(
     step: Optional[SliderStepArg] = None,
     time_format: Optional[str] = None,
     timezone: Optional[str] = None,
-    session: Optional["ShinySession"] = None,
+    session: Optional[ShinySession] = None,
 ) -> None:
     session = _require_active_session(session)
 
@@ -262,7 +258,7 @@ def update_text(
     label: Optional[str] = None,
     value: Optional[str] = None,
     placeholder: Optional[str] = None,
-    session: Optional["ShinySession"] = None,
+    session: Optional[ShinySession] = None,
 ) -> None:
     session = _require_active_session(session)
     msg = {"label": label, "value": value, "placeholder": placeholder}
@@ -275,8 +271,10 @@ update_text_area = update_text
 # -----------------------------------------------------------------------------
 # navs.py
 # -----------------------------------------------------------------------------
-def nav_select(
-    id: str, selected: Optional[str] = None, session: Optional["ShinySession"] = None
+
+# TODO: we should probably provide a nav_select() alias for this as well
+def update_navs(
+    id: str, selected: Optional[str] = None, session: Optional[ShinySession] = None
 ) -> None:
     session = _require_active_session(session)
     msg = {"value": selected}
