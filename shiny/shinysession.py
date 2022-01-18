@@ -422,9 +422,7 @@ class ShinySession:
 
     def send_input_message(self, id: str, message: Dict[str, object]) -> None:
         self.add_message_out({"id": id, "message": message}, type="input")
-        # TODO: this should be request_flush() instead of flush(),
-        # but that's not currently implemented
-        utils.run_coro_sync(self.flush())
+        self.request_flush()
 
     def send_insert_ui(
         self, selector: str, multiple: bool, where: str, content: "_RenderedDeps"
