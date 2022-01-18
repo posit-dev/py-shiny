@@ -131,6 +131,9 @@ class ShinySession:
 
         self._register_session_end_callbacks()
 
+        self._flush_callbacks = utils.Callbacks()
+        self._flushed_callbacks = utils.Callbacks()
+
         with session_context(self):
             self.app.server(self)
 
@@ -407,6 +410,21 @@ class ShinySession:
     def clear_messages_out(self) -> None:
         self._message_queue_out.clear()
 
+    def send_insert_ui(
+        self, selector: str, multiple: bool, where: str, content: "_RenderedDeps"
+    ) -> None:
+        msg = {
+            "selector": selector,
+            "multiple": multiple,
+            "where": where,
+            "content": content,
+        }
+        utils.run_coro_sync(self.send_message({"shiny-insert-ui": msg}))
+
+    def send_remove_ui(self, selector: str, multiple: bool) -> None:
+        msg = {"selector": selector, "multiple": multiple}
+        utils.run_coro_sync(self.send_message({"shiny-remove-ui": msg}))
+
     async def send_message(self, message: Dict[str, object]) -> None:
         message_str: str = json.dumps(message) + "\n"
         if self._debug:
@@ -424,12 +442,27 @@ class ShinySession:
     # ==========================================================================
     # Flush
     # ==========================================================================
+    def on_flush(self, func: Callable[[], None], once: bool = True) -> None:
+        """
+        Registers a function to be called before the next time (if once=True) or every time (if once=False) Shiny flushes the reactive system. Returns a function that can be called with no arguments to cancel the registration.
+        """
+        self._flush_callbacks.register(func, once)
+
+    def on_flushed(self, func: Callable[[], None], once: bool = True) -> None:
+        """
+        Registers a function to be called after the next time (if once=TRUE) or every time (if once=FALSE) Shiny flushes the reactive system. Returns a function that can be called with no arguments to cancel the registration.
+        """
+        self._flushed_callbacks.register(func, once)
+
     def request_flush(self) -> None:
         self.app.request_flush(self)
 
     async def flush(self) -> None:
-        values: Dict[str, object] = {}
+        with session_context(self):
+            self._flush_callbacks.invoke()
+            self._flushed_callbacks.invoke()
 
+        values: Dict[str, object] = {}
         for value in self.get_messages_out():
             values.update(value)
 
