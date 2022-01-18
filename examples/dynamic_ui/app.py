@@ -15,7 +15,7 @@ ui = page_fluid(
         panel_sidebar(
             h2("Dynamic UI"),
             output_ui("ui"),
-            input_button("btn", "Trigger insert/remove ui"),
+            input_action_button("btn", "Trigger insert/remove ui"),
         ),
         panel_main(
             output_text_verbatim("txt"),

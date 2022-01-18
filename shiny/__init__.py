@@ -8,7 +8,7 @@ __version__ = "0.0.0.9000"
 from .bootstrap import *
 from .download_button import *
 from .dynamic_ui import *
-from .input_button import *
+from .input_action_button import *
 from .input_check_radio import *
 from .input_date import *
 from .input_file import *
