@@ -1,6 +1,7 @@
 from typing import (
     Callable,
     Awaitable,
+    Tuple,
     TypeVar,
     Dict,
     Any,
@@ -91,6 +92,37 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
 
 def drop_none(x: Dict[str, Any]) -> Dict[str, object]:
     return {k: v for k, v in x.items() if v is not None}
+
+
+class Callbacks:
+    def __init__(self) -> None:
+        self._callbacks: Dict[str, Tuple[Callable[[], None], bool]] = {}
+        self._id: int = 0
+
+    def register(
+        self, fn: Callable[[], None], once: bool = False
+    ) -> Callable[[], None]:
+        self._id += 1
+        id = str(self._id)
+        self._callbacks[id] = (fn, once)
+
+        def _():
+            del self._callbacks[id]
+
+        return _
+
+    def invoke(self) -> None:
+        ids = list(self._callbacks.keys())
+        for id in ids:
+            fn, once = self._callbacks[id]
+            try:
+                fn()
+            finally:
+                if once:
+                    del self._callbacks[id]
+
+    def count(self) -> int:
+        return len(self._callbacks)
 
 
 # ==============================================================================

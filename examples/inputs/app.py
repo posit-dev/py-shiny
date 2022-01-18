@@ -46,7 +46,9 @@ ui = page_fluid(
                     "Group C": ["c1", "c2"],
                 },
             ),
-            input_button("button", "input_button()", icon=icon_svg("check")),
+            input_action_button(
+                "button", "input_action_button()", icon=icon_svg("check")
+            ),
             input_file("file", "File upload"),
         ),
         panel_main(
@@ -59,11 +61,13 @@ ui = page_fluid(
                 ),
                 nav(
                     "Misc",
-                    input_link(
+                    input_action_link(
                         "link", "Show notification/progress", icon=icon_svg("info")
                     ),
                     tags.br(),
-                    input_button("btn", "Show modal", icon=icon_svg("info-circle")),
+                    input_action_button(
+                        "btn", "Show modal", icon=icon_svg("info-circle")
+                    ),
                     panel_fixed(
                         panel_well(
                             "A fixed, draggable, panel",
@@ -105,7 +109,7 @@ def server(s: ShinySession):
             f"<code>input_checkbox_group()</code>: {s.input['checkbox_group']}",
             f"<code>input_radio()</code>: {s.input['radio']}",
             f"<code>input_select()</code>: {s.input['select']}",
-            f"<code>input_button()</code>: {s.input['button']}",
+            f"<code>input_action_button()</code>: {s.input['button']}",
         ]
         return tags.pre(HTML("\n".join(vals)))
 

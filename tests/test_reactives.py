@@ -101,7 +101,8 @@ def test_recursive_reactive():
     asyncio.run(reactcore.flush())
     assert o._exec_count == 2
     assert r._exec_count == 6
-    assert isolate(v) == 0
+    with isolate():
+        assert v() == 0
 
 
 def test_recursive_reactive_async():
@@ -121,7 +122,8 @@ def test_recursive_reactive_async():
     asyncio.run(reactcore.flush())
     assert o._exec_count == 2
     assert r._exec_count == 6
-    assert isolate(v) == 0
+    with isolate():
+        assert v() == 0
 
 
 # ======================================================================
@@ -236,12 +238,6 @@ def test_async_sequential():
 # ======================================================================
 # isolate()
 # ======================================================================
-def test_isolate_basic_value():
-    # isolate() returns basic value
-    assert isolate(lambda: 123) == 123
-    assert isolate(lambda: None) is None
-
-
 def test_isolate_basic_without_context():
     # isolate() works with Reactive and ReactiveVal; allows executing without a
     # reactive context.
@@ -254,11 +250,12 @@ def test_isolate_basic_without_context():
     def get_r():
         return r()
 
-    assert isolate(lambda: v()) == 1
-    assert isolate(v) == 1
-    assert isolate(lambda: r()) == 11
-    assert isolate(r) == 11
-    assert isolate(get_r) == 11
+    with isolate():
+        assert v() == 1
+        assert (lambda: v())() == 1
+        assert r() == 11
+        assert (lambda: r())() == 11
+        assert get_r() == 11
 
 
 def test_isolate_prevents_dependency():
@@ -275,7 +272,8 @@ def test_isolate_prevents_dependency():
     def o():
         nonlocal o_val
         v_dep()
-        o_val = isolate(lambda: r())
+        with isolate():
+            o_val = r()
 
     asyncio.run(reactcore.flush())
     assert o_val == 11
@@ -294,20 +292,21 @@ def test_isolate_prevents_dependency():
 
 
 # ======================================================================
-# isolate_async()
+# async isolate
 # ======================================================================
 def test_isolate_async_basic_value():
     async def f():
         return 123
 
     async def go():
-        assert await isolate_async(f) == 123
+        async with isolate():
+            assert await f() == 123
 
     asyncio.run(go())
 
 
 def test_isolate_async_basic_without_context():
-    # isolate_async() works with Reactive and ReactiveVal; allows executing
+    # async isolate works with Reactive and ReactiveVal; allows executing
     # without a reactive context.
     v = ReactiveVal(1)
 
@@ -319,8 +318,9 @@ def test_isolate_async_basic_without_context():
         return await r()
 
     async def go():
-        assert await isolate_async(r) == 11
-        assert await isolate_async(get_r) == 11
+        async with isolate():
+            assert await r() == 11
+            assert await get_r() == 11
 
     asyncio.run(go())
 
@@ -339,7 +339,8 @@ def test_isolate_async_prevents_dependency():
     async def o():
         nonlocal o_val
         v_dep()
-        o_val = await isolate_async(r)
+        async with isolate():
+            o_val = await r()
 
     asyncio.run(reactcore.flush())
     assert o_val == 11

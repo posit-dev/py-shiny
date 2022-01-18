@@ -12,7 +12,6 @@ __all__ = (
     "observe",
     "observe_async",
     "isolate",
-    "isolate_async",
 )
 
 from typing import (
@@ -357,27 +356,14 @@ def observe_async(
 # ==============================================================================
 # Miscellaneous functions
 # ==============================================================================
-def isolate(func: Callable[[], T]) -> T:
-    # The `object` in func's type definition also encompasses Awaitable[object],
-    # so add a runtime check to make sure that this hasn't been called with an
-    # async function.
-    if inspect.iscoroutinefunction(func):
-        raise TypeError("isolate() requires a non-async function")
-
-    func_async: Callable[[], Awaitable[T]] = utils.wrap_async(func)
-    ctx: Context = reactcore.Context()
-    try:
-        return utils.run_coro_sync(ctx.run(func_async, create_task=False))
-    finally:
-        ctx.invalidate()
-
-
-async def isolate_async(func: Callable[[], Awaitable[T]]) -> T:
-    ctx: Context = reactcore.Context()
-    try:
-        return await ctx.run(func, create_task=True)
-    finally:
-        ctx.invalidate()
+def isolate():
+    """
+    Can be used via `with isolate():` or `async with isolate():` to wrap code blocks
+    whose reactive reads should not result in reactive dependencies being taken (that
+    is, we want to read reactive values but are not interested in automatically
+    reexecuting when those particular values change).
+    """
+    return reactcore.isolate()
 
 
 # Import here at the bottom seems to fix a circular dependency problem.

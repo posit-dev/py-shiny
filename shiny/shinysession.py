@@ -5,18 +5,26 @@ __all__ = (
     "session_context",
 )
 
+import functools
+import os
+from pathlib import Path
 import sys
 import json
 import re
 import warnings
 import typing
 import mimetypes
+import dataclasses
+import urllib.parse
 from contextvars import ContextVar, Token
 from contextlib import contextmanager
 from typing import (
     TYPE_CHECKING,
+    AsyncIterable,
     Callable,
+    Iterable,
     Optional,
+    TypeVar,
     Union,
     Awaitable,
     Dict,
@@ -25,7 +33,14 @@ from typing import (
 )
 from starlette.requests import Request
 
-from starlette.responses import Response, HTMLResponse, PlainTextResponse
+from starlette.responses import (
+    HTMLResponse,
+    PlainTextResponse,
+    StreamingResponse,
+    guess_type,
+)
+from starlette.types import ASGIApp
+
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict, Literal
@@ -37,7 +52,8 @@ if TYPE_CHECKING:
 
 from htmltools import TagChildArg, TagList
 
-from .reactives import ReactiveValues, Observer, ObserverAsync
+from .reactives import ReactiveValues, Observer, ObserverAsync, isolate
+from .http_staticfiles import FileResponse
 from .connmanager import Connection, ConnectionClosed
 from . import render
 from . import utils
@@ -66,6 +82,26 @@ class ClientMessageOther(ClientMessage):
     tag: int
 
 
+# This is the type for the function provided by the user to provide the contents of a
+# download. It must be a function that takes no arguments, and returns one of:
+# 1. A string, which will be interpreted as a path
+# 2. A regular Iterable of bytes or strings (i.e. a generator function)
+# 3. An AsyncIterable of bytes or strings (i.e. an async generator function)
+#
+# (Not currently supported is Awaitable[str], could be added easily enough if needed.)
+_DownloadHandler = Callable[
+    [], Union[str, Iterable[Union[bytes, str]], AsyncIterable[Union[bytes, str]]]
+]
+
+
+@dataclasses.dataclass
+class _DownloadInfo:
+    filename: Union[Callable[[], str], str, None]
+    content_type: Optional[Union[Callable[[], str], str]]
+    handler: _DownloadHandler
+    encoding: str
+
+
 class ShinySession:
     # ==========================================================================
     # Initialization
@@ -90,8 +126,12 @@ class ShinySession:
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks: List[Callable[[], None]] = []
         self._has_run_session_end_tasks: bool = False
+        self._downloads: Dict[str, _DownloadInfo] = {}
 
         self._register_session_end_callbacks()
+
+        self._flush_callbacks = utils.Callbacks()
+        self._flushed_callbacks = utils.Callbacks()
 
         with session_context(self):
             self.app.server(self)
@@ -247,18 +287,16 @@ class ShinySession:
         }
 
     # ==========================================================================
-    # Handling /session/{session_id}/{subpath} requests
+    # Handling /session/{session_id}/{action}/{subpath} requests
     # ==========================================================================
-    async def handle_request(self, request: Request) -> Response:
-        subpath: str = request.path_params["subpath"]  # type: ignore
-        matches = re.search("^([a-z]+)/(.*)$", subpath)
+    async def handle_request(
+        self, request: Request, action: str, subpath: Optional[str]
+    ) -> ASGIApp:
+        if action == "upload" and request.method == "POST":
+            if subpath is None or subpath == "":
+                return HTMLResponse("<h1>Bad Request</h1>", 400)
 
-        if not matches:
-            return HTMLResponse("<h1>Bad Request</h1>", 400)
-
-        if matches[1] == "upload" and request.method == "POST":
-            # check that upload operation exists
-            job_id = matches[2]
+            job_id = subpath
             upload_op = self._file_upload_manager.get_upload_operation(job_id)
             if not upload_op:
                 return HTMLResponse("<h1>Bad Request</h1>", 400)
@@ -271,6 +309,91 @@ class ShinySession:
                     upload_op.write_chunk(chunk)
 
             return PlainTextResponse("OK", 200)
+
+        elif action == "download" and request.method == "GET" and subpath:
+            download_id = subpath
+            if download_id in self._downloads:
+                # TODO: This really needs to be `async with session_context`
+                with session_context(self):
+                    async with isolate():
+                        download = self._downloads[download_id]
+                        filename = read_thunk_opt(download.filename)
+                        content_type = read_thunk_opt(download.content_type)
+                        contents = download.handler()
+
+                        if filename is None:
+                            if isinstance(contents, str):
+                                filename = os.path.basename(contents)
+                            else:
+                                warnings.warn(
+                                    "Unable to infer a filename for the "
+                                    f"'{download_id}' download handler; please use "
+                                    "@session.download(filename=) to specify one "
+                                    "manually"
+                                )
+                                filename = download_id
+
+                        if content_type is None:
+                            (content_type, _) = guess_type(filename)
+                        content_disposition_filename = urllib.parse.quote(filename)
+                        if content_disposition_filename != filename:
+                            content_disposition = f"attachment; filename*=utf-8''{content_disposition_filename}"
+                        else:
+                            content_disposition = f'attachment; filename="{filename}"'
+                        headers = {
+                            "Content-Disposition": content_disposition,
+                            "Cache-Control": "no-store",
+                        }
+
+                        if isinstance(contents, str):
+                            # contents is the path to a file
+                            return FileResponse(
+                                Path(contents),
+                                headers=headers,
+                                media_type=content_type,
+                            )
+
+                        wrapped_contents: AsyncIterable[bytes]
+
+                        if isinstance(contents, AsyncIterable):
+
+                            # Need to wrap the app-author-provided iterator in a
+                            # callback that installs the appropriate context mgrs.
+                            # We already use this context mgrs further up in the
+                            # implementation of handle_request(), but the iterators
+                            # aren't invoked until after handle_request() returns.
+                            async def wrap_content_async() -> AsyncIterable[bytes]:
+                                # TODO: This really needs to be `async with session_context`
+                                with session_context(self):
+                                    async with isolate():
+                                        async for chunk in contents:
+                                            if isinstance(chunk, str):
+                                                yield chunk.encode(download.encoding)
+                                            else:
+                                                yield chunk
+
+                            wrapped_contents = wrap_content_async()
+
+                        else:  # isinstance(contents, Iterable):
+
+                            async def wrap_content_sync() -> AsyncIterable[bytes]:
+                                # TODO: Make sure these two `with` statements don't need to be async
+                                with session_context(self):
+                                    with isolate():
+                                        for chunk in contents:
+                                            if isinstance(chunk, str):
+                                                yield chunk.encode(download.encoding)
+                                            else:
+                                                yield chunk
+
+                            wrapped_contents = wrap_content_sync()
+
+                        return StreamingResponse(
+                            wrapped_contents,
+                            200,
+                            headers=headers,
+                            media_type=content_type,  # type: ignore
+                        )
 
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
@@ -303,6 +426,21 @@ class ShinySession:
         # but that's not currently implemented
         utils.run_coro_sync(self.flush())
 
+    def send_insert_ui(
+        self, selector: str, multiple: bool, where: str, content: "_RenderedDeps"
+    ) -> None:
+        msg = {
+            "selector": selector,
+            "multiple": multiple,
+            "where": where,
+            "content": content,
+        }
+        utils.run_coro_sync(self.send_message({"shiny-insert-ui": msg}))
+
+    def send_remove_ui(self, selector: str, multiple: bool) -> None:
+        msg = {"selector": selector, "multiple": multiple}
+        utils.run_coro_sync(self.send_message({"shiny-remove-ui": msg}))
+
     async def send_message(self, message: Dict[str, object]) -> None:
         message_str: str = json.dumps(message) + "\n"
         if self._debug:
@@ -320,12 +458,27 @@ class ShinySession:
     # ==========================================================================
     # Flush
     # ==========================================================================
+    def on_flush(self, func: Callable[[], None], once: bool = True) -> None:
+        """
+        Registers a function to be called before the next time (if once=True) or every time (if once=False) Shiny flushes the reactive system. Returns a function that can be called with no arguments to cancel the registration.
+        """
+        self._flush_callbacks.register(func, once)
+
+    def on_flushed(self, func: Callable[[], None], once: bool = True) -> None:
+        """
+        Registers a function to be called after the next time (if once=TRUE) or every time (if once=FALSE) Shiny flushes the reactive system. Returns a function that can be called with no arguments to cancel the registration.
+        """
+        self._flushed_callbacks.register(func, once)
+
     def request_flush(self) -> None:
         self.app.request_flush(self)
 
     async def flush(self) -> None:
-        values: Dict[str, object] = {}
+        with session_context(self):
+            self._flush_callbacks.invoke()
+            self._flushed_callbacks.invoke()
 
+        values: Dict[str, object] = {}
         for value in self.get_messages_out():
             values.update(value)
 
@@ -352,6 +505,35 @@ class ShinySession:
     async def unhandled_error(self, e: Exception) -> None:
         print("Unhandled error: " + str(e))
         await self.close()
+
+    # TODO: probably name should be id
+    def download(
+        self,
+        name: Optional[str] = None,
+        filename: Optional[Union[str, Callable[[], str]]] = None,
+        media_type: Union[None, str, Callable[[], str]] = None,
+        encoding: str = "utf-8",
+    ):
+        def wrapper(fn: _DownloadHandler):
+            if name is None:
+                effective_name = fn.__name__
+            else:
+                effective_name = name
+
+            self._downloads[effective_name] = _DownloadInfo(
+                filename=filename,
+                content_type=media_type,
+                handler=fn,
+                encoding=encoding,
+            )
+
+            @self.output(effective_name)
+            @functools.wraps(fn)
+            def _():
+                # TODO: the `w=` parameter should eventually be a worker ID, if we add those
+                return f"session/{urllib.parse.quote(self.id)}/download/{urllib.parse.quote(effective_name)}?w="
+
+        return wrapper
 
 
 class Outputs:
@@ -411,6 +593,8 @@ def get_current_session() -> Optional[ShinySession]:
     return _current_session.get()
 
 
+# TODO: I don't think this works for async (i.e. `async with session_context():`), see
+#       how isolate() works for an example
 @contextmanager
 def session_context(session: Optional[ShinySession]):
     token: Token[Union[ShinySession, None]] = _current_session.set(session)
@@ -470,3 +654,25 @@ def _process_deps(
         deps.append(dep_dict)
 
     return {"deps": deps, "html": res["html"]}
+
+
+# Ideally I'd love not to limit the types for T, but if I don't, the type checker has
+# trouble figuring out what `T` is supposed to be when run_thunk is actually used. For
+# now, just keep expanding the possible types, as needed.
+T = TypeVar("T", str, int)
+
+
+def read_thunk(thunk: Union[Callable[[], T], T]) -> T:
+    if callable(thunk):
+        return thunk()
+    else:
+        return thunk
+
+
+def read_thunk_opt(thunk: Optional[Union[Callable[[], T], T]]) -> Optional[T]:
+    if thunk is None:
+        return None
+    elif callable(thunk):
+        return thunk()
+    else:
+        return thunk

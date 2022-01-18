@@ -21,9 +21,9 @@ if TYPE_CHECKING:
     from .shinysession import ShinySession
 
 # -----------------------------------------------------------------------------
-# input_button.py
+# input_action_button.py
 # -----------------------------------------------------------------------------
-def update_button(
+def update_action_button(
     id: str,
     *,
     label: Optional[str] = None,
@@ -37,7 +37,7 @@ def update_button(
     session.send_input_message(id, drop_none(msg))
 
 
-update_link = update_button
+update_action_link = update_action_button
 
 # -----------------------------------------------------------------------------
 # input_check_radio.py

@@ -4,16 +4,6 @@
 # Then point web browser to:
 #   http://localhost:8000/
 
-# Add parent directory to path, so we can find the prism module.
-# (This is just a temporary fix)
-import os
-import sys
-
-# This will load the shiny module dynamically, without having to install it.
-# This makes the debug/run cycle quicker.
-shiny_module_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, shiny_module_dir)
-
 from shiny import *
 
 # For plot rendering
@@ -22,7 +12,11 @@ import matplotlib.pyplot as plt
 
 ui = page_fluid(
     layout_sidebar(
-        panel_sidebar(h2("Dynamic UI"), output_ui("ui")),
+        panel_sidebar(
+            h2("Dynamic UI"),
+            output_ui("ui"),
+            input_action_button("btn", "Trigger insert/remove ui"),
+        ),
         panel_main(
             output_text_verbatim("txt"),
             output_plot("plot"),
@@ -56,7 +50,15 @@ def server(session: ShinySession):
     @session.output("ui")
     @render_ui()
     def _():
-        return input_slider("n", "N", 0, 100, 20)
+        return input_slider("This slider is rendered via @render_ui()", "N", 0, 100, 20)
+
+    @observe()
+    def _():
+        btn = session.input["btn"]
+        if btn % 2 == 1:
+            ui_insert(tags.p("Thanks for clicking!", id="thanks"), "body")
+        elif btn > 0:
+            ui_remove("#thanks")
 
 
 app = ShinyApp(ui, server)
