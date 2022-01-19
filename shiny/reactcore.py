@@ -83,9 +83,13 @@ class Dependents:
 
     def invalidate(self) -> None:
         # TODO: Check sort order
-        for id in sorted(self._dependents.keys()):
-            ctx = self._dependents[id]
-            ctx.invalidate()
+        # Invalidate all dependents. This gets all the dependents as list, then iterates
+        # over the list. It's done this way instead of iterating over keys because it's
+        # possible that a dependent is removed from the dict while iterating over it.
+        # https://github.com/rstudio/prism/issues/26
+        ids = sorted(self._dependents.keys())
+        for dep_ctx in [self._dependents[id] for id in ids]:
+            dep_ctx.invalidate()
 
 
 class ReactiveEnvironment:

@@ -494,3 +494,44 @@ def test_observer_destroy():
     o2.destroy()
     asyncio.run(reactcore.flush())
     assert results == []
+
+
+# ======================================================================
+# Invalidating dependents
+# ======================================================================
+# For https://github.com/rstudio/prism/issues/26
+def test_dependent_invalidation():
+    trigger = ReactiveVal(0)
+    v = ReactiveVal(0)
+    error_occurred = False
+
+    @observe()
+    def _():
+        trigger()
+
+        try:
+            with isolate():
+                r()
+                val = v()
+                v(val + 1)
+        except Exception:
+            nonlocal error_occurred
+            error_occurred = True
+
+    @observe()
+    def _():
+        r()
+
+    @reactive()
+    def r():
+        return v()
+
+    asyncio.run(reactcore.flush())
+    trigger(1)
+    asyncio.run(reactcore.flush())
+
+    with isolate():
+        val = v()
+
+    assert val == 2
+    assert error_occurred == False
