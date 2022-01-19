@@ -60,7 +60,7 @@ def panel_sidebar(*args: TagChildArg, width: int = 4, **kwargs: TagAttrArg) -> T
     )
 
 
-def panel_main(*args: TagChildArg, width: int = 8, **kwargs: TagAttrArg):
+def panel_main(*args: TagChildArg, width: int = 8, **kwargs: TagAttrArg) -> Tag:
     return div(
         # A11y semantic landmark for main region
         *args,
@@ -81,7 +81,7 @@ def panel_conditional(
     # TODO: do we have an answer for shiny::NS() yet?
     ns: Callable[[str], str] = lambda x: x,
     **kwargs: TagAttrArg,
-):
+) -> Tag:
     return div(*args, data_display_if=condition, data_ns_prefix=ns(""), **kwargs)
 
 
