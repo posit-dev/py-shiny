@@ -50,22 +50,34 @@ ui = page_fluid(
                 input_checkbox_group(
                     "inCheckboxGroup",
                     "Checkbox group input:",
-                    ("label 1", "option1", "label 2", "option2"),
+                    {
+                        "option1": "label 1",
+                        "option2": "label 2",
+                    },
                 ),
                 input_radio_buttons(
                     "inRadio",
                     "Radio buttons:",
-                    ("label 1", "option1", "label 2", "option2"),
+                    {
+                        "option1": "label 1",
+                        "option2": "label 2",
+                    },
                 ),
                 input_select(
                     "inSelect",
                     "Select input:",
-                    {"label 1": "option1", "label 2": "option2"},
+                    {
+                        "option1": "label 1",
+                        "option2": "label 2",
+                    },
                 ),
                 input_select(
                     "inSelect2",
                     "Select input 2:",
-                    {"label 1": "option1", "label 2": "option2"},
+                    {
+                        "option1": "label 1",
+                        "option2": "label 2",
+                    },
                     multiple=True,
                 ),
             ),
@@ -145,14 +157,13 @@ def server(sess: ShinySession):
         # 'option-x-A'.
         opt_labels = [f"option label {c_num} {type}" for type in ["A", "B"]]
         opt_vals = [f"option-{c_num}-{type}" for type in ["A", "B"]]
-        opts_tuple = tuple(zip(opt_labels, opt_vals))
-        opts_dict = dict(zip(opt_labels, opt_vals))
+        opts_dict = dict(zip(opt_vals, opt_labels))
 
         # Set the label, choices, and selected item
         update_checkbox_group(
             "inCheckboxGroup",
             label="Checkbox group " + c_label,
-            choices=opts_tuple,
+            choices=opts_dict,
             selected=f"option-{c_num}-A",
         )
 
@@ -160,7 +171,7 @@ def server(sess: ShinySession):
         update_radio_buttons(
             "inRadio",
             label="Radio " + c_label,
-            choices=opts_tuple,
+            choices=opts_dict,
             selected=f"option-{c_num}-A",
         )
         # Select input =============================================
