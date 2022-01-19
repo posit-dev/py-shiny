@@ -5,10 +5,19 @@ from typing import Any, Callable, Optional, Awaitable, TypeVar
 from contextvars import ContextVar
 from asyncio import Task
 import asyncio
+import warnings
 
 from .datastructures import PriorityQueueFIFO
 
 T = TypeVar("T")
+
+
+class ReactiveWarning(RuntimeWarning):
+    pass
+
+
+# By default warnings are shown once; we want to always show them.
+warnings.simplefilter("always", ReactiveWarning)
 
 
 class Context:
@@ -58,10 +67,7 @@ class Context:
     async def execute_flush_callbacks(self) -> None:
         """Execute all flush callbacks"""
         for cb in self._flush_callbacks:
-            try:
-                await cb()
-            finally:
-                pass
+            await cb()
 
         self._flush_callbacks.clear()
 
@@ -154,13 +160,8 @@ class ReactiveEnvironment:
                 # Take the first element
                 ctx = self._pending_flush_queue.get()
 
-                try:
-                    task: Task[None] = asyncio.create_task(
-                        ctx.execute_flush_callbacks()
-                    )
-                    tasks.append(task)
-                finally:
-                    pass
+                task: Task[None] = asyncio.create_task(ctx.execute_flush_callbacks())
+                tasks.append(task)
 
             await asyncio.gather(*tasks)
 
@@ -170,10 +171,7 @@ class ReactiveEnvironment:
         # sequence.
         while not self._pending_flush_queue.empty():
             ctx = self._pending_flush_queue.get()
-            try:
-                await ctx.execute_flush_callbacks()
-            finally:
-                pass
+            await ctx.execute_flush_callbacks()
 
     def add_pending_flush(self, ctx: Context, priority: int) -> None:
         self._pending_flush_queue.put(priority, ctx)

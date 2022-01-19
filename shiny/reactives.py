@@ -27,8 +27,9 @@ from typing import (
 )
 import typing
 import inspect
+import warnings
 
-from .reactcore import Context, Dependents
+from .reactcore import Context, Dependents, ReactiveWarning
 from . import reactcore
 from . import utils
 from .types import MISSING, MISSING_TYPE
@@ -301,6 +302,7 @@ class Observer:
             try:
                 await ctx.run(self._func, create_task=self._is_async)
             except Exception as e:
+                warnings.warn("Error in observer: " + str(e), ReactiveWarning)
                 if self._session:
                     await self._session.unhandled_error(e)
 
