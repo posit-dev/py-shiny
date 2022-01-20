@@ -8,7 +8,7 @@ else:
 
 from htmltools import TagList, TagChildArg
 
-from .utils import run_coro_sync, rand_hex
+from .utils import rand_hex
 from .shinysession import ShinySession, _require_active_session, _process_deps
 
 
@@ -20,7 +20,7 @@ def notification_show(
     id: Optional[str] = None,
     type: Literal["default", "message", "warning", "error"] = "default",
     session: Optional[ShinySession] = None,
-):
+) -> None:
     session = _require_active_session(session)
 
     ui_ = _process_deps(ui, session)
@@ -38,14 +38,10 @@ def notification_show(
     if duration:
         payload.update({"duration": duration * 1000})
 
-    return run_coro_sync(
-        session.send_message({"notification": {"type": "show", "message": payload}})
-    )
+    session.send_message({"notification": {"type": "show", "message": payload}})
 
 
-def notification_remove(id: str, session: Optional[ShinySession] = None):
+def notification_remove(id: str, session: Optional[ShinySession] = None) -> None:
     session = _require_active_session(session)
-    run_coro_sync(
-        session.send_message({"notification": {"type": "remove", "message": None}})
-    )
+    session.send_message({"notification": {"type": "remove", "message": None}})
     return id

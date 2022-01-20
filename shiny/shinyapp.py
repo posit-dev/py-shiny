@@ -82,9 +82,9 @@ class ShinyApp:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         await self.starlette_app(scope, receive, send)
 
-    async def call_pyodide(self, scope: Scope, receive: Receive, send: Send) -> None:
-        # TODO: Pretty sure there are objects that need to be destroy()'d here?
-        scope = cast(Any, scope).to_py()
+    # To starting the app from JS, call this method.
+    async def call_pyodide(self, scope_: Scope, receive: Receive, send: Send) -> None:
+        scope: Scope = cast(Any, scope_).to_py()
 
         # ASGI requires some values to be byte strings, not character strings. Those are
         # not that easy to create in JavaScript, so we let the JS side pass us strings

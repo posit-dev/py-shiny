@@ -18,7 +18,7 @@ def ui_insert(
     multiple: bool = False,
     immediate: bool = False,
     session: Optional[ShinySession] = None,
-):
+) -> None:
     session = _require_active_session(session)
 
     def callback():
@@ -39,7 +39,7 @@ def ui_remove(
     multiple: bool = False,
     immediate: bool = False,
     session: Optional[ShinySession] = None,
-):
+) -> None:
     session = _require_active_session(session)
 
     def callback():

@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
 from warnings import warn
-from .utils import run_coro_sync, rand_hex
+from .utils import rand_hex
 from .shinysession import ShinySession, _require_active_session
 
 
@@ -65,7 +65,5 @@ class Progress:
         self._send_progress("close", {"id": self._id, "style": self._style})
         self._closed = True
 
-    def _send_progress(self, type: str, message: Dict[str, Any]):
-        return run_coro_sync(
-            self._session.send_message({"progress": {"type": type, "message": message}})
-        )
+    def _send_progress(self, type: str, message: Dict[str, Any]) -> None:
+        self._session.send_message({"progress": {"type": type, "message": message}})

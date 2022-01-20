@@ -161,7 +161,7 @@ class ShinySession:
         self._run_session_end_tasks()
 
     async def run(self) -> None:
-        await self.send_message(
+        self.send_message(
             {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
         )
 
@@ -247,7 +247,7 @@ class ShinySession:
         await self._send_response(message, value)
 
     async def _send_response(self, message: ClientMessageOther, value: object) -> None:
-        await self.send_message({"response": {"tag": message["tag"], "value": value}})
+        self.send_message({"response": {"tag": message["tag"], "value": value}})
 
     # This is called during __init__.
     def _create_message_handlers(self) -> Dict[str, Callable[..., Awaitable[object]]]:
@@ -433,13 +433,13 @@ class ShinySession:
             "where": where,
             "content": content,
         }
-        utils.run_coro_sync(self.send_message({"shiny-insert-ui": msg}))
+        self.send_message({"shiny-insert-ui": msg})
 
     def send_remove_ui(self, selector: str, multiple: bool) -> None:
         msg = {"selector": selector, "multiple": multiple}
-        utils.run_coro_sync(self.send_message({"shiny-remove-ui": msg}))
+        self.send_message({"shiny-remove-ui": msg})
 
-    async def send_message(self, message: Dict[str, object]) -> None:
+    def send_message(self, message: Dict[str, object]) -> None:
         message_str: str = json.dumps(message) + "\n"
         if self._debug:
             print(
@@ -447,7 +447,7 @@ class ShinySession:
                 + re.sub("(?m)base64,[a-zA-Z0-9+/=]+", "[base64 data]", message_str),
                 end="",
             )
-        await self._conn.send(json.dumps(message))
+        self._conn.send(json.dumps(message))
 
     def _send_error_response(self, message_str: str) -> None:
         print("_send_error_response: " + message_str)
@@ -487,7 +487,7 @@ class ShinySession:
         }
 
         try:
-            await self.send_message(message)
+            self.send_message(message)
         finally:
             self.clear_messages_out()
 
@@ -555,7 +555,7 @@ class Outputs:
 
             @ObserverAsync
             async def output_obs():
-                await self._session.send_message(
+                self._session.send_message(
                     {"recalculating": {"name": name, "status": "recalculating"}}
                 )
 
@@ -568,7 +568,7 @@ class Outputs:
                 message[name] = val
                 self._session.add_message_out(message)
 
-                await self._session.send_message(
+                self._session.send_message(
                     {"recalculating": {"name": name, "status": "recalculated"}}
                 )
 
