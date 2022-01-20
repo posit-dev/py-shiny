@@ -10,7 +10,7 @@ else:
 
 from htmltools import TagChildArg
 
-from .input_check_radio import CheckChoicesArg, _generate_options
+from .input_check_radio import ChoicesArg, _generate_options
 from .input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from .input_slider import SliderValueArg, SliderStepArg, _slider_type, _as_numeric
 from .utils import drop_none
@@ -54,7 +54,7 @@ def update_checkbox_group(
     id: str,
     *,
     label: Optional[str] = None,
-    choices: Optional[CheckChoicesArg] = None,
+    choices: Optional[ChoicesArg] = None,
     selected: Optional[str] = None,
     inline: bool = False,
     session: Optional[ShinySession] = None,
@@ -74,7 +74,7 @@ def update_radio_buttons(
     id: str,
     *,
     label: Optional[str] = None,
-    choices: Optional[CheckChoicesArg] = None,
+    choices: Optional[ChoicesArg] = None,
     selected: Optional[str] = None,
     inline: bool = False,
     session: Optional[ShinySession] = None,
@@ -95,7 +95,7 @@ def _update_choice_input(
     *,
     type: Literal["checkbox", "radio"],
     label: Optional[str] = None,
-    choices: Optional[CheckChoicesArg] = None,
+    choices: Optional[ChoicesArg] = None,
     selected: Optional[str] = None,
     inline: bool = False,
     session: Optional[ShinySession] = None,

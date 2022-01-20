@@ -30,20 +30,20 @@ ui = page_fluid(
             input_checkbox_group(
                 "checkbox_group",
                 "input_checkbox_group()",
-                {"Choice 1": "a", "Choice 2": "b"},
+                {"a": "Choice 1", "b": "Choice 2"},
                 selected="b",
                 inline=True,
             ),
             input_radio_buttons(
-                "radio", "input_radio()", {"Choice 1": "a", "Choice 2": "b"}
+                "radio", "input_radio()", {"a": "Choice 1", "b": "Choice 2"}
             ),
             input_select(
                 "select",
                 "input_select()",
                 {
-                    "Choice A": "a",
-                    "Group B": {"Choice B1": "b1", "Choice B2": "b2"},
-                    "Group C": ["c1", "c2"],
+                    "a": "Choice A",
+                    "Group B": {"b1": "Choice B1", "b2": "Choice B2"},
+                    "Group C": {"c1": "c1", "c2": "c2"},
                 },
             ),
             input_action_button(

@@ -1,8 +1,14 @@
-from typing import Optional, Sequence, Union, List, Tuple
+from typing import Optional, Dict, Union, List, Tuple
 
 from htmltools import tags, Tag, div, span, css, TagChildArg
 
 from .input_utils import shiny_input_label
+
+# Canonical format for representing select options.
+_Choices = Dict[str, TagChildArg]
+
+# Formats available to the user
+ChoicesArg = Union[List[str], _Choices]
 
 
 def input_checkbox(
@@ -23,13 +29,10 @@ def input_checkbox(
     )
 
 
-CheckChoicesArg = Union[Sequence[str], Sequence[Tuple[TagChildArg, str]]]
-
-
 def input_checkbox_group(
     id: str,
     label: TagChildArg,
-    choices: CheckChoicesArg,
+    choices: ChoicesArg,
     selected: Optional[str] = None,
     inline: bool = False,
     width: Optional[str] = None,
@@ -58,7 +61,7 @@ def input_checkbox_group(
 def input_radio_buttons(
     id: str,
     label: TagChildArg,
-    choices: CheckChoicesArg,
+    choices: ChoicesArg,
     selected: Optional[str] = None,
     inline: bool = False,
     width: Optional[str] = None,
@@ -87,15 +90,18 @@ def input_radio_buttons(
 def _generate_options(
     id: str,
     type: str,
-    choices: CheckChoicesArg,
+    choices: ChoicesArg,
     selected: Optional[str],
     inline: bool,
 ):
-    choicez = _standardize_choices(choices)
+    choicez = _normalize_choices(choices)
     if type == "radio" and not selected:
-        selected = choicez[0][1]
+        selected = list(choicez.keys())[0]
     return div(
-        *[_generate_option(id, type, choice, selected, inline) for choice in choicez],
+        *[
+            _generate_option(id, type, choice, selected, inline)
+            for choice in choicez.items()
+        ],
         class_="shiny-options-group",
     )
 
@@ -103,30 +109,24 @@ def _generate_options(
 def _generate_option(
     id: str,
     type: str,
-    choice: Tuple[TagChildArg, str],
+    choice: Tuple[str, TagChildArg],
     selected: Optional[str],
     inline: bool,
 ):
     input = tags.input(
         type=type,
         name=id,
-        value=choice[1],
-        checked="checked" if selected == choice[1] else None,
+        value=choice[0],
+        checked="checked" if selected == choice[0] else None,
     )
     if inline:
-        return tags.label(input, span(choice[0]), class_=type + "-inline")
+        return tags.label(input, span(choice[1]), class_=type + "-inline")
     else:
-        return div(tags.label(input, span(choice[0])), class_=type)
+        return div(tags.label(input, span(choice[1])), class_=type)
 
 
-def _standardize_choices(x: CheckChoicesArg) -> Tuple[Tuple[TagChildArg, str]]:
-    res: List[Tuple[TagChildArg, str]] = []
-    for choice in x:
-        # TODO: maybe this should use TypeGuard? https://docs.python.org/3/library/typing.html#typing.TypeGuard
-        if isinstance(choice, str):
-            res.append((choice, choice))
-        elif len(choice) == 2:
-            res.append(choice)
-        else:
-            raise ValueError("`choices` must be a list of strings or tuples of strings")
-    return tuple(res)
+def _normalize_choices(x: ChoicesArg) -> _Choices:
+    if isinstance(x, list):
+        return {k: k for k in x}
+    else:
+        return x
