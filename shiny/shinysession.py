@@ -536,7 +536,7 @@ class ShinySession:
 
 class Outputs:
     def __init__(self, session: ShinySession) -> None:
-        self._output_obervers: Dict[str, Observer] = {}
+        self._output_observers: Dict[str, Observer] = {}
         self._session: ShinySession = session
 
     def __call__(
@@ -550,29 +550,44 @@ class Outputs:
             if isinstance(fn, render.RenderFunction):
                 fn.set_metadata(self._session, name)
 
-            if name in self._output_obervers:
-                self._output_obervers[name].destroy()
+            if name in self._output_observers:
+                self._output_observers[name].destroy()
 
-            @ObserverAsync
-            async def output_obs():
-                self._session.send_message(
-                    {"recalculating": {"name": name, "status": "recalculating"}}
-                )
-
-                message: Dict[str, object] = {}
+            if utils.is_async_callable(fn):
                 if utils.is_async_callable(fn):
-                    fn2 = typing.cast(Callable[[], Awaitable[object]], fn)
-                    val = await fn2()
-                else:
-                    val = fn()
-                message[name] = val
-                self._session.add_message_out(message)
+                    fn_a = typing.cast(Callable[[], Awaitable[object]], fn)
 
-                self._session.send_message(
-                    {"recalculating": {"name": name, "status": "recalculated"}}
-                )
+                @ObserverAsync
+                async def output_obs_a():
+                    self._session.send_message(
+                        {"recalculating": {"name": name, "status": "recalculating"}}
+                    )
 
-            self._output_obervers[name] = output_obs
+                    message: Dict[str, object] = {name: await fn_a()}
+                    self._session.add_message_out(message)
+
+                    self._session.send_message(
+                        {"recalculating": {"name": name, "status": "recalculated"}}
+                    )
+
+                self._output_observers[name] = output_obs_a
+
+            else:
+
+                @Observer
+                def output_obs():
+                    self._session.send_message(
+                        {"recalculating": {"name": name, "status": "recalculating"}}
+                    )
+
+                    message: Dict[str, object] = {name: fn()}
+                    self._session.add_message_out(message)
+
+                    self._session.send_message(
+                        {"recalculating": {"name": name, "status": "recalculated"}}
+                    )
+
+                self._output_observers[name] = output_obs
 
             return None
 
