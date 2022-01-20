@@ -25,7 +25,7 @@ class Progress:
         value: float,
         message: Optional[str] = None,
         detail: Optional[str] = None,
-    ):
+    ) -> None:
         if self._closed:
             warn("Attempting to set progress, but progress already closed.")
             return None
@@ -50,14 +50,14 @@ class Progress:
         amount: float = 0.1,
         message: Optional[str] = None,
         detail: Optional[str] = None,
-    ):
+    ) -> None:
         if self.value is None:
             self.value = self.min
 
         value = min(self.value + amount, self.max)
         self.set(value, message, detail)
 
-    def close(self):
+    def close(self) -> None:
         if self._closed:
             warn("Attempting to close progress, but progress already closed.")
             return None
@@ -65,7 +65,7 @@ class Progress:
         self._send_progress("close", {"id": self._id, "style": self._style})
         self._closed = True
 
-    def _send_progress(self, type: str, message: Dict[str, Any]):
-        return run_coro_sync(
+    def _send_progress(self, type: str, message: Dict[str, Any]) -> None:
+        run_coro_sync(
             self._session.send_message({"progress": {"type": type, "message": message}})
         )

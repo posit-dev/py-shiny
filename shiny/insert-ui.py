@@ -9,6 +9,7 @@ else:
 from htmltools import TagList
 
 from .shinysession import ShinySession, _require_active_session, _process_deps
+from . import utils
 
 
 def ui_insert(
@@ -18,7 +19,7 @@ def ui_insert(
     multiple: bool = False,
     immediate: bool = False,
     session: Optional[ShinySession] = None,
-):
+) -> None:
     session = _require_active_session(session)
 
     def callback():
@@ -28,7 +29,7 @@ def ui_insert(
             "where": where,
             "content": _process_deps(ui, session),
         }
-        session.send_message({"shiny-insert-ui": msg})
+        utils.run_coro_sync(session.send_message({"shiny-insert-ui": msg}))
 
     # TODO: Should session have an on_flush() method? If not, how to get context object from session?
     callback() if immediate else session.on_flush(callback, once=True)
@@ -39,12 +40,14 @@ def ui_remove(
     multiple: bool = False,
     immediate: bool = False,
     session: Optional[ShinySession] = None,
-):
+) -> None:
     session = _require_active_session(session)
 
     def callback():
-        session.send_message(
-            {"shiny-remove-ui": {"selector": selector, "multiple": multiple}}
+        utils.run_coro_sync(
+            session.send_message(
+                {"shiny-remove-ui": {"selector": selector, "multiple": multiple}}
+            )
         )
 
     callback() if immediate else session.on_flush(callback, once=True)

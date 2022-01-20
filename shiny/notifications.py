@@ -20,7 +20,7 @@ def notification_show(
     id: Optional[str] = None,
     type: Literal["default", "message", "warning", "error"] = "default",
     session: Optional[ShinySession] = None,
-):
+) -> None:
     session = _require_active_session(session)
 
     ui_ = _process_deps(ui, session)
@@ -38,12 +38,12 @@ def notification_show(
     if duration:
         payload.update({"duration": duration * 1000})
 
-    return run_coro_sync(
+    run_coro_sync(
         session.send_message({"notification": {"type": "show", "message": payload}})
     )
 
 
-def notification_remove(id: str, session: Optional[ShinySession] = None):
+def notification_remove(id: str, session: Optional[ShinySession] = None) -> str:
     session = _require_active_session(session)
     run_coro_sync(
         session.send_message({"notification": {"type": "remove", "message": None}})

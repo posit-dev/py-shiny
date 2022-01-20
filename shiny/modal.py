@@ -79,16 +79,12 @@ def modal(
     )
 
 
-def modal_show(modal: Tag, session: Optional[ShinySession] = None):
+def modal_show(modal: Tag, session: Optional[ShinySession] = None) -> None:
     session = _require_active_session(session)
     msg = _process_deps(modal)
-    return run_coro_sync(
-        session.send_message({"modal": {"type": "show", "message": msg}})
-    )
+    run_coro_sync(session.send_message({"modal": {"type": "show", "message": msg}}))
 
 
-def modal_remove(session: Optional[ShinySession] = None):
+def modal_remove(session: Optional[ShinySession] = None) -> None:
     session = _require_active_session(session)
-    return run_coro_sync(
-        session.send_message({"modal": {"type": "remove", "message": None}})
-    )
+    run_coro_sync(session.send_message({"modal": {"type": "remove", "message": None}}))
