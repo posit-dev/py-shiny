@@ -8,6 +8,7 @@ from asyncio import Task
 import asyncio
 
 from .datastructures import PriorityQueueFIFO
+from .validation import SilentException
 
 T = TypeVar("T")
 
@@ -123,6 +124,8 @@ class ReactiveEnvironment:
             old = self._current_context.set(ctx)
             try:
                 return await context_func()
+            except SilentException:
+                pass
             finally:
                 self._current_context.reset(old)
 

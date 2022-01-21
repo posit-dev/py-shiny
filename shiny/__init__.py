@@ -29,3 +29,4 @@ from .reactives import *
 from .shinyapp import *
 from .shinysession import *
 from .shinymodule import *
+from .validation import *
