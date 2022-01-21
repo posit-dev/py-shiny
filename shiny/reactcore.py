@@ -124,8 +124,12 @@ class ReactiveEnvironment:
             old = self._current_context.set(ctx)
             try:
                 return await context_func()
-            except SilentException:
-                pass
+            except Exception as e:
+                # It's OK for SilentException to cause an observer to stop running
+                if isinstance(e, SilentException):
+                    pass
+                else:
+                    raise e
             finally:
                 self._current_context.reset(old)
 

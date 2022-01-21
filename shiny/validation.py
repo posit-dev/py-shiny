@@ -1,9 +1,15 @@
-class SilentException(Exception):
+# For use with shinysession.SANITIZE_ERRORS = True
+class SafeException(Exception):
     pass
 
 
-def req(*args: object) -> object:
+class SilentException(Exception):
+    def __init__(self, cancel_output: bool = False) -> None:
+        self.cancel_output = cancel_output
+
+
+def req(*args: object, cancel_output: bool = False) -> object:
     for arg in args:
         if not arg:
-            raise SilentException()
+            raise SilentException(cancel_output)
     return args[0]

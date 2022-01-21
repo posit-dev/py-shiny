@@ -301,9 +301,6 @@ class Observer:
             try:
                 await ctx.run(self._func, create_task=self._is_async)
             except Exception as e:
-                # TODO: these exceptions need to be passed to session.send_message()
-                # somehow when inside of an output context (but how to we detect when
-                # we're in an output context?)
                 if self._session:
                     await self._session.unhandled_error(e)
 
