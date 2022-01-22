@@ -10,7 +10,7 @@ Welcome to Shiny's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-
+   api
 
 Indices and tables
 ==================
@@ -18,3 +18,14 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+
+
+Function reference
+==================
+
+.. automodule:: shiny.reactives
+
+.. autofunction:: shiny.reactives.observe
+
+.. autofunction:: shiny.reactives.isolate
