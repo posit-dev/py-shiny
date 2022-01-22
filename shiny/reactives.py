@@ -347,6 +347,16 @@ class ObserverAsync(Observer):
 def observe(
     *, priority: int = 0, session: Union[MISSING_TYPE, "ShinySession", None] = MISSING
 ) -> Callable[[Callable[[], None]], Observer]:
+    """[summary]
+
+    Args:
+        priority : [description]. Defaults to 0.
+        session : [description]. Defaults to MISSING.
+
+    Returns:
+        [description]
+    """
+
     def create_observer(fn: Callable[[], None]) -> Observer:
         return Observer(fn, priority=priority, session=session)
 
