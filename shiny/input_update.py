@@ -1,7 +1,7 @@
 import sys
 from datetime import date
 
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Tuple, List
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -55,7 +55,7 @@ def update_checkbox_group(
     *,
     label: Optional[str] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[str] = None,
+    selected: Optional[Union[str, List[str]]] = None,
     inline: bool = False,
     session: Optional[ShinySession] = None,
 ) -> None:
@@ -96,7 +96,7 @@ def _update_choice_input(
     type: Literal["checkbox", "radio"],
     label: Optional[str] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[str] = None,
+    selected: Optional[Union[str, List[str]]] = None,
     inline: bool = False,
     session: Optional[ShinySession] = None,
 ) -> None:
