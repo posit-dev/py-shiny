@@ -553,31 +553,32 @@ class Outputs:
                         message[name] = await fn2()
                     else:
                         message[name] = fn()
-                except Exception as e:
-                    if isinstance(e, SilentException):
-                        if e.cancel_output:
-                            return
+                except SilentException as e:
+                    if e.cancel_output:
+                        return
                     else:
-                        # Print traceback to the console
-                        traceback.print_exc()
-
-                        # Possibly sanitize error for the user
-                        if SANITIZE_ERRORS and not isinstance(e, SafeException):
-                            err_msg = SANITIZE_ERROR_MSG
-                        else:
-                            err_msg = str(e)
-
-                        # Register the outbound error message
-                        msg: Dict[str, object] = {
-                            name: {
-                                "message": err_msg,
-                                # TODO: is it possible to get the call?
-                                "call": None,
-                                # TODO: I don't think we actually use this for anything client-side
-                                "type": None,
-                            }
+                        pass
+                except Exception as e:
+                    # Print traceback to the console
+                    traceback.print_exc()
+                    # Possibly sanitize error for the user
+                    if self._session.app.SANITIZE_ERRORS and not isinstance(
+                        e, SafeException
+                    ):
+                        err_msg = self._session.app.SANITIZE_ERROR_MSG
+                    else:
+                        err_msg = str(e)
+                    # Register the outbound error message
+                    msg: Dict[str, object] = {
+                        name: {
+                            "message": err_msg,
+                            # TODO: is it possible to get the call?
+                            "call": None,
+                            # TODO: I don't think we actually use this for anything client-side
+                            "type": None,
                         }
-                        self._session._outbound_message["errors"] = msg
+                    }
+                    self._session._outbound_message["errors"].update(msg)
 
                 self._session._outbound_message["values"].append(message)
 
@@ -591,9 +592,6 @@ class Outputs:
 
         return set_fn
 
-
-SANITIZE_ERRORS = False
-SANITIZE_ERROR_MSG = "An error has occurred. Check your logs or contact the app author for clarification."
 
 # ==============================================================================
 # Context manager for current session (AKA current reactive domain)
