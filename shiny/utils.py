@@ -1,6 +1,8 @@
+import asyncio
 from typing import (
     Callable,
     Awaitable,
+    Optional,
     Tuple,
     TypeVar,
     Dict,
@@ -11,6 +13,7 @@ import tempfile
 import importlib
 import inspect
 import secrets
+import typing
 
 # ==============================================================================
 # Misc utility functions
@@ -88,6 +91,63 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
     raise RuntimeError(
         "async function yielded control; it did not finish in one iteration."
     )
+
+class RunLoop:
+    """Used to serialize sub-tasks, using a dedicated Task
+
+    From other Tasks, you can use execute() to run logic on this Task and get the result
+    (or error) back on the originating Task. Or, use schedule() to fire-and-forget,
+    which might also be faster.
+    """
+    def __init__(self):
+        self._task: Optional[asyncio.Task[None]] = None
+        self._queue: asyncio.Queue[Awaitable[None]] = asyncio.Queue()
+
+    async def _run(self) -> None:
+        while True:
+            coro = await self._queue.get()
+            await coro
+
+    def start(self):
+        if self._task is None:
+            self._task = asyncio.create_task(self._run())
+
+    def stop(self):
+        if self._task is not None:
+            self._task.cancel()
+            self._task = None
+
+    async def execute(self, coro: Awaitable[T]) -> T:
+        if asyncio.current_task() is self._task:
+            raise RuntimeError("Cannot call RunLoop.execute() from its own captive Task")
+
+        success = False
+        result: Optional[T] = None
+        error: Optional[BaseException] = None
+
+        # I'm worried these events might be too expensive--can we use just one per Task?
+        event = asyncio.Event()
+
+        async def wrapper():
+            nonlocal success, result, error
+            try:
+                result = await coro
+                success = True
+            except BaseException as err:
+                error = err
+                success = False
+            finally:
+                event.set()
+
+        await self._queue.put(wrapper())
+        await event.wait()
+        if success:
+            return typing.cast(T, result)
+        else:
+            raise typing.cast(BaseException, error)
+
+    async def schedule(self, coro: Awaitable[None]) -> None:
+        await self._queue.put(coro)
 
 
 def drop_none(x: Dict[str, Any]) -> Dict[str, object]:

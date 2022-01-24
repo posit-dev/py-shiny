@@ -54,7 +54,7 @@ from htmltools import TagChildArg, TagList
 
 from .reactives import ReactiveValues, Observer, ObserverAsync, isolate
 from .http_staticfiles import FileResponse
-from .connmanager import Connection, ConnectionClosed
+from .connmanager import Connection
 from . import render
 from . import utils
 from .fileupload import FileInfo, FileUploadManager
@@ -143,7 +143,7 @@ class ShinySession:
         # Clear file upload directories, if present
         self._on_ended_callbacks.append(self._file_upload_manager.rm_upload_dir)
 
-    def _run_session_end_tasks(self) -> None:
+    async def end(self) -> None:
         if self._has_run_session_end_tasks:
             return
         self._has_run_session_end_tasks = True
@@ -158,60 +158,50 @@ class ShinySession:
 
     async def close(self, code: int = 1001) -> None:
         await self._conn.close(code, None)
-        self._run_session_end_tasks()
+        await self.end()
 
-    async def run(self) -> None:
-        await self.send_message(
-            {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
-        )
+    async def handle_message(self, message: str) -> bool:
+        if self._debug:
+            print("RECV: " + message)
 
         try:
-            while True:
-                message: str = await self._conn.receive()
-                if self._debug:
-                    print("RECV: " + message)
+            message_obj = json.loads(message)
+        except json.JSONDecodeError:
+            print("ERROR: Invalid JSON message")
+            return False
 
-                try:
-                    message_obj = json.loads(message)
-                except json.JSONDecodeError:
-                    print("ERROR: Invalid JSON message")
-                    continue
+        if "method" not in message_obj:
+            self._send_error_response("Message does not contain 'method'.")
+            return False
 
-                if "method" not in message_obj:
-                    self._send_error_response("Message does not contain 'method'.")
-                    return
+        if message_obj["method"] == "init":
+            message_obj = typing.cast(ClientMessageInit, message_obj)
+            self._manage_inputs(message_obj["data"])
 
-                if message_obj["method"] == "init":
-                    message_obj = typing.cast(ClientMessageInit, message_obj)
-                    self._manage_inputs(message_obj["data"])
+        elif message_obj["method"] == "update":
+            message_obj = typing.cast(ClientMessageUpdate, message_obj)
+            self._manage_inputs(message_obj["data"])
 
-                elif message_obj["method"] == "update":
-                    message_obj = typing.cast(ClientMessageUpdate, message_obj)
-                    self._manage_inputs(message_obj["data"])
+        else:
+            if "tag" not in message_obj:
+                warnings.warn(
+                    "Cannot dispatch message with missing 'tag'; method: "
+                    + message_obj["method"]
+                )
+                return False
+            if "args" not in message_obj:
+                warnings.warn(
+                    "Cannot dispatch message with missing 'args'; method: "
+                    + message_obj["method"]
+                )
+                return False
 
-                else:
-                    if "tag" not in message_obj:
-                        warnings.warn(
-                            "Cannot dispatch message with missing 'tag'; method: "
-                            + message_obj["method"]
-                        )
-                        return
-                    if "args" not in message_obj:
-                        warnings.warn(
-                            "Cannot dispatch message with missing 'args'; method: "
-                            + message_obj["method"]
-                        )
-                        return
+            message_obj = typing.cast(ClientMessageOther, message_obj)
+            await self._dispatch(message_obj)
 
-                    message_obj = typing.cast(ClientMessageOther, message_obj)
-                    await self._dispatch(message_obj)
-
-                self.request_flush()
-
-                await self.app.flush_pending_sessions()
-
-        except ConnectionClosed:
-            self._run_session_end_tasks()
+        self.request_flush()
+        await self.app.flush_pending_sessions()
+        return True
 
     def _manage_inputs(self, data: Dict[str, object]) -> None:
         for (key, val) in data.items():

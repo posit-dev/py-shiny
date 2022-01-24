@@ -1,11 +1,13 @@
 __all__ = ("ShinyApp",)
 
+import contextlib
 from typing import Any, List, Optional, Union, Dict, Callable, cast
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
 
 import starlette.routing
 import starlette.websockets
+from starlette.applications import Starlette
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from starlette.requests import Request
 from starlette.responses import Response, HTMLResponse, JSONResponse
@@ -13,8 +15,10 @@ from starlette.responses import Response, HTMLResponse, JSONResponse
 from .http_staticfiles import StaticFiles
 from .shinysession import ShinySession, session_context
 from . import reactcore
+from . import utils
 from .connmanager import (
     Connection,
+    ConnectionClosed,
     StarletteConnection,
 )
 from .html_dependencies import jquery_deps, shiny_deps
@@ -43,7 +47,8 @@ class ShinyApp:
         self._registered_dependencies: Dict[str, HTMLDependency] = {}
         self._dependency_handler: Any = starlette.routing.Router()
 
-        self.starlette_app = starlette.routing.Router(
+        self._mainLoop: utils.RunLoop = utils.RunLoop()
+        self.starlette_app = Starlette(
             routes=[
                 starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
                 starlette.routing.Route("/", self._on_root_request_cb, methods=["GET"]),
@@ -53,14 +58,26 @@ class ShinyApp:
                     methods=["GET", "POST"],
                 ),
                 starlette.routing.Mount("/", app=self._dependency_handler),
-            ]
+            ],
+            lifespan = self._lifespan
         )
 
-    def create_session(self, conn: Connection) -> ShinySession:
+    @contextlib.asynccontextmanager
+    async def _lifespan(self, app: Starlette):
+        self._mainLoop.start()
+        try:
+            yield
+        finally:
+            self._mainLoop.stop()
+
+    async def create_session(self, conn: Connection) -> ShinySession:
         self._last_session_id += 1
         id = str(self._last_session_id)
         session = ShinySession(self, id, conn, debug=self._debug)
         self._sessions[id] = session
+        await session.send_message(
+            {"config": {"workerId": "", "sessionId": str(session.id), "user": None}}
+        )
         return session
 
     def remove_session(self, session: Union[ShinySession, str]) -> None:
@@ -132,9 +149,21 @@ class ShinyApp:
         """
         await ws.accept()
         conn = StarletteConnection(ws)
-        session = self.create_session(conn)
+        session = await self._mainLoop.execute(self._on_connect_cb_impl(conn))
+        try:
+            while True:
+                message = await conn.receive()
+                await self._mainLoop.execute(self._on_session_message_recv(session, message))
+        except ConnectionClosed:
+            # TODO: Probably should run on main
+            await self._mainLoop.execute(session.end())
 
-        await session.run()
+
+    async def _on_connect_cb_impl(self, conn: Connection) -> ShinySession:
+        session = await self.create_session(conn)
+        return session
+    async def _on_session_message_recv(self, session: ShinySession, message: str):
+        return await session.handle_message(message)
 
     async def _on_session_request_cb(self, request: Request) -> ASGIApp:
         """
