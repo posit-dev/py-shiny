@@ -32,6 +32,7 @@ from .reactcore import Context, Dependents
 from . import reactcore
 from . import utils
 from .types import MISSING, MISSING_TYPE
+from .validation import SilentException
 
 if TYPE_CHECKING:
     from .shinysession import ShinySession
@@ -300,6 +301,9 @@ class Observer:
         with shinysession.session_context(self._session):
             try:
                 await ctx.run(self._func, create_task=self._is_async)
+            except SilentException:
+                # It's OK for SilentException to cause an observer to stop running
+                pass
             except Exception as e:
                 if self._session:
                     await self._session.unhandled_error(e)

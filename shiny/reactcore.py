@@ -8,7 +8,6 @@ from asyncio import Task
 import asyncio
 
 from .datastructures import PriorityQueueFIFO
-from .validation import SilentException
 
 T = TypeVar("T")
 
@@ -124,12 +123,6 @@ class ReactiveEnvironment:
             old = self._current_context.set(ctx)
             try:
                 return await context_func()
-            except Exception as e:
-                # It's OK for SilentException to cause an observer to stop running
-                if isinstance(e, SilentException):
-                    pass
-                else:
-                    raise e
             finally:
                 self._current_context.reset(old)
 
@@ -194,7 +187,9 @@ class ReactiveEnvironment:
         finally:
             self._current_context.reset(token)
 
+
 _reactive_environment = ReactiveEnvironment()
+
 
 @contextlib.contextmanager
 def isolate():

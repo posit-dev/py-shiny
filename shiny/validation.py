@@ -1,4 +1,4 @@
-# For use with shinysession.SANITIZE_ERRORS = True
+# For use with ShinyApp().SANITIZE_ERRORS = True
 from typing import TypeVar
 
 
@@ -7,8 +7,11 @@ class SafeException(Exception):
 
 
 class SilentException(Exception):
-    def __init__(self, cancel_output: bool = False) -> None:
-        self.cancel_output = cancel_output
+    pass
+
+
+class SilentCancelOutputException(Exception):
+    pass
 
 
 T = TypeVar("T")
@@ -17,5 +20,8 @@ T = TypeVar("T")
 def req(*args: T, cancel_output: bool = False) -> T:
     for arg in args:
         if not arg:
-            raise SilentException(cancel_output)
+            if cancel_output:
+                raise SilentCancelOutputException()
+            else:
+                raise SilentException()
     return args[0]

@@ -59,7 +59,7 @@ from . import render
 from . import utils
 from .fileupload import FileInfo, FileUploadManager
 from .input_handlers import input_handlers
-from .validation import SafeException, SilentException
+from .validation import SafeException, SilentCancelOutputException, SilentException
 
 # This cast is necessary because if the type checker thinks that if
 # "tag" isn't in `message`, then it's not a ClientMessage object.
@@ -553,11 +553,10 @@ class Outputs:
                         message[name] = await fn2()
                     else:
                         message[name] = fn()
-                except SilentException as e:
-                    if e.cancel_output:
-                        return
-                    else:
-                        pass
+                except SilentCancelOutputException:
+                    return
+                except SilentException:
+                    pass
                 except Exception as e:
                     # Print traceback to the console
                     traceback.print_exc()
