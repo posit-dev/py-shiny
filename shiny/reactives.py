@@ -14,8 +14,13 @@ __all__ = (
     "isolate",
 )
 
+import asyncio
+import sys
+import time
+import traceback
 from typing import (
     TYPE_CHECKING,
+    List,
     Optional,
     Callable,
     Awaitable,
@@ -383,6 +388,50 @@ def isolate():
     reexecuting when those particular values change).
     """
     return reactcore.isolate()
+
+
+def invalidate_later(delay: float):
+    ctx = reactcore.get_current_context()
+    # Pass an absolute time to our subtask, rather than passing the delay directly, in
+    # case the subtask doesn't get a chance to start sleeping until a significant amount
+    # of time has passed.
+    deadline = time.monotonic() + delay
+
+    cancellable = True
+
+    async def _task(ctx: Context, deadline: float):
+        nonlocal cancellable
+        try:
+            delay = deadline - time.monotonic()
+            try:
+                await asyncio.sleep(delay)
+            except asyncio.CancelledError:
+                # This happens when cancel_task is called due to the session ending, or
+                # the context being invalidated due to some other reason. There's no
+                # reason for us to keep waiting at that point, as ctx.invalidate() can
+                # only be a no-op.
+                return
+
+            async with reactcore.lock():
+                # Prevent the ctx.invalidate() from killing our own task. (Another way
+                # to accomplish this is to unregister our ctx.on_invalidate handler, but
+                # ctx.on_invalidate doesn't currently allow unregistration.)
+                cancellable = False
+
+                ctx.invalidate()
+                await reactcore.flush()
+
+        except BaseException:
+            traceback.print_exception(*sys.exc_info())
+            raise
+
+    task = asyncio.create_task(_task(ctx, deadline))
+
+    def cancel_task():
+        if cancellable:
+            task.cancel()
+
+    ctx.on_invalidate(cancel_task)
 
 
 # Import here at the bottom seems to fix a circular dependency problem.

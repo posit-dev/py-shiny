@@ -55,6 +55,7 @@ from htmltools import TagChildArg, TagList
 from .reactives import ReactiveValues, Observer, ObserverAsync, isolate
 from .http_staticfiles import FileResponse
 from .connmanager import Connection, ConnectionClosed
+from . import reactcore
 from . import render
 from . import utils
 from .fileupload import FileInfo, FileUploadManager
@@ -191,34 +192,36 @@ class ShinySession:
                     self._send_error_response("Message does not contain 'method'.")
                     return
 
-                if message_obj["method"] == "init":
-                    message_obj = typing.cast(ClientMessageInit, message_obj)
-                    self._manage_inputs(message_obj["data"])
+                async with reactcore.lock():
 
-                elif message_obj["method"] == "update":
-                    message_obj = typing.cast(ClientMessageUpdate, message_obj)
-                    self._manage_inputs(message_obj["data"])
+                    if message_obj["method"] == "init":
+                        message_obj = typing.cast(ClientMessageInit, message_obj)
+                        self._manage_inputs(message_obj["data"])
 
-                else:
-                    if "tag" not in message_obj:
-                        warnings.warn(
-                            "Cannot dispatch message with missing 'tag'; method: "
-                            + message_obj["method"]
-                        )
-                        return
-                    if "args" not in message_obj:
-                        warnings.warn(
-                            "Cannot dispatch message with missing 'args'; method: "
-                            + message_obj["method"]
-                        )
-                        return
+                    elif message_obj["method"] == "update":
+                        message_obj = typing.cast(ClientMessageUpdate, message_obj)
+                        self._manage_inputs(message_obj["data"])
 
-                    message_obj = typing.cast(ClientMessageOther, message_obj)
-                    await self._dispatch(message_obj)
+                    else:
+                        if "tag" not in message_obj:
+                            warnings.warn(
+                                "Cannot dispatch message with missing 'tag'; method: "
+                                + message_obj["method"]
+                            )
+                            return
+                        if "args" not in message_obj:
+                            warnings.warn(
+                                "Cannot dispatch message with missing 'args'; method: "
+                                + message_obj["method"]
+                            )
+                            return
 
-                self.request_flush()
+                        message_obj = typing.cast(ClientMessageOther, message_obj)
+                        await self._dispatch(message_obj)
 
-                await self.app.flush_pending_sessions()
+                    self.request_flush()
+
+                    await reactcore.flush()
 
         except ConnectionClosed:
             self._run_session_end_tasks()

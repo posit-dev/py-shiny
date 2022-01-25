@@ -9,6 +9,7 @@ import asyncio
 import warnings
 
 from .datastructures import PriorityQueueFIFO
+from . import utils
 
 T = TypeVar("T")
 
@@ -108,6 +109,8 @@ class ReactiveEnvironment:
         )
         self._next_id: int = 0
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
+        self.lock = asyncio.Lock()
+        self._flushed_callbacks = utils.AsyncCallbacks()
 
     def next_id(self) -> int:
         """Return the next available id"""
@@ -137,6 +140,11 @@ class ReactiveEnvironment:
         else:
             return await asyncio.create_task(wrapper())
 
+    def on_flushed(
+        self, func: Callable[[], Awaitable[None]], once: bool = False
+    ) -> Callable[[], None]:
+        return self._flushed_callbacks.register(func, once=once)
+
     async def flush(self, *, concurrent: bool = True) -> None:
         """Flush all pending operations"""
         # Currently, we default to concurrent flush. In the future, we'll
@@ -147,6 +155,8 @@ class ReactiveEnvironment:
             await self._flush_concurrent()
         else:
             await self._flush_sequential()
+
+        await self._flushed_callbacks.invoke()
 
     async def _flush_concurrent(self) -> None:
         # Flush observers concurrently, using Tasks.
@@ -201,3 +211,13 @@ def get_current_context() -> Context:
 
 async def flush(*, concurrent: bool = True) -> None:
     await _reactive_environment.flush(concurrent=concurrent)
+
+
+def on_flushed(
+    func: Callable[[], Awaitable[None]], once: bool = False
+) -> Callable[[], None]:
+    return _reactive_environment.on_flushed(func, once)
+
+
+def lock():
+    return _reactive_environment.lock
