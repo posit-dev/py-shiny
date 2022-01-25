@@ -12,6 +12,7 @@ __all__ = (
     "observe",
     "observe_async",
     "isolate",
+    "bind_event",
 )
 
 from typing import (
@@ -24,17 +25,20 @@ from typing import (
     Generic,
     Any,
     overload,
+    cast,
 )
 import typing
 import inspect
 import warnings
 import traceback
 
+from .input_handlers import ActionButtonValue
 from .reactcore import Context, Dependents, ReactiveWarning
+from .render import RenderFunction
 from . import reactcore
 from . import utils
 from .types import MISSING, MISSING_TYPE
-from .validation import SilentException
+from .validation import SilentException, req
 
 if TYPE_CHECKING:
     from .shinysession import ShinySession
@@ -383,6 +387,63 @@ def isolate():
     reexecuting when those particular values change).
     """
     return reactcore.isolate()
+
+
+Bindable = TypeVar("Bindable", Observer, Reactive[object], RenderFunction)
+
+
+def bind_event(
+    value_func: Callable[[], object],
+    ignore_none: bool = True,
+    ignore_init: bool = False,
+    once: bool = False,
+    session: Optional["ShinySession"] = None,
+) -> Callable[[Bindable], Bindable]:
+    def _(x: Bindable) -> Bindable:
+        from .shinysession import _require_active_session
+
+        nonlocal session
+        session = _require_active_session(session)
+
+        initialized = False
+
+        def trigger() -> None:
+            event_func = Reactive(value_func, session=session)
+            val = event_func()
+            nonlocal initialized
+            if ignore_init and not initialized:
+                initialized = True
+                req(False)
+            if ignore_none and _is_none_event(val):
+                req(False)
+
+        # TODO: RenderFunction should maybe define _func in the base class?
+        fname = "_fn" if isinstance(x, RenderFunction) else "_func"
+        f: Callable[[], Awaitable[Optional[object]]] = getattr(x, fname)
+
+        async def f_obs() -> None:
+            trigger()
+            with isolate():
+                try:
+                    await f()
+                finally:
+                    if once:
+                        x.destroy()  # type: ignore
+
+        async def f_val() -> object:
+            trigger()
+            with isolate():
+                return await f()
+
+        setattr(x, fname, f_obs if isinstance(x, Observer) else f_val)
+
+        return x
+
+    return _
+
+
+def _is_none_event(val: object) -> bool:
+    return val is None or (isinstance(val, ActionButtonValue) and val == 0)
 
 
 # Import here at the bottom seems to fix a circular dependency problem.
