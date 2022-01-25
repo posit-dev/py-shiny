@@ -103,10 +103,11 @@ def _update_choice_input(
     session = _require_active_session(session)
     options = None
     if choices is not None:
-        options = _generate_options(
+        opts = _generate_options(
             id=id, type=type, choices=choices, selected=selected, inline=inline
         )
-    msg = {"label": label, "options": _process_deps(options)["html"], "value": selected}
+        options = _process_deps(opts)["html"]
+    msg = {"label": label, "options": options, "value": selected}
     session.send_input_message(id, drop_none(msg))
 
 
