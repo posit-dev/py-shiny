@@ -313,9 +313,8 @@ class ShinySession:
         elif action == "download" and request.method == "GET" and subpath:
             download_id = subpath
             if download_id in self._downloads:
-                # TODO: This really needs to be `async with session_context`
                 with session_context(self):
-                    async with isolate():
+                    with isolate():
                         download = self._downloads[download_id]
                         filename = read_thunk_opt(download.filename)
                         content_type = read_thunk_opt(download.content_type)
@@ -363,9 +362,8 @@ class ShinySession:
                             # implementation of handle_request(), but the iterators
                             # aren't invoked until after handle_request() returns.
                             async def wrap_content_async() -> AsyncIterable[bytes]:
-                                # TODO: This really needs to be `async with session_context`
                                 with session_context(self):
-                                    async with isolate():
+                                    with isolate():
                                         async for chunk in contents:
                                             if isinstance(chunk, str):
                                                 yield chunk.encode(download.encoding)
@@ -377,7 +375,6 @@ class ShinySession:
                         else:  # isinstance(contents, Iterable):
 
                             async def wrap_content_sync() -> AsyncIterable[bytes]:
-                                # TODO: Make sure these two `with` statements don't need to be async
                                 with session_context(self):
                                     with isolate():
                                         for chunk in contents:
@@ -591,8 +588,6 @@ def get_current_session() -> Optional[ShinySession]:
     return _current_session.get()
 
 
-# TODO: I don't think this works for async (i.e. `async with session_context():`), see
-#       how isolate() works for an example
 @contextmanager
 def session_context(session: Optional[ShinySession]):
     token: Token[Union[ShinySession, None]] = _current_session.set(session)
