@@ -299,7 +299,7 @@ def test_isolate_async_basic_value():
         return 123
 
     async def go():
-        async with isolate():
+        with isolate():
             assert await f() == 123
 
     asyncio.run(go())
@@ -318,7 +318,7 @@ def test_isolate_async_basic_without_context():
         return await r()
 
     async def go():
-        async with isolate():
+        with isolate():
             assert await r() == 11
             assert await get_r() == 11
 
@@ -339,7 +339,7 @@ def test_isolate_async_prevents_dependency():
     async def o():
         nonlocal o_val
         v_dep()
-        async with isolate():
+        with isolate():
             o_val = await r()
 
     asyncio.run(reactcore.flush())
