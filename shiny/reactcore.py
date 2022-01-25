@@ -1,7 +1,8 @@
 """Low-level reactive components."""
 
 
-from typing import Any, Callable, Optional, Awaitable, TypeVar
+import contextlib
+from typing import Callable, Optional, Awaitable, TypeVar
 from contextvars import ContextVar
 from asyncio import Task
 import asyncio
@@ -178,31 +179,20 @@ class ReactiveEnvironment:
     def add_pending_flush(self, ctx: Context, priority: int) -> None:
         self._pending_flush_queue.put(priority, ctx)
 
-    class Isolator:
-        def __init__(self):
-            self._old: Optional[Context] = None
-
-        def __enter__(self):
-            self._old = _reactive_environment._current_context.get()
-            _reactive_environment._current_context.set(Context())
-
-        def __exit__(self, *args: Any):
-            _reactive_environment._current_context.set(self._old)
-            self._old = None
-
-        async def __aenter__(self):
-            return self.__enter__()
-
-        async def __aexit__(self, *args: Any):
-            return self.__exit__(*args)
-
+    @contextlib.contextmanager
+    def isolate(self):
+        token = self._current_context.set(Context())
+        try:
+            yield
+        finally:
+            self._current_context.reset(token)
 
 _reactive_environment = ReactiveEnvironment()
-_isolator = _reactive_environment.Isolator()
 
-
+@contextlib.contextmanager
 def isolate():
-    return _isolator
+    with _reactive_environment.isolate():
+        yield
 
 
 def get_current_context() -> Context:

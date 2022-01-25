@@ -133,4 +133,6 @@ class Callbacks:
 def package_dir(package: str) -> str:
     with tempfile.TemporaryDirectory():
         pkg_file = importlib.import_module(".", package=package).__file__
+        if pkg_file is None:
+            raise RuntimeError(f"Could not find package dir for '{package}'")
         return os.path.dirname(pkg_file)
