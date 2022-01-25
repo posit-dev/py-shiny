@@ -103,14 +103,14 @@ class _DownloadInfo:
     encoding: str
 
 
-class _OutBoundMessage(TypedDict):
+class _OutBoundMessageQueues(TypedDict):
     values: List[Dict[str, object]]
     input_messages: List[Dict[str, object]]
-    errors: Dict[str, object]
+    errors: List[Dict[str, object]]
 
 
-def _empty_outbound_message() -> _OutBoundMessage:
-    return {"values": [], "input_messages": [], "errors": {}}
+def _empty_outbound_message_queues() -> _OutBoundMessageQueues:
+    return {"values": [], "input_messages": [], "errors": []}
 
 
 class ShinySession:
@@ -128,7 +128,7 @@ class ShinySession:
         self.input: ReactiveValues = ReactiveValues()
         self.output: Outputs = Outputs(self)
 
-        self._outbound_message = _empty_outbound_message()
+        self._outbound_message_queues = _empty_outbound_message_queues()
 
         self._message_handlers: Dict[
             str, Callable[..., Awaitable[object]]
@@ -406,7 +406,7 @@ class ShinySession:
 
     def send_input_message(self, id: str, message: Dict[str, object]) -> None:
         msg: Dict[str, object] = {"id": id, "message": message}
-        self._outbound_message["input_messages"].append(msg)
+        self._outbound_message_queues["input_messages"].append(msg)
         self.request_flush()
 
     def send_insert_ui(
@@ -461,22 +461,26 @@ class ShinySession:
             self._flush_callbacks.invoke()
             self._flushed_callbacks.invoke()
 
-        msg = self._outbound_message
+        omq = self._outbound_message_queues
 
         values: Dict[str, object] = {}
-        for value in msg["values"]:
-            values.update(value)
+        for v in omq["values"]:
+            values.update(v)
+
+        errors: Dict[str, object] = {}
+        for err in omq["errors"]:
+            errors.update(err)
 
         message: Dict[str, object] = {
-            "errors": msg["errors"],
             "values": values,
-            "inputMessages": msg["input_messages"],
+            "inputMessages": omq["input_messages"],
+            "errors": errors,
         }
 
         try:
             await self.send_message(message)
         finally:
-            self._outbound_message = _empty_outbound_message()
+            self._outbound_message_queues = _empty_outbound_message_queues()
 
     # ==========================================================================
     # On session ended
@@ -577,9 +581,9 @@ class Outputs:
                             "type": None,
                         }
                     }
-                    self._session._outbound_message["errors"].update(msg)
+                    self._session._outbound_message_queues["errors"].append(msg)
 
-                self._session._outbound_message["values"].append(message)
+                self._session._outbound_message_queues["values"].append(message)
 
                 await self._session.send_message(
                     {"recalculating": {"name": name, "status": "recalculated"}}
