@@ -1,7 +1,7 @@
 import sys
 from datetime import date
 
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Tuple, List
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -55,7 +55,7 @@ def update_checkbox_group(
     *,
     label: Optional[str] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[str] = None,
+    selected: Optional[Union[str, List[str]]] = None,
     inline: bool = False,
     session: Optional[ShinySession] = None,
 ) -> None:
@@ -96,17 +96,18 @@ def _update_choice_input(
     type: Literal["checkbox", "radio"],
     label: Optional[str] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[str] = None,
+    selected: Optional[Union[str, List[str]]] = None,
     inline: bool = False,
     session: Optional[ShinySession] = None,
 ) -> None:
     session = _require_active_session(session)
     options = None
     if choices is not None:
-        options = _generate_options(
+        opts = _generate_options(
             id=id, type=type, choices=choices, selected=selected, inline=inline
         )
-    msg = {"label": label, "options": _process_deps(options)["html"], "value": selected}
+        options = _process_deps(opts)["html"]
+    msg = {"label": label, "options": options, "value": selected}
     session.send_input_message(id, drop_none(msg))
 
 

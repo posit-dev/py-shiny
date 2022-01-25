@@ -33,7 +33,7 @@ def input_checkbox_group(
     id: str,
     label: TagChildArg,
     choices: ChoicesArg,
-    selected: Optional[str] = None,
+    selected: Optional[Union[str, List[str]]] = None,
     inline: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
@@ -91,7 +91,7 @@ def _generate_options(
     id: str,
     type: str,
     choices: ChoicesArg,
-    selected: Optional[str],
+    selected: Optional[Union[str, List[str]]],
     inline: bool,
 ):
     choicez = _normalize_choices(choices)
@@ -110,19 +110,24 @@ def _generate_option(
     id: str,
     type: str,
     choice: Tuple[str, TagChildArg],
-    selected: Optional[str],
+    selected: Optional[Union[str, List[str]]],
     inline: bool,
 ):
+    value, label = choice
+    if isinstance(selected, list):
+        checked = value in selected
+    else:
+        checked = value == selected
     input = tags.input(
         type=type,
         name=id,
-        value=choice[0],
-        checked="checked" if selected == choice[0] else None,
+        value=value,
+        checked="checked" if checked else None,
     )
     if inline:
-        return tags.label(input, span(choice[1]), class_=type + "-inline")
+        return tags.label(input, span(label), class_=type + "-inline")
     else:
-        return div(tags.label(input, span(choice[1])), class_=type)
+        return div(tags.label(input, span(label)), class_=type)
 
 
 def _normalize_choices(x: ChoicesArg) -> _Choices:

@@ -31,7 +31,7 @@ ui = page_fluid(
                 "checkbox_group",
                 "input_checkbox_group()",
                 {"a": "Choice 1", "b": "Choice 2"},
-                selected="b",
+                selected=["a", "b"],
                 inline=True,
             ),
             input_radio_buttons(
