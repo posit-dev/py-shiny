@@ -103,3 +103,4 @@ ENV/
 
 typings/
 
+docs/source/generated/
