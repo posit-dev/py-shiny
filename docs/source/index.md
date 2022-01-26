@@ -3,8 +3,8 @@
 %   You can adapt this file completely to your liking, but it should at least
 %   contain the root `toctree` directive.
 
-Welcome to Shiny's documentation!
-=================================
+Shiny for Python
+================
 
 ```{toctree}
 ---
@@ -25,8 +25,8 @@ Indices and tables
 
 
 
-Function reference
-==================
+Function reference (testing)
+============================
 
 NOTE: This section is just for testing.
 
