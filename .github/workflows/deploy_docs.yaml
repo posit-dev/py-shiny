@@ -1,0 +1,59 @@
+name: Build and deploy docs
+
+# NOTE: after merging to main, remove next line and uncomment following block.
+on: push
+# on:
+#   push:
+#     branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Setup SSH key for htmltools
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.HTMLTOOLS_SSH_KEY }}"
+
+      - name: Check out and install htmltools
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          git clone git@github.com:rstudio/py-htmltools.git
+          cd py-htmltools
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
+      - name: Install shiny
+        run: |
+          pip install -e .
+
+      - name: Install rsconnect-python
+        run: pip install rsconnect-python
+
+      - name: Build docs
+        run: |
+          cd docs
+          make html
