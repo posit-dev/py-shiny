@@ -28,6 +28,8 @@ Indices and tables
 Function reference
 ==================
 
+NOTE: This section is just for testing.
+
 
 % Directives from the autodoc exentions need to be written in rST and wrapped with
 % ```{eval-rst}
