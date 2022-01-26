@@ -2,6 +2,7 @@
 
 import pytest
 import asyncio
+from typing import List
 
 import shiny.reactcore as reactcore
 from shiny.reactives import *
@@ -497,6 +498,89 @@ def test_observer_destroy():
 
 
 # ======================================================================
+# Error handling
+# ======================================================================
+def test_error_handling():
+    vals: List[str] = []
+
+    @observe()
+    def _():
+        vals.append("o1")
+
+    @observe()
+    def _():
+        vals.append("o2-1")
+        raise Exception("Error here!")
+        vals.append("o2-2")
+
+    @observe()
+    def _():
+        vals.append("o3")
+
+    # Error in observer should get converted to warning.
+    with pytest.warns(reactcore.ReactiveWarning):
+        asyncio.run(reactcore.flush())
+    # All observers should have executed.
+    assert vals == ["o1", "o2-1", "o3"]
+
+    vals: List[str] = []
+
+    @reactive()
+    def r():
+        vals.append("r")
+        raise Exception("Error here!")
+
+    @observe()
+    def _():
+        vals.append("o1-1")
+        r()
+        vals.append("o1-2")
+
+    @observe()
+    def _():
+        vals.append("o2")
+
+    # Error in observer should get converted to warning.
+    with pytest.warns(reactcore.ReactiveWarning):
+        asyncio.run(reactcore.flush())
+    assert vals == ["o1-1", "r", "o2"]
+
+
+def test_reactive_error_rethrow():
+    # Make sure reactives re-throw errors.
+    vals: List[str] = []
+    v = ReactiveVal(1)
+
+    @reactive()
+    def r():
+        vals.append("r")
+        raise Exception("Error here!")
+
+    @observe()
+    def _():
+        v()
+        vals.append("o1-1")
+        r()
+        vals.append("o1-2")
+
+    @observe()
+    def _():
+        v()
+        vals.append("o2-2")
+        r()
+        vals.append("o2-2")
+
+    with pytest.warns(reactcore.ReactiveWarning):
+        asyncio.run(reactcore.flush())
+    assert vals == ["o1-1", "r", "o2-2"]
+
+    v(2)
+    with pytest.warns(reactcore.ReactiveWarning):
+        asyncio.run(reactcore.flush())
+    assert vals == ["o1-1", "r", "o2-2", "o1-1", "o2-2"]
+
+
+# ======================================================================
 # Invalidating dependents
 # ======================================================================
 # For https://github.com/rstudio/prism/issues/26
@@ -534,4 +618,4 @@ def test_dependent_invalidation():
         val = v()
 
     assert val == 2
-    assert error_occurred == False
+    assert error_occurred is False
