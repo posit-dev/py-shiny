@@ -397,13 +397,15 @@ def bind_event(
     ignore_none: bool = True,
     ignore_init: bool = False,
     once: bool = False,
-    session: Optional["ShinySession"] = None,
+    session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
 ) -> Callable[[Bindable], Bindable]:
     def _(x: Bindable) -> Bindable:
-        from .shinysession import _require_active_session
 
         nonlocal session
-        session = _require_active_session(session)
+        if isinstance(session, MISSING_TYPE):
+            # If no session is provided, autodetect the current session (this
+            # could be None if outside of a session).
+            session = shinysession.get_current_session()
 
         initialized = False
 
