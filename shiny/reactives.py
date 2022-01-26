@@ -27,8 +27,10 @@ from typing import (
 )
 import typing
 import inspect
+import warnings
+import traceback
 
-from .reactcore import Context, Dependents
+from .reactcore import Context, Dependents, ReactiveWarning
 from . import reactcore
 from . import utils
 from .types import MISSING, MISSING_TYPE
@@ -305,6 +307,9 @@ class Observer:
                 # It's OK for SilentException to cause an observer to stop running
                 pass
             except Exception as e:
+                traceback.print_exc()
+
+                warnings.warn("Error in observer: " + str(e), ReactiveWarning)
                 if self._session:
                     await self._session.unhandled_error(e)
 
