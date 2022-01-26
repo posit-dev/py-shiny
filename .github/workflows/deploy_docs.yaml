@@ -1,10 +1,8 @@
 name: Build and deploy docs
 
-# NOTE: after merging to main, remove next line and uncomment following block.
-on: push
-# on:
-#   push:
-#     branches: [main]
+on:
+  push:
+    branches: [main]
 
 jobs:
   build:
