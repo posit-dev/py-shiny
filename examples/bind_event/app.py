@@ -1,7 +1,14 @@
 from shiny import *
 
 ui = page_fluid(
-    tags.p("The first checkbox group controls the second"),
+    tags.p(
+        """
+      The first time you click the button, you should see a 1 appear below the button,
+      as well as 3 messages in the python console (all reporting 1 click). After
+      clicking once, clicking again should increment the number below the button and
+      print the number of clicks in the console twice.
+      """
+    ),
     input_action_button("btn", "Click me"),
     output_ui("foo"),
 )

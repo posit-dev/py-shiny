@@ -4,6 +4,7 @@ import pytest
 import asyncio
 from typing import List
 
+from shiny.input_handlers import ActionButtonValue
 import shiny.reactcore as reactcore
 from shiny.reactives import *
 from shiny.validation import req
@@ -673,3 +674,67 @@ def test_req():
 
     asyncio.run(reactcore.flush())
     assert val == 1
+
+
+# ------------------------------------------------------------
+# @bind_cache() works as expected
+# ------------------------------------------------------------
+def test_bind_cache():
+    n_times = 0
+
+    @bind_event(lambda: None)
+    @observe()
+    def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 0
+
+    @bind_event(lambda: None, ignore_none=False)
+    @observe()
+    def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 1
+
+    @bind_event(lambda: ActionButtonValue(0), ignore_none=False)
+    @observe()
+    def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 2
+
+    @bind_event(lambda: "foo", ignore_init=True)
+    @observe()
+    def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 2
+
+    r = ReactiveVal(0)
+
+    @bind_event(lambda: r())
+    @observe()
+    def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 3
+
+    r(0)
+    asyncio.run(reactcore.flush())
+    assert n_times == 3
+
+    r(1)
+    asyncio.run(reactcore.flush())
+    assert n_times == 4
+
+    # TODO: without a session context, I don't think we can properly test once=True?
