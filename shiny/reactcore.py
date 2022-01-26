@@ -185,7 +185,9 @@ class ReactiveEnvironment:
         finally:
             self._current_context.reset(token)
 
+
 _reactive_environment = ReactiveEnvironment()
+
 
 @contextlib.contextmanager
 def isolate():

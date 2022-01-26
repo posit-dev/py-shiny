@@ -6,6 +6,7 @@ from typing import List
 
 import shiny.reactcore as reactcore
 from shiny.reactives import *
+from shiny.validation import req
 
 
 def test_flush_runs_newly_invalidated():
@@ -619,3 +620,56 @@ def test_dependent_invalidation():
 
     assert val == 2
     assert error_occurred is False
+
+
+# ------------------------------------------------------------
+# req() pauses execution in @observe() and @reactive()
+# ------------------------------------------------------------
+def test_req():
+    n_times = 0
+
+    @observe()
+    def _():
+        req(False)
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 0
+
+    @observe()
+    def _():
+        req(True)
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 1
+
+    @reactive()
+    def r():
+        req(False)
+        return 1
+
+    val = None
+
+    @observe()
+    def _():
+        nonlocal val
+        val = r()
+
+    asyncio.run(reactcore.flush())
+    assert val is None
+
+    @reactive()
+    def r2():
+        req(True)
+        return 1
+
+    @observe()
+    def _():
+        nonlocal val
+        val = r2()
+
+    asyncio.run(reactcore.flush())
+    assert val == 1

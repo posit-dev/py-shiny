@@ -11,6 +11,7 @@ from pathlib import Path
 import sys
 import json
 import re
+import traceback
 import warnings
 import typing
 import mimetypes
@@ -41,11 +42,10 @@ from starlette.responses import (
 )
 from starlette.types import ASGIApp
 
-
 if sys.version_info >= (3, 8):
-    from typing import TypedDict, Literal
+    from typing import TypedDict
 else:
-    from typing_extensions import TypedDict, Literal
+    from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
     from .shinyapp import ShinyApp
@@ -59,6 +59,7 @@ from . import render
 from . import utils
 from .fileupload import FileInfo, FileUploadManager
 from .input_handlers import input_handlers
+from .validation import SafeException, SilentCancelOutputException, SilentException
 
 # This cast is necessary because if the type checker thinks that if
 # "tag" isn't in `message`, then it's not a ClientMessage object.
@@ -102,6 +103,16 @@ class _DownloadInfo:
     encoding: str
 
 
+class _OutBoundMessageQueues(TypedDict):
+    values: List[Dict[str, object]]
+    input_messages: List[Dict[str, object]]
+    errors: List[Dict[str, object]]
+
+
+def _empty_outbound_message_queues() -> _OutBoundMessageQueues:
+    return {"values": [], "input_messages": [], "errors": []}
+
+
 class ShinySession:
     # ==========================================================================
     # Initialization
@@ -117,8 +128,7 @@ class ShinySession:
         self.input: ReactiveValues = ReactiveValues()
         self.output: Outputs = Outputs(self)
 
-        self._message_output_values: List[Dict[str, object]] = []
-        self._message_input_messages: List[Dict[str, object]] = []
+        self._outbound_message_queues = _empty_outbound_message_queues()
 
         self._message_handlers: Dict[
             str, Callable[..., Awaitable[object]]
@@ -394,31 +404,9 @@ class ShinySession:
 
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
-    # ==========================================================================
-    # Outbound message handling
-    # ==========================================================================
-    def add_message_out(
-        self, message: Dict[str, object], type: Literal["output", "input"] = "output"
-    ) -> None:
-        if type == "output":
-            self._message_output_values.append(message)
-        elif type == "input":
-            self._message_input_messages.append(message)
-
-    def get_messages_out(
-        self, type: Literal["output", "input"] = "output"
-    ) -> List[Dict[str, object]]:
-        if type == "output":
-            return self._message_output_values
-        elif type == "input":
-            return self._message_input_messages
-
-    def clear_messages_out(self) -> None:
-        self.get_messages_out("output").clear()
-        self.get_messages_out("input").clear()
-
     def send_input_message(self, id: str, message: Dict[str, object]) -> None:
-        self.add_message_out({"id": id, "message": message}, type="input")
+        msg: Dict[str, object] = {"id": id, "message": message}
+        self._outbound_message_queues["input_messages"].append(msg)
         self.request_flush()
 
     def send_insert_ui(
@@ -473,20 +461,26 @@ class ShinySession:
             self._flush_callbacks.invoke()
             self._flushed_callbacks.invoke()
 
+        omq = self._outbound_message_queues
+
         values: Dict[str, object] = {}
-        for value in self.get_messages_out("output"):
-            values.update(value)
+        for v in omq["values"]:
+            values.update(v)
+
+        errors: Dict[str, object] = {}
+        for err in omq["errors"]:
+            errors.update(err)
 
         message: Dict[str, object] = {
-            "errors": {},
             "values": values,
-            "inputMessages": self.get_messages_out("input"),
+            "inputMessages": omq["input_messages"],
+            "errors": errors,
         }
 
         try:
             await self.send_message(message)
         finally:
-            self.clear_messages_out()
+            self._outbound_message_queues = _empty_outbound_message_queues()
 
     # ==========================================================================
     # On session ended
@@ -557,13 +551,39 @@ class Outputs:
                 )
 
                 message: Dict[str, object] = {}
-                if utils.is_async_callable(fn):
-                    fn2 = typing.cast(Callable[[], Awaitable[object]], fn)
-                    val = await fn2()
-                else:
-                    val = fn()
-                message[name] = val
-                self._session.add_message_out(message)
+                try:
+                    if utils.is_async_callable(fn):
+                        fn2 = typing.cast(Callable[[], Awaitable[object]], fn)
+                        message[name] = await fn2()
+                    else:
+                        message[name] = fn()
+                except SilentCancelOutputException:
+                    return
+                except SilentException:
+                    pass
+                except Exception as e:
+                    # Print traceback to the console
+                    traceback.print_exc()
+                    # Possibly sanitize error for the user
+                    if self._session.app.SANITIZE_ERRORS and not isinstance(
+                        e, SafeException
+                    ):
+                        err_msg = self._session.app.SANITIZE_ERROR_MSG
+                    else:
+                        err_msg = str(e)
+                    # Register the outbound error message
+                    msg: Dict[str, object] = {
+                        name: {
+                            "message": err_msg,
+                            # TODO: is it possible to get the call?
+                            "call": None,
+                            # TODO: I don't think we actually use this for anything client-side
+                            "type": None,
+                        }
+                    }
+                    self._session._outbound_message_queues["errors"].append(msg)
+
+                self._session._outbound_message_queues["values"].append(message)
 
                 await self._session.send_message(
                     {"recalculating": {"name": name, "status": "recalculated"}}
