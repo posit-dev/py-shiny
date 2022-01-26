@@ -21,9 +21,9 @@ from .html_dependencies import jquery_deps, shiny_deps
 
 
 class ShinyApp:
-    LIB_PREFIX = "lib/"
-    SANITIZE_ERRORS = False
-    SANITIZE_ERROR_MSG = "An error has occurred. Check your logs or contact the app author for clarification."
+    LIB_PREFIX: str = "lib/"
+    SANITIZE_ERRORS: bool = False
+    SANITIZE_ERROR_MSG: str = "An error has occurred. Check your logs or contact the app author for clarification."
 
     def __init__(
         self,
