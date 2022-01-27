@@ -188,12 +188,16 @@ class ShinyApp:
         ):
             return
 
-        paths = dep.source_path_map(lib_prefix=self.LIB_PREFIX)
-        self._dependency_handler.mount(
-            "/" + paths["href"],
-            StaticFiles(directory=paths["source"]),
-            name=dep.name + "-" + str(dep.version),
-        )
+        # For HTMLDependencies that have sources on disk, mount the source dir.
+        # (Some HTMLDependencies only carry head content, and have no source on disk.)
+        if dep.source:
+            paths = dep.source_path_map(lib_prefix=self.LIB_PREFIX)
+            self._dependency_handler.mount(
+                "/" + paths["href"],
+                StaticFiles(directory=paths["source"]),
+                name=dep.name + "-" + str(dep.version),
+            )
+
         self._registered_dependencies[dep.name] = dep
 
 
