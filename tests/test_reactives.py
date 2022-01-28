@@ -20,6 +20,7 @@ async def test_flush_runs_newly_invalidated():
     v2 = ReactiveVal(2)
 
     v2_result = None
+
     # In practice, on the first flush, Observers run in the order that they were
     # created. Our test checks that o2 runs _after_ o1.
     @observe()
@@ -48,6 +49,7 @@ async def test_flush_runs_newly_invalidated_async():
     v2 = ReactiveVal(2)
 
     v2_result = None
+
     # In practice, on the first flush, Observers run in the order that they were
     # created. Our test checks that o2 runs _after_ o1.
     @observe_async()

@@ -1,4 +1,3 @@
-import collections
 from typing import (
     Callable,
     Awaitable,
@@ -97,9 +96,7 @@ def drop_none(x: Dict[str, Any]) -> Dict[str, object]:
 
 class Callbacks:
     def __init__(self) -> None:
-        self._callbacks: collections.OrderedDict[
-            str, Tuple[Callable[[], None], bool]
-        ] = collections.OrderedDict()
+        self._callbacks: dict[str, Tuple[Callable[[], None], bool]] = {}
         self._id: int = 0
 
     def register(
@@ -134,9 +131,7 @@ class Callbacks:
 
 class AsyncCallbacks:
     def __init__(self) -> None:
-        self._callbacks: collections.OrderedDict[
-            str, Tuple[Callable[[], Awaitable[None]], bool]
-        ] = collections.OrderedDict()
+        self._callbacks: dict[str, Tuple[Callable[[], Awaitable[None]], bool]] = {}
         self._id: int = 0
 
     def register(
