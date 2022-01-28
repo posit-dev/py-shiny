@@ -4,7 +4,7 @@ import io
 import base64
 import mimetypes
 import inspect
-from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union
+from typing import TYPE_CHECKING, Callable, Optional, Awaitable, TypeVar, Union
 import typing
 
 if sys.version_info >= (3, 8):
@@ -30,6 +30,8 @@ __all__ = (
     "render_image",
     "render_ui",
 )
+
+T = TypeVar("T")
 
 # It would be nice to specify the return type of RenderPlotFunc to be something like:
 #   Union[matplotlib.figure.Figure, PIL.Image.Image]
@@ -63,6 +65,16 @@ class RenderFunction:
         """
         self._session: ShinySession = session
         self._name: str = name
+
+    def _wrap_user_func(
+        self, fn: Callable[[Callable[[], Awaitable[T]]], Awaitable[T]]
+    ) -> None:
+        user_fn = self._fn
+
+        async def new_fn() -> T:
+            return await fn(user_fn)
+
+        self._fn = new_fn
 
 
 class RenderFunctionAsync(RenderFunction):
@@ -260,8 +272,8 @@ class RenderImage(RenderFunction):
 class RenderImageAsync(RenderImage, RenderFunctionAsync):
     def __init__(self, fn: RenderImageFuncAsync, delete_file: bool = False) -> None:
         if not inspect.iscoroutinefunction(fn):
-            raise TypeError("PlotAsync requires an async function")
-        # Init the Plot base class with a placeholder synchronous function so it
+            raise TypeError("ImageAsync requires an async function")
+        # Init the Image base class with a placeholder synchronous function so it
         # won't throw an error, then replace it with the async function.
         super().__init__(lambda: None, delete_file)
         self._fn: RenderImageFuncAsync = fn

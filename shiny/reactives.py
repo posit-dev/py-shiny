@@ -15,6 +15,7 @@ __all__ = (
     "bind_event",
 )
 
+import inspect
 from typing import (
     TYPE_CHECKING,
     Optional,
@@ -25,11 +26,16 @@ from typing import (
     Generic,
     Any,
     overload,
+    cast,
 )
-import typing
-import inspect
-import warnings
+import sys
 import traceback
+import warnings
+
+if sys.version_info >= (3, 8):
+    from typing import Protocol, runtime_checkable
+else:
+    from typing_extensions import Protocol, runtime_checkable
 
 from .input_handlers import ActionButtonValue
 from .reactcore import Context, Dependents, ReactiveWarning
@@ -192,6 +198,16 @@ class Reactive(Generic[T]):
         except Exception as err:
             self._error.append(err)
 
+    def _wrap_user_func(
+        self, fn: Callable[[Callable[[], Awaitable[T]]], Awaitable[T]]
+    ) -> None:
+        user_fn = self._func
+
+        async def new_fn() -> T:
+            return await fn(user_fn)
+
+        self._func = new_fn
+
 
 class ReactiveAsync(Reactive[T]):
     def __init__(
@@ -206,7 +222,7 @@ class ReactiveAsync(Reactive[T]):
         # Init the Reactive base class with a placeholder synchronous function
         # so it won't throw an error, then replace it with the async function.
         # Need the `cast` to satisfy the type checker.
-        super().__init__(lambda: typing.cast(T, None), session=session)
+        super().__init__(lambda: cast(T, None), session=session)
         self._func: Callable[[], Awaitable[T]] = func
         self._is_async = True
 
@@ -328,6 +344,21 @@ class Observer:
     def _on_session_ended_cb(self) -> None:
         self.destroy()
 
+    def _wrap_user_func(
+        self, fn: Callable[[Callable[[], Awaitable[None]]], Awaitable[None]]
+    ) -> None:
+        user_fn = self._func
+
+        async def new_fn() -> None:
+            return await fn(user_fn)
+
+        self._func = new_fn
+
+    # This is defined so that observers are compatible with the Bindable type
+    # (used for the @bind_event decorator)
+    def __call__(self) -> Any:
+        raise NotImplementedError("Observer is not callable")
+
 
 class ObserverAsync(Observer):
     def __init__(
@@ -388,59 +419,63 @@ def isolate():
     return reactcore.isolate()
 
 
-Bindable = TypeVar("Bindable", Observer, Reactive[object], RenderFunction)
+@runtime_checkable
+class Bindable(Protocol[T]):
+    def _wrap_user_func(
+        self, fn: Callable[[Callable[[], Awaitable[T]]], Awaitable[T]]
+    ) -> None:
+        ...
+
+    def __call__(self) -> Optional[object]:
+        ...
 
 
 def bind_event(
-    value_func: Callable[[], object],
+    *args: Callable[[], object],
     ignore_none: bool = True,
     ignore_init: bool = False,
     once: bool = False,
     session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
-) -> Callable[[Bindable], Bindable]:
-    def _(x: Bindable) -> Bindable:
+) -> Callable[[Bindable[T]], Bindable[T]]:
 
-        nonlocal session
-        if isinstance(session, MISSING_TYPE):
-            # If no session is provided, autodetect the current session (this
-            # could be None if outside of a session).
-            session = shinysession.get_current_session()
+    if isinstance(session, MISSING_TYPE):
+        session = shinysession.get_current_session()
+
+    def _wrap_fn(x: Bindable[T]) -> Bindable[T]:
 
         initialized = False
 
         def trigger() -> None:
-            event_func = Reactive(value_func, session=session)
-            val = event_func()
+            vals = [arg() for arg in args]
             nonlocal initialized
             if ignore_init and not initialized:
                 initialized = True
                 req(False)
-            if ignore_none and _is_none_event(val):
+            if ignore_none and all(map(_is_none_event, vals)):
                 req(False)
 
-        # TODO: RenderFunction should maybe define _func in the base class?
-        fname = "_fn" if isinstance(x, RenderFunction) else "_func"
-        f: Callable[[], Awaitable[Optional[object]]] = getattr(x, fname)
-
-        async def f_obs() -> None:
+        async def f_obs(fn: Callable[[], Awaitable[None]]) -> None:
             trigger()
             with isolate():
                 try:
-                    await f()
+                    await fn()
                 finally:
                     if once:
                         x.destroy()  # type: ignore
 
-        async def f_val() -> object:
+        async def f_val(fn: Callable[[], Awaitable[T]]) -> T:
             trigger()
             with isolate():
-                return await f()
+                return await fn()
 
-        setattr(x, fname, f_obs if isinstance(x, Observer) else f_val)
+        if isinstance(x, Observer):
+            x._wrap_user_func(f_obs)
+        else:
+            x._wrap_user_func(f_val)
 
         return x
 
-    return _
+    return _wrap_fn
 
 
 def _is_none_event(val: object) -> bool:
