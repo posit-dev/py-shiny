@@ -393,7 +393,7 @@ def isolate():
     return reactcore.isolate()
 
 
-def invalidate_later(delay: float):
+def invalidate_later(delay: float) -> None:
     ctx = reactcore.get_current_context()
     # Pass an absolute time to our subtask, rather than passing the delay directly, in
     # case the subtask doesn't get a chance to start sleeping until a significant amount
