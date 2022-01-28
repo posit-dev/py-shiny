@@ -4,8 +4,8 @@
 import contextlib
 from typing import Callable, Optional, Awaitable, TypeVar
 from contextvars import ContextVar
-from asyncio import Task
 import asyncio
+import typing
 import warnings
 
 from .datastructures import PriorityQueueFIFO
@@ -31,10 +31,8 @@ class Context:
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._flush_callbacks: list[Callable[[], Awaitable[None]]] = []
 
-    async def run(self, func: Callable[[], Awaitable[T]], create_task: bool) -> T:
-        """Run the provided function in this context"""
-        env = _reactive_environment
-        return await env.run_with(self, func, create_task)
+    def __call__(self) -> typing.ContextManager[None]:
+        return _reactive_environment.use_context(self)
 
     def invalidate(self) -> None:
         """Invalidate this context. It will immediately call the callbacks
@@ -118,6 +116,14 @@ class ReactiveEnvironment:
         self._next_id += 1
         return id
 
+    @contextlib.contextmanager
+    def use_context(self, ctx: Context) -> typing.Generator[None, None, None]:
+        old = self._current_context.set(ctx)
+        try:
+            yield
+        finally:
+            self._current_context.reset(old)
+
     def current_context(self) -> Context:
         """Return the current Context object"""
         ctx = self._current_context.get()
@@ -125,56 +131,15 @@ class ReactiveEnvironment:
             raise RuntimeError("No current reactive context")
         return ctx
 
-    async def run_with(
-        self, ctx: Context, context_func: Callable[[], Awaitable[T]], create_task: bool
-    ) -> T:
-        async def wrapper() -> T:
-            old = self._current_context.set(ctx)
-            try:
-                return await context_func()
-            finally:
-                self._current_context.reset(old)
-
-        if not create_task:
-            return await wrapper()
-        else:
-            return await asyncio.create_task(wrapper())
-
     def on_flushed(
         self, func: Callable[[], Awaitable[None]], once: bool = False
     ) -> Callable[[], None]:
         return self._flushed_callbacks.register(func, once=once)
 
-    async def flush(self, *, concurrent: bool = True) -> None:
+    async def flush(self) -> None:
         """Flush all pending operations"""
-        # Currently, we default to concurrent flush. In the future, we'll
-        # probably remove the option and just do it one way or the other. For a
-        # concurrent flush, there are still some issues that need to be
-        # resolved.
-        if concurrent:
-            await self._flush_concurrent()
-        else:
-            await self._flush_sequential()
-
+        await self._flush_sequential()
         await self._flushed_callbacks.invoke()
-
-    async def _flush_concurrent(self) -> None:
-        # Flush observers concurrently, using Tasks.
-        tasks: list[Task[None]] = []
-
-        # Double-nest the check for self._pending_flush because it is possible
-        # that running a flush callback (in the gather()) will add another thing
-        # to the pending flush list (like if an observer sets a reactive value,
-        # which in turn invalidates other reactives/observers).
-        while not self._pending_flush_queue.empty():
-            while not self._pending_flush_queue.empty():
-                # Take the first element
-                ctx = self._pending_flush_queue.get()
-
-                task: Task[None] = asyncio.create_task(ctx.execute_flush_callbacks())
-                tasks.append(task)
-
-            await asyncio.gather(*tasks)
 
     async def _flush_sequential(self) -> None:
         # Sequential flush: instead of storing the tasks in a list and
@@ -209,8 +174,8 @@ def get_current_context() -> Context:
     return _reactive_environment.current_context()
 
 
-async def flush(*, concurrent: bool = True) -> None:
-    await _reactive_environment.flush(concurrent=concurrent)
+async def flush() -> None:
+    await _reactive_environment.flush()
 
 
 def on_flushed(
@@ -219,5 +184,6 @@ def on_flushed(
     return _reactive_environment.on_flushed(func, once)
 
 
-def lock():
+def lock() -> asyncio.Lock:
+    """A lock that should be held whenever manipulating the reactive graph."""
     return _reactive_environment.lock
