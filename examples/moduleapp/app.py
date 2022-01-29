@@ -54,7 +54,7 @@ ui = page_fluid(
 )
 
 
-def server(session: ShinySession):
+def server(session: Session):
     counter_module.server("counter1")
     counter_module.server("counter2")
 

@@ -13,7 +13,7 @@ from starlette.requests import Request
 from starlette.responses import Response, HTMLResponse, JSONResponse
 
 from .http_staticfiles import StaticFiles
-from .shinysession import ShinySession, session_context
+from .session import Session, session_context
 from . import reactcore
 from .connmanager import (
     Connection,
@@ -30,19 +30,19 @@ class ShinyApp:
     def __init__(
         self,
         ui: Union[Tag, TagList],
-        server: Callable[[ShinySession], None],
+        server: Callable[[Session], None],
         *,
         debug: bool = False,
     ) -> None:
         self.ui: RenderedHTML = _render_page(ui, lib_prefix=self.LIB_PREFIX)
-        self.server: Callable[[ShinySession], None] = server
+        self.server: Callable[[Session], None] = server
 
         self._debug: bool = debug
 
-        self._sessions: Dict[str, ShinySession] = {}
+        self._sessions: Dict[str, Session] = {}
         self._last_session_id: int = 0  # Counter for generating session IDs
 
-        self._sessions_needing_flush: Dict[int, ShinySession] = {}
+        self._sessions_needing_flush: Dict[int, Session] = {}
 
         self._registered_dependencies: Dict[str, HTMLDependency] = {}
         self._dependency_handler: Any = starlette.routing.Router()
@@ -58,12 +58,12 @@ class ShinyApp:
                 ),
                 starlette.routing.Mount("/", app=self._dependency_handler),
             ],
-            lifespan=self.lifespan
+            lifespan=self.lifespan,
         )
 
     @contextlib.asynccontextmanager
     async def lifespan(self, app: starlette.applications.Starlette):
-        unreg = reactcore.on_flushed(self._on_reactive_flushed, once = False)
+        unreg = reactcore.on_flushed(self._on_reactive_flushed, once=False)
         try:
             yield
         finally:
@@ -72,15 +72,15 @@ class ShinyApp:
     async def _on_reactive_flushed(self):
         await self.flush_pending_sessions()
 
-    def create_session(self, conn: Connection) -> ShinySession:
+    def create_session(self, conn: Connection) -> Session:
         self._last_session_id += 1
         id = str(self._last_session_id)
-        session = ShinySession(self, id, conn, debug=self._debug)
+        session = Session(self, id, conn, debug=self._debug)
         self._sessions[id] = session
         return session
 
-    def remove_session(self, session: Union[ShinySession, str]) -> None:
-        if isinstance(session, ShinySession):
+    def remove_session(self, session: Union[Session, str]) -> None:
+        if isinstance(session, Session):
             session = session.id
 
         if self._debug:
@@ -162,7 +162,7 @@ class ShinyApp:
         subpath: str = request.path_params["subpath"]  # type: ignore
 
         if session_id in self._sessions:
-            session: ShinySession = self._sessions[session_id]
+            session: Session = self._sessions[session_id]
             with session_context(session):
                 return await session.handle_request(request, action, subpath)
 
@@ -171,7 +171,7 @@ class ShinyApp:
     # ==========================================================================
     # Flush
     # ==========================================================================
-    def request_flush(self, session: ShinySession) -> None:
+    def request_flush(self, session: Session) -> None:
         # TODO: Until we have reactive domains, because we can't yet keep track
         # of which sessions need a flush.
         pass

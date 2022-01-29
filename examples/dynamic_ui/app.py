@@ -25,7 +25,7 @@ ui = page_fluid(
 )
 
 
-def server(session: ShinySession):
+def server(session: Session):
     @reactive()
     def r():
         if session.input["n"] is None:

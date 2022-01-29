@@ -82,7 +82,7 @@ ui = page_fluid(
 )
 
 
-def server(session: ShinySession):
+def server(session: Session):
     @session.download()
     def download1():
         """

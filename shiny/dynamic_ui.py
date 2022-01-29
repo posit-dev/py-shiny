@@ -8,7 +8,7 @@ else:
 
 from htmltools import TagChildArg
 
-from .shinysession import ShinySession, _require_active_session, _process_deps
+from .session import Session, _require_active_session, _process_deps
 
 
 def ui_insert(
@@ -17,7 +17,7 @@ def ui_insert(
     where: Literal["beforeBegin", "afterBegin", "beforeEnd", "afterEnd"] = "beforeEnd",
     multiple: bool = False,
     immediate: bool = False,
-    session: Optional[ShinySession] = None,
+    session: Optional[Session] = None,
 ) -> None:
 
     session = _require_active_session(session)
@@ -40,7 +40,7 @@ def ui_remove(
     selector: str,
     multiple: bool = False,
     immediate: bool = False,
-    session: Optional[ShinySession] = None,
+    session: Optional[Session] = None,
 ) -> None:
 
     session = _require_active_session(session)

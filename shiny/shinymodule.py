@@ -9,7 +9,7 @@ from typing import Optional, Union, Callable, Any
 
 from htmltools.core import TagChildArg
 
-from .shinysession import ShinySession, Outputs, _require_active_session
+from .session import Session, Outputs, _require_active_session
 from .reactives import ReactiveValues
 from .render import RenderFunction
 
@@ -46,10 +46,10 @@ class OutputsProxy(Outputs):
         return self._outputs(self._ns_key(name))
 
 
-class ShinySessionProxy(ShinySession):
-    def __init__(self, ns: str, parent_session: ShinySession) -> None:
+class ShinySessionProxy(Session):
+    def __init__(self, ns: str, parent_session: Session) -> None:
         self._ns: str = ns
-        self._parent: ShinySession = parent_session
+        self._parent: Session = parent_session
         self.input: ReactiveValuesProxy = ReactiveValuesProxy(ns, parent_session.input)
         self.output: OutputsProxy = OutputsProxy(ns, parent_session.output)
 
@@ -67,7 +67,7 @@ class ShinyModule:
         ns = ShinyModule._make_ns_fn(namespace)
         return self._ui(ns, *args)
 
-    def server(self, ns: str, *, session: Optional[ShinySession] = None) -> None:
+    def server(self, ns: str, *, session: Optional[Session] = None) -> None:
         self.ns: str = ns
         session = _require_active_session(session)
         session_proxy = ShinySessionProxy(ns, session)

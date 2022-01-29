@@ -1,15 +1,13 @@
 from typing import Optional, Dict, Any
 from warnings import warn
 from .utils import run_coro_sync, rand_hex
-from .shinysession import ShinySession, _require_active_session
+from .session import Session, _require_active_session
 
 
 class Progress:
     _style = "notification"
 
-    def __init__(
-        self, min: int = 0, max: int = 1, session: Optional[ShinySession] = None
-    ):
+    def __init__(self, min: int = 0, max: int = 1, session: Optional[Session] = None):
         self.min = min
         self.max = max
         self.value = None

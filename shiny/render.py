@@ -21,7 +21,7 @@ else:
 from htmltools import TagChildArg
 
 if TYPE_CHECKING:
-    from .shinysession import ShinySession
+    from .session import Session
 
 from . import utils
 
@@ -57,11 +57,11 @@ class RenderFunction:
     def __call__(self) -> object:
         raise NotImplementedError
 
-    def set_metadata(self, session: "ShinySession", name: str) -> None:
+    def set_metadata(self, session: "Session", name: str) -> None:
         """When RenderFunctions are assigned to Output object slots, this method
         is used to pass along session and name information.
         """
-        self._session: ShinySession = session
+        self._session: Session = session
         self._name: str = name
 
 
@@ -300,7 +300,7 @@ class RenderUI(RenderFunction):
         if ui is None:
             return None
         # TODO: better a better workaround for the circular dependency
-        from .shinysession import _process_deps
+        from .session import _process_deps
 
         return _process_deps(ui, self._session)
 

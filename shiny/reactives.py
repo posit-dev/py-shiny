@@ -41,7 +41,7 @@ from .types import MISSING, MISSING_TYPE
 from .validation import SilentException
 
 if TYPE_CHECKING:
-    from .shinysession import ShinySession
+    from .session import Session
 
 T = TypeVar("T")
 
@@ -113,7 +113,7 @@ class Reactive(Generic[T]):
         self,
         func: Callable[[], T],
         *,
-        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
+        session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
         if inspect.iscoroutinefunction(func):
             raise TypeError("Reactive requires a non-async function")
@@ -128,14 +128,14 @@ class Reactive(Generic[T]):
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
 
-        self._session: Optional[ShinySession]
+        self._session: Optional[Session]
         # Use `isinstance(x, MISSING_TYPE)`` instead of `x is MISSING` because
         # the type checker doesn't know that MISSING is the only instance of
         # MISSING_TYPE; this saves us from casting later on.
         if isinstance(session, MISSING_TYPE):
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
-            session = shinysession.get_current_session()
+            session = shiny_session.get_current_session()
         self._session = session
 
         # Use lists to hold (optional) value and error, instead of Optional[T],
@@ -174,7 +174,7 @@ class Reactive(Generic[T]):
         was_running = self._running
         self._running = True
 
-        with shinysession.session_context(self._session):
+        with shiny_session.session_context(self._session):
             try:
                 with self._ctx():
                     await self._run_func()
@@ -200,7 +200,7 @@ class ReactiveAsync(Reactive[T]):
         self,
         func: Callable[[], Awaitable[T]],
         *,
-        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
+        session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
         if not inspect.iscoroutinefunction(func):
             raise TypeError("ReactiveAsync requires an async function")
@@ -217,7 +217,7 @@ class ReactiveAsync(Reactive[T]):
 
 
 def reactive(
-    *, session: Union[MISSING_TYPE, "ShinySession", None] = MISSING
+    *, session: Union[MISSING_TYPE, "Session", None] = MISSING
 ) -> Callable[[Callable[[], T]], Reactive[T]]:
     def create_reactive(fn: Callable[[], T]) -> Reactive[T]:
         return Reactive(fn, session=session)
@@ -226,7 +226,7 @@ def reactive(
 
 
 def reactive_async(
-    *, session: Union[MISSING_TYPE, "ShinySession", None] = MISSING
+    *, session: Union[MISSING_TYPE, "Session", None] = MISSING
 ) -> Callable[[Callable[[], Awaitable[T]]], ReactiveAsync[T]]:
     def create_reactive_async(fn: Callable[[], Awaitable[T]]) -> ReactiveAsync[T]:
         return ReactiveAsync(fn, session=session)
@@ -243,7 +243,7 @@ class Observer:
         func: Callable[[], None],
         *,
         priority: int = 0,
-        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
+        session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
         if inspect.iscoroutinefunction(func):
             raise TypeError("Observer requires a non-async function")
@@ -258,14 +258,14 @@ class Observer:
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
 
-        self._session: Optional[ShinySession]
+        self._session: Optional[Session]
         # Use `isinstance(x, MISSING_TYPE)`` instead of `x is MISSING` because
         # the type checker doesn't know that MISSING is the only instance of
         # MISSING_TYPE; this saves us from casting later on.
         if isinstance(session, MISSING_TYPE):
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
-            session = shinysession.get_current_session()
+            session = shiny_session.get_current_session()
         self._session = session
 
         if self._session is not None:
@@ -305,7 +305,7 @@ class Observer:
         ctx = self._create_context()
         self._exec_count += 1
 
-        with shinysession.session_context(self._session):
+        with shiny_session.session_context(self._session):
             try:
                 with ctx():
                     await self._func()
@@ -338,7 +338,7 @@ class ObserverAsync(Observer):
         func: Callable[[], Awaitable[None]],
         *,
         priority: int = 0,
-        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
+        session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
         if not inspect.iscoroutinefunction(func):
             raise TypeError("ObserverAsync requires an async function")
@@ -351,7 +351,7 @@ class ObserverAsync(Observer):
 
 
 def observe(
-    *, priority: int = 0, session: Union[MISSING_TYPE, "ShinySession", None] = MISSING
+    *, priority: int = 0, session: Union[MISSING_TYPE, "Session", None] = MISSING
 ) -> Callable[[Callable[[], None]], Observer]:
     """[summary]
 
@@ -372,7 +372,7 @@ def observe(
 def observe_async(
     *,
     priority: int = 0,
-    session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
+    session: Union[MISSING_TYPE, "Session", None] = MISSING,
 ) -> Callable[[Callable[[], Awaitable[None]]], ObserverAsync]:
     def create_observer_async(fn: Callable[[], Awaitable[None]]) -> ObserverAsync:
         return ObserverAsync(fn, priority=priority, session=session)
@@ -438,4 +438,6 @@ def invalidate_later(delay: float) -> None:
 
 
 # Import here at the bottom seems to fix a circular dependency problem.
-from . import shinysession
+# Need to import as shiny_session to avoid naming conflicts with function params named
+# `session`.
+from . import session as shiny_session

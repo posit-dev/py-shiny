@@ -94,7 +94,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def server(s: ShinySession):
+def server(s: Session):
     @s.output("inputs")
     @render_ui()
     def _() -> Tag:

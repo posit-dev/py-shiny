@@ -13,7 +13,7 @@ ui = page_fluid(
 )
 
 
-def server(session: ShinySession):
+def server(session: Session):
     @reactive()
     def safe_click():
         req(session.input["safe"])

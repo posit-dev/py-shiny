@@ -91,7 +91,7 @@ ui = page_fluid(
 )
 
 
-def server(sess: ShinySession):
+def server(sess: Session):
     @observe()
     def _():
         # We'll use these multiple times, so use short var names for

@@ -1,4 +1,4 @@
-"""Tests for `shiny.shinysession`."""
+"""Tests for `shiny.Session`."""
 
 import pytest
 

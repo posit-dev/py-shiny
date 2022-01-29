@@ -37,7 +37,7 @@ ui = page_fluid(
 shared_val = ReactiveVal(None)
 
 
-def server(session: ShinySession):
+def server(session: Session):
     @reactive()
     def r():
         if session.input["n"] is None:

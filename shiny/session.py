@@ -1,5 +1,5 @@
 __all__ = (
-    "ShinySession",
+    "Session",
     "Outputs",
     "get_current_session",
     "session_context",
@@ -114,7 +114,7 @@ def _empty_outbound_message_queues() -> _OutBoundMessageQueues:
     return {"values": [], "input_messages": [], "errors": []}
 
 
-class ShinySession:
+class Session:
     # ==========================================================================
     # Initialization
     # ==========================================================================
@@ -529,9 +529,9 @@ class ShinySession:
 
 
 class Outputs:
-    def __init__(self, session: ShinySession) -> None:
+    def __init__(self, session: Session) -> None:
         self._output_obervers: Dict[str, Observer] = {}
-        self._session: ShinySession = session
+        self._session: Session = session
 
     def __call__(
         self, name: str
@@ -602,25 +602,25 @@ class Outputs:
 # ==============================================================================
 # Context manager for current session (AKA current reactive domain)
 # ==============================================================================
-_current_session: ContextVar[Optional[ShinySession]] = ContextVar(
+_current_session: ContextVar[Optional[Session]] = ContextVar(
     "current_session", default=None
 )
 
 
-def get_current_session() -> Optional[ShinySession]:
+def get_current_session() -> Optional[Session]:
     return _current_session.get()
 
 
 @contextmanager
-def session_context(session: Optional[ShinySession]):
-    token: Token[Union[ShinySession, None]] = _current_session.set(session)
+def session_context(session: Optional[Session]):
+    token: Token[Union[Session, None]] = _current_session.set(session)
     try:
         yield
     finally:
         _current_session.reset(token)
 
 
-def _require_active_session(session: Optional[ShinySession]) -> ShinySession:
+def _require_active_session(session: Optional[Session]) -> Session:
     if session is None:
         session = get_current_session()
     if session is None:
@@ -656,9 +656,7 @@ class _RenderedDeps(TypedDict):
     html: str
 
 
-def _process_deps(
-    ui: TagChildArg, session: Optional[ShinySession] = None
-) -> _RenderedDeps:
+def _process_deps(ui: TagChildArg, session: Optional[Session] = None) -> _RenderedDeps:
 
     session = _require_active_session(session)
 
