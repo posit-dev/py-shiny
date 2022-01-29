@@ -151,6 +151,6 @@ def server(s: Session):
             p.close()
 
 
-app = ShinyApp(ui, server)
+app = App(ui, server)
 if __name__ == "__main__":
     app.run()

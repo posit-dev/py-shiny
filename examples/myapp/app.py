@@ -91,7 +91,7 @@ def server(session: Session):
         return out_str
 
 
-app = ShinyApp(ui, server)
+app = App(ui, server)
 
 if __name__ == "__main__":
     app.run()

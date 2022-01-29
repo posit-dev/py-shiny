@@ -127,7 +127,7 @@ def server(session: Session):
         raise Exception("This error was caused intentionally")
 
 
-app = ShinyApp(ui, server)
+app = App(ui, server)
 
 if __name__ == "__main__":
     app.run()

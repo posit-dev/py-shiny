@@ -59,7 +59,7 @@ def server(session: Session):
     counter_module.server("counter2")
 
 
-app = ShinyApp(ui, server)
+app = App(ui, server)
 
 
 if __name__ == "__main__":

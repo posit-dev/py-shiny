@@ -1,4 +1,4 @@
-__all__ = ("ShinyApp",)
+__all__ = ("App",)
 
 import contextlib
 from typing import Any, List, Optional, Union, Dict, Callable, cast
@@ -22,7 +22,7 @@ from .connmanager import (
 from .html_dependencies import jquery_deps, shiny_deps
 
 
-class ShinyApp:
+class App:
     LIB_PREFIX: str = "lib/"
     SANITIZE_ERRORS: bool = False
     SANITIZE_ERROR_MSG: str = "An error has occurred. Check your logs or contact the app author for clarification."

@@ -200,7 +200,7 @@ def server(sess: Session):
         update_navs("inTabset", selected="panel2" if c_num % 2 else "panel1")
 
 
-app = ShinyApp(ui, server)
+app = App(ui, server)
 
 if __name__ == "__main__":
     app.run()

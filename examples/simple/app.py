@@ -50,7 +50,7 @@ def server(session: Session):
         return f"n*2 is {val}, session id is {get_current_session().id}"
 
 
-app = ShinyApp(ui, server)
+app = App(ui, server)
 
 if __name__ == "__main__":
     app.run()

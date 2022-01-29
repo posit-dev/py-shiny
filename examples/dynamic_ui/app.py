@@ -61,7 +61,7 @@ def server(session: Session):
             ui_remove("#thanks")
 
 
-app = ShinyApp(ui, server)
+app = App(ui, server)
 
 if __name__ == "__main__":
     app.run()

@@ -45,6 +45,6 @@ def server(session: Session):
         return session.input["txt"]
 
 
-app = ShinyApp(ui, server)
+app = App(ui, server)
 app.SANITIZE_ERRORS = True
 app.run()

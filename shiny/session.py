@@ -48,7 +48,7 @@ else:
     from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
-    from .shinyapp import ShinyApp
+    from .app import App
 
 from htmltools import TagChildArg, TagList
 
@@ -119,9 +119,9 @@ class Session:
     # Initialization
     # ==========================================================================
     def __init__(
-        self, app: "ShinyApp", id: str, conn: Connection, debug: bool = False
+        self, app: "App", id: str, conn: Connection, debug: bool = False
     ) -> None:
-        self.app: ShinyApp = app
+        self.app: App = app
         self.id: str = id
         self._conn: Connection = conn
         self._debug: bool = debug

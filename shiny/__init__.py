@@ -27,7 +27,7 @@ from .page import *
 from .progress import *
 from .render import *
 from .reactives import *
-from .shinyapp import *
+from .app import *
 from .session import *
 from .shinymodule import *
 from .validation import *
