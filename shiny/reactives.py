@@ -12,8 +12,13 @@ __all__ = (
     "observe",
     "observe_async",
     "isolate",
+    "invalidate_later",
 )
 
+import asyncio
+import sys
+import time
+import traceback
 from typing import (
     TYPE_CHECKING,
     Optional,
@@ -28,7 +33,6 @@ from typing import (
 import typing
 import inspect
 import warnings
-import traceback
 
 from .reactcore import Context, Dependents, ReactiveWarning
 from . import reactcore
@@ -172,7 +176,8 @@ class Reactive(Generic[T]):
 
         with shinysession.session_context(self._session):
             try:
-                await self._ctx.run(self._run_func, create_task=self._is_async)
+                with self._ctx():
+                    await self._run_func()
             finally:
                 self._running = was_running
 
@@ -237,8 +242,8 @@ class Observer:
         self,
         func: Callable[[], None],
         *,
-        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
         priority: int = 0,
+        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
     ) -> None:
         if inspect.iscoroutinefunction(func):
             raise TypeError("Observer requires a non-async function")
@@ -302,7 +307,8 @@ class Observer:
 
         with shinysession.session_context(self._session):
             try:
-                await ctx.run(self._func, create_task=self._is_async)
+                with ctx():
+                    await self._func()
             except SilentException:
                 # It's OK for SilentException to cause an observer to stop running
                 pass
@@ -331,8 +337,8 @@ class ObserverAsync(Observer):
         self,
         func: Callable[[], Awaitable[None]],
         *,
-        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
         priority: int = 0,
+        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
     ) -> None:
         if not inspect.iscoroutinefunction(func):
             raise TypeError("ObserverAsync requires an async function")
@@ -364,7 +370,9 @@ def observe(
 
 
 def observe_async(
-    *, priority: int = 0, session: Union[MISSING_TYPE, "ShinySession", None] = MISSING
+    *,
+    priority: int = 0,
+    session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
 ) -> Callable[[Callable[[], Awaitable[None]]], ObserverAsync]:
     def create_observer_async(fn: Callable[[], Awaitable[None]]) -> ObserverAsync:
         return ObserverAsync(fn, priority=priority, session=session)
@@ -377,12 +385,56 @@ def observe_async(
 # ==============================================================================
 def isolate():
     """
-    Can be used via `with isolate():` or `async with isolate():` to wrap code blocks
-    whose reactive reads should not result in reactive dependencies being taken (that
-    is, we want to read reactive values but are not interested in automatically
-    reexecuting when those particular values change).
+    Can be used via `with isolate():` to wrap code blocks whose reactive reads should
+    not result in reactive dependencies being taken (that is, we want to read reactive
+    values but are not interested in automatically reexecuting when those particular
+    values change).
     """
     return reactcore.isolate()
+
+
+def invalidate_later(delay: float) -> None:
+    ctx = reactcore.get_current_context()
+    # Pass an absolute time to our subtask, rather than passing the delay directly, in
+    # case the subtask doesn't get a chance to start sleeping until a significant amount
+    # of time has passed.
+    deadline = time.monotonic() + delay
+
+    cancellable = True
+
+    async def _task(ctx: Context, deadline: float):
+        nonlocal cancellable
+        try:
+            delay = deadline - time.monotonic()
+            try:
+                await asyncio.sleep(delay)
+            except asyncio.CancelledError:
+                # This happens when cancel_task is called due to the session ending, or
+                # the context being invalidated due to some other reason. There's no
+                # reason for us to keep waiting at that point, as ctx.invalidate() can
+                # only be a no-op.
+                return
+
+            async with reactcore.lock():
+                # Prevent the ctx.invalidate() from killing our own task. (Another way
+                # to accomplish this is to unregister our ctx.on_invalidate handler, but
+                # ctx.on_invalidate doesn't currently allow unregistration.)
+                cancellable = False
+
+                ctx.invalidate()
+                await reactcore.flush()
+
+        except BaseException:
+            traceback.print_exc()
+            raise
+
+    task = asyncio.create_task(_task(ctx, deadline))
+
+    def cancel_task():
+        if cancellable:
+            task.cancel()
+
+    ctx.on_invalidate(cancel_task)
 
 
 # Import here at the bottom seems to fix a circular dependency problem.
