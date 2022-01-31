@@ -26,7 +26,7 @@ from .output import *
 from .page import *
 from .progress import *
 from .render import *
-from .reactives import *
+from .reactive import *
 from .app import *
 from .session import *
 from .shinymodule import *

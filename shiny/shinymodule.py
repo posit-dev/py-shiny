@@ -10,7 +10,7 @@ from typing import Optional, Union, Callable, Any
 from htmltools.core import TagChildArg
 
 from .session import Session, Outputs, _require_active_session
-from .reactives import ReactiveValues
+from .reactive import ReactiveValues
 from .render import RenderFunction
 
 

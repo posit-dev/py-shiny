@@ -3,12 +3,12 @@
 import pytest
 import asyncio
 from typing import List
-from shiny import reactives
+from shiny import reactive
 
 from shiny.input_handlers import ActionButtonValue
 import shiny.reactcore as reactcore
 from shiny.decorators import *
-from shiny.reactives import *
+from shiny.reactive import *
 from shiny.validation import req
 
 from .mocktime import MockTime

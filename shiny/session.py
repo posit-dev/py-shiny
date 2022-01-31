@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 
 from htmltools import TagChildArg, TagList
 
-from .reactives import ReactiveValues, Observer, ObserverAsync, isolate
+from .reactive import ReactiveValues, Observer, ObserverAsync, isolate
 from .http_staticfiles import FileResponse
 from .connmanager import Connection, ConnectionClosed
 from . import reactcore
