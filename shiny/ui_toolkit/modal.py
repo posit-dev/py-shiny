@@ -8,8 +8,8 @@ else:
 
 from htmltools import tags, Tag, div, HTML, TagChildArg, TagAttrArg
 
-from .utils import run_coro_sync
-from .session import Session, _require_active_session, _process_deps
+from ..utils import run_coro_sync
+from ..session import Session, _require_active_session, _process_deps
 
 
 def modal_button(label: str, icon: TagChildArg = None) -> Tag:

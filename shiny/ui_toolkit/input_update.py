@@ -13,8 +13,8 @@ from htmltools import TagChildArg
 from .input_check_radio import ChoicesArg, _generate_options
 from .input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from .input_slider import SliderValueArg, SliderStepArg, _slider_type, _as_numeric
-from .utils import drop_none
-from .session import Session, _require_active_session, _process_deps
+from ..utils import drop_none
+from ..session import Session, _require_active_session, _process_deps
 
 # -----------------------------------------------------------------------------
 # input_action_button.py
