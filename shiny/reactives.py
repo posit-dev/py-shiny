@@ -454,24 +454,25 @@ def bind_event(
             if ignore_none and all(map(_is_none_event, vals)):
                 req(False)
 
-        async def f_obs(fn: Callable[[], Awaitable[None]]) -> None:
-            trigger()
-            with isolate():
-                try:
-                    await fn()
-                finally:
-                    if once:
-                        x.destroy()  # type: ignore
-
-        async def f_val(fn: Callable[[], Awaitable[T]]) -> T:
-            trigger()
-            with isolate():
-                return await fn()
-
         if isinstance(x, Observer):
-            x._wrap_user_func(f_obs)
+
+            async def _(fn: Callable[[], Awaitable[None]]) -> None:
+                trigger()
+                with isolate():
+                    try:
+                        await fn()
+                    finally:
+                        if once:
+                            x.destroy()
+
         else:
-            x._wrap_user_func(f_val)
+
+            async def _(fn: Callable[[], Awaitable[T]]) -> T:
+                trigger()
+                with isolate():
+                    return await fn()
+
+        x._wrap_user_func(_)
 
         return x
 
