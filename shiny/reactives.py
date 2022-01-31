@@ -39,7 +39,6 @@ else:
 
 from .input_handlers import ActionButtonValue
 from .reactcore import Context, Dependents, ReactiveWarning
-from .render import RenderFunction
 from . import reactcore
 from . import utils
 from .types import MISSING, MISSING_TYPE
