@@ -420,14 +420,14 @@ def isolate():
 
 
 @runtime_checkable
-class Bindable(Protocol[T]):
+class Bindable(Protocol):
     def _wrap_user_func(
-        self, fn: Callable[[Callable[[], Awaitable[T]]], Awaitable[T]]
+        self, fn: Callable[[Callable[[], Awaitable[Any]]], Awaitable[Any]]
     ) -> None:
         ...
 
-    def __call__(self) -> Optional[object]:
-        ...
+
+BindableT = TypeVar("BindableT", bound=Bindable)
 
 
 def bind_event(
@@ -436,12 +436,12 @@ def bind_event(
     ignore_init: bool = False,
     once: bool = False,
     session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
-) -> Callable[[Bindable[T]], Bindable[T]]:
+) -> Callable[[BindableT], BindableT]:
 
     if isinstance(session, MISSING_TYPE):
         session = shinysession.get_current_session()
 
-    def _wrap_fn(x: Bindable[T]) -> Bindable[T]:
+    def _wrap_fn(x: BindableT) -> BindableT:
 
         initialized = False
 

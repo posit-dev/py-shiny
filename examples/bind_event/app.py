@@ -72,7 +72,6 @@ def server(session: ShinySession):
     async def btn_async() -> int:
         return session.input["btn_async"]
 
-    # TODO: typing for this needs to be fixed
     @observe_async()
     async def _():
         val = await btn_async()
