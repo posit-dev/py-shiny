@@ -714,9 +714,9 @@ async def test_mock_time():
 
 
 # ------------------------------------------------------------
-# @bind_cache() works as expected
+# @event() works as expected
 # ------------------------------------------------------------
-def test_bind_cache():
+def test_event_decorator():
     n_times = 0
 
     @observe()
@@ -767,9 +767,9 @@ def test_bind_cache():
 
 
 # ------------------------------------------------------------
-# @bind_cache() works as expected with async
+# @event() works as expected with async
 # ------------------------------------------------------------
-def test_bind_cache_async():
+def test_event_async_decorator():
     n_times = 0
 
     @observe_async()
