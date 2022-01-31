@@ -6,6 +6,7 @@ from typing import List
 
 from shiny.input_handlers import ActionButtonValue
 import shiny.reactcore as reactcore
+from shiny.decorators import *
 from shiny.reactives import *
 from shiny.validation import req
 
@@ -682,8 +683,8 @@ def test_req():
 def test_bind_cache():
     n_times = 0
 
-    @bind_event(lambda: None)
     @observe()
+    @event(lambda: None)
     def _():
         nonlocal n_times
         n_times += 1
@@ -691,8 +692,8 @@ def test_bind_cache():
     asyncio.run(reactcore.flush())
     assert n_times == 0
 
-    @bind_event(lambda: None, lambda: ActionButtonValue(0), ignore_none=False)
     @observe()
+    @event(lambda: None, lambda: ActionButtonValue(0), ignore_none=False)
     def _():
         nonlocal n_times
         n_times += 1
@@ -700,8 +701,8 @@ def test_bind_cache():
     asyncio.run(reactcore.flush())
     assert n_times == 1
 
-    @bind_event(lambda: "foo", ignore_init=True)
     @observe()
+    @event(lambda: "foo", ignore_init=True)
     def _():
         nonlocal n_times
         n_times += 1
@@ -711,8 +712,8 @@ def test_bind_cache():
 
     r = ReactiveVal(0)
 
-    @bind_event(lambda: r())
     @observe()
+    @event(lambda: r())
     def _():
         nonlocal n_times
         n_times += 1
@@ -727,31 +728,16 @@ def test_bind_cache():
     r(1)
     asyncio.run(reactcore.flush())
     assert n_times == 3
-
-    r2 = ReactiveVal(0)
-
-    @bind_event(lambda: r2(), once=True)
-    @observe()
-    def _():
-        nonlocal n_times
-        n_times += 1
-
-    asyncio.run(reactcore.flush())
-    assert n_times == 4
-
-    r2(1)
-    asyncio.run(reactcore.flush())
-    assert n_times == 4
 
 
 # ------------------------------------------------------------
 # @bind_cache() works as expected with async
 # ------------------------------------------------------------
-def test_bind_cache():
+def test_bind_cache_async():
     n_times = 0
 
-    @bind_event(lambda: None)
     @observe_async()
+    @event(lambda: None)
     async def _():
         nonlocal n_times
         n_times += 1
@@ -759,8 +745,8 @@ def test_bind_cache():
     asyncio.run(reactcore.flush())
     assert n_times == 0
 
-    @bind_event(lambda: None, lambda: ActionButtonValue(0), ignore_none=False)
     @observe_async()
+    @event(lambda: None, lambda: ActionButtonValue(0), ignore_none=False)
     async def _():
         nonlocal n_times
         n_times += 1
@@ -768,8 +754,8 @@ def test_bind_cache():
     asyncio.run(reactcore.flush())
     assert n_times == 1
 
-    @bind_event(lambda: "foo", ignore_init=True)
     @observe_async()
+    @event(lambda: "foo", ignore_init=True)
     async def _():
         nonlocal n_times
         n_times += 1
@@ -779,8 +765,8 @@ def test_bind_cache():
 
     r = ReactiveVal(0)
 
-    @bind_event(lambda: r())
     @observe_async()
+    @event(lambda: r())
     async def _():
         nonlocal n_times
         n_times += 1
@@ -795,18 +781,3 @@ def test_bind_cache():
     r(1)
     asyncio.run(reactcore.flush())
     assert n_times == 3
-
-    r2 = ReactiveVal(0)
-
-    @bind_event(lambda: r2(), once=True)
-    @observe_async()
-    async def _():
-        nonlocal n_times
-        n_times += 1
-
-    asyncio.run(reactcore.flush())
-    assert n_times == 4
-
-    r2(1)
-    asyncio.run(reactcore.flush())
-    assert n_times == 4

@@ -12,8 +12,8 @@ __all__ = (
     "observe",
     "observe_async",
     "isolate",
-    "bind_event",
 )
+
 
 import inspect
 from typing import (
@@ -28,21 +28,14 @@ from typing import (
     overload,
     cast,
 )
-import sys
 import traceback
 import warnings
 
-if sys.version_info >= (3, 8):
-    from typing import Protocol, runtime_checkable
-else:
-    from typing_extensions import Protocol, runtime_checkable
-
-from .input_handlers import ActionButtonValue
 from .reactcore import Context, Dependents, ReactiveWarning
 from . import reactcore
 from . import utils
 from .types import MISSING, MISSING_TYPE
-from .validation import SilentException, req
+from .validation import SilentException
 
 if TYPE_CHECKING:
     from .shinysession import ShinySession
@@ -197,16 +190,6 @@ class Reactive(Generic[T]):
         except Exception as err:
             self._error.append(err)
 
-    def _wrap_user_func(
-        self, fn: Callable[[Callable[[], Awaitable[T]]], Awaitable[T]]
-    ) -> None:
-        user_fn = self._func
-
-        async def new_fn() -> T:
-            return await fn(user_fn)
-
-        self._func = new_fn
-
 
 class ReactiveAsync(Reactive[T]):
     def __init__(
@@ -343,16 +326,6 @@ class Observer:
     def _on_session_ended_cb(self) -> None:
         self.destroy()
 
-    def _wrap_user_func(
-        self, fn: Callable[[Callable[[], Awaitable[None]]], Awaitable[None]]
-    ) -> None:
-        user_fn = self._func
-
-        async def new_fn() -> None:
-            return await fn(user_fn)
-
-        self._func = new_fn
-
 
 class ObserverAsync(Observer):
     def __init__(
@@ -411,70 +384,6 @@ def isolate():
     reexecuting when those particular values change).
     """
     return reactcore.isolate()
-
-
-@runtime_checkable
-class Bindable(Protocol):
-    def _wrap_user_func(
-        self, fn: Callable[[Callable[[], Awaitable[Any]]], Awaitable[Any]]
-    ) -> None:
-        ...
-
-
-BindableT = TypeVar("BindableT", bound=Bindable)
-
-
-def bind_event(
-    *args: Callable[[], object],
-    ignore_none: bool = True,
-    ignore_init: bool = False,
-    once: bool = False,
-    session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
-) -> Callable[[BindableT], BindableT]:
-
-    if isinstance(session, MISSING_TYPE):
-        session = shinysession.get_current_session()
-
-    def _wrap_fn(x: BindableT) -> BindableT:
-
-        initialized = False
-
-        def trigger() -> None:
-            vals = [arg() for arg in args]
-            nonlocal initialized
-            if ignore_init and not initialized:
-                initialized = True
-                req(False)
-            if ignore_none and all(map(_is_none_event, vals)):
-                req(False)
-
-        if isinstance(x, Observer):
-
-            async def _(fn: Callable[[], Awaitable[None]]) -> None:
-                trigger()
-                with isolate():
-                    try:
-                        await fn()
-                    finally:
-                        if once:
-                            x.destroy()
-
-        else:
-
-            async def _(fn: Callable[[], Awaitable[T]]) -> T:
-                trigger()
-                with isolate():
-                    return await fn()
-
-        x._wrap_user_func(_)
-
-        return x
-
-    return _wrap_fn
-
-
-def _is_none_event(val: object) -> bool:
-    return val is None or (isinstance(val, ActionButtonValue) and val == 0)
 
 
 # Import here at the bottom seems to fix a circular dependency problem.

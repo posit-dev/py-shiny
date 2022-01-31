@@ -6,6 +6,7 @@ __version__ = "0.0.0.9000"
 
 # All objects imported into this scope will be available as shiny.foo
 from .bootstrap import *
+from .decorators import *
 from .download_button import *
 from .dynamic_ui import *
 from .input_action_button import *

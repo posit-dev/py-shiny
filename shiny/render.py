@@ -4,7 +4,7 @@ import io
 import base64
 import mimetypes
 import inspect
-from typing import TYPE_CHECKING, Callable, Optional, Awaitable, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union
 import typing
 
 if sys.version_info >= (3, 8):
@@ -30,8 +30,6 @@ __all__ = (
     "render_image",
     "render_ui",
 )
-
-T = TypeVar("T")
 
 # It would be nice to specify the return type of RenderPlotFunc to be something like:
 #   Union[matplotlib.figure.Figure, PIL.Image.Image]
@@ -65,16 +63,6 @@ class RenderFunction:
         """
         self._session: ShinySession = session
         self._name: str = name
-
-    def _wrap_user_func(
-        self, fn: Callable[[Callable[[], Awaitable[T]]], Awaitable[T]]
-    ) -> None:
-        user_fn = self._fn
-
-        async def new_fn() -> T:
-            return await fn(user_fn)
-
-        self._fn = new_fn
 
 
 class RenderFunctionAsync(RenderFunction):
