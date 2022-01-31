@@ -1,10 +1,12 @@
 __all__ = ("ShinyApp",)
 
+import contextlib
 from typing import Any, List, Optional, Union, Dict, Callable, cast
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
 
 import starlette.routing
+import starlette.applications
 import starlette.websockets
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from starlette.requests import Request
@@ -45,7 +47,7 @@ class ShinyApp:
         self._registered_dependencies: Dict[str, HTMLDependency] = {}
         self._dependency_handler: Any = starlette.routing.Router()
 
-        self.starlette_app = starlette.routing.Router(
+        self.starlette_app = starlette.applications.Starlette(
             routes=[
                 starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
                 starlette.routing.Route("/", self._on_root_request_cb, methods=["GET"]),
@@ -55,8 +57,20 @@ class ShinyApp:
                     methods=["GET", "POST"],
                 ),
                 starlette.routing.Mount("/", app=self._dependency_handler),
-            ]
+            ],
+            lifespan=self.lifespan
         )
+
+    @contextlib.asynccontextmanager
+    async def lifespan(self, app: starlette.applications.Starlette):
+        unreg = reactcore.on_flushed(self._on_reactive_flushed, once = False)
+        try:
+            yield
+        finally:
+            unreg()
+
+    async def _on_reactive_flushed(self):
+        await self.flush_pending_sessions()
 
     def create_session(self, conn: Connection) -> ShinySession:
         self._last_session_id += 1
@@ -164,8 +178,6 @@ class ShinyApp:
         # self._sessions_needing_flush[session.id] = session
 
     async def flush_pending_sessions(self) -> None:
-        await reactcore.flush()
-
         # TODO: Until we have reactive domains, flush all sessions (because we
         # can't yet keep track of which ones need a flush)
         for _, session in self._sessions.items():
@@ -188,12 +200,16 @@ class ShinyApp:
         ):
             return
 
-        paths = dep.source_path_map(lib_prefix=self.LIB_PREFIX)
-        self._dependency_handler.mount(
-            "/" + paths["href"],
-            StaticFiles(directory=paths["source"]),
-            name=dep.name + "-" + str(dep.version),
-        )
+        # For HTMLDependencies that have sources on disk, mount the source dir.
+        # (Some HTMLDependencies only carry head content, and have no source on disk.)
+        if dep.source:
+            paths = dep.source_path_map(lib_prefix=self.LIB_PREFIX)
+            self._dependency_handler.mount(
+                "/" + paths["href"],
+                StaticFiles(directory=paths["source"]),
+                name=dep.name + "-" + str(dep.version),
+            )
+
         self._registered_dependencies[dep.name] = dep
 
 

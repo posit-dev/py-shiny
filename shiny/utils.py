@@ -96,7 +96,7 @@ def drop_none(x: Dict[str, Any]) -> Dict[str, object]:
 
 class Callbacks:
     def __init__(self) -> None:
-        self._callbacks: Dict[str, Tuple[Callable[[], None], bool]] = {}
+        self._callbacks: dict[str, Tuple[Callable[[], None], bool]] = {}
         self._id: int = 0
 
     def register(
@@ -107,19 +107,58 @@ class Callbacks:
         self._callbacks[id] = (fn, once)
 
         def _():
-            del self._callbacks[id]
+            if id in self._callbacks:
+                del self._callbacks[id]
 
         return _
 
     def invoke(self) -> None:
-        ids = list(self._callbacks.keys())
-        for id in ids:
-            fn, once = self._callbacks[id]
+        # The list() wrapper is necessary to force collection of all the items before
+        # iteration begins. This is necessary because self._callbacks may be mutated
+        # by callbacks.
+        for id, value in list(self._callbacks.items()):
+            fn, once = value
             try:
                 fn()
             finally:
                 if once:
-                    del self._callbacks[id]
+                    if id in self._callbacks:
+                        del self._callbacks[id]
+
+    def count(self) -> int:
+        return len(self._callbacks)
+
+
+class AsyncCallbacks:
+    def __init__(self) -> None:
+        self._callbacks: dict[str, Tuple[Callable[[], Awaitable[None]], bool]] = {}
+        self._id: int = 0
+
+    def register(
+        self, fn: Callable[[], Awaitable[None]], once: bool = False
+    ) -> Callable[[], None]:
+        self._id += 1
+        id = str(self._id)
+        self._callbacks[id] = (fn, once)
+
+        def _():
+            if id in self._callbacks:
+                del self._callbacks[id]
+
+        return _
+
+    async def invoke(self) -> None:
+        # The list() wrapper is necessary to force collection of all the items before
+        # iteration begins. This is necessary because self._callbacks may be mutated
+        # by callbacks.
+        for id, value in list(self._callbacks.items()):
+            fn, once = value
+            try:
+                await fn()
+            finally:
+                if once:
+                    if id in self._callbacks:
+                        del self._callbacks[id]
 
     def count(self) -> int:
         return len(self._callbacks)
