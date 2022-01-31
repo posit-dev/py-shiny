@@ -691,7 +691,7 @@ def test_bind_cache():
     asyncio.run(reactcore.flush())
     assert n_times == 0
 
-    @bind_event(lambda: None, ignore_none=False)
+    @bind_event(lambda: None, lambda: ActionButtonValue(0), ignore_none=False)
     @observe()
     def _():
         nonlocal n_times
@@ -700,15 +700,6 @@ def test_bind_cache():
     asyncio.run(reactcore.flush())
     assert n_times == 1
 
-    @bind_event(lambda: ActionButtonValue(0), ignore_none=False)
-    @observe()
-    def _():
-        nonlocal n_times
-        n_times += 1
-
-    asyncio.run(reactcore.flush())
-    assert n_times == 2
-
     @bind_event(lambda: "foo", ignore_init=True)
     @observe()
     def _():
@@ -716,7 +707,7 @@ def test_bind_cache():
         n_times += 1
 
     asyncio.run(reactcore.flush())
-    assert n_times == 2
+    assert n_times == 1
 
     r = ReactiveVal(0)
 
@@ -727,14 +718,95 @@ def test_bind_cache():
         n_times += 1
 
     asyncio.run(reactcore.flush())
-    assert n_times == 3
+    assert n_times == 2
 
     r(0)
     asyncio.run(reactcore.flush())
-    assert n_times == 3
+    assert n_times == 2
 
     r(1)
     asyncio.run(reactcore.flush())
+    assert n_times == 3
+
+    r2 = ReactiveVal(0)
+
+    @bind_event(lambda: r2(), once=True)
+    @observe()
+    def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
     assert n_times == 4
 
-    # TODO: without a session context, I don't think we can properly test once=True?
+    r2(1)
+    asyncio.run(reactcore.flush())
+    assert n_times == 4
+
+
+# ------------------------------------------------------------
+# @bind_cache() works as expected with async
+# ------------------------------------------------------------
+def test_bind_cache():
+    n_times = 0
+
+    @bind_event(lambda: None)
+    @observe_async()
+    async def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 0
+
+    @bind_event(lambda: None, lambda: ActionButtonValue(0), ignore_none=False)
+    @observe_async()
+    async def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 1
+
+    @bind_event(lambda: "foo", ignore_init=True)
+    @observe_async()
+    async def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 1
+
+    r = ReactiveVal(0)
+
+    @bind_event(lambda: r())
+    @observe_async()
+    async def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 2
+
+    r(0)
+    asyncio.run(reactcore.flush())
+    assert n_times == 2
+
+    r(1)
+    asyncio.run(reactcore.flush())
+    assert n_times == 3
+
+    r2 = ReactiveVal(0)
+
+    @bind_event(lambda: r2(), once=True)
+    @observe_async()
+    async def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 4
+
+    r2(1)
+    asyncio.run(reactcore.flush())
+    assert n_times == 4
