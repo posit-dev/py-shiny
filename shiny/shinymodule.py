@@ -1,7 +1,7 @@
 __all__ = (
     "ReactiveValuesProxy",
     "OutputsProxy",
-    "ShinySessionProxy",
+    "SessionProxy",
     "ShinyModule",
 )
 
@@ -46,7 +46,7 @@ class OutputsProxy(Outputs):
         return self._outputs(self._ns_key(name))
 
 
-class ShinySessionProxy(Session):
+class SessionProxy(Session):
     def __init__(self, ns: str, parent_session: Session) -> None:
         self._ns: str = ns
         self._parent: Session = parent_session
@@ -58,10 +58,10 @@ class ShinyModule:
     def __init__(
         self,
         ui: Callable[..., TagChildArg],
-        server: Callable[[ShinySessionProxy], None],
+        server: Callable[[SessionProxy], None],
     ) -> None:
         self._ui: Callable[..., TagChildArg] = ui
-        self._server: Callable[[ShinySessionProxy], None] = server
+        self._server: Callable[[SessionProxy], None] = server
 
     def ui(self, namespace: str, *args: Any) -> TagChildArg:
         ns = ShinyModule._make_ns_fn(namespace)
@@ -70,7 +70,7 @@ class ShinyModule:
     def server(self, ns: str, *, session: Optional[Session] = None) -> None:
         self.ns: str = ns
         session = _require_active_session(session)
-        session_proxy = ShinySessionProxy(ns, session)
+        session_proxy = SessionProxy(ns, session)
         self._server(session_proxy)
 
     @staticmethod

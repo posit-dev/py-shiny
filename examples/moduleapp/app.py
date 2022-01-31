@@ -28,7 +28,7 @@ def counter_module_ui(
     )
 
 
-def counter_module_server(session: ShinySessionProxy):
+def counter_module_server(session: SessionProxy):
     count: ReactiveVal[int] = ReactiveVal(0)
 
     @observe()
