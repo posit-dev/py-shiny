@@ -8,6 +8,8 @@ import shiny.reactcore as reactcore
 from shiny.reactives import *
 from shiny.validation import req
 
+from .mocktime import MockTime
+
 
 @pytest.mark.asyncio
 async def test_flush_runs_newly_invalidated():
@@ -625,3 +627,85 @@ async def test_req():
 
     await reactcore.flush()
     assert val == 1
+
+
+@pytest.mark.asyncio
+async def test_invalidate_later():
+    mock_time = MockTime()
+    with mock_time():
+
+        @observe()
+        def obs1():
+            invalidate_later(1)
+
+        # Initial run happens immediately
+        await reactcore.flush()
+        assert obs1._exec_count == 1
+
+        # If not enough time passes, no re-execution occurs
+        await mock_time.advance_time(0.5)
+        assert obs1._exec_count == 1
+
+        # Re-execute after one second (total)
+        await mock_time.advance_time(0.5)
+        assert obs1._exec_count == 2
+
+        # Make sure it happens repeatedly
+        await mock_time.advance_time(10)
+        assert obs1._exec_count == 12
+
+        # After destruction, no more re-executions
+        obs1.destroy()
+        await mock_time.advance_time(10)
+        assert obs1._exec_count == 12
+
+
+@pytest.mark.asyncio
+async def test_invalidate_later_invalidation():
+    mock_time = MockTime()
+    with mock_time():
+        rv = ReactiveVal(0)
+
+        @observe()
+        def obs1():
+            if rv() == 0:
+                invalidate_later(1)
+
+        await reactcore.flush()
+        assert obs1._exec_count == 1
+
+        # Change rv, triggering invalidation of obs1. The expected behavior is that
+        # the invalidation causes the invalidate_later call to be cancelled.
+        rv(1)
+        await reactcore.flush()
+        assert obs1._exec_count == 2
+
+        # Advance time to long after the invalidate_later would have fired, and ensure
+        # nothing happens.
+        await mock_time.advance_time(10)
+        assert obs1._exec_count == 2
+        await reactcore.flush()
+        assert obs1._exec_count == 2
+
+
+@pytest.mark.asyncio
+async def test_mock_time():
+
+    mock_time = MockTime()
+
+    with mock_time():
+        results: List[str] = []
+
+        async def add_result_later(delay: float, msg: str):
+            await asyncio.sleep(delay)
+            results.append(msg)
+
+        asyncio.create_task(add_result_later(10, "a"))
+        asyncio.create_task(add_result_later(5, "b"))
+        task_c = asyncio.create_task(add_result_later(15, "c"))
+
+        await mock_time.advance_time(11)
+
+        assert results == ["b", "a"]
+        # Prevent asyncio from complaining about a pending task not being complete
+        task_c.cancel()
