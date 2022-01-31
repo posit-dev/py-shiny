@@ -14,8 +14,6 @@ __all__ = (
     "isolate",
 )
 
-
-import inspect
 from typing import (
     TYPE_CHECKING,
     Optional,
@@ -26,10 +24,11 @@ from typing import (
     Generic,
     Any,
     overload,
-    cast,
 )
-import traceback
+import typing
+import inspect
 import warnings
+import traceback
 
 from .reactcore import Context, Dependents, ReactiveWarning
 from . import reactcore
@@ -204,7 +203,7 @@ class ReactiveAsync(Reactive[T]):
         # Init the Reactive base class with a placeholder synchronous function
         # so it won't throw an error, then replace it with the async function.
         # Need the `cast` to satisfy the type checker.
-        super().__init__(lambda: cast(T, None), session=session)
+        super().__init__(lambda: typing.cast(T, None), session=session)
         self._func: Callable[[], Awaitable[T]] = func
         self._is_async = True
 
