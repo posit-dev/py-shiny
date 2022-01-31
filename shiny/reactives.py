@@ -353,11 +353,6 @@ class Observer:
 
         self._func = new_fn
 
-    # This is defined so that observers are compatible with the Bindable type
-    # (used for the @bind_event decorator)
-    def __call__(self) -> Any:
-        raise NotImplementedError("Observer is not callable")
-
 
 class ObserverAsync(Observer):
     def __init__(
