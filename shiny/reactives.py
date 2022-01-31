@@ -425,7 +425,7 @@ def invalidate_later(delay: float) -> None:
                 await reactcore.flush()
 
         except BaseException:
-            traceback.print_exception(*sys.exc_info())
+            traceback.print_exc()
             raise
 
     task = asyncio.create_task(_task(ctx, deadline))
