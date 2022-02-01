@@ -1,5 +1,5 @@
 import functools
-from typing import TypeVar, Callable, List, Awaitable, Any, Union, cast
+from typing import TypeVar, Callable, List, Awaitable, Union, cast
 
 from .input_handlers import ActionButtonValue
 from .reactives import isolate
@@ -7,15 +7,15 @@ from .validation import req
 from .utils import is_async_callable, run_coro_sync
 
 
-TBA = TypeVar("TBA", bound=Any)
+T = TypeVar("T")
 
 
 def event(
     *args: Union[Callable[[], object], Callable[[], Awaitable[object]]],
     ignore_none: bool = True,
     ignore_init: bool = False,
-) -> Callable[[Callable[[], TBA]], Callable[[], TBA]]:
-    def decorator(user_fn: Callable[[], TBA]) -> Callable[[], TBA]:
+) -> Callable[[Callable[[], T]], Callable[[], T]]:
+    def decorator(user_fn: Callable[[], T]) -> Callable[[], T]:
 
         initialized = False
 
@@ -39,7 +39,7 @@ def event(
         if is_async_callable(user_fn):
 
             @functools.wraps(user_fn)
-            async def new_user_fn() -> TBA:
+            async def new_user_fn() -> T:
                 await trigger()
                 with isolate():
                     return await user_fn()
@@ -54,7 +54,7 @@ def event(
         else:
 
             @functools.wraps(user_fn)
-            def new_user_fn() -> TBA:
+            def new_user_fn() -> T:
                 run_coro_sync(trigger())
                 with isolate():
                     return user_fn()
