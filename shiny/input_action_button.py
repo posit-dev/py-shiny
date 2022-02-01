@@ -10,13 +10,13 @@ def input_action_button(
     width: Optional[str] = None,
     **kwargs: TagAttrArg,
 ) -> Tag:
+    kwargs["class_"] = "btn btn-default action-button " + str(kwargs.get("class_", ""))
+    kwargs["style"] = css(width=width) if width else "" + str(kwargs.get("style", ""))
     return tags.button(
         icon,
         label,
         id=id,
         type="button",
-        class_="btn btn-default action-button",
-        style=css(width=width),
         **kwargs,
     )
 
@@ -27,4 +27,5 @@ def input_action_link(
     icon: TagChildArg = None,
     **kwargs: TagAttrArg,
 ) -> Tag:
-    return tags.a(icon, label, id=id, href="#", class_="action-button", **kwargs)
+    kwargs["class_"] = "action-button " + str(kwargs.get("class_", ""))
+    return tags.a(icon, label, id=id, href="#", **kwargs)
