@@ -10,7 +10,7 @@ from typing import Optional, Union, Callable, Any
 from htmltools.core import TagChildArg
 
 from .session import Session, Outputs, _require_active_session
-from .reactive import Values
+from .reactive import Values, Value
 from .render import RenderFunction
 
 
@@ -22,14 +22,31 @@ class ReactiveValuesProxy(Values):
     def _ns_key(self, key: str) -> str:
         return self._ns + "-" + key
 
-    def __setitem__(self, key: str, value: object) -> None:
-        self._values[self._ns_key(key)] = value
+    def __setitem__(self, key: str, value: Value[Any]) -> None:
+        self._values[self._ns_key(key)].set(value)
 
-    def __getitem__(self, key: str) -> object:
+    def __getitem__(self, key: str) -> Value[Any]:
         return self._values[self._ns_key(key)]
 
     def __delitem__(self, key: str) -> None:
         del self._values[self._ns_key(key)]
+
+    # Allow access of values as attributes.
+    def __setattr__(self, attr: str, value: Value[Any]) -> None:
+        if attr in ("_values", "_ns"):
+            super().__setattr__(attr, value)
+            return
+        else:
+            self.__setitem__(attr, value)
+
+    def __getattr__(self, attr: str) -> Value[Any]:
+        if attr in ("_values", "_ns"):
+            return object.__getattribute__(self, attr)
+        else:
+            return self.__getitem__(attr)
+
+    def __delattr__(self, key: str) -> None:
+        self.__delitem__(key)
 
 
 class OutputsProxy(Outputs):

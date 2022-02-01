@@ -27,7 +27,6 @@ from typing import (
     Union,
     Generic,
     Any,
-    overload,
 )
 import typing
 import inspect
@@ -52,19 +51,10 @@ class Value(Generic[T]):
         self._value: T = value
         self._dependents: Dependents = Dependents()
 
-    @overload
+    # Calling the object is equivalent to `.get()`
     def __call__(self) -> T:
-        ...
-
-    @overload
-    def __call__(self, value: T) -> bool:
-        ...
-
-    def __call__(self, value: Union[MISSING_TYPE, T] = MISSING) -> Union[T, bool]:
-        if isinstance(value, MISSING_TYPE):
-            return self.get()
-        else:
-            return self.set(value)
+        self._dependents.register()
+        return self._value
 
     def get(self) -> T:
         self._dependents.register()
@@ -85,23 +75,40 @@ class Values:
         for key, value in kwargs.items():
             self._map[key] = Value(value)
 
-    def __setitem__(self, key: str, value: object) -> None:
-        if key in self._map:
-            self._map[key](value)
-        else:
-            self._map[key] = Value(value)
+    def __setitem__(self, key: str, value: Value[Any]) -> None:
+        if not isinstance(value, Value):
+            raise TypeError("`value` must be a shiny.reactive.Value object.")
 
-    def __getitem__(self, key: str) -> Any:
+        self._map[key] = value
+
+    def __getitem__(self, key: str) -> Value[Any]:
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
         # yet.
         if key not in self._map:
             self._map[key] = Value(None)
 
-        return self._map[key]()
+        return self._map[key]
 
     def __delitem__(self, key: str) -> None:
         del self._map[key]
+
+    # Allow access of values as attributes.
+    def __setattr__(self, attr: str, value: Value[Any]) -> None:
+        # Need special handling of "_map".
+        if attr == "_map":
+            super().__setattr__(attr, value)
+            return
+
+        self.__setitem__(attr, value)
+
+    def __getattr__(self, attr: str) -> Value[Any]:
+        if attr == "_map":
+            return object.__getattribute__(self, attr)
+        return self.__getitem__(attr)
+
+    def __delattr__(self, key: str) -> None:
+        self.__delitem__(key)
 
 
 # ==============================================================================

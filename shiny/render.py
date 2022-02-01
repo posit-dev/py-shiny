@@ -83,13 +83,13 @@ class RenderPlot(RenderFunction):
     async def run(self) -> object:
         # Reactively read some information about the plot.
         pixelratio: float = typing.cast(
-            float, self._session.input[".clientdata_pixelratio"]
+            float, self._session.input[".clientdata_pixelratio"]()
         )
         width: float = typing.cast(
-            float, self._session.input[f".clientdata_output_{self._name}_width"]
+            float, self._session.input[f".clientdata_output_{self._name}_width"]()
         )
         height: float = typing.cast(
-            float, self._session.input[f".clientdata_output_{self._name}_height"]
+            float, self._session.input[f".clientdata_output_{self._name}_height"]()
         )
 
         fig = await self._fn()

@@ -1,4 +1,4 @@
-"""Tests for `shiny.reactives` and `shiny.reactcore`."""
+"""Tests for `shiny.reactive` and `shiny.reactcore`."""
 
 import pytest
 import asyncio
@@ -35,7 +35,7 @@ async def test_flush_runs_newly_invalidated():
 
     @observe()
     def o1():
-        v2(v1())
+        v2.set(v1())
 
     await reactcore.flush()
     assert v2_result == 1
@@ -64,7 +64,7 @@ async def test_flush_runs_newly_invalidated_async():
 
     @observe_async()
     async def o1():
-        v2(v1())
+        v2.set(v1())
 
     await reactcore.flush()
     assert v2_result == 1
@@ -86,7 +86,7 @@ async def test_reactive_val_same_no_invalidate():
     await reactcore.flush()
     assert o._exec_count == 1
 
-    v(1)
+    v.set(1)
     await reactcore.flush()
     assert o._exec_count == 1
 
@@ -102,7 +102,7 @@ async def test_recursive_reactive():
     def r():
         if v() == 0:
             return 0
-        v(v() - 1)
+        v.set(v() - 1)
         r()
 
     @observe()
@@ -124,7 +124,7 @@ async def test_recursive_reactive_async():
     async def r():
         if v() == 0:
             return 0
-        v(v() - 1)
+        v.set(v() - 1)
         await r()
 
     @observe_async()
@@ -170,7 +170,7 @@ async def test_async_sequential():
 
     await asyncio.gather(react_chain(1), react_chain(2))
     await reactcore.flush()
-    x(5)
+    x.set(5)
     await reactcore.flush()
 
     assert results == [111, 211, 115, 215]
@@ -234,13 +234,13 @@ async def test_isolate_prevents_dependency():
     assert o_val == 11
 
     # Changing v() shouldn't invalidate o
-    v(2)
+    v.set(2)
     await reactcore.flush()
     assert o_val == 11
     assert o._exec_count == 1
 
     # v_dep() should invalidate the observer
-    v_dep(2)
+    v_dep.set(2)
     await reactcore.flush()
     assert o_val == 12
     assert o._exec_count == 2
@@ -298,13 +298,13 @@ async def test_isolate_async_prevents_dependency():
     assert o_val == 11
 
     # Changing v() shouldn't invalidate o
-    v(2)
+    v.set(2)
     await reactcore.flush()
     assert o_val == 11
     assert o._exec_count == 1
 
     # v_dep() should invalidate the observer
-    v_dep(2)
+    v_dep.set(2)
     await reactcore.flush()
     assert o_val == 12
     assert o._exec_count == 2
@@ -353,12 +353,12 @@ async def test_observer_priority():
 
     # Change v and run again, to make sure results are stable
     results.clear()
-    v(2)
+    v.set(2)
     await reactcore.flush()
     assert results == [2, 4, 1, 3]
 
     results.clear()
-    v(3)
+    v.set(3)
     await reactcore.flush()
     assert results == [2, 4, 1, 3]
 
@@ -404,12 +404,12 @@ async def test_observer_async_priority():
 
     # Change v and run again, to make sure results are stable
     results.clear()
-    v(2)
+    v.set(2)
     await reactcore.flush()
     assert results == [2, 4, 1, 3]
 
     results.clear()
-    v(3)
+    v.set(3)
     await reactcore.flush()
     assert results == [2, 4, 1, 3]
 
@@ -431,7 +431,7 @@ async def test_observer_destroy():
     await reactcore.flush()
     assert results == [1]
 
-    v(2)
+    v.set(2)
     o1.destroy()
     await reactcore.flush()
     assert results == [1]
@@ -530,7 +530,7 @@ async def test_reactive_error_rethrow():
         await reactcore.flush()
     assert vals == ["o1-1", "r", "o2-2"]
 
-    v(2)
+    v.set(2)
     with pytest.warns(reactcore.ReactiveWarning):
         await reactcore.flush()
     assert vals == ["o1-1", "r", "o2-2", "o1-1", "o2-2"]
@@ -554,7 +554,7 @@ async def test_dependent_invalidation():
             with isolate():
                 r()
                 val = v()
-                v(val + 1)
+                v.set(val + 1)
         except Exception:
             nonlocal error_occurred
             error_occurred = True
@@ -568,7 +568,7 @@ async def test_dependent_invalidation():
         return v()
 
     await reactcore.flush()
-    trigger(1)
+    trigger.set(1)
     await reactcore.flush()
 
     with isolate():
@@ -679,7 +679,7 @@ async def test_invalidate_later_invalidation():
 
         # Change rv, triggering invalidation of obs1. The expected behavior is that
         # the invalidation causes the invalidate_later call to be cancelled.
-        rv(1)
+        rv.set(1)
         await reactcore.flush()
         assert obs1._exec_count == 2
 
@@ -751,10 +751,10 @@ def test_event_decorator():
     assert n_times == 2
 
     # Is invalidated properly by reactive vals
-    r = Value(1)
+    v = Value(1)
 
     @observe()
-    @event(r)
+    @event(v)
     def _():
         nonlocal n_times
         n_times += 1
@@ -762,19 +762,19 @@ def test_event_decorator():
     asyncio.run(reactcore.flush())
     assert n_times == 3
 
-    r(1)
+    v.set(1)
     asyncio.run(reactcore.flush())
     assert n_times == 3
 
-    r(2)
+    v.set(2)
     asyncio.run(reactcore.flush())
     assert n_times == 4
 
     # Doesn't run on init
-    r = Value(1)
+    v = Value(1)
 
     @observe()
-    @event(r, ignore_init=True)
+    @event(v, ignore_init=True)
     def _():
         nonlocal n_times
         n_times += 1
@@ -782,32 +782,32 @@ def test_event_decorator():
     asyncio.run(reactcore.flush())
     assert n_times == 4
 
-    r(2)
+    v.set(2)
     asyncio.run(reactcore.flush())
     assert n_times == 5
 
     # Isolates properly
-    r = Value(1)
-    r2 = Value(1)
+    v = Value(1)
+    v2 = Value(1)
 
     @observe()
-    @event(r)
+    @event(v)
     def _():
         nonlocal n_times
-        n_times += r2()
+        n_times += v2()
 
     asyncio.run(reactcore.flush())
     assert n_times == 6
 
-    r2(2)
+    v2.set(2)
     asyncio.run(reactcore.flush())
     assert n_times == 6
 
     # works with @reactive()
-    r2 = Value(1)
+    v2 = Value(1)
 
     @reactive()
-    @event(lambda: r2(), ignore_init=True)
+    @event(lambda: v2(), ignore_init=True)
     def r2b():
         return 1
 
@@ -819,7 +819,7 @@ def test_event_decorator():
     asyncio.run(reactcore.flush())
     assert n_times == 6
 
-    r2(2)
+    v2.set(2)
     asyncio.run(reactcore.flush())
     assert n_times == 7
 
@@ -861,10 +861,10 @@ def test_event_async_decorator():
     assert n_times == 2
 
     # Is invalidated properly by reactive vals
-    r = Value(1)
+    v = Value(1)
 
     @observe_async()
-    @event(r)
+    @event(v)
     async def _():
         nonlocal n_times
         n_times += 1
@@ -872,19 +872,19 @@ def test_event_async_decorator():
     asyncio.run(reactcore.flush())
     assert n_times == 3
 
-    r(1)
+    v.set(1)
     asyncio.run(reactcore.flush())
     assert n_times == 3
 
-    r(2)
+    v.set(2)
     asyncio.run(reactcore.flush())
     assert n_times == 4
 
     # Doesn't run on init
-    r = Value(1)
+    v = Value(1)
 
     @observe_async()
-    @event(r, ignore_init=True)
+    @event(v, ignore_init=True)
     async def _():
         nonlocal n_times
         n_times += 1
@@ -892,32 +892,32 @@ def test_event_async_decorator():
     asyncio.run(reactcore.flush())
     assert n_times == 4
 
-    r(2)
+    v.set(2)
     asyncio.run(reactcore.flush())
     assert n_times == 5
 
     # Isolates properly
-    r = Value(1)
-    r2 = Value(1)
+    v = Value(1)
+    v2 = Value(1)
 
     @observe_async()
-    @event(r)
+    @event(v)
     async def _():
         nonlocal n_times
-        n_times += r2()
+        n_times += v2()
 
     asyncio.run(reactcore.flush())
     assert n_times == 6
 
-    r2(2)
+    v2.set(2)
     asyncio.run(reactcore.flush())
     assert n_times == 6
 
     # works with @reactive()
-    r2 = Value(1)
+    v2 = Value(1)
 
     @reactive_async()
-    @event(lambda: r2(), ignore_init=True)
+    @event(lambda: v2(), ignore_init=True)
     async def r2b():
         return 1
 
@@ -929,6 +929,6 @@ def test_event_async_decorator():
     asyncio.run(reactcore.flush())
     assert n_times == 6
 
-    r2(2)
+    v2.set(2)
     asyncio.run(reactcore.flush())
     assert n_times == 7

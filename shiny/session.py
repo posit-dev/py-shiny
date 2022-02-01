@@ -237,7 +237,7 @@ class Session:
             if len(keys) == 2:
                 val = input_handlers.process_value(keys[1], val, keys[0], self)
 
-            self.input[keys[0]] = val
+            self.input[keys[0]].set(val)
 
     # ==========================================================================
     # Message handlers
@@ -290,7 +290,7 @@ class Session:
                 )
                 return None
             file_data = upload_op.finish()
-            self.input[input_id] = file_data
+            self.input[input_id].set(file_data)
             # Explicitly return None to signal that the message was handled.
             return None
 
