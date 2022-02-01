@@ -8,6 +8,12 @@
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
     },
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportImportCycles":  "none",
+        "reportUnusedFunction":  "none",
+        "reportPrivateUsage": "none",
+        "reportUnnecessaryIsInstance": "none"
+    },
     "editor.rulers": [
         88
     ],
