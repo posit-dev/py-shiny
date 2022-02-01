@@ -260,8 +260,8 @@ class RenderImage(RenderFunction):
 class RenderImageAsync(RenderImage, RenderFunctionAsync):
     def __init__(self, fn: RenderImageFuncAsync, delete_file: bool = False) -> None:
         if not inspect.iscoroutinefunction(fn):
-            raise TypeError("PlotAsync requires an async function")
-        # Init the Plot base class with a placeholder synchronous function so it
+            raise TypeError("ImageAsync requires an async function")
+        # Init the Image base class with a placeholder synchronous function so it
         # won't throw an error, then replace it with the async function.
         super().__init__(lambda: None, delete_file)
         self._fn: RenderImageFuncAsync = fn

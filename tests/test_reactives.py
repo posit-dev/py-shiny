@@ -3,8 +3,11 @@
 import pytest
 import asyncio
 from typing import List
+from shiny import reactives
 
+from shiny.input_handlers import ActionButtonValue
 import shiny.reactcore as reactcore
+from shiny.decorators import *
 from shiny.reactives import *
 from shiny.validation import req
 
@@ -709,3 +712,223 @@ async def test_mock_time():
         assert results == ["b", "a"]
         # Prevent asyncio from complaining about a pending task not being complete
         task_c.cancel()
+
+
+# ------------------------------------------------------------
+# @event() works as expected
+# ------------------------------------------------------------
+def test_event_decorator():
+    n_times = 0
+
+    # By default, runs every time that event expression is _not_ None (ignore_none=True)
+    @observe()
+    @event(lambda: None, lambda: ActionButtonValue(0))
+    def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 0
+
+    # Unless ignore_none=False
+    @observe()
+    @event(lambda: None, lambda: ActionButtonValue(0), ignore_none=False)
+    def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 1
+
+    # Or if one of the args is not None
+    @observe()
+    @event(lambda: None, lambda: ActionButtonValue(0), lambda: True)
+    def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 2
+
+    # Is invalidated properly by reactive vals
+    r = ReactiveVal(1)
+
+    @observe()
+    @event(r)
+    def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 3
+
+    r(1)
+    asyncio.run(reactcore.flush())
+    assert n_times == 3
+
+    r(2)
+    asyncio.run(reactcore.flush())
+    assert n_times == 4
+
+    # Doesn't run on init
+    r = ReactiveVal(1)
+
+    @observe()
+    @event(r, ignore_init=True)
+    def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 4
+
+    r(2)
+    asyncio.run(reactcore.flush())
+    assert n_times == 5
+
+    # Isolates properly
+    r = ReactiveVal(1)
+    r2 = ReactiveVal(1)
+
+    @observe()
+    @event(r)
+    def _():
+        nonlocal n_times
+        n_times += r2()
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 6
+
+    r2(2)
+    asyncio.run(reactcore.flush())
+    assert n_times == 6
+
+    # works with @reactive()
+    r2 = ReactiveVal(1)
+
+    @reactive()
+    @event(lambda: r2(), ignore_init=True)
+    def r2b():
+        return 1
+
+    @observe()
+    def _():
+        nonlocal n_times
+        n_times += r2b()
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 6
+
+    r2(2)
+    asyncio.run(reactcore.flush())
+    assert n_times == 7
+
+
+# ------------------------------------------------------------
+# @event() works as expected with async
+# ------------------------------------------------------------
+def test_event_async_decorator():
+    n_times = 0
+
+    # By default, runs every time that event expression is _not_ None (ignore_none=True)
+    @observe_async()
+    @event(lambda: None, lambda: ActionButtonValue(0))
+    async def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 0
+
+    # Unless ignore_none=False
+    @observe_async()
+    @event(lambda: None, lambda: ActionButtonValue(0), ignore_none=False)
+    async def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 1
+
+    # Or if one of the args is not None
+    @observe_async()
+    @event(lambda: None, lambda: ActionButtonValue(0), lambda: True)
+    async def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 2
+
+    # Is invalidated properly by reactive vals
+    r = ReactiveVal(1)
+
+    @observe_async()
+    @event(r)
+    async def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 3
+
+    r(1)
+    asyncio.run(reactcore.flush())
+    assert n_times == 3
+
+    r(2)
+    asyncio.run(reactcore.flush())
+    assert n_times == 4
+
+    # Doesn't run on init
+    r = ReactiveVal(1)
+
+    @observe_async()
+    @event(r, ignore_init=True)
+    async def _():
+        nonlocal n_times
+        n_times += 1
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 4
+
+    r(2)
+    asyncio.run(reactcore.flush())
+    assert n_times == 5
+
+    # Isolates properly
+    r = ReactiveVal(1)
+    r2 = ReactiveVal(1)
+
+    @observe_async()
+    @event(r)
+    async def _():
+        nonlocal n_times
+        n_times += r2()
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 6
+
+    r2(2)
+    asyncio.run(reactcore.flush())
+    assert n_times == 6
+
+    # works with @reactive()
+    r2 = ReactiveVal(1)
+
+    @reactive_async()
+    @event(lambda: r2(), ignore_init=True)
+    async def r2b():
+        return 1
+
+    @observe_async()
+    async def _():
+        nonlocal n_times
+        n_times += await r2b()
+
+    asyncio.run(reactcore.flush())
+    assert n_times == 6
+
+    r2(2)
+    asyncio.run(reactcore.flush())
+    assert n_times == 7
