@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 
 from htmltools import TagChildArg, TagList
 
-from .reactive import ReactiveValues, Observer, ObserverAsync, isolate
+from .reactive import Values, Observer, ObserverAsync, isolate
 from .http_staticfiles import FileResponse
 from .connmanager import Connection, ConnectionClosed
 from . import reactcore
@@ -126,7 +126,7 @@ class Session:
         self._conn: Connection = conn
         self._debug: bool = debug
 
-        self.input: ReactiveValues = ReactiveValues()
+        self.input: Values = Values()
         self.output: Outputs = Outputs(self)
 
         self._outbound_message_queues = _empty_outbound_message_queues()

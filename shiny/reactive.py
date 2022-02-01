@@ -1,8 +1,8 @@
 """Reactive components"""
 
 __all__ = (
-    "ReactiveVal",
-    "ReactiveValues",
+    "Value",
+    "Values",
     "Reactive",
     "ReactiveAsync",
     "reactive",
@@ -16,7 +16,6 @@ __all__ = (
 )
 
 import asyncio
-import sys
 import time
 import traceback
 from typing import (
@@ -46,9 +45,9 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 # ==============================================================================
-# ReactiveVal and ReactiveValues
+# Value and Values
 # ==============================================================================
-class ReactiveVal(Generic[T]):
+class Value(Generic[T]):
     def __init__(self, value: T) -> None:
         self._value: T = value
         self._dependents: Dependents = Dependents()
@@ -80,24 +79,24 @@ class ReactiveVal(Generic[T]):
         return True
 
 
-class ReactiveValues:
+class Values:
     def __init__(self, **kwargs: object) -> None:
-        self._map: dict[str, ReactiveVal[Any]] = {}
+        self._map: dict[str, Value[Any]] = {}
         for key, value in kwargs.items():
-            self._map[key] = ReactiveVal(value)
+            self._map[key] = Value(value)
 
     def __setitem__(self, key: str, value: object) -> None:
         if key in self._map:
             self._map[key](value)
         else:
-            self._map[key] = ReactiveVal(value)
+            self._map[key] = Value(value)
 
     def __getitem__(self, key: str) -> Any:
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
         # yet.
         if key not in self._map:
-            self._map[key] = ReactiveVal(None)
+            self._map[key] = Value(None)
 
         return self._map[key]()
 

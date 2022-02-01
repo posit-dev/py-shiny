@@ -10,14 +10,14 @@ from typing import Optional, Union, Callable, Any
 from htmltools.core import TagChildArg
 
 from .session import Session, Outputs, _require_active_session
-from .reactive import ReactiveValues
+from .reactive import Values
 from .render import RenderFunction
 
 
-class ReactiveValuesProxy(ReactiveValues):
-    def __init__(self, ns: str, values: ReactiveValues):
+class ReactiveValuesProxy(Values):
+    def __init__(self, ns: str, values: Values):
         self._ns: str = ns
-        self._values: ReactiveValues = values
+        self._values: Values = values
 
     def _ns_key(self, key: str) -> str:
         return self._ns + "-" + key

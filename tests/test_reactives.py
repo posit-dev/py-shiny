@@ -21,8 +21,8 @@ async def test_flush_runs_newly_invalidated():
     during the flush.
     """
 
-    v1 = ReactiveVal(1)
-    v2 = ReactiveVal(2)
+    v1 = Value(1)
+    v2 = Value(2)
 
     v2_result = None
 
@@ -50,8 +50,8 @@ async def test_flush_runs_newly_invalidated_async():
     during the flush. (Same as previous test, but async.)
     """
 
-    v1 = ReactiveVal(1)
-    v2 = ReactiveVal(2)
+    v1 = Value(1)
+    v2 = Value(2)
 
     v2_result = None
 
@@ -77,7 +77,7 @@ async def test_flush_runs_newly_invalidated_async():
 # ======================================================================
 @pytest.mark.asyncio
 async def test_reactive_val_same_no_invalidate():
-    v = ReactiveVal(1)
+    v = Value(1)
 
     @observe()
     def o():
@@ -96,7 +96,7 @@ async def test_reactive_val_same_no_invalidate():
 # ======================================================================
 @pytest.mark.asyncio
 async def test_recursive_reactive():
-    v = ReactiveVal(5)
+    v = Value(5)
 
     @reactive()
     def r():
@@ -118,7 +118,7 @@ async def test_recursive_reactive():
 
 @pytest.mark.asyncio
 async def test_recursive_reactive_async():
-    v = ReactiveVal(5)
+    v = Value(5)
 
     @reactive_async()
     async def r():
@@ -145,7 +145,7 @@ async def test_recursive_reactive_async():
 
 @pytest.mark.asyncio
 async def test_async_sequential():
-    x: ReactiveVal[int] = ReactiveVal(1)
+    x: Value[int] = Value(1)
     results: list[int] = []
     exec_order: list[str] = []
 
@@ -195,7 +195,7 @@ async def test_async_sequential():
 async def test_isolate_basic_without_context():
     # isolate() works with Reactive and ReactiveVal; allows executing without a
     # reactive context.
-    v = ReactiveVal(1)
+    v = Value(1)
 
     @reactive()
     def r():
@@ -214,13 +214,13 @@ async def test_isolate_basic_without_context():
 
 @pytest.mark.asyncio
 async def test_isolate_prevents_dependency():
-    v = ReactiveVal(1)
+    v = Value(1)
 
     @reactive()
     def r():
         return v() + 10
 
-    v_dep = ReactiveVal(1)  # Use this only for invalidating the observer
+    v_dep = Value(1)  # Use this only for invalidating the observer
     o_val = None
 
     @observe()
@@ -262,7 +262,7 @@ async def test_isolate_async_basic_value():
 async def test_isolate_async_basic_without_context():
     # async isolate works with Reactive and ReactiveVal; allows executing
     # without a reactive context.
-    v = ReactiveVal(1)
+    v = Value(1)
 
     @reactive_async()
     async def r():
@@ -278,13 +278,13 @@ async def test_isolate_async_basic_without_context():
 
 @pytest.mark.asyncio
 async def test_isolate_async_prevents_dependency():
-    v = ReactiveVal(1)
+    v = Value(1)
 
     @reactive_async()
     async def r():
         return v() + 10
 
-    v_dep = ReactiveVal(1)  # Use this only for invalidating the observer
+    v_dep = Value(1)  # Use this only for invalidating the observer
     o_val = None
 
     @observe_async()
@@ -315,7 +315,7 @@ async def test_isolate_async_prevents_dependency():
 # ======================================================================
 @pytest.mark.asyncio
 async def test_observer_priority():
-    v = ReactiveVal(1)
+    v = Value(1)
     results: list[int] = []
 
     @observe(priority=1)
@@ -366,7 +366,7 @@ async def test_observer_priority():
 # Same as previous, but with async
 @pytest.mark.asyncio
 async def test_observer_async_priority():
-    v = ReactiveVal(1)
+    v = Value(1)
     results: list[int] = []
 
     @observe_async(priority=1)
@@ -419,7 +419,7 @@ async def test_observer_async_priority():
 # ======================================================================
 @pytest.mark.asyncio
 async def test_observer_destroy():
-    v = ReactiveVal(1)
+    v = Value(1)
     results: list[int] = []
 
     @observe()
@@ -437,7 +437,7 @@ async def test_observer_destroy():
     assert results == [1]
 
     # Same as above, but destroy before running first time
-    v = ReactiveVal(1)
+    v = Value(1)
     results: list[int] = []
 
     @observe()
@@ -505,7 +505,7 @@ async def test_error_handling():
 async def test_reactive_error_rethrow():
     # Make sure reactives re-throw errors.
     vals: List[str] = []
-    v = ReactiveVal(1)
+    v = Value(1)
 
     @reactive()
     def r():
@@ -542,8 +542,8 @@ async def test_reactive_error_rethrow():
 # For https://github.com/rstudio/prism/issues/26
 @pytest.mark.asyncio
 async def test_dependent_invalidation():
-    trigger = ReactiveVal(0)
-    v = ReactiveVal(0)
+    trigger = Value(0)
+    v = Value(0)
     error_occurred = False
 
     @observe()
@@ -667,7 +667,7 @@ async def test_invalidate_later():
 async def test_invalidate_later_invalidation():
     mock_time = MockTime()
     with mock_time():
-        rv = ReactiveVal(0)
+        rv = Value(0)
 
         @observe()
         def obs1():
@@ -751,7 +751,7 @@ def test_event_decorator():
     assert n_times == 2
 
     # Is invalidated properly by reactive vals
-    r = ReactiveVal(1)
+    r = Value(1)
 
     @observe()
     @event(r)
@@ -771,7 +771,7 @@ def test_event_decorator():
     assert n_times == 4
 
     # Doesn't run on init
-    r = ReactiveVal(1)
+    r = Value(1)
 
     @observe()
     @event(r, ignore_init=True)
@@ -787,8 +787,8 @@ def test_event_decorator():
     assert n_times == 5
 
     # Isolates properly
-    r = ReactiveVal(1)
-    r2 = ReactiveVal(1)
+    r = Value(1)
+    r2 = Value(1)
 
     @observe()
     @event(r)
@@ -804,7 +804,7 @@ def test_event_decorator():
     assert n_times == 6
 
     # works with @reactive()
-    r2 = ReactiveVal(1)
+    r2 = Value(1)
 
     @reactive()
     @event(lambda: r2(), ignore_init=True)
@@ -861,7 +861,7 @@ def test_event_async_decorator():
     assert n_times == 2
 
     # Is invalidated properly by reactive vals
-    r = ReactiveVal(1)
+    r = Value(1)
 
     @observe_async()
     @event(r)
@@ -881,7 +881,7 @@ def test_event_async_decorator():
     assert n_times == 4
 
     # Doesn't run on init
-    r = ReactiveVal(1)
+    r = Value(1)
 
     @observe_async()
     @event(r, ignore_init=True)
@@ -897,8 +897,8 @@ def test_event_async_decorator():
     assert n_times == 5
 
     # Isolates properly
-    r = ReactiveVal(1)
-    r2 = ReactiveVal(1)
+    r = Value(1)
+    r2 = Value(1)
 
     @observe_async()
     @event(r)
@@ -914,7 +914,7 @@ def test_event_async_decorator():
     assert n_times == 6
 
     # works with @reactive()
-    r2 = ReactiveVal(1)
+    r2 = Value(1)
 
     @reactive_async()
     @event(lambda: r2(), ignore_init=True)
