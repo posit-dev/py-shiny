@@ -41,9 +41,13 @@ class OutputsProxy(Outputs):
         return self._ns + "-" + key
 
     def __call__(
-        self, name: str
+        self, name: str, *, suspend_when_hidden: bool = True, priority: int = 0
     ) -> Callable[[Union[Callable[[], object], RenderFunction]], None]:
-        return self._outputs(self._ns_key(name))
+        return self._outputs(
+            self._ns_key(name),
+            suspend_when_hidden=suspend_when_hidden,
+            priority=priority,
+        )
 
 
 class ShinySessionProxy(ShinySession):

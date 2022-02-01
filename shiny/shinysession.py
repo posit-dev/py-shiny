@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 
 from htmltools import TagChildArg, TagList
 
-from .reactives import ReactiveValues, Observer, ObserverAsync, isolate
+from .reactives import ReactiveValues, Observer, ObserverAsync, isolate, observe_async
 from .http_staticfiles import FileResponse
 from .connmanager import Connection, ConnectionClosed
 from . import reactcore
@@ -140,6 +140,8 @@ class ShinySession:
         self._downloads: Dict[str, _DownloadInfo] = {}
 
         self._register_session_end_callbacks()
+
+        self._busy_count: int = 0
 
         self._flush_callbacks = utils.Callbacks()
         self._flushed_callbacks = utils.Callbacks()
@@ -238,6 +240,8 @@ class ShinySession:
                 val = input_handlers.process_value(keys[1], val, keys[0], self)
 
             self.input[keys[0]] = val
+
+            self.output.manage_hidden()
 
     # ==========================================================================
     # Message handlers
@@ -460,6 +464,9 @@ class ShinySession:
         self.app.request_flush(self)
 
     async def flush(self) -> None:
+        if self._busy_count > 0:
+            return
+
         with session_context(self):
             self._flush_callbacks.invoke()
             self._flushed_callbacks.invoke()
@@ -527,14 +534,21 @@ class ShinySession:
 
         return wrapper
 
+    def increment_busy_count(self) -> None:
+        self._busy_count += 1
+
+    def decrement_busy_count(self) -> None:
+        self._busy_count -= 1
+
 
 class Outputs:
     def __init__(self, session: ShinySession) -> None:
-        self._output_obervers: Dict[str, Observer] = {}
+        self._observers: Dict[str, Observer] = {}
+        self._suspend_when_hidden: Dict[str, bool] = {}
         self._session: ShinySession = session
 
     def __call__(
-        self, name: str
+        self, name: str, *, suspend_when_hidden: bool = True, priority: int = 0
     ) -> Callable[[Union[Callable[[], object], render.RenderFunction]], None]:
         def set_fn(fn: Union[Callable[[], object], render.RenderFunction]) -> None:
 
@@ -544,10 +558,15 @@ class Outputs:
             if isinstance(fn, render.RenderFunction):
                 fn.set_metadata(self._session, name)
 
-            if name in self._output_obervers:
-                self._output_obervers[name].destroy()
+            if name in self._observers:
+                self._observers[name].destroy()
 
-            @ObserverAsync
+            self._suspend_when_hidden[name] = suspend_when_hidden
+
+            @observe_async(
+                suspended=suspend_when_hidden and self._is_hidden(name),
+                priority=priority,
+            )
             async def output_obs():
                 await self._session.send_message(
                     {"recalculating": {"name": name, "status": "recalculating"}}
@@ -592,11 +611,33 @@ class Outputs:
                     {"recalculating": {"name": name, "status": "recalculated"}}
                 )
 
-            self._output_obervers[name] = output_obs
+            self._observers[name] = output_obs
 
             return None
 
         return set_fn
+
+    def manage_hidden(self, output_names: Optional[List[str]] = None) -> None:
+        if output_names is None:
+            output_names = list(self._suspend_when_hidden.keys())
+
+        for name in output_names:
+            if self._should_suspend(name):
+                self._observers[name].suspend()
+            else:
+                self._observers[name].resume()
+
+    def _should_suspend(self, name: str) -> bool:
+        return self._suspend_when_hidden[name] and self._is_hidden(name)
+
+    def _is_hidden(self, name: str) -> bool:
+        with isolate():
+            hidden = self._session.input[f".clientdata_output_{name}_hidden"]
+
+        if hidden is None:
+            return True
+        else:
+            return hidden
 
 
 # ==============================================================================

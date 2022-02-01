@@ -242,6 +242,7 @@ class Observer:
         self,
         func: Callable[[], None],
         *,
+        suspended: bool = False,
         priority: int = 0,
         session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
     ) -> None:
@@ -257,6 +258,9 @@ class Observer:
         self._destroyed: bool = False
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
+
+        self._suspended = suspended
+        self._on_resume: Callable[[], None] = lambda: None
 
         self._session: Optional[ShinySession]
         # Use `isinstance(x, MISSING_TYPE)`` instead of `x is MISSING` because
@@ -289,12 +293,23 @@ class Observer:
             for cb in self._invalidate_callbacks:
                 cb()
 
-            # TODO: Wrap this stuff up in a continue callback, depending on if suspended?
-            ctx.add_pending_flush(self._priority)
+            def _continue() -> None:
+                ctx.add_pending_flush(self._priority)
+                if self._session:
+                    self._session.increment_busy_count()
+
+            if self._suspended:
+                self._on_resume = _continue
+            else:
+                _continue()
 
         async def on_flush_cb() -> None:
             if not self._destroyed:
-                await self.run()
+                try:
+                    await self.run()
+                finally:
+                    if self._session:
+                        self._session.decrement_busy_count()
 
         ctx.on_invalidate(on_invalidate_cb)
         ctx.on_flush(on_flush_cb)
@@ -328,6 +343,35 @@ class Observer:
         if self._ctx is not None:
             self._ctx.invalidate()
 
+    def suspend(self) -> None:
+        """
+        Causes this observer to stop scheduling flushes (re-executions) in response to
+        invalidations. If the observer was invalidated prior to this call but it has not
+        re-executed yet (because it waits until on_flush is called) then that
+        re-execution will still occur, because the flush is already scheduled.
+        """
+        self._suspended = True
+
+    def resume(self) -> None:
+        """
+        Causes this observer to start re-executing in response to invalidations. If the
+        observer was invalidated while suspended, then it will schedule itself for
+        re-execution (pending flush).
+        """
+        if self._suspended:
+            self._suspended = False
+            self._on_resume()
+            self._on_resume = lambda: None
+
+    def set_priority(self, priority: int = 0) -> None:
+        """
+        Change this observer's priority. Note that if the observer is currently
+        invalidated, then the change in priority will not take effect until the next
+        invalidation--unless the observer is also currently suspended, in which case the
+        priority change will be effective upon resume.
+        """
+        self._priority = priority
+
     def _on_session_ended_cb(self) -> None:
         self.destroy()
 
@@ -337,6 +381,7 @@ class ObserverAsync(Observer):
         self,
         func: Callable[[], Awaitable[None]],
         *,
+        suspended: bool = False,
         priority: int = 0,
         session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
     ) -> None:
@@ -345,13 +390,18 @@ class ObserverAsync(Observer):
 
         # Init the Observer base class with a placeholder synchronous function
         # so it won't throw an error, then replace it with the async function.
-        super().__init__(lambda: None, session=session, priority=priority)
+        super().__init__(
+            lambda: None, suspended=suspended, priority=priority, session=session
+        )
         self._func: Callable[[], Awaitable[None]] = func
         self._is_async = True
 
 
 def observe(
-    *, priority: int = 0, session: Union[MISSING_TYPE, "ShinySession", None] = MISSING
+    *,
+    suspended: bool = False,
+    priority: int = 0,
+    session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
 ) -> Callable[[Callable[[], None]], Observer]:
     """[summary]
 
@@ -364,18 +414,21 @@ def observe(
     """
 
     def create_observer(fn: Callable[[], None]) -> Observer:
-        return Observer(fn, priority=priority, session=session)
+        return Observer(fn, suspended=suspended, priority=priority, session=session)
 
     return create_observer
 
 
 def observe_async(
     *,
+    suspended: bool = False,
     priority: int = 0,
     session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
 ) -> Callable[[Callable[[], Awaitable[None]]], ObserverAsync]:
     def create_observer_async(fn: Callable[[], Awaitable[None]]) -> ObserverAsync:
-        return ObserverAsync(fn, priority=priority, session=session)
+        return ObserverAsync(
+            fn, suspended=suspended, priority=priority, session=session
+        )
 
     return create_observer_async
 
