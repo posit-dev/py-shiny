@@ -36,9 +36,9 @@ NOTE: This section is just for testing.
 % https://myst-parser.readthedocs.io/en/latest/sphinx/use.html?highlight=autodoc#use-sphinx-ext-autodoc-in-markdown-files
 
 ```{eval-rst}
-.. automodule:: shiny.reactives
+.. automodule:: shiny.reactive
 
-.. autofunction:: shiny.reactives.observe
+.. autofunction:: shiny.reactive.effect
 
-.. autofunction:: shiny.reactives.isolate
+.. autofunction:: shiny.reactive.isolate
 ```

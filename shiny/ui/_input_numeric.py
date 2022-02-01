@@ -4,9 +4,18 @@ from typing import Optional
 
 from htmltools import tags, Tag, div, css, TagChildArg
 
+from .._docstring import doc
 from ._utils import shiny_input_label
 
 
+@doc(
+    "Create an input control for entry of numeric values.",
+    returns="A UI element.",
+    topics={"Server value": "A numeric value."},
+    see_also=[
+        ":func:`~shiny.ui.update_numeric`",
+    ],
+)
 def input_numeric(
     id: str,
     label: TagChildArg,

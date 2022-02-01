@@ -8,6 +8,8 @@ from typing import Optional, Dict, Union, List, Tuple
 
 from htmltools import tags, Tag, div, span, css, TagChildArg
 
+
+from .._docstring import doc
 from ._utils import shiny_input_label
 
 # Canonical format for representing select options.
@@ -17,6 +19,16 @@ _Choices = Dict[str, TagChildArg]
 ChoicesArg = Union[List[str], _Choices]
 
 
+@doc(
+    "Create a checkbox that can be used to specify logical values.",
+    returns="A UI element.",
+    topics={"Server value": "True if checked, False otherwise."},
+    see_also=[
+        ":func:`~shiny.ui.update_checkbox`",
+        ":func:`~shiny.ui.input_checkbox_group`",
+        ":func:`~shiny.ui.input_radio_buttons`",
+    ],
+)
 def input_checkbox(
     id: str, label: TagChildArg, value: bool = False, width: Optional[str] = None
 ) -> Tag:
@@ -35,6 +47,20 @@ def input_checkbox(
     )
 
 
+@doc(
+    """
+    Create a group of checkboxes that can be used to toggle multiple choices
+    independently. The server will receive the input as a character vector of the
+    selected values.
+    """,
+    returns="A UI element.",
+    topics={"Server value": "A list of string(s) with the selected value(s) (if any)."},
+    see_also=[
+        ":func:`~shiny.ui.update_checkbox_group",
+        ":func:`~shiny.ui.input_checkbox",
+        ":func:`~shiny.ui.input_radio_buttons",
+    ],
+)
 def input_checkbox_group(
     id: str,
     label: TagChildArg,
@@ -64,6 +90,16 @@ def input_checkbox_group(
     )
 
 
+@doc(
+    "Create a set of radio buttons used to select an item from a list.",
+    returns="A UI element",
+    topics={"Server value": "A string with the selected value."},
+    see_also=[
+        ":func:`~shiny.ui.update_radio_buttons",
+        ":func:`~shiny.ui.input_checkbox_group",
+        ":func:`~shiny.ui.input_checkbox",
+    ],
+)
 def input_radio_buttons(
     id: str,
     label: TagChildArg,

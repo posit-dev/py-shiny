@@ -11,6 +11,7 @@ from typing import Dict, Optional, Union, Tuple, TypeVar
 
 from htmltools import tags, Tag, div, css, TagAttrArg, TagChildArg, HTML
 
+from .._docstring import doc
 from ._html_dependencies import ionrangeslider_deps
 from ..types import TypedDict, NotRequired
 from ._utils import shiny_input_label
@@ -22,12 +23,54 @@ SliderStepArg = Union[float, timedelta]
 
 
 class AnimationOptions(TypedDict):
+    """
+    Options for the animation of a :func:`input_slider`.
+
+    :param interval: The interval, in milliseconds, between each animation step.
+    :param loop: ``True`` to automatically restart the animation when it reaches the
+        end.
+    :param play_button: Play button text or HTML.
+    :param pause_button: Pause button text or HTML.
+    """
+
     interval: NotRequired[int]
     loop: NotRequired[bool]
     play_button: NotRequired[TagChildArg]
     pause_button: NotRequired[TagChildArg]
 
 
+@doc(
+    """
+    Constructs a slider widget to select a number, date, or date-time from a range.
+    """,
+    parameters={
+        "ticks": """
+        ``False`` to hide tick marks, ``True`` to show them according to some simple heuristics.
+        """,
+        "animate": """
+        ``True`` to show simple animation controls with default settings; ``False`` not
+        to; or a custom settings list, such as those created using :class:`AnimationOptions()`.
+        """,
+        "sep": "Separator between thousands places in numbers.",
+        "pre": "A prefix string to put in front of the value.",
+        "post": "A suffix string to put after the value.",
+        "drag_range": """
+        This option is used only if it is a range slider (with two values). If ``True`` (the
+        default), the range can be dragged. In other words, the min and max can be
+        dragged together. If ``False``, the range cannot be dragged.
+        """,
+    },
+    returns="A UI element",
+    topics={
+        "Server value": """
+        A number, date, or date-time (depending on the class of value), or in the case
+        of slider range, a list of two numbers/dates/date-times.
+        """
+    },
+    see_also=[
+        ":func:`~shiny.ui.update_slider`",
+    ],
+)
 def input_slider(
     id: str,
     label: TagChildArg,

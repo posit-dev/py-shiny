@@ -7,6 +7,7 @@ from typing import Optional, Dict, Union, List
 
 from htmltools import Tag, tags, div, TagChildArg, TagList
 
+from .._docstring import doc
 from ._html_dependencies import selectize_deps
 from ._utils import shiny_input_label
 
@@ -26,7 +27,29 @@ SelectChoicesArg = Union[
     _OptGrpChoices,
 ]
 
+_topics = {
+    "Server value": """
+A list of strings, usually of length 1, with the value of the selected items. When
+``multiple=True`` and nothing is selected, this value will be ``None``.
+"""
+}
 
+
+@doc(
+    """
+    Create a select list that can be used to choose a single or multiple items from a list of values.
+    """,
+    parameters={"multiple": "Is selection of multiple items allowed?"},
+    returns="A UI element.",
+    topics=_topics,
+    see_also=[
+        # TODO: update_selectize
+        # ":func:`~shiny.ui.update_selectize`",
+        ":func:`~shiny.ui.input_select`",
+        ":func:`~shiny.ui.input_radio_buttons`",
+        ":func:`~shiny.ui.input_checkbox_group`",
+    ],
+)
 def input_selectize(
     id: str,
     label: TagChildArg,
@@ -35,7 +58,6 @@ def input_selectize(
     selected: Optional[str] = None,
     multiple: bool = False,
     width: Optional[str] = None,
-    size: Optional[str] = None,
 ) -> Tag:
 
     return input_select(
@@ -46,10 +68,31 @@ def input_selectize(
         multiple=multiple,
         selectize=True,
         width=width,
-        size=size,
     )
 
 
+@doc(
+    """
+    Create a select list that can be used to choose a single or multiple items from a list of values.
+    """,
+    parameters={
+        "multiple": "Is selection of multiple items allowed?",
+        "selectize": "Whether to use selectize.js or not.",
+        "size": """
+    Number of items to show in the selection box; a larger number will result in a
+    taller box. Normally, when ``multiple=False``, a select input will be a drop-down
+    list, but when size is set, it will be a box instead.
+    """,
+    },
+    returns="A UI element.",
+    topics=_topics,
+    see_also=[
+        ":func:`~shiny.ui.input_selectize`",
+        ":func:`~shiny.ui.update_select`",
+        ":func:`~shiny.ui.input_radio_buttons`",
+        ":func:`~shiny.ui.input_checkbox_group`",
+    ],
+)
 def input_select(
     id: str,
     label: TagChildArg,

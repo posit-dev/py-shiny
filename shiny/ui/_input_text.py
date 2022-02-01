@@ -4,9 +4,25 @@ from typing import Optional
 
 from htmltools import tags, Tag, div, css, TagChildArg
 
+from .._docstring import doc
 from ._utils import shiny_input_label
 
 
+@doc(
+    """
+    Create an input control for entry of unstructured text values
+    """,
+    returns="A UI element",
+    topics={
+        "Server value": """
+A string containing the current text input. The default value is "" unless ``value`` is
+provided.
+    """
+    },
+    see_also=[
+        ":func:`~shiny.ui.input_text_area`",
+    ],
+)
 def input_text(
     id: str,
     label: TagChildArg,

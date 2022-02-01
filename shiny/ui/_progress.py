@@ -2,14 +2,41 @@ __all__ = ("Progress",)
 
 from typing import Optional, Dict, Any
 from warnings import warn
+
+from .._docstring import doc
 from .._utils import run_coro_sync, rand_hex
 from ..session import Session, require_active_session
 
+_common_params = {
+    "message": """
+    The message to be displayed to the user or `None` to hide the current message (if
+    any).
+    """,
+    "detail": """
+    The detail message to be displayed to the user or `None` to hide the current detail
+    message (if any). The detail message will be shown with a de-emphasized appearance
+    relative to message.
+    """,
+}
 
+
+@doc(
+    "Initialize a progress bar.",
+    parameters={
+        "min": """
+      The value that represents the starting point of the progress bar. Must be less than ``max``.
+      """,
+        "max": """
+      The value that represents the end of the progress bar. Must be greater than ``min``.
+      """,
+    },
+)
 class Progress:
     _style = "notification"
 
-    def __init__(self, min: int = 0, max: int = 1, session: Optional[Session] = None):
+    def __init__(
+        self, min: int = 0, max: int = 1, session: Optional[Session] = None
+    ) -> None:
         self.min = min
         self.max = max
         self.value = None
@@ -20,9 +47,22 @@ class Progress:
         msg = {"id": self._id, "style": self._style}
         self._send_progress("open", msg)
 
+    @doc(
+        """
+       Updates the progress panel. When called the first time, the progress panel is
+       displayed.
+       """,
+        parameters={
+            "value": """
+           The value at which to set the progress bar, relative to ``min`` and ``max``.
+           ``None`` hides the progress bar, if it is currently visible.
+           """,
+            **_common_params,
+        },
+    )
     def set(
         self,
-        value: float,
+        value: Optional[float] = None,
         message: Optional[str] = None,
         detail: Optional[str] = None,
     ) -> None:
@@ -45,6 +85,15 @@ class Progress:
 
         self._send_progress("update", {k: v for k, v in msg.items() if v is not None})
 
+    @doc(
+        "Increment the progress bar.",
+        parameters={"amount": "The amount to increment in progress.", **_common_params},
+        returns="None",
+        note="""
+       Like ``set``, this updates the progress panel. The difference is that ``inc``
+       increases the progress bar by amount, instead of setting it to a specific value.
+       """,
+    )
     def inc(
         self,
         amount: float = 0.1,
@@ -57,6 +106,11 @@ class Progress:
         value = min(self.value + amount, self.max)
         self.set(value, message, detail)
 
+    @doc(
+        "Close the progress bar.",
+        returns="None",
+        note="Removes the progress panel. Future calls to set and close will be ignored.",
+    )
     def close(self) -> None:
         if self._closed:
             warn("Attempting to close progress, but progress already closed.")
