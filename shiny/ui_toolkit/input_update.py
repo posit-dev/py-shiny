@@ -11,6 +11,7 @@ else:
 from htmltools import TagChildArg
 
 from .input_check_radio import ChoicesArg, _generate_options
+from .input_date import _as_date_attr
 from .input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from .input_slider import SliderValueArg, SliderStepArg, _slider_type, _as_numeric
 from ..utils import drop_none
@@ -118,18 +119,18 @@ def update_date(
     id: str,
     *,
     label: Optional[str] = None,
-    value: Optional[date] = None,
-    min: Optional[date] = None,
-    max: Optional[date] = None,
+    value: Optional[Union[date, str]] = None,
+    min: Optional[Union[date, str]] = None,
+    max: Optional[Union[date, str]] = None,
     session: Optional[Session] = None,
 ) -> None:
 
     session = _require_active_session(session)
     msg = {
         "label": label,
-        "value": str(value),
-        "min": str(min),
-        "max": str(max),
+        "value": _as_date_attr(value),
+        "min": _as_date_attr(min),
+        "max": _as_date_attr(max),
     }
     session.send_input_message(id, drop_none(msg))
 
@@ -138,19 +139,19 @@ def update_date_range(
     id: str,
     *,
     label: Optional[str] = None,
-    start: Optional[date] = None,
-    end: Optional[date] = None,
-    min: Optional[date] = None,
-    max: Optional[date] = None,
+    start: Optional[Union[date, str]] = None,
+    end: Optional[Union[date, str]] = None,
+    min: Optional[Union[date, str]] = None,
+    max: Optional[Union[date, str]] = None,
     session: Optional[Session] = None,
 ) -> None:
     session = _require_active_session(session)
-    value = {"start": str(start), "end": str(end)}
+    value = {"start": _as_date_attr(start), "end": _as_date_attr(end)}
     msg = {
         "label": label,
         "value": drop_none(value),
-        "min": str(min),
-        "max": str(max),
+        "min": _as_date_attr(min),
+        "max": _as_date_attr(max),
     }
     session.send_input_message(id, drop_none(msg))
 
