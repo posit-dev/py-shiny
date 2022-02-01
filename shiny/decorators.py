@@ -44,6 +44,13 @@ def event(
                 with isolate():
                     return await user_fn()
 
+        elif any(map(is_async_callable, args)):
+
+            raise TypeError(
+                "When decorating a syncronous function with @event(), all arguments"
+                + "to @event() must be syncronous functions."
+            )
+
         else:
 
             @functools.wraps(user_fn)
