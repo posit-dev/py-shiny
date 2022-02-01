@@ -47,8 +47,8 @@ def event(
         elif any(map(is_async_callable, args)):
 
             raise TypeError(
-                "When decorating a syncronous function with @event(), all arguments"
-                + "to @event() must be syncronous functions."
+                "When decorating a synchronous function with @event(), all arguments"
+                + "to @event() must be synchronous functions."
             )
 
         else:
