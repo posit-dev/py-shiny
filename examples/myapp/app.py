@@ -34,7 +34,7 @@ shared_val = reactive.Value(None)
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.reactive()
+    @reactive.calc()
     def r():
         if input.n() is None:
             return

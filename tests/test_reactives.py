@@ -3,7 +3,6 @@
 import pytest
 import asyncio
 from typing import List
-from shiny import reactive
 
 from shiny.input_handlers import ActionButtonValue
 import shiny.reactcore as reactcore
@@ -17,8 +16,8 @@ from .mocktime import MockTime
 @pytest.mark.asyncio
 async def test_flush_runs_newly_invalidated():
     """
-    Make sure that a flush will also run any reactives that were invalidated
-    during the flush.
+    Make sure that a flush will also run any calcs that were invalidated during the
+    flush.
     """
 
     v1 = Value(1)
@@ -46,8 +45,8 @@ async def test_flush_runs_newly_invalidated():
 @pytest.mark.asyncio
 async def test_flush_runs_newly_invalidated_async():
     """
-    Make sure that a flush will also run any reactives that were invalidated
-    during the flush. (Same as previous test, but async.)
+    Make sure that a flush will also run any calcs that were invalidated during the
+    flush. (Same as previous test, but async.)
     """
 
     v1 = Value(1)
@@ -73,10 +72,10 @@ async def test_flush_runs_newly_invalidated_async():
 
 
 # ======================================================================
-# Setting ReactiveVal to same value doesn't invalidate downstream
+# Setting reactive.Value to same value doesn't invalidate downstream
 # ======================================================================
 @pytest.mark.asyncio
-async def test_reactive_val_same_no_invalidate():
+async def test_reactive_value_same_no_invalidate():
     v = Value(1)
 
     @effect()
@@ -92,13 +91,13 @@ async def test_reactive_val_same_no_invalidate():
 
 
 # ======================================================================
-# Recursive calls to reactives
+# Recursive calls to calcs
 # ======================================================================
 @pytest.mark.asyncio
-async def test_recursive_reactive():
+async def test_recursive_calc():
     v = Value(5)
 
-    @reactive()
+    @calc()
     def r():
         if v() == 0:
             return 0
@@ -117,10 +116,10 @@ async def test_recursive_reactive():
 
 
 @pytest.mark.asyncio
-async def test_recursive_reactive_async():
+async def test_recursive_calc_async():
     v = Value(5)
 
-    @reactive_async()
+    @calc_async()
     async def r():
         if v() == 0:
             return 0
@@ -150,7 +149,7 @@ async def test_async_sequential():
     exec_order: list[str] = []
 
     async def react_chain(n: int):
-        @reactive_async()
+        @calc_async()
         async def r():
             nonlocal exec_order
             exec_order.append(f"r{n}-1")
@@ -193,11 +192,10 @@ async def test_async_sequential():
 # ======================================================================
 @pytest.mark.asyncio
 async def test_isolate_basic_without_context():
-    # isolate() works with Reactive and ReactiveVal; allows executing without a
-    # reactive context.
+    # isolate() works with calc and Value; allows executing without a reactive context.
     v = Value(1)
 
-    @reactive()
+    @calc()
     def r():
         return v() + 10
 
@@ -216,7 +214,7 @@ async def test_isolate_basic_without_context():
 async def test_isolate_prevents_dependency():
     v = Value(1)
 
-    @reactive()
+    @calc()
     def r():
         return v() + 10
 
@@ -260,11 +258,11 @@ async def test_isolate_async_basic_value():
 
 @pytest.mark.asyncio
 async def test_isolate_async_basic_without_context():
-    # async isolate works with Reactive and ReactiveVal; allows executing
-    # without a reactive context.
+    # async isolate works with calc and Value; allows executing without a reactive
+    # context.
     v = Value(1)
 
-    @reactive_async()
+    @calc_async()
     async def r():
         return v() + 10
 
@@ -280,7 +278,7 @@ async def test_isolate_async_basic_without_context():
 async def test_isolate_async_prevents_dependency():
     v = Value(1)
 
-    @reactive_async()
+    @calc_async()
     async def r():
         return v() + 10
 
@@ -480,7 +478,7 @@ async def test_error_handling():
 
     vals: List[str] = []
 
-    @reactive()
+    @calc()
     def r():
         vals.append("r")
         raise Exception("Error here!")
@@ -502,12 +500,12 @@ async def test_error_handling():
 
 
 @pytest.mark.asyncio
-async def test_reactive_error_rethrow():
-    # Make sure reactives re-throw errors.
+async def test_calc_error_rethrow():
+    # Make sure calcs re-throw errors.
     vals: List[str] = []
     v = Value(1)
 
-    @reactive()
+    @calc()
     def r():
         vals.append("r")
         raise Exception("Error here!")
@@ -563,7 +561,7 @@ async def test_dependent_invalidation():
     def _():
         r()
 
-    @reactive()
+    @calc()
     def r():
         return v()
 
@@ -603,7 +601,7 @@ async def test_req():
     await reactcore.flush()
     assert n_times == 1
 
-    @reactive()
+    @calc()
     def r():
         req(False)
         return 1
@@ -618,7 +616,7 @@ async def test_req():
     await reactcore.flush()
     assert val is None
 
-    @reactive()
+    @calc()
     def r2():
         req(True)
         return 1
@@ -751,7 +749,7 @@ async def test_event_decorator():
     await reactcore.flush()
     assert n_times == 2
 
-    # Is invalidated properly by reactive vals
+    # Is invalidated properly by reactive values
     v = Value(1)
 
     @effect()
@@ -804,10 +802,10 @@ async def test_event_decorator():
     await reactcore.flush()
     assert n_times == 6
 
-    # works with @reactive()
+    # works with @calc()
     v2 = Value(1)
 
-    @reactive()
+    @calc()
     @event(lambda: v2(), ignore_init=True)
     def r2b():
         return 1
@@ -862,7 +860,7 @@ async def test_event_async_decorator():
     await reactcore.flush()
     assert n_times == 2
 
-    # Is invalidated properly by reactive vals
+    # Is invalidated properly by reactive values
     v = Value(1)
 
     @effect_async()
@@ -915,15 +913,15 @@ async def test_event_async_decorator():
     await reactcore.flush()
     assert n_times == 6
 
-    # works with @reactive()
+    # works with @calc()
     v2 = Value(1)
 
-    @reactive_async()
+    @calc_async()
     async def r_a():
         await asyncio.sleep(0)  # Make sure the async function yields control
         return 1
 
-    @reactive_async()
+    @calc_async()
     @event(lambda: v2(), r_a, ignore_init=True)
     async def r2b():
         await asyncio.sleep(0)  # Make sure the async function yields control

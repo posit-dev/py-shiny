@@ -2,10 +2,10 @@
 
 __all__ = (
     "Value",
-    "Reactive",
-    "ReactiveAsync",
-    "reactive",
-    "reactive_async",
+    "Calc",
+    "CalcAsync",
+    "calc",
+    "calc_async",
     "Effect",
     "EffectAsync",
     "effect",
@@ -68,9 +68,9 @@ class Value(Generic[T]):
 
 
 # ==============================================================================
-# Reactive
+# Calc
 # ==============================================================================
-class Reactive(Generic[T]):
+class Calc(Generic[T]):
     def __init__(
         self,
         func: Callable[[], T],
@@ -157,7 +157,7 @@ class Reactive(Generic[T]):
             self._error.append(err)
 
 
-class ReactiveAsync(Reactive[T]):
+class CalcAsync(Calc[T]):
     def __init__(
         self,
         func: Callable[[], Awaitable[T]],
@@ -165,11 +165,11 @@ class ReactiveAsync(Reactive[T]):
         session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
         if not inspect.iscoroutinefunction(func):
-            raise TypeError("ReactiveAsync requires an async function")
+            raise TypeError("CalcAsync requires an async function")
 
-        # Init the Reactive base class with a placeholder synchronous function
-        # so it won't throw an error, then replace it with the async function.
-        # Need the `cast` to satisfy the type checker.
+        # Init the Calc base class with a placeholder synchronous function so it won't
+        # throw an error, then replace it with the async function. Need the `cast` to
+        # satisfy the type checker.
         super().__init__(lambda: typing.cast(T, None), session=session)
         self._func: Callable[[], Awaitable[T]] = func
         self._is_async = True
@@ -178,22 +178,22 @@ class ReactiveAsync(Reactive[T]):
         return await self.get_value()
 
 
-def reactive(
+def calc(
     *, session: Union[MISSING_TYPE, "Session", None] = MISSING
-) -> Callable[[Callable[[], T]], Reactive[T]]:
-    def create_reactive(fn: Callable[[], T]) -> Reactive[T]:
-        return Reactive(fn, session=session)
+) -> Callable[[Callable[[], T]], Calc[T]]:
+    def create_calc(fn: Callable[[], T]) -> Calc[T]:
+        return Calc(fn, session=session)
 
-    return create_reactive
+    return create_calc
 
 
-def reactive_async(
+def calc_async(
     *, session: Union[MISSING_TYPE, "Session", None] = MISSING
-) -> Callable[[Callable[[], Awaitable[T]]], ReactiveAsync[T]]:
-    def create_reactive_async(fn: Callable[[], Awaitable[T]]) -> ReactiveAsync[T]:
-        return ReactiveAsync(fn, session=session)
+) -> Callable[[Callable[[], Awaitable[T]]], CalcAsync[T]]:
+    def create_calc_async(fn: Callable[[], Awaitable[T]]) -> CalcAsync[T]:
+        return CalcAsync(fn, session=session)
 
-    return create_reactive_async
+    return create_calc_async
 
 
 # ==============================================================================
