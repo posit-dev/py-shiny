@@ -44,7 +44,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @shiny.render_text()
     async def txt():
         val = r()
-        return f"n*2 is {val}, session id is {shiny.session.get_current_session().id}"
+        return f"n*2 is {val}, session id is {session.id}"
 
     # This observer watches n, and changes shared_val, which is shared across
     # all running sessions.
