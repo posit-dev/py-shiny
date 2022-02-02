@@ -13,9 +13,8 @@ from starlette.requests import Request
 from starlette.responses import Response, HTMLResponse, JSONResponse
 
 from .http_staticfiles import StaticFiles
-from .session import Outputs, Session, session_context
+from .session import Inputs, Outputs, Session, session_context
 from . import reactcore
-from .reactive import Values
 from .connmanager import (
     Connection,
     StarletteConnection,
@@ -31,12 +30,12 @@ class App:
     def __init__(
         self,
         ui: Union[Tag, TagList],
-        server: Callable[[Values, Outputs, Session], None],
+        server: Callable[[Inputs, Outputs, Session], None],
         *,
         debug: bool = False,
     ) -> None:
         self.ui: RenderedHTML = _render_page(ui, lib_prefix=self.LIB_PREFIX)
-        self.server: Callable[[Values, Outputs, Session], None] = server
+        self.server: Callable[[Inputs, Outputs, Session], None] = server
 
         self._debug: bool = debug
 

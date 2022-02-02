@@ -2,7 +2,6 @@
 
 __all__ = (
     "Value",
-    "Values",
     "Reactive",
     "ReactiveAsync",
     "reactive",
@@ -26,7 +25,6 @@ from typing import (
     TypeVar,
     Union,
     Generic,
-    Any,
 )
 import typing
 import inspect
@@ -44,7 +42,7 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 # ==============================================================================
-# Value and Values
+# Value
 # ==============================================================================
 class Value(Generic[T]):
     def __init__(self, value: T) -> None:
@@ -67,48 +65,6 @@ class Value(Generic[T]):
         self._value = value
         self._dependents.invalidate()
         return True
-
-
-class Values:
-    def __init__(self, **kwargs: object) -> None:
-        self._map: dict[str, Value[Any]] = {}
-        for key, value in kwargs.items():
-            self._map[key] = Value(value)
-
-    def __setitem__(self, key: str, value: Value[Any]) -> None:
-        if not isinstance(value, Value):
-            raise TypeError("`value` must be a shiny.reactive.Value object.")
-
-        self._map[key] = value
-
-    def __getitem__(self, key: str) -> Value[Any]:
-        # Auto-populate key if accessed but not yet set. Needed to take reactive
-        # dependencies on input values that haven't been received from client
-        # yet.
-        if key not in self._map:
-            self._map[key] = Value(None)
-
-        return self._map[key]
-
-    def __delitem__(self, key: str) -> None:
-        del self._map[key]
-
-    # Allow access of values as attributes.
-    def __setattr__(self, attr: str, value: Value[Any]) -> None:
-        # Need special handling of "_map".
-        if attr == "_map":
-            super().__setattr__(attr, value)
-            return
-
-        self.__setitem__(attr, value)
-
-    def __getattr__(self, attr: str) -> Value[Any]:
-        if attr == "_map":
-            return object.__getattribute__(self, attr)
-        return self.__getitem__(attr)
-
-    def __delattr__(self, key: str) -> None:
-        self.__delitem__(key)
 
 
 # ==============================================================================

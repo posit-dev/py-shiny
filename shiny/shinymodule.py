@@ -1,5 +1,6 @@
 __all__ = (
-    "ReactiveValuesProxy",
+    "InputsProxy",
+    "InputsProxy",
     "OutputsProxy",
     "SessionProxy",
     "ShinyModule",
@@ -9,15 +10,15 @@ from typing import Optional, Union, Callable, Any
 
 from htmltools.core import TagChildArg
 
-from .session import Session, Outputs, _require_active_session
-from .reactive import Values, Value
+from .session import Session, Inputs, Outputs, _require_active_session
+from .reactive import Value
 from .render import RenderFunction
 
 
-class ReactiveValuesProxy(Values):
-    def __init__(self, ns: str, values: Values):
+class InputsProxy(Inputs):
+    def __init__(self, ns: str, values: Inputs):
         self._ns: str = ns
-        self._values: Values = values
+        self._values: Inputs = values
 
     def _ns_key(self, key: str) -> str:
         return self._ns + "-" + key
@@ -67,7 +68,7 @@ class SessionProxy(Session):
     def __init__(self, ns: str, parent_session: Session) -> None:
         self._ns: str = ns
         self._parent: Session = parent_session
-        self.input: ReactiveValuesProxy = ReactiveValuesProxy(ns, parent_session.input)
+        self.input: InputsProxy = InputsProxy(ns, parent_session.input)
         self.output: OutputsProxy = OutputsProxy(ns, parent_session.output)
 
 
@@ -75,12 +76,10 @@ class ShinyModule:
     def __init__(
         self,
         ui: Callable[..., TagChildArg],
-        server: Callable[[ReactiveValuesProxy, OutputsProxy, SessionProxy], None],
+        server: Callable[[InputsProxy, OutputsProxy, SessionProxy], None],
     ) -> None:
         self._ui: Callable[..., TagChildArg] = ui
-        self._server: Callable[
-            [ReactiveValuesProxy, OutputsProxy, SessionProxy], None
-        ] = server
+        self._server: Callable[[InputsProxy, OutputsProxy, SessionProxy], None] = server
 
     def ui(self, namespace: str, *args: Any) -> TagChildArg:
         ns = ShinyModule._make_ns_fn(namespace)

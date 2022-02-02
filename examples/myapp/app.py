@@ -11,7 +11,7 @@ import numpy as np
 
 import shiny.ui_toolkit as st
 import shiny
-from shiny import Session, Outputs, reactive
+from shiny import Session, Inputs, Outputs, reactive
 from shiny.fileupload import FileInfo
 
 ui = st.page_fluid(
@@ -33,7 +33,7 @@ ui = st.page_fluid(
 shared_val = reactive.Value(None)
 
 
-def server(input: reactive.Values, output: Outputs, session: Session):
+def server(input: Inputs, output: Outputs, session: Session):
     @reactive.reactive()
     def r():
         if input.n() is None:

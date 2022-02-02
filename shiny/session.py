@@ -1,5 +1,6 @@
 __all__ = (
     "Session",
+    "Inputs",
     "Outputs",
     "get_current_session",
     "session_context",
@@ -52,7 +53,7 @@ if TYPE_CHECKING:
 
 from htmltools import TagChildArg, TagList
 
-from .reactive import Values, Observer, ObserverAsync, isolate
+from .reactive import Value, Observer, ObserverAsync, isolate
 from .http_staticfiles import FileResponse
 from .connmanager import Connection, ConnectionClosed
 from . import reactcore
@@ -126,7 +127,7 @@ class Session:
         self._conn: Connection = conn
         self._debug: bool = debug
 
-        self.input: Values = Values()
+        self.input: Inputs = Inputs()
         self.output: Outputs = Outputs(self)
 
         self._outbound_message_queues = _empty_outbound_message_queues()
@@ -529,6 +530,54 @@ class Session:
         return wrapper
 
 
+# ======================================================================================
+# Inputs
+# ======================================================================================
+class Inputs:
+    def __init__(self, **kwargs: object) -> None:
+        self._map: dict[str, Value[Any]] = {}
+        for key, value in kwargs.items():
+            self._map[key] = Value(value)
+
+    def __setitem__(self, key: str, value: Value[Any]) -> None:
+        if not isinstance(value, Value):
+            raise TypeError("`value` must be a shiny.reactive.Value object.")
+
+        self._map[key] = value
+
+    def __getitem__(self, key: str) -> Value[Any]:
+        # Auto-populate key if accessed but not yet set. Needed to take reactive
+        # dependencies on input values that haven't been received from client
+        # yet.
+        if key not in self._map:
+            self._map[key] = Value(None)
+
+        return self._map[key]
+
+    def __delitem__(self, key: str) -> None:
+        del self._map[key]
+
+    # Allow access of values as attributes.
+    def __setattr__(self, attr: str, value: Value[Any]) -> None:
+        # Need special handling of "_map".
+        if attr == "_map":
+            super().__setattr__(attr, value)
+            return
+
+        self.__setitem__(attr, value)
+
+    def __getattr__(self, attr: str) -> Value[Any]:
+        if attr == "_map":
+            return object.__getattribute__(self, attr)
+        return self.__getitem__(attr)
+
+    def __delattr__(self, key: str) -> None:
+        self.__delitem__(key)
+
+
+# ======================================================================================
+# Outputs
+# ======================================================================================
 class Outputs:
     def __init__(self, session: Session) -> None:
         self._output_obervers: Dict[str, Observer] = {}
