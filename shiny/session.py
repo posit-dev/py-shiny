@@ -145,7 +145,7 @@ class Session:
         self._flushed_callbacks = utils.Callbacks()
 
         with session_context(self):
-            self.app.server(self)
+            self.app.server(self.input, self.output, self)
 
     def _register_session_end_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions

@@ -75,10 +75,12 @@ class ShinyModule:
     def __init__(
         self,
         ui: Callable[..., TagChildArg],
-        server: Callable[[SessionProxy], None],
+        server: Callable[[ReactiveValuesProxy, OutputsProxy, SessionProxy], None],
     ) -> None:
         self._ui: Callable[..., TagChildArg] = ui
-        self._server: Callable[[SessionProxy], None] = server
+        self._server: Callable[
+            [ReactiveValuesProxy, OutputsProxy, SessionProxy], None
+        ] = server
 
     def ui(self, namespace: str, *args: Any) -> TagChildArg:
         ns = ShinyModule._make_ns_fn(namespace)
@@ -88,7 +90,7 @@ class ShinyModule:
         self.ns: str = ns
         session = _require_active_session(session)
         session_proxy = SessionProxy(ns, session)
-        self._server(session_proxy)
+        self._server(session_proxy.input, session_proxy.output, session_proxy)
 
     @staticmethod
     def _make_ns_fn(namespace: str) -> Callable[[str], str]:

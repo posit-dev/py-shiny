@@ -11,7 +11,7 @@ import numpy as np
 
 import shiny.ui_toolkit as st
 import shiny
-from shiny import Session, reactive
+from shiny import Session, Outputs, reactive
 from shiny.fileupload import FileInfo
 
 ui = st.page_fluid(
@@ -33,14 +33,14 @@ ui = st.page_fluid(
 shared_val = reactive.Value(None)
 
 
-def server(session: Session):
+def server(input: reactive.Values, output: Outputs, session: Session):
     @reactive.reactive()
     def r():
-        if session.input.n() is None:
+        if input.n() is None:
             return
-        return session.input.n() * 2
+        return input.n() * 2
 
-    @session.output("txt")
+    @output("txt")
     async def _():
         val = r()
         return f"n*2 is {val}, session id is {shiny.session.get_current_session().id}"
@@ -49,29 +49,29 @@ def server(session: Session):
     # all running sessions.
     @reactive.observe()
     def _():
-        if session.input.n() is None:
+        if input.n() is None:
             return
-        shared_val.set(session.input["n"]() * 10)
+        shared_val.set(input["n"]() * 10)
 
     # Print the value of shared_val(). Changing it in one session should cause
     # this to run in all sessions.
-    @session.output("shared_txt")
+    @output("shared_txt")
     def _():
         return f"shared_val() is {shared_val()}"
 
-    @session.output("plot")
+    @output("plot")
     @shiny.render_plot(alt="A histogram")
     def _():
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(437)
 
         fig, ax = plt.subplots()
-        ax.hist(x, session.input.n(), density=True)
+        ax.hist(x, input.n(), density=True)
         return fig
 
-    @session.output("file_content")
+    @output("file_content")
     def _():
-        file_infos: list[FileInfo] = session.input.file1()
+        file_infos: list[FileInfo] = input.file1()
         if not file_infos:
             return
 
