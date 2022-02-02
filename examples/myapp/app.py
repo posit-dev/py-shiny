@@ -48,7 +48,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     # This observer watches n, and changes shared_val, which is shared across
     # all running sessions.
-    @reactive.observe()
+    @reactive.effect()
     def _():
         if input.n() is None:
             return

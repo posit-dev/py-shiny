@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 
 from htmltools import TagChildArg, TagList
 
-from .reactive import Value, Observer, ObserverAsync, isolate
+from .reactive import Value, Effect, EffectAsync, isolate
 from .http_staticfiles import FileResponse
 from .connmanager import Connection, ConnectionClosed
 from . import reactcore
@@ -580,7 +580,7 @@ class Inputs:
 # ======================================================================================
 class Outputs:
     def __init__(self, session: Session) -> None:
-        self._output_obervers: Dict[str, Observer] = {}
+        self._output_obervers: Dict[str, Effect] = {}
         self._session: Session = session
 
     def __call__(
@@ -597,7 +597,7 @@ class Outputs:
             if fn_name in self._output_obervers:
                 self._output_obervers[fn_name].destroy()
 
-            @ObserverAsync
+            @EffectAsync
             async def output_obs():
                 await self._session.send_message(
                     {"recalculating": {"name": fn_name, "status": "recalculating"}}

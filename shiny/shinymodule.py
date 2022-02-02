@@ -59,9 +59,9 @@ class OutputsProxy(Outputs):
         return self._ns + "-" + key
 
     def __call__(
-        self, name: str
-    ) -> Callable[[Union[Callable[[], object], RenderFunction]], None]:
-        return self._outputs(self._ns_key(name))
+        self, *, name: Optional[str] = None
+    ) -> Callable[[RenderFunction], None]:
+        return self._outputs(name=self._ns_key(name))
 
 
 class SessionProxy(Session):

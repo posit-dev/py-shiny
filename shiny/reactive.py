@@ -6,10 +6,10 @@ __all__ = (
     "ReactiveAsync",
     "reactive",
     "reactive_async",
-    "Observer",
-    "ObserverAsync",
-    "observe",
-    "observe_async",
+    "Effect",
+    "EffectAsync",
+    "effect",
+    "effect_async",
     "isolate",
     "invalidate_later",
 )
@@ -197,9 +197,9 @@ def reactive_async(
 
 
 # ==============================================================================
-# Observer
+# Effect
 # ==============================================================================
-class Observer:
+class Effect:
     def __init__(
         self,
         func: Callable[[], None],
@@ -208,7 +208,7 @@ class Observer:
         session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
         if inspect.iscoroutinefunction(func):
-            raise TypeError("Observer requires a non-async function")
+            raise TypeError("Effect requires a non-async function")
 
         self._func: Callable[[], Awaitable[None]] = utils.wrap_async(func)
         self._is_async: bool = False
@@ -239,7 +239,7 @@ class Observer:
     def _create_context(self) -> Context:
         ctx = Context()
 
-        # Store the context explicitly in Observer object
+        # Store the context explicitly in Effect object
         # TODO: More explanation here
         self._ctx = ctx
 
@@ -272,12 +272,12 @@ class Observer:
                 with ctx():
                     await self._func()
             except SilentException:
-                # It's OK for SilentException to cause an observer to stop running
+                # It's OK for SilentException to cause an Effect to stop running
                 pass
             except Exception as e:
                 traceback.print_exc()
 
-                warnings.warn("Error in observer: " + str(e), ReactiveWarning)
+                warnings.warn("Error in Effect: " + str(e), ReactiveWarning)
                 if self._session:
                     await self._session.unhandled_error(e)
 
@@ -294,7 +294,7 @@ class Observer:
         self.destroy()
 
 
-class ObserverAsync(Observer):
+class EffectAsync(Effect):
     def __init__(
         self,
         func: Callable[[], Awaitable[None]],
@@ -303,18 +303,18 @@ class ObserverAsync(Observer):
         session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
         if not inspect.iscoroutinefunction(func):
-            raise TypeError("ObserverAsync requires an async function")
+            raise TypeError("EffectAsync requires an async function")
 
-        # Init the Observer base class with a placeholder synchronous function
+        # Init the Efect base class with a placeholder synchronous function
         # so it won't throw an error, then replace it with the async function.
         super().__init__(lambda: None, session=session, priority=priority)
         self._func: Callable[[], Awaitable[None]] = func
         self._is_async = True
 
 
-def observe(
+def effect(
     *, priority: int = 0, session: Union[MISSING_TYPE, "Session", None] = MISSING
-) -> Callable[[Callable[[], None]], Observer]:
+) -> Callable[[Callable[[], None]], Effect]:
     """[summary]
 
     Args:
@@ -325,21 +325,21 @@ def observe(
         [description]
     """
 
-    def create_observer(fn: Callable[[], None]) -> Observer:
-        return Observer(fn, priority=priority, session=session)
+    def create_effect(fn: Callable[[], None]) -> Effect:
+        return Effect(fn, priority=priority, session=session)
 
-    return create_observer
+    return create_effect
 
 
-def observe_async(
+def effect_async(
     *,
     priority: int = 0,
     session: Union[MISSING_TYPE, "Session", None] = MISSING,
-) -> Callable[[Callable[[], Awaitable[None]]], ObserverAsync]:
-    def create_observer_async(fn: Callable[[], Awaitable[None]]) -> ObserverAsync:
-        return ObserverAsync(fn, priority=priority, session=session)
+) -> Callable[[Callable[[], Awaitable[None]]], EffectAsync]:
+    def create_effect_async(fn: Callable[[], Awaitable[None]]) -> EffectAsync:
+        return EffectAsync(fn, priority=priority, session=session)
 
-    return create_observer_async
+    return create_effect_async
 
 
 # ==============================================================================
