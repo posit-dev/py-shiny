@@ -26,30 +26,15 @@ if TYPE_CHECKING:
 from . import utils
 
 __all__ = (
+    "render_text",
     "render_plot",
     "render_image",
     "render_ui",
 )
 
-# It would be nice to specify the return type of RenderPlotFunc to be something like:
-#   Union[matplotlib.figure.Figure, PIL.Image.Image]
-# However, if we did that, we'd have to import those modules at load time, which adds
-# a nontrivial amount of overhead. So for now, we're just using `object`.
-RenderPlotFunc = Callable[[], object]
-RenderPlotFuncAsync = Callable[[], Awaitable[object]]
-
-
-class ImgData(TypedDict):
-    src: str
-    width: Union[str, float]
-    height: Union[str, float]
-    alt: Optional[str]
-
-
-RenderImageFunc = Callable[[], ImgData]
-RenderImageFuncAsync = Callable[[], Awaitable[ImgData]]
-
-
+# ======================================================================================
+# RenderFunction/RenderFunctionAsync base class
+# ======================================================================================
 class RenderFunction:
     def __init__(self, fn: Callable[[], object]) -> None:
         self.__name__ = fn.__name__
@@ -66,9 +51,74 @@ class RenderFunction:
         self._name: str = name
 
 
+# The reason for having a separate RenderFunctionAsync class is because the __call__
+# method is marked here as async; you can't have a single class where one method could
+# be either sync or async.
 class RenderFunctionAsync(RenderFunction):
     async def __call__(self) -> object:
         raise NotImplementedError
+
+
+# ======================================================================================
+# RenderText
+# ======================================================================================
+RenderTextFunc = Callable[[], str]
+RenderTextFuncAsync = Callable[[], Awaitable[str]]
+
+
+class RenderText(RenderFunction):
+    def __init__(self, fn: RenderTextFunc) -> None:
+        super().__init__(fn)
+        self._fn: RenderTextFuncAsync = utils.wrap_async(fn)
+
+    def __call__(self) -> str:
+        return utils.run_coro_sync(self.run())
+
+    async def run(self) -> str:
+        return await self._fn()
+
+
+class RenderTextAsync(RenderText, RenderFunctionAsync):
+    def __init__(self, fn: RenderTextFuncAsync) -> None:
+        if not inspect.iscoroutinefunction(fn):
+            raise TypeError(self.__class__.__name__ + " requires an async function")
+        # Init the base class with a placeholder synchronous function so it won't throw
+        # an error, then replace it with the async function.
+        super().__init__(typing.cast(RenderTextFunc, lambda: None))
+        self._fn: RenderTextFuncAsync = fn
+
+    async def __call__(self) -> str:  # type: ignore
+        return await self.run()
+
+
+def render_text() -> Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], RenderText]:
+    def wrapper(fn: Union[RenderTextFunc, RenderTextFuncAsync]) -> RenderText:
+        if inspect.iscoroutinefunction(fn):
+            fn = typing.cast(RenderTextFuncAsync, fn)
+            return RenderTextAsync(fn)
+        else:
+            fn = typing.cast(RenderTextFunc, fn)
+            return RenderText(fn)
+
+    return wrapper
+
+
+# ======================================================================================
+# RenderPlot
+# ======================================================================================
+# It would be nice to specify the return type of RenderPlotFunc to be something like:
+#   Union[matplotlib.figure.Figure, PIL.Image.Image]
+# However, if we did that, we'd have to import those modules at load time, which adds
+# a nontrivial amount of overhead. So for now, we're just using `object`.
+RenderPlotFunc = Callable[[], object]
+RenderPlotFuncAsync = Callable[[], Awaitable[object]]
+
+
+class ImgData(TypedDict):
+    src: str
+    width: Union[str, float]
+    height: Union[str, float]
+    alt: Optional[str]
 
 
 class RenderPlot(RenderFunction):
@@ -127,7 +177,7 @@ class RenderPlot(RenderFunction):
 class RenderPlotAsync(RenderPlot, RenderFunctionAsync):
     def __init__(self, fn: RenderPlotFuncAsync, alt: Optional[str] = None) -> None:
         if not inspect.iscoroutinefunction(fn):
-            raise TypeError("PlotAsync requires an async function")
+            raise TypeError(self.__class__.__name__ + " requires an async function")
 
         # Init the Plot base class with a placeholder synchronous function so it
         # won't throw an error, then replace it with the async function.
@@ -236,6 +286,13 @@ def try_render_plot_pil(
         return "TYPE_MISMATCH"
 
 
+# ======================================================================================
+# RenderImage
+# ======================================================================================
+RenderImageFunc = Callable[[], ImgData]
+RenderImageFuncAsync = Callable[[], Awaitable[ImgData]]
+
+
 class RenderImage(RenderFunction):
     def __init__(self, fn: RenderImageFunc, delete_file: bool = False) -> None:
         super().__init__(fn)
@@ -263,7 +320,7 @@ class RenderImage(RenderFunction):
 class RenderImageAsync(RenderImage, RenderFunctionAsync):
     def __init__(self, fn: RenderImageFuncAsync, delete_file: bool = False) -> None:
         if not inspect.iscoroutinefunction(fn):
-            raise TypeError("ImageAsync requires an async function")
+            raise TypeError(self.__class__.__name__ + " requires an async function")
         # Init the Image base class with a placeholder synchronous function so it
         # won't throw an error, then replace it with the async function.
         super().__init__(lambda: None, delete_file)
@@ -287,6 +344,9 @@ def render_image(
     return wrapper
 
 
+# ======================================================================================
+# RenderUI
+# ======================================================================================
 RenderUIFunc = Callable[[], TagChildArg]
 RenderUIFuncAsync = Callable[[], Awaitable[TagChildArg]]
 
@@ -312,7 +372,7 @@ class RenderUI(RenderFunction):
 class RenderUIAsync(RenderUI, RenderFunctionAsync):
     def __init__(self, fn: RenderUIFuncAsync) -> None:
         if not inspect.iscoroutinefunction(fn):
-            raise TypeError("PlotAsync requires an async function")
+            raise TypeError(self.__class__.__name__ + " requires an async function")
 
         super().__init__(lambda: None)
         self._fn: RenderUIFuncAsync = fn
