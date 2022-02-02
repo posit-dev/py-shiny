@@ -41,6 +41,7 @@ def server(input: reactive.Values, output: Outputs, session: Session):
         return input.n() * 2
 
     @output()
+    @shiny.render_text()
     async def txt():
         val = r()
         return f"n*2 is {val}, session id is {shiny.session.get_current_session().id}"
@@ -56,6 +57,7 @@ def server(input: reactive.Values, output: Outputs, session: Session):
     # Print the value of shared_val(). Changing it in one session should cause
     # this to run in all sessions.
     @output()
+    @shiny.render_text()
     def shared_txt():
         return f"shared_val() is {shared_val()}"
 
@@ -70,10 +72,11 @@ def server(input: reactive.Values, output: Outputs, session: Session):
         return fig
 
     @output()
+    @shiny.render_text()
     def file_content():
         file_infos: list[FileInfo] = input.file1()
         if not file_infos:
-            return
+            return ""
 
         out_str = ""
         for file_info in file_infos:

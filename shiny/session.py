@@ -520,6 +520,7 @@ class Session:
             )
 
             @self.output(name=effective_name)
+            @render.render_text()
             @functools.wraps(fn)
             def _():
                 # TODO: the `w=` parameter should eventually be a worker ID, if we add those
@@ -535,8 +536,8 @@ class Outputs:
 
     def __call__(
         self, *, name: Optional[str] = None
-    ) -> Callable[[Union[Callable[[], object], render.RenderFunction]], None]:
-        def set_fn(fn: Union[Callable[[], object], render.RenderFunction]) -> None:
+    ) -> Callable[[render.RenderFunction], None]:
+        def set_fn(fn: render.RenderFunction) -> None:
             fn_name = name or fn.__name__
             # fn is either a regular function or a RenderFunction object. If
             # it's the latter, we can give it a bit of metadata, which can be
