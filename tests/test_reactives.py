@@ -717,7 +717,8 @@ async def test_mock_time():
 # ------------------------------------------------------------
 # @event() works as expected
 # ------------------------------------------------------------
-def test_event_decorator():
+@pytest.mark.asyncio
+async def test_event_decorator():
     n_times = 0
 
     # By default, runs every time that event expression is _not_ None (ignore_none=True)
@@ -727,7 +728,7 @@ def test_event_decorator():
         nonlocal n_times
         n_times += 1
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 0
 
     # Unless ignore_none=False
@@ -737,7 +738,7 @@ def test_event_decorator():
         nonlocal n_times
         n_times += 1
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 1
 
     # Or if one of the args is not None
@@ -747,7 +748,7 @@ def test_event_decorator():
         nonlocal n_times
         n_times += 1
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 2
 
     # Is invalidated properly by reactive vals
@@ -759,15 +760,15 @@ def test_event_decorator():
         nonlocal n_times
         n_times += 1
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 3
 
     v.set(1)
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 3
 
     v.set(2)
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 4
 
     # Doesn't run on init
@@ -779,11 +780,11 @@ def test_event_decorator():
         nonlocal n_times
         n_times += 1
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 4
 
     v.set(2)
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 5
 
     # Isolates properly
@@ -796,11 +797,11 @@ def test_event_decorator():
         nonlocal n_times
         n_times += v2()
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 6
 
     v2.set(2)
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 6
 
     # works with @reactive()
@@ -816,18 +817,19 @@ def test_event_decorator():
         nonlocal n_times
         n_times += r2b()
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 6
 
     v2.set(2)
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 7
 
 
 # ------------------------------------------------------------
 # @event() works as expected with async
 # ------------------------------------------------------------
-def test_event_async_decorator():
+@pytest.mark.asyncio
+async def test_event_async_decorator():
     n_times = 0
 
     # By default, runs every time that event expression is _not_ None (ignore_none=True)
@@ -837,7 +839,7 @@ def test_event_async_decorator():
         nonlocal n_times
         n_times += 1
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 0
 
     # Unless ignore_none=False
@@ -847,7 +849,7 @@ def test_event_async_decorator():
         nonlocal n_times
         n_times += 1
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 1
 
     # Or if one of the args is not None
@@ -857,7 +859,7 @@ def test_event_async_decorator():
         nonlocal n_times
         n_times += 1
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 2
 
     # Is invalidated properly by reactive vals
@@ -869,15 +871,15 @@ def test_event_async_decorator():
         nonlocal n_times
         n_times += 1
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 3
 
     v.set(1)
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 3
 
     v.set(2)
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 4
 
     # Doesn't run on init
@@ -889,11 +891,11 @@ def test_event_async_decorator():
         nonlocal n_times
         n_times += 1
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 4
 
     v.set(2)
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 5
 
     # Isolates properly
@@ -906,29 +908,36 @@ def test_event_async_decorator():
         nonlocal n_times
         n_times += v2()
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 6
 
     v2.set(2)
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 6
 
     # works with @reactive()
     v2 = Value(1)
 
     @reactive_async()
-    @event(lambda: v2(), ignore_init=True)
+    async def r_a():
+        await asyncio.sleep(0)  # Make sure the async function yields control
+        return 1
+
+    @reactive_async()
+    @event(lambda: v2(), r_a, ignore_init=True)
     async def r2b():
+        await asyncio.sleep(0)  # Make sure the async function yields control
         return 1
 
     @observe_async()
     async def _():
         nonlocal n_times
+        await asyncio.sleep(0)
         n_times += await r2b()
 
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 6
 
     v2.set(2)
-    asyncio.run(reactcore.flush())
+    await reactcore.flush()
     assert n_times == 7
