@@ -323,7 +323,7 @@ class RenderImageAsync(RenderImage, RenderFunctionAsync):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         # Init the Image base class with a placeholder synchronous function so it
         # won't throw an error, then replace it with the async function.
-        super().__init__(lambda: None, delete_file)
+        super().__init__(typing.cast(RenderImageFunc, lambda: None), delete_file)
         self._fn: RenderImageFuncAsync = fn
 
     async def __call__(self) -> object:
