@@ -519,7 +519,7 @@ class Session:
                 encoding=encoding,
             )
 
-            @self.output(effective_name)
+            @self.output(name=effective_name)
             @functools.wraps(fn)
             def _():
                 # TODO: the `w=` parameter should eventually be a worker ID, if we add those
@@ -534,32 +534,32 @@ class Outputs:
         self._session: Session = session
 
     def __call__(
-        self, name: str
+        self, *, name: Optional[str] = None
     ) -> Callable[[Union[Callable[[], object], render.RenderFunction]], None]:
         def set_fn(fn: Union[Callable[[], object], render.RenderFunction]) -> None:
-
+            fn_name = name or fn.__name__
             # fn is either a regular function or a RenderFunction object. If
             # it's the latter, we can give it a bit of metadata, which can be
             # used by the
             if isinstance(fn, render.RenderFunction):
-                fn.set_metadata(self._session, name)
+                fn.set_metadata(self._session, fn_name)
 
-            if name in self._output_obervers:
-                self._output_obervers[name].destroy()
+            if fn_name in self._output_obervers:
+                self._output_obervers[fn_name].destroy()
 
             @ObserverAsync
             async def output_obs():
                 await self._session.send_message(
-                    {"recalculating": {"name": name, "status": "recalculating"}}
+                    {"recalculating": {"name": fn_name, "status": "recalculating"}}
                 )
 
                 message: Dict[str, object] = {}
                 try:
                     if utils.is_async_callable(fn):
                         fn2 = typing.cast(Callable[[], Awaitable[object]], fn)
-                        message[name] = await fn2()
+                        message[fn_name] = await fn2()
                     else:
-                        message[name] = fn()
+                        message[fn_name] = fn()
                 except SilentCancelOutputException:
                     return
                 except SilentException:
@@ -576,7 +576,7 @@ class Outputs:
                         err_msg = str(e)
                     # Register the outbound error message
                     msg: Dict[str, object] = {
-                        name: {
+                        fn_name: {
                             "message": err_msg,
                             # TODO: is it possible to get the call?
                             "call": None,
@@ -589,10 +589,10 @@ class Outputs:
                 self._session._outbound_message_queues["values"].append(message)
 
                 await self._session.send_message(
-                    {"recalculating": {"name": name, "status": "recalculated"}}
+                    {"recalculating": {"name": fn_name, "status": "recalculated"}}
                 )
 
-            self._output_obervers[name] = output_obs
+            self._output_obervers[fn_name] = output_obs
 
             return None
 

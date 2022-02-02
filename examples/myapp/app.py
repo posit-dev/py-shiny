@@ -40,8 +40,8 @@ def server(input: reactive.Values, output: Outputs, session: Session):
             return
         return input.n() * 2
 
-    @output("txt")
-    async def _():
+    @output()
+    async def txt():
         val = r()
         return f"n*2 is {val}, session id is {shiny.session.get_current_session().id}"
 
@@ -55,13 +55,13 @@ def server(input: reactive.Values, output: Outputs, session: Session):
 
     # Print the value of shared_val(). Changing it in one session should cause
     # this to run in all sessions.
-    @output("shared_txt")
-    def _():
+    @output()
+    def shared_txt():
         return f"shared_val() is {shared_val()}"
 
-    @output("plot")
+    @output()
     @shiny.render_plot(alt="A histogram")
-    def _():
+    def plot() -> object:
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(437)
 
@@ -69,8 +69,8 @@ def server(input: reactive.Values, output: Outputs, session: Session):
         ax.hist(x, input.n(), density=True)
         return fig
 
-    @output("file_content")
-    def _():
+    @output()
+    def file_content():
         file_infos: list[FileInfo] = input.file1()
         if not file_infos:
             return

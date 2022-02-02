@@ -52,7 +52,8 @@ RenderImageFuncAsync = Callable[[], Awaitable[ImgData]]
 
 class RenderFunction:
     def __init__(self, fn: Callable[[], object]) -> None:
-        raise NotImplementedError
+        self.__name__ = fn.__name__
+        self.__doc__ = fn.__doc__
 
     def __call__(self) -> object:
         raise NotImplementedError
@@ -74,6 +75,7 @@ class RenderPlot(RenderFunction):
     _ppi: float = 96
 
     def __init__(self, fn: RenderPlotFunc, alt: Optional[str] = None) -> None:
+        super().__init__(fn)
         self._fn: RenderPlotFuncAsync = utils.wrap_async(fn)
         self._alt: Optional[str] = alt
 
@@ -236,6 +238,7 @@ def try_render_plot_pil(
 
 class RenderImage(RenderFunction):
     def __init__(self, fn: RenderImageFunc, delete_file: bool = False) -> None:
+        super().__init__(fn)
         self._fn: RenderImageFuncAsync = utils.wrap_async(fn)
         self._delete_file: bool = delete_file
 
@@ -290,6 +293,7 @@ RenderUIFuncAsync = Callable[[], Awaitable[TagChildArg]]
 
 class RenderUI(RenderFunction):
     def __init__(self, fn: RenderUIFunc) -> None:
+        super().__init__(fn)
         self._fn: RenderUIFuncAsync = utils.wrap_async(fn)
 
     def __call__(self) -> object:
