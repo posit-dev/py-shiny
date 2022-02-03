@@ -506,7 +506,7 @@ class Session:
         filename: Optional[Union[str, Callable[[], str]]] = None,
         media_type: Union[None, str, Callable[[], str]] = None,
         encoding: str = "utf-8",
-    ):
+    ) -> Callable[[_DownloadHandler], None]:
         def wrapper(fn: _DownloadHandler):
             if name is None:
                 effective_name = fn.__name__
