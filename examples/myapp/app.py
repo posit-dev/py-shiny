@@ -52,7 +52,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         if input.n() is None:
             return
-        shared_val.set(input["n"]() * 10)
+        shared_val.set(input.n() * 10)
 
     # Print the value of shared_val(). Changing it in one session should cause
     # this to run in all sessions.
@@ -88,8 +88,3 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = shiny.App(ui, server)
-
-if __name__ == "__main__":
-    app.run()
-    # Alternately, to listen on a TCP port:
-    # app.run(conn_type = "tcp")

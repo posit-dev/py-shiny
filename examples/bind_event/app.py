@@ -1,6 +1,9 @@
+import asyncio
+import shiny.ui_toolkit as st
 from shiny import *
+from htmltools import tags
 
-ui = page_fluid(
+ui = st.page_fluid(
     tags.p(
         """
       The first time you click the button, you should see a 1 appear below the button,
@@ -9,68 +12,72 @@ ui = page_fluid(
       print the number of clicks in the console twice.
       """
     ),
-    navs_tab_card(
-        nav(
+    st.navs_tab_card(
+        st.nav(
             "Sync",
-            input_action_button("btn", "Click me"),
-            output_ui("foo"),
+            st.input_action_button("btn", "Click me"),
+            st.output_ui("btn_value"),
         ),
-        nav(
+        st.nav(
             "Async",
-            input_action_button("btn_async", "Click me"),
-            output_ui("foo_async"),
+            st.input_action_button("btn_async", "Click me"),
+            st.output_ui("btn_async_value"),
         ),
     ),
 )
 
 
-def server(session: ShinySession):
+def server(input: Inputs, output: Outputs, session: Session):
 
     # i.e., observeEvent(once=False)
-    @observe()
-    @event(lambda: session.input["btn"])
+    @reactive.effect()
+    @event(input.btn)
     def _():
-        print("@observe() event: ", str(session.input["btn"]))
+        print("@effect() event: ", str(input.btn()))
 
     # i.e., eventReactive()
-    @reactive()
-    @event(lambda: session.input["btn"])
+    @reactive.calc()
+    @event(input.btn)
     def btn() -> int:
-        return session.input["btn"]
+        return input.btn()
 
-    @observe()
+    @reactive.effect()
     def _():
-        print("@reactive() event: ", str(btn()))
+        print("@calc() event: ", str(btn()))
 
-    @session.output("foo")
+    @output()
     @render_ui()
-    @event(lambda: session.input["btn"])
-    def _():
-        return session.input["btn"]
+    @event(input.btn)
+    def btn_value():
+        return str(input.btn())
 
     # -----------------------------------------------------------------------------
     # Async
     # -----------------------------------------------------------------------------
-    @observe_async()
-    @event(lambda: session.input["btn_async"])
+    @reactive.effect_async()
+    @event(input.btn_async)
     async def _():
-        print("@observe_async() event: ", str(session.input["btn_async"]))
+        await asyncio.sleep(0)
+        print("@effect_async() event: ", str(input.btn_async()))
 
-    @reactive_async()
-    @event(lambda: session.input["btn_async"])
-    async def btn_async() -> int:
-        return session.input["btn_async"]
+    @reactive.calc_async()
+    @event(input.btn_async)
+    async def btn_async_r() -> int:
+        await asyncio.sleep(0)
+        return input.btn_async()
 
-    @observe_async()
+    @reactive.effect_async()
     async def _():
-        val = await btn_async()
-        print("@reactive_async() event: ", str(val))
+        val = await btn_async_r()
+        print("@calc_async() event: ", str(val))
 
-    @session.output("foo_async")
+    @output()
     @render_ui()
-    @event(lambda: session.input["btn_async"])
-    async def _():
-        return session.input["btn_async"]
+    @event(btn_async_r)
+    async def btn_async_value():
+        val = await btn_async_r()
+        print("== " + str(val))
+        return str(val)
 
 
-ShinyApp(ui, server).run()
+app = App(ui, server, debug=True)
