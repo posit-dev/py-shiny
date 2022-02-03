@@ -37,6 +37,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/rstudio/prism",
-    version="0.0.0.9000",
+    version="0.0.0.9001",
     zip_safe=False,
 )

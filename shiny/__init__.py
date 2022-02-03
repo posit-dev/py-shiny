@@ -2,7 +2,7 @@
 
 __author__ = """Winston Chang"""
 __email__ = "winston@rstudio.com"
-__version__ = "0.0.0.9000"
+__version__ = "0.0.0.9001"
 
 # All objects imported into this scope will be available as shiny.foo
 from .decorators import *
