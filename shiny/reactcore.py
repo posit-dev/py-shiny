@@ -142,9 +142,8 @@ class ReactiveEnvironment:
         await self._flushed_callbacks.invoke()
 
     async def _flush_sequential(self) -> None:
-        # Sequential flush: instead of storing the tasks in a list and
-        # calling gather() on them later, just run each observer in
-        # sequence.
+        # Sequential flush: instead of storing the tasks in a list and calling gather()
+        # on them later, just run each effect in sequence.
         while not self._pending_flush_queue.empty():
             ctx = self._pending_flush_queue.get()
             await ctx.execute_flush_callbacks()

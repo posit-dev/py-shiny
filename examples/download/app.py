@@ -4,28 +4,32 @@
 # Then point web browser to:
 #   http://localhost:8000/
 import asyncio
-from datetime import date
 import os
 import io
+from datetime import date
+from typing import Any
+
+import shiny.ui_toolkit as st
+from shiny import *
+from htmltools import *
+
 import matplotlib.pyplot as plt
 import numpy as np
 
-from shiny import *
-
 
 def make_example(id: str, label: str, title: str, desc: str, extra: Any = None):
-    return column(
-        3,
-        tags.div(
+    return st.column(
+        4,
+        div(
             class_="card mb-4",
             children=[
-                tags.div(title, class_="card-header"),
-                tags.div(
+                div(title, class_="card-header"),
+                div(
                     class_="card-body",
                     children=[
-                        tags.p(desc, class_="card-text text-muted"),
+                        p(desc, class_="card-text text-muted"),
                         extra,
-                        download_button(id, label, class_="btn-primary"),
+                        st.download_button(id, label, class_="btn-primary"),
                     ],
                 ),
             ],
@@ -33,9 +37,8 @@ def make_example(id: str, label: str, title: str, desc: str, extra: Any = None):
     )
 
 
-ui = page_fluid(
-    tags.h1("Download examples"),
-    row(
+ui = st.page_fluid(
+    st.row(
         make_example(
             "download1",
             label="Download CSV",
@@ -43,19 +46,19 @@ ui = page_fluid(
             desc="Downloads a pre-existing file, using its existing name on disk.",
         ),
     ),
-    row(
+    st.row(
         make_example(
             "download2",
             label="Download plot",
             title="Dynamic data generation",
             desc="Downloads a PNG that's generated on the fly.",
             extra=[
-                input_text("title", "Plot title", "Random scatter plot"),
-                input_slider("num_points", "Number of data points", 1, 100, 50),
+                st.input_text("title", "Plot title", "Random scatter plot"),
+                st.input_slider("num_points", "Number of data points", 1, 100, 50),
             ],
         ),
     ),
-    row(
+    st.row(
         make_example(
             "download3",
             "Download",
@@ -63,7 +66,7 @@ ui = page_fluid(
             "Demonstrates that filenames can be generated on the fly (and use Unicode characters!).",
         ),
     ),
-    row(
+    st.row(
         make_example(
             "download4",
             "Download",
@@ -71,7 +74,7 @@ ui = page_fluid(
             "Throws an error in the download handler, download should not succeed.",
         ),
     ),
-    row(
+    st.row(
         make_example(
             "download5",
             "Download",
@@ -82,7 +85,7 @@ ui = page_fluid(
 )
 
 
-def server(session: ShinySession):
+def server(input: Inputs, output: Outputs, session: Session):
     @session.download()
     def download1():
         """
@@ -107,7 +110,7 @@ def server(session: ShinySession):
         y = np.random.uniform(size=session.input["num_points"])
         plt.figure()
         plt.scatter(x, y)
-        plt.title(session.input["title"])
+        plt.title(input.title())
         with io.BytesIO() as buf:
             plt.savefig(buf, format="png")
             yield buf.getvalue()
@@ -127,9 +130,4 @@ def server(session: ShinySession):
         raise Exception("This error was caused intentionally")
 
 
-app = ShinyApp(ui, server)
-
-if __name__ == "__main__":
-    app.run()
-    # Alternately, to listen on a TCP port:
-    # app.run(conn_type = "tcp")
+app = App(ui, server)

@@ -1,22 +1,20 @@
 """Reactive components"""
 
 __all__ = (
-    "ReactiveVal",
-    "ReactiveValues",
-    "Reactive",
-    "ReactiveAsync",
-    "reactive",
-    "reactive_async",
-    "Observer",
-    "ObserverAsync",
-    "observe",
-    "observe_async",
+    "Value",
+    "Calc",
+    "CalcAsync",
+    "calc",
+    "calc_async",
+    "Effect",
+    "EffectAsync",
+    "effect",
+    "effect_async",
     "isolate",
     "invalidate_later",
 )
 
 import asyncio
-import sys
 import time
 import traceback
 from typing import (
@@ -27,8 +25,6 @@ from typing import (
     TypeVar,
     Union,
     Generic,
-    Any,
-    overload,
 )
 import typing
 import inspect
@@ -41,31 +37,22 @@ from .types import MISSING, MISSING_TYPE
 from .validation import SilentException
 
 if TYPE_CHECKING:
-    from .shinysession import ShinySession
+    from .session import Session
 
 T = TypeVar("T")
 
 # ==============================================================================
-# ReactiveVal and ReactiveValues
+# Value
 # ==============================================================================
-class ReactiveVal(Generic[T]):
+class Value(Generic[T]):
     def __init__(self, value: T) -> None:
         self._value: T = value
         self._dependents: Dependents = Dependents()
 
-    @overload
+    # Calling the object is equivalent to `.get()`
     def __call__(self) -> T:
-        ...
-
-    @overload
-    def __call__(self, value: T) -> bool:
-        ...
-
-    def __call__(self, value: Union[MISSING_TYPE, T] = MISSING) -> Union[T, bool]:
-        if isinstance(value, MISSING_TYPE):
-            return self.get()
-        else:
-            return self.set(value)
+        self._dependents.register()
+        return self._value
 
     def get(self) -> T:
         self._dependents.register()
@@ -80,40 +67,15 @@ class ReactiveVal(Generic[T]):
         return True
 
 
-class ReactiveValues:
-    def __init__(self, **kwargs: object) -> None:
-        self._map: dict[str, ReactiveVal[Any]] = {}
-        for key, value in kwargs.items():
-            self._map[key] = ReactiveVal(value)
-
-    def __setitem__(self, key: str, value: object) -> None:
-        if key in self._map:
-            self._map[key](value)
-        else:
-            self._map[key] = ReactiveVal(value)
-
-    def __getitem__(self, key: str) -> Any:
-        # Auto-populate key if accessed but not yet set. Needed to take reactive
-        # dependencies on input values that haven't been received from client
-        # yet.
-        if key not in self._map:
-            self._map[key] = ReactiveVal(None)
-
-        return self._map[key]()
-
-    def __delitem__(self, key: str) -> None:
-        del self._map[key]
-
-
 # ==============================================================================
-# Reactive
+# Calc
 # ==============================================================================
-class Reactive(Generic[T]):
+class Calc(Generic[T]):
     def __init__(
         self,
         func: Callable[[], T],
         *,
-        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
+        session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
         if inspect.iscoroutinefunction(func):
             raise TypeError("Reactive requires a non-async function")
@@ -128,14 +90,14 @@ class Reactive(Generic[T]):
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
 
-        self._session: Optional[ShinySession]
+        self._session: Optional[Session]
         # Use `isinstance(x, MISSING_TYPE)`` instead of `x is MISSING` because
         # the type checker doesn't know that MISSING is the only instance of
         # MISSING_TYPE; this saves us from casting later on.
         if isinstance(session, MISSING_TYPE):
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
-            session = shinysession.get_current_session()
+            session = shiny_session.get_current_session()
         self._session = session
 
         # Use lists to hold (optional) value and error, instead of Optional[T],
@@ -174,7 +136,7 @@ class Reactive(Generic[T]):
         was_running = self._running
         self._running = True
 
-        with shinysession.session_context(self._session):
+        with shiny_session.session_context(self._session):
             try:
                 with self._ctx():
                     await self._run_func()
@@ -195,19 +157,19 @@ class Reactive(Generic[T]):
             self._error.append(err)
 
 
-class ReactiveAsync(Reactive[T]):
+class CalcAsync(Calc[T]):
     def __init__(
         self,
         func: Callable[[], Awaitable[T]],
         *,
-        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
+        session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
         if not inspect.iscoroutinefunction(func):
-            raise TypeError("ReactiveAsync requires an async function")
+            raise TypeError("CalcAsync requires an async function")
 
-        # Init the Reactive base class with a placeholder synchronous function
-        # so it won't throw an error, then replace it with the async function.
-        # Need the `cast` to satisfy the type checker.
+        # Init the Calc base class with a placeholder synchronous function so it won't
+        # throw an error, then replace it with the async function. Need the `cast` to
+        # satisfy the type checker.
         super().__init__(lambda: typing.cast(T, None), session=session)
         self._func: Callable[[], Awaitable[T]] = func
         self._is_async = True
@@ -216,37 +178,37 @@ class ReactiveAsync(Reactive[T]):
         return await self.get_value()
 
 
-def reactive(
-    *, session: Union[MISSING_TYPE, "ShinySession", None] = MISSING
-) -> Callable[[Callable[[], T]], Reactive[T]]:
-    def create_reactive(fn: Callable[[], T]) -> Reactive[T]:
-        return Reactive(fn, session=session)
+def calc(
+    *, session: Union[MISSING_TYPE, "Session", None] = MISSING
+) -> Callable[[Callable[[], T]], Calc[T]]:
+    def create_calc(fn: Callable[[], T]) -> Calc[T]:
+        return Calc(fn, session=session)
 
-    return create_reactive
+    return create_calc
 
 
-def reactive_async(
-    *, session: Union[MISSING_TYPE, "ShinySession", None] = MISSING
-) -> Callable[[Callable[[], Awaitable[T]]], ReactiveAsync[T]]:
-    def create_reactive_async(fn: Callable[[], Awaitable[T]]) -> ReactiveAsync[T]:
-        return ReactiveAsync(fn, session=session)
+def calc_async(
+    *, session: Union[MISSING_TYPE, "Session", None] = MISSING
+) -> Callable[[Callable[[], Awaitable[T]]], CalcAsync[T]]:
+    def create_calc_async(fn: Callable[[], Awaitable[T]]) -> CalcAsync[T]:
+        return CalcAsync(fn, session=session)
 
-    return create_reactive_async
+    return create_calc_async
 
 
 # ==============================================================================
-# Observer
+# Effect
 # ==============================================================================
-class Observer:
+class Effect:
     def __init__(
         self,
         func: Callable[[], None],
         *,
         priority: int = 0,
-        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
+        session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
         if inspect.iscoroutinefunction(func):
-            raise TypeError("Observer requires a non-async function")
+            raise TypeError("Effect requires a non-async function")
 
         self._func: Callable[[], Awaitable[None]] = utils.wrap_async(func)
         self._is_async: bool = False
@@ -258,14 +220,14 @@ class Observer:
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
 
-        self._session: Optional[ShinySession]
+        self._session: Optional[Session]
         # Use `isinstance(x, MISSING_TYPE)`` instead of `x is MISSING` because
         # the type checker doesn't know that MISSING is the only instance of
         # MISSING_TYPE; this saves us from casting later on.
         if isinstance(session, MISSING_TYPE):
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
-            session = shinysession.get_current_session()
+            session = shiny_session.get_current_session()
         self._session = session
 
         if self._session is not None:
@@ -277,7 +239,7 @@ class Observer:
     def _create_context(self) -> Context:
         ctx = Context()
 
-        # Store the context explicitly in Observer object
+        # Store the context explicitly in Effect object
         # TODO: More explanation here
         self._ctx = ctx
 
@@ -305,17 +267,17 @@ class Observer:
         ctx = self._create_context()
         self._exec_count += 1
 
-        with shinysession.session_context(self._session):
+        with shiny_session.session_context(self._session):
             try:
                 with ctx():
                     await self._func()
             except SilentException:
-                # It's OK for SilentException to cause an observer to stop running
+                # It's OK for SilentException to cause an Effect to stop running
                 pass
             except Exception as e:
                 traceback.print_exc()
 
-                warnings.warn("Error in observer: " + str(e), ReactiveWarning)
+                warnings.warn("Error in Effect: " + str(e), ReactiveWarning)
                 if self._session:
                     await self._session.unhandled_error(e)
 
@@ -332,27 +294,27 @@ class Observer:
         self.destroy()
 
 
-class ObserverAsync(Observer):
+class EffectAsync(Effect):
     def __init__(
         self,
         func: Callable[[], Awaitable[None]],
         *,
         priority: int = 0,
-        session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
+        session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
         if not inspect.iscoroutinefunction(func):
-            raise TypeError("ObserverAsync requires an async function")
+            raise TypeError("EffectAsync requires an async function")
 
-        # Init the Observer base class with a placeholder synchronous function
+        # Init the Efect base class with a placeholder synchronous function
         # so it won't throw an error, then replace it with the async function.
         super().__init__(lambda: None, session=session, priority=priority)
         self._func: Callable[[], Awaitable[None]] = func
         self._is_async = True
 
 
-def observe(
-    *, priority: int = 0, session: Union[MISSING_TYPE, "ShinySession", None] = MISSING
-) -> Callable[[Callable[[], None]], Observer]:
+def effect(
+    *, priority: int = 0, session: Union[MISSING_TYPE, "Session", None] = MISSING
+) -> Callable[[Callable[[], None]], Effect]:
     """[summary]
 
     Args:
@@ -363,21 +325,21 @@ def observe(
         [description]
     """
 
-    def create_observer(fn: Callable[[], None]) -> Observer:
-        return Observer(fn, priority=priority, session=session)
+    def create_effect(fn: Callable[[], None]) -> Effect:
+        return Effect(fn, priority=priority, session=session)
 
-    return create_observer
+    return create_effect
 
 
-def observe_async(
+def effect_async(
     *,
     priority: int = 0,
-    session: Union[MISSING_TYPE, "ShinySession", None] = MISSING,
-) -> Callable[[Callable[[], Awaitable[None]]], ObserverAsync]:
-    def create_observer_async(fn: Callable[[], Awaitable[None]]) -> ObserverAsync:
-        return ObserverAsync(fn, priority=priority, session=session)
+    session: Union[MISSING_TYPE, "Session", None] = MISSING,
+) -> Callable[[Callable[[], Awaitable[None]]], EffectAsync]:
+    def create_effect_async(fn: Callable[[], Awaitable[None]]) -> EffectAsync:
+        return EffectAsync(fn, priority=priority, session=session)
 
-    return create_observer_async
+    return create_effect_async
 
 
 # ==============================================================================
@@ -438,4 +400,6 @@ def invalidate_later(delay: float) -> None:
 
 
 # Import here at the bottom seems to fix a circular dependency problem.
-from . import shinysession
+# Need to import as shiny_session to avoid naming conflicts with function params named
+# `session`.
+from . import session as shiny_session

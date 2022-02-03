@@ -21,16 +21,91 @@ else:
 from htmltools import TagChildArg
 
 if TYPE_CHECKING:
-    from .shinysession import ShinySession
+    from .session import Session
 
 from . import utils
 
 __all__ = (
+    "render_text",
     "render_plot",
     "render_image",
     "render_ui",
 )
 
+# ======================================================================================
+# RenderFunction/RenderFunctionAsync base class
+# ======================================================================================
+class RenderFunction:
+    def __init__(self, fn: Callable[[], object]) -> None:
+        self.__name__ = fn.__name__
+        self.__doc__ = fn.__doc__
+
+    def __call__(self) -> object:
+        raise NotImplementedError
+
+    def set_metadata(self, session: "Session", name: str) -> None:
+        """When RenderFunctions are assigned to Output object slots, this method
+        is used to pass along session and name information.
+        """
+        self._session: Session = session
+        self._name: str = name
+
+
+# The reason for having a separate RenderFunctionAsync class is because the __call__
+# method is marked here as async; you can't have a single class where one method could
+# be either sync or async.
+class RenderFunctionAsync(RenderFunction):
+    async def __call__(self) -> object:
+        raise NotImplementedError
+
+
+# ======================================================================================
+# RenderText
+# ======================================================================================
+RenderTextFunc = Callable[[], Union[str, None]]
+RenderTextFuncAsync = Callable[[], Awaitable[Union[str, None]]]
+
+
+class RenderText(RenderFunction):
+    def __init__(self, fn: RenderTextFunc) -> None:
+        super().__init__(fn)
+        # The Render*Async subclass will pass in an async function, but it tells the
+        # static type checker that it's synchronous. wrap_async() is smart -- if is
+        # passed an async function, it will not change it.
+        self._fn: RenderTextFuncAsync = utils.wrap_async(fn)
+
+    def __call__(self) -> Union[str, None]:
+        return utils.run_coro_sync(self.run())
+
+    async def run(self) -> Union[str, None]:
+        return await self._fn()
+
+
+class RenderTextAsync(RenderText, RenderFunctionAsync):
+    def __init__(self, fn: RenderTextFuncAsync) -> None:
+        if not inspect.iscoroutinefunction(fn):
+            raise TypeError(self.__class__.__name__ + " requires an async function")
+        super().__init__(typing.cast(RenderTextFunc, fn))
+
+    async def __call__(self) -> Union[str, None]:  # type: ignore
+        return await self.run()
+
+
+def render_text() -> Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], RenderText]:
+    def wrapper(fn: Union[RenderTextFunc, RenderTextFuncAsync]) -> RenderText:
+        if inspect.iscoroutinefunction(fn):
+            fn = typing.cast(RenderTextFuncAsync, fn)
+            return RenderTextAsync(fn)
+        else:
+            fn = typing.cast(RenderTextFunc, fn)
+            return RenderText(fn)
+
+    return wrapper
+
+
+# ======================================================================================
+# RenderPlot
+# ======================================================================================
 # It would be nice to specify the return type of RenderPlotFunc to be something like:
 #   Union[matplotlib.figure.Figure, PIL.Image.Image]
 # However, if we did that, we'd have to import those modules at load time, which adds
@@ -46,36 +121,16 @@ class ImgData(TypedDict):
     alt: Optional[str]
 
 
-RenderImageFunc = Callable[[], ImgData]
-RenderImageFuncAsync = Callable[[], Awaitable[ImgData]]
-
-
-class RenderFunction:
-    def __init__(self, fn: Callable[[], object]) -> None:
-        raise NotImplementedError
-
-    def __call__(self) -> object:
-        raise NotImplementedError
-
-    def set_metadata(self, session: "ShinySession", name: str) -> None:
-        """When RenderFunctions are assigned to Output object slots, this method
-        is used to pass along session and name information.
-        """
-        self._session: ShinySession = session
-        self._name: str = name
-
-
-class RenderFunctionAsync(RenderFunction):
-    async def __call__(self) -> object:
-        raise NotImplementedError
-
-
 class RenderPlot(RenderFunction):
     _ppi: float = 96
 
-    def __init__(self, fn: RenderPlotFunc, alt: Optional[str] = None) -> None:
-        self._fn: RenderPlotFuncAsync = utils.wrap_async(fn)
+    def __init__(self, fn: RenderPlotFunc, *, alt: Optional[str] = None) -> None:
+        super().__init__(fn)
         self._alt: Optional[str] = alt
+        # The Render*Async subclass will pass in an async function, but it tells the
+        # static type checker that it's synchronous. wrap_async() is smart -- if is
+        # passed an async function, it will not change it.
+        self._fn: RenderPlotFuncAsync = utils.wrap_async(fn)
 
     def __call__(self) -> object:
         return utils.run_coro_sync(self.run())
@@ -83,13 +138,13 @@ class RenderPlot(RenderFunction):
     async def run(self) -> object:
         # Reactively read some information about the plot.
         pixelratio: float = typing.cast(
-            float, self._session.input[".clientdata_pixelratio"]
+            float, self._session.input[".clientdata_pixelratio"]()
         )
         width: float = typing.cast(
-            float, self._session.input[f".clientdata_output_{self._name}_width"]
+            float, self._session.input[f".clientdata_output_{self._name}_width"]()
         )
         height: float = typing.cast(
-            float, self._session.input[f".clientdata_output_{self._name}_height"]
+            float, self._session.input[f".clientdata_output_{self._name}_height"]()
         )
 
         fig = await self._fn()
@@ -125,12 +180,8 @@ class RenderPlot(RenderFunction):
 class RenderPlotAsync(RenderPlot, RenderFunctionAsync):
     def __init__(self, fn: RenderPlotFuncAsync, alt: Optional[str] = None) -> None:
         if not inspect.iscoroutinefunction(fn):
-            raise TypeError("PlotAsync requires an async function")
-
-        # Init the Plot base class with a placeholder synchronous function so it
-        # won't throw an error, then replace it with the async function.
-        super().__init__(lambda: None, alt)
-        self._fn: RenderPlotFuncAsync = fn
+            raise TypeError(self.__class__.__name__ + " requires an async function")
+        super().__init__(typing.cast(RenderPlotFunc, fn), alt=alt)
 
     async def __call__(self) -> object:
         return await self.run()
@@ -234,10 +285,26 @@ def try_render_plot_pil(
         return "TYPE_MISMATCH"
 
 
+# ======================================================================================
+# RenderImage
+# ======================================================================================
+RenderImageFunc = Callable[[], ImgData]
+RenderImageFuncAsync = Callable[[], Awaitable[ImgData]]
+
+
 class RenderImage(RenderFunction):
-    def __init__(self, fn: RenderImageFunc, delete_file: bool = False) -> None:
-        self._fn: RenderImageFuncAsync = utils.wrap_async(fn)
+    def __init__(
+        self,
+        fn: RenderImageFunc,
+        *,
+        delete_file: bool = False,
+    ) -> None:
+        super().__init__(fn)
         self._delete_file: bool = delete_file
+        # The Render*Async subclass will pass in an async function, but it tells the
+        # static type checker that it's synchronous. wrap_async() is smart -- if is
+        # passed an async function, it will not change it.
+        self._fn: RenderImageFuncAsync = utils.wrap_async(fn)
 
     def __call__(self) -> object:
         return utils.run_coro_sync(self.run())
@@ -260,11 +327,8 @@ class RenderImage(RenderFunction):
 class RenderImageAsync(RenderImage, RenderFunctionAsync):
     def __init__(self, fn: RenderImageFuncAsync, delete_file: bool = False) -> None:
         if not inspect.iscoroutinefunction(fn):
-            raise TypeError("ImageAsync requires an async function")
-        # Init the Image base class with a placeholder synchronous function so it
-        # won't throw an error, then replace it with the async function.
-        super().__init__(lambda: None, delete_file)
-        self._fn: RenderImageFuncAsync = fn
+            raise TypeError(self.__class__.__name__ + " requires an async function")
+        super().__init__(typing.cast(RenderImageFunc, fn), delete_file=delete_file)
 
     async def __call__(self) -> object:
         return await self.run()
@@ -284,12 +348,19 @@ def render_image(
     return wrapper
 
 
+# ======================================================================================
+# RenderUI
+# ======================================================================================
 RenderUIFunc = Callable[[], TagChildArg]
 RenderUIFuncAsync = Callable[[], Awaitable[TagChildArg]]
 
 
 class RenderUI(RenderFunction):
     def __init__(self, fn: RenderUIFunc) -> None:
+        super().__init__(fn)
+        # The Render*Async subclass will pass in an async function, but it tells the
+        # static type checker that it's synchronous. wrap_async() is smart -- if is
+        # passed an async function, it will not change it.
         self._fn: RenderUIFuncAsync = utils.wrap_async(fn)
 
     def __call__(self) -> object:
@@ -300,7 +371,7 @@ class RenderUI(RenderFunction):
         if ui is None:
             return None
         # TODO: better a better workaround for the circular dependency
-        from .shinysession import _process_deps
+        from .session import _process_deps
 
         return _process_deps(ui, self._session)
 
@@ -308,10 +379,8 @@ class RenderUI(RenderFunction):
 class RenderUIAsync(RenderUI, RenderFunctionAsync):
     def __init__(self, fn: RenderUIFuncAsync) -> None:
         if not inspect.iscoroutinefunction(fn):
-            raise TypeError("PlotAsync requires an async function")
-
-        super().__init__(lambda: None)
-        self._fn: RenderUIFuncAsync = fn
+            raise TypeError(self.__class__.__name__ + " requires an async function")
+        super().__init__(typing.cast(RenderUIFunc, fn))
 
     async def __call__(self) -> object:
         return await self.run()

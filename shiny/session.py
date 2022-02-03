@@ -1,5 +1,6 @@
 __all__ = (
-    "ShinySession",
+    "Session",
+    "Inputs",
     "Outputs",
     "get_current_session",
     "session_context",
@@ -48,11 +49,11 @@ else:
     from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
-    from .shinyapp import ShinyApp
+    from .app import App
 
 from htmltools import TagChildArg, TagList
 
-from .reactives import ReactiveValues, Observer, ObserverAsync, isolate
+from .reactive import Value, Effect, EffectAsync, isolate
 from .http_staticfiles import FileResponse
 from .connmanager import Connection, ConnectionClosed
 from . import reactcore
@@ -114,19 +115,19 @@ def _empty_outbound_message_queues() -> _OutBoundMessageQueues:
     return {"values": [], "input_messages": [], "errors": []}
 
 
-class ShinySession:
+class Session:
     # ==========================================================================
     # Initialization
     # ==========================================================================
     def __init__(
-        self, app: "ShinyApp", id: str, conn: Connection, debug: bool = False
+        self, app: "App", id: str, conn: Connection, debug: bool = False
     ) -> None:
-        self.app: ShinyApp = app
+        self.app: App = app
         self.id: str = id
         self._conn: Connection = conn
         self._debug: bool = debug
 
-        self.input: ReactiveValues = ReactiveValues()
+        self.input: Inputs = Inputs()
         self.output: Outputs = Outputs(self)
 
         self._outbound_message_queues = _empty_outbound_message_queues()
@@ -145,7 +146,7 @@ class ShinySession:
         self._flushed_callbacks = utils.Callbacks()
 
         with session_context(self):
-            self.app.server(self)
+            self.app.server(self.input, self.output, self)
 
     def _register_session_end_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions
@@ -237,7 +238,7 @@ class ShinySession:
             if len(keys) == 2:
                 val = input_handlers.process_value(keys[1], val, keys[0], self)
 
-            self.input[keys[0]] = val
+            self.input[keys[0]].set(val)
 
     # ==========================================================================
     # Message handlers
@@ -290,7 +291,7 @@ class ShinySession:
                 )
                 return None
             file_data = upload_op.finish()
-            self.input[input_id] = file_data
+            self.input[input_id].set(file_data)
             # Explicitly return None to signal that the message was handled.
             return None
 
@@ -505,7 +506,7 @@ class ShinySession:
         filename: Optional[Union[str, Callable[[], str]]] = None,
         media_type: Union[None, str, Callable[[], str]] = None,
         encoding: str = "utf-8",
-    ):
+    ) -> Callable[[_DownloadHandler], None]:
         def wrapper(fn: _DownloadHandler):
             if name is None:
                 effective_name = fn.__name__
@@ -519,7 +520,8 @@ class ShinySession:
                 encoding=encoding,
             )
 
-            @self.output(effective_name)
+            @self.output(name=effective_name)
+            @render.render_text()
             @functools.wraps(fn)
             def _():
                 # TODO: the `w=` parameter should eventually be a worker ID, if we add those
@@ -528,38 +530,86 @@ class ShinySession:
         return wrapper
 
 
+# ======================================================================================
+# Inputs
+# ======================================================================================
+class Inputs:
+    def __init__(self, **kwargs: object) -> None:
+        self._map: dict[str, Value[Any]] = {}
+        for key, value in kwargs.items():
+            self._map[key] = Value(value)
+
+    def __setitem__(self, key: str, value: Value[Any]) -> None:
+        if not isinstance(value, Value):
+            raise TypeError("`value` must be a shiny.reactive.Value object.")
+
+        self._map[key] = value
+
+    def __getitem__(self, key: str) -> Value[Any]:
+        # Auto-populate key if accessed but not yet set. Needed to take reactive
+        # dependencies on input values that haven't been received from client
+        # yet.
+        if key not in self._map:
+            self._map[key] = Value(None)
+
+        return self._map[key]
+
+    def __delitem__(self, key: str) -> None:
+        del self._map[key]
+
+    # Allow access of values as attributes.
+    def __setattr__(self, attr: str, value: Value[Any]) -> None:
+        # Need special handling of "_map".
+        if attr == "_map":
+            super().__setattr__(attr, value)
+            return
+
+        self.__setitem__(attr, value)
+
+    def __getattr__(self, attr: str) -> Value[Any]:
+        if attr == "_map":
+            return object.__getattribute__(self, attr)
+        return self.__getitem__(attr)
+
+    def __delattr__(self, key: str) -> None:
+        self.__delitem__(key)
+
+
+# ======================================================================================
+# Outputs
+# ======================================================================================
 class Outputs:
-    def __init__(self, session: ShinySession) -> None:
-        self._output_obervers: Dict[str, Observer] = {}
-        self._session: ShinySession = session
+    def __init__(self, session: Session) -> None:
+        self._output_obervers: Dict[str, Effect] = {}
+        self._session: Session = session
 
     def __call__(
-        self, name: str
-    ) -> Callable[[Union[Callable[[], object], render.RenderFunction]], None]:
-        def set_fn(fn: Union[Callable[[], object], render.RenderFunction]) -> None:
-
+        self, *, name: Optional[str] = None
+    ) -> Callable[[render.RenderFunction], None]:
+        def set_fn(fn: render.RenderFunction) -> None:
+            fn_name = name or fn.__name__
             # fn is either a regular function or a RenderFunction object. If
             # it's the latter, we can give it a bit of metadata, which can be
             # used by the
             if isinstance(fn, render.RenderFunction):
-                fn.set_metadata(self._session, name)
+                fn.set_metadata(self._session, fn_name)
 
-            if name in self._output_obervers:
-                self._output_obervers[name].destroy()
+            if fn_name in self._output_obervers:
+                self._output_obervers[fn_name].destroy()
 
-            @ObserverAsync
+            @EffectAsync
             async def output_obs():
                 await self._session.send_message(
-                    {"recalculating": {"name": name, "status": "recalculating"}}
+                    {"recalculating": {"name": fn_name, "status": "recalculating"}}
                 )
 
                 message: Dict[str, object] = {}
                 try:
                     if utils.is_async_callable(fn):
                         fn2 = typing.cast(Callable[[], Awaitable[object]], fn)
-                        message[name] = await fn2()
+                        message[fn_name] = await fn2()
                     else:
-                        message[name] = fn()
+                        message[fn_name] = fn()
                 except SilentCancelOutputException:
                     return
                 except SilentException:
@@ -576,7 +626,7 @@ class Outputs:
                         err_msg = str(e)
                     # Register the outbound error message
                     msg: Dict[str, object] = {
-                        name: {
+                        fn_name: {
                             "message": err_msg,
                             # TODO: is it possible to get the call?
                             "call": None,
@@ -589,10 +639,10 @@ class Outputs:
                 self._session._outbound_message_queues["values"].append(message)
 
                 await self._session.send_message(
-                    {"recalculating": {"name": name, "status": "recalculated"}}
+                    {"recalculating": {"name": fn_name, "status": "recalculated"}}
                 )
 
-            self._output_obervers[name] = output_obs
+            self._output_obervers[fn_name] = output_obs
 
             return None
 
@@ -602,25 +652,25 @@ class Outputs:
 # ==============================================================================
 # Context manager for current session (AKA current reactive domain)
 # ==============================================================================
-_current_session: ContextVar[Optional[ShinySession]] = ContextVar(
+_current_session: ContextVar[Optional[Session]] = ContextVar(
     "current_session", default=None
 )
 
 
-def get_current_session() -> Optional[ShinySession]:
+def get_current_session() -> Optional[Session]:
     return _current_session.get()
 
 
 @contextmanager
-def session_context(session: Optional[ShinySession]):
-    token: Token[Union[ShinySession, None]] = _current_session.set(session)
+def session_context(session: Optional[Session]):
+    token: Token[Union[Session, None]] = _current_session.set(session)
     try:
         yield
     finally:
         _current_session.reset(token)
 
 
-def _require_active_session(session: Optional[ShinySession]) -> ShinySession:
+def _require_active_session(session: Optional[Session]) -> Session:
     if session is None:
         session = get_current_session()
     if session is None:
@@ -656,9 +706,7 @@ class _RenderedDeps(TypedDict):
     html: str
 
 
-def _process_deps(
-    ui: TagChildArg, session: Optional[ShinySession] = None
-) -> _RenderedDeps:
+def _process_deps(ui: TagChildArg, session: Optional[Session] = None) -> _RenderedDeps:
 
     session = _require_active_session(session)
 

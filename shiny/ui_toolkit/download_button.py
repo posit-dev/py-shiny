@@ -2,7 +2,7 @@ from typing import Optional
 
 from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
 
-from .shinyenv import is_pyodide
+from ..shinyenv import is_pyodide
 
 
 # TODO: implement icon

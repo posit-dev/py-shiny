@@ -4,83 +4,79 @@
 # Then point web browser to:
 #   http://localhost:8000/
 
-# Add parent directory to path, so we can find the prism module.
-# (This is just a temporary fix)
-import os
-import sys
-
-# This will load the shiny module dynamically, without having to install it.
-# This makes the debug/run cycle quicker.
-shiny_module_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, shiny_module_dir)
-
-from shiny import *
-from shiny.fileupload import FileInfo
+import matplotlib.pyplot as plt
 
 # For plot rendering
 import numpy as np
-import matplotlib.pyplot as plt
 
-ui = page_fluid(
-    layout_sidebar(
-        panel_sidebar(
-            input_slider("n", "N", 0, 100, 20),
-            input_file("file1", "Choose file", multiple=True),
+import shiny.ui_toolkit as st
+import shiny
+from shiny import Session, Inputs, Outputs, reactive
+from shiny.fileupload import FileInfo
+
+ui = st.page_fluid(
+    st.layout_sidebar(
+        st.panel_sidebar(
+            st.input_slider("n", "N", 0, 100, 20),
+            st.input_file("file1", "Choose file", multiple=True),
         ),
-        panel_main(
-            output_text_verbatim("txt"),
-            output_text_verbatim("shared_txt"),
-            output_plot("plot"),
-            output_text_verbatim("file_content"),
+        st.panel_main(
+            st.output_text_verbatim("txt"),
+            st.output_text_verbatim("shared_txt"),
+            st.output_plot("plot"),
+            st.output_text_verbatim("file_content"),
         ),
     ),
 )
 
 # A ReactiveVal which is shared across all sessions.
-shared_val = ReactiveVal(None)
+shared_val = reactive.Value(None)
 
 
-def server(session: ShinySession):
-    @reactive()
+def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.calc()
     def r():
-        if session.input["n"] is None:
+        if input.n() is None:
             return
-        return session.input["n"] * 2
+        return input.n() * 2
 
-    @session.output("txt")
-    async def _():
+    @output()
+    @shiny.render_text()
+    async def txt():
         val = r()
-        return f"n*2 is {val}, session id is {get_current_session().id}"
+        return f"n*2 is {val}, session id is {session.id}"
 
     # This observer watches n, and changes shared_val, which is shared across
     # all running sessions.
-    @observe()
+    @reactive.effect()
     def _():
-        if session.input["n"] is None:
+        if input.n() is None:
             return
-        shared_val(session.input["n"] * 10)
+        shared_val.set(input.n() * 10)
 
     # Print the value of shared_val(). Changing it in one session should cause
     # this to run in all sessions.
-    @session.output("shared_txt")
-    def _():
+    @output()
+    @shiny.render_text()
+    def shared_txt():
         return f"shared_val() is {shared_val()}"
 
-    @session.output("plot")
-    @render_plot(alt="A histogram")
-    def _():
+    @output()
+    @shiny.render_plot(alt="A histogram")
+    def plot() -> object:
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(437)
 
         fig, ax = plt.subplots()
-        ax.hist(x, session.input["n"], density=True)
+        ax.hist(x, input.n(), density=True)
         return fig
 
-    @session.output("file_content")
-    def _():
-        file_infos: list[FileInfo] = session.input["file1"]
+    @output()
+    @shiny.render_text()
+    def file_content():
+        file_infos: list[FileInfo] = input.file1()
         if not file_infos:
-            return
+            return ""
 
         out_str = ""
         for file_info in file_infos:
@@ -91,9 +87,4 @@ def server(session: ShinySession):
         return out_str
 
 
-app = ShinyApp(ui, server)
-
-if __name__ == "__main__":
-    app.run()
-    # Alternately, to listen on a TCP port:
-    # app.run(conn_type = "tcp")
+app = shiny.App(ui, server)

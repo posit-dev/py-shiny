@@ -1,50 +1,48 @@
+import shiny.ui_toolkit as st
 from shiny import *
 
-ui = page_fluid(
-    input_action_button("safe", "Throw a safe error"),
-    output_ui("safe"),
-    input_action_button("unsafe", "Throw an unsafe error"),
-    output_ui("unsafe"),
-    input_text(
+ui = st.page_fluid(
+    st.input_action_button("safe", "Throw a safe error"),
+    st.output_ui("safe"),
+    st.input_action_button("unsafe", "Throw an unsafe error"),
+    st.output_ui("unsafe"),
+    st.input_text(
         "txt",
         "Enter some text below, then remove it. Notice how the text is never fully removed.",
     ),
-    output_ui("txt_out"),
+    st.output_ui("txt_out"),
 )
 
 
-def server(session: ShinySession):
-    @reactive()
+def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.calc()
     def safe_click():
-        req(session.input["safe"])
-        return session.input["safe"]
+        req(input.safe())
+        return input.safe()
 
-    @session.output("safe")
+    @output()
     @render_ui()
-    def _():
+    def safe():
         raise SafeException(f"You've clicked {str(safe_click())} times")
 
-    @session.output("unsafe")
+    @output()
     @render_ui()
-    def _():
-        req(session.input["unsafe"])
-        raise Exception(
-            f"Super secret number of clicks: {str(session.input['unsafe'])}"
-        )
+    def unsafe():
+        req(input.unsafe())
+        raise Exception(f"Super secret number of clicks: {str(input.unsafe())}")
 
-    @observe()
+    @reactive.effect()
     def _():
-        req(session.input["unsafe"])
-        print("unsafe clicks:", session.input["unsafe"])
+        req(input.unsafe())
+        print("unsafe clicks:", input.unsafe())
         # raise Exception("Observer exception: this should cause a crash")
 
-    @session.output("txt_out")
+    @output()
     @render_ui()
-    def _():
-        req(session.input["txt"], cancel_output=True)
-        return session.input["txt"]
+    def txt_out():
+        req(input.txt(), cancel_output=True)
+        return input.txt()
 
 
-app = ShinyApp(ui, server)
+app = App(ui, server)
 app.SANITIZE_ERRORS = True
-app.run()
