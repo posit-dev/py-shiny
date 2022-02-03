@@ -1,11 +1,14 @@
 from typing import (
     Callable,
     Awaitable,
+    Union,
     Tuple,
     TypeVar,
     Dict,
     Any,
+    cast,
 )
+import functools
 import os
 import tempfile
 import importlib
@@ -31,12 +34,20 @@ def rand_hex(bytes: int) -> str:
 T = TypeVar("T")
 
 
-def wrap_async(fn: Callable[[], T]) -> Callable[[], Awaitable[T]]:
+def wrap_async(
+    fn: Union[Callable[[], T], Callable[[], Awaitable[T]]]
+) -> Callable[[], Awaitable[T]]:
     """
-    Wrap a synchronous function that returns T, and return an async function
-    that wraps the original function.
+    Given a synchronous function that returns T, return an async function that wraps the
+    original function. If the input function is already async, then return it unchanged.
     """
 
+    if is_async_callable(fn):
+        return cast(Callable[[], Awaitable[T]], fn)
+
+    fn = cast(Callable[[], T], fn)
+
+    @functools.wraps(fn)
     async def fn_async() -> T:
         return fn()
 
@@ -45,8 +56,8 @@ def wrap_async(fn: Callable[[], T]) -> Callable[[], Awaitable[T]]:
 
 def is_async_callable(obj: object) -> bool:
     """
-    Returns True if `obj` is an `async def` function, or if it's an object with
-    a `__call__` method which is an `async def` function.
+    Returns True if `obj` is an `async def` function, or if it's an object with a
+    `__call__` method which is an `async def` function.
     """
     if inspect.iscoroutinefunction(obj):
         return True

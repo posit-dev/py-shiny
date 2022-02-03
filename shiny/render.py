@@ -62,19 +62,22 @@ class RenderFunctionAsync(RenderFunction):
 # ======================================================================================
 # RenderText
 # ======================================================================================
-RenderTextFunc = Callable[[], str]
-RenderTextFuncAsync = Callable[[], Awaitable[str]]
+RenderTextFunc = Callable[[], Union[str, None]]
+RenderTextFuncAsync = Callable[[], Awaitable[Union[str, None]]]
 
 
 class RenderText(RenderFunction):
     def __init__(self, fn: RenderTextFunc) -> None:
         super().__init__(fn)
+        # The Render*Async subclass will pass in an async function, but it tells the
+        # static type checker that it's synchronous. wrap_async() is smart -- if is
+        # passed an async function, it will not change it.
         self._fn: RenderTextFuncAsync = utils.wrap_async(fn)
 
-    def __call__(self) -> str:
+    def __call__(self) -> Union[str, None]:
         return utils.run_coro_sync(self.run())
 
-    async def run(self) -> str:
+    async def run(self) -> Union[str, None]:
         return await self._fn()
 
 
@@ -82,12 +85,9 @@ class RenderTextAsync(RenderText, RenderFunctionAsync):
     def __init__(self, fn: RenderTextFuncAsync) -> None:
         if not inspect.iscoroutinefunction(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
-        # Init the base class with a placeholder synchronous function so it won't throw
-        # an error, then replace it with the async function.
-        super().__init__(typing.cast(RenderTextFunc, lambda: None))
-        self._fn: RenderTextFuncAsync = fn
+        super().__init__(typing.cast(RenderTextFunc, fn))
 
-    async def __call__(self) -> str:  # type: ignore
+    async def __call__(self) -> Union[str, None]:  # type: ignore
         return await self.run()
 
 
@@ -124,10 +124,13 @@ class ImgData(TypedDict):
 class RenderPlot(RenderFunction):
     _ppi: float = 96
 
-    def __init__(self, fn: RenderPlotFunc, alt: Optional[str] = None) -> None:
+    def __init__(self, fn: RenderPlotFunc, *, alt: Optional[str] = None) -> None:
         super().__init__(fn)
-        self._fn: RenderPlotFuncAsync = utils.wrap_async(fn)
         self._alt: Optional[str] = alt
+        # The Render*Async subclass will pass in an async function, but it tells the
+        # static type checker that it's synchronous. wrap_async() is smart -- if is
+        # passed an async function, it will not change it.
+        self._fn: RenderPlotFuncAsync = utils.wrap_async(fn)
 
     def __call__(self) -> object:
         return utils.run_coro_sync(self.run())
@@ -178,11 +181,7 @@ class RenderPlotAsync(RenderPlot, RenderFunctionAsync):
     def __init__(self, fn: RenderPlotFuncAsync, alt: Optional[str] = None) -> None:
         if not inspect.iscoroutinefunction(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
-
-        # Init the Plot base class with a placeholder synchronous function so it
-        # won't throw an error, then replace it with the async function.
-        super().__init__(lambda: None, alt)
-        self._fn: RenderPlotFuncAsync = fn
+        super().__init__(typing.cast(RenderPlotFunc, fn), alt=alt)
 
     async def __call__(self) -> object:
         return await self.run()
@@ -294,10 +293,18 @@ RenderImageFuncAsync = Callable[[], Awaitable[ImgData]]
 
 
 class RenderImage(RenderFunction):
-    def __init__(self, fn: RenderImageFunc, delete_file: bool = False) -> None:
+    def __init__(
+        self,
+        fn: RenderImageFunc,
+        *,
+        delete_file: bool = False,
+    ) -> None:
         super().__init__(fn)
-        self._fn: RenderImageFuncAsync = utils.wrap_async(fn)
         self._delete_file: bool = delete_file
+        # The Render*Async subclass will pass in an async function, but it tells the
+        # static type checker that it's synchronous. wrap_async() is smart -- if is
+        # passed an async function, it will not change it.
+        self._fn: RenderImageFuncAsync = utils.wrap_async(fn)
 
     def __call__(self) -> object:
         return utils.run_coro_sync(self.run())
@@ -321,10 +328,7 @@ class RenderImageAsync(RenderImage, RenderFunctionAsync):
     def __init__(self, fn: RenderImageFuncAsync, delete_file: bool = False) -> None:
         if not inspect.iscoroutinefunction(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
-        # Init the Image base class with a placeholder synchronous function so it
-        # won't throw an error, then replace it with the async function.
-        super().__init__(typing.cast(RenderImageFunc, lambda: None), delete_file)
-        self._fn: RenderImageFuncAsync = fn
+        super().__init__(typing.cast(RenderImageFunc, fn), delete_file=delete_file)
 
     async def __call__(self) -> object:
         return await self.run()
@@ -354,6 +358,9 @@ RenderUIFuncAsync = Callable[[], Awaitable[TagChildArg]]
 class RenderUI(RenderFunction):
     def __init__(self, fn: RenderUIFunc) -> None:
         super().__init__(fn)
+        # The Render*Async subclass will pass in an async function, but it tells the
+        # static type checker that it's synchronous. wrap_async() is smart -- if is
+        # passed an async function, it will not change it.
         self._fn: RenderUIFuncAsync = utils.wrap_async(fn)
 
     def __call__(self) -> object:
@@ -373,9 +380,7 @@ class RenderUIAsync(RenderUI, RenderFunctionAsync):
     def __init__(self, fn: RenderUIFuncAsync) -> None:
         if not inspect.iscoroutinefunction(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
-
-        super().__init__(lambda: None)
-        self._fn: RenderUIFuncAsync = fn
+        super().__init__(typing.cast(RenderUIFunc, fn))
 
     async def __call__(self) -> object:
         return await self.run()
