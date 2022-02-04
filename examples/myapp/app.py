@@ -1,9 +1,3 @@
-# To run this app:
-#   python3 app.py
-
-# Then point web browser to:
-#   http://localhost:8000/
-
 import matplotlib.pyplot as plt
 
 # For plot rendering

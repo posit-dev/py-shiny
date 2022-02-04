@@ -1,19 +1,3 @@
-# To run this app:
-#   python3 app.py
-
-# Then point web browser to:
-#   http://localhost:8000/
-
-# Add parent directory to path, so we can find the prism module.
-# (This is just a temporary fix)
-import os
-import sys
-
-# This will load the shiny module dynamically, without having to install it.
-# This makes the debug/run cycle quicker.
-shiny_module_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, shiny_module_dir)
-
 from shiny import *
 
 # =============================================================================
@@ -60,7 +44,3 @@ def server(session: Session):
 
 
 app = App(ui, server)
-
-
-if __name__ == "__main__":
-    app.run()

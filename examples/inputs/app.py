@@ -155,5 +155,3 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(ui, server)
-if __name__ == "__main__":
-    app.run()

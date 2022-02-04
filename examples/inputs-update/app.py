@@ -1,9 +1,3 @@
-# To run this app:
-#   python3 app.py
-
-# Then point web browser to:
-#   http://localhost:8000/
-
 from datetime import date
 
 import shiny.ui_toolkit as st
@@ -205,7 +199,3 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(ui, server, debug=True)
-
-
-if __name__ == "__main__":
-    app.run()

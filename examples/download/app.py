@@ -1,8 +1,3 @@
-# To run this app:
-#   python3 app.py
-
-# Then point web browser to:
-#   http://localhost:8000/
 import asyncio
 import os
 import io

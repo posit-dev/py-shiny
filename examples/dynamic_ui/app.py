@@ -1,9 +1,3 @@
-# To run this app:
-#   python3 app.py
-
-# Then point web browser to:
-#   http://localhost:8000/
-
 import shiny.ui_toolkit as st
 from shiny import *
 from htmltools import *
