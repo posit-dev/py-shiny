@@ -1,5 +1,5 @@
 from shiny import *
-from htmltools import *
+from htmltools import tags
 
 # For plot rendering
 import numpy as np

@@ -1,7 +1,7 @@
 from datetime import date
 
 from shiny import *
-from htmltools import *
+from htmltools import tags, h2
 
 app_ui = ui.page_fluid(
     ui.panel_title("Changing the values of inputs from the server"),
@@ -198,7 +198,3 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server, debug=True)
-
-
-if __name__ == "__main__":
-    app.run()
