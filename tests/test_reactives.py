@@ -939,3 +939,167 @@ async def test_event_async_decorator():
     v2.set(2)
     await reactcore.flush()
     assert n_times == 7
+
+
+def test_observer_pausing():
+    a = Value(float(1))
+
+    @calc()
+    def funcA():
+        return a()
+
+    @effect()
+    def obsB():
+        funcA()
+
+    # Important: suspend() only affects observer at invalidation time
+
+    # Observers are invalidated at creation time, so it will run once regardless
+    # of being suspended
+    obsB.suspend()
+    asyncio.run(reactcore.flush())
+    assert funcA._exec_count == 1
+    assert obsB._exec_count == 1
+
+    # When resuming, if nothing changed, don't do anything
+    obsB.resume()
+    asyncio.run(reactcore.flush())
+    assert funcA._exec_count == 1
+    assert obsB._exec_count == 1
+
+    # Make sure suspended observers do not flush, but do invalidate
+    obsB_invalidated = False
+
+    def _():
+        nonlocal obsB_invalidated
+        obsB_invalidated = True
+
+    obsB.on_invalidate(_)
+    obsB.suspend()
+    a.set(2)
+    asyncio.run(reactcore.flush())
+    assert obsB_invalidated
+    assert funcA._exec_count == 1
+    assert obsB._exec_count == 1
+
+    obsB.resume()
+    a.set(2.5)
+    obsB.suspend()
+    asyncio.run(reactcore.flush())
+    assert funcA._exec_count == 2
+    assert obsB._exec_count == 2
+
+    a.set(3)
+    asyncio.run(reactcore.flush())
+    assert funcA._exec_count == 2
+    assert obsB._exec_count == 2
+
+    # If on_invalidate() is added _after_ obsB is suspended and the values["a"] changes,
+    # then it shouldn't get run (on_invalidate runs on invalidation, not on flush)
+    a.set(4)
+    obsB_invalidated2 = False
+
+    def _():
+        nonlocal obsB_invalidated2
+        obsB_invalidated2 = True
+
+    obsB.on_invalidate(_)
+    obsB.resume()
+    asyncio.run(reactcore.flush())
+    assert not obsB_invalidated2
+    assert funcA._exec_count == 3
+    assert obsB._exec_count == 3
+
+
+def test_observer_async_pausing():
+    a = Value(float(1))
+
+    @calc()
+    async def funcA():
+        return a()
+
+    @effect()
+    async def obsB():
+        await funcA()
+
+    # Important: suspend() only affects observer at invalidation time
+
+    # Observers are invalidated at creation time, so it will run once regardless
+    # of being suspended
+    obsB.suspend()
+    asyncio.run(reactcore.flush())
+    assert funcA._exec_count == 1
+    assert obsB._exec_count == 1
+
+    # When resuming, if nothing changed, don't do anything
+    obsB.resume()
+    asyncio.run(reactcore.flush())
+    assert funcA._exec_count == 1
+    assert obsB._exec_count == 1
+
+    # Make sure suspended observers do not flush, but do invalidate
+    obsB_invalidated = False
+
+    def _():
+        nonlocal obsB_invalidated
+        obsB_invalidated = True
+
+    obsB.on_invalidate(_)
+    obsB.suspend()
+    a.set(2)
+    asyncio.run(reactcore.flush())
+    assert obsB_invalidated
+    assert funcA._exec_count == 1
+    assert obsB._exec_count == 1
+
+    obsB.resume()
+    a.set(2.5)
+    obsB.suspend()
+    asyncio.run(reactcore.flush())
+    assert funcA._exec_count == 2
+    assert obsB._exec_count == 2
+
+    a.set(3)
+    asyncio.run(reactcore.flush())
+    assert funcA._exec_count == 2
+    assert obsB._exec_count == 2
+
+    # If on_invalidate() is added _after_ obsB is suspended and the values["a"] changes,
+    # then it shouldn't get run (on_invalidate runs on invalidation, not on flush)
+    a.set(4)
+    obsB_invalidated2 = False
+
+    def _():
+        nonlocal obsB_invalidated2
+        obsB_invalidated2 = True
+
+    obsB.on_invalidate(_)
+    obsB.resume()
+    asyncio.run(reactcore.flush())
+    assert not obsB_invalidated2
+    assert funcA._exec_count == 3
+    assert obsB._exec_count == 3
+
+
+def test_observer_async_suspended_resumed_observers_run_at_most_once():
+
+    a = Value(1)
+
+    @effect()
+    async def obs():
+        print(a())
+
+    # First flush should run obs once
+    assert obs._exec_count == 0
+    asyncio.run(reactcore.flush())
+    assert obs._exec_count == 1
+
+    # Modify the dependency at each stage of suspend/resume/flush should still
+    # only result in one run of obs()
+    a.set(2)
+    obs.suspend()
+    a.set(3)
+    obs.resume()
+    a.set(4)
+    asyncio.run(reactcore.flush())
+    assert obs._exec_count == 2
