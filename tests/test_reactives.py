@@ -116,10 +116,10 @@ async def test_recursive_calc():
 
 
 @pytest.mark.asyncio
-async def test_recursive_calc_async():
+async def test_recursive_async_calc():
     v = Value(5)
 
-    @calc_async()
+    @calc()
     async def r():
         if v() == 0:
             return 0
@@ -149,7 +149,7 @@ async def test_async_sequential():
     exec_order: list[str] = []
 
     async def react_chain(n: int):
-        @calc_async()
+        @calc()
         async def r():
             nonlocal exec_order
             exec_order.append(f"r{n}-1")
@@ -262,7 +262,7 @@ async def test_isolate_async_basic_without_context():
     # context.
     v = Value(1)
 
-    @calc_async()
+    @calc()
     async def r():
         return v() + 10
 
@@ -278,7 +278,7 @@ async def test_isolate_async_basic_without_context():
 async def test_isolate_async_prevents_dependency():
     v = Value(1)
 
-    @calc_async()
+    @calc()
     async def r():
         return v() + 10
 
@@ -916,12 +916,12 @@ async def test_event_async_decorator():
     # works with @calc()
     v2 = Value(1)
 
-    @calc_async()
+    @calc()
     async def r_a():
         await asyncio.sleep(0)  # Make sure the async function yields control
         return 1
 
-    @calc_async()
+    @calc()
     @event(lambda: v2(), r_a, ignore_init=True)
     async def r2b():
         await asyncio.sleep(0)  # Make sure the async function yields control

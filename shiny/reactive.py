@@ -5,7 +5,6 @@ __all__ = (
     "Calc",
     "CalcAsync",
     "calc",
-    "calc_async",
     "Effect",
     "EffectAsync",
     "effect",
@@ -70,17 +69,25 @@ class Value(Generic[T]):
 # ==============================================================================
 # Calc
 # ==============================================================================
+
+CalcFunction = Callable[[], T]
+CalcFunctionAsync = Callable[[], Awaitable[T]]
+
+
 class Calc(Generic[T]):
     def __init__(
         self,
-        func: Callable[[], T],
+        fn: CalcFunction[T],
         *,
         session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
-        if inspect.iscoroutinefunction(func):
-            raise TypeError("Reactive requires a non-async function")
+        self.__name__ = fn.__name__
+        self.__doc__ = fn.__doc__
 
-        self._func: Callable[[], Awaitable[T]] = utils.wrap_async(func)
+        # The CalcAsync subclass will pass in an async function, but it tells the
+        # static type checker that it's synchronous. wrap_async() is smart -- if is
+        # passed an async function, it will not change it.
+        self._fn: CalcFunctionAsync[T] = utils.wrap_async(fn)
         self._is_async: bool = False
 
         self._dependents: Dependents = Dependents()
@@ -152,7 +159,7 @@ class Calc(Generic[T]):
     async def _run_func(self) -> None:
         self._error.clear()
         try:
-            self._value.append(await self._func())
+            self._value.append(await self._fn())
         except Exception as err:
             self._error.append(err)
 
@@ -160,18 +167,14 @@ class Calc(Generic[T]):
 class CalcAsync(Calc[T]):
     def __init__(
         self,
-        func: Callable[[], Awaitable[T]],
+        fn: CalcFunctionAsync[T],
         *,
         session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
-        if not inspect.iscoroutinefunction(func):
-            raise TypeError("CalcAsync requires an async function")
+        if not inspect.iscoroutinefunction(fn):
+            raise TypeError(self.__class__.__name__ + " requires an async function")
 
-        # Init the Calc base class with a placeholder synchronous function so it won't
-        # throw an error, then replace it with the async function. Need the `cast` to
-        # satisfy the type checker.
-        super().__init__(lambda: typing.cast(T, None), session=session)
-        self._func: Callable[[], Awaitable[T]] = func
+        super().__init__(cast(CalcFunction[T], fn), session=session)
         self._is_async = True
 
     async def __call__(self) -> T:
@@ -180,20 +183,16 @@ class CalcAsync(Calc[T]):
 
 def calc(
     *, session: Union[MISSING_TYPE, "Session", None] = MISSING
-) -> Callable[[Callable[[], T]], Calc[T]]:
-    def create_calc(fn: Callable[[], T]) -> Calc[T]:
-        return Calc(fn, session=session)
+) -> Callable[[Union[CalcFunction[T], CalcFunctionAsync[T]]], Calc[T]]:
+    def create_calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc[T]:
+        if inspect.iscoroutinefunction(fn):
+            fn = cast(CalcFunctionAsync[T], fn)
+            return CalcAsync(fn, session=session)
+        else:
+            fn = cast(CalcFunction[T], fn)
+            return Calc(fn, session=session)
 
     return create_calc
-
-
-def calc_async(
-    *, session: Union[MISSING_TYPE, "Session", None] = MISSING
-) -> Callable[[Callable[[], Awaitable[T]]], CalcAsync[T]]:
-    def create_calc_async(fn: Callable[[], Awaitable[T]]) -> CalcAsync[T]:
-        return CalcAsync(fn, session=session)
-
-    return create_calc_async
 
 
 # ==============================================================================
