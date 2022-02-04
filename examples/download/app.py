@@ -21,18 +21,14 @@ def make_example(id: str, label: str, title: str, desc: str, extra: Any = None):
     return st.column(
         4,
         div(
-            class_="card mb-4",
-            children=[
-                div(title, class_="card-header"),
-                div(
-                    class_="card-body",
-                    children=[
-                        p(desc, class_="card-text text-muted"),
-                        extra,
-                        st.download_button(id, label, class_="btn-primary"),
-                    ],
-                ),
-            ],
+            {"class": "card mb-4"},
+            div(title, class_="card-header"),
+            div(
+                {"class": "card-body"},
+                p(desc, class_="card-text text-muted"),
+                extra,
+                st.download_button(id, label, class_="btn-primary"),
+            ),
         ),
     )
 
