@@ -61,7 +61,12 @@ class OutputsProxy(Outputs):
     def __call__(
         self, *, name: Optional[str] = None
     ) -> Callable[[RenderFunction], None]:
-        return self._outputs(name=self._ns_key(name))
+        def set_fn(fn: RenderFunction) -> None:
+            fn_name = name or fn.__name__
+            fn_name = self._ns_key(fn_name)
+            return self._outputs(name=fn_name)(fn)
+
+        return set_fn
 
 
 class SessionProxy(Session):
