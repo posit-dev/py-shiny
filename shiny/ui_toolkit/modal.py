@@ -12,14 +12,15 @@ from ..utils import run_coro_sync
 from ..session import Session, _require_active_session, _process_deps
 
 
-def modal_button(label: str, icon: TagChildArg = None) -> Tag:
+def modal_button(label: str, icon: TagChildArg = None, **kwargs: TagChildArg) -> Tag:
     return tags.button(
         icon,
         label,
+        {"class": "btn btn-default"},
         type="button",
-        class_="btn btn-default",
         data_dismiss="modal",
         data_bs_dismiss="modal",
+        **kwargs
     )
 
 
@@ -43,7 +44,7 @@ def modal(
     dialog = div(
         div(
             title_div,
-            div(*args, class_="modal-body", **kwargs),
+            div({"class": "modal-body"}, *args, **kwargs),
             footer,
             class_="modal-content",
         ),
