@@ -1,16 +1,15 @@
-import shiny.ui_toolkit as st
 from shiny import *
 
-ui = st.page_fluid(
-    st.input_action_button("safe", "Throw a safe error"),
-    st.output_ui("safe"),
-    st.input_action_button("unsafe", "Throw an unsafe error"),
-    st.output_ui("unsafe"),
-    st.input_text(
+app_ui = ui.page_fluid(
+    ui.input_action_button("safe", "Throw a safe error"),
+    ui.output_ui("safe"),
+    ui.input_action_button("unsafe", "Throw an unsafe error"),
+    ui.output_ui("unsafe"),
+    ui.input_text(
         "txt",
         "Enter some text below, then remove it. Notice how the text is never fully removed.",
     ),
-    st.output_ui("txt_out"),
+    ui.output_ui("txt_out"),
 )
 
 
@@ -44,5 +43,5 @@ def server(input: Inputs, output: Outputs, session: Session):
         return input.txt()
 
 
-app = App(ui, server)
+app = App(app_ui, server)
 app.SANITIZE_ERRORS = True

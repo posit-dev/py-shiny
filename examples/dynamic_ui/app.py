@@ -1,10 +1,3 @@
-# To run this app:
-#   python3 app.py
-
-# Then point web browser to:
-#   http://localhost:8000/
-
-import shiny.ui_toolkit as st
 from shiny import *
 from htmltools import *
 
@@ -12,16 +5,16 @@ from htmltools import *
 import numpy as np
 import matplotlib.pyplot as plt
 
-ui = st.page_fluid(
-    st.layout_sidebar(
-        st.panel_sidebar(
-            st.h2("Dynamic UI"),
-            st.output_ui("ui"),
-            st.input_action_button("btn", "Trigger insert/remove ui"),
+app_ui = ui.page_fluid(
+    ui.layout_sidebar(
+        ui.panel_sidebar(
+            ui.h2("Dynamic UI"),
+            ui.output_ui("ui"),
+            ui.input_action_button("btn", "Trigger insert/remove ui"),
         ),
-        st.panel_main(
-            st.output_text_verbatim("txt"),
-            st.output_plot("plot"),
+        ui.panel_main(
+            ui.output_text_verbatim("txt"),
+            ui.output_plot("plot"),
         ),
     ),
 )
@@ -50,10 +43,10 @@ def server(input: Inputs, output: Outputs, session: Session):
         ax.hist(x, input.n(), density=True)
         return fig
 
-    @output()
+    @output(name="ui")
     @render_ui()
-    def ui():
-        return st.input_slider(
+    def _():
+        return ui.input_slider(
             "This slider is rendered via @render_ui()", "N", 0, 100, 20
         )
 
@@ -66,4 +59,4 @@ def server(input: Inputs, output: Outputs, session: Session):
             ui_remove("#thanks")
 
 
-app = App(ui, server)
+app = App(app_ui, server)

@@ -1,15 +1,8 @@
-# To run this app:
-#   python3 app.py
-
-# Then point web browser to:
-#   http://localhost:8000/
-
-import shiny.ui_toolkit as st
 from shiny import *
 
-ui = st.page_fluid(
-    st.input_slider("n", "N", 0, 100, 20),
-    st.output_text_verbatim("txt", placeholder=True),
+ui = ui.page_fluid(
+    ui.input_slider("n", "N", 0, 100, 20),
+    ui.output_text_verbatim("txt", placeholder=True),
 )
 
 # A reactive.Value which is exists outside of the session.
