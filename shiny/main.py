@@ -107,7 +107,7 @@ def run(
         reload=reload,
         ws_max_size=ws_max_size,
         log_level=log_level,
-        # DON'T pass app_dir, as uvicorn.run didn't support it until recently
+        # DON'T pass app_dir, we've already handled it ourselves
         # app_dir=app_dir,
     )
 
