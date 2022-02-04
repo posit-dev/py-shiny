@@ -61,7 +61,7 @@ def main() -> None:
     " Defaults to the current working directory.",
 )
 def run(
-    app: typing.Union[str, shiny.ShinyApp],
+    app: typing.Union[str, shiny.App],
     host: str,
     port: int,
     debug: bool,
@@ -112,7 +112,7 @@ def run(
     )
 
 
-def resolve_app(app: str, app_dir: typing.Optional[str]) -> typing.Any:
+def resolve_app(app: str, app_dir: typing.Optional[str]) -> str:
     # The `app` parameter can be:
     #
     # - A module:attribute name
@@ -156,7 +156,7 @@ def resolve_app(app: str, app_dir: typing.Optional[str]) -> typing.Any:
         if not instance:
             raise ImportError(f"Could not find the module '{module}'")
 
-    return getattr(instance, attr)
+    return f"{module}:{attr}"
 
 
 def try_import_module(module: str) -> typing.Optional[types.ModuleType]:
