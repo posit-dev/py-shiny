@@ -44,8 +44,9 @@ T = TypeVar("T")
 # Value
 # ==============================================================================
 class Value(Generic[T]):
-    def __init__(self, value: T) -> None:
+    def __init__(self, value: T, *, _read_only: bool = False) -> None:
         self._value: T = value
+        self._read_only: bool = _read_only
         self._dependents: Dependents = Dependents()
 
     # Calling the object is equivalent to `.get()`
@@ -58,6 +59,13 @@ class Value(Generic[T]):
         return self._value
 
     def set(self, value: T) -> bool:
+        if self._read_only:
+            raise RuntimeError("Can't set read-only reactive.Value")
+        return self._set(value)
+
+    # The ._set() method allows setting read-only Value objects. This is used when the
+    # Value is part of a session.Inputs object, and the session wants to set it.
+    def _set(self, value: T) -> bool:
         if self._value is value:
             return False
 
