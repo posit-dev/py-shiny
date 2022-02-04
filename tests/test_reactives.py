@@ -56,12 +56,12 @@ async def test_flush_runs_newly_invalidated_async():
 
     # In practice, on the first flush, Effects run in the order that they were
     # created. Our test checks that o2 runs _after_ o1.
-    @effect_async()
+    @effect()
     async def o2():
         nonlocal v2_result
         v2_result = v2()
 
-    @effect_async()
+    @effect()
     async def o1():
         v2.set(v1())
 
@@ -126,7 +126,7 @@ async def test_recursive_calc_async():
         v.set(v() - 1)
         await r()
 
-    @effect_async()
+    @effect()
     async def o():
         await r()
 
@@ -157,7 +157,7 @@ async def test_async_sequential():
             exec_order.append(f"r{n}-2")
             return x() + 10
 
-        @effect_async()
+        @effect()
         async def _():
             nonlocal exec_order
             exec_order.append(f"o{n}-1")
@@ -285,7 +285,7 @@ async def test_isolate_async_prevents_dependency():
     v_dep = Value(1)  # Use this only for invalidating the effect
     o_val = None
 
-    @effect_async()
+    @effect()
     async def o():
         nonlocal o_val
         v_dep()
@@ -363,23 +363,23 @@ async def test_effect_priority():
 
 # Same as previous, but with async
 @pytest.mark.asyncio
-async def test_effect_async_priority():
+async def test_async_effect_priority():
     v = Value(1)
     results: list[int] = []
 
-    @effect_async(priority=1)
+    @effect(priority=1)
     async def o1():
         nonlocal results
         v()
         results.append(1)
 
-    @effect_async(priority=2)
+    @effect(priority=2)
     async def o2():
         nonlocal results
         v()
         results.append(2)
 
-    @effect_async(priority=1)
+    @effect(priority=1)
     async def o3():
         nonlocal results
         v()
@@ -390,7 +390,7 @@ async def test_effect_async_priority():
 
     # Add another effect with priority 2. Only this one will run (until we
     # invalidate others by changing v).
-    @effect_async(priority=2)
+    @effect(priority=2)
     async def o4():
         nonlocal results
         v()
@@ -831,7 +831,7 @@ async def test_event_async_decorator():
     n_times = 0
 
     # By default, runs every time that event expression is _not_ None (ignore_none=True)
-    @effect_async()
+    @effect()
     @event(lambda: None, lambda: ActionButtonValue(0))
     async def _():
         nonlocal n_times
@@ -841,7 +841,7 @@ async def test_event_async_decorator():
     assert n_times == 0
 
     # Unless ignore_none=False
-    @effect_async()
+    @effect()
     @event(lambda: None, lambda: ActionButtonValue(0), ignore_none=False)
     async def _():
         nonlocal n_times
@@ -851,7 +851,7 @@ async def test_event_async_decorator():
     assert n_times == 1
 
     # Or if one of the args is not None
-    @effect_async()
+    @effect()
     @event(lambda: None, lambda: ActionButtonValue(0), lambda: True)
     async def _():
         nonlocal n_times
@@ -863,7 +863,7 @@ async def test_event_async_decorator():
     # Is invalidated properly by reactive values
     v = Value(1)
 
-    @effect_async()
+    @effect()
     @event(v)
     async def _():
         nonlocal n_times
@@ -883,7 +883,7 @@ async def test_event_async_decorator():
     # Doesn't run on init
     v = Value(1)
 
-    @effect_async()
+    @effect()
     @event(v, ignore_init=True)
     async def _():
         nonlocal n_times
@@ -900,7 +900,7 @@ async def test_event_async_decorator():
     v = Value(1)
     v2 = Value(1)
 
-    @effect_async()
+    @effect()
     @event(v)
     async def _():
         nonlocal n_times
@@ -927,7 +927,7 @@ async def test_event_async_decorator():
         await asyncio.sleep(0)  # Make sure the async function yields control
         return 1
 
-    @effect_async()
+    @effect()
     async def _():
         nonlocal n_times
         await asyncio.sleep(0)

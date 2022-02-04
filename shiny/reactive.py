@@ -9,7 +9,6 @@ __all__ = (
     "Effect",
     "EffectAsync",
     "effect",
-    "effect_async",
     "isolate",
     "invalidate_later",
 )
@@ -25,6 +24,7 @@ from typing import (
     TypeVar,
     Union,
     Generic,
+    cast,
 )
 import typing
 import inspect
@@ -199,18 +199,26 @@ def calc_async(
 # ==============================================================================
 # Effect
 # ==============================================================================
+
+EffectFunction = Callable[[], None]
+EffectFunctionAsync = Callable[[], Awaitable[None]]
+
+
 class Effect:
     def __init__(
         self,
-        func: Callable[[], None],
+        fn: EffectFunction,
         *,
         priority: int = 0,
         session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
-        if inspect.iscoroutinefunction(func):
-            raise TypeError("Effect requires a non-async function")
+        self.__name__ = fn.__name__
+        self.__doc__ = fn.__doc__
 
-        self._func: Callable[[], Awaitable[None]] = utils.wrap_async(func)
+        # The EffectAsync subclass will pass in an async function, but it tells the
+        # static type checker that it's synchronous. wrap_async() is smart -- if is
+        # passed an async function, it will not change it.
+        self._fn: EffectFunctionAsync = utils.wrap_async(fn)
         self._is_async: bool = False
 
         self._priority: int = priority
@@ -270,7 +278,7 @@ class Effect:
         with shiny_session.session_context(self._session):
             try:
                 with ctx():
-                    await self._func()
+                    await self._fn()
             except SilentException:
                 # It's OK for SilentException to cause an Effect to stop running
                 pass
@@ -297,24 +305,21 @@ class Effect:
 class EffectAsync(Effect):
     def __init__(
         self,
-        func: Callable[[], Awaitable[None]],
+        fn: EffectFunctionAsync,
         *,
         priority: int = 0,
         session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
-        if not inspect.iscoroutinefunction(func):
-            raise TypeError("EffectAsync requires an async function")
+        if not inspect.iscoroutinefunction(fn):
+            raise TypeError(self.__class__.__name__ + " requires an async function")
 
-        # Init the Efect base class with a placeholder synchronous function
-        # so it won't throw an error, then replace it with the async function.
-        super().__init__(lambda: None, session=session, priority=priority)
-        self._func: Callable[[], Awaitable[None]] = func
+        super().__init__(cast(EffectFunction, fn), session=session, priority=priority)
         self._is_async = True
 
 
 def effect(
     *, priority: int = 0, session: Union[MISSING_TYPE, "Session", None] = MISSING
-) -> Callable[[Callable[[], None]], Effect]:
+) -> Callable[[Union[EffectFunction, EffectFunctionAsync]], Effect]:
     """[summary]
 
     Args:
@@ -325,21 +330,15 @@ def effect(
         [description]
     """
 
-    def create_effect(fn: Callable[[], None]) -> Effect:
-        return Effect(fn, priority=priority, session=session)
+    def create_effect(fn: Union[EffectFunction, EffectFunctionAsync]) -> Effect:
+        if inspect.iscoroutinefunction(fn):
+            fn = cast(EffectFunctionAsync, fn)
+            return EffectAsync(fn, priority=priority, session=session)
+        else:
+            fn = cast(EffectFunction, fn)
+            return Effect(fn, priority=priority, session=session)
 
     return create_effect
-
-
-def effect_async(
-    *,
-    priority: int = 0,
-    session: Union[MISSING_TYPE, "Session", None] = MISSING,
-) -> Callable[[Callable[[], Awaitable[None]]], EffectAsync]:
-    def create_effect_async(fn: Callable[[], Awaitable[None]]) -> EffectAsync:
-        return EffectAsync(fn, priority=priority, session=session)
-
-    return create_effect_async
 
 
 # ==============================================================================
