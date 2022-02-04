@@ -39,4 +39,4 @@ def output_ui(
 ) -> Tag:
     if not container:
         container = tags.span if inline else tags.div
-    return container(id=id, class_="shiny-html-output", **kwargs)  # type: ignore
+    return container({"class": "shiny-html-output"}, id=id, **kwargs)

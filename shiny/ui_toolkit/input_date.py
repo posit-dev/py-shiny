@@ -124,8 +124,8 @@ def date_input_tag(
 ):
     return tags.input(
         datepicker_deps(),
+        {"class": "form-control"},
         type="text",
-        class_="form-control",
         # `aria-labelledby` attribute is required for accessibility to avoid doubled labels (#2951).
         aria_labelledby=id + "-label",
         # title attribute is announced for screen readers for date format.

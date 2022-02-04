@@ -23,7 +23,7 @@ from .html_dependencies import jqui_deps
 
 
 def row(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
-    return div(*args, class_="row", **kwargs)
+    return div({"class": "row"}, *args, **kwargs)
 
 
 def column(
@@ -38,7 +38,7 @@ def column(
         # https://github.com/twbs/bootstrap/blob/74b8fe7/docs/4.3/migration/index.html#L659
         off = str(offset)
         cls += f" offset-md-{off} col-sm-offset-{off}"
-    return div(*args, class_=cls, **kwargs)
+    return div({"class": cls}, *args, **kwargs)
 
 
 # TODO: also accept a generic list (and wrap in panel in that case)
@@ -49,23 +49,23 @@ def layout_sidebar(
 
 
 def panel_well(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
-    return div(*args, class_="well", **kwargs)
+    return div({"class": "well"}, *args, **kwargs)
 
 
 def panel_sidebar(*args: TagChildArg, width: int = 4, **kwargs: TagAttrArg) -> Tag:
     return div(
+        {"class": "col-sm-" + str(width)},
         # A11y semantic landmark for sidebar
-        tags.form(*args, role="complementary", class_="well", **kwargs),
-        class_="col-sm-" + str(width),
+        tags.form({"class": "well"}, *args, role="complementary", **kwargs),
     )
 
 
 def panel_main(*args: TagChildArg, width: int = 8, **kwargs: TagAttrArg) -> Tag:
     return div(
+        {"class": "col-sm-" + str(width)},
         # A11y semantic landmark for main region
         *args,
         role="main",
-        class_="col-sm-" + str(width),
         **kwargs,
     )
 
@@ -131,4 +131,4 @@ def panel_absolute(
 
 
 def help_text(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
-    return span(*args, class_="help-block", **kwargs)
+    return span({"class": "help-block"}, *args, **kwargs)
