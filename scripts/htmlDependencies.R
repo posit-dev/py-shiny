@@ -41,3 +41,11 @@ withr::with_tempdir({
     bslib, recursive = TRUE
   )
 })
+
+# For JSX based markdown() implementation
+markdown <- file.path(www, "shared", "markdown-to-jsx")
+dir.create(markdown)
+download.file(
+  "https://unpkg.com/markdown-to-jsx@7.1.6/dist/index.umd.js",
+  file.path(markdown, "index.min.js")
+)

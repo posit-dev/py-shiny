@@ -19,6 +19,7 @@ from .input_select import *
 from .input_slider import *
 from .input_text import *
 from .input_update import *
+from .markdown import *
 from .modal import *
 from .navs import *
 from .notifications import *
