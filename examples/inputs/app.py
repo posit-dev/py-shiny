@@ -38,7 +38,10 @@ app_ui = ui.page_fluid(
                 },
             ),
             ui.input_action_button(
-                "button", "input_action_button()", icon=icon_svg("check")
+                "button",
+                "input_action_button()",
+                icon=icon_svg("check"),
+                class_="btn-primary",
             ),
             ui.input_file("file", "File upload"),
         ),
@@ -59,7 +62,10 @@ app_ui = ui.page_fluid(
                     ),
                     tags.br(),
                     ui.input_action_button(
-                        "btn", "Show modal", icon=icon_svg("info-circle")
+                        "btn",
+                        "Show modal",
+                        icon=icon_svg("info-circle"),
+                        class_="btn-primary",
                     ),
                     ui.panel_fixed(
                         ui.panel_well(
@@ -128,7 +134,13 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         btn = input.btn()
         if btn and btn > 0:
-            ui.modal_show(ui.modal("Hello there!", easy_close=True))
+            ui.modal_show(
+                ui.modal(
+                    "Hello there!",
+                    easy_close=True,
+                    footer=ui.modal_button("Dismiss", class_="btn-primary"),
+                )
+            )
 
     @reactive.effect()
     def _():

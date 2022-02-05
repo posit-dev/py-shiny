@@ -6,13 +6,13 @@ __all__ = (
     "ShinyModule",
 )
 
-from typing import Optional, Union, Callable, Any
+from typing import Any, Callable, Optional
 
 from htmltools.core import TagChildArg
 
-from .session import Session, Inputs, Outputs, _require_active_session
 from .reactive import Value
 from .render import RenderFunction
+from .session import Inputs, Outputs, Session, _require_active_session
 
 
 class InputsProxy(Inputs):
@@ -34,14 +34,14 @@ class InputsProxy(Inputs):
 
     # Allow access of values as attributes.
     def __setattr__(self, attr: str, value: Value[Any]) -> None:
-        if attr in ("_values", "_ns"):
-            super().__setattr__(attr, value)
+        if attr in ("_values", "_ns", "_ns_key"):
+            object.__setattr__(self, attr, value)
             return
         else:
             self.__setitem__(attr, value)
 
     def __getattr__(self, attr: str) -> Value[Any]:
-        if attr in ("_values", "_ns"):
+        if attr in ("_values", "_ns", "_ns_key"):
             return object.__getattribute__(self, attr)
         else:
             return self.__getitem__(attr)
@@ -61,7 +61,12 @@ class OutputsProxy(Outputs):
     def __call__(
         self, *, name: Optional[str] = None
     ) -> Callable[[RenderFunction], None]:
-        return self._outputs(name=self._ns_key(name))
+        def set_fn(fn: RenderFunction) -> None:
+            fn_name = name or fn.__name__
+            fn_name = self._ns_key(fn_name)
+            return self._outputs(name=fn_name)(fn)
+
+        return set_fn
 
 
 class SessionProxy(Session):

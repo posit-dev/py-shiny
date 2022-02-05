@@ -1,6 +1,6 @@
 import json
 from datetime import date
-from typing import Optional
+from typing import Optional, List, Union
 
 from htmltools import tags, Tag, div, span, TagAttrArg, TagChildArg, css
 
@@ -13,26 +13,21 @@ __all__ = ["input_date", "input_date_range"]
 def input_date(
     id: str,
     label: TagChildArg,
-    value: Optional[date] = None,
-    min: Optional[date] = None,
-    max: Optional[date] = None,
+    value: Optional[Union[date, str]] = None,
+    min: Optional[Union[date, str]] = None,
+    max: Optional[Union[date, str]] = None,
     format: str = "yyyy-mm-dd",
     startview: str = "month",
     weekstart: int = 0,
     language: str = "en",
     width: Optional[str] = None,
     autoclose: bool = True,
-    datesdisabled: Optional[str] = None,
-    daysofweekdisabled: Optional[str] = None,
+    datesdisabled: Optional[List[str]] = None,
+    daysofweekdisabled: Optional[List[int]] = None,
 ) -> Tag:
-    # TODO: needed?
-    # value = dateYMD(value, "value")
-    # min = dateYMD(min, "min")
-    # max = dateYMD(max, "max")
-    # datesdisabled = dateYMD(datesdisabled, "datesdisabled")
     return div(
         shiny_input_label(id, label),
-        date_input_tag(
+        _date_input_tag(
             id=id,
             value=value,
             min=min,
@@ -54,10 +49,10 @@ def input_date(
 def input_date_range(
     id: str,
     label: TagChildArg,
-    start: Optional[date] = None,
-    end: Optional[date] = None,
-    min: Optional[date] = None,
-    max: Optional[date] = None,
+    start: Optional[Union[date, str]] = None,
+    end: Optional[Union[date, str]] = None,
+    min: Optional[Union[date, str]] = None,
+    max: Optional[Union[date, str]] = None,
     format: str = "yyyy-mm-dd",
     startview: str = "month",
     weekstart: int = 0,
@@ -66,15 +61,10 @@ def input_date_range(
     width: Optional[str] = None,
     autoclose: bool = True,
 ) -> Tag:
-    # TODO: needed?
-    # start = dateYMD(start, "start")
-    # end = dateYMD(end, "end")
-    # min = dateYMD(min, "min")
-    # max = dateYMD(max, "max")
     return div(
         shiny_input_label(id, label),
         div(
-            date_input_tag(
+            _date_input_tag(
                 id=id,
                 value=start,
                 min=min,
@@ -90,7 +80,7 @@ def input_date_range(
                 span(separator, class_="input-group-text"),
                 class_="input-group-addon input-group-prepend input-group-append",
             ),
-            date_input_tag(
+            _date_input_tag(
                 id=id,
                 value=end,
                 min=min,
@@ -110,11 +100,11 @@ def input_date_range(
     )
 
 
-def date_input_tag(
+def _date_input_tag(
     id: str,
-    value: Optional[date],
-    min: Optional[date],
-    max: Optional[date],
+    value: Optional[Union[date, str]],
+    min: Optional[Union[date, str]],
+    max: Optional[Union[date, str]],
     format: str,
     startview: str,
     weekstart: int,
@@ -124,8 +114,8 @@ def date_input_tag(
 ):
     return tags.input(
         datepicker_deps(),
+        {"class": "form-control"},
         type="text",
-        class_="form-control",
         # `aria-labelledby` attribute is required for accessibility to avoid doubled labels (#2951).
         aria_labelledby=id + "-label",
         # title attribute is announced for screen readers for date format.
@@ -134,9 +124,17 @@ def date_input_tag(
         data_date_week_start=weekstart,
         data_date_format=format,
         data_date_start_view=startview,
-        data_min_date=min,
-        data_max_date=max,
-        data_initial_date=value,
+        data_min_date=_as_date_attr(min),
+        data_max_date=_as_date_attr(max),
+        data_initial_date=_as_date_attr(value),
         data_date_autoclose="true" if autoclose else "false",
         **kwargs,
     )
+
+
+def _as_date_attr(x: Optional[Union[date, str]]) -> Optional[str]:
+    if x is None:
+        return None
+    if isinstance(x, date):
+        return str(x)
+    return str(date.fromisoformat(x))

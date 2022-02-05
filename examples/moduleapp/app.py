@@ -1,25 +1,28 @@
 from shiny import *
 
-# =============================================================================
+# ============================================================
 # Counter module
-# =============================================================================
-def counter_ui(
+# ============================================================
+def counter_module_ui(
     ns: Callable[[str], str], label: str = "Increment counter"
 ) -> TagChildArg:
-    return TagList(
+    return ui.div(
+        {"style": "border: 1px solid #ccc; border-radius: 5px; margin: 5px 0;"},
+        ui.h2("This is " + label),
         ui.input_action_button(id=ns("button"), label=label),
         ui.output_text_verbatim(id=ns("out")),
     )
 
 
-def counter_server(input: InputsProxy, output: OutputsProxy, session: SessionProxy):
+def counter_module_server(
+    input: InputsProxy, output: OutputsProxy, session: SessionProxy
+):
     count: reactive.Value[int] = reactive.Value(0)
 
     @reactive.effect()
+    @event(input.button)
     def _():
-        input.button()
-        with isolate():
-            count.set(count() + 1)
+        count.set(count() + 1)
 
     @output()
     @render_text()
@@ -27,7 +30,7 @@ def counter_server(input: InputsProxy, output: OutputsProxy, session: SessionPro
         return f"Click count is {count()}"
 
 
-counter_module = ShinyModule(counter_ui, counter_server)
+counter_module = ShinyModule(counter_module_ui, counter_module_server)
 
 
 # =============================================================================

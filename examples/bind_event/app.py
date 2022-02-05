@@ -53,22 +53,22 @@ def server(input: Inputs, output: Outputs, session: Session):
     # -----------------------------------------------------------------------------
     # Async
     # -----------------------------------------------------------------------------
-    @reactive.effect_async()
+    @reactive.effect()
     @event(input.btn_async)
     async def _():
         await asyncio.sleep(0)
-        print("@effect_async() event: ", str(input.btn_async()))
+        print("async @effect() event: ", str(input.btn_async()))
 
-    @reactive.calc_async()
+    @reactive.calc()
     @event(input.btn_async)
     async def btn_async_r() -> int:
         await asyncio.sleep(0)
         return input.btn_async()
 
-    @reactive.effect_async()
+    @reactive.effect()
     async def _():
         val = await btn_async_r()
-        print("@calc_async() event: ", str(val))
+        print("async @calc() event: ", str(val))
 
     @output()
     @render_ui()

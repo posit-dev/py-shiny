@@ -42,13 +42,13 @@ def input_text_area(
         raise ValueError("Invalid resize value: " + str(resize))
 
     area = tags.textarea(
+        value,
         id=id,
         class_="form-control",
         style=css(width=None if width else "100%", height=height, resize=resize),
         placeholder=placeholder,
         rows=rows,
         cols=cols,
-        children=[value],
     )
 
     return div(

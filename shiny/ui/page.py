@@ -62,7 +62,7 @@ def page_fluid(
     *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
 ) -> Tag:
     return page_bootstrap(
-        div(*args, class_="container-fluid", **kwargs), title=title, lang=lang
+        div({"class": "container-fluid"}, *args, **kwargs), title=title, lang=lang
     )
 
 
@@ -70,7 +70,7 @@ def page_fixed(
     *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
 ) -> Tag:
     return page_bootstrap(
-        div(*args, class_="container", **kwargs), title=title, lang=lang
+        div({"class": "container"}, *args, **kwargs), title=title, lang=lang
     )
 
 
