@@ -238,7 +238,7 @@ class Session:
             if len(keys) == 2:
                 val = input_handlers.process_value(keys[1], val, keys[0], self)
 
-            self.input[keys[0]].set(val)
+            self.input[keys[0]]._set(val)
 
     # ==========================================================================
     # Message handlers
@@ -537,7 +537,7 @@ class Inputs:
     def __init__(self, **kwargs: object) -> None:
         self._map: dict[str, Value[Any]] = {}
         for key, value in kwargs.items():
-            self._map[key] = Value(value)
+            self._map[key] = Value(value, _read_only=True)
 
     def __setitem__(self, key: str, value: Value[Any]) -> None:
         if not isinstance(value, Value):
@@ -550,7 +550,7 @@ class Inputs:
         # dependencies on input values that haven't been received from client
         # yet.
         if key not in self._map:
-            self._map[key] = Value(None)
+            self._map[key] = Value(None, _read_only=True)
 
         return self._map[key]
 
