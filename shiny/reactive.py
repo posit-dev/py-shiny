@@ -191,9 +191,28 @@ class CalcAsync(Calc[T]):
         return await self.get_value()
 
 
+# Note that the specified return type of calc() isn't exactly the same as the actual
+# returned object -- the former specifes a Callable that takes a CalcFunction[T], and
+# the latter is a Callable that takes CalcFunction[T] | CalcFunctionAsync[T]. Both are
+# technically correct, since the CalcFunction's T encompasses both "regular" types V as
+# well as Awatiable[V]. (We're using V to represent a generic type that is NOT itself
+# Awaitable.) So if the T represents an Awaitable[V], then the type checker knows that
+# the returned function will return a Calc[Awaitable[V]].
+#
+# However, if the calc() function is specified to return a Callable that takes
+# CalcFunction[T] | CalcFunctionAsync[T], then if a CalcFunctionAsync is passed in, the
+# type check will not know that the returned Calc object is a Calc[Awaitable[V]]. It
+# will think that it's a [Calc[V]]. Then the type checker will think that the returned
+# Calc object is not async when it actually is.
+#
+# To work around this, we say that calc() returns a Callable that takes a
+# CalcFunction[T], instead of the union type. We're sort of tricking the type checker
+# twice: once here, and once when we return a Calc object (which has a synchronous
+# __call__ method) or CalcAsync object (which has an async __call__ method), and it
+# works out.
 def calc(
     *, session: Union[MISSING_TYPE, "Session", None] = MISSING
-) -> Callable[[Union[CalcFunction[T], CalcFunctionAsync[T]]], Calc[T]]:
+) -> Callable[[CalcFunction[T]], Calc[T]]:
     def create_calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc[T]:
         if inspect.iscoroutinefunction(fn):
             fn = cast(CalcFunctionAsync[T], fn)
