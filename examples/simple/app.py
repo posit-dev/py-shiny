@@ -1,6 +1,6 @@
 from shiny import *
 
-ui = ui.page_fluid(
+app_ui = ui.page_fluid(
     ui.input_slider("n", "N", 0, 100, 20),
     ui.output_text_verbatim("txt", placeholder=True),
 )
@@ -23,4 +23,4 @@ def server(input: Inputs, output: Outputs, session: Session):
         return f"n*2 is {val}, session id is {session.id}"
 
 
-app = App(ui, server)
+app = App(app_ui, server)
