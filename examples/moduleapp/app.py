@@ -1,14 +1,15 @@
 import shiny.ui_toolkit as st
 from shiny import *
 
-
-# =============================================================================
+# ============================================================
 # Counter module
-# =============================================================================
+# ============================================================
 def counter_module_ui(
     ns: Callable[[str], str], label: str = "Increment counter"
 ) -> TagChildArg:
-    return TagList(
+    return st.div(
+        {"style": "border: 1px solid #ccc; border-radius: 5px; margin: 5px 0;"},
+        st.h2("This is " + label),
         st.input_action_button(id=ns("button"), label=label),
         st.output_text_verbatim(id=ns("out")),
     )
@@ -20,7 +21,7 @@ def counter_module_server(
     count: reactive.Value[int] = reactive.Value(0)
 
     @reactive.effect()
-    @event(session.input.button)
+    @event(input.button)
     def _():
         count.set(count() + 1)
 
@@ -33,9 +34,9 @@ def counter_module_server(
 counter_module = ShinyModule(counter_module_ui, counter_module_server)
 
 
-# =============================================================================
-# App that uses module
-# =============================================================================
+# ============================================================
+# App which uses module
+# ============================================================
 ui = st.page_fluid(
     counter_module.ui("counter1", "Counter 1"),
     counter_module.ui("counter2", "Counter 2"),
