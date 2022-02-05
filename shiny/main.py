@@ -3,9 +3,9 @@ import importlib.util
 import os
 import sys
 import types
-import click
 import typing
 
+import click
 import uvicorn
 import uvicorn.config
 
@@ -60,6 +60,12 @@ def main() -> None:
     help="Look for APP in the specified directory, by adding this to the PYTHONPATH."
     " Defaults to the current working directory.",
 )
+@click.option(
+    "--launch-browser/--no-launch-browser",
+    default=sys.stdout.isatty(),
+    help="Whether to launch a web browser after starting the app. The default behavior"
+    " is to start a web browser if the command appears to be running at a terminal.",
+)
 def run(
     app: typing.Union[str, shiny.App],
     host: str,
@@ -69,6 +75,7 @@ def run(
     ws_max_size: int,
     log_level: str,
     app_dir: str,
+    launch_browser: bool,
 ) -> None:
     """Starts a Shiny app. Press Ctrl+C (or Ctrl+Break on Windows) to stop.
 
@@ -96,8 +103,15 @@ def run(
     shiny run mydir/myapp.py:app
     """
 
+    if app_dir is not None:
+        sys.path.insert(0, app_dir)
+
     if isinstance(app, str):
         app = resolve_app(app, app_dir)
+
+    os.environ["SHINY_LAUNCH_BROWSER"] = (
+        f"http://{host}:{port}/" if launch_browser else ""
+    )
 
     uvicorn.run(
         app,  # type: ignore
@@ -127,11 +141,7 @@ def resolve_app(app: str, app_dir: typing.Optional[str]) -> str:
     if not attr:
         attr = "app"
 
-    if app_dir is not None:
-        sys.path.insert(0, app_dir)
-
-    instance = try_import_module(module)
-    if not instance:
+    if not try_import_module(module):
         # It must be a path
         path = os.path.normpath(module)
         if path.startswith("../") or path.startswith("..\\"):
@@ -152,21 +162,18 @@ def resolve_app(app: str, app_dir: typing.Optional[str]) -> str:
                     f"The directory '{fullpath}' did not include an app.py file"
                 )
         module = path.removesuffix(".py").replace("/", ".").replace("\\", ".")
-        instance = try_import_module(module)
-        if not instance:
+        if not try_import_module(module):
             raise ImportError(f"Could not find the module '{module}'")
 
     return f"{module}:{attr}"
 
 
-def try_import_module(module: str) -> typing.Optional[types.ModuleType]:
+def try_import_module(module: str) -> bool:
     try:
-        if importlib.util.find_spec(module):
-            return importlib.import_module(module)
-        return None
+        return importlib.util.find_spec(module) is not None
     except ModuleNotFoundError:
         # find_spec throws this when the module contains both '/' and '.' characters
-        return None
+        return False
     except ImportError:
         # find_spec throws this when the module starts with "."
-        return None
+        return False

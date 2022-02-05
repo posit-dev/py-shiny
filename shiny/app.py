@@ -1,7 +1,9 @@
 __all__ = ("App",)
 
 import contextlib
+import os
 from typing import Any, List, Optional, Union, Dict, Callable, cast
+import webbrowser
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
 
@@ -63,6 +65,7 @@ class App:
 
     @contextlib.asynccontextmanager
     async def lifespan(self, app: starlette.applications.Starlette):
+        maybe_launch_browser()
         unreg = reactcore.on_flushed(self._on_reactive_flushed, once=False)
         try:
             yield
@@ -216,3 +219,13 @@ class App:
 def _render_page(ui: Union[Tag, TagList], lib_prefix: str) -> RenderedHTML:
     doc = HTMLDocument(TagList(jquery_deps(), shiny_deps(), ui))
     return doc.render(lib_prefix=lib_prefix)
+
+
+def maybe_launch_browser() -> bool:
+    url = os.environ["SHINY_LAUNCH_BROWSER"]
+
+    if url and (url.startswith("http://") or url.startswith("https://")):
+        webbrowser.open(os.environ["SHINY_LAUNCH_BROWSER"])
+        return True
+
+    return False
