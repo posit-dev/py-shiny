@@ -60,7 +60,9 @@ class Value(Generic[T]):
 
     def set(self, value: T) -> bool:
         if self._read_only:
-            raise RuntimeError("Can't set read-only reactive.Value")
+            raise RuntimeError(
+                "Can't set read-only reactive.Value. If you are trying to set an input value, use `update_xxx()` instead."
+            )
         return self._set(value)
 
     # The ._set() method allows setting read-only Value objects. This is used when the
