@@ -2,7 +2,6 @@
 
 import pytest
 
-import shiny.ui_toolkit as ui
 from shiny import *
 
 

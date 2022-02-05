@@ -1,9 +1,8 @@
 import asyncio
-import shiny.ui_toolkit as st
 from shiny import *
 from htmltools import tags
 
-ui = st.page_fluid(
+app_ui = ui.page_fluid(
     tags.p(
         """
       The first time you click the button, you should see a 1 appear below the button,
@@ -12,16 +11,16 @@ ui = st.page_fluid(
       print the number of clicks in the console twice.
       """
     ),
-    st.navs_tab_card(
-        st.nav(
+    ui.navs_tab_card(
+        ui.nav(
             "Sync",
-            st.input_action_button("btn", "Click me"),
-            st.output_ui("btn_value"),
+            ui.input_action_button("btn", "Click me"),
+            ui.output_ui("btn_value"),
         ),
-        st.nav(
+        ui.nav(
             "Async",
-            st.input_action_button("btn_async", "Click me"),
-            st.output_ui("btn_async_value"),
+            ui.input_action_button("btn_async", "Click me"),
+            ui.output_ui("btn_async_value"),
         ),
     ),
 )
@@ -80,4 +79,4 @@ def server(input: Inputs, output: Outputs, session: Session):
         return str(val)
 
 
-app = App(ui, server, debug=True)
+app = App(app_ui, server, debug=True)

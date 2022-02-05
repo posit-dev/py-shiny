@@ -1,44 +1,34 @@
-# This will load the shiny module dynamically, without having to install it.
-# This makes the debug/run cycle quicker.
-import os
-import sys
-
-shiny_module_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, shiny_module_dir)
-
-
-import shiny.ui_toolkit as st
 from shiny import *
 from htmltools import tags, HTML, Tag
 from fontawesome import icon_svg
 
-ui = st.page_fluid(
-    st.panel_title("Hello prism ui"),
-    st.layout_sidebar(
-        st.panel_sidebar(
-            st.input_slider(
+app_ui = ui.page_fluid(
+    ui.panel_title("Hello prism ui"),
+    ui.layout_sidebar(
+        ui.panel_sidebar(
+            ui.input_slider(
                 "n", "input_slider()", min=10, max=100, value=50, step=5, animate=True
             ),
-            st.input_date("date", "input_date()"),
-            st.input_date_range("date_rng", "input_date_range()"),
-            st.input_text("txt", "input_text()", placeholder="Input some text"),
-            st.input_text_area(
+            ui.input_date("date", "input_date()"),
+            ui.input_date_range("date_rng", "input_date_range()"),
+            ui.input_text("txt", "input_text()", placeholder="Input some text"),
+            ui.input_text_area(
                 "txt_area", "input_text_area()", placeholder="Input some text"
             ),
-            st.input_numeric("num", "input_numeric()", 20),
-            st.input_password("password", "input_password()"),
-            st.input_checkbox("checkbox", "input_checkbox()"),
-            st.input_checkbox_group(
+            ui.input_numeric("num", "input_numeric()", 20),
+            ui.input_password("password", "input_password()"),
+            ui.input_checkbox("checkbox", "input_checkbox()"),
+            ui.input_checkbox_group(
                 "checkbox_group",
                 "input_checkbox_group()",
                 {"a": "Choice 1", "b": "Choice 2"},
                 selected=["a", "b"],
                 inline=True,
             ),
-            st.input_radio_buttons(
+            ui.input_radio_buttons(
                 "radio", "input_radio()", {"a": "Choice 1", "b": "Choice 2"}
             ),
-            st.input_select(
+            ui.input_select(
                 "select",
                 "input_select()",
                 {
@@ -47,41 +37,41 @@ ui = st.page_fluid(
                     "Group C": {"c1": "c1", "c2": "c2"},
                 },
             ),
-            st.input_action_button(
+            ui.input_action_button(
                 "button",
                 "input_action_button()",
                 icon=icon_svg("check"),
                 class_="btn-primary",
             ),
-            st.input_file("file", "File upload"),
+            ui.input_file("file", "File upload"),
         ),
-        st.panel_main(
-            st.output_plot("plot"),
-            st.navs_tab_card(
+        ui.panel_main(
+            ui.output_plot("plot"),
+            ui.navs_tab_card(
                 # TODO: output_plot() within a tab not working?
-                st.nav("Inputs", st.output_ui("inputs"), icon=icon_svg("code")),
-                st.nav(
+                ui.nav("Inputs", ui.output_ui("inputs"), icon=icon_svg("code")),
+                ui.nav(
                     "Image",
-                    st.output_image("image", inline=True),
+                    ui.output_image("image", inline=True),
                     icon=icon_svg("image"),
                 ),
-                st.nav(
+                ui.nav(
                     "Misc",
-                    st.input_action_link(
+                    ui.input_action_link(
                         "link", "Show notification/progress", icon=icon_svg("info")
                     ),
                     tags.br(),
-                    st.input_action_button(
+                    ui.input_action_button(
                         "btn",
                         "Show modal",
                         icon=icon_svg("info-circle"),
                         class_="btn-primary",
                     ),
-                    st.panel_fixed(
-                        st.panel_well(
+                    ui.panel_fixed(
+                        ui.panel_well(
                             "A fixed, draggable, panel",
-                            st.input_checkbox("checkbox2", "Check me!"),
-                            st.panel_conditional(
+                            ui.input_checkbox("checkbox2", "Check me!"),
+                            ui.panel_conditional(
                                 "input.checkbox2 == true", "Thanks for checking!"
                             ),
                         ),
@@ -144,11 +134,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         btn = input.btn()
         if btn and btn > 0:
-            st.modal_show(
-                st.modal(
+            ui.modal_show(
+                ui.modal(
                     "Hello there!",
                     easy_close=True,
-                    footer=st.modal_button("Dismiss", class_="btn-primary"),
+                    footer=ui.modal_button("Dismiss", class_="btn-primary"),
                 )
             )
 
@@ -166,6 +156,4 @@ def server(input: Inputs, output: Outputs, session: Session):
             p.close()
 
 
-app = App(ui, server)
-if __name__ == "__main__":
-    app.run()
+app = App(app_ui, server)

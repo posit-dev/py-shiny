@@ -1,6 +1,6 @@
 """UI Toolkit for Shiny."""
 
-# All objects imported into this scope will be available as shiny.ui_toolkit.foo
+# All objects imported into this scope will be available as shiny.ui.foo
 from .bootstrap import *
 from .download_button import *
 from .html_dependencies import *

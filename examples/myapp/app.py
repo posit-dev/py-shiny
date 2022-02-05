@@ -1,30 +1,19 @@
-# To run this app:
-#   python3 app.py
-
-# Then point web browser to:
-#   http://localhost:8000/
-
+from shiny import *
+from shiny.fileupload import FileInfo
 import matplotlib.pyplot as plt
-
-# For plot rendering
 import numpy as np
 
-import shiny.ui_toolkit as st
-import shiny
-from shiny import Session, Inputs, Outputs, reactive
-from shiny.fileupload import FileInfo
-
-ui = st.page_fluid(
-    st.layout_sidebar(
-        st.panel_sidebar(
-            st.input_slider("n", "N", 0, 100, 20),
-            st.input_file("file1", "Choose file", multiple=True),
+app_ui = ui.page_fluid(
+    ui.layout_sidebar(
+        ui.panel_sidebar(
+            ui.input_slider("n", "N", 0, 100, 20),
+            ui.input_file("file1", "Choose file", multiple=True),
         ),
-        st.panel_main(
-            st.output_text_verbatim("txt"),
-            st.output_text_verbatim("shared_txt"),
-            st.output_plot("plot"),
-            st.output_text_verbatim("file_content"),
+        ui.panel_main(
+            ui.output_text_verbatim("txt"),
+            ui.output_text_verbatim("shared_txt"),
+            ui.output_plot("plot"),
+            ui.output_text_verbatim("file_content"),
         ),
     ),
 )
@@ -41,7 +30,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return input.n() * 2
 
     @output()
-    @shiny.render_text()
+    @render_text()
     async def txt():
         val = r()
         return f"n*2 is {val}, session id is {session.id}"
@@ -57,12 +46,12 @@ def server(input: Inputs, output: Outputs, session: Session):
     # Print the value of shared_val(). Changing it in one session should cause
     # this to run in all sessions.
     @output()
-    @shiny.render_text()
+    @render_text()
     def shared_txt():
         return f"shared_val() is {shared_val()}"
 
     @output()
-    @shiny.render_plot(alt="A histogram")
+    @render_plot(alt="A histogram")
     def plot() -> object:
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(437)
@@ -72,7 +61,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return fig
 
     @output()
-    @shiny.render_text()
+    @render_text()
     def file_content():
         file_infos: list[FileInfo] = input.file1()
         if not file_infos:
@@ -87,4 +76,4 @@ def server(input: Inputs, output: Outputs, session: Session):
         return out_str
 
 
-app = shiny.App(ui, server)
+app = App(app_ui, server)

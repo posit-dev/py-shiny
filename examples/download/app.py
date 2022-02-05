@@ -1,24 +1,18 @@
-# To run this app:
-#   python3 app.py
-
-# Then point web browser to:
-#   http://localhost:8000/
 import asyncio
 import os
 import io
 from datetime import date
 from typing import Any
 
-import shiny.ui_toolkit as st
 from shiny import *
-from htmltools import *
+from htmltools import div, p
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 
 def make_example(id: str, label: str, title: str, desc: str, extra: Any = None):
-    return st.column(
+    return ui.column(
         4,
         div(
             {"class": "card mb-4"},
@@ -27,14 +21,14 @@ def make_example(id: str, label: str, title: str, desc: str, extra: Any = None):
                 {"class": "card-body"},
                 p(desc, class_="card-text text-muted"),
                 extra,
-                st.download_button(id, label, class_="btn-primary"),
+                ui.download_button(id, label, class_="btn-primary"),
             ),
         ),
     )
 
 
-ui = st.page_fluid(
-    st.row(
+app_ui = ui.page_fluid(
+    ui.row(
         make_example(
             "download1",
             label="Download CSV",
@@ -42,19 +36,19 @@ ui = st.page_fluid(
             desc="Downloads a pre-existing file, using its existing name on disk.",
         ),
     ),
-    st.row(
+    ui.row(
         make_example(
             "download2",
             label="Download plot",
             title="Dynamic data generation",
             desc="Downloads a PNG that's generated on the fly.",
             extra=[
-                st.input_text("title", "Plot title", "Random scatter plot"),
-                st.input_slider("num_points", "Number of data points", 1, 100, 50),
+                ui.input_text("title", "Plot title", "Random scatter plot"),
+                ui.input_slider("num_points", "Number of data points", 1, 100, 50),
             ],
         ),
     ),
-    st.row(
+    ui.row(
         make_example(
             "download3",
             "Download",
@@ -62,7 +56,7 @@ ui = st.page_fluid(
             "Demonstrates that filenames can be generated on the fly (and use Unicode characters!).",
         ),
     ),
-    st.row(
+    ui.row(
         make_example(
             "download4",
             "Download",
@@ -70,7 +64,7 @@ ui = st.page_fluid(
             "Throws an error in the download handler, download should not succeed.",
         ),
     ),
-    st.row(
+    ui.row(
         make_example(
             "download5",
             "Download",
@@ -126,4 +120,4 @@ def server(input: Inputs, output: Outputs, session: Session):
         raise Exception("This error was caused intentionally")
 
 
-app = App(ui, server)
+app = App(app_ui, server)
