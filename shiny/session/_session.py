@@ -47,8 +47,9 @@ from htmltools import TagChildArg, TagList
 if TYPE_CHECKING:
     from .._app import App
 
-from ..reactive import Value, Effect, effect, isolate, flush
+from ..reactive import Effect, effect, isolate, flush
 from ..reactive._core import lock
+from .. import reactive
 from ..http_staticfiles import FileResponse
 from .._connmanager import Connection, ConnectionClosed
 from .. import render
@@ -541,24 +542,26 @@ class Session:
 # ======================================================================================
 # Inputs
 # ======================================================================================
+
+
 class Inputs:
     def __init__(self, **kwargs: object) -> None:
-        self._map: dict[str, Value[Any]] = {}
+        self._map: dict[str, reactive.value[Any]] = {}
         for key, value in kwargs.items():
-            self._map[key] = Value(value, _read_only=True)
+            self._map[key] = reactive.value(value, _read_only=True)
 
-    def __setitem__(self, key: str, value: Value[Any]) -> None:
-        if not isinstance(value, Value):
-            raise TypeError("`value` must be a shiny.Value object.")
+    def __setitem__(self, key: str, value: reactive.value[Any]) -> None:
+        if not isinstance(value, reactive.value):
+            raise TypeError("`value` must be a shiny.reactive.value object.")
 
         self._map[key] = value
 
-    def __getitem__(self, key: str) -> Value[Any]:
+    def __getitem__(self, key: str) -> reactive.value[Any]:
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
         # yet.
         if key not in self._map:
-            self._map[key] = Value(None, _read_only=True)
+            self._map[key] = reactive.value(None, _read_only=True)
 
         return self._map[key]
 
@@ -566,7 +569,7 @@ class Inputs:
         del self._map[key]
 
     # Allow access of values as attributes.
-    def __setattr__(self, attr: str, value: Value[Any]) -> None:
+    def __setattr__(self, attr: str, value: reactive.value[Any]) -> None:
         # Need special handling of "_map".
         if attr == "_map":
             super().__setattr__(attr, value)
@@ -574,7 +577,7 @@ class Inputs:
 
         self.__setitem__(attr, value)
 
-    def __getattr__(self, attr: str) -> Value[Any]:
+    def __getattr__(self, attr: str) -> reactive.value[Any]:
         if attr == "_map":
             return object.__getattribute__(self, attr)
         return self.__getitem__(attr)

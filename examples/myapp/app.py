@@ -19,7 +19,7 @@ app_ui = ui.page_fluid(
 )
 
 # A ReactiveVal which is shared across all sessions.
-shared_val = reactive.Value(None)
+shared_val = reactive.value(None)
 
 
 def server(input: Inputs, output: Outputs, session: Session):

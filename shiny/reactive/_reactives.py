@@ -1,6 +1,6 @@
 """Reactive components"""
 
-__all__ = ("Value", "Calc", "CalcAsync", "calc", "Effect", "EffectAsync", "effect")
+__all__ = ("value", "Calc", "CalcAsync", "calc", "Effect", "EffectAsync", "effect")
 
 import traceback
 from typing import (
@@ -25,9 +25,9 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 # ==============================================================================
-# Value
+# value
 # ==============================================================================
-class Value(Generic[T]):
+class value(Generic[T]):
     def __init__(self, value: T, *, _read_only: bool = False) -> None:
         self._value: T = value
         self._read_only: bool = _read_only
@@ -45,12 +45,12 @@ class Value(Generic[T]):
     def set(self, value: T) -> bool:
         if self._read_only:
             raise RuntimeError(
-                "Can't set read-only Value. If you are trying to set an input value, use `update_xxx()` instead."
+                "Can't set read-only reactive.value. If you are trying to set an input value, use `update_xxx()` instead."
             )
         return self._set(value)
 
-    # The ._set() method allows setting read-only Value objects. This is used when the
-    # Value is part of a session.Inputs object, and the session wants to set it.
+    # The ._set() method allows setting read-only value objects. This is used when the
+    # value is part of a session.Inputs object, and the session wants to set it.
     def _set(self, value: T) -> bool:
         if self._value is value:
             return False

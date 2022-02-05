@@ -1,12 +1,12 @@
 """Tests for `Module`."""
 
 import pytest
+from htmltools import TagChildArg
 
 from shiny import *
-from shiny.modules import *
 from shiny._utils import Callable
-from shiny.reactive import isolate
-from htmltools import TagChildArg
+from shiny.modules import *
+from shiny.reactive import isolate, effect
 
 
 def mod_ui(ns: Callable[[str], str]) -> TagChildArg:
@@ -18,7 +18,7 @@ def mod_ui(ns: Callable[[str], str]) -> TagChildArg:
 
 # Note: We currently can't test Session; this is just here for future use.
 def mod_server(input: ModuleInputs, output: ModuleOutputs, session: ModuleSession):
-    count: Value[int] = Value(0)
+    count: reactive.value[int] = reactive.value(0)
 
     @effect()
     @event(session.input.button)

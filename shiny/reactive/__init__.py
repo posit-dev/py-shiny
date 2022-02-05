@@ -4,7 +4,7 @@ from ._reactives import *
 __all__ = (
     "flush",
     "on_flushed",
-    "Value",
+    "value",
     "calc",
     "effect",
     "isolate",
