@@ -49,7 +49,7 @@ async def test_inputs_proxy():
         assert input_proxy["a"]() is None
         assert input["mod1-a"]() is None
 
-    input_proxy.a.set(2)
+    input_proxy.a._set(2)
 
     with isolate():
         assert input.a() == 1
@@ -67,7 +67,7 @@ async def test_inputs_proxy():
         assert input_proxy_proxy["a"]() is None
         assert input["mod1-mod2-a"]() is None
 
-    input_proxy_proxy.a.set(3)
+    input_proxy_proxy.a._set(3)
 
     with isolate():
         assert input.a() == 1
