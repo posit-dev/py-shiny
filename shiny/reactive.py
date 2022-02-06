@@ -181,7 +181,7 @@ class CalcAsync(Calc[T]):
         *,
         session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
-        if not inspect.iscoroutinefunction(fn):
+        if not utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
 
         super().__init__(cast(CalcFunction[T], fn), session=session)
@@ -214,8 +214,7 @@ def calc(
     *, session: Union[MISSING_TYPE, "Session", None] = MISSING
 ) -> Callable[[CalcFunction[T]], Calc[T]]:
     def create_calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc[T]:
-        if inspect.iscoroutinefunction(fn):
-            fn = cast(CalcFunctionAsync[T], fn)
+        if utils.is_async_callable(fn):
             return CalcAsync(fn, session=session)
         else:
             fn = cast(CalcFunction[T], fn)
@@ -338,7 +337,7 @@ class EffectAsync(Effect):
         priority: int = 0,
         session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
-        if not inspect.iscoroutinefunction(fn):
+        if not utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
 
         super().__init__(cast(EffectFunction, fn), session=session, priority=priority)
@@ -359,7 +358,7 @@ def effect(
     """
 
     def create_effect(fn: Union[EffectFunction, EffectFunctionAsync]) -> Effect:
-        if inspect.iscoroutinefunction(fn):
+        if utils.is_async_callable(fn):
             fn = cast(EffectFunctionAsync, fn)
             return EffectAsync(fn, priority=priority, session=session)
         else:

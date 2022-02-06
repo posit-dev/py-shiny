@@ -606,8 +606,7 @@ class Outputs:
                 message: Dict[str, object] = {}
                 try:
                     if utils.is_async_callable(fn):
-                        fn2 = typing.cast(Callable[[], Awaitable[object]], fn)
-                        message[fn_name] = await fn2()
+                        message[fn_name] = await fn()
                     else:
                         message[fn_name] = fn()
                 except SilentCancelOutputException:

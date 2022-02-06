@@ -83,7 +83,7 @@ class RenderText(RenderFunction):
 
 class RenderTextAsync(RenderText, RenderFunctionAsync):
     def __init__(self, fn: RenderTextFuncAsync) -> None:
-        if not inspect.iscoroutinefunction(fn):
+        if not utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderTextFunc, fn))
 
@@ -93,8 +93,7 @@ class RenderTextAsync(RenderText, RenderFunctionAsync):
 
 def render_text() -> Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], RenderText]:
     def wrapper(fn: Union[RenderTextFunc, RenderTextFuncAsync]) -> RenderText:
-        if inspect.iscoroutinefunction(fn):
-            fn = typing.cast(RenderTextFuncAsync, fn)
+        if utils.is_async_callable(fn):
             return RenderTextAsync(fn)
         else:
             fn = typing.cast(RenderTextFunc, fn)
@@ -179,7 +178,7 @@ class RenderPlot(RenderFunction):
 
 class RenderPlotAsync(RenderPlot, RenderFunctionAsync):
     def __init__(self, fn: RenderPlotFuncAsync, alt: Optional[str] = None) -> None:
-        if not inspect.iscoroutinefunction(fn):
+        if not utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderPlotFunc, fn), alt=alt)
 
@@ -192,8 +191,7 @@ def render_plot(
     alt: Optional[str] = None,
 ) -> Callable[[Union[RenderPlotFunc, RenderPlotFuncAsync]], RenderPlot]:
     def wrapper(fn: Union[RenderPlotFunc, RenderPlotFuncAsync]) -> RenderPlot:
-        if inspect.iscoroutinefunction(fn):
-            fn = typing.cast(RenderPlotFuncAsync, fn)
+        if utils.is_async_callable(fn):
             return RenderPlotAsync(fn, alt=alt)
         else:
             return RenderPlot(fn, alt=alt)
@@ -326,7 +324,7 @@ class RenderImage(RenderFunction):
 
 class RenderImageAsync(RenderImage, RenderFunctionAsync):
     def __init__(self, fn: RenderImageFuncAsync, delete_file: bool = False) -> None:
-        if not inspect.iscoroutinefunction(fn):
+        if not utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderImageFunc, fn), delete_file=delete_file)
 
@@ -338,8 +336,7 @@ def render_image(
     delete_file: bool = False,
 ) -> Callable[[Union[RenderImageFunc, RenderImageFuncAsync]], RenderImage]:
     def wrapper(fn: Union[RenderImageFunc, RenderImageFuncAsync]) -> RenderImage:
-        if inspect.iscoroutinefunction(fn):
-            fn = typing.cast(RenderImageFuncAsync, fn)
+        if utils.is_async_callable(fn):
             return RenderImageAsync(fn, delete_file=delete_file)
         else:
             fn = typing.cast(RenderImageFunc, fn)
@@ -378,7 +375,7 @@ class RenderUI(RenderFunction):
 
 class RenderUIAsync(RenderUI, RenderFunctionAsync):
     def __init__(self, fn: RenderUIFuncAsync) -> None:
-        if not inspect.iscoroutinefunction(fn):
+        if not utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderUIFunc, fn))
 
@@ -387,9 +384,10 @@ class RenderUIAsync(RenderUI, RenderFunctionAsync):
 
 
 def render_ui() -> Callable[[Union[RenderUIFunc, RenderUIFuncAsync]], RenderUI]:
-    def wrapper(fn: Union[RenderUIFunc, RenderUIFuncAsync]) -> RenderUI:
-        if inspect.iscoroutinefunction(fn):
-            fn = typing.cast(RenderUIFuncAsync, fn)
+    def wrapper(
+        fn: Union[Callable[[], TagChildArg], Callable[[], Awaitable[TagChildArg]]]
+    ) -> RenderUI:
+        if utils.is_async_callable(fn):
             return RenderUIAsync(fn)
         else:
             fn = typing.cast(RenderUIFunc, fn)

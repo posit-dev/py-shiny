@@ -10,10 +10,16 @@ from typing import (
 )
 import functools
 import os
+import sys
 import tempfile
 import importlib
 import inspect
 import secrets
+
+if sys.version_info >= (3, 10):
+    from typing import TypeGuard
+else:
+    from typing_extensions import TypeGuard
 
 # ==============================================================================
 # Misc utility functions
@@ -43,7 +49,7 @@ def wrap_async(
     """
 
     if is_async_callable(fn):
-        return cast(Callable[[], Awaitable[T]], fn)
+        return fn
 
     fn = cast(Callable[[], T], fn)
 
@@ -54,10 +60,13 @@ def wrap_async(
     return fn_async
 
 
-def is_async_callable(obj: object) -> bool:
+def is_async_callable(
+    obj: Union[Callable[[], T], Callable[[], Awaitable[T]]]
+) -> TypeGuard[Callable[[], Awaitable[T]]]:
     """
     Returns True if `obj` is an `async def` function, or if it's an object with a
-    `__call__` method which is an `async def` function.
+    `__call__` method which is an `async def` function. This function should generally
+    be used in this code base instead of iscoroutinefunction().
     """
     if inspect.iscoroutinefunction(obj):
         return True

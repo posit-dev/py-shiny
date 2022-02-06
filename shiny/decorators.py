@@ -23,7 +23,6 @@ def event(
             vals: List[object] = []
             for arg in args:
                 if is_async_callable(arg):
-                    arg = cast(Callable[[], Awaitable[object]], arg)
                     v = await arg()
                 else:
                     v = arg()
