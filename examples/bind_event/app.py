@@ -1,6 +1,6 @@
 import asyncio
 from shiny import *
-from htmltools import tags
+from shiny.ui import tags
 
 app_ui = ui.page_fluid(
     tags.p(

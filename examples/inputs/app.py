@@ -1,5 +1,6 @@
 from shiny import *
-from htmltools import tags, HTML, Tag
+from shiny.ui import tags, HTML
+from htmltools import Tag
 from fontawesome import icon_svg
 
 app_ui = ui.page_fluid(

@@ -5,7 +5,7 @@ from datetime import date
 from typing import Any
 
 from shiny import *
-from htmltools import div, p
+from shiny.ui import div, p
 
 import matplotlib.pyplot as plt
 import numpy as np
