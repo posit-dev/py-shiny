@@ -25,8 +25,6 @@ from typing import (
     Generic,
     cast,
 )
-import typing
-import inspect
 import warnings
 
 from .reactcore import Context, Dependents, ReactiveWarning

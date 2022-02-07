@@ -1,9 +1,15 @@
+__all__ = (
+    "render_text",
+    "render_plot",
+    "render_image",
+    "render_ui",
+)
+
 import sys
 import os
 import io
 import base64
 import mimetypes
-import inspect
 from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union
 import typing
 
@@ -25,12 +31,6 @@ if TYPE_CHECKING:
 
 from . import utils
 
-__all__ = (
-    "render_text",
-    "render_plot",
-    "render_image",
-    "render_ui",
-)
 
 # ======================================================================================
 # RenderFunction/RenderFunctionAsync base class

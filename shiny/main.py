@@ -1,17 +1,18 @@
+__all__ = ("main", "run")
+
+
 import importlib
 import importlib.util
 import os
 import sys
 import types
-import click
 import typing
 
+import click
 import uvicorn
 import uvicorn.config
 
 import shiny
-
-__all__ = ["main", "run"]
 
 
 @click.group()

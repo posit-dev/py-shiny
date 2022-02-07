@@ -9,6 +9,11 @@ nothing we could disclose that an attacker wouldn't already have access to. The 
 not true when running in native Python, we want to be as safe as possible.
 """
 
+__all__ = (
+    "StaticFiles",
+    "FileResponse",
+)
+
 import sys
 
 from starlette.background import BackgroundTask

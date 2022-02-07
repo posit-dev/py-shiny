@@ -1,3 +1,5 @@
+__all__ = ("req",)
+
 # For use with ShinyApp().SANITIZE_ERRORS = True
 from typing import TypeVar
 

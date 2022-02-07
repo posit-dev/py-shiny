@@ -1,5 +1,7 @@
+__all__ = ("event",)
+
 import functools
-from typing import TypeVar, Callable, List, Awaitable, Union, cast
+from typing import TypeVar, Callable, List, Awaitable, Union
 
 from .input_handlers import ActionButtonValue
 from .reactive import isolate

@@ -3,10 +3,13 @@
 import pytest
 
 from shiny import *
+from shiny.utils import Callable
+from shiny.reactive import isolate
+from htmltools import TagChildArg
 
 
 def mod_ui(ns: Callable[[str], str]) -> TagChildArg:
-    return TagList(
+    return ui.TagList(
         ui.input_action_button(id=ns("button"), label="module1"),
         ui.output_text_verbatim(id=ns("out")),
     )
