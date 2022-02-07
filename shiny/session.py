@@ -32,6 +32,7 @@ from typing import (
     Dict,
     List,
     Any,
+    cast,
 )
 from starlette.requests import Request
 
@@ -53,7 +54,7 @@ if TYPE_CHECKING:
 
 from htmltools import TagChildArg, TagList
 
-from .reactive import Value, Effect, EffectAsync, isolate
+from .reactive import Value, Effect, effect, isolate
 from .http_staticfiles import FileResponse
 from .connmanager import Connection, ConnectionClosed
 from . import reactcore
@@ -239,6 +240,8 @@ class Session:
                 val = input_handlers.process_value(keys[1], val, keys[0], self)
 
             self.input[keys[0]]._set(val)
+
+            self.output.manage_hidden()
 
     # ==========================================================================
     # Message handlers
@@ -580,11 +583,16 @@ class Inputs:
 # ======================================================================================
 class Outputs:
     def __init__(self, session: Session) -> None:
-        self._output_obervers: Dict[str, Effect] = {}
+        self._effects: Dict[str, Effect] = {}
+        self._suspend_when_hidden: Dict[str, bool] = {}
         self._session: Session = session
 
     def __call__(
-        self, *, name: Optional[str] = None
+        self,
+        *,
+        name: Optional[str] = None,
+        suspend_when_hidden: bool = True,
+        priority: int = 0,
     ) -> Callable[[render.RenderFunction], None]:
         def set_fn(fn: render.RenderFunction) -> None:
             fn_name = name or fn.__name__
@@ -594,10 +602,15 @@ class Outputs:
             if isinstance(fn, render.RenderFunction):
                 fn.set_metadata(self._session, fn_name)
 
-            if fn_name in self._output_obervers:
-                self._output_obervers[fn_name].destroy()
+            if fn_name in self._effects:
+                self._effects[fn_name].destroy()
 
-            @EffectAsync
+            self._suspend_when_hidden[fn_name] = suspend_when_hidden
+
+            @effect(
+                suspended=suspend_when_hidden and self._is_hidden(fn_name),
+                priority=priority,
+            )
             async def output_obs():
                 await self._session.send_message(
                     {"recalculating": {"name": fn_name, "status": "recalculating"}}
@@ -641,11 +654,35 @@ class Outputs:
                     {"recalculating": {"name": fn_name, "status": "recalculated"}}
                 )
 
-            self._output_obervers[fn_name] = output_obs
+            self._effects[fn_name] = output_obs
 
             return None
 
         return set_fn
+
+    def manage_hidden(self) -> None:
+        "Suspends execution of hidden outputs and resumes execution of visible outputs."
+        output_names = list(self._suspend_when_hidden.keys())
+        for name in output_names:
+            if self._should_suspend(name):
+                self._effects[name].suspend()
+            else:
+                self._effects[name].resume()
+
+    def _should_suspend(self, name: str) -> bool:
+        return self._suspend_when_hidden[name] and self._is_hidden(name)
+
+    def _is_hidden(self, name: str) -> bool:
+        with isolate():
+            hidden = cast(
+                Optional[bool],
+                self._session.input[f".clientdata_output_{name}_hidden"](),
+            )
+
+        if hidden is None:
+            return True
+        else:
+            return hidden
 
 
 # ==============================================================================

@@ -59,12 +59,19 @@ class OutputsProxy(Outputs):
         return self._ns + "-" + key
 
     def __call__(
-        self, *, name: Optional[str] = None
+        self,
+        *,
+        name: Optional[str] = None,
+        suspend_when_hidden: bool = True,
+        priority: int = 0
     ) -> Callable[[RenderFunction], None]:
         def set_fn(fn: RenderFunction) -> None:
             fn_name = name or fn.__name__
             fn_name = self._ns_key(fn_name)
-            return self._outputs(name=fn_name)(fn)
+            out_fn = self._outputs(
+                name=fn_name, suspend_when_hidden=suspend_when_hidden, priority=priority
+            )
+            return out_fn(fn)
 
         return set_fn
 

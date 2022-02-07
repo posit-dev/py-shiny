@@ -236,6 +236,7 @@ class Effect:
         self,
         fn: EffectFunction,
         *,
+        suspended: bool = False,
         priority: int = 0,
         session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
@@ -249,6 +250,8 @@ class Effect:
         self._is_async: bool = False
 
         self._priority: int = priority
+        self._suspended = suspended
+        self._on_resume: Callable[[], None] = lambda: None
 
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._destroyed: bool = False
@@ -286,8 +289,16 @@ class Effect:
             for cb in self._invalidate_callbacks:
                 cb()
 
-            # TODO: Wrap this stuff up in a continue callback, depending on if suspended?
-            ctx.add_pending_flush(self._priority)
+            if self._destroyed:
+                return
+
+            def _continue() -> None:
+                ctx.add_pending_flush(self._priority)
+
+            if self._suspended:
+                self._on_resume = _continue
+            else:
+                _continue()
 
         async def on_flush_cb() -> None:
             if not self._destroyed:
@@ -325,6 +336,35 @@ class Effect:
         if self._ctx is not None:
             self._ctx.invalidate()
 
+    def suspend(self) -> None:
+        """
+        Causes this observer to stop scheduling flushes (re-executions) in response to
+        invalidations. If the observer was invalidated prior to this call but it has not
+        re-executed yet (because it waits until on_flush is called) then that
+        re-execution will still occur, because the flush is already scheduled.
+        """
+        self._suspended = True
+
+    def resume(self) -> None:
+        """
+        Causes this observer to start re-executing in response to invalidations. If the
+        observer was invalidated while suspended, then it will schedule itself for
+        re-execution (pending flush).
+        """
+        if self._suspended:
+            self._suspended = False
+            self._on_resume()
+            self._on_resume = lambda: None
+
+    def set_priority(self, priority: int = 0) -> None:
+        """
+        Change this observer's priority. Note that if the observer is currently
+        invalidated, then the change in priority will not take effect until the next
+        invalidation--unless the observer is also currently suspended, in which case the
+        priority change will be effective upon resume.
+        """
+        self._priority = priority
+
     def _on_session_ended_cb(self) -> None:
         self.destroy()
 
@@ -334,18 +374,27 @@ class EffectAsync(Effect):
         self,
         fn: EffectFunctionAsync,
         *,
+        suspended: bool = False,
         priority: int = 0,
         session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
         if not utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
 
-        super().__init__(cast(EffectFunction, fn), session=session, priority=priority)
+        super().__init__(
+            cast(EffectFunction, fn),
+            suspended=suspended,
+            session=session,
+            priority=priority,
+        )
         self._is_async = True
 
 
 def effect(
-    *, priority: int = 0, session: Union[MISSING_TYPE, "Session", None] = MISSING
+    *,
+    suspended: bool = False,
+    priority: int = 0,
+    session: Union[MISSING_TYPE, "Session", None] = MISSING,
 ) -> Callable[[Union[EffectFunction, EffectFunctionAsync]], Effect]:
     """[summary]
 
@@ -360,10 +409,12 @@ def effect(
     def create_effect(fn: Union[EffectFunction, EffectFunctionAsync]) -> Effect:
         if utils.is_async_callable(fn):
             fn = cast(EffectFunctionAsync, fn)
-            return EffectAsync(fn, priority=priority, session=session)
+            return EffectAsync(
+                fn, suspended=suspended, priority=priority, session=session
+            )
         else:
             fn = cast(EffectFunction, fn)
-            return Effect(fn, priority=priority, session=session)
+            return Effect(fn, suspended=suspended, priority=priority, session=session)
 
     return create_effect
 
