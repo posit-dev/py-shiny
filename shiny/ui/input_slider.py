@@ -14,7 +14,12 @@ from htmltools import tags, Tag, div, css, TagAttrArg, TagChildArg, HTML
 from .html_dependencies import ionrangeslider_deps
 from .input_utils import shiny_input_label
 
-__all__ = ["input_slider"]
+__all__ = (
+    "input_slider",
+    "SliderValueArg",
+    "SliderStepArg",
+    "AnimationOptions",
+)
 
 # TODO: validate value(s) are within (min,max)?
 

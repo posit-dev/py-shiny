@@ -1,3 +1,16 @@
+__all__ = (
+    "nav",
+    "nav_menu",
+    "nav_item",
+    "nav_spacer",
+    "navs_tab",
+    "navs_tab_card",
+    "navs_pill",
+    "navs_pill_card",
+    "navs_pill_list",
+    "navs_bar",
+)
+
 import sys
 from typing import Optional, Any, Tuple
 
@@ -19,7 +32,7 @@ def nav(
 ) -> JSXTag:
     if not value:
         value = title
-    return nav_tag("Nav", *args, value=value, title=TagList(icon, title))
+    return _nav_tag("Nav", *args, value=value, title=TagList(icon, title))
 
 
 def nav_menu(
@@ -31,7 +44,7 @@ def nav_menu(
 ) -> JSXTag:
     if not value:
         value = str(title)
-    return nav_tag(
+    return _nav_tag(
         "NavMenu", *args, value=value, title=TagList(icon, title), align=align
     )
 
@@ -41,11 +54,11 @@ def nav_menu(
 
 
 def nav_item(*args: TagChildArg) -> JSXTag:
-    return nav_tag("NavItem", *args)
+    return _nav_tag("NavItem", *args)
 
 
 def nav_spacer() -> JSXTag:
-    return nav_tag("NavSpacer")
+    return _nav_tag("NavSpacer")
 
 
 def navs_tab(
@@ -55,7 +68,7 @@ def navs_tab(
     header: Optional[TagChildArg] = None,
     footer: Optional[TagChildArg] = None,
 ) -> JSXTag:
-    return nav_tag(
+    return _nav_tag(
         "Navs",
         *args,
         type="tabs",
@@ -73,7 +86,7 @@ def navs_tab_card(
     header: Optional[TagChildArg] = None,
     footer: Optional[TagChildArg] = None,
 ) -> JSXTag:
-    return nav_tag(
+    return _nav_tag(
         "NavsCard",
         *args,
         type="tabs",
@@ -91,7 +104,7 @@ def navs_pill(
     header: Optional[TagChildArg] = None,
     footer: Optional[TagChildArg] = None,
 ) -> JSXTag:
-    return nav_tag(
+    return _nav_tag(
         "Navs",
         *args,
         type="pills",
@@ -110,7 +123,7 @@ def navs_pill_card(
     footer: Optional[TagChildArg] = None,
     placement: Literal["above", "below"] = "above",
 ) -> JSXTag:
-    return nav_tag(
+    return _nav_tag(
         "NavsCard",
         *args,
         type="pills",
@@ -132,7 +145,7 @@ def navs_pill_list(
     fluid: bool = True,
     widths: Tuple[int, int] = (4, 8),
 ) -> JSXTag:
-    return nav_tag(
+    return _nav_tag(
         "NavsList",
         *args,
         id=id,
@@ -146,7 +159,7 @@ def navs_pill_list(
 
 
 # def navs_hidden(*args, id: Optional[str] = None, selected: Optional[str] = None, header: Any=None, footer: Any=None) -> tag:
-#  return nav_tag("NavsHidden", *args, id=id, selected=selected, header=header, footer=footer)
+#  return _nav_tag("NavsHidden", *args, id=id, selected=selected, header=header, footer=footer)
 
 
 def navs_bar(
@@ -162,7 +175,7 @@ def navs_bar(
     collapsible: bool = True,
     fluid: bool = True,
 ) -> JSXTag:
-    return nav_tag(
+    return _nav_tag(
         "NavsBar",
         *args,
         title=title,
@@ -178,6 +191,6 @@ def navs_bar(
     )
 
 
-def nav_tag(name: str, *args: TagChildArg, **kwargs: JSXTagAttrArg) -> JSXTag:
+def _nav_tag(name: str, *args: TagChildArg, **kwargs: JSXTagAttrArg) -> JSXTag:
     tag = jsx_tag_create("bslib." + name)
     return tag(nav_deps(), *args, **kwargs)

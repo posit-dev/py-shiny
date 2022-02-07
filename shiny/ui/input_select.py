@@ -1,10 +1,14 @@
+__all__ = (
+    "input_select",
+    "input_selectize",
+)
+
 from typing import Optional, Dict, Union, List
 
-from htmltools import Tag, tags, div, TagChildArg
+from htmltools import Tag, tags, div, TagChildArg, TagList
 
 from .html_dependencies import selectize_deps
 from .input_utils import shiny_input_label
-
 
 _Choices = Dict[str, TagChildArg]
 _OptGrpChoices = Dict[str, _Choices]
@@ -76,10 +80,10 @@ def input_select(
                 size=size,
             ),
             (
-                [
+                TagList(
                     tags.script("{}", type="application/json", data_for=id),
                     selectize_deps(),
-                ]
+                )
                 if selectize
                 else None
             ),
@@ -95,8 +99,8 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
         return x
 
 
-def _render_choices(x: _SelectChoices, selected: Optional[str] = None) -> List[Tag]:
-    result: List[Tag] = []
+def _render_choices(x: _SelectChoices, selected: Optional[str] = None) -> TagList:
+    result = TagList()
     for (k, v) in x.items():
         if isinstance(v, dict):
             result.append(tags.optgroup(*(_render_choices(v, selected)), label=k))

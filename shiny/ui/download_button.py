@@ -1,3 +1,5 @@
+__all__ = ("download_button", "download_link")
+
 from typing import Optional
 
 from htmltools import tags, Tag, TagChildArg, TagAttrArg, css

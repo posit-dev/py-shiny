@@ -1,3 +1,5 @@
+__all__ = ("input_file",)
+
 from typing import Optional, List
 
 from htmltools import tags, Tag, div, span, css, TagChildArg

@@ -1,3 +1,5 @@
+__all__ = ("input_action_button", "input_action_link")
+
 from typing import Optional
 
 from htmltools import tags, Tag, TagChildArg, TagAttrArg, css

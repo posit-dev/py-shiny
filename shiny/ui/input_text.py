@@ -1,3 +1,5 @@
+__all__ = ("input_text", "input_text_area")
+
 from typing import Optional
 
 from htmltools import tags, Tag, div, css, TagChildArg

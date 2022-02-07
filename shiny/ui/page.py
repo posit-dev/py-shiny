@@ -1,3 +1,10 @@
+__all__ = (
+    "page_navbar",
+    "page_fluid",
+    "page_fixed",
+    "page_bootstrap",
+)
+
 import sys
 from typing import Optional, Any, List
 from warnings import warn
@@ -31,7 +38,7 @@ def page_navbar(
 
     if title is not None and window_title is None:
         # Try to infer window_title from contents of title
-        window_title = " ".join(find_characters(title))
+        window_title = " ".join(_find_characters(title))
         if not window_title:
             warn(
                 "Unable to infer a `window_title` default from `title`. Consider providing a character string to `window_title`."
@@ -78,12 +85,12 @@ def page_fixed(
 def page_bootstrap(
     *args: Any, title: Optional[str] = None, lang: Optional[str] = None
 ) -> Tag:
-    page = TagList(bootstrap_deps(), *args)
+    page = TagList(*bootstrap_deps(), *args)
     head = tags.title(title) if title else None
     return tags.html(tags.head(head), tags.body(page), lang=lang)
 
 
-def find_characters(x: Any) -> List[str]:
+def _find_characters(x: Any) -> List[str]:
     if isinstance(x, str):
         return [x]
     elif isinstance(x, list):
