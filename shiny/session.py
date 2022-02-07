@@ -660,9 +660,9 @@ class Outputs:
 
         return set_fn
 
-    def manage_hidden(self, output_names: Optional[List[str]] = None) -> None:
-        if output_names is None:
-            output_names = list(self._suspend_when_hidden.keys())
+    def manage_hidden(self) -> None:
+        "Suspends execution of hidden outputs and resumes execution of visible outputs."
+        output_names = list(self._suspend_when_hidden.keys())
         for name in output_names:
             if self._should_suspend(name):
                 self._effects[name].suspend()
