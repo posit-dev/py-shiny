@@ -1,5 +1,5 @@
 from shiny import *
-from htmltools import tags
+from shiny.ui import tags
 
 # For plot rendering
 import numpy as np
@@ -54,9 +54,9 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         btn = input.btn()
         if btn % 2 == 1:
-            ui_insert(tags.p("Thanks for clicking!", id="thanks"), "body")
+            ui.insert_ui(tags.p("Thanks for clicking!", id="thanks"), "body")
         elif btn > 0:
-            ui_remove("#thanks")
+            ui.remove_ui("#thanks")
 
 
 app = App(app_ui, server)

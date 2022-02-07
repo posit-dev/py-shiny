@@ -1,3 +1,5 @@
+__all__ = ("insert_ui", "remove_ui")
+
 import sys
 from typing import Optional
 
@@ -8,10 +10,10 @@ else:
 
 from htmltools import TagChildArg
 
-from .session import Session, _require_active_session, _process_deps
+from ..session import Session, _require_active_session, _process_deps
 
 
-def ui_insert(
+def insert_ui(
     ui: TagChildArg,
     selector: str,
     where: Literal["beforeBegin", "afterBegin", "beforeEnd", "afterEnd"] = "beforeEnd",
@@ -36,7 +38,7 @@ def ui_insert(
         session.on_flushed(callback, once=True)
 
 
-def ui_remove(
+def remove_ui(
     selector: str,
     multiple: bool = False,
     immediate: bool = False,
