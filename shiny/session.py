@@ -146,8 +146,6 @@ class Session:
         self._flush_callbacks = utils.Callbacks()
         self._flushed_callbacks = utils.Callbacks()
 
-        self._busy_count: int = 0
-
         with session_context(self):
             self.app.server(self.input, self.output, self)
 
@@ -466,9 +464,6 @@ class Session:
         self.app.request_flush(self)
 
     async def flush(self) -> None:
-        if self._busy_count > 0:
-            return
-
         with session_context(self):
             self._flush_callbacks.invoke()
             self._flushed_callbacks.invoke()
@@ -536,12 +531,6 @@ class Session:
                 return f"session/{urllib.parse.quote(self.id)}/download/{urllib.parse.quote(effective_name)}?w="
 
         return wrapper
-
-    def increment_busy_count(self) -> None:
-        self._busy_count += 1
-
-    def decrement_busy_count(self) -> None:
-        self._busy_count -= 1
 
 
 # ======================================================================================

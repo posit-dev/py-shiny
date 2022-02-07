@@ -291,8 +291,6 @@ class Effect:
 
             def _continue() -> None:
                 ctx.add_pending_flush(self._priority)
-                if self._session:
-                    self._session.increment_busy_count()
 
             if self._suspended:
                 self._on_resume = _continue
@@ -301,11 +299,7 @@ class Effect:
 
         async def on_flush_cb() -> None:
             if not self._destroyed:
-                try:
-                    await self.run()
-                finally:
-                    if self._session:
-                        self._session.decrement_busy_count()
+                await self.run()
 
         ctx.on_invalidate(on_invalidate_cb)
         ctx.on_flush(on_flush_cb)
