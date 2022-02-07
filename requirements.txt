@@ -1,5 +1,6 @@
-https://rstudio.github.io/prism/shiny-0.0.0.9000-py2.py3-none-any.whl
+https://rstudio.github.io/prism/shiny-0.0.0.9001-py2.py3-none-any.whl
 https://rstudio.github.io/prism/htmltools-0.0.1-py3-none-any.whl
+https://rstudio.github.io/prism/fontawesome-0.1.0-py2.py3-none-any.whl
 packaging
 uvicorn==0.14.0
 matplotlib==3.4.2
