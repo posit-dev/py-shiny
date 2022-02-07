@@ -289,6 +289,9 @@ class Effect:
             for cb in self._invalidate_callbacks:
                 cb()
 
+            if self._destroyed:
+                return
+
             def _continue() -> None:
                 ctx.add_pending_flush(self._priority)
 
