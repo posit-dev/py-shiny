@@ -6,7 +6,7 @@ from typing import TypeVar, Callable, List, Awaitable, Union
 from .input_handlers import ActionButtonValue
 from .reactive import isolate
 from .validation import req
-from .utils import is_async_callable, run_coro_sync
+from ._utils import is_async_callable, run_coro_sync
 
 
 T = TypeVar("T")

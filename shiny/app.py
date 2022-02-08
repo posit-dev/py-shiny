@@ -15,7 +15,7 @@ from starlette.responses import Response, HTMLResponse, JSONResponse
 from .http_staticfiles import StaticFiles
 from .session import Inputs, Outputs, Session, session_context
 from . import reactcore
-from .connmanager import (
+from ._connmanager import (
     Connection,
     StarletteConnection,
 )

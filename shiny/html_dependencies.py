@@ -1,5 +1,3 @@
-__all__ = ()
-
 from htmltools import HTMLDependency
 
 

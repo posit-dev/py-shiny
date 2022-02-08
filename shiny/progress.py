@@ -2,7 +2,7 @@ __all__ = ("Progress",)
 
 from typing import Optional, Dict, Any
 from warnings import warn
-from .utils import run_coro_sync, rand_hex
+from ._utils import run_coro_sync, rand_hex
 from .session import Session, _require_active_session
 
 

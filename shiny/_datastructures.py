@@ -1,5 +1,3 @@
-__all__ = ()
-
 from typing import TypeVar, Generic
 from queue import PriorityQueue
 

@@ -29,7 +29,7 @@ from htmltools import TagChildArg
 if TYPE_CHECKING:
     from .session import Session
 
-from . import utils
+from . import _utils
 
 
 # ======================================================================================
@@ -72,10 +72,10 @@ class RenderText(RenderFunction):
         # The Render*Async subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
-        self._fn: RenderTextFuncAsync = utils.wrap_async(fn)
+        self._fn: RenderTextFuncAsync = _utils.wrap_async(fn)
 
     def __call__(self) -> Union[str, None]:
-        return utils.run_coro_sync(self.run())
+        return _utils.run_coro_sync(self.run())
 
     async def run(self) -> Union[str, None]:
         return await self._fn()
@@ -83,7 +83,7 @@ class RenderText(RenderFunction):
 
 class RenderTextAsync(RenderText, RenderFunctionAsync):
     def __init__(self, fn: RenderTextFuncAsync) -> None:
-        if not utils.is_async_callable(fn):
+        if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderTextFunc, fn))
 
@@ -93,7 +93,7 @@ class RenderTextAsync(RenderText, RenderFunctionAsync):
 
 def render_text() -> Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], RenderText]:
     def wrapper(fn: Union[RenderTextFunc, RenderTextFuncAsync]) -> RenderText:
-        if utils.is_async_callable(fn):
+        if _utils.is_async_callable(fn):
             return RenderTextAsync(fn)
         else:
             fn = typing.cast(RenderTextFunc, fn)
@@ -129,10 +129,10 @@ class RenderPlot(RenderFunction):
         # The Render*Async subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
-        self._fn: RenderPlotFuncAsync = utils.wrap_async(fn)
+        self._fn: RenderPlotFuncAsync = _utils.wrap_async(fn)
 
     def __call__(self) -> object:
-        return utils.run_coro_sync(self.run())
+        return _utils.run_coro_sync(self.run())
 
     async def run(self) -> object:
         # Reactively read some information about the plot.
@@ -178,7 +178,7 @@ class RenderPlot(RenderFunction):
 
 class RenderPlotAsync(RenderPlot, RenderFunctionAsync):
     def __init__(self, fn: RenderPlotFuncAsync, alt: Optional[str] = None) -> None:
-        if not utils.is_async_callable(fn):
+        if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderPlotFunc, fn), alt=alt)
 
@@ -191,7 +191,7 @@ def render_plot(
     alt: Optional[str] = None,
 ) -> Callable[[Union[RenderPlotFunc, RenderPlotFuncAsync]], RenderPlot]:
     def wrapper(fn: Union[RenderPlotFunc, RenderPlotFuncAsync]) -> RenderPlot:
-        if utils.is_async_callable(fn):
+        if _utils.is_async_callable(fn):
             return RenderPlotAsync(fn, alt=alt)
         else:
             return RenderPlot(fn, alt=alt)
@@ -302,10 +302,10 @@ class RenderImage(RenderFunction):
         # The Render*Async subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
-        self._fn: RenderImageFuncAsync = utils.wrap_async(fn)
+        self._fn: RenderImageFuncAsync = _utils.wrap_async(fn)
 
     def __call__(self) -> object:
-        return utils.run_coro_sync(self.run())
+        return _utils.run_coro_sync(self.run())
 
     async def run(self) -> object:
         res: ImgData = await self._fn()
@@ -324,7 +324,7 @@ class RenderImage(RenderFunction):
 
 class RenderImageAsync(RenderImage, RenderFunctionAsync):
     def __init__(self, fn: RenderImageFuncAsync, delete_file: bool = False) -> None:
-        if not utils.is_async_callable(fn):
+        if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderImageFunc, fn), delete_file=delete_file)
 
@@ -336,7 +336,7 @@ def render_image(
     delete_file: bool = False,
 ) -> Callable[[Union[RenderImageFunc, RenderImageFuncAsync]], RenderImage]:
     def wrapper(fn: Union[RenderImageFunc, RenderImageFuncAsync]) -> RenderImage:
-        if utils.is_async_callable(fn):
+        if _utils.is_async_callable(fn):
             return RenderImageAsync(fn, delete_file=delete_file)
         else:
             fn = typing.cast(RenderImageFunc, fn)
@@ -358,10 +358,10 @@ class RenderUI(RenderFunction):
         # The Render*Async subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
-        self._fn: RenderUIFuncAsync = utils.wrap_async(fn)
+        self._fn: RenderUIFuncAsync = _utils.wrap_async(fn)
 
     def __call__(self) -> object:
-        return utils.run_coro_sync(self.run())
+        return _utils.run_coro_sync(self.run())
 
     async def run(self) -> object:
         ui: TagChildArg = await self._fn()
@@ -375,7 +375,7 @@ class RenderUI(RenderFunction):
 
 class RenderUIAsync(RenderUI, RenderFunctionAsync):
     def __init__(self, fn: RenderUIFuncAsync) -> None:
-        if not utils.is_async_callable(fn):
+        if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderUIFunc, fn))
 
@@ -387,7 +387,7 @@ def render_ui() -> Callable[[Union[RenderUIFunc, RenderUIFuncAsync]], RenderUI]:
     def wrapper(
         fn: Union[Callable[[], TagChildArg], Callable[[], Awaitable[TagChildArg]]]
     ) -> RenderUI:
-        if utils.is_async_callable(fn):
+        if _utils.is_async_callable(fn):
             return RenderUIAsync(fn)
         else:
             fn = typing.cast(RenderUIFunc, fn)

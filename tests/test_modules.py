@@ -3,7 +3,7 @@
 import pytest
 
 from shiny import *
-from shiny.utils import Callable
+from shiny._utils import Callable
 from shiny.reactive import isolate
 from htmltools import TagChildArg
 

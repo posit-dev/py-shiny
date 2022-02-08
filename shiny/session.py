@@ -56,10 +56,10 @@ from htmltools import TagChildArg, TagList
 
 from .reactive import Value, Effect, effect, isolate
 from .http_staticfiles import FileResponse
-from .connmanager import Connection, ConnectionClosed
+from ._connmanager import Connection, ConnectionClosed
 from . import reactcore
 from . import render
-from . import utils
+from . import _utils
 from .fileupload import FileInfo, FileUploadManager
 from .input_handlers import input_handlers
 from .validation import SafeException, SilentCancelOutputException, SilentException
@@ -143,8 +143,8 @@ class Session:
 
         self._register_session_end_callbacks()
 
-        self._flush_callbacks = utils.Callbacks()
-        self._flushed_callbacks = utils.Callbacks()
+        self._flush_callbacks = _utils.Callbacks()
+        self._flushed_callbacks = _utils.Callbacks()
 
         with session_context(self):
             self.app.server(self.input, self.output, self)
@@ -425,11 +425,11 @@ class Session:
             "where": where,
             "content": content,
         }
-        utils.run_coro_sync(self.send_message({"shiny-insert-ui": msg}))
+        _utils.run_coro_sync(self.send_message({"shiny-insert-ui": msg}))
 
     def send_remove_ui(self, selector: str, multiple: bool) -> None:
         msg = {"selector": selector, "multiple": multiple}
-        utils.run_coro_sync(self.send_message({"shiny-remove-ui": msg}))
+        _utils.run_coro_sync(self.send_message({"shiny-remove-ui": msg}))
 
     async def send_message(self, message: Dict[str, object]) -> None:
         message_str: str = json.dumps(message) + "\n"
@@ -618,7 +618,7 @@ class Outputs:
 
                 message: Dict[str, object] = {}
                 try:
-                    if utils.is_async_callable(fn):
+                    if _utils.is_async_callable(fn):
                         message[fn_name] = await fn()
                     else:
                         message[fn_name] = fn()

@@ -29,7 +29,7 @@ import warnings
 
 from .reactcore import Context, Dependents, ReactiveWarning
 from . import reactcore
-from . import utils
+from . import _utils
 from .types import MISSING, MISSING_TYPE
 from .validation import SilentException
 
@@ -95,7 +95,7 @@ class Calc(Generic[T]):
         # The CalcAsync subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
-        self._fn: CalcFunctionAsync[T] = utils.wrap_async(fn)
+        self._fn: CalcFunctionAsync[T] = _utils.wrap_async(fn)
         self._is_async: bool = False
 
         self._dependents: Dependents = Dependents()
@@ -126,7 +126,7 @@ class Calc(Generic[T]):
     def __call__(self) -> T:
         # Run the Coroutine (synchronously), and then return the value.
         # If the Coroutine yields control, then an error will be raised.
-        return utils.run_coro_sync(self.get_value())
+        return _utils.run_coro_sync(self.get_value())
 
     async def get_value(self) -> T:
         self._dependents.register()
@@ -179,7 +179,7 @@ class CalcAsync(Calc[T]):
         *,
         session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
-        if not utils.is_async_callable(fn):
+        if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
 
         super().__init__(cast(CalcFunction[T], fn), session=session)
@@ -212,7 +212,7 @@ def calc(
     *, session: Union[MISSING_TYPE, "Session", None] = MISSING
 ) -> Callable[[CalcFunction[T]], Calc[T]]:
     def create_calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc[T]:
-        if utils.is_async_callable(fn):
+        if _utils.is_async_callable(fn):
             return CalcAsync(fn, session=session)
         else:
             fn = cast(CalcFunction[T], fn)
@@ -244,7 +244,7 @@ class Effect:
         # The EffectAsync subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
-        self._fn: EffectFunctionAsync = utils.wrap_async(fn)
+        self._fn: EffectFunctionAsync = _utils.wrap_async(fn)
         self._is_async: bool = False
 
         self._priority: int = priority
@@ -376,7 +376,7 @@ class EffectAsync(Effect):
         priority: int = 0,
         session: Union[MISSING_TYPE, "Session", None] = MISSING,
     ) -> None:
-        if not utils.is_async_callable(fn):
+        if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
 
         super().__init__(
@@ -405,7 +405,7 @@ def effect(
     """
 
     def create_effect(fn: Union[EffectFunction, EffectFunctionAsync]) -> Effect:
-        if utils.is_async_callable(fn):
+        if _utils.is_async_callable(fn):
             fn = cast(EffectFunctionAsync, fn)
             return EffectAsync(
                 fn, suspended=suspended, priority=priority, session=session

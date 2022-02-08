@@ -1,6 +1,6 @@
 """Tests for `shiny.datastructures`."""
 
-from shiny.datastructures import PriorityQueueFIFO
+from shiny._datastructures import PriorityQueueFIFO
 
 
 def test_priority_queue_fifo():

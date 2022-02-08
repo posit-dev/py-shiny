@@ -14,7 +14,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import TypedDict
 
-from . import utils
+from . import _utils
 
 # File uploads happen through a series of requests. This requires a browser
 # which supports the HTML5 File API.
@@ -111,7 +111,7 @@ class FileUploadManager:
         self._operations: dict[str, FileUploadOperation] = {}
 
     def create_upload_operation(self, file_infos: List[FileInfo]) -> str:
-        job_id = utils.rand_hex(12)
+        job_id = _utils.rand_hex(12)
         dir = tempfile.mkdtemp(dir=self._basedir)
         self._operations[job_id] = FileUploadOperation(self, job_id, dir, file_infos)
         return job_id

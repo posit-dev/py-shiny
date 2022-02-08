@@ -9,8 +9,8 @@ import asyncio
 import typing
 import warnings
 
-from .datastructures import PriorityQueueFIFO
-from . import utils
+from ._datastructures import PriorityQueueFIFO
+from . import _utils
 
 T = TypeVar("T")
 
@@ -109,7 +109,7 @@ class ReactiveEnvironment:
         self._next_id: int = 0
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
         self.lock = asyncio.Lock()
-        self._flushed_callbacks = utils.AsyncCallbacks()
+        self._flushed_callbacks = _utils.AsyncCallbacks()
 
     def next_id(self) -> int:
         """Return the next available id"""
