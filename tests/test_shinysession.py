@@ -10,5 +10,5 @@ def test_require_active_session_error_messages():
     with pytest.raises(RuntimeError, match=r"Progress\(\) must be called"):
         Progress()
 
-    with pytest.raises(RuntimeError, match=r"notification_remove\(\) must be called.*"):
-        notification_remove("abc")
+    with pytest.raises(RuntimeError, match=r"notification.remove\(\) must be called.*"):
+        notification.remove("abc")

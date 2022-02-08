@@ -19,7 +19,7 @@ from .modal import *
 from .navs import *
 from .output import *
 from .page import *
-from htmltools import tags, TagList, HTML
+from htmltools import TagList, Tag, TagChildArg, TagAttrArg, tags, HTML, head_content
 
 # "Re-export" top-level tags
 # Note this should match https://github.com/rstudio/py-htmltools/blob/dcebb4/htmltools/tags.py#L8-L26

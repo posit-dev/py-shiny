@@ -1,6 +1,5 @@
 from shiny import *
-from shiny.ui import tags, HTML
-from htmltools import Tag
+from shiny.ui import tags, HTML, Tag
 from fontawesome import icon_svg
 
 app_ui = ui.page_fluid(
@@ -147,7 +146,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         link = input.link()
         if link and link > 0:
-            notification_show("A notification!")
+            notification.show("A notification!")
             p = Progress()
             import time
 
