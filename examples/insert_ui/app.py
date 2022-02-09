@@ -21,7 +21,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.calc()
+    @calc()
     def r():
         if input.n() is None:
             return
@@ -50,7 +50,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             "This slider is rendered via @render_ui()", "N", 0, 100, 20
         )
 
-    @reactive.effect()
+    @effect()
     def _():
         btn = input.btn()
         if btn % 2 == 1:

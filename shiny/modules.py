@@ -1,9 +1,8 @@
 __all__ = (
-    "InputsProxy",
-    "InputsProxy",
-    "OutputsProxy",
-    "SessionProxy",
-    "ShinyModule",
+    "ModuleInputs",
+    "ModuleOutputs",
+    "ModuleSession",
+    "Module",
 )
 
 from typing import Any, Callable, Optional
@@ -15,7 +14,7 @@ from .render import RenderFunction
 from .session import Inputs, Outputs, Session, _require_active_session
 
 
-class InputsProxy(Inputs):
+class ModuleInputs(Inputs):
     def __init__(self, ns: str, values: Inputs):
         self._ns: str = ns
         self._values: Inputs = values
@@ -50,7 +49,7 @@ class InputsProxy(Inputs):
         self.__delitem__(key)
 
 
-class OutputsProxy(Outputs):
+class ModuleOutputs(Outputs):
     def __init__(self, ns: str, outputs: Outputs):
         self._ns: str = ns
         self._outputs: Outputs = outputs
@@ -76,31 +75,33 @@ class OutputsProxy(Outputs):
         return set_fn
 
 
-class SessionProxy(Session):
+class ModuleSession(Session):
     def __init__(self, ns: str, parent_session: Session) -> None:
         self._ns: str = ns
         self._parent: Session = parent_session
-        self.input: InputsProxy = InputsProxy(ns, parent_session.input)
-        self.output: OutputsProxy = OutputsProxy(ns, parent_session.output)
+        self.input: ModuleInputs = ModuleInputs(ns, parent_session.input)
+        self.output: ModuleOutputs = ModuleOutputs(ns, parent_session.output)
 
 
-class ShinyModule:
+class Module:
     def __init__(
         self,
         ui: Callable[..., TagChildArg],
-        server: Callable[[InputsProxy, OutputsProxy, SessionProxy], None],
+        server: Callable[[ModuleInputs, ModuleOutputs, ModuleSession], None],
     ) -> None:
         self._ui: Callable[..., TagChildArg] = ui
-        self._server: Callable[[InputsProxy, OutputsProxy, SessionProxy], None] = server
+        self._server: Callable[
+            [ModuleInputs, ModuleOutputs, ModuleSession], None
+        ] = server
 
     def ui(self, namespace: str, *args: Any) -> TagChildArg:
-        ns = ShinyModule._make_ns_fn(namespace)
+        ns = Module._make_ns_fn(namespace)
         return self._ui(ns, *args)
 
     def server(self, ns: str, *, session: Optional[Session] = None) -> None:
         self.ns: str = ns
         session = _require_active_session(session)
-        session_proxy = SessionProxy(ns, session)
+        session_proxy = ModuleSession(ns, session)
         self._server(session_proxy.input, session_proxy.output, session_proxy)
 
     @staticmethod

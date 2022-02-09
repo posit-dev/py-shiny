@@ -130,7 +130,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         dir = Path(__file__).resolve().parent
         return {"src": dir / "rstudio-logo.png", "width": "150px"}
 
-    @reactive.effect()
+    @effect()
     def _():
         btn = input.btn()
         if btn and btn > 0:
@@ -142,7 +142,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 )
             )
 
-    @reactive.effect()
+    @effect()
     def _():
         link = input.link()
         if link and link > 0:

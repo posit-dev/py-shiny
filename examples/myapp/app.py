@@ -23,7 +23,7 @@ shared_val = reactive.Value(None)
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.calc()
+    @calc()
     def r():
         if input.n() is None:
             return
@@ -37,7 +37,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     # This observer watches n, and changes shared_val, which is shared across
     # all running sessions.
-    @reactive.effect()
+    @effect()
     def _():
         if input.n() is None:
             return

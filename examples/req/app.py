@@ -14,7 +14,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.calc()
+    @calc()
     def safe_click():
         req(input.safe())
         return input.safe()
@@ -30,7 +30,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         req(input.unsafe())
         raise Exception(f"Super secret number of clicks: {str(input.unsafe())}")
 
-    @reactive.effect()
+    @effect()
     def _():
         req(input.unsafe())
         print("unsafe clicks:", input.unsafe())

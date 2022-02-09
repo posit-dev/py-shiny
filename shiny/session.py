@@ -3,7 +3,6 @@ __all__ = (
     "Inputs",
     "Outputs",
     "get_current_session",
-    "session_context",
 )
 
 import functools
@@ -60,28 +59,28 @@ from ._connmanager import Connection, ConnectionClosed
 from . import reactcore
 from . import render
 from . import _utils
-from .fileupload import FileInfo, FileUploadManager
-from .input_handlers import input_handlers
+from .fileupload import FileInfo, _FileUploadManager
+from .input_handler import input_handlers
 from .validation import SafeException, SilentCancelOutputException, SilentException
 
 # This cast is necessary because if the type checker thinks that if
 # "tag" isn't in `message`, then it's not a ClientMessage object.
 # This will be fixable when TypedDict items can be marked as
 # potentially missing, in Python 3.10, with PEP 655.
-class ClientMessage(TypedDict):
+class _ClientMessage(TypedDict):
     method: str
 
 
-class ClientMessageInit(ClientMessage):
+class _ClientMessageInit(_ClientMessage):
     data: Dict[str, object]
 
 
-class ClientMessageUpdate(ClientMessage):
+class _ClientMessageUpdate(_ClientMessage):
     data: Dict[str, object]
 
 
 # For messages where "method" is something other than "init" or "update".
-class ClientMessageOther(ClientMessage):
+class _ClientMessageOther(_ClientMessage):
     args: List[object]
     tag: int
 
@@ -136,7 +135,7 @@ class Session:
         self._message_handlers: Dict[
             str, Callable[..., Awaitable[object]]
         ] = self._create_message_handlers()
-        self._file_upload_manager: FileUploadManager = FileUploadManager()
+        self._file_upload_manager: _FileUploadManager = _FileUploadManager()
         self._on_ended_callbacks: List[Callable[[], None]] = []
         self._has_run_session_end_tasks: bool = False
         self._downloads: Dict[str, _DownloadInfo] = {}
@@ -197,11 +196,11 @@ class Session:
                 async with reactcore.lock():
 
                     if message_obj["method"] == "init":
-                        message_obj = typing.cast(ClientMessageInit, message_obj)
+                        message_obj = typing.cast(_ClientMessageInit, message_obj)
                         self._manage_inputs(message_obj["data"])
 
                     elif message_obj["method"] == "update":
-                        message_obj = typing.cast(ClientMessageUpdate, message_obj)
+                        message_obj = typing.cast(_ClientMessageUpdate, message_obj)
                         self._manage_inputs(message_obj["data"])
 
                     else:
@@ -218,7 +217,7 @@ class Session:
                             )
                             return
 
-                        message_obj = typing.cast(ClientMessageOther, message_obj)
+                        message_obj = typing.cast(_ClientMessageOther, message_obj)
                         await self._dispatch(message_obj)
 
                     self.request_flush()
@@ -247,7 +246,7 @@ class Session:
     # Message handlers
     # ==========================================================================
 
-    async def _dispatch(self, message: ClientMessageOther) -> None:
+    async def _dispatch(self, message: _ClientMessageOther) -> None:
         try:
             func = self._message_handlers[message["method"]]
         except AttributeError:
@@ -263,7 +262,7 @@ class Session:
 
         await self._send_response(message, value)
 
-    async def _send_response(self, message: ClientMessageOther, value: object) -> None:
+    async def _send_response(self, message: _ClientMessageOther, value: object) -> None:
         await self.send_message({"response": {"tag": message["tag"], "value": value}})
 
     # This is called during __init__.
@@ -318,7 +317,7 @@ class Session:
             if not upload_op:
                 return HTMLResponse("<h1>Bad Request</h1>", 400)
 
-            # The FileUploadOperation can have multiple files; each one will
+            # The _FileUploadOperation can have multiple files; each one will
             # have a separate POST request. Each call to  `with upload_op` will
             # open up each file (in sequence) for writing.
             with upload_op:
@@ -333,8 +332,8 @@ class Session:
                 with session_context(self):
                     with isolate():
                         download = self._downloads[download_id]
-                        filename = read_thunk_opt(download.filename)
-                        content_type = read_thunk_opt(download.content_type)
+                        filename = _read_thunk_opt(download.filename)
+                        content_type = _read_thunk_opt(download.content_type)
                         contents = download.handler()
 
                         if filename is None:
@@ -762,14 +761,14 @@ def _process_deps(ui: TagChildArg, session: Optional[Session] = None) -> _Render
 T = TypeVar("T", str, int)
 
 
-def read_thunk(thunk: Union[Callable[[], T], T]) -> T:
+def _read_thunk(thunk: Union[Callable[[], T], T]) -> T:
     if callable(thunk):
         return thunk()
     else:
         return thunk
 
 
-def read_thunk_opt(thunk: Optional[Union[Callable[[], T], T]]) -> Optional[T]:
+def _read_thunk_opt(thunk: Optional[Union[Callable[[], T], T]]) -> Optional[T]:
     if thunk is None:
         return None
     elif callable(thunk):

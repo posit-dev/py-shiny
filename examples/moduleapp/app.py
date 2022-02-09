@@ -1,11 +1,14 @@
+from typing import Callable
 from shiny import *
+from shiny.modules import *
+
 
 # ============================================================
 # Counter module
 # ============================================================
-def counter_module_ui(
+def counter_ui(
     ns: Callable[[str], str], label: str = "Increment counter"
-) -> TagChildArg:
+) -> ui.TagChildArg:
     return ui.div(
         {"style": "border: 1px solid #ccc; border-radius: 5px; margin: 5px 0;"},
         ui.h2("This is " + label),
@@ -14,12 +17,10 @@ def counter_module_ui(
     )
 
 
-def counter_module_server(
-    input: InputsProxy, output: OutputsProxy, session: SessionProxy
-):
-    count: reactive.Value[int] = reactive.Value(0)
+def counter_server(input: ModuleInputs, output: ModuleOutputs, session: ModuleSession):
+    count: Value[int] = Value(0)
 
-    @reactive.effect()
+    @effect()
     @event(input.button)
     def _():
         count.set(count() + 1)
@@ -30,7 +31,7 @@ def counter_module_server(
         return f"Click count is {count()}"
 
 
-counter_module = ShinyModule(counter_module_ui, counter_module_server)
+counter_module = Module(counter_ui, counter_server)
 
 
 # =============================================================================

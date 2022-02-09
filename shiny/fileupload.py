@@ -50,11 +50,15 @@ class FileInfo(TypedDict):
     datapath: str
 
 
-class FileUploadOperation:
+class _FileUploadOperation:
     def __init__(
-        self, parent: "FileUploadManager", id: str, dir: str, file_infos: List[FileInfo]
+        self,
+        parent: "_FileUploadManager",
+        id: str,
+        dir: str,
+        file_infos: List[FileInfo],
     ) -> None:
-        self._parent: FileUploadManager = parent
+        self._parent: _FileUploadManager = parent
         self._id: str = id
         self._dir: str = dir
         # Copy file_infos and add a "datapath" entry for each file.
@@ -84,7 +88,7 @@ class FileUploadOperation:
     # Write a chunk of data for the currently-open file.
     def write_chunk(self, chunk: bytes) -> None:
         if self._current_file_obj is None:
-            raise RuntimeError(f"FileUploadOperation for {self._id} is not open.")
+            raise RuntimeError(f"_FileUploadOperation for {self._id} is not open.")
         self._current_file_obj.write(chunk)
 
     # End the entire operation, which can consist of multiple files.
@@ -104,19 +108,19 @@ class FileUploadOperation:
         self.file_end()
 
 
-class FileUploadManager:
+class _FileUploadManager:
     def __init__(self) -> None:
         # TODO: Remove basedir when app exits.
         self._basedir: str = tempfile.mkdtemp(prefix="fileupload-")
-        self._operations: dict[str, FileUploadOperation] = {}
+        self._operations: dict[str, _FileUploadOperation] = {}
 
     def create_upload_operation(self, file_infos: List[FileInfo]) -> str:
         job_id = _utils.rand_hex(12)
         dir = tempfile.mkdtemp(dir=self._basedir)
-        self._operations[job_id] = FileUploadOperation(self, job_id, dir, file_infos)
+        self._operations[job_id] = _FileUploadOperation(self, job_id, dir, file_infos)
         return job_id
 
-    def get_upload_operation(self, id: str) -> Optional[FileUploadOperation]:
+    def get_upload_operation(self, id: str) -> Optional[_FileUploadOperation]:
         if id in self._operations:
             return self._operations[id]
         else:

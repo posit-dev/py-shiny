@@ -4,7 +4,7 @@ __all__ = (
     "Value",
     "Calc",
     "CalcAsync",
-    "calc",
+    "calculate",
     "Effect",
     "EffectAsync",
     "effect",
@@ -208,7 +208,7 @@ class CalcAsync(Calc[T]):
 # twice: once here, and once when we return a Calc object (which has a synchronous
 # __call__ method) or CalcAsync object (which has an async __call__ method), and it
 # works out.
-def calc(
+def calculate(
     *, session: Union[MISSING_TYPE, "Session", None] = MISSING
 ) -> Callable[[CalcFunction[T]], Calc[T]]:
     def create_calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc[T]:

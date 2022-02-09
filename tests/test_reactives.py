@@ -4,7 +4,7 @@ import pytest
 import asyncio
 from typing import List
 
-from shiny.input_handlers import ActionButtonValue
+from shiny.input_handler import ActionButtonValue
 import shiny.reactcore as reactcore
 from shiny.decorators import *
 from shiny.reactive import *
