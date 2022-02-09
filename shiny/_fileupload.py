@@ -1,5 +1,3 @@
-__all__ = ("FileInfo",)
-
 import sys
 from typing import Optional, BinaryIO, List
 import typing
