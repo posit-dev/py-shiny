@@ -1,11 +1,14 @@
-__all__ = ("MISSING", "MISSING_TYPE", "FileInfo")
+__all__ = ("MISSING", "MISSING_TYPE", "FileInfo", "ImgData")
 
 import sys
+from typing import Union
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
 else:
     from typing_extensions import TypedDict
+
+from typing_extensions import NotRequired
 
 # Sentinel value - indicates a missing value in a function call.
 class MISSING_TYPE:
@@ -24,3 +27,10 @@ class FileInfo(TypedDict):
     size: int
     type: str
     datapath: str
+
+
+class ImgData(TypedDict):
+    src: str
+    width: NotRequired[Union[str, float]]
+    height: NotRequired[Union[str, float]]
+    alt: NotRequired[str]

@@ -19,17 +19,13 @@ else:
     from typing_extensions import Literal
 
 
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
-
 from htmltools import TagChildArg
 
 if TYPE_CHECKING:
     from .session import Session
 
 from . import _utils
+from .types import ImgData
 
 
 # ======================================================================================
@@ -111,13 +107,6 @@ def render_text() -> Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], Rend
 # a nontrivial amount of overhead. So for now, we're just using `object`.
 RenderPlotFunc = Callable[[], object]
 RenderPlotFuncAsync = Callable[[], Awaitable[object]]
-
-
-class ImgData(TypedDict):
-    src: str
-    width: Union[str, float]
-    height: Union[str, float]
-    alt: Optional[str]
 
 
 class RenderPlot(RenderFunction):
