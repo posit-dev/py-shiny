@@ -7,8 +7,8 @@ from typing import Optional, Dict, Union, List
 
 from htmltools import Tag, tags, div, TagChildArg, TagList
 
-from .html_dependencies import selectize_deps
-from .input_utils import shiny_input_label
+from ._html_dependencies import selectize_deps
+from ._input_utils import shiny_input_label
 
 _Choices = Dict[str, TagChildArg]
 _OptGrpChoices = Dict[str, _Choices]

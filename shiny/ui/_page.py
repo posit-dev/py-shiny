@@ -16,8 +16,8 @@ else:
 
 from htmltools import tags, Tag, TagList, div, TagChildArg
 
-from .html_dependencies import bootstrap_deps
-from .navs import navs_bar
+from ._html_dependencies import bootstrap_deps
+from ._navs import navs_bar
 
 
 def page_navbar(

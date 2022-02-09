@@ -6,8 +6,8 @@ from typing import Optional, List, Union
 
 from htmltools import tags, Tag, div, span, TagAttrArg, TagChildArg, css
 
-from .html_dependencies import datepicker_deps
-from .input_utils import shiny_input_label
+from ._html_dependencies import datepicker_deps
+from ._input_utils import shiny_input_label
 
 
 def input_date(

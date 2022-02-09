@@ -11,8 +11,8 @@ from typing_extensions import NotRequired
 
 from htmltools import tags, Tag, div, css, TagAttrArg, TagChildArg, HTML
 
-from .html_dependencies import ionrangeslider_deps
-from .input_utils import shiny_input_label
+from ._html_dependencies import ionrangeslider_deps
+from ._input_utils import shiny_input_label
 
 __all__ = (
     "input_slider",

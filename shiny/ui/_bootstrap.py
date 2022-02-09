@@ -33,7 +33,7 @@ from htmltools import (
     HTML,
 )
 
-from .html_dependencies import jqui_deps
+from ._html_dependencies import jqui_deps
 
 
 def row(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:

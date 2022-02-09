@@ -4,7 +4,7 @@ from typing import Optional
 
 from htmltools import tags, Tag, div, css, TagChildArg
 
-from .input_utils import shiny_input_label
+from ._input_utils import shiny_input_label
 
 
 def input_text(

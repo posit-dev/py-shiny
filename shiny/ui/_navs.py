@@ -21,7 +21,7 @@ else:
 
 from htmltools import jsx_tag_create, JSXTag, TagList, TagChildArg, JSXTagAttrArg
 
-from .html_dependencies import nav_deps
+from ._html_dependencies import nav_deps
 
 
 def nav(
