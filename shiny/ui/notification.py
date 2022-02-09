@@ -1,4 +1,4 @@
-__all__ = ("show", "remove")
+__all__ = ("notification_show", "notification_remove")
 
 import sys
 from typing import Dict, Union, Optional, Any
@@ -10,11 +10,11 @@ else:
 
 from htmltools import TagList, TagChildArg
 
-from ._utils import run_coro_sync, rand_hex
-from .session import Session, _require_active_session, _process_deps
+from .._utils import run_coro_sync, rand_hex
+from ..session import Session, _require_active_session, _process_deps
 
 
-def show(
+def notification_show(
     ui: TagChildArg,
     action: Optional[TagList] = None,
     duration: Optional[Union[int, float]] = 5,
@@ -45,7 +45,7 @@ def show(
     )
 
 
-def remove(id: str, session: Optional[Session] = None) -> str:
+def notification_remove(id: str, session: Optional[Session] = None) -> str:
     session = _require_active_session(session)
     run_coro_sync(
         session.send_message({"notification": {"type": "remove", "message": None}})

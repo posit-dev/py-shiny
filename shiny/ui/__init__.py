@@ -17,8 +17,10 @@ from .input_update import *
 from .insert import *
 from .modal import *
 from .navs import *
+from .notification import *
 from .output import *
 from .page import *
+from .progress import *
 from htmltools import TagList, Tag, TagChildArg, TagAttrArg, tags, HTML, head_content
 
 # "Re-export" top-level tags
