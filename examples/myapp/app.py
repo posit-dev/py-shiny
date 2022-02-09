@@ -1,5 +1,5 @@
 from shiny import *
-from shiny.fileupload import FileInfo
+from shiny.types import FileInfo
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -19,11 +19,11 @@ app_ui = ui.page_fluid(
 )
 
 # A ReactiveVal which is shared across all sessions.
-shared_val = reactive.Value(None)
+shared_val = Value(None)
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @calc()
+    @calculate()
     def r():
         if input.n() is None:
             return

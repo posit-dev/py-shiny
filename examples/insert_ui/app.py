@@ -21,7 +21,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @calc()
+    @calculate()
     def r():
         if input.n() is None:
             return

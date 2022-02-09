@@ -4,14 +4,21 @@ __author__ = """Winston Chang"""
 __email__ = "winston@rstudio.com"
 __version__ = "0.0.0.9001"
 
-from . import ui
 
 from .app import *
 from .decorators import *
+from . import html_dependencies
+from . import http_staticfiles
+from . import input_handler
+from . import main
+from . import modules
+from . import reactcore
 from .reactive import *
 from .render import *
 from .session import *
-from .modules import *
+from . import shinyenv
+from . import types
+from . import ui
 from .validation import *
 
 __all__ = (

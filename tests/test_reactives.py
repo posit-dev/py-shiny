@@ -97,7 +97,7 @@ async def test_reactive_value_same_no_invalidate():
 async def test_recursive_calc():
     v = Value(5)
 
-    @calc()
+    @calculate()
     def r():
         if v() == 0:
             return 0
@@ -119,7 +119,7 @@ async def test_recursive_calc():
 async def test_recursive_async_calc():
     v = Value(5)
 
-    @calc()
+    @calculate()
     async def r():
         if v() == 0:
             return 0
@@ -149,7 +149,7 @@ async def test_async_sequential():
     exec_order: list[str] = []
 
     async def react_chain(n: int):
-        @calc()
+        @calculate()
         async def r():
             nonlocal exec_order
             exec_order.append(f"r{n}-1")
@@ -195,7 +195,7 @@ async def test_isolate_basic_without_context():
     # isolate() works with calc and Value; allows executing without a reactive context.
     v = Value(1)
 
-    @calc()
+    @calculate()
     def r():
         return v() + 10
 
@@ -214,7 +214,7 @@ async def test_isolate_basic_without_context():
 async def test_isolate_prevents_dependency():
     v = Value(1)
 
-    @calc()
+    @calculate()
     def r():
         return v() + 10
 
@@ -262,7 +262,7 @@ async def test_isolate_async_basic_without_context():
     # context.
     v = Value(1)
 
-    @calc()
+    @calculate()
     async def r():
         return v() + 10
 
@@ -278,7 +278,7 @@ async def test_isolate_async_basic_without_context():
 async def test_isolate_async_prevents_dependency():
     v = Value(1)
 
-    @calc()
+    @calculate()
     async def r():
         return v() + 10
 
@@ -478,7 +478,7 @@ async def test_error_handling():
 
     vals: List[str] = []
 
-    @calc()
+    @calculate()
     def r():
         vals.append("r")
         raise Exception("Error here!")
@@ -505,7 +505,7 @@ async def test_calc_error_rethrow():
     vals: List[str] = []
     v = Value(1)
 
-    @calc()
+    @calculate()
     def r():
         vals.append("r")
         raise Exception("Error here!")
@@ -561,7 +561,7 @@ async def test_dependent_invalidation():
     def _():
         r()
 
-    @calc()
+    @calculate()
     def r():
         return v()
 
@@ -577,7 +577,7 @@ async def test_dependent_invalidation():
 
 
 # ------------------------------------------------------------
-# req() pauses execution in @effect() and @calc()
+# req() pauses execution in @effect() and @calculate()
 # ------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_req():
@@ -601,7 +601,7 @@ async def test_req():
     await reactcore.flush()
     assert n_times == 1
 
-    @calc()
+    @calculate()
     def r():
         req(False)
         return 1
@@ -616,7 +616,7 @@ async def test_req():
     await reactcore.flush()
     assert val is None
 
-    @calc()
+    @calculate()
     def r2():
         req(True)
         return 1
@@ -802,10 +802,10 @@ async def test_event_decorator():
     await reactcore.flush()
     assert n_times == 6
 
-    # works with @calc()
+    # works with @calculate()
     v2 = Value(1)
 
-    @calc()
+    @calculate()
     @event(lambda: v2(), ignore_init=True)
     def r2b():
         return 1
@@ -913,15 +913,15 @@ async def test_event_async_decorator():
     await reactcore.flush()
     assert n_times == 6
 
-    # works with @calc()
+    # works with @calculate()
     v2 = Value(1)
 
-    @calc()
+    @calculate()
     async def r_a():
         await asyncio.sleep(0)  # Make sure the async function yields control
         return 1
 
-    @calc()
+    @calculate()
     @event(lambda: v2(), r_a, ignore_init=True)
     async def r2b():
         await asyncio.sleep(0)  # Make sure the async function yields control
@@ -948,7 +948,7 @@ async def test_event_async_decorator():
 async def test_effect_pausing():
     a = Value(float(1))
 
-    @calc()
+    @calculate()
     def funcA():
         return a()
 
@@ -1030,7 +1030,7 @@ async def test_effect_pausing():
 async def test_effect_async_pausing():
     a = Value(float(1))
 
-    @calc()
+    @calculate()
     async def funcA():
         return a()
 

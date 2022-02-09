@@ -1,4 +1,5 @@
 from shiny import *
+from shiny.render import ImgData
 from shiny.ui import tags, HTML, Tag
 from fontawesome import icon_svg
 
@@ -128,7 +129,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         from pathlib import Path
 
         dir = Path(__file__).resolve().parent
-        return {"src": dir / "rstudio-logo.png", "width": "150px"}
+        img: ImgData = {"src": str(dir / "rstudio-logo.png"), "width": "150px"}
+        return img
 
     @effect()
     def _():
@@ -146,8 +148,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         link = input.link()
         if link and link > 0:
-            notification.show("A notification!")
-            p = Progress()
+            ui.notification_show("A notification!")
+            p = ui.Progress()
             import time
 
             for i in range(30):

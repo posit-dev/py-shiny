@@ -59,7 +59,7 @@ from ._connmanager import Connection, ConnectionClosed
 from . import reactcore
 from . import render
 from . import _utils
-from .fileupload import FileInfo, _FileUploadManager
+from ._fileupload import FileInfo, FileUploadManager
 from .input_handler import input_handlers
 from .validation import SafeException, SilentCancelOutputException, SilentException
 
@@ -135,7 +135,7 @@ class Session:
         self._message_handlers: Dict[
             str, Callable[..., Awaitable[object]]
         ] = self._create_message_handlers()
-        self._file_upload_manager: _FileUploadManager = _FileUploadManager()
+        self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks: List[Callable[[], None]] = []
         self._has_run_session_end_tasks: bool = False
         self._downloads: Dict[str, _DownloadInfo] = {}
@@ -317,7 +317,7 @@ class Session:
             if not upload_op:
                 return HTMLResponse("<h1>Bad Request</h1>", 400)
 
-            # The _FileUploadOperation can have multiple files; each one will
+            # The FileUploadOperation can have multiple files; each one will
             # have a separate POST request. Each call to  `with upload_op` will
             # open up each file (in sequence) for writing.
             with upload_op:

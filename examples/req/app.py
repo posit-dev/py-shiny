@@ -1,4 +1,5 @@
 from shiny import *
+from shiny.validation import SafeException
 
 app_ui = ui.page_fluid(
     ui.input_action_button("safe", "Throw a safe error"),
@@ -14,7 +15,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @calc()
+    @calculate()
     def safe_click():
         req(input.safe())
         return input.safe()
