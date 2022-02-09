@@ -72,7 +72,7 @@ async def test_flush_runs_newly_invalidated_async():
 
 
 # ======================================================================
-# Setting reactive.Value to same value doesn't invalidate downstream
+# Setting Value to same value doesn't invalidate downstream
 # ======================================================================
 @pytest.mark.asyncio
 async def test_reactive_value_same_no_invalidate():

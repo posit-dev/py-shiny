@@ -98,7 +98,7 @@ def run(
     """
 
     if isinstance(app, str):
-        app = resolve_app(app, app_dir)
+        app = _resolve_app(app, app_dir)
 
     uvicorn.run(
         app,  # type: ignore
@@ -113,7 +113,7 @@ def run(
     )
 
 
-def resolve_app(app: str, app_dir: typing.Optional[str]) -> str:
+def _resolve_app(app: str, app_dir: typing.Optional[str]) -> str:
     # The `app` parameter can be:
     #
     # - A module:attribute name
@@ -131,7 +131,7 @@ def resolve_app(app: str, app_dir: typing.Optional[str]) -> str:
     if app_dir is not None:
         sys.path.insert(0, app_dir)
 
-    instance = try_import_module(module)
+    instance = _try_import_module(module)
     if not instance:
         # It must be a path
         path = os.path.normpath(module)
@@ -153,14 +153,14 @@ def resolve_app(app: str, app_dir: typing.Optional[str]) -> str:
                     f"The directory '{fullpath}' did not include an app.py file"
                 )
         module = path.removesuffix(".py").replace("/", ".").replace("\\", ".")
-        instance = try_import_module(module)
+        instance = _try_import_module(module)
         if not instance:
             raise ImportError(f"Could not find the module '{module}'")
 
     return f"{module}:{attr}"
 
 
-def try_import_module(module: str) -> typing.Optional[types.ModuleType]:
+def _try_import_module(module: str) -> typing.Optional[types.ModuleType]:
     try:
         if importlib.util.find_spec(module):
             return importlib.import_module(module)

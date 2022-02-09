@@ -3,6 +3,7 @@
 import pytest
 
 from shiny import *
+from shiny.modules import *
 from shiny._utils import Callable
 from shiny.reactive import isolate
 from htmltools import TagChildArg
@@ -17,9 +18,9 @@ def mod_ui(ns: Callable[[str], str]) -> TagChildArg:
 
 # Note: We currently can't test Session; this is just here for future use.
 def mod_server(input: ModuleInputs, output: ModuleOutputs, session: ModuleSession):
-    count: reactive.Value[int] = reactive.Value(0)
+    count: Value[int] = Value(0)
 
-    @reactive.effect()
+    @effect()
     @event(session.input.button)
     def _():
         count.set(count() + 1)
@@ -41,7 +42,7 @@ def test_module_ui():
 
 @pytest.mark.asyncio
 async def test_inputs_proxy():
-    input = session.Inputs(a=1)
+    input = Inputs(a=1)
     input_proxy = ModuleInputs("mod1", input)
 
     with isolate():

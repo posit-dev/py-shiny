@@ -5,7 +5,7 @@ app_ui = ui.page_fluid(
     ui.output_text_verbatim("txt", placeholder=True),
 )
 
-# A reactive.Value which is exists outside of the session.
+# A Value which is exists outside of the session.
 shared_val = Value(None)
 
 
