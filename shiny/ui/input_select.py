@@ -99,8 +99,8 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
         return x
 
 
-def _render_choices(x: _SelectChoices, selected: Optional[str] = None) -> TagList:
-    result = TagList()
+def _render_choices(x: _SelectChoices, selected: Optional[str] = None) -> List[Tag]:
+    result: List[Tag] = []
     for (k, v) in x.items():
         if isinstance(v, dict):
             result.append(tags.optgroup(*(_render_choices(v, selected)), label=k))
