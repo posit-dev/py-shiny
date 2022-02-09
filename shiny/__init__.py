@@ -12,8 +12,7 @@ from . import http_staticfiles
 from . import input_handler
 from . import main
 from . import modules
-from . import reactcore
-from .reactive import *
+from . import reactive
 from .render import *
 from .session import *
 from . import shinyenv
@@ -22,17 +21,13 @@ from . import ui
 from .validation import *
 
 __all__ = (
+    # subpackages
     "ui",
+    "reactive",
     # app.py
     "App",
     # decorators.py
     "event",
-    # reactive.py
-    "calculate",
-    "effect",
-    "isolate",
-    "invalidate_later",
-    "Value",
     # render.py
     "render_text",
     "render_plot",

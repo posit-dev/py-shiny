@@ -1,16 +1,18 @@
 """Low-level reactive components."""
 
-__all__ = ("on_flushed", "flush")
+__all__ = ("isolate", "invalidate_later", "flush", "on_flushed")
 
-import contextlib
-from typing import Callable, Optional, Awaitable, TypeVar
-from contextvars import ContextVar
 import asyncio
+import contextlib
+from contextvars import ContextVar
+import time
+import traceback
 import typing
+from typing import Callable, Optional, Awaitable, TypeVar
 import warnings
 
-from ._datastructures import PriorityQueueFIFO
-from . import _utils
+from .._datastructures import PriorityQueueFIFO
+from .. import _utils
 
 T = TypeVar("T")
 
@@ -166,6 +168,12 @@ _reactive_environment = ReactiveEnvironment()
 
 @contextlib.contextmanager
 def isolate():
+    """
+    Can be used via `with isolate():` to wrap code blocks whose reactive reads should
+    not result in reactive dependencies being taken (that is, we want to read reactive
+    values but are not interested in automatically reexecuting when those particular
+    values change).
+    """
     with _reactive_environment.isolate():
         yield
 
@@ -187,3 +195,47 @@ def on_flushed(
 def lock() -> asyncio.Lock:
     """A lock that should be held whenever manipulating the reactive graph."""
     return _reactive_environment.lock
+
+
+def invalidate_later(delay: float) -> None:
+    ctx = get_current_context()
+    # Pass an absolute time to our subtask, rather than passing the delay directly, in
+    # case the subtask doesn't get a chance to start sleeping until a significant amount
+    # of time has passed.
+    deadline = time.monotonic() + delay
+
+    cancellable = True
+
+    async def _task(ctx: Context, deadline: float):
+        nonlocal cancellable
+        try:
+            delay = deadline - time.monotonic()
+            try:
+                await asyncio.sleep(delay)
+            except asyncio.CancelledError:
+                # This happens when cancel_task is called due to the session ending, or
+                # the context being invalidated due to some other reason. There's no
+                # reason for us to keep waiting at that point, as ctx.invalidate() can
+                # only be a no-op.
+                return
+
+            async with lock():
+                # Prevent the ctx.invalidate() from killing our own task. (Another way
+                # to accomplish this is to unregister our ctx.on_invalidate handler, but
+                # ctx.on_invalidate doesn't currently allow unregistration.)
+                cancellable = False
+
+                ctx.invalidate()
+                await flush()
+
+        except BaseException:
+            traceback.print_exc()
+            raise
+
+    task = asyncio.create_task(_task(ctx, deadline))
+
+    def cancel_task():
+        if cancellable:
+            task.cancel()
+
+    ctx.on_invalidate(cancel_task)

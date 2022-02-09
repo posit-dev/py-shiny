@@ -10,7 +10,7 @@ shared_val = Value(None)
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @calculate()
+    @calc()
     def r():
         if input.n() is None:
             return

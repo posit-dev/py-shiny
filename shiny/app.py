@@ -14,7 +14,7 @@ from starlette.responses import Response, HTMLResponse, JSONResponse
 
 from .http_staticfiles import StaticFiles
 from .session import Inputs, Outputs, Session, session_context
-from . import reactcore
+from .reactive import on_flushed
 from ._connmanager import (
     Connection,
     StarletteConnection,
@@ -63,7 +63,7 @@ class App:
 
     @contextlib.asynccontextmanager
     async def lifespan(self, app: starlette.applications.Starlette):
-        unreg = reactcore.on_flushed(self._on_reactive_flushed, once=False)
+        unreg = on_flushed(self._on_reactive_flushed, once=False)
         try:
             yield
         finally:

@@ -53,10 +53,10 @@ if TYPE_CHECKING:
 
 from htmltools import TagChildArg, TagList
 
-from .reactive import Value, Effect, effect, isolate
+from .reactive import Value, Effect, effect, isolate, flush
+from .reactive._core import lock
 from .http_staticfiles import FileResponse
 from ._connmanager import Connection, ConnectionClosed
-from . import reactcore
 from . import render
 from . import _utils
 from ._fileupload import FileInfo, FileUploadManager
@@ -193,7 +193,7 @@ class Session:
                     self._send_error_response("Message does not contain 'method'.")
                     return
 
-                async with reactcore.lock():
+                async with lock():
 
                     if message_obj["method"] == "init":
                         message_obj = typing.cast(_ClientMessageInit, message_obj)
@@ -222,7 +222,7 @@ class Session:
 
                     self.request_flush()
 
-                    await reactcore.flush()
+                    await flush()
 
         except ConnectionClosed:
             self._run_session_end_tasks()

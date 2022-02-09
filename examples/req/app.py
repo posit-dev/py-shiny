@@ -15,7 +15,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @calculate()
+    @calc()
     def safe_click():
         req(input.safe())
         return input.safe()
