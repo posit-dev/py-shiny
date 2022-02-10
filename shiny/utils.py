@@ -116,14 +116,14 @@ def drop_none(x: Dict[str, Any]) -> Dict[str, object]:
 
 class Callbacks:
     def __init__(self) -> None:
-        self._callbacks: dict[str, Tuple[Callable[[], None], bool]] = {}
+        self._callbacks: dict[int, Tuple[Callable[[], None], bool]] = {}
         self._id: int = 0
 
     def register(
         self, fn: Callable[[], None], once: bool = False
     ) -> Callable[[], None]:
         self._id += 1
-        id = str(self._id)
+        id = self._id
         self._callbacks[id] = (fn, once)
 
         def _():
@@ -151,14 +151,14 @@ class Callbacks:
 
 class AsyncCallbacks:
     def __init__(self) -> None:
-        self._callbacks: dict[str, Tuple[Callable[[], Awaitable[None]], bool]] = {}
+        self._callbacks: dict[int, Tuple[Callable[[], Awaitable[None]], bool]] = {}
         self._id: int = 0
 
     def register(
         self, fn: Callable[[], Awaitable[None]], once: bool = False
     ) -> Callable[[], None]:
         self._id += 1
-        id = str(self._id)
+        id = self._id
         self._callbacks[id] = (fn, once)
 
         def _():
