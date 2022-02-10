@@ -294,7 +294,7 @@ class Session:
                 )
                 return None
             file_data = upload_op.finish()
-            self.input[input_id].set(file_data)
+            self.input[input_id]._set(file_data)
             # Explicitly return None to signal that the message was handled.
             return None
 
