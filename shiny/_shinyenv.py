@@ -1,8 +1,6 @@
 """
-Functions for inspecting the execution environment for Shiny
+Information about the execution environment for Shiny
 """
-
-__all__ = ("is_pyodide",)
 
 import sys
 

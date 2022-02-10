@@ -1,11 +1,9 @@
-__all__ = ("event",)
-
 import functools
 from typing import TypeVar, Callable, List, Awaitable, Union
 
 from .input_handler import ActionButtonValue
 from .reactive import isolate
-from .validation import req
+from ._validation import req
 from ._utils import is_async_callable, run_coro_sync
 
 

@@ -1,5 +1,3 @@
-__all__ = ("App",)
-
 import contextlib
 from typing import Any, List, Optional, Union, Dict, Callable, cast
 

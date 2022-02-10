@@ -1,16 +1,9 @@
-import sys
-from typing import Optional, BinaryIO, List
-import typing
-import tempfile
-import os
 import copy
-import shutil
+import os
 import pathlib
-
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
+import shutil
+import tempfile
+from typing import Optional, BinaryIO, List, cast
 
 from . import _utils
 from .types import FileInfo
@@ -51,8 +44,7 @@ class FileUploadOperation:
         self._dir: str = dir
         # Copy file_infos and add a "datapath" entry for each file.
         self._file_infos: list[FileInfo] = [
-            typing.cast(FileInfo, {**fi, "datapath": ""})
-            for fi in copy.deepcopy(file_infos)
+            cast(FileInfo, {**fi, "datapath": ""}) for fi in copy.deepcopy(file_infos)
         ]
         self._n_uploaded: int = 0
         self._current_file_obj: Optional[BinaryIO] = None

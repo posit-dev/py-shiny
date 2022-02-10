@@ -1,42 +1,47 @@
-"""Top-level package for Shiny."""
+"""A package for building reactive web applications."""
 
-__author__ = """Winston Chang"""
-__email__ = "winston@rstudio.com"
-__version__ = "0.0.0.9001"
-
-
-from ._app import *
-from ._decorators import *
-from . import html_dependencies
-from . import http_staticfiles
-from . import input_handler
-from . import main
-from . import modules
+# User-facing subpackages that should be available on `from shiny import *`
 from . import reactive
 from .render import *
 from .session import *
-from . import shinyenv
-from . import types
 from . import ui
-from .validation import *
+
+# Private submodules that have some user-facing functionality
+from ._app import App
+from ._decorators import event
+from ._main import run as run_app
+from ._validation import req
+
+# User-facing submodules that should *not* be available on `from shiny import *`
+from . import modules
+from . import types
+
+# N.B.: we intentionally don't import 'developer-facing' submodules (e.g.,
+# html_dependencies) so that they aren't super visible when you `import shiny`, but
+# developers who know what they're doing can import them directly.
+
 
 __all__ = (
-    # subpackages
-    "ui",
+    # public sub-packages
     "reactive",
-    # app.py
+    "render",
+    "session",
+    "ui",
+    # _app.py
     "App",
-    # decorators.py
+    # _decorators.py
     "event",
-    # render.py
+    # _main.py
+    "run_app",
+    # _render.py
     "render_text",
     "render_plot",
     "render_image",
     "render_ui",
-    # session.py
+    # _session.py
     "Session",
     "Inputs",
     "Outputs",
-    # validation
+    # _validation.py
     "req",
 )

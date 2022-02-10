@@ -1,5 +1,3 @@
-__all__ = ()
-
 from typing import List, Union
 
 from htmltools import HTML, HTMLDependency

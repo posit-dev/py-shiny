@@ -1,10 +1,3 @@
-__all__ = (
-    "render_text",
-    "render_plot",
-    "render_image",
-    "render_ui",
-)
-
 import sys
 import os
 import io
@@ -22,10 +15,10 @@ else:
 from htmltools import TagChildArg
 
 if TYPE_CHECKING:
-    from .session import Session
+    from ..session import Session
 
-from . import _utils
-from .types import ImgData
+from .. import _utils
+from ..types import ImgData
 
 
 # ======================================================================================

@@ -1,6 +1,3 @@
-__all__ = ("main", "run")
-
-
 import importlib
 import importlib.util
 import os

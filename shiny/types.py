@@ -1,4 +1,12 @@
-__all__ = ("MISSING", "MISSING_TYPE", "FileInfo", "ImgData")
+__all__ = (
+    "MISSING",
+    "MISSING_TYPE",
+    "FileInfo",
+    "ImgData",
+    "SafeException",
+    "SilentException",
+    "SilentCancelOutputException",
+)
 
 import sys
 from typing import Union, Optional
@@ -34,3 +42,15 @@ class ImgData(TypedDict):
     width: NotRequired[Union[str, float]]
     height: NotRequired[Union[str, float]]
     alt: NotRequired[Optional[str]]
+
+
+class SafeException(Exception):
+    pass
+
+
+class SilentException(Exception):
+    pass
+
+
+class SilentCancelOutputException(Exception):
+    pass

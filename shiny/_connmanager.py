@@ -5,7 +5,7 @@ from typing import Optional
 import starlette.websockets
 from starlette.websockets import WebSocketState
 
-from .shinyenv import is_pyodide
+from ._shinyenv import is_pyodide
 
 
 class Connection(ABC):

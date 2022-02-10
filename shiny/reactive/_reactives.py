@@ -17,8 +17,7 @@ import warnings
 
 from ._core import Context, Dependents, ReactiveWarning
 from .. import _utils
-from ..types import MISSING, MISSING_TYPE
-from ..validation import SilentException
+from ..types import MISSING, MISSING_TYPE, SilentException
 
 if TYPE_CHECKING:
     from ..session import Session
@@ -97,9 +96,11 @@ class Calc(Generic[T]):
         # the type checker doesn't know that MISSING is the only instance of
         # MISSING_TYPE; this saves us from casting later on.
         if isinstance(session, MISSING_TYPE):
+            import shiny.session
+
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
-            session = shiny_session.get_current_session()
+            session = shiny.session.get_current_session()
         self._session = session
 
         # Use lists to hold (optional) value and error, instead of Optional[T],
@@ -138,7 +139,9 @@ class Calc(Generic[T]):
         was_running = self._running
         self._running = True
 
-        with shiny_session.session_context(self._session):
+        import shiny.session
+
+        with shiny.session.session_context(self._session):
             try:
                 with self._ctx():
                     await self._run_func()
@@ -248,9 +251,11 @@ class Effect:
         # the type checker doesn't know that MISSING is the only instance of
         # MISSING_TYPE; this saves us from casting later on.
         if isinstance(session, MISSING_TYPE):
+            import shiny.session
+
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
-            session = shiny_session.get_current_session()
+            session = shiny.session.get_current_session()
         self._session = session
 
         if self._session is not None:
@@ -297,8 +302,9 @@ class Effect:
     async def run(self) -> None:
         ctx = self._create_context()
         self._exec_count += 1
+        import shiny.session
 
-        with shiny_session.session_context(self._session):
+        with shiny.session.session_context(self._session):
             try:
                 with ctx():
                     await self._fn()
@@ -402,9 +408,3 @@ def effect(
             return Effect(fn, suspended=suspended, priority=priority, session=session)
 
     return create_effect
-
-
-# Import here at the bottom seems to fix a circular dependency problem.
-# Need to import as shiny_session to avoid naming conflicts with function params named
-# `session`.
-from ..session import _session as shiny_session
