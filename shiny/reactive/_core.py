@@ -81,8 +81,12 @@ class Dependents:
 
     def register(self) -> None:
         ctx: Context = get_current_context()
-        if ctx.id not in self._dependents:
-            self._dependents[ctx.id] = ctx
+
+        if ctx.id in self._dependents:
+            # This context is already registered; no need to register it.
+            return
+
+        self._dependents[ctx.id] = ctx
 
         def on_invalidate_cb() -> None:
             if ctx.id in self._dependents:
