@@ -15,6 +15,13 @@ def event(
     ignore_none: bool = True,
     ignore_init: bool = False,
 ) -> Callable[[Callable[[], T]], Callable[[], T]]:
+
+    if any([not callable(arg) for arg in args]):
+        raise TypeError(
+            "All objects passed to event decorator must be callable.\n"
+            + "If you are calling `@event(f())`, try calling `@event(f)` instead."
+        )
+
     def decorator(user_fn: Callable[[], T]) -> Callable[[], T]:
 
         initialized = False
