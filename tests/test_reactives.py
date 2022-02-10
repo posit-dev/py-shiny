@@ -1,14 +1,14 @@
-"""Tests for `shiny.reactive` and `shiny.reactcore`."""
+"""Tests for `shiny.reactive`."""
 
 import pytest
 import asyncio
 from typing import List
 
-from shiny.input_handlers import ActionButtonValue
-import shiny.reactcore as reactcore
-from shiny.decorators import *
+from shiny.input_handler import ActionButtonValue
+from shiny.reactive._core import ReactiveWarning
+from shiny._decorators import *
 from shiny.reactive import *
-from shiny.validation import req
+from shiny._validation import req
 
 from .mocktime import MockTime
 
@@ -36,7 +36,7 @@ async def test_flush_runs_newly_invalidated():
     def o1():
         v2.set(v1())
 
-    await reactcore.flush()
+    await flush()
     assert v2_result == 1
     assert o2._exec_count == 2
     assert o1._exec_count == 1
@@ -65,14 +65,14 @@ async def test_flush_runs_newly_invalidated_async():
     async def o1():
         v2.set(v1())
 
-    await reactcore.flush()
+    await flush()
     assert v2_result == 1
     assert o2._exec_count == 2
     assert o1._exec_count == 1
 
 
 # ======================================================================
-# Setting reactive.Value to same value doesn't invalidate downstream
+# Setting Value to same value doesn't invalidate downstream
 # ======================================================================
 @pytest.mark.asyncio
 async def test_reactive_value_same_no_invalidate():
@@ -82,11 +82,11 @@ async def test_reactive_value_same_no_invalidate():
     def o():
         v()
 
-    await reactcore.flush()
+    await flush()
     assert o._exec_count == 1
 
     v.set(1)
-    await reactcore.flush()
+    await flush()
     assert o._exec_count == 1
 
 
@@ -108,7 +108,7 @@ async def test_recursive_calc():
     def o():
         r()
 
-    await reactcore.flush()
+    await flush()
     assert o._exec_count == 2
     assert r._exec_count == 6
     with isolate():
@@ -130,7 +130,7 @@ async def test_recursive_async_calc():
     async def o():
         await r()
 
-    await reactcore.flush()
+    await flush()
     assert o._exec_count == 2
     assert r._exec_count == 6
     with isolate():
@@ -168,9 +168,9 @@ async def test_async_sequential():
             results.append(val + n * 100)
 
     await asyncio.gather(react_chain(1), react_chain(2))
-    await reactcore.flush()
+    await flush()
     x.set(5)
-    await reactcore.flush()
+    await flush()
 
     assert results == [111, 211, 115, 215]
 
@@ -228,18 +228,18 @@ async def test_isolate_prevents_dependency():
         with isolate():
             o_val = r()
 
-    await reactcore.flush()
+    await flush()
     assert o_val == 11
 
     # Changing v() shouldn't invalidate o
     v.set(2)
-    await reactcore.flush()
+    await flush()
     assert o_val == 11
     assert o._exec_count == 1
 
     # v_dep() should invalidate the effect
     v_dep.set(2)
-    await reactcore.flush()
+    await flush()
     assert o_val == 12
     assert o._exec_count == 2
 
@@ -292,18 +292,18 @@ async def test_isolate_async_prevents_dependency():
         with isolate():
             o_val = await r()
 
-    await reactcore.flush()
+    await flush()
     assert o_val == 11
 
     # Changing v() shouldn't invalidate o
     v.set(2)
-    await reactcore.flush()
+    await flush()
     assert o_val == 11
     assert o._exec_count == 1
 
     # v_dep() should invalidate the effect
     v_dep.set(2)
-    await reactcore.flush()
+    await flush()
     assert o_val == 12
     assert o._exec_count == 2
 
@@ -334,7 +334,7 @@ async def test_effect_priority():
         v()
         results.append(3)
 
-    await reactcore.flush()
+    await flush()
     assert results == [2, 1, 3]
 
     # Add another effect with priority 2. Only this one will run (until we
@@ -346,18 +346,18 @@ async def test_effect_priority():
         results.append(4)
 
     results.clear()
-    await reactcore.flush()
+    await flush()
     assert results == [4]
 
     # Change v and run again, to make sure results are stable
     results.clear()
     v.set(2)
-    await reactcore.flush()
+    await flush()
     assert results == [2, 4, 1, 3]
 
     results.clear()
     v.set(3)
-    await reactcore.flush()
+    await flush()
     assert results == [2, 4, 1, 3]
 
 
@@ -385,7 +385,7 @@ async def test_async_effect_priority():
         v()
         results.append(3)
 
-    await reactcore.flush()
+    await flush()
     assert results == [2, 1, 3]
 
     # Add another effect with priority 2. Only this one will run (until we
@@ -397,18 +397,18 @@ async def test_async_effect_priority():
         results.append(4)
 
     results.clear()
-    await reactcore.flush()
+    await flush()
     assert results == [4]
 
     # Change v and run again, to make sure results are stable
     results.clear()
     v.set(2)
-    await reactcore.flush()
+    await flush()
     assert results == [2, 4, 1, 3]
 
     results.clear()
     v.set(3)
-    await reactcore.flush()
+    await flush()
     assert results == [2, 4, 1, 3]
 
 
@@ -426,12 +426,12 @@ async def test_effect_destroy():
         v()
         results.append(1)
 
-    await reactcore.flush()
+    await flush()
     assert results == [1]
 
     v.set(2)
     o1.destroy()
-    await reactcore.flush()
+    await flush()
     assert results == [1]
 
     # Same as above, but destroy before running first time
@@ -445,7 +445,7 @@ async def test_effect_destroy():
         results.append(1)
 
     o2.destroy()
-    await reactcore.flush()
+    await flush()
     assert results == []
 
 
@@ -471,8 +471,8 @@ async def test_error_handling():
         vals.append("o3")
 
     # Error in effect should get converted to warning.
-    with pytest.warns(reactcore.ReactiveWarning):
-        await reactcore.flush()
+    with pytest.warns(ReactiveWarning):
+        await flush()
     # All effects should have executed.
     assert vals == ["o1", "o2-1", "o3"]
 
@@ -494,8 +494,8 @@ async def test_error_handling():
         vals.append("o2")
 
     # Error in effect should get converted to warning.
-    with pytest.warns(reactcore.ReactiveWarning):
-        await reactcore.flush()
+    with pytest.warns(ReactiveWarning):
+        await flush()
     assert vals == ["o1-1", "r", "o2"]
 
 
@@ -524,13 +524,13 @@ async def test_calc_error_rethrow():
         r()
         vals.append("o2-2")
 
-    with pytest.warns(reactcore.ReactiveWarning):
-        await reactcore.flush()
+    with pytest.warns(ReactiveWarning):
+        await flush()
     assert vals == ["o1-1", "r", "o2-2"]
 
     v.set(2)
-    with pytest.warns(reactcore.ReactiveWarning):
-        await reactcore.flush()
+    with pytest.warns(ReactiveWarning):
+        await flush()
     assert vals == ["o1-1", "r", "o2-2", "o1-1", "o2-2"]
 
 
@@ -565,9 +565,9 @@ async def test_dependent_invalidation():
     def r():
         return v()
 
-    await reactcore.flush()
+    await flush()
     trigger.set(1)
-    await reactcore.flush()
+    await flush()
 
     with isolate():
         val = v()
@@ -589,7 +589,7 @@ async def test_req():
         nonlocal n_times
         n_times += 1
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 0
 
     @effect()
@@ -598,7 +598,7 @@ async def test_req():
         nonlocal n_times
         n_times += 1
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 1
 
     @calc()
@@ -613,7 +613,7 @@ async def test_req():
         nonlocal val
         val = r()
 
-    await reactcore.flush()
+    await flush()
     assert val is None
 
     @calc()
@@ -626,7 +626,7 @@ async def test_req():
         nonlocal val
         val = r2()
 
-    await reactcore.flush()
+    await flush()
     assert val == 1
 
 
@@ -640,7 +640,7 @@ async def test_invalidate_later():
             invalidate_later(1)
 
         # Initial run happens immediately
-        await reactcore.flush()
+        await flush()
         assert obs1._exec_count == 1
 
         # If not enough time passes, no re-execution occurs
@@ -672,20 +672,20 @@ async def test_invalidate_later_invalidation():
             if rv() == 0:
                 invalidate_later(1)
 
-        await reactcore.flush()
+        await flush()
         assert obs1._exec_count == 1
 
         # Change rv, triggering invalidation of obs1. The expected behavior is that
         # the invalidation causes the invalidate_later call to be cancelled.
         rv.set(1)
-        await reactcore.flush()
+        await flush()
         assert obs1._exec_count == 2
 
         # Advance time to long after the invalidate_later would have fired, and ensure
         # nothing happens.
         await mock_time.advance_time(10)
         assert obs1._exec_count == 2
-        await reactcore.flush()
+        await flush()
         assert obs1._exec_count == 2
 
 
@@ -726,7 +726,7 @@ async def test_event_decorator():
         nonlocal n_times
         n_times += 1
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 0
 
     # Unless ignore_none=False
@@ -736,7 +736,7 @@ async def test_event_decorator():
         nonlocal n_times
         n_times += 1
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 1
 
     # Or if one of the args is not None
@@ -746,7 +746,7 @@ async def test_event_decorator():
         nonlocal n_times
         n_times += 1
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 2
 
     # Is invalidated properly by reactive values
@@ -758,15 +758,15 @@ async def test_event_decorator():
         nonlocal n_times
         n_times += 1
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 3
 
     v.set(1)
-    await reactcore.flush()
+    await flush()
     assert n_times == 3
 
     v.set(2)
-    await reactcore.flush()
+    await flush()
     assert n_times == 4
 
     # Doesn't run on init
@@ -778,11 +778,11 @@ async def test_event_decorator():
         nonlocal n_times
         n_times += 1
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 4
 
     v.set(2)
-    await reactcore.flush()
+    await flush()
     assert n_times == 5
 
     # Isolates properly
@@ -795,11 +795,11 @@ async def test_event_decorator():
         nonlocal n_times
         n_times += v2()
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 6
 
     v2.set(2)
-    await reactcore.flush()
+    await flush()
     assert n_times == 6
 
     # works with @calc()
@@ -815,11 +815,11 @@ async def test_event_decorator():
         nonlocal n_times
         n_times += r2b()
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 6
 
     v2.set(2)
-    await reactcore.flush()
+    await flush()
     assert n_times == 7
 
 
@@ -837,7 +837,7 @@ async def test_event_async_decorator():
         nonlocal n_times
         n_times += 1
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 0
 
     # Unless ignore_none=False
@@ -847,7 +847,7 @@ async def test_event_async_decorator():
         nonlocal n_times
         n_times += 1
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 1
 
     # Or if one of the args is not None
@@ -857,7 +857,7 @@ async def test_event_async_decorator():
         nonlocal n_times
         n_times += 1
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 2
 
     # Is invalidated properly by reactive values
@@ -869,15 +869,15 @@ async def test_event_async_decorator():
         nonlocal n_times
         n_times += 1
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 3
 
     v.set(1)
-    await reactcore.flush()
+    await flush()
     assert n_times == 3
 
     v.set(2)
-    await reactcore.flush()
+    await flush()
     assert n_times == 4
 
     # Doesn't run on init
@@ -889,11 +889,11 @@ async def test_event_async_decorator():
         nonlocal n_times
         n_times += 1
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 4
 
     v.set(2)
-    await reactcore.flush()
+    await flush()
     assert n_times == 5
 
     # Isolates properly
@@ -906,11 +906,11 @@ async def test_event_async_decorator():
         nonlocal n_times
         n_times += v2()
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 6
 
     v2.set(2)
-    await reactcore.flush()
+    await flush()
     assert n_times == 6
 
     # works with @calc()
@@ -933,11 +933,11 @@ async def test_event_async_decorator():
         await asyncio.sleep(0)
         n_times += await r2b()
 
-    await reactcore.flush()
+    await flush()
     assert n_times == 6
 
     v2.set(2)
-    await reactcore.flush()
+    await flush()
     assert n_times == 7
 
 
@@ -961,13 +961,13 @@ async def test_effect_pausing():
     # Effects are invalidated at creation time, so it will run once regardless
     # of being suspended
     obsB.suspend()
-    await reactcore.flush()
+    await flush()
     assert funcA._exec_count == 1
     assert obsB._exec_count == 1
 
     # When resuming, if nothing changed, don't do anything
     obsB.resume()
-    await reactcore.flush()
+    await flush()
     assert funcA._exec_count == 1
     assert obsB._exec_count == 1
 
@@ -981,7 +981,7 @@ async def test_effect_pausing():
     obsB.on_invalidate(_)
     obsB.suspend()
     a.set(2)
-    await reactcore.flush()
+    await flush()
     assert obsB_invalidated
     assert funcA._exec_count == 1
     assert obsB._exec_count == 1
@@ -989,12 +989,12 @@ async def test_effect_pausing():
     obsB.resume()
     a.set(2.5)
     obsB.suspend()
-    await reactcore.flush()
+    await flush()
     assert funcA._exec_count == 2
     assert obsB._exec_count == 2
 
     a.set(3)
-    await reactcore.flush()
+    await flush()
     assert funcA._exec_count == 2
     assert obsB._exec_count == 2
 
@@ -1009,7 +1009,7 @@ async def test_effect_pausing():
 
     obsB.on_invalidate(_)
     obsB.resume()
-    await reactcore.flush()
+    await flush()
     assert not obsB_invalidated2
     assert funcA._exec_count == 3
     assert obsB._exec_count == 3
@@ -1018,7 +1018,7 @@ async def test_effect_pausing():
     a.set(5)
     obsB.destroy()
     obsB.resume()
-    await reactcore.flush()
+    await flush()
     assert funcA._exec_count == 3
     assert obsB._exec_count == 3
 
@@ -1043,13 +1043,13 @@ async def test_effect_async_pausing():
     # Effects are invalidated at creation time, so it will run once regardless
     # of being suspended
     obsB.suspend()
-    await reactcore.flush()
+    await flush()
     assert funcA._exec_count == 1
     assert obsB._exec_count == 1
 
     # When resuming, if nothing changed, don't do anything
     obsB.resume()
-    await reactcore.flush()
+    await flush()
     assert funcA._exec_count == 1
     assert obsB._exec_count == 1
 
@@ -1063,7 +1063,7 @@ async def test_effect_async_pausing():
     obsB.on_invalidate(_)
     obsB.suspend()
     a.set(2)
-    await reactcore.flush()
+    await flush()
     assert obsB_invalidated
     assert funcA._exec_count == 1
     assert obsB._exec_count == 1
@@ -1071,12 +1071,12 @@ async def test_effect_async_pausing():
     obsB.resume()
     a.set(2.5)
     obsB.suspend()
-    await reactcore.flush()
+    await flush()
     assert funcA._exec_count == 2
     assert obsB._exec_count == 2
 
     a.set(3)
-    await reactcore.flush()
+    await flush()
     assert funcA._exec_count == 2
     assert obsB._exec_count == 2
 
@@ -1091,7 +1091,7 @@ async def test_effect_async_pausing():
 
     obsB.on_invalidate(_)
     obsB.resume()
-    await reactcore.flush()
+    await flush()
     assert not obsB_invalidated2
     assert funcA._exec_count == 3
     assert obsB._exec_count == 3
@@ -1100,7 +1100,7 @@ async def test_effect_async_pausing():
     a.set(5)
     obsB.destroy()
     obsB.resume()
-    await reactcore.flush()
+    await flush()
     assert funcA._exec_count == 3
     assert obsB._exec_count == 3
 
@@ -1116,7 +1116,7 @@ async def test_observer_async_suspended_resumed_observers_run_at_most_once():
 
     # First flush should run obs once
     assert obs._exec_count == 0
-    await reactcore.flush()
+    await flush()
     assert obs._exec_count == 1
 
     # Modify the dependency at each stage of suspend/resume/flush should still
@@ -1126,5 +1126,5 @@ async def test_observer_async_suspended_resumed_observers_run_at_most_once():
     a.set(3)
     obs.resume()
     a.set(4)
-    await reactcore.flush()
+    await flush()
     assert obs._exec_count == 2

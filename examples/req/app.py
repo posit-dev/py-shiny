@@ -1,4 +1,5 @@
 from shiny import *
+from shiny.types import SafeException
 
 app_ui = ui.page_fluid(
     ui.input_action_button("safe", "Throw a safe error"),

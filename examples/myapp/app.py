@@ -1,5 +1,5 @@
 from shiny import *
-from shiny.fileupload import FileInfo
+from shiny.types import FileInfo
 import matplotlib.pyplot as plt
 import numpy as np
 

@@ -4,7 +4,7 @@ import pytest
 import asyncio
 from typing import Iterator, List
 
-from shiny.utils import run_coro_sync
+from shiny._utils import run_coro_sync
 
 
 def range_sync(n: int) -> Iterator[int]:

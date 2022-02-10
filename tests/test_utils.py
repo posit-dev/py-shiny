@@ -1,5 +1,5 @@
 import pytest
-from shiny.utils import AsyncCallbacks, Callbacks
+from shiny._utils import AsyncCallbacks, Callbacks
 
 
 def test_callbacks():

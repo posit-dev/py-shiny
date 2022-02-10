@@ -9,6 +9,11 @@ nothing we could disclose that an attacker wouldn't already have access to. The 
 not true when running in native Python, we want to be as safe as possible.
 """
 
+__all__ = (
+    "StaticFiles",
+    "FileResponse",
+)
+
 import sys
 
 from starlette.background import BackgroundTask
@@ -46,7 +51,7 @@ else:
                 raise AssertionError("StaticFiles can't handle non-http request")
             path = scope["path"]
             path_segments = path.split("/")
-            final_path, trailing_slash = traverse_url_path(self.dir, path_segments)
+            final_path, trailing_slash = _traverse_url_path(self.dir, path_segments)
             if final_path is None:
                 return await Error404()(scope, receive, send)
 
@@ -69,7 +74,7 @@ else:
             else:
                 return await FileResponse(final_path)(scope, receive, send)
 
-    def traverse_url_path(
+    def _traverse_url_path(
         dir: pathlib.Path[str], path_segments: list[str]
     ) -> Tuple[Optional[pathlib.Path[str]], bool]:
         assert len(path_segments) > 0
@@ -92,7 +97,7 @@ else:
         if len(path_segments) == 0:
             return new_dir, path_segment == ""
         else:
-            return traverse_url_path(new_dir, path_segments)
+            return _traverse_url_path(new_dir, path_segments)
 
     class Error404(PlainTextResponse):
         def __init__(self):
@@ -126,7 +131,7 @@ else:
                     {
                         "type": "http.response.start",
                         "status": 200,
-                        "headers": convert_headers(self.headers, self.media_type),
+                        "headers": _convert_headers(self.headers, self.media_type),
                     }
                 )
 
@@ -151,7 +156,7 @@ else:
             if self.background:
                 await self.background()
 
-    def convert_headers(
+    def _convert_headers(
         headers: Optional[MutableMapping[str, str]], media_type: Optional[str] = None
     ) -> Iterable[Tuple[bytes, bytes]]:
         if headers is None:

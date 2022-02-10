@@ -1,22 +1,26 @@
-"""Tests for `ShinyModule`."""
+"""Tests for `Module`."""
 
 import pytest
 
 from shiny import *
+from shiny.modules import *
+from shiny._utils import Callable
+from shiny.reactive import isolate
+from htmltools import TagChildArg
 
 
 def mod_ui(ns: Callable[[str], str]) -> TagChildArg:
-    return TagList(
+    return ui.TagList(
         ui.input_action_button(id=ns("button"), label="module1"),
         ui.output_text_verbatim(id=ns("out")),
     )
 
 
 # Note: We currently can't test Session; this is just here for future use.
-def mod_server(input: InputsProxy, output: OutputsProxy, session: SessionProxy):
-    count: reactive.Value[int] = reactive.Value(0)
+def mod_server(input: ModuleInputs, output: ModuleOutputs, session: ModuleSession):
+    count: Value[int] = Value(0)
 
-    @reactive.effect()
+    @effect()
     @event(session.input.button)
     def _():
         count.set(count() + 1)
@@ -27,7 +31,7 @@ def mod_server(input: InputsProxy, output: OutputsProxy, session: SessionProxy):
         return f"Click count is {count()}"
 
 
-mod = ShinyModule(mod_ui, mod_server)
+mod = Module(mod_ui, mod_server)
 
 
 def test_module_ui():
@@ -38,8 +42,8 @@ def test_module_ui():
 
 @pytest.mark.asyncio
 async def test_inputs_proxy():
-    input = session.Inputs(a=1)
-    input_proxy = InputsProxy("mod1", input)
+    input = Inputs(a=1)
+    input_proxy = ModuleInputs("mod1", input)
 
     with isolate():
         assert input.a() == 1
@@ -57,7 +61,7 @@ async def test_inputs_proxy():
         assert input["mod1-a"]() == 2
 
     # Nested input proxies
-    input_proxy_proxy = InputsProxy("mod2", input_proxy)
+    input_proxy_proxy = ModuleInputs("mod2", input_proxy)
     with isolate():
         assert input.a() == 1
         assert input_proxy.a() == 2
