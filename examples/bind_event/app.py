@@ -32,7 +32,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect()
     @event(input.btn)
     def _():
-        print("@reactive.effect() event: ", str(input.btn()))
+        print("@effect() event: ", str(input.btn()))
 
     # i.e., eventReactive()
     @reactive.calc()
@@ -42,7 +42,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.effect()
     def _():
-        print("@reactive.calc() event: ", str(btn()))
+        print("@calc() event: ", str(btn()))
 
     @output()
     @render_ui()
@@ -57,7 +57,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @event(input.btn_async)
     async def _():
         await asyncio.sleep(0)
-        print("async @reactive.effect() event: ", str(input.btn_async()))
+        print("async @effect() event: ", str(input.btn_async()))
 
     @reactive.calc()
     @event(input.btn_async)
@@ -68,7 +68,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect()
     async def _():
         val = await btn_async_r()
-        print("async @reactive.calc() event: ", str(val))
+        print("async @calc() event: ", str(val))
 
     @output()
     @render_ui()

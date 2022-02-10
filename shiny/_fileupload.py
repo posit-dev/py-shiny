@@ -33,11 +33,7 @@ from .types import FileInfo
 
 class FileUploadOperation:
     def __init__(
-        self,
-        parent: "FileUploadManager",
-        id: str,
-        dir: str,
-        file_infos: List[FileInfo],
+        self, parent: "FileUploadManager", id: str, dir: str, file_infos: List[FileInfo]
     ) -> None:
         self._parent: FileUploadManager = parent
         self._id: str = id
