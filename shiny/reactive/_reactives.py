@@ -30,14 +30,15 @@ T = TypeVar("T")
 # ==============================================================================
 class Value(Generic[T]):
     # These overloads are necessary so that the following hold:
-    # - Value() is marked by the type checker as an error. It is also a run-time error.
-    # - Value(MISSING) is marked by the type checker as an error, because the type T
-    #   is unknown. (It is not a run-time error.)
-    # - Value[int](MISSING) works.
+    # - Value() is marked by the type checker as an error, because the type T is
+    #   unknown. (It is not a run-time error.)
+    # - Value[int]() works.
     # - Value[int](1) works.
     # - Value(1) works, with T is inferred to be int.
     @overload
-    def __init__(self, value: MISSING_TYPE, *, read_only: bool = False) -> None:
+    def __init__(
+        self, value: MISSING_TYPE = MISSING, *, read_only: bool = False
+    ) -> None:
         ...
 
     @overload
@@ -47,7 +48,7 @@ class Value(Generic[T]):
     # If `value` is MISSING, then `get()` will raise a SilentException, until a new
     # value is set. Calling `unset()` will set the value to MISSING.
     def __init__(
-        self, value: Union[T, MISSING_TYPE], *, read_only: bool = False
+        self, value: Union[T, MISSING_TYPE] = MISSING, *, read_only: bool = False
     ) -> None:
         self._value: T = value
         self._read_only: bool = read_only
