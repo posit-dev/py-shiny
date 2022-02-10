@@ -1,3 +1,7 @@
+# Needed for NotRequired with Python 3.7 - 3.9
+# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
+from __future__ import annotations
+
 __all__ = (
     "MISSING",
     "MISSING_TYPE",
@@ -9,18 +13,12 @@ __all__ = (
 )
 
 import sys
-
-# Needed for NotRequired. See
-#   https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
-if sys.version_info < (3, 10):
-    from __future__ import annotations
+from typing import Union, Optional
 
 if sys.version_info >= (3, 11):
     from typing import NotRequired, TypedDict
 else:
     from typing_extensions import NotRequired, TypedDict
-
-from typing import Union, Optional
 
 # Sentinel value - indicates a missing value in a function call.
 class MISSING_TYPE:
