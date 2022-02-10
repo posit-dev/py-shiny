@@ -29,20 +29,20 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
 
     # i.e., observeEvent(once=False)
-    @effect()
+    @reactive.effect()
     @event(input.btn)
     def _():
-        print("@effect() event: ", str(input.btn()))
+        print("@reactive.effect() event: ", str(input.btn()))
 
     # i.e., eventReactive()
-    @calc()
+    @reactive.calc()
     @event(input.btn)
     def btn() -> int:
         return input.btn()
 
-    @effect()
+    @reactive.effect()
     def _():
-        print("@calc() event: ", str(btn()))
+        print("@reactive.calc() event: ", str(btn()))
 
     @output()
     @render_ui()
@@ -53,22 +53,22 @@ def server(input: Inputs, output: Outputs, session: Session):
     # -----------------------------------------------------------------------------
     # Async
     # -----------------------------------------------------------------------------
-    @effect()
+    @reactive.effect()
     @event(input.btn_async)
     async def _():
         await asyncio.sleep(0)
-        print("async @effect() event: ", str(input.btn_async()))
+        print("async @reactive.effect() event: ", str(input.btn_async()))
 
-    @calc()
+    @reactive.calc()
     @event(input.btn_async)
     async def btn_async_r() -> int:
         await asyncio.sleep(0)
         return input.btn_async()
 
-    @effect()
+    @reactive.effect()
     async def _():
         val = await btn_async_r()
-        print("async @calc() event: ", str(val))
+        print("async @reactive.calc() event: ", str(val))
 
     @output()
     @render_ui()

@@ -1,5 +1,5 @@
 from shiny import *
-from shiny.render import ImgData
+from shiny.types import ImgData
 from shiny.ui import tags, HTML, Tag
 from fontawesome import icon_svg
 
@@ -132,7 +132,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         img: ImgData = {"src": str(dir / "rstudio-logo.png"), "width": "150px"}
         return img
 
-    @effect()
+    @reactive.effect()
     def _():
         btn = input.btn()
         if btn and btn > 0:
@@ -144,7 +144,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 )
             )
 
-    @effect()
+    @reactive.effect()
     def _():
         link = input.link()
         if link and link > 0:

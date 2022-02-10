@@ -45,7 +45,7 @@ else:
 from htmltools import TagChildArg, TagList
 
 if TYPE_CHECKING:
-    from ..app import App
+    from .._app import App
 
 from ..reactive import Value, Effect, effect, isolate, flush
 from ..reactive._core import lock

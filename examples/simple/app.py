@@ -5,12 +5,12 @@ app_ui = ui.page_fluid(
     ui.output_text_verbatim("txt", placeholder=True),
 )
 
-# A Value which is exists outside of the session.
-shared_val = Value(None)
+# A reactive.Value which is exists outside of the session.
+shared_val = reactive.Value(None)
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @calc()
+    @reactive.calc()
     def r():
         if input.n() is None:
             return

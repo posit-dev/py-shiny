@@ -19,11 +19,11 @@ app_ui = ui.page_fluid(
 )
 
 # A ReactiveVal which is shared across all sessions.
-shared_val = Value(None)
+shared_val = reactive.Value(None)
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @calc()
+    @reactive.calc()
     def r():
         if input.n() is None:
             return
@@ -37,7 +37,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     # This observer watches n, and changes shared_val, which is shared across
     # all running sessions.
-    @effect()
+    @reactive.effect()
     def _():
         if input.n() is None:
             return

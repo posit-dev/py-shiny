@@ -6,7 +6,7 @@ from typing import List
 
 from shiny.input_handler import ActionButtonValue
 from shiny.reactive._core import ReactiveWarning
-from shiny.decorators import *
+from shiny._decorators import *
 from shiny.reactive import *
 from shiny.validation import req
 

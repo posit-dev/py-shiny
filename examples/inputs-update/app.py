@@ -89,7 +89,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @effect()
+    @reactive.effect()
     def _():
         # We'll use these multiple times, so use short var names for
         # convenience.

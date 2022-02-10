@@ -5,8 +5,8 @@ __email__ = "winston@rstudio.com"
 __version__ = "0.0.0.9001"
 
 
-from .app import *
-from .decorators import *
+from ._app import *
+from ._decorators import *
 from . import html_dependencies
 from . import http_staticfiles
 from . import input_handler
