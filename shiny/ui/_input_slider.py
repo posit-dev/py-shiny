@@ -1,25 +1,19 @@
-import math
-import sys
-from datetime import date, datetime, timedelta
-from typing import Dict, Optional, Union, Tuple, TypeVar
-
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
-from typing_extensions import NotRequired
-
-from htmltools import tags, Tag, div, css, TagAttrArg, TagChildArg, HTML
-
-from ._html_dependencies import ionrangeslider_deps
-from ._utils import shiny_input_label
-
 __all__ = (
     "input_slider",
     "SliderValueArg",
     "SliderStepArg",
     "AnimationOptions",
 )
+
+import math
+from datetime import date, datetime, timedelta
+from typing import Dict, Optional, Union, Tuple, TypeVar
+
+from htmltools import tags, Tag, div, css, TagAttrArg, TagChildArg, HTML
+
+from ._html_dependencies import ionrangeslider_deps
+from ..types import TypedDict, NotRequired
+from ._utils import shiny_input_label
 
 # TODO: validate value(s) are within (min,max)?
 

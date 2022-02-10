@@ -9,14 +9,18 @@ __all__ = (
 )
 
 import sys
-from typing import Union, Optional
 
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
+# Needed for NotRequired. See
+#   https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
+if sys.version_info < (3, 10):
+    from __future__ import annotations
+
+if sys.version_info >= (3, 11):
+    from typing import NotRequired, TypedDict
 else:
-    from typing_extensions import TypedDict
+    from typing_extensions import NotRequired, TypedDict
 
-from typing_extensions import NotRequired
+from typing import Union, Optional
 
 # Sentinel value - indicates a missing value in a function call.
 class MISSING_TYPE:
