@@ -1,7 +1,7 @@
 __all__ = ("MISSING", "MISSING_TYPE", "FileInfo", "ImgData")
 
 import sys
-from typing import Union
+from typing import Union, Optional
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
@@ -33,4 +33,4 @@ class ImgData(TypedDict):
     src: str
     width: NotRequired[Union[str, float]]
     height: NotRequired[Union[str, float]]
-    alt: NotRequired[str]
+    alt: NotRequired[Optional[str]]

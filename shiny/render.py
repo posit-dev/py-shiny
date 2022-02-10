@@ -356,10 +356,8 @@ class RenderUI(RenderFunction):
         ui: TagChildArg = await self._fn()
         if ui is None:
             return None
-        # TODO: better a better workaround for the circular dependency
-        from .session import _process_deps
 
-        return _process_deps(ui, self._session)
+        return self._session.process_ui(ui)
 
 
 class RenderUIAsync(RenderUI, RenderFunctionAsync):

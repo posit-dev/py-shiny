@@ -407,4 +407,4 @@ def effect(
 # Import here at the bottom seems to fix a circular dependency problem.
 # Need to import as shiny_session to avoid naming conflicts with function params named
 # `session`.
-from .. import session as shiny_session
+from ..session import _session as shiny_session

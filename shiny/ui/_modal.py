@@ -16,7 +16,8 @@ else:
 from htmltools import tags, Tag, div, HTML, TagChildArg, TagAttrArg
 
 from .._utils import run_coro_sync
-from ..session import Session, _require_active_session, _process_deps
+from ..session import Session
+from ..session._utils import require_active_session
 
 
 def modal_button(label: str, icon: TagChildArg = None, **kwargs: TagChildArg) -> Tag:
@@ -88,11 +89,11 @@ def modal(
 
 
 def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
-    session = _require_active_session(session)
-    msg = _process_deps(modal)
+    session = require_active_session(session)
+    msg = session.process_ui(modal)
     run_coro_sync(session.send_message({"modal": {"type": "show", "message": msg}}))
 
 
 def modal_remove(session: Optional[Session] = None) -> None:
-    session = _require_active_session(session)
+    session = require_active_session(session)
     run_coro_sync(session.send_message({"modal": {"type": "remove", "message": None}}))

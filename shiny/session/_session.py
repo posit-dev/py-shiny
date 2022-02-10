@@ -1,9 +1,4 @@
-__all__ = (
-    "Session",
-    "Inputs",
-    "Outputs",
-    "get_current_session",
-)
+__all__ = ("Session", "Inputs", "Outputs", "get_current_session", "session_context")
 
 import functools
 import os
@@ -25,7 +20,6 @@ from typing import (
     Callable,
     Iterable,
     Optional,
-    TypeVar,
     Union,
     Awaitable,
     Dict,
@@ -48,20 +42,21 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import TypedDict
 
-if TYPE_CHECKING:
-    from .app import App
-
 from htmltools import TagChildArg, TagList
 
-from .reactive import Value, Effect, effect, isolate, flush
-from .reactive._core import lock
-from .http_staticfiles import FileResponse
-from ._connmanager import Connection, ConnectionClosed
-from . import render
-from . import _utils
-from ._fileupload import FileInfo, FileUploadManager
-from .input_handler import input_handlers
-from .validation import SafeException, SilentCancelOutputException, SilentException
+if TYPE_CHECKING:
+    from ..app import App
+
+from ..reactive import Value, Effect, effect, isolate, flush
+from ..reactive._core import lock
+from ..http_staticfiles import FileResponse
+from .._connmanager import Connection, ConnectionClosed
+from .. import render
+from .. import _utils
+from .._fileupload import FileInfo, FileUploadManager
+from ..input_handler import input_handlers
+from ..validation import SafeException, SilentCancelOutputException, SilentException
+from ._utils import *
 
 # This cast is necessary because if the type checker thinks that if
 # "tag" isn't in `message`, then it's not a ClientMessage object.
@@ -332,8 +327,8 @@ class Session:
                 with session_context(self):
                     with isolate():
                         download = self._downloads[download_id]
-                        filename = _read_thunk_opt(download.filename)
-                        content_type = _read_thunk_opt(download.content_type)
+                        filename = read_thunk_opt(download.filename)
+                        content_type = read_thunk_opt(download.content_type)
                         contents = download.handler()
 
                         if filename is None:
@@ -416,7 +411,7 @@ class Session:
         self.request_flush()
 
     def send_insert_ui(
-        self, selector: str, multiple: bool, where: str, content: "_RenderedDeps"
+        self, selector: str, multiple: bool, where: str, content: "RenderedDeps"
     ) -> None:
         msg = {
             "selector": selector,
@@ -530,6 +525,17 @@ class Session:
                 return f"session/{urllib.parse.quote(self.id)}/download/{urllib.parse.quote(effective_name)}?w="
 
         return wrapper
+
+    def process_ui(self, ui: TagChildArg) -> RenderedDeps:
+
+        res = TagList(ui).render()
+        deps: List[Dict[str, Any]] = []
+        for dep in res["dependencies"]:
+            self.app.register_web_dependency(dep)
+            dep_dict = dep.as_dict(lib_prefix=self.app.LIB_PREFIX)
+            deps.append(dep_dict)
+
+        return {"deps": deps, "html": res["html"]}
 
 
 # ======================================================================================
@@ -703,75 +709,3 @@ def session_context(session: Optional[Session]):
         yield
     finally:
         _current_session.reset(token)
-
-
-def _require_active_session(session: Optional[Session]) -> Session:
-    if session is None:
-        session = get_current_session()
-    if session is None:
-        import inspect
-
-        call_stack = inspect.stack()
-        if len(call_stack) > 1:
-            caller = call_stack[1]
-        else:
-            # Uncommon case: this function is called from the top-level, so the caller
-            # is just _require_active_session.
-            caller = call_stack[0]
-
-        calling_fn_name = caller.function
-        if calling_fn_name == "__init__":
-            # If the caller is __init__, then we're most likely in the initialization of
-            # an object. This will get the class name.
-            calling_fn_name = caller.frame.f_locals["self"].__class__.__name__
-
-        raise RuntimeError(
-            f"{calling_fn_name}() must be called from within an active Shiny session."
-        )
-    return session
-
-
-# ==============================================================================
-# Miscellaneous functions
-# ==============================================================================
-
-
-class _RenderedDeps(TypedDict):
-    deps: List[Dict[str, Any]]
-    html: str
-
-
-def _process_deps(ui: TagChildArg, session: Optional[Session] = None) -> _RenderedDeps:
-
-    session = _require_active_session(session)
-
-    res = TagList(ui).render()
-    deps: List[Dict[str, Any]] = []
-    for dep in res["dependencies"]:
-        session.app.register_web_dependency(dep)
-        dep_dict = dep.as_dict(lib_prefix=session.app.LIB_PREFIX)
-        deps.append(dep_dict)
-
-    return {"deps": deps, "html": res["html"]}
-
-
-# Ideally I'd love not to limit the types for T, but if I don't, the type checker has
-# trouble figuring out what `T` is supposed to be when run_thunk is actually used. For
-# now, just keep expanding the possible types, as needed.
-T = TypeVar("T", str, int)
-
-
-def _read_thunk(thunk: Union[Callable[[], T], T]) -> T:
-    if callable(thunk):
-        return thunk()
-    else:
-        return thunk
-
-
-def _read_thunk_opt(thunk: Optional[Union[Callable[[], T], T]]) -> Optional[T]:
-    if thunk is None:
-        return None
-    elif callable(thunk):
-        return thunk()
-    else:
-        return thunk

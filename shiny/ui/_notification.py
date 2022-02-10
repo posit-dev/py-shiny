@@ -11,7 +11,8 @@ else:
 from htmltools import TagList, TagChildArg
 
 from .._utils import run_coro_sync, rand_hex
-from ..session import Session, _require_active_session, _process_deps
+from ..session import Session
+from ..session._utils import require_active_session
 
 
 def notification_show(
@@ -23,10 +24,10 @@ def notification_show(
     type: Literal["default", "message", "warning", "error"] = "default",
     session: Optional[Session] = None,
 ) -> None:
-    session = _require_active_session(session)
+    session = require_active_session(session)
 
-    ui_ = _process_deps(ui, session)
-    action_ = _process_deps(action, session)
+    ui_ = session.process_ui(ui)
+    action_ = session.process_ui(action)
 
     payload: Dict[str, Any] = {
         "html": ui_["html"],
@@ -46,7 +47,7 @@ def notification_show(
 
 
 def notification_remove(id: str, session: Optional[Session] = None) -> str:
-    session = _require_active_session(session)
+    session = require_active_session(session)
     run_coro_sync(
         session.send_message({"notification": {"type": "remove", "message": None}})
     )

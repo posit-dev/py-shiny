@@ -3,7 +3,8 @@ __all__ = ("Progress",)
 from typing import Optional, Dict, Any
 from warnings import warn
 from .._utils import run_coro_sync, rand_hex
-from ..session import Session, _require_active_session
+from ..session import Session
+from ..session._utils import require_active_session
 
 
 class Progress:
@@ -15,7 +16,7 @@ class Progress:
         self.value = None
         self._id = rand_hex(8)
         self._closed = False
-        self._session = _require_active_session(session)
+        self._session = require_active_session(session)
 
         msg = {"id": self._id, "style": self._style}
         self._send_progress("open", msg)

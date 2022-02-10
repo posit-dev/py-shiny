@@ -31,7 +31,8 @@ from ._input_date import _as_date_attr
 from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from ._input_slider import SliderValueArg, SliderStepArg, _slider_type, _as_numeric
 from .._utils import drop_none
-from ..session import Session, _require_active_session, _process_deps
+from ..session import Session
+from ..session._utils import require_active_session
 
 # -----------------------------------------------------------------------------
 # input_action_button.py
@@ -43,10 +44,10 @@ def update_action_button(
     icon: TagChildArg = None,
     session: Optional[Session] = None,
 ) -> None:
-    session = _require_active_session(session)
+    session = require_active_session(session)
     # TODO: supporting a TagChildArg for label would require changes to shiny.js
     # https://github.com/rstudio/shiny/issues/1140
-    msg = {"label": label, "icon": _process_deps(icon)["html"] if icon else None}
+    msg = {"label": label, "icon": session.process_ui(icon)["html"] if icon else None}
     session.send_input_message(id, drop_none(msg))
 
 
@@ -62,7 +63,7 @@ def update_checkbox(
     value: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
-    session = _require_active_session(session)
+    session = require_active_session(session)
     msg = {"label": label, "value": value}
     session.send_input_message(id, drop_none(msg))
 
@@ -117,13 +118,13 @@ def _update_choice_input(
     inline: bool = False,
     session: Optional[Session] = None,
 ) -> None:
-    session = _require_active_session(session)
+    session = require_active_session(session)
     options = None
     if choices is not None:
         opts = _generate_options(
             id=id, type=type, choices=choices, selected=selected, inline=inline
         )
-        options = _process_deps(opts)["html"]
+        options = session.process_ui(opts)["html"]
     msg = {"label": label, "options": options, "value": selected}
     session.send_input_message(id, drop_none(msg))
 
@@ -141,7 +142,7 @@ def update_date(
     session: Optional[Session] = None,
 ) -> None:
 
-    session = _require_active_session(session)
+    session = require_active_session(session)
     msg = {
         "label": label,
         "value": _as_date_attr(value),
@@ -161,7 +162,7 @@ def update_date_range(
     max: Optional[Union[date, str]] = None,
     session: Optional[Session] = None,
 ) -> None:
-    session = _require_active_session(session)
+    session = require_active_session(session)
     value = {"start": _as_date_attr(start), "end": _as_date_attr(end)}
     msg = {
         "label": label,
@@ -185,7 +186,7 @@ def update_numeric(
     step: Optional[float] = None,
     session: Optional[Session] = None,
 ) -> None:
-    session = _require_active_session(session)
+    session = require_active_session(session)
     msg = {
         "label": label,
         "value": value,
@@ -207,13 +208,13 @@ def update_select(
     selected: Optional[str] = None,
     session: Optional[Session] = None,
 ) -> None:
-    session = _require_active_session(session)
+    session = require_active_session(session)
 
     if choices is None:
         options = None
     else:
         option_tags = _render_choices(_normalize_choices(choices), selected)
-        options = _process_deps(option_tags)["html"]
+        options = session.process_ui(*option_tags)["html"]
 
     msg = {
         "label": label,
@@ -240,7 +241,7 @@ def update_slider(
     timezone: Optional[str] = None,
     session: Optional[Session] = None,
 ) -> None:
-    session = _require_active_session(session)
+    session = require_active_session(session)
 
     # Get any non-None value to see if the `data-type` may need to change
     val = value[0] if isinstance(value, tuple) else value
@@ -278,7 +279,7 @@ def update_text(
     placeholder: Optional[str] = None,
     session: Optional[Session] = None,
 ) -> None:
-    session = _require_active_session(session)
+    session = require_active_session(session)
     msg = {"label": label, "value": value, "placeholder": placeholder}
     session.send_input_message(id, drop_none(msg))
 
@@ -294,6 +295,6 @@ update_text_area = update_text
 def update_navs(
     id: str, selected: Optional[str] = None, session: Optional[Session] = None
 ) -> None:
-    session = _require_active_session(session)
+    session = require_active_session(session)
     msg = {"value": selected}
     session.send_input_message(id, drop_none(msg))

@@ -10,7 +10,8 @@ else:
 
 from htmltools import TagChildArg
 
-from ..session import Session, _require_active_session, _process_deps
+from ..session import Session
+from ..session._utils import require_active_session
 
 
 def insert_ui(
@@ -22,14 +23,14 @@ def insert_ui(
     session: Optional[Session] = None,
 ) -> None:
 
-    session = _require_active_session(session)
+    session = require_active_session(session)
 
     def callback() -> None:
         session.send_insert_ui(
             selector=selector,
             multiple=multiple,
             where=where,
-            content=_process_deps(ui, session),
+            content=session.process_ui(ui),
         )
 
     if immediate:
@@ -45,7 +46,7 @@ def remove_ui(
     session: Optional[Session] = None,
 ) -> None:
 
-    session = _require_active_session(session)
+    session = require_active_session(session)
 
     def callback():
         session.send_remove_ui(selector=selector, multiple=multiple)

@@ -11,7 +11,8 @@ from htmltools.core import TagChildArg
 
 from .reactive import Value
 from .render import RenderFunction
-from .session import Inputs, Outputs, Session, _require_active_session
+from .session import Inputs, Outputs, Session
+from .session._utils import require_active_session
 
 
 class ModuleInputs(Inputs):
@@ -100,7 +101,7 @@ class Module:
 
     def server(self, ns: str, *, session: Optional[Session] = None) -> None:
         self.ns: str = ns
-        session = _require_active_session(session)
+        session = require_active_session(session)
         session_proxy = ModuleSession(ns, session)
         self._server(session_proxy.input, session_proxy.output, session_proxy)
 
