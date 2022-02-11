@@ -12,6 +12,7 @@ from typing import (
     Union,
     Generic,
     cast,
+    overload,
 )
 import warnings
 
@@ -28,18 +29,40 @@ T = TypeVar("T")
 # Value
 # ==============================================================================
 class Value(Generic[T]):
-    def __init__(self, value: T, *, _read_only: bool = False) -> None:
+    # These overloads are necessary so that the following hold:
+    # - Value() is marked by the type checker as an error, because the type T is
+    #   unknown. (It is not a run-time error.)
+    # - Value[int]() works.
+    # - Value[int](1) works.
+    # - Value(1) works, with T is inferred to be int.
+    @overload
+    def __init__(
+        self, value: MISSING_TYPE = MISSING, *, read_only: bool = False
+    ) -> None:
+        ...
+
+    @overload
+    def __init__(self, value: T, *, read_only: bool = False) -> None:
+        ...
+
+    # If `value` is MISSING, then `get()` will raise a SilentException, until a new
+    # value is set. Calling `unset()` will set the value to MISSING.
+    def __init__(
+        self, value: Union[T, MISSING_TYPE] = MISSING, *, read_only: bool = False
+    ) -> None:
         self._value: T = value
-        self._read_only: bool = _read_only
+        self._read_only: bool = read_only
         self._dependents: Dependents = Dependents()
 
-    # Calling the object is equivalent to `.get()`
     def __call__(self) -> T:
-        self._dependents.register()
-        return self._value
+        return self.get()
 
     def get(self) -> T:
         self._dependents.register()
+
+        if isinstance(self._value, MISSING_TYPE):
+            raise SilentException
+
         return self._value
 
     def set(self, value: T) -> bool:
@@ -58,6 +81,17 @@ class Value(Generic[T]):
         self._value = value
         self._dependents.invalidate()
         return True
+
+    def unset(self) -> None:
+        self.set(MISSING)  # type: ignore
+
+    def is_set(self) -> bool:
+        self._dependents.register()
+        return not isinstance(self._value, MISSING_TYPE)
+
+    # Like unset(), except that this does not invalidate dependents.
+    def freeze(self) -> None:
+        self._value = MISSING
 
 
 # ==============================================================================

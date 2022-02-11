@@ -8,7 +8,8 @@ from shiny.input_handler import ActionButtonValue
 from shiny.reactive._core import ReactiveWarning
 from shiny._decorators import *
 from shiny.reactive import *
-from shiny._validation import req
+from shiny.types import MISSING
+from shiny._validation import SilentException, req
 
 from .mocktime import MockTime
 
@@ -88,6 +89,65 @@ async def test_reactive_value_same_no_invalidate():
     v.set(1)
     await flush()
     assert o._exec_count == 1
+
+
+# ======================================================================
+# Intializing reactive.Value to MISSING, and unsetting
+# ======================================================================
+@pytest.mark.asyncio
+async def test_reactive_value_unset():
+    v = Value[int](MISSING)
+
+    with isolate():
+        assert v.is_set() is False
+        with pytest.raises(SilentException):
+            v()
+
+    val: int = 0
+
+    @effect()
+    def o():
+        nonlocal val
+        val = v()
+
+    await flush()
+    assert o._exec_count == 1
+    assert val == 0
+
+    v.set(1)
+    await flush()
+    assert o._exec_count == 2
+    assert val == 1
+
+    v.unset()
+    await flush()
+    assert o._exec_count == 3
+    assert val == 1
+
+    with isolate():
+        assert v.is_set() is False
+        with pytest.raises(SilentException):
+            v()
+
+    # Check that dependency is taken when is_set() is called.
+    v = Value[int](MISSING)
+    val2: Union[bool, None] = None
+
+    @effect()
+    def o2():
+        nonlocal val2
+        val2 = v.is_set()
+
+    await flush()
+    assert val2 is False
+
+    v.set(1)
+    await flush()
+    assert val2 is True
+
+    v.unset()
+    await flush()
+    assert val2 is False
 
 
 # ======================================================================
@@ -939,6 +999,72 @@ async def test_event_async_decorator():
     v2.set(2)
     await flush()
     assert n_times == 7
+
+
+# ------------------------------------------------------------
+# @event() handles silent exceptions in event function, async
+# ------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_event_silent_exception_async():
+    n_times = 0
+    x = Value[bool]()
+
+    async def req_fn() -> int:
+        await asyncio.sleep(0)
+        x()
+        return 1234
+
+    @effect()
+    @event(req_fn)
+    async def _():
+        await asyncio.sleep(0)
+        nonlocal n_times
+        n_times += 1
+
+    await flush()
+    assert n_times == 0
+
+    x.set(True)
+    await flush()
+    assert n_times == 1
+
+    x.unset()
+    await flush()
+    assert n_times == 1
+
+    x.set(True)
+    await flush()
+    assert n_times == 2
+
+
+# ------------------------------------------------------------
+# @event() handles silent exceptions in async event function
+# ------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_event_silent_exception():
+    n_times = 0
+    x = Value[bool]()
+
+    @effect()
+    @event(x)
+    def _():
+        nonlocal n_times
+        n_times += 1
+
+    await flush()
+    assert n_times == 0
+
+    x.set(True)
+    await flush()
+    assert n_times == 1
+
+    x.unset()
+    await flush()
+    assert n_times == 1
+
+    x.set(True)
+    await flush()
+    assert n_times == 2
 
 
 # ------------------------------------------------------------

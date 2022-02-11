@@ -53,7 +53,7 @@ from .. import render
 from .. import _utils
 from .._fileupload import FileInfo, FileUploadManager
 from ..input_handler import input_handlers
-from ..types import SafeException, SilentCancelOutputException, SilentException
+from ..types import MISSING, SafeException, SilentCancelOutputException, SilentException
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
 # This cast is necessary because if the type checker thinks that if
@@ -543,7 +543,7 @@ class Inputs:
     def __init__(self, **kwargs: object) -> None:
         self._map: dict[str, Value[Any]] = {}
         for key, value in kwargs.items():
-            self._map[key] = Value(value, _read_only=True)
+            self._map[key] = Value(value, read_only=True)
 
     def __setitem__(self, key: str, value: Value[Any]) -> None:
         if not isinstance(value, Value):
@@ -556,7 +556,7 @@ class Inputs:
         # dependencies on input values that haven't been received from client
         # yet.
         if key not in self._map:
-            self._map[key] = Value(None, _read_only=True)
+            self._map[key] = Value(read_only=True)
 
         return self._map[key]
 
@@ -677,12 +677,10 @@ class Outputs:
 
     def _is_hidden(self, name: str) -> bool:
         with isolate():
-            hidden = cast(
-                Optional[bool],
-                self._session.input[f".clientdata_output_{name}_hidden"](),
+            hidden_value_obj = cast(
+                Value[bool], self._session.input[f".clientdata_output_{name}_hidden"]
             )
+            if not hidden_value_obj.is_set():
+                return True
 
-        if hidden is None:
-            return True
-        else:
-            return hidden
+            return hidden_value_obj()

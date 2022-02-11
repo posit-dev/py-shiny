@@ -48,9 +48,9 @@ async def test_inputs_proxy():
     with isolate():
         assert input.a() == 1
         # Different ways of accessing "a" from the input proxy.
-        assert input_proxy.a() is None
-        assert input_proxy["a"]() is None
-        assert input["mod1-a"]() is None
+        assert input_proxy.a.is_set() is False
+        assert input_proxy["a"].is_set() is False
+        assert input["mod1-a"].is_set() is False
 
     input_proxy.a._set(2)
 
@@ -66,9 +66,9 @@ async def test_inputs_proxy():
         assert input.a() == 1
         assert input_proxy.a() == 2
         # Different ways of accessing "a" from the input proxy.
-        assert input_proxy_proxy.a() is None
-        assert input_proxy_proxy["a"]() is None
-        assert input["mod1-mod2-a"]() is None
+        assert input_proxy_proxy.a.is_set() is False
+        assert input_proxy_proxy["a"].is_set() is False
+        assert input_proxy["mod1-a"].is_set() is False
 
     input_proxy_proxy.a._set(3)
 
