@@ -89,6 +89,10 @@ class Value(Generic[T]):
         self._dependents.register()
         return not isinstance(self._value, MISSING_TYPE)
 
+    # Like unset(), except that this does not invalidate dependents.
+    def freeze(self) -> None:
+        self._value = MISSING
+
 
 # ==============================================================================
 # Calc
