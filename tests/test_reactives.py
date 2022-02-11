@@ -105,7 +105,7 @@ async def test_reactive_value_unset():
 
     val: int = 0
 
-    @effect()
+    @Effect()
     def o():
         nonlocal val
         val = v()
@@ -133,7 +133,7 @@ async def test_reactive_value_unset():
     v = Value[int](MISSING)
     val2: Union[bool, None] = None
 
-    @effect()
+    @Effect()
     def o2():
         nonlocal val2
         val2 = v.is_set()
@@ -1002,22 +1002,16 @@ async def test_event_async_decorator():
 
 
 # ------------------------------------------------------------
-# @event() handles silent exceptions in event function, async
+# @event() handles silent exceptions in event function
 # ------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_event_silent_exception_async():
+async def test_event_silent_exception():
     n_times = 0
     x = Value[bool]()
 
-    async def req_fn() -> int:
-        await asyncio.sleep(0)
-        x()
-        return 1234
-
-    @effect()
-    @event(req_fn)
-    async def _():
-        await asyncio.sleep(0)
+    @Effect()
+    @event(x)
+    def _():
         nonlocal n_times
         n_times += 1
 
@@ -1038,16 +1032,22 @@ async def test_event_silent_exception_async():
 
 
 # ------------------------------------------------------------
-# @event() handles silent exceptions in async event function
+# @event() handles silent exceptions in event function, async
 # ------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_event_silent_exception():
+async def test_event_silent_exception_async():
     n_times = 0
     x = Value[bool]()
 
-    @effect()
-    @event(x)
-    def _():
+    async def req_fn() -> int:
+        await asyncio.sleep(0)
+        x()
+        return 1234
+
+    @Effect()
+    @event(req_fn)
+    async def _():
+        await asyncio.sleep(0)
         nonlocal n_times
         n_times += 1
 
