@@ -20,7 +20,7 @@ def counter_ui(
 def counter_server(input: ModuleInputs, output: ModuleOutputs, session: ModuleSession):
     count: reactive.Value[int] = reactive.Value(0)
 
-    @reactive.effect()
+    @reactive.Effect()
     @event(input.button)
     def _():
         count.set(count() + 1)

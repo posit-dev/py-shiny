@@ -1,6 +1,6 @@
 """Reactive components"""
 
-__all__ = ("Value", "Calc", "CalcAsync", "calc", "Effect", "EffectAsync", "effect")
+__all__ = ("Value", "Calc", "Calc_", "CalcAsync_", "Effect", "Effect_")
 
 import traceback
 from typing import (
@@ -68,7 +68,7 @@ CalcFunction = Callable[[], T]
 CalcFunctionAsync = Callable[[], Awaitable[T]]
 
 
-class Calc(Generic[T]):
+class Calc_(Generic[T]):
     def __init__(
         self,
         fn: CalcFunction[T],
@@ -82,7 +82,7 @@ class Calc(Generic[T]):
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
         self._fn: CalcFunctionAsync[T] = _utils.wrap_async(fn)
-        self._is_async: bool = False
+        self._is_async: bool = _utils.is_async_callable(fn)
 
         self._dependents: Dependents = Dependents()
         self._invalidated: bool = True
@@ -96,11 +96,11 @@ class Calc(Generic[T]):
         # the type checker doesn't know that MISSING is the only instance of
         # MISSING_TYPE; this saves us from casting later on.
         if isinstance(session, MISSING_TYPE):
-            import shiny.session
+            from ..session import get_current_session
 
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
-            session = shiny.session.get_current_session()
+            session = get_current_session()
         self._session = session
 
         # Use lists to hold (optional) value and error, instead of Optional[T],
@@ -139,9 +139,9 @@ class Calc(Generic[T]):
         was_running = self._running
         self._running = True
 
-        import shiny.session
+        from ..session import session_context
 
-        with shiny.session.session_context(self._session):
+        with session_context(self._session):
             try:
                 with self._ctx():
                     await self._run_func()
@@ -162,7 +162,7 @@ class Calc(Generic[T]):
             self._error.append(err)
 
 
-class CalcAsync(Calc[T]):
+class CalcAsync_(Calc_[T]):
     def __init__(
         self,
         fn: CalcFunctionAsync[T],
@@ -173,7 +173,6 @@ class CalcAsync(Calc[T]):
             raise TypeError(self.__class__.__name__ + " requires an async function")
 
         super().__init__(cast(CalcFunction[T], fn), session=session)
-        self._is_async = True
 
     async def __call__(self) -> T:
         return await self.get_value()
@@ -198,15 +197,15 @@ class CalcAsync(Calc[T]):
 # twice: once here, and once when we return a Calc object (which has a synchronous
 # __call__ method) or CalcAsync object (which has an async __call__ method), and it
 # works out.
-def calc(
+def Calc(
     *, session: Union[MISSING_TYPE, "Session", None] = MISSING
-) -> Callable[[CalcFunction[T]], Calc[T]]:
-    def create_calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc[T]:
+) -> Callable[[CalcFunction[T]], Calc_[T]]:
+    def create_calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc_[T]:
         if _utils.is_async_callable(fn):
-            return CalcAsync(fn, session=session)
+            return CalcAsync_(fn, session=session)
         else:
             fn = cast(CalcFunction[T], fn)
-            return Calc(fn, session=session)
+            return Calc_(fn, session=session)
 
     return create_calc
 
@@ -219,10 +218,10 @@ EffectFunction = Callable[[], None]
 EffectFunctionAsync = Callable[[], Awaitable[None]]
 
 
-class Effect:
+class Effect_:
     def __init__(
         self,
-        fn: EffectFunction,
+        fn: Union[EffectFunction, EffectFunctionAsync],
         *,
         suspended: bool = False,
         priority: int = 0,
@@ -235,7 +234,8 @@ class Effect:
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
         self._fn: EffectFunctionAsync = _utils.wrap_async(fn)
-        self._is_async: bool = False
+        # This indicates whether the user's effect function (before wrapping) is async.
+        self._is_async: bool = _utils.is_async_callable(fn)
 
         self._priority: int = priority
         self._suspended = suspended
@@ -251,11 +251,11 @@ class Effect:
         # the type checker doesn't know that MISSING is the only instance of
         # MISSING_TYPE; this saves us from casting later on.
         if isinstance(session, MISSING_TYPE):
-            import shiny.session
+            from ..session import get_current_session
 
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
-            session = shiny.session.get_current_session()
+            session = get_current_session()
         self._session = session
 
         if self._session is not None:
@@ -302,9 +302,10 @@ class Effect:
     async def run(self) -> None:
         ctx = self._create_context()
         self._exec_count += 1
-        import shiny.session
 
-        with shiny.session.session_context(self._session):
+        from ..session import session_context
+
+        with session_context(self._session):
             try:
                 with ctx():
                     await self._fn()
@@ -360,51 +361,14 @@ class Effect:
         self.destroy()
 
 
-class EffectAsync(Effect):
-    def __init__(
-        self,
-        fn: EffectFunctionAsync,
-        *,
-        suspended: bool = False,
-        priority: int = 0,
-        session: Union[MISSING_TYPE, "Session", None] = MISSING,
-    ) -> None:
-        if not _utils.is_async_callable(fn):
-            raise TypeError(self.__class__.__name__ + " requires an async function")
-
-        super().__init__(
-            cast(EffectFunction, fn),
-            suspended=suspended,
-            session=session,
-            priority=priority,
-        )
-        self._is_async = True
-
-
-def effect(
+def Effect(
     *,
     suspended: bool = False,
     priority: int = 0,
     session: Union[MISSING_TYPE, "Session", None] = MISSING,
-) -> Callable[[Union[EffectFunction, EffectFunctionAsync]], Effect]:
-    """[summary]
-
-    Args:
-        priority : [description]. Defaults to 0.
-        session : [description]. Defaults to MISSING.
-
-    Returns:
-        [description]
-    """
-
-    def create_effect(fn: Union[EffectFunction, EffectFunctionAsync]) -> Effect:
-        if _utils.is_async_callable(fn):
-            fn = cast(EffectFunctionAsync, fn)
-            return EffectAsync(
-                fn, suspended=suspended, priority=priority, session=session
-            )
-        else:
-            fn = cast(EffectFunction, fn)
-            return Effect(fn, suspended=suspended, priority=priority, session=session)
+) -> Callable[[Union[EffectFunction, EffectFunctionAsync]], Effect_]:
+    def create_effect(fn: Union[EffectFunction, EffectFunctionAsync]) -> Effect_:
+        fn = cast(EffectFunction, fn)
+        return Effect_(fn, suspended=suspended, priority=priority, session=session)
 
     return create_effect

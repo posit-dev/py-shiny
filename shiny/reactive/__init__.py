@@ -5,8 +5,8 @@ __all__ = (
     "flush",
     "on_flushed",
     "Value",
-    "calc",
-    "effect",
+    "Calc",
+    "Effect",
     "isolate",
     "invalidate_later",
 )
