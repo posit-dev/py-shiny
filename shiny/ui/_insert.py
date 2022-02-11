@@ -10,8 +10,7 @@ else:
 
 from htmltools import TagChildArg
 
-from ..session import Session
-from ..session._utils import require_active_session
+from ..session import Session, require_active_session
 
 
 def insert_ui(
