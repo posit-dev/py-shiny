@@ -11,8 +11,7 @@ from htmltools.core import TagChildArg
 
 from .reactive import Value
 from .render import RenderFunction
-from .session import Inputs, Outputs, Session
-from .session._utils import require_active_session
+from .session import Inputs, Outputs, Session, require_active_session
 
 
 class ModuleInputs(Inputs):

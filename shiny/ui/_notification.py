@@ -11,8 +11,7 @@ else:
 from htmltools import TagList, TagChildArg
 
 from .._utils import run_coro_sync, rand_hex
-from ..session import Session
-from ..session._utils import require_active_session
+from ..session import Session, require_active_session
 
 
 def notification_show(

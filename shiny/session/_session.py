@@ -1,4 +1,4 @@
-__all__ = ("Session", "Inputs", "Outputs", "get_current_session", "session_context")
+__all__ = ("Session", "Inputs", "Outputs")
 
 import functools
 import os
@@ -12,8 +12,6 @@ import typing
 import mimetypes
 import dataclasses
 import urllib.parse
-from contextvars import ContextVar, Token
-from contextlib import contextmanager
 from typing import (
     TYPE_CHECKING,
     AsyncIterable,
@@ -56,7 +54,7 @@ from .. import _utils
 from .._fileupload import FileInfo, FileUploadManager
 from ..input_handler import input_handlers
 from ..types import SafeException, SilentCancelOutputException, SilentException
-from ._utils import *
+from ._utils import RenderedDeps, read_thunk_opt, session_context
 
 # This cast is necessary because if the type checker thinks that if
 # "tag" isn't in `message`, then it's not a ClientMessage object.
@@ -688,24 +686,3 @@ class Outputs:
             return True
         else:
             return hidden
-
-
-# ==============================================================================
-# Context manager for current session (AKA current reactive domain)
-# ==============================================================================
-_current_session: ContextVar[Optional[Session]] = ContextVar(
-    "current_session", default=None
-)
-
-
-def get_current_session() -> Optional[Session]:
-    return _current_session.get()
-
-
-@contextmanager
-def session_context(session: Optional[Session]):
-    token: Token[Union[Session, None]] = _current_session.set(session)
-    try:
-        yield
-    finally:
-        _current_session.reset(token)

@@ -16,8 +16,7 @@ else:
 from htmltools import tags, Tag, div, HTML, TagChildArg, TagAttrArg
 
 from .._utils import run_coro_sync
-from ..session import Session
-from ..session._utils import require_active_session
+from ..session import Session, require_active_session
 
 
 def modal_button(label: str, icon: TagChildArg = None, **kwargs: TagChildArg) -> Tag:

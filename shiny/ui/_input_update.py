@@ -31,8 +31,7 @@ from ._input_date import _as_date_attr
 from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from ._input_slider import SliderValueArg, SliderStepArg, _slider_type, _as_numeric
 from .._utils import drop_none
-from ..session import Session
-from ..session._utils import require_active_session
+from ..session import Session, require_active_session
 
 # -----------------------------------------------------------------------------
 # input_action_button.py

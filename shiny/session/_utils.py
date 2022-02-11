@@ -1,5 +1,9 @@
+__all__ = ("get_current_session", "session_context", "require_active_session")
+
 import sys
-from typing import TYPE_CHECKING, List, Dict, Any, Optional, TypeVar, Callable, Union
+from contextlib import contextmanager
+from contextvars import ContextVar, Token
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TypeVar, Union
 
 if TYPE_CHECKING:
     from ._session import Session
@@ -16,10 +20,29 @@ class RenderedDeps(TypedDict):
     html: str
 
 
+# ==============================================================================
+# Context manager for current session (AKA current reactive domain)
+# ==============================================================================
+_current_session: ContextVar[Optional["Session"]] = ContextVar(
+    "current_session", default=None
+)
+
+
+def get_current_session() -> Optional["Session"]:
+    return _current_session.get()
+
+
+@contextmanager
+def session_context(session: Optional["Session"]):
+    token: Token[Union[Session, None]] = _current_session.set(session)
+    try:
+        yield
+    finally:
+        _current_session.reset(token)
+
+
 def require_active_session(session: Optional["Session"]) -> "Session":
     if session is None:
-        from ._session import get_current_session
-
         session = get_current_session()
     if session is None:
         import inspect
