@@ -45,7 +45,7 @@ from htmltools import TagChildArg, TagList
 if TYPE_CHECKING:
     from .._app import App
 
-from ..reactive import Value, Effect, effect, isolate, flush
+from ..reactive import Value, Effect, Effect_, isolate, flush
 from ..reactive._core import lock
 from ..http_staticfiles import FileResponse
 from .._connmanager import Connection, ConnectionClosed
@@ -586,7 +586,7 @@ class Inputs:
 # ======================================================================================
 class Outputs:
     def __init__(self, session: Session) -> None:
-        self._effects: Dict[str, Effect] = {}
+        self._effects: Dict[str, Effect_] = {}
         self._suspend_when_hidden: Dict[str, bool] = {}
         self._session: Session = session
 
@@ -610,7 +610,7 @@ class Outputs:
 
             self._suspend_when_hidden[fn_name] = suspend_when_hidden
 
-            @effect(
+            @Effect(
                 suspended=suspend_when_hidden and self._is_hidden(fn_name),
                 priority=priority,
             )

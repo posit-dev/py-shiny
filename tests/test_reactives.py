@@ -27,12 +27,12 @@ async def test_flush_runs_newly_invalidated():
 
     # In practice, on the first flush, Effects run in the order that they were created.
     # Our test checks that o2 runs _after_ o1.
-    @effect()
+    @Effect()
     def o2():
         nonlocal v2_result
         v2_result = v2()
 
-    @effect()
+    @Effect()
     def o1():
         v2.set(v1())
 
@@ -56,12 +56,12 @@ async def test_flush_runs_newly_invalidated_async():
 
     # In practice, on the first flush, Effects run in the order that they were
     # created. Our test checks that o2 runs _after_ o1.
-    @effect()
+    @Effect()
     async def o2():
         nonlocal v2_result
         v2_result = v2()
 
-    @effect()
+    @Effect()
     async def o1():
         v2.set(v1())
 
@@ -78,7 +78,7 @@ async def test_flush_runs_newly_invalidated_async():
 async def test_reactive_value_same_no_invalidate():
     v = Value(1)
 
-    @effect()
+    @Effect()
     def o():
         v()
 
@@ -97,14 +97,14 @@ async def test_reactive_value_same_no_invalidate():
 async def test_recursive_calc():
     v = Value(5)
 
-    @calc()
+    @Calc()
     def r():
         if v() == 0:
             return 0
         v.set(v() - 1)
         r()
 
-    @effect()
+    @Effect()
     def o():
         r()
 
@@ -119,14 +119,14 @@ async def test_recursive_calc():
 async def test_recursive_async_calc():
     v = Value(5)
 
-    @calc()
+    @Calc()
     async def r():
         if v() == 0:
             return 0
         v.set(v() - 1)
         await r()
 
-    @effect()
+    @Effect()
     async def o():
         await r()
 
@@ -149,7 +149,7 @@ async def test_async_sequential():
     exec_order: list[str] = []
 
     async def react_chain(n: int):
-        @calc()
+        @Calc()
         async def r():
             nonlocal exec_order
             exec_order.append(f"r{n}-1")
@@ -157,7 +157,7 @@ async def test_async_sequential():
             exec_order.append(f"r{n}-2")
             return x() + 10
 
-        @effect()
+        @Effect()
         async def _():
             nonlocal exec_order
             exec_order.append(f"o{n}-1")
@@ -195,7 +195,7 @@ async def test_isolate_basic_without_context():
     # isolate() works with calc and Value; allows executing without a reactive context.
     v = Value(1)
 
-    @calc()
+    @Calc()
     def r():
         return v() + 10
 
@@ -214,14 +214,14 @@ async def test_isolate_basic_without_context():
 async def test_isolate_prevents_dependency():
     v = Value(1)
 
-    @calc()
+    @Calc()
     def r():
         return v() + 10
 
     v_dep = Value(1)  # Use this only for invalidating the effect
     o_val = None
 
-    @effect()
+    @Effect()
     def o():
         nonlocal o_val
         v_dep()
@@ -262,7 +262,7 @@ async def test_isolate_async_basic_without_context():
     # context.
     v = Value(1)
 
-    @calc()
+    @Calc()
     async def r():
         return v() + 10
 
@@ -278,14 +278,14 @@ async def test_isolate_async_basic_without_context():
 async def test_isolate_async_prevents_dependency():
     v = Value(1)
 
-    @calc()
+    @Calc()
     async def r():
         return v() + 10
 
     v_dep = Value(1)  # Use this only for invalidating the effect
     o_val = None
 
-    @effect()
+    @Effect()
     async def o():
         nonlocal o_val
         v_dep()
@@ -316,19 +316,19 @@ async def test_effect_priority():
     v = Value(1)
     results: list[int] = []
 
-    @effect(priority=1)
+    @Effect(priority=1)
     def o1():
         nonlocal results
         v()
         results.append(1)
 
-    @effect(priority=2)
+    @Effect(priority=2)
     def o2():
         nonlocal results
         v()
         results.append(2)
 
-    @effect(priority=1)
+    @Effect(priority=1)
     def o3():
         nonlocal results
         v()
@@ -339,7 +339,7 @@ async def test_effect_priority():
 
     # Add another effect with priority 2. Only this one will run (until we
     # invalidate others by changing v).
-    @effect(priority=2)
+    @Effect(priority=2)
     def o4():
         nonlocal results
         v()
@@ -367,19 +367,19 @@ async def test_async_effect_priority():
     v = Value(1)
     results: list[int] = []
 
-    @effect(priority=1)
+    @Effect(priority=1)
     async def o1():
         nonlocal results
         v()
         results.append(1)
 
-    @effect(priority=2)
+    @Effect(priority=2)
     async def o2():
         nonlocal results
         v()
         results.append(2)
 
-    @effect(priority=1)
+    @Effect(priority=1)
     async def o3():
         nonlocal results
         v()
@@ -390,7 +390,7 @@ async def test_async_effect_priority():
 
     # Add another effect with priority 2. Only this one will run (until we
     # invalidate others by changing v).
-    @effect(priority=2)
+    @Effect(priority=2)
     async def o4():
         nonlocal results
         v()
@@ -420,7 +420,7 @@ async def test_effect_destroy():
     v = Value(1)
     results: list[int] = []
 
-    @effect()
+    @Effect()
     def o1():
         nonlocal results
         v()
@@ -438,7 +438,7 @@ async def test_effect_destroy():
     v = Value(1)
     results: list[int] = []
 
-    @effect()
+    @Effect()
     def o2():
         nonlocal results
         v()
@@ -456,17 +456,17 @@ async def test_effect_destroy():
 async def test_error_handling():
     vals: List[str] = []
 
-    @effect()
+    @Effect()
     def _():
         vals.append("o1")
 
-    @effect()
+    @Effect()
     def _():
         vals.append("o2-1")
         raise Exception("Error here!")
         vals.append("o2-2")
 
-    @effect()
+    @Effect()
     def _():
         vals.append("o3")
 
@@ -478,18 +478,18 @@ async def test_error_handling():
 
     vals: List[str] = []
 
-    @calc()
+    @Calc()
     def r():
         vals.append("r")
         raise Exception("Error here!")
 
-    @effect()
+    @Effect()
     def _():
         vals.append("o1-1")
         r()
         vals.append("o1-2")
 
-    @effect()
+    @Effect()
     def _():
         vals.append("o2")
 
@@ -505,19 +505,19 @@ async def test_calc_error_rethrow():
     vals: List[str] = []
     v = Value(1)
 
-    @calc()
+    @Calc()
     def r():
         vals.append("r")
         raise Exception("Error here!")
 
-    @effect()
+    @Effect()
     def _():
         v()
         vals.append("o1-1")
         r()
         vals.append("o1-2")
 
-    @effect()
+    @Effect()
     def _():
         v()
         vals.append("o2-2")
@@ -544,7 +544,7 @@ async def test_dependent_invalidation():
     v = Value(0)
     error_occurred = False
 
-    @effect()
+    @Effect()
     def _():
         trigger()
 
@@ -557,11 +557,11 @@ async def test_dependent_invalidation():
             nonlocal error_occurred
             error_occurred = True
 
-    @effect()
+    @Effect()
     def _():
         r()
 
-    @calc()
+    @Calc()
     def r():
         return v()
 
@@ -583,7 +583,7 @@ async def test_dependent_invalidation():
 async def test_req():
     n_times = 0
 
-    @effect()
+    @Effect()
     def _():
         req(False)
         nonlocal n_times
@@ -592,7 +592,7 @@ async def test_req():
     await flush()
     assert n_times == 0
 
-    @effect()
+    @Effect()
     def _():
         req(True)
         nonlocal n_times
@@ -601,14 +601,14 @@ async def test_req():
     await flush()
     assert n_times == 1
 
-    @calc()
+    @Calc()
     def r():
         req(False)
         return 1
 
     val = None
 
-    @effect()
+    @Effect()
     def _():
         nonlocal val
         val = r()
@@ -616,12 +616,12 @@ async def test_req():
     await flush()
     assert val is None
 
-    @calc()
+    @Calc()
     def r2():
         req(True)
         return 1
 
-    @effect()
+    @Effect()
     def _():
         nonlocal val
         val = r2()
@@ -635,7 +635,7 @@ async def test_invalidate_later():
     mock_time = MockTime()
     with mock_time():
 
-        @effect()
+        @Effect()
         def obs1():
             invalidate_later(1)
 
@@ -667,7 +667,7 @@ async def test_invalidate_later_invalidation():
     with mock_time():
         rv = Value(0)
 
-        @effect()
+        @Effect()
         def obs1():
             if rv() == 0:
                 invalidate_later(1)
@@ -720,7 +720,7 @@ async def test_event_decorator():
     n_times = 0
 
     # By default, runs every time that event expression is _not_ None (ignore_none=True)
-    @effect()
+    @Effect()
     @event(lambda: None, lambda: ActionButtonValue(0))
     def _():
         nonlocal n_times
@@ -730,7 +730,7 @@ async def test_event_decorator():
     assert n_times == 0
 
     # Unless ignore_none=False
-    @effect()
+    @Effect()
     @event(lambda: None, lambda: ActionButtonValue(0), ignore_none=False)
     def _():
         nonlocal n_times
@@ -740,7 +740,7 @@ async def test_event_decorator():
     assert n_times == 1
 
     # Or if one of the args is not None
-    @effect()
+    @Effect()
     @event(lambda: None, lambda: ActionButtonValue(0), lambda: True)
     def _():
         nonlocal n_times
@@ -752,7 +752,7 @@ async def test_event_decorator():
     # Is invalidated properly by reactive values
     v = Value(1)
 
-    @effect()
+    @Effect()
     @event(v)
     def _():
         nonlocal n_times
@@ -772,7 +772,7 @@ async def test_event_decorator():
     # Doesn't run on init
     v = Value(1)
 
-    @effect()
+    @Effect()
     @event(v, ignore_init=True)
     def _():
         nonlocal n_times
@@ -789,7 +789,7 @@ async def test_event_decorator():
     v = Value(1)
     v2 = Value(1)
 
-    @effect()
+    @Effect()
     @event(v)
     def _():
         nonlocal n_times
@@ -805,12 +805,12 @@ async def test_event_decorator():
     # works with @calc()
     v2 = Value(1)
 
-    @calc()
+    @Calc()
     @event(lambda: v2(), ignore_init=True)
     def r2b():
         return 1
 
-    @effect()
+    @Effect()
     def _():
         nonlocal n_times
         n_times += r2b()
@@ -831,7 +831,7 @@ async def test_event_async_decorator():
     n_times = 0
 
     # By default, runs every time that event expression is _not_ None (ignore_none=True)
-    @effect()
+    @Effect()
     @event(lambda: None, lambda: ActionButtonValue(0))
     async def _():
         nonlocal n_times
@@ -841,7 +841,7 @@ async def test_event_async_decorator():
     assert n_times == 0
 
     # Unless ignore_none=False
-    @effect()
+    @Effect()
     @event(lambda: None, lambda: ActionButtonValue(0), ignore_none=False)
     async def _():
         nonlocal n_times
@@ -851,7 +851,7 @@ async def test_event_async_decorator():
     assert n_times == 1
 
     # Or if one of the args is not None
-    @effect()
+    @Effect()
     @event(lambda: None, lambda: ActionButtonValue(0), lambda: True)
     async def _():
         nonlocal n_times
@@ -863,7 +863,7 @@ async def test_event_async_decorator():
     # Is invalidated properly by reactive values
     v = Value(1)
 
-    @effect()
+    @Effect()
     @event(v)
     async def _():
         nonlocal n_times
@@ -883,7 +883,7 @@ async def test_event_async_decorator():
     # Doesn't run on init
     v = Value(1)
 
-    @effect()
+    @Effect()
     @event(v, ignore_init=True)
     async def _():
         nonlocal n_times
@@ -900,7 +900,7 @@ async def test_event_async_decorator():
     v = Value(1)
     v2 = Value(1)
 
-    @effect()
+    @Effect()
     @event(v)
     async def _():
         nonlocal n_times
@@ -916,18 +916,18 @@ async def test_event_async_decorator():
     # works with @calc()
     v2 = Value(1)
 
-    @calc()
+    @Calc()
     async def r_a():
         await asyncio.sleep(0)  # Make sure the async function yields control
         return 1
 
-    @calc()
+    @Calc()
     @event(lambda: v2(), r_a, ignore_init=True)
     async def r2b():
         await asyncio.sleep(0)  # Make sure the async function yields control
         return 1
 
-    @effect()
+    @Effect()
     async def _():
         nonlocal n_times
         await asyncio.sleep(0)
@@ -948,11 +948,11 @@ async def test_event_async_decorator():
 async def test_effect_pausing():
     a = Value(float(1))
 
-    @calc()
+    @Calc()
     def funcA():
         return a()
 
-    @effect()
+    @Effect()
     def obsB():
         funcA()
 
@@ -1030,11 +1030,11 @@ async def test_effect_pausing():
 async def test_effect_async_pausing():
     a = Value(float(1))
 
-    @calc()
+    @Calc()
     async def funcA():
         return a()
 
-    @effect()
+    @Effect()
     async def obsB():
         await funcA()
 
@@ -1110,7 +1110,7 @@ async def test_observer_async_suspended_resumed_observers_run_at_most_once():
 
     a = Value(1)
 
-    @effect()
+    @Effect()
     async def obs():
         print(a())
 

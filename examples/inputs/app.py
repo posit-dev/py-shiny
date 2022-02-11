@@ -132,7 +132,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         img: ImgData = {"src": str(dir / "rstudio-logo.png"), "width": "150px"}
         return img
 
-    @reactive.effect()
+    @reactive.Effect()
     def _():
         btn = input.btn()
         if btn and btn > 0:
@@ -144,7 +144,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 )
             )
 
-    @reactive.effect()
+    @reactive.Effect()
     def _():
         link = input.link()
         if link and link > 0:
