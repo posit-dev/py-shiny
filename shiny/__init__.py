@@ -1,5 +1,7 @@
 """A package for building reactive web applications."""
 
+from ._shinyenv import is_pyodide as _is_pyodide
+
 # User-facing subpackages that should be available on `from shiny import *`
 from . import reactive
 from .render import *
@@ -9,8 +11,14 @@ from . import ui
 # Private submodules that have some user-facing functionality
 from ._app import App
 from ._decorators import event
-from ._main import run as run_app
 from ._validation import req
+
+if _is_pyodide:
+    # In pyodide, avoid importing _main because it imports packages that aren't
+    # available.
+    run_app = None
+else:
+    from ._main import run as run_app
 
 # User-facing submodules that should *not* be available on `from shiny import *`
 from . import modules
