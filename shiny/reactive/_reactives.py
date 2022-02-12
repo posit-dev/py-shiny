@@ -52,13 +52,14 @@ class Value(Generic[T]):
     ) -> None:
         self._value: T = value
         self._read_only: bool = read_only
-        self._dependents: Dependents = Dependents()
+        self._value_dependents: Dependents = Dependents()
+        self._is_set_dependents: Dependents = Dependents()
 
     def __call__(self) -> T:
         return self.get()
 
     def get(self) -> T:
-        self._dependents.register()
+        self._value_dependents.register()
 
         if isinstance(self._value, MISSING_TYPE):
             raise SilentException
@@ -78,15 +79,18 @@ class Value(Generic[T]):
         if self._value is value:
             return False
 
+        if isinstance(self._value, MISSING_TYPE) != isinstance(value, MISSING_TYPE):
+            self._is_set_dependents.invalidate()
+
         self._value = value
-        self._dependents.invalidate()
+        self._value_dependents.invalidate()
         return True
 
     def unset(self) -> None:
         self.set(MISSING)  # type: ignore
 
     def is_set(self) -> bool:
-        self._dependents.register()
+        self._is_set_dependents.register()
         return not isinstance(self._value, MISSING_TYPE)
 
     # Like unset(), except that this does not invalidate dependents.
