@@ -213,7 +213,9 @@ def update_select(
         options = None
     else:
         option_tags = _render_choices(_normalize_choices(choices), selected)
-        options = session.process_ui(*option_tags)["html"]
+        # Typing problem due to a bug in pylance:
+        # https://github.com/microsoft/pylance-release/issues/2377
+        options = session.process_ui(option_tags)["html"]  # type: ignore
 
     msg = {
         "label": label,
