@@ -8,7 +8,6 @@ from shiny.input_handler import ActionButtonValue
 from shiny.reactive._core import ReactiveWarning
 from shiny._decorators import *
 from shiny.reactive import *
-from shiny.types import MISSING
 from shiny._validation import SilentException, req
 
 from .mocktime import MockTime
@@ -96,7 +95,7 @@ async def test_reactive_value_same_no_invalidate():
 # ======================================================================
 @pytest.mark.asyncio
 async def test_reactive_value_unset():
-    v = Value[int](MISSING)
+    v = Value[int]()
 
     with isolate():
         assert v.is_set() is False
@@ -118,36 +117,60 @@ async def test_reactive_value_unset():
     await flush()
     assert o._exec_count == 2
     assert val == 1
+    with isolate():
+        assert v.is_set() is True
 
     v.unset()
     await flush()
     assert o._exec_count == 3
     assert val == 1
-
     with isolate():
         assert v.is_set() is False
         with pytest.raises(SilentException):
             v()
 
-    # Check that dependency is taken when is_set() is called.
-    v = Value[int](MISSING)
-    val2: Union[bool, None] = None
+
+# ======================================================================
+# reactive.Value.is_set() invalidates dependents only when set state changes
+# ======================================================================
+@pytest.mark.asyncio
+async def test_reactive_value_is_set():
+    v = Value[int]()
+    v_is_set: bool = False
 
     @Effect()
-    def o2():
-        nonlocal val2
-        val2 = v.is_set()
+    def o():
+        nonlocal v_is_set
+        v_is_set = v.is_set()
 
     await flush()
-    assert val2 is False
+    assert o._exec_count == 1
+    assert v_is_set is False
 
     v.set(1)
     await flush()
-    assert val2 is True
+    assert o._exec_count == 2
+    assert v_is_set is True
+
+    v.set(2)
+    await flush()
+    assert o._exec_count == 2
+    assert v_is_set is True
 
     v.unset()
     await flush()
-    assert val2 is False
+    assert o._exec_count == 3
+    assert v_is_set is False
+
+    v.unset()
+    await flush()
+    assert o._exec_count == 3
+    assert v_is_set is False
+
+    v.set(1)
+    await flush()
+    assert o._exec_count == 4
+    assert v_is_set is True
 
 
 # ======================================================================
