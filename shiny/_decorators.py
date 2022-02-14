@@ -50,8 +50,7 @@ def event(
                 with isolate():
                     return await user_fn()
 
-        elif any(map(is_async_callable, args)):
-
+        elif any([is_async_callable(arg) for arg in args]):
             raise TypeError(
                 "When decorating a synchronous function with @event(), all arguments"
                 + "to @event() must be synchronous functions."
