@@ -1,7 +1,6 @@
 import functools
 from typing import TypeVar, Callable, List, Awaitable, Union
 
-from .input_handler import ActionButtonValue
 from .reactive import isolate
 from ._validation import req
 from ._utils import is_async_callable, run_coro_sync
@@ -12,7 +11,6 @@ T = TypeVar("T")
 
 def event(
     *args: Union[Callable[[], object], Callable[[], Awaitable[object]]],
-    ignore_none: bool = True,
     ignore_init: bool = False,
 ) -> Callable[[Callable[[], T]], Callable[[], T]]:
 
@@ -38,8 +36,6 @@ def event(
             nonlocal initialized
             if ignore_init and not initialized:
                 initialized = True
-                req(False)
-            if ignore_none and all(map(_is_none_event, vals)):
                 req(False)
 
         if is_async_callable(user_fn):
@@ -67,7 +63,3 @@ def event(
         return new_user_fn
 
     return decorator
-
-
-def _is_none_event(val: object) -> bool:
-    return val is None or (isinstance(val, ActionButtonValue) and val == 0)
