@@ -7,7 +7,7 @@ from typing import Optional, Dict, Union, List
 
 from htmltools import Tag, tags, div, TagChildArg, TagList
 
-from .._docstring import doc
+from .._docstring import add_example
 from ._html_dependencies import selectize_deps
 from ._utils import shiny_input_label
 
@@ -35,21 +35,7 @@ A list of strings, usually of length 1, with the value of the selected items. Wh
 }
 
 
-@doc(
-    """
-    Create a select list that can be used to choose a single or multiple items from a list of values.
-    """,
-    parameters={"multiple": "Is selection of multiple items allowed?"},
-    returns="A UI element.",
-    topics=_topics,
-    see_also=[
-        # TODO: update_selectize
-        # ":func:`~shiny.ui.update_selectize`",
-        ":func:`~shiny.ui.input_select`",
-        ":func:`~shiny.ui.input_radio_buttons`",
-        ":func:`~shiny.ui.input_checkbox_group`",
-    ],
-)
+@add_example()
 def input_selectize(
     id: str,
     label: TagChildArg,
@@ -59,6 +45,44 @@ def input_selectize(
     multiple: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
+    """
+    Create a select list that can be used to choose a single or multiple items from a
+    list of values.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    choices
+        Either a list of choices or a dictionary mapping choice values to labels. Note
+        that if a dictionary is provided, the keys are used as the (input) values so
+        that the dictionary values can hold HTML labels. A dictionary of dictionaries is
+        also supported, and in that case, the top-level keys are treated as
+        ``<optgroup>`` labels.
+    selected
+        The values that should be initially selected, if any.
+    multiple
+        Is selection of multiple items allowed?
+    width
+        The CSS width, e.g. '400px', or '100%'
+
+    Returns
+    -------
+    A UI element.
+
+    Notes
+    ------
+    .. admonition:: Server value
+
+    A list of strings, usually of length 1, with the value of the selected items. When
+    ``multiple=True`` and nothing is selected, this value will be ``None``.
+
+    See Also
+    -------
+    ~shiny.ui.input_select ~shiny.ui.input_radio_buttons ~shiny.ui.input_checkbox_group
+    """
 
     return input_select(
         id,
@@ -71,28 +95,7 @@ def input_selectize(
     )
 
 
-@doc(
-    """
-    Create a select list that can be used to choose a single or multiple items from a list of values.
-    """,
-    parameters={
-        "multiple": "Is selection of multiple items allowed?",
-        "selectize": "Whether to use selectize.js or not.",
-        "size": """
-    Number of items to show in the selection box; a larger number will result in a
-    taller box. Normally, when ``multiple=False``, a select input will be a drop-down
-    list, but when size is set, it will be a box instead.
-    """,
-    },
-    returns="A UI element.",
-    topics=_topics,
-    see_also=[
-        ":func:`~shiny.ui.input_selectize`",
-        ":func:`~shiny.ui.update_select`",
-        ":func:`~shiny.ui.input_radio_buttons`",
-        ":func:`~shiny.ui.input_checkbox_group`",
-    ],
-)
+@add_example()
 def input_select(
     id: str,
     label: TagChildArg,
@@ -104,6 +107,53 @@ def input_select(
     width: Optional[str] = None,
     size: Optional[str] = None,
 ) -> Tag:
+    """
+    Create a select list that can be used to choose a single or multiple items from a
+    list of values.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    choices
+        Either a list of choices or a dictionary mapping choice values to labels. Note
+        that if a dictionary is provided, the keys are used as the (input) values so
+        that the dictionary values can hold HTML labels. A dictionary of dictionaries is
+        also supported, and in that case, the top-level keys are treated as
+        ``<optgroup>`` labels.
+    selected
+        The values that should be initially selected, if any.
+    multiple
+        Is selection of multiple items allowed?
+    selectize
+        Whether to use selectize.js or not.
+    width
+        The CSS width, e.g. '400px', or '100%'
+    size
+        Number of items to show in the selection box; a larger number will result in a
+        taller box. Normally, when ``multiple=False``, a select input will be a
+        drop-down list, but when size is set, it will be a box instead.
+
+    Returns
+    -------
+    A UI element.
+
+    Notes
+    ------
+    .. admonition:: Server value
+
+    A list of strings, usually of length 1, with the value of the selected items. When
+    ``multiple=True`` and nothing is selected, this value will be ``None``.
+
+    See Also
+    -------
+    ~shiny.ui.input_selectize
+    ~shiny.ui.update_select
+    ~shiny.ui.input_radio_buttons
+    ~shiny.ui.input_checkbox_group
+    """
 
     choices_ = _normalize_choices(choices)
     if selected is None:

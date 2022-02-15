@@ -4,18 +4,11 @@ from typing import Optional
 
 from htmltools import tags, Tag, div, css, TagChildArg
 
-from .._docstring import doc
+from .._docstring import add_example
 from ._utils import shiny_input_label
 
 
-@doc(
-    "Create an input control for entry of numeric values.",
-    returns="A UI element.",
-    topics={"Server value": "A numeric value."},
-    see_also=[
-        ":func:`~shiny.ui.update_numeric`",
-    ],
-)
+@add_example()
 def input_numeric(
     id: str,
     label: TagChildArg,
@@ -25,6 +18,41 @@ def input_numeric(
     step: Optional[float] = None,
     width: Optional[str] = None,
 ) -> Tag:
+    """
+    Create an input control for entry of numeric values.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    value
+        Initial value.
+    min
+        The minimum allowed value.
+    max
+        The maximum allowed value.
+    step
+        Interval to use when stepping between min and max.
+    width
+        The CSS width, e.g. '400px', or '100%'
+
+    Returns
+    -------
+    A UI element.
+
+    Notes
+    ------
+    .. admonition:: Server value
+
+        A numeric value.
+
+    See Also
+    -------
+    ~shiny.ui.update_numeric
+    """
+
     return div(
         shiny_input_label(id, label),
         tags.input(

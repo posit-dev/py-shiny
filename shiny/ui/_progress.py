@@ -3,35 +3,29 @@ __all__ = ("Progress",)
 from typing import Optional, Dict, Any
 from warnings import warn
 
-from .._docstring import doc
+from .._docstring import add_example
 from .._utils import run_coro_sync, rand_hex
 from ..session import Session, require_active_session
 
-_common_params = {
-    "message": """
-    The message to be displayed to the user or `None` to hide the current message (if
-    any).
-    """,
-    "detail": """
-    The detail message to be displayed to the user or `None` to hide the current detail
-    message (if any). The detail message will be shown with a de-emphasized appearance
-    relative to message.
-    """,
-}
 
-
-@doc(
-    "Initialize a progress bar.",
-    parameters={
-        "min": """
-      The value that represents the starting point of the progress bar. Must be less than ``max``.
-      """,
-        "max": """
-      The value that represents the end of the progress bar. Must be greater than ``min``.
-      """,
-    },
-)
+@add_example()
 class Progress:
+    """
+    Initialize a progress bar.
+
+    Parameters
+    ----------
+    min
+        The value that represents the starting point of the progress bar. Must be less
+        than ``max``.
+    max
+        The value that represents the end of the progress bar. Must be greater than
+        ``min``.
+    session
+        The :class:`~shiny.Session` object passed to the server function of a
+        :func:`~shiny.App`.
+    """
+
     _style = "notification"
 
     def __init__(
@@ -47,25 +41,32 @@ class Progress:
         msg = {"id": self._id, "style": self._style}
         self._send_progress("open", msg)
 
-    @doc(
-        """
-       Updates the progress panel. When called the first time, the progress panel is
-       displayed.
-       """,
-        parameters={
-            "value": """
-           The value at which to set the progress bar, relative to ``min`` and ``max``.
-           ``None`` hides the progress bar, if it is currently visible.
-           """,
-            **_common_params,
-        },
-    )
     def set(
         self,
         value: Optional[float] = None,
         message: Optional[str] = None,
         detail: Optional[str] = None,
     ) -> None:
+        """
+        Updates the progress panel. When called the first time, the progress panel is
+        displayed.
+
+        Parameters
+        ----------
+        self
+            The object instance
+        value
+            The value at which to set the progress bar, relative to ``min`` and ``max``.
+            ``None`` hides the progress bar, if it is currently visible.
+        message
+            The message to be displayed to the user or ``None`` to hide the current
+            message (if any).
+        detail
+            The detail message to be displayed to the user or ``None`` to hide the
+            current detail message (if any). The detail message will be shown with a
+            de-emphasized appearance relative to message.
+        """
+
         if self._closed:
             warn("Attempting to set progress, but progress already closed.")
             return None
@@ -85,33 +86,54 @@ class Progress:
 
         self._send_progress("update", {k: v for k, v in msg.items() if v is not None})
 
-    @doc(
-        "Increment the progress bar.",
-        parameters={"amount": "The amount to increment in progress.", **_common_params},
-        returns="None",
-        note="""
-       Like ``set``, this updates the progress panel. The difference is that ``inc``
-       increases the progress bar by amount, instead of setting it to a specific value.
-       """,
-    )
     def inc(
         self,
         amount: float = 0.1,
         message: Optional[str] = None,
         detail: Optional[str] = None,
     ) -> None:
+        """
+        Increment the progress bar.
+
+        Parameters
+        ----------
+        self
+            The object instance
+        amount
+            The amount to increment in progress.
+        message
+            The message to be displayed to the user or ``None`` to hide the current
+            message (if any).
+        detail
+            The detail message to be displayed to the user or ``None`` to hide the current
+            detail message (if any). The detail message will be shown with a
+            de-emphasized appearance relative to message.
+
+        Note
+        ----
+        Like ``set``, this updates the progress panel. The difference is that ``inc``
+        increases the progress bar by amount, instead of setting it to a specific value.
+        """
+
         if self.value is None:
             self.value = self.min
 
         value = min(self.value + amount, self.max)
         self.set(value, message, detail)
 
-    @doc(
-        "Close the progress bar.",
-        returns="None",
-        note="Removes the progress panel. Future calls to set and close will be ignored.",
-    )
     def close(self) -> None:
+        """
+        Close the progress bar.
+
+        Parameters
+        ----------
+        self
+            The object instance
+
+        Note
+        ----
+        Removes the progress panel. Future calls to set and close will be ignored.
+        """
         if self._closed:
             warn("Attempting to close progress, but progress already closed.")
             return None

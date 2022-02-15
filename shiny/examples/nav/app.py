@@ -38,6 +38,7 @@ app_ui = ui.page_navbar(
     *nav_items("page_navbar"),
     title="page_navbar()",
     bg="#0062cc",
+    inverse=True,
     footer=ui.div(
         {"style": "width:80%;margin: 0 auto"},
         ui.h4("navs_tab()"),
@@ -48,9 +49,8 @@ app_ui = ui.page_navbar(
         ui.navs_tab_card(*nav_items("navs_tab_card()")),
         h4("navs_pill_card()"),
         ui.navs_pill_card(*nav_items("navs_pill_card()")),
-        # TODO: not implemented yet
-        # h4("navs_pill_list()"),
-        # ui.navs_pill_list(*nav_items("navs_pill_list()"))
+        h4("navs_pill_list()"),
+        ui.navs_pill_list(*nav_items("navs_pill_list()")),
     )
 )
 
