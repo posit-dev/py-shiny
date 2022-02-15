@@ -802,19 +802,9 @@ async def test_mock_time():
 async def test_event_decorator():
     n_times = 0
 
-    # By default, runs every time that event expression is _not_ None (ignore_none=True)
+    # Initial run whenever (A) input do _not_ throw an exception.
     @Effect()
-    @event(lambda: None, lambda: ActionButtonValue(0))
-    def _():
-        nonlocal n_times
-        n_times += 1
-
-    await flush()
-    assert n_times == 0
-
-    # Unless ignore_none=False
-    @Effect()
-    @event(lambda: None, lambda: ActionButtonValue(0), ignore_none=False)
+    @event(lambda: 1)
     def _():
         nonlocal n_times
         n_times += 1
@@ -822,9 +812,19 @@ async def test_event_decorator():
     await flush()
     assert n_times == 1
 
-    # Or if one of the args is not None
+    # Run even if function returns None.
     @Effect()
-    @event(lambda: None, lambda: ActionButtonValue(0), lambda: True)
+    @event(lambda: None)
+    def _():
+        nonlocal n_times
+        n_times += 1
+
+    await flush()
+    assert n_times == 2
+
+    # With ignore_init=True, don't run the first time.
+    @Effect()
+    @event(lambda: None, ignore_init=True)
     def _():
         nonlocal n_times
         n_times += 1
@@ -852,7 +852,11 @@ async def test_event_decorator():
     await flush()
     assert n_times == 4
 
-    # Doesn't run on init
+    v.unset()
+    await flush()
+    assert n_times == 4
+
+    # Don't run first time with ignore_init=True.
     v = Value(1)
 
     @Effect()
@@ -885,18 +889,18 @@ async def test_event_decorator():
     await flush()
     assert n_times == 6
 
-    # works with @calc()
+    # works with @Calc()
     v2 = Value(1)
 
     @Calc()
-    @event(lambda: v2(), ignore_init=True)
-    def r2b():
+    @event(v2, ignore_init=True)
+    def r():
         return 1
 
     @Effect()
     def _():
         nonlocal n_times
-        n_times += r2b()
+        n_times += r()
 
     await flush()
     assert n_times == 6
@@ -913,31 +917,34 @@ async def test_event_decorator():
 async def test_event_async_decorator():
     n_times = 0
 
-    # By default, runs every time that event expression is _not_ None (ignore_none=True)
+    # Initial run whenever (A) input do _not_ throw an exception.
     @Effect()
-    @event(lambda: None, lambda: ActionButtonValue(0))
+    @event(lambda: 1)
     async def _():
         nonlocal n_times
-        n_times += 1
-
-    await flush()
-    assert n_times == 0
-
-    # Unless ignore_none=False
-    @Effect()
-    @event(lambda: None, lambda: ActionButtonValue(0), ignore_none=False)
-    async def _():
-        nonlocal n_times
+        await asyncio.sleep(0)  # Make sure the async function yields control
         n_times += 1
 
     await flush()
     assert n_times == 1
 
-    # Or if one of the args is not None
+    # Run even if function returns None.
     @Effect()
-    @event(lambda: None, lambda: ActionButtonValue(0), lambda: True)
+    @event(lambda: None)
     async def _():
         nonlocal n_times
+        await asyncio.sleep(0)
+        n_times += 1
+
+    await flush()
+    assert n_times == 2
+
+    # With ignore_init=True, don't run the first time.
+    @Effect()
+    @event(lambda: None, ignore_init=True)
+    async def _():
+        nonlocal n_times
+        await asyncio.sleep(0)
         n_times += 1
 
     await flush()
@@ -950,6 +957,7 @@ async def test_event_async_decorator():
     @event(v)
     async def _():
         nonlocal n_times
+        await asyncio.sleep(0)
         n_times += 1
 
     await flush()
@@ -963,13 +971,18 @@ async def test_event_async_decorator():
     await flush()
     assert n_times == 4
 
-    # Doesn't run on init
+    v.unset()
+    await flush()
+    assert n_times == 4
+
+    # Don't run first time with ignore_init=True.
     v = Value(1)
 
     @Effect()
     @event(v, ignore_init=True)
     async def _():
         nonlocal n_times
+        await asyncio.sleep(0)
         n_times += 1
 
     await flush()
@@ -987,6 +1000,7 @@ async def test_event_async_decorator():
     @event(v)
     async def _():
         nonlocal n_times
+        await asyncio.sleep(0)
         n_times += v2()
 
     await flush()
@@ -996,17 +1010,12 @@ async def test_event_async_decorator():
     await flush()
     assert n_times == 6
 
-    # works with @calc()
+    # works with @Calc()
     v2 = Value(1)
 
     @Calc()
-    async def r_a():
-        await asyncio.sleep(0)  # Make sure the async function yields control
-        return 1
-
-    @Calc()
-    @event(lambda: v2(), r_a, ignore_init=True)
-    async def r2b():
+    @event(v2, ignore_init=True)
+    async def r():
         await asyncio.sleep(0)  # Make sure the async function yields control
         return 1
 
@@ -1014,7 +1023,7 @@ async def test_event_async_decorator():
     async def _():
         nonlocal n_times
         await asyncio.sleep(0)
-        n_times += await r2b()
+        n_times += await r()
 
     await flush()
     assert n_times == 6
