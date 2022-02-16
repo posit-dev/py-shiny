@@ -173,6 +173,7 @@ def navs_pill_list(
         header=header,
         footer=footer,
         well=well,
+        fluid=fluid,
         widthNav=widths[0],
         widthContent=widths[1],
     )
