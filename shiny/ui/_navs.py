@@ -1,6 +1,7 @@
 __all__ = (
     "nav",
     "nav_menu",
+    "nav_content",
     "nav_item",
     "nav_spacer",
     "navs_tab",
@@ -8,6 +9,7 @@ __all__ = (
     "navs_pill",
     "navs_pill_card",
     "navs_pill_list",
+    "navs_hidden",
     "navs_bar",
 )
 
@@ -49,8 +51,8 @@ def nav_menu(
     )
 
 
-# def nav_content(value, *args, icon: TagChildArg = None) -> tag:
-#  raise Exception("Not yet implemented")
+def nav_content(value: str, *args: TagChildArg, icon: TagChildArg = None) -> JSXTag:
+    return nav(None, *args, value=value, icon=icon)
 
 
 def nav_item(*args: TagChildArg) -> JSXTag:
@@ -153,13 +155,28 @@ def navs_pill_list(
         header=header,
         footer=footer,
         well=well,
+        fluid=fluid,
         widthNav=widths[0],
         widthContent=widths[1],
     )
 
 
-# def navs_hidden(*args, id: Optional[str] = None, selected: Optional[str] = None, header: Any=None, footer: Any=None) -> tag:
-#  return _nav_tag("NavsHidden", *args, id=id, selected=selected, header=header, footer=footer)
+def navs_hidden(
+    *args: TagChildArg,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    header: Optional[TagChildArg] = None,
+    footer: Optional[TagChildArg] = None,
+) -> JSXTag:
+    return _nav_tag(
+        "Navs",
+        *args,
+        type="hidden",
+        id=id,
+        selected=selected,
+        header=header,
+        footer=footer,
+    )
 
 
 def navs_bar(
