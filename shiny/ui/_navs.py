@@ -1,15 +1,15 @@
 __all__ = (
     "nav",
     "nav_menu",
+    "nav_content",
     "nav_item",
     "nav_spacer",
-    "nav_content",
     "navs_tab",
-    "navs_pill",
-    "navs_hidden",
     "navs_tab_card",
+    "navs_pill",
     "navs_pill_card",
     "navs_pill_list",
+    "navs_hidden",
     "navs_bar",
 )
 
@@ -117,24 +117,6 @@ def navs_pill(
     )
 
 
-def navs_hidden(
-    *args: TagChildArg,
-    id: Optional[str] = None,
-    selected: Optional[str] = None,
-    header: Optional[TagChildArg] = None,
-    footer: Optional[TagChildArg] = None,
-) -> JSXTag:
-    return _nav_tag(
-        "Navs",
-        *args,
-        type="hidden",
-        id=id,
-        selected=selected,
-        header=header,
-        footer=footer,
-    )
-
-
 def navs_pill_card(
     *args: TagChildArg,
     id: Optional[str] = None,
@@ -176,6 +158,24 @@ def navs_pill_list(
         fluid=fluid,
         widthNav=widths[0],
         widthContent=widths[1],
+    )
+
+
+def navs_hidden(
+    *args: TagChildArg,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    header: Optional[TagChildArg] = None,
+    footer: Optional[TagChildArg] = None,
+) -> JSXTag:
+    return _nav_tag(
+        "Navs",
+        *args,
+        type="hidden",
+        id=id,
+        selected=selected,
+        header=header,
+        footer=footer,
     )
 
 
