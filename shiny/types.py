@@ -56,3 +56,7 @@ class SilentException(Exception):
 
 class SilentCancelOutputException(Exception):
     pass
+
+
+class ActionButtonValue(int):
+    pass

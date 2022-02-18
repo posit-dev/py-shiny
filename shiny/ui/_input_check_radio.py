@@ -8,6 +8,8 @@ from typing import Optional, Dict, Union, List, Tuple
 
 from htmltools import tags, Tag, div, span, css, TagChildArg
 
+
+from .._docstring import add_example
 from ._utils import shiny_input_label
 
 # Canonical format for representing select options.
@@ -17,9 +19,41 @@ _Choices = Dict[str, TagChildArg]
 ChoicesArg = Union[List[str], _Choices]
 
 
+@add_example()
 def input_checkbox(
     id: str, label: TagChildArg, value: bool = False, width: Optional[str] = None
 ) -> Tag:
+    """
+    Create a checkbox that can be used to specify logical values.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    value
+        Initial value.
+    width
+        The CSS width, e.g. '400px', or '100%'
+
+    Returns
+    -------
+    A UI element.
+
+    Notes
+    ------
+    .. admonition:: Server value
+
+        ``True`` if checked, ``False`` otherwise.
+
+    See Also
+    -------
+    ~shiny.ui.update_checkbox
+    ~shiny.ui.input_checkbox_group
+    ~shiny.ui.input_radio_buttons
+    """
+
     return div(
         div(
             tags.label(
@@ -35,6 +69,7 @@ def input_checkbox(
     )
 
 
+@add_example()
 def input_checkbox_group(
     id: str,
     label: TagChildArg,
@@ -43,6 +78,44 @@ def input_checkbox_group(
     inline: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
+    """
+    Create a group of checkboxes that can be used to toggle multiple choices
+    independently.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    choices
+        Either a list of choices or a dictionary mapping choice values to labels. Note
+        that if a dictionary is provided, the keys are used as the (input) values so
+        that the dictionary values can hold HTML labels.
+    selected
+        The values that should be initially selected, if any.
+    inline
+        If `True`, the result is displayed inline
+    width
+        The CSS width, e.g. '400px', or '100%'
+
+    Returns
+    -------
+    A UI element.
+
+    Notes
+    ------
+    .. admonition:: Server value
+
+        A list of string(s) with the selected value(s) (if any).
+
+    See Also
+    -------
+    ~shiny.ui.update_checkbox_group
+    ~shiny.ui.input_checkbox
+    ~shiny.ui.input_radio_buttons
+    """
+
     input_label = shiny_input_label(id, label)
     options = _generate_options(
         id=id,
@@ -64,6 +137,7 @@ def input_checkbox_group(
     )
 
 
+@add_example()
 def input_radio_buttons(
     id: str,
     label: TagChildArg,
@@ -72,6 +146,42 @@ def input_radio_buttons(
     inline: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
+    """
+    Create a set of radio buttons used to select an item from a list.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    choices
+        Either a list of choices or a dictionary mapping choice values to labels. Note
+        that if a dictionary is provided, the keys are used as the (input) values so
+        that the dictionary values can hold HTML labels.
+    selected
+        The values that should be initially selected, if any.
+    inline
+        If ``True``, the result is displayed inline
+    width
+        The CSS width, e.g. '400px', or '100%'
+    Returns
+    -------
+    A UI element
+
+    Notes
+    ------
+    .. admonition:: Server value
+
+        A string with the selected value.
+
+    See Also
+    -------
+    ~shiny.ui.update_radio_buttons
+    ~shiny.ui.input_checkbox_group
+    ~shiny.ui.input_checkbox
+    """
+
     input_label = shiny_input_label(id, label)
     options = _generate_options(
         id=id,

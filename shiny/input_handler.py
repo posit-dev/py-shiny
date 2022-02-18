@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Callable, Dict, Union, List, Any, TypeVar
 if TYPE_CHECKING:
     from .session import Session
 
+from .types import ActionButtonValue
+
 InputHandlerType = Callable[[Any, str, "Session"], Any]
 
 
@@ -67,10 +69,6 @@ def _(
     if isinstance(value, (int, float)):
         return datetime.utcfromtimestamp(value)
     return [datetime.utcfromtimestamp(v) for v in value]
-
-
-class ActionButtonValue(int):
-    pass
 
 
 @input_handlers.add("shiny.action")

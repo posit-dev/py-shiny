@@ -2,14 +2,35 @@ __all__ = ("Progress",)
 
 from typing import Optional, Dict, Any
 from warnings import warn
+
+from .._docstring import add_example
 from .._utils import run_coro_sync, rand_hex
 from ..session import Session, require_active_session
 
 
+@add_example()
 class Progress:
+    """
+    Initialize a progress bar.
+
+    Parameters
+    ----------
+    min
+        The value that represents the starting point of the progress bar. Must be less
+        than ``max``.
+    max
+        The value that represents the end of the progress bar. Must be greater than
+        ``min``.
+    session
+        The :class:`~shiny.Session` object passed to the server function of a
+        :func:`~shiny.App`.
+    """
+
     _style = "notification"
 
-    def __init__(self, min: int = 0, max: int = 1, session: Optional[Session] = None):
+    def __init__(
+        self, min: int = 0, max: int = 1, session: Optional[Session] = None
+    ) -> None:
         self.min = min
         self.max = max
         self.value = None
@@ -22,10 +43,30 @@ class Progress:
 
     def set(
         self,
-        value: float,
+        value: Optional[float] = None,
         message: Optional[str] = None,
         detail: Optional[str] = None,
     ) -> None:
+        """
+        Updates the progress panel. When called the first time, the progress panel is
+        displayed.
+
+        Parameters
+        ----------
+        self
+            The object instance
+        value
+            The value at which to set the progress bar, relative to ``min`` and ``max``.
+            ``None`` hides the progress bar, if it is currently visible.
+        message
+            The message to be displayed to the user or ``None`` to hide the current
+            message (if any).
+        detail
+            The detail message to be displayed to the user or ``None`` to hide the
+            current detail message (if any). The detail message will be shown with a
+            de-emphasized appearance relative to message.
+        """
+
         if self._closed:
             warn("Attempting to set progress, but progress already closed.")
             return None
@@ -51,6 +92,29 @@ class Progress:
         message: Optional[str] = None,
         detail: Optional[str] = None,
     ) -> None:
+        """
+        Increment the progress bar.
+
+        Parameters
+        ----------
+        self
+            The object instance
+        amount
+            The amount to increment in progress.
+        message
+            The message to be displayed to the user or ``None`` to hide the current
+            message (if any).
+        detail
+            The detail message to be displayed to the user or ``None`` to hide the current
+            detail message (if any). The detail message will be shown with a
+            de-emphasized appearance relative to message.
+
+        Note
+        ----
+        Like ``set``, this updates the progress panel. The difference is that ``inc``
+        increases the progress bar by amount, instead of setting it to a specific value.
+        """
+
         if self.value is None:
             self.value = self.min
 
@@ -58,6 +122,18 @@ class Progress:
         self.set(value, message, detail)
 
     def close(self) -> None:
+        """
+        Close the progress bar.
+
+        Parameters
+        ----------
+        self
+            The object instance
+
+        Note
+        ----
+        Removes the progress panel. Future calls to set and close will be ignored.
+        """
         if self._closed:
             warn("Attempting to close progress, but progress already closed.")
             return None

@@ -15,11 +15,40 @@ else:
 
 from htmltools import tags, Tag, div, HTML, TagChildArg, TagAttrArg
 
-from .._utils import run_coro_sync
+from .._docstring import add_example
 from ..session import Session, require_active_session
+from .._utils import run_coro_sync
 
 
-def modal_button(label: str, icon: TagChildArg = None, **kwargs: TagChildArg) -> Tag:
+def modal_button(
+    label: TagChildArg, icon: TagChildArg = None, **kwargs: TagChildArg
+) -> Tag:
+    """
+    Creates a button that will dismiss a :func:`modal` (useful when customising the
+    ``footer`` of :func:`modal`).
+
+    Parameters
+    ----------
+    label
+        An input label.
+    icon
+        An icon to appear inline with the button/link.
+    kwargs
+        Attributes to be applied to the button.
+    Returns
+    -------
+    A UI element
+
+    Note
+    ----
+    See :func:`modal` for an example.
+
+    See Also
+    -------
+    ~shiny.ui.modal
+    ~shiny.ui.modal_show
+    ~shiny.ui.modal_remove
+    """
     return tags.button(
         icon,
         label,
@@ -31,6 +60,7 @@ def modal_button(label: str, icon: TagChildArg = None, **kwargs: TagChildArg) ->
     )
 
 
+@add_example()
 def modal(
     *args: TagChildArg,
     title: Optional[str] = None,
@@ -40,6 +70,42 @@ def modal(
     fade: bool = True,
     **kwargs: TagAttrArg
 ) -> Tag:
+    """
+    Creates the UI for a modal dialog, using Bootstrap's modal class. Modals are
+    typically used for showing important messages, or for presenting UI that requires
+    input from the user, such as a user name and/or password input.
+
+    Parameters
+    ----------
+    args
+        UI elements for the body of the modal.
+    title
+        An optional title for the modal dialog.
+    footer
+        UI for footer. Use ``None`` for no footer.
+    size
+        One of "s" for small, "m" (the default) for medium, or "l" for large.
+    easy_close
+        If ``True``, the modal dialog can be dismissed by clicking outside the dialog
+        box, or be pressing the Escape key. If ``False`` (the default), the modal dialog
+        can't be dismissed in those ways; instead it must be dismissed by clicking on a
+        ``modal_button()``, or from a call to ``modal_remove()`` on the server.
+    fade
+        If ``False``, the modal dialog will have no fade-in animation (it will simply
+        appear rather than fade in to view).
+    kwargs
+        Attributes to be applied to the modal's body tag.
+
+    Returns
+    -------
+    A UI element
+
+    See Also
+    -------
+    ~shiny.ui.modal_show
+    ~shiny.ui.modal_remove
+    ~shiny.ui.modal_button
+    """
 
     title_div = None
     if title:
@@ -88,11 +154,49 @@ def modal(
 
 
 def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
+    """
+    Show a modal dialog.
+
+    Parameters
+    ----------
+    modal
+        Typically a :func:`modal` instance.
+    session
+        The :class:`~shiny.Session` object passed to the server function of a
+        :func:`~shiny.App`.
+
+    Note
+    ----
+    See :func:`modal` for an example.
+
+    See Also
+    -------
+    ~shiny.ui.modal_remove
+    ~shiny.ui.modal
+    """
     session = require_active_session(session)
     msg = session.process_ui(modal)
     run_coro_sync(session.send_message({"modal": {"type": "show", "message": msg}}))
 
 
 def modal_remove(session: Optional[Session] = None) -> None:
+    """
+    Remove a modal dialog.
+
+    Parameters
+    ----------
+    session
+        The :class:`~shiny.Session` object passed to the server function of a
+        :func:`~shiny.App`.
+
+    Note
+    ----
+    See :func:`modal` for an example.
+
+    See Also
+    -------
+    ~shiny.ui.modal_show
+    ~shiny.ui.modal
+    """
     session = require_active_session(session)
     run_coro_sync(session.send_message({"modal": {"type": "remove", "message": None}}))

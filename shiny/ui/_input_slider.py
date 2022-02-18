@@ -11,6 +11,7 @@ from typing import Dict, Optional, Union, Tuple, TypeVar
 
 from htmltools import tags, Tag, div, css, TagAttrArg, TagChildArg, HTML
 
+from .._docstring import add_example
 from ._html_dependencies import ionrangeslider_deps
 from ..types import TypedDict, NotRequired
 from ._utils import shiny_input_label
@@ -22,12 +23,36 @@ SliderStepArg = Union[float, timedelta]
 
 
 class AnimationOptions(TypedDict):
+    """
+    Options for the animation of a :func:`input_slider`.
+
+    Parameters
+    ----------
+    interval
+        The interval, in milliseconds, between each animation step.
+    loop
+        ``True`` to automatically restart the animation when it reaches the end.
+    play_button
+        Play button text or HTML.
+    pause_button
+        Pause button text or HTML.
+
+    Returns
+    -------
+    A TypedDict.
+
+    See Also
+    --------
+    ~shiny.ui.input_slider
+    """
+
     interval: NotRequired[int]
     loop: NotRequired[bool]
     play_button: NotRequired[TagChildArg]
     pause_button: NotRequired[TagChildArg]
 
 
+@add_example()
 def input_slider(
     id: str,
     label: TagChildArg,
@@ -45,6 +70,69 @@ def input_slider(
     timezone: Optional[str] = None,
     drag_range: bool = True,
 ) -> Tag:
+    """
+    Constructs a slider widget to select a number, date, or date-time from a range.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    min
+        The minimum allowed value.
+    max
+        The maximum allowed value.
+    value
+        Initial value.
+    step
+        Interval to use when stepping between min and max.
+    ticks
+        ``False`` to hide tick marks, ``True`` to show them according to some simple
+        heuristics.
+    animate
+        ``True`` to show simple animation controls with default settings; ``False`` not
+        to; or a custom settings list, such as those created using
+        :class:`AnimationOptions()`.
+    width
+        The CSS width, e.g. '400px', or '100%'
+    sep
+        Separator between thousands places in numbers.
+    pre
+        A prefix string to put in front of the value.
+    post
+        A suffix string to put after the value.
+    time_format
+        Only used if the slider values are :func:`~datetime.date` or
+        :func:`~datetime.datetime` objects. A time format string, to be passed to the
+        Javascript strftime library. See https://github.com/samsonjs/strftime for more
+        details. For Dates, the default is "%F" (like "2015-07-01"), and for Datetimes,
+        the default is "%F %T" (like "2015-07-01 15:32:10").
+    timezone
+        Only used if the values are :func:`~datetime.datetime` objects. A string
+        specifying the time zone offset for the displayed times, in the format "+HHMM"
+        or "-HHMM". If ``None`` (the default), times will be displayed in the browser's
+        time zone. The value "+0000" will result in UTC time.
+    drag_range
+        This option is used only if it is a range slider (with two values). If ``True``
+        (the default), the range can be dragged. In other words, the min and max can be
+        dragged together. If ``False``, the range cannot be dragged.
+
+    Returns
+    -------
+    A UI element
+
+    Notes
+    ------
+    .. admonition:: Server value
+
+       A number, date, or date-time (depending on the class of value), or in the case of
+       slider range, a list of two numbers/dates/date-times.
+
+    See Also
+    -------
+    ~shiny.ui.update_slider
+    """
 
     # Thanks to generic typing, max, value, etc. should be of the same type
     data_type = _slider_type(min)

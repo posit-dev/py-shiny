@@ -4,9 +4,11 @@ from typing import Optional
 
 from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
 
+from .._docstring import add_example
 from .._shinyenv import is_pyodide
 
 
+@add_example()
 def download_button(
     id: str,
     label: TagChildArg,
@@ -14,6 +16,32 @@ def download_button(
     width: Optional[str] = None,
     **kwargs: TagAttrArg,
 ) -> Tag:
+    """
+    Create a download button
+
+    Parameters
+    ----------
+    id
+        An id for the download.
+    label
+        An input label.
+    icon
+        An icon to display on the button.
+    width
+        The width of the button.
+    kwargs
+        Additional attributes for the button.
+
+    Returns
+    -------
+    A UI element
+
+    See Also
+    --------
+    ~shiny.Session.download
+    ~shiny.ui.download_link
+    """
+
     return tags.a(
         icon,
         label,
@@ -33,6 +61,7 @@ def download_button(
     )
 
 
+@add_example()
 def download_link(
     id: str,
     label: TagChildArg,
@@ -40,6 +69,32 @@ def download_link(
     width: Optional[str] = None,
     **kwargs: TagAttrArg,
 ) -> Tag:
+    """
+    Create a download button
+
+    Parameters
+    ----------
+    id
+        An id for the download.
+    label
+        An input label.
+    icon
+        An icon to display on the button.
+    width
+        The width of the button.
+    kwargs
+        Additional attributes for the button.
+
+    Returns
+    -------
+    A UI element
+
+    See Also
+    --------
+    ~shiny.Session.download
+    ~shiny.ui.download_link
+    """
+
     return tags.a(
         icon,
         label,

@@ -4,9 +4,11 @@ from typing import Optional
 
 from htmltools import tags, Tag, div, css, TagChildArg
 
+from .._docstring import add_example
 from ._utils import shiny_input_label
 
 
+@add_example()
 def input_text(
     id: str,
     label: TagChildArg,
@@ -14,6 +16,38 @@ def input_text(
     width: Optional[str] = None,
     placeholder: Optional[str] = None,
 ) -> Tag:
+    """
+    Create an input control for entry of unstructured text values
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    value
+        Initial value.
+    width
+        The CSS width, e.g. '400px', or '100%'
+    placeholder
+        A hint as to what can be entered into the control.
+
+    Returns
+    -------
+    A UI element
+
+    Notes
+    ------
+    .. admonition:: Server value
+
+        A string containing the current text input. The default value is ``""`` unless ``value`` is
+    provided.
+
+    See Also
+    -------
+    ~shiny.ui.input_text_area
+    """
+
     return div(
         shiny_input_label(id, label),
         tags.input(
@@ -28,6 +62,7 @@ def input_text(
     )
 
 
+@add_example()
 def input_text_area(
     id: str,
     label: TagChildArg,
@@ -39,6 +74,51 @@ def input_text_area(
     placeholder: Optional[str] = None,
     resize: Optional[str] = None,
 ) -> Tag:
+    """
+    Create a textarea input control for entry of unstructured text values.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    value
+        Initial value.
+    width
+        The CSS width, e.g. '400px', or '100%'
+    height
+        The CSS height, e.g. '400px', or '100%'
+    cols
+        Value of the visible character columns of the input, e.g. 80. This argument will
+        only take effect if there is not a CSS width rule defined for this element; such
+        a rule could come from the width argument of this function or from a containing
+        page layout such as :func:`~shiny.ui.page_fluid`.
+    rows
+        The value of the visible character rows of the input, e.g. 6. If the height
+        argument is specified, height will take precedence in the browser's rendering.
+    placeholder
+        A hint as to what can be entered into the control.
+    resize
+        Which directions the textarea box can be resized. Can be one of "both", "none",
+        "vertical", and "horizontal". The default, ``None``, will use the client
+        browser's default setting for resizing textareas.
+
+    Returns
+    -------
+    A UI element
+
+    Notes
+    ------
+    .. admonition:: Server value
+
+        A string containing the current text input. The default value is ``""`` unless
+        ``value`` is provided.
+
+    See Also
+    -------
+    ~shiny.ui.input_text
+    """
 
     if resize and resize not in ["none", "both", "horizontal", "vertical"]:
         raise ValueError("Invalid resize value: " + str(resize))
