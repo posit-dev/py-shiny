@@ -58,8 +58,8 @@ def insert_ui(
         Shiny should wait until all outputs have been updated and all effects have been
         run (default).
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     Note
     ----
@@ -120,8 +120,8 @@ def remove_ui(
         Shiny should wait until all outputs have been updated and all effects have been
         run (default).
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     See Also
     -------

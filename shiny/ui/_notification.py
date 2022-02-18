@@ -50,8 +50,8 @@ def notification_show(
         A string which controls the color of the notification. One of "default" (gray),
         "message" (blue), "warning" (yellow), or "error" (red).
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     Returns
     -------
@@ -97,8 +97,8 @@ def notification_remove(id: str, session: Optional[Session] = None) -> str:
     id
         A notification ``id``.
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     Returns
     -------

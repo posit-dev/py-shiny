@@ -15,11 +15,11 @@ __all__ = (
     "render_ui",
 )
 
-import sys
-import os
-import io
 import base64
+import io
 import mimetypes
+import os
+import sys
 from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union
 import typing
 
@@ -28,15 +28,13 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal
 
-
 from htmltools import TagChildArg
 
 if TYPE_CHECKING:
     from ..session import Session
 
-from .. import _utils
 from ..types import ImgData
-
+from .. import _utils
 
 # ======================================================================================
 # RenderFunction/RenderFunctionAsync base class
@@ -81,9 +79,9 @@ class RenderText(RenderFunction):
         self._fn: RenderTextFuncAsync = _utils.wrap_async(fn)
 
     def __call__(self) -> Union[str, None]:
-        return _utils.run_coro_sync(self.run())
+        return _utils.run_coro_sync(self._run())
 
-    async def run(self) -> Union[str, None]:
+    async def _run(self) -> Union[str, None]:
         return await self._fn()
 
 
@@ -94,10 +92,29 @@ class RenderTextAsync(RenderText, RenderFunctionAsync):
         super().__init__(typing.cast(RenderTextFunc, fn))
 
     async def __call__(self) -> Union[str, None]:  # type: ignore
-        return await self.run()
+        return await self._run()
 
 
 def render_text() -> Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], RenderText]:
+    """
+    Reactively render text.
+
+    Returns
+    -------
+    A decorator for a function that returns a string.
+
+    Note
+    ----
+    This decorator should be applied **before** the ``@output`` decorator. Also, the
+    name of the decorated function (or ``@output(name=...)``) should match the ``id`` of
+    a :func:`~shiny.ui.output_text` container (see :func:`~shiny.ui.output_text` for
+    example usage).
+
+    See Also
+    --------
+    ~shiny.ui.output_text
+    """
+
     def wrapper(fn: Union[RenderTextFunc, RenderTextFuncAsync]) -> RenderText:
         if _utils.is_async_callable(fn):
             return RenderTextAsync(fn)
@@ -131,9 +148,9 @@ class RenderPlot(RenderFunction):
         self._fn: RenderPlotFuncAsync = _utils.wrap_async(fn)
 
     def __call__(self) -> object:
-        return _utils.run_coro_sync(self.run())
+        return _utils.run_coro_sync(self._run())
 
-    async def run(self) -> object:
+    async def _run(self) -> object:
         # Reactively read some information about the plot.
         pixelratio: float = typing.cast(
             float, self._session.input[".clientdata_pixelratio"]()
@@ -182,13 +199,39 @@ class RenderPlotAsync(RenderPlot, RenderFunctionAsync):
         super().__init__(typing.cast(RenderPlotFunc, fn), alt=alt)
 
     async def __call__(self) -> object:
-        return await self.run()
+        return await self._run()
 
 
 # TODO: Use more specific types for render_plot
 def render_plot(
     alt: Optional[str] = None,
 ) -> Callable[[Union[RenderPlotFunc, RenderPlotFuncAsync]], RenderPlot]:
+    """
+    Reactively render a plot object as an HTML image.
+
+    Parameters
+    ----------
+    alt
+        Alternative text for the image if it cannot be displayed or viewed (i.e., the
+        user uses a screen reader).
+
+    Returns
+    -------
+    A decorator for a function that returns a ``matplotlib`` or ``PIL`` figure.
+
+    Note
+    ----
+    This decorator should be applied **before** the ``@output`` decorator. Also, the
+    name of the decorated function (or ``@output(name=...)``) should match the ``id`` of
+    a :func:`~shiny.ui.output_plot` container (see :func:`~shiny.ui.output_plot` for
+    example usage).
+
+    See Also
+    --------
+    ~shiny.ui.output_plot
+    ~shiny.render_image
+    """
+
     def wrapper(fn: Union[RenderPlotFunc, RenderPlotFuncAsync]) -> RenderPlot:
         if _utils.is_async_callable(fn):
             return RenderPlotAsync(fn, alt=alt)
@@ -304,9 +347,9 @@ class RenderImage(RenderFunction):
         self._fn: RenderImageFuncAsync = _utils.wrap_async(fn)
 
     def __call__(self) -> object:
-        return _utils.run_coro_sync(self.run())
+        return _utils.run_coro_sync(self._run())
 
-    async def run(self) -> object:
+    async def _run(self) -> object:
         res: ImgData = await self._fn()
         src: str = res.get("src")
         try:
@@ -328,12 +371,38 @@ class RenderImageAsync(RenderImage, RenderFunctionAsync):
         super().__init__(typing.cast(RenderImageFunc, fn), delete_file=delete_file)
 
     async def __call__(self) -> object:
-        return await self.run()
+        return await self._run()
 
 
 def render_image(
     delete_file: bool = False,
 ) -> Callable[[Union[RenderImageFunc, RenderImageFuncAsync]], RenderImage]:
+    """
+    Reactively render a image file as an HTML image.
+
+    Parameters
+    ----------
+    delete_file
+        If ``True``, the image file will be deleted after rendering.
+
+    Returns
+    -------
+    A decorator for a function that returns an `~shiny.types.ImgData` object.
+
+    Note
+    ----
+    This decorator should be applied **before** the ``@output`` decorator. Also, the
+    name of the decorated function (or ``@output(name=...)``) should match the ``id`` of
+    a :func:`~shiny.ui.output_image` container (see :func:`~shiny.ui.output_image` for
+    example usage).
+
+    See Also
+    --------
+    ~shiny.ui.output_image
+    ~shiny.types.ImgData
+    ~shiny.render_plot
+    """
+
     def wrapper(fn: Union[RenderImageFunc, RenderImageFuncAsync]) -> RenderImage:
         if _utils.is_async_callable(fn):
             return RenderImageAsync(fn, delete_file=delete_file)
@@ -360,9 +429,9 @@ class RenderUI(RenderFunction):
         self._fn: RenderUIFuncAsync = _utils.wrap_async(fn)
 
     def __call__(self) -> object:
-        return _utils.run_coro_sync(self.run())
+        return _utils.run_coro_sync(self._run())
 
-    async def run(self) -> object:
+    async def _run(self) -> object:
         ui: TagChildArg = await self._fn()
         if ui is None:
             return None
@@ -377,10 +446,29 @@ class RenderUIAsync(RenderUI, RenderFunctionAsync):
         super().__init__(typing.cast(RenderUIFunc, fn))
 
     async def __call__(self) -> object:
-        return await self.run()
+        return await self._run()
 
 
 def render_ui() -> Callable[[Union[RenderUIFunc, RenderUIFuncAsync]], RenderUI]:
+    """
+    Reactively render HTML content.
+
+    Returns
+    -------
+    A decorator for a function that returns an object of type `~shiny.ui.TagChildArg`.
+
+    Note
+    ----
+    This decorator should be applied **before** the ``@output`` decorator. Also, the
+    name of the decorated function (or ``@output(name=...)``) should match the ``id`` of
+    a :func:`~shiny.ui.output_ui` container (see :func:`~shiny.ui.output_ui` for example
+    usage).
+
+    See Also
+    --------
+    ~shiny.ui.output_ui
+    """
+
     def wrapper(
         fn: Union[Callable[[], TagChildArg], Callable[[], Awaitable[TagChildArg]]]
     ) -> RenderUI:

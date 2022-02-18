@@ -36,7 +36,8 @@ def output_plot(
 
     Note
     ----
-    Currently only supports ``matplotlib`` and ``PIL`` figures.
+    See :func:`~shiny.render_plot` for more details on what types of plots are
+    supported.
 
     See Also
     -------

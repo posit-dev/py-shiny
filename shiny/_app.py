@@ -148,7 +148,7 @@ class App:
         conn = StarletteConnection(ws)
         session = self.create_session(conn)
 
-        await session.run()
+        await session._run()
 
     async def _on_session_request_cb(self, request: Request) -> ASGIApp:
         """

@@ -17,6 +17,7 @@ from typing import (
 import warnings
 
 from ._core import Context, Dependents, ReactiveWarning
+from .._docstring import add_example
 from .. import _utils
 from ..types import MISSING, MISSING_TYPE, SilentException
 
@@ -28,7 +29,41 @@ T = TypeVar("T")
 # ==============================================================================
 # Value
 # ==============================================================================
+@add_example()
 class Value(Generic[T]):
+    """
+    Create a reactive value
+
+    Parameters
+    ----------
+    value
+        An optional initial value.
+    read_only
+        If ``True``, then the reactive value cannot be `set()`.
+
+    Returns
+    -------
+    An instance of a reactive value.
+
+    Raises
+    ------
+    ~shiny.types.SilentException
+        If :func:`~Value.get` is called before a value is provided/set.
+
+    Note
+    ----
+    A reactive value may only be read from within a reactive function (e.g.,
+    :func:`Calc`, :func:`Effect`, :func:`shiny.render_text`, etc.) and, when doing so,
+    the function takes a reactive dependency on the value (i.e., when the value changes,
+    the calling reactive function will re-execute).
+
+    See Also
+    --------
+    ~shiny.Inputs
+    Calc
+    Effect
+    """
+
     # These overloads are necessary so that the following hold:
     # - Value() is marked by the type checker as an error, because the type T is
     #   unknown. (It is not a run-time error.)
@@ -59,6 +94,21 @@ class Value(Generic[T]):
         return self.get()
 
     def get(self) -> T:
+        """
+        Read the reactive value.
+
+        Returns
+        -------
+        The reactive value.
+
+        Raises
+        ------
+        ~shiny.types.SilentException
+            If the value is not set.
+        RuntimeError
+            If called from outside a reactive function.
+        """
+
         self._value_dependents.register()
 
         if isinstance(self._value, MISSING_TYPE):
@@ -67,6 +117,23 @@ class Value(Generic[T]):
         return self._value
 
     def set(self, value: T) -> bool:
+        """
+        Set the reactive value to a new value.
+
+        Parameters
+        ----------
+        value
+            A value.
+
+        Returns
+        -------
+        ``True`` if the value was set to a different value and ``False`` otherwise.
+
+        Raises
+        ------
+        RuntimeError
+            If called on a read-only reactive value.
+        """
         if self._read_only:
             raise RuntimeError(
                 "Can't set read-only Value. If you are trying to set an input value, use `update_xxx()` instead."
@@ -87,14 +154,36 @@ class Value(Generic[T]):
         return True
 
     def unset(self) -> None:
+        """
+        Unset the reactive value.
+
+        Returns
+        -------
+        ``True`` if the value was set prior to this unsetting.
+        """
         self.set(MISSING)  # type: ignore
 
     def is_set(self) -> bool:
+        """
+        Check if the reactive value is set.
+
+        Returns
+        -------
+        ``True`` if the value is set, ``False`` otherwise.
+        """
+
         self._is_set_dependents.register()
         return not isinstance(self._value, MISSING_TYPE)
 
-    # Like unset(), except that this does not invalidate dependents.
     def freeze(self) -> None:
+        """
+        Freeze the reactive value.
+
+        Note
+        ----
+        Freezing is equivalent to unsetting the value, but it does not invalidate
+        dependents.
+        """
         self._value = MISSING
 
 
@@ -107,6 +196,15 @@ CalcFunctionAsync = Callable[[], Awaitable[T]]
 
 
 class Calc_(Generic[T]):
+    """
+    Mark a function as a reactive calculation.
+
+    Warning
+    -------
+    Most users shouldn't use this class directly to initialize a reactive calculation
+    (instead, use the :func:`Calc` decorator).
+    """
+
     def __init__(
         self,
         fn: CalcFunction[T],
@@ -154,6 +252,7 @@ class Calc_(Generic[T]):
         # If the Coroutine yields control, then an error will be raised.
         return _utils.run_coro_sync(self.get_value())
 
+    # TODO: should this be private?
     async def get_value(self) -> T:
         self._dependents.register()
 
@@ -165,6 +264,7 @@ class Calc_(Generic[T]):
 
         return self._value[0]
 
+    # TODO: should this be private?
     async def update_value(self) -> None:
         self._ctx = Context()
         self._most_recent_ctx_id = self._ctx.id
@@ -201,6 +301,15 @@ class Calc_(Generic[T]):
 
 
 class CalcAsync_(Calc_[T]):
+    """
+    Mark an async function as a reactive calculation.
+
+    Warning
+    -------
+    Most users shouldn't use this class directly to initialize a reactive calculation
+    (instead, use the :func:`Calc` decorator).
+    """
+
     def __init__(
         self,
         fn: CalcFunctionAsync[T],
@@ -235,9 +344,45 @@ class CalcAsync_(Calc_[T]):
 # twice: once here, and once when we return a Calc object (which has a synchronous
 # __call__ method) or CalcAsync object (which has an async __call__ method), and it
 # works out.
+@add_example()
 def Calc(
     *, session: Union[MISSING_TYPE, "Session", None] = MISSING
 ) -> Callable[[CalcFunction[T]], Calc_[T]]:
+    """
+    Mark a function as a reactive calculation.
+
+    Parameters
+    ----------
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
+
+    Returns
+    -------
+    A decorator that marks a function as a reactive calculation.
+
+    Note
+    ----
+    A reactive calculation is a function whose return value depends solely on other
+    reactive value(s) (i.e., :class:`~shiny.Inputs`, :class:`~shiny.reactive.Value`(s),
+    and other reactive calculations). Whenever a reactive value changes, any reactive
+    calculations that depend on it are "invalidated" and automatically re-execute when
+    necessary. If a reactive calculation is marked as invalidated, any other reactive
+    calculations that recently called it are also marked as invalidated. In this way,
+    invalidations ripple through reactive calculations that depend on each other.
+
+    Reactive calculations should not produce any side effects; to reactively produce
+    side effects, use :func:`~shiny.reactive.Effect` instead.
+
+    See Also
+    --------
+    ~shiny.Inputs
+    ~shiny.reactive.Value
+    ~shiny.reactive.Effect
+    ~shiny.reactive.invalidate_later
+    ~shiny.event
+    """
+
     def create_calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc_[T]:
         if _utils.is_async_callable(fn):
             return CalcAsync_(fn, session=session)
@@ -257,6 +402,15 @@ EffectFunctionAsync = Callable[[], Awaitable[None]]
 
 
 class Effect_:
+    """
+    Mark a function as a reactive side effect.
+
+    Warning
+    -------
+    Most users shouldn't use this class directly to initialize a reactive side effect
+    (instead, use the :func:`Effect` decorator).
+    """
+
     def __init__(
         self,
         fn: Union[EffectFunction, EffectFunctionAsync],
@@ -330,14 +484,14 @@ class Effect_:
 
         async def on_flush_cb() -> None:
             if not self._destroyed:
-                await self.run()
+                await self._run()
 
         ctx.on_invalidate(on_invalidate_cb)
         ctx.on_flush(on_flush_cb)
 
         return ctx
 
-    async def run(self) -> None:
+    async def _run(self) -> None:
         ctx = self._create_context()
         self._exec_count += 1
 
@@ -358,9 +512,26 @@ class Effect_:
                     await self._session.unhandled_error(e)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
+        """
+        Register a callback that will be called when this reactive effect is
+        invalidated.
+
+        Parameters
+        ----------
+        callback
+            A callback that will be called when this reactive effect is invalidated.
+        """
         self._invalidate_callbacks.append(callback)
 
     def destroy(self) -> None:
+        """
+        Destroy this reactive effect.
+
+        Note
+        ----
+        Stops the observer from executing ever again, even if it is currently scheduled
+        for re-execution.
+        """
         self._destroyed = True
 
         if self._ctx is not None:
@@ -368,17 +539,25 @@ class Effect_:
 
     def suspend(self) -> None:
         """
-        Causes this observer to stop scheduling flushes (re-executions) in response to
-        invalidations. If the observer was invalidated prior to this call but it has not
-        re-executed yet (because it waits until on_flush is called) then that
-        re-execution will still occur, because the flush is already scheduled.
+        Suspend the effect.
+
+        Note
+        ----
+        Pauses scheduling of flushes (re-executions) in response to invalidations. If
+        the effect was invalidated prior to this call but it has not re-executed yet
+        (because it waits until on_flush is called) then that re-execution will still
+        occur, because the flush is already scheduled.
         """
         self._suspended = True
 
     def resume(self) -> None:
         """
-        Causes this observer to start re-executing in response to invalidations. If the
-        observer was invalidated while suspended, then it will schedule itself for
+        Resume the effect.
+
+        Note
+        ----
+        Causes this effect to start re-executing in response to invalidations. If the
+        effect was invalidated while suspended, then it will schedule itself for
         re-execution (pending flush).
         """
         if self._suspended:
@@ -388,10 +567,20 @@ class Effect_:
 
     def set_priority(self, priority: int = 0) -> None:
         """
-        Change this observer's priority. Note that if the observer is currently
-        invalidated, then the change in priority will not take effect until the next
-        invalidation--unless the observer is also currently suspended, in which case the
-        priority change will be effective upon resume.
+        Control the execution priority for this effect.
+
+        Parameters
+        ----------
+        priority
+            The new priority. A higher value means higher priority: an effect with a
+            higher priority value will execute before all effects with lower priority
+            values. Positive, negative, and zero values are allowed.
+
+        Note
+        ----
+        If the observer is currently invalidated, then the change in priority will not
+        take effect until the next invalidation--unless the observer is also currently
+        suspended, in which case the priority change will be effective upon resume.
         """
         self._priority = priority
 
@@ -399,12 +588,55 @@ class Effect_:
         self.destroy()
 
 
+@add_example()
 def Effect(
     *,
     suspended: bool = False,
     priority: int = 0,
     session: Union[MISSING_TYPE, "Session", None] = MISSING,
 ) -> Callable[[Union[EffectFunction, EffectFunctionAsync]], Effect_]:
+    """
+    Mark a function as a reactive side effect.
+
+    Parameters
+    ----------
+    suspended
+        If ``TRUE``, start the effect in a suspended state (i.e., it will not
+        execute until resumed and invalidated).
+    priority
+        The new priority. A higher value means higher priority: an effect with a
+        higher priority value will execute before all effects with lower priority
+        values. Positive, negative, and zero values are allowed.
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
+
+    Returns
+    -------
+    A decorator that marks a function as a reactive calculation.
+
+    Note
+    ----
+    A reactive calculation is a function whose return value depends solely on other
+    reactive value(s) (i.e., :class:`~shiny.Inputs`, :class:`~shiny.reactive.Value`(s),
+    and other reactive calculations). Whenever a reactive value changes, any reactive
+    calculations that depend on it are "invalidated" and automatically re-execute when
+    necessary. If a reactive calculation is marked as invalidated, any other reactive
+    calculations that recently called it are also marked as invalidated. In this way,
+    invalidations ripple through reactive calculations that depend on each other.
+
+    Reactive calculations should not produce any side effects; to reactively produce
+    side effects, use :func:`~shiny.reactive.Effect` instead.
+
+    See Also
+    --------
+    ~shiny.Inputs
+    ~shiny.reactive.Value
+    ~shiny.reactive.Effect
+    ~shiny.reactive.invalidate_later
+    ~shiny.event
+    """
+
     def create_effect(fn: Union[EffectFunction, EffectFunctionAsync]) -> Effect_:
         fn = cast(EffectFunction, fn)
         return Effect_(fn, suspended=suspended, priority=priority, session=session)

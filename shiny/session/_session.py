@@ -165,7 +165,7 @@ class Session:
         await self._conn.close(code, None)
         self._run_session_end_tasks()
 
-    async def run(self) -> None:
+    async def _run(self) -> None:
         await self.send_message(
             {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
         )

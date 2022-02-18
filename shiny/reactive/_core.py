@@ -12,6 +12,7 @@ from typing import Callable, Optional, Awaitable, TypeVar
 import warnings
 
 from .._datastructures import PriorityQueueFIFO
+from .._docstring import add_example
 from .. import _utils
 
 T = TypeVar("T")
@@ -170,13 +171,33 @@ class ReactiveEnvironment:
 _reactive_environment = ReactiveEnvironment()
 
 
+@add_example()
 @contextlib.contextmanager
 def isolate():
     """
-    Can be used via `with isolate():` to wrap code blocks whose reactive reads should
-    not result in reactive dependencies being taken (that is, we want to read reactive
-    values but are not interested in automatically reexecuting when those particular
-    values change).
+    Create a non-reactive scope within a reactive scope.
+
+    Returns
+    -------
+    A context manager that executes the given expression in a scope where reactive
+    values can be read, but do not cause the reactive scope of the caller to be
+    re-evaluated when they change.
+
+    Note
+    ----
+    Ordinarily, the simple act of reading a reactive value causes a relationship to be
+    established between the caller and the reactive value, where a change to the
+    reactive value will cause the caller to re-execute. (The same applies for the act of
+    getting a reactive expression's value.) `with isolate()` lets you read a
+    reactive value or expression without establishing this relationship.
+
+    `with isolate()` can also be useful for calling reactive expression at the console,
+    which can be useful for debugging. To do so, simply wrap the calls to the reactive
+    expression with isolate().
+
+    See Also
+    --------
+    ~shiny.event
     """
     with _reactive_environment.isolate():
         yield
@@ -187,12 +208,39 @@ def get_current_context() -> Context:
 
 
 async def flush() -> None:
+    """
+    Run any pending invalidations (i.e., flush the reactive environment).
+
+    Warning
+    -------
+    This function shouldn't ever need to be called inside a Shiny app. It's only
+    useful for testing and running reactive code interactively in the console.
+    """
     await _reactive_environment.flush()
 
 
 def on_flushed(
     func: Callable[[], Awaitable[None]], once: bool = False
 ) -> Callable[[], None]:
+    """
+    Register a function to be called when the reactive environment is flushed
+
+    Parameters
+    ----------
+    func
+        The function to be called when the reactive environment is flushed
+    once
+        If True, the function will only be called once, and then removed from the
+
+    Returns
+    -------
+    A function that can be used to unregister the callback.
+
+    See Also
+    --------
+    flush
+    """
+
     return _reactive_environment.on_flushed(func, once)
 
 
@@ -201,7 +249,29 @@ def lock() -> asyncio.Lock:
     return _reactive_environment.lock
 
 
+@add_example()
 def invalidate_later(delay: float) -> None:
+    """
+    Scheduled Invalidation
+
+    Schedules the current reactive context to be invalidated in the given number of
+    seconds.
+
+    Parameters
+    ----------
+    delay
+        The number of seconds to wait before invalidating.
+
+    Note
+    ----
+    When called within a reactive function (i.e., :func:`Effect`, :func:`Calc`,
+    :func:`render_ui`, etc.), that reactive context is invalidated (and re-executes)
+    after the interval has passed. The re-execution will reset the invalidation flag, so
+    in a typical use case, the object will keep re-executing and waiting for the
+    specified interval. It's possible to stop this cycle by adding conditional logic
+    that prevents the ``invalidate_later`` from being run.
+    """
+
     ctx = get_current_context()
     # Pass an absolute time to our subtask, rather than passing the delay directly, in
     # case the subtask doesn't get a chance to start sleeping until a significant amount

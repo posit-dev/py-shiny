@@ -76,8 +76,8 @@ def update_action_button(
     icon
         An icon to appear inline with the button/link.
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     Note
     ----
@@ -122,8 +122,8 @@ def update_checkbox(
     value
         A new value.
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     Note
     ----
@@ -168,8 +168,8 @@ def update_checkbox_group(
     inline
         If ``True``, the result is displayed inline
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     Note
     ----
@@ -220,8 +220,8 @@ def update_radio_buttons(
     inline
         If ``True```, the result is displayed inline
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     Note
     ----
@@ -295,8 +295,8 @@ def update_date(
     max
         The maximum allowed value.
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     Note
     ----
@@ -351,8 +351,8 @@ def update_date_range(
     max
         The maximum allowed value.
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     Note
     ----
@@ -460,8 +460,8 @@ def update_select(
     labels. selected
         The values that should be initially selected, if any.
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     Note
     ----
@@ -541,8 +541,8 @@ def update_slider(
         or "-HHMM". If ``None`` (the default), times will be displayed in the browser's
         time zone. The value "+0000" will result in UTC time.
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     Note
     ----
@@ -607,8 +607,8 @@ def update_text(
     placeholder
         A hint as to what can be entered into the control.
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     Note
     ----
@@ -648,8 +648,8 @@ def update_navs(
     selected
         The values that should be initially selected, if any.
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
 
     Note
     ----

@@ -22,8 +22,8 @@ class Progress:
         The value that represents the end of the progress bar. Must be greater than
         ``min``.
     session
-        The :class:`~shiny.Session` object passed to the server function of a
-        :func:`~shiny.App`.
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:~`shiny.session.get_current_session`.
     """
 
     _style = "notification"
