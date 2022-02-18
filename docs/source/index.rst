@@ -183,6 +183,9 @@ Create, run, stop, and hook into the lifecycle of Shiny applications.
 
     ~shiny.App
     ~shiny.run_app
+    ~shiny.Inputs
+    ~shiny.Outputs
+    ~shiny.Session
 
 Display messages
 ~~~~~~~~~~~~~~~~

@@ -104,3 +104,4 @@ ENV/
 typings/
 
 docs/source/generated/
+docs/source/reference/
