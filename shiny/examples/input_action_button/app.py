@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 app_ui = ui.page_fluid(
     ui.input_slider("n", "Number of observations", 0, 1000, 500),
     ui.input_action_button("go", "Go!", class_="btn-success"),
-    ui.output_plot("plt"),
+    ui.output_plot("plot"),
 )
 
 
@@ -15,7 +15,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     # Use event() to invalidate the plot only when the button is pressed
     # (not when the slider is changed)
     @event(lambda: input.go, ignore_none=False)
-    def plt():
+    def plot():
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(input.n())
         fig, ax = plt.subplots()

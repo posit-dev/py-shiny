@@ -1,3 +1,4 @@
+from ntpath import join
 import os
 from typing import Callable, Any, TypeVar
 
@@ -14,17 +15,32 @@ def add_example() -> Callable[[F], F]:
         if not os.path.exists(example_file):
             raise ValueError(f"No example for {fn_name}")
 
-        with open(example_file) as f:
-            example = [" " * 8 + x for x in f.readlines()]
-            example = "".join(example)
-
         if func.__doc__ is None:
             func.__doc__ = ""
 
-        func.__doc__ += (
-            f"\n\n    Examples\n    --------\n\n    .. code-block:: python\n\n{example}"
+        # How many spaces should there be before the example section?
+        # (yes, leading white-space is important :eye-roll:)
+        doc = func.__doc__.replace("\n", "")
+        indent = " " * (len(doc) - len(doc.lstrip()))
+
+        example_section = ("\n" + indent).join(
+            [
+                "",
+                "",
+                "Example",
+                "-------",
+                "",
+                ".. code-block:: python",
+                "",
+            ]
         )
 
+        with open(example_file) as f:
+            exindent = indent + " " * 4
+            example = [exindent + x for x in f.readlines()]
+            example = "".join(example)
+
+        func.__doc__ += example_section + "\n" + example
         return func
 
     return _

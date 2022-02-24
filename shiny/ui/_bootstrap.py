@@ -46,6 +46,13 @@ def row(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
     """
     Responsive row-column based layout
 
+    Layout UI components using Bootstrap's grid layout system. Use ``row()`` to group
+    elements that should appear on the same line (if the browser has adequate width) and
+    :func:`~shiny.ui.column` to define how much horizontal space within a 12-unit wide
+    grid each on of these elements should occupy. See the `layout guide
+    <https://shiny.rstudio.com/articles/layout-guide.html>`_ for more context and
+    examples.
+
     Parameters
     ----------
     args
@@ -56,15 +63,6 @@ def row(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
     Returns
     -------
     A UI element
-
-    Note
-    ----
-    Layout UI components using Bootstrap's grid layout system. Use ``row()`` to group
-    elements that should appear on the same line (if the browser has adequate width) and
-    :func:`~shiny.ui.column` to define how much horizontal space within a 12-unit wide
-    grid each on of these elements should occupy. See the `layout guide
-    <https://shiny.rstudio.com/articles/layout-guide.html>`_ for more context and
-    examples.
 
     See Also
     -------
@@ -78,6 +76,8 @@ def column(
 ) -> Tag:
     """
     Responsive row-column based layout
+
+    See :func:`~shiny.ui.row` for more information.
 
     Parameters
     ----------
@@ -93,10 +93,6 @@ def column(
     Returns
     -------
     A UI element
-
-    Note
-    ----
-    See :func:`~shiny.ui.row` for more information.
 
     See Also
     -------
@@ -125,6 +121,11 @@ def layout_sidebar(
     """
     Layout a sidebar and main area
 
+    Create a layout with a sidebar (:func:`~shiny.ui.panel_sidebar`) and main area
+    (:func:`~shiny.ui.panel_main`). The sidebar is displayed with a distinct background
+    color and typically contains input controls. By default, the main area occupies 2/3
+    of the horizontal width and typically contains outputs.
+
     Parameters
     ----------
     sidebar
@@ -140,13 +141,6 @@ def layout_sidebar(
     -------
     A UI element
 
-    Note
-    ----
-    Create a layout with a sidebar (:func:`~shiny.ui.panel_sidebar`) and main area
-    (:func:`~shiny.ui.panel_main`). The sidebar is displayed with a distinct background
-    color and typically contains input controls. By default, the main area occupies 2/3
-    of the horizontal width and typically contains outputs.
-
     See Also
     -------
     :func:`~shiny.ui.panel_sidebar`
@@ -159,6 +153,9 @@ def panel_well(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
     """
     Create a well panel
 
+    Creates a panel with a slightly inset border and grey background. Equivalent to
+    Bootstrap's ``well`` CSS class.
+
     Parameters
     ----------
     args
@@ -169,11 +166,6 @@ def panel_well(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
     Returns
     -------
     A UI element
-
-    Note
-    ----
-    Creates a panel with a slightly inset border and grey background. Equivalent to
-    Bootstrap's ``well`` CSS class.
 
     See Also
     -------
@@ -186,6 +178,8 @@ def panel_well(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
 def panel_sidebar(*args: TagChildArg, width: int = 4, **kwargs: TagAttrArg) -> Tag:
     """
     Create a sidebar panel
+
+    See :func:`~shiny.ui.layout_sidebar` for more information and an example.
 
     Parameters
     ----------
@@ -200,10 +194,6 @@ def panel_sidebar(*args: TagChildArg, width: int = 4, **kwargs: TagAttrArg) -> T
     Returns
     -------
     A UI element
-
-    Note
-    ----
-    See :func:`~shiny.ui.layout_sidebar` for more information and an example.
 
     See Also
     -------
@@ -221,6 +211,8 @@ def panel_main(*args: TagChildArg, width: int = 8, **kwargs: TagAttrArg) -> Tag:
     """
     Create an main area panel
 
+    See :func:`~shiny.ui.layout_sidebar` for more information and an example.
+
     Parameters
     ----------
     args
@@ -233,10 +225,6 @@ def panel_main(*args: TagChildArg, width: int = 8, **kwargs: TagAttrArg) -> Tag:
     Returns
     -------
     A UI element
-
-    Note
-    ----
-    See :func:`~shiny.ui.layout_sidebar` for more information and an example.
 
     See Also
     -------
@@ -266,6 +254,8 @@ def panel_conditional(
     """
     Create a conditional panel
 
+    Show UI elements only if a ``JavaScript`` condition is ``true``.
+
     Parameters
     ----------
     condition
@@ -291,6 +281,16 @@ def panel_conditional(
     the input id's, but if you do use them anyway, for example, ``id = "foo.bar"``, you
     will have to use ``input["foo.bar"]`` instead of ``input.foo.bar`` to read the input
     value.
+
+    Tip
+    ---
+    A more powerful (but slower) way to conditionally show UI content is to use
+    :func:`~shiny.render_ui`.
+
+    See Also
+    -------
+    ~shiny.render_ui
+    ~shiny.ui.output_ui
     """
     # TODO: do we need a shiny::NS() equivalent?
     ns: Callable[[str], str] = lambda x: x
@@ -333,6 +333,10 @@ def panel_fixed(*args: TagChildArg, **kwargs: TagAttrArg) -> TagList:
     """
     Create a panel of absolutely positioned content.
 
+    This function is equivalent to calling :func:`~shiny.ui.panel_absolute` with
+    ``fixed=True`` (i.e., the panel does not scroll with the rest of the page). See
+    :func:`~shiny.ui.panel_absolute` for more information.
+
     Parameters
     ----------
     args
@@ -343,13 +347,6 @@ def panel_fixed(*args: TagChildArg, **kwargs: TagAttrArg) -> TagList:
     Returns
     -------
     A UI element
-
-    Note
-    ----
-    This function is equivalent to calling :func:`~shiny.ui.panel_absolute` with
-    ``fixed=True`` (i.e., the panel does not scroll with the rest of the page). See
-    :func:`~shiny.ui.panel_absolute` for more information.
-
 
     See Also
     -------
@@ -374,6 +371,13 @@ def panel_absolute(
 ) -> TagList:
     """
     Create a panel of absolutely positioned content.
+
+    Creates a ``<div>`` tag whose CSS position is set to absolute (or fixed if ``fixed =
+    True``). The way absolute positioning works in HTML is that absolute coordinates are
+    specified relative to its nearest parent element whose position is not set to static
+    (which is the default), and if no such parent is found, then relative to the page
+    borders. If you're not sure what that means, just keep in mind that you may get
+    strange results if you use this function from inside of certain types of panels.
 
     Parameters
     ----------
@@ -413,15 +417,8 @@ def panel_absolute(
     -------
     A UI element
 
-    Note
+    Tip
     ----
-    Creates a ``<div>`` tag whose CSS position is set to absolute (or fixed if ``fixed =
-    True``). The way absolute positioning works in HTML is that absolute coordinates are
-    specified relative to its nearest parent element whose position is not set to static
-    (which is the default), and if no such parent is found, then relative to the page
-    borders. If you're not sure what that means, just keep in mind that you may get
-    strange results if you use this function from inside of certain types of panels.
-
     The position (``top``, ``left``, ``right``, ``bottom``) and size (``width``,
     ``height``) parameters are all optional, but you should specify exactly two of top,
     bottom, and height and exactly two of left, right, and width for predictable

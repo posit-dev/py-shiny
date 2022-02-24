@@ -29,11 +29,37 @@ _current_session: ContextVar[Optional["Session"]] = ContextVar(
 
 
 def get_current_session() -> Optional["Session"]:
+    """
+    Get the current user session.
+
+    Returns
+    -------
+    The current session if one is active, otherwise ``None``.
+
+    Note
+    ----
+    Shiny apps should not need to call this function directly. Instead, it's intended to
+    be used by Shiny developing who wish to create new functions that should only be
+    called from within an active Shiny session.
+
+    See Also
+    -------
+    ~require_active_session
+    """
     return _current_session.get()
 
 
 @contextmanager
 def session_context(session: Optional["Session"]):
+    """
+    Context manager for current session.
+
+    Parameters
+    ----------
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        :func:`~shiny.session.get_current_session`.
+    """
     token: Token[Union[Session, None]] = _current_session.set(session)
     try:
         yield
@@ -42,6 +68,35 @@ def session_context(session: Optional["Session"]):
 
 
 def require_active_session(session: Optional["Session"]) -> "Session":
+    """
+    Raise an exception if no Shiny session is currently active.
+
+    Parameters
+    ----------
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        :func:`~shiny.session.get_current_session`.
+
+    Returns
+    -------
+    The session.
+
+    Note
+    ----
+    Shiny apps should not need to call this function directly. Instead, it's intended to
+    be used by Shiny developing who wish to create new functions that should only be
+    called from within an active Shiny session.
+
+    Raises
+    ------
+    ValueError
+        If session is not active.
+
+    See Also
+    -------
+    ~get_current_session
+    """
+
     if session is None:
         session = get_current_session()
     if session is None:

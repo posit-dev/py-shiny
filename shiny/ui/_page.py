@@ -94,16 +94,16 @@ def page_navbar(
     -------
     A UI element.
 
-    Note
-    ----
-    See :func:`~shiny.ui.nav` for an example.
-
     See Also
     -------
     :func:`~shiny.ui.nav`
     :func:`~shiny.ui.nav_menu`
     :func:`~shiny.ui.navs_bar`
     :func:`~shiny.ui.page_fluid`
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`.
     """
 
     return tags.html(

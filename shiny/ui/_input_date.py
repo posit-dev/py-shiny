@@ -195,8 +195,8 @@ def input_date_range(
 
     Note
     ----
-    The date `format` string specifies how the date will be displayed in the browser. It
-    allows the following values:
+    The date ``format`` string specifies how the date will be displayed in the browser.
+    It allows the following values:
 
     - ``yy``: Year without century (12)
     - ``yyyy``: Year with century (2012)

@@ -40,8 +40,7 @@ def input_text(
     ------
     .. admonition:: Server value
 
-        A string containing the current text input. The default value is ``""`` unless ``value`` is
-    provided.
+        A string containing the current text input. The default value is ``""`` unless ``value`` is provided.
 
     See Also
     -------
