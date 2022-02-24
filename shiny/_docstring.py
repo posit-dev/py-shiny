@@ -1,4 +1,3 @@
-from ntpath import join
 import os
 from typing import Callable, Any, TypeVar
 
@@ -10,6 +9,12 @@ F = TypeVar("F", bound=FuncType)
 
 def add_example() -> Callable[[F], F]:
     def _(func: F) -> F:
+
+        # To avoid a performance hit on `import shiny`, we only add examples to the
+        # docstrings if this env variable is set (as it is in docs/source/conf.py).
+        if os.getenv("SHINY_ADD_EXAMPLES") != "true":
+            return func
+
         fn_name = func.__name__
         example_file = os.path.join(ex_dir, fn_name, "app.py")
         if not os.path.exists(example_file):
