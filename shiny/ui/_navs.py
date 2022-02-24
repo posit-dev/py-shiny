@@ -108,10 +108,6 @@ def nav_menu(
     -------
     A UI element representing both the navigation menu.
 
-    Note
-    ----
-    See :func:`~shiny.ui.nav` for an example.
-
     See Also
     -------
     ~shiny.ui.nav
@@ -123,6 +119,10 @@ def nav_menu(
     ~shiny.ui.navs_tab_card
     ~shiny.ui.navs_pill_card
     ~shiny.ui.navs_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`
     """
     if not value:
         value = str(title)
@@ -134,6 +134,8 @@ def nav_menu(
 def nav_content(value: str, *args: TagChildArg, icon: TagChildArg = None) -> JSXTag:
     """
     Create a nav item pointing to some internal content with no title.
+
+    Mainly useful when used inside :func:`~shiny.ui.navs_hidden`
 
     Parameters
     ----------
@@ -148,13 +150,13 @@ def nav_content(value: str, *args: TagChildArg, icon: TagChildArg = None) -> JSX
     -------
     A UI element.
 
-    Note
-    ----
-    This is mainly for use with :func:`~shiny.ui.navs_hidden`. See there for an example.
-
     See Also
     --------
     ~shiny.ui.navs_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`
     """
 
     return nav(None, *args, value=value, icon=icon)
@@ -173,10 +175,6 @@ def nav_item(*args: TagChildArg) -> JSXTag:
     -------
     A UI element.
 
-    Note
-    ----
-    See :func:`~shiny.ui.nav` for an example.
-
     See Also
     -------
     ~shiny.ui.nav
@@ -189,6 +187,10 @@ def nav_item(*args: TagChildArg) -> JSXTag:
     ~shiny.ui.navs_tab_card
     ~shiny.ui.navs_pill_card
     ~shiny.ui.navs_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`
     """
     return _nav_tag("NavItem", *args)
 
@@ -200,10 +202,6 @@ def nav_spacer() -> JSXTag:
     Returns
     -------
     A UI element.
-
-    Note
-    ----
-    See :func:`~shiny.ui.nav` for an example.
 
     See Also
     -------
@@ -217,6 +215,10 @@ def nav_spacer() -> JSXTag:
     ~shiny.ui.navs_tab_card
     ~shiny.ui.navs_pill_card
     ~shiny.ui.navs_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`
     """
     return _nav_tag("NavSpacer")
 
@@ -229,7 +231,7 @@ def navs_tab(
     footer: Optional[TagChildArg] = None,
 ) -> JSXTag:
     """
-    Render a collection of nav items as a tabset.
+    Render nav items as a tabset.
 
     Parameters
     ----------
@@ -250,10 +252,6 @@ def navs_tab(
     -------
     A UI element.
 
-    Note
-    ----
-    See :func:`~shiny.ui.nav` for an example.
-
     See Also
     -------
     ~shiny.ui.nav
@@ -266,6 +264,10 @@ def navs_tab(
     ~shiny.ui.navs_tab_card
     ~shiny.ui.navs_pill_card
     ~shiny.ui.navs_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`
     """
 
     return _nav_tag(
@@ -287,7 +289,7 @@ def navs_tab_card(
     footer: Optional[TagChildArg] = None,
 ) -> JSXTag:
     """
-    Render a collection of nav items as a tabset inside a card container.
+    Render nav items as a tabset inside a card container.
 
     Parameters
     ----------
@@ -308,10 +310,6 @@ def navs_tab_card(
     -------
     A UI element.
 
-    Note
-    ----
-    See :func:`~shiny.ui.nav` for an example.
-
     See Also
     -------
     ~shiny.ui.nav
@@ -324,6 +322,10 @@ def navs_tab_card(
     ~shiny.ui.navs_pill
     ~shiny.ui.navs_pill_card
     ~shiny.ui.navs_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`
     """
 
     return _nav_tag(
@@ -345,7 +347,7 @@ def navs_pill(
     footer: Optional[TagChildArg] = None,
 ) -> JSXTag:
     """
-    Render a collection of nav items as a pillset.
+    Render nav items as a pillset.
 
     Parameters
     ----------
@@ -366,10 +368,6 @@ def navs_pill(
     -------
     A UI element.
 
-    Note
-    ----
-    See :func:`~shiny.ui.nav` for an example.
-
     See Also
     -------
     ~shiny.ui.nav
@@ -382,6 +380,10 @@ def navs_pill(
     ~shiny.ui.navs_tab_card
     ~shiny.ui.navs_pill_card
     ~shiny.ui.navs_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`
     """
 
     return _nav_tag(
@@ -404,7 +406,7 @@ def navs_pill_card(
     placement: Literal["above", "below"] = "above",
 ) -> JSXTag:
     """
-    Render a collection of nav items as a pillset inside a card container.
+    Render nav items as a pillset inside a card container.
 
     Parameters
     ----------
@@ -427,10 +429,6 @@ def navs_pill_card(
     -------
     A UI element.
 
-    Note
-    ----
-    See :func:`~shiny.ui.nav` for an example.
-
     See Also
     -------
     ~shiny.ui.nav
@@ -443,6 +441,10 @@ def navs_pill_card(
     ~shiny.ui.navs_pill
     ~shiny.ui.navs_tab_card
     ~shiny.ui.navs_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`
     """
 
     return _nav_tag(
@@ -468,7 +470,7 @@ def navs_pill_list(
     widths: Tuple[int, int] = (4, 8),
 ) -> JSXTag:
     """
-    Render a collection of nav items as a vertical pillset.
+    Render nav items as a vertical pillset.
 
     Parameters
     ----------
@@ -509,6 +511,10 @@ def navs_pill_list(
     ~shiny.ui.navs_hidden
     ~shiny.ui.navs_bar
     ~shiny.ui.navs_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`
     """
 
     return _nav_tag(
@@ -596,7 +602,7 @@ def navs_bar(
     fluid: bool = True,
 ) -> JSXTag:
     """
-    Render a collection of nav items as a navbar.
+    Render nav items as a navbar.
 
     Parameters
     ----------
@@ -635,10 +641,6 @@ def navs_bar(
     -------
     A UI element.
 
-    Note
-    ----
-    See :func:`~shiny.ui.nav` for an example.
-
     See Also
     -------
     ~shiny.ui.page_navbar
@@ -652,6 +654,10 @@ def navs_bar(
     ~shiny.ui.navs_tab_card
     ~shiny.ui.navs_pill_card
     ~shiny.ui.navs_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`.
     """
 
     return _nav_tag(

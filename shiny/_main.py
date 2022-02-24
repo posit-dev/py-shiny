@@ -3,7 +3,7 @@ import importlib.util
 import os
 import sys
 import types
-import typing
+from typing import Optional, Union
 
 import click
 import uvicorn
@@ -59,7 +59,7 @@ def main() -> None:
     " Defaults to the current working directory.",
 )
 def run(
-    app: typing.Union[str, shiny.App],
+    app: Union[str, shiny.App],
     host: str,
     port: int,
     debug: bool,
@@ -68,30 +68,80 @@ def run(
     log_level: str,
     app_dir: str,
 ) -> None:
-    """Starts a Shiny app. Press Ctrl+C (or Ctrl+Break on Windows) to stop.
+    return run_app(
+        app,
+        host=host,
+        port=port,
+        debug=debug,
+        reload=reload,
+        ws_max_size=ws_max_size,
+        log_level=log_level,
+        app_dir=app_dir,
+    )
 
-    The APP argument indicates where the Shiny app should be loaded from. You have
-    several options for specifying this:
 
-    \b
-    - No APP argument; `shiny run` will look for app.py in the current directory.
-    - A module name to load. It should have an `app` attribute.
-    - A "<module>:<attribute>" string. Useful when you named your Shiny app
-      something other than `app`, or if there are multiple apps in a single
-      module.
-    - A relative path to a Python file.
-    - A relative path to a Python directory (it must contain an app.py file).
-    - A "<path-to-file-or-dir>:<attribute>" string.
+def run_app(
+    app: Union[str, shiny.App] = "app:app",
+    host: str = "127.0.0.1",
+    port: int = 8000,
+    debug: bool = False,
+    reload: bool = False,
+    ws_max_size: int = 16777216,
+    log_level: Optional[str] = None,
+    app_dir: Optional[str] = ".",
+) -> None:
+    """
+    Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop.
 
-    \b
+    Parameters
+    ----------
+    app
+        The app to run. The default, ``app:app``, represents the "usual" case where the
+        application is named ``app`` inside a ``app.py`` file within the current working
+        directory. In other cases, the app location can be specified as a
+        ``<module>:<attribute>`` string where the ``:<attribute>`` is only necessary if
+        the application is named something other than ``app``. Note that ``<module>``
+        can be relative path to a ``.py`` file or a directory (with an ``app.py`` file
+        inside it); and in this case, the relative path is resolved relative to the
+        ``app_dir`` directory.
+    host
+        The address that the app should listen on.
+    port
+        The port that the app should listen on.
+    debug
+        Enable debug mode.
+    reload
+        Enable auto-reload.
+    ws_max_size
+        WebSocket max size message in bytes.
+    log_level
+        Log level.
+    app_dir
+        Look for ``app`` under this directory (by adding this to the ``PYTHONPATH``).
+
+    Tip
+    ---
+    The ``shiny run`` command-line interface (which comes installed with Shiny) provides
+    the same functionality as this function.
+
     Examples
-    ========
-    shiny run
-    shiny run mypackage.mymodule
-    shiny run mypackage.mymodule:app
-    shiny run mydir
-    shiny run mydir/myapp.py
-    shiny run mydir/myapp.py:app
+    --------
+
+    .. code-block:: python
+
+        from shiny import run_app
+
+        # Run ``app`` inside ``./app.py``
+        run_app()
+
+        # Run ``app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
+        run_app("myapp")
+
+        # Run ``my_app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
+        run_app("myapp:my_app")
+
+        # Run ``my_app`` inside ``../myapp.py`` (or ``../myapp/app.py``)
+        run_app("myapp:my_app", app_dir="..")
     """
 
     if isinstance(app, str):
@@ -110,7 +160,7 @@ def run(
     )
 
 
-def resolve_app(app: str, app_dir: typing.Optional[str]) -> str:
+def resolve_app(app: str, app_dir: Optional[str]) -> str:
     # The `app` parameter can be:
     #
     # - A module:attribute name
@@ -149,7 +199,9 @@ def resolve_app(app: str, app_dir: typing.Optional[str]) -> str:
                 raise ImportError(
                     f"The directory '{fullpath}' did not include an app.py file"
                 )
-        module = path.removesuffix(".py").replace("/", ".").replace("\\", ".")
+        if path.endswith(".py"):
+            path = path[:-3]
+        module = path.replace("/", ".").replace("\\", ".")
         instance = try_import_module(module)
         if not instance:
             raise ImportError(f"Could not find the module '{module}'")
@@ -157,7 +209,7 @@ def resolve_app(app: str, app_dir: typing.Optional[str]) -> str:
     return f"{module}:{attr}"
 
 
-def try_import_module(module: str) -> typing.Optional[types.ModuleType]:
+def try_import_module(module: str) -> Optional[types.ModuleType]:
     try:
         if importlib.util.find_spec(module):
             return importlib.import_module(module)

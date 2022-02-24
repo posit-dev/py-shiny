@@ -1,5 +1,5 @@
 import contextlib
-from typing import Any, List, Optional, Union, Dict, Callable, cast
+from typing import Any, List, Union, Dict, Callable, cast
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
 
@@ -10,20 +10,60 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from starlette.requests import Request
 from starlette.responses import Response, HTMLResponse, JSONResponse
 
-from .http_staticfiles import StaticFiles
-from .session import Inputs, Outputs, Session, session_context
-from .reactive import on_flushed
-from ._connmanager import (
-    Connection,
-    StarletteConnection,
-)
+from ._connmanager import Connection, StarletteConnection
 from .html_dependencies import jquery_deps, shiny_deps
+from .http_staticfiles import StaticFiles
+from .reactive import on_flushed
+from .session import Inputs, Outputs, Session, session_context
 
 
 class App:
+    """
+    Create a Shiny app instance.
+
+    Parameters
+    ----------
+    ui
+        The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fluid`
+        with nested controls).
+    server
+        A function which is called once for each session, ensuring that each app is
+        independent.
+    debug
+        Whether to enable debug mode.
+
+    Example
+    -------
+
+    .. code-block:: python
+
+        from shiny import *
+
+        app_ui = ui.page_fluid("Hello Shiny!")
+
+        def server(input: Inputs, output: Outputs, session: Session):
+            pass
+
+        app = App(app_ui, server)
+    """
+
     LIB_PREFIX: str = "lib/"
+    """
+    A path prefix to place before all HTML dependencies processed by
+    ``register_web_dependency()``.
+    """
+
     SANITIZE_ERRORS: bool = False
+    """
+    Whether or not to show a generic message (``SANITIZE_ERRORS=True``) or the actual
+    message (``SANITIZE_ERRORS=False``) in the app UI when an error occurs. This flag
+    may default to ``True`` in some production environments (e.g., RStudio Connect).
+    """
+
     SANITIZE_ERROR_MSG: str = "An error has occurred. Check your logs or contact the app author for clarification."
+    """
+    The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
+    """
 
     def __init__(
         self,
@@ -56,11 +96,11 @@ class App:
                 ),
                 starlette.routing.Mount("/", app=self._dependency_handler),
             ],
-            lifespan=self.lifespan,
+            lifespan=self._lifespan,
         )
 
     @contextlib.asynccontextmanager
-    async def lifespan(self, app: starlette.applications.Starlette):
+    async def _lifespan(self, app: starlette.applications.Starlette):
         unreg = on_flushed(self._on_reactive_flushed, once=False)
         try:
             yield
@@ -68,16 +108,16 @@ class App:
             unreg()
 
     async def _on_reactive_flushed(self):
-        await self.flush_pending_sessions()
+        await self._flush_pending_sessions()
 
-    def create_session(self, conn: Connection) -> Session:
+    def _create_session(self, conn: Connection) -> Session:
         self._last_session_id += 1
         id = str(self._last_session_id)
         session = Session(self, id, conn, debug=self._debug)
         self._sessions[id] = session
         return session
 
-    def remove_session(self, session: Union[Session, str]) -> None:
+    def _remove_session(self, session: Union[Session, str]) -> None:
         if isinstance(session, Session):
             session = session.id
 
@@ -85,18 +125,33 @@ class App:
             print(f"remove_session: {session}")
         del self._sessions[session]
 
-    def run(self, debug: Optional[bool] = None) -> None:
-        import uvicorn  # type: ignore
+    def run(self, **kwargs: object) -> None:
+        """
+        Run the app.
 
-        if debug is not None:
-            self._debug = debug
-        uvicorn.run(cast(Any, self), host="0.0.0.0", port=8000)
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments passed to :func:`~shiny.run_app`.
+        """
+        from ._main import run_app
+
+        run_app(self, **kwargs)
 
     # ASGI entrypoint. Handles HTTP, WebSocket, and lifespan.
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         await self.starlette_app(scope, receive, send)
 
     async def call_pyodide(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """
+        Communicate with pyodide.
+
+        Warning
+        -------
+        This method is not intended for public usage. It's exported for use by
+        prism-experiments.
+        """
+
         # TODO: Pretty sure there are objects that need to be destroy()'d here?
         scope = cast(Any, scope).to_py()
 
@@ -124,8 +179,15 @@ class App:
         await self(scope, rcv, snd)
 
     async def stop(self) -> None:
-        # Close all sessions (convert to list to avoid modifying the dict while
-        # iterating over it, which throws an error).
+        """
+        Stop the app (i.e., close all sessions).
+
+        See Also
+        --------
+        ~shiny.Session.close
+        """
+        # convert to list to avoid modifying the dict while iterating over it, which
+        # throws an error
         for session in list(self._sessions.values()):
             await session.close()
 
@@ -146,7 +208,7 @@ class App:
         """
         await ws.accept()
         conn = StarletteConnection(ws)
-        session = self.create_session(conn)
+        session = self._create_session(conn)
 
         await session._run()
 
@@ -162,24 +224,24 @@ class App:
         if session_id in self._sessions:
             session: Session = self._sessions[session_id]
             with session_context(session):
-                return await session.handle_request(request, action, subpath)
+                return await session._handle_request(request, action, subpath)
 
         return JSONResponse({"detail": "Not Found"}, status_code=404)
 
     # ==========================================================================
     # Flush
     # ==========================================================================
-    def request_flush(self, session: Session) -> None:
+    def _request_flush(self, session: Session) -> None:
         # TODO: Until we have reactive domains, because we can't yet keep track
         # of which sessions need a flush.
         pass
         # self._sessions_needing_flush[session.id] = session
 
-    async def flush_pending_sessions(self) -> None:
+    async def _flush_pending_sessions(self) -> None:
         # TODO: Until we have reactive domains, flush all sessions (because we
         # can't yet keep track of which ones need a flush)
         for _, session in self._sessions.items():
-            await session.flush()
+            await session._flush()
         # for id, session in self._sessions_needing_flush.items():
         #     await session.flush()
         #     del self._sessions_needing_flush[id]
@@ -189,9 +251,9 @@ class App:
     # ==========================================================================
     def _ensure_web_dependencies(self, deps: List[HTMLDependency]) -> None:
         for dep in deps:
-            self.register_web_dependency(dep)
+            self._register_web_dependency(dep)
 
-    def register_web_dependency(self, dep: HTMLDependency) -> None:
+    def _register_web_dependency(self, dep: HTMLDependency) -> None:
         if (
             dep.name in self._registered_dependencies
             and dep.version >= self._registered_dependencies[dep.name].version

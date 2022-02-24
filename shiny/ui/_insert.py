@@ -59,7 +59,7 @@ def insert_ui(
         run (default).
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -73,17 +73,18 @@ def insert_ui(
 
     See Also
     --------
-    ~shiny.ui.remove_ui ~shiny.render_ui
+    ~shiny.ui.remove_ui
+    ~shiny.render_ui
     """
 
     session = require_active_session(session)
 
     def callback() -> None:
-        session.send_insert_ui(
+        session._send_insert_ui(
             selector=selector,
             multiple=multiple,
             where=where,
-            content=session.process_ui(ui),
+            content=session._process_ui(ui),
         )
 
     if immediate:
@@ -121,7 +122,7 @@ def remove_ui(
         run (default).
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     See Also
     -------
@@ -132,7 +133,7 @@ def remove_ui(
     session = require_active_session(session)
 
     def callback():
-        session.send_remove_ui(selector=selector, multiple=multiple)
+        session._send_remove_ui(selector=selector, multiple=multiple)
 
     if immediate:
         callback()

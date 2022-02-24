@@ -103,7 +103,7 @@ def render_text() -> Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], Rend
     -------
     A decorator for a function that returns a string.
 
-    Note
+    Tip
     ----
     This decorator should be applied **before** the ``@output`` decorator. Also, the
     name of the decorated function (or ``@output(name=...)``) should match the ``id`` of
@@ -219,7 +219,7 @@ def render_plot(
     -------
     A decorator for a function that returns a ``matplotlib`` or ``PIL`` figure.
 
-    Note
+    Tip
     ----
     This decorator should be applied **before** the ``@output`` decorator. Also, the
     name of the decorated function (or ``@output(name=...)``) should match the ``id`` of
@@ -389,7 +389,7 @@ def render_image(
     -------
     A decorator for a function that returns an `~shiny.types.ImgData` object.
 
-    Note
+    Tip
     ----
     This decorator should be applied **before** the ``@output`` decorator. Also, the
     name of the decorated function (or ``@output(name=...)``) should match the ``id`` of
@@ -436,7 +436,7 @@ class RenderUI(RenderFunction):
         if ui is None:
             return None
 
-        return self._session.process_ui(ui)
+        return self._session._process_ui(ui)
 
 
 class RenderUIAsync(RenderUI, RenderFunctionAsync):
@@ -457,7 +457,7 @@ def render_ui() -> Callable[[Union[RenderUIFunc, RenderUIFuncAsync]], RenderUI]:
     -------
     A decorator for a function that returns an object of type `~shiny.ui.TagChildArg`.
 
-    Note
+    Tip
     ----
     This decorator should be applied **before** the ``@output`` decorator. Also, the
     name of the decorated function (or ``@output(name=...)``) should match the ``id`` of

@@ -27,22 +27,19 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-
-    # i.e., observeEvent(once=False)
     @reactive.Effect()
     @event(input.btn)
     def _():
         print("@effect() event: ", str(input.btn()))
 
-    # i.e., eventReactive()
     @reactive.Calc()
     @event(input.btn)
-    async def btn() -> int:
-        return input.btn() + 2
+    def btn() -> int:
+        return input.btn()
 
     @reactive.Effect()
-    async def _():
-        print("@calc() event: ", str(btn()))
+    def _():
+        print("@calc() event:   ", str(btn()))
 
     @output()
     @render_ui()
@@ -68,7 +65,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect()
     async def _():
         val = await btn_async_r()
-        print("async @calc() event: ", str(val))
+        print("async @calc() event:   ", str(val))
 
     @output()
     @render_ui()
@@ -79,4 +76,4 @@ def server(input: Inputs, output: Outputs, session: Session):
         return str(val)
 
 
-app = App(app_ui, server, debug=True)
+app = App(app_ui, server)

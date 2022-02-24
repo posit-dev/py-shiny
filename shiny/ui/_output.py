@@ -19,6 +19,9 @@ def output_plot(
     """
     Create a output container for a static plot.
 
+    Place a :func:`~shiny.render_plot` result in the user interface. See
+    :func:`~shiny.render_plot` for more details on what types of plots are supported.
+
     Parameters
     ----------
     id
@@ -33,11 +36,6 @@ def output_plot(
     Returns
     -------
     A UI element
-
-    Note
-    ----
-    See :func:`~shiny.render_plot` for more details on what types of plots are
-    supported.
 
     See Also
     -------
@@ -120,6 +118,10 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     """
     Create a output container for some text.
 
+    Place a :func:`~shiny.render_text` result in the user interface.
+    Differs from :func:`~shiny.ui.output_text` in that it wraps the text in a
+    fixed-width container with a gray-ish background color and border.
+
     Parameters
     ----------
     id
@@ -132,16 +134,14 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     -------
     A UI element
 
-    Note
-    ----
-    Usually paired with :func:`~shiny.render_text` and the text produced by it is
-    HTML-escaped prior to rendering (use :func:`~shiny.render_ui` instead to render
-    HTML). See :func:`~shiny.ui.output_text` for an example.
-
     See Also
     -------
     ~shiny.render_text
     ~shiny.ui.output_text
+
+    Example
+    -------
+    See :func:`~shiny.ui.output_text`
     """
 
     cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")

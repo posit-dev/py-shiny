@@ -45,35 +45,37 @@ from htmltools import TagChildArg, TagList
 if TYPE_CHECKING:
     from .._app import App
 
+from .._connmanager import Connection, ConnectionClosed
+from .._docstring import add_example
+from .._fileupload import FileInfo, FileUploadManager
+from ..http_staticfiles import FileResponse
+from ..input_handler import input_handlers
 from ..reactive import Value, Effect, Effect_, isolate, flush
 from ..reactive._core import lock
-from ..http_staticfiles import FileResponse
-from .._connmanager import Connection, ConnectionClosed
+from ..types import SafeException, SilentCancelOutputException, SilentException
+from ._utils import RenderedDeps, read_thunk_opt, session_context
+
 from .. import render
 from .. import _utils
-from .._fileupload import FileInfo, FileUploadManager
-from ..input_handler import input_handlers
-from ..types import MISSING, SafeException, SilentCancelOutputException, SilentException
-from ._utils import RenderedDeps, read_thunk_opt, session_context
 
 # This cast is necessary because if the type checker thinks that if
 # "tag" isn't in `message`, then it's not a ClientMessage object.
 # This will be fixable when TypedDict items can be marked as
 # potentially missing, in Python 3.10, with PEP 655.
-class _ClientMessage(TypedDict):
+class ClientMessage(TypedDict):
     method: str
 
 
-class _ClientMessageInit(_ClientMessage):
+class ClientMessageInit(ClientMessage):
     data: Dict[str, object]
 
 
-class _ClientMessageUpdate(_ClientMessage):
+class ClientMessageUpdate(ClientMessage):
     data: Dict[str, object]
 
 
 # For messages where "method" is something other than "init" or "update".
-class _ClientMessageOther(_ClientMessage):
+class ClientMessageOther(ClientMessage):
     args: List[object]
     tag: int
 
@@ -85,30 +87,40 @@ class _ClientMessageOther(_ClientMessage):
 # 3. An AsyncIterable of bytes or strings (i.e. an async generator function)
 #
 # (Not currently supported is Awaitable[str], could be added easily enough if needed.)
-_DownloadHandler = Callable[
+DownloadHandler = Callable[
     [], Union[str, Iterable[Union[bytes, str]], AsyncIterable[Union[bytes, str]]]
 ]
 
 
 @dataclasses.dataclass
-class _DownloadInfo:
+class DownloadInfo:
     filename: Union[Callable[[], str], str, None]
     content_type: Optional[Union[Callable[[], str], str]]
-    handler: _DownloadHandler
+    handler: DownloadHandler
     encoding: str
 
 
-class _OutBoundMessageQueues(TypedDict):
+class OutBoundMessageQueues(TypedDict):
     values: List[Dict[str, object]]
     input_messages: List[Dict[str, object]]
     errors: List[Dict[str, object]]
 
 
-def _empty_outbound_message_queues() -> _OutBoundMessageQueues:
+def empty_outbound_message_queues() -> OutBoundMessageQueues:
     return {"values": [], "input_messages": [], "errors": []}
 
 
 class Session:
+    """
+    A class representing a user session.
+
+    Warning
+    -------
+    An instance of this class is created for each request and passed as an argument to
+    the :class:`shiny.App`'s ``server`` function. For this reason, you shouldn't
+    need to create instances of this class yourself.
+    """
+
     # ==========================================================================
     # Initialization
     # ==========================================================================
@@ -123,7 +135,7 @@ class Session:
         self.input: Inputs = Inputs()
         self.output: Outputs = Outputs(self)
 
-        self._outbound_message_queues = _empty_outbound_message_queues()
+        self._outbound_message_queues = empty_outbound_message_queues()
 
         self._message_handlers: Dict[
             str, Callable[..., Awaitable[object]]
@@ -131,7 +143,7 @@ class Session:
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks: List[Callable[[], None]] = []
         self._has_run_session_end_tasks: bool = False
-        self._downloads: Dict[str, _DownloadInfo] = {}
+        self._downloads: Dict[str, DownloadInfo] = {}
 
         self._register_session_end_callbacks()
 
@@ -159,15 +171,18 @@ class Session:
             except Exception as e:
                 print("Error in session on_ended callback: " + str(e))
 
-        self.app.remove_session(self)
+        self.app._remove_session(self)
 
     async def close(self, code: int = 1001) -> None:
+        """
+        Close the session.
+        """
         await self._conn.close(code, None)
         self._run_session_end_tasks()
 
     async def _run(self) -> None:
-        await self.send_message(
-            {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
+        await self.send_custom_message(
+            "config", {"workerId": "", "sessionId": str(self.id), "user": None}
         )
 
         try:
@@ -189,11 +204,11 @@ class Session:
                 async with lock():
 
                     if message_obj["method"] == "init":
-                        message_obj = typing.cast(_ClientMessageInit, message_obj)
+                        message_obj = typing.cast(ClientMessageInit, message_obj)
                         self._manage_inputs(message_obj["data"])
 
                     elif message_obj["method"] == "update":
-                        message_obj = typing.cast(_ClientMessageUpdate, message_obj)
+                        message_obj = typing.cast(ClientMessageUpdate, message_obj)
                         self._manage_inputs(message_obj["data"])
 
                     else:
@@ -210,10 +225,10 @@ class Session:
                             )
                             return
 
-                        message_obj = typing.cast(_ClientMessageOther, message_obj)
+                        message_obj = typing.cast(ClientMessageOther, message_obj)
                         await self._dispatch(message_obj)
 
-                    self.request_flush()
+                    self._request_flush()
 
                     await flush()
 
@@ -229,17 +244,17 @@ class Session:
                     + key
                 )
             if len(keys) == 2:
-                val = input_handlers.process_value(keys[1], val, keys[0], self)
+                val = input_handlers._process_value(keys[1], val, keys[0], self)
 
             self.input[keys[0]]._set(val)
 
-            self.output.manage_hidden()
+            self.output._manage_hidden()
 
     # ==========================================================================
     # Message handlers
     # ==========================================================================
 
-    async def _dispatch(self, message: _ClientMessageOther) -> None:
+    async def _dispatch(self, message: ClientMessageOther) -> None:
         try:
             func = self._message_handlers[message["method"]]
         except AttributeError:
@@ -255,8 +270,10 @@ class Session:
 
         await self._send_response(message, value)
 
-    async def _send_response(self, message: _ClientMessageOther, value: object) -> None:
-        await self.send_message({"response": {"tag": message["tag"], "value": value}})
+    async def _send_response(self, message: ClientMessageOther, value: object) -> None:
+        await self.send_custom_message(
+            "response", {"tag": message["tag"], "value": value}
+        )
 
     # This is called during __init__.
     def _create_message_handlers(self) -> Dict[str, Callable[..., Awaitable[object]]]:
@@ -298,7 +315,7 @@ class Session:
     # ==========================================================================
     # Handling /session/{session_id}/{action}/{subpath} requests
     # ==========================================================================
-    async def handle_request(
+    async def _handle_request(
         self, request: Request, action: str, subpath: Optional[str]
     ) -> ASGIApp:
         if action == "upload" and request.method == "POST":
@@ -404,11 +421,27 @@ class Session:
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
     def send_input_message(self, id: str, message: Dict[str, object]) -> None:
+        """
+        Send an input message to the session.
+
+        Sends a message to an input on the session's client web page; if the input is
+        present and bound on the page at the time the message is received, then the
+        input binding object's ``receiveMessage(el, message)`` method will be called.
+        This method should generally not be called directly from Shiny apps, but through
+        friendlier wrapper functions like ``ui.update_text()``.
+
+        Parameters
+        ----------
+        id
+            An id matching the id of an input to update.
+        message
+            The message to send.
+        """
         msg: Dict[str, object] = {"id": id, "message": message}
         self._outbound_message_queues["input_messages"].append(msg)
-        self.request_flush()
+        self._request_flush()
 
-    def send_insert_ui(
+    def _send_insert_ui(
         self, selector: str, multiple: bool, where: str, content: "RenderedDeps"
     ) -> None:
         msg = {
@@ -417,13 +450,34 @@ class Session:
             "where": where,
             "content": content,
         }
-        _utils.run_coro_sync(self.send_message({"shiny-insert-ui": msg}))
+        _utils.run_coro_sync(self._send_message({"shiny-insert-ui": msg}))
 
-    def send_remove_ui(self, selector: str, multiple: bool) -> None:
+    def _send_remove_ui(self, selector: str, multiple: bool) -> None:
         msg = {"selector": selector, "multiple": multiple}
-        _utils.run_coro_sync(self.send_message({"shiny-remove-ui": msg}))
+        _utils.run_coro_sync(self._send_message({"shiny-remove-ui": msg}))
 
-    async def send_message(self, message: Dict[str, object]) -> None:
+    @add_example()
+    async def send_custom_message(self, type: str, message: Dict[str, object]) -> None:
+        """
+        Send a message to the client.
+
+        Parameters
+        ----------
+        type
+            The type of message to send.
+        message
+            The message to send.
+
+        Note
+        ----
+        Sends messages to the client which can be handled in JavaScript with
+        ``Shiny.addCustomMessageHandler(type, function(message){...})``. Once the
+        message handler is added, it will be invoked each time ``send_custom_message()``
+        is called on the server.
+        """
+        await self._send_message({"custom": {type: message}})
+
+    async def _send_message(self, message: Dict[str, object]) -> None:
         message_str: str = json.dumps(message) + "\n"
         if self._debug:
             print(
@@ -440,22 +494,48 @@ class Session:
     # ==========================================================================
     # Flush
     # ==========================================================================
-    def on_flush(self, func: Callable[[], None], once: bool = True) -> None:
+    @add_example()
+    def on_flush(self, fn: Callable[[], None], once: bool = True) -> Callable[[], None]:
         """
-        Registers a function to be called before the next time (if once=True) or every time (if once=False) Shiny flushes the reactive system. Returns a function that can be called with no arguments to cancel the registration.
-        """
-        self._flush_callbacks.register(func, once)
+        Register a function to call before the next reactive flush.
 
-    def on_flushed(self, func: Callable[[], None], once: bool = True) -> None:
-        """
-        Registers a function to be called after the next time (if once=TRUE) or every time (if once=FALSE) Shiny flushes the reactive system. Returns a function that can be called with no arguments to cancel the registration.
-        """
-        self._flushed_callbacks.register(func, once)
+        Parameters
+        ----------
+        fn
+            The function to call.
+        once
+            Whether to call the function only once or on every flush.
 
-    def request_flush(self) -> None:
-        self.app.request_flush(self)
+        Returns
+        -------
+        A function that can be used to cancel the registration.
+        """
+        return self._flush_callbacks.register(fn, once)
 
-    async def flush(self) -> None:
+    @add_example()
+    def on_flushed(
+        self, fn: Callable[[], None], once: bool = True
+    ) -> Callable[[], None]:
+        """
+        Register a function to call after the next reactive flush.
+
+        Parameters
+        ----------
+        fn
+            The function to call.
+        once
+            Whether to call the function only once or on every flush.
+
+        Returns
+        -------
+        A function that can be used to cancel the registration.
+        """
+        return self._flushed_callbacks.register(fn, once)
+
+    def _request_flush(self) -> None:
+        self.app._request_flush(self)
+
+    async def _flush(self) -> None:
         with session_context(self):
             self._flush_callbacks.invoke()
             self._flushed_callbacks.invoke()
@@ -477,38 +557,71 @@ class Session:
         }
 
         try:
-            await self.send_message(message)
+            await self._send_message(message)
         finally:
-            self._outbound_message_queues = _empty_outbound_message_queues()
+            self._outbound_message_queues = empty_outbound_message_queues()
 
     # ==========================================================================
     # On session ended
     # ==========================================================================
-    def on_ended(self, cb: Callable[[], None]) -> None:
-        self._on_ended_callbacks.append(cb)
+    @add_example()
+    def on_ended(self, fn: Callable[[], None]) -> None:
+        """
+        Registers a function to be called after the client has disconnected.
+
+        Parameters
+        ----------
+        fn
+            The function to call.
+
+        Returns
+        -------
+        A function that can be used to cancel the registration.
+        """
+        self._on_ended_callbacks.append(fn)
 
     # ==========================================================================
     # Misc
     # ==========================================================================
-    async def unhandled_error(self, e: Exception) -> None:
+    async def _unhandled_error(self, e: Exception) -> None:
         print("Unhandled error: " + str(e))
         await self.close()
 
     # TODO: probably name should be id
+    @add_example()
     def download(
         self,
         name: Optional[str] = None,
         filename: Optional[Union[str, Callable[[], str]]] = None,
         media_type: Union[None, str, Callable[[], str]] = None,
         encoding: str = "utf-8",
-    ) -> Callable[[_DownloadHandler], None]:
-        def wrapper(fn: _DownloadHandler):
+    ) -> Callable[[DownloadHandler], None]:
+        """
+        Decorator to register a function to handle a download.
+
+        Parameters
+        ----------
+        name
+            The name of the download.
+        filename
+            The filename of the download.
+        media_type
+            The media type of the download.
+        encoding
+            The encoding of the download.
+
+        Returns
+        -------
+        The decorated function.
+        """
+
+        def wrapper(fn: DownloadHandler):
             if name is None:
                 effective_name = fn.__name__
             else:
                 effective_name = name
 
-            self._downloads[effective_name] = _DownloadInfo(
+            self._downloads[effective_name] = DownloadInfo(
                 filename=filename,
                 content_type=media_type,
                 handler=fn,
@@ -524,12 +637,12 @@ class Session:
 
         return wrapper
 
-    def process_ui(self, ui: TagChildArg) -> RenderedDeps:
+    def _process_ui(self, ui: TagChildArg) -> RenderedDeps:
 
         res = TagList(ui).render()
         deps: List[Dict[str, Any]] = []
         for dep in res["dependencies"]:
-            self.app.register_web_dependency(dep)
+            self.app._register_web_dependency(dep)
             dep_dict = dep.as_dict(lib_prefix=self.app.LIB_PREFIX)
             deps.append(dep_dict)
 
@@ -539,7 +652,20 @@ class Session:
 # ======================================================================================
 # Inputs
 # ======================================================================================
+
+# TODO: provide a real input typing example when we have an answer for that
+# https://github.com/rstudio/prism/issues/70
 class Inputs:
+    """
+    A class representing Shiny input values.
+
+    Warning
+    -------
+    An instance of this class is created for each request and passed as an argument to
+    the :class:`shiny.App`'s ``server`` function. For this reason, you shouldn't
+    need to create instances of this class yourself.
+    """
+
     def __init__(self, **kwargs: object) -> None:
         self._map: dict[str, Value[Any]] = {}
         for key, value in kwargs.items():
@@ -585,6 +711,16 @@ class Inputs:
 # Outputs
 # ======================================================================================
 class Outputs:
+    """
+    A class representing Shiny output definitions.
+
+    Warning
+    -------
+    An instance of this class is created for each request and passed as an argument to
+    the :class:`shiny.App`'s ``server`` function. For this reason, you shouldn't
+    need to create instances of this class yourself.
+    """
+
     def __init__(self, session: Session) -> None:
         self._effects: Dict[str, Effect_] = {}
         self._suspend_when_hidden: Dict[str, bool] = {}
@@ -615,8 +751,8 @@ class Outputs:
                 priority=priority,
             )
             async def output_obs():
-                await self._session.send_message(
-                    {"recalculating": {"name": fn_name, "status": "recalculating"}}
+                await self._session.send_custom_message(
+                    "recalculating", {"name": fn_name, "status": "recalculating"}
                 )
 
                 message: Dict[str, object] = {}
@@ -653,8 +789,8 @@ class Outputs:
 
                 self._session._outbound_message_queues["values"].append(message)
 
-                await self._session.send_message(
-                    {"recalculating": {"name": fn_name, "status": "recalculated"}}
+                await self._session.send_custom_message(
+                    "recalculating", {"name": fn_name, "status": "recalculated"}
                 )
 
             self._effects[fn_name] = output_obs
@@ -663,7 +799,7 @@ class Outputs:
 
         return set_fn
 
-    def manage_hidden(self) -> None:
+    def _manage_hidden(self) -> None:
         "Suspends execution of hidden outputs and resumes execution of visible outputs."
         output_names = list(self._suspend_when_hidden.keys())
         for name in output_names:

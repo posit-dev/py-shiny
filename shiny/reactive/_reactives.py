@@ -179,8 +179,6 @@ class Value(Generic[T]):
         """
         Freeze the reactive value.
 
-        Note
-        ----
         Freezing is equivalent to unsetting the value, but it does not invalidate
         dependents.
         """
@@ -351,26 +349,26 @@ def Calc(
     """
     Mark a function as a reactive calculation.
 
-    Parameters
-    ----------
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
-
-    Returns
-    -------
-    A decorator that marks a function as a reactive calculation.
-
-    Note
-    ----
     A reactive calculation is a function whose return value depends solely on other
-    reactive value(s) (i.e., :class:`~shiny.Inputs`, :class:`~shiny.reactive.Value`(s),
+    reactive value(s) (i.e., :class:`~shiny.Inputs`, :class:`~shiny.reactive.Value`,
     and other reactive calculations). Whenever a reactive value changes, any reactive
     calculations that depend on it are "invalidated" and automatically re-execute when
     necessary. If a reactive calculation is marked as invalidated, any other reactive
     calculations that recently called it are also marked as invalidated. In this way,
     invalidations ripple through reactive calculations that depend on each other.
 
+    Parameters
+    ----------
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:`~shiny.session.get_current_session`.
+
+    Returns
+    -------
+    A decorator that marks a function as a reactive calculation.
+
+    Tip
+    ---
     Reactive calculations should not produce any side effects; to reactively produce
     side effects, use :func:`~shiny.reactive.Effect` instead.
 
@@ -509,7 +507,7 @@ class Effect_:
 
                 warnings.warn("Error in Effect: " + str(e), ReactiveWarning)
                 if self._session:
-                    await self._session.unhandled_error(e)
+                    await self._session._unhandled_error(e)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
         """
@@ -527,8 +525,6 @@ class Effect_:
         """
         Destroy this reactive effect.
 
-        Note
-        ----
         Stops the observer from executing ever again, even if it is currently scheduled
         for re-execution.
         """
@@ -541,8 +537,6 @@ class Effect_:
         """
         Suspend the effect.
 
-        Note
-        ----
         Pauses scheduling of flushes (re-executions) in response to invalidations. If
         the effect was invalidated prior to this call but it has not re-executed yet
         (because it waits until on_flush is called) then that re-execution will still
@@ -554,8 +548,6 @@ class Effect_:
         """
         Resume the effect.
 
-        Note
-        ----
         Causes this effect to start re-executing in response to invalidations. If the
         effect was invalidated while suspended, then it will schedule itself for
         re-execution (pending flush).
@@ -598,35 +590,35 @@ def Effect(
     """
     Mark a function as a reactive side effect.
 
+    A reactive effect is like a reactive calculation (:func:`Calc`) in that it can read
+    reactive values and call reactive calculations, and will automatically re-execute
+    when those dependencies change. But unlike reactive calculations, it doesn't return
+    a result and can't be used as an input to other reactive expressions. Thus,
+    observers are only useful for their side effects (for example, performing I/O).
+
+    Another contrast between reactive calculations and effects is their execution
+    strategy. Reactive calculations use lazy evaluation; that is, when their
+    dependencies change, they don't re-execute right away but rather wait until they are
+    called by someone else. Indeed, if they are not called then they will never
+    re-execute. In contrast, effects use eager evaluation; as soon as their dependencies
+    change, they schedule themselves to re-execute.
+
     Parameters
     ----------
     suspended
-        If ``TRUE``, start the effect in a suspended state (i.e., it will not
-        execute until resumed and invalidated).
+        If ``TRUE``, start the effect in a suspended state (i.e., it will not execute
+        until resumed and invalidated).
     priority
-        The new priority. A higher value means higher priority: an effect with a
-        higher priority value will execute before all effects with lower priority
-        values. Positive, negative, and zero values are allowed.
+        The new priority. A higher value means higher priority: an effect with a higher
+        priority value will execute before all effects with lower priority values.
+        Positive, negative, and zero values are allowed.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Returns
     -------
-    A decorator that marks a function as a reactive calculation.
-
-    Note
-    ----
-    A reactive calculation is a function whose return value depends solely on other
-    reactive value(s) (i.e., :class:`~shiny.Inputs`, :class:`~shiny.reactive.Value`(s),
-    and other reactive calculations). Whenever a reactive value changes, any reactive
-    calculations that depend on it are "invalidated" and automatically re-execute when
-    necessary. If a reactive calculation is marked as invalidated, any other reactive
-    calculations that recently called it are also marked as invalidated. In this way,
-    invalidations ripple through reactive calculations that depend on each other.
-
-    Reactive calculations should not produce any side effects; to reactively produce
-    side effects, use :func:`~shiny.reactive.Effect` instead.
+    A decorator that marks a function as a reactive effect (:class:`Effect_`).
 
     See Also
     --------

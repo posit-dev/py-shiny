@@ -51,7 +51,7 @@ def notification_show(
         "message" (blue), "warning" (yellow), or "error" (red).
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Returns
     -------
@@ -59,13 +59,14 @@ def notification_show(
 
     See Also
     -------
-    ~shiny.ui.notification_remove ~shiny.ui.modal
+    ~shiny.ui.notification_remove
+    ~shiny.ui.modal
     """
 
     session = require_active_session(session)
 
-    ui_ = session.process_ui(ui)
-    action_ = session.process_ui(action)
+    ui_ = session._process_ui(ui)
+    action_ = session._process_ui(action)
 
     id = id if id else rand_hex(8)
 
@@ -82,7 +83,7 @@ def notification_show(
         payload.update({"duration": duration * 1000})
 
     run_coro_sync(
-        session.send_message({"notification": {"type": "show", "message": payload}})
+        session._send_message({"notification": {"type": "show", "message": payload}})
     )
 
     return id
@@ -98,22 +99,23 @@ def notification_remove(id: str, session: Optional[Session] = None) -> str:
         A notification ``id``.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Returns
     -------
     The notification's ``id``.
 
-    Note
-    ----
-    See :func:`~shiny.ui.notification_show` for an example.
-
     See Also
     -------
-    ~shiny.ui.notification_show ~shiny.ui.modal
+    ~shiny.ui.notification_show
+    ~shiny.ui.modal
+
+    Example
+    -------
+    See :func:`notification_show`.
     """
     session = require_active_session(session)
     run_coro_sync(
-        session.send_message({"notification": {"type": "remove", "message": id}})
+        session._send_message({"notification": {"type": "remove", "message": id}})
     )
     return id

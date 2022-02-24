@@ -35,19 +35,20 @@ def modal_button(
         An icon to appear inline with the button/link.
     kwargs
         Attributes to be applied to the button.
+
     Returns
     -------
     A UI element
-
-    Note
-    ----
-    See :func:`modal` for an example.
 
     See Also
     -------
     ~shiny.ui.modal
     ~shiny.ui.modal_show
     ~shiny.ui.modal_remove
+
+    Example
+    -------
+    See :func:`modal`.
     """
     return tags.button(
         icon,
@@ -163,20 +164,20 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
         Typically a :func:`modal` instance.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
-
-    Note
-    ----
-    See :func:`modal` for an example.
+       :func:`~shiny.session.get_current_session`.
 
     See Also
     -------
     ~shiny.ui.modal_remove
     ~shiny.ui.modal
+
+    Example
+    -------
+    See :func:`modal`.
     """
     session = require_active_session(session)
-    msg = session.process_ui(modal)
-    run_coro_sync(session.send_message({"modal": {"type": "show", "message": msg}}))
+    msg = session._process_ui(modal)
+    run_coro_sync(session._send_message({"modal": {"type": "show", "message": msg}}))
 
 
 def modal_remove(session: Optional[Session] = None) -> None:
@@ -187,16 +188,16 @@ def modal_remove(session: Optional[Session] = None) -> None:
     ----------
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
-
-    Note
-    ----
-    See :func:`modal` for an example.
+       :func:`~shiny.session.get_current_session`.
 
     See Also
     -------
     ~shiny.ui.modal_show
     ~shiny.ui.modal
+
+    Example
+    -------
+    See :func:`modal`.
     """
     session = require_active_session(session)
-    run_coro_sync(session.send_message({"modal": {"type": "remove", "message": None}}))
+    run_coro_sync(session._send_message({"modal": {"type": "remove", "message": None}}))

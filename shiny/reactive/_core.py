@@ -177,23 +177,21 @@ def isolate():
     """
     Create a non-reactive scope within a reactive scope.
 
-    Returns
-    -------
-    A context manager that executes the given expression in a scope where reactive
-    values can be read, but do not cause the reactive scope of the caller to be
-    re-evaluated when they change.
-
-    Note
-    ----
     Ordinarily, the simple act of reading a reactive value causes a relationship to be
     established between the caller and the reactive value, where a change to the
     reactive value will cause the caller to re-execute. (The same applies for the act of
     getting a reactive expression's value.) `with isolate()` lets you read a
     reactive value or expression without establishing this relationship.
 
-    `with isolate()` can also be useful for calling reactive expression at the console,
-    which can be useful for debugging. To do so, simply wrap the calls to the reactive
-    expression with isolate().
+    ``with isolate()`` can also be useful for calling reactive expression at the console,
+    which can be useful for debugging. To do so, wrap the calls to the reactive
+    expression with ``with isolate()``.
+
+    Returns
+    -------
+    A context manager that executes the given expression in a scope where reactive
+    values can be read, but do not cause the reactive scope of the caller to be
+    re-evaluated when they change.
 
     See Also
     --------

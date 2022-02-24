@@ -18,7 +18,7 @@ if _is_pyodide:
     # available.
     run_app = None
 else:
-    from ._main import run as run_app
+    from ._main import run_app
 
 # User-facing submodules that should *not* be available on `from shiny import *`
 from . import modules

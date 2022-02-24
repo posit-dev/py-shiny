@@ -23,7 +23,7 @@ class Progress:
         ``min``.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
     """
 
     _style = "notification"
@@ -95,6 +95,9 @@ class Progress:
         """
         Increment the progress bar.
 
+        Like ``set``, this updates the progress panel. The difference is that ``inc``
+        increases the progress bar by amount, instead of setting it to a specific value.
+
         Parameters
         ----------
         self
@@ -108,11 +111,6 @@ class Progress:
             The detail message to be displayed to the user or ``None`` to hide the current
             detail message (if any). The detail message will be shown with a
             de-emphasized appearance relative to message.
-
-        Note
-        ----
-        Like ``set``, this updates the progress panel. The difference is that ``inc``
-        increases the progress bar by amount, instead of setting it to a specific value.
         """
 
         if self.value is None:
@@ -143,5 +141,7 @@ class Progress:
 
     def _send_progress(self, type: str, message: Dict[str, Any]) -> None:
         run_coro_sync(
-            self._session.send_message({"progress": {"type": type, "message": message}})
+            self._session._send_message(
+                {"progress": {"type": type, "message": message}}
+            )
         )

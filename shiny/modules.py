@@ -7,14 +7,25 @@ __all__ = (
 
 from typing import Any, Callable, Optional
 
-from htmltools.core import TagChildArg
+from htmltools import TagChildArg
 
+from ._docstring import add_example
 from .reactive import Value
 from .render import RenderFunction
 from .session import Inputs, Outputs, Session, require_active_session
 
 
 class ModuleInputs(Inputs):
+    """
+    A class representing the inputs of a module.
+
+    Warning
+    -------
+    An instance of this class is created for each request and passed as an argument to
+    the :class:`shiny.modules.Module`'s ``server`` function. For this reason, you
+    shouldn't need to create instances of this class yourself.
+    """
+
     def __init__(self, ns: str, values: Inputs):
         self._ns: str = ns
         self._values: Inputs = values
@@ -50,6 +61,16 @@ class ModuleInputs(Inputs):
 
 
 class ModuleOutputs(Outputs):
+    """
+    A class representing the outputs of a module.
+
+    Warning
+    -------
+    An instance of this class is created for each request and passed as an argument to
+    the :class:`shiny.modules.Module`'s ``server`` function. For this reason, you
+    shouldn't need to create instances of this class yourself.
+    """
+
     def __init__(self, ns: str, outputs: Outputs):
         self._ns: str = ns
         self._outputs: Outputs = outputs
@@ -76,6 +97,16 @@ class ModuleOutputs(Outputs):
 
 
 class ModuleSession(Session):
+    """
+    A class representing the session of a module.
+
+    Warning
+    -------
+    An instance of this class is created for each request and passed as an argument to
+    the :class:`shiny.modules.Module`'s ``server`` function. For this reason, you
+    shouldn't need to create instances of this class yourself.
+    """
+
     def __init__(self, ns: str, parent_session: Session) -> None:
         self._ns: str = ns
         self._parent: Session = parent_session
@@ -83,7 +114,19 @@ class ModuleSession(Session):
         self.output: ModuleOutputs = ModuleOutputs(ns, parent_session.output)
 
 
+@add_example()
 class Module:
+    """
+    Modularize UI and server-side logic.
+
+    Parameters
+    ----------
+    ui
+        The module's UI definition.
+    server
+        The module's server-side logic.
+    """
+
     def __init__(
         self,
         ui: Callable[..., TagChildArg],
@@ -94,11 +137,31 @@ class Module:
             [ModuleInputs, ModuleOutputs, ModuleSession], None
         ] = server
 
-    def ui(self, namespace: str, *args: Any) -> TagChildArg:
-        ns = Module._make_ns_fn(namespace)
-        return self._ui(ns, *args)
+    def ui(self, ns: str, *args: Any) -> TagChildArg:
+        """
+        Render the module's UI.
+
+        Parameters
+        ----------
+        namespace
+            A namespace for the module.
+        args
+            Additional arguments to pass to the module's UI definition.
+        """
+        return self._ui(Module._make_ns_fn(ns), *args)
 
     def server(self, ns: str, *, session: Optional[Session] = None) -> None:
+        """
+        Invoke the module's server-side logic.
+
+        Parameters
+        ----------
+        ns
+            A namespace for the module.
+        session
+            A :class:`~shiny.Session` instance. If not provided, it is inferred via
+            :func:`~shiny.session.get_current_session`.
+        """
         self.ns: str = ns
         session = require_active_session(session)
         session_proxy = ModuleSession(ns, session)

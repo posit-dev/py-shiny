@@ -77,7 +77,7 @@ def update_action_button(
         An icon to appear inline with the button/link.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -91,7 +91,7 @@ def update_action_button(
     session = require_active_session(session)
     # TODO: supporting a TagChildArg for label would require changes to shiny.js
     # https://github.com/rstudio/shiny/issues/1140
-    msg = {"label": label, "icon": session.process_ui(icon)["html"] if icon else None}
+    msg = {"label": label, "icon": session._process_ui(icon)["html"] if icon else None}
     session.send_input_message(id, drop_none(msg))
 
 
@@ -123,7 +123,7 @@ def update_checkbox(
         A new value.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -169,7 +169,7 @@ def update_checkbox_group(
         If ``True``, the result is displayed inline
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -221,7 +221,7 @@ def update_radio_buttons(
         If ``True```, the result is displayed inline
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -259,7 +259,7 @@ def _update_choice_input(
         opts = _generate_options(
             id=id, type=type, choices=choices, selected=selected, inline=inline
         )
-        options = session.process_ui(opts)["html"]
+        options = session._process_ui(opts)["html"]
     msg = {"label": label, "options": options, "value": selected}
     session.send_input_message(id, drop_none(msg))
 
@@ -296,7 +296,7 @@ def update_date(
         The maximum allowed value.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -352,7 +352,7 @@ def update_date_range(
         The maximum allowed value.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -461,7 +461,7 @@ def update_select(
         The values that should be initially selected, if any.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -480,7 +480,7 @@ def update_select(
         option_tags = _render_choices(_normalize_choices(choices), selected)
         # Typing problem due to a bug in pylance:
         # https://github.com/microsoft/pylance-release/issues/2377
-        options = session.process_ui(option_tags)["html"]  # type: ignore
+        options = session._process_ui(option_tags)["html"]  # type: ignore
 
     msg = {
         "label": label,
@@ -542,7 +542,7 @@ def update_slider(
         time zone. The value "+0000" will result in UTC time.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -608,7 +608,7 @@ def update_text(
         A hint as to what can be entered into the control.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -649,7 +649,7 @@ def update_navs(
         The values that should be initially selected, if any.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:~`shiny.session.get_current_session`.
+       :func:`~shiny.session.get_current_session`.
 
     Note
     ----
