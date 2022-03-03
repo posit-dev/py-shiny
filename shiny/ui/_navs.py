@@ -596,8 +596,7 @@ def navs_bar(
     header: Optional[TagChildArg] = None,
     footer: Optional[TagChildArg] = None,
     bg: Optional[str] = None,
-    # TODO: default to 'auto', like we have in R
-    inverse: bool = False,
+    inverse: Literal["auto", True, False] = "auto",
     collapsible: bool = True,
     fluid: bool = True,
 ) -> JSXTag:
@@ -630,6 +629,8 @@ def navs_bar(
         Background color of the navbar (a CSS color).
     inverse
         Either ``True`` for a light text color or ``False`` for a dark text color.
+        The default, ``"auto"``, will yield ``True`` if a dark (or no) ``bg`` color is
+        provided  and ``False`` if a light ``bg`` color is provided.
     collapsible
         ``True`` to automatically collapse the navigation elements into a menu when the
         width of the browser is less than 940 pixels (useful for viewing on smaller

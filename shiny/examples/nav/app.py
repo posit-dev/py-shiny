@@ -37,8 +37,7 @@ def nav_items(prefix: str) -> List[JSXTag]:
 app_ui = ui.page_navbar(
     *nav_items("page_navbar"),
     title="page_navbar()",
-    bg="#0062cc",
-    inverse=True,
+    bg="salmon",
     footer=ui.div(
         {"style": "width:80%;margin: 0 auto"},
         ui.h4("navs_tab()"),
