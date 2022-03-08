@@ -11,6 +11,7 @@ from . import ui
 # Private submodules that have some user-facing functionality
 from ._app import App
 from ._decorators import event
+from ._modules import Module
 from ._validation import req
 
 if _is_pyodide:
@@ -21,7 +22,6 @@ else:
     from ._main import run_app
 
 # User-facing submodules that should *not* be available on `from shiny import *`
-from . import modules
 from . import types
 
 # N.B.: we intentionally don't import 'developer-facing' submodules (e.g.,
@@ -41,6 +41,8 @@ __all__ = (
     "event",
     # _main.py
     "run_app",
+    # _modules.py
+    "Module",
     # _render.py
     "render_text",
     "render_plot",

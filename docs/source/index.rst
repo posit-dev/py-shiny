@@ -253,10 +253,7 @@ Control application complexity by namespacing UI and server code.
     :toctree: reference/
     :template: class.rst
 
-    modules.Module
-    modules.ModuleInputs
-    modules.ModuleOutputs
-    modules.ModuleSession
+    Module
 
 
 Type hints

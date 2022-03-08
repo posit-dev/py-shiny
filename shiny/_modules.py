@@ -1,9 +1,4 @@
-__all__ = (
-    "ModuleInputs",
-    "ModuleOutputs",
-    "ModuleSession",
-    "Module",
-)
+__all__ = ("Module",)
 
 from typing import Any, Callable, Optional
 
@@ -12,7 +7,7 @@ from htmltools import TagChildArg
 from ._docstring import add_example
 from .reactive import Value
 from .render import RenderFunction
-from .session import Inputs, Outputs, Session, require_active_session
+from .session import Inputs, Outputs, Session, require_active_session, session_context
 
 
 class ModuleInputs(Inputs):
@@ -23,7 +18,9 @@ class ModuleInputs(Inputs):
     -------
     An instance of this class is created for each request and passed as an argument to
     the :class:`shiny.modules.Module`'s ``server`` function. For this reason, you
-    shouldn't need to create instances of this class yourself.
+    shouldn't need to create instances of this class yourself. Furthermore, you
+    probably shouldn't need this class for type checking either since it has the same
+    signature as :class:`shiny.session.Session`.
     """
 
     def __init__(self, ns: str, values: Inputs):
@@ -68,7 +65,9 @@ class ModuleOutputs(Outputs):
     -------
     An instance of this class is created for each request and passed as an argument to
     the :class:`shiny.modules.Module`'s ``server`` function. For this reason, you
-    shouldn't need to create instances of this class yourself.
+    shouldn't need to create instances of this class yourself. Furthermore, you
+    probably shouldn't need this class for type checking either since it has the same
+    signature as :class:`shiny.session.Session`.
     """
 
     def __init__(self, ns: str, outputs: Outputs):
@@ -104,7 +103,9 @@ class ModuleSession(Session):
     -------
     An instance of this class is created for each request and passed as an argument to
     the :class:`shiny.modules.Module`'s ``server`` function. For this reason, you
-    shouldn't need to create instances of this class yourself.
+    shouldn't need to create instances of this class yourself. Furthermore, you
+    probably shouldn't need this class for type checking either since it has the same
+    signature as :class:`shiny.session.Session`.
     """
 
     def __init__(self, ns: str, parent_session: Session) -> None:
@@ -112,6 +113,9 @@ class ModuleSession(Session):
         self._parent: Session = parent_session
         self.input: ModuleInputs = ModuleInputs(ns, parent_session.input)
         self.output: ModuleOutputs = ModuleOutputs(ns, parent_session.output)
+
+    def __getattr__(self, attr: str) -> Any:
+        return getattr(self._parent, attr)
 
 
 @add_example()
@@ -165,7 +169,8 @@ class Module:
         self.ns: str = ns
         session = require_active_session(session)
         session_proxy = ModuleSession(ns, session)
-        self._server(session_proxy.input, session_proxy.output, session_proxy)
+        with session_context(session_proxy):
+            self._server(session_proxy.input, session_proxy.output, session_proxy)
 
     @staticmethod
     def _make_ns_fn(namespace: str) -> Callable[[str], str]:

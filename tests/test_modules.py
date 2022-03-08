@@ -1,11 +1,13 @@
 """Tests for `Module`."""
 
-import pytest
+from typing import Callable, Dict, Union
 
+import pytest
 from shiny import *
-from shiny.modules import *
-from shiny._utils import Callable
-from shiny.reactive import isolate
+from shiny.session import get_current_session
+from shiny._connmanager import MockConnection
+from shiny._modules import ModuleInputs, ModuleSession
+from shiny._utils import run_coro_sync
 from htmltools import TagChildArg
 
 
@@ -17,10 +19,10 @@ def mod_ui(ns: Callable[[str], str]) -> TagChildArg:
 
 
 # Note: We currently can't test Session; this is just here for future use.
-def mod_server(input: ModuleInputs, output: ModuleOutputs, session: ModuleSession):
-    count: Value[int] = Value(0)
+def mod_server(input: Inputs, output: Outputs, session: Session):
+    count: reactive.Value[int] = reactive.Value(0)
 
-    @effect()
+    @reactive.Effect()
     @event(session.input.button)
     def _():
         count.set(count() + 1)
@@ -45,7 +47,7 @@ async def test_inputs_proxy():
     input = Inputs(a=1)
     input_proxy = ModuleInputs("mod1", input)
 
-    with isolate():
+    with reactive.isolate():
         assert input.a() == 1
         # Different ways of accessing "a" from the input proxy.
         assert input_proxy.a.is_set() is False
@@ -54,7 +56,7 @@ async def test_inputs_proxy():
 
     input_proxy.a._set(2)
 
-    with isolate():
+    with reactive.isolate():
         assert input.a() == 1
         assert input_proxy.a() == 2
         assert input_proxy["a"]() == 2
@@ -62,7 +64,7 @@ async def test_inputs_proxy():
 
     # Nested input proxies
     input_proxy_proxy = ModuleInputs("mod2", input_proxy)
-    with isolate():
+    with reactive.isolate():
         assert input.a() == 1
         assert input_proxy.a() == 2
         # Different ways of accessing "a" from the input proxy.
@@ -72,9 +74,72 @@ async def test_inputs_proxy():
 
     input_proxy_proxy.a._set(3)
 
-    with isolate():
+    with reactive.isolate():
         assert input.a() == 1
         assert input_proxy.a() == 2
         assert input_proxy_proxy.a() == 3
         assert input_proxy_proxy["a"]() == 3
         assert input["mod1-mod2-a"]() == 3
+
+
+def test_current_session():
+
+    sessions: Dict[str, Union[Session, None]] = {}
+
+    def inner(input: Inputs, output: Outputs, session: Session):
+        @reactive.Calc()
+        def out():
+            return get_current_session()
+
+        @reactive.Effect()
+        def _():
+            sessions["inner"] = session
+            sessions["inner_current"] = get_current_session()
+            sessions["inner_calc_current"] = out()
+
+    mod_inner = Module(ui.TagList, inner)
+
+    def outer(input: Inputs, output: Outputs, session: Session):
+        @reactive.Calc()
+        def out():
+            return get_current_session()
+
+        @reactive.Effect()
+        def _():
+            mod_inner.server("mod_inner")
+            sessions["outer"] = session
+            sessions["outer_current"] = get_current_session()
+            sessions["outer_calc_current"] = out()
+
+    mod_outer = Module(ui.TagList, outer)
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        mod_outer.server("mod_outer")
+
+        @reactive.Calc()
+        def out():
+            return get_current_session()
+
+        @reactive.Effect()
+        def _():
+            sessions["top"] = session
+            sessions["top_current"] = get_current_session()
+            sessions["top_calc_current"] = out()
+
+    App(ui.TagList(), server)._create_session(MockConnection())
+    run_coro_sync(reactive.flush())
+
+    assert sessions["inner"] is sessions["inner_current"]
+    assert sessions["inner_current"] is sessions["inner_calc_current"]
+    assert isinstance(sessions["inner_current"], ModuleSession)
+    assert sessions["inner_current"]._ns == "mod_inner"
+
+    assert sessions["outer"] is sessions["outer_current"]
+    assert sessions["outer_current"] is sessions["outer_calc_current"]
+    assert isinstance(sessions["outer_current"], ModuleSession)
+    assert sessions["outer_current"]._ns == "mod_outer"
+
+    assert sessions["top"] is sessions["top_current"]
+    assert sessions["top_current"] is sessions["top_calc_current"]
+    assert isinstance(sessions["top_current"], Session)
+    assert not isinstance(sessions["top_current"], ModuleSession)
