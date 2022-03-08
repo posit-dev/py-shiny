@@ -823,13 +823,3 @@ class Outputs:
                 return True
 
             return hidden_value_obj()
-
-
-# A very bare bones MockSession which allows us to unit test server
-class MockSession(Session):
-    def __init__(self, server: Callable[..., None]) -> None:
-        from ..ui import TagList
-        from .._app import App
-
-        app = App(TagList(), server)
-        super().__init__(app=app, id="1", conn=MockConnection())
