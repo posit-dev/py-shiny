@@ -6,7 +6,7 @@ import pytest
 from shiny import *
 from shiny.session import get_current_session
 from shiny.session._session import MockSession
-from shiny.modules import ModuleInputs, ModuleSession
+from shiny._modules import ModuleInputs, ModuleSession
 from shiny._utils import run_coro_sync
 from htmltools import TagChildArg
 

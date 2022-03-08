@@ -11,7 +11,7 @@ from . import ui
 # Private submodules that have some user-facing functionality
 from ._app import App
 from ._decorators import event
-from .modules import Module
+from ._modules import Module
 from ._validation import req
 
 if _is_pyodide:
