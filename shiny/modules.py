@@ -113,6 +113,9 @@ class ModuleSession(Session):
         self.input: ModuleInputs = ModuleInputs(ns, parent_session.input)
         self.output: ModuleOutputs = ModuleOutputs(ns, parent_session.output)
 
+    def __getattr__(self, attr: str) -> Any:
+        return getattr(self._parent, attr)
+
 
 @add_example()
 class Module:
