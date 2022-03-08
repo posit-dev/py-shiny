@@ -1,6 +1,5 @@
 from typing import Callable
 from shiny import *
-from shiny.modules import *
 
 
 # ============================================================
@@ -17,7 +16,7 @@ def counter_ui(
     )
 
 
-def counter_server(input: ModuleInputs, output: ModuleOutputs, session: ModuleSession):
+def counter_server(input: Inputs, output: Outputs, session: Session):
     count: reactive.Value[int] = reactive.Value(0)
 
     @reactive.Effect()

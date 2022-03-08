@@ -1,11 +1,10 @@
 """Tests for `Module`."""
 
 import pytest
+from typing import Callable
 
 from shiny import *
-from shiny.modules import *
-from shiny._utils import Callable
-from shiny.reactive import isolate
+from shiny.modules import ModuleInputs, ModuleSession
 from htmltools import TagChildArg
 
 
@@ -17,10 +16,10 @@ def mod_ui(ns: Callable[[str], str]) -> TagChildArg:
 
 
 # Note: We currently can't test Session; this is just here for future use.
-def mod_server(input: ModuleInputs, output: ModuleOutputs, session: ModuleSession):
-    count: Value[int] = Value(0)
+def mod_server(input: Inputs, output: Outputs, session: Session):
+    count: reactive.Value[int] = reactive.Value(0)
 
-    @effect()
+    @reactive.Effect()
     @event(session.input.button)
     def _():
         count.set(count() + 1)
@@ -45,7 +44,7 @@ async def test_inputs_proxy():
     input = Inputs(a=1)
     input_proxy = ModuleInputs("mod1", input)
 
-    with isolate():
+    with reactive.isolate():
         assert input.a() == 1
         # Different ways of accessing "a" from the input proxy.
         assert input_proxy.a.is_set() is False
@@ -54,7 +53,7 @@ async def test_inputs_proxy():
 
     input_proxy.a._set(2)
 
-    with isolate():
+    with reactive.isolate():
         assert input.a() == 1
         assert input_proxy.a() == 2
         assert input_proxy["a"]() == 2
@@ -62,7 +61,7 @@ async def test_inputs_proxy():
 
     # Nested input proxies
     input_proxy_proxy = ModuleInputs("mod2", input_proxy)
-    with isolate():
+    with reactive.isolate():
         assert input.a() == 1
         assert input_proxy.a() == 2
         # Different ways of accessing "a" from the input proxy.

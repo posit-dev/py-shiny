@@ -1,9 +1,4 @@
-__all__ = (
-    "ModuleInputs",
-    "ModuleOutputs",
-    "ModuleSession",
-    "Module",
-)
+__all__ = ("Module",)
 
 from typing import Any, Callable, Optional
 
@@ -23,7 +18,9 @@ class ModuleInputs(Inputs):
     -------
     An instance of this class is created for each request and passed as an argument to
     the :class:`shiny.modules.Module`'s ``server`` function. For this reason, you
-    shouldn't need to create instances of this class yourself.
+    shouldn't need to create instances of this class yourself. Furthermore, you
+    probably shouldn't need this class for type checking either since it has the same
+    signature as :class:`shiny.session.Session`.
     """
 
     def __init__(self, ns: str, values: Inputs):
@@ -68,7 +65,9 @@ class ModuleOutputs(Outputs):
     -------
     An instance of this class is created for each request and passed as an argument to
     the :class:`shiny.modules.Module`'s ``server`` function. For this reason, you
-    shouldn't need to create instances of this class yourself.
+    shouldn't need to create instances of this class yourself. Furthermore, you
+    probably shouldn't need this class for type checking either since it has the same
+    signature as :class:`shiny.session.Session`.
     """
 
     def __init__(self, ns: str, outputs: Outputs):
@@ -104,7 +103,9 @@ class ModuleSession(Session):
     -------
     An instance of this class is created for each request and passed as an argument to
     the :class:`shiny.modules.Module`'s ``server`` function. For this reason, you
-    shouldn't need to create instances of this class yourself.
+    shouldn't need to create instances of this class yourself. Furthermore, you
+    probably shouldn't need this class for type checking either since it has the same
+    signature as :class:`shiny.session.Session`.
     """
 
     def __init__(self, ns: str, parent_session: Session) -> None:
