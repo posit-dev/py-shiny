@@ -4,6 +4,7 @@ from typing import Callable, Dict, Union
 
 import pytest
 from shiny import *
+from shiny.reactive import Calc_
 from shiny.session import get_current_session
 from shiny._connmanager import MockConnection
 from shiny._modules import ModuleInputs, ModuleSession
@@ -86,60 +87,66 @@ def test_current_session():
 
     sessions: Dict[str, Union[Session, None]] = {}
 
-    def inner(input: Inputs, output: Outputs, session: Session):
+    def inner(
+        input: Inputs, output: Outputs, session: Session, top_calc: Calc_[Session]
+    ):
         @reactive.Calc()
-        def out():
+        def calc():
             return get_current_session()
 
         @reactive.Effect()
         def _():
             sessions["inner"] = session
             sessions["inner_current"] = get_current_session()
-            sessions["inner_calc_current"] = out()
+            sessions["inner_calc"] = calc()
+            sessions["inner_top_calc"] = top_calc()
 
     mod_inner = Module(ui.TagList, inner)
 
-    def outer(input: Inputs, output: Outputs, session: Session):
+    def outer(
+        input: Inputs, output: Outputs, session: Session, top_calc: Calc_[Session]
+    ):
         @reactive.Calc()
-        def out():
+        def calc():
             return get_current_session()
 
         @reactive.Effect()
         def _():
-            mod_inner.server("mod_inner")
             sessions["outer"] = session
             sessions["outer_current"] = get_current_session()
-            sessions["outer_calc_current"] = out()
+            sessions["outer_calc"] = calc()
+            sessions["outer_top_calc"] = top_calc()
+
+        mod_inner.server("mod_inner", top_calc=top_calc)
 
     mod_outer = Module(ui.TagList, outer)
 
     def server(input: Inputs, output: Outputs, session: Session):
-        mod_outer.server("mod_outer")
-
         @reactive.Calc()
-        def out():
+        def calc():
             return get_current_session()
 
         @reactive.Effect()
         def _():
             sessions["top"] = session
             sessions["top_current"] = get_current_session()
-            sessions["top_calc_current"] = out()
+            sessions["top_calc"] = calc()
+
+        mod_outer.server("mod_outer", top_calc=calc)
 
     App(ui.TagList(), server)._create_session(MockConnection())
     run_coro_sync(reactive.flush())
 
-    assert sessions["inner"] is sessions["inner_current"]
-    assert sessions["inner_current"] is sessions["inner_calc_current"]
-    assert isinstance(sessions["inner_current"], ModuleSession)
-    assert sessions["inner_current"]._ns == "mod_inner"
+    assert sessions["inner"] is sessions["inner_current"] and sessions["inner_calc"]
+    assert isinstance(sessions["inner"], ModuleSession)
+    assert sessions["inner"]._ns == "mod_inner"
 
-    assert sessions["outer"] is sessions["outer_current"]
-    assert sessions["outer_current"] is sessions["outer_calc_current"]
-    assert isinstance(sessions["outer_current"], ModuleSession)
-    assert sessions["outer_current"]._ns == "mod_outer"
+    assert sessions["outer"] is sessions["outer_current"] and sessions["outer_calc"]
+    assert isinstance(sessions["outer"], ModuleSession)
+    assert sessions["outer"]._ns == "mod_outer"
 
-    assert sessions["top"] is sessions["top_current"]
-    assert sessions["top_current"] is sessions["top_calc_current"]
-    assert isinstance(sessions["top_current"], Session)
-    assert not isinstance(sessions["top_current"], ModuleSession)
+    assert sessions["top"] is sessions["top_current"] and sessions["top_calc"]
+    assert sessions["top"] is sessions["inner_top_calc"] and sessions["outer_top_calc"]
+    assert isinstance(sessions["top"], Session) and not isinstance(
+        sessions["top"], ModuleSession
+    )

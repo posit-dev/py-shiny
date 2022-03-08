@@ -134,14 +134,12 @@ class Module:
     def __init__(
         self,
         ui: Callable[..., TagChildArg],
-        server: Callable[[ModuleInputs, ModuleOutputs, ModuleSession], None],
+        server: Callable[..., Any],
     ) -> None:
         self._ui: Callable[..., TagChildArg] = ui
-        self._server: Callable[
-            [ModuleInputs, ModuleOutputs, ModuleSession], None
-        ] = server
+        self._server: Callable[..., Any] = server
 
-    def ui(self, ns: str, *args: Any) -> TagChildArg:
+    def ui(self, ns: str, *args: Any, **kwargs: Any) -> TagChildArg:
         """
         Render the module's UI.
 
@@ -152,9 +150,11 @@ class Module:
         args
             Additional arguments to pass to the module's UI definition.
         """
-        return self._ui(Module._make_ns_fn(ns), *args)
+        return self._ui(Module._make_ns_fn(ns), *args, **kwargs)
 
-    def server(self, ns: str, *, session: Optional[Session] = None) -> None:
+    def server(
+        self, ns: str, *args: Any, session: Optional[Session] = None, **kwargs: Any
+    ) -> Any:
         """
         Invoke the module's server-side logic.
 
@@ -162,15 +162,25 @@ class Module:
         ----------
         ns
             A namespace for the module.
+        *args
+            Additional arguments to pass to the module's server-side logic.
         session
             A :class:`~shiny.Session` instance. If not provided, it is inferred via
             :func:`~shiny.session.get_current_session`.
+        **kwargs
+            Additional keyword arguments to pass to the module's server-side logic.
         """
         self.ns: str = ns
         session = require_active_session(session)
         session_proxy = ModuleSession(ns, session)
         with session_context(session_proxy):
-            self._server(session_proxy.input, session_proxy.output, session_proxy)
+            return self._server(
+                session_proxy.input,
+                session_proxy.output,
+                session_proxy,
+                *args,
+                **kwargs
+            )
 
     @staticmethod
     def _make_ns_fn(namespace: str) -> Callable[[str], str]:
