@@ -12,7 +12,7 @@ from htmltools import TagChildArg
 from ._docstring import add_example
 from .reactive import Value
 from .render import RenderFunction
-from .session import Inputs, Outputs, Session, require_active_session
+from .session import Inputs, Outputs, Session, require_active_session, session_context
 
 
 class ModuleInputs(Inputs):
@@ -165,7 +165,8 @@ class Module:
         self.ns: str = ns
         session = require_active_session(session)
         session_proxy = ModuleSession(ns, session)
-        self._server(session_proxy.input, session_proxy.output, session_proxy)
+        with session_context(session_proxy):
+            self._server(session_proxy.input, session_proxy.output, session_proxy)
 
     @staticmethod
     def _make_ns_fn(namespace: str) -> Callable[[str], str]:
