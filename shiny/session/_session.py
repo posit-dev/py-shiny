@@ -118,7 +118,8 @@ class Session:
     -------
     An instance of this class is created for each request and passed as an argument to
     the :class:`shiny.App`'s ``server`` function. For this reason, you shouldn't
-    need to create instances of this class yourself.
+    need to create instances of this class yourself (it's only part of the public API
+    for type checking reasons).
     """
 
     # ==========================================================================
@@ -663,7 +664,8 @@ class Inputs:
     -------
     An instance of this class is created for each request and passed as an argument to
     the :class:`shiny.App`'s ``server`` function. For this reason, you shouldn't
-    need to create instances of this class yourself.
+    need to create instances of this class yourself (it's only part of the public API
+    for type checking reasons).
     """
 
     def __init__(self, **kwargs: object) -> None:
@@ -718,7 +720,8 @@ class Outputs:
     -------
     An instance of this class is created for each request and passed as an argument to
     the :class:`shiny.App`'s ``server`` function. For this reason, you shouldn't
-    need to create instances of this class yourself.
+    need to create instances of this class yourself (it's only part of the public API
+    for type checking reasons).
     """
 
     def __init__(self, session: Session) -> None:
