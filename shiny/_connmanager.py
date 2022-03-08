@@ -25,6 +25,21 @@ class Connection(ABC):
         ...
 
 
+class MockConnection(Connection):
+    async def send(self, message: str) -> None:
+        pass
+
+    # I should say I’m not 100% that the receive method can be a no-op for our testing
+    # purposes. It might need to be asyncio.sleep(0), and/or it might need an external
+    # way to yield until we tell the connection to continue, so that the run loop can
+    # continue.
+    async def receive(self) -> str:
+        pass
+
+    async def close(self, code: int, reason: Optional[str]) -> None:
+        pass
+
+
 class StarletteConnection(Connection):
     def __init__(self, conn: starlette.websockets.WebSocket):
         self.conn: starlette.websockets.WebSocket = conn
