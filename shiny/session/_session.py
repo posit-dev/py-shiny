@@ -49,6 +49,7 @@ from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
+from .._namespaces import namespaced_id
 from ..reactive import Value, Effect, Effect_, isolate, flush
 from ..reactive._core import lock
 from ..types import SafeException, SilentCancelOutputException, SilentException
@@ -140,6 +141,8 @@ class Session:
 
         self.input: Inputs = Inputs()
         self.output: Outputs = Outputs(self)
+
+        self._ns: Optional[str] = None  # Only relevant for ModuleSession
 
         self.user: Union[str, None] = None
         self.groups: Union[List[str], None] = None
@@ -336,6 +339,7 @@ class Session:
     # ==========================================================================
     # Handling /session/{session_id}/{action}/{subpath} requests
     # ==========================================================================
+    # TODO: anything to be done here for module support?
     async def _handle_request(
         self, request: Request, action: str, subpath: Optional[str]
     ) -> ASGIApp:
@@ -471,7 +475,7 @@ class Session:
         message
             The message to send.
         """
-        msg: Dict[str, object] = {"id": id, "message": message}
+        msg: Dict[str, object] = {"id": namespaced_id(id, self._ns), "message": message}
         self._outbound_message_queues["input_messages"].append(msg)
         self._request_flush()
 
@@ -639,6 +643,7 @@ class Session:
         await self.close()
 
     # TODO: probably name should be id
+    # TODO: anything to be done here for module support?
     @add_example()
     def download(
         self,
@@ -748,13 +753,16 @@ class Inputs:
         for key, value in kwargs.items():
             self._map[key] = Value(value, read_only=True)
 
+        self._ns: Optional[str] = None  # Only relevant for ModuleInputs()
+
     def __setitem__(self, key: str, value: Value[Any]) -> None:
         if not isinstance(value, Value):
             raise TypeError("`value` must be a reactive.Value object.")
 
-        self._map[key] = value
+        self._map[namespaced_id(key, self._ns)] = value
 
     def __getitem__(self, key: str) -> Value[Any]:
+        key = namespaced_id(key, self._ns)
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
         # yet.
@@ -764,19 +772,18 @@ class Inputs:
         return self._map[key]
 
     def __delitem__(self, key: str) -> None:
-        del self._map[key]
+        del self._map[namespaced_id(key, self._ns)]
 
     # Allow access of values as attributes.
     def __setattr__(self, attr: str, value: Value[Any]) -> None:
-        # Need special handling of "_map".
-        if attr == "_map":
+        if attr in ("_map", "_ns"):
             super().__setattr__(attr, value)
             return
 
         self.__setitem__(attr, value)
 
     def __getattr__(self, attr: str) -> Value[Any]:
-        if attr == "_map":
+        if attr in ("_map", "_ns"):
             return object.__getattribute__(self, attr)
         return self.__getitem__(attr)
 
@@ -803,6 +810,7 @@ class Outputs:
         self._effects: Dict[str, Effect_] = {}
         self._suspend_when_hidden: Dict[str, bool] = {}
         self._session: Session = session
+        self._ns: Optional[str] = None  # Only relevant for ModuleOutputs()
 
     @overload
     def __call__(self, fn: render.RenderFunction) -> None:
@@ -837,7 +845,9 @@ class Outputs:
             id = name
 
         def set_fn(fn: render.RenderFunction) -> None:
-            output_name = id or fn.__name__
+            # Get the (possibly namespaced) output id
+            output_name = namespaced_id(id or fn.__name__, self._ns)
+
             # fn is either a regular function or a RenderFunction object. If
             # it's the latter, give it a bit of metadata.
             if isinstance(fn, render.RenderFunction):

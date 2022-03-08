@@ -1,6 +1,6 @@
 """Tests for `Module`."""
 
-from typing import Callable, Dict, Union, cast
+from typing import Dict, Union, cast
 
 import pytest
 from shiny import *
@@ -11,10 +11,10 @@ from shiny._utils import run_coro_sync
 from htmltools import TagChildArg
 
 
-def mod_ui(ns: Callable[[str], str]) -> TagChildArg:
+def mod_ui() -> TagChildArg:
     return ui.TagList(
-        ui.input_action_button(id=ns("button"), label="module1"),
-        ui.output_text_verbatim(id=ns("out")),
+        ui.input_action_button(id="button", label="module1"),
+        ui.output_text_verbatim(id="out"),
     )
 
 
@@ -38,8 +38,8 @@ mod = Module(mod_ui, mod_server)
 
 def test_module_ui():
     x = cast(ui.TagList, mod.ui("mod1"))
-    assert cast(ui.Tag, x[0]).attrs["id"] == "mod1-button"
-    assert cast(ui.Tag, x[1]).attrs["id"] == "mod1-out"
+    assert cast(ui.Tag, x[0]).attrs["id"] == "mod1_button"
+    assert cast(ui.Tag, x[1]).attrs["id"] == "mod1_out"
 
 
 @pytest.mark.asyncio
@@ -52,7 +52,7 @@ async def test_inputs_proxy():
         # Different ways of accessing "a" from the input proxy.
         assert input_proxy.a.is_set() is False
         assert input_proxy["a"].is_set() is False
-        assert input["mod1-a"].is_set() is False
+        assert input["mod1_a"].is_set() is False
 
     input_proxy.a._set(2)
 
@@ -60,7 +60,7 @@ async def test_inputs_proxy():
         assert input.a() == 1
         assert input_proxy.a() == 2
         assert input_proxy["a"]() == 2
-        assert input["mod1-a"]() == 2
+        assert input["mod1_a"]() == 2
 
     # Nested input proxies
     input_proxy_proxy = ModuleInputs("mod2", input_proxy)
@@ -70,7 +70,7 @@ async def test_inputs_proxy():
         # Different ways of accessing "a" from the input proxy.
         assert input_proxy_proxy.a.is_set() is False
         assert input_proxy_proxy["a"].is_set() is False
-        assert input_proxy["mod1-a"].is_set() is False
+        assert input_proxy["mod1_a"].is_set() is False
 
     input_proxy_proxy.a._set(3)
 
@@ -79,7 +79,7 @@ async def test_inputs_proxy():
         assert input_proxy.a() == 2
         assert input_proxy_proxy.a() == 3
         assert input_proxy_proxy["a"]() == 3
-        assert input["mod1-mod2-a"]() == 3
+        assert input["mod1_mod2_a"]() == 3
 
 
 def test_current_session():
@@ -132,7 +132,7 @@ def test_current_session():
     assert sessions["inner"] is sessions["inner_current"]
     assert sessions["inner_current"] is sessions["inner_calc_current"]
     assert isinstance(sessions["inner_current"], ModuleSession)
-    assert sessions["inner_current"]._ns == "mod_inner"
+    assert sessions["inner_current"]._ns == "mod_outer_mod_inner"
 
     assert sessions["outer"] is sessions["outer_current"]
     assert sessions["outer_current"] is sessions["outer_calc_current"]

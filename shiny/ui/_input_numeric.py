@@ -5,6 +5,7 @@ from typing import Optional
 from htmltools import tags, Tag, div, css, TagChildArg
 
 from .._docstring import add_example
+from .._namespaces import namespaced_id
 from ._utils import shiny_input_label
 
 
@@ -57,7 +58,7 @@ def input_numeric(
     return div(
         shiny_input_label(id, label),
         tags.input(
-            id=id,
+            id=namespaced_id(id),
             type="number",
             class_="form-control",
             value=value,

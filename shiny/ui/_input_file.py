@@ -11,6 +11,7 @@ else:
 from htmltools import Tag, TagChildArg, css, div, span, tags
 
 from .._docstring import add_example
+from .._namespaces import namespaced_id
 from ._utils import shiny_input_label
 
 
@@ -89,7 +90,7 @@ def input_file(
     btn_file = span(
         button_label,
         tags.input(
-            id=id,
+            id=namespaced_id(id),
             name=id,
             type="file",
             multiple="multiple" if multiple else None,

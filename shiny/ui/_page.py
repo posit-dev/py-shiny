@@ -28,6 +28,7 @@ from htmltools import Tagifiable  # pyright: ignore[reportUnusedImport] # noqa: 
 from .._docstring import add_example
 from ._html_dependencies import bootstrap_deps
 from ._navs import navset_bar
+from .._namespaces import namespaced_id
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._utils import get_window_title
 
@@ -114,7 +115,7 @@ def page_navbar(
             navset_bar(
                 *args,
                 title=title,
-                id=id,
+                id=namespaced_id(id) if id else None,
                 selected=selected,
                 position=position,
                 header=header,

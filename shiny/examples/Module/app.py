@@ -1,18 +1,14 @@
-from typing import Callable
 from shiny import *
-
 
 # ============================================================
 # Counter module
 # ============================================================
-def counter_ui(
-    ns: Callable[[str], str], label: str = "Increment counter"
-) -> ui.TagChildArg:
+def counter_ui(label: str = "Increment counter") -> ui.TagChildArg:
     return ui.div(
         {"style": "border: 1px solid #ccc; border-radius: 5px; margin: 5px 0;"},
         ui.h2("This is " + label),
-        ui.input_action_button(id=ns("button"), label=label),
-        ui.output_text_verbatim(id=ns("out")),
+        ui.input_action_button(id="button", label=label),
+        ui.output_text_verbatim(id="out"),
     )
 
 
