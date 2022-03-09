@@ -48,6 +48,14 @@ jobs:
         run: |
           pip install -e .
 
+      - name: Check out prism-experiments
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          pwd
+          cd ..
+          git clone --depth=1 git@github.com:rstudio/prism-experiments.git
+
       - name: Build docs
         run: |
           cd docs

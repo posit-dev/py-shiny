@@ -1,5 +1,5 @@
 import os
-from typing import Callable, Any, TypeVar
+from typing import Callable, Any, TypeVar, Literal
 
 ex_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "examples")
 
@@ -7,7 +7,7 @@ FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
 
 
-def add_example() -> Callable[[F], F]:
+def add_example(directive: Literal["pyshinyapp"] = "pyshinyapp") -> Callable[[F], F]:
     def _(func: F) -> F:
 
         # To avoid a performance hit on `import shiny`, we only add examples to the
@@ -23,10 +23,12 @@ def add_example() -> Callable[[F], F]:
         if func.__doc__ is None:
             func.__doc__ = ""
 
-        # How many spaces should there be before the example section?
-        # (yes, leading white-space is important :eye-roll:)
+        # How many leading spaces does the docstring start with?
         doc = func.__doc__.replace("\n", "")
         indent = " " * (len(doc) - len(doc.lstrip()))
+
+        with open(example_file) as f:
+            example = indent.join([" " * 4 + x for x in f.readlines()])
 
         example_section = ("\n" + indent).join(
             [
@@ -37,15 +39,15 @@ def add_example() -> Callable[[F], F]:
                 "",
                 ".. code-block:: python",
                 "",
+                example,
+                "",
+                f".. {directive}::",
+                "",
+                example,
             ]
         )
 
-        with open(example_file) as f:
-            exindent = indent + " " * 4
-            example = [exindent + x for x in f.readlines()]
-            example = "".join(example)
-
-        func.__doc__ += example_section + "\n" + example
+        func.__doc__ += example_section
         return func
 
     return _
