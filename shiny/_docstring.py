@@ -1,5 +1,12 @@
 import os
-from typing import Callable, Any, TypeVar, Literal, List
+import sys
+from typing import Callable, Any, TypeVar, List
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
 
 ex_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "examples")
 
