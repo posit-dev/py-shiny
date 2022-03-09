@@ -48,6 +48,13 @@ jobs:
         run: |
           pip install -e .
 
+      - name: Setup SSH key for prism-experiments
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.PRISM_EXPERIMENTS_DEPLOY_KEY }}"
+
       - name: Check out prism-experiments
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
