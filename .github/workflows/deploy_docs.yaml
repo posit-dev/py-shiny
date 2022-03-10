@@ -65,7 +65,7 @@ jobs:
       # Configured for deployment to https://connect.rstudioservices.com/pyshiny
       - name: Build docs
         run: |
-          export SHINYLIVE_DEST="/pyshiny/shinylive"
+          export SHINYLIVE_BASE_URL="/pyshiny"
           cd docs
           make clean && make html
 

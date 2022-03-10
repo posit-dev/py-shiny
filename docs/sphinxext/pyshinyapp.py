@@ -29,13 +29,14 @@ from htmltools import css
 
 # Local path to the shinylive/ directory (currently provided by rstudio/prism-experiments)
 # This is only needed for the "self-contained" version of the API reference.
-# (in other words, you can set this to None if you already have the shinylive/ directory
+# (in other words, you can set this to "" if you already have the shinylive/ directory
 # in your repo, just make sure to also point SHINYLIVE_DEST to the right place)
 shinylive_src = abspath(join(dirname(__file__), "../../../prism-experiments/shinylive"))
 SHINYLIVE_SRC = os.getenv("SHINYLIVE_SRC", shinylive_src)
 
 # The location of the shinylive/ directory (relative to the output/root directory)
-SHINYLIVE_DEST = os.getenv("SHINYLIVE_DEST", "/shinylive")
+SHINYLIVE_BASE_URL = os.getenv("SHINYLIVE_BASE_URL", "/")
+SHINYLIVE_DEST = os.getenv("SHINYLIVE_DEST", "shinylive")
 
 # Since we may want to configure the location of the shinylive directory,
 # write a _templates/layout.html with the relevant extrahead content
@@ -46,7 +47,7 @@ LAYOUT_TEMPLATE = f"""
 {{% extends "!layout.html" %}}
 {{% block extrahead %}}
   <script type="module">
-    const serviceWorkerPath = "{join(dirname(SHINYLIVE_DEST), 'serviceworker.js')}";
+    const serviceWorkerPath = "{join(SHINYLIVE_BASE_URL, dirname(SHINYLIVE_DEST), 'serviceworker.js')}";
     // Start the service worker as soon as possible, to maximize the
     // resources it will be able to cache on the first run.
     if ("serviceWorker" in navigator) {{
@@ -63,8 +64,8 @@ LAYOUT_TEMPLATE = f"""
       }});
     }}
   </script>
-  <link rel="stylesheet" href="{join(SHINYLIVE_DEST, 'Components/App.css')}" type="text/css">
-  <script src="{join(SHINYLIVE_DEST, 'run-python-blocks.js')}" type="module"></script>
+  <link rel="stylesheet" href="{join(SHINYLIVE_BASE_URL, SHINYLIVE_DEST, 'Components/App.css')}" type="text/css">
+  <script src="{join(SHINYLIVE_BASE_URL, SHINYLIVE_DEST, 'run-python-blocks.js')}" type="module"></script>
 {{% endblock %}}
 """
 
