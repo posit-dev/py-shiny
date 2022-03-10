@@ -62,3 +62,9 @@ html_static_path = ["_static"]
 
 # Tell @shiny._docstring.add_example() to actually add examples to the docstrings.
 os.environ["SHINY_ADD_EXAMPLES"] = "true"
+
+
+# WARNING: if you're thinking about adding subclasses of docutils.nodes.Element here,
+# don't! You'll get unhelpful pickling errors. https://github.com/sphinx-doc/sphinx/pull/6754
+# Instead, add them to the docs/source/sphinxext/ directory and add the name to the
+# extensions list above (as done for pyshinyapp).

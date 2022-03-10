@@ -1,9 +1,5 @@
+
 {% extends "!layout.html" %}
-// This additional head content makes it possible to embed shiny apps via wasm.
-// It's intended for use with the custom sphinx extension directives located
-// under docs/source/sphinxext/
-// See https://rstudio.github.io/prism-experiments/embedded-app.html
-// and https://rstudio.github.io/prism-experiments/guide/site/components.html
 {% block extrahead %}
   <script type="module">
     const serviceWorkerPath = "/serviceworker.js";

@@ -17,10 +17,8 @@ Usage::
         :height: 500px
 """
 
-# N.B. place subclasses of Element in here (not conf.py)...because Sphinx!
-# https://github.com/sphinx-doc/sphinx/pull/6754
-
 import os
+from os.path import dirname, join, abspath
 import shutil
 
 from docutils.nodes import SkipNode, Element
@@ -29,18 +27,54 @@ from sphinx.application import Sphinx
 from sphinx.util.docutils import SphinxDirective
 from htmltools import css
 
-# Current assumption is that rstudio/prism-experiments repo is a sibling of rstudio/prism
-SHINYLIVE_DIR = os.path.abspath(
-    os.path.join(
-        os.path.dirname(__file__),
-        "../../../prism-experiments/shinylive",
-    )
+# Local path to the shinylive/ directory (currently provided by rstudio/prism-experiments)
+# This is only needed for the "self-contained" version of the API reference.
+# (in other words, you can set this to None if you already have the shinylive/ directory
+# in your repo, just make sure to also point SHINYLIVE_DEST to the right place)
+shinylive_src = abspath(join(dirname(__file__), "../../../prism-experiments/shinylive"))
+SHINYLIVE_SRC = os.getenv("SHINYLIVE_SRC", shinylive_src)
+
+# The location of the shinylive/ directory (relative to the output/root directory)
+SHINYLIVE_DEST = os.getenv("SHINYLIVE_DEST", "/shinylive")
+
+# Since we may want to configure the location of the shinylive directory,
+# write a _templates/layout.html with the relevant extrahead content
+# See https://rstudio.github.io/prism-experiments/embedded-app.html
+# and https://rstudio.github.io/prism-experiments/guide/site/components.html
+# for more/update details
+LAYOUT_TEMPLATE = f"""
+{{% extends "!layout.html" %}}
+{{% block extrahead %}}
+  <script type="module">
+    const serviceWorkerPath = "{join(dirname(SHINYLIVE_DEST), 'serviceworker.js')}";
+    // Start the service worker as soon as possible, to maximize the
+    // resources it will be able to cache on the first run.
+    if ("serviceWorker" in navigator) {{
+      navigator.serviceWorker
+        .register(serviceWorkerPath)
+        .then(() => console.log("Service Worker registered"))
+        .catch(() => console.log("Service Worker registration failed"));
+      navigator.serviceWorker.ready.then(() => {{
+        if (!navigator.serviceWorker.controller) {{
+          // For Shift+Reload case; navigator.serviceWorker.controller will
+          // never appear until a regular (not Shift+Reload) page load.
+          window.location.reload();
+        }}
+      }});
+    }}
+  </script>
+  <link rel="stylesheet" href="{join(SHINYLIVE_DEST, 'Components/App.css')}" type="text/css">
+  <script src="{join(SHINYLIVE_DEST, 'run-python-blocks.js')}" type="module"></script>
+{{% endblock %}}
+"""
+
+layout_template = join(
+    dirname(dirname(__file__)),
+    "source/_templates/layout.html",
 )
 
-if not os.path.exists(SHINYLIVE_DIR):
-    raise Exception(
-        "Couldn't find the shinylive/ directory (i.e., the static files necessary to render shiny apps client-side)"
-    )
+with open(layout_template, "w") as f:
+    f.write(LAYOUT_TEMPLATE)
 
 
 class ShinyElement(Element):
@@ -93,26 +127,28 @@ class TerminalDirective(BaseDirective):
 
 
 def setup(app: Sphinx):
-    # After the build is finished, copy over the necessary shinylive static files
-    # the usual _static/ directory won't work given the limitations in it's current
-    # design
-    def after_build(app: Sphinx, error):
-        shinylive = os.path.join(app.outdir, "shinylive")
+    # After the build is finished, if necessary, copy over the necessary shinylive
+    # static files the usual _static/ directory won't work given the limitations in it's
+    # current design
+    def after_build(app: Sphinx, error: object):
+        if not SHINYLIVE_SRC:
+            return
+        shinylive = os.path.join(app.outdir, SHINYLIVE_DEST)
         if os.path.exists(shinylive):
             shutil.rmtree(shinylive)
-        shutil.copytree(SHINYLIVE_DIR, shinylive)
+        shutil.copytree(SHINYLIVE_SRC, shinylive)
         shutil.copy(
-            os.path.join(SHINYLIVE_DIR, "../serviceworker.js"),
+            os.path.join(SHINYLIVE_SRC, "../serviceworker.js"),
             os.path.join(app.outdir, "serviceworker.js"),
         )
 
     app.connect("build-finished", after_build)
 
-    def append_element_html(self, node: Element):
+    def append_element_html(self: Sphinx, node: Element):
         self.body.append(node.html())
         raise SkipNode
 
-    def skip(self, node: Element):
+    def skip(self: Sphinx, node: Element):
         raise SkipNode
 
     app.add_node(

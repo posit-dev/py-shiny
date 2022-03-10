@@ -59,14 +59,15 @@ jobs:
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent2.sock
         run: |
-          pwd
           cd ..
           git clone --depth=1 git@github.com:rstudio/prism-experiments.git
 
+      # Configured for deployment to https://connect.rstudioservices.com/pyshiny
       - name: Build docs
         run: |
+          export SHINYLIVE_DEST="/pyshiny/shinylive"
           cd docs
-          make html
+          make clean && make html
 
       # - name: Install rsconnect-python
       #   run: |
