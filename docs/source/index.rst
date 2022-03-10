@@ -1,7 +1,72 @@
-Shiny for Python API Reference
-==============================
+API Reference Intro
+===================
 
-* :ref:`search`
+This website documents the public API of Shiny (for Python). See the `Getting Started
+tutorial <https://rstudio.github.io/prism-experiments/guide/site/get-started.html>`_ for
+a more approachable introduction to the API. The left-hand sidebar lists the full public
+API, without any grouping, but the sections below (linked to the right-hand sidebar)
+break it into semantically similar groups. Most of the reference pages include a live
+example app at the bottom, or at least mention another page with a relevant example. See
+`here <https://rstudio.github.io/prism-experiments/>`_ for more on how to these basic
+apps are able to run purely in the browser (no server required) on a statically hosted
+site (more complex apps may require a server).
+
+We've intentionally designed Shiny's API so that you can ``from shiny import *`` to get
+access to most of what you need for most apps without introducing an excessive amount of
+namespace pollution. Namely, it gives you:
+
+* User interface (UI/HTML) helpers, available via the ``ui`` subpackage.
+
+  * To avoid clashing with this ``ui`` namespace when you do ``from shiny import *``, you'll want to name you UI object something else, like ``app_ui``.
+
+* Reactive programming utilities, available via the ``reactive`` subpackage.
+* Decorators for rendering ``output``, all of which start with ``render_*`` (e.g. ``@render_text()``, ``@render_plot()``, etc).
+
+  * We intentionally avoid a ``render`` subpackage so that 3rd party packages can define their own rendering functions without requring a different API.
+
+* A handful of other things you'll want for most apps (e.g., ``App``, ``Module``, etc).
+* If you're using type checking, you'll also want to use the ``Inputs``, ``Outputs``, and ``Session`` Classes
+  to type the instances supplied to your server function, for example:
+
+.. code-block:: python
+
+  from shiny import *
+
+  app_ui = ui.page_fluid(
+    ui.input_slider("n", "Value of n", min=1, max=10, value=5),
+    ui.output_text("n2")
+  )
+
+  def server(input: Inputs, output: Outputs, session: Session) -> None:
+      @output()
+      @render_text()
+      def n2():
+          return f"The value of n*2 is {input.n() * 2}"
+
+  app = App(app_ui, server)
+
+.. shinyapp::
+    :height: 200px
+
+    from shiny import *
+
+    app_ui = ui.page_fluid(
+      ui.input_slider("n", "Value of n", min=1, max=10, value=5),
+      ui.output_text("n2")
+    )
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @output()
+        @render_text()
+        def n2():
+            return f"The value of n*2 is {input.n() * 2}"
+
+    app = App(app_ui, server)
+
+
+
+API Reference
+=============
 
 .. currentmodule:: shiny
 

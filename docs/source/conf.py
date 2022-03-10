@@ -7,6 +7,8 @@
 import os
 import sys
 
+from sphinx.application import Sphinx
+
 # -- Path setup --------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -50,8 +52,17 @@ exclude_patterns = []
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
+# https://sphinx-book-theme.readthedocs.io/en/latest/tutorials/get-started.html
 html_theme = "sphinx_book_theme"
+
+html_theme_options = {
+    "repository_url": "https://github.com/rstudio/prism",
+    "use_repository_button": True,
+}
+
+html_title = "for Python"
+
+html_logo = "images/shiny-logo.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -68,3 +79,8 @@ os.environ["SHINY_ADD_EXAMPLES"] = "true"
 # don't! You'll get unhelpful pickling errors. https://github.com/sphinx-doc/sphinx/pull/6754
 # Instead, add them to the docs/source/sphinxext/ directory and add the name to the
 # extensions list above (as done for pyshinyapp).
+
+
+def setup(app: Sphinx) -> None:
+    # Add the 'Get Started' Link to the top navbar
+    app.add_js_file("js/insert-get-started.js")
