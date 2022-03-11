@@ -28,25 +28,7 @@ namespace pollution. Namely, it gives you:
 * If you're using type checking, you'll also want to use the ``Inputs``, ``Outputs``, and ``Session`` Classes
   to type the instances supplied to your server function, for example:
 
-.. code-block:: python
-
-  from shiny import *
-
-  app_ui = ui.page_fluid(
-    ui.input_slider("n", "Value of n", min=1, max=10, value=5),
-    ui.output_text("n2")
-  )
-
-  def server(input: Inputs, output: Outputs, session: Session) -> None:
-      @output()
-      @render_text()
-      def n2():
-          return f"The value of n*2 is {input.n() * 2}"
-
-  app = App(app_ui, server)
-
-.. shinyapp::
-    :height: 200px
+.. shinyeditor::
 
     from shiny import *
 

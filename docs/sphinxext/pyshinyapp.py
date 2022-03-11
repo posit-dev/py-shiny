@@ -83,12 +83,15 @@ class ShinyElement(Element):
     def html(self):
         style = css(height=self["height"], width=self["width"])
         type = self["type"]
-        # right now pyshiny gives you the editor, but that'll probably change
+        code = self["code"]
         if type == "shinyeditor":
+            # TODO: allow the layout to be specified (right now I don't think we need
+            # horizontal layout, but maybe someday we will)
+            code = "#| layout: vertical\n" + code
+            # the class for the editor currently is, somewhat confusingly, pyshiny
             type = "shiny"
-        return (
-            f'<pre class="py{type}" style="{style}"><code>{self["code"]}</code></pre>'
-        )
+
+        return f'<pre class="py{type}" style="{style}"><code>{code}</code></pre>'
 
 
 def _run(self: SphinxDirective, type: str):
