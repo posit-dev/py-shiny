@@ -106,18 +106,28 @@ def _(
     return [datetime.utcfromtimestamp(v) for v in value]
 
 
-# TODO: this can probably be removed?
 @input_handlers.add("shiny.action")
 def _(value: int, name: str, session: "Session") -> ActionButtonValue:
+    # TODO: ActionButtonValue() class can probably be removed
     return ActionButtonValue(value)
 
 
-# # TODO: implement when we have bookmarking
-# @input_handlers.add("shiny.password")
-# def _(value: str, name: str, session: "Session") -> str:
-#     return value
-#
-# # TODO: implement when we have bookmarking
-# @input_handlers.add("shiny.file")
-# def _(value: Any, name: str, session: "Session") -> Any:
-#     return value
+# The inputs handlers below currently do nothing, but still need to be defined,
+# otherwise there will be an error when the input value is handled.
+
+
+@input_handlers.add("shiny.number")
+def _(value: str, name: str, session: "Session") -> str:
+    return value
+
+
+# TODO: implement when we have bookmarking
+@input_handlers.add("shiny.password")
+def _(value: str, name: str, session: "Session") -> str:
+    return value
+
+
+# TODO: implement when we have bookmarking
+@input_handlers.add("shiny.file")
+def _(value: Any, name: str, session: "Session") -> Any:
+    return value
