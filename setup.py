@@ -4,8 +4,6 @@
 
 from setuptools import setup, find_packages
 
-requirements = []
-
 test_requirements = [
     "pytest>=3",
 ]
@@ -25,7 +23,6 @@ setup(
         "Programming Language :: Python :: 3.9",
     ],
     description="A web development framework for Python.",
-    install_requires=requirements,
     license="GNU General Public License v3",
     include_package_data=True,
     keywords="shiny",
