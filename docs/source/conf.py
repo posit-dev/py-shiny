@@ -84,3 +84,4 @@ os.environ["SHINY_ADD_EXAMPLES"] = "true"
 def setup(app: Sphinx) -> None:
     # Add the 'Get Started' Link to the top navbar
     app.add_js_file("js/insert-get-started.js")
+    app.add_js_file("js/disable-keypress.js")

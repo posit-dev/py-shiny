@@ -17,7 +17,7 @@ F = TypeVar("F", bound=FuncType)
 def add_example(
     directive: Literal[
         "shinyapp::", "shinyeditor::", "code-block:: python", "cell::", "terminal::"
-    ] = "shinyapp::",
+    ] = "shinyeditor::",
     **options: str,
 ) -> Callable[[F], F]:
     """
