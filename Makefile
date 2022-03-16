@@ -81,5 +81,5 @@ dist: clean ## builds source and wheel package
 	python3 setup.py bdist_wheel
 	ls -l dist
 
-install: clean ## install the package to the active Python's site-packages
-	python3 setup.py install
+install: dist ## install the package to the active Python's site-packages
+	python3 -m pip install --force-reinstall dist/shiny*.whl
