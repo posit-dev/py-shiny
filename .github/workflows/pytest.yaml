@@ -29,24 +29,10 @@ jobs:
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
           ssh-add - <<< "${{ secrets.HTMLTOOLS_SSH_KEY }}"
 
-      - name: Check out and install htmltools
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-        run: |
-          cd ..
-          git clone git@github.com:rstudio/py-htmltools.git
-          cd py-htmltools
-          pip install -r requirements-dev.txt
-          make install
-
-      - name: Install dependencies
-        run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-
       - name: Install
         run: |
           make install
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
 
       - name: Lint with flake8
         run: |
