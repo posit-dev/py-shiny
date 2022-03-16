@@ -97,7 +97,7 @@ class ShinyElement(Element):
 def _run(self: SphinxDirective, type: str):
     code = "\n".join(self.content)
     width = self.options.pop("width", "100%")
-    height = self.options.pop("height", "500px")
+    height = self.options.pop("height", None)
 
     return [ShinyElement(type=type, code=code, height=height, width=width)]
 
