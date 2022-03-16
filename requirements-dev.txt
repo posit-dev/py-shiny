@@ -7,3 +7,4 @@ sphinx==4.4.0
 sphinx-autodoc-typehints==1.15.3
 myst-parser==0.16.1
 sphinx-book-theme==0.2.0
+wheel
