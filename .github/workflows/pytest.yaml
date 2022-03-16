@@ -33,6 +33,7 @@ jobs:
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
+          cd ..
           git clone git@github.com:rstudio/py-htmltools.git
           cd py-htmltools
           pip install -r requirements.txt
