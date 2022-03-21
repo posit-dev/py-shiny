@@ -133,6 +133,8 @@ class Session:
         self._conn: Connection = conn
         self._debug: bool = debug
 
+        self.json_packer: Callable[[object], Union[str, bytes]] = json.dumps
+
         self.input: Inputs = Inputs()
         self.output: Outputs = Outputs(self)
 
@@ -479,14 +481,16 @@ class Session:
         await self._send_message({"custom": {type: message}})
 
     async def _send_message(self, message: Dict[str, object]) -> None:
-        message_str: str = json.dumps(message) + "\n"
+        msg = self.json_packer(message)
+        if isinstance(msg, bytes):
+            msg = msg.decode("utf-8")
         if self._debug:
             print(
                 "SEND: "
-                + re.sub("(?m)base64,[a-zA-Z0-9+/=]+", "[base64 data]", message_str),
+                + re.sub("(?m)base64,[a-zA-Z0-9+/=]+", "[base64 data]", msg + "\n"),
                 end="",
             )
-        await self._conn.send(json.dumps(message))
+        await self._conn.send(msg)
 
     def _send_error_response(self, message_str: str) -> None:
         print("_send_error_response: " + message_str)
