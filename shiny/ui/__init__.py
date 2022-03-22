@@ -44,12 +44,58 @@ from ._output import __all__ as _output_all
 from ._page import __all__ as _page_all
 from ._progress import __all__ as _progress_all
 
-# For reasons I can't explain, if we explicitly import each function/class
-# from htmltools (e.g., from htmltools import div, span, etc.) then
-# VSCode will flag them as private???
-from htmltools import *
+from htmltools import (
+    TagList,
+    Tag,
+    TagChildArg,
+    TagAttrArg,
+    tags,
+    HTML,
+    head_content,
+    p,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    a,
+    br,
+    div,
+    span,
+    pre,
+    code,
+    img,
+    strong,
+    em,
+    hr,
+)
 
-_htmltools_all = (
+
+__all__ = (
+    _bootstrap_all
+    + _download_button_all
+    + _input_action_button_all
+    + _input_check_radio_all
+    + _input_date_all
+    + _input_file_all
+    + _input_numeric_all
+    + _input_password_all
+    + _input_select_all
+    + _input_slider_all
+    + _input_text_all
+    + _input_update_all
+    + _insert_all
+    + _modal_all
+    + _navs_all
+    + _notification_all
+    + _output_all
+    + _page_all
+    + _progress_all,
+    # For some reason, if we create a tuple named `_htmltools_all` with the items below
+    # and `+` that tuple here, VS Code doesn't recognize the items as being exported
+    # from shiny.ui. That may be a bug in VS Code. Instead we'll just append the items
+    # directly to `__all__`.
     "TagList",
     "Tag",
     "TagChildArg",
@@ -74,28 +120,4 @@ _htmltools_all = (
     "strong",
     "em",
     "hr",
-)
-
-
-__all__ = (
-    _bootstrap_all
-    + _download_button_all
-    + _input_action_button_all
-    + _input_check_radio_all
-    + _input_date_all
-    + _input_file_all
-    + _input_numeric_all
-    + _input_password_all
-    + _input_select_all
-    + _input_slider_all
-    + _input_text_all
-    + _input_update_all
-    + _insert_all
-    + _modal_all
-    + _navs_all
-    + _notification_all
-    + _output_all
-    + _page_all
-    + _progress_all
-    + _htmltools_all
 )
