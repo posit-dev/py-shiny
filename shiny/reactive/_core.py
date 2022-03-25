@@ -1,6 +1,6 @@
 """Low-level reactive components."""
 
-__all__ = ("isolate", "invalidate_later", "flush", "on_flushed")
+__all__ = ("isolate", "invalidate_later", "flush", "on_flushed", "get_current_context")
 
 import asyncio
 import contextlib
