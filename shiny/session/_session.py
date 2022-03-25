@@ -675,7 +675,7 @@ class Inputs:
 
     def __setitem__(self, key: str, value: Value[Any]) -> None:
         if not isinstance(value, Value):
-            raise TypeError("`value` must be a shiny.Value object.")
+            raise TypeError("`value` must be a reactive.Value object.")
 
         self._map[key] = value
 
