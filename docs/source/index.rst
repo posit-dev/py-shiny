@@ -2,7 +2,7 @@ API Reference Intro
 ===================
 
 This website documents the public API of Shiny (for Python). See the `Getting Started
-tutorial <https://rstudio.github.io/pyshiny-site/get-started.html>`_ for
+tutorial <https://rstudio.github.io/pyshiny-site/>`_ for
 a more approachable introduction to the API. The left-hand sidebar lists the full public
 API, without any grouping, but the sections below (linked to the right-hand sidebar)
 break it into semantically similar groups. Most of the reference pages include a live
