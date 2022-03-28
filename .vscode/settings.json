@@ -4,6 +4,9 @@
     "python.analysis.typeCheckingMode": "strict",
     "python.formatting.provider": "black",
     "python.linting.flake8Enabled": true,
+    "editor.tabSize": 2,
+    "files.encoding": "utf8",
+    "files.eol": "\n",
     "[python]": {
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
