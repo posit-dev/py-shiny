@@ -211,12 +211,17 @@ def resolve_app(app: str, app_dir: Optional[str]) -> str:
 
 def try_import_module(module: str) -> Optional[types.ModuleType]:
     try:
-        if importlib.util.find_spec(module):
-            return importlib.import_module(module)
-        return None
+        if not importlib.util.find_spec(module):
+            return None
     except ModuleNotFoundError:
         # find_spec throws this when the module contains both '/' and '.' characters
         return None
     except ImportError:
         # find_spec throws this when the module starts with "."
         return None
+
+    # It's important for ModuleNotFoundError and ImportError (and any other error) NOT
+    # to be caught here, as we want to report the true error to the user. Otherwise,
+    # missing dependencies can be misreported to the user as the app module itself not
+    # being found.
+    return importlib.import_module(module)
