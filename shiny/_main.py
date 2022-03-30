@@ -17,8 +17,26 @@ def main() -> None:
     pass
 
 
-@main.command()
-@click.argument("app", default="app:app")
+stop_shortcut = "Ctrl+C"
+
+
+@main.command(
+    help=f"""Runs a Shiny app. Press {stop_shortcut} to stop.
+
+The APP argument indicates the Python file (or module) and attribute where the
+shiny.App object can be found. For example, if the current directory contains
+a file called app.py, which contains an `app` variable that is the Shiny app,
+any of the following will work:
+
+\b
+  * shiny run             # app:app is assumed
+  * shiny run app         # :app is assumed
+  * shiny run app.py      # :app is assumed
+  * shiny run app:app
+  * shiny run app.py:app
+"""
+)
+@click.argument("app", default="app.py:app")
 @click.option(
     "--host",
     type=str,
@@ -56,7 +74,15 @@ def main() -> None:
     default=".",
     show_default=True,
     help="Look for APP in the specified directory, by adding this to the PYTHONPATH."
-    " Defaults to the current working directory.",
+    " Defaults to the current working directory. If APP is a file path, this argument"
+    " is ignored.",
+)
+@click.option(
+    "--factory",
+    is_flag=True,
+    default=False,
+    help="Treat APP as an application factory, i.e. a () -> <ASGI app> callable.",
+    show_default=True,
 )
 def run(
     app: Union[str, shiny.App],
@@ -67,6 +93,7 @@ def run(
     ws_max_size: int,
     log_level: str,
     app_dir: str,
+    factory: bool,
 ) -> None:
     return run_app(
         app,
@@ -77,6 +104,7 @@ def run(
         ws_max_size=ws_max_size,
         log_level=log_level,
         app_dir=app_dir,
+        factory=factory,
     )
 
 
@@ -89,6 +117,7 @@ def run_app(
     ws_max_size: int = 16777216,
     log_level: Optional[str] = None,
     app_dir: Optional[str] = ".",
+    factory: bool = False,
 ) -> None:
     """
     Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop.
@@ -145,7 +174,10 @@ def run_app(
     """
 
     if isinstance(app, str):
-        app = resolve_app(app, app_dir)
+        app, app_dir = resolve_app(app, app_dir)
+
+    if app_dir:
+        app_dir = os.path.realpath(app_dir)
 
     uvicorn.run(
         app,  # type: ignore
@@ -153,14 +185,19 @@ def run_app(
         port=port,
         debug=debug,
         reload=reload,
+        reload_dirs=[app_dir] if reload else [],
         ws_max_size=ws_max_size,
         log_level=log_level,
-        # DON'T pass app_dir, we've already handled it ourselves
-        # app_dir=app_dir,
+        app_dir=app_dir,
+        factory=factory,
     )
 
 
-def resolve_app(app: str, app_dir: Optional[str]) -> str:
+def is_file(app: str) -> bool:
+    return "/" in app or app.endswith(".py")
+
+
+def resolve_app(app: str, app_dir: Optional[str]) -> tuple[str, Optional[str]]:
     # The `app` parameter can be:
     #
     # - A module:attribute name
@@ -175,38 +212,23 @@ def resolve_app(app: str, app_dir: Optional[str]) -> str:
     if not attr:
         attr = "app"
 
-    if app_dir is not None:
-        sys.path.insert(0, app_dir)
+    if is_file(module):
+        # TODO: We should probably be using some kind of loader
+        # TODO: I don't like that we exit here, if we ever export this it would be bad;
+        #       but also printing a massive stack trace for a `shiny run badpath` is way
+        #       unfriendly. We should probably throw a custom error that the shiny run
+        #       entrypoint knows not to print the stack trace for.
+        if not os.path.exists(module):
+            sys.stderr.write(f"Error: {module} not found\n")
+            sys.exit(1)
+        if not os.path.isfile(module):
+            sys.stderr.write(f"Error: {module} is not a file\n")
+            sys.exit(1)
+        dirname, filename = os.path.split(module)
+        module = filename[:-3] if filename.endswith(".py") else filename
+        app_dir = dirname
 
-    instance = try_import_module(module)
-    if not instance:
-        # It must be a path
-        path = os.path.normpath(module)
-        if path.startswith("../") or path.startswith("..\\"):
-            raise ImportError(
-                "The APP parameter cannot refer to a parent directory ('..'). "
-                "Either change the working directory to a parent of the app, "
-                "or use the --app-dir option to specify a different starting "
-                "directory to search from."
-            )
-        fullpath = os.path.normpath(os.path.join(app_dir or ".", module))
-        if not os.path.exists(fullpath):
-            raise ImportError(f"Could not find the module or path '{module}'")
-        if os.path.isdir(fullpath):
-            path = os.path.join(path, "app.py")
-            fullpath = os.path.join(fullpath, "app.py")
-            if not os.path.exists(fullpath):
-                raise ImportError(
-                    f"The directory '{fullpath}' did not include an app.py file"
-                )
-        if path.endswith(".py"):
-            path = path[:-3]
-        module = path.replace("/", ".").replace("\\", ".")
-        instance = try_import_module(module)
-        if not instance:
-            raise ImportError(f"Could not find the module '{module}'")
-
-    return f"{module}:{attr}"
+    return f"{module}:{attr}", app_dir
 
 
 def try_import_module(module: str) -> Optional[types.ModuleType]:
