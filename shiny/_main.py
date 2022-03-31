@@ -3,7 +3,7 @@ import importlib.util
 import os
 import sys
 import types
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
 
 import click
 import uvicorn
@@ -197,7 +197,7 @@ def is_file(app: str) -> bool:
     return "/" in app or app.endswith(".py")
 
 
-def resolve_app(app: str, app_dir: Optional[str]) -> tuple[str, Optional[str]]:
+def resolve_app(app: str, app_dir: Optional[str]) -> Tuple[str, Optional[str]]:
     # The `app` parameter can be:
     #
     # - A module:attribute name
