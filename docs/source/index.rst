@@ -325,4 +325,5 @@ Tools for Shiny developers.
     session.get_current_session
     session.require_active_session
     session.session_context
+    reactive.get_current_context
     input_handler.input_handlers

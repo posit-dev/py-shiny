@@ -202,6 +202,18 @@ def isolate():
 
 
 def get_current_context() -> Context:
+    """
+    Get the current reactive context.
+
+    Returns
+    -------
+    A :class:`~Context`.
+
+    Raises
+    ------
+    RuntimeError
+        If called outside of a reactive context.
+    """
     return _reactive_environment.current_context()
 
 
