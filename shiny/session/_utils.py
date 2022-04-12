@@ -67,6 +67,29 @@ def session_context(session: Optional["Session"]):
         _current_session.reset(token)
 
 
+# ==============================================================================
+# Context manager for current session (AKA currently executing output)
+# ==============================================================================
+# TODO: use a TypedDict?
+OutputInfo = Dict[str, str]
+_current_output_info: ContextVar[Optional[OutputInfo]] = ContextVar(
+    "current_output_info", default=None
+)
+
+
+def get_current_output_info() -> Optional[OutputInfo]:
+    return _current_output_info.get()
+
+
+@contextmanager
+def output_context(info: OutputInfo):
+    old_info = _current_output_info.set(info)
+    try:
+        yield
+    finally:
+        _current_output_info.reset(old_info)
+
+
 def require_active_session(session: Optional["Session"]) -> "Session":
     """
     Raise an exception if no Shiny session is currently active.

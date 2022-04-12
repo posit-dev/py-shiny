@@ -449,7 +449,11 @@ def panel_absolute(
     divTag.add_class("draggable")
     deps = jqui_deps()
     deps.stylesheet = []
-    return TagList(deps, divTag, tags.script(HTML('$(".draggable").draggable();')))
+    return TagList(
+        deps,
+        divTag,
+        tags.script('$(".draggable").draggable();'),
+    )
 
 
 def help_text(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:

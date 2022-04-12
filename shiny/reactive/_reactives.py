@@ -90,10 +90,10 @@ class Value(Generic[T]):
         self._value_dependents: Dependents = Dependents()
         self._is_set_dependents: Dependents = Dependents()
 
-    def __call__(self) -> T:
-        return self.get()
+    def __call__(self, default: object = MISSING) -> T:
+        return self.get(default=default)
 
-    def get(self) -> T:
+    def get(self, default: object = MISSING) -> T:
         """
         Read the reactive value.
 
@@ -112,7 +112,10 @@ class Value(Generic[T]):
         self._value_dependents.register()
 
         if isinstance(self._value, MISSING_TYPE):
-            raise SilentException
+            if isinstance(default, MISSING_TYPE):
+                raise SilentException
+            else:
+                return default  # type: ignore
 
         return self._value
 

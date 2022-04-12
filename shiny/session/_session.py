@@ -53,7 +53,7 @@ from ..input_handler import input_handlers
 from ..reactive import Value, Effect, Effect_, isolate, flush
 from ..reactive._core import lock
 from ..types import SafeException, SilentCancelOutputException, SilentException
-from ._utils import RenderedDeps, read_thunk_opt, session_context
+from ._utils import RenderedDeps, read_thunk_opt, session_context, output_context
 
 from .. import render
 from .. import _utils
@@ -758,12 +758,26 @@ class Outputs:
                     "recalculating", {"name": fn_name, "status": "recalculating"}
                 )
 
+                output_info = {"name": fn_name}
+                with isolate():
+                    width = self._session.input[f".clientdata_output_{fn_name}_width"](
+                        default=None
+                    )
+                    height = self._session.input[
+                        f".clientdata_output_{fn_name}_height"
+                    ](default=None)
+                    if width is not None:
+                        output_info["width"] = width
+                    if height is not None:
+                        output_info["height"] = height
+
                 message: Dict[str, object] = {}
                 try:
-                    if _utils.is_async_callable(fn):
-                        message[fn_name] = await fn()
-                    else:
-                        message[fn_name] = fn()
+                    with output_context(output_info):
+                        if _utils.is_async_callable(fn):
+                            message[fn_name] = await fn()
+                        else:
+                            message[fn_name] = fn()
                 except SilentCancelOutputException:
                     return
                 except SilentException:

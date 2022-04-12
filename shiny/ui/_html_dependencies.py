@@ -93,6 +93,6 @@ def jqui_deps() -> HTMLDependency:
         name="jquery-ui",
         version="1.12.1",
         source={"package": "shiny", "subdir": "www/shared/jqueryui/"},
-        script={"src": "jquery-ui.min.js"},
+        script={"src": "jquery-ui.js"},
         stylesheet={"href": "jquery-ui.min.css"},
     )
