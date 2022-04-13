@@ -7,6 +7,7 @@ from starlette.websockets import WebSocketState
 from starlette.requests import HTTPConnection
 
 from ._shinyenv import is_pyodide
+from ._asyncutils import run_elsewhere
 
 
 class Connection(ABC):
@@ -59,9 +60,7 @@ class MockConnection(Connection):
 class StarletteConnection(Connection):
     def __init__(self, conn: starlette.websockets.WebSocket):
         self.conn: starlette.websockets.WebSocket = conn
-
-    async def accept(self, subprotocol: Optional[str] = None):
-        await self.conn.accept(subprotocol)  # type: ignore
+        self.event_loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
 
     def send(self, message: str) -> None:
         if self._is_closed():
@@ -86,14 +85,16 @@ class StarletteConnection(Connection):
             # warning. We call create_task() to avoid that warning.
             asyncio.create_task(self.conn.send_text(message))
         else:
-            asyncio.create_task(self.conn.send_text(message))
+            asyncio.run_coroutine_threadsafe(
+                self.conn.send_text(message), self.event_loop
+            )
 
     async def receive(self) -> str:
         if self._is_closed():
             raise ConnectionClosed()
 
         try:
-            return await self.conn.receive_text()
+            return await run_elsewhere(self.conn.receive_text(), self.event_loop)
         except starlette.websockets.WebSocketDisconnect:
             raise ConnectionClosed()
 
@@ -101,7 +102,8 @@ class StarletteConnection(Connection):
         if self._is_closed():
             return
 
-        await self.conn.close(code)
+        # TODO: Figure out how to await this
+        await run_elsewhere(self.conn.close(code), self.event_loop)
 
     def _is_closed(self) -> bool:
         return (

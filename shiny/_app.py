@@ -1,6 +1,7 @@
 import copy
 import contextlib
 import os
+import threading
 from typing import Any, List, Union, Dict, Callable, cast, Optional
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
@@ -14,6 +15,7 @@ from starlette.responses import Response, HTMLResponse, JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from ._autoreload import autoreload_url, InjectAutoreloadMiddleware
+from ._asyncutils import ThreadsafeAsyncEvent
 from ._connection import Connection, StarletteConnection
 from .html_dependencies import require_deps, jquery_deps, shiny_deps
 from .http_staticfiles import StaticFiles
@@ -259,7 +261,17 @@ class App:
         conn = StarletteConnection(ws)
         session = self._create_session(conn)
 
-        await session._run()
+        # TODO: Don't spawn one thread per session
+        evt = ThreadsafeAsyncEvent()
+
+        def _run():
+            try:
+                session.run()
+            finally:
+                evt.set()
+
+        threading.Thread(target=session.run).start()
+        await evt.wait()
 
     async def _on_session_request_cb(self, request: Request) -> ASGIApp:
         """
