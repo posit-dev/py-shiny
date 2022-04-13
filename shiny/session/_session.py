@@ -204,7 +204,7 @@ class Session:
         self._run_session_end_tasks()
 
     async def _run(self) -> None:
-        await self._send_message(
+        self._send_message(
             {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
         )
 
@@ -294,7 +294,7 @@ class Session:
         await self._send_response(message, value)
 
     async def _send_response(self, message: ClientMessageOther, value: object) -> None:
-        await self._send_message({"response": {"tag": message["tag"], "value": value}})
+        self._send_message({"response": {"tag": message["tag"], "value": value}})
 
     # This is called during __init__.
     def _create_message_handlers(self) -> Dict[str, Callable[..., Awaitable[object]]]:
@@ -484,14 +484,14 @@ class Session:
             "where": where,
             "content": content,
         }
-        _utils.run_coro_sync(self._send_message({"shiny-insert-ui": msg}))
+        self._send_message({"shiny-insert-ui": msg})
 
     def _send_remove_ui(self, selector: str, multiple: bool) -> None:
         msg = {"selector": selector, "multiple": multiple}
-        _utils.run_coro_sync(self._send_message({"shiny-remove-ui": msg}))
+        self._send_message({"shiny-remove-ui": msg})
 
     @add_example()
-    async def send_custom_message(self, type: str, message: Dict[str, object]) -> None:
+    def send_custom_message(self, type: str, message: Dict[str, object]) -> None:
         """
         Send a message to the client.
 
@@ -509,9 +509,9 @@ class Session:
         message handler is added, it will be invoked each time ``send_custom_message()``
         is called on the server.
         """
-        await self._send_message({"custom": {type: message}})
+        self._send_message({"custom": {type: message}})
 
-    async def _send_message(self, message: Dict[str, object]) -> None:
+    def _send_message(self, message: Dict[str, object]) -> None:
         message_str: str = json.dumps(message) + "\n"
         if self._debug:
             print(
@@ -520,7 +520,7 @@ class Session:
                 end="",
                 flush=True,
             )
-        await self._conn.send(json.dumps(message))
+        self._conn.send(json.dumps(message))
 
     def _send_error_response(self, message_str: str) -> None:
         print("_send_error_response: " + message_str)
@@ -592,7 +592,7 @@ class Session:
             }
 
             try:
-                await self._send_message(message)
+                self._send_message(message)
             finally:
                 self._outbound_message_queues = empty_outbound_message_queues()
         finally:
@@ -819,7 +819,7 @@ class Outputs:
                 priority=priority,
             )
             async def output_obs():
-                await self._session._send_message(
+                self._session._send_message(
                     {"recalculating": {"name": fn_name, "status": "recalculating"}}
                 )
 
@@ -857,7 +857,7 @@ class Outputs:
 
                 self._session._outbound_message_queues["values"].append(message)
 
-                await self._session._send_message(
+                self._session._send_message(
                     {"recalculating": {"name": fn_name, "status": "recalculated"}}
                 )
 

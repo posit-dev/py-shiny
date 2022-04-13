@@ -14,7 +14,7 @@ class Connection(ABC):
     client."""
 
     @abstractmethod
-    async def send(self, message: str) -> None:
+    def send(self, message: str) -> None:
         ...
 
     @abstractmethod
@@ -37,7 +37,7 @@ class MockConnection(Connection):
         # "scheme", "path", and "query_string").
         self._http_conn = HTTPConnection(scope={"type": "websocket", "headers": {}})
 
-    async def send(self, message: str) -> None:
+    def send(self, message: str) -> None:
         pass
 
     # I should say I’m not 100% that the receive method can be a no-op for our testing
@@ -63,14 +63,12 @@ class StarletteConnection(Connection):
     async def accept(self, subprotocol: Optional[str] = None):
         await self.conn.accept(subprotocol)  # type: ignore
 
-    async def send(self, message: str) -> None:
+    def send(self, message: str) -> None:
         if self._is_closed():
             return
 
         # In general, we want to be able to call this send() method from synchronous
-        # functions. That means this method must either (A) be synchronous, or (B) if it
-        # is marked as async, it must never yield so that we can use run_coro_sync() to
-        # call it from synchronous functions.
+        # functions.
         if is_pyodide:
             # The create_task() here isn't strictly necessary for things to work in
             # pyodide. The emulated websocket's .send() method is a proxy object for a
@@ -88,9 +86,7 @@ class StarletteConnection(Connection):
             # warning. We call create_task() to avoid that warning.
             asyncio.create_task(self.conn.send_text(message))
         else:
-            # The uvicorn websocket.send() method does not yield, so we can wrap it with
-            # run_coro_sync().
-            await self.conn.send_text(message)
+            asyncio.create_task(self.conn.send_text(message))
 
     async def receive(self) -> str:
         if self._is_closed():
