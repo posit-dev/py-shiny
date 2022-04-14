@@ -1,17 +1,21 @@
 import os
 import sys
-from typing import Callable, Any, TypeVar, List
+from typing import Callable, TypeVar, List
 
 if sys.version_info >= (3, 8):
     from typing import Literal
 else:
     from typing_extensions import Literal
 
+if sys.version_info >= (3, 10):
+    from typing import ParamSpec
+else:
+    from typing_extensions import ParamSpec
 
 ex_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "examples")
 
-FuncType = Callable[..., Any]
-F = TypeVar("F", bound=FuncType)
+P = ParamSpec("P")
+T = TypeVar("T")
 
 
 def add_example(
@@ -19,7 +23,7 @@ def add_example(
         "shinyapp::", "shinyeditor::", "code-block:: python", "cell::", "terminal::"
     ] = "shinyeditor::",
     **options: str,
-) -> Callable[[F], F]:
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """
     Add an example to the docstring of a function, method, or class.
 
@@ -40,7 +44,7 @@ def add_example(
         Options for the directive. See docs/source/sphinxext/pyshinyapp.py for details.
     """
 
-    def _(func: F) -> F:
+    def _(func: Callable[P, T]) -> Callable[P, T]:
 
         # To avoid a performance hit on `import shiny`, we only add examples to the
         # docstrings if this env variable is set (as it is in docs/source/conf.py).
@@ -96,8 +100,8 @@ def add_example(
     return _
 
 
-def doc_format(**kwargs: str) -> Callable[[F], F]:
-    def _(func: F) -> F:
+def doc_format(**kwargs: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
+    def _(func: Callable[P, T]) -> Callable[P, T]:
         if func.__doc__:
             func.__doc__ = func.__doc__.format(**kwargs)
         return func
