@@ -265,7 +265,7 @@ def _find_step_size(
         return 1
 
 
-def _play_icon() -> HTML:
+def _play_icon() -> Union[Tag, HTML]:
     try:
         from fontawesome import icon_svg
 
@@ -274,7 +274,7 @@ def _play_icon() -> HTML:
         return HTML("&#x23ef;")
 
 
-def _pause_icon() -> HTML:
+def _pause_icon() -> Union[Tag, HTML]:
     try:
         from fontawesome import icon_svg
 
