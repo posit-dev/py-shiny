@@ -6,6 +6,7 @@ layout helpers, page-level containers, and more.
 # All objects imported into this scope will be available as shiny.ui.foo
 from ._bootstrap import *
 from ._download_button import *
+from ._include_helpers import *
 from ._input_action_button import *
 from ._input_check_radio import *
 from ._input_date import *
