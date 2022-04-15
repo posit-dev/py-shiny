@@ -47,12 +47,6 @@ class App:
         app = App(app_ui, server)
     """
 
-    LIB_PREFIX: str = "lib/"
-    """
-    A path prefix to place before all HTML dependencies processed by
-    ``register_web_dependency()``.
-    """
-
     SANITIZE_ERRORS: bool = False
     """
     Whether or not to show a generic message (``SANITIZE_ERRORS=True``) or the actual
@@ -72,7 +66,7 @@ class App:
         *,
         debug: bool = False,
     ) -> None:
-        self.ui: RenderedHTML = _render_page(ui, lib_prefix=self.LIB_PREFIX)
+        self.ui: RenderedHTML = _render_page(ui)
         self.server: Callable[[Inputs, Outputs, Session], None] = server
 
         self._debug: bool = debug
@@ -263,7 +257,7 @@ class App:
         # For HTMLDependencies that have sources on disk, mount the source dir.
         # (Some HTMLDependencies only carry head content, and have no source on disk.)
         if dep.source:
-            paths = dep.source_path_map(lib_prefix=self.LIB_PREFIX)
+            paths = dep.source_path_map()
             self._dependency_handler.mount(
                 "/" + paths["href"],
                 StaticFiles(directory=paths["source"]),
@@ -273,6 +267,6 @@ class App:
         self._registered_dependencies[dep.name] = dep
 
 
-def _render_page(ui: Union[Tag, TagList], lib_prefix: str) -> RenderedHTML:
+def _render_page(ui: Union[Tag, TagList]) -> RenderedHTML:
     doc = HTMLDocument(TagList(jquery_deps(), shiny_deps(), ui))
-    return doc.render(lib_prefix=lib_prefix)
+    return doc.render()

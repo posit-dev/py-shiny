@@ -644,7 +644,7 @@ class Session:
         deps: List[Dict[str, Any]] = []
         for dep in res["dependencies"]:
             self.app._register_web_dependency(dep)
-            dep_dict = dep.as_dict(lib_prefix=self.app.LIB_PREFIX)
+            dep_dict = dep.as_dict()
             deps.append(dep_dict)
 
         return {"deps": deps, "html": res["html"]}
