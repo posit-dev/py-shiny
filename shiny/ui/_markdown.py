@@ -16,12 +16,9 @@ from htmltools import HTML
 from .._docstring import add_example
 
 
-MarkdownRenderFunc = Callable[[str], str]
-
-
 @add_example()
 def markdown(
-    text: str, *, render_func: Optional[MarkdownRenderFunc] = None, **kwargs: object
+    text: str, *, render_func: Optional[Callable[[str], str]] = None, **kwargs: object
 ) -> HTML:
     """
     Convert a string of markdown to :func:`ui.HTML`.
@@ -71,7 +68,7 @@ def markdown(
 
 def default_md_renderer(
     preset: Literal["commonmark", "gfm"] = "gfm"
-) -> MarkdownRenderFunc:
+) -> Callable[[str], str]:
     try:
         from markdown_it.main import MarkdownIt
     except ModuleNotFoundError:
