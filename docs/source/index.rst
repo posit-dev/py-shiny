@@ -188,6 +188,7 @@ Lower-level UI functions for creating custom HTML/CSS/JS.
 .. autosummary::
     :toctree: reference/
 
+    ui.markdown
     ui.insert_ui
     ui.remove_ui
 
