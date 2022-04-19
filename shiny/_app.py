@@ -1,4 +1,5 @@
 import contextlib
+import os
 from typing import Any, List, Union, Dict, Callable, cast
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
@@ -65,6 +66,12 @@ class App:
     The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
     """
 
+    STATIC_ASSETS_DIR: str = "www"
+    """
+    A directory, relative to the app's directory, which contains static files to be
+    served by the app.
+    """
+
     def __init__(
         self,
         ui: Union[Tag, TagList],
@@ -83,7 +90,7 @@ class App:
         self._sessions_needing_flush: Dict[int, Session] = {}
 
         self._registered_dependencies: Dict[str, HTMLDependency] = {}
-        self._dependency_handler: Any = starlette.routing.Router()
+        self._dependency_handler = starlette.routing.Router()
 
         self.starlette_app = starlette.applications.Starlette(
             routes=[
@@ -199,6 +206,19 @@ class App:
         Callback passed to the ConnectionManager which is invoked when a HTTP
         request for / occurs.
         """
+
+        # Mount static assets (i.e., the www subdir) if the app directory has been set
+        # (by run_app())
+        app_dir = os.getenv("SHINY_APP_DIRECTORY")
+        if app_dir:
+            www_dir = os.path.join(app_dir, self.STATIC_ASSETS_DIR)
+            if os.path.isdir(www_dir):
+                self._dependency_handler.mount(
+                    "/",
+                    StaticFiles(directory=www_dir),
+                    name="shiny-app-static-assets-directory",
+                )
+
         self._ensure_web_dependencies(self.ui["dependencies"])
         return HTMLResponse(content=self.ui["html"])
 
