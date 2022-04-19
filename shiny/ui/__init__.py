@@ -17,6 +17,7 @@ from ._input_slider import *
 from ._input_text import *
 from ._input_update import *
 from ._insert import *
+from ._markdown import *
 from ._modal import *
 from ._navs import *
 from ._notification import *
