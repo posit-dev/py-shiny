@@ -33,7 +33,7 @@ setup(
     },
     test_suite="tests",
     tests_require=test_requirements,
-    url="https://github.com/rstudio/prism",
+    url="https://github.com/rstudio/py-shiny",
     version="0.0.0.9001",
     zip_safe=False,
 )

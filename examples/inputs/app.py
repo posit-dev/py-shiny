@@ -4,7 +4,7 @@ from shiny.ui import tags, HTML, Tag
 from fontawesome import icon_svg
 
 app_ui = ui.page_fluid(
-    ui.panel_title("Hello prism ui"),
+    ui.panel_title("Hello Shiny UI"),
     ui.layout_sidebar(
         ui.panel_sidebar(
             ui.input_slider(

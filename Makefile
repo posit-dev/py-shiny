@@ -82,6 +82,6 @@ dist: clean ## builds source and wheel package
 	ls -l dist
 
 ## install the package to the active Python's site-packages
-# Note that py-htmltools/ must be a sibling directory of prism/.
+# Note that py-htmltools/ must be a sibling directory of py-shiny/.
 install: dist
 	python3 -m pip install --force-reinstall dist/shiny*.whl --find-links ../py-htmltools/dist/

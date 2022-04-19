@@ -1,5 +1,5 @@
 ---
-title: "Prism UI parity"
+title: "PyShiny UI parity"
 output: html_document
 ---
 

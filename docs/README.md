@@ -26,5 +26,5 @@ python3 -m http.server
 It's recommended to use VSCode's [reStructuredText extension](https://marketplace.visualstudio.com/items?itemName=lextudio.restructuredtext) (as well as it's recommended extensions) when contributing to these docs. **Just make sure you open VSCode from the docs folder**:
 
 ```sh
-code prism/docs
+code py-shiny/docs
 ```

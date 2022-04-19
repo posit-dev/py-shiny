@@ -655,7 +655,7 @@ class Session:
 # ======================================================================================
 
 # TODO: provide a real input typing example when we have an answer for that
-# https://github.com/rstudio/prism/issues/70
+# https://github.com/rstudio/py-shiny/issues/70
 class Inputs:
     """
     A class representing Shiny input values.

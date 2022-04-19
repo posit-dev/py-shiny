@@ -56,7 +56,7 @@ exclude_patterns = []
 html_theme = "sphinx_book_theme"
 
 html_theme_options = {
-    "repository_url": "https://github.com/rstudio/prism",
+    "repository_url": "https://github.com/rstudio/py-shiny",
     "use_repository_button": True,
 }
 
