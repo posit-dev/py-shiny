@@ -1,0 +1,23 @@
+{
+  "name": "web-components",
+  "version": "0.0.1",
+  "author": "Carson Sievert",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.14.3",
+    "@babel/preset-env": "^7.14.2",
+    "@babel/preset-typescript": "^7.13.0",
+    "esbuild": "^0.12.2",
+    "esbuild-plugin-babel": "^0.2.3"
+  },
+  "dependencies": {
+    "@popperjs/core": "^2.9.2",
+    "bootstrap": "^5.0.2",
+    "core-js": "^3.12.1"
+  }
+}

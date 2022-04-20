@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List
 
 from htmltools import HTML, HTMLDependency
 
@@ -31,14 +31,14 @@ def bs3compat_deps() -> HTMLDependency:
 
 def nav_deps(
     include_bootstrap: bool = True,
-) -> Union[HTMLDependency, List[HTMLDependency]]:
+) -> List[HTMLDependency]:
     dep = HTMLDependency(
-        name="bslib-navs",
+        name="navigation-containers",
         version="1.0",
-        source={"package": "shiny", "subdir": "www/shared/bslib/dist/"},
-        script={"src": "navs.min.js"},
+        source={"package": "shiny", "subdir": "www/shared/navs/"},
+        script={"src": "nav.js", "defer": ""},
     )
-    return [dep, *bootstrap_deps()] if include_bootstrap else dep
+    return [dep, *bootstrap_deps()] if include_bootstrap else [dep]
 
 
 def ionrangeslider_deps() -> List[HTMLDependency]:

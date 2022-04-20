@@ -14,14 +14,14 @@ __all__ = (
 )
 
 import sys
-from typing import Optional, Any, Tuple
+from typing import Optional, Tuple, Union
 
 if sys.version_info >= (3, 8):
     from typing import Literal
 else:
     from typing_extensions import Literal
 
-from htmltools import jsx_tag_create, JSXTag, TagList, TagChildArg, JSXTagAttrArg
+from htmltools import tags, Tag, TagList, TagChildArg
 
 from .._docstring import add_example
 from ._html_dependencies import nav_deps
@@ -29,11 +29,11 @@ from ._html_dependencies import nav_deps
 
 @add_example()
 def nav(
-    title: Any,
+    title: Union[str, Tag, TagList],
     *args: TagChildArg,
     value: Optional[str] = None,
     icon: TagChildArg = None,
-) -> JSXTag:
+) -> Tag:
     """
     Create a nav item pointing to some internal content.
 
@@ -70,8 +70,10 @@ def nav(
     ~shiny.ui.navs_hidden
     """
     if not value:
-        value = title
-    return _nav_tag("Nav", *args, value=value, title=TagList(icon, title))
+        value = str(title)
+    return tags.template(
+        *args, class_="nav", value=value, title=str(TagList(icon, value))
+    )
 
 
 def nav_menu(
@@ -80,7 +82,7 @@ def nav_menu(
     value: Optional[str] = None,
     icon: TagChildArg = None,
     align: Literal["left", "right"] = "left",
-) -> JSXTag:
+) -> Tag:
     """
     Create a menu of nav items.
 
@@ -126,12 +128,17 @@ def nav_menu(
     """
     if not value:
         value = str(title)
-    return _nav_tag(
-        "NavMenu", *args, value=value, title=TagList(icon, title), align=align
+
+    return tags.template(
+        *args,
+        class_="nav-menu",
+        value=value,
+        title=str(TagList(icon, value)),
+        align=align,
     )
 
 
-def nav_content(value: str, *args: TagChildArg, icon: TagChildArg = None) -> JSXTag:
+def nav_content(value: str, *args: TagChildArg, icon: TagChildArg = None) -> Tag:
     """
     Create a nav item pointing to some internal content with no title.
 
@@ -162,7 +169,7 @@ def nav_content(value: str, *args: TagChildArg, icon: TagChildArg = None) -> JSX
     return nav(None, *args, value=value, icon=icon)
 
 
-def nav_item(*args: TagChildArg) -> JSXTag:
+def nav_item(*args: TagChildArg) -> Tag:
     """
     Create a nav item.
 
@@ -192,10 +199,10 @@ def nav_item(*args: TagChildArg) -> JSXTag:
     -------
     See :func:`~shiny.ui.nav`
     """
-    return _nav_tag("NavItem", *args)
+    return tags.template(*args, class_="nav-item")
 
 
-def nav_spacer() -> JSXTag:
+def nav_spacer() -> Tag:
     """
     Create space between nav items.
 
@@ -220,7 +227,8 @@ def nav_spacer() -> JSXTag:
     -------
     See :func:`~shiny.ui.nav`
     """
-    return _nav_tag("NavSpacer")
+
+    return tags.template(class_="nav-spacer")
 
 
 def navs_tab(
@@ -229,7 +237,7 @@ def navs_tab(
     selected: Optional[str] = None,
     header: Optional[TagChildArg] = None,
     footer: Optional[TagChildArg] = None,
-) -> JSXTag:
+) -> Tag:
     """
     Render nav items as a tabset.
 
@@ -270,10 +278,9 @@ def navs_tab(
     See :func:`~shiny.ui.nav`
     """
 
-    return _nav_tag(
-        "Navs",
+    return navs_container(
+        "navs-tab",
         *args,
-        type="tabs",
         id=id,
         selected=selected,
         header=header,
@@ -287,7 +294,7 @@ def navs_tab_card(
     selected: Optional[str] = None,
     header: Optional[TagChildArg] = None,
     footer: Optional[TagChildArg] = None,
-) -> JSXTag:
+) -> Tag:
     """
     Render nav items as a tabset inside a card container.
 
@@ -328,10 +335,9 @@ def navs_tab_card(
     See :func:`~shiny.ui.nav`
     """
 
-    return _nav_tag(
-        "NavsCard",
+    return navs_container(
+        "navs-tab-card",
         *args,
-        type="tabs",
         id=id,
         selected=selected,
         header=header,
@@ -345,7 +351,7 @@ def navs_pill(
     selected: Optional[str] = None,
     header: Optional[TagChildArg] = None,
     footer: Optional[TagChildArg] = None,
-) -> JSXTag:
+) -> Tag:
     """
     Render nav items as a pillset.
 
@@ -386,10 +392,9 @@ def navs_pill(
     See :func:`~shiny.ui.nav`
     """
 
-    return _nav_tag(
-        "Navs",
+    return navs_container(
+        "navs-pill",
         *args,
-        type="pills",
         id=id,
         selected=selected,
         header=header,
@@ -404,7 +409,7 @@ def navs_pill_card(
     header: Optional[TagChildArg] = None,
     footer: Optional[TagChildArg] = None,
     placement: Literal["above", "below"] = "above",
-) -> JSXTag:
+) -> Tag:
     """
     Render nav items as a pillset inside a card container.
 
@@ -447,15 +452,13 @@ def navs_pill_card(
     See :func:`~shiny.ui.nav`
     """
 
-    return _nav_tag(
-        "NavsCard",
+    return navs_container(
+        "navs-pill-card",
         *args,
-        type="pills",
         id=id,
         selected=selected,
         header=header,
         footer=footer,
-        placement=placement,
     )
 
 
@@ -468,7 +471,7 @@ def navs_pill_list(
     well: bool = True,
     fluid: bool = True,
     widths: Tuple[int, int] = (4, 8),
-) -> JSXTag:
+) -> Tag:
     """
     Render nav items as a vertical pillset.
 
@@ -517,17 +520,14 @@ def navs_pill_list(
     See :func:`~shiny.ui.nav`
     """
 
-    return _nav_tag(
-        "NavsList",
+    # TODO: implement well and fluid
+    return navs_container(
+        "navs-pill-list",
         *args,
         id=id,
         selected=selected,
         header=header,
         footer=footer,
-        well=well,
-        fluid=fluid,
-        widthNav=widths[0],
-        widthContent=widths[1],
     )
 
 
@@ -538,7 +538,7 @@ def navs_hidden(
     selected: Optional[str] = None,
     header: Optional[TagChildArg] = None,
     footer: Optional[TagChildArg] = None,
-) -> JSXTag:
+) -> Tag:
     """
     Render nav contents without the nav items.
 
@@ -576,10 +576,9 @@ def navs_hidden(
     ~shiny.ui.navs_bar
     """
 
-    return _nav_tag(
-        "Navs",
+    return navs_container(
+        "navs-hidden",
         *args,
-        type="hidden",
         id=id,
         selected=selected,
         header=header,
@@ -600,7 +599,7 @@ def navs_bar(
     inverse: bool = False,
     collapsible: bool = True,
     fluid: bool = True,
-) -> JSXTag:
+) -> Tag:
     """
     Render nav items as a navbar.
 
@@ -660,8 +659,8 @@ def navs_bar(
     See :func:`~shiny.ui.nav`.
     """
 
-    return _nav_tag(
-        "NavsBar",
+    return navs_container(
+        "navs-bar",
         *args,
         title=title,
         id=id,
@@ -676,6 +675,14 @@ def navs_bar(
     )
 
 
-def _nav_tag(name: str, *args: TagChildArg, **kwargs: JSXTagAttrArg) -> JSXTag:
-    tag = jsx_tag_create("bslib." + name)
-    return tag(nav_deps(), *args, **kwargs)
+def navs_container(name: str, *args: TagChildArg, **kwargs: TagChildArg) -> Tag:
+
+    # Unlike ordinary tags, navigation web components support attributes that are
+    # tags, so make sure we don't drop any dependencies when
+    deps = nav_deps()
+    for key, val in kwargs.items():
+        v = TagList(val).render()
+        kwargs[key] = v["html"]
+        deps.extend(v["dependencies"])
+
+    return Tag("bslib-" + name, deps, *args, **kwargs)
