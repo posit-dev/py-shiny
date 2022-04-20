@@ -10,7 +10,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from starlette.requests import Request
 from starlette.responses import Response, HTMLResponse, JSONResponse
 
-from ._connmanager import Connection, StarletteConnection
+from ._connection import Connection, StarletteConnection
 from .html_dependencies import jquery_deps, shiny_deps
 from .http_staticfiles import StaticFiles
 from .reactive import on_flushed

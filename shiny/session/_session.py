@@ -25,7 +25,7 @@ from typing import (
     Any,
     cast,
 )
-from starlette.requests import Request
+from starlette.requests import Request, HTTPConnection
 
 from starlette.responses import (
     HTMLResponse,
@@ -45,7 +45,7 @@ from htmltools import TagChildArg, TagList
 if TYPE_CHECKING:
     from .._app import App
 
-from .._connmanager import Connection, ConnectionClosed, MockConnection
+from .._connection import Connection, ConnectionClosed
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from ..http_staticfiles import FileResponse
@@ -132,6 +132,10 @@ class Session:
         self.id: str = id
         self._conn: Connection = conn
         self._debug: bool = debug
+
+        # The HTTPConnection representing the WebSocket. This is used so that we can
+        # query information about the request, like headers, cookies, etc.
+        self.http_conn: HTTPConnection = conn.get_http_conn()
 
         self.input: Inputs = Inputs()
         self.output: Outputs = Outputs(self)
