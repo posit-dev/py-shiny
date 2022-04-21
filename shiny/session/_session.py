@@ -156,8 +156,8 @@ class Session:
                 creds = json.loads(credentials_json)
                 self.user = creds["user"]
                 self.groups = creds["groups"]
-            except json.JSONDecodeError:
-                pass
+            except Exception as e:
+                print("Error parsing credentials header: " + str(e))
 
         self._outbound_message_queues = empty_outbound_message_queues()
 
