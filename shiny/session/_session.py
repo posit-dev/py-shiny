@@ -140,6 +140,16 @@ class Session:
         self.input: Inputs = Inputs()
         self.output: Outputs = Outputs(self)
 
+        self.user: Union[str, None] = None
+        self.groups: Union[List[str], None] = None
+        if "shiny-server-credentials" in self.http_conn.headers:
+            try:
+                creds = json.loads(self.http_conn.headers["shiny-server-credentials"])
+                self.user = creds["user"]
+                self.groups = creds["groups"]
+            except json.JSONDecodeError:
+                pass
+
         self._outbound_message_queues = empty_outbound_message_queues()
 
         self._message_handlers: Dict[
