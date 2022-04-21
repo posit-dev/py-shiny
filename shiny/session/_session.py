@@ -142,9 +142,18 @@ class Session:
 
         self.user: Union[str, None] = None
         self.groups: Union[List[str], None] = None
+        credentials_json: str = ""
         if "shiny-server-credentials" in self.http_conn.headers:
+            credentials_json = self.http_conn.headers["shiny-server-credentials"]
+        elif "rstudio-connect-credentials" in self.http_conn.headers:
+            # Fall back to "rstudio-connect-credentials" if "shiny-server-credentials"
+            # isn't available. Note: This is only needed temporarily, because Connect
+            # treates PyShiny apps as FastAPI apps. When there's proper Shiny support,
+            # this can be removed.
+            credentials_json = self.http_conn.headers["rstudio-connect-credentials"]
+        if credentials_json:
             try:
-                creds = json.loads(self.http_conn.headers["shiny-server-credentials"])
+                creds = json.loads(credentials_json)
                 self.user = creds["user"]
                 self.groups = creds["groups"]
             except json.JSONDecodeError:
