@@ -14,9 +14,9 @@
 // Example:
 //
 // <bslib-navs-* selected='two'>
-//   <template class='nav' title='Tab 1' value='one'>
+//   <bslib-nav title='<a>Tab 1</a>' value='one'>
 //     Tab 1 content
-//   </template>
+//   </bslib-nav>
 //   <template class='nav' title='Tab 2' value='two'>
 //     Tab 2 content
 //   </template>
@@ -47,13 +47,13 @@ class NavsTab extends HTMLElement {
   constructor() {
     self = super();
 
-    debugger;
-
     const selected = getSelected(self);
     const tabset = buildTabset(self.children, selected);
     const tabs = createTabFragment(self, 'nav nav-tabs', tabset);
 
     replaceChildren(self, tabs);
+    // TODO: remove all attributes on self?
+    // self.removeAttribute("id");
   }
 }
 
@@ -69,6 +69,8 @@ class NavsPill extends HTMLElement {
     const pills = createTabFragment(self, 'nav nav-pills', tabset);
 
     replaceChildren(self, pills);
+    // TODO: remove all attributes on self?
+    // self.removeAttribute("id");
   }
 }
 

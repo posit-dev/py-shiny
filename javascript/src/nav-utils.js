@@ -50,7 +50,7 @@ function buildTabset(navs, selected) {
 
 function buildTabItem(nav, selected, id, index) {
     let liTag = document.createElement('li');
-    //liTag.classList.add('nav-item');
+    liTag.classList.add('nav-item');
 
     if (nav.classList.contains('nav-spacer')) {
         liTag.classList.add('bslib-nav-spacer');
@@ -76,7 +76,7 @@ function buildTabItem(nav, selected, id, index) {
         };
 
         let toggle = tag('a', attrs, HTML(nav.getAttribute('title')));
-        //toggle.classList.add('nav-link');
+        toggle.classList.add('nav-link');
 
         let menu = tag('ul', {'data-tabsetid': id, class: 'dropdown-menu'});
         if (nav.getAttribute('align') === 'right') {
@@ -85,12 +85,14 @@ function buildTabItem(nav, selected, id, index) {
 
         let navMenu = buildTabset(nav.content.children, selected);
 
-        //navMenu.tabList.children.forEach(x => {
-        //  x.classList.remove('nav-item')
-        //  let link = x.querySelector('.nav-link');
-        //  link.classList.remove('nav-link');
-        //  link.classList.add('dropdown-item');
-        //})
+        navMenu.tabList.children.forEach(x => {
+          x.classList.remove('nav-item');
+          let link = x.querySelector('.nav-link');
+          if (link) { // Need to be careful of this case because of nav_item()
+              link.classList.remove('nav-link');
+              link.classList.add('dropdown-item');
+          }
+        })
 
         menu.append(navMenu.tabList);
         liTag.append(toggle);
@@ -104,10 +106,16 @@ function buildTabItem(nav, selected, id, index) {
         // NOTE: this should really be <button> (not <a>), but Shiny's
         // tab updating logic would need updating to support that
         // NOTE: requires compatibility layer...
-        //aTag.classList.add('nav-link');
 
         let aTag = tag(
-          'a', {href: '#' + tabId, role: 'tab', 'data-toggle': 'tab', 'data-value': nav.getAttribute('value')},
+          'a', {
+            'href': '#' + tabId,
+            'class': 'nav-link',
+            'role': 'tab',
+            'data-toggle': 'tab',
+            'data-bs-toggle': 'tab',
+            'data-value': nav.getAttribute('value')
+          },
           HTML(nav.getAttribute('title'))
         );
 
@@ -118,10 +126,10 @@ function buildTabItem(nav, selected, id, index) {
             nav.content
         );
 
-        // NOTE: requires compatibility layer...
-        // Calling tab.show() would be better, but probably has to be inserted into DOM to work?
         if (selected === nav.getAttribute('value')) {
-            liTag.classList.add('active');
+            // TODO: this code assumes were using BS4+ (in BS3, active goes on the liTag)
+            // Calling tab.show() would be better, but probably has to be inserted into DOM to work?
+            aTag.classList.add('active');
             divTag.classList.add('active');
         }
 
