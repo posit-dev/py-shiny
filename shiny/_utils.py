@@ -1,3 +1,13 @@
+import contextlib
+import functools
+import importlib
+import inspect
+import os
+import random
+import secrets
+import sys
+import tempfile
+
 from typing import (
     Callable,
     Awaitable,
@@ -8,13 +18,6 @@ from typing import (
     Any,
     cast,
 )
-import functools
-import os
-import sys
-import tempfile
-import importlib
-import inspect
-import secrets
 
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
@@ -32,6 +35,26 @@ def rand_hex(bytes: int) -> str:
     format_str = "{{:0{}x}}".format(bytes * 2)
     return format_str.format(secrets.randbits(bytes * 8))
 
+
+def private_random_int(min: int, max: int) -> str:
+    with private_seed():
+        return str(random.randint(min, max))
+
+
+@contextlib.contextmanager
+def private_seed():
+    state = random.getstate()
+    global own_random_state
+    try:
+        if own_random_state is not None:
+            random.setstate(own_random_state)
+        yield
+    finally:
+        own_random_state = random.getstate()
+        random.setstate(state)
+
+
+own_random_state = None
 
 # ==============================================================================
 # Async-related functions

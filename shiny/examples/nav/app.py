@@ -1,11 +1,12 @@
-from typing import List
+from typing import List, Union
 
 from shiny import *
-from htmltools import JSXTag, h4
+from shiny.ui import h4
+from shiny.ui._navs import Nav, NavMenu  # TODO: export this via shiny.types
 from fontawesome import icon_svg as icon
 
 
-def nav_items(prefix: str) -> List[JSXTag]:
+def nav_items(prefix: str) -> List[Union[Nav, NavMenu]]:
     return [
         ui.nav("a", prefix + ": tab a content"),
         ui.nav("b", prefix + ": tab b content"),
@@ -21,6 +22,9 @@ def nav_items(prefix: str) -> List[JSXTag]:
         ui.nav_menu(
             "Other links",
             ui.nav("c", prefix + ": tab c content"),
+            "----",
+            "Plain text",
+            "----",
             ui.nav_item(
                 ui.a(
                     icon("r-project"),
@@ -39,6 +43,7 @@ app_ui = ui.page_navbar(
     title="page_navbar()",
     bg="#0062cc",
     inverse=True,
+    id="navbar_id",
     footer=ui.div(
         {"style": "width:80%;margin: 0 auto"},
         ui.h4("navs_tab()"),
@@ -56,7 +61,9 @@ app_ui = ui.page_navbar(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    pass
+    @reactive.Effect()
+    def _():
+        print("Current navbar page: ", input.navbar_id())
 
 
 app = App(app_ui, server)

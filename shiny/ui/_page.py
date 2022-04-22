@@ -6,8 +6,7 @@ __all__ = (
 )
 
 import sys
-from typing import Optional, Any, List, Union, cast
-from warnings import warn
+from typing import Optional, Any, Union
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -15,23 +14,23 @@ else:
     from typing_extensions import Literal
 
 from htmltools import (
-    HTMLDependency,
     tags,
     Tag,
     TagList,
     div,
     TagChildArg,
-    head_content,
 )
 
 from .._docstring import add_example
 from ._html_dependencies import bootstrap_deps
 from ._navs import navs_bar
 from ..types import MISSING, MISSING_TYPE
+from ._navs import Nav, NavMenu
+from ._utils import get_window_title
 
 
 def page_navbar(
-    *args: TagChildArg,  # Create a type for nav()?
+    *args: Union[Nav, NavMenu],
     title: Optional[Union[str, Tag, TagList]] = None,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -125,24 +124,6 @@ def page_navbar(
         ),
         lang=lang,
     )
-
-
-def get_window_title(
-    title: Optional[Union[str, Tag, TagList]],
-    window_title: Union[str, MISSING_TYPE] = MISSING,
-) -> Optional[HTMLDependency]:
-    if title is not None and isinstance(window_title, MISSING_TYPE):
-        # Try to infer window_title from contents of title
-        window_title = " ".join(_find_characters(title))
-        if not window_title:
-            warn(
-                "Unable to infer a `window_title` default from `title`. Consider providing a character string to `window_title`."
-            )
-
-    if isinstance(window_title, MISSING_TYPE):
-        return None
-    else:
-        return head_content(tags.title(window_title))
 
 
 @add_example()
@@ -254,12 +235,3 @@ def page_bootstrap(
     page = TagList(*bootstrap_deps(), *args)
     head = tags.title(title) if title else None
     return tags.html(tags.head(head), tags.body(page), lang=lang)
-
-
-def _find_characters(x: Any) -> List[str]:
-    if isinstance(x, str):
-        return [x]
-    elif isinstance(x, list):
-        return [y for y in cast(List[Any], x) if isinstance(y, str)]
-    else:
-        return []
