@@ -256,12 +256,13 @@ def try_render_plot_matplotlib(
     import matplotlib.pyplot
 
     if isinstance(fig, matplotlib.figure.Figure):
+        mpl: matplotlib.figure.Figure = fig  # Help the type checker
         try:
-            fig.set_dpi(ppi * pixelratio)
-            fig.set_size_inches(width / ppi, height / ppi)
+            mpl.set_dpi(ppi * pixelratio)
+            mpl.set_size_inches(width / ppi, height / ppi)
 
             with io.BytesIO() as buf:
-                fig.savefig(buf, format="png")
+                mpl.savefig(buf, format="png")
                 buf.seek(0)
                 data = base64.b64encode(buf.read())
                 data_str = data.decode("utf-8")

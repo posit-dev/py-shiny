@@ -1,0 +1,4 @@
+{
+  "ignore": ["shiny/examples", "examples", "build", "dist"],
+  "stubPath": ""
+}

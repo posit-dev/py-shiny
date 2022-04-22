@@ -3,7 +3,7 @@ __all__ = (
     "input_selectize",
 )
 
-from typing import Optional, Dict, Union, List
+from typing import Optional, Dict, Union, List, cast
 
 from htmltools import Tag, tags, div, TagChildArg, TagList
 
@@ -196,7 +196,11 @@ def _render_choices(x: _SelectChoices, selected: Optional[str] = None) -> List[T
     result: List[Tag] = []
     for (k, v) in x.items():
         if isinstance(v, dict):
-            result.append(tags.optgroup(*(_render_choices(v, selected)), label=k))
+            result.append(
+                tags.optgroup(
+                    *(_render_choices(cast(_SelectChoices, v), selected)), label=k
+                )
+            )
         else:
             result.append(tags.option(v, value=k, selected=(k == selected)))
 
@@ -216,7 +220,7 @@ def _render_choices(x: _SelectChoices, selected: Optional[str] = None) -> List[T
 def _find_first_option(x: _SelectChoices) -> Optional[str]:
     for (k, v) in x.items():
         if isinstance(v, dict):
-            result = _find_first_option(v)
+            result = _find_first_option(cast(_SelectChoices, v))
             if result is not None:
                 return result
         else:

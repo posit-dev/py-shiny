@@ -150,7 +150,8 @@ def setup(app: Sphinx):
     app.connect("build-finished", after_build)
 
     def append_element_html(self: Sphinx, node: Element):
-        self.body.append(node.html())
+        # Not sure why type checking doesn't work on this line
+        self.body.append(node.html())  # type: ignore
         raise SkipNode
 
     def skip(self: Sphinx, node: Element):

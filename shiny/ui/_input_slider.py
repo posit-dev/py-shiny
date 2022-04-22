@@ -8,7 +8,7 @@ __all__ = (
 import math
 import sys
 from datetime import date, datetime, timedelta
-from typing import Dict, Iterable, Optional, TypeVar, Union
+from typing import Dict, Iterable, Optional, TypeVar, Union, cast
 
 from htmltools import HTML, Tag, TagAttrArg, TagChildArg, css, div, tags
 
@@ -152,7 +152,10 @@ def input_slider(
     val_nums = (
         (_as_numeric(value[0]), _as_numeric(value[1]))
         if isinstance(value, (tuple, list))
-        else (_as_numeric(value), _as_numeric(value))
+        else (
+            _as_numeric(cast(SliderValueArg, value)),
+            _as_numeric(cast(SliderValueArg, value)),
+        )
     )
     step_num = _find_step_size(min_num, max_num) if step is None else _as_numeric(step)
 

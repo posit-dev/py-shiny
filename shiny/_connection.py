@@ -45,7 +45,9 @@ class MockConnection(Connection):
     # way to yield until we tell the connection to continue, so that the run loop can
     # continue.
     async def receive(self) -> str:
-        pass
+        # Sleep forever
+        await asyncio.Event().wait()
+        raise RuntimeError("make the type checker happy")
 
     async def close(self, code: int, reason: Optional[str]) -> None:
         pass
