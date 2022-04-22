@@ -5,7 +5,7 @@ from typing import Callable, Dict, Union
 import pytest
 from shiny import *
 from shiny.session import get_current_session
-from shiny._connmanager import MockConnection
+from shiny._connection import MockConnection
 from shiny._modules import ModuleInputs, ModuleSession
 from shiny._utils import run_coro_sync
 from htmltools import TagChildArg

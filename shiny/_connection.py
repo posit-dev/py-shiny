@@ -1,9 +1,10 @@
-from abc import ABC, abstractmethod
 import asyncio
+from abc import ABC, abstractmethod
 from typing import Optional
 
 import starlette.websockets
 from starlette.websockets import WebSocketState
+from starlette.requests import HTTPConnection
 
 from ._shinyenv import is_pyodide
 
@@ -24,8 +25,18 @@ class Connection(ABC):
     async def close(self, code: int, reason: Optional[str]) -> None:
         ...
 
+    @abstractmethod
+    def get_http_conn(self) -> HTTPConnection:
+        ...
+
 
 class MockConnection(Connection):
+    def __init__(self):
+        # This currently hard-codes some basic values for scope. In the future, we could
+        # make those more configurable if we need to customize the HTTPConnection (like
+        # "scheme", "path", and "query_string").
+        self._http_conn = HTTPConnection(scope={"type": "websocket", "headers": {}})
+
     async def send(self, message: str) -> None:
         pass
 
@@ -38,6 +49,9 @@ class MockConnection(Connection):
 
     async def close(self, code: int, reason: Optional[str]) -> None:
         pass
+
+    def get_http_conn(self) -> HTTPConnection:
+        return self._http_conn
 
 
 class StarletteConnection(Connection):
@@ -96,6 +110,9 @@ class StarletteConnection(Connection):
             self.conn.application_state == WebSocketState.DISCONNECTED  # type: ignore
             or self.conn.client_state == WebSocketState.DISCONNECTED  # type: ignore
         )
+
+    def get_http_conn(self) -> HTTPConnection:
+        return self.conn
 
 
 class ConnectionClosed(Exception):

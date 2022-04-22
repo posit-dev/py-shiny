@@ -25,7 +25,7 @@ from typing import (
     Any,
     cast,
 )
-from starlette.requests import Request
+from starlette.requests import Request, HTTPConnection
 
 from starlette.responses import (
     HTMLResponse,
@@ -45,7 +45,7 @@ from htmltools import TagChildArg, TagList
 if TYPE_CHECKING:
     from .._app import App
 
-from .._connmanager import Connection, ConnectionClosed, MockConnection
+from .._connection import Connection, ConnectionClosed
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from ..http_staticfiles import FileResponse
@@ -133,8 +133,31 @@ class Session:
         self._conn: Connection = conn
         self._debug: bool = debug
 
+        # The HTTPConnection representing the WebSocket. This is used so that we can
+        # query information about the request, like headers, cookies, etc.
+        self.http_conn: HTTPConnection = conn.get_http_conn()
+
         self.input: Inputs = Inputs()
         self.output: Outputs = Outputs(self)
+
+        self.user: Union[str, None] = None
+        self.groups: Union[List[str], None] = None
+        credentials_json: str = ""
+        if "shiny-server-credentials" in self.http_conn.headers:
+            credentials_json = self.http_conn.headers["shiny-server-credentials"]
+        elif "rstudio-connect-credentials" in self.http_conn.headers:
+            # Fall back to "rstudio-connect-credentials" if "shiny-server-credentials"
+            # isn't available. Note: This is only needed temporarily, because Connect
+            # treates PyShiny apps as FastAPI apps. When there's proper Shiny support,
+            # this can be removed.
+            credentials_json = self.http_conn.headers["rstudio-connect-credentials"]
+        if credentials_json:
+            try:
+                creds = json.loads(credentials_json)
+                self.user = creds["user"]
+                self.groups = creds["groups"]
+            except Exception as e:
+                print("Error parsing credentials header: " + str(e))
 
         self._outbound_message_queues = empty_outbound_message_queues()
 
