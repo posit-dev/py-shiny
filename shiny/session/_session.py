@@ -205,8 +205,8 @@ class Session:
         self._run_session_end_tasks()
 
     async def _run(self) -> None:
-        await self.send_custom_message(
-            "config", {"workerId": "", "sessionId": str(self.id), "user": None}
+        await self._send_message(
+            {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
         )
 
         try:
@@ -295,9 +295,7 @@ class Session:
         await self._send_response(message, value)
 
     async def _send_response(self, message: ClientMessageOther, value: object) -> None:
-        await self.send_custom_message(
-            "response", {"tag": message["tag"], "value": value}
-        )
+        await self._send_message({"response": {"tag": message["tag"], "value": value}})
 
     # This is called during __init__.
     def _create_message_handlers(self) -> Dict[str, Callable[..., Awaitable[object]]]:
@@ -777,8 +775,8 @@ class Outputs:
                 priority=priority,
             )
             async def output_obs():
-                await self._session.send_custom_message(
-                    "recalculating", {"name": fn_name, "status": "recalculating"}
+                await self._session._send_message(
+                    {"recalculating": {"name": fn_name, "status": "recalculating"}}
                 )
 
                 message: Dict[str, object] = {}
@@ -815,8 +813,8 @@ class Outputs:
 
                 self._session._outbound_message_queues["values"].append(message)
 
-                await self._session.send_custom_message(
-                    "recalculating", {"name": fn_name, "status": "recalculated"}
+                await self._session._send_message(
+                    {"recalculating": {"name": fn_name, "status": "recalculated"}}
                 )
 
             self._effects[fn_name] = output_obs

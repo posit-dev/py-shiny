@@ -24,4 +24,4 @@ def server(input: Inputs, output: Outputs, session: Session):
         return ui.HTML(df.to_html(classes="table table-striped"))
 
 
-app = App(app_ui, server)
+app = App(app_ui, server, debug=True)
