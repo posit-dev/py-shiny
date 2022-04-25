@@ -6,7 +6,7 @@ __all__ = (
 )
 
 import sys
-from typing import Optional, Any, List, Union
+from typing import Optional, Any, List, Union, cast
 from warnings import warn
 
 if sys.version_info >= (3, 8):
@@ -260,6 +260,6 @@ def _find_characters(x: Any) -> List[str]:
     if isinstance(x, str):
         return [x]
     elif isinstance(x, list):
-        return [y for y in x if isinstance(y, str)]
+        return [y for y in cast(List[Any], x) if isinstance(y, str)]
     else:
         return []

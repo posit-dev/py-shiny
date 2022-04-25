@@ -1,5 +1,3 @@
-import pytest
-import textwrap
 from shiny.ui import markdown
 from htmltools import HTML
 

@@ -20,13 +20,13 @@ import io
 import mimetypes
 import os
 import sys
-from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union
+from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union, Tuple
 import typing
 
 if sys.version_info >= (3, 8):
-    from typing import Literal
+    from typing import Literal, Protocol
 else:
-    from typing_extensions import Literal
+    from typing_extensions import Literal, Protocol
 
 from htmltools import TagChildArg
 
@@ -35,6 +35,39 @@ if TYPE_CHECKING:
 
 from ..types import ImgData
 from .. import _utils
+
+
+# Use this protocol to avoid needing to maintain working stubs for matplotlib. If
+# good stubs ever become available for matplotlib, use those instead.
+class MatplotlibFigureProtocol(Protocol):
+    def set_dpi(self, val: float) -> None:
+        ...
+
+    def set_size_inches(
+        self,
+        w: Union[Tuple[float, float], float],
+        h: Optional[float] = None,
+        forward: bool = True,
+    ):
+        ...
+
+    def savefig(
+        self,
+        fname: Union[str, typing.TextIO, typing.BinaryIO, os.PathLike[typing.Any]],
+        # dpi: Union[float, typing.Literal["figure"], None] = None,
+        # facecolor="w",
+        # edgecolor="w",
+        # orientation="portrait",
+        # papertype=None,
+        format: Optional[str] = None,
+        # transparent=False,
+        # bbox_inches=None,
+        # pad_inches=0.1,
+        # frameon=None,
+        # metadata=None,
+    ):
+        ...
+
 
 # ======================================================================================
 # RenderFunction/RenderFunctionAsync base class
@@ -252,11 +285,13 @@ def try_render_plot_matplotlib(
     ppi: float,
     alt: Optional[str] = None,
 ) -> Union[ImgData, None, Literal["TYPE_MISMATCH"]]:
-    import matplotlib.figure
-    import matplotlib.pyplot
+    import matplotlib.figure  # pyright: ignore[reportMissingTypeStubs]
+    import matplotlib.pyplot  # pyright: ignore[reportMissingTypeStubs]
 
-    if isinstance(fig, matplotlib.figure.Figure):
-        mpl: matplotlib.figure.Figure = fig  # Help the type checker
+    if isinstance(
+        fig, matplotlib.figure.Figure  # pyright: ignore[reportUnknownMemberType]
+    ):
+        mpl = typing.cast(MatplotlibFigureProtocol, fig)
         try:
             mpl.set_dpi(ppi * pixelratio)
             mpl.set_size_inches(width / ppi, height / ppi)
@@ -281,7 +316,7 @@ def try_render_plot_matplotlib(
             print("Error rendering matplotlib object: " + str(e))
 
         finally:
-            matplotlib.pyplot.close(fig)
+            matplotlib.pyplot.close(fig)  # pyright: ignore[reportUnknownMemberType]
 
         return None
 

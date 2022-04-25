@@ -1,4 +1,8 @@
 {
-  "ignore": ["shiny/examples", "examples", "build", "dist"],
-  "stubPath": ""
+  "ignore": ["shiny/examples", "examples", "build", "dist", "typings"],
+  "typeCheckingMode": "strict",
+  "reportImportCycles":  "none",
+  "reportUnusedFunction":  "none",
+  "reportPrivateUsage": "none",
+  "reportUnnecessaryIsInstance": "none",
 }

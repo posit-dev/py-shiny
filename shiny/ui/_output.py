@@ -6,7 +6,7 @@ __all__ = (
     "output_ui",
 )
 
-from typing import Optional, cast
+from typing import Optional
 from htmltools import tags, Tag, div, css, TagAttrArg, TagFunction
 
 from .._docstring import add_example
@@ -111,7 +111,7 @@ def output_text(
 
     if not container:
         container = tags.span if inline else tags.div
-    return container(id=id, class_="shiny-text-output")  # type: ignore
+    return container(id=id, class_="shiny-text-output")
 
 
 def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
@@ -181,4 +181,4 @@ def output_ui(
 
     if not container:
         container = tags.span if inline else tags.div
-    return cast(TagFunction, container)({"class": "shiny-html-output"}, id=id, **kwargs)
+    return container({"class": "shiny-html-output"}, id=id, **kwargs)
