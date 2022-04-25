@@ -16,7 +16,7 @@ __all__ = (
 import copy
 import re
 import sys
-from typing import Optional, Tuple, List, Union, NamedTuple, cast
+from typing import Optional, Tuple, List, Union, NamedTuple, cast, Any
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -37,6 +37,48 @@ class Nav(NamedTuple):
     nav: Tag
     # nav_item()/nav_spacer() have None as their content
     content: Optional[Tag]
+
+    def render(
+        self, selected: Optional[str], id: str, is_menu: bool = False
+    ) -> Tuple[Tag, Optional[Tag]]:
+        """
+        Add appropriate tag attributes to nav/content tags when linking to internal content.
+        """
+
+        x = copy.copy(self)
+
+        # Nothing to do for nav_item()/nav_spacer()
+        if x.content is None:
+            return x.nav, None
+
+        # At least currently, in the case where both nav and content are tags
+        # (i.e., nav()), the nav always has a child <a> tag...I'm not sure if
+        # there's a way to statically type this
+        a_tag = cast(Tag, x.nav.children[0])
+        if is_menu:
+            a_tag.add_class("dropdown-item")
+        else:
+            a_tag.add_class("nav-link")
+            x.nav.add_class("nav-item")
+
+        # Hyperlink the nav to the content
+        x.content.attrs["id"] = id
+        a_tag.attrs["href"] = f"#{id}"
+
+        # Mark the nav/content as active if it should be
+        if isinstance(selected, str) and selected == self.get_value():
+            x.content.add_class("active")
+            a_tag.add_class("active")
+
+        x.nav.children[0] = a_tag
+
+        return x.nav, x.content
+
+    def get_value(self) -> Optional[str]:
+        if self.content is None:
+            return None
+        a_tag = cast(Tag, self.nav.children[0])
+        return a_tag.attrs.get("data-value", None)
 
 
 @add_example()
@@ -187,6 +229,42 @@ class NavMenu:
         self.title = title
         self.value = value
         self.align = align
+
+    def render(self, selected: Optional[str], **kwargs: Any) -> Tuple[Tag, TagList]:
+        nav, content = render_tabset(
+            *self.nav_items,
+            ul_class=f"dropdown-menu {'dropdown-menu-right' if self.align == 'right' else ''}",
+            id=None,
+            selected=selected,
+            is_menu=True,
+        )
+
+        active = False
+        for tab in content.children:
+            if isinstance(tab, Tag) and tab.has_class("active"):
+                active = True
+                break
+
+        return (
+            tags.li(
+                tags.a(
+                    self.title,
+                    class_=f"nav-link dropdown-toggle {'active' if active else ''}",
+                    data_bs_toggle="dropdown",
+                    # N.B. this value is only relevant for locating the insertion/removal
+                    # of items inside the nav container
+                    data_value=self.value,
+                    href="#",
+                    role="button",
+                ),
+                nav,
+                class_="nav-item dropdown",
+            ),
+            content.children,
+        )
+
+    def get_value(self) -> Optional[str]:
+        return None
 
 
 def menu_string_as_nav(x: Union[str, Nav]) -> Nav:
@@ -708,105 +786,21 @@ def render_tabset(
     if id is not None:
         ul_class += " shiny-tab-input"
 
+    # If the user hasn't provided a selected value, use the first one
     if selected is None:
-        selected = find_first_nav_value(*items)
+        for x in items:
+            selected = x.get_value()
+            if selected is not None:
+                break
 
-    result = {
-        "ul_tag": tags.ul(
-            bootstrap_deps(), class_=ul_class, id=id, data_tabsetid=tabsetid
-        ),
-        "div_tag": div(class_="tab-content", data_tabsetid=tabsetid),
-    }
+    ul_tag = tags.ul(bootstrap_deps(), class_=ul_class, id=id, data_tabsetid=tabsetid)
+    div_tag = div(class_="tab-content", data_tabsetid=tabsetid)
     for i, x in enumerate(items):
-        if isinstance(x, NavMenu):
-            nav, contents = render_dropdown(x, selected)
-        elif isinstance(x, Nav):
-            nav, contents = render_nav(x, f"tab-{tabsetid}-{i}", selected, is_menu)
-        else:
-            raise ValueError(f"Unknown nav type: {type(x)}")
-        result["ul_tag"].append(nav)
-        result["div_tag"].append(contents)
+        nav, contents = x.render(selected, id=f"tab-{tabsetid}-{i}", is_menu=is_menu)
+        ul_tag.append(nav)
+        div_tag.append(contents)
 
-    return result["ul_tag"], result["div_tag"]
-
-
-def render_nav(
-    x: Nav, id: str, selected: Optional[str], is_menu: bool = False
-) -> Tuple[Tag, Optional[Tag]]:
-    """
-    Add appropriate tag attributes to nav/content tags when linking to internal content.
-    """
-
-    x = copy.copy(x)
-
-    # Nothing to do for nav_item()/nav_spacer()
-    if x.content is None:
-        return x.nav, None
-
-    # At least currently, in the case where both nav and content are tags
-    # (i.e., nav()), the nav always has a child <a> tag...I'm not sure if
-    # there's a way to statically type this
-    a_tag = cast(Tag, x.nav.children[0])
-    if is_menu:
-        a_tag.add_class("dropdown-item")
-    else:
-        a_tag.add_class("nav-link")
-        x.nav.add_class("nav-item")
-
-    # Hyperlink the nav to the content
-    x.content.attrs["id"] = id
-    a_tag.attrs["href"] = f"#{id}"
-
-    # Mark the nav/content as active if it should be
-    if isinstance(selected, str) and selected == a_tag.attrs.get("data-value", None):
-        x.content.add_class("active")
-        a_tag.add_class("active")
-
-    x.nav.children[0] = a_tag
-
-    return x.nav, x.content
-
-
-def render_dropdown(x: NavMenu, selected: Optional[str]) -> Tuple[Tag, TagList]:
-    nav, content = render_tabset(
-        *x.nav_items,
-        ul_class=f"dropdown-menu {'dropdown-menu-right' if x.align == 'right' else ''}",
-        id=None,
-        selected=selected,
-        is_menu=True,
-    )
-
-    active = False
-    for tab in content.children:
-        if isinstance(tab, Tag) and tab.has_class("active"):
-            active = True
-            break
-
-    return (
-        tags.li(
-            tags.a(
-                x.title,
-                class_=f"nav-link dropdown-toggle {'active' if active else ''}",
-                data_bs_toggle="dropdown",
-                data_value=x.value,
-                href="#",
-                role="button",
-            ),
-            nav,
-            class_="nav-item dropdown",
-        ),
-        content.children,
-    )
-
-
-def find_first_nav_value(*args: Union[Nav, NavMenu]) -> Optional[str]:
-    for x in args:
-        if isinstance(x, Nav) and x.content is not None:
-            a_tag = cast(Tag, x.nav.children[0])
-            return a_tag.attrs.get("data-value", None)
-        if isinstance(x, NavMenu):
-            return find_first_nav_value(*x.nav_items)
-    return None
+    return ul_tag, div_tag
 
 
 def card(
