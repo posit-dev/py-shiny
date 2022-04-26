@@ -45,22 +45,22 @@ jobs:
           pip install -r requirements-dev.txt
           make install
 
-      - name: Setup SSH key for fontawesome
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-        run: |
-          ssh-add -D
-          ssh-add - <<< "${{ secrets.FONTAWESOME_SSH_KEY }}"
+      # - name: Setup SSH key for fontawesome
+      #   env:
+      #     SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+      #   run: |
+      #     ssh-add -D
+      #     ssh-add - <<< "${{ secrets.FONTAWESOME_SSH_KEY }}"
 
-      - name: Check out and install fontawesome
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-        run: |
-          cd ..
-          git clone git@github.com:rstudio/py-fontawesome.git
-          cd py-fontawesome
-          pip install -r requirements-dev.txt
-          make install
+      # - name: Check out and install fontawesome
+      #   env:
+      #     SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+      #   run: |
+      #     cd ..
+      #     git clone git@github.com:rstudio/py-fontawesome.git
+      #     cd py-fontawesome
+      #     pip install -r requirements-dev.txt
+      #     make install
 
       - name: Install dependencies
         run: |
