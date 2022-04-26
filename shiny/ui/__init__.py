@@ -121,4 +121,6 @@ __all__ = (
     "strong",
     "em",
     "hr",
-)
+)  # pyright: ignore[reportUnsupportedDunderAll]
+# pyright complains about the preceding because it only expects string literals, not
+# expressions or variable names.

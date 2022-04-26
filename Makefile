@@ -47,6 +47,12 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
+typings/uvicorn/__init__.pyi:
+	pyright --createstub uvicorn
+
+check: typings/uvicorn/__init__.pyi ## type check with pyright
+	pyright
+
 lint: ## check style with flake8
 	flake8 shiny tests
 

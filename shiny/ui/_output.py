@@ -111,7 +111,7 @@ def output_text(
 
     if not container:
         container = tags.span if inline else tags.div
-    return container(id=id, class_="shiny-text-output")  # type: ignore
+    return container(id=id, class_="shiny-text-output")
 
 
 def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:

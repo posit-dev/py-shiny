@@ -23,8 +23,6 @@ if _is_pyodide:
 else:
     from ._main import run_app
 
-# User-facing submodules that should *not* be available on `from shiny import *`
-from . import types
 
 # N.B.: we intentionally don't import 'developer-facing' submodules (e.g.,
 # html_dependencies) so that they aren't super visible when you `import shiny`, but

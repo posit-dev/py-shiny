@@ -319,7 +319,7 @@ class CalcAsync_(Calc_[T]):
 
         super().__init__(cast(CalcFunction[T], fn), session=session)
 
-    async def __call__(self) -> T:
+    async def __call__(self) -> T:  # pyright: ignore[reportIncompatibleMethodOverride]
         return await self.get_value()
 
 

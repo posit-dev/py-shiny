@@ -30,7 +30,7 @@ if "pyodide" not in sys.modules:
 else:
     # Running in wasm mode; must use our own simple StaticFiles
 
-    from typing import Optional, Tuple, MutableMapping, Iterable
+    from typing import Optional, Tuple, MutableMapping, Iterable, List
     from starlette.types import Scope, Receive, Send
     from starlette.responses import PlainTextResponse
     import os
@@ -59,7 +59,10 @@ else:
                 return await Error404()(scope, receive, send)
 
             # Sanity check that final path is under self.dir, and if not, 404
-            if not final_path.is_relative_to(self.dir):
+            # This construction is like .is_relative_to, but works with Python 3.8
+            try:
+                final_path.relative_to(self.dir)
+            except ValueError:
                 return await Error404()(scope, receive, send)
 
             # Serve up the path
@@ -75,8 +78,8 @@ else:
                 return await FileResponse(final_path)(scope, receive, send)
 
     def _traverse_url_path(
-        dir: pathlib.Path[str], path_segments: list[str]
-    ) -> Tuple[Optional[pathlib.Path[str]], bool]:
+        dir: pathlib.Path, path_segments: List[str]
+    ) -> Tuple[Optional[pathlib.Path], bool]:
         assert len(path_segments) > 0
 
         new_dir = dir
@@ -104,13 +107,13 @@ else:
             super().__init__("404", status_code=404)  # type: ignore
 
     class FileResponse:
-        file: os.PathLike[str]
+        file: pathlib.Path
         headers: Optional[MutableMapping[str, str]]
         media_type: str
 
         def __init__(
             self,
-            file: os.PathLike[str],
+            file: pathlib.Path,
             headers: Optional[MutableMapping[str, str]] = None,
             media_type: Optional[str] = None,
             background: Optional[BackgroundTask] = None,
@@ -120,7 +123,7 @@ else:
             self.background = background
 
             if media_type is None:
-                media_type, _ = mimetypes.guess_type(file, strict=False)
+                media_type, _ = mimetypes.guess_type(str(file), strict=False)
                 if media_type is None:
                     media_type = "application/octet-stream"
             self.media_type = media_type

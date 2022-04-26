@@ -86,10 +86,15 @@ def event(
         if is_async_callable(user_fn):
 
             @functools.wraps(user_fn)
-            async def new_user_fn() -> T:
+            # Impossible to specify a return type here; we know T is
+            # Awaitable[something] but I don't think there's a way to refer to the
+            # `something`
+            async def new_user_async_fn():
                 await trigger()
                 with isolate():
                     return await user_fn()
+
+            return new_user_async_fn  # type: ignore
 
         elif any([is_async_callable(arg) for arg in args]):
             raise TypeError(
@@ -105,7 +110,7 @@ def event(
                 with isolate():
                     return user_fn()
 
-        return new_user_fn
+            return new_user_fn
 
     return decorator
 

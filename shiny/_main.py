@@ -12,7 +12,7 @@ import uvicorn.config
 import shiny
 
 
-@click.group()
+@click.group()  # pyright: ignore[reportUnknownMemberType]
 def main() -> None:
     pass
 

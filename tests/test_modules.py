@@ -1,6 +1,6 @@
 """Tests for `Module`."""
 
-from typing import Callable, Dict, Union
+from typing import Callable, Dict, Union, cast
 
 import pytest
 from shiny import *
@@ -37,9 +37,9 @@ mod = Module(mod_ui, mod_server)
 
 
 def test_module_ui():
-    x = mod.ui("mod1")
-    assert x[0].attrs["id"] == "mod1-button"
-    assert x[1].attrs["id"] == "mod1-out"
+    x = cast(ui.TagList, mod.ui("mod1"))
+    assert cast(ui.Tag, x[0]).attrs["id"] == "mod1-button"
+    assert cast(ui.Tag, x[1]).attrs["id"] == "mod1-out"
 
 
 @pytest.mark.asyncio

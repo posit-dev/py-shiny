@@ -147,16 +147,19 @@ def setup(app: Sphinx):
             os.path.join(app.outdir, "serviceworker.js"),
         )
 
-    app.connect("build-finished", after_build)
+    app.connect(  # pyright: ignore[reportUnknownMemberType]
+        "build-finished", after_build
+    )
 
     def append_element_html(self: Sphinx, node: Element):
-        self.body.append(node.html())
+        # Not sure why type checking doesn't work on this line
+        self.body.append(node.html())  # type: ignore
         raise SkipNode
 
     def skip(self: Sphinx, node: Element):
         raise SkipNode
 
-    app.add_node(
+    app.add_node(  # pyright: ignore[reportUnknownMemberType]
         ShinyElement,
         html=(append_element_html, None),
         latex=(skip, None),

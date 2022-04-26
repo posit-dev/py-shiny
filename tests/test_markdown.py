@@ -1,6 +1,5 @@
-import pytest
-import textwrap
-from shiny.ui import markdown, HTML
+from shiny.ui import markdown
+from htmltools import HTML
 
 
 def test_markdown():

@@ -1,7 +1,6 @@
 {
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true,
-    "python.analysis.typeCheckingMode": "strict",
     "python.formatting.provider": "black",
     "python.linting.flake8Enabled": true,
     "editor.tabSize": 2,
@@ -10,12 +9,6 @@
     "[python]": {
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
-    },
-    "python.analysis.diagnosticSeverityOverrides": {
-        "reportImportCycles":  "none",
-        "reportUnusedFunction":  "none",
-        "reportPrivateUsage": "none",
-        "reportUnnecessaryIsInstance": "none"
     },
     "editor.rulers": [
         88
