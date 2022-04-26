@@ -53,7 +53,7 @@ class MatplotlibFigureProtocol(Protocol):
 
     def savefig(
         self,
-        fname: Union[str, typing.TextIO, typing.BinaryIO, os.PathLike[typing.Any]],
+        fname: Union[str, typing.TextIO, typing.BinaryIO, "os.PathLike[typing.Any]"],
         # dpi: Union[float, typing.Literal["figure"], None] = None,
         # facecolor="w",
         # edgecolor="w",
