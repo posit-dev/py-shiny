@@ -39,40 +39,41 @@ class Nav(NamedTuple):
     content: Optional[Tag]
 
     def render(
-        self, selected: Optional[str], id: str, is_menu: bool = False
+        self, selected: Optional[str], id: Optional[str] = None, is_menu: bool = False
     ) -> Tuple[Tag, Optional[Tag]]:
         """
         Add appropriate tag attributes to nav/content tags when linking to internal content.
         """
 
-        x = copy.copy(self)
-
         # Nothing to do for nav_item()/nav_spacer()
-        if x.content is None:
-            return x.nav, None
+        if self.content is None:
+            return self
 
         # At least currently, in the case where both nav and content are tags
         # (i.e., nav()), the nav always has a child <a> tag...I'm not sure if
         # there's a way to statically type this
-        a_tag = cast(Tag, x.nav.children[0])
+        nav = copy.deepcopy(self.nav)
+        a_tag = cast(Tag, nav.children[0])
         if is_menu:
             a_tag.add_class("dropdown-item")
         else:
             a_tag.add_class("nav-link")
-            x.nav.add_class("nav-item")
+            nav.add_class("nav-item")
 
         # Hyperlink the nav to the content
-        x.content.attrs["id"] = id
-        a_tag.attrs["href"] = f"#{id}"
+        content = copy.copy(self.content)
+        if id is not None:
+            content.attrs["id"] = id
+            a_tag.attrs["href"] = f"#{id}"
 
         # Mark the nav/content as active if it should be
         if isinstance(selected, str) and selected == self.get_value():
-            x.content.add_class("active")
+            content.add_class("active")
             a_tag.add_class("active")
 
-        x.nav.children[0] = a_tag
+        nav.children[0] = a_tag
 
-        return x.nav, x.content
+        return nav, content
 
     def get_value(self) -> Optional[str]:
         if self.content is None:
@@ -119,7 +120,7 @@ def nav(
     ~shiny.ui.navs_pill_card
     ~shiny.ui.navs_hidden
     """
-    if not value:
+    if value is None:
         value = str(title)
 
     # N.B. at this point, we don't have enough info to link the nav to the content
@@ -127,7 +128,8 @@ def nav(
     link = tags.a(
         icon,
         title,
-        data_bs_toggle="tab",
+        data_bs_toggle="tab",  # Bootstrap 5
+        data_toggle="tab",  # Needed for shiny.js' insert-tab handler
         data_value=value,
         role="tab",
     )
@@ -222,7 +224,7 @@ class NavMenu:
         self,
         *args: Union[Nav, str],
         title: TagChildArg,
-        value: Optional[str] = None,
+        value: str,
         align: Literal["left", "right"] = "left",
     ) -> None:
         self.nav_items: List[Nav] = [menu_string_as_nav(x) for x in args]
@@ -264,6 +266,10 @@ class NavMenu:
         )
 
     def get_value(self) -> Optional[str]:
+        for x in self.nav_items:
+            val = x.get_value()
+            if val:
+                return val
         return None
 
 
@@ -328,6 +334,9 @@ def nav_menu(
     -------
     See :func:`~shiny.ui.nav`
     """
+    if value is None:
+        value = str(title)
+
     return NavMenu(
         *args,
         title=TagList(icon, title),
@@ -748,16 +757,17 @@ def navs_bar(
         nav = div(nav, id=collapse_id, class_="collapse navbar-collapse")
 
     nav_container.append(nav)
-    nav_final = tags.nav({"class": "navbar"}, nav_container)
+    nav_final = tags.nav({"class": "navbar navbar-expand-md"}, nav_container)
 
     if position != "static-top":
         nav_final.add_class(position)
 
+    nav_final.add_class(f"navbar-{'dark' if inverse else 'light'}")
+
     if bg:
         nav_final.attrs["style"] = "background-color: " + bg
-
-    if inverse:
-        nav_final.add_class("navbar-dark")
+    else:
+        nav_final.add_class(f"bg-{'dark' if inverse else 'light'}")
 
     return TagList(
         nav_final,

@@ -46,7 +46,7 @@ app_ui = ui.page_navbar(
     id="navbar_id",
     footer=ui.div(
         {"style": "width:80%;margin: 0 auto"},
-        ui.h4("navs_tab()"),
+        h4("navs_tab()"),
         ui.navs_tab(*nav_items("navs_tab()")),
         h4("navs_pill()"),
         ui.navs_pill(*nav_items("navs_pill()")),
