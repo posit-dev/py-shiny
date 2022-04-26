@@ -24,13 +24,12 @@ from htmltools import (
 from .._docstring import add_example
 from ._html_dependencies import bootstrap_deps
 from ._navs import navs_bar
-from ..types import MISSING, MISSING_TYPE
-from ._navs import Nav, NavMenu
+from ..types import MISSING, MISSING_TYPE, NavsArg
 from ._utils import get_window_title
 
 
 def page_navbar(
-    *args: Union[Nav, NavMenu],
+    *args: NavsArg,
     title: Optional[Union[str, Tag, TagList]] = None,
     id: Optional[str] = None,
     selected: Optional[str] = None,

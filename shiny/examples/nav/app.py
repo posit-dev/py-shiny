@@ -1,12 +1,12 @@
-from typing import List, Union
+from typing import List
 
 from shiny import *
+from shiny.types import NavsArg
 from shiny.ui import h4
-from shiny.ui._navs import Nav, NavMenu  # TODO: export this via shiny.types
 from fontawesome import icon_svg as icon
 
 
-def nav_items(prefix: str) -> List[Union[Nav, NavMenu]]:
+def nav_items(prefix: str) -> List[NavsArg]:
     return [
         ui.nav("a", prefix + ": tab a content"),
         ui.nav("b", prefix + ": tab b content"),

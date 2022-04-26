@@ -13,7 +13,7 @@ __all__ = (
 )
 
 import sys
-from typing import Union, Optional
+from typing import Union, Optional, Tuple
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -22,6 +22,13 @@ if sys.version_info >= (3, 11):
     from typing import NotRequired, TypedDict
 else:
     from typing_extensions import NotRequired, TypedDict
+
+if sys.version_info >= (3, 8):
+    from typing import Protocol
+else:
+    from typing_extensions import Protocol
+
+from htmltools import TagChildArg
 
 from ._docstring import add_example
 
@@ -138,3 +145,37 @@ class SilentCancelOutputException(Exception):
 
 class ActionButtonValue(int):
     pass
+
+
+class NavsArg(Protocol):
+    """
+    An value suitable for passing to a navigation container (e.g.,
+    :func:`~shiny.ui.navs_tab`).
+    """
+
+    def resolve(
+        self, selected: Optional[str], id: Optional[str] = None, is_menu: bool = False
+    ) -> Tuple[TagChildArg, TagChildArg]:
+        """
+        Resolve information provided by the navigation container.
+
+        Parameters
+        ----------
+        selected
+            The value of the navigation item to be shown on page load.
+        id
+            The id of the navigation item.
+        is_menu
+            Whether the navigation item is contained within a menu.
+        """
+        ...
+
+    def get_value(self) -> Optional[str]:
+        """
+        Get the value of this navigation item (if any).
+
+        This value is only used to determine what navigation item should be shown
+        by default when none is specified (i.e., the first navigation item that
+        returns a value is used to determine the container's ``selected`` value).
+        """
+        ...

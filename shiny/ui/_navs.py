@@ -16,7 +16,7 @@ __all__ = (
 import copy
 import re
 import sys
-from typing import Optional, Tuple, List, Union, NamedTuple, cast, Any
+from typing import Optional, Tuple, Union, NamedTuple, cast
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -28,6 +28,7 @@ from htmltools import tags, Tag, TagList, TagChildArg, div
 from ._bootstrap import row, column
 from .._docstring import add_example
 from ._html_dependencies import bootstrap_deps
+from ..types import NavsArg
 from .._utils import private_random_int
 
 # -----------------------------------------------------------------------------
@@ -38,12 +39,9 @@ class Nav(NamedTuple):
     # nav_item()/nav_spacer() have None as their content
     content: Optional[Tag]
 
-    def render(
+    def resolve(
         self, selected: Optional[str], id: Optional[str] = None, is_menu: bool = False
-    ) -> Tuple[Tag, Optional[Tag]]:
-        """
-        Add appropriate tag attributes to nav/content tags when linking to internal content.
-        """
+    ) -> Tuple[TagChildArg, TagChildArg]:
 
         # Nothing to do for nav_item()/nav_spacer()
         if self.content is None:
@@ -222,17 +220,19 @@ def nav_spacer() -> Nav:
 class NavMenu:
     def __init__(
         self,
-        *args: Union[Nav, str],
+        *args: Union[NavsArg, str],
         title: TagChildArg,
         value: str,
         align: Literal["left", "right"] = "left",
     ) -> None:
-        self.nav_items: List[Nav] = [menu_string_as_nav(x) for x in args]
+        self.nav_items = [menu_string_as_nav(x) for x in args]
         self.title = title
         self.value = value
         self.align = align
 
-    def render(self, selected: Optional[str], **kwargs: Any) -> Tuple[Tag, TagList]:
+    def resolve(
+        self, selected: Optional[str], id: Optional[str] = None, is_menu: bool = False
+    ) -> Tuple[TagChildArg, TagChildArg]:
         nav, content = render_tabset(
             *self.nav_items,
             ul_class=f"dropdown-menu {'dropdown-menu-right' if self.align == 'right' else ''}",
@@ -273,7 +273,7 @@ class NavMenu:
         return None
 
 
-def menu_string_as_nav(x: Union[str, Nav]) -> Nav:
+def menu_string_as_nav(x: Union[str, NavsArg]) -> NavsArg:
     if not isinstance(x, str):
         return x
 
@@ -349,7 +349,7 @@ def nav_menu(
 # Navigation containers
 # -----------------------------------------------------------------------------
 def navs_tab(
-    *args: Union[Nav, NavMenu],
+    *args: NavsArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChildArg = None,
@@ -399,7 +399,7 @@ def navs_tab(
 
 
 def navs_pill(
-    *args: Union[Nav, NavMenu],
+    *args: NavsArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChildArg = None,
@@ -449,7 +449,7 @@ def navs_pill(
 
 @add_example()
 def navs_hidden(
-    *args: Union[Nav, NavMenu],
+    *args: NavsArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChildArg = None,
@@ -495,7 +495,7 @@ def navs_hidden(
 
 
 def navs_tab_card(
-    *args: Union[Nav, NavMenu],
+    *args: NavsArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChildArg = None,
@@ -544,7 +544,7 @@ def navs_tab_card(
 
 
 def navs_pill_card(
-    *args: Union[Nav, NavMenu],
+    *args: NavsArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChildArg = None,
@@ -600,7 +600,7 @@ def navs_pill_card(
 
 
 def navs_pill_list(
-    *args: Union[Nav, NavMenu],
+    *args: NavsArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChildArg = None,
@@ -662,7 +662,7 @@ def navs_pill_list(
 
 
 def navs_bar(
-    *args: Union[Nav, NavMenu],
+    *args: NavsArg,
     title: TagChildArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -784,7 +784,7 @@ def navs_bar(
 # Utilities for rendering navs
 # -----------------------------------------------------------------------------\
 def render_tabset(
-    *items: Union[Nav, NavMenu],
+    *items: NavsArg,
     ul_class: str,
     id: Optional[str],
     selected: Optional[str],
@@ -806,7 +806,7 @@ def render_tabset(
     ul_tag = tags.ul(bootstrap_deps(), class_=ul_class, id=id, data_tabsetid=tabsetid)
     div_tag = div(class_="tab-content", data_tabsetid=tabsetid)
     for i, x in enumerate(items):
-        nav, contents = x.render(selected, id=f"tab-{tabsetid}-{i}", is_menu=is_menu)
+        nav, contents = x.resolve(selected, id=f"tab-{tabsetid}-{i}", is_menu=is_menu)
         ul_tag.append(nav)
         div_tag.append(contents)
 
