@@ -220,7 +220,7 @@ def input_slider(
             tags.span(animate.get("play_button", _play_icon()), class_="play"),
             tags.span(animate.get("pause_button", _pause_icon()), class_="pause"),
             href="#",
-            class_="slider-animate-button",
+            class_="slider-animate-button link-secondary",
             data_target_id=id,
             data_interval=animate.get("interval", 500),
             data_loop=animate.get("loop", True),
@@ -268,19 +268,22 @@ def _find_step_size(
         return 1
 
 
-def _play_icon() -> Union[Tag, HTML]:
-    try:
-        from fontawesome import icon_svg
+play_icon = """<svg viewBox="0 0 448 512" preserveAspectRatio="none" aria-hidden="true" role="img" style="fill:currentColor;height:1em;width:0.88em;margin-left:auto;margin-right:0.2em;position:relative;vertical-align:-0.125em;font-size:inherit;overflow:visible;">
+  <title>Play</title>
+  <!-- Font Awesome Free 5.15.4 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) -->
+  <path d="M424.4 214.7L72.4 6.6C43.8-10.3 0 6.1 0 47.9V464c0 37.5 40.7 60.1 72.4 41.3l352-208c31.4-18.5 31.5-64.1 0-82.6z"></path>
+</svg>"""
 
-        return icon_svg("play")
-    except ImportError:
-        return HTML("&#x23ef;")
+pause_icon = """<svg viewBox="0 0 448 512" preserveAspectRatio="none" aria-hidden="true" role="img" style="fill:currentColor;height:1em;width:0.88em;margin-left:auto;margin-right:0.2em;position:relative;vertical-align:-0.125em;font-size:inherit;overflow:visible;">
+  <title>Pause</title>
+  <!-- Font Awesome Free 5.15.4 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) -->
+  <path d="M144 479H48c-26.5 0-48-21.5-48-48V79c0-26.5 21.5-48 48-48h96c26.5 0 48 21.5 48 48v352c0 26.5-21.5 48-48 48zm304-48V79c0-26.5-21.5-48-48-48h-96c-26.5 0-48 21.5-48 48v352c0 26.5 21.5 48 48 48h96c26.5 0 48-21.5 48-48z"></path>
+</svg>"""
+
+
+def _play_icon() -> Union[Tag, HTML]:
+    return HTML(play_icon)
 
 
 def _pause_icon() -> Union[Tag, HTML]:
-    try:
-        from fontawesome import icon_svg
-
-        return icon_svg("pause")
-    except ImportError:
-        return HTML("&#9616;&#9616;")
+    return HTML(pause_icon)
