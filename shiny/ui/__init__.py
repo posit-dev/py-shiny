@@ -66,6 +66,12 @@ from ._navs import (
     navset_hidden,
     navset_bar,
 )
+from ._navs_dynamic import (
+    nav_hide,
+    nav_insert,
+    nav_remove,
+    nav_show,
+)
 from ._notification import notification_show, notification_remove
 from ._output import (
     output_plot,
@@ -179,6 +185,10 @@ __all__ = (
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
+    "nav_hide",
+    "nav_insert",
+    "nav_remove",
+    "nav_show",
     "notification_show",
     "notification_remove",
     "output_plot",
