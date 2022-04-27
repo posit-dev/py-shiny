@@ -82,7 +82,7 @@ class Nav(NamedTuple):
 
 @add_example()
 def nav(
-    title: Union[str, Tag, TagList, None],
+    title: TagChildArg,
     *args: TagChildArg,
     value: Optional[str] = None,
     icon: TagChildArg = None,

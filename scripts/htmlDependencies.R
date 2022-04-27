@@ -30,4 +30,9 @@ withr::with_options(
   lapply(deps, copyDependencyToDir, "shiny/www/shared")
 )
 
+# This additional bs3compat HTMLDependency() only holds
+# the JS shim for tab panel logic, which we don't need
+# since we're generating BS5+ tab markup. Note, however,
+# we still do have bs3compat's CSS on the page, which
+# comes in via the bootstrap HTMLDependency()
 unlink("shiny/www/shared/bs3compat/", recursive = TRUE)
