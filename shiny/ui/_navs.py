@@ -4,19 +4,19 @@ __all__ = (
     "nav_content",
     "nav_item",
     "nav_spacer",
-    "navs_tab",
-    "navs_tab_card",
-    "navs_pill",
-    "navs_pill_card",
-    "navs_pill_list",
-    "navs_hidden",
-    "navs_bar",
+    "navset_tab",
+    "navset_tab_card",
+    "navset_pill",
+    "navset_pill_card",
+    "navset_pill_list",
+    "navset_hidden",
+    "navset_bar",
 )
 
 import copy
 import re
 import sys
-from typing import Optional, Tuple, Union, NamedTuple, cast, Dict, Any
+from typing import Optional, Tuple, Union, cast, Dict, Any
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -28,16 +28,17 @@ from htmltools import tags, Tag, TagList, TagChildArg, div
 from ._bootstrap import row, column
 from .._docstring import add_example
 from ._html_dependencies import bootstrap_deps
-from ..types import NavsArg
+from ..types import NavSetArg
 from .._utils import private_random_int
 
 # -----------------------------------------------------------------------------
 # Navigation items
 # -----------------------------------------------------------------------------
-class Nav(NamedTuple):
-    nav: Tag
-    # nav_item()/nav_spacer() have None as their content
-    content: Optional[Tag]
+class Nav:
+    def __init__(self, nav: Tag, content: Optional[Tag] = None) -> None:
+        self.nav = nav
+        # nav_item()/nav_spacer() have None as their content
+        self.content = content
 
     def resolve(
         self, selected: Optional[str], context: Dict[str, Any] = {}
@@ -45,7 +46,7 @@ class Nav(NamedTuple):
 
         # Nothing to do for nav_item()/nav_spacer()
         if self.content is None:
-            return self
+            return self.nav, None
 
         # At least currently, in the case where both nav and content are tags
         # (i.e., nav()), the nav always has a child <a> tag...I'm not sure if
@@ -80,6 +81,11 @@ class Nav(NamedTuple):
         a_tag = cast(Tag, self.nav.children[0])
         return a_tag.attrs.get("data-value", None)
 
+    def tagify(self) -> None:
+        raise NotImplementedError(
+            "nav() items must appear within navset_*() container."
+        )
+
 
 @add_example()
 def nav(
@@ -102,7 +108,7 @@ def nav(
         (when an ``id`` is provided to the nav container), programmatically select the
         item (e.g., :func:`~shiny.ui.update_navs`), and/or be provided to the
         ``selected`` argument of the navigation container (e.g.,
-        :func:`~shiny.ui.navs_tab`).
+        :func:`~shiny.ui.navset_tab`).
     icon
         An icon to appear inline with the button/link.
 
@@ -112,12 +118,12 @@ def nav(
     ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
-    ~shiny.ui.navs_bar
-    ~shiny.ui.navs_tab
-    ~shiny.ui.navs_pill
-    ~shiny.ui.navs_tab_card
-    ~shiny.ui.navs_pill_card
-    ~shiny.ui.navs_hidden
+    ~shiny.ui.navset_bar
+    ~shiny.ui.navset_tab
+    ~shiny.ui.navset_pill
+    ~shiny.ui.navset_tab_card
+    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_hidden
     """
     if value is None:
         value = str(title)
@@ -134,8 +140,8 @@ def nav(
     )
 
     return Nav(
-        nav=tags.li(link),
-        content=div(*args, class_="tab-pane", role="tabpanel", data_value=value),
+        tags.li(link),
+        div(*args, class_="tab-pane", role="tabpanel", data_value=value),
     )
 
 
@@ -143,7 +149,7 @@ def nav_content(value: str, *args: TagChildArg) -> Nav:
     """
     Create a nav item pointing to some internal content with no title.
 
-    Mainly useful when used inside :func:`~shiny.ui.navs_hidden`
+    Mainly useful when used inside :func:`~shiny.ui.navset_hidden`
 
     Parameters
     ----------
@@ -156,7 +162,7 @@ def nav_content(value: str, *args: TagChildArg) -> Nav:
 
     See Also
     --------
-    ~shiny.ui.navs_hidden
+    ~shiny.ui.navset_hidden
 
     Example
     -------
@@ -180,17 +186,17 @@ def nav_item(*args: TagChildArg) -> Nav:
     ~shiny.ui.nav_menu
     ~shiny.ui.nav_content
     ~shiny.ui.nav_spacer
-    ~shiny.ui.navs_bar
-    ~shiny.ui.navs_tab
-    ~shiny.ui.navs_pill
-    ~shiny.ui.navs_tab_card
-    ~shiny.ui.navs_pill_card
-    ~shiny.ui.navs_hidden
+    ~shiny.ui.navset_bar
+    ~shiny.ui.navset_tab
+    ~shiny.ui.navset_pill
+    ~shiny.ui.navset_tab_card
+    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_hidden
     Example
     -------
     See :func:`~shiny.ui.nav`
     """
-    return Nav(nav=tags.li(*args), content=None)
+    return Nav(tags.li(*args))
 
 
 def nav_spacer() -> Nav:
@@ -203,25 +209,25 @@ def nav_spacer() -> Nav:
     ~shiny.ui.nav_menu
     ~shiny.ui.nav_content
     ~shiny.ui.nav_item
-    ~shiny.ui.navs_bar
-    ~shiny.ui.navs_tab
-    ~shiny.ui.navs_pill
-    ~shiny.ui.navs_tab_card
-    ~shiny.ui.navs_pill_card
-    ~shiny.ui.navs_hidden
+    ~shiny.ui.navset_bar
+    ~shiny.ui.navset_tab
+    ~shiny.ui.navset_pill
+    ~shiny.ui.navset_tab_card
+    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_hidden
 
     Example
     -------
     See :func:`~shiny.ui.nav`
     """
 
-    return Nav(nav=tags.li(class_="bslib-nav-spacer"), content=None)
+    return Nav(tags.li(class_="bslib-nav-spacer"))
 
 
 class NavMenu:
     def __init__(
         self,
-        *args: Union[NavsArg, str],
+        *args: Union[NavSetArg, str],
         title: TagChildArg,
         value: str,
         align: Literal["left", "right"] = "left",
@@ -236,7 +242,7 @@ class NavMenu:
         selected: Optional[str],
         context: Dict[str, Any] = {},
     ) -> Tuple[TagChildArg, TagChildArg]:
-        nav, content = render_tabset(
+        nav, content = render_navset(
             *self.nav_items,
             ul_class=f"dropdown-menu {'dropdown-menu-right' if self.align == 'right' else ''}",
             id=None,
@@ -275,8 +281,11 @@ class NavMenu:
                 return val
         return None
 
+    def tagify(self) -> None:
+        raise NotImplementedError("nav_menu() must appear within navset_*() container.")
 
-def menu_string_as_nav(x: Union[str, NavsArg]) -> NavsArg:
+
+def menu_string_as_nav(x: Union[str, NavSetArg]) -> NavSetArg:
     if not isinstance(x, str):
         return x
 
@@ -285,7 +294,7 @@ def menu_string_as_nav(x: Union[str, NavsArg]) -> NavsArg:
     else:
         nav = tags.li(x, class_="dropdown-header")
 
-    return Nav(nav=nav, content=None)
+    return Nav(nav)
 
 
 def nav_menu(
@@ -312,7 +321,7 @@ def nav_menu(
         (when an ``id`` is provided to the nav container), programmatically select the
         item (e.g., :func:`~shiny.ui.update_navs`), and/or be provided to the
         ``selected`` argument of the navigation container (e.g.,
-        :func:`~shiny.ui.navs_tab`).
+        :func:`~shiny.ui.navset_tab`).
     icon
         An icon to appear inline with the button/link.
     align
@@ -327,12 +336,12 @@ def nav_menu(
     ~shiny.ui.nav
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
-    ~shiny.ui.navs_bar
-    ~shiny.ui.navs_tab
-    ~shiny.ui.navs_pill
-    ~shiny.ui.navs_tab_card
-    ~shiny.ui.navs_pill_card
-    ~shiny.ui.navs_hidden
+    ~shiny.ui.navset_bar
+    ~shiny.ui.navset_tab
+    ~shiny.ui.navset_pill
+    ~shiny.ui.navset_tab_card
+    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_hidden
     Example
     -------
     See :func:`~shiny.ui.nav`
@@ -348,16 +357,48 @@ def nav_menu(
     )
 
 
+class NavSet:
+    def __init__(
+        self,
+        *args: NavSetArg,
+        ul_class: str,
+        id: Optional[str],
+        selected: Optional[str],
+        **kwargs: Any,
+    ) -> None:
+        self.args = args
+        self.ul_class = ul_class
+        self.id = id
+        self.selected = selected
+        self.kwargs = kwargs
+
+    def tagify(self) -> Union[TagList, Tag]:
+        id = self.id
+        ul_class = self.ul_class
+        if id is not None:
+            ul_class += " shiny-tab-input"
+
+        nav, content = render_navset(
+            *self.args, ul_class=ul_class, id=id, selected=self.selected
+        )
+        return self.layout(nav, content, **self.kwargs)
+
+    def layout(
+        self, nav: TagChildArg, content: TagChildArg, **kwargs: Any
+    ) -> Union[TagList, Tag]:
+        return TagList(nav, kwargs["header"], content, kwargs["footer"])
+
+
 # -----------------------------------------------------------------------------
 # Navigation containers
 # -----------------------------------------------------------------------------
-def navs_tab(
-    *args: NavsArg,
+def navset_tab(
+    *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChildArg = None,
     footer: TagChildArg = None,
-) -> TagList:
+) -> NavSet:
     """
     Render nav items as a tabset.
 
@@ -384,30 +425,34 @@ def navs_tab(
     ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
-    ~shiny.ui.navs_bar
-    ~shiny.ui.navs_pill
-    ~shiny.ui.navs_tab_card
-    ~shiny.ui.navs_pill_card
-    ~shiny.ui.navs_hidden
+    ~shiny.ui.navset_bar
+    ~shiny.ui.navset_pill
+    ~shiny.ui.navset_tab_card
+    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_hidden
 
     Example
     -------
     See :func:`~shiny.ui.nav`
     """
 
-    nav, content = render_tabset(
-        *args, ul_class="nav nav-tabs", id=id, selected=selected
+    return NavSet(
+        *args,
+        ul_class="nav nav-tabs",
+        id=id,
+        selected=selected,
+        header=header,
+        footer=footer,
     )
-    return TagList(nav, header, content, footer)
 
 
-def navs_pill(
-    *args: NavsArg,
+def navset_pill(
+    *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChildArg = None,
     footer: TagChildArg = None,
-) -> TagList:
+) -> NavSet:
     """
     Render nav items as a pillset.
 
@@ -433,31 +478,35 @@ def navs_pill(
     ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
-    ~shiny.ui.navs_bar
-    ~shiny.ui.navs_tab
-    ~shiny.ui.navs_tab_card
-    ~shiny.ui.navs_pill_card
-    ~shiny.ui.navs_hidden
+    ~shiny.ui.navset_bar
+    ~shiny.ui.navset_tab
+    ~shiny.ui.navset_tab_card
+    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_hidden
 
     Example
     -------
     See :func:`~shiny.ui.nav`
     """
 
-    nav, content = render_tabset(
-        *args, ul_class="nav nav-pills", id=id, selected=selected
+    return NavSet(
+        *args,
+        ul_class="nav nav-pills",
+        id=id,
+        selected=selected,
+        header=header,
+        footer=footer,
     )
-    return TagList(nav, header, content, footer)
 
 
 @add_example()
-def navs_hidden(
-    *args: NavsArg,
+def navset_hidden(
+    *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChildArg = None,
     footer: TagChildArg = None,
-) -> TagList:
+) -> NavSet:
     """
     Render nav contents without the nav items.
 
@@ -483,27 +532,39 @@ def navs_hidden(
     ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
-    ~shiny.ui.navs_tab
-    ~shiny.ui.navs_tab_card
-    ~shiny.ui.navs_pill
-    ~shiny.ui.navs_pill_card
-    ~shiny.ui.navs_pill_list
-    ~shiny.ui.navs_bar
+    ~shiny.ui.navset_tab
+    ~shiny.ui.navset_tab_card
+    ~shiny.ui.navset_pill
+    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_pill_list
+    ~shiny.ui.navset_bar
     """
 
-    nav, content = render_tabset(
-        *args, ul_class="nav nav-hidden", id=id, selected=selected
+    return NavSet(
+        *args,
+        ul_class="nav nav-hidden",
+        id=id,
+        selected=selected,
+        header=header,
+        footer=footer,
     )
-    return TagList(nav, header, content, footer)
 
 
-def navs_tab_card(
-    *args: NavsArg,
+class NavSetCard(NavSet):
+    def layout(self, nav: TagChildArg, content: TagChildArg, **kwargs: Any) -> Tag:
+        if kwargs.get("placement") == "below":
+            return card(kwargs["header"], content, kwargs["footer"], footer=nav)
+        else:
+            return card(kwargs["header"], content, kwargs["footer"], header=nav)
+
+
+def navset_tab_card(
+    *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChildArg = None,
     footer: TagChildArg = None,
-) -> Tag:
+) -> NavSetCard:
     """
     Render nav items as a tabset inside a card container.
 
@@ -529,31 +590,36 @@ def navs_tab_card(
     ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
-    ~shiny.ui.navs_bar
-    ~shiny.ui.navs_tab
-    ~shiny.ui.navs_pill
-    ~shiny.ui.navs_pill_card
-    ~shiny.ui.navs_hidden
+    ~shiny.ui.navset_bar
+    ~shiny.ui.navset_tab
+    ~shiny.ui.navset_pill
+    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_hidden
 
     Example
     -------
     See :func:`~shiny.ui.nav`
     """
 
-    nav, content = render_tabset(
-        *args, ul_class="nav nav-tabs card-header-tabs", id=id, selected=selected
+    return NavSetCard(
+        *args,
+        ul_class="nav nav-tabs card-header-tabs",
+        id=id,
+        selected=selected,
+        header=header,
+        footer=footer,
+        placement="above",
     )
-    return card(header, content, footer, header=nav)
 
 
-def navs_pill_card(
-    *args: NavsArg,
+def navset_pill_card(
+    *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChildArg = None,
     footer: TagChildArg = None,
     placement: Literal["above", "below"] = "above",
-) -> Tag:
+) -> NavSetCard:
     """
     Render nav items as a pillset inside a card container.
 
@@ -581,36 +647,46 @@ def navs_pill_card(
     ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
-    ~shiny.ui.navs_bar
-    ~shiny.ui.navs_tab
-    ~shiny.ui.navs_pill
-    ~shiny.ui.navs_tab_card
-    ~shiny.ui.navs_hidden
+    ~shiny.ui.navset_bar
+    ~shiny.ui.navset_tab
+    ~shiny.ui.navset_pill
+    ~shiny.ui.navset_tab_card
+    ~shiny.ui.navset_hidden
 
     Example
     -------
     See :func:`~shiny.ui.nav`
     """
 
-    nav, content = render_tabset(
-        *args, ul_class="nav nav-pills card-header-pills", id=id, selected=selected
+    return NavSetCard(
+        *args,
+        ul_class="nav nav-pills card-header-pills",
+        id=id,
+        selected=selected,
+        header=header,
+        footer=footer,
+        placement=placement,
     )
 
-    if placement == "below":
-        return card(header, content, footer, footer=nav)
-    else:
-        return card(header, content, footer, header=nav)
+
+class NavSetPillList(NavSet):
+    def layout(self, nav: TagChildArg, content: TagChildArg, **kwargs: Any) -> Tag:
+        widths = kwargs["widths"]
+        return row(
+            column(widths[0], nav, class_="well" if kwargs["well"] else None),
+            column(widths[1], kwargs["header"], content, kwargs["footer"]),
+        )
 
 
-def navs_pill_list(
-    *args: NavsArg,
+def navset_pill_list(
+    *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChildArg = None,
     footer: TagChildArg = None,
     well: bool = True,
     widths: Tuple[int, int] = (4, 8),
-) -> Tag:
+) -> NavSet:
     """
     Render nav items as a vertical pillset.
 
@@ -642,30 +718,88 @@ def navs_pill_list(
     ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
-    ~shiny.ui.navs_tab
-    ~shiny.ui.navs_tab_card
-    ~shiny.ui.navs_pill
-    ~shiny.ui.navs_pill_card
-    ~shiny.ui.navs_hidden
-    ~shiny.ui.navs_bar
-    ~shiny.ui.navs_hidden
+    ~shiny.ui.navset_tab
+    ~shiny.ui.navset_tab_card
+    ~shiny.ui.navset_pill
+    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_hidden
+    ~shiny.ui.navset_bar
+    ~shiny.ui.navset_hidden
 
     Example
     -------
     See :func:`~shiny.ui.nav`
     """
 
-    nav, content = render_tabset(
-        *args, ul_class="nav nav-pills nav-stacked", id=id, selected=selected
-    )
-    return row(
-        column(widths[0], nav, class_="well" if well else None),
-        column(widths[1], header, content, footer),
+    return NavSetPillList(
+        *args,
+        ul_class="nav nav-pills nav-stacked",
+        id=id,
+        selected=selected,
+        header=header,
+        footer=footer,
+        well=well,
+        widths=widths,
     )
 
 
-def navs_bar(
-    *args: NavsArg,
+class NavSetBar(NavSet):
+    def layout(self, nav: TagChildArg, content: TagChildArg, **kwargs: Any) -> TagList:
+        fluid = kwargs["fluid"]
+        title = kwargs["title"]
+        collapsible = kwargs["collapsible"]
+        position = kwargs["position"]
+        inverse = kwargs["inverse"]
+        bg = kwargs["bg"]
+        header = kwargs["header"]
+        footer = kwargs["footer"]
+
+        nav_container = div(
+            {"class": "container-fluid" if fluid else "container"},
+            tags.a({"class": "navbar-brand", "href": "#"}, title),
+        )
+        if collapsible:
+            collapse_id = "navbar-collapse-" + private_random_int(1000, 10000)
+            nav_container.append(
+                tags.button(
+                    tags.span(class_="navbar-toggler-icon"),
+                    class_="navbar-toggler",
+                    type="button",
+                    data_bs_toggle="collapse",
+                    data_bs_target="#" + collapse_id,
+                    aria_controls=collapse_id,
+                    aria_expanded="false",
+                    aria_label="Toggle navigation",
+                )
+            )
+            nav = div(nav, id=collapse_id, class_="collapse navbar-collapse")
+
+        nav_container.append(nav)
+        nav_final = tags.nav({"class": "navbar navbar-expand-md"}, nav_container)
+
+        if position != "static-top":
+            nav_final.add_class(position)
+
+        nav_final.add_class(f"navbar-{'dark' if inverse else 'light'}")
+
+        if bg:
+            nav_final.attrs["style"] = "background-color: " + bg
+        else:
+            nav_final.add_class(f"bg-{'dark' if inverse else 'light'}")
+
+        return TagList(
+            nav_final,
+            div(
+                row(header) if header else None,
+                content,
+                row(footer) if footer else None,
+                class_="container-fluid" if fluid else "container",
+            ),
+        )
+
+
+def navset_bar(
+    *args: NavSetArg,
     title: TagChildArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -679,7 +813,7 @@ def navs_bar(
     inverse: bool = False,
     collapsible: bool = True,
     fluid: bool = True,
-) -> TagList:
+) -> NavSetBar:
     """
     Render nav items as a navbar.
 
@@ -724,70 +858,38 @@ def navs_bar(
     ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
-    ~shiny.ui.navs_tab
-    ~shiny.ui.navs_pill
-    ~shiny.ui.navs_tab_card
-    ~shiny.ui.navs_pill_card
-    ~shiny.ui.navs_hidden
+    ~shiny.ui.navset_tab
+    ~shiny.ui.navset_pill
+    ~shiny.ui.navset_tab_card
+    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_hidden
 
     Example
     -------
     See :func:`~shiny.ui.nav`.
     """
 
-    nav, content = render_tabset(
-        *args, ul_class="nav navbar-nav", id=id, selected=selected
-    )
-
-    nav_container = div(
-        {"class": "container-fluid" if fluid else "container"},
-        tags.a({"class": "navbar-brand", "href": "#"}, title),
-    )
-    if collapsible:
-        collapse_id = "navbar-collapse-" + private_random_int(1000, 10000)
-        nav_container.append(
-            tags.button(
-                tags.span(class_="navbar-toggler-icon"),
-                class_="navbar-toggler",
-                type="button",
-                data_bs_toggle="collapse",
-                data_bs_target="#" + collapse_id,
-                aria_controls=collapse_id,
-                aria_expanded="false",
-                aria_label="Toggle navigation",
-            )
-        )
-        nav = div(nav, id=collapse_id, class_="collapse navbar-collapse")
-
-    nav_container.append(nav)
-    nav_final = tags.nav({"class": "navbar navbar-expand-md"}, nav_container)
-
-    if position != "static-top":
-        nav_final.add_class(position)
-
-    nav_final.add_class(f"navbar-{'dark' if inverse else 'light'}")
-
-    if bg:
-        nav_final.attrs["style"] = "background-color: " + bg
-    else:
-        nav_final.add_class(f"bg-{'dark' if inverse else 'light'}")
-
-    return TagList(
-        nav_final,
-        div(
-            row(header) if header else None,
-            content,
-            row(footer) if footer else None,
-            class_="container-fluid" if fluid else "container",
-        ),
+    return NavSetBar(
+        *args,
+        ul_class="nav navbar-nav",
+        id=id,
+        selected=selected,
+        title=title,
+        position=position,
+        header=header,
+        footer=footer,
+        bg=bg,
+        inverse=inverse,
+        collapsible=collapsible,
+        fluid=fluid,
     )
 
 
 # -----------------------------------------------------------------------------
 # Utilities for rendering navs
 # -----------------------------------------------------------------------------\
-def render_tabset(
-    *items: NavsArg,
+def render_navset(
+    *items: NavSetArg,
     ul_class: str,
     id: Optional[str],
     selected: Optional[str],
@@ -795,9 +897,6 @@ def render_tabset(
 ) -> Tuple[Tag, Tag]:
 
     tabsetid = private_random_int(1000, 10000)
-
-    if id is not None:
-        ul_class += " shiny-tab-input"
 
     # If the user hasn't provided a selected value, use the first one
     if selected is None:

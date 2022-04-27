@@ -3,17 +3,16 @@
 
 import random
 import textwrap
-from typing import Callable, Any, Union
+from typing import Callable, Any
 
 from shiny import ui
+from shiny.ui._navs import NavSet
 from shiny._utils import private_seed
-from htmltools import Tag, TagList
+from htmltools import TagList
 
 
 # Fix the randomness of these functions to make the tests deterministic
-def with_private_seed(
-    func: Callable[[], Union[Tag, TagList]], *args: Any, **kwargs: Any
-):
+def with_private_seed(func: Callable[[], NavSet], *args: Any, **kwargs: Any):
     with private_seed():
         random.seed(0)
         return func(*args, **kwargs)
@@ -32,9 +31,9 @@ def test_nav_markup():
         ui.nav_item("Other item"),
     )
 
-    x = with_private_seed(ui.navs_tab, a, b, ui.nav_item("Some item"), menu)
+    x = with_private_seed(ui.navset_tab, a, b, ui.nav_item("Some item"), menu)
 
-    assert x.render()["html"] == textwrap.dedent(
+    assert TagList(x).render()["html"] == textwrap.dedent(
         """\
         <ul class="nav nav-tabs" data-tabsetid="7311">
           <li class="nav-item">
@@ -65,15 +64,15 @@ def test_nav_markup():
     )
 
     x = with_private_seed(
-        ui.navs_pill,
+        ui.navset_pill,
         menu,
         a,
-        id="navs_pill_id",
+        id="navset_pill_id",
     )
 
-    assert x.render()["html"] == textwrap.dedent(
+    assert TagList(x).render()["html"] == textwrap.dedent(
         """\
-        <ul class="nav nav-pills shiny-tab-input" id="navs_pill_id" data-tabsetid="7311">
+        <ul class="nav nav-pills shiny-tab-input" id="navset_pill_id" data-tabsetid="7311">
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle active" data-bs-toggle="dropdown" data-value="Menu" href="#" role="button">Menu</a>
             <ul class="dropdown-menu " data-tabsetid="7890">
@@ -97,14 +96,14 @@ def test_nav_markup():
     )
 
     x = with_private_seed(
-        ui.navs_pill_card,
+        ui.navset_pill_card,
         a,
         ui.nav_menu("Menu", c),
         b,
         selected="c",
     )
 
-    assert x.render()["html"] == textwrap.dedent(
+    assert TagList(x).render()["html"] == textwrap.dedent(
         """\
         <div class="card">
           <div class="card-header">
@@ -136,14 +135,14 @@ def test_nav_markup():
     )
 
     x = with_private_seed(
-        ui.navs_bar,  # type: ignore
+        ui.navset_bar,  # type: ignore
         ui.nav_menu("Menu", "Plain text", c),
         title="Page title",
         footer="Page footer",
         header="Page header",
     )
 
-    assert x.render()["html"] == textwrap.dedent(
+    assert TagList(x).render()["html"] == textwrap.dedent(
         """\
         <nav class="navbar navbar-expand-md navbar-light bg-light">
           <div class="container-fluid">

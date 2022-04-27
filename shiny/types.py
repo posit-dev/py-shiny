@@ -147,10 +147,10 @@ class ActionButtonValue(int):
     pass
 
 
-class NavsArg(Protocol):
+class NavSetArg(Protocol):
     """
     An value suitable for passing to a navigation container (e.g.,
-    :func:`~shiny.ui.navs_tab`).
+    :func:`~shiny.ui.navset_tab`).
     """
 
     def resolve(

@@ -1,12 +1,12 @@
 from typing import List
 
 from shiny import *
-from shiny.types import NavsArg
+from shiny.types import NavSetArg
 from shiny.ui import h4
 from fontawesome import icon_svg as icon
 
 
-def nav_items(prefix: str) -> List[NavsArg]:
+def nav_items(prefix: str) -> List[NavSetArg]:
     return [
         ui.nav("a", prefix + ": tab a content"),
         ui.nav("b", prefix + ": tab b content"),
@@ -46,16 +46,17 @@ app_ui = ui.page_navbar(
     id="navbar_id",
     footer=ui.div(
         {"style": "width:80%;margin: 0 auto"},
-        h4("navs_tab()"),
-        ui.navs_tab(*nav_items("navs_tab()")),
-        h4("navs_pill()"),
-        ui.navs_pill(*nav_items("navs_pill()")),
-        h4("navs_tab_card()"),
-        ui.navs_tab_card(*nav_items("navs_tab_card()")),
-        h4("navs_pill_card()"),
-        ui.navs_pill_card(*nav_items("navs_pill_card()")),
-        h4("navs_pill_list()"),
-        ui.navs_pill_list(*nav_items("navs_pill_list()")),
+        h4("navset_tab()"),
+        # ui.nav_menu("F", ui.nav("G", "g")),
+        ui.navset_tab(*nav_items("navset_tab()")),
+        h4("navset_pill()"),
+        ui.navset_pill(*nav_items("navset_pill()")),
+        h4("navset_tab_card()"),
+        ui.navset_tab_card(*nav_items("navset_tab_card()")),
+        h4("navset_pill_card()"),
+        ui.navset_pill_card(*nav_items("navset_pill_card()")),
+        h4("navset_pill_list()"),
+        ui.navset_pill_list(*nav_items("navset_pill_list()")),
     )
 )
 

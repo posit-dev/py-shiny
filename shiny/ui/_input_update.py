@@ -657,8 +657,8 @@ def update_navs(
 
     See Also
     -------
-    ~shiny.ui.navs_tab
-    ~shiny.ui.navs_pill
+    ~shiny.ui.navset_tab
+    ~shiny.ui.navset_pill
     ~shiny.ui.page_navbar
     """
 

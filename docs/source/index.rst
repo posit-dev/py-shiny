@@ -131,11 +131,11 @@ Create segments of UI content.
     ui.nav_item
     ui.nav_spacer
     ui.nav_menu
-    ui.navs_tab
-    ui.navs_tab_card
-    ui.navs_pill
-    ui.navs_pill_card
-    ui.navs_pill_list
+    ui.navset_tab
+    ui.navset_tab_card
+    ui.navset_pill
+    ui.navset_pill_card
+    ui.navset_pill_list
 
 
 UI panels
