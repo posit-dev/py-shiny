@@ -37,7 +37,7 @@ from htmltools import (
 
 from .._docstring import add_example
 from ._html_dependencies import jqui_deps
-from ._page import get_window_title
+from ._utils import get_window_title
 
 
 # TODO: make a python version of the layout guide?
