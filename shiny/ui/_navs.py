@@ -1,7 +1,7 @@
 __all__ = (
     "nav",
     "nav_menu",
-    "nav_item",
+    "nav_control",
     "nav_spacer",
     "navset_tab",
     "navset_tab_card",
@@ -36,14 +36,14 @@ from .._utils import private_random_int
 class Nav:
     def __init__(self, nav: Tag, content: Optional[Tag] = None) -> None:
         self.nav = nav
-        # nav_item()/nav_spacer() have None as their content
+        # nav_control()/nav_spacer() have None as their content
         self.content = content
 
     def resolve(
         self, selected: Optional[str], context: Dict[str, Any] = {}
     ) -> Tuple[TagChildArg, TagChildArg]:
 
-        # Nothing to do for nav_item()/nav_spacer()
+        # Nothing to do for nav_control()/nav_spacer()
         if self.content is None:
             return self.nav, None
 
@@ -114,7 +114,7 @@ def nav(
     See Also
     -------
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_item
+    ~shiny.ui.nav_control
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
@@ -143,7 +143,7 @@ def nav(
     )
 
 
-def nav_item(*args: TagChildArg) -> Nav:
+def nav_control(*args: TagChildArg) -> Nav:
     """
     Place a control in the navigation container.
 
@@ -178,7 +178,7 @@ def nav_spacer() -> Nav:
     -------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_item
+    ~shiny.ui.nav_control
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
@@ -202,7 +202,7 @@ class NavMenu:
         value: str,
         align: Literal["left", "right"] = "left",
     ) -> None:
-        self.nav_items = [menu_string_as_nav(x) for x in args]
+        self.nav_controls = [menu_string_as_nav(x) for x in args]
         self.title = title
         self.value = value
         self.align = align
@@ -213,7 +213,7 @@ class NavMenu:
         context: Dict[str, Any] = {},
     ) -> Tuple[TagChildArg, TagChildArg]:
         nav, content = render_navset(
-            *self.nav_items,
+            *self.nav_controls,
             ul_class=f"dropdown-menu {'dropdown-menu-right' if self.align == 'right' else ''}",
             id=None,
             selected=selected,
@@ -245,7 +245,7 @@ class NavMenu:
         )
 
     def get_value(self) -> Optional[str]:
-        for x in self.nav_items:
+        for x in self.nav_controls:
             val = x.get_value()
             if val:
                 return val
@@ -304,7 +304,7 @@ def nav_menu(
     See Also
     -------
     ~shiny.ui.nav
-    ~shiny.ui.nav_item
+    ~shiny.ui.nav_control
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
@@ -392,7 +392,7 @@ def navset_tab(
     -------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_item
+    ~shiny.ui.nav_control
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_pill
@@ -444,7 +444,7 @@ def navset_pill(
     -------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_item
+    ~shiny.ui.nav_control
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
@@ -497,7 +497,7 @@ def navset_hidden(
     --------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_item
+    ~shiny.ui.nav_control
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_tab_card
@@ -554,7 +554,7 @@ def navset_tab_card(
     -------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_item
+    ~shiny.ui.nav_control
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
@@ -610,7 +610,7 @@ def navset_pill_card(
     -------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_item
+    ~shiny.ui.nav_control
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
@@ -680,7 +680,7 @@ def navset_pill_list(
     -------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_item
+    ~shiny.ui.nav_control
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_tab_card
@@ -819,7 +819,7 @@ def navset_bar(
     ~shiny.ui.page_navbar
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_item
+    ~shiny.ui.nav_control
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill

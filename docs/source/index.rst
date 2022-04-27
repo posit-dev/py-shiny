@@ -128,7 +128,7 @@ Create segments of UI content.
     :toctree: reference/
 
     ui.nav
-    ui.nav_item
+    ui.nav_control
     ui.nav_spacer
     ui.nav_menu
     ui.navset_tab

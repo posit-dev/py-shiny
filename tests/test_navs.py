@@ -28,10 +28,10 @@ def test_nav_markup():
         "----",
         "Plain text",
         "----",
-        ui.nav_item("Other item"),
+        ui.nav_control("Other item"),
     )
 
-    x = with_private_seed(ui.navset_tab, a, b, ui.nav_item("Some item"), menu)
+    x = with_private_seed(ui.navset_tab, a, b, ui.nav_control("Some item"), menu)
 
     assert TagList(x).render()["html"] == textwrap.dedent(
         """\

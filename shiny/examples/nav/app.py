@@ -6,11 +6,11 @@ from shiny.ui import h4
 from fontawesome import icon_svg as icon
 
 
-def nav_items(prefix: str) -> List[NavSetArg]:
+def nav_controls(prefix: str) -> List[NavSetArg]:
     return [
         ui.nav("a", prefix + ": tab a content"),
         ui.nav("b", prefix + ": tab b content"),
-        ui.nav_item(
+        ui.nav_control(
             ui.a(
                 icon("github"),
                 "Shiny",
@@ -25,7 +25,7 @@ def nav_items(prefix: str) -> List[NavSetArg]:
             "----",
             "Plain text",
             "----",
-            ui.nav_item(
+            ui.nav_control(
                 ui.a(
                     icon("r-project"),
                     "RStudio",
@@ -39,7 +39,7 @@ def nav_items(prefix: str) -> List[NavSetArg]:
 
 
 app_ui = ui.page_navbar(
-    *nav_items("page_navbar"),
+    *nav_controls("page_navbar"),
     title="page_navbar()",
     bg="#0062cc",
     inverse=True,
@@ -48,15 +48,15 @@ app_ui = ui.page_navbar(
         {"style": "width:80%;margin: 0 auto"},
         h4("navset_tab()"),
         # ui.nav_menu("F", ui.nav("G", "g")),
-        ui.navset_tab(*nav_items("navset_tab()")),
+        ui.navset_tab(*nav_controls("navset_tab()")),
         h4("navset_pill()"),
-        ui.navset_pill(*nav_items("navset_pill()")),
+        ui.navset_pill(*nav_controls("navset_pill()")),
         h4("navset_tab_card()"),
-        ui.navset_tab_card(*nav_items("navset_tab_card()")),
+        ui.navset_tab_card(*nav_controls("navset_tab_card()")),
         h4("navset_pill_card()"),
-        ui.navset_pill_card(*nav_items("navset_pill_card()")),
+        ui.navset_pill_card(*nav_controls("navset_pill_card()")),
         h4("navset_pill_list()"),
-        ui.navset_pill_list(*nav_items("navset_pill_list()")),
+        ui.navset_pill_list(*nav_controls("navset_pill_list()")),
     )
 )
 
