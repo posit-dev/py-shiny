@@ -1,5 +1,4 @@
 from typing import Optional, Union
-import warnings
 
 from htmltools import (
     tags,
@@ -24,12 +23,7 @@ def get_window_title(
     window_title: Union[str, MISSING_TYPE] = MISSING,
 ) -> Optional[HTMLDependency]:
     if title is not None and isinstance(window_title, MISSING_TYPE):
-        # Try to infer window_title from contents of title
         window_title = _find_child_strings(title)
-        if not window_title:
-            warnings.warn(
-                "Unable to infer a `window_title` default from `title`. Consider providing a character string to `window_title`."
-            )
 
     if isinstance(window_title, MISSING_TYPE):
         return None
@@ -38,8 +32,11 @@ def get_window_title(
 
 
 def _find_child_strings(x: Union[Tag, TagList, TagChild]) -> str:
-    if isinstance(x, Tag):
+    if isinstance(x, Tag) and x.name not in ("script", "style"):
         x = x.children
     if isinstance(x, TagList):
-        return " ".join([_find_child_strings(y) for y in x])
-    return x if isinstance(x, str) else ""
+        strings = [_find_child_strings(y) for y in x]
+        return " ".join(filter(lambda x: x != "", strings))
+    if isinstance(x, str):
+        return x
+    return ""
