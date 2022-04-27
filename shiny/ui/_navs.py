@@ -1,7 +1,6 @@
 __all__ = (
     "nav",
     "nav_menu",
-    "nav_content",
     "nav_item",
     "nav_spacer",
     "navset_tab",
@@ -115,7 +114,6 @@ def nav(
     See Also
     -------
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
@@ -145,32 +143,6 @@ def nav(
     )
 
 
-def nav_content(value: str, *args: TagChildArg) -> Nav:
-    """
-    Create a nav item pointing to some internal content with no title.
-
-    Mainly useful when used inside :func:`~shiny.ui.navset_hidden`
-
-    Parameters
-    ----------
-    value
-        The value of the item. This is used to determine whether the item is active
-    *args
-        UI elements to display when the item is active.
-    icon
-        An optional icon.
-
-    See Also
-    --------
-    ~shiny.ui.navset_hidden
-
-    Example
-    -------
-    See :func:`~shiny.ui.nav`
-    """
-    return nav(None, *args, value=value)
-
-
 def nav_item(*args: TagChildArg) -> Nav:
     """
     Place a control in the navigation container.
@@ -184,7 +156,6 @@ def nav_item(*args: TagChildArg) -> Nav:
     -------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_content
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
@@ -207,7 +178,6 @@ def nav_spacer() -> Nav:
     -------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
@@ -422,7 +392,6 @@ def navset_tab(
     -------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
@@ -475,7 +444,6 @@ def navset_pill(
     -------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
@@ -529,7 +497,6 @@ def navset_hidden(
     --------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_tab
@@ -587,7 +554,6 @@ def navset_tab_card(
     -------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
@@ -644,7 +610,6 @@ def navset_pill_card(
     -------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
@@ -715,7 +680,6 @@ def navset_pill_list(
     -------
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_tab
@@ -855,7 +819,6 @@ def navset_bar(
     ~shiny.ui.page_navbar
     ~shiny.ui.nav
     ~shiny.ui.nav_menu
-    ~shiny.ui.nav_content
     ~shiny.ui.nav_item
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_tab

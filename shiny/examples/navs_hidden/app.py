@@ -7,9 +7,9 @@ app_ui = ui.page_fluid(
         ),
         ui.panel_main(
             ui.navset_hidden(
-                ui.nav_content("panel1", "Panel 1 content"),
-                ui.nav_content("panel2", "Panel 2 content"),
-                ui.nav_content("panel3", "Panel 3 content"),
+                ui.nav(None, "Panel 1 content", value="panel1"),
+                ui.nav(None, "Panel 2 content", value="panel2"),
+                ui.nav(None, "Panel 3 content", value="panel3"),
                 id="hidden_tabs",
             )
         ),
