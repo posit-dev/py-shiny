@@ -13,7 +13,7 @@ __all__ = (
 )
 
 import sys
-from typing import Union, Optional, Tuple
+from typing import Union, Optional, Tuple, Dict, Any
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -154,7 +154,7 @@ class NavsArg(Protocol):
     """
 
     def resolve(
-        self, selected: Optional[str], id: Optional[str] = None, is_menu: bool = False
+        self, selected: Optional[str], context: Dict[str, Any] = {}
     ) -> Tuple[TagChildArg, TagChildArg]:
         """
         Resolve information provided by the navigation container.
@@ -163,10 +163,8 @@ class NavsArg(Protocol):
         ----------
         selected
             The value of the navigation item to be shown on page load.
-        id
-            The id of the navigation item.
-        is_menu
-            Whether the navigation item is contained within a menu.
+        context
+            Additional context supplied by the navigation container.
         """
         ...
 

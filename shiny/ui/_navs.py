@@ -16,7 +16,7 @@ __all__ = (
 import copy
 import re
 import sys
-from typing import Optional, Tuple, Union, NamedTuple, cast
+from typing import Optional, Tuple, Union, NamedTuple, cast, Dict, Any
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -40,7 +40,7 @@ class Nav(NamedTuple):
     content: Optional[Tag]
 
     def resolve(
-        self, selected: Optional[str], id: Optional[str] = None, is_menu: bool = False
+        self, selected: Optional[str], context: Dict[str, Any] = {}
     ) -> Tuple[TagChildArg, TagChildArg]:
 
         # Nothing to do for nav_item()/nav_spacer()
@@ -52,7 +52,7 @@ class Nav(NamedTuple):
         # there's a way to statically type this
         nav = copy.deepcopy(self.nav)
         a_tag = cast(Tag, nav.children[0])
-        if is_menu:
+        if context.get("is_menu", False):
             a_tag.add_class("dropdown-item")
         else:
             a_tag.add_class("nav-link")
@@ -60,7 +60,8 @@ class Nav(NamedTuple):
 
         # Hyperlink the nav to the content
         content = copy.copy(self.content)
-        if id is not None:
+        if "tabsetid" in context and "index" in context:
+            id = f"tab-{context['tabsetid']}-{context['index']}"
             content.attrs["id"] = id
             a_tag.attrs["href"] = f"#{id}"
 
@@ -166,7 +167,7 @@ def nav_content(value: str, *args: TagChildArg) -> Nav:
 
 def nav_item(*args: TagChildArg) -> Nav:
     """
-    Create a nav item.
+    Place a control in the navigation container.
 
     Parameters
     ----------
@@ -231,14 +232,16 @@ class NavMenu:
         self.align = align
 
     def resolve(
-        self, selected: Optional[str], id: Optional[str] = None, is_menu: bool = False
+        self,
+        selected: Optional[str],
+        context: Dict[str, Any] = {},
     ) -> Tuple[TagChildArg, TagChildArg]:
         nav, content = render_tabset(
             *self.nav_items,
             ul_class=f"dropdown-menu {'dropdown-menu-right' if self.align == 'right' else ''}",
             id=None,
             selected=selected,
-            is_menu=True,
+            context={**context, "is_menu": True},
         )
 
         active = False
@@ -788,7 +791,7 @@ def render_tabset(
     ul_class: str,
     id: Optional[str],
     selected: Optional[str],
-    is_menu: bool = False,
+    context: Dict[str, Any] = {},
 ) -> Tuple[Tag, Tag]:
 
     tabsetid = private_random_int(1000, 10000)
@@ -806,7 +809,9 @@ def render_tabset(
     ul_tag = tags.ul(bootstrap_deps(), class_=ul_class, id=id, data_tabsetid=tabsetid)
     div_tag = div(class_="tab-content", data_tabsetid=tabsetid)
     for i, x in enumerate(items):
-        nav, contents = x.resolve(selected, id=f"tab-{tabsetid}-{i}", is_menu=is_menu)
+        nav, contents = x.resolve(
+            selected, {**context, "tabsetid": tabsetid, "index": i}
+        )
         ul_tag.append(nav)
         div_tag.append(contents)
 
