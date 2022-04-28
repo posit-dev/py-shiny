@@ -334,13 +334,15 @@ class NavSet:
         ul_class: str,
         id: Optional[str],
         selected: Optional[str],
-        **kwargs: Any,
+        header: TagChildArg = None,
+        footer: TagChildArg = None,
     ) -> None:
         self.args = args
         self.ul_class = ul_class
         self.id = id
         self.selected = selected
-        self.kwargs = kwargs
+        self.header = header
+        self.footer = footer
 
     def tagify(self) -> Union[TagList, Tag]:
         id = self.id
@@ -351,12 +353,10 @@ class NavSet:
         nav, content = render_navset(
             *self.args, ul_class=ul_class, id=id, selected=self.selected
         )
-        return self.layout(nav, content, **self.kwargs)
+        return self.layout(nav, content)
 
-    def layout(
-        self, nav: TagChildArg, content: TagChildArg, **kwargs: Any
-    ) -> Union[TagList, Tag]:
-        return TagList(nav, kwargs["header"], content, kwargs["footer"])
+    def layout(self, nav: TagChildArg, content: TagChildArg) -> Union[TagList, Tag]:
+        return TagList(nav, self.header, content, self.footer)
 
 
 # -----------------------------------------------------------------------------
@@ -518,11 +518,31 @@ def navset_hidden(
 
 
 class NavSetCard(NavSet):
-    def layout(self, nav: TagChildArg, content: TagChildArg, **kwargs: Any) -> Tag:
-        if kwargs.get("placement") == "below":
-            return card(kwargs["header"], content, kwargs["footer"], footer=nav)
+    def __init__(
+        self,
+        *args: NavSetArg,
+        ul_class: str,
+        id: Optional[str],
+        selected: Optional[str],
+        header: TagChildArg = None,
+        footer: TagChildArg = None,
+        placement: Literal["above", "below"] = "above",
+    ) -> None:
+        super().__init__(
+            *args,
+            ul_class=ul_class,
+            id=id,
+            selected=selected,
+            header=header,
+            footer=footer,
+        )
+        self.placement = placement
+
+    def layout(self, nav: TagChildArg, content: TagChildArg) -> Tag:
+        if self.placement == "below":
+            return card(self.header, content, self.footer, footer=nav)
         else:
-            return card(kwargs["header"], content, kwargs["footer"], header=nav)
+            return card(self.header, content, self.footer, header=nav)
 
 
 def navset_tab_card(
@@ -635,11 +655,33 @@ def navset_pill_card(
 
 
 class NavSetPillList(NavSet):
-    def layout(self, nav: TagChildArg, content: TagChildArg, **kwargs: Any) -> Tag:
-        widths = kwargs["widths"]
+    def __init__(
+        self,
+        *args: NavSetArg,
+        ul_class: str,
+        id: Optional[str],
+        selected: Optional[str],
+        header: TagChildArg = None,
+        footer: TagChildArg = None,
+        well: bool = True,
+        widths: Tuple[int, int] = (4, 8),
+    ) -> None:
+        super().__init__(
+            *args,
+            ul_class=ul_class,
+            id=id,
+            selected=selected,
+            header=header,
+            footer=footer,
+        )
+        self.well = well
+        self.widths = widths
+
+    def layout(self, nav: TagChildArg, content: TagChildArg) -> Tag:
+        widths = self.widths
         return row(
-            column(widths[0], nav, class_="well" if kwargs["well"] else None),
-            column(widths[1], kwargs["header"], content, kwargs["footer"]),
+            column(widths[0], nav, class_="well" if self.well else None),
+            column(widths[1], self.header, content, self.footer),
         )
 
 
@@ -708,21 +750,45 @@ def navset_pill_list(
 
 
 class NavSetBar(NavSet):
-    def layout(self, nav: TagChildArg, content: TagChildArg, **kwargs: Any) -> TagList:
-        fluid = kwargs["fluid"]
-        title = kwargs["title"]
-        collapsible = kwargs["collapsible"]
-        position = kwargs["position"]
-        inverse = kwargs["inverse"]
-        bg = kwargs["bg"]
-        header = kwargs["header"]
-        footer = kwargs["footer"]
-
-        nav_container = div(
-            {"class": "container-fluid" if fluid else "container"},
-            tags.a({"class": "navbar-brand", "href": "#"}, title),
+    def __init__(
+        self,
+        *args: NavSetArg,
+        ul_class: str,
+        title: TagChildArg,
+        id: Optional[str],
+        selected: Optional[str],
+        position: Literal[
+            "static-top", "fixed-top", "fixed-bottom", "sticky-top"
+        ] = "static-top",
+        header: TagChildArg = None,
+        footer: TagChildArg = None,
+        bg: Optional[str] = None,
+        # TODO: default to 'auto', like we have in R (parse color via webcolors?)
+        inverse: bool = False,
+        collapsible: bool = True,
+        fluid: bool = True,
+    ) -> None:
+        super().__init__(
+            *args,
+            ul_class=ul_class,
+            id=id,
+            selected=selected,
+            header=header,
+            footer=footer,
         )
-        if collapsible:
+        self.title = title
+        self.position = position
+        self.bg = bg
+        self.inverse = inverse
+        self.collapsible = collapsible
+        self.fluid = fluid
+
+    def layout(self, nav: TagChildArg, content: TagChildArg) -> TagList:
+        nav_container = div(
+            {"class": "container-fluid" if self.fluid else "container"},
+            tags.a({"class": "navbar-brand", "href": "#"}, self.title),
+        )
+        if self.collapsible:
             collapse_id = "navbar-collapse-" + private_random_int(1000, 10000)
             nav_container.append(
                 tags.button(
@@ -741,23 +807,23 @@ class NavSetBar(NavSet):
         nav_container.append(nav)
         nav_final = tags.nav({"class": "navbar navbar-expand-md"}, nav_container)
 
-        if position != "static-top":
-            nav_final.add_class(position)
+        if self.position != "static-top":
+            nav_final.add_class(self.position)
 
-        nav_final.add_class(f"navbar-{'dark' if inverse else 'light'}")
+        nav_final.add_class(f"navbar-{'dark' if self.inverse else 'light'}")
 
-        if bg:
-            nav_final.attrs["style"] = "background-color: " + bg
+        if self.bg:
+            nav_final.attrs["style"] = "background-color: " + self.bg
         else:
-            nav_final.add_class(f"bg-{'dark' if inverse else 'light'}")
+            nav_final.add_class(f"bg-{'dark' if self.inverse else 'light'}")
 
         return TagList(
             nav_final,
             div(
-                row(header) if header else None,
+                row(self.header) if self.header else None,
                 content,
-                row(footer) if footer else None,
-                class_="container-fluid" if fluid else "container",
+                row(self.footer) if self.footer else None,
+                class_="container-fluid" if self.fluid else "container",
             ),
         )
 
