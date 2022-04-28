@@ -23,13 +23,13 @@ from htmltools import (
 
 from .._docstring import add_example
 from ._html_dependencies import bootstrap_deps
-from ._navs import navs_bar
-from ..types import MISSING, MISSING_TYPE
+from ._navs import navset_bar
+from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._utils import get_window_title
 
 
 def page_navbar(
-    *args: TagChildArg,  # Create a type for nav()?
+    *args: NavSetArg,
     title: Optional[Union[str, Tag, TagList]] = None,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -96,7 +96,7 @@ def page_navbar(
     -------
     :func:`~shiny.ui.nav`
     :func:`~shiny.ui.nav_menu`
-    :func:`~shiny.ui.navs_bar`
+    :func:`~shiny.ui.navset_bar`
     :func:`~shiny.ui.page_fluid`
 
     Example
@@ -107,7 +107,7 @@ def page_navbar(
     return tags.html(
         get_window_title(title, window_title),
         tags.body(
-            navs_bar(
+            navset_bar(
                 *args,
                 title=title,
                 id=id,

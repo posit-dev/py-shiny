@@ -78,7 +78,7 @@ app_ui = ui.page_fluid(
                     multiple=True,
                 ),
             ),
-            ui.navs_tab(
+            ui.navset_tab(
                 ui.nav("panel1", h2("This is the first panel.")),
                 ui.nav("panel2", h2("This is the second panel.")),
                 id="inTabset",

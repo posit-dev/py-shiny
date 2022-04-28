@@ -48,7 +48,7 @@ app_ui = ui.page_fluid(
         ),
         ui.panel_main(
             ui.output_plot("plot"),
-            ui.navs_tab_card(
+            ui.navset_tab_card(
                 # TODO: output_plot() within a tab not working?
                 ui.nav("Inputs", ui.output_ui("inputs"), icon=icon_svg("code")),
                 ui.nav(

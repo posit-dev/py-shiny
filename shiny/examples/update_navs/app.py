@@ -4,7 +4,7 @@ app_ui = ui.page_fluid(
     ui.layout_sidebar(
         ui.panel_sidebar(ui.input_slider("controller", "Controller", 1, 3, 1)),
         ui.panel_main(
-            ui.navs_tab_card(
+            ui.navset_tab_card(
                 ui.nav("Panel 1", "Panel 1 content", value="panel1"),
                 ui.nav("Panel 2", "Panel 2 content", value="panel2"),
                 ui.nav("Panel 3", "Panel 3 content", value="panel3"),

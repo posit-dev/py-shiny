@@ -11,7 +11,7 @@ app_ui = ui.page_fluid(
       print the number of clicks in the console twice.
       """
     ),
-    ui.navs_tab_card(
+    ui.navset_tab_card(
         ui.nav(
             "Sync",
             ui.input_action_button("btn", "Click me"),

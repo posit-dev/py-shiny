@@ -1,11 +1,11 @@
-from typing import List, Union
+from typing import List
 
 from htmltools import HTML, HTMLDependency
 
 from ..html_dependencies import jquery_deps
 
 
-def bootstrap_deps(bs3compat: bool = True) -> List[HTMLDependency]:
+def bootstrap_deps() -> List[HTMLDependency]:
     dep = HTMLDependency(
         name="bootstrap",
         version="5.0.1",
@@ -14,31 +14,7 @@ def bootstrap_deps(bs3compat: bool = True) -> List[HTMLDependency]:
         stylesheet={"href": "bootstrap.min.css"},
     )
     deps = [jquery_deps(), dep]
-    if bs3compat:
-        deps.append(bs3compat_deps())
     return deps
-
-
-# TODO: if we want to support glyphicons we'll need to bundle font files, too
-def bs3compat_deps() -> HTMLDependency:
-    return HTMLDependency(
-        name="bs3-compat",
-        version="1.0",
-        source={"package": "shiny", "subdir": "www/shared/bs3compat/"},
-        script=[{"src": "transition.js"}, {"src": "tabs.js"}, {"src": "bs3compat.js"}],
-    )
-
-
-def nav_deps(
-    include_bootstrap: bool = True,
-) -> Union[HTMLDependency, List[HTMLDependency]]:
-    dep = HTMLDependency(
-        name="bslib-navs",
-        version="1.0",
-        source={"package": "shiny", "subdir": "www/shared/bslib/dist/"},
-        script={"src": "navs.min.js"},
-    )
-    return [dep, *bootstrap_deps()] if include_bootstrap else dep
 
 
 def ionrangeslider_deps() -> List[HTMLDependency]:

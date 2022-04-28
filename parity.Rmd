@@ -37,8 +37,8 @@ output: html_document
 
 ## Tabs
 
-✓ `tabsetPanel()` -> `navs_tab()`/`navs_pill()`
-✓ `navlistPanel()` -> `navs_pill_list()`
+✓ `tabsetPanel()` -> `navset_tab()`/`navset_pill()`
+✓ `navlistPanel()` -> `navset_pill_list()`
 ✓ `tabPanel()` -> `nav()`
 ✓ `navbarMenu()` -> `nav_menu()`
 `tabPanelBody()` -> `navs_content()`
