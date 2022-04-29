@@ -3,6 +3,7 @@ from shiny import *
 # ============================================================
 # Counter module
 # ============================================================
+@module_ui
 def counter_ui(label: str = "Increment counter") -> ui.TagChildArg:
     return ui.div(
         {"style": "border: 1px solid #ccc; border-radius: 5px; margin: 5px 0;"},
@@ -12,7 +13,8 @@ def counter_ui(label: str = "Increment counter") -> ui.TagChildArg:
     )
 
 
-def counter_server(input: Inputs, output: Outputs, session: Session):
+@module_server
+def counter_server(input: Inputs, output: Outputs, session: Session) -> int:
     count: reactive.Value[int] = reactive.Value(0)
 
     @reactive.Effect
@@ -25,22 +27,22 @@ def counter_server(input: Inputs, output: Outputs, session: Session):
     def out() -> str:
         return f"Click count is {count()}"
 
-
-counter_module = Module(counter_ui, counter_server)
+    return 1
 
 
 # =============================================================================
 # App that uses module
 # =============================================================================
 app_ui = ui.page_fluid(
-    counter_module.ui("counter1", "Counter 1"),
-    counter_module.ui("counter2", "Counter 2"),
+    counter_ui("counter1", "Counter 1"),
+    counter_ui("counter2", "Counter 2"),
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    counter_module.server("counter1")
-    counter_module.server("counter2")
+    counter_server("counter1")
+    val = counter_server("counter2")
+    print(val)
 
 
 app = App(app_ui, server)

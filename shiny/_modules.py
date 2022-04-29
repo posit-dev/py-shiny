@@ -1,10 +1,7 @@
-__all__ = ("Module", "namespaced_id")
+__all__ = ("namespaced_id", "module_ui", "module_server")
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable, TypeVar, ParamSpec, Concatenate
 
-from htmltools import TagChildArg
-
-from ._docstring import add_example
 from ._namespaces import namespaced_id
 from .session import Inputs, Outputs, Session, require_active_session, session_context
 
@@ -78,59 +75,83 @@ class MockModuleSession(ModuleSession):
         self._ns = ns
 
 
-@add_example()
-class Module:
-    """
-    Modularize UI and server-side logic.
+P = ParamSpec("P")
+R = TypeVar("R")
 
-    Parameters
-    ----------
-    ui
-        The module's UI definition.
-    server
-        The module's server-side logic.
-    """
 
-    def __init__(
-        self,
-        ui: Callable[..., TagChildArg],
-        server: Callable[[ModuleInputs, ModuleOutputs, ModuleSession], None],
-    ) -> None:
-        self._ui: Callable[..., TagChildArg] = ui
-        self._server: Callable[
-            [ModuleInputs, ModuleOutputs, ModuleSession], None
-        ] = server
-
-    def ui(self, ns: str, *args: Any) -> TagChildArg:
-        """
-        Render the module's UI.
-
-        Parameters
-        ----------
-        namespace
-            A namespace for the module.
-        args
-            Additional arguments to pass to the module's UI definition.
-        """
-
-        # Create a fake session so that namespaced_id() knows
-        # what the relevant namespace is
+def module_ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
+    def wrapper(ns: str, *args: P.args, **kwargs: P.kwargs) -> R:
         with session_context(MockModuleSession(ns)):
-            return self._ui(*args)
+            return fn(*args, **kwargs)
 
-    def server(self, ns: str, *, session: Optional[Session] = None) -> None:
-        """
-        Invoke the module's server-side logic.
+    return wrapper
 
-        Parameters
-        ----------
-        ns
-            A namespace for the module.
-        session
-            A :class:`~shiny.Session` instance. If not provided, it is inferred via
-            :func:`~shiny.session.get_current_session`.
-        """
 
-        mod_sess = ModuleSession(ns, require_active_session(session))
+def module_server(
+    fn: Callable[Concatenate[Inputs, Outputs, Session, P], R]
+) -> Callable[Concatenate[str, P], R]:
+    def wrapper(ns: str, *args: P.args, **kwargs: P.kwargs) -> R:
+        mod_sess = ModuleSession(ns, require_active_session(None))
         with session_context(mod_sess):
-            return self._server(mod_sess.input, mod_sess.output, mod_sess)
+            return fn(mod_sess.input, mod_sess.output, mod_sess, *args, **kwargs)
+
+    return wrapper
+
+
+# @add_example()
+# class Module:
+#    """
+#    Modularize UI and server-side logic.
+#
+#    Parameters
+#    ----------
+#    ui
+#        The module's UI definition.
+#    server
+#        The module's server-side logic.
+#    """
+#
+#    def __init__(
+#        self,
+#        ui: Callable[..., TagChildArg],
+#        server: Callable[[ModuleInputs, ModuleOutputs, ModuleSession], None],
+#    ) -> None:
+#        self._ui: Callable[..., TagChildArg] = ui
+#        self._server: Callable[
+#            [ModuleInputs, ModuleOutputs, ModuleSession], None
+#        ] = server
+#
+#    def ui(self, ns: str, *args: Any) -> TagChildArg:
+#        """
+#        Render the module's UI.
+#
+#        Parameters
+#        ----------
+#        namespace
+#            A namespace for the module.
+#        args
+#            Additional arguments to pass to the module's UI definition.
+#        """
+#
+#        # Create a fake session so that namespaced_id() knows
+#        # what the relevant namespace is
+#        with session_context(MockModuleSession(ns)):
+#            return self._ui(*args)
+#
+#    def server(self, ns: str, *, session: Optional[Session] = None) -> None:
+#        """
+#        Invoke the module's server-side logic.
+#
+#        Parameters
+#        ----------
+#        ns
+#            A namespace for the module.
+#        session
+#            A :class:`~shiny.Session` instance. If not provided, it is inferred via
+#            :func:`~shiny.session.get_current_session`.
+#        """
+#
+#        mod_sess = ModuleSession(ns, require_active_session(session))
+#        with session_context(mod_sess):
+#            return self._server(mod_sess.input, mod_sess.output, mod_sess)
+#
