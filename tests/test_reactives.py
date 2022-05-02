@@ -203,11 +203,11 @@ async def test_recursive_async_calc():
     v = Value(5)
 
     @Calc()
-    async def r():
+    async def r() -> int:
         if v() == 0:
             return 0
         v.set(v() - 1)
-        await r()
+        return await r()
 
     @Effect()
     async def o():
