@@ -178,24 +178,19 @@ def run_app(
 
     if app_dir:
         app_dir = os.path.realpath(app_dir)
-        os.environ["SHINY_APP_DIRECTORY"] = app_dir
 
-    try:
-        uvicorn.run(
-            app,  # type: ignore
-            host=host,
-            port=port,
-            debug=debug,
-            reload=reload,
-            reload_dirs=[app_dir] if reload else [],
-            ws_max_size=ws_max_size,
-            log_level=log_level,
-            app_dir=app_dir,
-            factory=factory,
-        )
-    finally:
-        if app_dir:
-            del os.environ["SHINY_APP_DIRECTORY"]
+    uvicorn.run(
+        app,  # type: ignore
+        host=host,
+        port=port,
+        debug=debug,
+        reload=reload,
+        reload_dirs=[app_dir] if reload else [],
+        ws_max_size=ws_max_size,
+        log_level=log_level,
+        app_dir=app_dir,
+        factory=factory,
+    )
 
 
 def is_file(app: str) -> bool:

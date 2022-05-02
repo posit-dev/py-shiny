@@ -1,3 +1,4 @@
+from pathlib import Path
 from shiny import *
 
 app_ui = ui.page_fluid(
@@ -11,4 +12,5 @@ def server(input: Inputs, output: Outputs, session: Session):
     pass
 
 
-app = App(app_ui, server)
+app_dir = Path(__file__).parent.resolve()
+app = App(app_ui, server, static_assets=str(app_dir / "www"))

@@ -1,6 +1,6 @@
 import contextlib
 import os
-from typing import Any, List, Union, Dict, Callable, cast
+from typing import Any, List, Union, Dict, Callable, cast, Optional
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
 
@@ -32,6 +32,8 @@ class App:
         independent.
     debug
         Whether to enable debug mode.
+    static_assets
+        An absolute directory containing static files to be served by the app.
 
     Example
     -------
@@ -66,23 +68,19 @@ class App:
     The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
     """
 
-    STATIC_ASSETS_DIR: str = "www"
-    """
-    A directory, relative to the app's directory, which contains static files to be
-    served by the app.
-    """
-
     def __init__(
         self,
         ui: Union[Tag, TagList],
         server: Callable[[Inputs, Outputs, Session], None],
         *,
+        static_assets: Optional[str] = None,
         debug: bool = False,
     ) -> None:
         self.ui: RenderedHTML = _render_page(ui, lib_prefix=self.LIB_PREFIX)
         self.server: Callable[[Inputs, Outputs, Session], None] = server
 
         self._debug: bool = debug
+        self._static_assets = static_assets
 
         self._sessions: Dict[str, Session] = {}
         self._last_session_id: int = 0  # Counter for generating session IDs
@@ -207,17 +205,20 @@ class App:
         request for / occurs.
         """
 
-        # Mount static assets (i.e., the www subdir) if the app directory has been set
-        # (by run_app())
-        app_dir = os.getenv("SHINY_APP_DIRECTORY")
-        if app_dir:
-            www_dir = os.path.join(app_dir, self.STATIC_ASSETS_DIR)
-            if os.path.isdir(www_dir):
-                self._dependency_handler.mount(
-                    "/",
-                    StaticFiles(directory=www_dir),
-                    name="shiny-app-static-assets-directory",
+        if self._static_assets is not None:
+            if not os.path.isdir(self._static_assets):
+                raise ValueError(
+                    f"static_assets must be a directory: {self._static_assets}"
                 )
+            if not os.path.isabs(self._static_assets):
+                raise ValueError(
+                    f"static_assets must be an absolute path: {self._static_assets}"
+                )
+            self._dependency_handler.mount(
+                "/",
+                StaticFiles(directory=self._static_assets),
+                name="shiny-app-static-assets-directory",
+            )
 
         self._ensure_web_dependencies(self.ui["dependencies"])
         return HTMLResponse(content=self.ui["html"])
