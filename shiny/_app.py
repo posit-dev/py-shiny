@@ -80,6 +80,15 @@ class App:
         self.server: Callable[[Inputs, Outputs, Session], None] = server
 
         self._debug: bool = debug
+
+        if static_assets is not None:
+            if not os.path.isdir(static_assets):
+                raise ValueError(f"static_assets must be a directory: {static_assets}")
+            if not os.path.isabs(static_assets):
+                raise ValueError(
+                    f"static_assets must be an absolute path: {static_assets}"
+                )
+
         self._static_assets = static_assets
 
         self._sessions: Dict[str, Session] = {}
@@ -206,14 +215,6 @@ class App:
         """
 
         if self._static_assets is not None:
-            if not os.path.isdir(self._static_assets):
-                raise ValueError(
-                    f"static_assets must be a directory: {self._static_assets}"
-                )
-            if not os.path.isabs(self._static_assets):
-                raise ValueError(
-                    f"static_assets must be an absolute path: {self._static_assets}"
-                )
             self._dependency_handler.mount(
                 "/",
                 StaticFiles(directory=self._static_assets),

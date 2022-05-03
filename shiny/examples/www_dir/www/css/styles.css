@@ -1,10 +1,4 @@
-@font-face {
-  font-family: 'Square Peg';
-  src: url('SquarePeg-Regular.ttf');
-}
-
+@import url('more-styles.css');
 body {
-  font-family: 'Square Peg', sans-serif;
   font-size: 3rem;
-  background-color: pink
 }
