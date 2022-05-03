@@ -27,7 +27,12 @@ from htmltools import TagChildArg
 if TYPE_CHECKING:
     from ..session import Session
 
-from ._try_render_plot import try_render_matplotlib, try_render_pil, TryPlotResult
+from ._try_render_plot import (
+    try_render_matplotlib,
+    try_render_pil,
+    try_render_plotnine,
+    TryPlotResult,
+)
 from ..types import ImgData
 from .. import _utils
 
@@ -157,9 +162,9 @@ class RenderPlot(RenderFunction):
             float, self._session.input[f".clientdata_output_{self._name}_height"]()
         )
 
-        fig = await self._fn()
+        x = await self._fn()
 
-        if fig is None:
+        if x is None:
             return None
 
         # Try each type of renderer in turn. The reason we do it this way is to avoid
@@ -172,17 +177,27 @@ class RenderPlot(RenderFunction):
         # how to handle). In the case of a "TYPE_MISMATCH", it will move on to the next
         # renderer.
         result: TryPlotResult = None
+
+        if "plotnine" in sys.modules:
+            result = try_render_plotnine(x, width, height, pixelratio, self._ppi)
+            if result != "TYPE_MISMATCH":
+                return result
+
         if "matplotlib" in sys.modules:
-            result = try_render_matplotlib(fig, width, height, pixelratio, self._ppi)
+            result = try_render_matplotlib(x, width, height, pixelratio, self._ppi)
             if result != "TYPE_MISMATCH":
                 return result
 
         if "PIL" in sys.modules:
-            result = try_render_pil(fig, width, height, pixelratio, self._ppi)
+            result = try_render_pil(x, width, height, pixelratio, self._ppi)
             if result != "TYPE_MISMATCH":
                 return result
 
-        raise Exception("Unsupported figure type: " + str(type(fig)))
+        raise Exception(
+            f"@render_plot() doesn't know to render objects of type '{str(type(x))}'. "
+            + "Consider either requesting support for this type of plot object, and/or "
+            + " explictly saving the object to a (png) file and using @render_image()."
+        )
 
 
 class RenderPlotAsync(RenderPlot, RenderFunctionAsync):
@@ -210,7 +225,13 @@ def render_plot(
 
     Returns
     -------
-    A decorator for a function that returns a ``matplotlib`` or ``PIL`` figure.
+    A decorator for a function that returns any of the following:
+        1. A :class:`matplotlib.figure.Figure` instance.
+        2. An :class:`matplotlib.artist.Artist` instance.
+        3. A ``holoviews`` object that can be converted to ``matplotlib`` via
+            ``holoviews.render()``.
+        4. A list/tuple of 1, 2, or 3.
+        4. A :class:`PIL.Image.Image` instance.
 
     Tip
     ----
