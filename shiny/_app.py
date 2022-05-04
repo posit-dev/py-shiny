@@ -273,6 +273,11 @@ class App:
         self._registered_dependencies[dep.name] = dep
 
 
-def _render_page(ui: Union[Tag, TagList], lib_prefix: str) -> RenderedHTML:
-    doc = HTMLDocument(TagList(jquery_deps(), shiny_deps(), ui))
-    return doc.render(lib_prefix=lib_prefix)
+def _render_page(
+    ui: Union[Tag, TagList, HTMLDocument], lib_prefix: str
+) -> RenderedHTML:
+    if not isinstance(ui, HTMLDocument):
+        ui = HTMLDocument(ui)
+    # TODO: HTMLDocument() should probably have an insert() method
+    ui._content.insert(0, [jquery_deps(), shiny_deps()])
+    return ui.render(lib_prefix=lib_prefix)
