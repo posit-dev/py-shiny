@@ -11,7 +11,6 @@ from typing import (
     BinaryIO,
     Any,
     List,
-    TYPE_CHECKING,
 )
 
 if sys.version_info >= (3, 8):
@@ -19,14 +18,11 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal, Protocol
 
-if TYPE_CHECKING:
-    from matplotlib.figure import Figure
-
 from ..types import ImgData
 
 # Use this protocol to avoid needing to maintain working stubs for matplotlib. If
 # good stubs ever become available for matplotlib, use those instead.
-class MatplotlibFigureProtocol(Protocol):
+class MplFigure(Protocol):
     def set_dpi(self, val: float) -> None:
         ...
 
@@ -56,9 +52,22 @@ class MatplotlibFigureProtocol(Protocol):
         ...
 
 
+class MplArtist(Protocol):
+    def get_figure(self) -> MplFigure:
+        ...
+
+
+class MplAnimation(Protocol):
+    def pause(self):
+        ...
+
+    def resume(self):
+        ...
+
+
 # Use this protocol to avoid needing to maintain working stubs for plotnint. If
 # good stubs ever become available for plotnine, use those instead.
-class PlotnineFigureProtocol(Protocol):
+class PlotnineFigure(Protocol):
     def save(
         self,
         filename: BinaryIO,
@@ -92,12 +101,11 @@ def try_render_matplotlib(
         return "TYPE_MISMATCH"
 
     try:
-        figure = cast(MatplotlibFigureProtocol, fig)
-        figure.set_dpi(ppi * pixelratio)
-        figure.set_size_inches(width / ppi, height / ppi)
+        fig.set_dpi(ppi * pixelratio)
+        fig.set_size_inches(width / ppi, height / ppi)
 
         with io.BytesIO() as buf:
-            figure.savefig(buf, format="png")
+            fig.savefig(buf, format="png")
             buf.seek(0)
             data = base64.b64encode(buf.read())
             data_str = data.decode("utf-8")
@@ -123,13 +131,19 @@ def try_render_matplotlib(
     return None
 
 
-def get_matplotlib_figure(x: object) -> Union["Figure", None]:
-    from matplotlib.figure import Figure
-    from matplotlib.artist import Artist
-    from matplotlib.animation import Animation
+def get_matplotlib_figure(x: object) -> Union[MplFigure, None]:
+    from matplotlib.figure import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
+        Figure,
+    )
+    from matplotlib.artist import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
+        Artist,
+    )
+    from matplotlib.animation import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
+        Animation,
+    )
 
     if isinstance(x, Figure):
-        return x
+        return cast(MplFigure, x)
 
     if isinstance(x, Animation):
         raise RuntimeError(
@@ -143,7 +157,7 @@ def get_matplotlib_figure(x: object) -> Union["Figure", None]:
     # should cover most, if not all, of these (it doesn't cover Animation, though).
     # https://matplotlib.org/stable/api/artist_api.html
     if isinstance(x, Artist):
-        return x.get_figure()
+        return cast(MplArtist, x).get_figure()
 
     # Sometimes generic plot() methods will return an iterable of Artists,
     # If they all refer to the same figure, then it seems reasonable to use it
@@ -200,14 +214,16 @@ def try_render_plotnine(
     ppi: float,
     alt: Optional[str] = None,
 ) -> TryPlotResult:
-    from plotnine.ggplot import ggplot
+    from plotnine.ggplot import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false,reportMissingImports=false
+        ggplot,
+    )
 
     if not isinstance(x, ggplot):
         return "TYPE_MISMATCH"
 
     try:
         with io.BytesIO() as buf:
-            cast(PlotnineFigureProtocol, x).save(
+            cast(PlotnineFigure, x).save(
                 filename=buf,
                 format="png",
                 units="in",

@@ -1,13 +1,9 @@
-import io
-
 from shiny import *
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from plotnine.data import mtcars
-
-sns.set_theme(style="dark")
 
 nav = ui.navset_pill_list(
     ui.nav_control(ui.p("Choose a package", class_="lead text-center")),
