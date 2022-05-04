@@ -91,6 +91,15 @@ DownloadHandler = Callable[
     [], Union[str, Iterable[Union[bytes, str]], AsyncIterable[Union[bytes, str]]]
 ]
 
+ServeObjectHandler = Callable[[object, Request], ASGIApp]
+
+
+class ServedObject(TypedDict):
+    name: str
+    object: object
+    handler: ServeObjectHandler
+    nonce: str
+
 
 @dataclasses.dataclass
 class DownloadInfo:
@@ -168,6 +177,7 @@ class Session:
         self._on_ended_callbacks: List[Callable[[], None]] = []
         self._has_run_session_end_tasks: bool = False
         self._downloads: Dict[str, DownloadInfo] = {}
+        self._served_objects: List[ServedObject] = []
 
         self._register_session_end_callbacks()
 
@@ -440,6 +450,19 @@ class Session:
                             media_type=content_type,  # type: ignore
                         )
 
+        elif action == "serve_object" and request.method == "GET" and subpath:
+            name = subpath
+            nonce = request.query_params.get("nonce", None)
+            for x in self._served_objects:
+                if name != x["name"] or nonce != x["nonce"]:
+                    continue
+
+                with session_context(self):
+                    with isolate():
+                        return x["handler"](x["object"], request)
+
+            return HTMLResponse("<h1>Bad Request</h1>", 400)
+
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
     def send_input_message(self, id: str, message: Dict[str, object]) -> None:
@@ -659,6 +682,16 @@ class Session:
                 return f"session/{urllib.parse.quote(self.id)}/download/{urllib.parse.quote(effective_name)}?w="
 
         return wrapper
+
+    def serve_object(
+        self, name: str, object: object, handler: ServeObjectHandler
+    ) -> str:
+        nonce = _utils.rand_hex(8)
+        self._served_objects.append(
+            ServedObject(name=name, object=object, handler=handler, nonce=nonce)
+        )
+        # TODO: the `w=` parameter should eventually be a worker ID, if we add those
+        return f"session/{urllib.parse.quote(self.id)}/serve_object/{urllib.parse.quote(name)}?nonce={nonce}"
 
     def _process_ui(self, ui: TagChildArg) -> RenderedDeps:
 
