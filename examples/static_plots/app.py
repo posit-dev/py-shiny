@@ -5,6 +5,8 @@ import pandas as pd
 import seaborn as sns
 from plotnine.data import mtcars
 
+plt.tight_layout()
+
 nav = ui.navset_pill_list(
     ui.nav_control(ui.p("Choose a package", class_="lead text-center")),
     ui.nav(
@@ -93,7 +95,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             + stat_smooth(method="lm")
             + facet_wrap("~gear")
             + theme_bw(base_size=16)
-            # + theme(legend_position="top")
+            + theme(legend_position="top")
         )
 
     @output(name="pandas")
