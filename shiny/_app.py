@@ -149,7 +149,7 @@ class App:
         Warning
         -------
         This method is not intended for public usage. It's exported for use by
-        prism-experiments.
+        shinylive.
         """
 
         # TODO: Pretty sure there are objects that need to be destroy()'d here?
