@@ -228,9 +228,7 @@ def render_plot(
     A decorator for a function that returns any of the following:
         1. A :class:`matplotlib.figure.Figure` instance.
         2. An :class:`matplotlib.artist.Artist` instance.
-        3. A ``holoviews`` object that can be converted to ``matplotlib`` via
-            ``holoviews.render()``.
-        4. A list/tuple of 1, 2, or 3.
+        4. A list/tuple of Figure/Artist instances.
         4. A :class:`PIL.Image.Image` instance.
 
     Tip

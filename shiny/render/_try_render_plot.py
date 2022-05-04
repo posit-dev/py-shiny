@@ -153,14 +153,6 @@ def get_matplotlib_figure(x: object) -> Union["Figure", None]:
         if len(set(figs)) == 1:
             return figs[0]
 
-    # holoviews has it's own figure representations, most (all?) of which may be
-    # "rendered" to bokeh or mpl Figure/Animation objects.
-    # TODO: does this work for holoviews extension packages?
-    if "holoviews" in sys.modules and x.__module__.split(".")[0] == "holoviews":
-        import holoviews
-
-        return get_matplotlib_figure(holoviews.render(x, backend="matplotlib"))  # type: ignore
-
     return None
 
 
