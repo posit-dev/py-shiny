@@ -5,7 +5,7 @@ import os
 import re
 import sys
 import types
-from typing import Optional, Union, Tuple, Any, cast
+from typing import Optional, Union, Tuple, Any, Dict, cast
 
 import click
 import uvicorn
@@ -192,9 +192,9 @@ def run_app(
     if app_dir:
         app_dir = os.path.realpath(app_dir)
 
-    log_config: dict[str, Any] = copy.deepcopy(
+    log_config: Dict[str, Any] = copy.deepcopy(
         cast(
-            "dict[str, Any]",
+            Dict[str, Any],
             uvicorn.config.LOGGING_CONFIG,  # pyright: ignore[reportUnknownMemberType]
         )
     )
