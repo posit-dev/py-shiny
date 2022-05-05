@@ -1,3 +1,4 @@
+import copy
 import contextlib
 from typing import Any, List, Union, Dict, Callable, cast
 
@@ -274,5 +275,6 @@ class App:
 
 
 def _render_page(ui: Union[Tag, TagList], lib_prefix: str) -> RenderedHTML:
-    doc = HTMLDocument(TagList(jquery_deps(), shiny_deps(), ui))
-    return doc.render(lib_prefix=lib_prefix)
+    ui_res = copy.copy(ui)
+    ui_res.insert(0, [jquery_deps(), shiny_deps()])
+    return HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
