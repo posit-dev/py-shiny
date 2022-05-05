@@ -1,15 +1,18 @@
 import contextlib
+import os
 from typing import Any, List, Union, Dict, Callable, cast
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
 
-import starlette.routing
 import starlette.applications
+import starlette.middleware
+import starlette.routing
 import starlette.websockets
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from starlette.requests import Request
 from starlette.responses import Response, HTMLResponse, JSONResponse
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from ._autoreload import autoreload_url, InjectAutoreloadMiddleware
 from ._connection import Connection, StarletteConnection
 from .html_dependencies import jquery_deps, shiny_deps
 from .http_staticfiles import StaticFiles
@@ -83,21 +86,44 @@ class App:
         self._sessions_needing_flush: Dict[int, Session] = {}
 
         self._registered_dependencies: Dict[str, HTMLDependency] = {}
-        self._dependency_handler: Any = starlette.routing.Router()
+        self._dependency_handler: starlette.routing.Router = starlette.routing.Router()
 
-        self.starlette_app = starlette.applications.Starlette(
-            routes=[
-                starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
-                starlette.routing.Route("/", self._on_root_request_cb, methods=["GET"]),
-                starlette.routing.Route(
-                    "/session/{session_id}/{action}/{subpath:path}",
-                    self._on_session_request_cb,
-                    methods=["GET", "POST"],
+        starlette_app = self.init_starlette_app()
+
+        self.starlette_app = starlette_app
+
+    def init_starlette_app(self):
+        routes: list[starlette.routing.BaseRoute] = [
+            starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
+            starlette.routing.Route("/", self._on_root_request_cb, methods=["GET"]),
+            starlette.routing.Route(
+                "/session/{session_id}/{action}/{subpath:path}",
+                self._on_session_request_cb,
+                methods=["GET", "POST"],
+            ),
+            starlette.routing.Mount("/", app=self._dependency_handler),
+        ]
+        middleware: list[starlette.middleware.Middleware] = []
+        if autoreload_url():
+            shared_dir = os.path.join(os.path.dirname(__file__), "www", "shared")
+            routes.insert(
+                0,
+                starlette.routing.Mount(
+                    "/__shared",
+                    app=StaticFiles(directory=shared_dir),
                 ),
-                starlette.routing.Mount("/", app=self._dependency_handler),
-            ],
+            )
+            middleware.append(
+                starlette.middleware.Middleware(InjectAutoreloadMiddleware)
+            )
+
+        starlette_app = starlette.applications.Starlette(
+            routes=routes,
+            middleware=middleware,
             lifespan=self._lifespan,
         )
+
+        return starlette_app
 
     @contextlib.asynccontextmanager
     async def _lifespan(self, app: starlette.applications.Starlette):
