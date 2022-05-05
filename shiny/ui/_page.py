@@ -14,7 +14,6 @@ else:
     from typing_extensions import Literal
 
 from htmltools import (
-    HTMLDocument,
     tags,
     Tag,
     TagList,
@@ -43,7 +42,7 @@ def page_navbar(
     fluid: bool = True,
     window_title: Union[str, MISSING_TYPE] = MISSING,
     lang: Optional[str] = None
-) -> HTMLDocument:
+) -> Tag:
     """
     Create a navbar with a navs bar and a title.
 
@@ -105,21 +104,23 @@ def page_navbar(
     See :func:`~shiny.ui.nav`.
     """
 
-    return page_bootstrap(
-        navset_bar(
-            *args,
-            title=title,
-            id=id,
-            selected=selected,
-            position=position,
-            header=header,
-            footer=footer,
-            bg=bg,
-            inverse=inverse,
-            collapsible=collapsible,
-            fluid=fluid
-        ),
+    return tags.html(
         get_window_title(title, window_title),
+        tags.body(
+            navset_bar(
+                *args,
+                title=title,
+                id=id,
+                selected=selected,
+                position=position,
+                header=header,
+                footer=footer,
+                bg=bg,
+                inverse=inverse,
+                collapsible=collapsible,
+                fluid=fluid
+            )
+        ),
         lang=lang,
     )
 
@@ -127,7 +128,7 @@ def page_navbar(
 @add_example()
 def page_fluid(
     *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
-) -> HTMLDocument:
+) -> Tag:
     """
     Create a fluid page.
 
@@ -165,7 +166,7 @@ def page_fluid(
 @add_example()
 def page_fixed(
     *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
-) -> HTMLDocument:
+) -> Tag:
     """
     Create a fixed page.
 
@@ -203,7 +204,7 @@ def page_fixed(
 # TODO: implement theme (just Bootswatch for now?)
 def page_bootstrap(
     *args: Any, title: Optional[str] = None, lang: Optional[str] = None
-) -> HTMLDocument:
+) -> Tag:
     """
     Create a Bootstrap UI page container.
 
@@ -230,6 +231,6 @@ def page_bootstrap(
     :func:`~shiny.ui.page_navbar`
     """
 
-    return HTMLDocument(
-        tags.title(title) if title else None, *bootstrap_deps(), *args, lang=lang
-    )
+    page = TagList(*bootstrap_deps(), *args)
+    head = tags.title(title) if title else None
+    return tags.html(tags.head(head), tags.body(page), lang=lang)
