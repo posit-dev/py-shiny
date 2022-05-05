@@ -194,7 +194,7 @@ def run_app(
 
     log_config: dict[str, Any] = copy.deepcopy(
         cast(
-            dict[str, Any],
+            "dict[str, Any]",
             uvicorn.config.LOGGING_CONFIG,  # pyright: ignore[reportUnknownMemberType]
         )
     )
