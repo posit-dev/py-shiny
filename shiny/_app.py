@@ -1,6 +1,7 @@
+import copy
 import contextlib
 import os
-from typing import Any, List, Union, Dict, Callable, cast
+from typing import Any, List, Union, Dict, Callable, cast, Optional
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
 
@@ -32,6 +33,8 @@ class App:
     server
         A function which is called once for each session, ensuring that each app is
         independent.
+    static_assets
+        An absolute directory containing static files to be served by the app.
     debug
         Whether to enable debug mode.
 
@@ -73,6 +76,7 @@ class App:
         ui: Union[Tag, TagList],
         server: Callable[[Inputs, Outputs, Session], None],
         *,
+        static_assets: Optional[str] = None,
         debug: bool = False,
     ) -> None:
         self.ui: RenderedHTML = _render_page(ui, lib_prefix=self.LIB_PREFIX)
@@ -80,13 +84,32 @@ class App:
 
         self._debug: bool = debug
 
+        if static_assets is not None:
+            if not os.path.isdir(static_assets):
+                raise ValueError(f"static_assets must be a directory: {static_assets}")
+            if not os.path.isabs(static_assets):
+                raise ValueError(
+                    f"static_assets must be an absolute path: {static_assets}"
+                )
+
+        self._static_assets = static_assets
+
         self._sessions: Dict[str, Session] = {}
         self._last_session_id: int = 0  # Counter for generating session IDs
 
         self._sessions_needing_flush: Dict[int, Session] = {}
 
         self._registered_dependencies: Dict[str, HTMLDependency] = {}
-        self._dependency_handler: starlette.routing.Router = starlette.routing.Router()
+        self._dependency_handler = starlette.routing.Router()
+        
+        if self._static_assets is not None:
+            self._dependency_handler.routes.append(
+                starlette.routing.Mount(
+                    "/",
+                    StaticFiles(directory=self._static_assets),
+                    name="shiny-app-static-assets-directory",
+                )
+            )
 
         starlette_app = self.init_starlette_app()
 
@@ -290,15 +313,19 @@ class App:
         # (Some HTMLDependencies only carry head content, and have no source on disk.)
         if dep.source:
             paths = dep.source_path_map(lib_prefix=self.LIB_PREFIX)
-            self._dependency_handler.mount(
-                "/" + paths["href"],
-                StaticFiles(directory=paths["source"]),
-                name=dep.name + "-" + str(dep.version),
+            self._dependency_handler.routes.insert(
+                0,
+                starlette.routing.Mount(
+                    "/" + paths["href"],
+                    StaticFiles(directory=paths["source"]),
+                    name=dep.name + "-" + str(dep.version),
+                ),
             )
 
         self._registered_dependencies[dep.name] = dep
 
 
 def _render_page(ui: Union[Tag, TagList], lib_prefix: str) -> RenderedHTML:
-    doc = HTMLDocument(TagList(jquery_deps(), shiny_deps(), ui))
-    return doc.render(lib_prefix=lib_prefix)
+    ui_res = copy.copy(ui)
+    ui_res.insert(0, [jquery_deps(), shiny_deps()])
+    return HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
