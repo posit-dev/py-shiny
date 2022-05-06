@@ -30,10 +30,10 @@ class App:
     server
         A function which is called once for each session, ensuring that each app is
         independent.
-    debug
-        Whether to enable debug mode.
     static_assets
         An absolute directory containing static files to be served by the app.
+    debug
+        Whether to enable debug mode.
 
     Example
     -------
@@ -222,7 +222,6 @@ class App:
         Callback passed to the ConnectionManager which is invoked when a HTTP
         request for / occurs.
         """
-
         self._ensure_web_dependencies(self.ui["dependencies"])
         return HTMLResponse(content=self.ui["html"])
 
