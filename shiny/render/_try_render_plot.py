@@ -23,9 +23,6 @@ from ..types import ImgData
 # Use this protocol to avoid needing to maintain working stubs for matplotlib. If
 # good stubs ever become available for matplotlib, use those instead.
 class MplFigure(Protocol):
-    def set_dpi(self, val: float) -> None:
-        ...
-
     def set_size_inches(
         self,
         w: Union[Tuple[float, float], float],
@@ -37,7 +34,7 @@ class MplFigure(Protocol):
     def savefig(
         self,
         fname: Union[str, TextIO, BinaryIO, "os.PathLike[Any]"],
-        # dpi: Union[float, Literal["figure"], None] = None,
+        dpi: Union[float, Literal["figure"], None] = None,
         # facecolor="w",
         # edgecolor="w",
         # orientation="portrait",
@@ -106,11 +103,10 @@ def try_render_matplotlib(
         return "TYPE_MISMATCH"
 
     try:
-        fig.set_dpi(ppi * pixelratio)
         fig.set_size_inches(width / ppi, height / ppi)
 
         with io.BytesIO() as buf:
-            fig.savefig(buf, format="png")
+            fig.savefig(buf, format="png", dpi=ppi * pixelratio)
             buf.seek(0)
             data = base64.b64encode(buf.read())
             data_str = data.decode("utf-8")
