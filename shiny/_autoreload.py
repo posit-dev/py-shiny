@@ -41,8 +41,11 @@ class HotReloadHandler(logging.Handler):
         logging.Handler.__init__(self)
 
     def emit(self, record: logging.LogRecord) -> None:
+        # https://github.com/encode/uvicorn/blob/266db48888f3f1ba56710a49ec82e12eecde3aa3/uvicorn/supervisors/statreload.py#L46
+        # https://github.com/encode/uvicorn/blob/266db48888f3f1ba56710a49ec82e12eecde3aa3/uvicorn/supervisors/watchgodreload.py#L148
         if "Reloading..." in record.getMessage():
             reload_begin()
+        # https://github.com/encode/uvicorn/blob/926a8f5dc2c9265d5fb5daaafce13878f477e264/uvicorn/lifespan/on.py#L59
         elif "Application startup complete." in record.getMessage():
             reload_end()
 
@@ -61,8 +64,6 @@ def reload_end():
         return None
 
     url = f"ws://localhost:{port}/notify"
-    if not url:
-        return
 
     async def _() -> None:
         options = {
@@ -71,10 +72,7 @@ def reload_end():
             }
         }
         try:
-            async with connect(
-                url,
-                **options,
-            ) as websocket:
+            async with connect(url, **options) as websocket:
                 await websocket.send("reload_end")
         except websockets.exceptions.ConnectionClosed:
             pass
@@ -115,8 +113,6 @@ class InjectAutoreloadMiddleware:
 
             if intercept:
                 if event["type"] == "http.response.start":
-                    if event["status"] != 200:
-                        intercept = False
                     # Must remove Content-Length, if present; if we insert our
                     # scripts, it won't be correct anymore
                     event["headers"] = [
@@ -185,12 +181,17 @@ async def _coro_main(port: int, secret: str) -> None:
     async def reload_server(conn: WebSocketServerProtocol):
         try:
             if conn.path == "/autoreload":
+                # The client wants to be notified when the app has reloaded. The client
+                # in this case is the web browser, specifically shiny-autoreload.js.
                 while True:
                     await reload_now.wait()
                     await conn.send("autoreload")
             elif conn.path == "/notify":
+                # The client is notifying us that the app has reloaded. The client in
+                # this case is the uvicorn worker process (see reload_end(), above).
                 req_secret = conn.request_headers.get("Shiny-Autoreload-Secret", "")
                 if req_secret != secret:
+                    # The client coudn't prove that they were from a child process
                     return
                 data = await conn.recv()
                 if isinstance(data, str) and data == "reload_end":
