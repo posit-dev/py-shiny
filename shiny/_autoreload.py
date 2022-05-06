@@ -24,6 +24,7 @@ if not is_pyodide:
     from websockets.server import serve, WebSocketServerProtocol
     import websockets.exceptions
 
+from ._hostenv import get_proxy_url
 
 # CHILD PROCESS ------------------------------------------------------------
 
@@ -33,7 +34,7 @@ def autoreload_url() -> Optional[str]:
     if not port:
         return None
     else:
-        return f"ws://localhost:{port}/autoreload"
+        return get_proxy_url(f"ws://127.0.0.1:{port}/autoreload")
 
 
 # Instantiated by Uvicorn in worker process when reload is enabled
@@ -66,7 +67,9 @@ def reload_end():
     if not port:
         return None
 
-    url = f"ws://localhost:{port}/notify"
+    url = f"ws://127.0.0.1:{port}/notify"
+    if not url:
+        return
 
     async def _() -> None:
         options = {
@@ -202,5 +205,5 @@ async def _coro_main(port: int, secret: str) -> None:
         except websockets.exceptions.ConnectionClosed:
             pass
 
-    async with serve(reload_server, "localhost", port):
+    async with serve(reload_server, "127.0.0.1", port):
         await asyncio.Future()  # wait forever
