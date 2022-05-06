@@ -1,15 +1,18 @@
+import copy
 import importlib
 import importlib.util
 import os
+import re
 import sys
 import types
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Tuple, Any, Dict, cast
 
 import click
 import uvicorn
 import uvicorn.config
 
 import shiny
+from . import _autoreload
 
 
 @click.group()  # pyright: ignore[reportUnknownMemberType]
@@ -52,6 +55,13 @@ any of the following will work:
     show_default=True,
 )
 @click.option(
+    "--autoreload-port",
+    type=str,
+    default="+123",
+    help="Bind autoreload socket to this port number. If the value begins with + or -, it will be added to the value of --port. Ignored if --reload is not used.",
+    show_default=True,
+)
+@click.option(
     "--debug", is_flag=True, default=False, help="Enable debug mode.", hidden=True
 )
 @click.option("--reload", is_flag=True, default=False, help="Enable auto-reload.")
@@ -88,6 +98,7 @@ def run(
     app: Union[str, shiny.App],
     host: str,
     port: int,
+    autoreload_port: str,
     debug: bool,
     reload: bool,
     ws_max_size: int,
@@ -99,6 +110,7 @@ def run(
         app,
         host=host,
         port=port,
+        autoreload_port=autoreload_port,
         debug=debug,
         reload=reload,
         ws_max_size=ws_max_size,
@@ -112,6 +124,7 @@ def run_app(
     app: Union[str, shiny.App] = "app:app",
     host: str = "127.0.0.1",
     port: int = 8000,
+    autoreload_port: str = "",
     debug: bool = False,
     reload: bool = False,
     ws_max_size: int = 16777216,
@@ -179,6 +192,41 @@ def run_app(
     if app_dir:
         app_dir = os.path.realpath(app_dir)
 
+    log_config: Dict[str, Any] = copy.deepcopy(
+        cast(
+            Dict[str, Any],
+            uvicorn.config.LOGGING_CONFIG,  # pyright: ignore[reportUnknownMemberType]
+        )
+    )
+
+    if reload and autoreload_port != "":
+        m = re.search("^([+-]?)(\\d+)$", autoreload_port)
+        if not m:
+            sys.stderr.write(
+                "Error: Couldn't understand the provided value for --autoreload-port\n"
+            )
+            exit(1)
+        autoreload_port_num = int(m.group(2))
+        if m.group(1) == "+":
+            autoreload_port_num += port
+        elif m.group(1) == "-":
+            autoreload_port_num = port - autoreload_port_num
+
+        if autoreload_port_num == port:
+            sys.stderr.write(
+                "Autoreload port is already being used by the app; disabling autoreload\n"
+            )
+        else:
+            setup_hot_reload(autoreload_port_num)
+
+            # The only way I've found to get notified when uvicorn decides to reload, is by
+            # inserting a custom log handler.
+            log_config["handlers"]["shiny_hot_reload"] = {
+                "class": "shiny._autoreload.HotReloadHandler",
+                "level": "INFO",
+            }
+            log_config["loggers"]["uvicorn.error"]["handlers"] = ["shiny_hot_reload"]
+
     uvicorn.run(
         app,  # type: ignore
         host=host,
@@ -188,9 +236,14 @@ def run_app(
         reload_dirs=[app_dir] if reload else [],
         ws_max_size=ws_max_size,
         log_level=log_level,
+        log_config=log_config,
         app_dir=app_dir,
         factory=factory,
     )
+
+
+def setup_hot_reload(port: int) -> None:
+    _autoreload.start_server(port)
 
 
 def is_file(app: str) -> bool:

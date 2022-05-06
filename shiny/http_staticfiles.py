@@ -43,7 +43,7 @@ else:
         dir: pathlib.Path
         root_path: str
 
-        def __init__(self, directory: str):
+        def __init__(self, *, directory: str):
             self.dir = pathlib.Path(os.path.realpath(os.path.normpath(directory)))
 
         async def __call__(self, scope: Scope, receive: Receive, send: Send):
