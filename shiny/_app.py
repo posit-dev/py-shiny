@@ -99,6 +99,15 @@ class App:
         self._registered_dependencies: Dict[str, HTMLDependency] = {}
         self._dependency_handler = starlette.routing.Router()
 
+        if self._static_assets is not None:
+            self._dependency_handler.routes.append(
+                starlette.routing.Mount(
+                    "/",
+                    StaticFiles(directory=self._static_assets),
+                    name="shiny-app-static-assets-directory",
+                )
+            )
+
         self.starlette_app = starlette.applications.Starlette(
             routes=[
                 starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
@@ -214,13 +223,6 @@ class App:
         request for / occurs.
         """
 
-        if self._static_assets is not None:
-            self._dependency_handler.mount(
-                "/",
-                StaticFiles(directory=self._static_assets),
-                name="shiny-app-static-assets-directory",
-            )
-
         self._ensure_web_dependencies(self.ui["dependencies"])
         return HTMLResponse(content=self.ui["html"])
 
@@ -286,10 +288,13 @@ class App:
         # (Some HTMLDependencies only carry head content, and have no source on disk.)
         if dep.source:
             paths = dep.source_path_map(lib_prefix=self.LIB_PREFIX)
-            self._dependency_handler.mount(
-                "/" + paths["href"],
-                StaticFiles(directory=paths["source"]),
-                name=dep.name + "-" + str(dep.version),
+            self._dependency_handler.routes.insert(
+                0,
+                starlette.routing.Mount(
+                    "/" + paths["href"],
+                    StaticFiles(directory=paths["source"]),
+                    name=dep.name + "-" + str(dep.version),
+                ),
             )
 
         self._registered_dependencies[dep.name] = dep
