@@ -6,7 +6,7 @@ from starlette.responses import JSONResponse
 from starlette.requests import Request
 
 app_ui = ui.page_fluid(
-    ui.input_action_button("serve", "Serve a random value"),
+    ui.input_action_button("serve", "Click to serve"), ui.div(id="messages")
 )
 
 
@@ -14,13 +14,13 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect()
     @event(input.serve)
     def _():
-        def my_handler(x: dict[str, str], request: Request) -> JSONResponse:
-            return JSONResponse(x, status_code=200)
+        def my_handler(request: Request, **kwargs: object) -> JSONResponse:
+            return JSONResponse(kwargs, status_code=200)
 
-        path = session.serve_object(
+        path = session.add_route_handler(
             name="my-random-value",
-            object={"value": random.randint(0, 100)},
             handler=my_handler,
+            n_clicks=input.serve(),
         )
 
         print("Serving at: ", path)
@@ -31,7 +31,13 @@ def server(input: Inputs, output: Outputs, session: Session):
             HTMLDependency(
                 name=str(random.randint(0, 1000)),
                 version="1.0",
-                head=ui.tags.script(f"fetch('{path}').then(r => r.text()).then(alert)"),
+                head=ui.tags.script(
+                    f"""
+                    fetch('{path}')
+                      .then(r => r.json())
+                      .then(x => {{ $('#messages').text(`Clicked ${{x.n_clicks}} times`); }});
+                    """
+                ),
             ),
             selector="head",
         )
