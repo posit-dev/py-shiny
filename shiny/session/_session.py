@@ -213,7 +213,7 @@ class Session:
             while True:
                 message: str = await self._conn.receive()
                 if self._debug:
-                    print("RECV: " + message)
+                    print("RECV: " + message, flush=True)
 
                 try:
                     message_obj = json.loads(message)
@@ -302,7 +302,7 @@ class Session:
         async def uploadInit(file_infos: List[FileInfo]) -> Dict[str, object]:
             with session_context(self):
                 if self._debug:
-                    print("Upload init: " + str(file_infos))
+                    print("Upload init: " + str(file_infos), flush=True)
 
                 # TODO: Don't alter message in place?
                 for fi in file_infos:
@@ -506,6 +506,7 @@ class Session:
                 "SEND: "
                 + re.sub("(?m)base64,[a-zA-Z0-9+/=]+", "[base64 data]", message_str),
                 end="",
+                flush=True,
             )
         await self._conn.send(json.dumps(message))
 

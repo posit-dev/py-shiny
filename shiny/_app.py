@@ -101,7 +101,7 @@ class App:
 
         self._registered_dependencies: Dict[str, HTMLDependency] = {}
         self._dependency_handler = starlette.routing.Router()
-        
+
         if self._static_assets is not None:
             self._dependency_handler.routes.append(
                 starlette.routing.Mount(
@@ -171,7 +171,7 @@ class App:
             session = session.id
 
         if self._debug:
-            print(f"remove_session: {session}")
+            print(f"remove_session: {session}", flush=True)
         del self._sessions[session]
 
     def run(self, **kwargs: object) -> None:
