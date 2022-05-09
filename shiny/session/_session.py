@@ -36,9 +36,9 @@ from starlette.responses import (
 from starlette.types import ASGIApp
 
 if sys.version_info >= (3, 8):
-    from typing import TypedDict, Protocol
+    from typing import TypedDict
 else:
-    from typing_extensions import TypedDict, Protocol
+    from typing_extensions import TypedDict
 
 from htmltools import TagChildArg, TagList
 
@@ -91,17 +91,13 @@ DownloadHandler = Callable[
     [], Union[str, Iterable[Union[bytes, str]], AsyncIterable[Union[bytes, str]]]
 ]
 
-
-class CustomRouteHandler(Protocol):
-    def __call__(self, request: Request, **kwargs: Any) -> ASGIApp:
-        ...
+DynamicRouteHandler = Callable[[Request], ASGIApp]
 
 
-class CustomRoute(TypedDict):
+class DynamicRoute(TypedDict):
     name: str
-    handler: CustomRouteHandler
+    handler: DynamicRouteHandler
     nonce: str
-    kwargs: Dict[str, object]
 
 
 @dataclasses.dataclass
@@ -180,7 +176,7 @@ class Session:
         self._on_ended_callbacks: List[Callable[[], None]] = []
         self._has_run_session_end_tasks: bool = False
         self._downloads: Dict[str, DownloadInfo] = {}
-        self._custom_routes: List[CustomRoute] = []
+        self._dynamic_routes: List[DynamicRoute] = []
 
         self._register_session_end_callbacks()
 
@@ -453,16 +449,16 @@ class Session:
                             media_type=content_type,  # type: ignore
                         )
 
-        elif action == "route_handler" and request.method == "GET" and subpath:
+        elif action == "dynamic_route" and request.method == "GET" and subpath:
             name = subpath
             nonce = request.query_params.get("nonce", None)
-            for x in self._custom_routes:
+            for x in self._dynamic_routes:
                 if name != x["name"] or nonce != x["nonce"]:
                     continue
 
                 with session_context(self):
                     with isolate():
-                        return x["handler"](request, **x["kwargs"])
+                        return x["handler"](request)
 
             return HTMLResponse("<h1>Bad Request</h1>", 400)
 
@@ -687,36 +683,44 @@ class Session:
         return wrapper
 
     @add_example()
-    def add_route_handler(
-        self, name: str, handler: CustomRouteHandler, **kwargs: object
-    ) -> str:
+    def dynamic_route(
+        self, name: Optional[str] = None
+    ) -> Callable[[DynamicRouteHandler], Callable[[], str]]:
         """
-        Create a session-specific route handler.
+        Decorator to register a function to call when a dynamically generated,
+        session-specific, route is requested.
 
-        Convenience method for making Shiny session-dependent values available
-        for other clients/applications to consume.
+        Provides a convenient way to serve-up session-dependent values for other
+        clients/applications to consume.
 
         Parameters
         ----------
         name
-            A name for the route (this will be used to determine the returned path).
-        handler
-            A function to handle the route. It must have at least one argument,
-            (the client request) and return a response.
-        kwargs
-            Additional keyword arguments to pass to the handler.
+            A name for the route (used to determine part of the URL path).
 
         Returns
         -------
-        A path which may be requested to invoke the handler.
+            A decorator that can be used to register a route handler.
         """
 
-        nonce = _utils.rand_hex(8)
-        self._custom_routes.append(
-            CustomRoute(name=name, handler=handler, nonce=nonce, kwargs=kwargs)
-        )
-        # TODO: the `w=` parameter should eventually be a worker ID, if we add those
-        return f"session/{urllib.parse.quote(self.id)}/route_handler/{urllib.parse.quote(name)}?nonce={nonce}"
+        def wrapper(fn: DynamicRouteHandler) -> Callable[[], str]:
+
+            if name is None:
+                effective_name = fn.__name__
+            else:
+                effective_name = name
+
+            nonce = _utils.rand_hex(8)
+            route = DynamicRoute(name=effective_name, handler=fn, nonce=nonce)
+            self._dynamic_routes.append(route)
+
+            @functools.wraps(fn)
+            def _():
+                return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(effective_name)}?nonce={nonce}"
+
+            return _
+
+        return wrapper
 
     def _process_ui(self, ui: TagChildArg) -> RenderedDeps:
 

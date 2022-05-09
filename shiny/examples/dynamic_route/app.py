@@ -14,15 +14,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect()
     @event(input.serve)
     def _():
-        def my_handler(request: Request, **kwargs: object) -> JSONResponse:
-            return JSONResponse(kwargs, status_code=200)
+        @session.dynamic_route()
+        def my_handler(request: Request) -> JSONResponse:
+            return JSONResponse({"n_clicks": input.serve()}, status_code=200)
 
-        path = session.add_route_handler(
-            name="my-random-value",
-            handler=my_handler,
-            n_clicks=input.serve(),
-        )
-
+        path = my_handler()
         print("Serving at: ", path)
 
         ui.insert_ui(
