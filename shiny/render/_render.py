@@ -16,58 +16,25 @@ __all__ = (
 )
 
 import base64
-import io
 import mimetypes
 import os
 import sys
-from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union, Tuple
+from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union
 import typing
-
-if sys.version_info >= (3, 8):
-    from typing import Literal, Protocol
-else:
-    from typing_extensions import Literal, Protocol
 
 from htmltools import TagChildArg
 
 if TYPE_CHECKING:
     from ..session import Session
 
+from ._try_render_plot import (
+    try_render_matplotlib,
+    try_render_pil,
+    try_render_plotnine,
+    TryPlotResult,
+)
 from ..types import ImgData
 from .. import _utils
-
-
-# Use this protocol to avoid needing to maintain working stubs for matplotlib. If
-# good stubs ever become available for matplotlib, use those instead.
-class MatplotlibFigureProtocol(Protocol):
-    def set_dpi(self, val: float) -> None:
-        ...
-
-    def set_size_inches(
-        self,
-        w: Union[Tuple[float, float], float],
-        h: Optional[float] = None,
-        forward: bool = True,
-    ):
-        ...
-
-    def savefig(
-        self,
-        fname: Union[str, typing.TextIO, typing.BinaryIO, "os.PathLike[typing.Any]"],
-        # dpi: Union[float, typing.Literal["figure"], None] = None,
-        # facecolor="w",
-        # edgecolor="w",
-        # orientation="portrait",
-        # papertype=None,
-        format: Optional[str] = None,
-        # transparent=False,
-        # bbox_inches=None,
-        # pad_inches=0.1,
-        # frameon=None,
-        # metadata=None,
-    ):
-        ...
-
 
 # ======================================================================================
 # RenderFunction/RenderFunctionAsync base class
@@ -195,9 +162,9 @@ class RenderPlot(RenderFunction):
             float, self._session.input[f".clientdata_output_{self._name}_height"]()
         )
 
-        fig = await self._fn()
+        x = await self._fn()
 
-        if fig is None:
+        if x is None:
             return None
 
         # Try each type of renderer in turn. The reason we do it this way is to avoid
@@ -209,20 +176,28 @@ class RenderPlot(RenderFunction):
         # indicate that `fig` object was not the type of object that the renderer knows
         # how to handle). In the case of a "TYPE_MISMATCH", it will move on to the next
         # renderer.
-        result: Union[ImgData, None, Literal["TYPE_MISMATCH"]] = None
+        result: TryPlotResult = None
+
+        if "plotnine" in sys.modules:
+            result = try_render_plotnine(x, width, height, pixelratio, self._ppi)
+            if result != "TYPE_MISMATCH":
+                return result
+
         if "matplotlib" in sys.modules:
-            result = try_render_plot_matplotlib(
-                fig, width, height, pixelratio, self._ppi
-            )
+            result = try_render_matplotlib(x, width, height, pixelratio, self._ppi)
             if result != "TYPE_MISMATCH":
                 return result
 
         if "PIL" in sys.modules:
-            result = try_render_plot_pil(fig, width, height, pixelratio, self._ppi)
+            result = try_render_pil(x, width, height, pixelratio, self._ppi)
             if result != "TYPE_MISMATCH":
                 return result
 
-        raise Exception("Unsupported figure type: " + str(type(fig)))
+        raise Exception(
+            f"@render_plot() doesn't know to render objects of type '{str(type(x))}'. "
+            + "Consider either requesting support for this type of plot object, and/or "
+            + " explictly saving the object to a (png) file and using @render_image()."
+        )
 
 
 class RenderPlotAsync(RenderPlot, RenderFunctionAsync):
@@ -250,7 +225,11 @@ def render_plot(
 
     Returns
     -------
-    A decorator for a function that returns a ``matplotlib`` or ``PIL`` figure.
+    A decorator for a function that returns any of the following:
+        1. A :class:`matplotlib.figure.Figure` instance.
+        2. An :class:`matplotlib.artist.Artist` instance.
+        4. A list/tuple of Figure/Artist instances.
+        4. A :class:`PIL.Image.Image` instance.
 
     Tip
     ----
@@ -272,93 +251,6 @@ def render_plot(
             return RenderPlot(fn, alt=alt)
 
     return wrapper
-
-
-# Try to render a matplotlib object. If `fig` is not a matplotlib object, return
-# "TYPE_MISMATCH". If there's an error in rendering, return None. If successful in
-# rendering, return an ImgData object.
-def try_render_plot_matplotlib(
-    fig: object,
-    width: float,
-    height: float,
-    pixelratio: float,
-    ppi: float,
-    alt: Optional[str] = None,
-) -> Union[ImgData, None, Literal["TYPE_MISMATCH"]]:
-    import matplotlib.figure  # pyright: ignore[reportMissingTypeStubs]
-    import matplotlib.pyplot  # pyright: ignore[reportMissingTypeStubs]
-
-    if isinstance(
-        fig, matplotlib.figure.Figure  # pyright: ignore[reportUnknownMemberType]
-    ):
-        mpl = typing.cast(MatplotlibFigureProtocol, fig)
-        try:
-            mpl.set_dpi(ppi * pixelratio)
-            mpl.set_size_inches(width / ppi, height / ppi)
-
-            with io.BytesIO() as buf:
-                mpl.savefig(buf, format="png")
-                buf.seek(0)
-                data = base64.b64encode(buf.read())
-                data_str = data.decode("utf-8")
-
-            res: ImgData = {
-                "src": "data:image/png;base64," + data_str,
-                "width": width,
-                "height": height,
-                "alt": alt,
-            }
-
-            return res
-
-        except Exception as e:
-            # TODO: just let errors propagate?
-            print("Error rendering matplotlib object: " + str(e))
-
-        finally:
-            matplotlib.pyplot.close(fig)  # pyright: ignore[reportUnknownMemberType]
-
-        return None
-
-    else:
-        return "TYPE_MISMATCH"
-
-
-def try_render_plot_pil(
-    fig: object,
-    width: float,
-    height: float,
-    pixelratio: float,
-    ppi: float,
-    alt: Optional[str] = None,
-) -> Union[ImgData, None, Literal["TYPE_MISMATCH"]]:
-    import PIL.Image
-
-    if isinstance(fig, PIL.Image.Image):
-        try:
-            with io.BytesIO() as buf:
-                fig.save(buf, format="PNG")
-                buf.seek(0)
-                data = base64.b64encode(buf.read())
-                data_str = data.decode("utf-8")
-
-            res: ImgData = {
-                "src": "data:image/png;base64," + data_str,
-                "width": width,
-                "height": height,
-                "alt": alt,
-            }
-
-            return res
-
-        except Exception as e:
-            # TODO: just let errors propagate?
-            print("Error rendering PIL object: " + str(e))
-
-        return None
-
-    else:
-        return "TYPE_MISMATCH"
 
 
 # ======================================================================================
