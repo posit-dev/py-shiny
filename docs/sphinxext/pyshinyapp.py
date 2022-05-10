@@ -65,7 +65,7 @@ LAYOUT_TEMPLATE = f"""
       }});
     }}
   </script>
-  <link rel="stylesheet" href="{join(SHINYLIVE_BASE_URL, SHINYLIVE_DEST, 'Components/App.css')}" type="text/css">
+  <link rel="stylesheet" href="{join(SHINYLIVE_BASE_URL, SHINYLIVE_DEST, 'shinylive.css')}" type="text/css">
   <script src="{join(SHINYLIVE_BASE_URL, SHINYLIVE_DEST, 'run-python-blocks.js')}" type="module"></script>
 {{% endblock %}}
 """
