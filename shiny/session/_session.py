@@ -94,12 +94,6 @@ DownloadHandler = Callable[
 DynamicRouteHandler = Callable[[Request], ASGIApp]
 
 
-class DynamicRoute(TypedDict):
-    name: str
-    handler: DynamicRouteHandler
-    nonce: str
-
-
 @dataclasses.dataclass
 class DownloadInfo:
     filename: Union[Callable[[], str], str, None]
@@ -176,7 +170,7 @@ class Session:
         self._on_ended_callbacks: List[Callable[[], None]] = []
         self._has_run_session_end_tasks: bool = False
         self._downloads: Dict[str, DownloadInfo] = {}
-        self._dynamic_routes: List[DynamicRoute] = []
+        self._dynamic_routes: Dict[str, Dict[str, DynamicRouteHandler]] = {}
 
         self._register_session_end_callbacks()
 
@@ -451,16 +445,21 @@ class Session:
 
         elif action == "dynamic_route" and request.method == "GET" and subpath:
             name = subpath
+            handlers = self._dynamic_routes.get(name, None)
+            if handlers is None:
+                return HTMLResponse("<h1>Bad Request</h1>", 400)
+
             nonce = request.query_params.get("nonce", None)
-            for x in self._dynamic_routes:
-                if name != x["name"] or nonce != x["nonce"]:
-                    continue
+            if nonce is None:
+                return HTMLResponse("<h1>Bad Request</h1>", 400)
 
-                with session_context(self):
-                    with isolate():
-                        return x["handler"](request)
+            handler = handlers.get(nonce, None)
+            if handler is None:
+                return HTMLResponse("<h1>Bad Request</h1>", 400)
 
-            return HTMLResponse("<h1>Bad Request</h1>", 400)
+            with session_context(self):
+                with isolate():
+                    return handler(request)
 
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
@@ -711,12 +710,14 @@ class Session:
                 effective_name = name
 
             nonce = _utils.rand_hex(8)
-            route = DynamicRoute(name=effective_name, handler=fn, nonce=nonce)
-            self._dynamic_routes.append(route)
+            if effective_name not in self._dynamic_routes:
+                self._dynamic_routes[effective_name] = {}
+
+            self._dynamic_routes[effective_name].update({nonce: fn})
 
             @functools.wraps(fn)
             def _():
-                return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(effective_name)}?nonce={nonce}"
+                return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(effective_name)}?nonce={urllib.parse.quote(nonce)}"
 
             return _
 
