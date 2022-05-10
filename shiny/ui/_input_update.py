@@ -8,6 +8,7 @@ __all__ = (
     "update_date_range",
     "update_numeric",
     "update_select",
+    "update_selectize",
     "update_slider",
     "update_text",
     "update_text_area",
@@ -15,13 +16,23 @@ __all__ = (
 )
 
 from datetime import date
+import json
+import re
 import sys
 from typing import Optional, Union, Tuple, List
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
+from starlette.requests import Request
+from starlette.responses import Response, JSONResponse
+
+if sys.version_info >= (3, 11):
+    from typing import NotRequired
 else:
-    from typing_extensions import Literal
+    from typing_extensions import NotRequired
+
+if sys.version_info >= (3, 8):
+    from typing import Literal, TypedDict
+else:
+    from typing_extensions import Literal, TypedDict
 
 from htmltools import TagChildArg
 
@@ -439,7 +450,7 @@ def update_select(
     *,
     label: Optional[str] = None,
     choices: Optional[SelectChoicesArg] = None,
-    selected: Optional[str] = None,
+    selected: Optional[Union[str, List[str]]] = None,
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -456,8 +467,8 @@ def update_select(
         that if a dictionary is provided, the keys are used as the (input) values so
         that the dictionary values can hold HTML labels. A dictionary of dictionaries is
         also supported, and in that case, the top-level keys are treated as
-        ``<optgroup>``
-    labels. selected
+        ``<optgroup>`` labels.
+    selected
         The values that should be initially selected, if any.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
@@ -470,9 +481,14 @@ def update_select(
     See Also
     -------
     ~shiny.ui.input_select
+    ~shiny.ui.update_selectize
     """
 
     session = require_active_session(session)
+
+    selected_values = selected
+    if isinstance(selected, str):
+        selected_values = [selected]
 
     if choices is None:
         options = None
@@ -485,9 +501,185 @@ def update_select(
     msg = {
         "label": label,
         "options": options,
-        "selected": selected,
+        "value": selected_values,
     }
     session.send_input_message(id, drop_none(msg))
+
+
+class FlatSelectChoice(TypedDict):
+    label: str
+    value: str
+    optgroup: NotRequired[str]
+
+
+@doc_format(note=_note)
+@add_example()
+def update_selectize(
+    id: str,
+    *,
+    label: Optional[str] = None,
+    choices: Optional[SelectChoicesArg] = None,
+    selected: Optional[Union[str, List[str]]] = None,
+    # TODO: we need the equivalent of base::I()/htmlwidgets::JS() for marking strings as strings to be evaluated
+    # options: Optional[Dict[str, str]] = None,
+    server: bool = False,
+    session: Optional[Session] = None,
+) -> None:
+    """
+    Change the value of a selectize.js powered input on the client.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    choices
+        Either a list of choices or a dictionary mapping choice values to labels. Note
+        that if a dictionary is provided, the keys are used as the (input) values so
+        that the dictionary values can hold HTML labels. A dictionary of dictionaries is
+        also supported, and in that case, the top-level keys are treated as
+        ``<optgroup>`` labels.
+    selected
+        The values that should be initially selected, if any.
+    server
+        Whether to store choices on the server side, and load the select options
+        dynamically on searching, instead of writing all choices into the page at once
+        (i.e., only use the client-side version of selectize.js)
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:`~shiny.session.get_current_session`.
+
+    Note
+    ----
+    {note}
+
+    See Also
+    -------
+    ~shiny.ui.input_selectize
+    """
+
+    session = require_active_session(session)
+
+    if not server:
+        return update_select(
+            id, label=label, choices=choices, selected=selected, session=session
+        )
+
+    # Transform choices to a list of dicts (this is the form the client wants)
+    # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]
+    flat_choices: List[FlatSelectChoice] = []
+    if choices is not None:
+        for (k, v) in _normalize_choices(choices).items():
+            if not isinstance(v, dict):
+                flat_choices.append(
+                    FlatSelectChoice(value=k, label=session._process_ui(v)["html"])
+                )
+            else:  # The optgroup case
+                flat_choices.extend(
+                    [
+                        FlatSelectChoice(
+                            optgroup=k, value=k2, label=session._process_ui(v2)["html"]
+                        )
+                        for (k2, v2) in v.items()
+                    ]
+                )
+
+    selected_values = selected
+    if isinstance(selected, str):
+        selected_values = [selected]
+
+    # Find any selected choices now so we have them ready to send to the client
+    selected_choices: List[FlatSelectChoice] = []
+    if selected_values is not None:
+        all_values = [x["value"] for x in flat_choices]
+        for x in selected_values:
+            if x in all_values:
+                selected_choices.append(flat_choices[all_values.index(x)])
+
+    @session.dynamic_route()
+    def selectize_choices_json(request: Request) -> Response:
+        if choices is None:
+            return Response([], status_code=200)
+
+        # N.B. relevant query parameters that shiny.js setscan be found here
+        # https://github.com/rstudio/shiny/blob/78d77ce/srcts/src/bindings/input/selectInput.ts#L138-L142
+        qparams = request.query_params
+
+        # The (space-separated) input value(s) in lower-case (for case-insensitive matching)
+        keywords = set(re.split(r"\s+", qparams.get("query", "").lower()))
+
+        # Also note that the user (at least someday) has the ability to customize any of
+        # these options https://github.com/rstudio/shiny/blob/78d77ce/srcts/src/bindings/input/selectInput.ts#L231
+        #
+        # For most options this is fine, but searchField/valueField require some validation.
+
+        # i.e. maxOptions (defaults to 1000)
+        max_options = int(qparams.get("maxop", 1000))
+
+        # i.e. searchConjunction (defaults to 'and', but can also be 'or')
+        conjunction = any if qparams.get("conju", "and") == "or" else all
+
+        # i.e. searchFields (defaults to ['label'])
+        search_fields: List[str] = json.loads(qparams.get("field", "['label']"))
+        if len(search_fields) == 0:
+            raise ValueError("The selectize.js searchFields option must be non-empty")
+
+        # For some odd (probably wrong) reason, shiny.js is wrapping searchFields in an additional array
+        # https://github.com/rstudio/shiny/blob/78d77ce/srcts/src/bindings/input/selectInput.ts#L139
+        # https://github.com/rstudio/shiny/blob/78d77c/R/update-input.R#L801
+        if isinstance(search_fields[0], list):
+            search_fields = search_fields[0]
+
+        if set(search_fields).difference(set(["label", "value", "optgroup"])):
+            raise ValueError(
+                "The selectize.js searchFields option must contain some combination of: "
+                + "'label', 'value', and 'optgroup'"
+            )
+
+        # i.e. valueField (defaults to 'value')
+        if qparams.get("value", "value") != "value":
+            raise ValueError(
+                "The selectize.js valueField option must be set to 'value'"
+            )
+
+        filtered_choices: List[FlatSelectChoice] = []
+        for choice in flat_choices:
+            # Short-circuit if we've reached the max number of options
+            if (len(filtered_choices) + len(selected_choices)) > max_options:
+                break
+
+            # If this is a selected value, *don't* add it here (it will be added after
+            # this loop)
+            if selected_values:
+                is_selected = False
+                for y in selected_values:
+                    is_selected = choice["value"] == y
+                    if is_selected:
+                        break
+                if is_selected:
+                    continue
+
+            match = False
+            for f in search_fields:
+                val: Optional[str] = choice.get(f, None)
+                # optgroup could be requested, but not necessarily present/relevant
+                if val is None:
+                    continue
+                if conjunction([x in val.lower() for x in keywords]):
+                    match = True
+
+            if match:
+                filtered_choices.append(choice)
+
+        if selected_choices:
+            filtered_choices.extend(selected_choices)
+
+        return JSONResponse(filtered_choices, status_code=200)
+
+    msg = {"label": label, "value": selected_values, "url": selectize_choices_json()}
+
+    return session.send_input_message(id, drop_none(msg))
 
 
 # -----------------------------------------------------------------------------

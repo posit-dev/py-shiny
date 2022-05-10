@@ -10,8 +10,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         ui.update_selectize(
             "x",
-            choices=[f"Foo {i}" for i in range(100000)],
-            # selected=["Foo 0", "Foo 1"],
+            choices=[f"Foo {i}" for i in range(10000)],
+            selected=["Foo 0", "Foo 1"],
             server=True,
         )
 
