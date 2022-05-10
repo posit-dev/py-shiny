@@ -1,7 +1,9 @@
+import logging
 import os
 import re
 from ipaddress import ip_address
 from subprocess import run
+from typing import Dict
 from urllib.parse import urlparse
 
 def is_workbench() -> bool:
@@ -9,6 +11,8 @@ def is_workbench() -> bool:
 
 def is_proxy_env() -> bool:
     return is_workbench()
+
+port_cache: Dict[int, str] = {}
 
 def get_proxy_url(url: str) -> str:
     if not is_workbench():
@@ -24,6 +28,8 @@ def get_proxy_url(url: str) -> str:
     if not is_loopback:
         return url
 
+    path = parts.path or "/"
+
     server_url = os.getenv("RS_SERVER_URL", "")
     session_url = os.getenv("RS_SESSION_URL", "")
 
@@ -36,15 +42,38 @@ def get_proxy_url(url: str) -> str:
     if port == 0:
         return url
 
-    try:
-        res = run(["/usr/lib/rstudio-server/bin/rserver-url",
-            str(port)],
-            capture_output=True,
-            encoding="ascii")
-    except FileNotFoundError:
-        return url
+    if port in port_cache:
+        ptoken = port_cache[port]
+    else:
+        try:
+            res = run(["/usr/lib/rstudio-server/bin/rserver-url",
+                str(port)],
+                capture_output=True,
+                encoding="ascii")
+        except FileNotFoundError:
+            return url
+        if res.returncode != 0:
+            return url
+        ptoken = res.stdout
+        port_cache[port] = ptoken
 
-    if res.returncode != 0:
-        return url
+    return f"{server_url}/{session_url}p/{ptoken}{path}{'?' if parts.query else ''}{parts.query}"
 
-    return f"{server_url}/{session_url}p/{res.stdout}{parts.path}{'?' if parts.query else ''}{parts.query}"
+pat_local_url = re.compile("https?://(127.0.0.1|localhost)(:\\d+)?([-\+=&;%@.\w_]*)", re.IGNORECASE)
+
+class ProxyUrlFilter:
+    def __init__(self):
+        pass
+
+    def filter(self, record: logging.LogRecord) -> int:
+        record.msg = pat_local_url.sub(self.url_replacement, record.getMessage())
+        if hasattr(record, "color_message"):
+            color_msg = str(record.color_message)
+            if record.args:
+                color_msg = color_msg % record.args
+            record.color_message = pat_local_url.sub(self.url_replacement, color_msg)
+        record.args = ()
+        return 1
+
+    def url_replacement(self, match: re.Match) -> str:
+        return get_proxy_url(match.group(0))
