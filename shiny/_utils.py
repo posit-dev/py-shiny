@@ -75,8 +75,8 @@ def wrap_async(
 
 
 def is_async_callable(
-    obj: Union[Callable[[], T], Callable[[], Awaitable[T]]]
-) -> TypeGuard[Callable[[], Awaitable[T]]]:
+    obj: Union[Callable[..., T], Callable[..., Awaitable[T]]]
+) -> TypeGuard[Callable[..., Awaitable[T]]]:
     """
     Returns True if `obj` is an `async def` function, or if it's an object with a
     `__call__` method which is an `async def` function. This function should generally

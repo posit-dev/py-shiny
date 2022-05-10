@@ -459,7 +459,10 @@ class Session:
 
             with session_context(self):
                 with isolate():
-                    return handler(request)
+                    if _utils.is_async_callable(handler):
+                        return await handler(request)
+                    else:
+                        return handler(request)
 
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
@@ -709,10 +712,10 @@ class Session:
             else:
                 effective_name = name
 
-            nonce = _utils.rand_hex(8)
             if effective_name not in self._dynamic_routes:
                 self._dynamic_routes[effective_name] = {}
 
+            nonce = _utils.rand_hex(8)
             self._dynamic_routes[effective_name].update({nonce: fn})
 
             @functools.wraps(fn)
