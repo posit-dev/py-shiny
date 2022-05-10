@@ -14,12 +14,15 @@ from asgiref.typing import (
     ASGISendEvent,
 )
 
-# Warning: `import websockets` alone doesn't work because the websockets package uses
-# a lazy loading technique which is opaque to mypy and pyright.
-# https://github.com/aaugustin/websockets/issues/940#issuecomment-874012438
-from websockets.client import connect
-from websockets.server import serve, WebSocketServerProtocol
-import websockets.exceptions
+from ._shinyenv import is_pyodide
+
+if not is_pyodide:
+    # Warning: `import websockets` alone doesn't work because the websockets package uses
+    # a lazy loading technique which is opaque to mypy and pyright.
+    # https://github.com/aaugustin/websockets/issues/940#issuecomment-874012438
+    from websockets.client import connect
+    from websockets.server import serve, WebSocketServerProtocol
+    import websockets.exceptions
 
 
 # CHILD PROCESS ------------------------------------------------------------
