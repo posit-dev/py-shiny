@@ -170,7 +170,7 @@ class Session:
         self._on_ended_callbacks: List[Callable[[], None]] = []
         self._has_run_session_end_tasks: bool = False
         self._downloads: Dict[str, DownloadInfo] = {}
-        self._dynamic_routes: Dict[str, Dict[str, DynamicRouteHandler]] = {}
+        self._dynamic_routes: Dict[str, DynamicRouteHandler] = {}
 
         self._register_session_end_callbacks()
 
@@ -445,15 +445,7 @@ class Session:
 
         elif action == "dynamic_route" and request.method == "GET" and subpath:
             name = subpath
-            handlers = self._dynamic_routes.get(name, None)
-            if handlers is None:
-                return HTMLResponse("<h1>Bad Request</h1>", 400)
-
-            nonce = request.query_params.get("nonce", None)
-            if nonce is None:
-                return HTMLResponse("<h1>Bad Request</h1>", 400)
-
-            handler = handlers.get(nonce, None)
+            handler = self._dynamic_routes.get(name, None)
             if handler is None:
                 return HTMLResponse("<h1>Bad Request</h1>", 400)
 
@@ -712,15 +704,11 @@ class Session:
             else:
                 effective_name = name
 
-            if effective_name not in self._dynamic_routes:
-                self._dynamic_routes[effective_name] = {}
-
-            nonce = _utils.rand_hex(8)
-            self._dynamic_routes[effective_name].update({nonce: fn})
+            self._dynamic_routes.update({effective_name: fn})
 
             @functools.wraps(fn)
             def _():
-                return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(effective_name)}?nonce={urllib.parse.quote(nonce)}"
+                return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(effective_name)}?nonce={urllib.parse.quote(_utils.rand_hex(8))}"
 
             return _
 
