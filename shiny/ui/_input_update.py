@@ -595,7 +595,6 @@ def update_selectize(
     else:
         selected_choices = [x for x in flat_choices if x["value"] in selected_values]
 
-    @session.dynamic_route()
     def selectize_choices_json(request: Request) -> Response:
         if choices is None:
             return Response([], status_code=200)
@@ -668,7 +667,11 @@ def update_selectize(
 
         return JSONResponse(filtered_choices, status_code=200)
 
-    msg = {"label": label, "value": selected_values, "url": selectize_choices_json()}
+    msg = {
+        "label": label,
+        "value": selected_values,
+        "url": session.dynamic_route(f"update_selectize_{id}", selectize_choices_json),
+    }
 
     return session.send_input_message(id, drop_none(msg))
 
