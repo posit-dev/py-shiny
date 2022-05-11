@@ -2,7 +2,7 @@ __all__ = ("input_text", "input_text_area")
 
 from typing import Optional
 
-from htmltools import tags, Tag, div, css, TagChildArg
+from htmltools import Tag, TagChildArg, css, div, tags
 
 from .._docstring import add_example
 from ._utils import shiny_input_label
@@ -15,9 +15,10 @@ def input_text(
     value: str = "",
     width: Optional[str] = None,
     placeholder: Optional[str] = None,
+    autocomplete: bool = False,
 ) -> Tag:
     """
-    Create an input control for entry of unstructured text values
+    Create an input control for entry of text values
 
     Parameters
     ----------
@@ -31,6 +32,8 @@ def input_text(
         The CSS width, e.g. '400px', or '100%'
     placeholder
         A hint as to what can be entered into the control.
+    autocomplete
+        Whether to enable autocompletion of the text input (default is False).
 
     Returns
     -------
@@ -55,6 +58,7 @@ def input_text(
             class_="form-control",
             value=value,
             placeholder=placeholder,
+            autocomplete=None if autocomplete else "off",
         ),
         class_="form-group shiny-input-container",
         style=css(width=width),
