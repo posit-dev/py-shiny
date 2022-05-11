@@ -91,6 +91,8 @@ DownloadHandler = Callable[
     [], Union[str, Iterable[Union[bytes, str]], AsyncIterable[Union[bytes, str]]]
 ]
 
+DynamicRouteHandler = Callable[[Request], ASGIApp]
+
 
 @dataclasses.dataclass
 class DownloadInfo:
@@ -168,6 +170,7 @@ class Session:
         self._on_ended_callbacks: List[Callable[[], None]] = []
         self._has_run_session_end_tasks: bool = False
         self._downloads: Dict[str, DownloadInfo] = {}
+        self._dynamic_routes: Dict[str, DynamicRouteHandler] = {}
 
         self._register_session_end_callbacks()
 
@@ -440,6 +443,19 @@ class Session:
                             media_type=content_type,  # type: ignore
                         )
 
+        elif action == "dynamic_route" and request.method == "GET" and subpath:
+            name = subpath
+            handler = self._dynamic_routes.get(name, None)
+            if handler is None:
+                return HTMLResponse("<h1>Bad Request</h1>", 400)
+
+            with session_context(self):
+                with isolate():
+                    if _utils.is_async_callable(handler):
+                        return await handler(request)
+                    else:
+                        return handler(request)
+
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
     def send_input_message(self, id: str, message: Dict[str, object]) -> None:
@@ -659,6 +675,34 @@ class Session:
                 return f"session/{urllib.parse.quote(self.id)}/download/{urllib.parse.quote(effective_name)}?w="
 
         return wrapper
+
+    @add_example()
+    def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
+        """
+        Register a function to call when a dynamically generated, session-specific,
+        route is requested.
+
+        Provides a convenient way to serve-up session-dependent values for other
+        clients/applications to consume.
+
+        Parameters
+        ----------
+        name
+            A name for the route (used to determine part of the URL path).
+        handler
+            The function to call when a request is made to the route. This function
+            should take a single argument (a :class:`starlette.requests.Request` object)
+            and return a :class:`starlette.types.ASGIApp` object.
+
+
+        Returns
+        -------
+            The URL path for the route.
+        """
+
+        self._dynamic_routes.update({name: handler})
+        nonce = _utils.rand_hex(8)
+        return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(name)}?nonce={urllib.parse.quote(nonce)}"
 
     def _process_ui(self, ui: TagChildArg) -> RenderedDeps:
 

@@ -8,16 +8,7 @@ import secrets
 import sys
 import tempfile
 
-from typing import (
-    Callable,
-    Awaitable,
-    Union,
-    Tuple,
-    TypeVar,
-    Dict,
-    Any,
-    cast,
-)
+from typing import Callable, Awaitable, Union, Tuple, TypeVar, Dict, Any, cast
 
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
@@ -84,8 +75,8 @@ def wrap_async(
 
 
 def is_async_callable(
-    obj: Union[Callable[[], T], Callable[[], Awaitable[T]]]
-) -> TypeGuard[Callable[[], Awaitable[T]]]:
+    obj: Union[Callable[..., T], Callable[..., Awaitable[T]]]
+) -> TypeGuard[Callable[..., Awaitable[T]]]:
     """
     Returns True if `obj` is an `async def` function, or if it's an object with a
     `__call__` method which is an `async def` function. This function should generally
