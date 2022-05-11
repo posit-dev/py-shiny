@@ -48,8 +48,7 @@ def input_text(
         more.
     spellcheck
         Whether to enable browser spell checking of the text input (default is None). If
-        None, then it will use the browser's default behavior. Possible values are
-        "true", "false", and None.
+        None, then it will use the browser's default behavior.
 
     Returns
     -------
@@ -135,8 +134,7 @@ def input_text_area(
         more.
     spellcheck
         Whether to enable browser spell checking of the text input (default is None). If
-        None, then it will use the browser's default behavior. Possible values are
-        "true", "false", and None.
+        None, then it will use the browser's default behavior.
 
     Returns
     -------
