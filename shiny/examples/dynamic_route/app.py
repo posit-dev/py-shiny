@@ -11,11 +11,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect()
     @event(input.serve)
     def _():
-        @session.dynamic_route()
         async def my_handler(request: Request) -> JSONResponse:
             return JSONResponse({"n_clicks": input.serve()}, status_code=200)
 
-        path = my_handler()
+        path = session.dynamic_route("my_handler", my_handler)
+
         print("Serving at: ", path)
 
         ui.insert_ui(

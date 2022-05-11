@@ -677,12 +677,10 @@ class Session:
         return wrapper
 
     @add_example()
-    def dynamic_route(
-        self, name: Optional[str] = None
-    ) -> Callable[[DynamicRouteHandler], Callable[[], str]]:
+    def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
         """
-        Decorator to register a function to call when a dynamically generated,
-        session-specific, route is requested.
+        Register a function to call when a dynamically generated, session-specific,
+        route is requested.
 
         Provides a convenient way to serve-up session-dependent values for other
         clients/applications to consume.
@@ -691,28 +689,20 @@ class Session:
         ----------
         name
             A name for the route (used to determine part of the URL path).
+        handler
+            The function to call when a request is made to the route. This function
+            should take a single argument (a :class:`starlette.requests.Request` object)
+            and return a :class:`starlette.types.ASGIApp` object.
+
 
         Returns
         -------
-            A decorator that can be used to register a route handler.
+            The URL path for the route.
         """
 
-        def wrapper(fn: DynamicRouteHandler) -> Callable[[], str]:
-
-            if name is None:
-                effective_name = fn.__name__
-            else:
-                effective_name = name
-
-            self._dynamic_routes.update({effective_name: fn})
-
-            @functools.wraps(fn)
-            def _():
-                return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(effective_name)}?nonce={urllib.parse.quote(_utils.rand_hex(8))}"
-
-            return _
-
-        return wrapper
+        self._dynamic_routes.update({name: handler})
+        nonce = _utils.rand_hex(8)
+        return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(name)}?nonce={urllib.parse.quote(nonce)}"
 
     def _process_ui(self, ui: TagChildArg) -> RenderedDeps:
 
