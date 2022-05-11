@@ -41,7 +41,7 @@ def input_selectize(
     label: TagChildArg,
     choices: SelectChoicesArg,
     *,
-    selected: Optional[str] = None,
+    selected: Optional[Union[str, List[str]]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
@@ -101,7 +101,7 @@ def input_select(
     label: TagChildArg,
     choices: SelectChoicesArg,
     *,
-    selected: Optional[str] = None,
+    selected: Optional[Union[str, List[str]]] = None,
     multiple: bool = False,
     selectize: bool = False,
     width: Optional[str] = None,
@@ -192,8 +192,14 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
         return x
 
 
-def _render_choices(x: _SelectChoices, selected: Optional[str] = None) -> List[Tag]:
-    result: List[Tag] = []
+def _render_choices(
+    x: _SelectChoices, selected: Optional[Union[str, List[str]]] = None
+) -> TagList:
+    result = TagList()
+
+    if x is None:
+        return result
+
     for (k, v) in x.items():
         if isinstance(v, dict):
             result.append(
@@ -202,7 +208,12 @@ def _render_choices(x: _SelectChoices, selected: Optional[str] = None) -> List[T
                 )
             )
         else:
-            result.append(tags.option(v, value=k, selected=(k == selected)))
+            is_selected = False
+            if isinstance(selected, list):
+                is_selected = k in selected
+            else:
+                is_selected = k == selected
+            result.append(tags.option(v, value=k, selected=is_selected))
 
     return result
 
@@ -218,6 +229,9 @@ def _render_choices(x: _SelectChoices, selected: Optional[str] = None) -> List[T
 #     "Group B": {"Choice B1": "b1", "Choice B2": "b2"},
 # }
 def _find_first_option(x: _SelectChoices) -> Optional[str]:
+    if x is None:
+        return None
+
     for (k, v) in x.items():
         if isinstance(v, dict):
             result = _find_first_option(cast(_SelectChoices, v))
