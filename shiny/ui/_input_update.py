@@ -590,12 +590,10 @@ def update_selectize(
         selected_values = [selected]
 
     # Find any selected choices now so we have them ready to send to the client
-    selected_choices: List[FlatSelectChoice] = []
-    if selected_values is not None:
-        all_values = [x["value"] for x in flat_choices]
-        for x in selected_values:
-            if x in all_values:
-                selected_choices.append(flat_choices[all_values.index(x)])
+    if selected_values is None:
+        selected_choices = []
+    else:
+        selected_choices = [x for x in flat_choices if x["value"] in selected_values]
 
     @session.dynamic_route()
     def selectize_choices_json(request: Request) -> Response:
@@ -649,16 +647,9 @@ def update_selectize(
             if (len(filtered_choices) + len(selected_choices)) > max_options:
                 break
 
-            # If this is a selected value, *don't* add it here (it will be added after
-            # this loop)
-            if selected_values:
-                is_selected = False
-                for y in selected_values:
-                    is_selected = choice["value"] == y
-                    if is_selected:
-                        break
-                if is_selected:
-                    continue
+            # If this is a selected value, *don't* add it here (add after this loop)
+            if selected_values and choice["value"] in selected_values:
+                continue
 
             match = False
             for f in search_fields:
