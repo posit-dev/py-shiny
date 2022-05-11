@@ -3,6 +3,7 @@ import os
 import re
 from ipaddress import ip_address
 from subprocess import run
+import typing
 from typing import Dict
 from urllib.parse import urlparse
 
@@ -94,5 +95,5 @@ class ProxyUrlFilter:
         record.args = ()
         return 1
 
-    def url_replacement(self, match: re.Match[str]) -> str:
+    def url_replacement(self, match: typing.Match[str]) -> str:
         return get_proxy_url(match.group(0))
