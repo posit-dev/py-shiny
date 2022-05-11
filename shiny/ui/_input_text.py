@@ -1,6 +1,12 @@
 __all__ = ("input_text", "input_text_area")
 
-from typing import Optional, Union
+import sys
+from typing import Optional
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
 
 from htmltools import Tag, TagChildArg, css, div, tags
 
@@ -16,8 +22,8 @@ def input_text(
     *,
     width: Optional[str] = None,
     placeholder: Optional[str] = None,
-    autocomplete: Optional[bool] = False,
-    spellcheck: Optional[bool] = None,
+    autocomplete: Optional[str] = "off",
+    spellcheck: Optional[Literal["true", "false"]] = None,
 ) -> Tag:
     """
     Create an input control for entry of text values
@@ -35,11 +41,14 @@ def input_text(
     placeholder
         A hint as to what can be entered into the control.
     autocomplete
-        Whether to enable browser autocompletion of the text input (default is False).
-        If None, then it will use the browser's default behavior.
+        Whether to enable browser autocompletion of the text input (default is "off").
+        If None, then it will use the browser's default behavior. Other possible values
+        include "on", "name", "username", and "email". See
+        developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete for more.
     spellcheck
         Whether to enable browser spell checking of the text input (default is None). If
-        None, then it will use the browser's default behavior.
+        None, then it will use the browser's default behavior. Possible values are
+        "true" and "false".
 
     Returns
     -------
@@ -57,22 +66,6 @@ def input_text(
     ~shiny.ui.input_text_area
     """
 
-    autocomplete_value: Union[str, None]
-    if autocomplete is True:
-        autocomplete_value = "on"
-    elif autocomplete is False:
-        autocomplete_value = "off"
-    else:
-        autocomplete_value = None
-
-    spellcheck_value: Union[str, None]
-    if spellcheck is True:
-        spellcheck_value = "true"
-    elif spellcheck is False:
-        spellcheck_value = "false"
-    else:
-        spellcheck_value = None
-
     return div(
         shiny_input_label(id, label),
         tags.input(
@@ -81,8 +74,8 @@ def input_text(
             class_="form-control",
             value=value,
             placeholder=placeholder,
-            autocomplete=autocomplete_value,
-            spellcheck=spellcheck_value,
+            autocomplete=autocomplete,
+            spellcheck=spellcheck,
         ),
         class_="form-group shiny-input-container",
         style=css(width=width),
@@ -101,7 +94,7 @@ def input_text_area(
     rows: Optional[int] = None,
     placeholder: Optional[str] = None,
     resize: Optional[str] = None,
-    spellcheck: Optional[bool] = None,
+    spellcheck: Optional[Literal["true", "false"]] = None,
 ) -> Tag:
     """
     Create a textarea input control for entry of unstructured text values.
@@ -134,7 +127,8 @@ def input_text_area(
         browser's default setting for resizing textareas.
     spellcheck
         Whether to enable browser spell checking of the text input (default is None). If
-        None, then it will use the browser's default behavior.
+        None, then it will use the browser's default behavior. Possible values are
+        "true" and "false".
 
     Returns
     -------
@@ -155,14 +149,6 @@ def input_text_area(
     if resize and resize not in ["none", "both", "horizontal", "vertical"]:
         raise ValueError("Invalid resize value: " + str(resize))
 
-    spellcheck_value: Union[str, None]
-    if spellcheck is True:
-        spellcheck_value = "true"
-    elif spellcheck is False:
-        spellcheck_value = "false"
-    else:
-        spellcheck_value = None
-
     area = tags.textarea(
         value,
         id=id,
@@ -171,7 +157,7 @@ def input_text_area(
         placeholder=placeholder,
         rows=rows,
         cols=cols,
-        spellcheck=spellcheck_value,
+        spellcheck=spellcheck,
     )
 
     return div(
