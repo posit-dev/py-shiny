@@ -1,4 +1,5 @@
 import asyncio
+import threading
 import typing
 
 T = typing.TypeVar("T")
@@ -52,3 +53,16 @@ async def run_elsewhere(
 
     await evt.wait()
     return future.result()
+
+
+def create_worker_thread(name: str, daemon: bool = True) -> asyncio.AbstractEventLoop:
+    loop = asyncio.new_event_loop()
+
+    def _worker_thread():
+        nonlocal loop
+        asyncio.set_event_loop(loop)
+        loop.run_forever()
+
+    threading.Thread(target=_worker_thread, name=name, daemon=daemon).start()
+
+    return loop

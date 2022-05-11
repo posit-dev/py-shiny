@@ -1,6 +1,5 @@
 __all__ = ("Session", "Inputs", "Outputs")
 
-import asyncio
 import functools
 import os
 from pathlib import Path
@@ -204,10 +203,7 @@ class Session:
         await self._conn.close(code, None)
         self._run_session_end_tasks()
 
-    def run(self) -> None:
-        asyncio.run(self._run())
-
-    async def _run(self) -> None:
+    async def run(self) -> None:
         self._send_message(
             {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
         )

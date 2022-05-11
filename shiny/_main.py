@@ -194,6 +194,9 @@ def run_app(
     if app_dir:
         app_dir = os.path.realpath(app_dir)
 
+    # Use agg backend for matplotlib by default
+    os.environ["MPLBACKEND"] = os.getenv("MPLBACKEND", "agg")
+
     log_config: Dict[str, Any] = copy.deepcopy(
         cast(
             Dict[str, Any],

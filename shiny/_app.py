@@ -1,7 +1,6 @@
 import copy
 import contextlib
 import os
-import threading
 from typing import Any, List, Union, Dict, Callable, cast, Optional
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
@@ -15,8 +14,9 @@ from starlette.responses import Response, HTMLResponse, JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from ._autoreload import autoreload_url, InjectAutoreloadMiddleware
-from ._asyncutils import ThreadsafeAsyncEvent
+from ._asyncutils import create_worker_thread, run_elsewhere
 from ._connection import Connection, StarletteConnection
+from ._shinyenv import is_pyodide
 from .html_dependencies import require_deps, jquery_deps, shiny_deps
 from .http_staticfiles import StaticFiles
 from .reactive import on_flushed
@@ -116,6 +116,9 @@ class App:
         starlette_app = self.init_starlette_app()
 
         self.starlette_app = starlette_app
+
+        if not is_pyodide:
+            self._worker_loop = create_worker_thread("shiny-worker")
 
     def init_starlette_app(self):
         routes: list[starlette.routing.BaseRoute] = [
@@ -261,17 +264,10 @@ class App:
         conn = StarletteConnection(ws)
         session = self._create_session(conn)
 
-        # TODO: Don't spawn one thread per session
-        evt = ThreadsafeAsyncEvent()
-
-        def _run():
-            try:
-                session.run()
-            finally:
-                evt.set()
-
-        threading.Thread(target=session.run).start()
-        await evt.wait()
+        if is_pyodide:
+            await session.run()
+        else:
+            await run_elsewhere(session.run(), self._worker_loop)
 
     async def _on_session_request_cb(self, request: Request) -> ASGIApp:
         """
