@@ -41,14 +41,15 @@ def input_text(
     placeholder
         A hint as to what can be entered into the control.
     autocomplete
-        Whether to enable browser autocompletion of the text input (default is "off").
+        Whether to enable browser autocompletion of the text input (default is None).
         If None, then it will use the browser's default behavior. Other possible values
-        include "on", "name", "username", and "email". See
-        developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete for more.
+        include "on", "off", "name", "username", and "email". See
+        https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete for
+        more.
     spellcheck
         Whether to enable browser spell checking of the text input (default is None). If
         None, then it will use the browser's default behavior. Possible values are
-        "true" and "false".
+        "true", "false", and None.
 
     Returns
     -------
@@ -94,6 +95,7 @@ def input_text_area(
     rows: Optional[int] = None,
     placeholder: Optional[str] = None,
     resize: Optional[str] = None,
+    autocomplete: Optional[str] = None,
     spellcheck: Optional[Literal["true", "false"]] = None,
 ) -> Tag:
     """
@@ -125,10 +127,16 @@ def input_text_area(
         Which directions the textarea box can be resized. Can be one of "both", "none",
         "vertical", and "horizontal". The default, ``None``, will use the client
         browser's default setting for resizing textareas.
+    autocomplete
+        Whether to enable browser autocompletion of the text input (default is "off").
+        If None, then it will use the browser's default behavior. Other possible values
+        include "on", "name", "username", and "email". See
+        https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete for
+        more.
     spellcheck
         Whether to enable browser spell checking of the text input (default is None). If
         None, then it will use the browser's default behavior. Possible values are
-        "true" and "false".
+        "true", "false", and None.
 
     Returns
     -------
@@ -157,6 +165,7 @@ def input_text_area(
         placeholder=placeholder,
         rows=rows,
         cols=cols,
+        autocomplete=autocomplete,
         spellcheck=spellcheck,
     )
 
