@@ -196,7 +196,9 @@ class App:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         await self.starlette_app(scope, receive, send)
 
-    async def call_pyodide(self, scope: Scope, receive: Receive, send: Send) -> None:
+    async def call_pyodide(
+        self, scope: Scope, receive: Receive, send: Callable[[Message], None]
+    ) -> None:
         """
         Communicate with pyodide.
 
@@ -228,7 +230,7 @@ class App:
             return cast(Message, cast(Any, event).to_py())
 
         async def snd(event: Message):
-            await send(event)
+            send(event)
 
         await self(scope, rcv, snd)
 
