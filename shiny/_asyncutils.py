@@ -1,6 +1,12 @@
 import asyncio
+import sys
 import threading
 import typing
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
 
 T = typing.TypeVar("T")
 
@@ -24,7 +30,7 @@ class ThreadsafeAsyncEvent:
 
         asyncio.run_coroutine_threadsafe(_set(), self._loop)
 
-    async def wait(self) -> typing.Literal[True]:
+    async def wait(self) -> Literal[True]:
         self._check_loop("wait")
         return await self._event.wait()
 
