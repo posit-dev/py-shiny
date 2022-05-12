@@ -32,7 +32,6 @@ from htmltools import (
     h2,
     css,
     span,
-    HTML,
 )
 
 from .._docstring import add_example
@@ -449,7 +448,13 @@ def panel_absolute(
     divTag.add_class("draggable")
     deps = jqui_deps()
     deps.stylesheet = []
-    return TagList(deps, divTag, tags.script(HTML('$(".draggable").draggable();')))
+    return TagList(
+        deps,
+        divTag,
+        # N.B. when jquery-ui define()s itself, it mutates the global jQuery object
+        # so even though we may be require()ing it, we still need to use the global $.
+        tags.script('require(["jquery-ui"], () => $(".draggable").draggable() )'),
+    )
 
 
 def help_text(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
