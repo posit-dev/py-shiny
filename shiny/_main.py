@@ -13,6 +13,7 @@ import uvicorn.config
 
 import shiny
 from . import _autoreload
+from . import _hostenv
 
 
 @click.group()  # pyright: ignore[reportUnknownMemberType]
@@ -217,15 +218,9 @@ def run_app(
                 "Autoreload port is already being used by the app; disabling autoreload\n"
             )
         else:
-            setup_hot_reload(autoreload_port_num)
+            setup_hot_reload(log_config, autoreload_port_num)
 
-            # The only way I've found to get notified when uvicorn decides to reload, is by
-            # inserting a custom log handler.
-            log_config["handlers"]["shiny_hot_reload"] = {
-                "class": "shiny._autoreload.HotReloadHandler",
-                "level": "INFO",
-            }
-            log_config["loggers"]["uvicorn.error"]["handlers"] = ["shiny_hot_reload"]
+    maybe_setup_rsw_proxying(log_config)
 
     uvicorn.run(
         app,  # type: ignore
@@ -242,8 +237,28 @@ def run_app(
     )
 
 
-def setup_hot_reload(port: int) -> None:
+def setup_hot_reload(log_config: Dict[str, Any], port: int) -> None:
+    # The only way I've found to get notified when uvicorn decides to reload, is by
+    # inserting a custom log handler.
+    log_config["handlers"]["shiny_hot_reload"] = {
+        "class": "shiny._autoreload.HotReloadHandler",
+        "level": "INFO",
+    }
+    log_config["loggers"]["uvicorn.error"]["handlers"] = ["shiny_hot_reload"]
+
     _autoreload.start_server(port)
+
+def maybe_setup_rsw_proxying(log_config: Dict[str, Any]) -> None:
+    # Replace localhost URLs emitted to the log, with proxied URLs
+    if _hostenv.is_workbench():
+        if "filters" not in log_config:
+            log_config["filters"] = {}
+        log_config["filters"]["rsw_proxy"] = {
+            "()": "shiny._hostenv.ProxyUrlFilter"
+        }
+        if "filters" not in log_config["handlers"]["default"]:
+            log_config["handlers"]["default"]["filters"] = []
+        log_config["handlers"]["default"]["filters"].append("rsw_proxy")
 
 
 def is_file(app: str) -> bool:
