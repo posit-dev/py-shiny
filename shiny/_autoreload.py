@@ -68,8 +68,6 @@ def reload_end():
         return None
 
     url = f"ws://127.0.0.1:{port}/notify"
-    if not url:
-        return
 
     async def _() -> None:
         options = {
