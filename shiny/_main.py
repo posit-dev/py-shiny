@@ -248,14 +248,13 @@ def setup_hot_reload(log_config: Dict[str, Any], port: int) -> None:
 
     _autoreload.start_server(port)
 
+
 def maybe_setup_rsw_proxying(log_config: Dict[str, Any]) -> None:
     # Replace localhost URLs emitted to the log, with proxied URLs
     if _hostenv.is_workbench():
         if "filters" not in log_config:
             log_config["filters"] = {}
-        log_config["filters"]["rsw_proxy"] = {
-            "()": "shiny._hostenv.ProxyUrlFilter"
-        }
+        log_config["filters"]["rsw_proxy"] = {"()": "shiny._hostenv.ProxyUrlFilter"}
         if "filters" not in log_config["handlers"]["default"]:
             log_config["handlers"]["default"]["filters"] = []
         log_config["handlers"]["default"]["filters"].append("rsw_proxy")
@@ -315,3 +314,30 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
     # missing dependencies can be misreported to the user as the app module itself not
     # being found.
     return importlib.import_module(module)
+
+
+@main.command(
+    help="""Create a statically deployable distribution for a Shiny app.
+
+APPDIR is the directory containing the Shiny application.
+
+DESTDIR is the destination directory where the output files will be written to. This
+directory can be deployed as a static web site.
+
+After writing the output files, you can serve them locally with the following command:
+
+    python3 -m http.server --directory DESTDIR 8000
+"""
+)
+@click.argument("appdir", type=str)
+@click.argument("destdir", type=str)
+def static(appdir: str, destdir: str) -> None:
+    try:
+        import shinylive
+    except ImportError:
+        sys.stderr.write(
+            "Error: The 'shinylive' package must be installed to run the `shiny static` command.\n"
+        )
+        sys.exit(1)
+
+    shinylive.deploy(appdir, destdir)
