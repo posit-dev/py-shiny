@@ -345,7 +345,16 @@ After writing the output files, you can serve them locally with the following co
     help="Print debugging information when copying files.",
     show_default=True,
 )
-def static(appdir: str, destdir: str, overwrite: bool, verbose: bool) -> None:
+@click.option(
+    "--subdir",
+    type=str,
+    default=None,
+    help="Subdir in which to put the app.",
+    show_default=True,
+)
+def static(
+    appdir: str, destdir: str, overwrite: bool, subdir: str, verbose: bool
+) -> None:
     try:
         import shinylive
     except ImportError:
@@ -354,4 +363,6 @@ def static(appdir: str, destdir: str, overwrite: bool, verbose: bool) -> None:
         )
         sys.exit(1)
 
-    shinylive.deploy(appdir, destdir, overwrite=overwrite, verbose=verbose)
+    shinylive.deploy(
+        appdir, destdir, overwrite=overwrite, subdir=subdir, verbose=verbose
+    )
