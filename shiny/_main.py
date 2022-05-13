@@ -331,7 +331,21 @@ After writing the output files, you can serve them locally with the following co
 )
 @click.argument("appdir", type=str)
 @click.argument("destdir", type=str)
-def static(appdir: str, destdir: str) -> None:
+@click.option(
+    "--overwrite",
+    is_flag=True,
+    default=False,
+    help="Overwrite existing files in the destination directory.",
+    show_default=True,
+)
+@click.option(
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Print debugging information when copying files.",
+    show_default=True,
+)
+def static(appdir: str, destdir: str, overwrite: bool, verbose: bool) -> None:
     try:
         import shinylive
     except ImportError:
@@ -340,4 +354,4 @@ def static(appdir: str, destdir: str) -> None:
         )
         sys.exit(1)
 
-    shinylive.deploy(appdir, destdir)
+    shinylive.deploy(appdir, destdir, overwrite=overwrite, verbose=verbose)
