@@ -10,6 +10,9 @@ def bootstrap_deps() -> List[HTMLDependency]:
         name="bootstrap",
         version="5.0.1",
         source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
+        # N.B. data-requiremodule prevents an anonymous require.js define() error from
+        # happening when the script executes
+        # https://github.com/rstudio/py-shiny/pull/160
         script={"src": "bootstrap.bundle.min.js", "data-requiremodule": "bootstrap"},
         stylesheet={"href": "bootstrap.min.css"},
     )
@@ -69,12 +72,12 @@ def jqui_deps() -> HTMLDependency:
         name="jquery-ui",
         version="1.12.1",
         source={"package": "shiny", "subdir": "www/shared/jqueryui/"},
-        script={"src": "jquery-ui.min.js", "data-requiremodule": "jquery-ui"},
+        # N.B. data-requiremodule prevents an anonymous require.js define() error from
+        # happening when the script executes
+        # https://github.com/rstudio/py-shiny/pull/160
+        script={
+            "src": "jquery-ui.min.js",
+            "data-requiremodule": "jquery-ui",
+        },
         stylesheet={"href": "jquery-ui.min.css"},
-        all_files=True,
-        head="""
-        <script>
-        if (window.require) require.config({paths: {"jquery-ui": "lib/jquery-ui-1.12.1/jquery-ui.min"}});
-        </script>
-        """,
     )
