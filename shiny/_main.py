@@ -14,6 +14,7 @@ import uvicorn.config
 import shiny
 from . import _autoreload
 from . import _hostenv
+from ._static import deploy_static
 
 
 @click.group()  # pyright: ignore[reportUnknownMemberType]
@@ -355,14 +356,5 @@ After writing the output files, you can serve them locally with the following co
 def static(
     appdir: str, destdir: str, overwrite: bool, subdir: str, verbose: bool
 ) -> None:
-    try:
-        import shinylive  # pyright: reportMissingImports=false,reportUnknownVariableType=false
-    except ImportError:
-        sys.stderr.write(
-            "Error: The 'shinylive' package must be installed to run the `shiny static` command.\n"
-        )
-        sys.exit(1)
 
-    shinylive.deploy(  # pyright: reportUnknownMemberType=false
-        appdir, destdir, overwrite=overwrite, subdir=subdir, verbose=verbose
-    )
+    deploy_static(appdir, destdir, overwrite=overwrite, subdir=subdir, verbose=verbose)
