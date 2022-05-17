@@ -108,6 +108,7 @@ Programmatically update input values
     :toctree: reference/
 
     ui.update_select
+    ui.update_selectize
     ui.update_slider
     ui.update_date
     ui.update_date_range
