@@ -42,7 +42,7 @@ def deploy_static(
 
     shinylive_bundle_dir = _ensure_shinylive_local(version=version)
 
-    verbose_print(f"Copying {shinylive_bundle_dir} to {destdir}")
+    print(f"Copying {shinylive_bundle_dir} to {destdir}")
     if not os.path.exists(destdir):
         os.makedirs(destdir)
     shutil.copytree(
@@ -116,11 +116,11 @@ def deploy_static(
 
     app_json_output_file = os.path.join(app_destdir, "app.json")
 
-    verbose_print("Writing to " + app_json_output_file)
+    print("Writing to " + app_json_output_file)
     json.dump(app_files, open(app_json_output_file, "w"))
 
-    verbose_print(
-        f"Run the following to serve the app:\n  python3 -m http.server --directory {app_destdir}"
+    print(
+        f"\nRun the following to serve the app:\n  python3 -m http.server --directory {app_destdir}"
     )
 
 
@@ -181,7 +181,6 @@ def _ensure_shinylive_local(
     destdir: Optional[str] = None,
     version: str = _SHINYLIVE_DEFAULT_VERSION,
     url: str = _SHINYLIVE_DOWNLOAD_URL,
-    verbose_print: Callable[..., None] = lambda x: None,
 ) -> str:
     """Ensure that there is a local copy of shinylive."""
 
@@ -189,10 +188,12 @@ def _ensure_shinylive_local(
         destdir = _shinylive_dir()
 
     if not os.path.exists(destdir):
+        print("Creating directory " + destdir)
         os.makedirs(destdir)
 
     shinylive_bundle_dir = os.path.join(destdir, f"shinylive-{version}")
     if not os.path.exists(shinylive_bundle_dir):
+        print(f"{shinylive_bundle_dir} does not exist.")
         _download_shinylive(url=url, version=version, destdir=destdir)
 
     return shinylive_bundle_dir
@@ -208,7 +209,6 @@ def _download_shinylive(
     destdir: Optional[str] = None,
     version: str = _SHINYLIVE_DEFAULT_VERSION,
     url: str = _SHINYLIVE_DOWNLOAD_URL,
-    verbose_print: Callable[..., None] = lambda x: None,
 ) -> None:
     import urllib.request
     import tarfile
@@ -220,9 +220,9 @@ def _download_shinylive(
     with tempfile.NamedTemporaryFile() as tmp:
 
         bundle_url = f"{url}/shinylive-{version}.tar.gz"
-        verbose_print(f"Downloading shinylive: {bundle_url}...")
+        print(f"Downloading {bundle_url}...")
         urllib.request.urlretrieve(bundle_url, tmp.name)
 
-        verbose_print(f"Unzipping to {destdir}")
+        print(f"Unzipping to {destdir}")
         with tarfile.open(tmp.name) as tar:
             tar.extractall(destdir)
