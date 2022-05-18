@@ -3942,18 +3942,19 @@
     }
     return obj;
   }
+  var debouncedBind = debounce(10, function() {
+    Shiny.bindAll(document.documentElement);
+  });
   var BindingRegistry = /* @__PURE__ */ function() {
     function BindingRegistry2() {
       _classCallCheck4(this, BindingRegistry2);
       _defineProperty4(this, "name", void 0);
       _defineProperty4(this, "bindings", []);
       _defineProperty4(this, "bindingNames", {});
-      _defineProperty4(this, "bindAfterRegister", true);
     }
     _createClass4(BindingRegistry2, [{
       key: "register",
       value: function register2(binding, bindingName) {
-        var _this = this;
         var priority = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : 0;
         var bindingObj = {
           binding: binding,
@@ -3964,13 +3965,8 @@
           this.bindingNames[bindingName] = bindingObj;
           binding.name = bindingName;
         }
-        if (Shiny && Shiny.bindAll) {
-          var bindAll2 = debounce(10, function() {
-            if (_this.bindAfterRegister) {
-              Shiny.bindAll(document.documentElement);
-            }
-          });
-          bindAll2();
+        if (Shiny && Shiny.bindAll && !window["Shiny"]._renderingHtml) {
+          debouncedBind();
         }
       }
     }, {
@@ -9144,8 +9140,13 @@
   }
   function renderHtml2(html, el, dependencies) {
     var where = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : "replace";
-    renderDependencies(dependencies);
-    return renderHtml(html, el, where);
+    window["Shiny"]._renderingHtml = true;
+    try {
+      renderDependencies(dependencies);
+      return renderHtml(html, el, where);
+    } finally {
+      window["Shiny"]._renderingHtml = false;
+    }
   }
   var htmlDependencies = {};
   function registerDependency(name, version) {
