@@ -75,6 +75,12 @@ jobs:
         run: |
           make check
 
+      - name: Build API docs
+        env:
+          SHINYLIVE_SRC: ""
+        run: |
+          cd docs && make html
+
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
