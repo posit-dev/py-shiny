@@ -40,7 +40,7 @@ def input_action_button(
     ------
     .. admonition:: Server value
 
-    An integer representing the number of clicks.
+        An integer representing the number of clicks.
 
     See Also
     -------
