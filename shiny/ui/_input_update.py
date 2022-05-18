@@ -512,8 +512,8 @@ class FlatSelectChoice(TypedDict):
     optgroup: NotRequired[str]
 
 
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_selectize(
     id: str,
     *,
