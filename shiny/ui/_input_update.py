@@ -112,8 +112,8 @@ update_action_link.__doc__ = update_action_button.__doc__
 # -----------------------------------------------------------------------------
 # input_check_radio.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_checkbox(
     id: str,
     *,
@@ -150,8 +150,8 @@ def update_checkbox(
     session.send_input_message(id, drop_none(msg))
 
 
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_checkbox_group(
     id: str,
     *,
@@ -202,8 +202,8 @@ def update_checkbox_group(
     )
 
 
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_radio_buttons(
     id: str,
     *,
@@ -278,8 +278,8 @@ def _update_choice_input(
 # -----------------------------------------------------------------------------
 # input_date.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_date(
     id: str,
     *,
@@ -328,8 +328,8 @@ def update_date(
     session.send_input_message(id, drop_none(msg))
 
 
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_date_range(
     id: str,
     *,
@@ -388,8 +388,8 @@ def update_date_range(
 # -----------------------------------------------------------------------------
 # input_numeric.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_numeric(
     id: str,
     *,
@@ -443,8 +443,8 @@ def update_numeric(
 # -----------------------------------------------------------------------------
 # input_select.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_select(
     id: str,
     *,
@@ -679,8 +679,8 @@ def update_selectize(
 # -----------------------------------------------------------------------------
 # input_slider.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_slider(
     id: str,
     *,
@@ -769,8 +769,8 @@ def update_slider(
 # -----------------------------------------------------------------------------
 # input_text.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_text(
     id: str,
     *,
@@ -819,8 +819,8 @@ update_text_area.__doc__ = update_text.__doc__
 # -----------------------------------------------------------------------------
 
 # TODO: we should probably provide a nav_select() alias for this as well
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_navs(
     id: str, selected: Optional[str] = None, session: Optional[Session] = None
 ) -> None:
