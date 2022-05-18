@@ -9,6 +9,8 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import TypedDict
 
+_SHINYLIVE_DOWNLOAD_URL = "https://pyshiny.netlify.app/shinylive"
+_SHINYLIVE_DEFAULT_VERSION = "0.0.1"
 
 # This is the same as the FileContent type in TypeScript.
 class FileContent(TypedDict):
@@ -22,6 +24,7 @@ def deploy_static(
     *,
     overwrite: bool = False,
     subdir: Optional[str] = None,
+    version: str = _SHINYLIVE_DEFAULT_VERSION,
     verbose: bool = False,
 ) -> None:
     """
@@ -37,11 +40,13 @@ def deploy_static(
     if os.path.isabs(subdir):
         raise ValueError("subdir must be a relative path")
 
-    shinylive_source_dir = os.path.join(os.path.dirname(__file__), "js")
-    verbose_print(f"Copying {shinylive_source_dir} to {destdir}")
-    os.makedirs(destdir, exist_ok=True)
+    shinylive_bundle_dir = _ensure_shinylive_local(version=version)
+
+    verbose_print(f"Copying {shinylive_bundle_dir} to {destdir}")
+    if not os.path.exists(destdir):
+        os.makedirs(destdir)
     shutil.copytree(
-        shinylive_source_dir,
+        shinylive_bundle_dir,
         destdir,
         copy_function=_copy_fn(overwrite, verbose_print=verbose_print),
         dirs_exist_ok=True,
@@ -81,7 +86,7 @@ def deploy_static(
             )
 
     # Write the index.html, editor/index.html, and app.json in the destdir.
-    html_source_dir = os.path.join(os.path.dirname(__file__), "html")
+    html_source_dir = os.path.join(shinylive_bundle_dir, "shinylive/shiny_static")
     app_destdir = os.path.join(destdir, subdir)
 
     # For a subdir like a/b/c, this will be ../../../
@@ -89,7 +94,9 @@ def deploy_static(
     if subdir_inverse != "":
         subdir_inverse += "/"
 
-    os.makedirs(app_destdir, exist_ok=True)
+    if not os.path.exists(app_destdir):
+        os.makedirs(app_destdir)
+
     _copy_file_and_substitute(
         src=os.path.join(html_source_dir, "index.html"),
         dest=os.path.join(app_destdir, "index.html"),
@@ -97,10 +104,12 @@ def deploy_static(
         replace_str=subdir_inverse,
     )
 
-    os.makedirs(os.path.join(app_destdir, "editor"), exist_ok=True)
+    editor_destdir = os.path.join(app_destdir, "edit")
+    if not os.path.exists(editor_destdir):
+        os.makedirs(editor_destdir)
     _copy_file_and_substitute(
-        src=os.path.join(html_source_dir, "editor", "index.html"),
-        dest=os.path.join(app_destdir, "editor", "index.html"),
+        src=os.path.join(html_source_dir, "edit", "index.html"),
+        dest=os.path.join(editor_destdir, "index.html"),
         search_str="{{REL_PATH}}",
         replace_str=subdir_inverse,
     )
@@ -109,6 +118,10 @@ def deploy_static(
 
     verbose_print("Writing to " + app_json_output_file)
     json.dump(app_files, open(app_json_output_file, "w"))
+
+    verbose_print(
+        f"Run the following to serve the app:\n  python3 -m http.server --directory {app_destdir}"
+    )
 
 
 def _copy_fn(
@@ -162,3 +175,54 @@ def _copy_file_and_substitute(
         in_content = in_content.replace(search_str, replace_str)
         with open(dest, "w") as fout:
             fout.write(in_content)
+
+
+def _ensure_shinylive_local(
+    destdir: Optional[str] = None,
+    version: str = _SHINYLIVE_DEFAULT_VERSION,
+    url: str = _SHINYLIVE_DOWNLOAD_URL,
+    verbose_print: Callable[..., None] = lambda x: None,
+) -> str:
+    """Ensure that there is a local copy of shinylive."""
+
+    if destdir is None:
+        destdir = _shinylive_dir()
+
+    if not os.path.exists(destdir):
+        os.makedirs(destdir)
+
+    shinylive_bundle_dir = os.path.join(destdir, f"shinylive-{version}")
+    if not os.path.exists(shinylive_bundle_dir):
+        _download_shinylive(url=url, version=version, destdir=destdir)
+
+    return shinylive_bundle_dir
+
+
+def _shinylive_dir() -> str:
+    import appdirs
+
+    return os.path.join(appdirs.user_cache_dir("shiny"), "shinylive")
+
+
+def _download_shinylive(
+    destdir: Optional[str] = None,
+    version: str = _SHINYLIVE_DEFAULT_VERSION,
+    url: str = _SHINYLIVE_DOWNLOAD_URL,
+    verbose_print: Callable[..., None] = lambda x: None,
+) -> None:
+    import urllib.request
+    import tarfile
+    import tempfile
+
+    if destdir is None:
+        destdir = _shinylive_dir()
+
+    with tempfile.NamedTemporaryFile() as tmp:
+
+        bundle_url = f"{url}/shinylive-{version}.tar.gz"
+        verbose_print(f"Downloading shinylive: {bundle_url}...")
+        urllib.request.urlretrieve(bundle_url, tmp.name)
+
+        verbose_print(f"Unzipping to {destdir}")
+        with tarfile.open(tmp.name) as tar:
+            tar.extractall(destdir)
