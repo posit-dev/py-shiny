@@ -120,7 +120,7 @@ def deploy_static(
     json.dump(app_files, open(app_json_output_file, "w"))
 
     print(
-        f"\nRun the following to serve the app:\n  python3 -m http.server --directory {app_destdir}"
+        f"\nRun the following to serve the app:\n  python3 -m http.server --directory {destdir}"
     )
 
 
