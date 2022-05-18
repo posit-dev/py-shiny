@@ -39,6 +39,7 @@ def input_password(
     Notes
     ------
     .. admonition:: Server value
+
         A string of the password input. The default value is unless value is provided.
 
     See Also

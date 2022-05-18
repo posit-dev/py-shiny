@@ -76,8 +76,8 @@ def input_selectize(
     ------
     .. admonition:: Server value
 
-    A list of strings, usually of length 1, with the value of the selected items. When
-    ``multiple=True`` and nothing is selected, this value will be ``None``.
+        A list of strings, usually of length 1, with the value of the selected items. When
+        ``multiple=True`` and nothing is selected, this value will be ``None``.
 
     See Also
     -------
@@ -144,8 +144,8 @@ def input_select(
     ------
     .. admonition:: Server value
 
-    A list of strings, usually of length 1, with the value of the selected items. When
-    ``multiple=True`` and nothing is selected, this value will be ``None``.
+        A list of strings, usually of length 1, with the value of the selected items. When
+        ``multiple=True`` and nothing is selected, this value will be ``None``.
 
     See Also
     -------
