@@ -21,6 +21,10 @@ from htmltools import (
     TagChildArg,
 )
 
+# Tagifiable isn't used directly in this file, but it seems to necessary to import
+# it somewhere for Sphinx to work cleanly.
+from htmltools import Tagifiable  # pyright: ignore[reportUnusedImport] # noqa: F401
+
 from .._docstring import add_example
 from ._html_dependencies import bootstrap_deps
 from ._navs import navset_bar
