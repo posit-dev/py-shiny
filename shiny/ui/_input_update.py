@@ -66,8 +66,8 @@ _note = """
 # -----------------------------------------------------------------------------
 # input_action_button.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_action_button(
     id: str,
     *,
