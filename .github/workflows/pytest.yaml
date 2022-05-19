@@ -68,29 +68,31 @@ jobs:
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
 
       - name: Install
+        id: install
         run: |
           make install
 
       - name: Run unit tests
+        if: steps.install.outcome == "success"
         run: |
           pwd
           cd tests
           pytest
 
       - name: Type check with pyright
-        if: ${{ success() || failure() }}
+        if: steps.install.outcome == "success"
         run: |
           make check
 
       - name: Build API docs
-        if: ${{ success() || failure() }}
+        if: steps.install.outcome == "success"
         env:
           SHINYLIVE_SRC: ""
         run: |
           cd docs && make html
 
       - name: Lint with flake8
-        if: ${{ success() || failure() }}
+        if: steps.install.outcome == "success"
         run: |
           # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
