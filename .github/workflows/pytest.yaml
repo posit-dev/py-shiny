@@ -72,17 +72,17 @@ jobs:
         run: |
           make install
 
-      - name: Type check with pyright
-        if: steps.install.outcome == 'success'
-        run: |
-          make check
-
       - name: Run unit tests
-        if: steps.install.outcome == 'success'
+        if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           pwd
           cd tests
           pytest
+
+      - name: Type check with pyright
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          make check
 
       - name: Build API docs
         if: steps.install.outcome == 'success' && (success() || failure())
@@ -92,7 +92,7 @@ jobs:
           cd docs && make html
 
       - name: Lint with flake8
-        if: steps.install.outcome == 'success'
+        if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
