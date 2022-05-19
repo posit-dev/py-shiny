@@ -10,10 +10,7 @@ def bootstrap_deps() -> List[HTMLDependency]:
         name="bootstrap",
         version="5.0.1",
         source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
-        # N.B. data-requiremodule prevents an anonymous require.js define() error from
-        # happening when the script executes
-        # https://github.com/rstudio/py-shiny/pull/160
-        script={"src": "bootstrap.bundle.min.js", "data-requiremodule": "bootstrap"},
+        script={"src": "bootstrap.bundle.min.js"},
         stylesheet={"href": "bootstrap.min.css"},
     )
     deps = [jquery_deps(), dep]

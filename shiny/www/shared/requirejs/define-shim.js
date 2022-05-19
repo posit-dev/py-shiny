@@ -1,3 +1,9 @@
+// Make our globals require()-able (unfortunately a lot of legacy still depends on
+// globals but some things like panel_absolute()/jquery-ui want to require('jquery'))
+define("jquery", [], function() { return jQuery });
+define("bootstrap", [], function() { return bootstrap });
+
+
 // Since HTMLDependency()s are designed to be loaded via a <script> tag,
 // we need to avoid anonymous define() calls (which will error out in a script tag)
 // https://requirejs.org/docs/errors.html#mismatch

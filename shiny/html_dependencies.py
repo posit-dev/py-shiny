@@ -20,10 +20,14 @@ def jquery_deps() -> HTMLDependency:
     )
 
 
+# N.B. py-shiny has requirejs as a 'core' dependency since it's currently a pretty
+# fundamental dependency for any Jupyter widget project (i.e., ipyshiny). And, for
+# requirejs to work at all with our HTMLDependency() model (i.e., loading JS via
+# <script> tags), we need to shim define() to avoid anonymous module errors
 def require_deps() -> HTMLDependency:
     return HTMLDependency(
         name="requirejs",
         version="2.3.6",
         source={"package": "shiny", "subdir": "www/shared/requirejs/"},
-        script=[{"src": "require.min.js"}, {"src": "require-shims.js"}],
+        script=[{"src": "require.min.js"}, {"src": "define-shim.js"}],
     )
