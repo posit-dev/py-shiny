@@ -29,5 +29,5 @@ def require_deps() -> HTMLDependency:
         name="requirejs",
         version="2.3.6",
         source={"package": "shiny", "subdir": "www/shared/requirejs/"},
-        script=[{"src": "require.min.js"}, {"src": "define-shim.js"}],
+        script={"src": "require.min.js"},
     )

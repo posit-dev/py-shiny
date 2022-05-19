@@ -69,9 +69,9 @@ def jqui_deps() -> HTMLDependency:
         name="jquery-ui",
         version="1.12.1",
         source={"package": "shiny", "subdir": "www/shared/jqueryui/"},
-        # N.B. data-requiremodule prevents an anonymous require.js define() error from
-        # happening when the script executes
-        # https://github.com/rstudio/py-shiny/pull/160
+        # N.B. With help of our monkey-patched version of define(), this
+        # data-requiremodule prevents an anonymous define() error from happening when
+        # the script executes https://github.com/rstudio/py-shiny/pull/160
         script={
             "src": "jquery-ui.min.js",
             "data-requiremodule": "jquery-ui",
