@@ -72,8 +72,10 @@ jobs:
         run: |
           make install
 
-      - name: Dump `steps.install` context
-        run: echo '${{ toJSON(steps.install) }}'
+      - name: Type check with pyright
+        if: steps.install.outcome == 'success'
+        run: |
+          make check
 
       - name: Run unit tests
         if: steps.install.outcome == 'success'
@@ -82,14 +84,8 @@ jobs:
           cd tests
           pytest
 
-      - name: Type check with pyright
-        if: steps.install.outcome == 'success'
-        continue-on-error: true
-        run: |
-          make check
-
       - name: Build API docs
-        if: steps.install.outcome == 'success'
+        if: steps.install.outcome == 'success' && (success() || failure())
         env:
           SHINYLIVE_SRC: ""
         run: |
