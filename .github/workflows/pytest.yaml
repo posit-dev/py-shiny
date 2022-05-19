@@ -72,6 +72,9 @@ jobs:
         run: |
           make install
 
+      - name: Dump `steps.install` context
+        run: echo '${{ toJSON(steps.install) }}'
+
       - name: Run unit tests
         if: steps.install.outcome == 'success'
         run: |
@@ -81,6 +84,7 @@ jobs:
 
       - name: Type check with pyright
         if: steps.install.outcome == 'success'
+        continue-on-error: true
         run: |
           make check
 
