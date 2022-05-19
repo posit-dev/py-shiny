@@ -13,6 +13,13 @@ ex_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "examples")
 FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
 
+# This class is used to mark docstrings when @add_example() is used, so that an error
+# will be thrown if @doc_format() is used afterward. This is to avoid an error when
+# the example contains curly braces -- the @doc_format() decorator will try to evaluate
+# the code in {}.
+class DocStringWithExample(str):
+    ...
+
 
 def add_example(
     directive: Literal[
@@ -45,6 +52,8 @@ def add_example(
         # To avoid a performance hit on `import shiny`, we only add examples to the
         # docstrings if this env variable is set (as it is in docs/source/conf.py).
         if os.getenv("SHINY_ADD_EXAMPLES") != "true":
+            if func.__doc__ is not None:
+                func.__doc__ = DocStringWithExample(func.__doc__)
             return func
 
         fn_name = func.__name__
@@ -91,6 +100,7 @@ def add_example(
         )
 
         func.__doc__ += example_section
+        func.__doc__ = DocStringWithExample(func.__doc__)
         return func
 
     return _
@@ -98,6 +108,10 @@ def add_example(
 
 def doc_format(**kwargs: str) -> Callable[[F], F]:
     def _(func: F) -> F:
+        if isinstance(func.__doc__, DocStringWithExample):
+            raise ValueError(
+                f"@doc_format() must be applied before @add_example() for {func.__name__}."
+            )
         if func.__doc__:
             func.__doc__ = func.__doc__.format(**kwargs)
         return func
