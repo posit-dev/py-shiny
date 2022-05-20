@@ -49,7 +49,7 @@ from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
-from .._namespaces import namespaced_id
+from .._namespaces import namespaced_id_ns
 from ..reactive import Value, Effect, Effect_, isolate, flush
 from ..reactive._core import lock
 from ..types import SafeException, SilentCancelOutputException, SilentException
@@ -112,7 +112,14 @@ def empty_outbound_message_queues() -> OutBoundMessageQueues:
     return {"values": [], "input_messages": [], "errors": []}
 
 
-class Session:
+# Makes isinstance(x, Session) also return True when x is a SessionProxy (i.e., a module
+# session)
+class SessionMeta(type):
+    def __instancecheck__(self, __instance: Any) -> bool:
+        return isinstance(__instance, SessionProxy)
+
+
+class Session(object, metaclass=SessionMeta):
     """
     A class representing a user session.
 
@@ -141,8 +148,6 @@ class Session:
 
         self.input: Inputs = Inputs()
         self.output: Outputs = Outputs(self)
-
-        self._ns: Optional[str] = None  # Only relevant for ModuleSession
 
         self.user: Union[str, None] = None
         self.groups: Union[List[str], None] = None
@@ -475,7 +480,7 @@ class Session:
         message
             The message to send.
         """
-        msg: Dict[str, object] = {"id": namespaced_id(id, self._ns), "message": message}
+        msg: Dict[str, object] = {"id": id, "message": message}
         self._outbound_message_queues["input_messages"].append(msg)
         self._request_flush()
 
@@ -643,7 +648,7 @@ class Session:
         await self.close()
 
     # TODO: probably name should be id
-    # TODO: anything to be done here for module support?
+
     @add_example()
     def download(
         self,
@@ -729,6 +734,46 @@ class Session:
 
         return {"deps": deps, "html": res["html"]}
 
+    @staticmethod
+    def ns(id: str) -> str:
+        return id
+
+    def make_scope(self, id: str) -> "Session":
+        ns = create_ns_func(id)
+        return SessionProxy(parent=self, ns=ns)  # type: ignore
+
+
+class SessionProxy:
+    def __init__(self, parent: Session, ns: Callable[[str], str]) -> None:
+        self._parent = parent
+        self.ns = ns
+        self.input = Inputs(values=parent.input._map, ns=ns)
+        self.output = Outputs(
+            session=cast(Session, self),
+            effects=self.output._effects,
+            suspend_when_hidden=self.output._suspend_when_hidden,
+            ns=ns,
+        )
+
+    def __getattr__(self, attr: str) -> Any:
+        return getattr(self._parent, attr)
+
+    def send_input_message(self, id: str, message: Dict[str, object]) -> None:
+        return self._parent.send_input_message(self.ns(id), message)
+
+    # TODO: test this actually works (will handle_request() need an override?)
+    def download(
+        self, name: str, **kwargs: object
+    ) -> Callable[[DownloadHandler], None]:
+        return self._parent.download(self.ns(name), **kwargs)
+
+    def make_scope(self, id: str) -> Session:
+        return self._parent.make_scope(self.ns(id))
+
+
+def create_ns_func(namespace: str) -> Callable[[str], str]:
+    return lambda x: namespaced_id_ns(x, [namespace])
+
 
 # ======================================================================================
 # Inputs
@@ -748,31 +793,30 @@ class Inputs:
     for type checking reasons).
     """
 
-    def __init__(self, **kwargs: object) -> None:
-        self._map: dict[str, Value[Any]] = {}
-        for key, value in kwargs.items():
-            self._map[key] = Value(value, read_only=True)
-
-        self._ns: Optional[str] = None  # Only relevant for ModuleInputs()
+    def __init__(
+        self, values: Dict[str, Value[Any]] = {}, ns: Callable[[str], str] = lambda x: x
+    ) -> None:
+        self._map = values
+        self._ns = ns
 
     def __setitem__(self, key: str, value: Value[Any]) -> None:
         if not isinstance(value, Value):
             raise TypeError("`value` must be a reactive.Value object.")
 
-        self._map[namespaced_id(key, self._ns)] = value
+        self._map[self._ns(key)] = value
 
     def __getitem__(self, key: str) -> Value[Any]:
-        key = namespaced_id(key, self._ns)
+        key = self._ns(key)
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
         # yet.
         if key not in self._map:
-            self._map[key] = Value(read_only=True)
+            self._map[key] = Value[Any](read_only=True)
 
         return self._map[key]
 
     def __delitem__(self, key: str) -> None:
-        del self._map[namespaced_id(key, self._ns)]
+        del self._map[self._ns(key)]
 
     # Allow access of values as attributes.
     def __setattr__(self, attr: str, value: Value[Any]) -> None:
@@ -806,11 +850,17 @@ class Outputs:
     for type checking reasons).
     """
 
-    def __init__(self, session: Session) -> None:
-        self._effects: Dict[str, Effect_] = {}
-        self._suspend_when_hidden: Dict[str, bool] = {}
-        self._session: Session = session
-        self._ns: Optional[str] = None  # Only relevant for ModuleOutputs()
+    def __init__(
+        self,
+        session: Session,
+        ns: Callable[[str], str] = lambda x: x,
+        effects: Dict[str, Effect_] = {},
+        suspend_when_hidden: Dict[str, bool] = {},
+    ) -> None:
+        self._session = session
+        self._ns = ns
+        self._effects = effects
+        self._suspend_when_hidden = suspend_when_hidden
 
     @overload
     def __call__(self, fn: render.RenderFunction) -> None:
@@ -846,7 +896,7 @@ class Outputs:
 
         def set_fn(fn: render.RenderFunction) -> None:
             # Get the (possibly namespaced) output id
-            output_name = namespaced_id(id or fn.__name__, self._ns)
+            output_name = self._ns(id or fn.__name__)
 
             # fn is either a regular function or a RenderFunction object. If
             # it's the latter, give it a bit of metadata.

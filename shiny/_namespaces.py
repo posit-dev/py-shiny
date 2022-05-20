@@ -1,34 +1,39 @@
-# TODO: make this available under the shiny.modules API
-__all__ = ("namespaced_id",)
-
-from typing import Union, Optional
-
-from .types import MISSING, MISSING_TYPE
+from contextlib import contextmanager
+from contextvars import ContextVar, Token
+from typing import Union, List
 
 
-def namespaced_id(id: str, ns: Union[str, MISSING_TYPE, None] = MISSING) -> str:
-    """
-    Namespace an ID based on the current ``Module()``'s namespace.
+class ResolvedId(str):
+    pass
 
-    Parameters
-    ----------
-    id
-        The ID to namespace..
-    """
-    if isinstance(ns, MISSING_TYPE):
-        ns = get_current_namespace()
 
-    if ns is None:
+Id = Union[str, ResolvedId]
+
+
+def namespaced_id(id: Id) -> Id:
+    return namespaced_id_ns(id, get_current_namespaces())
+
+
+def namespaced_id_ns(id: Id, namespaces: List[str] = []) -> Id:
+    if isinstance(id, ResolvedId) or len(namespaces) == 0:
         return id
     else:
-        return ns + "_" + id
+        return ResolvedId("_".join(namespaces) + "_" + id)
 
 
-def get_current_namespace() -> Optional[str]:
-    from .session import get_current_session
+def get_current_namespaces() -> List[str]:
+    return _current_namespaces.get()
 
-    session = get_current_session()
-    if session is None:
-        return None
-    else:
-        return session._ns
+
+_current_namespaces: ContextVar[List[str]] = ContextVar(
+    "current_namespaces", default=[]
+)
+
+
+@contextmanager
+def namespace_context(namespaces: List[str]):
+    token: Token[List[str]] = _current_namespaces.set(namespaces)
+    try:
+        yield
+    finally:
+        _current_namespaces.reset(token)
