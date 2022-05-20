@@ -23,12 +23,6 @@ unlink(file.path(www, "shared", "legacy"), recursive = TRUE)
 # jQuery will come in via bslib (below)
 unlink(Sys.glob(file.path(www, "shared", "jquery*")))
 
-# We've manually included a newer and slimmer version jQuery UI (just the draggable
-# interaction) so ignore whatever Shiny wants to bring in. The URL below is what I used
-# to download it
-# https://jqueryui.com/download/#!version=1.13.1&themeParams=none&components=101000000100100000000000010000000000000000000000
-unlink(file.path(www, "shared", "jqueryui"), recursive = TRUE)
-
 # Upgrade to Bootstrap 5 by default
 deps <- bs_theme_dependencies(bs_theme(version = 5))
 withr::with_options(
