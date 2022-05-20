@@ -1,13 +1,15 @@
+import base64
 import json
 import os
+import re
 import shutil
 import sys
 from typing import Callable, List, Optional
 
 if sys.version_info >= (3, 8):
-    from typing import TypedDict
+    from typing import Literal, TypedDict
 else:
-    from typing_extensions import TypedDict
+    from typing_extensions import Literal, TypedDict
 
 _SHINYLIVE_DOWNLOAD_URL = "https://pyshiny.netlify.app/shinylive"
 _SHINYLIVE_DEFAULT_VERSION = "0.0.1"
@@ -16,6 +18,7 @@ _SHINYLIVE_DEFAULT_VERSION = "0.0.1"
 class FileContent(TypedDict):
     name: str
     content: str
+    type: Literal["text", "binary"]
 
 
 def deploy_static(
@@ -74,14 +77,23 @@ def deploy_static(
             else:
                 output_filename = os.path.join(rel_dir, filename)
 
-            file_content = (
-                open(os.path.join(root, filename), "rb").read().decode("utf-8")
-            )
+            type: Literal["text", "binary"] = "text"
+            try:
+                with open(os.path.join(root, filename), "r") as f:
+                    file_content = f.read()
+                    type = "text"
+            except UnicodeDecodeError:
+                # If text failed, try binary.
+                with open(os.path.join(root, filename), "rb") as f:
+                    file_content_bin = f.read()
+                    file_content = base64.b64encode(file_content_bin).decode("utf-8")
+                    type = "binary"
 
             app_files.append(
                 {
                     "name": output_filename,
                     "content": file_content,
+                    "type": type,
                 }
             )
 
@@ -177,6 +189,33 @@ def _copy_file_and_substitute(
             fout.write(in_content)
 
 
+def remove_shinylive_local(
+    shinylive_dir: Optional[str] = None,
+    version: Optional[str] = _SHINYLIVE_DEFAULT_VERSION,
+) -> None:
+    """Removes local copy of shinylive.
+
+    Parameters
+    ----------
+    shinylive_dir
+        The directory where shinylive is stored. If None, the default directory will
+        be used.
+
+    version
+        If a version is specified, only that version will be removed.
+        If None, all local versions of shinylive will be removed.
+    """
+
+    if shinylive_dir is None:
+        shinylive_dir = get_default_shinylive_dir()
+
+    target_dir = shinylive_dir
+    if version is not None:
+        target_dir = os.path.join(target_dir, f"shinylive-{version}")
+
+    shutil.rmtree(target_dir)
+
+
 def _ensure_shinylive_local(
     destdir: Optional[str] = None,
     version: str = _SHINYLIVE_DEFAULT_VERSION,
@@ -185,7 +224,7 @@ def _ensure_shinylive_local(
     """Ensure that there is a local copy of shinylive."""
 
     if destdir is None:
-        destdir = _shinylive_dir()
+        destdir = get_default_shinylive_dir()
 
     if not os.path.exists(destdir):
         print("Creating directory " + destdir)
@@ -194,28 +233,22 @@ def _ensure_shinylive_local(
     shinylive_bundle_dir = os.path.join(destdir, f"shinylive-{version}")
     if not os.path.exists(shinylive_bundle_dir):
         print(f"{shinylive_bundle_dir} does not exist.")
-        _download_shinylive(url=url, version=version, destdir=destdir)
+        download_shinylive(url=url, version=version, destdir=destdir)
 
     return shinylive_bundle_dir
 
 
-def _shinylive_dir() -> str:
-    import appdirs
-
-    return os.path.join(appdirs.user_cache_dir("shiny"), "shinylive")
-
-
-def _download_shinylive(
+def download_shinylive(
     destdir: Optional[str] = None,
     version: str = _SHINYLIVE_DEFAULT_VERSION,
     url: str = _SHINYLIVE_DOWNLOAD_URL,
 ) -> None:
-    import urllib.request
     import tarfile
     import tempfile
+    import urllib.request
 
     if destdir is None:
-        destdir = _shinylive_dir()
+        destdir = get_default_shinylive_dir()
 
     with tempfile.NamedTemporaryFile() as tmp:
 
@@ -226,3 +259,45 @@ def _download_shinylive(
         print(f"Unzipping to {destdir}")
         with tarfile.open(tmp.name) as tar:
             tar.extractall(destdir)
+
+
+def get_default_shinylive_dir() -> str:
+    import appdirs
+
+    return os.path.join(appdirs.user_cache_dir("shiny"), "shinylive")
+
+
+def copy_shinylive_local(
+    source_dir: str,
+    destdir: Optional[str] = None,
+    version: str = _SHINYLIVE_DEFAULT_VERSION,
+):
+    if destdir is None:
+        destdir = get_default_shinylive_dir()
+
+    target_dir = os.path.join(destdir, "shinylive-" + version)
+
+    if os.path.exists(target_dir):
+        shutil.rmtree(target_dir)
+
+    shutil.copytree(source_dir, target_dir)
+
+
+def _installed_shinylive_versions(shinylive_dir: Optional[str] = None) -> List[str]:
+    if shinylive_dir is None:
+        shinylive_dir = get_default_shinylive_dir()
+
+    subdirs = os.listdir(shinylive_dir)
+    subdirs = [re.sub("^shinylive-", "", s) for s in subdirs]
+    return subdirs
+
+
+def print_shinylive_local_info() -> None:
+
+    print(
+        f"""    Local shinylive dir:
+        {get_default_shinylive_dir()}
+
+    Installed versions:
+        {", ".join(_installed_shinylive_versions())}"""
+    )

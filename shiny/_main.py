@@ -14,7 +14,7 @@ import uvicorn.config
 import shiny
 from . import _autoreload
 from . import _hostenv
-from ._static import deploy_static
+from . import _static
 
 
 @click.group()  # pyright: ignore[reportUnknownMemberType]
@@ -327,7 +327,7 @@ directory can be deployed as a static web site.
 
 After writing the output files, you can serve them locally with the following command:
 
-    python3 -m http.server --directory DESTDIR 8000
+    python3 -m http.server --directory DESTDIR
 """
 )
 @click.argument("appdir", type=str)
@@ -356,5 +356,68 @@ After writing the output files, you can serve them locally with the following co
 def static(
     appdir: str, destdir: str, overwrite: bool, subdir: str, verbose: bool
 ) -> None:
+    _static.deploy_static(
+        appdir, destdir, overwrite=overwrite, subdir=subdir, verbose=verbose
+    )
 
-    deploy_static(appdir, destdir, overwrite=overwrite, subdir=subdir, verbose=verbose)
+
+@main.command(
+    help="""Manage local copy of assets for static app deployment.
+
+    \b
+    Commands:
+        download: Download assets from the remote server.
+        remove: Remove local copies of assets.
+        info: Print information about the local assets.
+        copy: Copy shinylive assets from a local directory. Must be used with --source.
+
+"""
+)
+@click.argument("command", type=str)
+@click.option(
+    "--version",
+    type=str,
+    default=_static._SHINYLIVE_DEFAULT_VERSION,
+    help="Shinylive version to download or remove.",
+    show_default=True,
+)
+@click.option(
+    "--url",
+    type=str,
+    default=_static._SHINYLIVE_DOWNLOAD_URL,
+    help="URL to download from.",
+    show_default=True,
+)
+@click.option(
+    "--dir",
+    type=str,
+    default=None,
+    help="Directory to store shinylive assets (if not using the default)",
+)
+@click.option(
+    "--source",
+    type=str,
+    default=None,
+    help="Directory where shinylive assets will be copied from. Must be used with 'copy' command.",
+)
+def static_assets(
+    command: str, version: str, url: str, dir: str, source: Optional[str]
+) -> None:
+    if dir is None:
+        dir = _static.get_default_shinylive_dir()
+
+    if command == "download":
+        print(f"Downloading shinylive-{version} from {url} to {dir}")
+        _static.download_shinylive(destdir=dir, version=version, url=url)
+    elif command == "remove":
+        print(f"Removing shinylive-{version} from {dir}")
+        _static.remove_shinylive_local(shinylive_dir=dir, version=version)
+    elif command == "info":
+        _static.print_shinylive_local_info()
+    elif command == "copy":
+        if source is None:
+            raise click.UsageError("Must specify --source")
+        print(f"Copying shinylive-{version} from {source} to {dir}/shinylive-{version}")
+        _static.copy_shinylive_local(source_dir=source, destdir=dir, version=version)
+    else:
+        raise click.UsageError(f"Unknown command: {command}")
