@@ -325,7 +325,7 @@ def _copy_recursive(
             if not os.path.isdir(dest):
                 os.makedirs(dest)
             files = os.listdir(source)
-            ignored = set()
+            ignored: set[str] = set()
             for f in files:
                 if f not in ignored:
                     _copy_recursive(os.path.join(source, f), os.path.join(dest, f))
