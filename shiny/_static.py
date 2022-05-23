@@ -48,12 +48,20 @@ def deploy_static(
     print(f"Copying {shinylive_bundle_dir} to {destdir}")
     if not os.path.exists(destdir):
         os.makedirs(destdir)
-    shutil.copytree(
+
+    # After we drop Python 3.7 support, this can be replaced with the shutil.copytree
+    # call below.
+    _copy_recursive(
         shinylive_bundle_dir,
         destdir,
         copy_function=_copy_fn(overwrite, verbose_print=verbose_print),
-        dirs_exist_ok=True,
     )
+    # shutil.copytree(
+    #     shinylive_bundle_dir,
+    #     destdir,
+    #     copy_function=_copy_fn(overwrite, verbose_print=verbose_print),
+    #     dirs_exist_ok=True,
+    # )
 
     app_files: List[FileContent] = []
     # Recursively iterate over files in app directory, and collect the files into
@@ -301,3 +309,23 @@ def print_shinylive_local_info() -> None:
     Installed versions:
         {", ".join(_installed_shinylive_versions())}"""
     )
+
+
+# A wrapper for shutil.copytree. In Python >= 3.8, we can use dirs_exist_ok=True so that
+# it doesn't error if the destination dir or subdirs already exist. In <= 3.7, we need
+# to ignore directories manually. After we drop 3.7 support, we can remove this wrapper
+# function.
+def _copy_recursive(
+    source: str, dest: str, copy_function: Callable[..., None] = shutil.copy2
+) -> None:
+    if sys.version_info >= (3, 8):
+        shutil.copytree(source, dest, copy_function=copy_function, dirs_exist_ok=True)
+    else:
+        if os.path.isdir(source):
+            if not os.path.isdir(dest):
+                os.makedirs(dest)
+            files = os.listdir(source)
+            for f in files:
+                _copy_recursive(os.path.join(source, f), os.path.join(dest, f))
+        else:
+            shutil.copyfile(source, dest)
