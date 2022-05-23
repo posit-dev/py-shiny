@@ -21,9 +21,10 @@ def jquery_deps() -> HTMLDependency:
 
 
 # N.B. py-shiny has requirejs as a 'core' dependency since it's currently a pretty
-# fundamental dependency for any Jupyter widget project (i.e., ipyshiny). And, for
-# requirejs to work at all with our HTMLDependency() model (i.e., loading JS via
-# <script> tags), we need to shim define() to avoid anonymous module errors
+# fundamental dependency for any Jupyter widget project (i.e., ipyshiny) and we need a
+# custom setup for it to work decently with HTMLDependency() model (i.e., loading JS via
+# <script> tags). At the moment, we're just setting window.define.amd=false after loading
+# requirejs so that the typical UMD pattern won't result in an anonymous define() error.
 def require_deps() -> HTMLDependency:
     return HTMLDependency(
         name="requirejs",
