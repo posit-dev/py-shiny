@@ -44,8 +44,11 @@ download.file(
   file.path(requirejs, "require.min.js")
 )
 
+shims <- file.path(getwd(), "scripts", "define-shims.js")
+
 cat(
-  "\n\ndefine.amd = false;",
+  "\n\n",
+  paste(readLines(shims), collapse = "\n"),
   file = file.path(requirejs, "require.min.js"),
   append = TRUE
 )
