@@ -15,7 +15,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from ._autoreload import autoreload_url, InjectAutoreloadMiddleware
 from ._connection import Connection, StarletteConnection
-from .html_dependencies import jquery_deps, shiny_deps
+from .html_dependencies import require_deps, jquery_deps, shiny_deps
 from .http_staticfiles import StaticFiles
 from .reactive import on_flushed
 from .session import Inputs, Outputs, Session, session_context
@@ -327,5 +327,7 @@ class App:
 
 def _render_page(ui: Union[Tag, TagList], lib_prefix: str) -> RenderedHTML:
     ui_res = copy.copy(ui)
-    ui_res.insert(0, [jquery_deps(), shiny_deps()])
+    # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
+    # (see require_deps() for a comment about why we even include it)
+    ui_res.insert(0, [require_deps(), jquery_deps(), shiny_deps()])
     return HTMLDocument(ui_res).render(lib_prefix=lib_prefix)

@@ -36,3 +36,19 @@ withr::with_options(
 # we still do have bs3compat's CSS on the page, which
 # comes in via the bootstrap HTMLDependency()
 unlink("shiny/www/shared/bs3compat/", recursive = TRUE)
+
+requirejs <- file.path(www, "shared", "requirejs")
+dir.create(requirejs)
+download.file(
+  "https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js",
+  file.path(requirejs, "require.min.js")
+)
+
+shims <- file.path(getwd(), "scripts", "define-shims.js")
+
+cat(
+  "\n\n",
+  paste(readLines(shims), collapse = "\n"),
+  file = file.path(requirejs, "require.min.js"),
+  append = TRUE
+)
