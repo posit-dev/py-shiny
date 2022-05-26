@@ -209,3 +209,21 @@ def package_dir(package: str) -> str:
         if pkg_file is None:
             raise RuntimeError(f"Could not find package dir for '{package}'")
         return os.path.dirname(pkg_file)
+
+
+def equal(a: Any, b: Any) -> bool:
+    try:
+        if a is b:
+            return True
+        if type(a) is not type(b):
+            return False
+
+        res = a == b
+        if isinstance(res, bool):
+            return res
+        for e in iter(res):
+            if e is not True:
+                return False
+        return True
+    except Exception:
+        return False

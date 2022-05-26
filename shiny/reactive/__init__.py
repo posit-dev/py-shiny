@@ -1,5 +1,6 @@
 from ._core import *
 from ._reactives import *
+from ._poll import *
 
 __all__ = (
     "flush",
@@ -9,4 +10,6 @@ __all__ = (
     "Effect",
     "isolate",
     "invalidate_later",
+    "poll",
+    "file_reader",
 )

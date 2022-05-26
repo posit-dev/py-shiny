@@ -577,28 +577,31 @@ class Session:
     async def _flush(self) -> None:
         with session_context(self):
             self._flush_callbacks.invoke()
-            self._flushed_callbacks.invoke()
-
-        omq = self._outbound_message_queues
-
-        values: Dict[str, object] = {}
-        for v in omq["values"]:
-            values.update(v)
-
-        errors: Dict[str, object] = {}
-        for err in omq["errors"]:
-            errors.update(err)
-
-        message: Dict[str, object] = {
-            "values": values,
-            "inputMessages": omq["input_messages"],
-            "errors": errors,
-        }
 
         try:
-            await self._send_message(message)
+            omq = self._outbound_message_queues
+
+            values: Dict[str, object] = {}
+            for v in omq["values"]:
+                values.update(v)
+
+            errors: Dict[str, object] = {}
+            for err in omq["errors"]:
+                errors.update(err)
+
+            message: Dict[str, object] = {
+                "values": values,
+                "inputMessages": omq["input_messages"],
+                "errors": errors,
+            }
+
+            try:
+                await self._send_message(message)
+            finally:
+                self._outbound_message_queues = empty_outbound_message_queues()
         finally:
-            self._outbound_message_queues = empty_outbound_message_queues()
+            with session_context(self):
+                self._flushed_callbacks.invoke()
 
     # ==========================================================================
     # On session ended
