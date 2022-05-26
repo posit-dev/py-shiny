@@ -5,15 +5,20 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: Shiny",
+      "name": "Run Shiny app",
       "type": "python",
       "request": "launch",
       "module": "shiny",
-      "args": [
-        "run",
-        "${file}"
-      ],
+      "args": ["run", "${file}"],
       "jinja": true,
+      "justMyCode": true
+    },
+    {
+      "name": "Test",
+      "type": "python",
+      "request": "launch",
+      "module": "pytest",
+      "args": [],
       "justMyCode": true
     }
   ]

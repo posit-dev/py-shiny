@@ -8,12 +8,17 @@ from contextvars import ContextVar
 import time
 import traceback
 import typing
-from typing import Callable, Optional, Awaitable, TypeVar
+from typing import TYPE_CHECKING, Callable, Optional, Awaitable, TypeVar, Union
 import warnings
+
+from shiny.types import MISSING, MISSING_TYPE
 
 from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example
 from .. import _utils
+
+if TYPE_CHECKING:
+    from shiny import Session
 
 T = TypeVar("T")
 
@@ -260,7 +265,9 @@ def lock() -> asyncio.Lock:
 
 
 @add_example()
-def invalidate_later(delay: float) -> None:
+def invalidate_later(
+    delay: float, session: Union[MISSING_TYPE, "Session", None] = MISSING
+) -> None:
     """
     Scheduled Invalidation
 
@@ -282,6 +289,13 @@ def invalidate_later(delay: float) -> None:
     that prevents the ``invalidate_later`` from being run.
     """
 
+    if isinstance(session, MISSING_TYPE):
+        from ..session import get_current_session
+
+        # If no session is provided, autodetect the current session (this
+        # could be None if outside of a session).
+        session = get_current_session()
+
     ctx = get_current_context()
     # Pass an absolute time to our subtask, rather than passing the delay directly, in
     # case the subtask doesn't get a chance to start sleeping until a significant amount
@@ -289,6 +303,7 @@ def invalidate_later(delay: float) -> None:
     deadline = time.monotonic() + delay
 
     cancellable = True
+    unsub: Optional[Callable[[], None]] = None
 
     async def _task(ctx: Context, deadline: float):
         nonlocal cancellable
@@ -315,11 +330,16 @@ def invalidate_later(delay: float) -> None:
         except BaseException:
             traceback.print_exc()
             raise
+        finally:
+            if unsub:
+                unsub()
 
     task = asyncio.create_task(_task(ctx, deadline))
 
     def cancel_task():
-        if cancellable:
+        if cancellable and not task.cancelled():
             task.cancel()
 
     ctx.on_invalidate(cancel_task)
+    if session:
+        unsub = session.on_ended(cancel_task)

@@ -1,9 +1,10 @@
 import os
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union
-import shiny
 
+import shiny
 from shiny.types import MISSING, MISSING_TYPE
 from shiny import reactive
+from .._docstring import add_example
 
 if TYPE_CHECKING:
     from ..session import Session
@@ -17,6 +18,7 @@ def poll(
     poll_func: Callable[[], Any],
     interval_secs: float = 1,
     *,
+    priority: int = 0,
     compare: Optional[Callable[[Any, Any], bool]] = None,
     session: Union[MISSING_TYPE, "Session", None] = MISSING,
 ) -> Callable[[Callable[[], T]], Callable[[], T]]:
@@ -27,7 +29,7 @@ def poll(
     with reactive.isolate():
         last_value: reactive.Value[Any] = reactive.Value(poll_func())
 
-    @reactive.Effect(session=session)
+    @reactive.Effect(priority=priority, session=session)
     def _():
         try:
             new = poll_func()
@@ -52,10 +54,12 @@ def poll(
     return wrapper
 
 
+@add_example()
 def file_reader(
     filepath: Union[str, Callable[[], str]],
     interval_secs: float = 1,
     *,
+    priority: int = 1,
     session: Union[MISSING_TYPE, "Session", None] = MISSING,
 ) -> Callable[[Callable[[], T]], Callable[[], T]]:
     if isinstance(filepath, str):
@@ -69,10 +73,16 @@ def file_reader(
         filepath = filepath_func
 
     def check_timestamp():
-        return os.path.getmtime(filepath())
+        path = filepath()
+        return (path, os.path.getmtime(path), os.path.getsize(path))
 
     def wrapper(fn: Callable[[], T]) -> Callable[[], T]:
-        @poll(check_timestamp)
+        @poll(
+            check_timestamp,
+            interval_secs=interval_secs,
+            priority=priority,
+            session=session,
+        )
         def reader():
             return fn()
 

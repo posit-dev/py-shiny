@@ -167,7 +167,7 @@ class Session:
             str, Callable[..., Awaitable[object]]
         ] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
-        self._on_ended_callbacks: List[Callable[[], None]] = []
+        self._on_ended_callbacks = _utils.Callbacks()
         self._has_run_session_end_tasks: bool = False
         self._downloads: Dict[str, DownloadInfo] = {}
         self._dynamic_routes: Dict[str, DynamicRouteHandler] = {}
@@ -185,18 +185,14 @@ class Session:
         # that are called when a session ends.
 
         # Clear file upload directories, if present
-        self._on_ended_callbacks.append(self._file_upload_manager.rm_upload_dir)
+        self.on_ended(self._file_upload_manager.rm_upload_dir)
 
     def _run_session_end_tasks(self) -> None:
         if self._has_run_session_end_tasks:
             return
         self._has_run_session_end_tasks = True
 
-        for cb in self._on_ended_callbacks:
-            try:
-                cb()
-            except Exception as e:
-                print("Error in session on_ended callback: " + str(e))
+        self._on_ended_callbacks.invoke()
 
         self.app._remove_session(self)
 
@@ -607,7 +603,7 @@ class Session:
     # On session ended
     # ==========================================================================
     @add_example()
-    def on_ended(self, fn: Callable[[], None]) -> None:
+    def on_ended(self, fn: Callable[[], None]) -> Callable[[], None]:
         """
         Registers a function to be called after the client has disconnected.
 
@@ -620,7 +616,7 @@ class Session:
         -------
         A function that can be used to cancel the registration.
         """
-        self._on_ended_callbacks.append(fn)
+        return self._on_ended_callbacks.register(fn)
 
     # ==========================================================================
     # Misc
