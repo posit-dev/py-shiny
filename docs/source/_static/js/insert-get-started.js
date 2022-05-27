@@ -10,9 +10,10 @@ document.addEventListener(
     a.setAttribute("data-placement", "bottom");
     a.setAttribute("data-original-title", "Learn Shiny for Python");
 
-    var nav = document.querySelector(
-      ".header-article-main .header-article__right"
-    );
+    var nav = document.querySelector(".topbar-main");
+    if (!nav) {
+      nav = document.querySelector(".header-article-main .header-article__right");
+    }
     if (nav) nav.appendChild(a);
   },
   false
