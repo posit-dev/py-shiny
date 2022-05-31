@@ -1,16 +1,10 @@
 """Tests for polling-related functionality."""
 
-import os
 import tempfile
 import pytest
-import asyncio
-from typing import List
 
-from shiny.input_handler import ActionButtonValue
-from shiny.reactive._core import ReactiveWarning
 from shiny._decorators import *
 from shiny.reactive import *
-from shiny._validation import SilentException, req
 
 from .mocktime import MockTime
 
