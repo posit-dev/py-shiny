@@ -1,7 +1,17 @@
+import functools
 import os
-from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import shiny
+import _utils
 from shiny.types import MISSING, MISSING_TYPE
 from shiny import reactive
 from .._docstring import add_example
@@ -30,9 +40,13 @@ def poll(
         last_value: reactive.Value[Any] = reactive.Value(poll_func())
 
     @reactive.Effect(priority=priority, session=session)
-    def _():
+    async def _():
         try:
-            new = poll_func()
+            if _utils.is_async_callable(poll_func):
+                new = await poll_func()
+            else:
+                new = poll_func()
+
             with reactive.isolate():
                 old = last_value.get()
             if not compare(old, new):
@@ -41,15 +55,28 @@ def poll(
             reactive.invalidate_later(interval_secs)
 
     def wrapper(fn: Callable[[], T]) -> Callable[[], T]:
-        @reactive.Calc(session=session)
-        def result() -> T:
-            # Take dependency on polling result
-            last_value.get()
+        if _utils.is_async_callable(fn):
 
-            # Note that we also depend on the main function
-            return fn()
+            @reactive.Calc(session=session)
+            @functools.wraps(fn)
+            async def result_async() -> T:
+                last_value.get()
+                return await fn()
 
-        return result
+            return cast(Callable[[], T], result_async)
+
+        else:
+
+            @reactive.Calc(session=session)
+            @functools.wraps(fn)
+            def result_sync() -> T:
+                # Take dependency on polling result
+                last_value.get()
+
+                # Note that we also depend on the main function
+                return fn()
+
+            return result_sync
 
     return wrapper
 
@@ -77,15 +104,31 @@ def file_reader(
         return (path, os.path.getmtime(path), os.path.getsize(path))
 
     def wrapper(fn: Callable[[], T]) -> Callable[[], T]:
-        @poll(
-            check_timestamp,
-            interval_secs=interval_secs,
-            priority=priority,
-            session=session,
-        )
-        def reader():
-            return fn()
+        if _utils.is_async_callable(fn):
 
-        return reader
+            @poll(
+                check_timestamp,
+                interval_secs=interval_secs,
+                priority=priority,
+                session=session,
+            )
+            @functools.wraps(fn)
+            async def reader_async():
+                return await fn()
+
+            return cast(Callable[[], T], reader_async)
+        else:
+
+            @poll(
+                check_timestamp,
+                interval_secs=interval_secs,
+                priority=priority,
+                session=session,
+            )
+            @functools.wraps(fn)
+            def reader():
+                return fn()
+
+            return reader
 
     return wrapper
