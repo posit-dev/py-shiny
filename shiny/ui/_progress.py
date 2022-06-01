@@ -1,6 +1,7 @@
 __all__ = ("Progress",)
 
-from typing import Optional, Dict, Any
+from types import TracebackType
+from typing import Optional, Dict, Any, Type
 from warnings import warn
 
 from .._docstring import add_example
@@ -40,6 +41,18 @@ class Progress:
 
         msg = {"id": self._id, "style": self._style}
         self._send_progress("open", msg)
+
+    def __enter__(self) -> "Progress":
+        return self
+
+    def __exit__(
+        self,
+        exctype: Optional[Type[BaseException]],
+        excinst: Optional[BaseException],
+        exctb: Optional[TracebackType],
+    ) -> bool:
+        self.close()
+        return False
 
     def set(
         self,
@@ -121,7 +134,8 @@ class Progress:
 
     def close(self) -> None:
         """
-        Close the progress bar.
+        Close the progress bar. You can also use the Progress object as a context
+        manager, which will cause the progress bar to close on exit.
 
         Parameters
         ----------
