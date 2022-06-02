@@ -105,14 +105,35 @@ def poll(
 
             with reactive.isolate():
                 old = last_value.get()
-            is_equal = equals(old, new)
-            if not isinstance(is_equal, bool):
+
+            try:
+                is_equal = equals(old, new)
+            except Exception as e:
+                # For example, pandas DataFrame throws if you try to compare it to a
+                # non-comparable object
                 raise TypeError(
-                    "The reactive.poll polling function returned an object that doesn't"
-                    " implement a simple == operator. Try modifying your polling "
-                    "function to return a simpler type, like a str, float, list, or "
-                    "dict."
-                )
+                    "The reactive.poll polling function returned an object that "
+                    "couldn't be compared with a previously returned object. Try "
+                    "modifying your polling function to return a simpler type, like a "
+                    "str, float, list, or dict."
+                ) from e
+            if not isinstance(is_equal, bool):
+                # Comparison succeeded, but we don't understand the result
+                if equals is eq:
+                    # We used == but it didn't work
+                    raise TypeError(
+                        "The reactive.poll polling function returned an object "
+                        "that doesn't implement a simple == operator. Try "
+                        "modifying your polling function to return a simpler type, "
+                        "like a str, float, list, or dict."
+                    )
+                else:
+                    # The caller passed in a custom function
+                    raise TypeError(
+                        "The reactive.poll `equals` function returned a non-bool "
+                        "value"
+                    )
+
             if not is_equal:
                 last_value.set(new)
         finally:
