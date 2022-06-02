@@ -15,7 +15,6 @@ from ._app import App
 from ._decorators import event
 from ._modules import Module
 from ._validation import req
-from ._utils import equal
 
 if _is_pyodide:
     # In pyodide, avoid importing _main because it imports packages that aren't
@@ -53,8 +52,6 @@ __all__ = (
     "Session",
     "Inputs",
     "Outputs",
-    # _utils.py
-    "equal",
     # _validation.py
     "req",
 )
