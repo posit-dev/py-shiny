@@ -135,6 +135,11 @@ def poll(
                 last_value.get()
                 return await fn()
 
+            # In this code path, the cast is necessary because result_async() has an
+            # incorrect signature due to limitations in Python's type hints. In this
+            # path, T is already an Awaitable. The signature should really be `async def
+            # result_async() -> Awaited[T]`, but there's no Awaited type in Python. So
+            # instead we'll just cast() it.
             return cast(Callable[[], T], result_async)
 
         else:
