@@ -266,7 +266,7 @@ def lock() -> asyncio.Lock:
 
 @add_example()
 def invalidate_later(
-    delay: float, session: Union[MISSING_TYPE, "Session", None] = MISSING
+    delay: float, *, session: Union[MISSING_TYPE, "Session", None] = MISSING
 ) -> None:
     """
     Scheduled Invalidation
