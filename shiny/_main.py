@@ -193,7 +193,6 @@ def run_app(
 
     if app_dir:
         app_dir = os.path.realpath(app_dir)
-        os.chdir(app_dir)
 
     log_config: Dict[str, Any] = copy.deepcopy(
         cast(

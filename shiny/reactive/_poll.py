@@ -209,7 +209,9 @@ def poll(
 
 @add_example()
 def file_reader(
-    filepath: Union[str, Callable[[], str]],
+    filepath: Union[
+        str, os.PathLike[str], Callable[[], str], Callable[[], os.PathLike[str]]
+    ],
     interval_secs: float = 1,
     *,
     priority: int = 1,
@@ -279,10 +281,17 @@ def file_reader(
 
         filepath_value = filepath
 
-        def filepath_func() -> str:
+        def filepath_func_str() -> str:
             return filepath_value
 
-        filepath = filepath_func
+        filepath = filepath_func_str
+    elif isinstance(filepath, os.PathLike):
+        filepath_value = filepath
+
+        def filepath_func_pathlike() -> os.PathLike[str]:
+            return filepath_value
+
+        filepath = filepath_func_pathlike
 
     def check_timestamp():
         path = filepath()
@@ -301,6 +310,7 @@ def file_reader(
             async def reader_async():
                 return await fn()
 
+            # See poll() for explanation of why this cast is needed.
             return cast(Callable[[], T], reader_async)
         else:
 
