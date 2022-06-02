@@ -1,7 +1,16 @@
 import functools
 import os
 from operator import eq
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, TypeVar, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from .. import _utils, reactive
 from .._docstring import add_example
@@ -94,6 +103,7 @@ def poll(
 
     with reactive.isolate():
         last_value: reactive.Value[Any] = reactive.Value(poll_func())
+        last_error: reactive.Value[Optional[Exception]] = reactive.Value(None)
 
     @reactive.Effect(priority=priority, session=session)
     async def _():
@@ -134,8 +144,21 @@ def poll(
                         "value"
                     )
 
+            # If we got here, the comparison succeeded. Need to make sure the error is
+            # cleared, but don't unnecessarily call last_error.set(); at the time of
+            # this writing, we haven't made a final decision on whether reactive.Value
+            # will ignore sets if the new value is identical to the existing one.
+            with reactive.isolate():
+                if last_error.get() is not None:
+                    last_error.set(None)
+
             if not is_equal:
                 last_value.set(new)
+        except Exception as e:
+            # Either the polling function threw an error, or we failed to compare its
+            # result with a previous result. Either way, we failed; save the error so
+            # that it can be exposed to whoever's trying to use the poll object.
+            last_error.set(e)
         finally:
             reactive.invalidate_later(interval_secs)
 
@@ -145,7 +168,15 @@ def poll(
             @reactive.Calc(session=session)
             @functools.wraps(fn)
             async def result_async() -> T:
+                # If an error occurred, raise it
+                err = last_error.get()
+                if err is not None:
+                    raise err
+
+                # Take dependency on polling result
                 last_value.get()
+
+                # Note that we also depend on the main function
                 return await fn()
 
             # In this code path, the cast is necessary because result_async() has an
@@ -160,6 +191,11 @@ def poll(
             @reactive.Calc(session=session)
             @functools.wraps(fn)
             def result_sync() -> T:
+                # If an error occurred, raise it
+                err = last_error.get()
+                if err is not None:
+                    raise err
+
                 # Take dependency on polling result
                 last_value.get()
 

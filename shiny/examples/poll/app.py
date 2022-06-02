@@ -1,13 +1,12 @@
 import asyncio
+import random
 import sqlite3
 from datetime import datetime
-import random
 from typing import Any, Awaitable
 
 import pandas as pd
 
 from shiny import *
-
 
 SYMBOLS = ["AAA", "BBB", "CCC", "DDD", "EEE", "FFF"]
 
