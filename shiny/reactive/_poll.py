@@ -1,24 +1,16 @@
 import functools
-from operator import eq
 import os
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    TypeVar,
-    Union,
-    cast,
-)
+from operator import eq
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, TypeVar, Union, cast
 
-from shiny.types import MISSING, MISSING_TYPE
-from shiny import reactive, _utils
+from .. import _utils, reactive
 from .._docstring import add_example
+from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
     from ..session import Session
 
-__all__ = ["poll", "file_reader"]
+__all__ = ("poll", "file_reader")
 
 T = TypeVar("T")
 

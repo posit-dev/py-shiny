@@ -4,21 +4,20 @@ __all__ = ("isolate", "invalidate_later", "flush", "on_flushed", "get_current_co
 
 import asyncio
 import contextlib
-from contextvars import ContextVar
 import time
 import traceback
 import typing
-from typing import TYPE_CHECKING, Callable, Optional, Awaitable, TypeVar, Union
 import warnings
+from contextvars import ContextVar
+from typing import TYPE_CHECKING, Awaitable, Callable, Optional, TypeVar, Union
 
-from shiny.types import MISSING, MISSING_TYPE
-
+from .. import _utils
 from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example
-from .. import _utils
+from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
-    from shiny import Session
+    from ..session import Session
 
 T = TypeVar("T")
 
@@ -303,6 +302,9 @@ def invalidate_later(
     deadline = time.monotonic() + delay
 
     cancellable = True
+    # unsub is used to unsubscribe from session.on_ended when time expires. We don't
+    # want a ton of event handler registrations sitting there uselessly, keeping object
+    # graphs from being gc'd.
     unsub: Optional[Callable[[], None]] = None
 
     async def _task(ctx: Context, deadline: float):
