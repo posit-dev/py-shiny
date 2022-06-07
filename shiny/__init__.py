@@ -15,6 +15,7 @@ from ._app import App
 from ._decorators import event
 from ._modules import Module
 from ._validation import req
+from ._deprecated import *
 
 if _is_pyodide:
     # In pyodide, avoid importing _main because it imports packages that aren't
@@ -49,4 +50,9 @@ __all__ = (
     "Outputs",
     # _validation.py
     "req",
+    # _deprecated.py
+    "render_text",
+    "render_plot",
+    "render_image",
+    "render_ui",
 )
