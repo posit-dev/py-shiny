@@ -17,7 +17,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return input.n() * 2
 
     @output()
-    @render_text()
+    @render.text()
     async def txt():
         val = r()
         return f"n*2 is {val}, session id is {session.id}"

@@ -54,7 +54,7 @@ def event(
     ----
     This decorator must be applied before the relevant reactivity decorator (i.e.,
     ``@event`` must be applied before ``@reactive.Effect()``, ``@reactive.Calc()``,
-    ``@render_ui``, etc).
+    ``@render.ui``, etc).
     """
 
     if any([not callable(arg) for arg in args]):

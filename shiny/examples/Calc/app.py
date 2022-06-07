@@ -27,7 +27,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return random.randint(1, 1000)
 
     @output()
-    @render_ui()
+    @render.ui()
     def result():
         return first() + second()
 

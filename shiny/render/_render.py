@@ -3,16 +3,16 @@ __all__ = (
     "RenderFunctionAsync",
     "RenderText",
     "RenderTextAsync",
-    "render_text",
+    "text",
     "RenderPlot",
     "RenderPlotAsync",
-    "render_plot",
+    "plot",
     "RenderImage",
     "RenderImageAsync",
-    "render_image",
+    "image",
     "RenderUI",
     "RenderUIAsync",
-    "render_ui",
+    "ui",
 )
 
 import base64
@@ -95,7 +95,7 @@ class RenderTextAsync(RenderText, RenderFunctionAsync):
         return await self._run()
 
 
-def render_text() -> Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], RenderText]:
+def text() -> Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], RenderText]:
     """
     Reactively render text.
 
@@ -194,9 +194,9 @@ class RenderPlot(RenderFunction):
                 return result
 
         raise Exception(
-            f"@render_plot() doesn't know to render objects of type '{str(type(x))}'. "
+            f"@render.plot() doesn't know to render objects of type '{str(type(x))}'. "
             + "Consider either requesting support for this type of plot object, and/or "
-            + " explictly saving the object to a (png) file and using @render_image()."
+            + " explictly saving the object to a (png) file and using @render.image()."
         )
 
 
@@ -210,8 +210,8 @@ class RenderPlotAsync(RenderPlot, RenderFunctionAsync):
         return await self._run()
 
 
-# TODO: Use more specific types for render_plot
-def render_plot(
+# TODO: Use more specific types for render.plot
+def plot(
     alt: Optional[str] = None,
 ) -> Callable[[Union[RenderPlotFunc, RenderPlotFuncAsync]], RenderPlot]:
     """
@@ -241,7 +241,7 @@ def render_plot(
     See Also
     --------
     ~shiny.ui.output_plot
-    ~shiny.render_image
+    ~shiny.render.image
     """
 
     def wrapper(fn: Union[RenderPlotFunc, RenderPlotFuncAsync]) -> RenderPlot:
@@ -302,7 +302,7 @@ class RenderImageAsync(RenderImage, RenderFunctionAsync):
         return await self._run()
 
 
-def render_image(
+def image(
     delete_file: bool = False,
 ) -> Callable[[Union[RenderImageFunc, RenderImageFuncAsync]], RenderImage]:
     """
@@ -328,7 +328,7 @@ def render_image(
     --------
     ~shiny.ui.output_image
     ~shiny.types.ImgData
-    ~shiny.render_plot
+    ~shiny.render.plot
     """
 
     def wrapper(fn: Union[RenderImageFunc, RenderImageFuncAsync]) -> RenderImage:
@@ -377,7 +377,7 @@ class RenderUIAsync(RenderUI, RenderFunctionAsync):
         return await self._run()
 
 
-def render_ui() -> Callable[[Union[RenderUIFunc, RenderUIFuncAsync]], RenderUI]:
+def ui() -> Callable[[Union[RenderUIFunc, RenderUIFuncAsync]], RenderUI]:
     """
     Reactively render HTML content.
 

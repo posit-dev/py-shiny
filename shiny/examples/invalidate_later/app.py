@@ -11,7 +11,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         print("Random int: ", random.randint(0, 10000))
 
     @output()
-    @render_ui()
+    @render.ui()
     def value():
         reactive.invalidate_later(0.5)
         return "Random int: " + str(random.randint(0, 10000))

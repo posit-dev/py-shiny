@@ -64,7 +64,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return rng.multivariate_normal(mean, cov, n).T
 
     @output(name="seaborn")
-    @render_plot()
+    @render.plot()
     def _():
         x, y = fake_data()
         f, ax = plt.subplots(figsize=(6, 6))
@@ -74,7 +74,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return f
 
     @output(name="plotnine")
-    @render_plot()
+    @render.plot()
     def _():
         from plotnine import (
             ggplot,
@@ -99,7 +99,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         )
 
     @output(name="pandas")
-    @render_plot()
+    @render.plot()
     def _():
         ts = pd.Series(
             np.random.randn(1000), index=pd.date_range("1/1/2000", periods=1000)
@@ -108,7 +108,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return ts.plot()
 
     @output(name="holoviews")
-    @render_plot()
+    @render.plot()
     def _():
         import holoviews as hv
         from bokeh.sampledata.les_mis import data as les_mis
@@ -117,7 +117,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return hv.render(hv.Chord(links), backend="matplotlib")
 
     @output(name="xarray")
-    @render_plot()
+    @render.plot()
     def _():
         import xarray as xr
 
@@ -128,7 +128,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return air.isel(lon=10, lat=[19, 21, 22]).plot.line(x="time")
 
     @output(name="geopandas")
-    @render_plot()
+    @render.plot()
     def _():
         import geopandas
 
@@ -139,7 +139,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return boros.plot()
 
     @output(name="missingno")
-    @render_plot()
+    @render.plot()
     def _():
         import missingno as msno
 

@@ -10,7 +10,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @output()
-    @render_plot()
+    @render.plot()
     def distPlot():
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(437)

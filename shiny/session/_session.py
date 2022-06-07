@@ -667,7 +667,7 @@ class Session:
             )
 
             @self.output(name=effective_name)
-            @render.render_text()
+            @render.text()
             @functools.wraps(fn)
             def _():
                 # TODO: the `w=` parameter should eventually be a worker ID, if we add those

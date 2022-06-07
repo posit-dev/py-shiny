@@ -13,7 +13,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @output()
-    @render_ui()
+    @render.ui()
     def txt_out():
         if not input.txt():
             raise SilentException()

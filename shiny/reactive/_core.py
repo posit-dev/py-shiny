@@ -281,7 +281,7 @@ def invalidate_later(
     Note
     ----
     When called within a reactive function (i.e., :func:`Effect`, :func:`Calc`,
-    :func:`render_ui`, etc.), that reactive context is invalidated (and re-executes)
+    :func:`render.ui`, etc.), that reactive context is invalidated (and re-executes)
     after the interval has passed. The re-execution will reset the invalidation flag, so
     in a typical use case, the object will keep re-executing and waiting for the
     specified interval. It's possible to stop this cycle by adding conditional logic

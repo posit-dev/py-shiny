@@ -20,9 +20,9 @@ namespace pollution. Namely, it gives you:
   * To avoid clashing with this ``ui`` namespace when you do ``from shiny import *``, you'll want to name you UI object something else, like ``app_ui``.
 
 * Reactive programming utilities, available via the ``reactive`` subpackage.
-* Decorators for rendering ``output``, all of which start with ``render_*`` (e.g. ``@render_text()``, ``@render_plot()``, etc).
+* Decorators for rendering ``output``, available via the ``render`` subpackage.
 
-  * We intentionally avoid a ``render`` subpackage so that 3rd party packages can define their own rendering functions without requring a different API.
+    * 3rd party packages that want to implement their own rendering functions are encouraged to use a `@render_foo()` naming convention so users may import with `from mypkg import render_foo`
 
 * A handful of other things you'll want for most apps (e.g., ``App``, ``Module``, etc).
 * If you're using type checking, you'll also want to use the ``Inputs``, ``Outputs``, and ``Session`` Classes

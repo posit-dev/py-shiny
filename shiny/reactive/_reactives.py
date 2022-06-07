@@ -53,7 +53,7 @@ class Value(Generic[T]):
     Note
     ----
     A reactive value may only be read from within a reactive function (e.g.,
-    :func:`Calc`, :func:`Effect`, :func:`shiny.render_text`, etc.) and, when doing so,
+    :func:`Calc`, :func:`Effect`, :func:`shiny.render.text`, etc.) and, when doing so,
     the function takes a reactive dependency on the value (i.e., when the value changes,
     the calling reactive function will re-execute).
 

@@ -1,12 +1,12 @@
 """A package for building reactive web applications."""
 
-__version__ = "0.2.0.9004"
+__version__ = "0.2.0.9005"
 
 from ._shinyenv import is_pyodide as _is_pyodide
 
 # User-facing subpackages that should be available on `from shiny import *`
 from . import reactive
-from .render import *
+from . import render
 from .session import *
 from . import ui
 
@@ -15,6 +15,7 @@ from ._app import App
 from ._decorators import event
 from ._modules import Module
 from ._validation import req
+from ._deprecated import *
 
 if _is_pyodide:
     # In pyodide, avoid importing _main because it imports packages that aren't
@@ -43,15 +44,15 @@ __all__ = (
     "run_app",
     # _modules.py
     "Module",
-    # _render.py
-    "render_text",
-    "render_plot",
-    "render_image",
-    "render_ui",
     # _session.py
     "Session",
     "Inputs",
     "Outputs",
     # _validation.py
     "req",
+    # _deprecated.py
+    "render_text",
+    "render_plot",
+    "render_image",
+    "render_ui",
 )
