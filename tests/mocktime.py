@@ -16,8 +16,13 @@ class MockTime:
 
     def __init__(self, now: float = 0):
         self._time = now
-        self._sleepers: typing.List[typing.Tuple[float, asyncio.Event]] = []
+        # The tuple elements are 1) time to wake, 2) tiebreaking int, 3) event to be
+        # signaled upon wake. The tiebreaking int is necessary to make sorting possible
+        # when two sleepers have the same time to wake, as asyncio.Event instances
+        # cannot be compared to each other.
+        self._sleepers: typing.List[typing.Tuple[float, int, asyncio.Event]] = []
         self._is_advancing = False
+        self._i = 0
 
     @contextlib.contextmanager
     def __call__(self):
@@ -43,7 +48,7 @@ class MockTime:
             # It's OK for self._sleepers to be mutated as we go
             while len(self._sleepers) > 0 and self._sleepers[0][0] <= end_time:
                 self._time = self._sleepers[0][0]
-                self._sleepers.pop(0)[1].set()
+                self._sleepers.pop(0)[2].set()
 
                 # Give just-awakened task a chance to run.
                 await yield_event_loop()
@@ -58,7 +63,8 @@ class MockTime:
         delay = max(0, delay)
         target = self._time + delay
         wake = asyncio.Event()
-        self._sleepers.append((target, wake))
+        self._sleepers.append((target, self._i, wake))
+        self._i += 1
         # Oldest first
         self._sleepers.sort()
         await wake.wait()

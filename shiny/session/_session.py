@@ -167,7 +167,7 @@ class Session:
             str, Callable[..., Awaitable[object]]
         ] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
-        self._on_ended_callbacks: List[Callable[[], None]] = []
+        self._on_ended_callbacks = _utils.Callbacks()
         self._has_run_session_end_tasks: bool = False
         self._downloads: Dict[str, DownloadInfo] = {}
         self._dynamic_routes: Dict[str, DynamicRouteHandler] = {}
@@ -185,18 +185,14 @@ class Session:
         # that are called when a session ends.
 
         # Clear file upload directories, if present
-        self._on_ended_callbacks.append(self._file_upload_manager.rm_upload_dir)
+        self.on_ended(self._file_upload_manager.rm_upload_dir)
 
     def _run_session_end_tasks(self) -> None:
         if self._has_run_session_end_tasks:
             return
         self._has_run_session_end_tasks = True
 
-        for cb in self._on_ended_callbacks:
-            try:
-                cb()
-            except Exception as e:
-                print("Error in session on_ended callback: " + str(e))
+        self._on_ended_callbacks.invoke()
 
         self.app._remove_session(self)
 
@@ -577,34 +573,37 @@ class Session:
     async def _flush(self) -> None:
         with session_context(self):
             self._flush_callbacks.invoke()
-            self._flushed_callbacks.invoke()
-
-        omq = self._outbound_message_queues
-
-        values: Dict[str, object] = {}
-        for v in omq["values"]:
-            values.update(v)
-
-        errors: Dict[str, object] = {}
-        for err in omq["errors"]:
-            errors.update(err)
-
-        message: Dict[str, object] = {
-            "values": values,
-            "inputMessages": omq["input_messages"],
-            "errors": errors,
-        }
 
         try:
-            await self._send_message(message)
+            omq = self._outbound_message_queues
+
+            values: Dict[str, object] = {}
+            for v in omq["values"]:
+                values.update(v)
+
+            errors: Dict[str, object] = {}
+            for err in omq["errors"]:
+                errors.update(err)
+
+            message: Dict[str, object] = {
+                "values": values,
+                "inputMessages": omq["input_messages"],
+                "errors": errors,
+            }
+
+            try:
+                await self._send_message(message)
+            finally:
+                self._outbound_message_queues = empty_outbound_message_queues()
         finally:
-            self._outbound_message_queues = empty_outbound_message_queues()
+            with session_context(self):
+                self._flushed_callbacks.invoke()
 
     # ==========================================================================
     # On session ended
     # ==========================================================================
     @add_example()
-    def on_ended(self, fn: Callable[[], None]) -> None:
+    def on_ended(self, fn: Callable[[], None]) -> Callable[[], None]:
         """
         Registers a function to be called after the client has disconnected.
 
@@ -617,7 +616,7 @@ class Session:
         -------
         A function that can be used to cancel the registration.
         """
-        self._on_ended_callbacks.append(fn)
+        return self._on_ended_callbacks.register(fn)
 
     # ==========================================================================
     # Misc
