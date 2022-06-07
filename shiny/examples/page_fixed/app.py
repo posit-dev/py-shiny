@@ -12,7 +12,7 @@ app_ui = ui.page_fixed(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @output()
-    @render_plot(alt="A histogram")
+    @render.plot(alt="A histogram")
     def plot() -> object:
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(437)

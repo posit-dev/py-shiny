@@ -21,12 +21,12 @@ def server(input: Inputs, output: Outputs, session: Session):
         return input.safe()
 
     @output()
-    @render_ui()
+    @render.ui()
     def safe():
         raise SafeException(f"You've clicked {str(safe_click())} times")
 
     @output()
-    @render_ui()
+    @render.ui()
     def unsafe():
         req(input.unsafe())
         raise Exception(f"Super secret number of clicks: {str(input.unsafe())}")
@@ -38,7 +38,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         # raise Exception("Observer exception: this should cause a crash")
 
     @output()
-    @render_ui()
+    @render.ui()
     def txt_out():
         req(input.txt(), cancel_output=True)
         return input.txt()

@@ -31,7 +31,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         print("@calc() event:   ", str(btn()))
 
     @output()
-    @render_ui()
+    @render.ui()
     @event(input.btn)
     def btn_value():
         return str(input.btn())

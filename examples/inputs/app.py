@@ -96,7 +96,7 @@ import matplotlib.pyplot as plt
 
 def server(input: Inputs, output: Outputs, session: Session):
     @output()
-    @render_ui()
+    @render.ui()
     def inputs() -> Tag:
         vals = [
             f"<code>input_date()</code> {input.date()}",
@@ -117,14 +117,14 @@ def server(input: Inputs, output: Outputs, session: Session):
     x_rand = 100 + 15 * np.random.randn(437)
 
     @output()
-    @render_plot(alt="A histogram")
+    @render.plot(alt="A histogram")
     def plot():
         fig, ax = plt.subplots()
         ax.hist(x_rand, int(input.n()), density=True)
         return fig
 
     @output()
-    @render_image()
+    @render.image()
     def image():
         from pathlib import Path
 

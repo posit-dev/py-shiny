@@ -24,7 +24,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         val.set(newVal)
 
     @output()
-    @render_text()
+    @render.text()
     def value():
         return str(val.get())
 

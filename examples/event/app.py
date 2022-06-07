@@ -42,7 +42,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         print("@calc() event:   ", str(btn()))
 
     @output()
-    @render_ui()
+    @render.ui()
     @event(input.btn)
     def btn_value():
         return str(input.btn())
@@ -68,7 +68,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         print("async @calc() event:   ", str(val))
 
     @output()
-    @render_ui()
+    @render.ui()
     @event(btn_async_r)
     async def btn_async_value():
         val = await btn_async_r()

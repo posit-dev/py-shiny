@@ -11,7 +11,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @output()
-    @render_plot(alt="A histogram")
+    @render.plot(alt="A histogram")
     # Use event() to invalidate the plot only when the button is pressed
     # (not when the slider is changed)
     @event(lambda: input.go, ignore_none=False)

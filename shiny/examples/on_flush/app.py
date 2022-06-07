@@ -15,7 +15,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     session.on_flush(log, once=False)
 
     @output()
-    @render_ui()
+    @render.ui()
     def n_clicks():
         n = input.flush()
         return "Number of clicks: " + str(n)

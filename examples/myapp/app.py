@@ -30,7 +30,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return input.n() * 2
 
     @output()
-    @render_text()
+    @render.text()
     async def txt():
         val = r()
         return f"n*2 is {val}, session id is {session.id}"
@@ -46,12 +46,12 @@ def server(input: Inputs, output: Outputs, session: Session):
     # Print the value of shared_val(). Changing it in one session should cause
     # this to run in all sessions.
     @output()
-    @render_text()
+    @render.text()
     def shared_txt():
         return f"shared_val() is {shared_val()}"
 
     @output()
-    @render_plot(alt="A histogram")
+    @render.plot(alt="A histogram")
     def plot() -> object:
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(437)
@@ -61,7 +61,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return fig
 
     @output()
-    @render_text()
+    @render.text()
     def file_content():
         file_infos: list[FileInfo] = input.file1()
         if not file_infos:

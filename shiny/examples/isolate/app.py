@@ -11,7 +11,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @output()
-    @render_plot(alt="A histogram")
+    @render.plot(alt="A histogram")
     def plot():
         # Take a reactive dependency on the action button...
         input.go()
