@@ -601,13 +601,29 @@ class Effect_:
         self.destroy()
 
 
-@add_example()
+@overload
+def Effect(fn: Union[EffectFunction, EffectFunctionAsync]) -> Effect_:
+    ...
+
+
+@overload
 def Effect(
     *,
     suspended: bool = False,
     priority: int = 0,
     session: Union[MISSING_TYPE, "Session", None] = MISSING,
 ) -> Callable[[Union[EffectFunction, EffectFunctionAsync]], Effect_]:
+    ...
+
+
+@add_example()
+def Effect(
+    fn: Optional[Union[EffectFunction, EffectFunctionAsync]] = None,
+    *,
+    suspended: bool = False,
+    priority: int = 0,
+    session: Union[MISSING_TYPE, "Session", None] = MISSING,
+) -> Union[Effect_, Callable[[Union[EffectFunction, EffectFunctionAsync]], Effect_]]:
     """
     Mark a function as a reactive side effect.
 
@@ -654,4 +670,7 @@ def Effect(
         fn = cast(EffectFunction, fn)
         return Effect_(fn, suspended=suspended, priority=priority, session=session)
 
-    return create_effect
+    if fn is None:
+        return create_effect
+    else:
+        return create_effect(fn)
