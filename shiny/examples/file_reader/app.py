@@ -16,7 +16,7 @@ def read_file():
 
 def server(input: Inputs, output: Outputs, session: Session):
     @output()
-    @render.render_ui()
+    @render.ui()
     def result():
         return HTML(
             read_file().to_html(
