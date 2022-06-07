@@ -116,7 +116,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         return df
 
     @output()
-    @render.render_ui()
+    @render.ui()
     def table():
         return ui.HTML(
             filtered_quotes().to_html(
