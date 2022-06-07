@@ -18,22 +18,23 @@ __all__ = (
 import base64
 import os
 import sys
-from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union
 import typing
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, Union, overload
 
 from htmltools import TagChildArg
 
 if TYPE_CHECKING:
     from ..session import Session
 
+from .. import _utils
+from ..types import ImgData
 from ._try_render_plot import (
+    TryPlotResult,
     try_render_matplotlib,
     try_render_pil,
     try_render_plotnine,
-    TryPlotResult,
 )
-from ..types import ImgData
-from .. import _utils
+
 
 # ======================================================================================
 # RenderFunction/RenderFunctionAsync base class
@@ -97,7 +98,21 @@ class RenderTextAsync(RenderText, RenderFunctionAsync):
         return await self._run()
 
 
+@overload
+def text(fn: Union[RenderTextFunc, RenderTextFuncAsync]) -> RenderText:
+    ...
+
+
+@overload
 def text() -> Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], RenderText]:
+    ...
+
+
+def text(
+    fn: Optional[Union[RenderTextFunc, RenderTextFuncAsync]] = None
+) -> Union[
+    RenderText, Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], RenderText]
+]:
     """
     Reactively render text.
 
@@ -124,7 +139,10 @@ def text() -> Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], RenderText]
             fn = typing.cast(RenderTextFunc, fn)
             return RenderText(fn)
 
-    return wrapper
+    if fn is None:
+        return wrapper
+    else:
+        return wrapper(fn)
 
 
 # ======================================================================================
@@ -221,10 +239,29 @@ class RenderPlotAsync(RenderPlot, RenderFunctionAsync):
         return await self._run()
 
 
+@overload
+def plot(fn: Union[RenderPlotFunc, RenderPlotFuncAsync]) -> RenderPlot:
+    ...
+
+
+@overload
+def plot(
+    *,
+    alt: Optional[str] = None,
+    **kwargs: Any,
+) -> Callable[[Union[RenderPlotFunc, RenderPlotFuncAsync]], RenderPlot]:
+    ...
+
+
 # TODO: Use more specific types for render.plot
 def plot(
-    *, alt: Optional[str] = None, **kwargs: object
-) -> Callable[[Union[RenderPlotFunc, RenderPlotFuncAsync]], RenderPlot]:
+    fn: Optional[Union[RenderPlotFunc, RenderPlotFuncAsync]] = None,
+    *,
+    alt: Optional[str] = None,
+    **kwargs: Any,
+) -> Union[
+    RenderPlot, Callable[[Union[RenderPlotFunc, RenderPlotFuncAsync]], RenderPlot]
+]:
     """
     Reactively render a plot object as an HTML image.
 
@@ -265,7 +302,10 @@ def plot(
         else:
             return RenderPlot(fn, alt=alt, **kwargs)
 
-    return wrapper
+    if fn is None:
+        return wrapper
+    else:
+        return wrapper(fn)
 
 
 # ======================================================================================
@@ -319,9 +359,26 @@ class RenderImageAsync(RenderImage, RenderFunctionAsync):
         return await self._run()
 
 
+@overload
+def image(fn: Union[RenderImageFunc, RenderImageFuncAsync]) -> RenderImage:
+    ...
+
+
+@overload
 def image(
+    *,
     delete_file: bool = False,
 ) -> Callable[[Union[RenderImageFunc, RenderImageFuncAsync]], RenderImage]:
+    ...
+
+
+def image(
+    fn: Optional[Union[RenderImageFunc, RenderImageFuncAsync]] = None,
+    *,
+    delete_file: bool = False,
+) -> Union[
+    RenderImage, Callable[[Union[RenderImageFunc, RenderImageFuncAsync]], RenderImage]
+]:
     """
     Reactively render a image file as an HTML image.
 
@@ -355,7 +412,10 @@ def image(
             fn = typing.cast(RenderImageFunc, fn)
             return RenderImage(fn, delete_file=delete_file)
 
-    return wrapper
+    if fn is None:
+        return wrapper
+    else:
+        return wrapper(fn)
 
 
 # ======================================================================================
@@ -394,7 +454,19 @@ class RenderUIAsync(RenderUI, RenderFunctionAsync):
         return await self._run()
 
 
+@overload
+def ui(fn: Union[RenderUIFunc, RenderUIFuncAsync]) -> RenderUI:
+    ...
+
+
+@overload
 def ui() -> Callable[[Union[RenderUIFunc, RenderUIFuncAsync]], RenderUI]:
+    ...
+
+
+def ui(
+    fn: Optional[Union[RenderUIFunc, RenderUIFuncAsync]] = None
+) -> Union[RenderUI, Callable[[Union[RenderUIFunc, RenderUIFuncAsync]], RenderUI]]:
     """
     Reactively render HTML content.
 
@@ -423,4 +495,7 @@ def ui() -> Callable[[Union[RenderUIFunc, RenderUIFuncAsync]], RenderUI]:
             fn = typing.cast(RenderUIFunc, fn)
             return RenderUI(fn)
 
-    return wrapper
+    if fn is None:
+        return wrapper
+    else:
+        return wrapper(fn)
