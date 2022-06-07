@@ -23,6 +23,7 @@ from typing import (
     List,
     Any,
     cast,
+    overload,
 )
 from starlette.requests import Request, HTTPConnection
 
@@ -803,6 +804,11 @@ class Outputs:
         self._suspend_when_hidden: Dict[str, bool] = {}
         self._session: Session = session
 
+    @overload
+    def __call__(self, fn: render.RenderFunction) -> None:
+        ...
+
+    @overload
     def __call__(
         self,
         *,
@@ -811,6 +817,17 @@ class Outputs:
         priority: int = 0,
         name: Optional[str] = None,
     ) -> Callable[[render.RenderFunction], None]:
+        ...
+
+    def __call__(
+        self,
+        fn: Optional[render.RenderFunction] = None,
+        *,
+        id: Optional[str] = None,
+        suspend_when_hidden: bool = True,
+        priority: int = 0,
+        name: Optional[str] = None,
+    ) -> Union[None, Callable[[render.RenderFunction], None]]:
         if name is not None:
             from .. import _deprecated
 
@@ -886,7 +903,10 @@ class Outputs:
 
             return None
 
-        return set_fn
+        if fn is None:
+            return set_fn
+        else:
+            return set_fn(fn)
 
     def _manage_hidden(self) -> None:
         "Suspends execution of hidden outputs and resumes execution of visible outputs."
