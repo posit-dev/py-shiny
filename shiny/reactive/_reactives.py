@@ -323,6 +323,18 @@ class CalcAsync_(Calc_[T]):
         return await self.get_value()
 
 
+@overload
+def Calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc_[T]:
+    ...
+
+
+@overload
+def Calc(
+    *, session: Union[MISSING_TYPE, "Session", None] = MISSING
+) -> Callable[[CalcFunction[T]], Calc_[T]]:
+    ...
+
+
 # Note that the specified return type of calc() isn't exactly the same as the actual
 # returned object -- the former specifes a Callable that takes a CalcFunction[T], and
 # the latter is a Callable that takes CalcFunction[T] | CalcFunctionAsync[T]. Both are
@@ -344,8 +356,10 @@ class CalcAsync_(Calc_[T]):
 # works out.
 @add_example()
 def Calc(
-    *, session: Union[MISSING_TYPE, "Session", None] = MISSING
-) -> Callable[[CalcFunction[T]], Calc_[T]]:
+    fn: Optional[Union[CalcFunction[T], CalcFunctionAsync[T]]] = None,
+    *,
+    session: Union[MISSING_TYPE, "Session", None] = MISSING,
+) -> Union[Calc_[T], Callable[[CalcFunction[T]], Calc_[T]]]:
     """
     Mark a function as a reactive calculation.
 
@@ -388,7 +402,10 @@ def Calc(
             fn = cast(CalcFunction[T], fn)
             return Calc_(fn, session=session)
 
-    return create_calc
+    if fn is None:
+        return create_calc
+    else:
+        return create_calc(fn)
 
 
 # ==============================================================================
