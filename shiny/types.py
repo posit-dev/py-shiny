@@ -69,15 +69,15 @@ class FileInfo(TypedDict):
 
 class ImgData(TypedDict):
     """
-    Return type for :func:`~shiny.render_image`.
+    Return type for :func:`~shiny.render.image`.
 
     See Also
     --------
-    ~shiny.render_image
+    ~shiny.render.image
 
     Example
     -------
-    See :func:`~shiny.render_image`.
+    See :func:`~shiny.render.image`.
     """
 
     src: str
@@ -112,7 +112,7 @@ class SilentException(Exception):
     Normally, when an exception occurs inside a reactive context, it's either:
 
     - Displayed to the user (as a big red error message)
-        - This happens when the exception is raised from an output context (e.g., :func:`shiny.render_ui`)
+        - This happens when the exception is raised from an output context (e.g., :func:`shiny.render.ui`)
     - Crashes the application
         - This happens when the exception is raised from an :func:`shiny.reactive.Effect`
 

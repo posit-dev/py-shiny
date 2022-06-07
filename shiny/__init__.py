@@ -6,7 +6,7 @@ from ._shinyenv import is_pyodide as _is_pyodide
 
 # User-facing subpackages that should be available on `from shiny import *`
 from . import reactive
-from .render import *
+from . import render
 from .session import *
 from . import ui
 
@@ -43,11 +43,6 @@ __all__ = (
     "run_app",
     # _modules.py
     "Module",
-    # _render.py
-    "render_text",
-    "render_plot",
-    "render_image",
-    "render_ui",
     # _session.py
     "Session",
     "Inputs",

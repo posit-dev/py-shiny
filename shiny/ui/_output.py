@@ -19,8 +19,8 @@ def output_plot(
     """
     Create a output container for a static plot.
 
-    Place a :func:`~shiny.render_plot` result in the user interface. See
-    :func:`~shiny.render_plot` for more details on what types of plots are supported.
+    Place a :func:`~shiny.render.plot` result in the user interface. See
+    :func:`~shiny.render.plot` for more details on what types of plots are supported.
 
     Parameters
     ----------
@@ -39,7 +39,7 @@ def output_plot(
 
     See Also
     -------
-    ~shiny.render_plot
+    ~shiny.render.plot
     ~shiny.ui.output_image
     """
     res = output_image(id=id, width=width, height=height, inline=inline)
@@ -71,7 +71,7 @@ def output_image(
 
     See Also
     -------
-    ~shiny.render_image
+    ~shiny.render.image
     ~shiny.ui.output_plot
     """
     func = tags.span if inline else div
@@ -105,7 +105,7 @@ def output_text(
 
     See Also
     -------
-    ~shiny.render_text
+    ~shiny.render.text
     ~shiny.ui.output_text_verbatim
     """
 
@@ -118,7 +118,7 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     """
     Create a output container for some text.
 
-    Place a :func:`~shiny.render_text` result in the user interface.
+    Place a :func:`~shiny.render.text` result in the user interface.
     Differs from :func:`~shiny.ui.output_text` in that it wraps the text in a
     fixed-width container with a gray-ish background color and border.
 
@@ -136,7 +136,7 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
 
     See Also
     -------
-    ~shiny.render_text
+    ~shiny.render.text
     ~shiny.ui.output_text
 
     Example
@@ -175,7 +175,7 @@ def output_ui(
 
     See Also
     -------
-    ~shiny.render_ui
+    ~shiny.render.ui
     ~shiny.ui.output_text
     """
 
