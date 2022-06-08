@@ -492,6 +492,10 @@ class Session:
         msg = {"selector": selector, "multiple": multiple}
         self._send_message_sync({"shiny-remove-ui": msg})
 
+    def _send_progress(self, type: str, message: object) -> None:
+        msg: Dict[str, object] = {"progress": {"type": type, "message": message}}
+        _utils.run_coro_sync(self._send_message(msg))
+
     @add_example()
     async def send_custom_message(self, type: str, message: Dict[str, object]) -> None:
         """
@@ -833,6 +837,7 @@ class Outputs:
                 await self._session._send_message(
                     {"recalculating": {"name": fn_name, "status": "recalculating"}}
                 )
+                self._session._send_progress("binding", {"id": fn_name})
 
                 message: Dict[str, object] = {}
                 try:

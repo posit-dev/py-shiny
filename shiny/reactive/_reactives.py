@@ -474,6 +474,8 @@ class Effect_:
 
             def _continue() -> None:
                 ctx.add_pending_flush(self._priority)
+                if self._session and hasattr(self._session, "_send_message"):
+                    _utils.run_coro_sync(self._session._send_message({"busy": "busy"}))
 
             if self._suspended:
                 self._on_resume = _continue
@@ -483,6 +485,8 @@ class Effect_:
         async def on_flush_cb() -> None:
             if not self._destroyed:
                 await self._run()
+            if self._session and hasattr(self._session, "_send_message"):
+                _utils.run_coro_sync(self._session._send_message({"busy": "idle"}))
 
         ctx.on_invalidate(on_invalidate_cb)
         ctx.on_flush(on_flush_cb)
