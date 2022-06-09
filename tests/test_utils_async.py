@@ -1,5 +1,6 @@
 """Tests for `shiny.utils` async-related functions."""
 
+import contextvars
 import pytest
 import asyncio
 from typing import Iterator, List
@@ -246,3 +247,28 @@ async def test_coro_hybrid_self_cancel2():
     with pytest.raises(asyncio.CancelledError):
         await fut
     assert state == 1
+
+
+@pytest.mark.asyncio
+async def test_coro_hybrid_context():
+    test = contextvars.ContextVar("test", default=False)
+
+    async def test_ctx():
+        assert test.get()
+        await asyncio.sleep(0)
+        assert test.get()
+        await asyncio.sleep(0.1)
+        assert test.get()
+
+    def do():
+        # Set our context's copy of `test` to True. Since test_ctx() is being launched
+        # within our context, it should see test.get() == True, whereas any code outside
+        # our context will continue to see test.get() == False.
+        test.set(True)
+        return run_coro_hybrid(test_ctx())
+
+    inner_ctx = contextvars.copy_context()
+    fut = inner_ctx.run(do)
+    assert not test.get()
+    await fut
+    assert not test.get()
