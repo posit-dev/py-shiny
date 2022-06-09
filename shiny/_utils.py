@@ -1,4 +1,5 @@
 import asyncio
+import collections.abc
 import contextlib
 import functools
 import importlib
@@ -9,7 +10,19 @@ import secrets
 import sys
 import tempfile
 
-from typing import Callable, Awaitable, Optional, Union, Tuple, TypeVar, Dict, Any, cast
+from typing import (
+    Callable,
+    Awaitable,
+    Optional,
+    Union,
+    Tuple,
+    Iterator,
+    TypeVar,
+    Dict,
+    List,
+    Any,
+    cast,
+)
 
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
@@ -277,6 +290,35 @@ class AsyncCallbacks:
 
     def count(self) -> int:
         return len(self._callbacks)
+
+
+# Intended for use with json.load()'s object_hook parameter.
+# Note also that object_hook is only called on dicts, not on lists, so this
+# work for converting "top-level" lists to tuples
+def make_object_read_only(x: object) -> object:
+    if isinstance(x, dict):
+        x = cast(Dict[str, object], x)
+        return ReadOnlyMap({k: make_object_read_only(v) for k, v in x.items()})
+    elif isinstance(x, list):
+        x = cast(List[object], x)
+        return tuple([make_object_read_only(y) for y in x])
+    else:
+        # TODO: are there other mutable iterators that we want to make read only?
+        return x
+
+
+class ReadOnlyMap(collections.abc.Mapping[str, object]):
+    def __init__(self, data: Dict[str, object] = {}):
+        self._data = data
+
+    def __getitem__(self, key: str):
+        return self._data[key]
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._data)
 
 
 # ==============================================================================

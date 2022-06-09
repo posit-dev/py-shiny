@@ -215,7 +215,9 @@ class Session:
                     print("RECV: " + message, flush=True)
 
                 try:
-                    message_obj = json.loads(message)
+                    message_obj = json.loads(
+                        message, object_hook=_utils.make_object_read_only
+                    )
                 except json.JSONDecodeError:
                     print("ERROR: Invalid JSON message")
                     continue
