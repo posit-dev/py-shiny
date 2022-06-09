@@ -1,4 +1,6 @@
+import asyncio
 import contextlib
+import contextvars
 import functools
 import importlib
 import inspect
@@ -8,7 +10,7 @@ import secrets
 import sys
 import tempfile
 
-from typing import Callable, Awaitable, Union, Tuple, TypeVar, Dict, Any, cast
+from typing import Callable, Awaitable, Optional, Union, Tuple, TypeVar, Dict, Any, cast
 
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
@@ -122,6 +124,82 @@ def run_coro_sync(coro: Awaitable[T]) -> T:
     raise RuntimeError(
         "async function yielded control; it did not finish in one iteration."
     )
+
+
+def run_coro_hybrid(coro: Awaitable[T]) -> asyncio.Future[T]:
+    """
+    Synchronously runs the given coro up to its first yield, then runs the rest of the
+    coro by scheduling it on the current event loop, as per normal. You can think of
+    this as either a run_coro_sync() that keeps running in the future, or, as an
+    asyncio.create_task() that starts executing immediately instead of via call_soon.
+
+    The status/result/exception can be access through the returned future. Even if an
+    error happens synchronously, run_coro_hybrid() will not throw, but rather the error
+    will be reported through the future object.
+
+    **PLEASE ONLY USE THIS IF IT'S ABSOLUTELY NECESSARY.** Relative to the official
+    asyncio Task implementation, this is a hastily assembled hack job; who knows what
+    unknown unknowns lurk here.
+    """
+    result_future: asyncio.Future[T] = asyncio.Future()
+    # Not sure it's necessary to grab the context here. If we didn't pass context
+    # arguments to call_soon and add_done_callback, maybe we'd implicitly get the
+    # correct context.
+    ctx = contextvars.copy_context()
+
+    if not inspect.iscoroutine(coro):
+        raise TypeError("run_coro_hybrid requires a Coroutine object.")
+
+    # Inspired by Task.__step method in cpython/Lib/asyncio/tasks.py
+    def _step(fut: Optional[asyncio.Future[None]] = None):
+        assert result_future.cancelled() or not result_future.done()
+
+        exc: Optional[BaseException] = None
+        if fut:
+            assert fut.done()
+            try:
+                fut.result()
+            except BaseException as e:
+                exc = e
+
+        if result_future.cancelled():
+            # This may cause fut.result()'s exception to be ignored. That's intentional.
+            # The cancellation takes precedent, but if we don't call fut.result() first
+            # to retrieve its error, Python will warn.
+            exc = asyncio.CancelledError()
+
+        res: Optional[asyncio.Future[None]] = None
+        try:
+            if exc is None:
+                res = coro.send(None)
+            else:
+                # Is it worth throwing here? Or just logging?
+                res = coro.throw(exc)
+        except StopIteration as e:
+            # Done
+            result_future.set_result(e.value)
+            return
+        except asyncio.exceptions.CancelledError:
+            result_future.cancel()
+            return
+        except (KeyboardInterrupt, SystemExit) as e:
+            result_future.set_exception(e)
+            raise
+        except BaseException as e:
+            result_future.set_exception(e)
+        else:
+            # If we get here, the coro didn't finish. Schedule it for completion.
+            if isinstance(res, asyncio.Future):
+                res.add_done_callback(_step, context=ctx)
+            elif res is None:
+                # This case happens with asyncio.sleep(0)
+                asyncio.get_running_loop().call_soon(_step, context=ctx)
+            else:
+                raise RuntimeError(f"coroutine yielded unknown value: {res!r}")
+
+    _step()
+
+    return result_future
 
 
 def drop_none(x: Dict[str, Any]) -> Dict[str, object]:

@@ -484,11 +484,11 @@ class Session:
             "where": where,
             "content": content,
         }
-        _utils.run_coro_sync(self._send_message({"shiny-insert-ui": msg}))
+        self._send_message_sync({"shiny-insert-ui": msg})
 
     def _send_remove_ui(self, selector: str, multiple: bool) -> None:
         msg = {"selector": selector, "multiple": multiple}
-        _utils.run_coro_sync(self._send_message({"shiny-remove-ui": msg}))
+        self._send_message_sync({"shiny-remove-ui": msg})
 
     @add_example()
     async def send_custom_message(self, type: str, message: Dict[str, object]) -> None:
@@ -521,6 +521,15 @@ class Session:
                 flush=True,
             )
         await self._conn.send(json.dumps(message))
+
+    def _send_message_sync(self, message: Dict[str, object]) -> None:
+        """
+        Same as _send_message, except that if the message isn't too large and the socket
+        isn't too backed up, then the message may be sent synchronously instead of
+        having to wait until the current task yields (and potentially much longer than
+        that, if there is a lot of contention for the main thread).
+        """
+        _utils.run_coro_hybrid(self._send_message(message))
 
     def _send_error_response(self, message_str: str) -> None:
         print("_send_error_response: " + message_str)
