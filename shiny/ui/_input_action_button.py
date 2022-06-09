@@ -11,6 +11,7 @@ from .._docstring import add_example
 def input_action_button(
     id: str,
     label: TagChildArg,
+    *,
     icon: TagChildArg = None,
     width: Optional[str] = None,
     **kwargs: TagAttrArg,
@@ -62,6 +63,7 @@ def input_action_button(
 def input_action_link(
     id: str,
     label: TagChildArg,
+    *,
     icon: TagChildArg = None,
     **kwargs: TagAttrArg,
 ) -> Tag:

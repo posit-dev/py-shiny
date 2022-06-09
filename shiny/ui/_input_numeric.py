@@ -13,6 +13,7 @@ def input_numeric(
     id: str,
     label: TagChildArg,
     value: float,
+    *,
     min: Optional[float] = None,
     max: Optional[float] = None,
     step: Optional[float] = None,

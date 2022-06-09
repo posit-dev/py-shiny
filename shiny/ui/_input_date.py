@@ -15,6 +15,7 @@ from ._utils import shiny_input_label
 def input_date(
     id: str,
     label: TagChildArg,
+    *,
     value: Optional[Union[date, str]] = None,
     min: Optional[Union[date, str]] = None,
     max: Optional[Union[date, str]] = None,
@@ -130,6 +131,7 @@ def input_date(
 def input_date_range(
     id: str,
     label: TagChildArg,
+    *,
     start: Optional[Union[date, str]] = None,
     end: Optional[Union[date, str]] = None,
     min: Optional[Union[date, str]] = None,

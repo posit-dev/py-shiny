@@ -64,6 +64,7 @@ class AnimationOptions(TypedDict):
 def input_slider(
     id: str,
     label: TagChildArg,
+    *,
     min: SliderValueArg,
     max: SliderValueArg,
     value: Union[SliderValueArg, Iterable[SliderValueArg]],

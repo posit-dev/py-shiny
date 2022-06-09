@@ -21,7 +21,7 @@ ChoicesArg = Union[List[str], _Choices]
 
 @add_example()
 def input_checkbox(
-    id: str, label: TagChildArg, value: bool = False, width: Optional[str] = None
+    id: str, label: TagChildArg, value: bool = False, *, width: Optional[str] = None
 ) -> Tag:
     """
     Create a checkbox that can be used to specify logical values.
@@ -74,6 +74,7 @@ def input_checkbox_group(
     id: str,
     label: TagChildArg,
     choices: ChoicesArg,
+    *,
     selected: Optional[Union[str, List[str]]] = None,
     inline: bool = False,
     width: Optional[str] = None,
@@ -142,6 +143,7 @@ def input_radio_buttons(
     id: str,
     label: TagChildArg,
     choices: ChoicesArg,
+    *,
     selected: Optional[str] = None,
     inline: bool = False,
     width: Optional[str] = None,
