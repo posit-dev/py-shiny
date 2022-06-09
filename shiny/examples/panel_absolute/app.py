@@ -3,7 +3,9 @@ from shiny import *
 app_ui = ui.page_fluid(
     ui.panel_title("A basic absolute panel example", "Demo"),
     ui.panel_absolute(
-        ui.panel_well("Drag me around!", ui.input_slider("n", "N", 0, 100, 20)),
+        ui.panel_well(
+            "Drag me around!", ui.input_slider("n", "N", min=0, max=100, value=20)
+        ),
         draggable=True,
         width="300px",
         right="50px",

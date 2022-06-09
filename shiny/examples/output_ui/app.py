@@ -12,7 +12,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     @event(input.add)
     def moreControls():
         return ui.TagList(
-            ui.input_slider("n", "N", 1, 1000, 500), ui.input_text("label", "Label")
+            ui.input_slider("n", "N", min=1, max=1000, value=500),
+            ui.input_text("label", "Label"),
         )
 
 

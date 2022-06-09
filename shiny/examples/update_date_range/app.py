@@ -2,7 +2,7 @@ from shiny import *
 from datetime import date, timedelta
 
 app_ui = ui.page_fluid(
-    ui.input_slider("n", "Day of month", 1, 30, 10),
+    ui.input_slider("n", "Day of month", min=1, max=30, value=10),
     ui.input_date_range("inDateRange", "Input date"),
 )
 

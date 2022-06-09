@@ -44,7 +44,9 @@ app_ui = ui.page_fluid(
             desc="Downloads a PNG that's generated on the fly.",
             extra=[
                 ui.input_text("title", "Plot title", "Random scatter plot"),
-                ui.input_slider("num_points", "Number of data points", 1, 100, 50),
+                ui.input_slider(
+                    "num_points", "Number of data points", min=1, max=100, value=50
+                ),
             ],
         ),
     ),

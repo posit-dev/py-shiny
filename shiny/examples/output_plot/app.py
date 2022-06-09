@@ -1,5 +1,4 @@
 from shiny import *
-from shiny.types import ImgData
 import numpy as np
 import matplotlib.pyplot as plt
 

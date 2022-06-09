@@ -3,7 +3,9 @@ from shiny import *
 app_ui = ui.page_fluid(
     ui.layout_sidebar(
         ui.panel_sidebar(
-            ui.input_radio_buttons("controller", "Controller", ["1", "2", "3"], "1")
+            ui.input_radio_buttons(
+                "controller", "Controller", ["1", "2", "3"], selected="1"
+            )
         ),
         ui.panel_main(
             ui.navset_hidden(
