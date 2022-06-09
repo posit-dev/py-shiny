@@ -1,5 +1,49 @@
 import pytest
-from shiny._utils import AsyncCallbacks, Callbacks
+import random
+from shiny._utils import AsyncCallbacks, Callbacks, private_seed
+from typing import List
+
+
+def test_randomness():
+    current_state = random.getstate()
+    try:
+        # Make sure the public stream of randomness is independent of the private stream
+        # https://github.com/rstudio/py-shiny/issues/140
+        pub = random.randint(0, 100)
+        with private_seed():
+            priv = random.randint(0, 100)
+        pub2 = random.randint(0, 100)
+        with private_seed():
+            priv2 = random.randint(0, 100)
+        assert pub != priv and priv != pub2 and pub2 != priv2
+
+        # By setting the same seed, we should get the same randomness
+        random.seed(0)
+        public = [random.randint(0, 100) for _ in range(3)]
+        with private_seed():
+            random.seed(0)
+            private = [random.randint(0, 100) for _ in range(3)]
+        assert public == private
+
+        # Interleaved calls to private and public should give the same randomness
+        public: List[float] = []
+        private: List[float] = []
+        random.seed(0)
+        with private_seed():
+            random.seed(0)
+        public.append(random.randint(0, 100))
+        with private_seed():
+            private.append(random.randint(0, 100))
+        with private_seed():
+            private.append(random.randint(0, 100))
+        public.append(random.randint(0, 100))
+        public.append(random.randint(0, 100))
+        with private_seed():
+            private.append(random.randint(0, 100))
+        assert public == private
+
+    finally:
+        random.setstate(current_state)
 
 
 def test_callbacks():
