@@ -1,5 +1,4 @@
 import asyncio
-import collections.abc
 import contextlib
 import functools
 import importlib
@@ -17,6 +16,7 @@ from typing import (
     Union,
     Tuple,
     Iterator,
+    Mapping,
     TypeVar,
     Dict,
     List,
@@ -307,7 +307,7 @@ def make_object_read_only(x: object) -> object:
         return x
 
 
-class ReadOnlyMap(collections.abc.Mapping[str, object]):
+class ReadOnlyMap(Mapping[str, object]):
     def __init__(self, data: Dict[str, object] = {}):
         self._data = data
 
