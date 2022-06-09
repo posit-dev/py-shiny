@@ -186,6 +186,7 @@ async def test_coro_hybrid_throw_later():
         raise ValueError("boom")
 
     fut = run_coro_hybrid(test_task_throw_later())
+    assert state == 1
     with pytest.raises(ValueError):
         await fut
 
