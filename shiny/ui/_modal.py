@@ -17,7 +17,6 @@ from htmltools import tags, Tag, div, HTML, TagChildArg, TagAttrArg
 
 from .._docstring import add_example
 from ..session import Session, require_active_session
-from .._utils import run_coro_sync
 
 
 def modal_button(
@@ -177,7 +176,7 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     """
     session = require_active_session(session)
     msg = session._process_ui(modal)
-    run_coro_sync(session._send_message({"modal": {"type": "show", "message": msg}}))
+    session._send_message_sync({"modal": {"type": "show", "message": msg}})
 
 
 def modal_remove(session: Optional[Session] = None) -> None:
@@ -200,4 +199,4 @@ def modal_remove(session: Optional[Session] = None) -> None:
     See :func:`modal`.
     """
     session = require_active_session(session)
-    run_coro_sync(session._send_message({"modal": {"type": "remove", "message": None}}))
+    session._send_message_sync({"modal": {"type": "remove", "message": None}})

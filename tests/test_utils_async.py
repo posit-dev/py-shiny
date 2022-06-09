@@ -1,10 +1,11 @@
 """Tests for `shiny.utils` async-related functions."""
 
+import contextvars
 import pytest
 import asyncio
 from typing import Iterator, List
 
-from shiny._utils import run_coro_sync
+from shiny._utils import run_coro_sync, run_coro_hybrid
 
 
 def range_sync(n: int) -> Iterator[int]:
@@ -138,3 +139,137 @@ def test_create_task():
 
     with pytest.raises(RuntimeError):
         asyncio.run(create_task_wrapper2())
+
+
+@pytest.mark.asyncio
+async def test_coro_hybrid():
+    state = 0
+
+    async def test_task() -> int:
+        nonlocal state
+        state = 1
+        await asyncio.sleep(0)
+        state = 2
+        await asyncio.sleep(0.1)
+        state = 3
+        return 100
+
+    assert state == 0
+    fut = run_coro_hybrid(test_task())
+    assert state == 1
+    await asyncio.sleep(0.01)
+    assert state == 2
+    await asyncio.sleep(0.1)
+    assert state == 3
+    assert await fut == 100
+
+
+@pytest.mark.asyncio
+async def test_coro_hybrid_throw():
+    async def test_task_throw():
+        raise ValueError("boom")
+
+    fut = run_coro_hybrid(test_task_throw())
+    with pytest.raises(ValueError):
+        await fut
+
+
+@pytest.mark.asyncio
+async def test_coro_hybrid_throw_later():
+
+    state = 0
+
+    async def test_task_throw_later():
+        nonlocal state
+        state = 1
+        await asyncio.sleep(0.1)
+        raise ValueError("boom")
+
+    fut = run_coro_hybrid(test_task_throw_later())
+    assert state == 1
+    with pytest.raises(ValueError):
+        await fut
+
+
+@pytest.mark.asyncio
+async def test_coro_hybrid_cancel():
+    state = 0
+
+    async def test_task_cancel():
+        nonlocal state
+        state = 1
+        await asyncio.sleep(0)
+        state = 2
+
+    fut = run_coro_hybrid(test_task_cancel())
+    assert state == 1
+    fut.cancel()
+    await asyncio.sleep(0.1)
+    assert state == 1
+
+
+@pytest.mark.asyncio
+async def test_coro_hybrid_self_cancel():
+    state = 0
+
+    fut: asyncio.Future[None]
+
+    async def test_task_cancel():
+        nonlocal state
+        state = 1
+        await asyncio.sleep(0)
+        fut.cancel()
+        await asyncio.sleep(0)
+        state = 2
+
+    fut = run_coro_hybrid(test_task_cancel())
+    assert state == 1
+    await asyncio.sleep(0.1)
+    assert state == 1
+    with pytest.raises(asyncio.CancelledError):
+        await fut
+    assert state == 1
+
+
+@pytest.mark.asyncio
+async def test_coro_hybrid_self_cancel2():
+    state = 0
+
+    async def test_task_cancel():
+        nonlocal state
+        state = 1
+        await asyncio.sleep(0)
+        raise asyncio.CancelledError()
+
+    fut = run_coro_hybrid(test_task_cancel())
+    assert state == 1
+    await asyncio.sleep(0.1)
+    assert state == 1
+    with pytest.raises(asyncio.CancelledError):
+        await fut
+    assert state == 1
+
+
+@pytest.mark.asyncio
+async def test_coro_hybrid_context():
+    test = contextvars.ContextVar("test", default=False)
+
+    async def test_ctx():
+        assert test.get()
+        await asyncio.sleep(0)
+        assert test.get()
+        await asyncio.sleep(0.1)
+        assert test.get()
+
+    def do():
+        # Set our context's copy of `test` to True. Since test_ctx() is being launched
+        # within our context, it should see test.get() == True, whereas any code outside
+        # our context will continue to see test.get() == False.
+        test.set(True)
+        return run_coro_hybrid(test_ctx())
+
+    inner_ctx = contextvars.copy_context()
+    fut = inner_ctx.run(do)
+    assert not test.get()
+    await fut
+    assert not test.get()

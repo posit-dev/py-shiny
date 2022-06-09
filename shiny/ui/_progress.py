@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any, Type
 from warnings import warn
 
 from .._docstring import add_example
-from .._utils import run_coro_sync, rand_hex
+from .._utils import rand_hex
 from ..session import Session, require_active_session
 
 
@@ -154,8 +154,6 @@ class Progress:
         self._closed = True
 
     def _send_progress(self, type: str, message: Dict[str, Any]) -> None:
-        run_coro_sync(
-            self._session._send_message(
-                {"progress": {"type": type, "message": message}}
-            )
+        self._session._send_message_sync(
+            {"progress": {"type": type, "message": message}}
         )

@@ -11,7 +11,7 @@ else:
 from htmltools import TagList, TagChildArg
 
 from .._docstring import add_example
-from .._utils import run_coro_sync, rand_hex
+from .._utils import rand_hex
 from ..session import Session, require_active_session
 
 
@@ -82,9 +82,7 @@ def notification_show(
     if duration:
         payload.update({"duration": duration * 1000})
 
-    run_coro_sync(
-        session._send_message({"notification": {"type": "show", "message": payload}})
-    )
+    session._send_message_sync({"notification": {"type": "show", "message": payload}})
 
     return id
 
@@ -115,7 +113,5 @@ def notification_remove(id: str, session: Optional[Session] = None) -> str:
     See :func:`notification_show`.
     """
     session = require_active_session(session)
-    run_coro_sync(
-        session._send_message({"notification": {"type": "remove", "message": id}})
-    )
+    session._send_message_sync({"notification": {"type": "remove", "message": id}})
     return id
