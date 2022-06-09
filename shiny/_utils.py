@@ -37,15 +37,18 @@ def private_seed():
     state = random.getstate()
     global own_random_state
     try:
-        if own_random_state is not None:
-            random.setstate(own_random_state)
+        random.setstate(own_random_state)
         yield
     finally:
         own_random_state = random.getstate()
         random.setstate(state)
 
 
-own_random_state = None
+# Initialize random state for shiny's own private stream of randomness.
+current_random_state = random.getstate()
+random.seed(secrets.randbits(128))
+own_random_state = random.getstate()
+random.setstate(current_random_state)
 
 # ==============================================================================
 # Async-related functions
