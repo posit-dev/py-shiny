@@ -1,8 +1,14 @@
 __all__ = ("input_file",)
 
-from typing import Optional, List, Literal
+import sys
+from typing import List, Optional
 
-from htmltools import tags, Tag, div, span, css, TagChildArg
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
+from htmltools import Tag, TagChildArg, css, div, span, tags
 
 from .._docstring import add_example
 from ._utils import shiny_input_label
