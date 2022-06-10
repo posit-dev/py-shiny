@@ -1,7 +1,7 @@
 __all__ = ("input_file",)
 
 import sys
-from typing import List, Optional
+from typing import List, Optional, Union
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -20,7 +20,7 @@ def input_file(
     label: TagChildArg,
     *,
     multiple: bool = False,
-    accept: Optional[List[str]] = None,
+    accept: Optional[Union[str, List[str]]] = None,
     width: Optional[str] = None,
     button_label: str = "Browse...",
     placeholder: str = "No file selected",
@@ -39,8 +39,9 @@ def input_file(
         Whether the user should be allowed to select and upload multiple files at once.
     accept
         Unique file type specifier(s) which give the browser a hint as to the type of
-        file the server expects. Many browsers use this prevent the user from selecting
-        an invalid file. See the note below for more details.
+        file the server expects. This can be a single string or a list of strings. Many
+        browsers use this prevent the user from selecting an invalid file. See the note
+        below for more details.
     width
         The CSS width, e.g. '400px', or '100%'
     button_label
@@ -50,8 +51,8 @@ def input_file(
     capture
         On mobile devices, this can be used to open the device's camera for input. If
         "environment", it will open the rear-facing camera. If "user", it will open the
-        front-facing camera. By default, it will accept either still photos or video.
-        To accept only still photos, use ``accept="image/*"``; to accept only video, use
+        front-facing camera. By default, it will accept either still photos or video. To
+        accept only still photos, use ``accept="image/*"``; to accept only video, use
         ``accept="video/*"``.
 
     Returns
@@ -74,6 +75,9 @@ def input_file(
     --------
     ~shiny.ui.download_button
     """
+
+    if isinstance(accept, str):
+        accept = [accept]
 
     btn_file = span(
         button_label,
