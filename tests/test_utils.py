@@ -9,20 +9,20 @@ def test_randomness():
     try:
         # Make sure the public stream of randomness is independent of the private stream
         # https://github.com/rstudio/py-shiny/issues/140
-        pub = random.randint(0, 100)
+        pub = random.randint(0, 1000)
         with private_seed():
-            priv = random.randint(0, 100)
-        pub2 = random.randint(0, 100)
+            priv = random.randint(0, 1000)
+        pub2 = random.randint(0, 1000)
         with private_seed():
-            priv2 = random.randint(0, 100)
+            priv2 = random.randint(0, 1000)
         assert pub != priv and priv != pub2 and pub2 != priv2
 
         # By setting the same seed, we should get the same randomness
         random.seed(0)
-        public = [random.randint(0, 100) for _ in range(3)]
+        public = [random.randint(0, 1000) for _ in range(3)]
         with private_seed():
             random.seed(0)
-            private = [random.randint(0, 100) for _ in range(3)]
+            private = [random.randint(0, 1000) for _ in range(3)]
         assert public == private
 
         # Interleaved calls to private and public should give the same randomness
@@ -31,15 +31,15 @@ def test_randomness():
         random.seed(0)
         with private_seed():
             random.seed(0)
-        public.append(random.randint(0, 100))
+        public.append(random.randint(0, 1000))
         with private_seed():
-            private.append(random.randint(0, 100))
+            private.append(random.randint(0, 1000))
         with private_seed():
-            private.append(random.randint(0, 100))
-        public.append(random.randint(0, 100))
-        public.append(random.randint(0, 100))
+            private.append(random.randint(0, 1000))
+        public.append(random.randint(0, 1000))
+        public.append(random.randint(0, 1000))
         with private_seed():
-            private.append(random.randint(0, 100))
+            private.append(random.randint(0, 1000))
         assert public == private
 
     finally:
