@@ -1,6 +1,6 @@
 __all__ = ("input_file",)
 
-from typing import Optional, List
+from typing import Optional, List, Literal
 
 from htmltools import tags, Tag, div, span, css, TagChildArg
 
@@ -12,11 +12,13 @@ from ._utils import shiny_input_label
 def input_file(
     id: str,
     label: TagChildArg,
+    *,
     multiple: bool = False,
     accept: Optional[List[str]] = None,
     width: Optional[str] = None,
     button_label: str = "Browse...",
     placeholder: str = "No file selected",
+    capture: Optional[Literal["environment", "user"]] = None,
 ) -> Tag:
     """
     Create a file upload control that can be used to upload one or more files.
@@ -39,6 +41,12 @@ def input_file(
         The label used on the button.
     placeholder
         The text to show on the input before a file has been uploaded.
+    capture
+        On mobile devices, this can be used to open the device's camera for input. If
+        "environment", it will open the rear-facing camera. If "user", it will open the
+        front-facing camera. By default, it will accept either still photos or video.
+        To accept only still photos, use ``accept="image/*"``; to accept only video, use
+        ``accept="video/*"``.
 
     Returns
     -------
@@ -69,6 +77,7 @@ def input_file(
             type="file",
             multiple="multiple" if multiple else None,
             accept=",".join(accept) if accept else None,
+            capture=capture,
             # Don't use "display: none;" style, which causes keyboard accessibility issue; instead use the following workaround: https://css-tricks.com/places-its-tempting-to-use-display-none-but-dont/
             style="position: absolute !important; top: -99999px !important; left: -99999px !important;",
         ),
