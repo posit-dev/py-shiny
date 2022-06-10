@@ -74,7 +74,7 @@ class App:
     def __init__(
         self,
         ui: Union[Tag, TagList],
-        server: Optional[Callable[[Inputs, Outputs, Session], None]] = None,
+        server: Optional[Callable[[Inputs, Outputs, Session], None]],
         *,
         static_assets: Optional[str] = None,
         debug: bool = False,
