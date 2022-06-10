@@ -279,6 +279,8 @@ class RenderImage(RenderFunction):
 
     async def _run(self) -> object:
         res: ImgData = await self._fn()
+        if res is None:
+            return None
         src: str = res.get("src")
         try:
             with open(src, "rb") as f:
