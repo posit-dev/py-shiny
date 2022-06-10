@@ -216,7 +216,7 @@ class Session:
 
                 try:
                     message_obj = json.loads(
-                        message, object_hook=_utils.make_object_read_only
+                        message, object_hook=_utils.lists_to_tuples
                     )
                 except json.JSONDecodeError:
                     print("ERROR: Invalid JSON message")

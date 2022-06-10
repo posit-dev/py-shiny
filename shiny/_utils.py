@@ -15,8 +15,6 @@ from typing import (
     Optional,
     Union,
     Tuple,
-    Iterator,
-    Mapping,
     TypeVar,
     Dict,
     List,
@@ -295,30 +293,16 @@ class AsyncCallbacks:
 # Intended for use with json.load()'s object_hook parameter.
 # Note also that object_hook is only called on dicts, not on lists, so this
 # work for converting "top-level" lists to tuples
-def make_object_read_only(x: object) -> object:
+def lists_to_tuples(x: object) -> object:
     if isinstance(x, dict):
         x = cast(Dict[str, object], x)
-        return ReadOnlyMap({k: make_object_read_only(v) for k, v in x.items()})
+        return {k: lists_to_tuples(v) for k, v in x.items()}
     elif isinstance(x, list):
         x = cast(List[object], x)
-        return tuple([make_object_read_only(y) for y in x])
+        return tuple(lists_to_tuples(y) for y in x)
     else:
         # TODO: are there other mutable iterators that we want to make read only?
         return x
-
-
-class ReadOnlyMap(Mapping[str, object]):
-    def __init__(self, data: Dict[str, object] = {}):
-        self._data = data
-
-    def __getitem__(self, key: str):
-        return self._data[key]
-
-    def __len__(self) -> int:
-        return len(self._data)
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._data)
 
 
 # ==============================================================================
