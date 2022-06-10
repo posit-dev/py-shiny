@@ -74,13 +74,21 @@ class App:
     def __init__(
         self,
         ui: Union[Tag, TagList],
-        server: Callable[[Inputs, Outputs, Session], None],
+        server: Optional[Callable[[Inputs, Outputs, Session], None]],
         *,
         static_assets: Optional[str] = None,
         debug: bool = False,
     ) -> None:
         self.ui: RenderedHTML = _render_page(ui, lib_prefix=self.LIB_PREFIX)
-        self.server: Callable[[Inputs, Outputs, Session], None] = server
+
+        if server is None:
+
+            def _server(inputs: Inputs, outputs: Outputs, session: Session):
+                pass
+
+            server = _server
+
+        self.server = server
 
         self._debug: bool = debug
 
