@@ -47,7 +47,6 @@ app_ui = ui.page_navbar(
     footer=ui.div(
         {"style": "width:80%;margin: 0 auto"},
         h4("navset_tab()"),
-        # ui.nav_menu("F", ui.nav("G", "g")),
         ui.navset_tab(*nav_controls("navset_tab()")),
         h4("navset_pill()"),
         ui.navset_pill(*nav_controls("navset_pill()")),
