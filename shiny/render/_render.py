@@ -82,7 +82,10 @@ class RenderText(RenderFunction):
         return _utils.run_coro_sync(self._run())
 
     async def _run(self) -> Union[str, None]:
-        return await self._fn()
+        res = await self._fn()
+        if res is None:
+            return None
+        return str(res)
 
 
 class RenderTextAsync(RenderText, RenderFunctionAsync):
