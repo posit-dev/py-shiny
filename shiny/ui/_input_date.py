@@ -213,7 +213,7 @@ def input_date_range(
     ------
     .. admonition:: Server value
 
-        A :func:`~datetime.date` object.
+        A tuple of :func:`~datetime.date` objects.
 
     See Also
     -------
