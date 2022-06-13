@@ -1,10 +1,15 @@
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Callable, Optional, TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from shiny import Session, Inputs, Outputs
 
 import starlette.websockets
 from starlette.websockets import WebSocketState
 from starlette.requests import HTTPConnection
+
+from . import _utils
 
 
 class Connection(ABC):
@@ -29,11 +34,27 @@ class Connection(ABC):
 
 
 class MockConnection(Connection):
-    def __init__(self):
+    def __init__(
+        self, server: Optional[Callable[["Inputs", "Outputs", "Session"], None]] = None
+    ) -> None:
         # This currently hard-codes some basic values for scope. In the future, we could
         # make those more configurable if we need to customize the HTTPConnection (like
         # "scheme", "path", and "query_string").
         self._http_conn = HTTPConnection(scope={"type": "websocket", "headers": {}})
+
+        self._on_ended_callbacks = _utils.Callbacks()
+
+        if server is not None:
+            from .session import Inputs, Outputs, Session, session_context
+
+            self = cast(Session, self)
+            self.input = Inputs()
+            self.output = Outputs(self)
+            with session_context(self):
+                server(self.input, self.output, self)
+
+    def on_ended(self, fn: Callable[[], None]) -> Callable[[], None]:
+        return self._on_ended_callbacks.register(fn)
 
     async def send(self, message: str) -> None:
         pass

@@ -126,7 +126,7 @@ def test_current_session():
             sessions["top_current"] = get_current_session()
             sessions["top_calc_current"] = out()
 
-    App(ui.TagList(), server)._create_session(MockConnection())
+    MockConnection(server)
     run_coro_sync(reactive.flush())
 
     assert sessions["inner"] is sessions["inner_current"]
@@ -141,5 +141,5 @@ def test_current_session():
 
     assert sessions["top"] is sessions["top_current"]
     assert sessions["top_current"] is sessions["top_calc_current"]
-    assert isinstance(sessions["top_current"], Session)
+    assert isinstance(sessions["top_current"], MockConnection)
     assert not isinstance(sessions["top_current"], ModuleSession)

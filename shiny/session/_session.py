@@ -177,9 +177,6 @@ class Session:
         self._flush_callbacks = _utils.Callbacks()
         self._flushed_callbacks = _utils.Callbacks()
 
-        with session_context(self):
-            self.app.server(self.input, self.output, self)
-
     def _register_session_end_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions
         # that are called when a session ends.
@@ -229,6 +226,8 @@ class Session:
                     if message_obj["method"] == "init":
                         message_obj = typing.cast(ClientMessageInit, message_obj)
                         self._manage_inputs(message_obj["data"])
+                        with session_context(self):
+                            self.app.server(self.input, self.output, self)
 
                     elif message_obj["method"] == "update":
                         message_obj = typing.cast(ClientMessageUpdate, message_obj)
