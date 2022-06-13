@@ -39,9 +39,13 @@ def input_file(
         Whether the user should be allowed to select and upload multiple files at once.
     accept
         Unique file type specifier(s) which give the browser a hint as to the type of
-        file the server expects. This can be a single string or a list of strings. Many
-        browsers use this prevent the user from selecting an invalid file. See the note
-        below for more details.
+        file the server expects. Many browsers use this to prevent the user from
+        selecting an invalid file. Examples of valid values include:
+
+          * A case insensitive extension like ``.csv`` or ``.rds``.
+          * A valid MIME type, like ``text/plain`` or ``application/pdf``
+          * One of ``audio/*``, ``video/*``, or ``image/*`` meaning any audio, video,
+            or image type, respectively.
     width
         The CSS width, e.g. '400px', or '100%'
     button_label
@@ -59,17 +63,20 @@ def input_file(
     -------
     A UI element.
 
-    Note
-    ----
-    A unique file type specifier (i.e. a string provided to the **accept** parameter)
-    can be any of the following:
+    Notes
+    -----
 
-    * A case insensitive extension like ``.csv`` or ``.rds``.
+    .. admonition:: Server value
 
-    * A valid MIME type, like ``text/plain`` or ``application/pdf``
+        A list of dictionaries (one for each file upload) with the following keys:
 
-    * One of ``audio/*``, ``video/*``, or ``image/*`` meaning any audio, video, or image
-      type, respectively.
+        * name: The filename provided by the web browser. This is *not* the path to read
+          to get at the actual data that was uploaded (see 'datapath').
+        * size: The size of the uploaded data, in bytes.
+        * type: The MIME type reported by the browser (for example, 'text/plain'), or
+          empty string if the browser didn't know.
+        * datapath: The path to a temp file that contains the data that was uploaded.
+          This file may be deleted if the user performs another upload operation.
 
     See Also
     --------

@@ -79,6 +79,7 @@ def input_action_link(
         An icon to appear inline with the button/link.
     kwargs
         Attributes to be applied to the link.
+
     Returns
     -------
     A UI element
@@ -87,7 +88,7 @@ def input_action_link(
     ------
     .. admonition:: Server value
 
-    An integer representing the number of clicks.
+        An integer representing the number of clicks.
 
     See Also
     -------

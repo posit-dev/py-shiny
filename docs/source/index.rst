@@ -22,7 +22,7 @@ namespace pollution. Namely, it gives you:
 * Reactive programming utilities, available via the ``reactive`` subpackage.
 * Decorators for rendering ``output``, available via the ``render`` subpackage.
 
-    * 3rd party packages that want to implement their own rendering functions are encouraged to use a `@render_foo()` naming convention so users may import with `from mypkg import render_foo`
+  * 3rd party packages that want to implement their own rendering functions are encouraged to use a `@render_foo()` naming convention so users may import with `from mypkg import render_foo`.
 
 * A handful of other things you'll want for most apps (e.g., ``App``, ``Module``, etc).
 * If you're using type checking, you'll also want to use the ``Inputs``, ``Outputs``, and ``Session`` Classes
@@ -39,7 +39,7 @@ namespace pollution. Namely, it gives you:
 
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         @output()
-        @render_text()
+        @render.text()
         def n2():
             return f"The value of n*2 is {input.n() * 2}"
 
@@ -98,6 +98,7 @@ Create UI that prompts the user for input values or interaction.
     ui.input_text_area
     ui.input_password
     ui.input_action_button
+    ui.input_action_link
 
 
 Update inputs
@@ -196,20 +197,20 @@ Lower-level UI functions for creating custom HTML/CSS/JS.
 
 Rendering outputs
 ~~~~~~~~~~~~~~~~~
-UI (`output_*()`) and server (``render_*()``) functions for generating content server-side.
+UI (`output_*()`) and server (``render``)ing functions for generating content server-side.
 
 .. autosummary::
     :toctree: reference/
 
     ui.output_plot
-    render_plot
+    render.plot
     ui.output_image
-    render_image
+    render.image
     ui.output_text
     ui.output_text_verbatim
-    render_text
+    render.text
     ui.output_ui
-    render_ui
+    render.ui
 
 
 Reactive programming
