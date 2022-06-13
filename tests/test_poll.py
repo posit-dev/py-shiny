@@ -5,7 +5,7 @@ import tempfile
 from enum import Enum
 from random import random
 from types import TracebackType
-from typing import Any, Callable, Optional, Type, cast
+from typing import Any, Dict, Callable, Optional, Type, cast
 
 import pytest
 
@@ -33,6 +33,9 @@ class OnEndedSessionCallbacks:
 
     def on_ended(self, fn: Callable[[], None]) -> Callable[[], None]:
         return self._on_ended_callbacks.register(fn)
+
+    async def _send_message(self, message: Dict[str, object]) -> None:
+        pass
 
     async def __aenter__(self):
         self._session_context.__enter__()
