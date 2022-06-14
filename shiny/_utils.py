@@ -292,7 +292,7 @@ class AsyncCallbacks:
 
 # Intended for use with json.load()'s object_hook parameter.
 # Note also that object_hook is only called on dicts, not on lists, so this
-# work for converting "top-level" lists to tuples
+# won't work for converting "top-level" lists to tuples
 def lists_to_tuples(x: object) -> object:
     if isinstance(x, dict):
         x = cast(Dict[str, object], x)
