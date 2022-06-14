@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 app_ui = ui.page_fluid(
-    ui.input_slider("n", "Number of observations", 0, 1000, 500),
+    ui.input_slider("n", "Number of observations", min=0, max=1000, value=500),
     ui.input_action_button("go", "Go!", class_="btn-success"),
     ui.output_plot("plot"),
 )

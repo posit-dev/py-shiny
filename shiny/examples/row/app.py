@@ -4,7 +4,7 @@ import numpy as np
 
 app_ui = ui.page_fluid(
     ui.row(
-        ui.column(4, ui.input_slider("n", "N", 0, 100, 20)),
+        ui.column(4, ui.input_slider("n", "N", min=0, max=100, value=20)),
         ui.column(8, ui.output_plot("plot")),
     )
 )

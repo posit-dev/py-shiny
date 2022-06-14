@@ -13,6 +13,7 @@ def input_password(
     id: str,
     label: TagChildArg,
     value: str = "",
+    *,
     width: Optional[str] = None,
     placeholder: Optional[str] = None,
 ) -> Tag:

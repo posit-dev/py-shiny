@@ -2,7 +2,9 @@ from shiny import *
 
 app_ui = ui.page_fluid(
     ui.layout_sidebar(
-        ui.panel_sidebar(ui.input_slider("controller", "Controller", 1, 3, 1)),
+        ui.panel_sidebar(
+            ui.input_slider("controller", "Controller", min=1, max=3, value=1)
+        ),
         ui.panel_main(
             ui.navset_tab_card(
                 ui.nav("Panel 1", "Panel 1 content", value="panel1"),

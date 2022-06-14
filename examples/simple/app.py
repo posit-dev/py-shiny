@@ -1,7 +1,7 @@
 from shiny import *
 
 app_ui = ui.page_fluid(
-    ui.input_slider("n", "N", 0, 100, 20),
+    ui.input_slider("n", "N", min=0, max=100, value=20),
     ui.output_text_verbatim("txt", placeholder=True),
 )
 

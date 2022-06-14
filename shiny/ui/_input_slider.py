@@ -67,6 +67,7 @@ def input_slider(
     min: SliderValueArg,
     max: SliderValueArg,
     value: Union[SliderValueArg, Iterable[SliderValueArg]],
+    *,
     step: Optional[SliderStepArg] = None,
     ticks: bool = True,
     animate: Union[bool, AnimationOptions] = False,
