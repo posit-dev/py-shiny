@@ -1,7 +1,7 @@
 __all__ = ("input_handlers",)
 
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Callable, Dict, Union, List, Any
+from typing import TYPE_CHECKING, Callable, Dict, Union, List, Any, Tuple
 
 if TYPE_CHECKING:
     from .session import Session
@@ -91,19 +91,19 @@ On the Javascript side, the associated input binding must have a corresponding
 @input_handlers.add("shiny.date")
 def _(
     value: Union[str, List[str]], name: str, session: "Session"
-) -> Union[date, List[date]]:
+) -> Union[date, Tuple[date, date]]:
     if isinstance(value, str):
         return datetime.strptime(value, "%Y-%m-%d").date()
-    return [datetime.strptime(v, "%Y-%m-%d").date() for v in value]
+    return tuple(datetime.strptime(v, "%Y-%m-%d").date() for v in value)
 
 
 @input_handlers.add("shiny.datetime")
 def _(
     value: Union[int, float, List[int], List[float]], name: str, session: "Session"
-) -> Union[datetime, List[datetime]]:
+) -> Union[datetime, Tuple[datetime, datetime]]:
     if isinstance(value, (int, float)):
         return datetime.utcfromtimestamp(value)
-    return [datetime.utcfromtimestamp(v) for v in value]
+    return tuple(datetime.utcfromtimestamp(v) for v in value)
 
 
 @input_handlers.add("shiny.action")

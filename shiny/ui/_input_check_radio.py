@@ -107,7 +107,7 @@ def input_checkbox_group(
     ------
     .. admonition:: Server value
 
-        A list of string(s) with the selected value(s) (if any).
+        A tuple of string(s) with the selected value(s) (if any).
 
     See Also
     -------

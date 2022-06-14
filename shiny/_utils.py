@@ -9,7 +9,18 @@ import secrets
 import sys
 import tempfile
 
-from typing import Callable, Awaitable, Optional, Union, Tuple, TypeVar, Dict, Any, cast
+from typing import (
+    Callable,
+    Awaitable,
+    Optional,
+    Union,
+    Tuple,
+    TypeVar,
+    Dict,
+    List,
+    Any,
+    cast,
+)
 
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
@@ -277,6 +288,21 @@ class AsyncCallbacks:
 
     def count(self) -> int:
         return len(self._callbacks)
+
+
+# Intended for use with json.load()'s object_hook parameter.
+# Note also that object_hook is only called on dicts, not on lists, so this
+# won't work for converting "top-level" lists to tuples
+def lists_to_tuples(x: object) -> object:
+    if isinstance(x, dict):
+        x = cast(Dict[str, object], x)
+        return {k: lists_to_tuples(v) for k, v in x.items()}
+    elif isinstance(x, list):
+        x = cast(List[object], x)
+        return tuple(lists_to_tuples(y) for y in x)
+    else:
+        # TODO: are there other mutable iterators that we want to make read only?
+        return x
 
 
 # ==============================================================================
