@@ -64,10 +64,10 @@ class AnimationOptions(TypedDict):
 def input_slider(
     id: str,
     label: TagChildArg,
-    *,
     min: SliderValueArg,
     max: SliderValueArg,
     value: Union[SliderValueArg, Iterable[SliderValueArg]],
+    *,
     step: Optional[SliderStepArg] = None,
     ticks: bool = True,
     animate: Union[bool, AnimationOptions] = False,
