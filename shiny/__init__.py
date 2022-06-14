@@ -1,6 +1,6 @@
 """A package for building reactive web applications."""
 
-__version__ = "0.2.0.9005"
+__version__ = "0.2.0.9006"
 
 from ._shinyenv import is_pyodide as _is_pyodide
 
