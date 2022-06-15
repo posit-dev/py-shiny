@@ -1,7 +1,7 @@
 __all__ = ("Progress",)
 
 from types import TracebackType
-from typing import Optional, Dict, Any, Type
+from typing import Optional, Type
 from warnings import warn
 
 from .._docstring import add_example
@@ -40,7 +40,7 @@ class Progress:
         self._session = require_active_session(session)
 
         msg = {"id": self._id, "style": self._style}
-        self._send_progress("open", msg)
+        self._session._send_progress("open", msg)
 
     def __enter__(self) -> "Progress":
         return self
@@ -97,7 +97,9 @@ class Progress:
             "style": self._style,
         }
 
-        self._send_progress("update", {k: v for k, v in msg.items() if v is not None})
+        self._session._send_progress(
+            "update", {k: v for k, v in msg.items() if v is not None}
+        )
 
     def inc(
         self,
@@ -150,10 +152,5 @@ class Progress:
             warn("Attempting to close progress, but progress already closed.")
             return None
 
-        self._send_progress("close", {"id": self._id, "style": self._style})
+        self._session._send_progress("close", {"id": self._id, "style": self._style})
         self._closed = True
-
-    def _send_progress(self, type: str, message: Dict[str, Any]) -> None:
-        self._session._send_message_sync(
-            {"progress": {"type": type, "message": message}}
-        )
