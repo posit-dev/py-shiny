@@ -44,6 +44,28 @@ def rand_hex(bytes: int) -> str:
     return format_str.format(secrets.randbits(bytes * 8))
 
 
+def drop_none(x: Dict[str, Any]) -> Dict[str, object]:
+    return {k: v for k, v in x.items() if v is not None}
+
+
+# Intended for use with json.load()'s object_hook parameter.
+# Note also that object_hook is only called on dicts, not on lists, so this
+# won't work for converting "top-level" lists to tuples
+def lists_to_tuples(x: object) -> object:
+    if isinstance(x, dict):
+        x = cast(Dict[str, object], x)
+        return {k: lists_to_tuples(v) for k, v in x.items()}
+    elif isinstance(x, list):
+        x = cast(List[object], x)
+        return tuple(lists_to_tuples(y) for y in x)
+    else:
+        # TODO: are there other mutable iterators that we want to make read only?
+        return x
+
+
+# ==============================================================================
+# Private random stream
+# ==============================================================================
 def private_random_int(min: int, max: int) -> str:
     with private_seed():
         return str(random.randint(min, max))
@@ -216,10 +238,9 @@ def run_coro_hybrid(coro: Awaitable[T]) -> "asyncio.Future[T]":
     return result_future
 
 
-def drop_none(x: Dict[str, Any]) -> Dict[str, object]:
-    return {k: v for k, v in x.items() if v is not None}
-
-
+# ==============================================================================
+# Callback registry
+# ==============================================================================
 class Callbacks:
     def __init__(self) -> None:
         self._callbacks: dict[int, Tuple[Callable[[], None], bool]] = {}
@@ -288,21 +309,6 @@ class AsyncCallbacks:
 
     def count(self) -> int:
         return len(self._callbacks)
-
-
-# Intended for use with json.load()'s object_hook parameter.
-# Note also that object_hook is only called on dicts, not on lists, so this
-# won't work for converting "top-level" lists to tuples
-def lists_to_tuples(x: object) -> object:
-    if isinstance(x, dict):
-        x = cast(Dict[str, object], x)
-        return {k: lists_to_tuples(v) for k, v in x.items()}
-    elif isinstance(x, list):
-        x = cast(List[object], x)
-        return tuple(lists_to_tuples(y) for y in x)
-    else:
-        # TODO: are there other mutable iterators that we want to make read only?
-        return x
 
 
 # ==============================================================================
