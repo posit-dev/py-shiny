@@ -837,7 +837,6 @@ class Outputs:
                 await self._session._send_message(
                     {"recalculating": {"name": fn_name, "status": "recalculating"}}
                 )
-                self._session._send_progress("binding", {"id": fn_name})
 
                 message: Dict[str, object] = {}
                 try:
@@ -876,6 +875,10 @@ class Outputs:
                 await self._session._send_message(
                     {"recalculating": {"name": fn_name, "status": "recalculated"}}
                 )
+
+            output_obs.on_invalidate(
+                lambda: self._session._send_progress("binding", {"id": fn_name})
+            )
 
             self._effects[fn_name] = output_obs
 
