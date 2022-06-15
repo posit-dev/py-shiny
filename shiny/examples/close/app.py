@@ -3,6 +3,12 @@ from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_action_button("close", "Close the session"),
+    ui.p(
+        """If this example is running on the browser (i.e., via shinylive),
+        closing the session will log a message to the JavaScript console
+        (open the browser's developer tools to see it).
+        """
+    ),
 )
 
 

@@ -3,22 +3,26 @@ from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_action_button("flush", "Trigger flush"),
-    "See the python console for log events",
     ui.output_ui("n_clicks"),
+    ui.div(id="flush_time"),
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
     def log():
-        print("Started flushing at " + datetime.now().strftime("%H:%M:%S"))
+        msg = "A reactive flush occurred at " + datetime.now().strftime("%H:%M:%S:%f")
+        print(msg)
+        ui.insert_ui(
+            ui.p(msg),
+            selector="#flush_time",
+        )
 
     session.on_flush(log, once=False)
 
     @output()
     @render.ui()
     def n_clicks():
-        n = input.flush()
-        return "Number of clicks: " + str(n)
+        return "Number of clicks: " + str(input.flush())
 
 
 app = App(app_ui, server)
