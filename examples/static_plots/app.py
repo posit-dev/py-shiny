@@ -5,8 +5,6 @@ import pandas as pd
 import seaborn as sns
 from plotnine.data import mtcars
 
-plt.tight_layout()
-
 nav = ui.navset_pill_list(
     ui.nav_control(ui.p("Choose a package", class_="lead text-center")),
     ui.nav(

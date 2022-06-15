@@ -41,7 +41,7 @@ class MplFigure(Protocol):
         # papertype=None,
         format: Optional[str] = None,
         # transparent=False,
-        # bbox_inches=None,
+        bbox_inches: object = None,
         # pad_inches=0.1,
         # frameon=None,
         # metadata=None,
@@ -74,6 +74,7 @@ class PlotnineFigure(Protocol):
         width: float,
         height: float,
         verbose: bool,
+        bbox_inches: object = None,
     ):
         ...
 
@@ -96,6 +97,7 @@ def try_render_matplotlib(
     pixelratio: float,
     ppi: float,
     alt: Optional[str] = None,
+    **kwargs: object,
 ) -> TryPlotResult:
     fig = get_matplotlib_figure(x)
 
@@ -105,8 +107,16 @@ def try_render_matplotlib(
     try:
         fig.set_size_inches(width / ppi, height / ppi)
 
+        bbox_inches = kwargs.pop("bbox_inches", "tight")
+
         with io.BytesIO() as buf:
-            fig.savefig(buf, format="png", dpi=ppi * pixelratio)
+            fig.savefig(
+                buf,
+                format="png",
+                dpi=ppi * pixelratio,
+                bbox_inches=bbox_inches,
+                **kwargs,
+            )
             buf.seek(0)
             data = base64.b64encode(buf.read())
             data_str = data.decode("utf-8")
@@ -182,6 +192,7 @@ def try_render_pil(
     pixelratio: float,
     ppi: float,
     alt: Optional[str] = None,
+    **kwargs: object,
 ) -> TryPlotResult:
     import PIL.Image
 
@@ -190,7 +201,7 @@ def try_render_pil(
 
     try:
         with io.BytesIO() as buf:
-            x.save(buf, format="PNG")
+            x.save(buf, format="PNG", **kwargs)
             buf.seek(0)
             data = base64.b64encode(buf.read())
             data_str = data.decode("utf-8")
@@ -219,6 +230,7 @@ def try_render_plotnine(
     pixelratio: float,
     ppi: float,
     alt: Optional[str] = None,
+    **kwargs: object,
 ) -> TryPlotResult:
     from plotnine.ggplot import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false,reportMissingImports=false
         ggplot,
@@ -227,6 +239,7 @@ def try_render_plotnine(
     if not isinstance(x, ggplot):
         return "TYPE_MISMATCH"
 
+    bbox_inches = kwargs.pop("bbox_inches", "tight")
     try:
         with io.BytesIO() as buf:
             cast(PlotnineFigure, x).save(
@@ -237,6 +250,8 @@ def try_render_plotnine(
                 width=width / ppi,
                 height=height / ppi,
                 verbose=False,
+                bbox_inches=bbox_inches,
+                **kwargs,
             )
             buf.seek(0)
             data = base64.b64encode(buf.read())
