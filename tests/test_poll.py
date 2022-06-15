@@ -34,7 +34,7 @@ class OnEndedSessionCallbacks:
     def on_ended(self, fn: Callable[[], None]) -> Callable[[], None]:
         return self._on_ended_callbacks.register(fn)
 
-    async def _send_message_sync(self, message: Dict[str, object]) -> None:
+    def _send_message_sync(self, message: Dict[str, object]) -> None:
         pass
 
     async def __aenter__(self):
