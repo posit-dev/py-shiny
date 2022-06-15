@@ -494,7 +494,7 @@ class Session:
 
     def _send_progress(self, type: str, message: object) -> None:
         msg: Dict[str, object] = {"progress": {"type": type, "message": message}}
-        _utils.run_coro_sync(self._send_message(msg))
+        self._send_message_sync(msg)
 
     @add_example()
     async def send_custom_message(self, type: str, message: Dict[str, object]) -> None:
