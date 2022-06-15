@@ -21,8 +21,8 @@ from starlette.background import BackgroundTask
 if "pyodide" not in sys.modules:
     # Running in native mode; use starlette StaticFiles
 
-    import starlette.staticfiles
     import starlette.responses
+    import starlette.staticfiles
 
     StaticFiles = starlette.staticfiles.StaticFiles  # type: ignore
     FileResponse = starlette.responses.FileResponse  # type: ignore
@@ -30,14 +30,16 @@ if "pyodide" not in sys.modules:
 else:
     # Running in wasm mode; must use our own simple StaticFiles
 
-    from typing import Optional, Tuple, MutableMapping, Iterable, List
-    from starlette.types import Scope, Receive, Send
-    from starlette.responses import PlainTextResponse
     import os
     import os.path
-    import mimetypes
     import pathlib
     import urllib.parse
+    from typing import Iterable, List, MutableMapping, Optional, Tuple
+
+    from starlette.responses import PlainTextResponse
+    from starlette.types import Receive, Scope, Send
+
+    from . import _utils
 
     class StaticFiles:
         dir: pathlib.Path
@@ -123,9 +125,7 @@ else:
             self.background = background
 
             if media_type is None:
-                media_type, _ = mimetypes.guess_type(str(file), strict=False)
-                if media_type is None:
-                    media_type = "application/octet-stream"
+                media_type = _utils.guess_mime_type(file, strict=False)
             self.media_type = media_type
 
         async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:

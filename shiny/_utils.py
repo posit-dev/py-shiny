@@ -63,12 +63,16 @@ def lists_to_tuples(x: object) -> object:
         return x
 
 
-def guess_mime_type(url: str, default: str = "application/octet-stream") -> str:
+def guess_mime_type(
+    url: Union[str, os.PathLike[str]],
+    default: str = "application/octet-stream",
+    strict: bool = True,
+) -> str:
     """
     Guess the MIME type of a file. This is a wrapper for mimetypes.guess_type, but it
     only returns the type (and not encoding), and it allows a default value.
     """
-    return mimetypes.guess_type(url)[0] or default
+    return mimetypes.guess_type(url, strict)[0] or default
 
 
 # ==============================================================================
