@@ -142,9 +142,12 @@ RenderPlotFuncAsync = Callable[[], Awaitable[object]]
 class RenderPlot(RenderFunction):
     _ppi: float = 96
 
-    def __init__(self, fn: RenderPlotFunc, *, alt: Optional[str] = None) -> None:
+    def __init__(
+        self, fn: RenderPlotFunc, *, alt: Optional[str] = None, **kwargs: object
+    ) -> None:
         super().__init__(fn)
         self._alt: Optional[str] = alt
+        self._kwargs = kwargs
         # The Render*Async subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
@@ -182,17 +185,23 @@ class RenderPlot(RenderFunction):
         result: TryPlotResult = None
 
         if "plotnine" in sys.modules:
-            result = try_render_plotnine(x, width, height, pixelratio, self._ppi)
+            result = try_render_plotnine(
+                x, width, height, pixelratio, self._ppi, **self._kwargs
+            )
             if result != "TYPE_MISMATCH":
                 return result
 
         if "matplotlib" in sys.modules:
-            result = try_render_matplotlib(x, width, height, pixelratio, self._ppi)
+            result = try_render_matplotlib(
+                x, width, height, pixelratio, self._ppi, **self._kwargs
+            )
             if result != "TYPE_MISMATCH":
                 return result
 
         if "PIL" in sys.modules:
-            result = try_render_pil(x, width, height, pixelratio, self._ppi)
+            result = try_render_pil(
+                x, width, height, pixelratio, self._ppi, **self._kwargs
+            )
             if result != "TYPE_MISMATCH":
                 return result
 
@@ -215,7 +224,7 @@ class RenderPlotAsync(RenderPlot, RenderFunctionAsync):
 
 # TODO: Use more specific types for render.plot
 def plot(
-    alt: Optional[str] = None,
+    *, alt: Optional[str] = None, **kwargs: object
 ) -> Callable[[Union[RenderPlotFunc, RenderPlotFuncAsync]], RenderPlot]:
     """
     Reactively render a plot object as an HTML image.
@@ -225,6 +234,10 @@ def plot(
     alt
         Alternative text for the image if it cannot be displayed or viewed (i.e., the
         user uses a screen reader).
+    **kwargs
+        Additional keyword arguments passed to the relevant method for saving the image
+        (e.g., for matplotlib, arguments to ``savefig()``; for PIL and plotnine,
+        arguments to ``save()``).
 
     Returns
     -------
@@ -249,9 +262,9 @@ def plot(
 
     def wrapper(fn: Union[RenderPlotFunc, RenderPlotFuncAsync]) -> RenderPlot:
         if _utils.is_async_callable(fn):
-            return RenderPlotAsync(fn, alt=alt)
+            return RenderPlotAsync(fn, alt=alt, **kwargs)
         else:
-            return RenderPlot(fn, alt=alt)
+            return RenderPlot(fn, alt=alt, **kwargs)
 
     return wrapper
 
