@@ -3,22 +3,22 @@ import contextlib
 import functools
 import importlib
 import inspect
+import mimetypes
 import os
 import random
 import secrets
 import sys
 import tempfile
-
 from typing import (
-    Callable,
+    Any,
     Awaitable,
-    Optional,
-    Union,
-    Tuple,
-    TypeVar,
+    Callable,
     Dict,
     List,
-    Any,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
     cast,
 )
 
@@ -61,6 +61,14 @@ def lists_to_tuples(x: object) -> object:
     else:
         # TODO: are there other mutable iterators that we want to make read only?
         return x
+
+
+def guess_mime_type(url: str, default: str = "application/octet-stream") -> str:
+    """
+    Guess the MIME type of a file. This is a wrapper for mimetypes.guess_type, but it
+    only returns the type (and not encoding), and it allows a default value.
+    """
+    return mimetypes.guess_type(url)[0] or default
 
 
 # ==============================================================================
