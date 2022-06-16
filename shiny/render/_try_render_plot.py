@@ -194,7 +194,7 @@ def try_render_pil(
     alt: Optional[str] = None,
     **kwargs: object,
 ) -> TryPlotResult:
-    import PIL.Image
+    import PIL.Image  # pyright: ignore[reportMissingModuleSource]
 
     if not isinstance(x, PIL.Image.Image):
         return "TYPE_MISMATCH"
