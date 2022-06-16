@@ -1,6 +1,6 @@
 __all__ = ("Module",)
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Union
 
 from htmltools import TagChildArg
 
@@ -79,12 +79,13 @@ class ModuleOutputs(Outputs):
 
     def __call__(
         self,
+        fn: Optional[RenderFunction] = None,
         *,
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
         name: Optional[str] = None,
-    ) -> Callable[[RenderFunction], None]:
+    ) -> Union[None, Callable[[RenderFunction], None]]:
         if name is not None:
             from . import _deprecated
 
@@ -103,7 +104,10 @@ class ModuleOutputs(Outputs):
             )
             return out_fn(fn)
 
-        return set_fn
+        if fn is None:
+            return set_fn
+        else:
+            return set_fn(fn)
 
 
 class ModuleSession(Session):
