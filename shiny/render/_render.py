@@ -16,7 +16,6 @@ __all__ = (
 )
 
 import base64
-import mimetypes
 import os
 import sys
 from typing import TYPE_CHECKING, Callable, Optional, Awaitable, Union
@@ -302,7 +301,7 @@ class RenderImage(RenderFunction):
             with open(src, "rb") as f:
                 data = base64.b64encode(f.read())
                 data_str = data.decode("utf-8")
-            content_type = mimetypes.guess_type(src)[1]
+            content_type = _utils.guess_mime_type(src)
             res["src"] = f"data:{content_type};base64,{data_str}"
             return res
         finally:

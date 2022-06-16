@@ -9,7 +9,6 @@ import re
 import traceback
 import warnings
 import typing
-import mimetypes
 import dataclasses
 import urllib.parse
 from typing import (
@@ -31,7 +30,6 @@ from starlette.responses import (
     HTMLResponse,
     PlainTextResponse,
     StreamingResponse,
-    guess_type,
 )
 from starlette.types import ASGIApp
 
@@ -308,8 +306,7 @@ class Session:
                 # TODO: Don't alter message in place?
                 for fi in file_infos:
                     if fi["type"] == "":
-                        type = mimetypes.guess_type(fi["name"])[0]
-                        fi["type"] = type if type else "application/octet-stream"
+                        fi["type"] = _utils.guess_mime_type(fi["name"])
 
                 job_id = self._file_upload_manager.create_upload_operation(file_infos)
                 worker_id = ""
@@ -382,7 +379,7 @@ class Session:
                                 filename = download_id
 
                         if content_type is None:
-                            (content_type, _) = guess_type(filename)
+                            content_type = _utils.guess_mime_type(filename)
                         content_disposition_filename = urllib.parse.quote(filename)
                         if content_disposition_filename != filename:
                             content_disposition = f"attachment; filename*=utf-8''{content_disposition_filename}"

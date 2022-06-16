@@ -3,22 +3,22 @@ import contextlib
 import functools
 import importlib
 import inspect
+import mimetypes
 import os
 import random
 import secrets
 import sys
 import tempfile
-
 from typing import (
-    Callable,
+    Any,
     Awaitable,
-    Optional,
-    Union,
-    Tuple,
-    TypeVar,
+    Callable,
     Dict,
     List,
-    Any,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
     cast,
 )
 
@@ -61,6 +61,24 @@ def lists_to_tuples(x: object) -> object:
     else:
         # TODO: are there other mutable iterators that we want to make read only?
         return x
+
+
+def guess_mime_type(
+    url: Union[str, "os.PathLike[str]"],
+    default: str = "application/octet-stream",
+    strict: bool = True,
+) -> str:
+    """
+    Guess the MIME type of a file. This is a wrapper for mimetypes.guess_type, but it
+    only returns the type (and not encoding), and it allows a default value.
+    """
+    # In Python<=3.7, mimetypes.guess_type only accepts strings.
+    #
+    # Note that in the parameters above, "os.PathLike[str]" is in quotes to avoid
+    # "TypeError: 'ABCMeta' object is not subscriptable", in Python<=3.8.
+    if sys.version_info < (3, 8):
+        url = os.fspath(url)
+    return mimetypes.guess_type(url, strict)[0] or default
 
 
 # ==============================================================================
