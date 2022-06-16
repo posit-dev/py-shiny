@@ -61,7 +61,7 @@ app_ui = ui.page_navbar(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect()
+    @reactive.Effect
     def _():
         print("Current navbar page: ", input.navbar_id())
 

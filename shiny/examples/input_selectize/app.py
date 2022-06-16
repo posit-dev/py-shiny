@@ -16,8 +16,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output()
-    @render.text()
+    @output
+    @render.text
     def value():
         return "You choose: " + str(input.state())
 

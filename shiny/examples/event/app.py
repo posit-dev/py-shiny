@@ -37,36 +37,36 @@ def server(input: Inputs, output: Outputs, session: Session):
     # Update a random number every second
     val = reactive.Value(random.randint(0, 1000))
 
-    @reactive.Effect()
+    @reactive.Effect
     def _():
         reactive.invalidate_later(0.5)
         val.set(random.randint(0, 1000))
 
     # Always update this output when the number is updated
-    @output()
-    @render.ui()
+    @output
+    @render.ui
     def number():
         return val.get()
 
     # Since ignore_none=False, the function executes before clicking the button.
     # (input.btn_out() is 0 on page load, but @event() treats 0 as None for action buttons.)
-    @output()
-    @render.text()
+    @output
+    @render.text
     @event(input.btn_out, ignore_none=False)
     def out_out():
         return str(val.get())
 
-    @reactive.Calc()
+    @reactive.Calc
     @event(input.btn_calc)
     def calc():
         return 1 / val.get()
 
-    @output()
-    @render.text()
+    @output
+    @render.text
     def out_calc():
         return str(calc())
 
-    @reactive.Effect()
+    @reactive.Effect
     @event(input.btn_effect)
     def _():
         ui.insert_ui(

@@ -11,8 +11,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output()
-    @render.plot()
+    @output
+    @render.plot
     def p():
         np.random.seed(19680801)
         x_rand = 100 + 15 * np.random.randn(437)

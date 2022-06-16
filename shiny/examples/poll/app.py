@@ -115,8 +115,8 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             df = df[df["symbol"].isin(input.symbols())]
         return df
 
-    @output()
-    @render.ui()
+    @output
+    @render.ui
     def table():
         return ui.HTML(
             filtered_quotes().to_html(

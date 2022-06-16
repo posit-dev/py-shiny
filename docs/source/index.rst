@@ -38,8 +38,8 @@ namespace pollution. Namely, it gives you:
     )
 
     def server(input: Inputs, output: Outputs, session: Session) -> None:
-        @output()
-        @render.text()
+        @output
+        @render.text
         def n2():
             return f"The value of n*2 is {input.n() * 2}"
 

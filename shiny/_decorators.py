@@ -53,7 +53,7 @@ def event(
     Tip
     ----
     This decorator must be applied before the relevant reactivity decorator (i.e.,
-    ``@event`` must be applied before ``@reactive.Effect()``, ``@reactive.Calc()``,
+    ``@event`` must be applied before ``@reactive.Effect``, ``@reactive.Calc``,
     ``@render.ui``, etc).
     """
 

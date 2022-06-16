@@ -95,8 +95,8 @@ import matplotlib.pyplot as plt
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output()
-    @render.ui()
+    @output
+    @render.ui
     def inputs() -> Tag:
         vals = [
             f"<code>input_date()</code> {input.date()}",
@@ -116,15 +116,15 @@ def server(input: Inputs, output: Outputs, session: Session):
     np.random.seed(19680801)
     x_rand = 100 + 15 * np.random.randn(437)
 
-    @output()
+    @output
     @render.plot(alt="A histogram")
     def plot():
         fig, ax = plt.subplots()
         ax.hist(x_rand, int(input.n()), density=True)
         return fig
 
-    @output()
-    @render.image()
+    @output
+    @render.image
     def image():
         from pathlib import Path
 
@@ -132,7 +132,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         img: ImgData = {"src": str(dir / "rstudio-logo.png"), "width": "150px"}
         return img
 
-    @reactive.Effect()
+    @reactive.Effect
     def _():
         btn = input.btn()
         if btn and btn > 0:
@@ -144,7 +144,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 )
             )
 
-    @reactive.Effect()
+    @reactive.Effect
     def _():
         link = input.link()
         if link and link > 0:

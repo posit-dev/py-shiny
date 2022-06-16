@@ -11,20 +11,20 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
     val = reactive.Value(0)
 
-    @reactive.Effect()
+    @reactive.Effect
     @event(input.minus)
     def _():
         newVal = val.get() - 1
         val.set(newVal)
 
-    @reactive.Effect()
+    @reactive.Effect
     @event(input.plus)
     def _():
         newVal = val.get() + 1
         val.set(newVal)
 
-    @output()
-    @render.text()
+    @output
+    @render.text
     def value():
         return str(val.get())
 

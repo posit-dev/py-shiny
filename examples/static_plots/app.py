@@ -53,7 +53,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Calc()
+    @reactive.Calc
     def fake_data():
         n = 5000
         mean = [0, 0]
@@ -61,8 +61,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         cov = [(input.var(), input.cov()), (input.cov(), 1 / input.var())]
         return rng.multivariate_normal(mean, cov, n).T
 
-    @output()
-    @render.plot()
+    @output
+    @render.plot
     def seaborn():
         x, y = fake_data()
         f, ax = plt.subplots(figsize=(6, 6))
@@ -71,8 +71,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         sns.kdeplot(x=x, y=y, levels=5, color="w", linewidths=1)
         return f
 
-    @output()
-    @render.plot()
+    @output
+    @render.plot
     def plotnine():
         from plotnine import (
             ggplot,
@@ -96,8 +96,8 @@ def server(input: Inputs, output: Outputs, session: Session):
             + theme(legend_position="top")
         )
 
-    @output()
-    @render.plot()
+    @output
+    @render.plot
     def pandas():
         ts = pd.Series(
             np.random.randn(1000), index=pd.date_range("1/1/2000", periods=1000)
@@ -105,8 +105,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         ts = ts.cumsum()
         return ts.plot()
 
-    @output()
-    @render.plot()
+    @output
+    @render.plot
     def holoviews():
         import holoviews as hv
         from bokeh.sampledata.les_mis import data as les_mis
@@ -114,8 +114,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         links = pd.DataFrame(les_mis["links"])
         return hv.render(hv.Chord(links), backend="matplotlib")
 
-    @output()
-    @render.plot()
+    @output
+    @render.plot
     def xarray():
         import xarray as xr
 
@@ -125,8 +125,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         air.attrs["units"] = "deg C"
         return air.isel(lon=10, lat=[19, 21, 22]).plot.line(x="time")
 
-    @output()
-    @render.plot()
+    @output
+    @render.plot
     def geopandas():
         import geopandas
 
@@ -136,8 +136,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         boros.sort_index(inplace=True)
         return boros.plot()
 
-    @output()
-    @render.plot()
+    @output
+    @render.plot
     def missingno():
         import missingno as msno
 

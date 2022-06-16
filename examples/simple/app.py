@@ -10,14 +10,14 @@ shared_val = reactive.Value(None)
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Calc()
+    @reactive.Calc
     def r():
         if input.n() is None:
             return
         return input.n() * 2
 
-    @output()
-    @render.text()
+    @output
+    @render.text
     async def txt():
         val = r()
         return f"n*2 is {val}, session id is {session.id}"
