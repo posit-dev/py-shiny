@@ -80,15 +80,26 @@ class ModuleOutputs(Outputs):
     def __call__(
         self,
         *,
-        name: Optional[str] = None,
+        id: Optional[str] = None,
         suspend_when_hidden: bool = True,
-        priority: int = 0
+        priority: int = 0,
+        name: Optional[str] = None,
     ) -> Callable[[RenderFunction], None]:
+        if name is not None:
+            from . import _deprecated
+
+            _deprecated._warn_deprecated(
+                "`@output(name=...)` is deprecated. Use `@output(id=...)` instead."
+            )
+            id = name
+
         def set_fn(fn: RenderFunction) -> None:
-            fn_name = name or fn.__name__
-            fn_name = self._ns_key(fn_name)
+            output_name = id or fn.__name__
+            output_name = self._ns_key(output_name)
             out_fn = self._outputs(
-                name=fn_name, suspend_when_hidden=suspend_when_hidden, priority=priority
+                name=output_name,
+                suspend_when_hidden=suspend_when_hidden,
+                priority=priority,
             )
             return out_fn(fn)
 

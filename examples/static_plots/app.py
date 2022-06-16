@@ -61,9 +61,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         cov = [(input.var(), input.cov()), (input.cov(), 1 / input.var())]
         return rng.multivariate_normal(mean, cov, n).T
 
-    @output(name="seaborn")
+    @output()
     @render.plot()
-    def _():
+    def seaborn():
         x, y = fake_data()
         f, ax = plt.subplots(figsize=(6, 6))
         sns.scatterplot(x=x, y=y, s=5, color=".15")
@@ -71,9 +71,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         sns.kdeplot(x=x, y=y, levels=5, color="w", linewidths=1)
         return f
 
-    @output(name="plotnine")
+    @output()
     @render.plot()
-    def _():
+    def plotnine():
         from plotnine import (
             ggplot,
             aes,
@@ -96,27 +96,27 @@ def server(input: Inputs, output: Outputs, session: Session):
             + theme(legend_position="top")
         )
 
-    @output(name="pandas")
+    @output()
     @render.plot()
-    def _():
+    def pandas():
         ts = pd.Series(
             np.random.randn(1000), index=pd.date_range("1/1/2000", periods=1000)
         )
         ts = ts.cumsum()
         return ts.plot()
 
-    @output(name="holoviews")
+    @output()
     @render.plot()
-    def _():
+    def holoviews():
         import holoviews as hv
         from bokeh.sampledata.les_mis import data as les_mis
 
         links = pd.DataFrame(les_mis["links"])
         return hv.render(hv.Chord(links), backend="matplotlib")
 
-    @output(name="xarray")
+    @output()
     @render.plot()
-    def _():
+    def xarray():
         import xarray as xr
 
         airtemps = xr.tutorial.open_dataset("air_temperature")
@@ -125,9 +125,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         air.attrs["units"] = "deg C"
         return air.isel(lon=10, lat=[19, 21, 22]).plot.line(x="time")
 
-    @output(name="geopandas")
+    @output()
     @render.plot()
-    def _():
+    def geopandas():
         import geopandas
 
         nybb_path = geopandas.datasets.get_path("nybb")
@@ -136,9 +136,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         boros.sort_index(inplace=True)
         return boros.plot()
 
-    @output(name="missingno")
+    @output()
     @render.plot()
-    def _():
+    def missingno():
         import missingno as msno
 
         collisions = pd.read_csv(

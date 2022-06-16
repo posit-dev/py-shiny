@@ -43,7 +43,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         ax.hist(x, input.n(), density=True)
         return fig
 
-    @output(name="ui")
+    @output(id="ui")
     @render.ui()
     def _():
         return ui.input_slider(

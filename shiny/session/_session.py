@@ -809,38 +809,46 @@ class Outputs:
     def __call__(
         self,
         *,
-        name: Optional[str] = None,
+        id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
+        name: Optional[str] = None,
     ) -> Callable[[render.RenderFunction], None]:
+        if name is not None:
+            from .. import _deprecated
+
+            _deprecated._warn_deprecated(
+                "`@output(name=...)` is deprecated. Use `@output(id=...)` instead."
+            )
+            id = name
+
         def set_fn(fn: render.RenderFunction) -> None:
-            fn_name = name or fn.__name__
+            output_name = id or fn.__name__
             # fn is either a regular function or a RenderFunction object. If
-            # it's the latter, we can give it a bit of metadata, which can be
-            # used by the
+            # it's the latter, give it a bit of metadata.
             if isinstance(fn, render.RenderFunction):
-                fn.set_metadata(self._session, fn_name)
+                fn.set_metadata(self._session, output_name)
 
-            if fn_name in self._effects:
-                self._effects[fn_name].destroy()
+            if output_name in self._effects:
+                self._effects[output_name].destroy()
 
-            self._suspend_when_hidden[fn_name] = suspend_when_hidden
+            self._suspend_when_hidden[output_name] = suspend_when_hidden
 
             @Effect(
-                suspended=suspend_when_hidden and self._is_hidden(fn_name),
+                suspended=suspend_when_hidden and self._is_hidden(output_name),
                 priority=priority,
             )
             async def output_obs():
                 await self._session._send_message(
-                    {"recalculating": {"name": fn_name, "status": "recalculating"}}
+                    {"recalculating": {"name": output_name, "status": "recalculating"}}
                 )
 
                 message: Dict[str, object] = {}
                 try:
                     if _utils.is_async_callable(fn):
-                        message[fn_name] = await fn()
+                        message[output_name] = await fn()
                     else:
-                        message[fn_name] = fn()
+                        message[output_name] = fn()
                 except SilentCancelOutputException:
                     return
                 except SilentException:
@@ -857,7 +865,7 @@ class Outputs:
                         err_msg = str(e)
                     # Register the outbound error message
                     msg: Dict[str, object] = {
-                        fn_name: {
+                        output_name: {
                             "message": err_msg,
                             # TODO: is it possible to get the call?
                             "call": None,
@@ -870,14 +878,14 @@ class Outputs:
                 self._session._outbound_message_queues["values"].append(message)
 
                 await self._session._send_message(
-                    {"recalculating": {"name": fn_name, "status": "recalculated"}}
+                    {"recalculating": {"name": output_name, "status": "recalculated"}}
                 )
 
             output_obs.on_invalidate(
-                lambda: self._session._send_progress("binding", {"id": fn_name})
+                lambda: self._session._send_progress("binding", {"id": output_name})
             )
 
-            self._effects[fn_name] = output_obs
+            self._effects[output_name] = output_obs
 
             return None
 
