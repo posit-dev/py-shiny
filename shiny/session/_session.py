@@ -641,7 +641,7 @@ class Session:
     @add_example()
     def download(
         self,
-        name: Optional[str] = None,
+        id: Optional[str] = None,
         filename: Optional[Union[str, Callable[[], str]]] = None,
         media_type: Union[None, str, Callable[[], str]] = None,
         encoding: str = "utf-8",
@@ -651,7 +651,7 @@ class Session:
 
         Parameters
         ----------
-        name
+        id
             The name of the download.
         filename
             The filename of the download.
@@ -666,10 +666,7 @@ class Session:
         """
 
         def wrapper(fn: DownloadHandler):
-            if name is None:
-                effective_name = fn.__name__
-            else:
-                effective_name = name
+            effective_name = id or fn.__name__
 
             self._downloads[effective_name] = DownloadInfo(
                 filename=filename,
@@ -678,7 +675,7 @@ class Session:
                 encoding=encoding,
             )
 
-            @self.output(name=effective_name)
+            @self.output(id=effective_name)
             @render.text()
             @functools.wraps(fn)
             def _():
