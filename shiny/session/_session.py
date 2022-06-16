@@ -814,7 +814,7 @@ class Outputs:
         if name is not None:
             from .. import _deprecated
 
-            _deprecated._warn_deprecated(
+            _deprecated.warn_deprecated(
                 "`@output(name=...)` is deprecated. Use `@output(id=...)` instead."
             )
             id = name

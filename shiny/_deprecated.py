@@ -21,7 +21,7 @@ class ShinyDeprecationWarning(RuntimeWarning):
 warnings.simplefilter("always", ShinyDeprecationWarning)
 
 
-def _warn_deprecated(message: str):
+def warn_deprecated(message: str):
     warnings.warn(message, ShinyDeprecationWarning)
 
 
@@ -30,23 +30,23 @@ def _warn_deprecated(message: str):
 # ======================================================================================
 def render_text():
     """Deprecated. Please use render.text() instead of render_text()."""
-    _warn_deprecated("render_text() is deprecated. Use render.text() instead.")
+    warn_deprecated("render_text() is deprecated. Use render.text() instead.")
     return render.text()
 
 
 def render_ui():
     """Deprecated. Please use render.ui() instead of render_ui()."""
-    _warn_deprecated("render_ui() is deprecated. Use render.ui() instead.")
+    warn_deprecated("render_ui() is deprecated. Use render.ui() instead.")
     return render.ui()
 
 
 def render_plot(*args: Any, **kwargs: Any):
     """Deprecated. Please use render.plot() instead of render_plot()."""
-    _warn_deprecated("render_plot() is deprecated. Use render.plot() instead.")
+    warn_deprecated("render_plot() is deprecated. Use render.plot() instead.")
     return render.plot(*args, **kwargs)
 
 
 def render_image(*args: Any, **kwargs: Any):
     """Deprecated. Please use render.image() instead of render_image()."""
-    _warn_deprecated("render_image() is deprecated. Use render.image() instead.")
+    warn_deprecated("render_image() is deprecated. Use render.image() instead.")
     return render.image(*args, **kwargs)
