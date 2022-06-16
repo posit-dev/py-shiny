@@ -116,7 +116,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         yield "新,1,2\n"
         yield "型,4,5\n"
 
-    @session.download(name="download4", filename="failuretest.txt")
+    @session.download(id="download4", filename="failuretest.txt")
     async def _():
         yield "hello"
         raise Exception("This error was caused intentionally")

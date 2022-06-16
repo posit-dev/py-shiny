@@ -108,7 +108,7 @@ def text() -> Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], RenderText]
     Tip
     ----
     This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(name=...)``) should match the ``id`` of
+    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
     a :func:`~shiny.ui.output_text` container (see :func:`~shiny.ui.output_text` for
     example usage).
 
@@ -249,7 +249,7 @@ def plot(
     Tip
     ----
     This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(name=...)``) should match the ``id`` of
+    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
     a :func:`~shiny.ui.output_plot` container (see :func:`~shiny.ui.output_plot` for
     example usage).
 
@@ -337,7 +337,7 @@ def image(
     Tip
     ----
     This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(name=...)``) should match the ``id`` of
+    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
     a :func:`~shiny.ui.output_image` container (see :func:`~shiny.ui.output_image` for
     example usage).
 
@@ -405,7 +405,7 @@ def ui() -> Callable[[Union[RenderUIFunc, RenderUIFuncAsync]], RenderUI]:
     Tip
     ----
     This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(name=...)``) should match the ``id`` of
+    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
     a :func:`~shiny.ui.output_ui` container (see :func:`~shiny.ui.output_ui` for example
     usage).
 
