@@ -7,8 +7,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output()
-    @render.text()
+    @output
+    @render.text
     @event(input.button)
     def compute():
         with ui.Progress(min=1, max=15) as p:

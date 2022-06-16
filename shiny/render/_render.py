@@ -223,9 +223,9 @@ class RenderPlot(RenderFunction):
                 return result
 
         raise Exception(
-            f"@render.plot() doesn't know to render objects of type '{str(type(x))}'. "
+            f"@render.plot doesn't know to render objects of type '{str(type(x))}'. "
             + "Consider either requesting support for this type of plot object, and/or "
-            + " explictly saving the object to a (png) file and using @render.image()."
+            + " explictly saving the object to a (png) file and using @render.image."
         )
 
 

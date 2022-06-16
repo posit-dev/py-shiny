@@ -18,7 +18,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     session.on_ended(log)
 
-    @reactive.Effect()
+    @reactive.Effect
     @event(input.close)
     async def _():
         await session.close()

@@ -4,7 +4,7 @@ app_ui = ui.page_fluid(ui.input_action_button("btn", "Press me!"))
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect()
+    @reactive.Effect
     @event(input.btn)
     def _():
         ui.insert_ui(

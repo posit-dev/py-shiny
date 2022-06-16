@@ -23,21 +23,21 @@ shared_val = reactive.Value(None)
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Calc()
+    @reactive.Calc
     def r():
         if input.n() is None:
             return
         return input.n() * 2
 
-    @output()
-    @render.text()
+    @output
+    @render.text
     async def txt():
         val = r()
         return f"n*2 is {val}, session id is {session.id}"
 
     # This observer watches n, and changes shared_val, which is shared across
     # all running sessions.
-    @reactive.Effect()
+    @reactive.Effect
     def _():
         if input.n() is None:
             return
@@ -45,12 +45,12 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     # Print the value of shared_val(). Changing it in one session should cause
     # this to run in all sessions.
-    @output()
-    @render.text()
+    @output
+    @render.text
     def shared_txt():
         return f"shared_val() is {shared_val()}"
 
-    @output()
+    @output
     @render.plot(alt="A histogram")
     def plot() -> object:
         np.random.seed(19680801)
@@ -60,8 +60,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         ax.hist(x, input.n(), density=True)
         return fig
 
-    @output()
-    @render.text()
+    @output
+    @render.text
     def file_content():
         file_infos: list[FileInfo] = input.file1()
         if not file_infos:

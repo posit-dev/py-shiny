@@ -19,13 +19,13 @@ def counter_ui(
 def counter_server(input: Inputs, output: Outputs, session: Session):
     count: reactive.Value[int] = reactive.Value(0)
 
-    @reactive.Effect()
+    @reactive.Effect
     @event(input.button)
     def _():
         count.set(count() + 1)
 
-    @output()
-    @render.text()
+    @output
+    @render.text
     def out() -> str:
         return f"Click count is {count()}"
 

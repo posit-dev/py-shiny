@@ -8,7 +8,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect()
+    @reactive.Effect
     def _():
         x = str(input.controller())
         # This will change the value of input$inText, based on x

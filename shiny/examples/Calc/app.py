@@ -11,7 +11,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Calc()
+    @reactive.Calc
     def first():
         input.first()
         p = ui.Progress()
@@ -21,13 +21,13 @@ def server(input: Inputs, output: Outputs, session: Session):
         p.close()
         return random.randint(1, 1000)
 
-    @reactive.Calc()
+    @reactive.Calc
     def second():
         input.second()
         return random.randint(1, 1000)
 
-    @output()
-    @render.ui()
+    @output
+    @render.ui
     def result():
         return first() + second()
 

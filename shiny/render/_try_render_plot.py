@@ -162,9 +162,9 @@ def get_matplotlib_figure(x: object) -> Union[MplFigure, None]:
 
     if isinstance(x, Animation):
         raise RuntimeError(
-            "Matplotlib's Animation class isn't supported by @render.plot(). "
+            "Matplotlib's Animation class isn't supported by @render.plot. "
             + "Consider explictly saving the animation to a file and "
-            + "then using @render.image() instead to render it."
+            + "then using @render.image instead to render it."
         )
 
     # Libraries like pandas, xarray, etc have plot() methods that can return a wide

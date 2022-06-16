@@ -14,8 +14,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output()
-    @render.ui()
+    @output
+    @render.ui
     def contents():
         if input.file1() is None:
             return "Please upload a csv file"

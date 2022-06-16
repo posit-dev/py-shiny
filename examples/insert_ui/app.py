@@ -21,19 +21,19 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Calc()
+    @reactive.Calc
     def r():
         if input.n() is None:
             return
         return input.n() * 2
 
-    @output()
-    @render.text()
+    @output
+    @render.text
     async def txt():
         val = r()
         return f"n*2 is {val}, session id is {session.id}"
 
-    @output()
+    @output
     @render.plot(alt="A histogram")
     def plot():
         np.random.seed(19680801)
@@ -44,13 +44,13 @@ def server(input: Inputs, output: Outputs, session: Session):
         return fig
 
     @output(id="ui")
-    @render.ui()
+    @render.ui
     def _():
         return ui.input_slider(
-            "n", "This slider is rendered via @render.ui()", min=0, max=100, value=20
+            "n", "This slider is rendered via @render.ui", min=0, max=100, value=20
         )
 
-    @reactive.Effect()
+    @reactive.Effect
     def _():
         btn = input.btn()
         if btn % 2 == 1:

@@ -22,13 +22,13 @@ def mod_ui(ns: Callable[[str], str]) -> TagChildArg:
 def mod_server(input: Inputs, output: Outputs, session: Session):
     count: reactive.Value[int] = reactive.Value(0)
 
-    @reactive.Effect()
+    @reactive.Effect
     @event(session.input.button)
     def _():
         count.set(count() + 1)
 
-    @output()
-    @render.text()
+    @output
+    @render.text
     def out() -> str:
         return f"Click count is {count()}"
 
@@ -87,11 +87,11 @@ def test_current_session():
     sessions: Dict[str, Union[Session, None]] = {}
 
     def inner(input: Inputs, output: Outputs, session: Session):
-        @reactive.Calc()
+        @reactive.Calc
         def out():
             return get_current_session()
 
-        @reactive.Effect()
+        @reactive.Effect
         def _():
             sessions["inner"] = session
             sessions["inner_current"] = get_current_session()
@@ -100,11 +100,11 @@ def test_current_session():
     mod_inner = Module(ui.TagList, inner)
 
     def outer(input: Inputs, output: Outputs, session: Session):
-        @reactive.Calc()
+        @reactive.Calc
         def out():
             return get_current_session()
 
-        @reactive.Effect()
+        @reactive.Effect
         def _():
             mod_inner.server("mod_inner")
             sessions["outer"] = session
@@ -116,11 +116,11 @@ def test_current_session():
     def server(input: Inputs, output: Outputs, session: Session):
         mod_outer.server("mod_outer")
 
-        @reactive.Calc()
+        @reactive.Calc
         def out():
             return get_current_session()
 
-        @reactive.Effect()
+        @reactive.Effect
         def _():
             sessions["top"] = session
             sessions["top_current"] = get_current_session()

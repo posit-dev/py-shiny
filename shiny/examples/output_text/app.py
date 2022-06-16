@@ -10,13 +10,13 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output()
-    @render.text()
+    @output
+    @render.text
     def text():
         return input.txt()
 
-    @output()
-    @render.text()
+    @output
+    @render.text
     def verb():
         return input.txt()
 
