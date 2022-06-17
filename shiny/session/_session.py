@@ -49,7 +49,7 @@ from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
-from .._namespaces import namespaced_id_ns
+from .._namespaces import ResolvedId, Id, Root
 from ..reactive import Value, Effect, Effect_, isolate, flush
 from ..reactive._core import lock
 from ..types import SafeException, SilentCancelOutputException, SilentException
@@ -130,6 +130,8 @@ class Session(object, metaclass=SessionMeta):
     need to create instances of this class yourself (it's only part of the public API
     for type checking reasons).
     """
+
+    ns = Root
 
     # ==========================================================================
     # Initialization
@@ -731,17 +733,13 @@ class Session(object, metaclass=SessionMeta):
 
         return {"deps": deps, "html": res["html"]}
 
-    @staticmethod
-    def ns(id: str) -> str:
-        return id
-
-    def make_scope(self, id: str) -> "Session":
-        ns = create_ns_func(id)
+    def make_scope(self, id: Id) -> "Session":
+        ns = self.ns(id)
         return SessionProxy(parent=self, ns=ns)  # type: ignore
 
 
 class SessionProxy:
-    def __init__(self, parent: Session, ns: Callable[[str], str]) -> None:
+    def __init__(self, parent: Session, ns: ResolvedId) -> None:
         self._parent = parent
         self.ns = ns
         self.input = Inputs(values=parent.input._map, ns=ns)
@@ -772,10 +770,6 @@ class SessionProxy:
             return self._parent.download(id=id_, **kwargs)(fn)
 
         return wrapper
-
-
-def create_ns_func(namespace: str) -> Callable[[str], str]:
-    return lambda x: namespaced_id_ns(x, [namespace])
 
 
 # ======================================================================================

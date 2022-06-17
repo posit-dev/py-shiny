@@ -12,6 +12,7 @@ import pytest
 from shiny import *
 from shiny import _utils
 from shiny.reactive import *
+from shiny._namespaces import Root
 
 from .mocktime import MockTime
 
@@ -24,6 +25,8 @@ class OnEndedSessionCallbacks:
 
     Eventually we should have a proper mock of Session, then we can retire this.
     """
+
+    ns = Root
 
     def __init__(self):
         self._on_ended_callbacks = _utils.Callbacks()

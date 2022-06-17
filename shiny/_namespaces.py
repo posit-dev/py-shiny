@@ -1,39 +1,40 @@
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
-from typing import Union, List
+from typing import Union
 
 
 class ResolvedId(str):
-    pass
+    def __call__(self, id: "Id") -> "ResolvedId":
+        if self == "" or isinstance(id, ResolvedId):
+            return ResolvedId(id)
+        else:
+            return ResolvedId(self + "_" + id)
+
+
+Root = ResolvedId("")
 
 
 Id = Union[str, ResolvedId]
 
 
-def namespaced_id(id: Id) -> Id:
-    return namespaced_id_ns(id, get_current_namespaces())
+def namespaced_id(id: Id) -> ResolvedId:
+    return ResolvedId(get_current_namespace())(id)
 
 
-def namespaced_id_ns(id: Id, namespaces: List[str] = []) -> Id:
-    if isinstance(id, ResolvedId) or len(namespaces) == 0:
-        return id
-    else:
-        return ResolvedId("_".join(namespaces) + "_" + id)
+def get_current_namespace() -> ResolvedId:
+    return _current_namespace.get()
 
 
-def get_current_namespaces() -> List[str]:
-    return _current_namespaces.get()
-
-
-_current_namespaces: ContextVar[List[str]] = ContextVar(
-    "current_namespaces", default=[]
+_current_namespace: ContextVar[ResolvedId] = ContextVar(
+    "current_namespace", default=Root
 )
 
 
 @contextmanager
-def namespace_context(namespaces: List[str]):
-    token: Token[List[str]] = _current_namespaces.set(namespaces)
+def namespace_context(id: Union[Id, None]):
+    namespace = namespaced_id(id) if id else Root
+    token: Token[ResolvedId] = _current_namespace.set(namespace)
     try:
         yield
     finally:
-        _current_namespaces.reset(token)
+        _current_namespace.reset(token)

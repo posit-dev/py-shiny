@@ -8,7 +8,7 @@ if sys.version_info < (3, 10):
 else:
     from typing import ParamSpec, Concatenate
 
-from ._namespaces import namespaced_id, namespace_context, get_current_namespaces
+from ._namespaces import namespaced_id, namespace_context, Id
 from .session import Inputs, Outputs, Session, require_active_session, session_context
 
 P = ParamSpec("P")
@@ -16,8 +16,8 @@ R = TypeVar("R")
 
 
 def module_ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
-    def wrapper(ns: str, *args: P.args, **kwargs: P.kwargs) -> R:
-        with namespace_context(get_current_namespaces() + [ns]):
+    def wrapper(id: Id, *args: P.args, **kwargs: P.kwargs) -> R:
+        with namespace_context(id):
             return fn(*args, **kwargs)
 
     return wrapper
@@ -26,9 +26,9 @@ def module_ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
 def module_server(
     fn: Callable[Concatenate[Inputs, Outputs, Session, P], R]
 ) -> Callable[Concatenate[str, P], R]:
-    def wrapper(ns: str, *args: P.args, **kwargs: P.kwargs) -> R:
+    def wrapper(id: Id, *args: P.args, **kwargs: P.kwargs) -> R:
         sess = require_active_session(None)
-        child_sess = sess.make_scope(ns)
+        child_sess = sess.make_scope(id)
         with session_context(child_sess):
             return fn(child_sess.input, child_sess.output, child_sess, *args, **kwargs)
 
