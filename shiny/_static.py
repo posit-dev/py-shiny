@@ -38,6 +38,9 @@ def deploy_static(
         if verbose:
             print(*args)
 
+    if not os.path.exists(os.path.join(appdir, "app.py")):
+        raise ValueError(f"Directory {appdir} must contain a file named app.py.")
+
     if subdir is None:
         subdir = ""
     if os.path.isabs(subdir):
