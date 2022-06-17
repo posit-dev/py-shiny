@@ -14,8 +14,10 @@ def counter_ui(label: str = "Increment counter") -> ui.TagChildArg:
 
 
 @module_server
-def counter_server(input: Inputs, output: Outputs, session: Session) -> int:
-    count: reactive.Value[int] = reactive.Value(0)
+def counter_server(
+    input: Inputs, output: Outputs, session: Session, starting_value: int = 0
+):
+    count: reactive.Value[int] = reactive.Value(starting_value)
 
     @reactive.Effect
     @event(input.button)
@@ -26,8 +28,6 @@ def counter_server(input: Inputs, output: Outputs, session: Session) -> int:
     @render.text
     def out() -> str:
         return f"Click count is {count()}"
-
-    return 1
 
 
 # =============================================================================
@@ -41,8 +41,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     counter_server("counter1")
-    val = counter_server("counter2")
-    print(val)
+    counter_server("counter2")
 
 
 app = App(app_ui, server)
