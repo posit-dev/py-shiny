@@ -344,7 +344,6 @@ class Session(object, metaclass=SessionMeta):
     # ==========================================================================
     # Handling /session/{session_id}/{action}/{subpath} requests
     # ==========================================================================
-    # TODO: anything to be done here for module support?
     async def _handle_request(
         self, request: Request, action: str, subpath: Optional[str]
     ) -> ASGIApp:
@@ -756,8 +755,14 @@ class SessionProxy:
     def __getattr__(self, attr: str) -> Any:
         return getattr(self._parent, attr)
 
+    def make_scope(self, id: str) -> Session:
+        return self._parent.make_scope(self.ns(id))
+
     def send_input_message(self, id: str, message: Dict[str, object]) -> None:
         return self._parent.send_input_message(self.ns(id), message)
+
+    def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
+        return self._parent.dynamic_route(self.ns(name), handler)
 
     def download(
         self, id: Optional[str] = None, **kwargs: object
@@ -767,9 +772,6 @@ class SessionProxy:
             return self._parent.download(id=id_, **kwargs)(fn)
 
         return wrapper
-
-    def make_scope(self, id: str) -> Session:
-        return self._parent.make_scope(self.ns(id))
 
 
 def create_ns_func(namespace: str) -> Callable[[str], str]:
