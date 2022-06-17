@@ -647,8 +647,6 @@ class Session(object, metaclass=SessionMeta):
         print("Unhandled error: " + str(e))
         await self.close()
 
-    # TODO: probably name should be id
-
     @add_example()
     def download(
         self,
@@ -761,11 +759,14 @@ class SessionProxy:
     def send_input_message(self, id: str, message: Dict[str, object]) -> None:
         return self._parent.send_input_message(self.ns(id), message)
 
-    # TODO: test this actually works (will handle_request() need an override?)
     def download(
-        self, name: str, **kwargs: object
+        self, id: Optional[str] = None, **kwargs: object
     ) -> Callable[[DownloadHandler], None]:
-        return self._parent.download(self.ns(name), **kwargs)
+        def wrapper(fn: DownloadHandler):
+            id_ = self.ns(id or fn.__name__)
+            return self._parent.download(id=id_, **kwargs)(fn)
+
+        return wrapper
 
     def make_scope(self, id: str) -> Session:
         return self._parent.make_scope(self.ns(id))

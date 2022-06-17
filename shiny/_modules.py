@@ -17,7 +17,6 @@ R = TypeVar("R")
 
 def module_ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     def wrapper(ns: str, *args: P.args, **kwargs: P.kwargs) -> R:
-        # TODO: what should happen if this is called *inside* of a session? Do we tack on the parent session's namespace as well?
         with namespace_context(get_current_namespaces() + [ns]):
             return fn(*args, **kwargs)
 
