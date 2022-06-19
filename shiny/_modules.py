@@ -95,10 +95,10 @@ class ModuleOutputs(Outputs):
             id = name
 
         def set_fn(fn: RenderFunction) -> None:
-            output_name = id or fn.__name__
-            output_name = self._ns_key(output_name)
+            output_id = id or fn.__name__
+            output_id = self._ns_key(output_id)
             out_fn = self._outputs(
-                name=output_name,
+                id=output_id,
                 suspend_when_hidden=suspend_when_hidden,
                 priority=priority,
             )
