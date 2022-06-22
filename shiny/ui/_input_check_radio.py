@@ -4,7 +4,7 @@ __all__ = (
     "input_radio_buttons",
 )
 
-from typing import Optional, Dict, Union, List, Tuple
+from typing import Optional, Dict, Union, List
 
 from htmltools import tags, Tag, div, span, css, TagChildArg
 
@@ -211,13 +211,28 @@ def _generate_options(
     choices: ChoicesArg,
     selected: Optional[Union[str, List[str]]],
     inline: bool,
-):
+) -> Tag:
     choicez = _normalize_choices(choices)
-    if type == "radio" and not selected:
-        selected = list(choicez.keys())[0]
+
+    if selected is None:
+        if type == "radio":
+            selected = list(choicez.keys())[0]
+        else:
+            selected = []
+
+    if not isinstance(selected, list):
+        selected = [selected]
+
     return div(
-        *[
-            _generate_option(id, type, choice, selected, inline)
+        [
+            _generate_option(
+                id,
+                type,
+                value=choice[0],
+                label=choice[1],
+                checked=choice[0] in selected,
+                inline=inline,
+            )
             for choice in choicez.items()
         ],
         class_="shiny-options-group",
@@ -227,15 +242,11 @@ def _generate_options(
 def _generate_option(
     id: str,
     type: str,
-    choice: Tuple[str, TagChildArg],
-    selected: Optional[Union[str, List[str]]],
+    value: str,
+    label: TagChildArg,
+    checked: bool,
     inline: bool,
-):
-    value, label = choice
-    if isinstance(selected, list):
-        checked = value in selected
-    else:
-        checked = value == selected
+) -> Tag:
     input = tags.input(
         type=type,
         name=id,
