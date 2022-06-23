@@ -46,6 +46,7 @@ clean-test: ## remove test and coverage artifacts
 	rm -f .coverage
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
+	rm -rf typings/
 
 typings/uvicorn/__init__.pyi:
 	pyright --createstub uvicorn
