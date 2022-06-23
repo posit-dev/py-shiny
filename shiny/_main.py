@@ -201,6 +201,11 @@ def run_app(
         )
     )
 
+    if reload and app_dir is not None:
+        reload_dirs = [app_dir]
+    else:
+        reload_dirs = []
+
     if reload and autoreload_port != "":
         m = re.search("^([+-]?)(\\d+)$", autoreload_port)
         if not m:
@@ -229,7 +234,7 @@ def run_app(
         port=port,
         debug=debug,
         reload=reload,
-        reload_dirs=[app_dir] if reload else [],
+        reload_dirs=reload_dirs,
         ws_max_size=ws_max_size,
         log_level=log_level,
         log_config=log_config,
