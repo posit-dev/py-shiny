@@ -3,18 +3,19 @@ import importlib
 import importlib.util
 import os
 import re
+import shutil
 import sys
 import types
-from typing import Optional, Union, Tuple, Any, Dict, cast
+from pathlib import Path
+from typing import Any, Dict, Optional, Tuple, Union, cast
 
 import click
 import uvicorn
 import uvicorn.config
 
 import shiny
-from . import _autoreload
-from . import _hostenv
-from . import _static
+
+from . import _autoreload, _hostenv, _static
 
 
 @click.group()  # pyright: ignore[reportUnknownMemberType]
@@ -320,6 +321,35 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
     # missing dependencies can be misreported to the user as the app module itself not
     # being found.
     return importlib.import_module(module)
+
+
+@main.command(
+    help="""Create a Shiny application from a template
+
+APPDIR is the directory to the Shiny application. A file named app.py will be created in
+that directory.
+
+After creating the application, you use `shiny run`:
+
+    shiny run APPDIR/app.py --reload
+"""
+)
+@click.argument("appdir", type=str)
+def create(appdir: str) -> None:
+    app_dir = Path(appdir)
+    app_path = app_dir / "app.py"
+    if app_path.exists():
+        print(f"Error: Can't create {app_path} because it already exists.")
+        sys.exit(1)
+
+    if not app_dir.exists():
+        app_dir.mkdir()
+
+    shutil.copyfile(
+        Path(__file__).parent / "examples" / "template" / "app.py", app_path
+    )
+
+    print(f"Created Shiny app at {app_dir / 'app.py'}")
 
 
 @main.command(
