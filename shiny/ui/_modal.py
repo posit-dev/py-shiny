@@ -6,7 +6,9 @@ __all__ = (
 )
 
 import sys
-from typing import Optional, Any
+from typing import Optional, Union
+
+from shiny.types import MISSING, MISSING_TYPE
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -64,7 +66,7 @@ def modal_button(
 def modal(
     *args: TagChildArg,
     title: Optional[str] = None,
-    footer: Any = None,
+    footer: Union[TagChildArg, MISSING_TYPE] = MISSING,
     size: Literal["m", "s", "l", "xl"] = "m",
     easy_close: bool = False,
     dismiss_button: bool = True,
@@ -91,8 +93,6 @@ def modal(
         box, or be pressing the Escape key. If ``False`` (the default), the modal dialog
         can't be dismissed in those ways; instead it must be dismissed by clicking on a
         ``modal_button()``, or from a call to ``modal_remove()`` on the server.
-    dismiss_button
-        If ``True``, adds a Dismiss button to the footer of the modal.
     fade
         If ``False``, the modal dialog will have no fade-in animation (it will simply
         appear rather than fade in to view).
@@ -114,12 +114,10 @@ def modal(
     if title:
         title_div = div(tags.h4(title, class_="modal-title"), class_="modal-header")
 
-    if footer or dismiss_button:
-        footer = div(
-            footer,
-            modal_button("Dismiss") if dismiss_button else None,
-            class_="modal-footer",
-        )
+    if isinstance(footer, MISSING_TYPE):
+        footer = modal_button("Dismiss")
+    if footer is not None:
+        footer = div(footer, class_="modal-footer")
 
     dialog = div(
         div(
