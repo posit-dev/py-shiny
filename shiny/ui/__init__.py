@@ -4,26 +4,26 @@ layout helpers, page-level containers, and more.
 """
 
 # All objects imported into this scope will be available as shiny.ui.foo
-from ._bootstrap import *
-from ._download_button import *
-from ._input_action_button import *
-from ._input_check_radio import *
-from ._input_date import *
-from ._input_file import *
-from ._input_numeric import *
-from ._input_password import *
-from ._input_select import *
-from ._input_slider import *
-from ._input_text import *
-from ._input_update import *
-from ._insert import *
-from ._markdown import *
-from ._modal import *
-from ._navs import *
-from ._notification import *
-from ._output import *
-from ._page import *
-from ._progress import *
+from ._bootstrap import *  # noqa: F401
+from ._download_button import *  # noqa: F401
+from ._input_action_button import *  # noqa: F401
+from ._input_check_radio import *  # noqa: F401
+from ._input_date import *  # noqa: F401
+from ._input_file import *  # noqa: F401
+from ._input_numeric import *  # noqa: F401
+from ._input_password import *  # noqa: F401
+from ._input_select import *  # noqa: F401
+from ._input_slider import *  # noqa: F401
+from ._input_text import *  # noqa: F401
+from ._input_update import *  # noqa: F401
+from ._insert import *  # noqa: F401
+from ._markdown import *  # noqa: F401
+from ._modal import *  # noqa: F401
+from ._navs import *  # noqa: F401
+from ._notification import *  # noqa: F401
+from ._output import *  # noqa: F401
+from ._page import *  # noqa: F401
+from ._progress import *  # noqa: F401
 
 from ._bootstrap import __all__ as _bootstrap_all
 from ._download_button import __all__ as _download_button_all

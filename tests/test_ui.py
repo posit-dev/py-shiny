@@ -49,3 +49,88 @@ def test_panel_title():
           </body>
         </html>"""
     )
+
+
+def test_modal_footer():
+    # Default behavior: Dismiss button
+    x = str(ui.modal())
+    assert x == textwrap.dedent(
+        """\
+        <div id="shiny-modal" class="modal fade" tabindex="-1" data-backdrop="static" data-bs-backdrop="static" data-keyboard="false" data-bs-keyboard="false">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-body"></div>
+              <div class="modal-footer">
+                <button class="btn btn-default" type="button" data-dismiss="modal" data-bs-dismiss="modal">Dismiss</button>
+              </div>
+            </div>
+          </div>
+          <script>if (window.bootstrap && !window.bootstrap.Modal.VERSION.match(/^4\\. /)) {
+          var modal=new bootstrap.Modal(document.getElementById('shiny-modal'))
+          modal.show()
+        } else {
+          $('#shiny-modal').modal().focus()
+        }</script>
+        </div>"""
+    )
+
+    # None: drop footer altogether
+    x = str(ui.modal(footer=None))
+    assert x == textwrap.dedent(
+        """\
+        <div id="shiny-modal" class="modal fade" tabindex="-1" data-backdrop="static" data-bs-backdrop="static" data-keyboard="false" data-bs-keyboard="false">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-body"></div>
+            </div>
+          </div>
+          <script>if (window.bootstrap && !window.bootstrap.Modal.VERSION.match(/^4\\. /)) {
+          var modal=new bootstrap.Modal(document.getElementById('shiny-modal'))
+          modal.show()
+        } else {
+          $('#shiny-modal').modal().focus()
+        }</script>
+        </div>"""
+    )
+
+    # If other falsy value: Render empty footer
+    x = str(ui.modal(footer=""))
+    assert x == textwrap.dedent(
+        """\
+        <div id="shiny-modal" class="modal fade" tabindex="-1" data-backdrop="static" data-bs-backdrop="static" data-keyboard="false" data-bs-keyboard="false">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-body"></div>
+              <div class="modal-footer"></div>
+            </div>
+          </div>
+          <script>if (window.bootstrap && !window.bootstrap.Modal.VERSION.match(/^4\\. /)) {
+          var modal=new bootstrap.Modal(document.getElementById('shiny-modal'))
+          modal.show()
+        } else {
+          $('#shiny-modal').modal().focus()
+        }</script>
+        </div>"""
+    )
+
+    # Anything else: include custom footer
+    x = str(ui.modal(footer=ui.span("Custom Footer", class_="mt-3")))
+    assert x == textwrap.dedent(
+        """\
+        <div id="shiny-modal" class="modal fade" tabindex="-1" data-backdrop="static" data-bs-backdrop="static" data-keyboard="false" data-bs-keyboard="false">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-body"></div>
+              <div class="modal-footer">
+                <span class="mt-3">Custom Footer</span>
+              </div>
+            </div>
+          </div>
+          <script>if (window.bootstrap && !window.bootstrap.Modal.VERSION.match(/^4\\. /)) {
+          var modal=new bootstrap.Modal(document.getElementById('shiny-modal'))
+          modal.show()
+        } else {
+          $('#shiny-modal').modal().focus()
+        }</script>
+        </div>"""
+    )

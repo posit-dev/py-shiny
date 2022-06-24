@@ -154,7 +154,7 @@ class NavSetArg(Protocol):
     """
 
     def resolve(
-        self, selected: Optional[str], context: Dict[str, Any] = {}
+        self, selected: Optional[str], context: Dict[str, Any]
     ) -> Tuple[TagChildArg, TagChildArg]:
         """
         Resolve information provided by the navigation container.

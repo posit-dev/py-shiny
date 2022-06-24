@@ -6,7 +6,9 @@ __all__ = (
 )
 
 import sys
-from typing import Optional, Any
+from typing import Optional, Union
+
+from shiny.types import MISSING, MISSING_TYPE
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -64,7 +66,7 @@ def modal_button(
 def modal(
     *args: TagChildArg,
     title: Optional[str] = None,
-    footer: Any = modal_button("Dismiss"),
+    footer: Union[TagChildArg, MISSING_TYPE] = MISSING,
     size: Literal["m", "s", "l", "xl"] = "m",
     easy_close: bool = False,
     fade: bool = True,
@@ -111,7 +113,9 @@ def modal(
     if title:
         title_div = div(tags.h4(title, class_="modal-title"), class_="modal-header")
 
-    if footer:
+    if isinstance(footer, MISSING_TYPE):
+        footer = modal_button("Dismiss")
+    if footer is not None:
         footer = div(footer, class_="modal-footer")
 
     dialog = div(

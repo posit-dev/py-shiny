@@ -144,7 +144,7 @@ def is_async_callable(
     """
     if inspect.iscoroutinefunction(obj):
         return True
-    if hasattr(obj, "__call__"):
+    if hasattr(obj, "__call__"):  # noqa: B004
         if inspect.iscoroutinefunction(obj.__call__):  # type: ignore
             return True
 
