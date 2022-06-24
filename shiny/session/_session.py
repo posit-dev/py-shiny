@@ -72,6 +72,14 @@ class ProtocolError(Exception):
         self.message = message
 
 
+class SessionWarning(RuntimeWarning):
+    pass
+
+
+# By default warnings are shown once; we want to always show them.
+warnings.simplefilter("always", SessionWarning)
+
+
 # This cast is necessary because if the type checker thinks that if
 # "tag" isn't in `message`, then it's not a ClientMessage object.
 # This will be fixable when TypedDict items can be marked as
@@ -245,7 +253,7 @@ class Session(object, metaclass=SessionMeta):
                         message, object_hook=_utils.lists_to_tuples
                     )
                 except json.JSONDecodeError:
-                    warnings.warn("ERROR: Invalid JSON message")
+                    warnings.warn("ERROR: Invalid JSON message", SessionWarning)
                     return
 
                 if "method" not in message_obj:
@@ -367,7 +375,8 @@ class Session(object, metaclass=SessionMeta):
             upload_op = self._file_upload_manager.get_upload_operation(job_id)
             if upload_op is None:
                 warnings.warn(
-                    "Received uploadEnd message for non-existent upload operation."
+                    "Received uploadEnd message for non-existent upload operation.",
+                    SessionWarning,
                 )
                 return None
             file_data = upload_op.finish()
@@ -425,7 +434,8 @@ class Session(object, metaclass=SessionMeta):
                                     "Unable to infer a filename for the "
                                     f"'{download_id}' download handler; please use "
                                     "@session.download(filename=) to specify one "
-                                    "manually"
+                                    "manually",
+                                    SessionWarning,
                                 )
                                 filename = download_id
 
