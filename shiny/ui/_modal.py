@@ -69,7 +69,6 @@ def modal(
     footer: Union[TagChildArg, MISSING_TYPE] = MISSING,
     size: Literal["m", "s", "l", "xl"] = "m",
     easy_close: bool = False,
-    dismiss_button: bool = True,
     fade: bool = True,
     **kwargs: TagAttrArg
 ) -> Tag:
