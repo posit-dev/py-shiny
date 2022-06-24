@@ -40,7 +40,7 @@ class Nav:
         self.content = content
 
     def resolve(
-        self, selected: Optional[str], context: Dict[str, Any] = {}
+        self, selected: Optional[str], context: Dict[str, Any]
     ) -> Tuple[TagChildArg, TagChildArg]:
 
         # Nothing to do for nav_control()/nav_spacer()
@@ -210,7 +210,7 @@ class NavMenu:
     def resolve(
         self,
         selected: Optional[str],
-        context: Dict[str, Any] = {},
+        context: Dict[str, Any],
     ) -> Tuple[TagChildArg, TagChildArg]:
         nav, content = render_navset(
             *self.nav_controls,
@@ -351,7 +351,7 @@ class NavSet:
             ul_class += " shiny-tab-input"
 
         nav, content = render_navset(
-            *self.args, ul_class=ul_class, id=id, selected=self.selected
+            *self.args, ul_class=ul_class, id=id, selected=self.selected, context={}
         )
         return self.layout(nav, content)
 
@@ -922,7 +922,7 @@ def render_navset(
     ul_class: str,
     id: Optional[str],
     selected: Optional[str],
-    context: Dict[str, Any] = {},
+    context: Dict[str, Any],
 ) -> Tuple[Tag, Tag]:
 
     tabsetid = private_random_int(1000, 10000)
