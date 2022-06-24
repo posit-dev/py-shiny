@@ -1,5 +1,6 @@
 __all__ = ("Session", "Inputs", "Outputs")
 
+import enum
 import functools
 import os
 from pathlib import Path
@@ -57,6 +58,19 @@ from ._utils import RenderedDeps, read_thunk_opt, session_context
 
 from .. import render
 from .. import _utils
+
+
+class ConnectionState(enum.Enum):
+    Start = 0
+    Running = 1
+    Closed = 2
+
+
+class ProtocolError(Exception):
+    def __init__(self, message: str = ""):
+        super(ProtocolError, self).__init__(message)
+        self.message = message
+
 
 # This cast is necessary because if the type checker thinks that if
 # "tag" isn't in `message`, then it's not a ClientMessage object.
@@ -186,9 +200,6 @@ class Session(object, metaclass=SessionMeta):
         self._flush_callbacks = _utils.Callbacks()
         self._flushed_callbacks = _utils.Callbacks()
 
-        with session_context(self):
-            self.app.server(self.input, self.output, self)
-
     def _register_session_end_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions
         # that are called when a session ends.
@@ -213,6 +224,12 @@ class Session(object, metaclass=SessionMeta):
         self._run_session_end_tasks()
 
     async def _run(self) -> None:
+        conn_state: ConnectionState = ConnectionState.Start
+
+        def verify_state(expected_state: ConnectionState) -> None:
+            if conn_state != expected_state:
+                raise ProtocolError("Invalid method for the current session state")
+
         await self._send_message(
             {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
         )
@@ -228,8 +245,8 @@ class Session(object, metaclass=SessionMeta):
                         message, object_hook=_utils.lists_to_tuples
                     )
                 except json.JSONDecodeError:
-                    print("ERROR: Invalid JSON message")
-                    continue
+                    warnings.warn("ERROR: Invalid JSON message")
+                    return
 
                 if "method" not in message_obj:
                     self._send_error_response("Message does not contain 'method'.")
@@ -238,29 +255,31 @@ class Session(object, metaclass=SessionMeta):
                 async with lock():
 
                     if message_obj["method"] == "init":
+                        verify_state(ConnectionState.Start)
+
+                        conn_state = ConnectionState.Running
                         message_obj = typing.cast(ClientMessageInit, message_obj)
                         self._manage_inputs(message_obj["data"])
 
+                        with session_context(self):
+                            self.app.server(self.input, self.output, self)
+
                     elif message_obj["method"] == "update":
+                        verify_state(ConnectionState.Running)
+
                         message_obj = typing.cast(ClientMessageUpdate, message_obj)
                         self._manage_inputs(message_obj["data"])
 
-                    else:
-                        if "tag" not in message_obj:
-                            warnings.warn(
-                                "Cannot dispatch message with missing 'tag'; method: "
-                                + message_obj["method"]
-                            )
-                            return
-                        if "args" not in message_obj:
-                            warnings.warn(
-                                "Cannot dispatch message with missing 'args'; method: "
-                                + message_obj["method"]
-                            )
-                            return
+                    elif "tag" in message_obj and "args" in message_obj:
+                        verify_state(ConnectionState.Running)
 
                         message_obj = typing.cast(ClientMessageOther, message_obj)
                         await self._dispatch(message_obj)
+
+                    else:
+                        raise ProtocolError(
+                            f"Unrecognized method {message_obj['method']}"
+                        )
 
                     self._request_flush()
 
@@ -268,6 +287,8 @@ class Session(object, metaclass=SessionMeta):
 
         except ConnectionClosed:
             self._run_session_end_tasks()
+        except ProtocolError as pe:
+            self._send_error_response(pe.message)
 
     def _manage_inputs(self, data: Dict[str, object]) -> None:
         for (key, val) in data.items():

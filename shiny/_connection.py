@@ -34,24 +34,30 @@ class MockConnection(Connection):
         # make those more configurable if we need to customize the HTTPConnection (like
         # "scheme", "path", and "query_string").
         self._http_conn = HTTPConnection(scope={"type": "websocket", "headers": {}})
+        self._queue: asyncio.Queue[str] = asyncio.Queue()
 
     async def send(self, message: str) -> None:
         pass
 
-    # I should say I’m not 100% that the receive method can be a no-op for our testing
-    # purposes. It might need to be asyncio.sleep(0), and/or it might need an external
-    # way to yield until we tell the connection to continue, so that the run loop can
-    # continue.
     async def receive(self) -> str:
-        # Sleep forever
-        await asyncio.Event().wait()
-        raise RuntimeError("make the type checker happy")
+        msg = await self._queue.get()
+        if msg == "":
+            raise ConnectionClosed()
+        return msg
 
     async def close(self, code: int, reason: Optional[str]) -> None:
         pass
 
     def get_http_conn(self) -> HTTPConnection:
         return self._http_conn
+
+    def cause_receive(self, message: str) -> None:
+        """Call from tests to simulate the other side sending a message"""
+        self._queue.put_nowait(message)
+
+    def cause_disconnect(self) -> None:
+        """Call from tests to simulate the other side disconnecting"""
+        self.cause_receive("")
 
 
 class StarletteConnection(Connection):

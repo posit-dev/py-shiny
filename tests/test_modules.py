@@ -1,13 +1,15 @@
 """Tests for `Module`."""
 
+import asyncio
 from typing import Dict, Union, cast
 
+import pytest
+
+from htmltools import Tag, TagList
 from shiny import *
-from shiny.session import get_current_session
 from shiny._connection import MockConnection
 from shiny._namespaces import resolve_id
-from shiny._utils import run_coro_sync
-from htmltools import TagList, Tag
+from shiny.session import get_current_session
 
 
 @module.ui
@@ -37,7 +39,8 @@ def test_module_ui():
     assert get_id(y, 2) == "outer-out2"
 
 
-def test_session_scoping():
+@pytest.mark.asyncio
+async def test_session_scoping():
 
     sessions: Dict[str, Union[Session, None, str]] = {}
 
@@ -85,8 +88,14 @@ def test_session_scoping():
             sessions["top_id"] = session.ns("foo")
             sessions["top_ui_id"] = get_id(mod_outer_ui("outer"), 0)
 
-    App(ui.TagList(), server)._create_session(MockConnection())
-    run_coro_sync(reactive.flush())
+    conn = MockConnection()
+    sess = App(ui.TagList(), server)._create_session(conn)
+
+    async def mock_client():
+        conn.cause_receive('{"method":"init","data":{}}')
+        conn.cause_disconnect()
+
+    await asyncio.gather(mock_client(), sess._run())
 
     assert sessions["inner"] is sessions["inner_current"]
     assert sessions["inner_current"] is sessions["inner_calc_current"]
