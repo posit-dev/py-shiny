@@ -162,8 +162,8 @@ class Session(object, metaclass=SessionMeta):
         # query information about the request, like headers, cookies, etc.
         self.http_conn: HTTPConnection = conn.get_http_conn()
 
-        self.input: Inputs = Inputs()
-        self.output: Outputs = Outputs(self)
+        self.input: Inputs = Inputs(dict())
+        self.output: Outputs = Outputs(self, self.ns, dict(), dict())
 
         self.user: Union[str, None] = None
         self.groups: Union[List[str], None] = None
@@ -301,14 +301,20 @@ class Session(object, metaclass=SessionMeta):
             if len(keys) == 2:
                 val = input_handlers._process_value(keys[1], val, keys[0], self)
 
-            self.input[keys[0]]._set(val)
+            # The keys[0] value is already a fully namespaced id; make that explicit by
+            # wrapping it in ResolvedId, otherwise self.input will throw an id
+            # validation error.
+            self.input[ResolvedId(keys[0])]._set(val)
 
         self.output._manage_hidden()
 
     def _is_hidden(self, name: str) -> bool:
         with isolate():
+            # The .clientdata_output_{name}_hidden string is already a fully namespaced
+            # id; make that explicit by wrapping it in ResolvedId, otherwise self.input
+            # will throw an id validation error.
             hidden_value_obj = cast(
-                Value[bool], self.input[f".clientdata_output_{name}_hidden"]
+                Value[bool], self.input[ResolvedId(f".clientdata_output_{name}_hidden")]
             )
             if not hidden_value_obj.is_set():
                 return True
@@ -365,7 +371,10 @@ class Session(object, metaclass=SessionMeta):
                 )
                 return None
             file_data = upload_op.finish()
-            self.input[input_id]._set(file_data)
+            # The input_id string is already a fully namespaced id; make that explicit
+            # by wrapping it in ResolvedId, otherwise self.input will throw an id
+            # validation error.
+            self.input[ResolvedId(input_id)]._set(file_data)
             # Explicitly return None to signal that the message was handled.
             return None
 
@@ -822,7 +831,7 @@ class Inputs:
     """
 
     def __init__(
-        self, values: Dict[str, Value[Any]] = {}, ns: Callable[[str], str] = lambda x: x
+        self, values: Dict[str, Value[Any]], ns: Callable[[str], str] = Root
     ) -> None:
         self._map = values
         self._ns = ns
@@ -881,9 +890,9 @@ class Outputs:
     def __init__(
         self,
         session: Session,
-        ns: Callable[[str], str] = lambda x: x,
-        effects: Dict[str, Effect_] = {},
-        suspend_when_hidden: Dict[str, bool] = {},
+        ns: Callable[[str], str],
+        effects: Dict[str, Effect_],
+        suspend_when_hidden: Dict[str, bool],
     ) -> None:
         self._session = session
         self._ns = ns
