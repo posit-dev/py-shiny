@@ -27,7 +27,7 @@ from htmltools import tags, Tag, TagList, TagChildArg, div
 from ._bootstrap import row, column
 from .._docstring import add_example
 from ._html_dependencies import bootstrap_deps
-from .._namespaces import namespaced_id
+from .._namespaces import resolve_id
 from ..types import NavSetArg
 from .._utils import private_random_int
 
@@ -409,7 +409,7 @@ def navset_tab(
     return NavSet(
         *args,
         ul_class="nav nav-tabs",
-        id=namespaced_id(id) if id else None,
+        id=resolve_id(id) if id else None,
         selected=selected,
         header=header,
         footer=footer,
@@ -461,7 +461,7 @@ def navset_pill(
     return NavSet(
         *args,
         ul_class="nav nav-pills",
-        id=namespaced_id(id) if id else None,
+        id=resolve_id(id) if id else None,
         selected=selected,
         header=header,
         footer=footer,
@@ -511,7 +511,7 @@ def navset_hidden(
     return NavSet(
         *args,
         ul_class="nav nav-hidden",
-        id=namespaced_id(id) if id else None,
+        id=resolve_id(id) if id else None,
         selected=selected,
         header=header,
         footer=footer,
@@ -591,7 +591,7 @@ def navset_tab_card(
     return NavSetCard(
         *args,
         ul_class="nav nav-tabs card-header-tabs",
-        id=namespaced_id(id) if id else None,
+        id=resolve_id(id) if id else None,
         selected=selected,
         header=header,
         footer=footer,
@@ -647,7 +647,7 @@ def navset_pill_card(
     return NavSetCard(
         *args,
         ul_class="nav nav-pills card-header-pills",
-        id=namespaced_id(id) if id else None,
+        id=resolve_id(id) if id else None,
         selected=selected,
         header=header,
         footer=footer,
@@ -741,7 +741,7 @@ def navset_pill_list(
     return NavSetPillList(
         *args,
         ul_class="nav nav-pills nav-stacked",
-        id=namespaced_id(id) if id else None,
+        id=resolve_id(id) if id else None,
         selected=selected,
         header=header,
         footer=footer,
@@ -902,7 +902,7 @@ def navset_bar(
     return NavSetBar(
         *args,
         ul_class="nav navbar-nav",
-        id=namespaced_id(id) if id else None,
+        id=resolve_id(id) if id else None,
         selected=selected,
         title=title,
         position=position,

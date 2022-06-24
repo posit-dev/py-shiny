@@ -13,9 +13,10 @@ from . import ui
 # Private submodules that have some user-facing functionality
 from ._app import App
 from ._decorators import event
-from ._modules import module_ui, module_server
 from ._validation import req
 from ._deprecated import *
+
+from . import module
 
 if _is_pyodide:
     # In pyodide, avoid importing _main because it imports packages that aren't
@@ -43,8 +44,7 @@ __all__ = (
     # _main.py
     "run_app",
     # _modules.py
-    "module_ui",
-    "module_server",
+    "module",
     # _session.py
     "Session",
     "Inputs",

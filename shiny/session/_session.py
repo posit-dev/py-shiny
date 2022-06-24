@@ -282,7 +282,17 @@ class Session(object, metaclass=SessionMeta):
 
             self.input[keys[0]]._set(val)
 
-            self.output._manage_hidden()
+        self.output._manage_hidden()
+
+    def _is_hidden(self, name: str) -> bool:
+        with isolate():
+            hidden_value_obj = cast(
+                Value[bool], self.input[f".clientdata_output_{name}_hidden"]
+            )
+            if not hidden_value_obj.is_set():
+                return True
+
+            return hidden_value_obj()
 
     # ==========================================================================
     # Message handlers
@@ -906,7 +916,7 @@ class Outputs:
             self._suspend_when_hidden[output_name] = suspend_when_hidden
 
             @Effect(
-                suspended=suspend_when_hidden and self._is_hidden(output_name),
+                suspended=suspend_when_hidden and self._session._is_hidden(output_name),
                 priority=priority,
             )
             async def output_obs():
@@ -975,14 +985,4 @@ class Outputs:
                 self._effects[name].resume()
 
     def _should_suspend(self, name: str) -> bool:
-        return self._suspend_when_hidden[name] and self._is_hidden(name)
-
-    def _is_hidden(self, name: str) -> bool:
-        with isolate():
-            hidden_value_obj = cast(
-                Value[bool], self._session.input[f".clientdata_output_{name}_hidden"]
-            )
-            if not hidden_value_obj.is_set():
-                return True
-
-            return hidden_value_obj()
+        return self._suspend_when_hidden[name] and self._session._is_hidden(name)

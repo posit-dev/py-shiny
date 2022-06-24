@@ -1,4 +1,4 @@
-__all__ = ("namespaced_id", "module_ui", "module_server")
+__all__ = ("resolve_id", "ui", "server")
 
 import sys
 from typing import Callable, TypeVar
@@ -8,14 +8,14 @@ if sys.version_info < (3, 10):
 else:
     from typing import ParamSpec, Concatenate
 
-from ._namespaces import namespaced_id, namespace_context, Id
+from ._namespaces import resolve_id, namespace_context, Id
 from .session import Inputs, Outputs, Session, require_active_session, session_context
 
 P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def module_ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
+def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     def wrapper(id: Id, *args: P.args, **kwargs: P.kwargs) -> R:
         with namespace_context(id):
             return fn(*args, **kwargs)
@@ -23,7 +23,7 @@ def module_ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     return wrapper
 
 
-def module_server(
+def server(
     fn: Callable[Concatenate[Inputs, Outputs, Session, P], R]
 ) -> Callable[Concatenate[str, P], R]:
     def wrapper(id: Id, *args: P.args, **kwargs: P.kwargs) -> R:

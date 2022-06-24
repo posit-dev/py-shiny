@@ -3,7 +3,7 @@ from shiny import *
 # ============================================================
 # Counter module
 # ============================================================
-@module_ui
+@module.ui
 def counter_ui(label: str = "Increment counter") -> ui.TagChildArg:
     return ui.div(
         {"style": "border: 1px solid #ccc; border-radius: 5px; margin: 5px 0;"},
@@ -13,7 +13,7 @@ def counter_ui(label: str = "Increment counter") -> ui.TagChildArg:
     )
 
 
-@module_server
+@module.server
 def counter_server(
     input: Inputs, output: Outputs, session: Session, starting_value: int = 0
 ):

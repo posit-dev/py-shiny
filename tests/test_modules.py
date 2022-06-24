@@ -5,20 +5,20 @@ from typing import Dict, Union, cast
 from shiny import *
 from shiny.session import get_current_session
 from shiny._connection import MockConnection
-from shiny._namespaces import namespaced_id
+from shiny._namespaces import resolve_id
 from shiny._utils import run_coro_sync
 from htmltools import TagList, Tag
 
 
-@module_ui
+@module.ui
 def mod_inner_ui() -> TagList:
     return TagList(
         ui.input_action_button("button", label="inner"),
-        ui.output_text(namespaced_id("out")),
+        ui.output_text(resolve_id("out")),
     )
 
 
-@module_ui
+@module.ui
 def mod_outer_ui() -> TagList:
     return TagList(mod_inner_ui("inner"), ui.output_text("out2"))
 
@@ -29,19 +29,19 @@ def get_id(x: TagList, child_idx: int = 0) -> str:
 
 def test_module_ui():
     x = mod_inner_ui("inner")
-    assert get_id(x, 0) == "inner_button"
-    assert get_id(x, 1) == "inner_out"
+    assert get_id(x, 0) == "inner-button"
+    assert get_id(x, 1) == "inner-out"
     y = mod_outer_ui("outer")
-    assert get_id(y, 0) == "outer_inner_button"
-    assert get_id(y, 1) == "outer_inner_out"
-    assert get_id(y, 2) == "outer_out2"
+    assert get_id(y, 0) == "outer-inner-button"
+    assert get_id(y, 1) == "outer-inner-out"
+    assert get_id(y, 2) == "outer-out2"
 
 
 def test_session_scoping():
 
     sessions: Dict[str, Union[Session, None, str]] = {}
 
-    @module_server
+    @module.server
     def inner_server(input: Inputs, output: Outputs, session: Session):
         @reactive.Calc
         def out():
@@ -55,7 +55,7 @@ def test_session_scoping():
             sessions["inner_id"] = session.ns("foo")
             sessions["inner_ui_id"] = get_id(mod_outer_ui("outer"), 0)
 
-    @module_server
+    @module.server
     def outer_server(input: Inputs, output: Outputs, session: Session):
         @reactive.Calc
         def out():
@@ -91,17 +91,17 @@ def test_session_scoping():
     assert sessions["inner"] is sessions["inner_current"]
     assert sessions["inner_current"] is sessions["inner_calc_current"]
     assert isinstance(sessions["inner_current"], Session)
-    assert sessions["inner_id"] == "mod_outer_mod_inner_foo"
-    assert sessions["inner_ui_id"] == "mod_outer_mod_inner_outer_inner_button"
+    assert sessions["inner_id"] == "mod_outer-mod_inner-foo"
+    assert sessions["inner_ui_id"] == "mod_outer-mod_inner-outer-inner-button"
 
     assert sessions["outer"] is sessions["outer_current"]
     assert sessions["outer_current"] is sessions["outer_calc_current"]
     assert isinstance(sessions["outer_current"], Session)
-    assert sessions["outer_id"] == "mod_outer_foo"
-    assert sessions["outer_ui_id"] == "mod_outer_outer_inner_button"
+    assert sessions["outer_id"] == "mod_outer-foo"
+    assert sessions["outer_ui_id"] == "mod_outer-outer-inner-button"
 
     assert sessions["top"] is sessions["top_current"]
     assert sessions["top_current"] is sessions["top_calc_current"]
     assert isinstance(sessions["top_current"], Session)
     assert sessions["top_id"] == "foo"
-    assert sessions["top_ui_id"] == "outer_inner_button"
+    assert sessions["top_ui_id"] == "outer-inner-button"
