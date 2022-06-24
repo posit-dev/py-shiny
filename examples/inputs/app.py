@@ -1,7 +1,9 @@
+import matplotlib.pyplot as plt
+import numpy as np
+from fontawesome import icon_svg
 from shiny import *
 from shiny.types import ImgData
-from shiny.ui import tags, HTML, Tag
-from fontawesome import icon_svg
+from shiny.ui import HTML, Tag, tags
 
 app_ui = ui.page_fluid(
     ui.panel_title("Hello Shiny UI"),
@@ -88,10 +90,6 @@ app_ui = ui.page_fluid(
         ),
     ),
 )
-
-
-import numpy as np
-import matplotlib.pyplot as plt
 
 
 def server(input: Inputs, output: Outputs, session: Session):
