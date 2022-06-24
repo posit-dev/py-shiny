@@ -98,8 +98,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         determines what the browser will name the downloaded file.
         """
 
-        x = np.random.uniform(size=session.input["num_points"])
-        y = np.random.uniform(size=session.input["num_points"])
+        print(input.num_points())
+        x = np.random.uniform(size=input.num_points())
+        y = np.random.uniform(size=input.num_points())
         plt.figure()
         plt.scatter(x, y)
         plt.title(input.title())
