@@ -55,7 +55,7 @@ check: typings/uvicorn/__init__.pyi ## type check with pyright
 	pyright
 
 lint: ## check style with flake8
-	flake8 shiny tests
+	flake8 --show-source --max-line-length=127 shiny tests examples
 
 test: ## run tests quickly with the default Python
 	pytest
