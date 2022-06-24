@@ -64,9 +64,10 @@ def modal_button(
 def modal(
     *args: TagChildArg,
     title: Optional[str] = None,
-    footer: Any = modal_button("Dismiss"),
+    footer: Any = None,
     size: Literal["m", "s", "l", "xl"] = "m",
     easy_close: bool = False,
+    dismiss_button: bool = True,
     fade: bool = True,
     **kwargs: TagAttrArg
 ) -> Tag:
@@ -90,6 +91,8 @@ def modal(
         box, or be pressing the Escape key. If ``False`` (the default), the modal dialog
         can't be dismissed in those ways; instead it must be dismissed by clicking on a
         ``modal_button()``, or from a call to ``modal_remove()`` on the server.
+    dismiss_button
+        If ``True``, adds a Dismiss button to the footer of the modal.
     fade
         If ``False``, the modal dialog will have no fade-in animation (it will simply
         appear rather than fade in to view).
@@ -111,8 +114,12 @@ def modal(
     if title:
         title_div = div(tags.h4(title, class_="modal-title"), class_="modal-header")
 
-    if footer:
-        footer = div(footer, class_="modal-footer")
+    if footer or dismiss_button:
+        footer = div(
+            footer,
+            modal_button("Dismiss") if dismiss_button else None,
+            class_="modal-footer",
+        )
 
     dialog = div(
         div(
