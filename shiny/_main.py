@@ -7,7 +7,7 @@ import shutil
 import sys
 import types
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union, cast
+from typing import Any, Dict, Optional, Tuple, Union
 
 import click
 import uvicorn
@@ -195,12 +195,7 @@ def run_app(
     if app_dir:
         app_dir = os.path.realpath(app_dir)
 
-    log_config: Dict[str, Any] = copy.deepcopy(
-        cast(
-            Dict[str, Any],
-            uvicorn.config.LOGGING_CONFIG,  # pyright: ignore[reportUnknownMemberType]
-        )
-    )
+    log_config: Dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
 
     if reload and app_dir is not None:
         reload_dirs = [app_dir]
@@ -229,7 +224,7 @@ def run_app(
 
     maybe_setup_rsw_proxying(log_config)
 
-    uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
+    uvicorn.run(
         app,  # type: ignore
         host=host,
         port=port,
