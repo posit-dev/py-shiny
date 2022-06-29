@@ -2,16 +2,7 @@ import base64
 import io
 import os
 import sys
-from typing import (
-    Optional,
-    Union,
-    cast,
-    Tuple,
-    TextIO,
-    BinaryIO,
-    Any,
-    List,
-)
+from typing import Optional, Union, cast, Tuple, TextIO, BinaryIO, Any, List
 
 if sys.version_info >= (3, 8):
     from typing import Literal, Protocol
@@ -173,6 +164,12 @@ def get_matplotlib_figure(x: object) -> Union[MplFigure, None]:
     # https://matplotlib.org/stable/api/artist_api.html
     if isinstance(x, Artist):
         return cast(MplArtist, x).get_figure()
+
+    # Some other custom figure-like classes such as seaborn.axisgrid.FacetGrid attach
+    # their figure as an attribute
+    fig = getattr(x, "figure", None)
+    if isinstance(fig, Figure):
+        return cast(MplFigure, fig)
 
     # Sometimes generic plot() methods will return an iterable of Artists,
     # If they all refer to the same figure, then it seems reasonable to use it

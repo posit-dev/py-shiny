@@ -281,7 +281,9 @@ def plot(
         1. A :class:`matplotlib.figure.Figure` instance.
         2. An :class:`matplotlib.artist.Artist` instance.
         3. A list/tuple of Figure/Artist instances.
-        4. A :class:`PIL.Image.Image` instance.
+        4. An object with a 'figure' attribute pointing to a
+          :class:`matplotlib.figure.Figure` instance.
+        5. A :class:`PIL.Image.Image` instance.
 
     Tip
     ----
