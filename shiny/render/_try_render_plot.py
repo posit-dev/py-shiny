@@ -169,7 +169,7 @@ def get_matplotlib_figure(x: object) -> Union[MplFigure, None]:
     # their figure as an attribute
     fig = getattr(x, "figure", None)
     if isinstance(fig, Figure):
-        return cast(MplFigure, x)
+        return cast(MplFigure, fig)
 
     # Sometimes generic plot() methods will return an iterable of Artists,
     # If they all refer to the same figure, then it seems reasonable to use it
