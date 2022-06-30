@@ -7,7 +7,12 @@ from ._shinyenv import is_pyodide as _is_pyodide
 # User-facing subpackages that should be available on `from shiny import *`
 from . import reactive
 from . import render
-from .session import *
+from .session import (
+    Session,
+    Inputs,
+    Outputs,
+)
+from . import session
 from . import ui
 
 # Private submodules that have some user-facing functionality
