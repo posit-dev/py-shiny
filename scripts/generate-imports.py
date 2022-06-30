@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
-from types import ModuleType
-
 import importlib
+import sys
+from types import ModuleType
 from typing import cast
+
+if sys.version_info < (3, 9):
+    raise RuntimeError("This script requires Python 3.9 or later")
 
 
 def gen_init_py(package_name: str) -> None:
