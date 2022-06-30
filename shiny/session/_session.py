@@ -1,5 +1,6 @@
 __all__ = ("Session", "Inputs", "Outputs")
 
+import enum
 import functools
 import os
 from pathlib import Path
@@ -49,6 +50,7 @@ from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
+from .._namespaces import ResolvedId, Id, Root
 from ..reactive import Value, Effect, Effect_, isolate, flush
 from ..reactive._core import lock
 from ..types import SafeException, SilentCancelOutputException, SilentException
@@ -56,6 +58,27 @@ from ._utils import RenderedDeps, read_thunk_opt, session_context
 
 from .. import render
 from .. import _utils
+
+
+class ConnectionState(enum.Enum):
+    Start = 0
+    Running = 1
+    Closed = 2
+
+
+class ProtocolError(Exception):
+    def __init__(self, message: str = ""):
+        super(ProtocolError, self).__init__(message)
+        self.message = message
+
+
+class SessionWarning(RuntimeWarning):
+    pass
+
+
+# By default warnings are shown once; we want to always show them.
+warnings.simplefilter("always", SessionWarning)
+
 
 # This cast is necessary because if the type checker thinks that if
 # "tag" isn't in `message`, then it's not a ClientMessage object.
@@ -111,7 +134,14 @@ def empty_outbound_message_queues() -> OutBoundMessageQueues:
     return {"values": [], "input_messages": [], "errors": []}
 
 
-class Session:
+# Makes isinstance(x, Session) also return True when x is a SessionProxy (i.e., a module
+# session)
+class SessionMeta(type):
+    def __instancecheck__(self, __instance: Any) -> bool:
+        return isinstance(__instance, SessionProxy)
+
+
+class Session(object, metaclass=SessionMeta):
     """
     A class representing a user session.
 
@@ -122,6 +152,8 @@ class Session:
     need to create instances of this class yourself (it's only part of the public API
     for type checking reasons).
     """
+
+    ns = Root
 
     # ==========================================================================
     # Initialization
@@ -138,8 +170,8 @@ class Session:
         # query information about the request, like headers, cookies, etc.
         self.http_conn: HTTPConnection = conn.get_http_conn()
 
-        self.input: Inputs = Inputs()
-        self.output: Outputs = Outputs(self)
+        self.input: Inputs = Inputs(dict())
+        self.output: Outputs = Outputs(self, self.ns, dict(), dict())
 
         self.user: Union[str, None] = None
         self.groups: Union[List[str], None] = None
@@ -176,9 +208,6 @@ class Session:
         self._flush_callbacks = _utils.Callbacks()
         self._flushed_callbacks = _utils.Callbacks()
 
-        with session_context(self):
-            self.app.server(self.input, self.output, self)
-
     def _register_session_end_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions
         # that are called when a session ends.
@@ -203,6 +232,12 @@ class Session:
         self._run_session_end_tasks()
 
     async def _run(self) -> None:
+        conn_state: ConnectionState = ConnectionState.Start
+
+        def verify_state(expected_state: ConnectionState) -> None:
+            if conn_state != expected_state:
+                raise ProtocolError("Invalid method for the current session state")
+
         await self._send_message(
             {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
         )
@@ -218,8 +253,8 @@ class Session:
                         message, object_hook=_utils.lists_to_tuples
                     )
                 except json.JSONDecodeError:
-                    print("ERROR: Invalid JSON message")
-                    continue
+                    warnings.warn("ERROR: Invalid JSON message", SessionWarning)
+                    return
 
                 if "method" not in message_obj:
                     self._send_error_response("Message does not contain 'method'.")
@@ -228,29 +263,31 @@ class Session:
                 async with lock():
 
                     if message_obj["method"] == "init":
+                        verify_state(ConnectionState.Start)
+
+                        conn_state = ConnectionState.Running
                         message_obj = typing.cast(ClientMessageInit, message_obj)
                         self._manage_inputs(message_obj["data"])
 
+                        with session_context(self):
+                            self.app.server(self.input, self.output, self)
+
                     elif message_obj["method"] == "update":
+                        verify_state(ConnectionState.Running)
+
                         message_obj = typing.cast(ClientMessageUpdate, message_obj)
                         self._manage_inputs(message_obj["data"])
 
-                    else:
-                        if "tag" not in message_obj:
-                            warnings.warn(
-                                "Cannot dispatch message with missing 'tag'; method: "
-                                + message_obj["method"]
-                            )
-                            return
-                        if "args" not in message_obj:
-                            warnings.warn(
-                                "Cannot dispatch message with missing 'args'; method: "
-                                + message_obj["method"]
-                            )
-                            return
+                    elif "tag" in message_obj and "args" in message_obj:
+                        verify_state(ConnectionState.Running)
 
                         message_obj = typing.cast(ClientMessageOther, message_obj)
                         await self._dispatch(message_obj)
+
+                    else:
+                        raise ProtocolError(
+                            f"Unrecognized method {message_obj['method']}"
+                        )
 
                     self._request_flush()
 
@@ -258,6 +295,8 @@ class Session:
 
         except ConnectionClosed:
             self._run_session_end_tasks()
+        except ProtocolError as pe:
+            self._send_error_response(pe.message)
 
     def _manage_inputs(self, data: Dict[str, object]) -> None:
         for (key, val) in data.items():
@@ -270,9 +309,25 @@ class Session:
             if len(keys) == 2:
                 val = input_handlers._process_value(keys[1], val, keys[0], self)
 
-            self.input[keys[0]]._set(val)
+            # The keys[0] value is already a fully namespaced id; make that explicit by
+            # wrapping it in ResolvedId, otherwise self.input will throw an id
+            # validation error.
+            self.input[ResolvedId(keys[0])]._set(val)
 
-            self.output._manage_hidden()
+        self.output._manage_hidden()
+
+    def _is_hidden(self, name: str) -> bool:
+        with isolate():
+            # The .clientdata_output_{name}_hidden string is already a fully namespaced
+            # id; make that explicit by wrapping it in ResolvedId, otherwise self.input
+            # will throw an id validation error.
+            hidden_value_obj = cast(
+                Value[bool], self.input[ResolvedId(f".clientdata_output_{name}_hidden")]
+            )
+            if not hidden_value_obj.is_set():
+                return True
+
+            return hidden_value_obj()
 
     # ==========================================================================
     # Message handlers
@@ -320,11 +375,15 @@ class Session:
             upload_op = self._file_upload_manager.get_upload_operation(job_id)
             if upload_op is None:
                 warnings.warn(
-                    "Received uploadEnd message for non-existent upload operation."
+                    "Received uploadEnd message for non-existent upload operation.",
+                    SessionWarning,
                 )
                 return None
             file_data = upload_op.finish()
-            self.input[input_id]._set(file_data)
+            # The input_id string is already a fully namespaced id; make that explicit
+            # by wrapping it in ResolvedId, otherwise self.input will throw an id
+            # validation error.
+            self.input[ResolvedId(input_id)]._set(file_data)
             # Explicitly return None to signal that the message was handled.
             return None
 
@@ -375,7 +434,8 @@ class Session:
                                     "Unable to infer a filename for the "
                                     f"'{download_id}' download handler; please use "
                                     "@session.download(filename=) to specify one "
-                                    "manually"
+                                    "manually",
+                                    SessionWarning,
                                 )
                                 filename = download_id
 
@@ -638,7 +698,6 @@ class Session:
         print("Unhandled error: " + str(e))
         await self.close()
 
-    # TODO: probably name should be id
     @add_example()
     def download(
         self,
@@ -724,6 +783,44 @@ class Session:
 
         return {"deps": deps, "html": res["html"]}
 
+    def make_scope(self, id: Id) -> "Session":
+        ns = self.ns(id)
+        return SessionProxy(parent=self, ns=ns)  # type: ignore
+
+
+class SessionProxy:
+    def __init__(self, parent: Session, ns: ResolvedId) -> None:
+        self._parent = parent
+        self.ns = ns
+        self.input = Inputs(values=parent.input._map, ns=ns)
+        self.output = Outputs(
+            session=cast(Session, self),
+            effects=self.output._effects,
+            suspend_when_hidden=self.output._suspend_when_hidden,
+            ns=ns,
+        )
+
+    def __getattr__(self, attr: str) -> Any:
+        return getattr(self._parent, attr)
+
+    def make_scope(self, id: str) -> Session:
+        return self._parent.make_scope(self.ns(id))
+
+    def send_input_message(self, id: str, message: Dict[str, object]) -> None:
+        return self._parent.send_input_message(self.ns(id), message)
+
+    def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
+        return self._parent.dynamic_route(self.ns(name), handler)
+
+    def download(
+        self, id: Optional[str] = None, **kwargs: object
+    ) -> Callable[[DownloadHandler], None]:
+        def wrapper(fn: DownloadHandler):
+            id_ = self.ns(id or fn.__name__)
+            return self._parent.download(id=id_, **kwargs)(fn)
+
+        return wrapper
+
 
 # ======================================================================================
 # Inputs
@@ -743,40 +840,41 @@ class Inputs:
     for type checking reasons).
     """
 
-    def __init__(self, **kwargs: object) -> None:
-        self._map: dict[str, Value[Any]] = {}
-        for key, value in kwargs.items():
-            self._map[key] = Value(value, read_only=True)
+    def __init__(
+        self, values: Dict[str, Value[Any]], ns: Callable[[str], str] = Root
+    ) -> None:
+        self._map = values
+        self._ns = ns
 
     def __setitem__(self, key: str, value: Value[Any]) -> None:
         if not isinstance(value, Value):
             raise TypeError("`value` must be a reactive.Value object.")
 
-        self._map[key] = value
+        self._map[self._ns(key)] = value
 
     def __getitem__(self, key: str) -> Value[Any]:
+        key = self._ns(key)
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
         # yet.
         if key not in self._map:
-            self._map[key] = Value(read_only=True)
+            self._map[key] = Value[Any](read_only=True)
 
         return self._map[key]
 
     def __delitem__(self, key: str) -> None:
-        del self._map[key]
+        del self._map[self._ns(key)]
 
     # Allow access of values as attributes.
     def __setattr__(self, attr: str, value: Value[Any]) -> None:
-        # Need special handling of "_map".
-        if attr == "_map":
+        if attr in ("_map", "_ns"):
             super().__setattr__(attr, value)
             return
 
         self.__setitem__(attr, value)
 
     def __getattr__(self, attr: str) -> Value[Any]:
-        if attr == "_map":
+        if attr in ("_map", "_ns"):
             return object.__getattribute__(self, attr)
         return self.__getitem__(attr)
 
@@ -799,10 +897,17 @@ class Outputs:
     for type checking reasons).
     """
 
-    def __init__(self, session: Session) -> None:
-        self._effects: Dict[str, Effect_] = {}
-        self._suspend_when_hidden: Dict[str, bool] = {}
-        self._session: Session = session
+    def __init__(
+        self,
+        session: Session,
+        ns: Callable[[str], str],
+        effects: Dict[str, Effect_],
+        suspend_when_hidden: Dict[str, bool],
+    ) -> None:
+        self._session = session
+        self._ns = ns
+        self._effects = effects
+        self._suspend_when_hidden = suspend_when_hidden
 
     @overload
     def __call__(self, fn: render.RenderFunction) -> None:
@@ -837,7 +942,9 @@ class Outputs:
             id = name
 
         def set_fn(fn: render.RenderFunction) -> None:
-            output_name = id or fn.__name__
+            # Get the (possibly namespaced) output id
+            output_name = self._ns(id or fn.__name__)
+
             # fn is either a regular function or a RenderFunction object. If
             # it's the latter, give it a bit of metadata.
             if isinstance(fn, render.RenderFunction):
@@ -849,7 +956,7 @@ class Outputs:
             self._suspend_when_hidden[output_name] = suspend_when_hidden
 
             @Effect(
-                suspended=suspend_when_hidden and self._is_hidden(output_name),
+                suspended=suspend_when_hidden and self._session._is_hidden(output_name),
                 priority=priority,
             )
             async def output_obs():
@@ -918,14 +1025,4 @@ class Outputs:
                 self._effects[name].resume()
 
     def _should_suspend(self, name: str) -> bool:
-        return self._suspend_when_hidden[name] and self._is_hidden(name)
-
-    def _is_hidden(self, name: str) -> bool:
-        with isolate():
-            hidden_value_obj = cast(
-                Value[bool], self._session.input[f".clientdata_output_{name}_hidden"]
-            )
-            if not hidden_value_obj.is_set():
-                return True
-
-            return hidden_value_obj()
+        return self._suspend_when_hidden[name] and self._session._is_hidden(name)

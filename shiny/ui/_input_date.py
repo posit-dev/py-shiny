@@ -8,6 +8,7 @@ from htmltools import tags, Tag, div, span, TagAttrArg, TagChildArg, css
 
 from .._docstring import add_example
 from ._html_dependencies import datepicker_deps
+from .._namespaces import resolve_id
 from ._utils import shiny_input_label
 
 
@@ -109,7 +110,7 @@ def input_date(
     return div(
         shiny_input_label(id, label),
         _date_input_tag(
-            id=id,
+            id=resolve_id(id),
             value=value,
             min=min,
             max=max,
@@ -121,7 +122,7 @@ def input_date(
             data_date_dates_disabled=json.dumps(datesdisabled),
             data_date_days_of_week_disabled=json.dumps(daysofweekdisabled),
         ),
-        id=id,
+        id=resolve_id(id),
         class_="shiny-date-input form-group shiny-input-container",
         style=css(width=width),
     )
@@ -227,7 +228,7 @@ def input_date_range(
         shiny_input_label(id, label),
         div(
             _date_input_tag(
-                id=id,
+                id=resolve_id(id),
                 value=start,
                 min=min,
                 max=max,
@@ -243,7 +244,7 @@ def input_date_range(
                 class_="input-group-addon input-group-prepend input-group-append",
             ),
             _date_input_tag(
-                id=id,
+                id=resolve_id(id),
                 value=end,
                 min=min,
                 max=max,
@@ -256,7 +257,7 @@ def input_date_range(
             # input-daterange class is needed for dropdown behavior
             class_="input-daterange input-group input-group-sm",
         ),
-        id=id,
+        id=resolve_id(id),
         class_="shiny-date-range-input form-group shiny-input-container",
         style=css(width=width),
     )

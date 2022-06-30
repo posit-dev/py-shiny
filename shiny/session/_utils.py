@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TypeVar, 
 if TYPE_CHECKING:
     from ._session import Session
 
+from .._namespaces import namespace_context
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
@@ -62,7 +63,8 @@ def session_context(session: Optional["Session"]):
     """
     token: Token[Union[Session, None]] = _current_session.set(session)
     try:
-        yield
+        with namespace_context(session.ns if session else None):
+            yield
     finally:
         _current_session.reset(token)
 

@@ -41,6 +41,7 @@ from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
 from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from ._input_slider import SliderValueArg, SliderStepArg, _slider_type, _as_numeric
+from .._namespaces import resolve_id
 from .._utils import drop_none
 from ..session import Session, require_active_session
 
@@ -192,7 +193,7 @@ def update_checkbox_group(
     """
 
     _update_choice_input(
-        id=id,
+        id=resolve_id(id),
         type="checkbox",
         label=label,
         choices=choices,
@@ -244,7 +245,7 @@ def update_radio_buttons(
     """
 
     _update_choice_input(
-        id=id,
+        id=resolve_id(id),
         type="radio",
         label=label,
         choices=choices,
@@ -268,7 +269,11 @@ def _update_choice_input(
     options = None
     if choices is not None:
         opts = _generate_options(
-            id=id, type=type, choices=choices, selected=selected, inline=inline
+            id=resolve_id(id),
+            type=type,
+            choices=choices,
+            selected=selected,
+            inline=inline,
         )
         options = session._process_ui(opts)["html"]
     msg = {"label": label, "options": options, "value": selected}

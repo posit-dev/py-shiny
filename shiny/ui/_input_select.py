@@ -9,6 +9,7 @@ from htmltools import Tag, tags, div, TagChildArg, TagList
 
 from .._docstring import add_example
 from ._html_dependencies import selectize_deps
+from .._namespaces import resolve_id
 from ._utils import shiny_input_label
 
 _Choices = Dict[str, TagChildArg]
@@ -166,7 +167,7 @@ def input_select(
         div(
             tags.select(
                 *choices_tags,
-                id=id,
+                id=resolve_id(id),
                 class_=None if selectize else "form-select",
                 multiple=multiple,
                 width=width,

@@ -1,92 +1,51 @@
 """Tests for `Module`."""
 
-from typing import Callable, Dict, Union, cast
+import asyncio
+from typing import Dict, Union, cast
 
 import pytest
+
+from htmltools import Tag, TagList
 from shiny import *
-from shiny.session import get_current_session
 from shiny._connection import MockConnection
-from shiny._modules import ModuleInputs, ModuleSession
-from shiny._utils import run_coro_sync
-from htmltools import TagChildArg
+from shiny._namespaces import resolve_id
+from shiny.session import get_current_session
 
 
-def mod_ui(ns: Callable[[str], str]) -> TagChildArg:
-    return ui.TagList(
-        ui.input_action_button(id=ns("button"), label="module1"),
-        ui.output_text_verbatim(id=ns("out")),
+@module.ui
+def mod_inner_ui() -> TagList:
+    return TagList(
+        ui.input_action_button("button", label="inner"),
+        ui.output_text(resolve_id("out")),
     )
 
 
-# Note: We currently can't test Session; this is just here for future use.
-def mod_server(input: Inputs, output: Outputs, session: Session):
-    count: reactive.Value[int] = reactive.Value(0)
-
-    @reactive.Effect
-    @event(session.input.button)
-    def _():
-        count.set(count() + 1)
-
-    @output
-    @render.text
-    def out() -> str:
-        return f"Click count is {count()}"
+@module.ui
+def mod_outer_ui() -> TagList:
+    return TagList(mod_inner_ui("inner"), ui.output_text("out2"))
 
 
-mod = Module(mod_ui, mod_server)
+def get_id(x: TagList, child_idx: int = 0) -> str:
+    return cast(Tag, x[child_idx]).attrs["id"]
 
 
 def test_module_ui():
-    x = cast(ui.TagList, mod.ui("mod1"))
-    assert cast(ui.Tag, x[0]).attrs["id"] == "mod1-button"
-    assert cast(ui.Tag, x[1]).attrs["id"] == "mod1-out"
+    x = mod_inner_ui("inner")
+    assert get_id(x, 0) == "inner-button"
+    assert get_id(x, 1) == "inner-out"
+    y = mod_outer_ui("outer")
+    assert get_id(y, 0) == "outer-inner-button"
+    assert get_id(y, 1) == "outer-inner-out"
+    assert get_id(y, 2) == "outer-out2"
 
 
 @pytest.mark.asyncio
-async def test_inputs_proxy():
-    input = Inputs(a=1)
-    input_proxy = ModuleInputs("mod1", input)
+async def test_session_scoping():
 
-    with reactive.isolate():
-        assert input.a() == 1
-        # Different ways of accessing "a" from the input proxy.
-        assert input_proxy.a.is_set() is False
-        assert input_proxy["a"].is_set() is False
-        assert input["mod1-a"].is_set() is False
+    sessions: Dict[str, Union[Session, None, str]] = {}
 
-    input_proxy.a._set(2)
-
-    with reactive.isolate():
-        assert input.a() == 1
-        assert input_proxy.a() == 2
-        assert input_proxy["a"]() == 2
-        assert input["mod1-a"]() == 2
-
-    # Nested input proxies
-    input_proxy_proxy = ModuleInputs("mod2", input_proxy)
-    with reactive.isolate():
-        assert input.a() == 1
-        assert input_proxy.a() == 2
-        # Different ways of accessing "a" from the input proxy.
-        assert input_proxy_proxy.a.is_set() is False
-        assert input_proxy_proxy["a"].is_set() is False
-        assert input_proxy["mod1-a"].is_set() is False
-
-    input_proxy_proxy.a._set(3)
-
-    with reactive.isolate():
-        assert input.a() == 1
-        assert input_proxy.a() == 2
-        assert input_proxy_proxy.a() == 3
-        assert input_proxy_proxy["a"]() == 3
-        assert input["mod1-mod2-a"]() == 3
-
-
-def test_current_session():
-
-    sessions: Dict[str, Union[Session, None]] = {}
-
-    def inner(input: Inputs, output: Outputs, session: Session):
+    @module.server
+    def inner_server(input: Inputs, output: Outputs, session: Session):
         @reactive.Calc
         def out():
             return get_current_session()
@@ -96,25 +55,26 @@ def test_current_session():
             sessions["inner"] = session
             sessions["inner_current"] = get_current_session()
             sessions["inner_calc_current"] = out()
+            sessions["inner_id"] = session.ns("foo")
+            sessions["inner_ui_id"] = get_id(mod_outer_ui("outer"), 0)
 
-    mod_inner = Module(ui.TagList, inner)
-
-    def outer(input: Inputs, output: Outputs, session: Session):
+    @module.server
+    def outer_server(input: Inputs, output: Outputs, session: Session):
         @reactive.Calc
         def out():
             return get_current_session()
 
         @reactive.Effect
         def _():
-            mod_inner.server("mod_inner")
+            inner_server("mod_inner")
             sessions["outer"] = session
             sessions["outer_current"] = get_current_session()
             sessions["outer_calc_current"] = out()
-
-    mod_outer = Module(ui.TagList, outer)
+            sessions["outer_id"] = session.ns("foo")
+            sessions["outer_ui_id"] = get_id(mod_outer_ui("outer"), 0)
 
     def server(input: Inputs, output: Outputs, session: Session):
-        mod_outer.server("mod_outer")
+        outer_server("mod_outer")
 
         @reactive.Calc
         def out():
@@ -125,21 +85,32 @@ def test_current_session():
             sessions["top"] = session
             sessions["top_current"] = get_current_session()
             sessions["top_calc_current"] = out()
+            sessions["top_id"] = session.ns("foo")
+            sessions["top_ui_id"] = get_id(mod_outer_ui("outer"), 0)
 
-    App(ui.TagList(), server)._create_session(MockConnection())
-    run_coro_sync(reactive.flush())
+    conn = MockConnection()
+    sess = App(ui.TagList(), server)._create_session(conn)
+
+    async def mock_client():
+        conn.cause_receive('{"method":"init","data":{}}')
+        conn.cause_disconnect()
+
+    await asyncio.gather(mock_client(), sess._run())
 
     assert sessions["inner"] is sessions["inner_current"]
     assert sessions["inner_current"] is sessions["inner_calc_current"]
-    assert isinstance(sessions["inner_current"], ModuleSession)
-    assert sessions["inner_current"]._ns == "mod_inner"
+    assert isinstance(sessions["inner_current"], Session)
+    assert sessions["inner_id"] == "mod_outer-mod_inner-foo"
+    assert sessions["inner_ui_id"] == "mod_outer-mod_inner-outer-inner-button"
 
     assert sessions["outer"] is sessions["outer_current"]
     assert sessions["outer_current"] is sessions["outer_calc_current"]
-    assert isinstance(sessions["outer_current"], ModuleSession)
-    assert sessions["outer_current"]._ns == "mod_outer"
+    assert isinstance(sessions["outer_current"], Session)
+    assert sessions["outer_id"] == "mod_outer-foo"
+    assert sessions["outer_ui_id"] == "mod_outer-outer-inner-button"
 
     assert sessions["top"] is sessions["top_current"]
     assert sessions["top_current"] is sessions["top_calc_current"]
     assert isinstance(sessions["top_current"], Session)
-    assert not isinstance(sessions["top_current"], ModuleSession)
+    assert sessions["top_id"] == "foo"
+    assert sessions["top_ui_id"] == "outer-inner-button"

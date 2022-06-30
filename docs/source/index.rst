@@ -303,7 +303,8 @@ Control application complexity by namespacing UI and server code.
     :toctree: reference/
     :template: class.rst
 
-    Module
+    module_ui
+    module_server
 
 
 Type hints

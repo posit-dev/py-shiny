@@ -1,5 +1,5 @@
 {
-  "ignore": ["shiny/examples", "examples", "build", "dist", "typings"],
+  "ignore": ["shiny/examples", "examples", "build", "dist", "typings", "sandbox"],
   "typeCheckingMode": "strict",
   "reportImportCycles":  "none",
   "reportUnusedFunction":  "none",

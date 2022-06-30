@@ -5,6 +5,7 @@ from typing import Optional
 from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
 
 from .._docstring import add_example
+from .._namespaces import resolve_id
 
 
 @add_example()
@@ -53,7 +54,7 @@ def input_action_button(
         {"class": "btn btn-default action-button", "style": css(width=width)},
         icon,
         label,
-        id=id,
+        id=resolve_id(id),
         type="button",
         **kwargs,
     )
@@ -98,4 +99,11 @@ def input_action_link(
     ~shiny.event
     """
 
-    return tags.a({"class": "action-button"}, icon, label, id=id, href="#", **kwargs)
+    return tags.a(
+        {"class": "action-button"},
+        icon,
+        label,
+        id=resolve_id(id),
+        href="#",
+        **kwargs,
+    )

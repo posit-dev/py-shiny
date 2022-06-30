@@ -5,6 +5,7 @@ from typing import Optional
 from htmltools import tags, Tag, div, css, TagChildArg
 
 from .._docstring import add_example
+from .._namespaces import resolve_id
 from ._utils import shiny_input_label
 
 
@@ -50,7 +51,7 @@ def input_password(
     return div(
         shiny_input_label(id, label),
         tags.input(
-            id=id,
+            id=resolve_id(id),
             type="password",
             value=value,
             class_="form-control",

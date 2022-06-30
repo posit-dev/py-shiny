@@ -10,6 +10,7 @@ from typing import Optional
 from htmltools import tags, Tag, div, css, TagAttrArg, TagFunction
 
 from .._docstring import add_example
+from .._namespaces import resolve_id
 
 
 @add_example()
@@ -42,7 +43,7 @@ def output_plot(
     ~shiny.render.plot
     ~shiny.ui.output_image
     """
-    res = output_image(id=id, width=width, height=height, inline=inline)
+    res = output_image(id=resolve_id(id), width=width, height=height, inline=inline)
     res.add_class("shiny-plot-output")
     return res
 
@@ -76,7 +77,7 @@ def output_image(
     """
     func = tags.span if inline else div
     style = None if inline else css(width=width, height=height)
-    return func(id=id, class_="shiny-image-output", style=style)
+    return func(id=resolve_id(id), class_="shiny-image-output", style=style)
 
 
 @add_example()
@@ -111,7 +112,7 @@ def output_text(
 
     if not container:
         container = tags.span if inline else tags.div
-    return container(id=id, class_="shiny-text-output")
+    return container(id=resolve_id(id), class_="shiny-text-output")
 
 
 def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
@@ -145,7 +146,7 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     """
 
     cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
-    return tags.pre(id=id, class_=cls)
+    return tags.pre(id=resolve_id(id), class_=cls)
 
 
 @add_example()
@@ -181,4 +182,4 @@ def output_ui(
 
     if not container:
         container = tags.span if inline else tags.div
-    return container({"class": "shiny-html-output"}, id=id, **kwargs)
+    return container({"class": "shiny-html-output"}, id=resolve_id(id), **kwargs)

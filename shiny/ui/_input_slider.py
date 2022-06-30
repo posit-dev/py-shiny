@@ -14,6 +14,7 @@ from htmltools import HTML, Tag, TagAttrArg, TagChildArg, css, div, tags
 
 from .._docstring import add_example
 from ._html_dependencies import ionrangeslider_deps
+from .._namespaces import resolve_id
 from ._utils import shiny_input_label
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
@@ -168,6 +169,8 @@ def input_slider(
         # integer multiple of the step size, e.g., min=1, max=10, step=4
         scale_factor = math.ceil(n_steps / 10)
         n_ticks = n_steps / scale_factor
+
+    id = resolve_id(id)
 
     props: Dict[str, TagAttrArg] = {
         "class_": "js-range-slider",

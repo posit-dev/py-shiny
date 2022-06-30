@@ -11,6 +11,7 @@ else:
 from htmltools import Tag, TagChildArg, css, div, tags
 
 from .._docstring import add_example
+from .._namespaces import resolve_id
 from ._utils import shiny_input_label
 
 
@@ -69,7 +70,7 @@ def input_text(
     return div(
         shiny_input_label(id, label),
         tags.input(
-            id=id,
+            id=resolve_id(id),
             type="text",
             class_="form-control",
             value=value,
@@ -157,7 +158,7 @@ def input_text_area(
 
     area = tags.textarea(
         value,
-        id=id,
+        id=resolve_id(id),
         class_="form-control",
         style=css(width=None if width else "100%", height=height, resize=resize),
         placeholder=placeholder,

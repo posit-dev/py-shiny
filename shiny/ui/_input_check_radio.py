@@ -10,6 +10,7 @@ from htmltools import tags, Tag, div, span, css, TagChildArg
 
 
 from .._docstring import add_example
+from .._namespaces import resolve_id
 from ._utils import shiny_input_label
 
 # Canonical format for representing select options.
@@ -58,7 +59,9 @@ def input_checkbox(
         div(
             tags.label(
                 tags.input(
-                    id=id, type="checkbox", checked="checked" if value else None
+                    id=resolve_id(id),
+                    type="checkbox",
+                    checked="checked" if value else None,
                 ),
                 span(label),
             ),
@@ -119,7 +122,7 @@ def input_checkbox_group(
 
     input_label = shiny_input_label(id, label)
     options = _generate_options(
-        id=id,
+        id=resolve_id(id),
         type="checkbox",
         choices=choices,
         selected=selected,
@@ -128,7 +131,7 @@ def input_checkbox_group(
     return div(
         input_label,
         options,
-        id=id,
+        id=resolve_id(id),
         style=css(width=width),
         class_="form-group shiny-input-checkboxgroup shiny-input-container"
         + (" shiny-input-container-inline" if inline else ""),
@@ -186,7 +189,7 @@ def input_radio_buttons(
 
     input_label = shiny_input_label(id, label)
     options = _generate_options(
-        id=id,
+        id=resolve_id(id),
         type="radio",
         choices=choices,
         selected=selected,
@@ -195,7 +198,7 @@ def input_radio_buttons(
     return div(
         input_label,
         options,
-        id=id,
+        id=resolve_id(id),
         style=css(width=width),
         class_="form-group shiny-input-radiogroup shiny-input-container"
         + (" shiny-input-container-inline" if inline else ""),
