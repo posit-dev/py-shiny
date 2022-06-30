@@ -14,8 +14,8 @@ else:
 _SHINYLIVE_DOWNLOAD_URL = "https://pyshiny.netlify.app/shinylive"
 _SHINYLIVE_DEFAULT_VERSION = "0.0.1"
 
-# This is the same as the FileContent type in TypeScript.
-class FileContent(TypedDict):
+# This is the same as the FileContentJson type in TypeScript.
+class FileContentJson(TypedDict):
     name: str
     content: str
     type: Literal["text", "binary"]
@@ -66,7 +66,7 @@ def deploy_static(
     #     dirs_exist_ok=True,
     # )
 
-    app_files: List[FileContent] = []
+    app_files: List[FileContentJson] = []
     # Recursively iterate over files in app directory, and collect the files into
     # app_files data structure.
     exclude_names = {"__pycache__"}
