@@ -61,6 +61,8 @@ class MockConnection(Connection):
 
 
 class StarletteConnection(Connection):
+    conn: starlette.websockets.WebSocket
+
     def __init__(self, conn: starlette.websockets.WebSocket):
         self.conn: starlette.websockets.WebSocket = conn
 

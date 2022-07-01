@@ -67,6 +67,8 @@ class ConnectionState(enum.Enum):
 
 
 class ProtocolError(Exception):
+    message: str
+
     def __init__(self, message: str = ""):
         super(ProtocolError, self).__init__(message)
         self.message = message
@@ -153,7 +155,16 @@ class Session(object, metaclass=SessionMeta):
     for type checking reasons).
     """
 
-    ns = Root
+    ns: ResolvedId = Root
+
+    # These declarations are here only for pyright and stubgen to generate stub files.
+    app: "App"
+    id: str
+    http_conn: HTTPConnection
+    input: "Inputs"
+    output: "Outputs"
+    user: Union[str, None]
+    groups: Union[List[str], None]
 
     # ==========================================================================
     # Initialization
@@ -789,6 +800,10 @@ class Session(object, metaclass=SessionMeta):
 
 
 class SessionProxy:
+    ns: ResolvedId
+    input: "Inputs"
+    output: "Outputs"
+
     def __init__(self, parent: Session, ns: ResolvedId) -> None:
         self._parent = parent
         self.ns = ns

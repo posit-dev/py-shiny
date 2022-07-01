@@ -36,7 +36,7 @@ class _InputHandlers(Dict[str, InputHandlerType]):
         return handler(value, name, session)
 
 
-input_handlers = _InputHandlers()
+input_handlers: _InputHandlers = _InputHandlers()
 input_handlers.__doc__ = """
 Manage Shiny input handlers.
 

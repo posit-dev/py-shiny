@@ -15,7 +15,7 @@ __all__ = (
 import copy
 import re
 import sys
-from typing import Optional, Tuple, Union, cast, Dict, Any
+from typing import List, Optional, Tuple, Union, cast, Dict, Any
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -35,6 +35,9 @@ from .._utils import private_random_int
 # Navigation items
 # -----------------------------------------------------------------------------
 class Nav:
+    nav: Tag
+    content: Optional[Tag]
+
     def __init__(self, nav: Tag, content: Optional[Tag] = None) -> None:
         self.nav = nav
         # nav_control()/nav_spacer() have None as their content
@@ -196,6 +199,11 @@ def nav_spacer() -> Nav:
 
 
 class NavMenu:
+    nav_controls: List[NavSetArg]
+    title: TagChildArg
+    value: str
+    align: Literal["left", "right"]
+
     def __init__(
         self,
         *args: Union[NavSetArg, str],
@@ -329,6 +337,13 @@ def nav_menu(
 
 
 class NavSet:
+    args: Tuple[NavSetArg]
+    ul_class: str
+    id: Optional[str]
+    selected: Optional[str]
+    header: TagChildArg
+    footer: TagChildArg
+
     def __init__(
         self,
         *args: NavSetArg,
@@ -519,6 +534,8 @@ def navset_hidden(
 
 
 class NavSetCard(NavSet):
+    placement: Literal["above", "below"]
+
     def __init__(
         self,
         *args: NavSetArg,
@@ -656,6 +673,9 @@ def navset_pill_card(
 
 
 class NavSetPillList(NavSet):
+    well: bool
+    widths: Tuple[int, int]
+
     def __init__(
         self,
         *args: NavSetArg,
@@ -751,6 +771,13 @@ def navset_pill_list(
 
 
 class NavSetBar(NavSet):
+    title: TagChildArg
+    position: Literal["static-top", "fixed-top", "fixed-bottom", "sticky-top"]
+    bg: Optional[str]
+    inverse: bool
+    collapsible: bool
+    fluid: bool
+
     def __init__(
         self,
         *args: NavSetArg,

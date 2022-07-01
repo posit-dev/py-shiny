@@ -8,7 +8,7 @@ else:
     from typing_extensions import Literal
 
 
-ex_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "examples")
+ex_dir: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "examples")
 
 FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)

@@ -1,7 +1,7 @@
 __all__ = ("Progress",)
 
 from types import TracebackType
-from typing import Optional, Type
+from typing import Optional, Type, Union
 from warnings import warn
 
 from .._docstring import add_example
@@ -28,6 +28,10 @@ class Progress:
     """
 
     _style = "notification"
+
+    min: int
+    max: int
+    value: Union[float, None]
 
     def __init__(
         self, min: int = 0, max: int = 1, session: Optional[Session] = None

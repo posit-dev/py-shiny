@@ -71,6 +71,9 @@ class App:
     The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
     """
 
+    ui: RenderedHTML
+    server: Callable[[Inputs, Outputs, Session], None]
+
     def __init__(
         self,
         ui: Union[Tag, TagList],

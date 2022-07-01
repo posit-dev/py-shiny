@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 import re
-from typing import Union
+from typing import Pattern, Union
 
 
 class ResolvedId(str):
@@ -17,7 +17,7 @@ class ResolvedId(str):
             return ResolvedId(self + "-" + id)
 
 
-Root = ResolvedId("")
+Root: ResolvedId = ResolvedId("")
 
 
 Id = Union[str, ResolvedId]
@@ -30,7 +30,7 @@ def resolve_id(id: Id) -> ResolvedId:
 
 # \w is a large set for unicode patterns, that's fine; we mostly want to avoid some
 # special characters like space, comma, period, and especially dash
-re_valid_id = re.compile("^\\.?\\w+$")
+re_valid_id: Pattern[str] = re.compile("^\\.?\\w+$")
 
 
 def validate_id(id: str):

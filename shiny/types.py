@@ -37,7 +37,7 @@ class MISSING_TYPE:
     pass
 
 
-MISSING = MISSING_TYPE()
+MISSING: MISSING_TYPE = MISSING_TYPE()
 
 
 # Information about a single file, with a structure like:

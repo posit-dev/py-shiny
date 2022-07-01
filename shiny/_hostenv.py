@@ -4,7 +4,7 @@ import re
 from ipaddress import ip_address
 from subprocess import run
 import typing
-from typing import Dict
+from typing import Dict, Pattern
 from urllib.parse import urlparse
 
 
@@ -74,7 +74,7 @@ def get_proxy_url(url: str) -> str:
     return f"{server_url}/{session_url}p/{ptoken}{path}{'?' if parts.query else ''}{parts.query}"
 
 
-pat_local_url = re.compile(
+pat_local_url: Pattern[str] = re.compile(
     "https?://(127.0.0.1|localhost)(:\\d+)?([-\\+=&;%@.\\w_]*)", re.IGNORECASE
 )
 
