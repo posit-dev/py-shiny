@@ -79,7 +79,7 @@ class App:
         ui: Union[Tag, TagList],
         server: Optional[Callable[[Inputs, Outputs, Session], None]],
         *,
-        static_assets: Optional[str] = None,
+        static_assets: Optional[Union[str, os.PathLike[str]]] = None,
         debug: bool = False,
     ) -> None:
         self.ui: RenderedHTML = _render_page(ui, lib_prefix=self.LIB_PREFIX)
@@ -103,7 +103,7 @@ class App:
                     f"static_assets must be an absolute path: {static_assets}"
                 )
 
-        self._static_assets = static_assets
+        self._static_assets: Union[str, os.PathLike[str], None] = static_assets
 
         self._sessions: Dict[str, Session] = {}
         self._last_session_id: int = 0  # Counter for generating session IDs

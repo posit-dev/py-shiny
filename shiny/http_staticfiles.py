@@ -34,7 +34,7 @@ else:
     import os.path
     import pathlib
     import urllib.parse
-    from typing import Iterable, List, MutableMapping, Optional, Tuple
+    from typing import Iterable, List, MutableMapping, Optional, Tuple, Union
 
     from starlette.responses import PlainTextResponse
     from starlette.types import Receive, Scope, Send
@@ -45,7 +45,7 @@ else:
         dir: pathlib.Path
         root_path: str
 
-        def __init__(self, *, directory: str):
+        def __init__(self, *, directory: Union[str, os.PathLike[str]]):
             self.dir = pathlib.Path(os.path.realpath(os.path.normpath(directory)))
 
         async def __call__(self, scope: Scope, receive: Receive, send: Send):
