@@ -146,13 +146,6 @@ class SessionMeta(type):
 class Session(object, metaclass=SessionMeta):
     """
     A class representing a user session.
-
-    Warning
-    -------
-    An instance of this class is created for each request and passed as an argument to
-    the :class:`shiny.App`'s ``server`` function. For this reason, you shouldn't
-    need to create instances of this class yourself (it's only part of the public API
-    for type checking reasons).
     """
 
     ns: ResolvedId = Root
@@ -846,13 +839,6 @@ class SessionProxy:
 class Inputs:
     """
     A class representing Shiny input values.
-
-    Warning
-    -------
-    An instance of this class is created for each request and passed as an argument to
-    the :class:`shiny.App`'s ``server`` function. For this reason, you shouldn't
-    need to create instances of this class yourself (it's only part of the public API
-    for type checking reasons).
     """
 
     def __init__(
@@ -903,13 +889,6 @@ class Inputs:
 class Outputs:
     """
     A class representing Shiny output definitions.
-
-    Warning
-    -------
-    An instance of this class is created for each request and passed as an argument to
-    the :class:`shiny.App`'s ``server`` function. For this reason, you shouldn't
-    need to create instances of this class yourself (it's only part of the public API
-    for type checking reasons).
     """
 
     def __init__(
