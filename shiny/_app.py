@@ -79,7 +79,7 @@ class App:
         ui: Union[Tag, TagList],
         server: Optional[Callable[[Inputs, Outputs, Session], None]],
         *,
-        static_assets: Optional[Union[str, os.PathLike[str]]] = None,
+        static_assets: Optional[Union[str, "os.PathLike[str]"]] = None,
         debug: bool = False,
     ) -> None:
         self.ui: RenderedHTML = _render_page(ui, lib_prefix=self.LIB_PREFIX)
