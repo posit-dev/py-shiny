@@ -3,7 +3,7 @@ __all__ = (
     "input_selectize",
 )
 
-from typing import Optional, Dict, Union, List, cast, Sequence
+from typing import Optional, Dict, Union, List, Tuple, cast
 
 from htmltools import Tag, tags, div, TagChildArg, TagList
 
@@ -19,13 +19,17 @@ _OptGrpChoices = Dict[str, _Choices]
 _SelectChoices = Union[_Choices, _OptGrpChoices]
 
 # Formats available to the user
-SelectChoicesArg = Union[
-    # ["a", "b", "c"] (or ("a", "b", "c"))
-    Sequence[str],
-    # {"a": "Choice A", "b": tags.i("Choice B")}
-    _Choices,
-    # optgroup {"Group A": {"a1": "Choice A1", "a2": tags.i("Choice A2")}, "Group B": {}}
-    _OptGrpChoices,
+SelectChoicesArg = Optional[
+    Union[
+        # ["a", "b", "c"]
+        List[str],
+        # ("a", "b", "c")
+        Tuple[str, ...],
+        # {"a": "Choice A", "b": tags.i("Choice B")}
+        _Choices,
+        # optgroup {"Group A": {"a1": "Choice A1", "a2": tags.i("Choice A2")}, "Group B": {}}
+        _OptGrpChoices,
+    ]
 ]
 
 _topics = {
@@ -187,7 +191,9 @@ def input_select(
 
 
 def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
-    if isinstance(x, Sequence):
+    if x is None:
+        return {}
+    elif isinstance(x, (list, tuple)):
         return {k: k for k in x}
     else:
         return x
