@@ -19,18 +19,17 @@ _OptGrpChoices = Dict[str, _Choices]
 _SelectChoices = Union[_Choices, _OptGrpChoices]
 
 # Formats available to the user
-SelectChoicesArg = Optional[
-    Union[
-        # ["a", "b", "c"]
-        List[str],
-        # ("a", "b", "c")
-        Tuple[str, ...],
-        # {"a": "Choice A", "b": tags.i("Choice B")}
-        _Choices,
-        # optgroup {"Group A": {"a1": "Choice A1", "a2": tags.i("Choice A2")}, "Group B": {}}
-        _OptGrpChoices,
-    ]
+SelectChoicesArg = Union[
+    # ["a", "b", "c"]
+    List[str],
+    # ("a", "b", "c")
+    Tuple[str, ...],
+    # {"a": "Choice A", "b": tags.i("Choice B")}
+    _Choices,
+    # optgroup {"Group A": {"a1": "Choice A1", "a2": tags.i("Choice A2")}, "Group B": {}}
+    _OptGrpChoices,
 ]
+
 
 _topics = {
     "Server value": """
@@ -192,7 +191,7 @@ def input_select(
 
 def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
     if x is None:
-        return {}
+        raise TypeError("`choices` must be a list, tuple, or dict.")
     elif isinstance(x, (list, tuple)):
         return {k: k for k in x}
     else:
