@@ -69,11 +69,13 @@ def deploy_static(
     app_files: List[FileContentJson] = []
     # Recursively iterate over files in app directory, and collect the files into
     # app_files data structure.
-    exclude_names = {"__pycache__"}
+    exclude_names = {"__pycache__", "venv", ".venv"}
     for root, dirs, files in os.walk(appdir, topdown=True):
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
         dirs[:] = set(dirs) - exclude_names
         rel_dir = os.path.relpath(root, appdir)
         files = [f for f in files if not f.startswith(".")]
+        files = [f for f in files if f not in exclude_names]
         files.sort()
 
         # Move app.py to first in list.
