@@ -355,6 +355,8 @@ APPDIR is the directory containing the Shiny application.
 DESTDIR is the destination directory where the output files will be written to. This
 directory can be deployed as a static web site.
 
+This will not deploy the contents of venv/ or any files that start with '.'
+
 After writing the output files, you can serve them locally with the following command:
 
     python3 -m http.server --directory DESTDIR
