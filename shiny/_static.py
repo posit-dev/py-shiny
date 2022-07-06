@@ -141,8 +141,9 @@ def deploy_static(
 
     app_json_output_file = os.path.join(app_destdir, "app.json")
 
-    print("Writing to " + app_json_output_file)
+    print("Writing to " + app_json_output_file, end="")
     json.dump(app_files, open(app_json_output_file, "w"))
+    print(":", os.path.getsize(app_json_output_file), "bytes")
 
     print(
         f"\nRun the following to serve the app:\n  python3 -m http.server --directory {destdir}"
