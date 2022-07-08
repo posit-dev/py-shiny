@@ -2,12 +2,14 @@ import warnings
 from typing import Any
 
 from . import render
+from . import reactive
 
 __all__ = (
     "render_text",
     "render_plot",
     "render_image",
     "render_ui",
+    "event",
 )
 
 # Create our own warning class instead of using built-in DeprecationWarning, because we
@@ -25,9 +27,6 @@ def warn_deprecated(message: str):
     warnings.warn(message, ShinyDeprecationWarning)
 
 
-# ======================================================================================
-# Render functions
-# ======================================================================================
 def render_text():
     """Deprecated. Please use render.text() instead of render_text()."""
     warn_deprecated("render_text() is deprecated. Use render.text() instead.")
@@ -50,3 +49,9 @@ def render_image(*args: Any, **kwargs: Any):
     """Deprecated. Please use render.image() instead of render_image()."""
     warn_deprecated("render_image() is deprecated. Use render.image() instead.")
     return render.image(*args, **kwargs)
+
+
+def event(*args: Any, **kwargs: Any):
+    """Deprecated. Please use @reactive.event() instead of @event()."""
+    warn_deprecated("@event() is deprecated. Use @reactive.event() instead.")
+    return reactive.event(*args, **kwargs)

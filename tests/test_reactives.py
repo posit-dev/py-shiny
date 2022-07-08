@@ -6,7 +6,6 @@ from typing import List
 
 from shiny.input_handler import ActionButtonValue
 from shiny.reactive._core import ReactiveWarning
-from shiny._decorators import *
 from shiny.reactive import *
 from shiny._validation import SilentException, req
 
@@ -796,7 +795,7 @@ async def test_mock_time():
 
 
 # ------------------------------------------------------------
-# @event() works as expected
+# @reactive.event() works as expected
 # ------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_event_decorator():

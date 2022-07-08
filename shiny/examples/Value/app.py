@@ -12,13 +12,13 @@ def server(input: Inputs, output: Outputs, session: Session):
     val = reactive.Value(0)
 
     @reactive.Effect
-    @event(input.minus)
+    @reactive.event(input.minus)
     def _():
         newVal = val.get() - 1
         val.set(newVal)
 
     @reactive.Effect
-    @event(input.plus)
+    @reactive.event(input.plus)
     def _():
         newVal = val.get() + 1
         val.set(newVal)

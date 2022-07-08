@@ -12,9 +12,9 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.plot(alt="A histogram")
-    # Use event() to invalidate the plot only when the button is pressed
+    # Use reactive.event() to invalidate the plot only when the button is pressed
     # (not when the slider is changed)
-    @event(lambda: input.go, ignore_none=False)
+    @reactive.event(lambda: input.go, ignore_none=False)
     def plot():
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(input.n())

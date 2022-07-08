@@ -13,6 +13,7 @@ from ._reactives import (  # noqa: F401
     CalcAsync_,  # pyright: ignore[reportUnusedImport]
     Effect,
     Effect_,  # pyright: ignore[reportUnusedImport]
+    event,
 )
 
 
@@ -22,6 +23,7 @@ __all__ = (
     "Value",
     "Calc",
     "Effect",
+    "event",
     "isolate",
     "invalidate_later",
     "poll",

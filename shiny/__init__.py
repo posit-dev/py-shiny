@@ -1,6 +1,6 @@
 """A package for building reactive web applications."""
 
-__version__ = "0.2.0.9011"
+__version__ = "0.2.0.9012"
 
 from ._shinyenv import is_pyodide as _is_pyodide
 
@@ -17,7 +17,6 @@ from . import ui
 
 # Private submodules that have some user-facing functionality
 from ._app import App
-from ._decorators import event
 from ._validation import req
 from ._deprecated import *
 
@@ -44,8 +43,6 @@ __all__ = (
     "ui",
     # _app.py
     "App",
-    # _decorators.py
-    "event",
     # _main.py
     "run_app",
     # _modules.py
@@ -61,4 +58,5 @@ __all__ = (
     "render_plot",
     "render_image",
     "render_ui",
+    "event",
 )

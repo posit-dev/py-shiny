@@ -9,7 +9,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect
-    @event(input.serve)
+    @reactive.event(input.serve)
     def _():
         async def my_handler(request: Request) -> JSONResponse:
             return JSONResponse({"n_clicks": input.serve()}, status_code=200)

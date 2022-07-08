@@ -9,7 +9,7 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.text
-    @event(input.button)
+    @reactive.event(input.button)
     def compute():
         with ui.Progress(min=1, max=15) as p:
             p.set(message="Calculation in progress", detail="This may take a while...")

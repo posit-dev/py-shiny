@@ -21,7 +21,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect
-    @event(input.controller)
+    @reactive.event(input.controller)
     def _():
         ui.update_navs("hidden_tabs", selected="panel" + str(input.controller()))
 
