@@ -328,10 +328,35 @@ class CalcAsync_(Calc_[T]):
 
 
 @overload
-def Calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc_[T]:
+def Calc(fn: CalcFunctionAsync[T]) -> CalcAsync_[T]:
     ...
 
 
+@overload
+def Calc(fn: CalcFunction[T]) -> Calc_[T]:
+    ...
+
+
+# Note that the specified return type of this Calc() overload (with a `session`) isn't
+# exactly the same as the actual returned object -- the specified return type is a
+# Callable that takes a CalcFunction[T], and actual return type is a Callable that takes
+# CalcFunction[T] | CalcFunctionAsync[T]. Both are technically correct, since the
+# CalcFunction's T encompasses both "regular" types V as well as Awatiable[V]. (We're
+# using V to represent a generic type that is NOT itself Awaitable.) So if the T
+# represents an Awaitable[V], then the type checker knows that the returned function
+# will return a Calc[Awaitable[V]].
+#
+# However, if the Calc() function is specified to return a Callable that takes
+# CalcFunction[T] | CalcFunctionAsync[T], then if a CalcFunctionAsync is passed in, the
+# type check will not know that the returned Calc object is a Calc[Awaitable[V]]. It
+# will think that it's a [Calc[V]]. Then the type checker will think that the returned
+# Calc object is not async when it actually is.
+#
+# To work around this, we say that Calc() returns a Callable that takes a
+# CalcFunction[T], instead of the union type. We're sort of tricking the type checker
+# twice: once here, and once when we return a Calc object (which has a synchronous
+# __call__ method) or CalcAsync object (which has an async __call__ method), and it
+# works out.
 @overload
 def Calc(
     *, session: Union[MISSING_TYPE, "Session", None] = MISSING
@@ -339,25 +364,6 @@ def Calc(
     ...
 
 
-# Note that the specified return type of calc() isn't exactly the same as the actual
-# returned object -- the former specifes a Callable that takes a CalcFunction[T], and
-# the latter is a Callable that takes CalcFunction[T] | CalcFunctionAsync[T]. Both are
-# technically correct, since the CalcFunction's T encompasses both "regular" types V as
-# well as Awatiable[V]. (We're using V to represent a generic type that is NOT itself
-# Awaitable.) So if the T represents an Awaitable[V], then the type checker knows that
-# the returned function will return a Calc[Awaitable[V]].
-#
-# However, if the calc() function is specified to return a Callable that takes
-# CalcFunction[T] | CalcFunctionAsync[T], then if a CalcFunctionAsync is passed in, the
-# type check will not know that the returned Calc object is a Calc[Awaitable[V]]. It
-# will think that it's a [Calc[V]]. Then the type checker will think that the returned
-# Calc object is not async when it actually is.
-#
-# To work around this, we say that calc() returns a Callable that takes a
-# CalcFunction[T], instead of the union type. We're sort of tricking the type checker
-# twice: once here, and once when we return a Calc object (which has a synchronous
-# __call__ method) or CalcAsync object (which has an async __call__ method), and it
-# works out.
 @add_example()
 def Calc(
     fn: Optional[Union[CalcFunction[T], CalcFunctionAsync[T]]] = None,
@@ -399,7 +405,7 @@ def Calc(
     ~shiny.event
     """
 
-    def create_calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc_[T]:
+    def create_calc(fn: Union[CalcFunctionAsync[T], CalcFunction[T]]) -> Calc_[T]:
         if _utils.is_async_callable(fn):
             return CalcAsync_(fn, session=session)
         else:
@@ -688,7 +694,10 @@ def event(
     *args: Union[Callable[[], object], Callable[[], Awaitable[object]]],
     ignore_none: bool = True,
     ignore_init: bool = False,
-) -> Callable[[Callable[[], T]], Callable[[], T]]:
+) -> Union[
+    Callable[[Callable[[], Awaitable[T]]], Callable[[], Awaitable[T]]],
+    Callable[[Callable[[], T]], Callable[[], T]],
+]:
     """
     Mark a function to react only when an "event" occurs.
 
@@ -789,3 +798,50 @@ def event(
 
 def _is_none_event(val: object) -> bool:
     return val is None or (isinstance(val, ActionButtonValue) and val == 0)
+
+
+# The code below is a test that the type checker is correctly inferring types. It should
+# have some type errors as indicated. There doesn't seem to be a good way to run pyright
+# and expect errors. Until that's supported, the best thing to do is uncomment the code
+# below and check that the errors are highlighted in red as expected. See:
+# https://github.com/microsoft/pyright/discussions/2163
+
+# # fmt: off
+# def test():
+#     @Calc(session=MISSING)
+#     async def cas() -> int:
+#         return 1
+
+#     @Calc(session=MISSING)
+#     def cs() -> int:
+#         return 1
+
+#     @Calc
+#     async def ca() -> int:
+#         return 1
+
+#     @Calc
+#     def c() -> int:
+#         return 1
+
+#     def f():
+#         await cas()  # Should error
+#         await cs()   # Should error
+#         await ca()   # Should error
+#         await c()    # Should error
+
+#         cas()        # Should error
+#         cs()
+#         ca()         # Should error
+#         c()
+
+#     async def fa():
+#         await cas()
+#         await cs()   # Should error
+#         await ca()
+#         await c()    # Should error
+
+#         cas()        # Should error
+#         cs()
+#         ca()         # Should error
+#         c()
