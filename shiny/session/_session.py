@@ -782,7 +782,7 @@ class Session(object, metaclass=SessionMeta):
         deps: List[Dict[str, Any]] = []
         for dep in res["dependencies"]:
             self.app._register_web_dependency(dep)
-            dep_dict = dep.as_dict(lib_prefix=self.app.LIB_PREFIX)
+            dep_dict = dep.as_dict(lib_prefix=self.app.lib_prefix)
             deps.append(dep_dict)
 
         return {"deps": deps, "html": res["html"]}
@@ -972,10 +972,10 @@ class Outputs:
                     # Print traceback to the console
                     traceback.print_exc()
                     # Possibly sanitize error for the user
-                    if self._session.app.SANITIZE_ERRORS and not isinstance(
+                    if self._session.app.sanitize_errors and not isinstance(
                         e, SafeException
                     ):
-                        err_msg = self._session.app.SANITIZE_ERROR_MSG
+                        err_msg = self._session.app.sanitize_error_msg
                     else:
                         err_msg = str(e)
                     # Register the outbound error message

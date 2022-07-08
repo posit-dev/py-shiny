@@ -21,6 +21,12 @@ from .reactive import on_flushed
 from .session import Inputs, Outputs, Session, session_context
 
 
+# Default values for App options.
+LIB_PREFIX: str = "lib/"
+SANITIZE_ERRORS: bool = False
+SANITIZE_ERROR_MSG: str = "An error has occurred. Check your logs or contact the app author for clarification."
+
+
 class App:
     """
     Create a Shiny app instance.
@@ -53,20 +59,20 @@ class App:
         app = App(app_ui, server)
     """
 
-    LIB_PREFIX: str = "lib/"
+    lib_prefix: str = "lib/"
     """
     A path prefix to place before all HTML dependencies processed by
     ``register_web_dependency()``.
     """
 
-    SANITIZE_ERRORS: bool = False
+    sanitize_errors: bool = False
     """
     Whether or not to show a generic message (``SANITIZE_ERRORS=True``) or the actual
     message (``SANITIZE_ERRORS=False``) in the app UI when an error occurs. This flag
     may default to ``True`` in some production environments (e.g., RStudio Connect).
     """
 
-    SANITIZE_ERROR_MSG: str = "An error has occurred. Check your logs or contact the app author for clarification."
+    sanitize_error_msg: str = "An error has occurred. Check your logs or contact the app author for clarification."
     """
     The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
     """
@@ -82,7 +88,7 @@ class App:
         static_assets: Optional[Union[str, "os.PathLike[str]"]] = None,
         debug: bool = False,
     ) -> None:
-        self.ui: RenderedHTML = _render_page(ui, lib_prefix=self.LIB_PREFIX)
+        self.ui: RenderedHTML = _render_page(ui, lib_prefix=self.lib_prefix)
 
         if server is None:
 
@@ -94,6 +100,11 @@ class App:
         self.server = server
 
         self._debug: bool = debug
+
+        # Settings that the user can change after creating the App object.
+        self.lib_prefix: str = LIB_PREFIX
+        self.sanitize_errors: bool = SANITIZE_ERRORS
+        self.sanitize_error_msg: str = SANITIZE_ERROR_MSG
 
         if static_assets is not None:
             if not os.path.isdir(static_assets):
@@ -323,7 +334,7 @@ class App:
         # For HTMLDependencies that have sources on disk, mount the source dir.
         # (Some HTMLDependencies only carry head content, and have no source on disk.)
         if dep.source:
-            paths = dep.source_path_map(lib_prefix=self.LIB_PREFIX)
+            paths = dep.source_path_map(lib_prefix=self.lib_prefix)
             self._dependency_handler.routes.insert(
                 0,
                 starlette.routing.Mount(

@@ -17,4 +17,4 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-app.SANITIZE_ERRORS = True
+app.sanitize_errors = True
