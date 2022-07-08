@@ -694,10 +694,7 @@ def event(
     *args: Union[Callable[[], object], Callable[[], Awaitable[object]]],
     ignore_none: bool = True,
     ignore_init: bool = False,
-) -> Union[
-    Callable[[Callable[[], Awaitable[T]]], Callable[[], Awaitable[T]]],
-    Callable[[Callable[[], T]], Callable[[], T]],
-]:
+) -> Callable[[Callable[[], T]], Callable[[], T]]:
     """
     Mark a function to react only when an "event" occurs.
 
@@ -807,41 +804,81 @@ def _is_none_event(val: object) -> bool:
 # https://github.com/microsoft/pyright/discussions/2163
 
 # # fmt: off
-# def test():
+# def test_calc():
 #     @Calc(session=MISSING)
-#     async def cas() -> int:
+#     async def fas() -> int:
 #         return 1
 
 #     @Calc(session=MISSING)
-#     def cs() -> int:
+#     def fs() -> int:
 #         return 1
 
 #     @Calc
-#     async def ca() -> int:
+#     async def fa() -> int:
 #         return 1
 
 #     @Calc
-#     def c() -> int:
+#     def f() -> int:
 #         return 1
 
-#     def f():
-#         await cas()  # Should error
-#         await cs()   # Should error
-#         await ca()   # Should error
-#         await c()    # Should error
+#     def test():
+#         await fas()  # Should error
+#         await fs()   # Should error
+#         await fa()   # Should error
+#         await f()    # Should error
 
-#         cas()        # Should error
-#         cs()
-#         ca()         # Should error
-#         c()
+#         fas()        # Should error
+#         fs()
+#         fa()         # Should error
+#         f()
 
-#     async def fa():
-#         await cas()
-#         await cs()   # Should error
-#         await ca()
-#         await c()    # Should error
+#     async def test_async():
+#         await fas()
+#         await fs()   # Should error
+#         await fa()
+#         await f()    # Should error
 
-#         cas()        # Should error
-#         cs()
-#         ca()         # Should error
-#         c()
+#         fas()        # Should error
+#         fs()
+#         fa()         # Should error
+#         f()
+
+# # fmt: off
+# def test_event():
+#     @event()
+#     async def fas() -> int:
+#         return 1
+
+#     @event()
+#     def fs() -> int:
+#         return 1
+
+#     @event()
+#     async def fa() -> int:
+#         return 1
+
+#     @event()
+#     def f() -> int:
+#         return 1
+
+#     def test():
+#         await fas()  # Should error
+#         await fs()   # Should error
+#         await fa()   # Should error
+#         await f()    # Should error
+
+#         fas()        # Should error
+#         fs()
+#         fa()         # Should error
+#         f()
+
+#     async def test_async():
+#         await fas()
+#         await fs()   # Should error
+#         await fa()
+#         await f()    # Should error
+
+#         fas()        # Should error
+#         fs()
+#         fa()         # Should error
+#         f()
