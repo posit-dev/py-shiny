@@ -1,9 +1,10 @@
 import asyncio
 import html
+import http
 import logging
 import os
 import secrets
-from typing import Optional
+from typing import Optional, Tuple
 import threading
 
 from asgiref.typing import (
@@ -23,6 +24,7 @@ if not is_pyodide:
     from websockets.client import connect
     from websockets.server import serve, WebSocketServerProtocol
     import websockets.exceptions
+    import websockets.datastructures
 
 from ._hostenv import get_proxy_url
 
@@ -147,7 +149,7 @@ class InjectAutoreloadMiddleware:
 # PARENT PROCESS ------------------------------------------------------------
 
 
-def start_server(port: int):
+def start_server(port: int, app_port: int):
     """Starts a websocket server that listens on its own port (separate from the main
     Shiny listener).
 
@@ -166,16 +168,20 @@ def start_server(port: int):
     os.environ["SHINY_AUTORELOAD_PORT"] = str(port)
     os.environ["SHINY_AUTORELOAD_SECRET"] = secret
 
+    app_url = get_proxy_url(f"http://127.0.0.1:{app_port}/")
+
     # Run on a background thread so our event loop doesn't interfere with uvicorn.
     # Set daemon=True because we don't want to keep the process alive with this thread.
-    threading.Thread(None, _thread_main, args=[port, secret], daemon=True).start()
+    threading.Thread(
+        None, _thread_main, args=[port, app_url, secret], daemon=True
+    ).start()
 
 
-def _thread_main(port: int, secret: str):
-    asyncio.run(_coro_main(port, secret))
+def _thread_main(port: int, app_url: str, secret: str):
+    asyncio.run(_coro_main(port, app_url, secret))
 
 
-async def _coro_main(port: int, secret: str) -> None:
+async def _coro_main(port: int, app_url: str, secret: str) -> None:
     reload_now: asyncio.Event = asyncio.Event()
 
     def nudge():
@@ -203,5 +209,17 @@ async def _coro_main(port: int, secret: str) -> None:
         except websockets.exceptions.ConnectionClosed:
             pass
 
-    async with serve(reload_server, "127.0.0.1", port):
+    # Handle non-WebSocket requests to the autoreload HTTP server. Without this, if you
+    # happen to visit the autoreload endpoint in a browser, you get an error message
+    # about only WebSockets being supported. This is not an academic problem as the
+    # VSCode extension used in RSW sniffs out ports that are being listened on, which
+    # leads to confusion if all you get is an error.
+    async def process_request(
+        path: str, request_headers: websockets.datastructures.Headers
+    ) -> Optional[Tuple[http.HTTPStatus, websockets.datastructures.HeadersLike, bytes]]:
+        # If there's no Upgrade header, it's not a WebSocket request.
+        if request_headers.get("Upgrade") is None:
+            return (http.HTTPStatus.MOVED_PERMANENTLY, [("Location", app_url)], b"")
+
+    async with serve(reload_server, "127.0.0.1", port, process_request=process_request):
         await asyncio.Future()  # wait forever

@@ -220,7 +220,7 @@ def run_app(
                 "Autoreload port is already being used by the app; disabling autoreload\n"
             )
         else:
-            setup_hot_reload(log_config, autoreload_port_num)
+            setup_hot_reload(log_config, autoreload_port_num, port)
 
     maybe_setup_rsw_proxying(log_config)
 
@@ -239,7 +239,9 @@ def run_app(
     )
 
 
-def setup_hot_reload(log_config: Dict[str, Any], port: int) -> None:
+def setup_hot_reload(
+    log_config: Dict[str, Any], autoreload_port: int, app_port: int
+) -> None:
     # The only way I've found to get notified when uvicorn decides to reload, is by
     # inserting a custom log handler.
     log_config["handlers"]["shiny_hot_reload"] = {
@@ -248,7 +250,7 @@ def setup_hot_reload(log_config: Dict[str, Any], port: int) -> None:
     }
     log_config["loggers"]["uvicorn.error"]["handlers"] = ["shiny_hot_reload"]
 
-    _autoreload.start_server(port)
+    _autoreload.start_server(autoreload_port, app_port)
 
 
 def maybe_setup_rsw_proxying(log_config: Dict[str, Any]) -> None:
