@@ -22,6 +22,7 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
+from ..render import RenderFunction
 from ..types import MISSING, MISSING_TYPE, ActionButtonValue, SilentException
 from ._core import Context, Dependents, ReactiveWarning, isolate
 
@@ -741,7 +742,30 @@ def event(
             + "If you are calling `@reactive.event(f())`, try calling `@reactive.event(f)` instead."
         )
 
+    if len(args) == 0:
+        raise TypeError(
+            "`@reactive.event()` requires at least one argument, as in `@reactive.event(input.x)`.\n"
+        )
+
     def decorator(user_fn: Callable[[], T]) -> Callable[[], T]:
+        if not callable(user_fn):
+            raise TypeError(
+                "`@reactive.event()` must be applied to a function or Callable object.\n"
+                + "It should usually be applied before `@Calc`,` @Effect`, `@output`, or `@render.xx` function.\n"
+                + "In other words, `@reactive.event()` goes below the other decorators."
+            )
+
+        if isinstance(user_fn, Calc_):
+            raise TypeError(
+                "`@reactive.event()` must be applied before `@Calc`. In other words, it goes on the line below `@Calc`."
+            )
+
+        if isinstance(user_fn, RenderFunction):
+            # At some point in the future, we may allow this condition, if we find an
+            # use case. For now we'll disallow it, for simplicity.
+            raise TypeError(
+                "`@reactive.event()` must be applied before `@render.xx` functions. In other words, it goes on the line below `@render.xx`."
+            )
 
         initialized = False
 

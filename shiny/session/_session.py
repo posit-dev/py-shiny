@@ -1,38 +1,35 @@
 __all__ = ("Session", "Inputs", "Outputs")
 
+import dataclasses
 import enum
 import functools
-import os
-from pathlib import Path
-import sys
 import json
+import os
 import re
+import sys
 import traceback
-import warnings
 import typing
-import dataclasses
 import urllib.parse
+import warnings
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
-    AsyncIterable,
-    Callable,
-    Iterable,
-    Optional,
-    Union,
-    Awaitable,
-    Dict,
-    List,
     Any,
+    AsyncIterable,
+    Awaitable,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    TypeVar,
+    Union,
     cast,
     overload,
 )
-from starlette.requests import Request, HTTPConnection
 
-from starlette.responses import (
-    HTMLResponse,
-    PlainTextResponse,
-    StreamingResponse,
-)
+from starlette.requests import HTTPConnection, Request
+from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 from starlette.types import ASGIApp
 
 if sys.version_info >= (3, 8):
@@ -45,19 +42,20 @@ from htmltools import TagChildArg, TagList
 if TYPE_CHECKING:
     from .._app import App
 
+from .. import _utils, render
 from .._connection import Connection, ConnectionClosed
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
+from .._namespaces import Id, ResolvedId, Root
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
-from .._namespaces import ResolvedId, Id, Root
-from ..reactive import Value, Effect, Effect_, isolate, flush
+from ..reactive import Effect, Effect_, Value, flush, isolate
 from ..reactive._core import lock
 from ..types import SafeException, SilentCancelOutputException, SilentException
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
-from .. import render
-from .. import _utils
+IT = TypeVar("IT")
+OT = TypeVar("OT")
 
 
 class ConnectionState(enum.Enum):
@@ -127,9 +125,9 @@ class DownloadInfo:
 
 
 class OutBoundMessageQueues(TypedDict):
-    values: List[Dict[str, object]]
-    input_messages: List[Dict[str, object]]
-    errors: List[Dict[str, object]]
+    values: List[Dict[str, Any]]
+    input_messages: List[Dict[str, Any]]
+    errors: List[Dict[str, Any]]
 
 
 def empty_outbound_message_queues() -> OutBoundMessageQueues:
@@ -904,7 +902,7 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    def __call__(self, fn: render.RenderFunction) -> None:
+    def __call__(self, fn: render.RenderFunction[Any, Any]) -> None:
         ...
 
     @overload
@@ -915,18 +913,18 @@ class Outputs:
         suspend_when_hidden: bool = True,
         priority: int = 0,
         name: Optional[str] = None,
-    ) -> Callable[[render.RenderFunction], None]:
+    ) -> Callable[[render.RenderFunction[Any, Any]], None]:
         ...
 
     def __call__(
         self,
-        fn: Optional[render.RenderFunction] = None,
+        fn: Optional[render.RenderFunction[IT, OT]] = None,
         *,
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
         name: Optional[str] = None,
-    ) -> Union[None, Callable[[render.RenderFunction], None]]:
+    ) -> Union[None, Callable[[render.RenderFunction[IT, OT]], None]]:
         if name is not None:
             from .. import _deprecated
 
@@ -935,14 +933,17 @@ class Outputs:
             )
             id = name
 
-        def set_fn(fn: render.RenderFunction) -> None:
+        def set_fn(fn: render.RenderFunction[IT, OT]) -> None:
             # Get the (possibly namespaced) output id
             output_name = self._ns(id or fn.__name__)
 
-            # fn is either a regular function or a RenderFunction object. If
-            # it's the latter, give it a bit of metadata.
-            if isinstance(fn, render.RenderFunction):
-                fn.set_metadata(self._session, output_name)
+            print("setting output ", output_name)
+
+            if not isinstance(fn, render.RenderFunction):
+                raise TypeError("`@output` must be applied to a `@render.xx` function.")
+
+            # fn is a RenderFunction object. Give it a bit of metadata.
+            fn.set_metadata(self._session, output_name)
 
             if output_name in self._effects:
                 self._effects[output_name].destroy()
@@ -958,12 +959,12 @@ class Outputs:
                     {"recalculating": {"name": output_name, "status": "recalculating"}}
                 )
 
-                message: Dict[str, object] = {}
+                message: Dict[str, OT] = {}
                 try:
                     if _utils.is_async_callable(fn):
-                        message[output_name] = await fn()
+                        message[output_name] = (await fn()).get_value()
                     else:
-                        message[output_name] = fn()
+                        message[output_name] = fn().get_value()
                 except SilentCancelOutputException:
                     return
                 except SilentException:
@@ -979,7 +980,7 @@ class Outputs:
                     else:
                         err_msg = str(e)
                     # Register the outbound error message
-                    msg: Dict[str, object] = {
+                    err_message = {
                         output_name: {
                             "message": err_msg,
                             # TODO: is it possible to get the call?
@@ -988,7 +989,7 @@ class Outputs:
                             "type": None,
                         }
                     }
-                    self._session._outbound_message_queues["errors"].append(msg)
+                    self._session._outbound_message_queues["errors"].append(err_message)
 
                 self._session._outbound_message_queues["values"].append(message)
 

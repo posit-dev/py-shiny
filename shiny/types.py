@@ -86,8 +86,10 @@ class ImgData(TypedDict):
     """The ``width`` attribute of the ``<img>`` tag."""
     height: NotRequired[Union[str, float]]
     """The ``height`` attribute of the ``<img>`` tag."""
-    alt: NotRequired[Optional[str]]
+    alt: NotRequired[str]
     """The ``alt`` attribute of the ``<img>`` tag."""
+    style: NotRequired[str]
+    """The ``style`` attribute of the ``<img>`` tag."""
 
 
 @add_example()

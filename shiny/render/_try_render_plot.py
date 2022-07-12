@@ -70,12 +70,7 @@ class PlotnineFigure(Protocol):
         ...
 
 
-class PlotImgData(ImgData):
-    style: Union[str, float]
-    """The ``style`` attribute of the ``<img>`` tag."""
-
-
-TryPlotResult = Union[PlotImgData, None, Literal["TYPE_MISMATCH"]]
+TryPlotResult = Union[ImgData, None, Literal["TYPE_MISMATCH"]]
 
 
 # Try to render a matplotlib object. If `fig` is not a matplotlib object, return
@@ -115,13 +110,15 @@ def try_render_matplotlib(
         # N.B. matplotlib.tight_layout() causes the intrinsic file size can be different
         # from the requested size (i.e., the container size). So, scale the image to fit
         # in the container while preserving the aspect ratio.
-        res: PlotImgData = {
+        res: ImgData = {
             "src": "data:image/png;base64," + data_str,
             "width": "100%",
             "height": "100%",
             "style": "object-fit:contain",
-            "alt": alt,
         }
+
+        if alt is not None:
+            res["alt"] = alt
 
         return res
 
@@ -203,13 +200,15 @@ def try_render_pil(
             data = base64.b64encode(buf.read())
             data_str = data.decode("utf-8")
 
-        res: PlotImgData = {
+        res: ImgData = {
             "src": "data:image/png;base64," + data_str,
             "width": "100%",
             "height": "100%",
             "style": "object-fit:contain",
-            "alt": alt,
         }
+
+        if alt is not None:
+            res["alt"] = alt
 
         return res
 
@@ -254,13 +253,15 @@ def try_render_plotnine(
             data = base64.b64encode(buf.read())
             data_str = data.decode("utf-8")
 
-        res: PlotImgData = {
+        res: ImgData = {
             "src": "data:image/png;base64," + data_str,
             "width": "100%",
             "height": "100%",
             "style": "object-fit:contain",
-            "alt": alt,
         }
+
+        if alt is not None:
+            res["alt"] = alt
 
         return res
 
