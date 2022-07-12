@@ -51,6 +51,7 @@ from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect, Effect_, Value, flush, isolate
 from ..reactive._core import lock
+from ..render import RenderFunction
 from ..types import SafeException, SilentCancelOutputException, SilentException
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
@@ -902,7 +903,7 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    def __call__(self, fn: render.RenderFunction[Any, Any]) -> None:
+    def __call__(self, fn: RenderFunction[Any, Any]) -> None:
         ...
 
     @overload
@@ -913,18 +914,18 @@ class Outputs:
         suspend_when_hidden: bool = True,
         priority: int = 0,
         name: Optional[str] = None,
-    ) -> Callable[[render.RenderFunction[Any, Any]], None]:
+    ) -> Callable[[RenderFunction[Any, Any]], None]:
         ...
 
     def __call__(
         self,
-        fn: Optional[render.RenderFunction[IT, OT]] = None,
+        fn: Optional[RenderFunction[IT, OT]] = None,
         *,
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
         name: Optional[str] = None,
-    ) -> Union[None, Callable[[render.RenderFunction[IT, OT]], None]]:
+    ) -> Union[None, Callable[[RenderFunction[IT, OT]], None]]:
         if name is not None:
             from .. import _deprecated
 
@@ -933,13 +934,13 @@ class Outputs:
             )
             id = name
 
-        def set_fn(fn: render.RenderFunction[IT, OT]) -> None:
+        def set_fn(fn: RenderFunction[IT, OT]) -> None:
             # Get the (possibly namespaced) output id
             output_name = self._ns(id or fn.__name__)
 
             print("setting output ", output_name)
 
-            if not isinstance(fn, render.RenderFunction):
+            if not isinstance(fn, RenderFunction):
                 raise TypeError(
                     "`@output` must be applied to a `@render.xx` function.\n"
                     + "In other words, `@output` must be above `@render.xx`."
