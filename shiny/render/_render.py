@@ -52,19 +52,6 @@ IT = TypeVar("IT")
 OT = TypeVar("OT")
 
 
-class RenderedValue(Generic[OT]):
-    """
-    A wrapper class for objects that go through a `render.*` function. This class allows
-    for run-time type checks.
-    """
-
-    def __init__(self, value: OT) -> None:
-        self._value: OT = value
-
-    def get_value(self) -> OT:
-        return self._value
-
-
 # ======================================================================================
 # RenderFunction/RenderFunctionAsync base class
 # ======================================================================================
@@ -78,7 +65,7 @@ class RenderFunction(Generic[IT, OT]):
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
 
-    def __call__(self) -> RenderedValue[OT]:
+    def __call__(self) -> OT:
         raise NotImplementedError
 
     def set_metadata(self, session: "Session", name: str) -> None:
@@ -93,7 +80,7 @@ class RenderFunction(Generic[IT, OT]):
 # method is marked here as async; you can't have a single class where one method could
 # be either sync or async.
 class RenderFunctionAsync(RenderFunction[IT, OT]):
-    async def __call__(self) -> RenderedValue[OT]:  # type: ignore
+    async def __call__(self) -> OT:  # type: ignore
         raise NotImplementedError
 
 
@@ -112,14 +99,14 @@ class RenderText(RenderFunction[Union[str, None], Union[str, None]]):
         # passed an async function, it will not change it.
         self._fn: RenderTextFuncAsync = _utils.wrap_async(fn)
 
-    def __call__(self) -> RenderedValue[Union[str, None]]:
+    def __call__(self) -> Union[str, None]:
         return _utils.run_coro_sync(self._run())
 
-    async def _run(self) -> RenderedValue[Union[str, None]]:
+    async def _run(self) -> Union[str, None]:
         res = await self._fn()
         if res is None:
-            return RenderedValue(None)
-        return RenderedValue(str(res))
+            return None
+        return str(res)
 
 
 class RenderTextAsync(
@@ -130,7 +117,7 @@ class RenderTextAsync(
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderTextFunc, fn))
 
-    async def __call__(self) -> RenderedValue[Union[str, None]]:  # type: ignore
+    async def __call__(self) -> Union[str, None]:  # type: ignore
         return await self._run()
 
 
@@ -206,10 +193,10 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
         # passed an async function, it will not change it.
         self._fn: RenderPlotFuncAsync = _utils.wrap_async(fn)
 
-    def __call__(self) -> RenderedValue[Union[ImgData, None]]:
+    def __call__(self) -> Union[ImgData, None]:
         return _utils.run_coro_sync(self._run())
 
-    async def _run(self) -> RenderedValue[Union[ImgData, None]]:
+    async def _run(self) -> Union[ImgData, None]:
         # Reactively read some information about the plot.
         pixelratio: float = typing.cast(
             float, self._session.input[".clientdata_pixelratio"]()
@@ -224,7 +211,7 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
         x = await self._fn()
 
         if x is None:
-            return RenderedValue(None)
+            return None
 
         # Try each type of renderer in turn. The reason we do it this way is to avoid
         # importing modules that aren't already loaded. That could slow things down, or
@@ -242,21 +229,21 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
                 x, width, height, pixelratio, self._ppi, **self._kwargs
             )
             if result != "TYPE_MISMATCH":
-                return RenderedValue(result)
+                return result
 
         if "matplotlib" in sys.modules:
             result = try_render_matplotlib(
                 x, width, height, pixelratio, self._ppi, **self._kwargs
             )
             if result != "TYPE_MISMATCH":
-                return RenderedValue(result)
+                return result
 
         if "PIL" in sys.modules:
             result = try_render_pil(
                 x, width, height, pixelratio, self._ppi, **self._kwargs
             )
             if result != "TYPE_MISMATCH":
-                return RenderedValue(result)
+                return result
 
         raise Exception(
             f"@render.plot doesn't know to render objects of type '{str(type(x))}'. "
@@ -271,7 +258,7 @@ class RenderPlotAsync(RenderPlot, RenderFunctionAsync[object, Union[ImgData, Non
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderPlotFunc, fn), alt=alt)
 
-    async def __call__(self) -> RenderedValue[Union[ImgData, None]]:  # type: ignore
+    async def __call__(self) -> Union[ImgData, None]:  # type: ignore
         return await self._run()
 
 
@@ -368,13 +355,13 @@ class RenderImage(RenderFunction[Union[ImgData, None], Union[ImgData, None]]):
         # passed an async function, it will not change it.
         self._fn: RenderImageFuncAsync = _utils.wrap_async(fn)
 
-    def __call__(self) -> RenderedValue[Union[ImgData, None]]:
+    def __call__(self) -> Union[ImgData, None]:
         return _utils.run_coro_sync(self._run())
 
-    async def _run(self) -> RenderedValue[Union[ImgData, None]]:
+    async def _run(self) -> Union[ImgData, None]:
         res: Union[ImgData, None] = await self._fn()
         if res is None:
-            return RenderedValue(None)
+            return None
 
         src: str = res.get("src")
         try:
@@ -383,7 +370,7 @@ class RenderImage(RenderFunction[Union[ImgData, None], Union[ImgData, None]]):
                 data_str = data.decode("utf-8")
             content_type = _utils.guess_mime_type(src)
             res["src"] = f"data:{content_type};base64,{data_str}"
-            return RenderedValue(res)
+            return res
         finally:
             if self._delete_file:
                 os.remove(src)
@@ -397,7 +384,7 @@ class RenderImageAsync(
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderImageFunc, fn), delete_file=delete_file)
 
-    async def __call__(self) -> RenderedValue[Union[ImgData, None]]:  # type: ignore
+    async def __call__(self) -> Union[ImgData, None]:  # type: ignore
         return await self._run()
 
 
@@ -475,15 +462,15 @@ class RenderUI(RenderFunction[TagChildArg, Union["RenderedDeps", None]]):
         # passed an async function, it will not change it.
         self._fn: RenderUIFuncAsync = _utils.wrap_async(fn)
 
-    def __call__(self) -> RenderedValue[Union["RenderedDeps", None]]:
+    def __call__(self) -> Union["RenderedDeps", None]:
         return _utils.run_coro_sync(self._run())
 
-    async def _run(self) -> RenderedValue[Union["RenderedDeps", None]]:
+    async def _run(self) -> Union["RenderedDeps", None]:
         ui: TagChildArg = await self._fn()
         if ui is None:
-            return RenderedValue(None)
+            return None
 
-        return RenderedValue(self._session._process_ui(ui))
+        return self._session._process_ui(ui)
 
 
 class RenderUIAsync(
@@ -494,7 +481,7 @@ class RenderUIAsync(
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderUIFunc, fn))
 
-    async def __call__(self) -> RenderedValue[Union["RenderedDeps", None]]:  # type: ignore
+    async def __call__(self) -> Union["RenderedDeps", None]:  # type: ignore
         return await self._run()
 
 

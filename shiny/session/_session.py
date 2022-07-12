@@ -966,9 +966,9 @@ class Outputs:
                 message: Dict[str, OT] = {}
                 try:
                     if _utils.is_async_callable(fn):
-                        message[output_name] = (await fn()).get_value()
+                        message[output_name] = await fn()
                     else:
-                        message[output_name] = fn().get_value()
+                        message[output_name] = fn()
                 except SilentCancelOutputException:
                     return
                 except SilentException:
