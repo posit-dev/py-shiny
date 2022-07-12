@@ -940,7 +940,10 @@ class Outputs:
             print("setting output ", output_name)
 
             if not isinstance(fn, render.RenderFunction):
-                raise TypeError("`@output` must be applied to a `@render.xx` function.")
+                raise TypeError(
+                    "`@output` must be applied to a `@render.xx` function.\n"
+                    + "In other words, `@output` must be above `@render.xx`."
+                )
 
             # fn is a RenderFunction object. Give it a bit of metadata.
             fn.set_metadata(self._session, output_name)

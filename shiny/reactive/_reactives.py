@@ -757,14 +757,16 @@ def event(
 
         if isinstance(user_fn, Calc_):
             raise TypeError(
-                "`@reactive.event()` must be applied before `@Calc`. In other words, it goes on the line below `@Calc`."
+                "`@reactive.event()` must be applied before `@reactive.Calc`.\n"
+                + "In other words, `@reactive.Calc` must be above `@reactive.event()`."
             )
 
         if isinstance(user_fn, RenderFunction):
             # At some point in the future, we may allow this condition, if we find an
             # use case. For now we'll disallow it, for simplicity.
             raise TypeError(
-                "`@reactive.event()` must be applied before `@render.xx` functions. In other words, it goes on the line below `@render.xx`."
+                "`@reactive.event()` must be applied before `@render.xx` .\n"
+                + "In other words, `@render.xx` must be above `@reactive.event()`."
             )
 
         initialized = False
