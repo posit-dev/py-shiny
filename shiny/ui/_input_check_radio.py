@@ -4,17 +4,16 @@ __all__ = (
     "input_radio_buttons",
 )
 
-from typing import Optional, Dict, Union, List
+from typing import List, Mapping, Optional, Union
 
-from htmltools import tags, Tag, div, span, css, TagChildArg
-
+from htmltools import Tag, TagChildArg, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from ._utils import shiny_input_label
 
 # Canonical format for representing select options.
-_Choices = Dict[str, TagChildArg]
+_Choices = Mapping[str, TagChildArg]
 
 # Formats available to the user
 ChoicesArg = Union[List[str], _Choices]

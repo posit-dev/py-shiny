@@ -3,17 +3,17 @@ __all__ = (
     "input_selectize",
 )
 
-from typing import Optional, Dict, Union, List, Tuple, cast
+from typing import List, Mapping, Optional, Tuple, Union, cast
 
-from htmltools import Tag, tags, div, TagChildArg, TagList
+from htmltools import Tag, TagChildArg, TagList, div, tags
 
 from .._docstring import add_example
-from ._html_dependencies import selectize_deps
 from .._namespaces import resolve_id
+from ._html_dependencies import selectize_deps
 from ._utils import shiny_input_label
 
-_Choices = Dict[str, TagChildArg]
-_OptGrpChoices = Dict[str, _Choices]
+_Choices = Mapping[str, TagChildArg]
+_OptGrpChoices = Mapping[str, _Choices]
 
 # Canonical format for representing select options.
 _SelectChoices = Union[_Choices, _OptGrpChoices]
@@ -207,7 +207,7 @@ def _render_choices(
         return result
 
     for (k, v) in x.items():
-        if isinstance(v, dict):
+        if isinstance(v, Mapping):
             result.append(
                 tags.optgroup(
                     *(_render_choices(cast(_SelectChoices, v), selected)), label=k
@@ -219,6 +219,7 @@ def _render_choices(
                 is_selected = k in selected
             else:
                 is_selected = k == selected
+
             result.append(tags.option(v, value=k, selected=is_selected))
 
     return result

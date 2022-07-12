@@ -15,14 +15,14 @@ __all__ = (
     "update_navs",
 )
 
-from datetime import date
 import json
 import re
 import sys
-from typing import Optional, Union, Tuple, List
+from datetime import date
+from typing import List, Mapping, Optional, Tuple, Union
 
 from starlette.requests import Request
-from starlette.responses import Response, JSONResponse
+from starlette.responses import JSONResponse, Response
 
 if sys.version_info >= (3, 11):
     from typing import NotRequired
@@ -36,14 +36,14 @@ else:
 
 from htmltools import TagChildArg
 
-from .._docstring import doc_format, add_example
-from ._input_check_radio import ChoicesArg, _generate_options
-from ._input_date import _as_date_attr
-from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
-from ._input_slider import SliderValueArg, SliderStepArg, _slider_type, _as_numeric
+from .._docstring import add_example, doc_format
 from .._namespaces import resolve_id
 from .._utils import drop_none
 from ..session import Session, require_active_session
+from ._input_check_radio import ChoicesArg, _generate_options
+from ._input_date import _as_date_attr
+from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
+from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
 
 _note = """
     The input updater functions send a message to the client, telling it to change the
@@ -576,7 +576,7 @@ def update_selectize(
     flat_choices: List[FlatSelectChoice] = []
     if choices is not None:
         for (k, v) in _normalize_choices(choices).items():
-            if not isinstance(v, dict):
+            if not isinstance(v, Mapping):
                 flat_choices.append(
                     FlatSelectChoice(value=k, label=session._process_ui(v)["html"])
                 )
