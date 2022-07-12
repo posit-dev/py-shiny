@@ -1,13 +1,15 @@
 """Tests for `shiny.reactive`."""
 
-import pytest
 import asyncio
 from typing import List
 
-from shiny.input_handler import ActionButtonValue
-from shiny.reactive._core import ReactiveWarning
-from shiny.reactive import *
+import pytest
+from shiny import App, render, ui
+from shiny._connection import MockConnection
 from shiny._validation import SilentException, req
+from shiny.input_handler import ActionButtonValue
+from shiny.reactive import *
+from shiny.reactive._core import ReactiveWarning
 
 from .mocktime import MockTime
 
@@ -1087,6 +1089,130 @@ async def test_event_silent_exception_async():
     x.set(True)
     await flush()
     assert n_times == 2
+
+
+# ------------------------------------------------------------
+# @event() throws runtime errors if passed wrong type
+# ------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_event_type_check():
+    conn = MockConnection()
+    session = App(ui.TagList(), None)._create_session(conn)
+    output = session.output
+
+    with pytest.raises(TypeError):
+        # Should complain about missing argument to @event().
+        @event()
+        async def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain that @event() can't take the result of @Effect (which returns
+        # None).
+        @event(lambda: 1)  # type: ignore
+        @Effect()
+        async def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain that @event must be applied before @Calc.
+        @event(lambda: 1)
+        @Calc()
+        async def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain that @event must be applied before @render.text. At some point
+        # in the future, this may be allowed.
+        @event(lambda: 1)  # No static type error, unfortunately.
+        @render.text
+        async def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain that @event must be applied before @output.
+        @event(lambda: 1)  # type: ignore
+        @output
+        @render.text
+        async def _():
+            ...
+
+    # These are OK
+    @event(lambda: 1)
+    async def _():
+        ...
+
+    @Effect()
+    @event(lambda: 1)
+    async def _():
+        ...
+
+    @Calc()
+    @event(lambda: 1)
+    async def _():
+        ...
+
+    @render.text
+    @event(lambda: 1)
+    async def _():
+        ...
+
+
+# ------------------------------------------------------------
+# @output() throws runtime errors if passed wrong type
+# ------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_output_type_check():
+    conn = MockConnection()
+    session = App(ui.TagList(), None)._create_session(conn)
+    output = session.output
+
+    with pytest.raises(TypeError):
+        # Should complain about bare function
+        @output  # type: ignore
+        def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain about @event
+        @output  # type: ignore
+        @event(lambda: 1)
+        def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain about @event, even with render.text. Although maybe in the
+        # future this will be allowed.
+        @output  # type: ignore
+        @event(lambda: 1)
+        @render.text
+        def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain about @Calc
+        @output  # type: ignore
+        @Calc
+        def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain about @Effet
+        @output  # type: ignore
+        @Effect
+        def _():
+            ...
+
+    @output
+    @render.text
+    def _():
+        ...
+
+    @output
+    @render.plot
+    @event(lambda: 1)
+    def _():
+        ...
 
 
 # ------------------------------------------------------------
