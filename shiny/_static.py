@@ -263,7 +263,7 @@ def _ensure_shinylive_local(
     """Ensure that there is a local copy of shinylive."""
 
     if destdir is None:
-        destdir = get_default_shinylive_dir()
+        destdir = Path(get_default_shinylive_dir())
 
     if not destdir.exists():
         print("Creating directory " + str(destdir))
@@ -302,19 +302,19 @@ def download_shinylive(
             tar.extractall(destdir)
 
 
-def get_default_shinylive_dir() -> Path:
+def get_default_shinylive_dir() -> str:
     import appdirs
 
-    return Path(appdirs.user_cache_dir("shiny")) / "shinylive"
+    return os.path.join(appdirs.user_cache_dir("shiny"), "shinylive")
 
 
 def copy_shinylive_local(
-    source_dir: Path,
-    destdir: Optional[Path] = None,
+    source_dir: Union[str, Path],
+    destdir: Optional[Union[str, Path]] = None,
     version: str = _SHINYLIVE_DEFAULT_VERSION,
 ):
     if destdir is None:
-        destdir = get_default_shinylive_dir()
+        destdir = Path(get_default_shinylive_dir())
 
     destdir = Path(destdir)
 
@@ -328,7 +328,7 @@ def copy_shinylive_local(
 
 def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> List[str]:
     if shinylive_dir is None:
-        shinylive_dir = get_default_shinylive_dir()
+        shinylive_dir = Path(get_default_shinylive_dir())
 
     shinylive_dir = Path(shinylive_dir)
     subdirs = shinylive_dir.iterdir()
