@@ -938,8 +938,6 @@ class Outputs:
             # Get the (possibly namespaced) output id
             output_name = self._ns(id or fn.__name__)
 
-            print("setting output ", output_name)
-
             if not isinstance(fn, RenderFunction):
                 raise TypeError(
                     "`@output` must be applied to a `@render.xx` function.\n"
