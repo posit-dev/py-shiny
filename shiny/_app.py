@@ -1,6 +1,7 @@
 import copy
 import contextlib
 import os
+import secrets
 from typing import Any, List, Union, Dict, Callable, cast, Optional
 
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
@@ -117,7 +118,6 @@ class App:
         self._static_assets: Union[str, os.PathLike[str], None] = static_assets
 
         self._sessions: Dict[str, Session] = {}
-        self._last_session_id: int = 0  # Counter for generating session IDs
 
         self._sessions_needing_flush: Dict[int, Session] = {}
 
@@ -182,8 +182,7 @@ class App:
         await self._flush_pending_sessions()
 
     def _create_session(self, conn: Connection) -> Session:
-        self._last_session_id += 1
-        id = str(self._last_session_id)
+        id = secrets.token_hex(32)
         session = Session(self, id, conn, debug=self._debug)
         self._sessions[id] = session
         return session
