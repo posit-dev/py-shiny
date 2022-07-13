@@ -4,7 +4,9 @@ import os
 import re
 import shutil
 import sys
-from typing import Callable, List, Optional
+from pathlib import Path
+from typing import Callable, List, Optional, Union
+
 
 if sys.version_info >= (3, 8):
     from typing import Literal, TypedDict
@@ -22,35 +24,43 @@ class FileContentJson(TypedDict):
 
 
 def deploy_static(
-    appdir: str,
-    destdir: str,
+    appdir: Union[str, Path],
+    destdir: Union[str, Path],
     *,
     overwrite: bool = False,
-    subdir: Optional[str] = None,
+    subdir: Union[str, Path, None] = None,
     version: str = _SHINYLIVE_DEFAULT_VERSION,
     verbose: bool = False,
 ) -> None:
     """
-    Statically deploy a Shiny app.
+    Create a statically deployable distribution with a Shiny app.
     """
 
     def verbose_print(*args: object) -> None:
         if verbose:
             print(*args)
 
-    if not os.path.exists(os.path.join(appdir, "app.py")):
+    appdir = Path(appdir)
+    destdir = Path(destdir)
+
+    if not (appdir / "app.py").exists():
         raise ValueError(f"Directory {appdir} must contain a file named app.py.")
 
     if subdir is None:
         subdir = ""
-    if os.path.isabs(subdir):
+    subdir = Path(subdir)
+    if subdir.is_absolute():
         raise ValueError("subdir must be a relative path")
 
     shinylive_bundle_dir = _ensure_shinylive_local(version=version)
 
     print(f"Copying {shinylive_bundle_dir} to {destdir}")
-    if not os.path.exists(destdir):
-        os.makedirs(destdir)
+    if not destdir.exists():
+        destdir.mkdir()
+
+    # destdir_rel: Union[str, None] = None
+    # if _is_relative_to(destdir, appdir):
+    #     destdir_rel = str(Path(destdir).relative_to(Path(appdir)))
 
     # After we drop Python 3.7 support, this can be replaced with the shutil.copytree
     # call below.
@@ -71,9 +81,15 @@ def deploy_static(
     # app_files data structure.
     exclude_names = {"__pycache__", "venv", ".venv"}
     for root, dirs, files in os.walk(appdir, topdown=True):
+        root = Path(root)
+
+        if _is_relative_to(Path(root), destdir):
+            # In case destdir is inside of the appdir, don't copy those files.
+            continue
+
         dirs[:] = [d for d in dirs if not d.startswith(".")]
         dirs[:] = set(dirs) - exclude_names
-        rel_dir = os.path.relpath(root, appdir)
+        rel_dir = root.relative_to(appdir)
         files = [f for f in files if not f.startswith(".")]
         files = [f for f in files if f not in exclude_names]
         files.sort()
@@ -88,16 +104,21 @@ def deploy_static(
             if rel_dir == ".":
                 output_filename = filename
             else:
-                output_filename = os.path.join(rel_dir, filename)
+                output_filename = str(rel_dir / filename)
+
+            if filename == "shinylive.js":
+                print(
+                    f"Warning: Found shinylive.js in source directory '{appdir}/{rel_dir}'. Are you including a shinylive distribution in your app?"
+                )
 
             type: Literal["text", "binary"] = "text"
             try:
-                with open(os.path.join(root, filename), "r") as f:
+                with open(root / filename, "r") as f:
                     file_content = f.read()
                     type = "text"
             except UnicodeDecodeError:
                 # If text failed, try binary.
-                with open(os.path.join(root, filename), "rb") as f:
+                with open(root / filename, "rb") as f:
                     file_content_bin = f.read()
                     file_content = base64.b64encode(file_content_bin).decode("utf-8")
                     type = "binary"
@@ -111,39 +132,39 @@ def deploy_static(
             )
 
     # Write the index.html, editor/index.html, and app.json in the destdir.
-    html_source_dir = os.path.join(shinylive_bundle_dir, "shinylive/shiny_static")
-    app_destdir = os.path.join(destdir, subdir)
+    html_source_dir = shinylive_bundle_dir / "shinylive/shiny_static"
+    app_destdir = destdir / subdir
 
     # For a subdir like a/b/c, this will be ../../../
     subdir_inverse = "/".join([".."] * _path_length(subdir))
     if subdir_inverse != "":
         subdir_inverse += "/"
 
-    if not os.path.exists(app_destdir):
-        os.makedirs(app_destdir)
+    if not app_destdir.exists():
+        app_destdir.mkdir()
 
     _copy_file_and_substitute(
-        src=os.path.join(html_source_dir, "index.html"),
-        dest=os.path.join(app_destdir, "index.html"),
+        src=html_source_dir / "index.html",
+        dest=app_destdir / "index.html",
         search_str="{{REL_PATH}}",
         replace_str=subdir_inverse,
     )
 
-    editor_destdir = os.path.join(app_destdir, "edit")
-    if not os.path.exists(editor_destdir):
-        os.makedirs(editor_destdir)
+    editor_destdir = app_destdir / "edit"
+    if not editor_destdir.exists():
+        editor_destdir.mkdir()
     _copy_file_and_substitute(
-        src=os.path.join(html_source_dir, "edit", "index.html"),
-        dest=os.path.join(editor_destdir, "index.html"),
+        src=html_source_dir / "edit" / "index.html",
+        dest=(editor_destdir / "index.html"),
         search_str="{{REL_PATH}}",
         replace_str=subdir_inverse,
     )
 
-    app_json_output_file = os.path.join(app_destdir, "app.json")
+    app_json_output_file = app_destdir / "app.json"
 
-    print("Writing to " + app_json_output_file, end="")
+    print("Writing to " + str(app_json_output_file), end="")
     json.dump(app_files, open(app_json_output_file, "w"))
-    print(":", os.path.getsize(app_json_output_file), "bytes")
+    print(":", app_json_output_file.stat().st_size, "bytes")
 
     print(
         f"\nRun the following to serve the app:\n  python3 -m http.server --directory {destdir} 8000"
@@ -173,15 +194,17 @@ def _copy_fn(
     return mycopy
 
 
-def _path_length(path: str) -> int:
+def _path_length(path: Union[str, Path]) -> int:
     """Returns the number of elements in a path.
 
     For example 'a' has length 1, 'a/b' has length 2, etc.
     """
 
+    path = str(path)
     if os.path.isabs(path):
         raise ValueError("path must be a relative path")
 
+    # Unfortunately, there's no equivalent of os.path.normpath for Path objects.
     path = os.path.normpath(path)
     if path == ".":
         return 0
@@ -194,7 +217,7 @@ def _path_length(path: str) -> int:
 
 
 def _copy_file_and_substitute(
-    src: str, dest: str, search_str: str, replace_str: str
+    src: Union[str, Path], dest: Union[str, Path], search_str: str, replace_str: str
 ) -> None:
     with open(src, "r") as fin:
         in_content = fin.read()
@@ -204,7 +227,7 @@ def _copy_file_and_substitute(
 
 
 def remove_shinylive_local(
-    shinylive_dir: Optional[str] = None,
+    shinylive_dir: Union[str, Path, None] = None,
     version: Optional[str] = _SHINYLIVE_DEFAULT_VERSION,
 ) -> None:
     """Removes local copy of shinylive.
@@ -223,29 +246,31 @@ def remove_shinylive_local(
     if shinylive_dir is None:
         shinylive_dir = get_default_shinylive_dir()
 
+    shinylive_dir = Path(shinylive_dir)
+
     target_dir = shinylive_dir
     if version is not None:
-        target_dir = os.path.join(target_dir, f"shinylive-{version}")
+        target_dir = target_dir / f"shinylive-{version}"
 
     shutil.rmtree(target_dir)
 
 
 def _ensure_shinylive_local(
-    destdir: Optional[str] = None,
+    destdir: Union[Path, None] = None,
     version: str = _SHINYLIVE_DEFAULT_VERSION,
     url: str = _SHINYLIVE_DOWNLOAD_URL,
-) -> str:
+) -> Path:
     """Ensure that there is a local copy of shinylive."""
 
     if destdir is None:
         destdir = get_default_shinylive_dir()
 
-    if not os.path.exists(destdir):
-        print("Creating directory " + destdir)
-        os.makedirs(destdir)
+    if not destdir.exists():
+        print("Creating directory " + str(destdir))
+        destdir.mkdir()
 
-    shinylive_bundle_dir = os.path.join(destdir, f"shinylive-{version}")
-    if not os.path.exists(shinylive_bundle_dir):
+    shinylive_bundle_dir = destdir / f"shinylive-{version}"
+    if not shinylive_bundle_dir.exists():
         print(f"{shinylive_bundle_dir} does not exist.")
         download_shinylive(url=url, version=version, destdir=destdir)
 
@@ -253,7 +278,7 @@ def _ensure_shinylive_local(
 
 
 def download_shinylive(
-    destdir: Optional[str] = None,
+    destdir: Union[str, Path, None] = None,
     version: str = _SHINYLIVE_DEFAULT_VERSION,
     url: str = _SHINYLIVE_DOWNLOAD_URL,
 ) -> None:
@@ -263,6 +288,8 @@ def download_shinylive(
 
     if destdir is None:
         destdir = get_default_shinylive_dir()
+
+    destdir = Path(destdir)
 
     with tempfile.NamedTemporaryFile() as tmp:
 
@@ -275,34 +302,37 @@ def download_shinylive(
             tar.extractall(destdir)
 
 
-def get_default_shinylive_dir() -> str:
+def get_default_shinylive_dir() -> Path:
     import appdirs
 
-    return os.path.join(appdirs.user_cache_dir("shiny"), "shinylive")
+    return Path(appdirs.user_cache_dir("shiny")) / "shinylive"
 
 
 def copy_shinylive_local(
-    source_dir: str,
-    destdir: Optional[str] = None,
+    source_dir: Path,
+    destdir: Optional[Path] = None,
     version: str = _SHINYLIVE_DEFAULT_VERSION,
 ):
     if destdir is None:
         destdir = get_default_shinylive_dir()
 
-    target_dir = os.path.join(destdir, "shinylive-" + version)
+    destdir = Path(destdir)
 
-    if os.path.exists(target_dir):
+    target_dir = destdir / ("shinylive-" + version)
+
+    if target_dir.exists():
         shutil.rmtree(target_dir)
 
     shutil.copytree(source_dir, target_dir)
 
 
-def _installed_shinylive_versions(shinylive_dir: Optional[str] = None) -> List[str]:
+def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> List[str]:
     if shinylive_dir is None:
         shinylive_dir = get_default_shinylive_dir()
 
-    subdirs = os.listdir(shinylive_dir)
-    subdirs = [re.sub("^shinylive-", "", s) for s in subdirs]
+    shinylive_dir = Path(shinylive_dir)
+    subdirs = shinylive_dir.iterdir()
+    subdirs = [re.sub("^shinylive-", "", str(s)) for s in subdirs]
     return subdirs
 
 
@@ -322,16 +352,35 @@ def print_shinylive_local_info() -> None:
 # to ignore directories manually. After we drop 3.7 support, we can remove this wrapper
 # function.
 def _copy_recursive(
-    source: str, dest: str, copy_function: Callable[..., None] = shutil.copy2
+    source: Path,
+    dest: Path,
+    copy_function: Callable[..., None] = shutil.copy2,
 ) -> None:
     if sys.version_info >= (3, 8):
         shutil.copytree(source, dest, copy_function=copy_function, dirs_exist_ok=True)
     else:
-        if os.path.isdir(source):
-            if not os.path.isdir(dest):
-                os.makedirs(dest)
-            files = os.listdir(source)
+        source = Path(source)
+        dest = Path(dest)
+
+        if source.is_dir():
+            if not dest.is_dir():
+                dest.mkdir()
+            files = source.iterdir()
             for f in files:
-                _copy_recursive(os.path.join(source, f), os.path.join(dest, f))
+                _copy_recursive(source / f, dest / f)
         else:
             shutil.copyfile(source, dest)
+
+
+def _is_relative_to(path: Path, base: Path) -> bool:
+    """
+    Wrapper for `PurePath.is_relative_to`, which was added in Python 3.9.
+    """
+    if sys.version_info >= (3, 9):
+        return path.is_relative_to(base)
+    else:
+        try:
+            path.relative_to(base)
+            return True
+        except ValueError:
+            return False
