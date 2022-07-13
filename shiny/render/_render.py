@@ -10,6 +10,9 @@ __all__ = (
     "RenderImage",
     "RenderImageAsync",
     "image",
+    "RenderTable",
+    "RenderTableAsync",
+    "table",
     "RenderUI",
     "RenderUIAsync",
     "ui",
@@ -30,6 +33,11 @@ from typing import (
     Union,
     overload,
 )
+
+if sys.version_info >= (3, 8):
+    from typing import Protocol, runtime_checkable
+else:
+    from typing_extensions import Protocol, runtime_checkable
 
 from htmltools import TagChildArg
 
@@ -253,10 +261,12 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
 
 
 class RenderPlotAsync(RenderPlot, RenderFunctionAsync[object, Union[ImgData, None]]):
-    def __init__(self, fn: RenderPlotFuncAsync, alt: Optional[str] = None) -> None:
+    def __init__(
+        self, fn: RenderPlotFuncAsync, alt: Optional[str] = None, **kwargs: Any
+    ) -> None:
         if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
-        super().__init__(typing.cast(RenderPlotFunc, fn), alt=alt)
+        super().__init__(typing.cast(RenderPlotFunc, fn), alt=alt, **kwargs)
 
     async def __call__(self) -> Union[ImgData, None]:  # type: ignore
         return await self._run()
@@ -440,6 +450,187 @@ def image(
         else:
             fn = typing.cast(RenderImageFunc, fn)
             return RenderImage(fn, delete_file=delete_file)
+
+    if fn is None:
+        return wrapper
+    else:
+        return wrapper(fn)
+
+
+# ======================================================================================
+# RenderTable
+# ======================================================================================
+# It would be nice to specify the return type of RenderPlotFunc to be something like:
+#   Union[pandas.DataFrame, <protocol with .to_pandas()>]
+# However, if we did that, we'd have to import pandas at load time, which adds
+# a nontrivial amount of overhead. So for now, we're just using `object`.
+RenderTableFunc = Callable[[], object]
+RenderTableFuncAsync = Callable[[], Awaitable[object]]
+
+
+@runtime_checkable
+class PandasCompatible(Protocol):
+    # Signature doesn't matter, runtime_checkable won't look at it anyway
+    def to_pandas(self) -> object:
+        ...
+
+
+class RenderTable(RenderFunction[object, Union["RenderedDeps", None]]):
+    def __init__(
+        self,
+        fn: RenderTableFunc,
+        *,
+        index: bool = False,
+        classes: str = "table shiny-table w-auto",
+        border: int = 0,
+        **kwargs: object,
+    ) -> None:
+        super().__init__(fn)
+        self._index = index
+        self._classes = classes
+        self._border = border
+        self._kwargs = kwargs
+        # The Render*Async subclass will pass in an async function, but it tells the
+        # static type checker that it's synchronous. wrap_async() is smart -- if is
+        # passed an async function, it will not change it.
+        self._fn: RenderTableFuncAsync = _utils.wrap_async(fn)
+
+    def __call__(self) -> Union["RenderedDeps", None]:
+        return _utils.run_coro_sync(self._run())
+
+    async def _run(self) -> Union["RenderedDeps", None]:
+        x = await self._fn()
+
+        if x is None:
+            return None
+
+        import pandas  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false,reportMissingImports=false,reportMissingModuleSource=false
+        import pandas.io.formats.style
+
+        html: str
+        if isinstance(
+            x, pandas.io.formats.style.Styler
+        ):  # pyright: reportUnknownMemberType=false
+            html = x.to_html(**self._kwargs)  # pyright: reportGeneralTypeIssues=false
+        else:
+            if not isinstance(x, pandas.DataFrame):
+                if not isinstance(x, PandasCompatible):
+                    raise TypeError(
+                        "@render.table doesn't know how to render objects of type "
+                        f"'{str(type(x))}'. Return either a pandas.DataFrame, or an object "
+                        "that has a .to_pandas() method."
+                    )
+                x = x.to_pandas()
+
+            df = typing.cast(pandas.DataFrame, x)
+            html = df.to_html(
+                index=self._index,
+                classes=self._classes,
+                border=self._border,
+                **self._kwargs,
+            )
+        return {"deps": [], "html": html}
+
+
+class RenderTableAsync(RenderTable, RenderFunctionAsync[object, Union[ImgData, None]]):
+    def __init__(
+        self,
+        fn: RenderTableFuncAsync,
+        *,
+        index: bool = False,
+        classes: str = "table shiny-table w-auto",
+        border: int = 0,
+        **kwargs: Any,
+    ) -> None:
+        if not _utils.is_async_callable(fn):
+            raise TypeError(self.__class__.__name__ + " requires an async function")
+        super().__init__(
+            typing.cast(RenderTableFunc, fn),
+            index=index,
+            classes=classes,
+            border=border,
+            **kwargs,
+        )
+
+    async def __call__(self) -> Union["RenderedDeps", None]:  # type: ignore
+        return await self._run()
+
+
+@overload
+def table(fn: Union[RenderTableFunc, RenderTableFuncAsync]) -> RenderTable:
+    ...
+
+
+@overload
+def table(
+    *,
+    index: bool = False,
+    classes: str = "table shiny-table w-auto",
+    border: int = 0,
+    **kwargs: Any,
+) -> Callable[[Union[RenderTableFunc, RenderTableFuncAsync]], RenderTable]:
+    ...
+
+
+# TODO: Use more specific types for render.table
+def table(
+    fn: Optional[Union[RenderTableFunc, RenderTableFuncAsync]] = None,
+    *,
+    index: bool = False,
+    classes: str = "table shiny-table w-auto",
+    border: int = 0,
+    **kwargs: Any,
+) -> Union[
+    RenderTable, Callable[[Union[RenderTableFunc, RenderTableFuncAsync]], RenderTable]
+]:
+    """
+    Reactively render a Pandas data frame object (or similar) as a basic HTML table.
+
+    Parameters
+    ----------
+    index
+        Whether to print index (row) labels. (Ignored for pandas :class:`Styler`
+        objects; call ``style.hide(axis="index")`` from user code instead.)
+    classes
+        CSS classes (space separated) to apply to the resulting table. By default, we
+        use `table shiny-table w-auto` which is designed to look reasonable with Bootstrap 5.
+        (Ignored for pandas :class:`Styler` objects; call
+        ``style.set_table_attributes('class="dataframe table shiny-table w-auto"')``
+        from user code instead.)
+    **kwargs
+        Additional keyword arguments passed to ``pandas.DataFrame.to_html()`` or
+        ``pandas.io.formats.style.Styler.to_html()``.
+
+    Returns
+    -------
+    A decorator for a function that returns any of the following:
+
+        1. A pandas :class:`DataFrame` object.
+        2. A pandas :class:`Styler` object.
+        3. Any object that has a `.to_pandas()` method (e.g., a Polars data frame or
+           Arrow table).
+
+    Tip
+    ----
+    This decorator should be applied **before** the ``@output`` decorator. Also, the
+    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
+    a :func:`~shiny.ui.output_table` container (see :func:`~shiny.ui.output_table` for
+    example usage).
+
+    See Also
+    --------
+    ~shiny.ui.output_table
+    """
+
+    def wrapper(fn: Union[RenderTableFunc, RenderTableFuncAsync]) -> RenderTable:
+        if _utils.is_async_callable(fn):
+            return RenderTableAsync(
+                fn, index=index, classes=classes, border=border, **kwargs
+            )
+        else:
+            return RenderTable(
+                fn, index=index, classes=classes, border=border, **kwargs
+            )
 
     if fn is None:
         return wrapper

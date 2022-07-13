@@ -14,6 +14,9 @@ from ._render import (  # noqa: F401
     RenderImage,  # pyright: ignore[reportUnusedImport]
     RenderImageAsync,  # pyright: ignore[reportUnusedImport]
     image,
+    RenderTable,  # pyright: ignore[reportUnusedImport]
+    RenderTableAsync,  # pyright: ignore[reportUnusedImport]
+    table,
     RenderUI,  # pyright: ignore[reportUnusedImport]
     RenderUIAsync,  # pyright: ignore[reportUnusedImport]
     ui,
@@ -24,5 +27,6 @@ __all__ = (
     "text",
     "plot",
     "image",
+    "table",
     "ui",
 )
