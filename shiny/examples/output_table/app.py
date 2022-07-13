@@ -1,6 +1,4 @@
 import pathlib
-import re
-import typing
 
 import pandas as pd
 from shiny import *
@@ -60,23 +58,6 @@ def server(input: Inputs, output: Outputs, session: Session):
                 .highlight_min(color="silver")
                 .highlight_max(color="yellow")
             )
-
-
-re_trailing_zeros = re.compile("(?<=\\.\\d)(\\d*?)0+$")
-
-
-def float_format(x: typing.Any) -> str:
-    """
-    Trims trailing zeros after a decimal point, leaving just one
-    if necessary. The behavior of DataFrame.to_html() is slightly
-    better than this because it formats an entire array of numbers
-    at once and can keep the decimal places consistent.
-    """
-    if not isinstance(x, float):
-        return str(x)
-    else:
-        str_float = f"{x: .{6:d}f}"
-        return re_trailing_zeros.sub("\\1", str_float, 1)
 
 
 app = App(app_ui, server)
