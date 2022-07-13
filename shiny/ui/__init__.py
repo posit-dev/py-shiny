@@ -68,6 +68,7 @@ from ._output import (
     output_image,
     output_text,
     output_text_verbatim,
+    output_table,
     output_ui,
 )
 from ._page import page_navbar, page_fluid, page_fixed, page_bootstrap
@@ -171,6 +172,7 @@ __all__ = (
     "output_image",
     "output_text",
     "output_text_verbatim",
+    "output_table",
     "output_ui",
     "page_navbar",
     "page_fluid",

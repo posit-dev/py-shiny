@@ -3,6 +3,7 @@ __all__ = (
     "output_image",
     "output_text",
     "output_text_verbatim",
+    "output_table",
     "output_ui",
 )
 
@@ -147,6 +148,11 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
 
     cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
     return tags.pre(id=resolve_id(id), class_=cls)
+
+
+@add_example()
+def output_table(id: str, **kwargs: TagAttrArg) -> Tag:
+    return tags.div({"class": "shiny-html-output"}, id=resolve_id(id), **kwargs)
 
 
 @add_example()
