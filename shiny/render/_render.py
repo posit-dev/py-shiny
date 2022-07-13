@@ -32,13 +32,12 @@ from typing import (
     TypeVar,
     Union,
     overload,
-    runtime_checkable,
 )
 
 if sys.version_info >= (3, 8):
-    from typing import Protocol
+    from typing import Protocol, runtime_checkable
 else:
-    from typing_extensions import Protocol
+    from typing_extensions import Protocol, runtime_checkable
 
 from htmltools import TagChildArg
 
