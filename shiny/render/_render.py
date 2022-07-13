@@ -29,12 +29,16 @@ from typing import (
     Callable,
     Generic,
     Optional,
-    Protocol,
     TypeVar,
     Union,
     overload,
     runtime_checkable,
 )
+
+if sys.version_info >= (3, 8):
+    from typing import Protocol
+else:
+    from typing_extensions import Protocol
 
 from htmltools import TagChildArg
 
