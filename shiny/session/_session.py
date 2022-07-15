@@ -223,9 +223,10 @@ class Session(object, metaclass=SessionMeta):
             return
         self._has_run_session_end_tasks = True
 
-        self._on_ended_callbacks.invoke()
-
-        self.app._remove_session(self)
+        try:
+            self._on_ended_callbacks.invoke()
+        finally:
+            self.app._remove_session(self)
 
     async def close(self, code: int = 1001) -> None:
         """
@@ -241,11 +242,11 @@ class Session(object, metaclass=SessionMeta):
             if conn_state != expected_state:
                 raise ProtocolError("Invalid method for the current session state")
 
-        await self._send_message(
-            {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
-        )
-
         try:
+            await self._send_message(
+                {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
+            )
+
             while True:
                 message: str = await self._conn.receive()
                 if self._debug:
@@ -297,9 +298,16 @@ class Session(object, metaclass=SessionMeta):
                     await flush()
 
         except ConnectionClosed:
+            ...
+        except Exception as e:
+            try:
+                self._send_error_response(str(e))
+            except Exception:
+                pass
+            finally:
+                await self.close()
+        finally:
             self._run_session_end_tasks()
-        except ProtocolError as pe:
-            self._send_error_response(pe.message)
 
     def _manage_inputs(self, data: Dict[str, object]) -> None:
         for (key, val) in data.items():
