@@ -71,6 +71,36 @@ def input_checkbox(
     )
 
 
+def input_switch(
+    id: str, label: TagChildArg, value: bool = False, *, width: Optional[str] = None
+) -> Tag:
+    return _input_checkbox(id, label, "form-check form-switch", value, width=width)
+
+
+def _input_checkbox(
+    id: str,
+    label: TagChildArg,
+    class_: str = "form-check",
+    value: bool = False,
+    *,
+    width: Optional[str] = None,
+) -> Tag:
+    return div(
+        div(
+            tags.input(
+                id=resolve_id(id),
+                class_="form-check-input",
+                type="checkbox",
+                checked="checked" if value else None,
+            ),
+            tags.label(label, class_="form-check-label", for_=resolve_id(id)),
+            class_=class_,
+        ),
+        class_="form-group shiny-input-container",
+        style=css(width=width),
+    )
+
+
 @add_example()
 def input_checkbox_group(
     id: str,

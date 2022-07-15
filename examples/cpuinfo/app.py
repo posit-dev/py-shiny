@@ -7,16 +7,10 @@ import matplotlib.pyplot as plt
 from shiny import Inputs, Outputs, Session, App, reactive, render, ui
 
 
-MAX_SAMPLES = 10_000
-rate = 1  # secs between samples
-
-THRESHOLD_MAX = 90
-THRESHOLD_ORANGE = 75
-THRESHOLD_MED = 50
-COLOR_MAX = "red"
-COLOR_HIGH = "red"
-COLOR_MED = "orange"
-COLOR_LOW = "#666666"
+# max number of samples to retain
+MAX_SAMPLES = 1000
+# secs between samples
+SAMPLE_PERIOD = 1
 
 
 ncpu = psutil.cpu_count(logical=True)
@@ -98,7 +92,7 @@ app_ui = ui.page_fluid(
 
 @reactive.Calc
 def cpu_percent():
-    reactive.invalidate_later(rate)
+    reactive.invalidate_later(SAMPLE_PERIOD)
     return psutil.cpu_percent(percpu=True)
 
 
