@@ -235,6 +235,8 @@ Reactive programming facilities for Python.
     reactive.isolate
     reactive.invalidate_later
     reactive.flush
+    reactive.poll
+    reactive.file_reader
     event
 
 
