@@ -5,7 +5,6 @@ from typing import Optional
 import starlette.websockets
 from starlette.websockets import WebSocketState
 from starlette.requests import HTTPConnection
-import websockets.exceptions
 
 
 class Connection(ABC):
@@ -77,9 +76,9 @@ class StarletteConnection(Connection):
 
         try:
             await self.conn.send_text(message)
-        except websockets.exceptions.ConnectionClosed:
-            # Sometimes see this exception when hammering on the browser reload button
             return
+        # For the record, websockets.exceptions.ConnectionClosed is one exception I see
+        # when hammering on the browser reload button
         except Exception:
             # The contract of WebSocket.send() is to never throw (unless the websocket
             # is not yet connected; sending a message after the ws has closed is OK.)
