@@ -1,3 +1,4 @@
+from math import ceil
 import psutil
 
 import numpy as np
@@ -9,12 +10,13 @@ from shiny import Inputs, Outputs, Session, App, reactive, render, ui
 MAX_SAMPLES = 10_000
 rate = 1  # secs between samples
 
-RED_THRESHOLD = 90
-ORANGE_THRESHOLD = 75
-YELLOW_THRESHOLD = 50
-RED = "#FFAAAA"
-ORANGE = "#FFCCAA"
-YELLOW = "#FFFFCC"
+THRESHOLD_MAX = 90
+THRESHOLD_ORANGE = 75
+THRESHOLD_MED = 50
+COLOR_MAX = "red"
+COLOR_HIGH = "red"
+COLOR_MED = "orange"
+COLOR_LOW = "#666666"
 
 
 ncpu = psutil.cpu_count(logical=True)
@@ -27,24 +29,70 @@ app_ui = ui.page_fluid(
             opacity: 1;
         }
         tbody > tr:last-child {
-            border: 3px solid var(--bs-dark);
+            /*border: 3px solid var(--bs-dark);*/
+            box-shadow:
+                0 0 2px 1px #fff, /* inner white */
+                0 0 4px 2px #0ff, /* middle cyan */
+                0 0 5px 3px #00f; /* outer blue */
         }
         #table table {
             table-layout: fixed;
             width: %s;
+            font-size: 0.8em;
         }
         th, td {
-            text-align: right;
+            text-align: center;
         }
         """
-        % f"{ncpu*3.5}em"
+        % f"{ncpu*4}em"
     ),
-    {"class": "p-3"},
-    ui.input_numeric("sample_count", f"Samples to show ({rate}sec per sample)", 100),
-    ui.input_checkbox("hold", "Hold graph", value=False),
-    ui.input_action_button("reset", "Clear history"),
-    ui.output_plot("plot", height=f"{ncpu * 80}px", width="400px"),
-    ui.output_table("table"),
+    ui.h3("CPU Usage %", class_="mt-2"),
+    ui.layout_sidebar(
+        ui.panel_sidebar(
+            ui.input_select(
+                "cmap",
+                "Colormap",
+                {
+                    "inferno": "inferno",
+                    "viridis": "viridis",
+                    "copper": "copper",
+                    "prism": "prism (not recommended)",
+                },
+            ),
+            ui.p(ui.input_action_button("reset", "Clear history", class_="btn-sm")),
+            ui.input_switch("hold", "Freeze output", value=False),
+            class_="mb-3",
+        ),
+        ui.panel_main(
+            ui.div(
+                {"class": "card mb-3"},
+                ui.div(
+                    {"class": "card-body"},
+                    ui.h5({"class": "card-title mt-0"}, "Graphs"),
+                    ui.output_plot("plot", height=f"{ncpu * 40}px"),
+                ),
+                ui.div(
+                    {"class": "card-footer"},
+                    ui.input_numeric("sample_count", "Number of samples per graph", 50),
+                ),
+            ),
+            ui.div(
+                {"class": "card"},
+                ui.div(
+                    {"class": "card-body"},
+                    ui.h5({"class": "card-title m-0"}, "Heatmap"),
+                ),
+                ui.div(
+                    {"class": "card-body overflow-auto pt-0"},
+                    ui.output_table("table"),
+                ),
+                ui.div(
+                    {"class": "card-footer"},
+                    ui.input_numeric("table_rows", "Rows to display", 5),
+                ),
+            ),
+        ),
+    ),
 )
 
 
@@ -106,10 +154,23 @@ def server(input: Inputs, output: Outputs, session: Session):
         if history.shape[1] > nsamples:
             history = history[:, -nsamples:]
 
-        fig, axeses = plt.subplots(nrows=ncpu, ncols=1)
-        for i in range(0, ncpu):
+        ncols = 2
+        nrows = int(ceil(ncpu / ncols))
+        fig, axeses = plt.subplots(
+            nrows=nrows,
+            ncols=ncols,
+            squeeze=False,
+        )
+        for i in range(0, ncols * nrows):
+            row = i // ncols
+            col = i % ncols
+            axes = axeses[row, col]
+            if i >= len(history):
+                axes.set_visible(False)
+                continue
             data = history[i]
-            axes = axeses[i]
+            axes.yaxis.set_label_position("right")
+            axes.yaxis.tick_right()
             axes.set_xlim(-(nsamples - 1), 0)
             axes.set_ylim(0, 100)
 
@@ -120,59 +181,48 @@ def server(input: Inputs, output: Outputs, session: Session):
             x = np.arange(0, len(data))
             x = np.flip(-x)
 
-            # Plot history as lines
-            axes.plot(x, data, color="blue", linewidth=0.5)
-            # Plot current sample as dot
-            current = data[-1:]  # may be zero-length
-            axes.scatter(np.zeros(len(current)), current, color="blue")
+            # Color bars by cmap
+            color = plt.get_cmap(input.cmap())(data / 100)
+            axes.bar(x, data, color=color, linewidth=0, width=1.0)
 
             axes.set_yticks([25, 50, 75])
             for ytl in axes.get_yticklabels():
-                ytl.set_fontsize(7)
-            for xtl in axes.get_xticklabels():
-                if i == ncpu - 1:
-                    xtl.set_fontsize(7)
+                if col == ncols - 1 or i == ncpu - 1 or True:
+                    ytl.set_fontsize(7)
                 else:
-                    xtl.set_visible(False)
+                    ytl.set_visible(False)
+                    hide_ticks(axes.yaxis)
+            for xtl in axes.get_xticklabels():
+                xtl.set_visible(False)
+            hide_ticks(axes.xaxis)
             axes.grid(True, linewidth=0.25)
 
-            if len(data) > 0 and data[-1] > RED_THRESHOLD:
-                axes.set_facecolor(RED)
-            elif len(data) > 0 and data[-1] > ORANGE_THRESHOLD:
-                axes.set_facecolor(ORANGE)
-            elif len(data) > 0 and data[-1] > YELLOW_THRESHOLD:
-                axes.set_facecolor(YELLOW)
         return fig
 
     @output
-    @render.table(index=True)
+    @render.table
     def table():
         history = cpu_history_with_hold()
-        latest = pd.DataFrame(history).transpose().tail()
+        latest = pd.DataFrame(history).transpose().tail(input.table_rows())
         if latest.shape[0] == 0:
             return latest
         return (
             latest.style.format(precision=0)
-            .set_table_attributes('class="dataframe shiny-table table font-monospace"')
-            .highlight_between(
-                color=YELLOW,
-                left=YELLOW_THRESHOLD,
-                right=ORANGE_THRESHOLD,
-                inclusive="left",
+            .hide(axis="index")
+            .set_table_attributes(
+                'class="dataframe shiny-table table table-borderless font-monospace"'
             )
-            .highlight_between(
-                color=ORANGE,
-                left=ORANGE_THRESHOLD,
-                right=RED_THRESHOLD,
-                inclusive="left",
-            )
-            .highlight_between(
-                color=RED,
-                left=RED_THRESHOLD,
-                right=100,
-                inclusive="both",
-            )
+            .background_gradient(cmap=input.cmap(), vmin=0, vmax=100)
         )
+
+
+def hide_ticks(axis):
+    for ticks in [axis.get_major_ticks(), axis.get_minor_ticks()]:
+        for tick in ticks:
+            tick.tick1line.set_visible(False)
+            tick.tick2line.set_visible(False)
+            tick.label1.set_visible(False)
+            tick.label2.set_visible(False)
 
 
 app = App(app_ui, server)
