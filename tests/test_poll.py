@@ -195,47 +195,50 @@ async def test_poll_errors():
                 assert invocations == 3
 
 
-tmpfile = tempfile.NamedTemporaryFile()
-
-
 @pytest.mark.asyncio
 async def test_file_reader():
-    async with OnEndedSessionCallbacks():
-        invocations = 0
+    tmpfile = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        async with OnEndedSessionCallbacks():
+            invocations = 0
 
-        tmpfile.write("hello\n".encode())
-        tmpfile.flush()
+            tmpfile.write("hello\n".encode())
+            tmpfile.flush()
+            tmpfile.close()
 
-        mock_time = MockTime()
-        with mock_time():
+            mock_time = MockTime()
+            with mock_time():
 
-            @file_reader(tmpfile.name)
-            def read_file():
-                with open(tmpfile.name, "r") as f:
-                    nonlocal invocations
-                    invocations += 1
-                    return f.read()
+                @file_reader(tmpfile.name)
+                def read_file():
+                    with open(tmpfile.name, "r") as f:
+                        nonlocal invocations
+                        invocations += 1
+                        return f.read()
 
-            with isolate():
-                assert invocations == 0
-                await flush()
+                with isolate():
+                    assert invocations == 0
+                    await flush()
 
-                assert read_file() == "hello\n"
-                assert invocations == 1
-                # Advancing time without a write does nothing
-                await mock_time.advance_time(1.01)
-                assert read_file() == "hello\n"
-                assert invocations == 1
+                    assert read_file() == "hello\n"
+                    assert invocations == 1
+                    # Advancing time without a write does nothing
+                    await mock_time.advance_time(1.01)
+                    assert read_file() == "hello\n"
+                    assert invocations == 1
 
-                tmpfile.write("goodbye\n".encode())
-                tmpfile.flush()
-                # The file's been updated, but we haven't looked yet
-                assert read_file() == "hello\n"
+                    with open(tmpfile.name, "a") as f:
+                        f.write("goodbye\n")
 
-                await mock_time.advance_time(1.01)
+                    # The file's been updated, but we haven't looked yet
+                    assert read_file() == "hello\n"
 
-                assert read_file() == "hello\ngoodbye\n"
-                assert invocations == 2
+                    await mock_time.advance_time(1.01)
+
+                    assert read_file() == "hello\ngoodbye\n"
+                    assert invocations == 2
+    finally:
+        os.unlink(tmpfile.name)
 
 
 @pytest.mark.asyncio
@@ -253,6 +256,7 @@ async def test_file_reader_error():
             with isolate():
                 await flush()
                 assert read_file() is True
+                tmpfile1.close()
 
                 os.unlink(tmpfile1.name)
                 await mock_time.advance_time(1.01)
