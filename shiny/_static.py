@@ -14,7 +14,7 @@ else:
     from typing_extensions import Literal, TypedDict
 
 _SHINYLIVE_DOWNLOAD_URL = "https://pyshiny.netlify.app/shinylive"
-_SHINYLIVE_DEFAULT_VERSION = "0.0.1"
+_SHINYLIVE_DEFAULT_VERSION = "0.0.1dev"
 
 # This is the same as the FileContentJson type in TypeScript.
 class FileContentJson(TypedDict):
