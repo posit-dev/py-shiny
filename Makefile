@@ -58,6 +58,7 @@ lint: ## check style with flake8
 	flake8 --show-source --max-line-length=127 shiny tests examples
 
 test: ## run tests quickly with the default Python
+	python3 tests/asyncio_prevent.py
 	pytest
 
 test-all: ## run tests on every Python version with tox
