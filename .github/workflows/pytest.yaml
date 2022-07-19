@@ -75,9 +75,7 @@ jobs:
       - name: Run unit tests
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          pwd
-          cd tests
-          pytest
+          make test
 
       - name: Type check with pyright
         if: steps.install.outcome == 'success' && (success() || failure())

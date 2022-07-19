@@ -310,7 +310,9 @@ class App:
     async def _flush_pending_sessions(self) -> None:
         # TODO: Until we have reactive domains, flush all sessions (because we
         # can't yet keep track of which ones need a flush)
-        for _, session in self._sessions.items():
+        # Use list() to create a copy, in case self._sessions mutates from under us,
+        # which would cause a "dictionary changed size during iteration" RuntimeError
+        for _, session in list(self._sessions.items()):
             await session._flush()
         # for id, session in self._sessions_needing_flush.items():
         #     await session.flush()

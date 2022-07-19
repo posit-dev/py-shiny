@@ -119,8 +119,23 @@ class ReactiveEnvironment:
         )
         self._next_id: int = 0
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
-        self.lock = asyncio.Lock()
+        self._lock: Optional[asyncio.Lock] = None
         self._flushed_callbacks = _utils.AsyncCallbacks()
+
+    @property
+    def lock(self) -> asyncio.Lock:
+        """
+        Lock that protects this ReactiveEnvironment. It must be lazily created, because
+        at the time the module is loaded, there generally isn't a running asyncio loop
+        yet. This causes the asyncio.Lock to be created with a different loop than it
+        will be invoked from later; when that happens, acquire() will succeed if there's
+        no contention, but throw a "hey you're on the wrong loop" error if there is.
+        """
+        if self._lock is None:
+            # Ensure we have a loop; get_running_loop() throws an error if we don't
+            asyncio.get_running_loop()
+            self._lock = asyncio.Lock()
+        return self._lock
 
     def next_id(self) -> int:
         """Return the next available id"""
