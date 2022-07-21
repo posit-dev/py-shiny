@@ -167,7 +167,7 @@ def deploy_static(
     print(":", app_json_output_file.stat().st_size, "bytes")
 
     print(
-        f"\nRun the following to serve the app:\n  python3 -m http.server --directory {destdir} 8000"
+        f"\nRun the following to serve the app:\n  python3 -m http.server --directory {destdir} 8008"
     )
 
 

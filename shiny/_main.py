@@ -361,7 +361,7 @@ This will not deploy the contents of venv/ or any files that start with '.'
 
 After writing the output files, you can serve them locally with the following command:
 
-    python3 -m http.server --directory DESTDIR 8000
+    python3 -m http.server --directory DESTDIR 8008
 """
 )
 @click.argument("appdir", type=str)
