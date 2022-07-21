@@ -36,14 +36,13 @@ def location_server(
     input: Inputs, output: Outputs, session: Session, *, wrap_long: bool = True
 ):
     map = L.Map(center=(0, 0), zoom=1, scoll_wheel_zoom=True)
-    marker = L.Marker(location=(52, 100))
+    with reactive.isolate():
+        marker = L.Marker(location=(input.lat() or 0, input.long() or 0))
 
-    @reactive.Effect
-    @reactive.isolate()  # Use this to ensure we only execute one time
-    def _():
+    with reactive.isolate():  # Use this to ensure we only execute one time
         if input.lat() is None and input.long() is None:
             ui.notification_show(
-                "Searching for location...", duration=False, id="searching"
+                "Searching for location...", duration=99999, id="searching"
             )
             ui.insert_ui(
                 ui.tags.script(
@@ -67,56 +66,55 @@ def location_server(
                 immediate=True,
             )
 
-    def move(lat: float, long: float) -> None:
+    @reactive.isolate()
+    def update_text_inputs(lat: Optional[float], long: Optional[float]) -> None:
+        req(lat is not None, long is not None)
         lat = round(lat, 8)
         long = round(long, 8)
-        marker.location = (lat, long)
+        if lat != input.lat():
+            input.lat.freeze()
+            ui.update_text("lat", value=lat)
+        if long != input.long():
+            input.long.freeze()
+            ui.update_text("long", value=long)
+        map.center = (lat, long)
+
+    @reactive.isolate()
+    def update_marker(lat: Optional[float], long: Optional[float]) -> None:
+        req(lat is not None, long is not None)
+        lat = round(lat, 8)
+        long = round(long, 8)
+        if marker.location != (lat, long):
+            marker.location = (lat, long)
         if marker not in map.layers:
             map.add_layer(marker)
-        ui.update_text("lat", value=lat)
-        ui.update_text("long", value=long)
+        map.center = marker.location
 
     def on_map_interaction(**kwargs):
         if kwargs.get("type") == "click":
-            coords = kwargs.get("coordinates")
-            move(coords[0], coords[1])
+            lat, long = kwargs.get("coordinates")
+            update_text_inputs(lat, long)
 
     map.on_interaction(on_map_interaction)
-
-    def on_marker_move():
-        move(marker.location[0], marker.location[1])
-
-    marker.on_move(on_marker_move)
 
     register_widget("map", map)
 
     @reactive.Effect
-    def detect_location():
+    def _():
+        coords = reactive_read(marker, "location")
+        if coords:
+            update_text_inputs(coords[0], coords[1])
+
+    @reactive.Effect
+    def sync_autolocate():
         coords = input.here()
         ui.notification_remove("searching")
         if coords and not input.lat() and not input.long():
-            ui.update_numeric("lat", value=coords["latitude"])
-            ui.update_numeric("long", value=coords["longitude"])
+            update_text_inputs(coords["latitude"], coords["longitude"])
 
     @reactive.Effect
-    def sync_map_lat():
-        req(input.lat() is not None)
-        lat = float(input.lat())
-        if marker.location[0] != lat:
-            marker.location = (lat, marker.location[1])
-        if marker not in map.layers:
-            map.add_layer(marker)
-        map.center = marker.location
-
-    @reactive.Effect
-    def sync_map_long():
-        req(input.long() is not None)
-        long = float(input.long())
-        if marker.location[1] != long:
-            marker.location = (marker.location[0], long)
-        if marker not in map.layers:
-            map.add_layer(marker)
-        map.center = marker.location
+    def sync_inputs_to_marker():
+        update_marker(input.lat(), input.long())
 
     @reactive.Calc
     def location():
@@ -127,11 +125,11 @@ def location_server(
         req(input.lat() is not None, input.long() is not None)
 
         try:
-            long = float(input.long())
+            long = input.long()
             # Wrap longitudes so they're within [-180, 180]
             if wrap_long:
                 long = (long + 180) % 360 - 180
-            return (float(input.lat()), long)
+            return (input.lat(), long)
         except ValueError:
             raise ValueError("Invalid latitude/longitude specification")
 
