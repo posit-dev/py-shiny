@@ -1,0 +1,10 @@
+astropy
+ipyleaflet
+matplotlib
+numpy
+pandas
+pytz
+shiny
+shinywidgets
+suntime
+timezonefinder
