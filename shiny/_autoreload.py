@@ -132,7 +132,7 @@ class InjectAutoreloadMiddleware:
                         event["body"] = body.replace(b"</head>", self.script, 1)
                         body = b""  # Allow gc
                         intercept = False
-                    elif event["more_body"]:
+                    elif "more_body" in event and event["more_body"]:
                         # DO NOT send the response; wait for more data
                         return
                     else:
