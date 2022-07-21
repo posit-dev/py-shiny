@@ -13,12 +13,12 @@ from shinywidgets import output_widget, reactive_read, register_widget
 def location_ui(
     label: str = "Location",
     *,
-    lat: Optional[float],
-    long: Optional[float],
+    lat: Optional[float] = None,
+    long: Optional[float] = None,
 ) -> ui.TagChildArg:
     return ui.div(
-        ui.input_numeric("lat", "Latitude", value=None),
-        ui.input_numeric("long", "Longitude", value=None),
+        ui.input_numeric("lat", "Latitude", value=lat),
+        ui.input_numeric("long", "Longitude", value=long),
         ui.help_text("Click to select location"),
         output_widget("map", height="200px"),
         ui.tags.style(
@@ -39,9 +39,12 @@ def location_server(
     marker = L.Marker(location=(52, 100))
 
     @reactive.Effect
-    @reactive.isolate()
+    @reactive.isolate()  # Use this to ensure we only execute one time
     def _():
-        if not input.lat() and not input.long():
+        if input.lat() is None and input.long() is None:
+            ui.notification_show(
+                "Searching for location...", duration=False, id="searching"
+            )
             ui.insert_ui(
                 ui.tags.script(
                     """
@@ -51,7 +54,7 @@ def location_server(
                             Shiny.setInputValue("#HERE#", {latitude, longitude});
                         },
                         (err) => {
-                            Shiny.setInputValue("#HERE#", null);
+                            Shiny.setInputValue("#HERE#", {latitude: 0, longitude: 0});
                         },
                         {maximumAge: Infinity, timeout: Infinity}
                     )
@@ -90,6 +93,7 @@ def location_server(
     @reactive.Effect
     def detect_location():
         coords = input.here()
+        ui.notification_remove("searching")
         if coords and not input.lat() and not input.long():
             ui.update_numeric("lat", value=coords["latitude"])
             ui.update_numeric("long", value=coords["longitude"])
@@ -116,11 +120,17 @@ def location_server(
 
     @reactive.Calc
     def location():
+        """Returns tuple of (lat,long) floats--or throws silent error if no lat/long is
+        selected"""
+
+        # Require lat/long to be populated before we can proceed
         req(input.lat() is not None, input.long() is not None)
-        long = float(input.long())
-        if wrap_long:
-            long = (long + 180) % 360 - 180
+
         try:
+            long = float(input.long())
+            # Wrap longitudes so they're within [-180, 180]
+            if wrap_long:
+                long = (long + 180) % 360 - 180
             return (float(input.lat()), long)
         except ValueError:
             raise ValueError("Invalid latitude/longitude specification")

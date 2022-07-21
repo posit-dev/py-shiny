@@ -33,12 +33,12 @@ app_ui = ui.page_fixed(
             ),
             ui.panel_well(
                 ui.input_text_area(
-                    "objects", "Target object(s)", "Sirius, Betelgeuse, NGC35", rows=3
+                    "objects", "Target object(s)", "M1, NGC35, PLX299", rows=3
                 ),
                 class_="pb-1 mb-3",
             ),
             ui.panel_well(
-                location_ui("location", lat=0, long=0),
+                location_ui("location"),
                 class_="mb-3",
             ),
             class_="order-1 order-sm-2",
