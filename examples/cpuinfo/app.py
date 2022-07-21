@@ -1,11 +1,18 @@
-from math import ceil
-import psutil
+import sys
 
-import numpy as np
-import pandas as pd
+if "pyodide" in sys.modules:
+    # psutil doesn't work on pyodide--use fake data instead
+    from fakepsutil import cpu_count, cpu_percent
+else:
+    from psutil import cpu_count, cpu_percent
+
+from math import ceil
+
 import matplotlib
 import matplotlib.pyplot as plt
-from shiny import Inputs, Outputs, Session, App, reactive, render, ui
+import numpy as np
+import pandas as pd
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 # The agg matplotlib backend seems to be a little more efficient than the default when
 # running on macOS, and also gives more consistent results across operating systems
@@ -17,7 +24,7 @@ MAX_SAMPLES = 1000
 SAMPLE_PERIOD = 1
 
 
-ncpu = psutil.cpu_count(logical=True)
+ncpu = cpu_count(logical=True)
 
 app_ui = ui.page_fluid(
     ui.tags.style(
@@ -95,9 +102,9 @@ app_ui = ui.page_fluid(
 
 
 @reactive.Calc
-def cpu_percent():
+def cpu_current():
     reactive.invalidate_later(SAMPLE_PERIOD)
-    return psutil.cpu_percent(percpu=True)
+    return cpu_percent(percpu=True)
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -121,7 +128,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         them up and stores them in the cpu_history reactive value, in a numpy 2D array
         (rows are CPUs, columns are time)."""
 
-        new_data = np.vstack(cpu_percent())
+        new_data = np.vstack(cpu_current())
         with reactive.isolate():
             if cpu_history() is None:
                 cpu_history.set(new_data)
