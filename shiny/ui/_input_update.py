@@ -2,6 +2,7 @@ __all__ = (
     "update_action_button",
     "update_action_link",
     "update_checkbox",
+    "update_switch",
     "update_checkbox_group",
     "update_radio_buttons",
     "update_date",
@@ -144,6 +145,44 @@ def update_checkbox(
     See Also
     -------
     ~shiny.ui.input_checkbox
+    """
+
+    session = require_active_session(session)
+    msg = {"label": label, "value": value}
+    session.send_input_message(id, drop_none(msg))
+
+
+@add_example()
+@doc_format(note=_note)
+def update_switch(
+    id: str,
+    *,
+    label: Optional[str] = None,
+    value: Optional[bool] = None,
+    session: Optional[Session] = None,
+) -> None:
+    """
+    Change the value of a switch input on the client.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    value
+        A new value.
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+       :func:`~shiny.session.get_current_session`.
+
+    Note
+    ----
+    {note}
+
+    See Also
+    -------
+    ~shiny.ui.input_switch
     """
 
     session = require_active_session(session)

@@ -49,6 +49,7 @@ def input_checkbox(
 
     See Also
     -------
+    ~shiny.ui.input_switch
     ~shiny.ui.update_checkbox
     ~shiny.ui.input_checkbox_group
     ~shiny.ui.input_radio_buttons
@@ -74,6 +75,40 @@ def input_checkbox(
 def input_switch(
     id: str, label: TagChildArg, value: bool = False, *, width: Optional[str] = None
 ) -> Tag:
+    """
+    Create a switch that can be used to specify logical values. Similar to
+    ~shiny.ui.input_checkbox, but implies to the user that the change will take effect
+    immediately.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    value
+        Initial value.
+    width
+        The CSS width, e.g. '400px', or '100%'
+
+    Returns
+    -------
+    A UI element.
+
+    Notes
+    ------
+    .. admonition:: Server value
+
+        ``True`` if checked, ``False`` otherwise.
+
+    See Also
+    -------
+    ~shiny.ui.input_checkbox
+    ~shiny.ui.update_switch
+    ~shiny.ui.input_checkbox_group
+    ~shiny.ui.input_radio_buttons
+    """
+
     return _input_checkbox(id, label, "form-check form-switch", value, width=width)
 
 

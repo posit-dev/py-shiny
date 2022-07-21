@@ -92,6 +92,7 @@ Create UI that prompts the user for input values or interaction.
     ui.input_date_range
     ui.input_checkbox
     ui.input_checkbox_group
+    ui.input_switch
     ui.input_radio_buttons
     ui.input_numeric
     ui.input_text
@@ -115,6 +116,7 @@ Programmatically update input values
     ui.update_date_range
     ui.update_checkbox
     ui.update_checkbox_group
+    ui.update_switch
     ui.update_radio_buttons
     ui.update_numeric
     ui.update_text

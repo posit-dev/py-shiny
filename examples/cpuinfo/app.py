@@ -3,9 +3,13 @@ import psutil
 
 import numpy as np
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 from shiny import Inputs, Outputs, Session, App, reactive, render, ui
 
+# The agg matplotlib backend seems to be a little more efficient than the default when
+# running on macOS, and also gives more consistent results across operating systems
+matplotlib.use("agg")
 
 # max number of samples to retain
 MAX_SAMPLES = 1000
