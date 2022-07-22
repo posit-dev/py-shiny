@@ -3,7 +3,6 @@ from typing import List
 from shiny import *
 from shiny.types import NavSetArg
 from shiny.ui import h4
-from fontawesome import icon_svg as icon
 
 
 def nav_controls(prefix: str) -> List[NavSetArg]:
@@ -12,7 +11,6 @@ def nav_controls(prefix: str) -> List[NavSetArg]:
         ui.nav("b", prefix + ": tab b content"),
         ui.nav_control(
             ui.a(
-                icon("github"),
                 "Shiny",
                 href="https://github.com/rstudio/shiny",
                 target="_blank",
@@ -27,7 +25,6 @@ def nav_controls(prefix: str) -> List[NavSetArg]:
             "----",
             ui.nav_control(
                 ui.a(
-                    icon("r-project"),
                     "RStudio",
                     href="https://rstudio.com",
                     target="_blank",
@@ -46,6 +43,13 @@ app_ui = ui.page_navbar(
     id="navbar_id",
     footer=ui.div(
         {"style": "width:80%;margin: 0 auto"},
+        ui.tags.style(
+            """
+            h4 {
+                margin-top: 3em;
+            }
+            """
+        ),
         h4("navset_tab()"),
         ui.navset_tab(*nav_controls("navset_tab()")),
         h4("navset_pill()"),

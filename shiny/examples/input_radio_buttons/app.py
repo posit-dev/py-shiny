@@ -1,5 +1,4 @@
 from shiny import *
-from fontawesome import icon_svg as icon
 from htmltools import HTML
 
 app_ui = ui.page_fluid(
@@ -7,7 +6,6 @@ app_ui = ui.page_fluid(
         "rb",
         "Choose one:",
         {
-            "icon": icon("calendar"),
             "html": HTML("<span style='color:red;'>Red Text</span>"),
             "text": "Normal text",
         },
