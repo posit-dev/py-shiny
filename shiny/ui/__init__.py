@@ -21,6 +21,7 @@ from ._input_action_button import input_action_button, input_action_link
 from ._input_check_radio import (
     input_checkbox,
     input_checkbox_group,
+    input_switch,
     input_radio_buttons,
 )
 from ._input_date import input_date, input_date_range
@@ -34,6 +35,7 @@ from ._input_update import (
     update_action_button,
     update_action_link,
     update_checkbox,
+    update_switch,
     update_checkbox_group,
     update_radio_buttons,
     update_date,
@@ -120,6 +122,7 @@ __all__ = (
     "input_action_link",
     "input_checkbox",
     "input_checkbox_group",
+    "input_switch",
     "input_radio_buttons",
     "input_date",
     "input_date_range",
@@ -137,6 +140,7 @@ __all__ = (
     "update_action_button",
     "update_action_link",
     "update_checkbox",
+    "update_switch",
     "update_checkbox_group",
     "update_radio_buttons",
     "update_date",
