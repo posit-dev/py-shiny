@@ -164,6 +164,11 @@ class App:
             middleware.append(
                 starlette.middleware.Middleware(InjectAutoreloadMiddleware)
             )
+        # In Pyodide mode, an HTTPException(404) being thrown resulted in
+        # some default error handler (that happened not to be async) being
+        # run in a threadpool, which Pyodide could not handle. So in Pyodide
+        # mode, install our own async error handler at the outermost layer
+        # that we can.
         if is_pyodide:
             middleware.append(starlette.middleware.Middleware(ErrorMiddleware))
 
