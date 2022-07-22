@@ -1,8 +1,8 @@
-from typing import cast
+from typing import Dict, cast
 
 import starlette.exceptions as exceptions
 import starlette.responses as responses
-from starlette.types import Receive, Scope, Send, ASGIApp
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 
 class ErrorMiddleware:
@@ -23,7 +23,7 @@ class ErrorMiddleware:
                 e.detail,
                 e.status_code,
                 headers=cast(
-                    dict[str, str],
+                    Dict[str, str],
                     e.headers,  # pyright: ignore[reportUnknownMemberType]
                 ),
                 media_type="text/plain",
