@@ -969,7 +969,7 @@ class Outputs:
                     {"recalculating": {"name": output_name, "status": "recalculating"}}
                 )
 
-                message: Dict[str, OT] = {}
+                message: Dict[str, Optional[OT]] = {}
                 try:
                     if _utils.is_async_callable(fn):
                         message[output_name] = await fn()
@@ -978,7 +978,7 @@ class Outputs:
                 except SilentCancelOutputException:
                     return
                 except SilentException:
-                    pass
+                    message[output_name] = None
                 except Exception as e:
                     # Print traceback to the console
                     traceback.print_exc()
