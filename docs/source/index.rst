@@ -2,14 +2,11 @@ API Reference Intro
 ===================
 
 This website documents the public API of Shiny (for Python). See the `Getting Started
-tutorial <https://pyshiny.netlify.app/>`_ for
+tutorial <https://shiny.rstudio.com/py/>`_ for
 a more approachable introduction to the API. The left-hand sidebar lists the full public
 API, without any grouping, but the sections below (linked to the right-hand sidebar)
 break it into semantically similar groups. Most of the reference pages include a live
-example app at the bottom, or at least mention another page with a relevant example. See
-`here <https://pyshiny.netlify.app/components.html>`_ for more on how to these basic
-apps are able to run purely in the browser (no server required) on a statically hosted
-site (more complex apps may require a server).
+example app at the bottom, or at least mention another page with a relevant example.
 
 We've intentionally designed Shiny's API so that you can ``from shiny import *`` to get
 access to most of what you need for most apps without introducing an excessive amount of
