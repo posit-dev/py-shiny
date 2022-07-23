@@ -152,7 +152,6 @@ def update_checkbox(
     session.send_input_message(id, drop_none(msg))
 
 
-@add_example()
 @doc_format(note=_note)
 def update_switch(
     id: str,
