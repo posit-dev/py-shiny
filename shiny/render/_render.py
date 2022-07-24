@@ -41,6 +41,14 @@ else:
 
 from htmltools import TagChildArg
 
+# These aren't  used directly in this file, but they seems necessary for Sphinx to work
+# cleanly.
+from htmltools import (  # pyright: ignore[reportUnusedImport] # noqa: F401
+    Tagifiable,  # pyright: ignore[reportUnusedImport]
+    Tag,  # pyright: ignore[reportUnusedImport]
+    TagList,  # pyright: ignore[reportUnusedImport]
+)
+
 if TYPE_CHECKING:
     from ..session import Session
     from ..session._utils import RenderedDeps
