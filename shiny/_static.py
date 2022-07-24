@@ -54,7 +54,7 @@ def deploy_static(
 
     shinylive_bundle_dir = _ensure_shinylive_local(version=version)
 
-    print(f"Copying {shinylive_bundle_dir} to {destdir}")
+    print(f"Copying {shinylive_bundle_dir}/ to {destdir}/")
     if not destdir.exists():
         destdir.mkdir()
 
