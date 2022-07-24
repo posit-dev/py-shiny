@@ -316,14 +316,14 @@ def plot(
         2. An :class:`matplotlib.artist.Artist` instance.
         3. A list/tuple of Figure/Artist instances.
         4. An object with a 'figure' attribute pointing to a
-          :class:`matplotlib.figure.Figure` instance.
+           :class:`matplotlib.figure.Figure` instance.
         5. A :class:`PIL.Image.Image` instance.
 
     Tip
     ----
     This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_plot` container (see :func:`~shiny.ui.output_plot` for
+    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of a
+    :func:`~shiny.ui.output_plot` container (see :func:`~shiny.ui.output_plot` for
     example usage).
 
     See Also
