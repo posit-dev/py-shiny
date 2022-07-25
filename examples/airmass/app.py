@@ -15,7 +15,17 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from location import location_server, location_ui
 
 app_ui = ui.page_fixed(
-    ui.tags.h3("Air mass calculator", class_="mb-5"),
+    ui.tags.h3("Air mass calculator"),
+    ui.div(
+        ui.markdown(
+            """This Shiny app uses [Astropy](https://www.astropy.org/) to calculate the
+            altitude (degrees above the horizon) and airmass (the amount of atmospheric
+            air along your line of sight to an object) of one or more astronomical
+            objects, over a given evening, at a given geographic location.
+            """
+        ),
+        class_="mb-5",
+    ),
     ui.row(
         ui.column(
             8,
@@ -172,4 +182,4 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 # The debug=True causes it to print messages to the console.
-app = App(app_ui, server, debug=True)
+app = App(app_ui, server, debug=False)
