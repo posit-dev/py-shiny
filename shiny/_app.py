@@ -7,6 +7,7 @@ from typing import Any, List, Union, Dict, Callable, cast, Optional
 from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
 
 import starlette.applications
+import starlette.exceptions
 import starlette.middleware
 import starlette.routing
 import starlette.websockets
@@ -16,6 +17,8 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from ._autoreload import autoreload_url, InjectAutoreloadMiddleware
 from ._connection import Connection, StarletteConnection
+from ._shinyenv import is_pyodide
+from ._error import ErrorMiddleware
 from .html_dependencies import require_deps, jquery_deps, shiny_deps
 from .http_staticfiles import StaticFiles
 from .reactive import on_flushed
@@ -161,6 +164,13 @@ class App:
             middleware.append(
                 starlette.middleware.Middleware(InjectAutoreloadMiddleware)
             )
+        # In Pyodide mode, an HTTPException(404) being thrown resulted in
+        # some default error handler (that happened not to be async) being
+        # run in a threadpool, which Pyodide could not handle. So in Pyodide
+        # mode, install our own async error handler at the outermost layer
+        # that we can.
+        if is_pyodide:
+            middleware.append(starlette.middleware.Middleware(ErrorMiddleware))
 
         starlette_app = starlette.applications.Starlette(
             routes=routes,

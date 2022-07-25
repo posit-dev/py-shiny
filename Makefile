@@ -54,6 +54,9 @@ typings/uvicorn/__init__.pyi:
 check: typings/uvicorn/__init__.pyi ## type check with pyright
 	pyright
 
+check-old: typings/uvicorn/__init__.pyi ## type check with pyright
+	pyright --pythonversion=3.7
+
 lint: ## check style with flake8
 	flake8 --show-source --max-line-length=127 shiny tests examples
 
