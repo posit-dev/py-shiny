@@ -1,6 +1,12 @@
 name: Run tests
 
-on: [push]
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "rc-*"]
+  pull_request:
+  release:
+    types: [published]
 
 jobs:
   build:
@@ -93,3 +99,20 @@ jobs:
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           make lint
+
+      # test deploy ----
+      - name: "Test Deploy to PyPI"
+        uses: pypa/gh-action-pypi-publish@release/v1
+        if: startsWith(github.event.release.name, 'TEST')
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TEST_API_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/
+
+      ## prod deploy ----
+      - name: "Deploy to PyPI"
+        uses: pypa/gh-action-pypi-publish@master
+        if: startsWith(github.event.release.name, 'shiny')
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
