@@ -267,7 +267,7 @@ def _ensure_shinylive_local(
 
     if not destdir.exists():
         print("Creating directory " + str(destdir))
-        destdir.mkdir()
+        destdir.mkdir(parents=True)
 
     shinylive_bundle_dir = destdir / f"shinylive-{version}"
     if not shinylive_bundle_dir.exists():
