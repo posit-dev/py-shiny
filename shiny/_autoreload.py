@@ -201,7 +201,7 @@ async def _coro_main(port: int, app_url: str, secret: str) -> None:
                 # this case is the uvicorn worker process (see reload_end(), above).
                 req_secret = conn.request_headers.get("Shiny-Autoreload-Secret", "")
                 if req_secret != secret:
-                    # The client coudn't prove that they were from a child process
+                    # The client couldn't prove that they were from a child process
                     return
                 data = await conn.recv()
                 if isinstance(data, str) and data == "reload_end":
