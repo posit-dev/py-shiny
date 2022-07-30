@@ -18,10 +18,10 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -82,9 +82,9 @@ jobs:
     if: github.event_name == 'release'
     needs: [build]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: "Set up Python 3.8"
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: "3.8"
       - name: Install dependencies
@@ -98,7 +98,7 @@ jobs:
 
       # test deploy ----
       - name: "Test Deploy to PyPI"
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@v1
         if: startsWith(github.event.release.name, 'TEST')
         with:
           user: __token__
@@ -107,7 +107,7 @@ jobs:
 
       ## prod deploy ----
       - name: "Deploy to PyPI"
-        uses: pypa/gh-action-pypi-publish@master
+        uses: pypa/gh-action-pypi-publish@v1
         if: startsWith(github.event.release.name, 'shiny')
         with:
           user: __token__
