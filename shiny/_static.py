@@ -283,7 +283,6 @@ def download_shinylive(
     url: str = _SHINYLIVE_DOWNLOAD_URL,
 ) -> None:
     import tarfile
-    import tempfile
     import urllib.request
 
     if destdir is None:
@@ -291,15 +290,17 @@ def download_shinylive(
 
     destdir = Path(destdir)
 
-    with tempfile.NamedTemporaryFile() as tmp:
+    try:
 
         bundle_url = f"{url}/shinylive-{version}.tar.gz"
         print(f"Downloading {bundle_url}...")
-        urllib.request.urlretrieve(bundle_url, tmp.name)
+        tmp_name, _ = urllib.request.urlretrieve(bundle_url)
 
         print(f"Unzipping to {destdir}")
-        with tarfile.open(tmp.name) as tar:
+        with tarfile.open(tmp_name) as tar:
             tar.extractall(destdir)
+    finally:
+        os.remove(tmp_name)
 
 
 def get_default_shinylive_dir() -> str:
