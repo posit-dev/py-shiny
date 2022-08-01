@@ -209,7 +209,6 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
         self._fn: RenderPlotFuncAsync = _utils.wrap_async(fn)
-        print(self.__dict__)
 
     def __call__(self) -> Union[ImgData, None]:
         return _utils.run_coro_sync(self._run())
