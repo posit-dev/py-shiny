@@ -289,9 +289,9 @@ def download_shinylive(
         destdir = get_default_shinylive_dir()
 
     destdir = Path(destdir)
+    tmp_name = None
 
     try:
-
         bundle_url = f"{url}/shinylive-{version}.tar.gz"
         print(f"Downloading {bundle_url}...")
         tmp_name, _ = urllib.request.urlretrieve(bundle_url)
@@ -300,7 +300,13 @@ def download_shinylive(
         with tarfile.open(tmp_name) as tar:
             tar.extractall(destdir)
     finally:
-        os.remove(tmp_name)
+        if tmp_name is not None:
+            # Can simplify this block after we drop Python 3.7 support.
+            if sys.version_info >= (3, 8):
+                Path(tmp_name).unlink(missing_ok=True)
+            else:
+                if os.path.exists(tmp_name):
+                    os.remove(tmp_name)
 
 
 def get_default_shinylive_dir() -> str:
