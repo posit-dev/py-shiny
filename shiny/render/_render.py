@@ -208,20 +208,22 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
         self._fn: RenderPlotFuncAsync = _utils.wrap_async(fn)
+        print(self.__dict__)
 
     def __call__(self) -> Union[ImgData, None]:
         return _utils.run_coro_sync(self._run())
 
     async def _run(self) -> Union[ImgData, None]:
+
         # Reactively read some information about the plot.
         pixelratio: float = typing.cast(
-            float, self._session.input[".clientdata_pixelratio"]()
+            float, self._session.input._map[".clientdata_pixelratio"]()
         )
         width: float = typing.cast(
-            float, self._session.input[f".clientdata_output_{self._name}_width"]()
+            float, self._session.input._map[f".clientdata_output_{self._name}_width"]()
         )
         height: float = typing.cast(
-            float, self._session.input[f".clientdata_output_{self._name}_height"]()
+            float, self._session.input._map[f".clientdata_output_{self._name}_height"]()
         )
 
         x = await self._fn()
