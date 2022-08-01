@@ -798,6 +798,9 @@ class Session(object, metaclass=SessionMeta):
         ns = self.ns(id)
         return SessionProxy(parent=self, ns=ns)  # type: ignore
 
+    def root_scope(self) -> "Session":
+        return self
+
 
 class SessionProxy:
     ns: ResolvedId
@@ -820,6 +823,12 @@ class SessionProxy:
 
     def make_scope(self, id: str) -> Session:
         return self._parent.make_scope(self.ns(id))
+
+    def root_scope(self) -> Session:
+        res = self
+        while isinstance(res, SessionProxy):
+            res = res._parent
+        return res
 
     def send_input_message(self, id: str, message: Dict[str, object]) -> None:
         return self._parent.send_input_message(self.ns(id), message)
