@@ -165,12 +165,14 @@ def input_select(
 
     choices_tags = _render_choices(choices_, selected)
 
+    id = resolve_id(id)
+
     return div(
         shiny_input_label(id, label),
         div(
             tags.select(
                 *choices_tags,
-                id=resolve_id(id),
+                id=id,
                 class_=None if selectize else "form-select",
                 multiple=multiple,
                 width=width,
