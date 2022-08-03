@@ -267,7 +267,7 @@ def _ensure_shinylive_local(
 
     if not destdir.exists():
         print("Creating directory " + str(destdir))
-        destdir.mkdir()
+        destdir.mkdir(parents=True)
 
     shinylive_bundle_dir = destdir / f"shinylive-{version}"
     if not shinylive_bundle_dir.exists():
@@ -283,23 +283,30 @@ def download_shinylive(
     url: str = _SHINYLIVE_DOWNLOAD_URL,
 ) -> None:
     import tarfile
-    import tempfile
     import urllib.request
 
     if destdir is None:
         destdir = get_default_shinylive_dir()
 
     destdir = Path(destdir)
+    tmp_name = None
 
-    with tempfile.NamedTemporaryFile() as tmp:
-
+    try:
         bundle_url = f"{url}/shinylive-{version}.tar.gz"
         print(f"Downloading {bundle_url}...")
-        urllib.request.urlretrieve(bundle_url, tmp.name)
+        tmp_name, _ = urllib.request.urlretrieve(bundle_url)
 
         print(f"Unzipping to {destdir}")
-        with tarfile.open(tmp.name) as tar:
+        with tarfile.open(tmp_name) as tar:
             tar.extractall(destdir)
+    finally:
+        if tmp_name is not None:
+            # Can simplify this block after we drop Python 3.7 support.
+            if sys.version_info >= (3, 8):
+                Path(tmp_name).unlink(missing_ok=True)
+            else:
+                if os.path.exists(tmp_name):
+                    os.remove(tmp_name)
 
 
 def get_default_shinylive_dir() -> str:

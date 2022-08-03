@@ -156,10 +156,10 @@ def start_server(port: int, app_port: int):
     Clients can connect on either the /autoreload or /notify path.
 
     Clients from the uvicorn worker process connect to the /notify path to notify us
-    that a successful startup or reload has occured.
+    that a successful startup or reload has occurred.
 
     Clients from browsers (on localhost only) connect to the /autoreload path to be
-    notified when a successful startup or reload has occured.
+    notified when a successful startup or reload has occurred.
     """
 
     # Store port and secret in environment variables so they are inherited by uvicorn
@@ -201,7 +201,7 @@ async def _coro_main(port: int, app_url: str, secret: str) -> None:
                 # this case is the uvicorn worker process (see reload_end(), above).
                 req_secret = conn.request_headers.get("Shiny-Autoreload-Secret", "")
                 if req_secret != secret:
-                    # The client coudn't prove that they were from a child process
+                    # The client couldn't prove that they were from a child process
                     return
                 data = await conn.recv()
                 if isinstance(data, str) and data == "reload_end":
