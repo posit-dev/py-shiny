@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Fixed #290: `@render.plot` now works as intended inside `@module.server`. (#292) 
 * Fixed #289: `input_selectize()` now resolves the input id before using for other id-like attributes (#291)
 
 ## [0.2.4] - 2022-08-01

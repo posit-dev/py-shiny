@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from ..session import Session
     from ..session._utils import RenderedDeps
 
+from .._namespaces import ResolvedId
 from .. import _utils
 from ..types import ImgData
 from ._try_render_plot import (
@@ -213,15 +214,18 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
         return _utils.run_coro_sync(self._run())
 
     async def _run(self) -> Union[ImgData, None]:
+
+        inputs = self._session.root_scope().input
+
         # Reactively read some information about the plot.
         pixelratio: float = typing.cast(
-            float, self._session.input[".clientdata_pixelratio"]()
+            float, inputs[ResolvedId(".clientdata_pixelratio")]()
         )
         width: float = typing.cast(
-            float, self._session.input[f".clientdata_output_{self._name}_width"]()
+            float, inputs[ResolvedId(f".clientdata_output_{self._name}_width")]()
         )
         height: float = typing.cast(
-            float, self._session.input[f".clientdata_output_{self._name}_height"]()
+            float, inputs[ResolvedId(f".clientdata_output_{self._name}_height")]()
         )
 
         x = await self._fn()
