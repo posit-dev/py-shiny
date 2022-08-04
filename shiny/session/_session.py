@@ -249,7 +249,7 @@ class Session(object, metaclass=SessionMeta):
                     {
                         "config": {
                             "workerId": "",
-                            "sessionId": str(self.id),
+                            "sessionId": self.id,
                             "user": None,
                         }
                     }
