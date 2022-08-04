@@ -1,5 +1,4 @@
 import copy
-import contextlib
 import os
 import secrets
 from typing import Any, List, Union, Dict, Callable, cast, Optional
@@ -21,7 +20,6 @@ from ._shinyenv import is_pyodide
 from ._error import ErrorMiddleware
 from .html_dependencies import require_deps, jquery_deps, shiny_deps
 from .http_staticfiles import StaticFiles
-from .reactive import on_flushed
 from .session import Inputs, Outputs, Session, session_context
 
 
@@ -175,21 +173,9 @@ class App:
         starlette_app = starlette.applications.Starlette(
             routes=routes,
             middleware=middleware,
-            lifespan=self._lifespan,
         )
 
         return starlette_app
-
-    @contextlib.asynccontextmanager
-    async def _lifespan(self, app: starlette.applications.Starlette):
-        unreg = on_flushed(self._on_reactive_flushed, once=False)
-        try:
-            yield
-        finally:
-            unreg()
-
-    async def _on_reactive_flushed(self):
-        await self._flush_pending_sessions()
 
     def _create_session(self, conn: Connection) -> Session:
         id = secrets.token_hex(32)
@@ -316,17 +302,6 @@ class App:
         # of which sessions need a flush.
         pass
         # self._sessions_needing_flush[session.id] = session
-
-    async def _flush_pending_sessions(self) -> None:
-        # TODO: Until we have reactive domains, flush all sessions (because we
-        # can't yet keep track of which ones need a flush)
-        # Use list() to create a copy, in case self._sessions mutates from under us,
-        # which would cause a "dictionary changed size during iteration" RuntimeError
-        for _, session in list(self._sessions.items()):
-            await session._flush()
-        # for id, session in self._sessions_needing_flush.items():
-        #     await session.flush()
-        #     del self._sessions_needing_flush[id]
 
     # ==========================================================================
     # HTML Dependency stuff

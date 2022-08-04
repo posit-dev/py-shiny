@@ -1,5 +1,6 @@
 __all__ = ("Session", "Inputs", "Outputs")
 
+import contextlib
 import dataclasses
 import enum
 import functools
@@ -50,7 +51,7 @@ from .._namespaces import Id, ResolvedId, Root
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect, Effect_, Value, flush, isolate
-from ..reactive._core import lock
+from ..reactive._core import lock, on_flushed
 from ..render import RenderFunction
 from ..types import SafeException, SilentCancelOutputException, SilentException
 from ._utils import RenderedDeps, read_thunk_opt, session_context
@@ -242,72 +243,87 @@ class Session(object, metaclass=SessionMeta):
             if conn_state != expected_state:
                 raise ProtocolError("Invalid method for the current session state")
 
-        try:
-            await self._send_message(
-                {"config": {"workerId": "", "sessionId": str(self.id), "user": None}}
-            )
-
-            while True:
-                message: str = await self._conn.receive()
-                if self._debug:
-                    print("RECV: " + message, flush=True)
-
-                try:
-                    message_obj = json.loads(
-                        message, object_hook=_utils.lists_to_tuples
-                    )
-                except json.JSONDecodeError:
-                    warnings.warn("ERROR: Invalid JSON message", SessionWarning)
-                    return
-
-                if "method" not in message_obj:
-                    self._send_error_response("Message does not contain 'method'.")
-                    return
-
-                async with lock():
-
-                    if message_obj["method"] == "init":
-                        verify_state(ConnectionState.Start)
-
-                        conn_state = ConnectionState.Running
-                        message_obj = typing.cast(ClientMessageInit, message_obj)
-                        self._manage_inputs(message_obj["data"])
-
-                        with session_context(self):
-                            self.app.server(self.input, self.output, self)
-
-                    elif message_obj["method"] == "update":
-                        verify_state(ConnectionState.Running)
-
-                        message_obj = typing.cast(ClientMessageUpdate, message_obj)
-                        self._manage_inputs(message_obj["data"])
-
-                    elif "tag" in message_obj and "args" in message_obj:
-                        verify_state(ConnectionState.Running)
-
-                        message_obj = typing.cast(ClientMessageOther, message_obj)
-                        await self._dispatch(message_obj)
-
-                    else:
-                        raise ProtocolError(
-                            f"Unrecognized method {message_obj['method']}"
-                        )
-
-                    self._request_flush()
-
-                    await flush()
-
-        except ConnectionClosed:
-            ...
-        except Exception as e:
+        with contextlib.ExitStack() as stack:
             try:
-                self._send_error_response(str(e))
-            except Exception:
-                pass
+                await self._send_message(
+                    {
+                        "config": {
+                            "workerId": "",
+                            "sessionId": self.id,
+                            "user": None,
+                        }
+                    }
+                )
+
+                while True:
+                    message: str = await self._conn.receive()
+                    if self._debug:
+                        print("RECV: " + message, flush=True)
+
+                    try:
+                        message_obj = json.loads(
+                            message, object_hook=_utils.lists_to_tuples
+                        )
+                    except json.JSONDecodeError:
+                        warnings.warn("ERROR: Invalid JSON message", SessionWarning)
+                        return
+
+                    if "method" not in message_obj:
+                        self._send_error_response("Message does not contain 'method'.")
+                        return
+
+                    async with lock():
+
+                        if message_obj["method"] == "init":
+                            verify_state(ConnectionState.Start)
+
+                            # When a reactive flush occurs, flush the session's outputs,
+                            # errors, etc. to the client. Note that this is
+                            # `reactive._core.on_flushed`, not `self.on_flushed`.
+                            unreg = on_flushed(self._flush)
+                            # When the session ends, stop flushing outputs on reactive
+                            # flush.
+                            stack.callback(unreg)
+
+                            conn_state = ConnectionState.Running
+                            message_obj = typing.cast(ClientMessageInit, message_obj)
+                            self._manage_inputs(message_obj["data"])
+
+                            with session_context(self):
+                                self.app.server(self.input, self.output, self)
+
+                        elif message_obj["method"] == "update":
+                            verify_state(ConnectionState.Running)
+
+                            message_obj = typing.cast(ClientMessageUpdate, message_obj)
+                            self._manage_inputs(message_obj["data"])
+
+                        elif "tag" in message_obj and "args" in message_obj:
+                            verify_state(ConnectionState.Running)
+
+                            message_obj = typing.cast(ClientMessageOther, message_obj)
+                            await self._dispatch(message_obj)
+
+                        else:
+                            raise ProtocolError(
+                                f"Unrecognized method {message_obj['method']}"
+                            )
+
+                        self._request_flush()
+
+                        await flush()
+
+            except ConnectionClosed:
+                ...
+            except Exception as e:
+                try:
+                    self._send_error_response(str(e))
+                except Exception:
+                    pass
+                finally:
+                    await self.close()
             finally:
-                await self.close()
-        finally:
-            self._run_session_end_tasks()
+                self._run_session_end_tasks()
 
     def _manage_inputs(self, data: Dict[str, object]) -> None:
         for (key, val) in data.items():
