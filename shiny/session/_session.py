@@ -278,7 +278,8 @@ class Session(object, metaclass=SessionMeta):
                             verify_state(ConnectionState.Start)
 
                             # When a reactive flush occurs, flush the session's outputs,
-                            # errors, etc. to the client.
+                            # errors, etc. to the client. Note that this is
+                            # `reactive._core.on_flushed`, not `self.on_flushed`.
                             unreg = on_flushed(self._flush)
                             # When the session ends, stop flushing outputs on reactive
                             # flush.
