@@ -1,4 +1,5 @@
 import copy
+from inspect import isfunction
 import os
 import secrets
 from typing import Any, List, Union, Dict, Callable, cast, Optional
@@ -36,8 +37,11 @@ class App:
     Parameters
     ----------
     ui
-        The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fluid`
-        with nested controls).
+        The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fluid` or
+        :func:`~shiny.ui.page_fixed`, with layouts and controls nested inside). You can
+        also pass a function that takes a :class:`~starlette.requests.Request` and
+        returns a UI definition, if you need the UI definition to be created dynamically
+        for each pageview.
     server
         A function which is called once for each session, ensuring that each app is
         independent.
@@ -79,19 +83,17 @@ class App:
     The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
     """
 
-    ui: RenderedHTML
+    ui: Union[RenderedHTML, Callable[[Request], Union[Tag, TagList]]]
     server: Callable[[Inputs, Outputs, Session], None]
 
     def __init__(
         self,
-        ui: Union[Tag, TagList],
+        ui: Union[Tag, TagList, Callable[[Request], Union[Tag, TagList]]],
         server: Optional[Callable[[Inputs, Outputs, Session], None]],
         *,
         static_assets: Optional[Union[str, "os.PathLike[str]"]] = None,
         debug: bool = False,
     ) -> None:
-        self.ui: RenderedHTML = _render_page(ui, lib_prefix=self.lib_prefix)
-
         if server is None:
 
             def _server(inputs: Inputs, outputs: Outputs, session: Session):
@@ -137,6 +139,15 @@ class App:
         starlette_app = self.init_starlette_app()
 
         self.starlette_app = starlette_app
+
+        if isfunction(ui):
+            # Dynamic UI: just store the function for later
+            self.ui = cast(Callable[[Request], Union[Tag, TagList]], ui)
+        else:
+            # Static UI: render the UI now and save the results
+            self.ui = self._render_page(
+                cast(Union[Tag, TagList], ui), lib_prefix=self.lib_prefix
+            )
 
     def init_starlette_app(self):
         routes: list[starlette.routing.BaseRoute] = [
@@ -265,8 +276,12 @@ class App:
         Callback passed to the ConnectionManager which is invoked when a HTTP
         request for / occurs.
         """
-        self._ensure_web_dependencies(self.ui["dependencies"])
-        return HTMLResponse(content=self.ui["html"])
+        ui: RenderedHTML
+        if isfunction(self.ui):
+            ui = self._render_page(self.ui(request), self.lib_prefix)
+        else:
+            ui = cast(RenderedHTML, self.ui)
+        return HTMLResponse(content=ui["html"])
 
     async def _on_connect_cb(self, ws: starlette.websockets.WebSocket) -> None:
         """
@@ -332,10 +347,11 @@ class App:
 
         self._registered_dependencies[dep.name] = dep
 
-
-def _render_page(ui: Union[Tag, TagList], lib_prefix: str) -> RenderedHTML:
-    ui_res = copy.copy(ui)
-    # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
-    # (see require_deps() for a comment about why we even include it)
-    ui_res.insert(0, [require_deps(), jquery_deps(), shiny_deps()])
-    return HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
+    def _render_page(self, ui: Union[Tag, TagList], lib_prefix: str) -> RenderedHTML:
+        ui_res = copy.copy(ui)
+        # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
+        # (see require_deps() for a comment about why we even include it)
+        ui_res.insert(0, [require_deps(), jquery_deps(), shiny_deps()])
+        rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
+        self._ensure_web_dependencies(rendered["dependencies"])
+        return rendered

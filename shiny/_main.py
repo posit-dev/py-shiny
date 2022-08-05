@@ -27,7 +27,7 @@ stop_shortcut = "Ctrl+C"
 
 
 @main.command(
-    help=f"""Runs a Shiny app. Press {stop_shortcut} to stop.
+    help=f"""Run a Shiny app (press {stop_shortcut} to stop).
 
 The APP argument indicates the Python file (or module) and attribute where the
 shiny.App object can be found. For example, if the current directory contains
@@ -321,7 +321,7 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
 
 
 @main.command(
-    help="""Create a Shiny application from a template
+    help="""Create a Shiny application from a template.
 
 APPDIR is the directory to the Shiny application. A file named app.py will be created in
 that directory.
@@ -331,7 +331,7 @@ After creating the application, you use `shiny run`:
     shiny run APPDIR/app.py --reload
 """
 )
-@click.argument("appdir", type=str)
+@click.argument("appdir", type=str, default=".")
 def create(appdir: str) -> None:
     app_dir = Path(appdir)
     app_path = app_dir / "app.py"
@@ -350,7 +350,7 @@ def create(appdir: str) -> None:
 
 
 @main.command(
-    help="""Create a statically deployable distribution for a Shiny app.
+    help="""Turn a Shiny app into a statically deployable bundle.
 
 APPDIR is the directory containing the Shiny application.
 
