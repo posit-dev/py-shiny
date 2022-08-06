@@ -1,5 +1,5 @@
 import copy
-from inspect import isfunction
+from inspect import iscoroutinefunction
 import os
 import secrets
 from typing import Any, List, Union, Dict, Callable, cast, Optional
@@ -140,7 +140,9 @@ class App:
 
         self.starlette_app = starlette_app
 
-        if isfunction(ui):
+        if is_uifunc(ui):
+            if iscoroutinefunction(ui):
+                raise TypeError("App UI cannot be a coroutine function")
             # Dynamic UI: just store the function for later
             self.ui = cast(Callable[[Request], Union[Tag, TagList]], ui)
         else:
@@ -277,10 +279,10 @@ class App:
         request for / occurs.
         """
         ui: RenderedHTML
-        if isfunction(self.ui):
+        if callable(self.ui):
             ui = self._render_page(self.ui(request), self.lib_prefix)
         else:
-            ui = cast(RenderedHTML, self.ui)
+            ui = self.ui
         return HTMLResponse(content=ui["html"])
 
     async def _on_connect_cb(self, ws: starlette.websockets.WebSocket) -> None:
@@ -355,3 +357,10 @@ class App:
         rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
         self._ensure_web_dependencies(rendered["dependencies"])
         return rendered
+
+
+def is_uifunc(x: Union[Tag, TagList, Callable[[Request], Union[Tag, TagList]]]):
+    if isinstance(x, Tag) or isinstance(x, TagList) or not callable(x):
+        return False
+    else:
+        return True
