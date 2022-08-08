@@ -1,5 +1,4 @@
 import copy
-from inspect import iscoroutinefunction
 import os
 import secrets
 from typing import Any, List, Union, Dict, Callable, cast, Optional
@@ -19,6 +18,7 @@ from ._autoreload import autoreload_url, InjectAutoreloadMiddleware
 from ._connection import Connection, StarletteConnection
 from ._shinyenv import is_pyodide
 from ._error import ErrorMiddleware
+from ._utils import is_async_callable
 from .html_dependencies import require_deps, jquery_deps, shiny_deps
 from .http_staticfiles import StaticFiles
 from .session import Inputs, Outputs, Session, session_context
@@ -141,7 +141,7 @@ class App:
         self.starlette_app = starlette_app
 
         if is_uifunc(ui):
-            if iscoroutinefunction(ui):
+            if is_async_callable(cast(Callable[[Request], Any], ui)):
                 raise TypeError("App UI cannot be a coroutine function")
             # Dynamic UI: just store the function for later
             self.ui = cast(Callable[[Request], Union[Tag, TagList]], ui)
