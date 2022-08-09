@@ -98,7 +98,7 @@ jobs:
 
       # test deploy ----
       - name: "Test Deploy to PyPI"
-        uses: pypa/gh-action-pypi-publish@v1
+        uses: pypa/gh-action-pypi-publish@release/v1
         if: startsWith(github.event.release.name, 'TEST')
         with:
           user: __token__
