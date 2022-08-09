@@ -49,6 +49,7 @@ from ._input_update import (
     update_navs,
 )
 from ._insert import insert_ui, remove_ui
+from ._run_js import run_js
 from ._markdown import markdown
 from ._modal import modal_button, modal, modal_show, modal_remove
 from ._navs import (
@@ -154,6 +155,7 @@ __all__ = (
     "update_navs",
     "insert_ui",
     "remove_ui",
+    "run_js",
     "markdown",
     "modal_button",
     "modal",

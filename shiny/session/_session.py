@@ -581,6 +581,9 @@ class Session(object, metaclass=SessionMeta):
         msg: Dict[str, object] = {"progress": {"type": type, "message": message}}
         self._send_message_sync(msg)
 
+    def _send_run_js(self, code: str) -> None:
+        self._send_message_sync({"javascript": code})
+
     @add_example()
     async def send_custom_message(self, type: str, message: Dict[str, object]) -> None:
         """
