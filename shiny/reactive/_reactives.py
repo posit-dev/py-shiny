@@ -406,7 +406,7 @@ def Calc(
     ~shiny.event
     """
 
-    def create_calc(fn: Union[CalcFunctionAsync[T], CalcFunction[T]]) -> Calc_[T]:
+    def create_calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc_[T]:
         if _utils.is_async_callable(fn):
             return CalcAsync_(fn, session=session)
         else:
