@@ -18,6 +18,7 @@ from ._autoreload import autoreload_url, InjectAutoreloadMiddleware
 from ._connection import Connection, StarletteConnection
 from ._shinyenv import is_pyodide
 from ._error import ErrorMiddleware
+from ._utils import is_async_callable
 from .html_dependencies import require_deps, jquery_deps, shiny_deps
 from .http_staticfiles import StaticFiles
 from .session import Inputs, Outputs, Session, session_context
@@ -36,8 +37,11 @@ class App:
     Parameters
     ----------
     ui
-        The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fluid`
-        with nested controls).
+        The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fluid` or
+        :func:`~shiny.ui.page_fixed`, with layouts and controls nested inside). You can
+        also pass a function that takes a :class:`~starlette.requests.Request` and
+        returns a UI definition, if you need the UI definition to be created dynamically
+        for each pageview.
     server
         A function which is called once for each session, ensuring that each app is
         independent.
@@ -79,19 +83,17 @@ class App:
     The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
     """
 
-    ui: RenderedHTML
+    ui: Union[RenderedHTML, Callable[[Request], Union[Tag, TagList]]]
     server: Callable[[Inputs, Outputs, Session], None]
 
     def __init__(
         self,
-        ui: Union[Tag, TagList],
+        ui: Union[Tag, TagList, Callable[[Request], Union[Tag, TagList]]],
         server: Optional[Callable[[Inputs, Outputs, Session], None]],
         *,
         static_assets: Optional[Union[str, "os.PathLike[str]"]] = None,
         debug: bool = False,
     ) -> None:
-        self.ui: RenderedHTML = _render_page(ui, lib_prefix=self.lib_prefix)
-
         if server is None:
 
             def _server(inputs: Inputs, outputs: Outputs, session: Session):
@@ -137,6 +139,17 @@ class App:
         starlette_app = self.init_starlette_app()
 
         self.starlette_app = starlette_app
+
+        if is_uifunc(ui):
+            if is_async_callable(cast(Callable[[Request], Any], ui)):
+                raise TypeError("App UI cannot be a coroutine function")
+            # Dynamic UI: just store the function for later
+            self.ui = cast(Callable[[Request], Union[Tag, TagList]], ui)
+        else:
+            # Static UI: render the UI now and save the results
+            self.ui = self._render_page(
+                cast(Union[Tag, TagList], ui), lib_prefix=self.lib_prefix
+            )
 
     def init_starlette_app(self):
         routes: list[starlette.routing.BaseRoute] = [
@@ -265,8 +278,12 @@ class App:
         Callback passed to the ConnectionManager which is invoked when a HTTP
         request for / occurs.
         """
-        self._ensure_web_dependencies(self.ui["dependencies"])
-        return HTMLResponse(content=self.ui["html"])
+        ui: RenderedHTML
+        if callable(self.ui):
+            ui = self._render_page(self.ui(request), self.lib_prefix)
+        else:
+            ui = self.ui
+        return HTMLResponse(content=ui["html"])
 
     async def _on_connect_cb(self, ws: starlette.websockets.WebSocket) -> None:
         """
@@ -332,10 +349,18 @@ class App:
 
         self._registered_dependencies[dep.name] = dep
 
+    def _render_page(self, ui: Union[Tag, TagList], lib_prefix: str) -> RenderedHTML:
+        ui_res = copy.copy(ui)
+        # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
+        # (see require_deps() for a comment about why we even include it)
+        ui_res.insert(0, [require_deps(), jquery_deps(), shiny_deps()])
+        rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
+        self._ensure_web_dependencies(rendered["dependencies"])
+        return rendered
 
-def _render_page(ui: Union[Tag, TagList], lib_prefix: str) -> RenderedHTML:
-    ui_res = copy.copy(ui)
-    # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
-    # (see require_deps() for a comment about why we even include it)
-    ui_res.insert(0, [require_deps(), jquery_deps(), shiny_deps()])
-    return HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
+
+def is_uifunc(x: Union[Tag, TagList, Callable[[Request], Union[Tag, TagList]]]):
+    if isinstance(x, Tag) or isinstance(x, TagList) or not callable(x):
+        return False
+    else:
+        return True
