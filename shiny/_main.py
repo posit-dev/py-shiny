@@ -389,11 +389,28 @@ After writing the output files, you can serve them locally with the following co
     help='Subdir in which to put the app. Use "." to put the app at the top level of the destdir. If there are multiple APPDIRs, there must be one --subdir for each APPDIR.',
     show_default=True,
 )
+@click.option(
+    "--full-shinylive",
+    is_flag=True,
+    default=False,
+    help="Include the full Shinylive bundle, including all Pyodide packages. Normally, only the packages needed to run the application are included.",
+    show_default=True,
+)
 def static(
-    appdir: Tuple[str], destdir: str, overwrite: bool, subdir: Tuple[str], verbose: bool
+    appdir: Tuple[str],
+    destdir: str,
+    overwrite: bool,
+    subdir: Tuple[str],
+    verbose: bool,
+    full_shinylive: bool,
 ) -> None:
     _static.deploy_static(
-        appdir, destdir, overwrite=overwrite, subdir=subdir, verbose=verbose
+        appdir,
+        destdir,
+        overwrite=overwrite,
+        subdir=subdir,
+        verbose=verbose,
+        full_shinylive=full_shinylive,
     )
 
 

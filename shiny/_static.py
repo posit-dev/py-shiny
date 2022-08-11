@@ -29,6 +29,7 @@ def deploy_static(
     subdir: Tuple[Union[str, Path], ...] = (),
     version: str = _SHINYLIVE_DEFAULT_VERSION,
     verbose: bool = False,
+    full_shinylive: bool = False,
 ) -> None:
     """
     Create a statically deployable distribution with a Shiny app.
@@ -50,7 +51,12 @@ def deploy_static(
 
     # Call out to shinylive module to do deployment.
     shinylive.deploy(
-        appdirs, destdir, overwrite=overwrite, subdirs=subdir, verbose=verbose
+        appdirs,
+        destdir,
+        overwrite=overwrite,
+        subdirs=subdir,
+        verbose=verbose,
+        full_shinylive=full_shinylive,
     )
 
 
