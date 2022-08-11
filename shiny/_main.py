@@ -397,10 +397,10 @@ After writing the output files, you can serve them locally with the following co
     show_default=True,
 )
 def static(
-    appdir: Tuple[str],
+    appdir: Tuple[str, ...],
     destdir: str,
     overwrite: bool,
-    subdir: Tuple[str],
+    subdir: Tuple[str, ...],
     verbose: bool,
     full_shinylive: bool,
 ) -> None:

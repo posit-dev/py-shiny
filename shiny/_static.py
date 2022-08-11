@@ -22,7 +22,7 @@ class FileContentJson(TypedDict):
 
 
 def deploy_static(
-    appdirs: Tuple[Union[str, Path]],
+    appdirs: Tuple[Union[str, Path], ...],
     destdir: Union[str, Path],
     *,
     overwrite: bool = False,
