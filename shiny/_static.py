@@ -4,7 +4,7 @@ import re
 import shutil
 import sys
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 if sys.version_info >= (3, 8):
     from typing import Literal, TypedDict
@@ -22,29 +22,17 @@ class FileContentJson(TypedDict):
 
 
 def deploy_static(
-    appdir: Union[str, Path],
+    appdirs: Tuple[Union[str, Path]],
     destdir: Union[str, Path],
     *,
     overwrite: bool = False,
-    subdir: Union[str, Path, None] = None,
+    subdir: Tuple[Union[str, Path], ...] = (),
     version: str = _SHINYLIVE_DEFAULT_VERSION,
     verbose: bool = False,
 ) -> None:
     """
     Create a statically deployable distribution with a Shiny app.
     """
-
-    appdir = Path(appdir)
-    destdir = Path(destdir)
-
-    if not (appdir / "app.py").exists():
-        raise ValueError(f"Directory {appdir} must contain a file named app.py.")
-
-    if subdir is None:
-        subdir = ""
-    subdir = Path(subdir)
-    if subdir.is_absolute():
-        raise ValueError("subdir must be a relative path")
 
     shinylive_bundle_dir = _ensure_shinylive_local(version=version)
 
@@ -62,7 +50,7 @@ def deploy_static(
 
     # Call out to shinylive module to do deployment.
     shinylive.deploy(
-        appdir, destdir, overwrite=overwrite, subdir=subdir, verbose=verbose
+        appdirs, destdir, overwrite=overwrite, subdirs=subdir, verbose=verbose
     )
 
 

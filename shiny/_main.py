@@ -7,7 +7,7 @@ import shutil
 import sys
 import types
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import click
 import uvicorn
@@ -352,7 +352,7 @@ def create(appdir: str) -> None:
 @main.command(
     help="""Turn a Shiny app into a statically deployable bundle.
 
-APPDIR is the directory containing the Shiny application.
+APPDIR is one or more directories containing the Shiny application.
 
 DESTDIR is the destination directory where the output files will be written to. This
 directory can be deployed as a static web site.
@@ -364,7 +364,7 @@ After writing the output files, you can serve them locally with the following co
     python3 -m http.server --directory DESTDIR 8008
 """
 )
-@click.argument("appdir", type=str)
+@click.argument("appdir", type=str, nargs=-1)
 @click.argument("destdir", type=str)
 @click.option(
     "--overwrite",
@@ -382,13 +382,15 @@ After writing the output files, you can serve them locally with the following co
 )
 @click.option(
     "--subdir",
+    "-s",
     type=str,
-    default=None,
-    help="Subdir in which to put the app.",
+    default=(),
+    multiple=True,
+    help='Subdir in which to put the app. Use "." to put the app at the top level of the destdir. If there are multiple APPDIRs, there must be one --subdir for each APPDIR.',
     show_default=True,
 )
 def static(
-    appdir: str, destdir: str, overwrite: bool, subdir: str, verbose: bool
+    appdir: Tuple[str], destdir: str, overwrite: bool, subdir: Tuple[str], verbose: bool
 ) -> None:
     _static.deploy_static(
         appdir, destdir, overwrite=overwrite, subdir=subdir, verbose=verbose
