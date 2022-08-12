@@ -7,22 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
+* Closed [#269](https://github.com/rstudio/py-shiny/issues/269): The UI for a `shiny.App` object can now be provided as a function. ([#299](https://github.com/rstudio/py-shiny/pull/299))
+* When a Shinylive deployment is made with `shiny static`, it the deployment code is now delegated to Shinylive. ([#310](https://github.com/rstudio/py-shiny/pull/310))
+
 ### Bug fixes
 
-* Fixed #290: `@render.plot` now works as intended inside `@module.server`. (#292) 
-* Fixed #289: `input_selectize()` now resolves the input id before using for other id-like attributes (#291)
+* Fixed [#279](https://github.com/rstudio/py-shiny/issues/279): When a Shiny application is mounted to a Starlette route, reactivity did not work. ([#294](https://github.com/rstudio/py-shiny/pull/294))
+* Fixed [#290](https://github.com/rstudio/py-shiny/issues/290): `@render.plot` now works as intended inside `@module.server`. ([#292](https://github.com/rstudio/py-shiny/pull/292))
+* Fixed [#289](https://github.com/rstudio/py-shiny/issues/289): `input_selectize()` now resolves the input id before using for other id-like attributes ([#291](https://github.com/rstudio/py-shiny/pull/291))
 
 ## [0.2.4] - 2022-08-01
 
 ### Bug fixes
 
-* Fixed #287: Running `shiny static` on Windows failed with `PermissionError`. (#288)
+* Fixed [#287](https://github.com/rstudio/py-shiny/issues/287): Running `shiny static` on Windows failed with `PermissionError`. ([#288](https://github.com/rstudio/py-shiny/pull/288))
 
 ## [0.2.3] - 2022-07-28
 
 ### Bug fixes
 
-* Fixed #281: Directory creation for Shinylive assets could fail if the parent directory did not exist. (#283)
+* Fixed [#281](https://github.com/rstudio/py-shiny/issues/281): Directory creation for Shinylive assets could fail if the parent directory did not exist. ([#283](https://github.com/rstudio/py-shiny/pull/283))
 
 ## [0.2.2] - 2022-07-27
 
