@@ -367,13 +367,6 @@ After writing the output files, you can serve them locally with the following co
 @click.argument("appdir", type=str)
 @click.argument("destdir", type=str)
 @click.option(
-    "--overwrite",
-    is_flag=True,
-    default=False,
-    help="Overwrite existing files in the destination directory.",
-    show_default=True,
-)
-@click.option(
     "--verbose",
     is_flag=True,
     default=False,
@@ -387,11 +380,26 @@ After writing the output files, you can serve them locally with the following co
     help="Subdir in which to put the app.",
     show_default=True,
 )
+@click.option(
+    "--full-shinylive",
+    is_flag=True,
+    default=False,
+    help="Include the full Shinylive bundle, including all Pyodide packages. Without this flag, only the packages needed to run the application are included.",
+    show_default=True,
+)
 def static(
-    appdir: str, destdir: str, overwrite: bool, subdir: str, verbose: bool
+    appdir: str,
+    destdir: str,
+    subdir: Union[str, None],
+    verbose: bool,
+    full_shinylive: bool,
 ) -> None:
     _static.deploy_static(
-        appdir, destdir, overwrite=overwrite, subdir=subdir, verbose=verbose
+        appdir,
+        destdir,
+        subdir=subdir,
+        verbose=verbose,
+        full_shinylive=full_shinylive,
     )
 
 
