@@ -4,7 +4,7 @@ import re
 import shutil
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 
 if sys.version_info >= (3, 8):
     from typing import Literal, TypedDict
@@ -22,11 +22,10 @@ class FileContentJson(TypedDict):
 
 
 def deploy_static(
-    appdirs: Tuple[Union[str, Path], ...],
+    appdir: Union[str, Path],
     destdir: Union[str, Path],
     *,
-    overwrite: bool = False,
-    subdir: Tuple[Union[str, Path], ...] = (),
+    subdir: Union[str, Path, None] = None,
     version: str = _SHINYLIVE_DEFAULT_VERSION,
     verbose: bool = False,
     full_shinylive: bool = False,
@@ -51,10 +50,9 @@ def deploy_static(
 
     # Call out to shinylive module to do deployment.
     shinylive.deploy(
-        appdirs,
+        appdir,
         destdir,
-        overwrite=overwrite,
-        subdirs=subdir,
+        subdir=subdir,
         verbose=verbose,
         full_shinylive=full_shinylive,
     )

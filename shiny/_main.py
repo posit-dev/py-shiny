@@ -352,7 +352,7 @@ def create(appdir: str) -> None:
 @main.command(
     help="""Turn a Shiny app into a statically deployable bundle.
 
-APPDIR is one or more directories containing the Shiny application.
+APPDIR is the directory containing the Shiny application.
 
 DESTDIR is the destination directory where the output files will be written to. This
 directory can be deployed as a static web site.
@@ -364,15 +364,8 @@ After writing the output files, you can serve them locally with the following co
     python3 -m http.server --directory DESTDIR 8008
 """
 )
-@click.argument("appdir", type=str, nargs=-1)
+@click.argument("appdir", type=str)
 @click.argument("destdir", type=str)
-@click.option(
-    "--overwrite",
-    is_flag=True,
-    default=False,
-    help="Overwrite existing files in the destination directory.",
-    show_default=True,
-)
 @click.option(
     "--verbose",
     is_flag=True,
@@ -382,32 +375,28 @@ After writing the output files, you can serve them locally with the following co
 )
 @click.option(
     "--subdir",
-    "-s",
     type=str,
-    default=(),
-    multiple=True,
-    help='Subdir in which to put the app. Use "." to put the app at the top level of the destdir. If there are multiple APPDIRs, there must be one --subdir for each APPDIR.',
+    default=None,
+    help="Subdir in which to put the app.",
     show_default=True,
 )
 @click.option(
     "--full-shinylive",
     is_flag=True,
     default=False,
-    help="Include the full Shinylive bundle, including all Pyodide packages. Normally, only the packages needed to run the application are included.",
+    help="Include the full Shinylive bundle, including all Pyodide packages. Without this flag, only the packages needed to run the application are included.",
     show_default=True,
 )
 def static(
-    appdir: Tuple[str, ...],
+    appdir: str,
     destdir: str,
-    overwrite: bool,
-    subdir: Tuple[str, ...],
+    subdir: Union[str, None],
     verbose: bool,
     full_shinylive: bool,
 ) -> None:
     _static.deploy_static(
         appdir,
         destdir,
-        overwrite=overwrite,
         subdir=subdir,
         verbose=verbose,
         full_shinylive=full_shinylive,
