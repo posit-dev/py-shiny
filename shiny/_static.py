@@ -60,7 +60,7 @@ def deploy_static(
 
 def remove_shinylive_local(
     shinylive_dir: Union[str, Path, None] = None,
-    version: Optional[str] = _SHINYLIVE_DEFAULT_VERSION,
+    version: Optional[str] = None,
 ) -> None:
     """Removes local copy of shinylive.
 
@@ -84,7 +84,10 @@ def remove_shinylive_local(
     if version is not None:
         target_dir = target_dir / f"shinylive-{version}"
 
-    shutil.rmtree(target_dir)
+    if target_dir.exists():
+        shutil.rmtree(target_dir)
+    else:
+        print(f"{target_dir} does not exist.")
 
 
 def _ensure_shinylive_local(

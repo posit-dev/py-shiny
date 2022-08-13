@@ -419,7 +419,7 @@ def static(
 @click.option(
     "--version",
     type=str,
-    default=_static._SHINYLIVE_DEFAULT_VERSION,
+    default=None,
     help="Shinylive version to download or remove.",
     show_default=True,
 )
@@ -449,16 +449,23 @@ def static_assets(
         dir = _static.get_default_shinylive_dir()
 
     if command == "download":
+        if version is None:
+            version = _static._SHINYLIVE_DEFAULT_VERSION
         print(f"Downloading shinylive-{version} from {url} to {dir}")
         _static.download_shinylive(destdir=dir, version=version, url=url)
     elif command == "remove":
-        print(f"Removing shinylive-{version} from {dir}")
+        if version is None:
+            print(f"Removing {dir}")
+        else:
+            print(f"Removing shinylive-{version} from {dir}")
         _static.remove_shinylive_local(shinylive_dir=dir, version=version)
     elif command == "info":
         _static.print_shinylive_local_info()
     elif command == "copy":
         if source is None:
             raise click.UsageError("Must specify --source")
+        if version is None:
+            version = _static._SHINYLIVE_DEFAULT_VERSION
         print(f"Copying shinylive-{version} from {source} to {dir}/shinylive-{version}")
         _static.copy_shinylive_local(source_dir=source, destdir=dir, version=version)
     else:
