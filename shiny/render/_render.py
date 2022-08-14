@@ -230,8 +230,7 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
 
         x = await self._fn()
 
-        if x is None:
-            return None
+        # Note that x might be None; it could be a matplotlib.pyplot
 
         # Try each type of renderer in turn. The reason we do it this way is to avoid
         # importing modules that aren't already loaded. That could slow things down, or
@@ -264,6 +263,9 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
             )
             if result != "TYPE_MISMATCH":
                 return result
+
+        if x is None:
+            return None
 
         raise Exception(
             f"@render.plot doesn't know to render objects of type '{str(type(x))}'. "

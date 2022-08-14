@@ -144,6 +144,11 @@ def get_matplotlib_figure(x: object) -> Union[MplFigure, None]:
     from matplotlib.animation import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
         Animation,
     )
+    from matplotlib.pyplot import gcf, get_fignums
+
+    # pyplot global figure was used
+    if x is None and len(get_fignums()) > 0:
+        return cast(MplFigure, gcf())
 
     if isinstance(x, Figure):
         return cast(MplFigure, x)
