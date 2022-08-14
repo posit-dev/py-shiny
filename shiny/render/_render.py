@@ -197,6 +197,7 @@ RenderPlotFuncAsync = Callable[[], Awaitable[object]]
 
 class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
     _ppi: float = 96
+    _is_userfn_async = False
 
     def __init__(
         self, fn: RenderPlotFunc, *, alt: Optional[str] = None, **kwargs: object
@@ -255,7 +256,14 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
 
         if "matplotlib" in sys.modules:
             ok, result = try_render_matplotlib(
-                x, width, height, pixelratio, self._ppi, **self._kwargs
+                x,
+                width,
+                height,
+                pixelratio=pixelratio,
+                ppi=self._ppi,
+                allow_global=not self._is_userfn_async,
+                alt=self._alt,
+                **self._kwargs,
             )
             if ok:
                 return result
@@ -280,6 +288,8 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
 
 
 class RenderPlotAsync(RenderPlot, RenderFunctionAsync[object, Union[ImgData, None]]):
+    _is_userfn_async = True
+
     def __init__(
         self, fn: RenderPlotFuncAsync, alt: Optional[str] = None, **kwargs: Any
     ) -> None:

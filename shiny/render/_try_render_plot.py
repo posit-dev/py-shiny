@@ -82,10 +82,11 @@ def try_render_matplotlib(
     height: float,
     pixelratio: float,
     ppi: float,
-    alt: Optional[str] = None,
+    allow_global: bool,
+    alt: Optional[str],
     **kwargs: object,
 ) -> TryPlotResult:
-    fig = get_matplotlib_figure(x)
+    fig = get_matplotlib_figure(x, allow_global)
 
     if fig is None:
         return (False, None)
@@ -128,7 +129,7 @@ def try_render_matplotlib(
         matplotlib.pyplot.close(fig)  # pyright: ignore[reportUnknownMemberType]
 
 
-def get_matplotlib_figure(x: object) -> Union[MplFigure, None]:
+def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, None]:
     from matplotlib.figure import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
         Figure,
     )
@@ -138,11 +139,24 @@ def get_matplotlib_figure(x: object) -> Union[MplFigure, None]:
     from matplotlib.animation import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
         Animation,
     )
-    from matplotlib.pyplot import gcf, get_fignums
+    import matplotlib.pyplot as plt
 
-    # pyplot global figure was used
-    if x is None and len(get_fignums()) > 0:  # pyright: reportUnknownArgumentType=false
-        return cast(MplFigure, gcf())
+    # Detect usage of pyplot global figure
+    # TODO: Might be good to detect non-empty plt.get_fignums() before we call the user
+    #   function, which would mean we will false-positive here. Maybe we warn in that
+    #   case, maybe we ignore gcf(), maybe both.
+    if (
+        x is None and len(plt.get_fignums()) > 0
+    ):  # pyright: reportUnknownArgumentType=false
+        if allow_global:
+            return cast(MplFigure, plt.gcf())
+        else:
+            # Must close the global figure so we don't stay in this state forever
+            plt.close(plt.gcf())
+            raise RuntimeError(
+                "matplotlib.pyplot cannot be used from an async render function; "
+                "please use matplotlib's object-oriented interface instead"
+            )
 
     if isinstance(x, Figure):
         return cast(MplFigure, x)
