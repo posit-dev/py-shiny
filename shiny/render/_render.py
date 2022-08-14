@@ -57,7 +57,6 @@ from .._namespaces import ResolvedId
 from .. import _utils
 from ..types import ImgData
 from ._try_render_plot import (
-    TryPlotResult,
     try_render_matplotlib,
     try_render_pil,
     try_render_plotnine,
@@ -236,34 +235,40 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
         # importing modules that aren't already loaded. That could slow things down, or
         # worse, cause an error if the module isn't installed.
         #
-        # Each try_render function should return either an ImgResult, None (which
-        # indicates that the rendering failed), or the string "TYPE_MISMATCH" (which
-        # indicate that `fig` object was not the type of object that the renderer knows
-        # how to handle). In the case of a "TYPE_MISMATCH", it will move on to the next
-        # renderer.
-        result: TryPlotResult = None
+        # Each try_render function should indicate whether it was able to make sense of
+        # the x value (or, in the case of matplotlib, possibly it decided to use the
+        # global pyplot figure) by returning a tuple that starts with True. The second
+        # tuple element may be None in this case, which means the try_render function
+        # explicitly wants the plot to be blanked.
+        #
+        # If a try_render function returns a tuple that starts with False, then the next
+        # try_render function should be tried. If none succeed, an error is raised.
+        ok: bool
+        result: Union[ImgData, None]
 
         if "plotnine" in sys.modules:
-            result = try_render_plotnine(
+            ok, result = try_render_plotnine(
                 x, width, height, pixelratio, self._ppi, **self._kwargs
             )
-            if result != "TYPE_MISMATCH":
+            if ok:
                 return result
 
         if "matplotlib" in sys.modules:
-            result = try_render_matplotlib(
+            ok, result = try_render_matplotlib(
                 x, width, height, pixelratio, self._ppi, **self._kwargs
             )
-            if result != "TYPE_MISMATCH":
+            if ok:
                 return result
 
         if "PIL" in sys.modules:
-            result = try_render_pil(
+            ok, result = try_render_pil(
                 x, width, height, pixelratio, self._ppi, **self._kwargs
             )
-            if result != "TYPE_MISMATCH":
+            if ok:
                 return result
 
+        # This check must happen last because matplotlib might be able to plot even if
+        # x is None
         if x is None:
             return None
 

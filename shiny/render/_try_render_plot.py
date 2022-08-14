@@ -70,12 +70,12 @@ class PlotnineFigure(Protocol):
         ...
 
 
-TryPlotResult = Union[ImgData, None, Literal["TYPE_MISMATCH"]]
+TryPlotResult = Tuple[bool, Union[ImgData, None]]
 
 
-# Try to render a matplotlib object. If `fig` is not a matplotlib object, return
-# "TYPE_MISMATCH". If there's an error in rendering, return None. If successful in
-# rendering, return an ImgData object.
+# Try to render a matplotlib object (or the global figure, if it's been used). If `fig`
+# is not a matplotlib object, return (False, None). If there's an error in rendering,
+# return None. If successful in rendering, return an ImgData object.
 def try_render_matplotlib(
     x: object,
     width: float,
@@ -88,7 +88,7 @@ def try_render_matplotlib(
     fig = get_matplotlib_figure(x)
 
     if fig is None:
-        return "TYPE_MISMATCH"
+        return (False, None)
 
     try:
         fig.set_size_inches(width / ppi, height / ppi)
@@ -120,18 +120,12 @@ def try_render_matplotlib(
         if alt is not None:
             res["alt"] = alt
 
-        return res
-
-    except Exception as e:
-        # TODO: just let errors propagate?
-        print("Error rendering matplotlib object: " + str(e))
+        return (True, res)
 
     finally:
         import matplotlib.pyplot  # pyright: ignore[reportMissingTypeStubs]
 
         matplotlib.pyplot.close(fig)  # pyright: ignore[reportUnknownMemberType]
-
-    return None
 
 
 def get_matplotlib_figure(x: object) -> Union[MplFigure, None]:
@@ -147,7 +141,7 @@ def get_matplotlib_figure(x: object) -> Union[MplFigure, None]:
     from matplotlib.pyplot import gcf, get_fignums
 
     # pyplot global figure was used
-    if x is None and len(get_fignums()) > 0:
+    if x is None and len(get_fignums()) > 0:  # pyright: reportUnknownArgumentType=false
         return cast(MplFigure, gcf())
 
     if isinstance(x, Figure):
@@ -196,32 +190,25 @@ def try_render_pil(
     import PIL.Image  # pyright: ignore[reportMissingModuleSource]
 
     if not isinstance(x, PIL.Image.Image):
-        return "TYPE_MISMATCH"
+        return (False, None)
 
-    try:
-        with io.BytesIO() as buf:
-            x.save(buf, format="PNG", **kwargs)
-            buf.seek(0)
-            data = base64.b64encode(buf.read())
-            data_str = data.decode("utf-8")
+    with io.BytesIO() as buf:
+        x.save(buf, format="PNG", **kwargs)
+        buf.seek(0)
+        data = base64.b64encode(buf.read())
+        data_str = data.decode("utf-8")
 
-        res: ImgData = {
-            "src": "data:image/png;base64," + data_str,
-            "width": "100%",
-            "height": "100%",
-            "style": "object-fit:contain",
-        }
+    res: ImgData = {
+        "src": "data:image/png;base64," + data_str,
+        "width": "100%",
+        "height": "100%",
+        "style": "object-fit:contain",
+    }
 
-        if alt is not None:
-            res["alt"] = alt
+    if alt is not None:
+        res["alt"] = alt
 
-        return res
-
-    except Exception as e:
-        # TODO: just let errors propagate?
-        print("Error rendering PIL object: " + str(e))
-
-    return None
+    return (True, res)
 
 
 def try_render_plotnine(
@@ -238,40 +225,34 @@ def try_render_plotnine(
     )
 
     if not isinstance(x, ggplot):
-        return "TYPE_MISMATCH"
+        return (False, None)
 
     bbox_inches = kwargs.pop("bbox_inches", "tight")
-    try:
-        with io.BytesIO() as buf:
-            cast(PlotnineFigure, x).save(
-                filename=buf,
-                format="png",
-                units="in",
-                dpi=ppi * pixelratio,
-                width=width / ppi,
-                height=height / ppi,
-                verbose=False,
-                bbox_inches=bbox_inches,
-                **kwargs,
-            )
-            buf.seek(0)
-            data = base64.b64encode(buf.read())
-            data_str = data.decode("utf-8")
 
-        res: ImgData = {
-            "src": "data:image/png;base64," + data_str,
-            "width": "100%",
-            "height": "100%",
-            "style": "object-fit:contain",
-        }
+    with io.BytesIO() as buf:
+        cast(PlotnineFigure, x).save(
+            filename=buf,
+            format="png",
+            units="in",
+            dpi=ppi * pixelratio,
+            width=width / ppi,
+            height=height / ppi,
+            verbose=False,
+            bbox_inches=bbox_inches,
+            **kwargs,
+        )
+        buf.seek(0)
+        data = base64.b64encode(buf.read())
+        data_str = data.decode("utf-8")
 
-        if alt is not None:
-            res["alt"] = alt
+    res: ImgData = {
+        "src": "data:image/png;base64," + data_str,
+        "width": "100%",
+        "height": "100%",
+        "style": "object-fit:contain",
+    }
 
-        return res
+    if alt is not None:
+        res["alt"] = alt
 
-    except Exception as e:
-        # TODO: just let errors propagate?
-        print("Error rendering matplotlib object: " + str(e))
-
-    return None
+    return (True, res)
