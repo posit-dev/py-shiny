@@ -147,7 +147,7 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, Non
     #   case, maybe we ignore gcf(), maybe both.
     if (
         x is None and len(plt.get_fignums()) > 0
-    ):  # pyright: reportUnknownArgumentType=false
+    ):  # pyright: reportUnknownArgumentType=false, reportUnknownMemberType=false
         if allow_global:
             return cast(MplFigure, plt.gcf())
         else:
@@ -185,7 +185,7 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, Non
     # If they all refer to the same figure, then it seems reasonable to use it
     # https://docs.xarray.dev/en/latest/user-guide/plotting.html#dimension-along-y-axis
     if isinstance(x, (list, tuple)):
-        figs = [get_matplotlib_figure(y) for y in cast(List[Any], x)]
+        figs = [get_matplotlib_figure(y, allow_global) for y in cast(List[Any], x)]
         if len(set(figs)) == 1:
             return figs[0]
 
