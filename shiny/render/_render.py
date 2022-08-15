@@ -57,7 +57,6 @@ from .._namespaces import ResolvedId
 from .. import _utils
 from ..types import ImgData
 from ._try_render_plot import (
-    TryPlotResult,
     try_render_matplotlib,
     try_render_pil,
     try_render_plotnine,
@@ -198,6 +197,7 @@ RenderPlotFuncAsync = Callable[[], Awaitable[object]]
 
 class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
     _ppi: float = 96
+    _is_userfn_async = False
 
     def __init__(
         self, fn: RenderPlotFunc, *, alt: Optional[str] = None, **kwargs: object
@@ -230,40 +230,55 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
 
         x = await self._fn()
 
-        if x is None:
-            return None
+        # Note that x might be None; it could be a matplotlib.pyplot
 
         # Try each type of renderer in turn. The reason we do it this way is to avoid
         # importing modules that aren't already loaded. That could slow things down, or
         # worse, cause an error if the module isn't installed.
         #
-        # Each try_render function should return either an ImgResult, None (which
-        # indicates that the rendering failed), or the string "TYPE_MISMATCH" (which
-        # indicate that `fig` object was not the type of object that the renderer knows
-        # how to handle). In the case of a "TYPE_MISMATCH", it will move on to the next
-        # renderer.
-        result: TryPlotResult = None
+        # Each try_render function should indicate whether it was able to make sense of
+        # the x value (or, in the case of matplotlib, possibly it decided to use the
+        # global pyplot figure) by returning a tuple that starts with True. The second
+        # tuple element may be None in this case, which means the try_render function
+        # explicitly wants the plot to be blanked.
+        #
+        # If a try_render function returns a tuple that starts with False, then the next
+        # try_render function should be tried. If none succeed, an error is raised.
+        ok: bool
+        result: Union[ImgData, None]
 
         if "plotnine" in sys.modules:
-            result = try_render_plotnine(
+            ok, result = try_render_plotnine(
                 x, width, height, pixelratio, self._ppi, **self._kwargs
             )
-            if result != "TYPE_MISMATCH":
+            if ok:
                 return result
 
         if "matplotlib" in sys.modules:
-            result = try_render_matplotlib(
-                x, width, height, pixelratio, self._ppi, **self._kwargs
+            ok, result = try_render_matplotlib(
+                x,
+                width,
+                height,
+                pixelratio=pixelratio,
+                ppi=self._ppi,
+                allow_global=not self._is_userfn_async,
+                alt=self._alt,
+                **self._kwargs,
             )
-            if result != "TYPE_MISMATCH":
+            if ok:
                 return result
 
         if "PIL" in sys.modules:
-            result = try_render_pil(
+            ok, result = try_render_pil(
                 x, width, height, pixelratio, self._ppi, **self._kwargs
             )
-            if result != "TYPE_MISMATCH":
+            if ok:
                 return result
+
+        # This check must happen last because matplotlib might be able to plot even if
+        # x is None
+        if x is None:
+            return None
 
         raise Exception(
             f"@render.plot doesn't know to render objects of type '{str(type(x))}'. "
@@ -273,6 +288,8 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
 
 
 class RenderPlotAsync(RenderPlot, RenderFunctionAsync[object, Union[ImgData, None]]):
+    _is_userfn_async = True
+
     def __init__(
         self, fn: RenderPlotFuncAsync, alt: Optional[str] = None, **kwargs: Any
     ) -> None:
@@ -330,6 +347,12 @@ def plot(
         4. An object with a 'figure' attribute pointing to a
            :class:`matplotlib.figure.Figure` instance.
         5. A :class:`PIL.Image.Image` instance.
+
+    It's also possible to use the `matplotlib.pyplot` interface; in that case, your
+    function should just call pyplot functions and not return anything. (Note that if
+    the decorated function is async, then it's not safe to use pyplot. Shiny will detect
+    this case and throw an error asking you to use matplotlib's object-oriented
+    interface instead.)
 
     Tip
     ----
