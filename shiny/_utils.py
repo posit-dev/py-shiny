@@ -115,7 +115,7 @@ T = TypeVar("T")
 
 
 def wrap_async(
-    fn: Union[Callable[[], T], Callable[[], Awaitable[T]]]
+    fn: Union[Callable[[], Awaitable[T]], Callable[[], T]]
 ) -> Callable[[], Awaitable[T]]:
     """
     Given a synchronous function that returns T, return an async function that wraps the
