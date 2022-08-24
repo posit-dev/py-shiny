@@ -59,6 +59,12 @@ jobs:
         run: |
           make test
 
+      - name: Run e2e tests
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          playwright install
+          make e2e
+
       - name: Type check with pyright
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |

@@ -1,4 +1,4 @@
-.PHONY: clean clean-test clean-pyc clean-build docs help
+.PHONY: help clean clean-test clean-pyc clean-build docs help lint test e2e test-all
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -63,6 +63,9 @@ lint: ## check style with flake8
 test: ## run tests quickly with the default Python
 	python3 tests/asyncio_prevent.py
 	pytest
+
+e2e: ## run e2e tests with playwright
+	pytest e2e
 
 test-all: ## run tests on every Python version with tox
 	tox
