@@ -1,11 +1,7 @@
 import re
-from typing import Union
-
-import pytest
 from playwright.sync_api import Page, expect
 
-from conftest import ShinyAppProc, run_shiny_app
-from pathlib import PurePath
+from conftest import ShinyAppProc
 
 
 def test_cpuinfo(page: Page, airmass_app: ShinyAppProc):

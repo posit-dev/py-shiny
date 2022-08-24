@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import queue
 import random
 import socket
@@ -10,7 +11,7 @@ import threading
 from enum import Enum
 from pathlib import PurePath
 from types import TracebackType
-from typing import Optional, TextIO, Type, Union
+from typing import IO, Callable, List, Optional, TextIO, Type, Union
 
 import pytest
 
@@ -41,10 +42,76 @@ def pipe_reader(stream: TextIO, queue: queue.Queue[str]):
             queue.put(line)
 
 
+class StreamingOutput:
+    def __init__(
+        self, proc: subprocess.Popen[str], io: IO[str], desc: Optional[str] = None
+    ):
+        self._proc = proc
+        self._io = io
+        self._closed = False
+        self._lines: List[str] = []
+        self._mutex = threading.Lock()
+        self._cond = threading.Condition(self._mutex)
+        self._thread = threading.Thread(
+            group=None, target=self._run, daemon=True, name=desc
+        )
+
+        self._thread.start()
+
+    def _run(self):
+        try:
+            while not self._io.closed:
+                try:
+                    line = self._io.readline()
+                except ValueError:
+                    # This is raised when the stream is closed
+                    break
+                if line is None:
+                    break
+                if line != "":
+                    # logging.warning(f"> {line}")
+                    with self._cond:
+                        self._lines.append(line)
+                        self._cond.notify_all()
+        finally:
+            with self._cond:
+                self._closed = True
+                self._cond.notify_all()
+
+    def wait_for(self, predicate: Callable[[str], bool], timeoutSecs: float) -> bool:
+        timeoutAt = datetime.datetime.now() + datetime.timedelta(seconds=timeoutSecs)
+        pos = 0
+        with self._cond:
+            while True:
+                while pos < len(self._lines):
+                    if predicate(self._lines[pos]):
+                        return True
+                    pos += 1
+                if self._closed:
+                    return False
+                else:
+                    remaining = (timeoutAt - datetime.datetime.now()).total_seconds()
+                    if remaining < 0 or not self._cond.wait(timeout=remaining):
+                        # Timed out
+                        raise TimeoutError(
+                            "Timeout while waiting for Shiny app to become ready"
+                        )
+
+    def __str__(self):
+        with self._cond:
+            return "".join(self._lines)
+
+
 class ShinyAppState(Enum):
     START = 0
     READY = 1
     EXITED = 2
+
+
+def dummyio() -> TextIO:
+    io = TextIO()
+    io.close()
+    return io
 
 
 class ShinyAppProc:
@@ -52,33 +119,20 @@ class ShinyAppProc:
         self.proc = proc
         self.port = port
         self.url = f"http://127.0.0.1:{port}/"
-        self.stdout: queue.Queue[str] = queue.Queue()
-        self.stderr: queue.Queue[str] = queue.Queue()
+        self.stdout = StreamingOutput(proc, proc.stdout or dummyio())
+        self.stderr = StreamingOutput(proc, proc.stderr or dummyio())
         self._state = ShinyAppState.START
+        threading.Thread(group=None, target=self._run, daemon=True).start()
 
-        self.stdout_thread: threading.Thread = threading.Thread(
-            group=None,
-            target=pipe_reader,
-            args=(proc.stdout, self.stdout),
-            name="shiny_stdout_reader",
-            daemon=True,
-        )
-        self.stdout_thread.start()
-        self.stderr_thread: threading.Thread = threading.Thread(
-            group=None,
-            target=pipe_reader,
-            args=(proc.stderr, self.stderr),
-            name="shiny_stderr_reader",
-            daemon=True,
-        )
-        self.stderr_thread.start()
-
-    def close(self) -> None:
-        self.proc.terminate()
+    def _run(self) -> None:
+        self.proc.wait()
         if self.proc.stdout is not None:
             self.proc.stdout.close()
         if self.proc.stderr is not None:
             self.proc.stderr.close()
+
+    def close(self) -> None:
+        self.proc.terminate()
 
     def __enter__(self) -> ShinyAppProc:
         return self
@@ -92,31 +146,11 @@ class ShinyAppProc:
         self.close()
 
     def wait_until_ready(self, timeoutSecs: float) -> None:
-        timeoutAt = datetime.datetime.now() + datetime.timedelta(seconds=timeoutSecs)
-        while True:
-            self.proc.poll()
-
-            if self._state is ShinyAppState.EXITED or self.proc.returncode is not None:
-                raise RuntimeError("Shiny app process has exited")
-            elif self._state is ShinyAppState.READY:
-                return
-            elif self._state is ShinyAppState.START:
-                remaining = timeoutAt - datetime.datetime.now()
-                if remaining.total_seconds() < 0:
-                    raise TimeoutError(
-                        "Timeout expired while waiting for Shiny app to be ready"
-                    )
-                try:
-                    line = self.stderr.get(
-                        block=True, timeout=min(0.2, remaining.total_seconds())
-                    )
-                except queue.Empty:
-                    continue
-                if "Uvicorn running on" in line:
-                    self._state = ShinyAppState.READY
-                    return
-            else:
-                raise RuntimeError(f"Unknown ShinyAppProc._state value: {self._state}")
+        if self.stderr.wait_for(lambda line: "Uvicorn running on1" in line, 10):
+            return
+        else:
+            logging.warning(str(self.stderr))
+            raise RuntimeError("Shiny app exited without ever becoming ready")
 
 
 def run_shiny_app(
@@ -155,7 +189,9 @@ def create_app_fixture(app: Union[PurePath, str], scope: str = "module"):
         with run_shiny_app(app) as sa:
             yield sa
 
-    return pytest.fixture(scope=scope)(fixture_func)
+    return pytest.fixture(
+        scope=scope,  # type: ignore
+    )(fixture_func)
 
 
 here = PurePath(__file__).parent
