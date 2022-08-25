@@ -59,12 +59,6 @@ jobs:
         run: |
           make test
 
-      - name: Run e2e tests
-        if: steps.install.outcome == 'success' && (success() || failure())
-        run: |
-          playwright install
-          make e2e
-
       - name: Type check with pyright
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
@@ -81,6 +75,18 @@ jobs:
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           make lint
+
+      - name: Install e2e dependencies
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          playwright install
+          pip install -r examples/airmass/requirements.txt
+          pip install psutil
+
+      - name: Run e2e tests
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          make e2e
 
   deploy:
     name: "Deploy to PyPI"
