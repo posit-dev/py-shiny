@@ -6,6 +6,7 @@ import re
 import shutil
 import sys
 import types
+import typing
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Union
 
@@ -16,6 +17,9 @@ import uvicorn.config
 import shiny
 
 from . import _autoreload, _hostenv, _static
+
+if typing.TYPE_CHECKING:
+    from asgiref.typing import ASGIApplication
 
 
 @click.group()  # pyright: ignore[reportUnknownMemberType]
@@ -225,7 +229,7 @@ def run_app(
     maybe_setup_rsw_proxying(log_config)
 
     uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
-        app,
+        typing.cast(ASGIApplication, app),
         host=host,
         port=port,
         debug=debug,
