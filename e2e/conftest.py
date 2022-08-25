@@ -146,7 +146,7 @@ class ShinyAppProc:
         self.close()
 
     def wait_until_ready(self, timeoutSecs: float) -> None:
-        if self.stderr.wait_for(lambda line: "Uvicorn running on1" in line, 10):
+        if self.stderr.wait_for(lambda line: "Uvicorn running on" in line, 10):
             return
         else:
             logging.warning(str(self.stderr))
