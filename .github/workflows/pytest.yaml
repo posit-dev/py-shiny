@@ -80,7 +80,9 @@ jobs:
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           playwright install
-          pip install -r examples/airmass/requirements.txt
+          # Install from requirements.in instead of requirements.txt to work with older
+          # Python versions
+          pip install -r examples/airmass/requirements.in
           pip install psutil
 
       - name: Run e2e tests
