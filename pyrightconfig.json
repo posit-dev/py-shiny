@@ -1,5 +1,6 @@
 {
   "ignore": ["shiny/examples", "examples", "build", "dist", "typings", "sandbox"],
+  "pythonPlatform": "All",
   "typeCheckingMode": "strict",
   "reportImportCycles":  "none",
   "reportUnusedFunction":  "none",

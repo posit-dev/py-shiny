@@ -124,19 +124,21 @@ def try_render_matplotlib(
         return (True, res)
 
     finally:
-        import matplotlib.pyplot  # pyright: ignore[reportMissingTypeStubs]
+        import matplotlib.pyplot
 
-        matplotlib.pyplot.close(fig)  # pyright: ignore[reportUnknownMemberType]
+        matplotlib.pyplot.close(  # pyright: ignore[reportUnknownMemberType]
+            fig  # pyright: ignore[reportGeneralTypeIssues,reportUnknownMemberType]
+        )
 
 
 def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, None]:
-    from matplotlib.figure import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
+    from matplotlib.figure import (
         Figure,
     )
-    from matplotlib.artist import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
+    from matplotlib.artist import (
         Artist,
     )
-    from matplotlib.animation import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
+    from matplotlib.animation import (
         Animation,
     )
     import matplotlib.pyplot as plt
@@ -147,12 +149,12 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, Non
     #   case, maybe we ignore gcf(), maybe both.
     if (
         x is None and len(plt.get_fignums()) > 0
-    ):  # pyright: reportUnknownArgumentType=false, reportUnknownMemberType=false
+    ):  # pyright: ignore[reportUnknownArgumentType,reportUnknownMemberType]
         if allow_global:
             return cast(MplFigure, plt.gcf())
         else:
             # Must close the global figure so we don't stay in this state forever
-            plt.close(plt.gcf())
+            plt.close(plt.gcf())  # pyright: ignore[reportUnknownMemberType]
             raise RuntimeError(
                 "matplotlib.pyplot cannot be used from an async render function; "
                 "please use matplotlib's object-oriented interface instead"
@@ -234,8 +236,8 @@ def try_render_plotnine(
     alt: Optional[str] = None,
     **kwargs: object,
 ) -> TryPlotResult:
-    from plotnine.ggplot import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false,reportMissingImports=false
-        ggplot,
+    from plotnine.ggplot import (  # pyright: ignore[reportMissingTypeStubs,reportMissingImports]
+        ggplot,  # pyright: ignore[reportUnknownVariableType]
     )
 
     if not isinstance(x, ggplot):
