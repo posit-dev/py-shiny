@@ -1,3 +1,6 @@
+# See https://github.com/microsoft/playwright-python/issues/1532
+# pyright: reportUnknownMemberType=false
+
 import re
 from playwright.sync_api import Page, expect
 
@@ -8,6 +11,7 @@ def test_cpuinfo(page: Page, airmass_app: ShinyAppProc):
     page.goto(airmass_app.url)
     plot = page.locator("#plot")
     expect(plot).to_have_class(re.compile(r"\bshiny-bound-output\b"))
+
     img = plot.locator(">img")
     expect(img).to_have_attribute("src", re.compile(".{1000}"))
     # img.screenshot(path="sshot.png")
