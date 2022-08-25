@@ -13,7 +13,7 @@ def test_airmass(page: Page, airmass_app: ShinyAppProc):
     expect(plot).to_have_class(re.compile(r"\bshiny-bound-output\b"))
 
     img = plot.locator(">img")
-    expect(img).to_have_attribute("src", re.compile(".{1000}"), timeout=30)
+    expect(img).to_have_attribute("src", re.compile(".{1000}"), timeout=30000)
     # img.screenshot(path="airmass.png")
 
     page.reload()
