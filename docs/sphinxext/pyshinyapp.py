@@ -27,13 +27,11 @@ from sphinx.application import Sphinx
 from sphinx.util.docutils import SphinxDirective
 from htmltools import css
 
-# Local path to the shinylive/ directory (currently provided by rstudio/py-shinylive)
+# Local path to the shinylive/ directory (currently provided by rstudio/shinylive)
 # This is only needed for the "self-contained" version of the API reference.
 # (in other words, you can set this to "" if you already have the shinylive/ directory
 # in your repo, just make sure to also point SHINYLIVE_DEST to the right place)
-shinylive_src = abspath(
-    join(dirname(__file__), "../../../py-shinylive/build/shinylive")
-)
+shinylive_src = abspath(join(dirname(__file__), "../../../shinylive/build/shinylive"))
 SHINYLIVE_SRC = os.getenv("SHINYLIVE_SRC", shinylive_src)
 
 # The location of the shinylive/ directory (relative to the output/root directory)
