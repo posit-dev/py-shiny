@@ -2,18 +2,27 @@ from __future__ import annotations
 
 import datetime
 import logging
-import queue
 import random
 import socket
 import subprocess
 import sys
 import threading
-from enum import Enum
 from pathlib import PurePath
+from time import sleep
 from types import TracebackType
-from typing import IO, Callable, List, Optional, TextIO, Type, Union
+from typing import IO, Callable, Generator, List, Optional, TextIO, Type, Union
 
 import pytest
+
+__all__ = (
+    "ShinyAppProc",
+    "create_app_fixture",
+    "create_example_fixture",
+    "local_app",
+    "run_shiny_app",
+)
+
+here = PurePath(__file__).parent
 
 
 def random_port():
@@ -28,30 +37,16 @@ def random_port():
                 continue
 
 
-def pipe_reader(stream: TextIO, queue: queue.Queue[str]):
-    while not stream.closed:
-        try:
-            line = stream.readline()
-        except ValueError:
-            # This is raised when the stream is closed
-            break
-        if line is None:
-            break
-        if line != "":
-            # print(f"> {line}", end="")
-            queue.put(line)
+class OutputStream:
+    """Designed to wrap an IO[str] and accumulate the output using a bg thread
 
+    Also allows for blocking waits for particular lines."""
 
-class StreamingOutput:
-    def __init__(
-        self, proc: subprocess.Popen[str], io: IO[str], desc: Optional[str] = None
-    ):
-        self._proc = proc
+    def __init__(self, io: IO[str], desc: Optional[str] = None):
         self._io = io
         self._closed = False
         self._lines: List[str] = []
-        self._mutex = threading.Lock()
-        self._cond = threading.Condition(self._mutex)
+        self._cond = threading.Condition()
         self._thread = threading.Thread(
             group=None, target=self._run, daemon=True, name=desc
         )
@@ -59,6 +54,8 @@ class StreamingOutput:
         self._thread.start()
 
     def _run(self):
+        """Pump lines into self._lines in a tight loop."""
+
         try:
             while not self._io.closed:
                 try:
@@ -74,6 +71,8 @@ class StreamingOutput:
                         self._lines.append(line)
                         self._cond.notify_all()
         finally:
+            # If we got here, we're finished reading self._io and need to signal any
+            # waiters that we're done and they'll never hear from us again.
             with self._cond:
                 self._closed = True
                 self._cond.notify_all()
@@ -102,12 +101,6 @@ class StreamingOutput:
             return "".join(self._lines)
 
 
-class ShinyAppState(Enum):
-    START = 0
-    READY = 1
-    EXITED = 2
-
-
 def dummyio() -> TextIO:
     io = TextIO()
     io.close()
@@ -119,9 +112,8 @@ class ShinyAppProc:
         self.proc = proc
         self.port = port
         self.url = f"http://127.0.0.1:{port}/"
-        self.stdout = StreamingOutput(proc, proc.stdout or dummyio())
-        self.stderr = StreamingOutput(proc, proc.stderr or dummyio())
-        self._state = ShinyAppState.START
+        self.stdout = OutputStream(proc.stdout or dummyio())
+        self.stderr = OutputStream(proc.stderr or dummyio())
         threading.Thread(group=None, target=self._run, daemon=True).start()
 
     def _run(self) -> None:
@@ -132,6 +124,7 @@ class ShinyAppProc:
             self.proc.stderr.close()
 
     def close(self) -> None:
+        sleep(0.5)
         self.proc.terminate()
 
     def __enter__(self) -> ShinyAppProc:
@@ -146,10 +139,11 @@ class ShinyAppProc:
         self.close()
 
     def wait_until_ready(self, timeoutSecs: float) -> None:
-        if self.stderr.wait_for(lambda line: "Uvicorn running on" in line, 10):
+        if self.stderr.wait_for(
+            lambda line: "Uvicorn running on" in line, timeoutSecs=timeoutSecs
+        ):
             return
         else:
-            logging.warning(str(self.stderr))
             raise RuntimeError("Shiny app exited without ever becoming ready")
 
 
@@ -186,16 +180,29 @@ def run_shiny_app(
 
 def create_app_fixture(app: Union[PurePath, str], scope: str = "module"):
     def fixture_func():
-        with run_shiny_app(app) as sa:
-            yield sa
+        sa = run_shiny_app(app, wait_for_start=False)
+        try:
+            with sa:
+                sa.wait_until_ready(30)
+                yield sa
+        finally:
+            logging.warning("Application output:\n" + str(sa.stderr))
 
     return pytest.fixture(
         scope=scope,  # type: ignore
     )(fixture_func)
 
 
-here = PurePath(__file__).parent
+def create_example_fixture(example_name: str, scope: str = "module"):
+    return create_app_fixture(here / "../examples" / example_name / "app.py", scope)
 
-# Actual fixtures are here; request them to run the respective Shiny app
-airmass_app = create_app_fixture(here / "../examples/airmass/app.py")
-cpuinfo_app = create_app_fixture(here / "../examples/cpuinfo/app.py")
+
+@pytest.fixture(scope="module")
+def local_app(request: pytest.FixtureRequest) -> Generator[ShinyAppProc, None, None]:
+    sa = run_shiny_app(PurePath(request.path).parent / "app.py", wait_for_start=False)
+    try:
+        with sa:
+            sa.wait_until_ready(30)
+            yield sa
+    finally:
+        logging.warning("Application output:\n" + str(sa.stderr))
