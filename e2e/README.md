@@ -1,10 +1,18 @@
 # End-to-end tests
 
-This directory contains end-to-end tests for Shiny for Python. Each subdirectory
-contains one or more Pytest files (`test_*.py`) containing
-[Playwright](https://playwright.dev/python/) assertions, and optionally, a single app
-(`app.py`) that the assertions test against. (The app is optional, because the tests may
-also be for apps in the `examples/` directory.)
+This directory contains end-to-end (i.e. browser based) tests for Shiny for Python.
+
+The Python files directly in this subdirectory are for Pytest fixtures and helper code
+to make test writing easier. (Eventually this logic may move to the `shiny` package
+itself or its own dedicated package, so that Shiny app authors can set up their own e2e
+tests against their apps.)
+
+The actual tests are in subdirectories. Each subdirectory contains one or more Pytest
+files (`test_*.py`) containing [Playwright](https://playwright.dev/python/) assertions,
+and optionally, a single app (`app.py`) that the assertions test against. (The app is
+optional, because the tests may also be for apps in the `examples/` directory.)
+
+## Running tests
 
 The following commands can be run from the repo root:
 
@@ -24,19 +32,14 @@ tox -- --headed e2e/async
 ## Shiny app fixtures
 
 Playwright for Python launches and controls (headless or headful) browsers, but does not
-know how to start/stop Shiny app processes. These are handled by fixtures in
-`conftest.py`.
-
-The fixtures wait until the app has finished loading and is responding to requests,
-before passing control back to Pytest and letting the test begin. The scope of each
-fixture is `module`; that is, the local app will be started and shutdown once regardless
-of how many test functions exist in this module. (We can easily make this customizable
-in the future if necessary.)
+know how to start/stop Shiny app processes. Insteaed, we have our own [Pytest
+fixtures](https://docs.pytest.org/en/latest/explanation/fixtures.html) for
+Shiny app process management.
 
 ### Testing a local `app.py`
 
 The `local_app: ShinyAppProc` fixture launches the `app.py` in the current directory
-(relative to the `test_*.py` file).
+as the calling `test_*.py` file.
 
 ```python
 # pyright: reportUnknownMemberType=false
@@ -54,8 +57,9 @@ def test_airmass(page: Page, local_app: ShinyAppProc):
 
 ### Testing an app from `../examples`
 
-Testing an example app is slightly more complicated. At the test module level, create a
-fixture with the help of `conftest.create_example_fixture`, and use it from test funcs.
+It's also possible to test apps that live in the `../examples` directory: at the test
+module level, create a fixture with the help of `conftest.create_example_fixture`, and
+use it from test funcs.
 
 ```python
 # See https://github.com/microsoft/playwright-python/issues/1532
