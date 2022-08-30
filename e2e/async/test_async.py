@@ -18,7 +18,7 @@ def test_async_app(page: Page, local_app: ShinyAppProc) -> None:
     expect(progress).to_be_visible()
     expect(progress).to_contain_text("Calculating...")
 
-    output = page.locator("#output")
+    output = page.locator("#hash_output")
     expect(output).to_have_text(
         "2e220fb9d401bf832115305b9ae0277e7b8b1a9368c6526e450acd255e0ec0c2", timeout=2000
     )

@@ -19,7 +19,7 @@ app_ui = ui.page_fluid(
         "value", "Value to sha256sum", value="The quick brown fox", rows=5, width="100%"
     ),
     ui.p(ui.input_action_button("go", "Calculate"), class_="mb-3"),
-    ui.output_text_verbatim("output"),
+    ui.output_text_verbatim("hash_output"),
 )
 
 
@@ -27,7 +27,7 @@ def server(input: s.Inputs, output: s.Outputs, session: s.Session):
     @output()
     @s.render.text()
     @reactive.event(input.go)
-    async def output():
+    async def hash_output():
         content = await hash_result()
         return content
 
