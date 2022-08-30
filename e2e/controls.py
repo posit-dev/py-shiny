@@ -16,17 +16,22 @@ class SimpleInput:
 
 class TextInput(SimpleInput):
     def __init__(self, page: Page, inputId: str):
-        super().__init__(page, f"#{inputId}[type=text].shiny-bound-input")
+        super().__init__(page, f"input#{inputId}[type=text].shiny-bound-input")
+
+
+class TextAreaInput(SimpleInput):
+    def __init__(self, page: Page, inputId: str):
+        super().__init__(page, f"textarea#{inputId}.shiny-bound-input")
 
 
 class NumericInput(SimpleInput):
     def __init__(self, page: Page, inputId: str):
-        super().__init__(page, f"#{inputId}[type=number].shiny-bound-input")
+        super().__init__(page, f"input#{inputId}[type=number].shiny-bound-input")
 
 
 class CheckboxInput(SimpleInput):
     def __init__(self, page: Page, inputId: str):
-        super().__init__(page, f"#{inputId}[type=checkbox].shiny-bound-input")
+        super().__init__(page, f"input#{inputId}[type=checkbox].shiny-bound-input")
 
 
 class DateInput:

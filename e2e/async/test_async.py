@@ -8,7 +8,7 @@ from conftest import ShinyAppProc
 def test_async_app(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    textarea = page.locator("#value")
+    textarea = page.locator("textarea#value")
     textarea.fill("Hello\nGoodbye")
 
     btn = page.locator("#go")
