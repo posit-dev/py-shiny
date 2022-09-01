@@ -224,8 +224,8 @@ def run_app(
 
     maybe_setup_rsw_proxying(log_config)
 
-    uvicorn.run(
-        app,  # type: ignore
+    uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
+        app,
         host=host,
         port=port,
         debug=debug,
