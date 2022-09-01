@@ -90,7 +90,7 @@ class Value(Generic[T]):
     def __init__(
         self, value: Union[T, MISSING_TYPE] = MISSING, *, read_only: bool = False
     ) -> None:
-        self._value: T = value
+        self._value: Union[T, MISSING_TYPE] = value
         self._read_only: bool = read_only
         self._value_dependents: Dependents = Dependents()
         self._is_set_dependents: Dependents = Dependents()
