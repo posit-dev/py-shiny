@@ -5,15 +5,13 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [0.2.6] - 2022-09-02
 
 ### New features
 
 * Closed [#312](https://github.com/rstudio/py-shiny/issues/312): Matplotlib plots in a `@render.plot` can now use the global figure, instead of returning a `figure` object. ([#314](https://github.com/rstudio/py-shiny/pull/314))
 
 * Disabled `shiny static` command, in favor of `shinylive export` from the shinylive package. ([#326](https://github.com/rstudio/py-shiny/pull/326))
-
-### Bug fixes
 
 
 ## [0.2.5] - 2022-08-12
