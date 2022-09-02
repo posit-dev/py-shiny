@@ -351,12 +351,12 @@ def create(appdir: str) -> None:
 
 @main.command(
     help="""The functionality from `shiny static` has been moved to the shinylive package.
-Please install shinylive and use `shinylive deploy` instead of `shiny static`:
+Please install shinylive and use `shinylive export` instead of `shiny static`:
 
   \b
   shiny static-assets remove
   pip install shinylive
-  shinylive deploy APPDIR DESTDIR
+  shinylive export APPDIR DESTDIR
 
 """,
     context_settings=dict(
@@ -367,11 +367,11 @@ Please install shinylive and use `shinylive deploy` instead of `shiny static`:
 def static() -> None:
     print(
         """The functionality from `shiny static` has been moved to the shinylive package.
-Please install shinylive and use `shinylive deploy` instead of `shiny static`:
+Please install shinylive and use `shinylive export` instead of `shiny static`:
 
   shiny static-assets remove
   pip install shinylive
-  shinylive deploy APPDIR DESTDIR
+  shinylive export APPDIR DESTDIR
 """
     )
     sys.exit(1)
