@@ -1,7 +1,9 @@
-import pytest
 import random
-from shiny._utils import AsyncCallbacks, Callbacks, private_seed
-from typing import List
+import socketserver
+from typing import List, Set
+
+import pytest
+from shiny._utils import AsyncCallbacks, Callbacks, private_seed, random_port
 
 
 def test_randomness():
@@ -132,3 +134,23 @@ async def test_async_callbacks():
     assert cb2.exec_count == 1  # Unregistered by previous invoke, not called again
     assert cb3.exec_count == 1  # once=True, so not called again
     assert cb4.exec_count == 1  # Registered during previous invoke(), was called
+
+
+def test_random_port():
+    assert random_port(9000, 9000) == 9000
+
+    seen: Set[int] = set()
+    while len(seen) < 10:
+        seen.add(random_port(9001, 9010))
+
+
+def test_random_port_unusable():
+    # 6000 is an unsafe port, make sure that it fails
+    with pytest.raises(RuntimeError, match="Failed to find a usable random port"):
+        random_port(6000, 6000)
+
+
+def test_random_port_starvation():
+    with socketserver.TCPServer(("127.0.0.1", 9000), socketserver.BaseRequestHandler):
+        with pytest.raises(RuntimeError, match="Failed to find a usable random port"):
+            random_port(9000, 9000)

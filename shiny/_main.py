@@ -15,7 +15,7 @@ import uvicorn.config
 
 import shiny
 
-from . import _autoreload, _hostenv, _static
+from . import _autoreload, _hostenv, _static, _utils
 
 
 @click.group()  # pyright: ignore[reportUnknownMemberType]
@@ -54,7 +54,7 @@ any of the following will work:
     "--port",
     type=int,
     default=8000,
-    help="Bind socket to this port.",
+    help="Bind socket to this port. If 0, a random port will be used.",
     show_default=True,
 )
 @click.option(
@@ -97,6 +97,13 @@ any of the following will work:
     help="Treat APP as an application factory, i.e. a () -> <ASGI app> callable.",
     show_default=True,
 )
+@click.option(
+    "--launch-browser",
+    is_flag=True,
+    default=False,
+    help="Launch app browser after app starts, using the Python webbrowser module.",
+    show_default=True,
+)
 def run(
     app: Union[str, shiny.App],
     host: str,
@@ -108,6 +115,7 @@ def run(
     log_level: str,
     app_dir: str,
     factory: bool,
+    launch_browser: bool,
 ) -> None:
     return run_app(
         app,
@@ -120,6 +128,7 @@ def run(
         log_level=log_level,
         app_dir=app_dir,
         factory=factory,
+        launch_browser=launch_browser,
     )
 
 
@@ -134,6 +143,7 @@ def run_app(
     log_level: Optional[str] = None,
     app_dir: Optional[str] = ".",
     factory: bool = False,
+    launch_browser: bool = False,
 ) -> None:
     """
     Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop.
@@ -152,7 +162,14 @@ def run_app(
     host
         The address that the app should listen on.
     port
-        The port that the app should listen on.
+        The port that the app should listen on. Set to 0 to use a random port.
+    autoreload_port
+        The port that should be used for an additional websocket that is used to support
+        hot-reload; ignored if ``reload`` is False. If the value begins with ``"+"`` or
+        ``"-"``, it will be added to the value of ``port`` (unless ``port`` is 0, in
+        which case, ``autoreload_port`` will also be chosen at random). If 0, a random
+        port number will be used. If any other numeric value, that port number will be
+        used.
     debug
         Enable debug mode.
     reload
@@ -163,6 +180,10 @@ def run_app(
         Log level.
     app_dir
         Look for ``app`` under this directory (by adding this to the ``PYTHONPATH``).
+    factory
+        Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
+    launch_browser
+        Launch app browser after app starts, using the Python webbrowser module.
 
     Tip
     ---
@@ -188,6 +209,19 @@ def run_app(
         # Run ``my_app`` inside ``../myapp.py`` (or ``../myapp/app.py``)
         run_app("myapp:my_app", app_dir="..")
     """
+
+    # TODO: If port is 0, randomize
+    if port == 0:
+        port = _utils.random_port(host=host)
+        if reload and (
+            autoreload_port.startswith("+")
+            or autoreload_port.startswith("-")
+            or int(autoreload_port) == 0
+        ):
+            autoreload_port = str(_utils.random_port(host=host))
+
+    os.environ["SHINY_HOST"] = host
+    os.environ["SHINY_PORT"] = str(port)
 
     if isinstance(app, str):
         app, app_dir = resolve_app(app, app_dir)
@@ -219,8 +253,12 @@ def run_app(
             sys.stderr.write(
                 "Autoreload port is already being used by the app; disabling autoreload\n"
             )
+            reload = False
         else:
-            setup_hot_reload(log_config, autoreload_port_num, port)
+            setup_hot_reload(log_config, autoreload_port_num, port, launch_browser)
+
+    if launch_browser and not reload:
+        setup_launch_browser(log_config)
 
     maybe_setup_rsw_proxying(log_config)
 
@@ -240,7 +278,10 @@ def run_app(
 
 
 def setup_hot_reload(
-    log_config: Dict[str, Any], autoreload_port: int, app_port: int
+    log_config: Dict[str, Any],
+    autoreload_port: int,
+    app_port: int,
+    launch_browser: bool,
 ) -> None:
     # The only way I've found to get notified when uvicorn decides to reload, is by
     # inserting a custom log handler.
@@ -248,9 +289,21 @@ def setup_hot_reload(
         "class": "shiny._autoreload.HotReloadHandler",
         "level": "INFO",
     }
-    log_config["loggers"]["uvicorn.error"]["handlers"] = ["shiny_hot_reload"]
+    if "handlers" not in log_config["loggers"]["uvicorn.error"]:
+        log_config["loggers"]["uvicorn.error"]["handlers"] = []
+    log_config["loggers"]["uvicorn.error"]["handlers"].append("shiny_hot_reload")
 
-    _autoreload.start_server(autoreload_port, app_port)
+    _autoreload.start_server(autoreload_port, app_port, launch_browser)
+
+
+def setup_launch_browser(log_config: Dict[str, Any]):
+    log_config["handlers"]["shiny_launch_browser"] = {
+        "class": "shiny._launchbrowser.LaunchBrowserHandler",
+        "level": "INFO",
+    }
+    if "handlers" not in log_config["loggers"]["uvicorn.error"]:
+        log_config["loggers"]["uvicorn.error"]["handlers"] = []
+    log_config["loggers"]["uvicorn.error"]["handlers"].append("shiny_launch_browser")
 
 
 def maybe_setup_rsw_proxying(log_config: Dict[str, Any]) -> None:
