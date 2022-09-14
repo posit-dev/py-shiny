@@ -85,6 +85,7 @@ class SliderInput:
         mouse.move(
             grid_bb.get("x") + (fraction * grid_bb.get("width")), handle_center[1]
         )
+        mouse.up()
 
 
 class CheckboxGroupInput:
