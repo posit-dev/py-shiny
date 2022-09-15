@@ -2,7 +2,6 @@ import copy
 import importlib
 import importlib.util
 import os
-import re
 import shutil
 import sys
 import types
@@ -59,9 +58,9 @@ any of the following will work:
 )
 @click.option(
     "--autoreload-port",
-    type=str,
-    default="+123",
-    help="Bind autoreload socket to this port number. If the value begins with + or -, it will be added to the value of --port. Ignored if --reload is not used.",
+    type=int,
+    default=0,
+    help="Bind autoreload socket to this port. If 0, a random port will be used. Ignored if --reload is not used.",
     show_default=True,
 )
 @click.option(
@@ -108,7 +107,7 @@ def run(
     app: Union[str, shiny.App],
     host: str,
     port: int,
-    autoreload_port: str,
+    autoreload_port: int,
     debug: bool,
     reload: bool,
     ws_max_size: int,
@@ -136,7 +135,7 @@ def run_app(
     app: Union[str, shiny.App] = "app:app",
     host: str = "127.0.0.1",
     port: int = 8000,
-    autoreload_port: str = "",
+    autoreload_port: int = 0,
     debug: bool = False,
     reload: bool = False,
     ws_max_size: int = 16777216,
@@ -165,11 +164,7 @@ def run_app(
         The port that the app should listen on. Set to 0 to use a random port.
     autoreload_port
         The port that should be used for an additional websocket that is used to support
-        hot-reload; ignored if ``reload`` is False. If the value begins with ``"+"`` or
-        ``"-"``, it will be added to the value of ``port`` (unless ``port`` is 0, in
-        which case, ``autoreload_port`` will also be chosen at random). If 0, a random
-        port number will be used. If any other numeric value, that port number will be
-        used.
+        hot-reload. Set to 0 to use a random port.
     debug
         Enable debug mode.
     reload
@@ -213,11 +208,6 @@ def run_app(
     # If port is 0, randomize
     if port == 0:
         port = _utils.random_port(host=host)
-        # If autoreload port is calculated relative to
-        if reload and (
-            autoreload_port.startswith("+") or autoreload_port.startswith("-")
-        ):
-            autoreload_port = "0"
 
     os.environ["SHINY_HOST"] = host
     os.environ["SHINY_PORT"] = str(port)
@@ -235,30 +225,17 @@ def run_app(
     else:
         reload_dirs = []
 
-    if reload and autoreload_port != "":
-        m = re.search("^([+-]?)(\\d+)$", autoreload_port)
-        if not m:
-            sys.stderr.write(
-                "Error: Couldn't understand the provided value for --autoreload-port\n"
-            )
-            exit(1)
-        autoreload_port = str(_utils.random_port(host=host))
-        autoreload_port_num = int(m.group(2))
-        if m.group(1) == "+":
-            autoreload_port_num += port
-        elif m.group(1) == "-":
-            autoreload_port_num = port - autoreload_port_num
+    if reload:
+        if autoreload_port == 0:
+            autoreload_port = _utils.random_port(host=host)
 
-        if autoreload_port_num == 0:
-            autoreload_port_num = _utils.random_port(host=host)
-
-        if autoreload_port_num == port:
+        if autoreload_port == port:
             sys.stderr.write(
                 "Autoreload port is already being used by the app; disabling autoreload\n"
             )
             reload = False
         else:
-            setup_hot_reload(log_config, autoreload_port_num, port, launch_browser)
+            setup_hot_reload(log_config, autoreload_port, port, launch_browser)
 
     if launch_browser and not reload:
         setup_launch_browser(log_config)
