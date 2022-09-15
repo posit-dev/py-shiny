@@ -210,15 +210,14 @@ def run_app(
         run_app("myapp:my_app", app_dir="..")
     """
 
-    # TODO: If port is 0, randomize
+    # If port is 0, randomize
     if port == 0:
         port = _utils.random_port(host=host)
+        # If autoreload port is calculated relative to
         if reload and (
-            autoreload_port.startswith("+")
-            or autoreload_port.startswith("-")
-            or int(autoreload_port) == 0
+            autoreload_port.startswith("+") or autoreload_port.startswith("-")
         ):
-            autoreload_port = str(_utils.random_port(host=host))
+            autoreload_port = "0"
 
     os.environ["SHINY_HOST"] = host
     os.environ["SHINY_PORT"] = str(port)
@@ -243,11 +242,15 @@ def run_app(
                 "Error: Couldn't understand the provided value for --autoreload-port\n"
             )
             exit(1)
+        autoreload_port = str(_utils.random_port(host=host))
         autoreload_port_num = int(m.group(2))
         if m.group(1) == "+":
             autoreload_port_num += port
         elif m.group(1) == "-":
             autoreload_port_num = port - autoreload_port_num
+
+        if autoreload_port_num == 0:
+            autoreload_port_num = _utils.random_port(host=host)
 
         if autoreload_port_num == port:
             sys.stderr.write(
