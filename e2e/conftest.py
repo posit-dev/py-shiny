@@ -17,6 +17,7 @@ import pytest
 __all__ = (
     "ShinyAppProc",
     "create_app_fixture",
+    "create_doc_example_fixture",
     "create_example_fixture",
     "local_app",
     "run_shiny_app",
@@ -193,7 +194,15 @@ def create_app_fixture(app: Union[PurePath, str], scope: str = "module"):
 
 
 def create_example_fixture(example_name: str, scope: str = "module"):
+    """Used to create app fixtures from apps in py-shiny/examples"""
     return create_app_fixture(here / "../examples" / example_name / "app.py", scope)
+
+
+def create_doc_example_fixture(example_name: str, scope: str = "module"):
+    """Used to create app fixtures from apps in py-shiny/shiny/examples"""
+    return create_app_fixture(
+        here / "../shiny/examples" / example_name / "app.py", scope
+    )
 
 
 @pytest.fixture(scope="module")
