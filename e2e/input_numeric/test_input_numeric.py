@@ -1,3 +1,6 @@
+# See https://github.com/microsoft/playwright-python/issues/1532
+# pyright: reportUnknownMemberType=false
+
 from playwright.sync_api import Page, expect
 from conftest import ShinyAppProc, create_doc_example_fixture
 import controls
