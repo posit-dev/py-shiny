@@ -32,7 +32,7 @@ tox -- --headed e2e/async
 ## Shiny app fixtures
 
 Playwright for Python launches and controls (headless or headful) browsers, but does not
-know how to start/stop Shiny app processes. Insteaed, we have our own [Pytest
+know how to start/stop Shiny app processes. Instead, we have our own [Pytest
 fixtures](https://docs.pytest.org/en/latest/explanation/fixtures.html) for
 Shiny app process management.
 
