@@ -66,7 +66,6 @@ class OutputStream:
                 if line is None:
                     break
                 if line != "":
-                    # logging.warning(f"> {line}")
                     with self._cond:
                         self._lines.append(line)
                         self._cond.notify_all()
