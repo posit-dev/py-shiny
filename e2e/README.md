@@ -10,7 +10,7 @@ tests against their apps.)
 The actual tests are in subdirectories. Each subdirectory contains one or more Pytest
 files (`test_*.py`) containing [Playwright](https://playwright.dev/python/) assertions,
 and optionally, a single app (`app.py`) that the assertions test against. (The app is
-optional, because the tests may also be for apps in the `examples/` directory.)
+optional, because the tests may also be for apps in the `../examples` or `../shiny/examples` directory.)
 
 ## Running tests
 
