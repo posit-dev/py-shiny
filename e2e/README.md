@@ -61,9 +61,6 @@ module level, create a fixture with the help of `conftest.create_example_fixture
 use it from test funcs.
 
 ```python
-# See https://github.com/microsoft/playwright-python/issues/1532
-# pyright: reportUnknownMemberType=false
-
 import re
 
 from playwright.sync_api import Page, expect
