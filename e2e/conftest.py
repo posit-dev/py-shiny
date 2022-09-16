@@ -169,7 +169,6 @@ def run_shiny_app(
         encoding="utf-8",
     )
 
-    # TODO: If wait_for_start, ensure the app is listening before returning
     # TODO: Detect early exit
 
     sa = ShinyAppProc(child, port)
