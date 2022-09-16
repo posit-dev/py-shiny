@@ -42,7 +42,6 @@ The `local_app: ShinyAppProc` fixture launches the `app.py` in the current direc
 as the calling `test_*.py` file.
 
 ```python
-# pyright: reportUnknownMemberType=false
 
 import re
 from playwright.sync_api import Page, expect
