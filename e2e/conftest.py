@@ -150,13 +150,13 @@ class ShinyAppProc:
 def run_shiny_app(
     app_file: Union[str, PurePath],
     *,
-    port: Optional[int] = None,
+    port: int = 0,
     cwd: Optional[str] = None,
     wait_for_start: bool = True,
     timeout_secs: float = 10,
     bufsize: int = 64 * 1024,
 ) -> ShinyAppProc:
-    if port is None:
+    if port == 0:
         port = random_port()
 
     child = subprocess.Popen(
