@@ -76,6 +76,11 @@ jobs:
         run: |
           make lint
 
+      - name: Run e2e tests
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          make e2e
+
   deploy:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest

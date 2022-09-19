@@ -54,9 +54,8 @@ class Progress:
         exctype: Optional[Type[BaseException]],
         excinst: Optional[BaseException],
         exctb: Optional[TracebackType],
-    ) -> bool:
+    ) -> None:
         self.close()
-        return False
 
     def set(
         self,
