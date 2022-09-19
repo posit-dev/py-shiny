@@ -2,6 +2,8 @@ import logging
 import os
 import webbrowser
 
+from ._hostenv import get_proxy_url
+
 
 class LaunchBrowserHandler(logging.Handler):
     """Uvicorn log reader, detects successful app startup so we can launch a browser.
@@ -34,4 +36,5 @@ class LaunchBrowserHandler(logging.Handler):
                 # For some reason the shiny port isn't set correctly!?
                 return
             host = os.environ["SHINY_HOST"]
-            webbrowser.open(f"http://{host}:{port}/", 1)
+            url = get_proxy_url(f"http://{host}:{port}/")
+            webbrowser.open(url, 1)
