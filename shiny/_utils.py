@@ -85,6 +85,26 @@ def guess_mime_type(
 def random_port(
     min: int = 1024, max: int = 49151, host: str = "127.0.0.1", n: int = 20
 ) -> int:
+    """Find an open TCP port
+
+    Finds a random available TCP port for listening on, within a specified range
+    of ports. The default range of ports to check is 1024 to 49151, which is the
+    set of TCP User Ports. This function automatically excludes some ports which
+    are considered unsafe by web browsers.
+
+    Parameters
+    ----------
+    min
+        Minimum port number.
+    max
+        Maximum port number, inclusive.
+    host
+        Before returning a port number, ensure that we can successfully bind it on this
+        host.
+    n
+        Number of times to attempt before giving up.
+    """
+
     # fmt: off
     # From https://github.com/rstudio/httpuv/blob/main/R/random_port.R
     unsafe_ports = [1, 7, 9, 11, 13, 15, 17, 19, 20, 21, 22, 23, 25, 37, 42, 43, 53, 77, 79, 87, 95, 101, 102, 103, 104, 109, 110, 111, 113, 115, 117, 119, 123, 135, 139, 143, 179, 389, 427, 465, 512, 513, 514, 515, 526, 530, 531, 532, 540, 548, 556, 563, 587, 601, 636, 993, 995, 2049, 3659, 4045, 6000, 6665, 6666, 6667, 6668, 6669, 6697]

@@ -140,6 +140,9 @@ def test_random_port():
     assert random_port(9000, 9000) == 9000
 
     seen: Set[int] = set()
+    # Ensure that 10 unique random ports are eventually generated. If not (e.g. if the
+    # max port number is treated as exclusive instead of inclusive, say) then the while
+    # loop will not exit and the test will timeout.
     while len(seen) < 10:
         seen.add(random_port(9001, 9010))
 
