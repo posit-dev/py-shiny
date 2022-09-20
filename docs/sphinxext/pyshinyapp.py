@@ -31,15 +31,19 @@ from htmltools import css
 # This is only needed for the "self-contained" version of the API reference.
 # (in other words, you can set this to "" if you already have the shinylive/ directory
 # in your repo, just make sure to also point SHINYLIVE_DEST to the right place)
-shinylive_src = abspath(join(dirname(__file__), "../../../shinylive/build/shinylive"))
-SHINYLIVE_SRC = os.getenv("SHINYLIVE_SRC", shinylive_src)
+SHINYLIVE_SRC = os.getenv(
+    "SHINYLIVE_SRC",
+    abspath(join(dirname(__file__), "../../../shinylive/build/shinylive")),
+)
 
 # The top level directory of the site, where shinylive-sw.js is located. This is usually
 # independent of where SHINYLIVE_BASE_URL is located, because the serviceworker JS file
 # must be at the top level of the site.
 SHINYLIVE_SW_DIR = os.getenv("SHINYLIVE_SW_DIR", "/")
-# The location of the shinylive/ directory (relative to the output/root directory)
-SHINYLIVE_BASE_URL = os.getenv("SHINYLIVE_BASE_URL", "shinylive/")
+# The location of the _parent_ of the shinylive/ directory, relative to the output/root
+# directory. In a Quarto deployment, it might be something like
+# "../site_libs/quarto-contrib/shinylive-0.0.8.9000/"
+SHINYLIVE_BASE_URL = os.getenv("SHINYLIVE_BASE_URL", "/")
 
 # Since we may want to configure the location of the shinylive directory, write a
 # _templates/layout.html with the relevant extra head content.
@@ -122,7 +126,7 @@ def setup(app: Sphinx):
     def after_build(app: Sphinx, error: object):
         if not SHINYLIVE_SRC:
             return
-        shinylive = app.outdir
+        shinylive = os.path.join(app.outdir, "shinylive")
         if os.path.exists(shinylive):
             shutil.rmtree(shinylive)
         shutil.copytree(SHINYLIVE_SRC, shinylive)
