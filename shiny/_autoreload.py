@@ -6,6 +6,7 @@ import os
 import secrets
 from typing import Optional, Tuple
 import threading
+import webbrowser
 
 from asgiref.typing import (
     ASGI3Application,
@@ -149,7 +150,7 @@ class InjectAutoreloadMiddleware:
 # PARENT PROCESS ------------------------------------------------------------
 
 
-def start_server(port: int, app_port: int):
+def start_server(port: int, app_port: int, launch_browser: bool):
     """Starts a websocket server that listens on its own port (separate from the main
     Shiny listener).
 
@@ -173,18 +174,25 @@ def start_server(port: int, app_port: int):
     # Run on a background thread so our event loop doesn't interfere with uvicorn.
     # Set daemon=True because we don't want to keep the process alive with this thread.
     threading.Thread(
-        None, _thread_main, args=[port, app_url, secret], daemon=True
+        None, _thread_main, args=[port, app_url, secret, launch_browser], daemon=True
     ).start()
 
 
-def _thread_main(port: int, app_url: str, secret: str):
-    asyncio.run(_coro_main(port, app_url, secret))
+def _thread_main(port: int, app_url: str, secret: str, launch_browser: bool):
+    asyncio.run(_coro_main(port, app_url, secret, launch_browser))
 
 
-async def _coro_main(port: int, app_url: str, secret: str) -> None:
+async def _coro_main(
+    port: int, app_url: str, secret: str, launch_browser: bool
+) -> None:
     reload_now: asyncio.Event = asyncio.Event()
 
     def nudge():
+        nonlocal launch_browser
+        if launch_browser:
+            # Only launch the browser once, not every time autoreload occurs
+            launch_browser = False
+            webbrowser.open(app_url, 1)
         reload_now.set()
         reload_now.clear()
 
