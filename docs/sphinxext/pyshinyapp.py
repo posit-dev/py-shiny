@@ -4,7 +4,7 @@ Usage::
         :width: 100%
         :height: 500px
 
-   .. shinyeditor::
+   .. shinylive-editor::
         :width: 100%
         :height: 500px
 
@@ -67,14 +67,14 @@ class ShinyElement(Element):
         style = css(height=self["height"], width=self["width"])
         type = self["type"]
         code = self["code"]
-        if type == "shinyeditor":
+        if type == "shinylive-editor":
             # TODO: allow the layout to be specified (right now I don't think we need
             # horizontal layout, but maybe someday we will)
-            code = "#| layout: vertical\n" + code
-            # the class for the editor currently is, somewhat confusingly, pyshiny
-            type = "shiny"
+            code = "#| standalone: true\n#| layout: vertical\n" + code
 
-        return f'<pre class="py{type}" style="{style}"><code>{code}</code></pre>'
+        return (
+            f'<pre class="shinylive-python" style="{style}"><code>{code}</code></pre>'
+        )
 
 
 def _run(self: SphinxDirective, type: str):
@@ -99,9 +99,9 @@ class ShinyAppDirective(BaseDirective):
         return _run(self, "shinyapp")
 
 
-class ShinyEditorDirective(BaseDirective):
+class ShinyliveEditorDirective(BaseDirective):
     def run(self):
-        return _run(self, "shinyeditor")
+        return _run(self, "shinylive-editor")
 
 
 class CellDirective(BaseDirective):
@@ -151,7 +151,7 @@ def setup(app: Sphinx):
         man=(skip, None),
     )
     app.add_directive("shinyapp", ShinyAppDirective)
-    app.add_directive("shinyeditor", ShinyEditorDirective)
+    app.add_directive("shinylive-editor", ShinyliveEditorDirective)
     app.add_directive("cell", CellDirective)
     app.add_directive("terminal", TerminalDirective)
 

@@ -23,8 +23,12 @@ class DocStringWithExample(str):
 
 def add_example(
     directive: Literal[
-        "shinyapp::", "shinyeditor::", "code-block:: python", "cell::", "terminal::"
-    ] = "shinyeditor::",
+        "shinyapp::",
+        "shinylive-editor::",
+        "code-block:: python",
+        "cell::",
+        "terminal::",
+    ] = "shinylive-editor::",
     **options: str,
 ) -> Callable[[F], F]:
     """
@@ -40,7 +44,7 @@ def add_example(
         A directive for rendering the example. This can be one of:
             - ``shinyapp``: A live shiny app (statically served via wasm).
             - ``code``: A python code snippet.
-            - ``shinyeditor``: A live shiny app (statically served via wasm).
+            - ``shinylive-editor``: A live shiny app with editor (statically served via wasm).
             - ``cell``: A executable Python cell.
             - ``terminal``: A minimal Python IDE
     **options

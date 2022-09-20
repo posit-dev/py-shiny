@@ -25,7 +25,7 @@ namespace pollution. Namely, it gives you:
 * If you're using type checking, you'll also want to use the ``Inputs``, ``Outputs``, and ``Session`` Classes
   to type the instances supplied to your server function, for example:
 
-.. shinyeditor::
+.. shinylive-editor::
 
     from shiny import *
 
