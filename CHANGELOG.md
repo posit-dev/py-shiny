@@ -5,14 +5,13 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [0.2.7] - 2022-09-27
 
 ### New features
 
+* `shiny run` now takes a `--launch-browser` argument that causes the default web browser to be launched after the app is successfully loaded. Also, the `--port` argument now interprets a value of `0` as "listen on a random port". (#329)
 
-### Bug fixes
-
-
+ 
 ### Other changes
 
 * Updated API document generation with updated paths to work with new version of Shinylive. (#331)
