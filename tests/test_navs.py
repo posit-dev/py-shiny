@@ -173,3 +173,27 @@ def test_nav_markup():
           <div class="row">Page footer</div>
         </div>"""
     )
+
+
+def test_nav_tagify():
+    class Foo:
+        def tagify(self):
+            return ui.span()
+
+    x = with_private_seed(ui.navset_tab, ui.nav("a", ui.div(Foo())))
+
+    assert TagList(x).render()["html"] == textwrap.dedent(
+        """\
+        <ul class="nav nav-tabs" data-tabsetid="7311">
+          <li class="nav-item">
+            <a data-bs-toggle="tab" data-toggle="tab" data-value="a" role="tab" class="nav-link active" href="#tab-7311-0">a</a>
+          </li>
+        </ul>
+        <div class="tab-content" data-tabsetid="7311">
+          <div class="tab-pane active" role="tabpanel" data-value="a" id="tab-7311-0">
+            <div>
+              <span></span>
+            </div>
+          </div>
+        </div>"""
+    )

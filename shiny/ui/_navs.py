@@ -369,7 +369,7 @@ class NavSet:
         nav, content = render_navset(
             *self.args, ul_class=ul_class, id=id, selected=self.selected, context={}
         )
-        return self.layout(nav, content)
+        return self.layout(nav.tagify(), content.tagify())
 
     def layout(self, nav: TagChildArg, content: TagChildArg) -> Union[TagList, Tag]:
         return TagList(nav, self.header, content, self.footer)
