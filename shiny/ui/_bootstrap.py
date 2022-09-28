@@ -37,6 +37,7 @@ from htmltools import (
 from .._docstring import add_example
 from ._html_dependencies import jqui_deps
 from ._utils import get_window_title
+from ..module import current_namespace
 
 
 # TODO: make a python version of the layout guide?
@@ -291,9 +292,13 @@ def panel_conditional(
     ~shiny.render.ui
     ~shiny.ui.output_ui
     """
-    # TODO: do we need a shiny::NS() equivalent?
-    ns: Callable[[str], str] = lambda x: x
-    return div(*args, data_display_if=condition, data_ns_prefix=ns(""), **kwargs)
+
+    ns_prefix = str(current_namespace())
+
+    if ns_prefix != "":
+        ns_prefix += "-"
+
+    return div(*args, data_display_if=condition, data_ns_prefix=ns_prefix, **kwargs)
 
 
 @add_example()
