@@ -75,6 +75,23 @@ html_static_path = ["_static"]
 os.environ["SHINY_ADD_EXAMPLES"] = "true"
 
 
+# The top level directory of the site, where shinylive-sw.js is located. This is usually
+# independent of where SHINYLIVE_BASE_URL is located, because the serviceworker JS file
+# must be at the top level of the site.
+SHINYLIVE_SW_DIR = os.getenv("SHINYLIVE_SW_DIR", "/")
+# The location of the _parent_ of the shinylive/ directory, relative to the output/root
+# directory. In a Quarto deployment, it might be something like
+# "../site_libs/quarto-contrib/shinylive-0.0.8.9000/"
+SHINYLIVE_BASE_URL = os.getenv("SHINYLIVE_BASE_URL", "/")
+
+# Variables to pass to the template
+html_context = {
+    "join": os.path.join,
+    "shinylive_sw_dir": SHINYLIVE_SW_DIR,
+    "shinylive_base_path": os.path.join(SHINYLIVE_BASE_URL, "shinylive"),
+}
+
+
 # WARNING: if you're thinking about adding subclasses of docutils.nodes.Element here,
 # don't! You'll get unhelpful pickling errors. https://github.com/sphinx-doc/sphinx/pull/6754
 # Instead, add them to the docs/source/sphinxext/ directory and add the name to the

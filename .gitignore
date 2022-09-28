@@ -105,7 +105,6 @@ typings/
 
 docs/source/generated/
 docs/source/reference/
-docs/source/_templates/layout.html
 
 .DS_Store
 .Rproj.user
