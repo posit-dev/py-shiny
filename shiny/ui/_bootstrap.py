@@ -293,7 +293,7 @@ def panel_conditional(
     ~shiny.ui.output_ui
     """
 
-    ns_prefix = str(current_namespace())
+    ns_prefix = current_namespace()
 
     if ns_prefix != "":
         ns_prefix += "-"
