@@ -23,6 +23,10 @@ Root: ResolvedId = ResolvedId("")
 Id = Union[str, ResolvedId]
 
 
+def current_namespace() -> ResolvedId:
+    return _current_namespace.get()
+
+
 def resolve_id(id: Id) -> ResolvedId:
     curr_ns = _current_namespace.get()
     return curr_ns(id)
