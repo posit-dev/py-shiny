@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* `panel_conditional` now works correctly inside of Shiny modules. (Thanks, @gcaligari!) (#336)
 
 ### Other changes
 
@@ -22,7 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shiny run` now takes a `--launch-browser` argument that causes the default web browser to be launched after the app is successfully loaded. Also, the `--port` argument now interprets a value of `0` as "listen on a random port". (#329)
 
- 
 ### Other changes
 
 * Updated API document generation with updated paths to work with new version of Shinylive. (#331)

@@ -13,7 +13,7 @@ __all__ = (
 )
 
 import sys
-from typing import Callable, Optional, Union
+from typing import Optional, Union
 
 from shiny.types import MISSING, MISSING_TYPE
 
