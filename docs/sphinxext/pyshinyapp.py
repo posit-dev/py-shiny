@@ -17,6 +17,8 @@ Usage::
         :height: 500px
 """
 
+import base64
+import json
 import os
 import shutil
 from os.path import abspath, dirname, join
@@ -46,9 +48,14 @@ class ShinyElement(Element):
             # TODO: allow the layout to be specified (right now I don't think we need
             # horizontal layout, but maybe someday we will)
             code = (
-                "#| standalone: true\n#| components: [editor, viewer]\n#| layout: vertical\n#| viewerHeight: 400\n"
+                "#| standalone: true\n#| components: [editor, viewer]\n#| layout: vertical\n#| viewerHeight: 400\n## file: app.py\n"
                 + code
             )
+
+            for f in self["files"]:
+                with open(f, "rb") as x:
+                    fc = base64.b64encode(x.read()).decode("utf-8")
+                    code += f"\n\n## file: {os.path.basename(f)}\n## type: binary\n{fc}"
 
         return (
             f'<pre class="shinylive-python" style="{style}"><code>{code}</code></pre>'
@@ -59,8 +66,9 @@ def _run(self: SphinxDirective, type: str):
     code = "\n".join(self.content)
     width = self.options.pop("width", "100%")
     height = self.options.pop("height", None)
+    files = json.loads(self.options.pop("files", "[]"))
 
-    return [ShinyElement(type=type, code=code, height=height, width=width)]
+    return [ShinyElement(type=type, code=code, height=height, width=width, files=files)]
 
 
 class BaseDirective(SphinxDirective):
@@ -69,6 +77,7 @@ class BaseDirective(SphinxDirective):
     option_spec = {
         "width": directives.unchanged,
         "height": directives.unchanged,
+        "files": directives.unchanged,
     }
 
 

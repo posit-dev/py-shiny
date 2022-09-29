@@ -1,0 +1,3 @@
+# Pandas needs Jinja2 for table styling, but it doesn't (yet) load automatically
+# in Pyodide, so we need to explicitly list it here.
+Jinja2
