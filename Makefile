@@ -56,7 +56,7 @@ pyright: typings/uvicorn/__init__.pyi ## type check with pyright
 
 lint: ## check style with flake8
 	echo "Checking style with flake8."
-	flake8 --show-source shiny tests examples
+	flake8 --show-source .
 
 format:
 	echo "Formatting code with black."
