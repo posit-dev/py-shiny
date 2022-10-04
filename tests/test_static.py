@@ -1,13 +1,12 @@
 import os
-
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
 
 from shiny._static import (
+    _installed_shinylive_versions,
     get_default_shinylive_dir,
     remove_shinylive_local,
-    _installed_shinylive_versions,
 )
 
 
