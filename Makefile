@@ -55,7 +55,7 @@ check:
 	echo "Checking types with pyright"
 	typings/uvicorn/__init__.pyi
 	pyright
-	echo "Linting code: Running pre-commit"
+	echo "Running pre-commit"
 	pre-commit run -a
 
 test: ## run tests quickly with the default Python

@@ -54,15 +54,15 @@ jobs:
         run: |
           make install
 
-      - name: Run unit tests
-        if: steps.install.outcome == 'success' && (success() || failure())
-        run: |
-          make test
-
       - name: Check code quality
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           make check
+
+      - name: Run unit tests
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          make test
 
       - name: Build API docs
         if: steps.install.outcome == 'success' && (success() || failure())
