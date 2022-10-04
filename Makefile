@@ -51,14 +51,20 @@ clean-test: ## remove test and coverage artifacts
 typings/uvicorn/__init__.pyi:
 	pyright --createstub uvicorn
 
-check: typings/uvicorn/__init__.pyi ## type check with pyright
+pyright: typings/uvicorn/__init__.pyi ## type check with pyright
 	pyright
 
-check-old: typings/uvicorn/__init__.pyi ## type check with pyright
-	pyright --pythonversion=3.7
-
 lint: ## check style with flake8
-	flake8 --show-source --max-line-length=127 shiny tests examples
+	echo "Checking style with flake8."
+	flake8 --show-source shiny tests examples
+
+format:
+	echo "Formatting code with black."
+	black .
+	echo "Sorting imports with isort."
+	isort .
+
+check: pyright lint format
 
 test: ## run tests quickly with the default Python
 	python3 tests/asyncio_prevent.py
