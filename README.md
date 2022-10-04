@@ -1,8 +1,16 @@
 Shiny for Python
 ================
 
-See the [Shiny for Python website](https://shiny.rstudio.com/py/).
 
+[![Release](https://img.shields.io/github/v/release/rstudio/py-shiny)](https://img.shields.io/github/v/release/rstudio/py-shiny)
+[![Build status](https://img.shields.io/github/workflow/status/rstudio/py-shiny/Run%20tests)](https://img.shields.io/github/workflow/status/rstudio/py-shiny/Run%20tests)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/deptry)](https://pypi.org/project/deptry/)
+[![License](https://img.shields.io/github/license/rstudio/py-shiny)](https://img.shields.io/github/license/rstudio/py-shiny)
+
+
+## What is Shiny?
+
+See the [Shiny for Python website](https://shiny.rstudio.com/py/).
 
 ## Installation
 
