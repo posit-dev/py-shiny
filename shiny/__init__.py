@@ -2,25 +2,15 @@
 
 __version__ = "0.2.7.9000"
 
-from ._shinyenv import is_pyodide as _is_pyodide
-
 # User-facing subpackages that should be available on `from shiny import *`
-from . import reactive
-from . import render
-from .session import (
-    Session,
-    Inputs,
-    Outputs,
-)
-from . import session
-from . import ui
+from . import module, reactive, render, session, ui
 
 # Private submodules that have some user-facing functionality
 from ._app import App
-from ._validation import req
 from ._deprecated import *
-
-from . import module
+from ._shinyenv import is_pyodide as _is_pyodide
+from ._validation import req
+from .session import Inputs, Outputs, Session
 
 if _is_pyodide:
     # In pyodide, avoid importing _main because it imports packages that aren't

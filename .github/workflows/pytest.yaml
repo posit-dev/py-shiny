@@ -59,7 +59,7 @@ jobs:
         run: |
           make test
 
-      - name: Type check with pyright
+      - name: Check code quality
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           make check
@@ -70,11 +70,6 @@ jobs:
           SHINYLIVE_SRC: ""
         run: |
           cd docs && make html
-
-      - name: Lint with flake8
-        if: steps.install.outcome == 'success' && (success() || failure())
-        run: |
-          make lint
 
       - name: Run e2e tests
         if: steps.install.outcome == 'success' && (success() || failure())

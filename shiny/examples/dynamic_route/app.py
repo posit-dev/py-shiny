@@ -1,6 +1,7 @@
-from shiny import *
-from starlette.responses import JSONResponse
 from starlette.requests import Request
+from starlette.responses import JSONResponse
+
+from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_action_button("serve", "Click to serve"), ui.div(id="messages")

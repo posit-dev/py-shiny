@@ -15,7 +15,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal
 
-from htmltools import tags, Tag, div, HTML, TagChildArg, TagAttrArg
+from htmltools import HTML, Tag, TagAttrArg, TagChildArg, div, tags
 
 from .._docstring import add_example
 from ..session import Session, require_active_session

@@ -13,7 +13,7 @@ __all__ = (
 )
 
 import sys
-from typing import Union, Optional, Tuple, Dict, Any
+from typing import Any, Dict, Optional, Tuple, Union
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -31,6 +31,7 @@ else:
 from htmltools import TagChildArg
 
 from ._docstring import add_example
+
 
 # Sentinel value - indicates a missing value in a function call.
 class MISSING_TYPE:

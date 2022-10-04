@@ -1,4 +1,5 @@
 import random
+
 from shiny import *
 
 app_ui = ui.page_fluid(

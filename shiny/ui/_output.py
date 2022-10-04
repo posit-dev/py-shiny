@@ -8,7 +8,8 @@ __all__ = (
 )
 
 from typing import Optional
-from htmltools import tags, Tag, div, css, TagAttrArg, TagFunction
+
+from htmltools import Tag, TagAttrArg, TagFunction, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id

@@ -18,14 +18,14 @@ Usage::
 """
 
 import os
-from os.path import dirname, join, abspath
 import shutil
+from os.path import abspath, dirname, join
 
-from docutils.nodes import SkipNode, Element
+from docutils.nodes import Element, SkipNode
 from docutils.parsers.rst import directives
+from htmltools import css
 from sphinx.application import Sphinx
 from sphinx.util.docutils import SphinxDirective
-from htmltools import css
 
 # Local path to the shinylive/ directory (currently provided by rstudio/shinylive)
 # This is only needed for the "self-contained" version of the API reference.

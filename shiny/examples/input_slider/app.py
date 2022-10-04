@@ -1,6 +1,7 @@
-from shiny import *
 import matplotlib.pyplot as plt
 import numpy as np
+
+from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_slider("obs", "Number of bins:", min=10, max=100, value=30),

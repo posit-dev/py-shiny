@@ -1,5 +1,6 @@
-from shiny import *
 import starlette.responses
+
+from shiny import *
 
 app_ui = ui.page_fluid(
     ui.markdown(

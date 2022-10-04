@@ -3,106 +3,105 @@ Tools for creating user interfaces including: custom components, HTML components
 layout helpers, page-level containers, and more.
 """
 
-from ._bootstrap import (
-    row,
-    column,
-    layout_sidebar,
-    panel_well,
-    panel_sidebar,
-    panel_main,
-    panel_conditional,
-    panel_title,
-    panel_fixed,
-    panel_absolute,
-    help_text,
-)
-from ._download_button import download_button, download_link
-from ._input_action_button import input_action_button, input_action_link
-from ._input_check_radio import (
-    input_checkbox,
-    input_checkbox_group,
-    input_switch,
-    input_radio_buttons,
-)
-from ._input_date import input_date, input_date_range
-from ._input_file import input_file
-from ._input_numeric import input_numeric
-from ._input_password import input_password
-from ._input_select import input_select, input_selectize
-from ._input_slider import input_slider, SliderValueArg, SliderStepArg, AnimationOptions
-from ._input_text import input_text, input_text_area
-from ._input_update import (
-    update_action_button,
-    update_action_link,
-    update_checkbox,
-    update_switch,
-    update_checkbox_group,
-    update_radio_buttons,
-    update_date,
-    update_date_range,
-    update_numeric,
-    update_select,
-    update_selectize,
-    update_slider,
-    update_text,
-    update_text_area,
-    update_navs,
-)
-from ._insert import insert_ui, remove_ui
-from ._markdown import markdown
-from ._modal import modal_button, modal, modal_show, modal_remove
-from ._navs import (
-    nav,
-    nav_menu,
-    nav_control,
-    nav_spacer,
-    navset_tab,
-    navset_tab_card,
-    navset_pill,
-    navset_pill_card,
-    navset_pill_list,
-    navset_hidden,
-    navset_bar,
-)
-from ._notification import notification_show, notification_remove
-from ._output import (
-    output_plot,
-    output_image,
-    output_text,
-    output_text_verbatim,
-    output_table,
-    output_ui,
-)
-from ._page import page_navbar, page_fluid, page_fixed, page_bootstrap
-from ._progress import Progress
-
 from htmltools import (
-    TagList,
-    Tag,
-    TagChildArg,
-    TagAttrArg,
-    tags,
     HTML,
-    head_content,
-    p,
+    Tag,
+    TagAttrArg,
+    TagChildArg,
+    TagList,
+    a,
+    br,
+    code,
+    div,
+    em,
     h1,
     h2,
     h3,
     h4,
     h5,
     h6,
-    a,
-    br,
-    div,
-    span,
-    pre,
-    code,
-    img,
-    strong,
-    em,
+    head_content,
     hr,
+    img,
+    p,
+    pre,
+    span,
+    strong,
+    tags,
 )
 
+from ._bootstrap import (
+    column,
+    help_text,
+    layout_sidebar,
+    panel_absolute,
+    panel_conditional,
+    panel_fixed,
+    panel_main,
+    panel_sidebar,
+    panel_title,
+    panel_well,
+    row,
+)
+from ._download_button import download_button, download_link
+from ._input_action_button import input_action_button, input_action_link
+from ._input_check_radio import (
+    input_checkbox,
+    input_checkbox_group,
+    input_radio_buttons,
+    input_switch,
+)
+from ._input_date import input_date, input_date_range
+from ._input_file import input_file
+from ._input_numeric import input_numeric
+from ._input_password import input_password
+from ._input_select import input_select, input_selectize
+from ._input_slider import AnimationOptions, SliderStepArg, SliderValueArg, input_slider
+from ._input_text import input_text, input_text_area
+from ._input_update import (
+    update_action_button,
+    update_action_link,
+    update_checkbox,
+    update_checkbox_group,
+    update_date,
+    update_date_range,
+    update_navs,
+    update_numeric,
+    update_radio_buttons,
+    update_select,
+    update_selectize,
+    update_slider,
+    update_switch,
+    update_text,
+    update_text_area,
+)
+from ._insert import insert_ui, remove_ui
+from ._markdown import markdown
+from ._modal import modal, modal_button, modal_remove, modal_show
+from ._navs import (
+    nav,
+    nav_control,
+    nav_menu,
+    nav_spacer,
+    navset_bar,
+    navset_hidden,
+    navset_pill,
+    navset_pill_card,
+    navset_pill_list,
+    navset_tab,
+    navset_tab_card,
+)
+from ._notification import notification_remove, notification_show
+from ._output import (
+    output_image,
+    output_plot,
+    output_table,
+    output_text,
+    output_text_verbatim,
+    output_ui,
+)
+from ._page import page_bootstrap, page_fixed, page_fluid, page_navbar
+from ._progress import Progress
 
 __all__ = (
     "row",

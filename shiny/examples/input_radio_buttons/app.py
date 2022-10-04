@@ -1,5 +1,6 @@
-from shiny import *
 from htmltools import HTML
+
+from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_radio_buttons(

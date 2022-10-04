@@ -1,7 +1,8 @@
 # pyright: reportUnusedFunction=false
 
-from shiny import *
 import typing
+
+from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_numeric("n", "N", 20),

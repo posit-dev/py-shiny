@@ -4,8 +4,8 @@ import asyncio
 from typing import Dict, Union, cast
 
 import pytest
-
 from htmltools import Tag, TagList
+
 from shiny import *
 from shiny._connection import MockConnection
 from shiny._namespaces import resolve_id

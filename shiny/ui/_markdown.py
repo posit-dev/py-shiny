@@ -3,8 +3,8 @@ __all__ = ("markdown",)
 import importlib
 import sys
 import textwrap
-from typing import Optional, Callable
 import warnings
+from typing import Callable, Optional
 
 if sys.version_info >= (3, 8):
     from typing import Literal

@@ -3,7 +3,7 @@ import os
 import pathlib
 import shutil
 import tempfile
-from typing import Optional, BinaryIO, List, cast
+from typing import BinaryIO, List, Optional, cast
 
 from . import _utils
 from .types import FileInfo
@@ -52,7 +52,8 @@ class FileUploadOperation:
         file_info["datapath"] = os.path.join(
             self._dir, str(self._n_uploaded) + file_ext
         )
-        self._current_file_obj = open(file_info["datapath"], "ab")
+        with open(file_info["datapath"], "ab") as f:
+            self._current_file_obj = f
 
     # Finish uploading one of the files.
     def file_end(self) -> None:

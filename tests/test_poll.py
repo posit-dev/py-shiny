@@ -5,14 +5,14 @@ import tempfile
 from enum import Enum
 from random import random
 from types import TracebackType
-from typing import Any, Dict, Callable, Optional, Type, cast
+from typing import Any, Callable, Dict, Optional, Type, cast
 
 import pytest
 
 from shiny import *
 from shiny import _utils
-from shiny.reactive import *
 from shiny._namespaces import Root
+from shiny.reactive import *
 
 from .mocktime import MockTime
 

@@ -1,4 +1,4 @@
-from shiny import Inputs, Outputs, Session, App, ui, module
+from shiny import App, Inputs, Outputs, Session, module, ui
 
 
 def my_ui(message: str) -> ui.TagList:

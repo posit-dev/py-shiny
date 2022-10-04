@@ -10,9 +10,9 @@ import pytz
 import suntime
 import timezonefinder
 from astropy.coordinates import AltAz, EarthLocation, SkyCoord
-from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
-
 from location import location_server, location_ui
+
+from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 app_ui = ui.page_fixed(
     ui.tags.h3("Air mass calculator"),

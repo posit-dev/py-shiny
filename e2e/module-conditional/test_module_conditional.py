@@ -1,13 +1,12 @@
-from playwright.sync_api import Page, expect
-
 from conftest import ShinyAppProc
 from controls import CheckboxInput
+from playwright.sync_api import Page, expect
 
 
 def test_async_app(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    ## Non-module version
+    # Non-module version
 
     cb_show = CheckboxInput(page, "show")
     expect(cb_show.loc).to_be_visible()
@@ -20,7 +19,7 @@ def test_async_app(page: Page, local_app: ShinyAppProc) -> None:
     expect(loc).to_be_visible()
     expect(loc).to_contain_text("Lorem ipsum dolor sit amet")
 
-    ## Module version
+    # Module version
 
     cb_mod_show = CheckboxInput(page, "mod-show")
     expect(cb_mod_show.loc).to_be_visible()
