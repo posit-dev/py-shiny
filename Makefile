@@ -53,7 +53,7 @@ typings/uvicorn/__init__.pyi:
 
 check:
 	echo "Checking types with pyright"
-	typings/uvicorn/__init__.pyi
+	$(MAKE) typings/uvicorn/__init__.pyi
 	pyright
 	echo "Running pre-commit"
 	pre-commit run -a
