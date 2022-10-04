@@ -26,6 +26,7 @@ If you want to do development on Shiny for Python:
 
 ```sh
 pip install -r requirements-dev.txt
+pip install -e .
 ```
 
 Additionally, you can install pre-commit hooks which will automatically reformat and lint the code when you make a commit:
