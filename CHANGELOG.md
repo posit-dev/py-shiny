@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* `shiny run` now takes zero or more `--reload-dir` arguments that can be used with `--reload` to indicate what directories should be (recursively) monitored for reload. If zero such arguments are passed, then the directory containing the app will be recursively monitored.
 
 ### Bug fixes
 
