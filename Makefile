@@ -58,13 +58,17 @@ lint: ## check style with flake8
 	echo "Checking style with flake8."
 	flake8 --show-source .
 
-format:
+format: ## format code with black and isort
 	echo "Formatting code with black."
 	black .
 	echo "Sorting imports with isort."
 	isort .
 
-check: pyright lint format
+check: pyright lint ## check code quality with pyright, flake8, black and isort
+	echo "Checking code with black."
+	black --check .
+	echo "Sorting imports with isort."
+	isort --check-only --diff .
 
 test: ## run tests quickly with the default Python
 	python3 tests/asyncio_prevent.py
