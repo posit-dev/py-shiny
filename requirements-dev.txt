@@ -11,6 +11,6 @@ pyright>=1.1.244
 sphinx-autodoc-typehints==1.15.3
 myst-parser>=0.16.1
 sphinx-book-theme>=0.2.0
-importlib-metadata>=1.1.0,<5;python_version<'3.8',
+importlib-metadata>=1.1.0,<5;python_version<'3.8'
 wheel
 tox
