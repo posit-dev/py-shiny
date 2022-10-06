@@ -2,11 +2,11 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional
 
 
 def remove_shinylive_local(
-    shinylive_dir: Union[str, Path, None] = None,
+    shinylive_dir: Optional[Path] = None,
     version: Optional[str] = None,
 ) -> None:
     """Removes local copy of shinylive.
@@ -25,8 +25,6 @@ def remove_shinylive_local(
     if shinylive_dir is None:
         shinylive_dir = get_default_shinylive_dir()
 
-    shinylive_dir = Path(shinylive_dir)
-
     target_dir = shinylive_dir
     if version is not None:
         target_dir = target_dir / f"shinylive-{version}"
@@ -35,20 +33,19 @@ def remove_shinylive_local(
         shutil.rmtree(target_dir)
 
 
-def get_default_shinylive_dir() -> str:
+def get_default_shinylive_dir() -> Path:
     import appdirs
 
-    return os.path.join(appdirs.user_cache_dir("shiny"), "shinylive")
+    return Path(appdirs.user_cache_dir("shiny")) / "shinylive"
 
 
 def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> List[str]:
     if shinylive_dir is None:
-        shinylive_dir = Path(get_default_shinylive_dir())
+        shinylive_dir = get_default_shinylive_dir()
 
-    shinylive_dir = Path(shinylive_dir)
     if not shinylive_dir.exists():
         return []
-    subdirs = shinylive_dir.iterdir()
+    subdirs = next(os.walk(shinylive_dir))[1]
     subdirs = [re.sub("^shinylive-", "", str(s)) for s in subdirs]
     return subdirs
 
