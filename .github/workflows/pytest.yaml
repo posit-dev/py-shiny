@@ -33,7 +33,7 @@ jobs:
           cd ..
           git clone https://github.com/rstudio/py-htmltools.git
           cd py-htmltools
-          pip install -r requirements-dev.txt
+          pip install wheel
           make install
 
       # - name: Check out and install fontawesome

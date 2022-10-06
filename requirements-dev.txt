@@ -1,7 +1,7 @@
 pytest>=6.2.4
 pytest-asyncio>=0.17.2
 black>=22.3.0
-flake8>=3.9.2
+flake8==3.9.2
 flake8-bugbear>=22.6.22
 isort>=5.10.1
 pytest-playwright>=0.3.0
@@ -12,5 +12,6 @@ pyright>=1.1.244
 sphinx-autodoc-typehints==1.15.3
 myst-parser>=0.16.1
 sphinx-book-theme>=0.2.0
+importlib-metadata>=1.1.0,<5;python_version<'3.8'
 wheel
 tox
