@@ -72,7 +72,7 @@ jobs:
       - name: black and isort
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make format
+          make check
 
       - name: Build API docs
         if: steps.install.outcome == 'success' && (success() || failure())
