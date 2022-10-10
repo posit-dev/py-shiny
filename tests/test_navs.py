@@ -3,12 +3,13 @@
 
 import random
 import textwrap
-from typing import Callable, Any
+from typing import Any, Callable
+
+from htmltools import TagList
 
 from shiny import ui
-from shiny.ui._navs import NavSet
 from shiny._utils import private_seed
-from htmltools import TagList
+from shiny.ui._navs import NavSet
 
 
 # Fix the randomness of these functions to make the tests deterministic

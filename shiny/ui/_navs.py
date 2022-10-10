@@ -15,21 +15,22 @@ __all__ = (
 import copy
 import re
 import sys
-from typing import List, Optional, Tuple, Union, cast, Dict, Any
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 if sys.version_info >= (3, 8):
     from typing import Literal
 else:
     from typing_extensions import Literal
 
-from htmltools import tags, Tag, TagList, TagChildArg, div
+from htmltools import Tag, TagChildArg, TagList, div, tags
 
-from ._bootstrap import row, column
 from .._docstring import add_example
-from ._html_dependencies import bootstrap_deps
 from .._namespaces import resolve_id
-from ..types import NavSetArg
 from .._utils import private_random_int
+from ..types import NavSetArg
+from ._bootstrap import column, row
+from ._html_dependencies import bootstrap_deps
+
 
 # -----------------------------------------------------------------------------
 # Navigation items

@@ -2,7 +2,7 @@ import base64
 import io
 import os
 import sys
-from typing import Optional, Union, cast, Tuple, TextIO, BinaryIO, Any, List
+from typing import Any, BinaryIO, List, Optional, TextIO, Tuple, Union, cast
 
 if sys.version_info >= (3, 8):
     from typing import Literal, Protocol
@@ -10,6 +10,7 @@ else:
     from typing_extensions import Literal, Protocol
 
 from ..types import ImgData
+
 
 # Use this protocol to avoid needing to maintain working stubs for matplotlib. If
 # good stubs ever become available for matplotlib, use those instead.
@@ -130,16 +131,16 @@ def try_render_matplotlib(
 
 
 def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, None]:
-    from matplotlib.figure import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
-        Figure,
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
+        Animation,
     )
     from matplotlib.artist import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
         Artist,
     )
-    from matplotlib.animation import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
-        Animation,
+    from matplotlib.figure import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
+        Figure,
     )
-    import matplotlib.pyplot as plt
 
     # Detect usage of pyplot global figure
     # TODO: Might be good to detect non-empty plt.get_fignums() before we call the user

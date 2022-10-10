@@ -1,5 +1,6 @@
-from shiny.ui import markdown
 from htmltools import HTML
+
+from shiny.ui import markdown
 
 
 def test_markdown():

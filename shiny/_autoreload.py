@@ -4,16 +4,16 @@ import http
 import logging
 import os
 import secrets
-from typing import Optional, Tuple
 import threading
 import webbrowser
+from typing import Optional, Tuple
 
 from asgiref.typing import (
     ASGI3Application,
-    Scope,
     ASGIReceiveCallable,
     ASGISendCallable,
     ASGISendEvent,
+    Scope,
 )
 
 from ._shinyenv import is_pyodide

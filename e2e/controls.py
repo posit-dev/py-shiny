@@ -2,7 +2,7 @@
 
 # pyright: reportUnknownMemberType=false
 
-from playwright.sync_api import Page, expect, Locator
+from playwright.sync_api import Locator, Page, expect
 
 
 class SimpleInput:

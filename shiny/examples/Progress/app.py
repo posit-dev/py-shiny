@@ -1,5 +1,6 @@
-from shiny import *
 import asyncio
+
+from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_action_button("button", "Compute"),

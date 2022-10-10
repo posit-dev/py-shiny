@@ -1,7 +1,7 @@
 __all__ = ("input_handlers",)
 
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Callable, Dict, Union, List, Any, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Tuple, Union
 
 if TYPE_CHECKING:
     from .session import Session
