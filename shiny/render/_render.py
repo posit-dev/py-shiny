@@ -39,12 +39,12 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Protocol, runtime_checkable
 
-# These aren't  used directly in this file, but they seems necessary for Sphinx to work
+# These aren't used directly in this file, but they seems necessary for Sphinx to work
 # cleanly.
-from htmltools import Tag  # pyright: ignore[reportUnusedImport]
+from htmltools import Tag  # pyright: ignore[reportUnusedImport] # noqa: F401
 from htmltools import TagChildArg  # pyright: ignore[reportUnusedImport] # noqa: F401
-from htmltools import Tagifiable  # pyright: ignore[reportUnusedImport]
-from htmltools import TagList  # pyright: ignore[reportUnusedImport]
+from htmltools import Tagifiable  # pyright: ignore[reportUnusedImport] # noqa: F401
+from htmltools import TagList  # pyright: ignore[reportUnusedImport] # noqa: F401
 
 if TYPE_CHECKING:
     from ..session import Session
