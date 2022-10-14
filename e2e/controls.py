@@ -124,3 +124,8 @@ class SelectInput(SimpleInput):
 
     def select_option(self, value: str):
         self.loc.select_option(value)
+
+class ActionButton():
+    def __init__(self, page: Page, inputId: str):
+        self.loc = page.locator(f"#{inputId}.action-button.shiny-bound-input")
+
