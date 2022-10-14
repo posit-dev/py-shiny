@@ -3,6 +3,7 @@
 # pyright: reportUnknownMemberType=false
 
 from playwright.sync_api import Locator, Page, expect
+from pathlib import PurePath
 
 
 class SimpleInput:
@@ -33,7 +34,6 @@ class CheckboxInput(SimpleInput):
     def __init__(self, page: Page, inputId: str):
         super().__init__(page, f"input#{inputId}[type=checkbox].shiny-bound-input")
 
-
 class DateInput:
     def __init__(self, page: Page, inputId: str):
         self.loc = page.locator(f"#{inputId}")
@@ -59,6 +59,9 @@ class DateRangeInput:
 class SliderInput:
     def __init__(self, page: Page, inputId: str):
         self.loc = page.locator(f"#{inputId}.js-range-slider").locator("xpath=..")
+
+    def map_slider(self, page: Page, inputId: str):
+        return page.locator(f"#{inputId}").locator("xpath=../span")
 
     def move_slider(self, fraction: float) -> None:
         self.loc.wait_for(state="visible")
@@ -86,6 +89,58 @@ class SliderInput:
             grid_bb.get("x") + (fraction * grid_bb.get("width")), handle_center[1]
         )
         mouse.up()
+
+    def move_slider_range(self, fractionFrom: float, fractionTo: float) -> None:
+        self.loc.wait_for(state="visible")
+        self.loc.scroll_into_view_if_needed()
+
+        # First Handle
+        handle_first = self.loc.locator(".irs-handle.from")
+        handle_bb_first = handle_first.bounding_box()
+        if handle_bb_first is None:
+            raise RuntimeError("Couldn't find bounding box for .irs-handle")
+
+        handle_center_first = (
+            handle_bb_first.get("x") + (handle_bb_first.get("width") / 2),
+            handle_bb_first.get("y") + (handle_bb_first.get("height") / 2),
+        )
+
+        grid = self.loc.locator(".irs-grid")
+        grid_bb = grid.bounding_box()
+        if grid_bb is None:
+            raise RuntimeError("Couldn't find bounding box for .irs-grid")
+
+        mouse = self.loc.page.mouse
+        mouse.move(handle_center_first[0], handle_center_first[1])
+        mouse.down()
+        mouse.move(
+            grid_bb.get("x") + (fractionFrom * grid_bb.get("width")), handle_center_first[1]
+        )
+
+        # Second Handle
+        handle_second = self.loc.locator(".irs-handle.to")
+        handle_bb_second = handle_second.bounding_box()
+        if handle_bb_second is None:
+            raise RuntimeError("Couldn't find bounding box for .irs-handle")
+
+        handle_center_second = (
+            handle_bb_second.get("x") + (handle_bb_first.get("width") / 2),
+            handle_bb_second.get("y") + (handle_bb_first.get("height") / 2),
+        )
+
+        grid = self.loc.locator(".irs-grid")
+        grid_bb = grid.bounding_box()
+        if grid_bb is None:
+            raise RuntimeError("Couldn't find bounding box for .irs-grid")
+
+        mouse = self.loc.page.mouse
+        mouse.move(handle_center_second[0], handle_center_second[1])
+        mouse.down()
+        mouse.move(
+            grid_bb.get("x") + (fractionTo * grid_bb.get("width")), handle_center_second[1]
+        )
+
+
 
 
 class CheckboxGroupInput:
@@ -124,6 +179,15 @@ class SelectInput(SimpleInput):
 
     def select_option(self, value: str):
         self.loc.select_option(value)
+
+class FileInput():
+    def __init__(self, page: Page, inputId: str):
+        self.loc = page.locator(f"#{inputId}[type=file].shiny-bound-input")
+
+    #TODO
+    # def upload_file(self, file) -> None:
+    #     browse = self.loc.locator("xpath=..")
+    #     browse.set_input_files(here / "../examples" / example_name / "app.py", scope)
 
 class ActionButton():
     def __init__(self, page: Page, inputId: str):
