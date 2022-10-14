@@ -12,7 +12,7 @@ def test_input_select(page: Page, app: ShinyAppProc) -> None:
     opt = SelectInput(page, "state").get_selected()
     assert opt == "NY"
 
-    # check the output text is "NY"
+    # check the output text
     output = page.locator("#value")
     expect(output).to_contain_text("NY")
 
