@@ -114,3 +114,13 @@ class RadioButtonsInput:
 
     def locate_by_value(self, value: str) -> Locator:
         return self.loc.locator("input[type=radio][value={value}]")
+
+class SelectInput(SimpleInput):
+    def __init__(self, page: Page, inputId: str):
+        super().__init__(page, f"select#{inputId}.shiny-bound-input")
+
+    def get_selected(self):
+        return self.loc.locator("option[selected]").inner_text()
+
+    def select_option(self, value: str):
+        self.loc.select_option(value)
