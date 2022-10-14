@@ -14,7 +14,6 @@ def test_input_selectize(page: Page, app: ShinyAppProc) -> None:
     expect(output).to_contain_text("NY")
 
     # Add another option - for ex: "CA"
-    # Click
     page.locator(".selectize-input").click()
 
     # Dropdown should be visible
@@ -31,16 +30,11 @@ def test_input_selectize(page: Page, app: ShinyAppProc) -> None:
     # click outside the dropdown box to close the dropdown menu
     page.keyboard.press("Escape")
 
-
-
-
     # Check the selected values from the input
     selected_items_2 = page.locator(".selectize-input .item")
-    print("Number of items: " + str(selected_items_2.count()))
     mylist = []
     for i in range(selected_items_2.count()):
         mylist.append(selected_items_2.nth(i).inner_text())
-        print(mylist)
 
     assert mylist == ['NY', 'CA']
 
