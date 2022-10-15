@@ -213,12 +213,12 @@ class SelectizeInput():
 
 class FileInput():
     def __init__(self, page: Page, inputId: str):
-        self.loc = page.locator(f"#{inputId}[type=file].shiny-bound-input")
+        self.loc = page.locator(f"//*[@id='{inputId}']//parent::div[contains(@class, 'shiny-input-container')]")
 
-    #TODO
-    # def upload_file(self, file) -> None:
-    #     browse = self.loc.locator("xpath=..")
-    #     browse.set_input_files(here / "../examples" / example_name / "app.py", scope)
+    def upload_file(self, fileName: str) -> None:
+        browse = self.loc.locator("//span[contains(@class, 'btn-file')]")
+        #TODO: Enhancement: Check PurePath option to upload files
+        browse.set_input_files(files=[f"e2e/data-files/{fileName}"])
 
 class ActionButton():
     def __init__(self, page: Page, inputId: str):
