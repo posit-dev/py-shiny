@@ -2,6 +2,7 @@
 
 # pyright: reportUnknownMemberType=false
 
+from typing import List
 from playwright.sync_api import Locator, Page, expect
 from pathlib import PurePath
 
@@ -179,6 +180,36 @@ class SelectInput(SimpleInput):
 
     def select_option(self, value: str):
         self.loc.select_option(value)
+
+class SelectizeInput():
+    def __init__(self, page: Page, inputId: str):
+        self.page = page
+        self.loc = page.locator(f"//*[@id='{inputId}']//ancestor::div[contains(@class, 'shiny-input-container')]")
+
+    def get_selected_items(self) -> List:
+        selected_items = self.loc.locator(".selectize-input .item")
+        mylist = []
+        for i in range(selected_items.count()):
+            mylist.append(selected_items.nth(i).inner_text())
+
+        return mylist
+
+    def select_option(self, value: str):
+        self.loc.locator(".selectize-input").click()
+
+        dropdown = self.loc.locator(".selectize-dropdown")
+        expect(dropdown).to_be_visible()
+
+        self.loc.locator(f".selectize-dropdown-content .option[data-value='{value}']").click()
+
+        self.loc.locator(f".selectize-input .item[data-value='{value}']")
+
+        # click outside the dropdown box to close the dropdown menu
+        self.page.keyboard.press("Escape")
+
+    #TODO
+    #def remove_option(self):
+
 
 class FileInput():
     def __init__(self, page: Page, inputId: str):
