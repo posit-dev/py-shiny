@@ -2,13 +2,13 @@ __all__ = ("input_date", "input_date_range")
 
 import json
 from datetime import date
-from typing import Optional, List, Union
+from typing import List, Optional, Union
 
-from htmltools import tags, Tag, div, span, TagAttrArg, TagChildArg, css
+from htmltools import Tag, TagAttrArg, TagChildArg, css, div, span, tags
 
 from .._docstring import add_example
-from ._html_dependencies import datepicker_deps
 from .._namespaces import resolve_id
+from ._html_dependencies import datepicker_deps
 from ._utils import shiny_input_label
 
 

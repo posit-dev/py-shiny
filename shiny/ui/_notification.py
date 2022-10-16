@@ -1,14 +1,14 @@
 __all__ = ("notification_show", "notification_remove")
 
 import sys
-from typing import Dict, Union, Optional, Any
+from typing import Any, Dict, Optional, Union
 
 if sys.version_info >= (3, 8):
     from typing import Literal
 else:
     from typing_extensions import Literal
 
-from htmltools import TagList, TagChildArg
+from htmltools import TagChildArg, TagList
 
 from .._docstring import add_example
 from .._utils import rand_hex

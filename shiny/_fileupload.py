@@ -3,7 +3,7 @@ import os
 import pathlib
 import shutil
 import tempfile
-from typing import Optional, BinaryIO, List, cast
+from typing import BinaryIO, List, Optional, cast
 
 from . import _utils
 from .types import FileInfo

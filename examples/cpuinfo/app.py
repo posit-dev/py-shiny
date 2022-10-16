@@ -12,6 +12,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 # The agg matplotlib backend seems to be a little more efficient than the default when

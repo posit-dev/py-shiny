@@ -2,7 +2,7 @@ __all__ = ("input_action_button", "input_action_link")
 
 from typing import Optional
 
-from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
+from htmltools import Tag, TagAttrArg, TagChildArg, css, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id

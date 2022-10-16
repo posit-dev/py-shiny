@@ -2,7 +2,7 @@ __all__ = ("input_numeric",)
 
 from typing import Optional
 
-from htmltools import tags, Tag, div, css, TagChildArg
+from htmltools import Tag, TagChildArg, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id

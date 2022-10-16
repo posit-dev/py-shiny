@@ -1,9 +1,9 @@
 import logging
 import os
 import re
+import typing
 from ipaddress import ip_address
 from subprocess import run
-import typing
 from typing import Dict, Pattern
 from urllib.parse import urlparse
 

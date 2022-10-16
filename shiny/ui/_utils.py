@@ -1,13 +1,13 @@
 from typing import Optional, Union
 
 from htmltools import (
-    tags,
-    Tag,
-    TagList,
-    TagChildArg,
-    TagChild,
     HTMLDependency,
+    Tag,
+    TagChild,
+    TagChildArg,
+    TagList,
     head_content,
+    tags,
 )
 
 from ..types import MISSING, MISSING_TYPE

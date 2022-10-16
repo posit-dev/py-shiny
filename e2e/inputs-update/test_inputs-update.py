@@ -2,14 +2,14 @@
 
 from conftest import ShinyAppProc, create_example_fixture
 from controls import (
+    CheckboxGroupInput,
+    CheckboxInput,
     DateInput,
     DateRangeInput,
     NumericInput,
+    RadioButtonsInput,
     SliderInput,
     TextInput,
-    CheckboxInput,
-    CheckboxGroupInput,
-    RadioButtonsInput,
 )
 from playwright.sync_api import Page
 

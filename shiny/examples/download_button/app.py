@@ -2,6 +2,7 @@ import asyncio
 from datetime import date
 
 import numpy as np
+
 from shiny import *
 
 app_ui = ui.page_fluid(

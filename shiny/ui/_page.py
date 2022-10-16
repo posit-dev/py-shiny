@@ -6,30 +6,23 @@ __all__ = (
 )
 
 import sys
-from typing import Optional, Any, Union
+from typing import Any, Optional, Union
 
 if sys.version_info >= (3, 8):
     from typing import Literal
 else:
     from typing_extensions import Literal
 
-from htmltools import (
-    tags,
-    Tag,
-    TagList,
-    div,
-    TagChildArg,
-)
-
 # Tagifiable isn't used directly in this file, but it seems to necessary to import
 # it somewhere for Sphinx to work cleanly.
 from htmltools import Tagifiable  # pyright: ignore[reportUnusedImport] # noqa: F401
+from htmltools import Tag, TagChildArg, TagList, div, tags
 
 from .._docstring import add_example
-from ._html_dependencies import bootstrap_deps
-from ._navs import navset_bar
 from .._namespaces import resolve_id
 from ..types import MISSING, MISSING_TYPE, NavSetArg
+from ._html_dependencies import bootstrap_deps
+from ._navs import navset_bar
 from ._utils import get_window_title
 
 
