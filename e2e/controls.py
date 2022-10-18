@@ -4,7 +4,6 @@
 
 from typing import List
 from playwright.sync_api import Locator, Page, expect
-from pathlib import PurePath
 
 
 class SimpleInput:
@@ -223,4 +222,17 @@ class FileInput():
 class ActionButton():
     def __init__(self, page: Page, inputId: str):
         self.loc = page.locator(f"#{inputId}.action-button.shiny-bound-input")
+
+class DownloadButton():
+    def __init__(self, page: Page, inputId: str):
+        self.loc = page.locator(f"#{inputId}.shiny-download-link.shiny-bound-output")
+
+class NavControls():
+    def __init__(self, page: Page, navControlType: str): #tab, pill, tab_card, pill_card, tab_list, tab_pill_list
+        self.loc = page.locator(f".nav.{navControlType}")
+
+
+
+
+
 
