@@ -1,12 +1,13 @@
 import copy
 import importlib
 import importlib.util
+import inspect
 import os
 import shutil
 import sys
 import types
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import click
 import uvicorn
@@ -65,6 +66,14 @@ any of the following will work:
 )
 @click.option("--reload", is_flag=True, default=False, help="Enable auto-reload.")
 @click.option(
+    "--reload-dir",
+    "reload_dirs",
+    multiple=True,
+    help="Set reload directories explicitly, instead of using the current working"
+    " directory.",
+    type=click.Path(exists=True),
+)
+@click.option(
     "--ws-max-size",
     type=int,
     default=16777216,
@@ -106,6 +115,7 @@ def run(
     port: int,
     autoreload_port: int,
     reload: bool,
+    reload_dirs: Tuple[str, ...],
     ws_max_size: int,
     log_level: str,
     app_dir: str,
@@ -118,6 +128,7 @@ def run(
         port=port,
         autoreload_port=autoreload_port,
         reload=reload,
+        reload_dirs=list(reload_dirs) if reload_dirs is not None else None,
         ws_max_size=ws_max_size,
         log_level=log_level,
         app_dir=app_dir,
@@ -132,6 +143,7 @@ def run_app(
     port: int = 8000,
     autoreload_port: int = 0,
     reload: bool = False,
+    reload_dirs: Optional[List[str]] = None,
     ws_max_size: int = 16777216,
     log_level: Optional[str] = None,
     app_dir: Optional[str] = ".",
@@ -212,12 +224,17 @@ def run_app(
 
     log_config: Dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
 
-    if reload and app_dir is not None:
-        reload_dirs = [app_dir]
-    else:
+    if reload_dirs is None:
         reload_dirs = []
-
     if reload:
+        # Always watch the app_dir
+        if app_dir:
+            reload_dirs.append(app_dir)
+        # For developers of Shiny itself; autoreload the app when Shiny package changes
+        if os.getenv("SHINY_PKG_AUTORELOAD"):
+            shinypath = Path(inspect.getfile(shiny)).parent
+            reload_dirs.append(str(shinypath))
+
         if autoreload_port == 0:
             autoreload_port = _utils.random_port(host=host)
 
@@ -240,6 +257,7 @@ def run_app(
         port=port,
         reload=reload,
         reload_dirs=reload_dirs,
+        reload_includes=["*.py", "*.css", "*.js", "*.htm", "*.html", "*.png"],
         ws_max_size=ws_max_size,
         log_level=log_level,
         log_config=log_config,
