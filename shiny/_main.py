@@ -69,8 +69,8 @@ any of the following will work:
     "--reload-dir",
     "reload_dirs",
     multiple=True,
-    help="Set reload directories explicitly, instead of using the current working"
-    " directory.",
+    help="Indicate a directory `--reload` should (recursively) monitor for changes, in "
+    "addition to the app's parent directory. Can be used more than once.",
     type=click.Path(exists=True),
 )
 @click.option(
