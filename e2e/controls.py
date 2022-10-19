@@ -228,8 +228,11 @@ class DownloadButton():
         self.loc = page.locator(f"#{inputId}.shiny-download-link.shiny-bound-output")
 
 class NavControls():
-    def __init__(self, page: Page, navControlType: str): #tab, pill, tab_card, pill_card, tab_list, tab_pill_list
-        self.loc = page.locator(f".nav.{navControlType}")
+    '''navControlType represents the type of navigation options available
+    for example: navset_tab, navset_pill, navset_tab_card, navset_pill_card, navset_pill_list'''
+
+    def __init__(self, page: Page, navControlType: str, navItem: str):
+        self.loc = page.locator(f".nav.{navControlType} .nav-item a[data-value={navItem}]")
 
 
 
