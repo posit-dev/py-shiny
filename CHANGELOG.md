@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `panel_conditional` now works correctly inside of Shiny modules. (Thanks, @gcaligari!) (#336)
 
+* Fix compatibility with Uvicorn 0.19.0 (#357)
+
 ### Other changes
 
 
