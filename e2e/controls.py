@@ -248,18 +248,9 @@ class PlotOutput():
     def expect(self):
         return expect(self.loc)
 
-    # Not used
-    # def get_image_data(self):
-    #     return self.loc.get_attribute("src")
-
 class ImageOutput():
     def __init__(self, page: Page, inputId: str):
         self.loc = page.locator(f"#{inputId}.shiny-image-output.shiny-bound-output")
-
-    # Not used
-    # def get_image_data(self):
-    #     return self.loc.get_attribute("src")
-
 
 # Other
 class ActionButton():
@@ -293,7 +284,6 @@ class LeafletContainer():
 
     def map_zoom_out(self):
         return self.loc.locator(".leaflet-control-zoom-out")
-
 
 
 

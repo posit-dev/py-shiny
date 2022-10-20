@@ -1,5 +1,5 @@
 from conftest import ShinyAppProc, create_example_fixture
-from playwright.sync_api import Page
+from playwright.sync_api import Page, ConsoleMessage
 from controls import ActionButton, UIOutput, NavControls
 
 event_app = create_example_fixture("event")
@@ -14,14 +14,14 @@ def test_event(page: Page, event_app: ShinyAppProc):
 
     output1 = UIOutput(page, "btn_value")
     assert output1.get_text() == "1"
-    # TODO: Check the messages in the python console
+    # TODO: Check the messages in the python console?
     # @effect() event:  1
     # @calc() event:    1
 
     click_me_sync.loc.click()
     assert output1.get_text() == "2"
 
-    # TODO: Check the messages in the python console
+    # TODO: Check the messages in the python console?
     # @effect() event:  2
     # @calc() event:    2
 
