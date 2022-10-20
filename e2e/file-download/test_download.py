@@ -42,7 +42,6 @@ def verify_download(page: Page, downloadBtnId: str, fileName: str):
     else:
         print("md5 does not match which is expected for Random scatter plot " + fileName)
 
-#def generate_md5(file: Union[PurePath, str]):
 def generate_md5(file: Path):
     with open(file, "rb") as f:
         bytes = f.read()  # read file as bytes

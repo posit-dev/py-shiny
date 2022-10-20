@@ -240,6 +240,27 @@ class UIOutput():
     def get_text(self) -> str:
         return self.loc.inner_text()
 
+class PlotOutput():
+    def __init__(self, page: Page, inputId: str):
+        self.loc = page.locator(f"#{inputId}.shiny-plot-output.shiny-bound-output img")
+
+    @property
+    def expect(self):
+        return expect(self.loc)
+
+    # Not used
+    # def get_image_data(self):
+    #     return self.loc.get_attribute("src")
+
+class ImageOutput():
+    def __init__(self, page: Page, inputId: str):
+        self.loc = page.locator(f"#{inputId}.shiny-image-output.shiny-bound-output")
+
+    # Not used
+    # def get_image_data(self):
+    #     return self.loc.get_attribute("src")
+
+
 # Other
 class ActionButton():
     def __init__(self, page: Page, inputId: str):
