@@ -60,9 +60,6 @@ class SliderInput:
     def __init__(self, page: Page, inputId: str):
         self.loc = page.locator(f"#{inputId}.js-range-slider").locator("xpath=..")
 
-    def map_slider(self, page: Page, inputId: str):
-        return page.locator(f"#{inputId}").locator("xpath=../span")
-
     def move_slider(self, fraction: float) -> None:
         self.loc.wait_for(state="visible")
         self.loc.scroll_into_view_if_needed()
@@ -140,8 +137,8 @@ class SliderInput:
             grid_bb.get("x") + (fractionTo * grid_bb.get("width")), handle_center_second[1]
         )
 
-
-
+    def get_slider_value(self) -> str:
+        return self.loc.locator(".irs-single").inner_text()
 
 class CheckboxGroupInput:
     def __init__(self, page: Page, inputId: str):
@@ -173,6 +170,9 @@ class RadioButtonsInput:
 class SelectInput(SimpleInput):
     def __init__(self, page: Page, inputId: str):
         super().__init__(page, f"select#{inputId}.shiny-bound-input")
+
+    # TODO
+    # def get_options(self):
 
     def get_selected(self):
         return self.loc.locator("option[selected]").inner_text()
@@ -219,6 +219,25 @@ class FileInput():
         #TODO: Enhancement: Check PurePath option to upload files
         browse.set_input_files(files=[f"e2e/data-files/{fileName}"])
 
+# Shiny Outputs
+class TextOutput():
+    def __init__(self, page: Page, inputId: str):
+        self.loc = page.locator(f"#{inputId}.shiny-text-output.shiny-bound-output")
+
+    def get_text(self) -> str:
+        return self.loc.inner_text()
+
+    def contains_digit(self, text: str) -> bool:
+        for character in text:
+            if character.isdigit():
+                return True
+        return False
+
+
+
+
+
+# Other
 class ActionButton():
     def __init__(self, page: Page, inputId: str):
         self.loc = page.locator(f"#{inputId}.action-button.shiny-bound-input")
@@ -234,7 +253,22 @@ class NavControls():
     def __init__(self, page: Page, navControlType: str, navItem: str):
         self.loc = page.locator(f".nav.{navControlType} .nav-item a[data-value={navItem}]")
 
+class LeafletContainer():
+    def __init__(self, page: Page, inputId: str):
+        self.loc = page.locator(f"#{inputId} .leaflet-container")
 
+    @property
+    def expect(self):
+        return expect(self.loc)
+
+    def locate_map_output(self) -> Locator:
+        return self.loc.locator("xpath=..").locator("xpath=..").locator("shiny-ipywidget-output shiny-bound-output")
+
+    def map_zoom_in(self):
+        return self.loc.locator(".leaflet-control-zoom-in")
+
+    def map_zoom_out(self):
+        return self.loc.locator(".leaflet-control-zoom-out")
 
 
 
