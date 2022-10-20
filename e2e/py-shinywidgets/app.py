@@ -1,6 +1,7 @@
 from shiny import *
 from shinywidgets import output_widget, register_widget, reactive_read
 import ipyleaflet as L
+from shiny.types import SafeException
 
 app_ui = ui.page_fluid(
     ui.input_slider("zoom", "Map zoom level", value=4, min=1, max=10),
@@ -29,8 +30,10 @@ def server(input, output, session):
     @render.text
     def map_bounds():
         b = reactive_read(map, "bounds")
+        req(b)
         lat = [b[0][0], b[0][1]]
         lon = [b[1][0], b[1][1]]
+
         return f"The current latitude is {lat} and longitude is {lon}"
 
 app = App(app_ui, server)

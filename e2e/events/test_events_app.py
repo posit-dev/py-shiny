@@ -43,12 +43,3 @@ def test_event(page: Page, event_app: ShinyAppProc):
     # TODO: Check the messages in the python console
     # async @effect() event:  2
     # async @calc() event:    2
-
-
-
-
-
-
-
-    # plot = page.locator("#plot")
-    # expect(plot).to_have_class(re.compile(r"\bshiny-bound-output\b"))

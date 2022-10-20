@@ -21,7 +21,6 @@ def test_global_pyplot(page: Page, globalpyplot_app: ShinyAppProc):
     output = page.locator("#mpl_bad")
     expect(output).to_have_class(re.compile(r"\bshiny-output-error"))
 
-    #optional check: Mention in PR if this is obselete
     message = "matplotlib.pyplot cannot be used from an async render function; please use matplotlib's object-oriented interface instead"
     error = output.inner_text()
     assert error == message

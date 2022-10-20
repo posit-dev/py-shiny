@@ -55,11 +55,13 @@ def test_download_button(page: Page, app1: ShinyAppProc) -> None:
     verify_download(page, "download2", "image.png")
     verify_download(page, "download3", f"新型-{date.today().isoformat()}.csv")
 
-    #TODO: Check download link
+    # TODO: Check the download failure cases
+    # verify_download(page, "download4", "failurestest.txt") # Failed - Network error
+    # verify_download(page, "download5", "missing_download.json") # Failed - No file
 
+
+#TODO: Check download link
 # def test_download_link(page: Page, app2: ShinyAppProc) -> None:
 #     page.goto(app2.url)
-      #TODO: Check the download failure cases
-      #verify_download(page, "download4", "failurestest.txt") # Failed - Network error
-      #verify_download(page, "download5", "missing_download.json") # Failed - No file
+
 
