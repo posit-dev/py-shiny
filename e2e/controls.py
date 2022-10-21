@@ -233,6 +233,10 @@ class TextOutput():
                 return True
         return False
 
+    @property
+    def expect(self):
+        return expect(self.loc)
+
 class UIOutput():
     def __init__(self, page: Page, inputId: str):
         self.loc = page.locator(f"#{inputId}.shiny-html-output.shiny-bound-output")
