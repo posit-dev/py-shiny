@@ -237,6 +237,13 @@ class TextOutput():
     def expect(self):
         return expect(self.loc)
 
+class TextOutputVerbatim():
+    def __init__(self, page: Page, inputId: str):
+        self.loc = page.locator(f"#{inputId}.shiny-text-output.noplaceholder.shiny-bound-output")
+
+    def get_text(self) -> str:
+        return self.loc.inner_text()
+
 class UIOutput():
     def __init__(self, page: Page, inputId: str):
         self.loc = page.locator(f"#{inputId}.shiny-html-output.shiny-bound-output")
