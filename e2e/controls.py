@@ -171,9 +171,6 @@ class SelectInput(SimpleInput):
     def __init__(self, page: Page, inputId: str):
         super().__init__(page, f"select#{inputId}.shiny-bound-input")
 
-    # TODO
-    # def get_options(self):
-
     def get_selected(self):
         return self.loc.locator("option[selected]").inner_text()
 
@@ -295,6 +292,73 @@ class LeafletContainer():
 
     def map_zoom_out(self):
         return self.loc.locator(".leaflet-control-zoom-out")
+
+class Modal():
+    def __init__(self, page: Page):
+        self.loc = page.locator("#shiny-modal .modal-dialog")
+
+    @property
+    def modal_content(self) -> Locator:
+        return self.loc.locator(".modal-content")
+
+    @property
+    def modal_header(self) -> Locator:
+        return self.modal_content.locator(".modal-title")
+
+    @property
+    def modal_body(self) -> Locator:
+        return self.modal_content.locator(".modal-body")
+
+    #TODO: Add modal_remove method
+
+class Notification():
+    def __init__(self, page: Page):
+        self.loc = page.locator("#shiny-notification-panel")
+
+    @property
+    def notification_close(self) -> Locator:
+        return self.loc.locator(".shiny-notification .shiny-notification-close")
+
+    @property
+    def notification_content(self) -> Locator:
+        return self.loc.locator(".shiny-notification-content")
+
+    @property
+    def notification_content_text(self) -> Locator:
+        return self.notification_content.locator(".shiny-notification-content-text")
+
+    @property
+    def notification_action(self) -> Locator:
+        return self.notification_content.locator(".shiny-notification-content-action")
+
+class Progress(Notification):
+    def __init__(self, page: Page):
+        super().__init__(page)
+
+    @property
+    def progress_notification(self) -> Locator:
+        return self.notification_content_text.locator(".shiny-progress-notification")
+
+    @property
+    def progress_status(self) -> Locator:
+        return self.progress_notification.locator(".progress .progress-bar")
+
+    @property
+    def progress_text(self) -> Locator:
+        return self.progress_notification.locator(".progress .progress-text")
+
+    @property
+    def progress_text_message(self) -> Locator:
+        return self.progress_text.locator(".progress-message")
+
+    @property
+    def progress_text_detail(self) -> Locator:
+        return self.progress_text.locator(".progress-detail")
+
+
+
+
+
 
 
 
