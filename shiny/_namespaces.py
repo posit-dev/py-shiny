@@ -1,6 +1,6 @@
+import re
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
-import re
 from typing import Pattern, Union
 
 

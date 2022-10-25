@@ -1,8 +1,9 @@
 from typing import Optional
 
 import ipyleaflet as L
-from shiny import Inputs, Outputs, Session, module, reactive, req, ui
 from shinywidgets import output_widget, reactive_read, register_widget
+
+from shiny import Inputs, Outputs, Session, module, reactive, req, ui
 
 # ============================================================
 # Module: location

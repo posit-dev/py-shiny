@@ -22,22 +22,12 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal
 
-from htmltools import (
-    TagChildArg,
-    TagAttrArg,
-    TagList,
-    Tag,
-    div,
-    tags,
-    h2,
-    css,
-    span,
-)
+from htmltools import Tag, TagAttrArg, TagChildArg, TagList, css, div, h2, span, tags
 
 from .._docstring import add_example
+from ..module import current_namespace
 from ._html_dependencies import jqui_deps
 from ._utils import get_window_title
-from ..module import current_namespace
 
 
 # TODO: make a python version of the layout guide?

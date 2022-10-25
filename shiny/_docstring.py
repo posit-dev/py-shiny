@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import Callable, Any, TypeVar, List
+from typing import Any, Callable, List, TypeVar
 
 if sys.version_info >= (3, 8):
     from typing import Literal

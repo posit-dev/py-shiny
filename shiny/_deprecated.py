@@ -1,8 +1,7 @@
 import warnings
 from typing import Any
 
-from . import render
-from . import reactive
+from . import reactive, render
 
 __all__ = (
     "render_text",

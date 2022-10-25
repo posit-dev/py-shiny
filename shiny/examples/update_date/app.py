@@ -1,5 +1,6 @@
-from shiny import *
 from datetime import date, timedelta
+
+from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_slider("n", "Day of month", min=1, max=30, value=10),

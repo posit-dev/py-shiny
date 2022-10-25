@@ -1,6 +1,5 @@
-from typing import TypeVar, Generic, Tuple
 from queue import PriorityQueue
-
+from typing import Generic, Tuple, TypeVar
 
 T = TypeVar("T")
 

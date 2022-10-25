@@ -39,28 +39,21 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Protocol, runtime_checkable
 
-from htmltools import TagChildArg
-
-# These aren't  used directly in this file, but they seems necessary for Sphinx to work
+# These aren't used directly in this file, but they seems necessary for Sphinx to work
 # cleanly.
-from htmltools import (  # pyright: ignore[reportUnusedImport] # noqa: F401
-    Tagifiable,  # pyright: ignore[reportUnusedImport]
-    Tag,  # pyright: ignore[reportUnusedImport]
-    TagList,  # pyright: ignore[reportUnusedImport]
-)
+from htmltools import Tag  # pyright: ignore[reportUnusedImport] # noqa: F401
+from htmltools import TagChildArg  # pyright: ignore[reportUnusedImport] # noqa: F401
+from htmltools import Tagifiable  # pyright: ignore[reportUnusedImport] # noqa: F401
+from htmltools import TagList  # pyright: ignore[reportUnusedImport] # noqa: F401
 
 if TYPE_CHECKING:
     from ..session import Session
     from ..session._utils import RenderedDeps
 
-from .._namespaces import ResolvedId
 from .. import _utils
+from .._namespaces import ResolvedId
 from ..types import ImgData
-from ._try_render_plot import (
-    try_render_matplotlib,
-    try_render_pil,
-    try_render_plotnine,
-)
+from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_plotnine
 
 # Input type for the user-spplied function that is passed to a render.xx
 IT = TypeVar("IT")

@@ -13,8 +13,8 @@ from typing import Dict, Iterable, Optional, TypeVar, Union, cast
 from htmltools import HTML, Tag, TagAttrArg, TagChildArg, css, div, tags
 
 from .._docstring import add_example
-from ._html_dependencies import ionrangeslider_deps
 from .._namespaces import resolve_id
+from ._html_dependencies import ionrangeslider_deps
 from ._utils import shiny_input_label
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,

@@ -1,5 +1,6 @@
-from shiny import *
 from htmltools import br
+
+from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_action_button("update", "Update other buttons and link"),

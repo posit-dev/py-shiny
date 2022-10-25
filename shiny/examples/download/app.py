@@ -1,14 +1,14 @@
 import asyncio
-import os
 import io
+import os
 from datetime import date
 from typing import Any
 
-from shiny import *
-from shiny.ui import div, p
-
 import matplotlib.pyplot as plt
 import numpy as np
+
+from shiny import *
+from shiny.ui import div, p
 
 
 def make_example(id: str, label: str, title: str, desc: str, extra: Any = None):

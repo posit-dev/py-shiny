@@ -1,6 +1,7 @@
+import pandas as pd
+
 from shiny import *
 from shiny.types import FileInfo
-import pandas as pd
 
 app_ui = ui.page_fluid(
     ui.layout_sidebar(

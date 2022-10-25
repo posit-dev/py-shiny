@@ -4,6 +4,7 @@ import asyncio
 from typing import List
 
 import pytest
+
 from shiny import App, render, ui
 from shiny._connection import MockConnection
 from shiny._validation import SilentException, req

@@ -60,6 +60,16 @@ jobs:
       - name: Type check with pyright
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
+          make pyright
+
+      - name: Lint with flake8
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          make lint
+
+      - name: black and isort
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
           make check
 
       - name: Build API docs
@@ -68,11 +78,6 @@ jobs:
           SHINYLIVE_SRC: ""
         run: |
           cd docs && make html
-
-      - name: Lint with flake8
-        if: steps.install.outcome == 'success' && (success() || failure())
-        run: |
-          make lint
 
       - name: Run e2e tests
         if: steps.install.outcome == 'success' && (success() || failure())
