@@ -45,9 +45,7 @@ jobs:
       #     make install
 
       - name: Install dependencies
-        run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+        run: pip install -e ".[dev,docs,test]"
 
       - name: Install
         id: install
@@ -95,8 +93,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          pip install -e ".[dev,docs,test]"
       - name: "Build Package"
         run: |
           make dist
