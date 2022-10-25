@@ -25,8 +25,7 @@ More detailed installation instructions, including the use of `conda`, are [also
 If you want to do development on Shiny for Python:
 
 ```sh
-pip install -r requirements-dev.txt
-pip install -e .
+pip install -e ".[dev,docs,test]"
 ```
 
 Additionally, you can install pre-commit hooks which will automatically reformat and lint the code when you make a commit:
