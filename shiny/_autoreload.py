@@ -266,12 +266,12 @@ class ResponseMangler:
                 # to the content-length header (if content-length is even present)
                 _add_to_content_length(self._response_start, new_len - old_len)
 
-            more_body = "more_body" in event and event["more_body"]
+            more_body = event.get("more_body", False)
 
             if done or not more_body:
-                # Either we've seen the whole body by now (more_body) or the mangler has
-                # seen all the data it cares to (done). Either way, we can send all the
-                # data we have.
+                # Either we've seen the whole body by now (`not more_body`) or the
+                # mangler has seen all the data it cares to (`done`). Either way, we can
+                # send all the data we have.
                 self._done = True
                 await self._send(self._response_start)
                 await self._send(
