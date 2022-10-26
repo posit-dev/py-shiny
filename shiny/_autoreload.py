@@ -113,7 +113,7 @@ class InjectAutoreloadMiddleware:
         if scope["type"] != "http" or scope["path"] != "/" or len(self.script) == 0:
             return await self.app(scope, receive, send)
 
-        def mangle_callback(body: bytes):
+        def mangle_callback(body: bytes) -> Tuple[bytes, bool]:
             if b"</head>" in body:
                 return (body.replace(b"</head>", self.script, 1), True)
             else:
@@ -220,7 +220,7 @@ class ResponseMangler:
 
     def __init__(
         self, send: ASGISendCallable, mangler: Callable[[bytes], Tuple[bytes, bool]]
-    ):
+    ) -> None:
         # The underlying ASGI send function
         self._send = send
         # The caller-provided logic for rewriting the body. Takes a single `bytes`
@@ -236,7 +236,7 @@ class ResponseMangler:
         # rewritten before we send it
         self._response_start: Optional[HTTPResponseStartEvent] = None
         # All the response body bytes we have seen so far
-        self._body = b""
+        self._body: bytes = b""
 
     async def send(self, event: ASGISendEvent) -> None:
         if self._done:
