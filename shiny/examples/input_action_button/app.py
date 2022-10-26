@@ -1,6 +1,7 @@
-from shiny import *
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
+from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_slider("n", "Number of observations", min=0, max=1000, value=500),

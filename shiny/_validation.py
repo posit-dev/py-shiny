@@ -1,5 +1,5 @@
 from ._docstring import add_example
-from .types import SilentException, SilentCancelOutputException
+from .types import SilentCancelOutputException, SilentException
 
 
 @add_example()

@@ -3,7 +3,7 @@ import hashlib
 import time
 
 import shiny as s
-from shiny import ui, reactive
+from shiny import reactive, ui
 
 
 def calc(value: str) -> str:

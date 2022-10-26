@@ -1,7 +1,8 @@
 import textwrap
 
-from shiny import ui
 from htmltools import HTMLDocument, TagList, tags
+
+from shiny import ui
 
 
 def test_panel_title():

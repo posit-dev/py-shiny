@@ -1,28 +1,26 @@
 import copy
 import os
 import secrets
-from typing import Any, List, Union, Dict, Callable, cast, Optional
-
-from htmltools import Tag, TagList, HTMLDocument, HTMLDependency, RenderedHTML
+from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 import starlette.applications
 import starlette.exceptions
 import starlette.middleware
 import starlette.routing
 import starlette.websockets
+from htmltools import HTMLDependency, HTMLDocument, RenderedHTML, Tag, TagList
 from starlette.requests import Request
-from starlette.responses import Response, HTMLResponse, JSONResponse
+from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from ._autoreload import autoreload_url, InjectAutoreloadMiddleware
+from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
-from ._shinyenv import is_pyodide
 from ._error import ErrorMiddleware
+from ._shinyenv import is_pyodide
 from ._utils import is_async_callable
-from .html_dependencies import require_deps, jquery_deps, shiny_deps
+from .html_dependencies import jquery_deps, require_deps, shiny_deps
 from .http_staticfiles import StaticFiles
 from .session import Inputs, Outputs, Session, session_context
-
 
 # Default values for App options.
 LIB_PREFIX: str = "lib/"

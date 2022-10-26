@@ -1,8 +1,9 @@
 # pyright: reportUnknownMemberType=false
 
 import re
-from playwright.sync_api import Page, expect
+
 from conftest import ShinyAppProc, create_example_fixture
+from playwright.sync_api import Page, expect
 
 cpuinfo_app = create_example_fixture("cpuinfo")
 

@@ -1,9 +1,10 @@
-from shiny import *
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 from plotnine.data import mtcars
+
+from shiny import *
 
 nav = ui.navset_pill_list(
     ui.nav_control(ui.p("Choose a package", class_="lead text-center")),
@@ -75,11 +76,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.plot
     def plotnine():
         from plotnine import (
-            ggplot,
             aes,
-            geom_point,
-            stat_smooth,
             facet_wrap,
+            geom_point,
+            ggplot,
+            stat_smooth,
             theme,
             theme_bw,
         )

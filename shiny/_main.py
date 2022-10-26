@@ -63,9 +63,6 @@ any of the following will work:
     help="Bind autoreload socket to this port. If 0, a random port will be used. Ignored if --reload is not used.",
     show_default=True,
 )
-@click.option(
-    "--debug", is_flag=True, default=False, help="Enable debug mode.", hidden=True
-)
 @click.option("--reload", is_flag=True, default=False, help="Enable auto-reload.")
 @click.option(
     "--ws-max-size",
@@ -108,7 +105,6 @@ def run(
     host: str,
     port: int,
     autoreload_port: int,
-    debug: bool,
     reload: bool,
     ws_max_size: int,
     log_level: str,
@@ -121,7 +117,6 @@ def run(
         host=host,
         port=port,
         autoreload_port=autoreload_port,
-        debug=debug,
         reload=reload,
         ws_max_size=ws_max_size,
         log_level=log_level,
@@ -136,7 +131,6 @@ def run_app(
     host: str = "127.0.0.1",
     port: int = 8000,
     autoreload_port: int = 0,
-    debug: bool = False,
     reload: bool = False,
     ws_max_size: int = 16777216,
     log_level: Optional[str] = None,
@@ -165,8 +159,6 @@ def run_app(
     autoreload_port
         The port that should be used for an additional websocket that is used to support
         hot-reload. Set to 0 to use a random port.
-    debug
-        Enable debug mode.
     reload
         Enable auto-reload.
     ws_max_size
@@ -246,7 +238,6 @@ def run_app(
         app,  # pyright: ignore[reportGeneralTypeIssues]
         host=host,
         port=port,
-        debug=debug,
         reload=reload,
         reload_dirs=reload_dirs,
         ws_max_size=ws_max_size,
