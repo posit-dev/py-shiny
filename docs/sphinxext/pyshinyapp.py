@@ -21,13 +21,27 @@ import base64
 import json
 import os
 import shutil
+import sys
 from os.path import abspath, dirname, join
+from typing import TypedDict
 
 from docutils.nodes import Element, SkipNode
 from docutils.parsers.rst import directives
 from htmltools import css
 from sphinx.application import Sphinx
 from sphinx.util.docutils import SphinxDirective
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
+# This is the same as the FileContentJson type in TypeScript.
+class FileContentJson(TypedDict):
+    name: str
+    content: str
+    type: Literal["text", "binary"]
+
 
 # Local path to the shinylive/ directory (currently provided by rstudio/shinylive)
 # This is only needed for the "self-contained" version of the API reference.
@@ -53,9 +67,13 @@ class ShinyElement(Element):
             )
 
             for f in self["files"]:
-                with open(f, "rb") as x:
-                    fc = base64.b64encode(x.read()).decode("utf-8")
-                    code += f"\n\n## file: {os.path.basename(f)}\n## type: binary\n{fc}"
+                file_info = _read_file(f)
+                if file_info["type"] == "text":
+                    code += (
+                        f"\n\n## file: {os.path.basename(f)}\n{file_info['content']}"
+                    )
+                else:
+                    code += f"\n\n## file: {os.path.basename(f)}\n## type: binary\n{file_info['content']}"
 
         return (
             f'<pre class="shinylive-python" style="{style}"><code>{code}</code></pre>'
@@ -143,3 +161,23 @@ def setup(app: Sphinx):
     app.add_directive("terminal", TerminalDirective)
 
     return {"version": "0.1"}
+
+
+def _read_file(filename: str) -> FileContentJson:
+    type: Literal["text", "binary"] = "text"
+    try:
+        with open(filename, "r") as f:
+            file_content = f.read()
+            type = "text"
+    except UnicodeDecodeError:
+        # If text failed, try binary.
+        with open(filename, "rb") as f:
+            file_content_bin = f.read()
+            file_content = base64.b64encode(file_content_bin).decode("utf-8")
+            type = "binary"
+
+    return {
+        "name": filename,
+        "content": file_content,
+        "type": type,
+    }
