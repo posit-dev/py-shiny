@@ -23,7 +23,6 @@ import os
 import shutil
 import sys
 from os.path import abspath, dirname, join
-from typing import TypedDict
 
 from docutils.nodes import Element, SkipNode
 from docutils.parsers.rst import directives
@@ -32,9 +31,9 @@ from sphinx.application import Sphinx
 from sphinx.util.docutils import SphinxDirective
 
 if sys.version_info >= (3, 8):
-    from typing import Literal
+    from typing import Literal, TypedDict
 else:
-    from typing_extensions import Literal
+    from typing_extensions import Literal, TypedDict
 
 # This is the same as the FileContentJson type in TypeScript.
 class FileContentJson(TypedDict):
