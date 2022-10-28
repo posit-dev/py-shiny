@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Closed #240, #330: Fixed live examples with additional files. (#340)
+
 ### Other changes
 
 

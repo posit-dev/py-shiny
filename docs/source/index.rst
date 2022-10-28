@@ -205,6 +205,8 @@ UI (`output_*()`) and server (``render``)ing functions for generating content se
     render.plot
     ui.output_image
     render.image
+    ui.output_table
+    render.table
     ui.output_text
     ui.output_text_verbatim
     render.text

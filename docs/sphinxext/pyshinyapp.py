@@ -17,8 +17,11 @@ Usage::
         :height: 500px
 """
 
+import base64
+import json
 import os
 import shutil
+import sys
 from os.path import abspath, dirname, join
 
 from docutils.nodes import Element, SkipNode
@@ -26,6 +29,18 @@ from docutils.parsers.rst import directives
 from htmltools import css
 from sphinx.application import Sphinx
 from sphinx.util.docutils import SphinxDirective
+
+if sys.version_info >= (3, 8):
+    from typing import Literal, TypedDict
+else:
+    from typing_extensions import Literal, TypedDict
+
+# This is the same as the FileContentJson type in TypeScript.
+class FileContentJson(TypedDict):
+    name: str
+    content: str
+    type: Literal["text", "binary"]
+
 
 # Local path to the shinylive/ directory (currently provided by rstudio/shinylive)
 # This is only needed for the "self-contained" version of the API reference.
@@ -46,9 +61,18 @@ class ShinyElement(Element):
             # TODO: allow the layout to be specified (right now I don't think we need
             # horizontal layout, but maybe someday we will)
             code = (
-                "#| standalone: true\n#| components: [editor, viewer]\n#| layout: vertical\n#| viewerHeight: 400\n"
+                "#| standalone: true\n#| components: [editor, viewer]\n#| layout: vertical\n#| viewerHeight: 400\n## file: app.py\n"
                 + code
             )
+
+            for f in self["files"]:
+                file_info = _read_file(f)
+                if file_info["type"] == "text":
+                    code += (
+                        f"\n\n## file: {os.path.basename(f)}\n{file_info['content']}"
+                    )
+                else:
+                    code += f"\n\n## file: {os.path.basename(f)}\n## type: binary\n{file_info['content']}"
 
         return (
             f'<pre class="shinylive-python" style="{style}"><code>{code}</code></pre>'
@@ -59,8 +83,9 @@ def _run(self: SphinxDirective, type: str):
     code = "\n".join(self.content)
     width = self.options.pop("width", "100%")
     height = self.options.pop("height", None)
+    files = json.loads(self.options.pop("files", "[]"))
 
-    return [ShinyElement(type=type, code=code, height=height, width=width)]
+    return [ShinyElement(type=type, code=code, height=height, width=width, files=files)]
 
 
 class BaseDirective(SphinxDirective):
@@ -69,6 +94,7 @@ class BaseDirective(SphinxDirective):
     option_spec = {
         "width": directives.unchanged,
         "height": directives.unchanged,
+        "files": directives.unchanged,
     }
 
 
@@ -134,3 +160,23 @@ def setup(app: Sphinx):
     app.add_directive("terminal", TerminalDirective)
 
     return {"version": "0.1"}
+
+
+def _read_file(filename: str) -> FileContentJson:
+    type: Literal["text", "binary"] = "text"
+    try:
+        with open(filename, "r") as f:
+            file_content = f.read()
+            type = "text"
+    except UnicodeDecodeError:
+        # If text failed, try binary.
+        with open(filename, "rb") as f:
+            file_content_bin = f.read()
+            file_content = base64.b64encode(file_content_bin).decode("utf-8")
+            type = "binary"
+
+    return {
+        "name": filename,
+        "content": file_content,
+        "type": type,
+    }

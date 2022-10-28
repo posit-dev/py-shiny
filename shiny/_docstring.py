@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from typing import Any, Callable, List, TypeVar
@@ -29,7 +30,7 @@ def add_example(
         "cell::",
         "terminal::",
     ] = "shinylive-editor::",
-    **options: str,
+    **options: object,
 ) -> Callable[[F], F]:
     """
     Add an example to the docstring of a function, method, or class.
@@ -61,9 +62,19 @@ def add_example(
             return func
 
         fn_name = func.__name__
-        example_file = os.path.join(ex_dir, fn_name, "app.py")
+        example_dir = os.path.join(ex_dir, fn_name)
+        example_file = os.path.join(example_dir, "app.py")
         if not os.path.exists(example_file):
             raise ValueError(f"No example for {fn_name}")
+
+        other_files: List[str] = []
+        for f in os.listdir(example_dir):
+            abs_f = os.path.join(example_dir, f)
+            if os.path.isfile(abs_f) and f != "app.py":
+                other_files.append(abs_f)
+
+        if "files" not in options:
+            options["files"] = json.dumps(other_files)
 
         if func.__doc__ is None:
             func.__doc__ = ""
@@ -97,7 +108,7 @@ def add_example(
                 "",
                 *example_prefix,
                 f".. {directive}",
-                *[f"{indent}:{k}: {v}" for k, v in options.items()],
+                *[f"    :{k}: {v}" for k, v in options.items()],
                 "",
                 example,
             ]

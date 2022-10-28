@@ -153,6 +153,23 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
 
 @add_example()
 def output_table(id: str, **kwargs: TagAttrArg) -> Tag:
+    """
+    Create a output container for a table.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    **kwargs
+        Additional attributes to add to the container.
+
+    Returns
+    -------
+
+    See Also
+    -------
+    ~shiny.render.table
+    """
     return tags.div({"class": "shiny-html-output"}, id=resolve_id(id), **kwargs)
 
 
