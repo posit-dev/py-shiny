@@ -1,6 +1,8 @@
-import numpy as np
-from shiny import ui
 import json
+
+import numpy as np
+
+from shiny import ui
 
 
 def mediapipe_ui(

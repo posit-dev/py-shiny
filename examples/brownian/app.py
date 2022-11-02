@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from shiny import ui, reactive, req, render, App
-from mediapipe import mediapipe_ui, hand_to_camera_eye
-from brownian_motion import brownian_ui, brownian_data, brownian_widget
+from brownian_motion import brownian_data, brownian_ui, brownian_widget
+from mediapipe import hand_to_camera_eye, mediapipe_ui
 
+from shiny import App, reactive, render, req, ui
 
 debug = False
 

@@ -1,6 +1,7 @@
 import numpy as np
 from plotly import graph_objects as go
 from shinywidgets import output_widget, register_widget
+
 from shiny import ui
 
 # Code taken from https://plotly.com/python/3d-line-plots/
