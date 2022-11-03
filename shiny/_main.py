@@ -2,6 +2,8 @@ import copy
 import importlib
 import importlib.util
 import os
+import platform
+import re
 import shutil
 import sys
 import types
@@ -301,7 +303,13 @@ def resolve_app(app: str, app_dir: Optional[str]) -> Tuple[str, Optional[str]]:
     #   - directory (look for app:app inside of it)
     # - A module name (look for :app) inside of it
 
-    module, _, attr = app.partition(":")
+    if platform.system() == "Windows" and re.match("^[a-zA-Z]:[/\\\\]", app):
+        # On Windows, need special handling of ':' in some cases, like these:
+        #   shiny run c:/Users/username/Documents/myapp/app.py
+        #   shiny run c:\Users\username\Documents\myapp\app.py
+        module, attr = app, ""
+    else:
+        module, _, attr = app.partition(":")
     if not module:
         raise ImportError("The APP parameter cannot start with ':'.")
     if not attr:
