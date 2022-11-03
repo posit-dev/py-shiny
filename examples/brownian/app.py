@@ -5,7 +5,7 @@ from mediapipe import hand_to_camera_eye, mediapipe_ui
 
 from shiny import App, reactive, render, req, ui
 
-debug = False
+debug = True
 
 app_ui = ui.page_fluid(
     ui.h1("Rotate plot using hand tracking"),
