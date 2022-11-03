@@ -1,7 +1,5 @@
 numpy
-pandas
 shiny
-mediapipe
 plotly
 shinywidgets
 json
