@@ -35,19 +35,16 @@ def brownian_ui(name, **kwargs):
     )
 
 
-def brownian_widget(name, data):
-    x = data["x"]
-    y = data["y"]
-    z = data["z"]
+def brownian_widget(name):
     widget = go.FigureWidget(
         data=[
             go.Scatter3d(
-                x=x,
-                y=y,
-                z=z,
+                x=[],
+                y=[],
+                z=[],
                 marker=dict(
                     size=4,
-                    color=z,
+                    color=[],
                     colorscale="Viridis",
                 ),
                 line=dict(color="darkblue", width=2),

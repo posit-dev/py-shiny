@@ -17,23 +17,23 @@ app_ui = ui.page_fluid(
 
 
 def server(input, output, session):
+    @reactive.Calc
+    def random_walk():
+        input.data_btn()
+        return brownian_data(n=200)
 
-    # TODO-make a reactive calc
-    random_walk = brownian_data(n=200)
-
-    widget = brownian_widget("plot", random_walk)
+    widget = brownian_widget("plot")
 
     hand = reactive.Value(0)
 
     @reactive.Effect
     def _():
-        req(input.data_btn())
-
-        data = brownian_data(n=200)
+        walk = random_walk()
         layer = widget.data[0]
-        layer.x = data["x"]
-        layer.y = data["y"]
-        layer.z = data["z"]
+        layer.x = walk["x"]
+        layer.y = walk["y"]
+        layer.z = walk["z"]
+        layer.marker.color = walk["z"]
 
     @reactive.Effect
     def _():
@@ -59,7 +59,7 @@ def server(input, output, session):
         @render.text
         def eye():
             eye = camera_eye()
-            return f"x: {eye['x']}, y: {eye['y']}, z: {eye['z']}"
+            return f"Eye: {{x: {eye['x']}, y: {eye['y']}, z: {eye['z']}}}"
 
 
 www_dir = Path(__file__).parent / "www"
