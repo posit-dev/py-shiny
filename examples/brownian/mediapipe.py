@@ -47,7 +47,7 @@ def hand_to_camera_eye(hands, detect_ok=False):
         if ok_dist < ref_dist * 2:
             return None
 
-    if left_hand:
+    if not left_hand:
         normal_vec = np.cross(
             rel_hand(PINKY_MCP, WRIST),
             rel_hand(INDEX_FINGER_MCP, WRIST),
