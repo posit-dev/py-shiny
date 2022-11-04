@@ -1,9 +1,13 @@
+from typing import TypeVar, cast
+
 from ._docstring import add_example
 from .types import SilentCancelOutputException, SilentException
 
+T = TypeVar("T")
+
 
 @add_example()
-def req(*args: object, cancel_output: bool = False) -> None:
+def req(*args: T, cancel_output: bool = False) -> T:
     """
     Throw a silent exception for falsey values.
 
@@ -17,6 +21,10 @@ def req(*args: object, cancel_output: bool = False) -> None:
     cancel_output
         If ``True``, throw :func:`~shiny.types.SilentCancelOutputException` instead of
         :func:`~shiny.types.SilentException`.
+
+    Returns
+    -------
+        The first argument.
     """
     for arg in args:
         if not arg:
@@ -24,3 +32,5 @@ def req(*args: object, cancel_output: bool = False) -> None:
                 raise SilentCancelOutputException()
             else:
                 raise SilentException()
+
+    return cast(T, None) if len(args) == 0 else args[0]

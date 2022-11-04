@@ -1,109 +1,78 @@
-import json
+import math
+from functools import reduce
+from operator import add
+from statistics import mean
 
 import numpy as np
 
-from shiny import ui
+WRIST = 0
+THUMB_CMC = 1
+THUMB_MCP = 2
+THUMB_IP = 3
+THUMB_TIP = 4
+INDEX_FINGER_MCP = 5
+INDEX_FINGER_PIP = 6
+INDEX_FINGER_DIP = 7
+INDEX_FINGER_TIP = 8
+MIDDLE_FINGER_MCP = 9
+MIDDLE_FINGER_PIP = 10
+MIDDLE_FINGER_DIP = 11
+MIDDLE_FINGER_TIP = 12
+RING_FINGER_MCP = 13
+RING_FINGER_PIP = 14
+RING_FINGER_DIP = 15
+RING_FINGER_TIP = 16
+PINKY_MCP = 17
+PINKY_PIP = 18
+PINKY_DIP = 19
+PINKY_TIP = 20
 
 
-def mediapipe_ui(
-    name,
-    *,
-    videoId="video",
-    canvasId="canvas",
-    options=None,
-    debug=True,
-):
+def hand_to_camera_eye(hand, detect_ok=False):
+    # TODO: Recognize the difference between left and right hand! Right now, switching
+    # hands rotates by 180 degrees
 
-    assert type(name) is str
-    assert type(videoId) is str
-    assert type(canvasId) is str
-    assert type(debug) is bool
+    hand = hand["multiHandLandmarks"][0]
 
-    if options is None:
-        options = hand_options()
-    mediapipHandArgs = {
-        "uiName": name,
-        "videoId": videoId,
-        "canvasId": canvasId,
-        "options": options,
-        "debug": debug,
-    }
-    mediapipe_js = f"mediapipeHand({json.dumps(mediapipHandArgs)})"
-
-    if debug:
-        canvasStyle = "display:block;"
-    else:
-        canvasStyle = "display:none;"
-
-    return ui.TagList(
-        ui.tags.video(id=videoId, style="display:none;"),
-        ui.tags.canvas(id=canvasId, style=canvasStyle),
-        ui.tags.script(
-            src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js",
-            crossorigin="anonymous",
-        ),
-        ui.tags.script(
-            src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js",
-            crossorigin="anonymous",
-        ),
-        ui.tags.script(
-            src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js",
-            crossorigin="anonymous",
-        ),
-        ui.tags.script(
-            src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js",
-            crossorigin="anonymous",
-        ),
-        ui.tags.script(src="hand.js"),
-        ui.tags.script(mediapipe_js),
-    )
-
-
-# https://google.github.io/mediapipe/solutions/hands.html#configuration-options
-def hand_options(
-    *,
-    maxNumHands: int = 1,
-    modelComplexity: float = 1.0,
-    minDetectionConfidence: float = 0.9,
-    minTrackingConfidence: float = 0.9,
-    **kwargs,
-):
-    maxNumHands = int(maxNumHands)
-    modelComplexity = float(modelComplexity)
-    minDetectionConfidence = float(minDetectionConfidence)
-    minTrackingConfidence = float(minTrackingConfidence)
-    assert 0 < maxNumHands
-    assert 0 <= modelComplexity <= 1
-    assert 0 <= minDetectionConfidence <= 1
-    assert 0 <= minTrackingConfidence <= 1
-
-    return {
-        "staticImageMode": False,
-        "maxNumHands": maxNumHands,
-        "modelComplexity": modelComplexity,
-        "minDetectionConfidence": minDetectionConfidence,
-        "minTrackingConfidence": minTrackingConfidence,
-        # Future model expansion
-        **kwargs,
-    }
-
-
-def hand_to_camera_eye(hand):
     def rel_hand(start_pos: int, end_pos: int):
         return np.subtract(list(hand[start_pos].values()), list(hand[end_pos].values()))
 
-    normal_vec = np.cross(rel_hand(17, 0), rel_hand(5, 0))
+    if detect_ok:
+        # If the distance between the thumbtip and index finger tip are pretty close,
+        # ignore the hand. (Using "OK" sign to pause hand tracking)
+        ok_dist = np.linalg.norm(rel_hand(THUMB_TIP, INDEX_FINGER_TIP))
+        ref_dist = np.linalg.norm(rel_hand(INDEX_FINGER_TIP, INDEX_FINGER_DIP))
+        if ok_dist < ref_dist * 2:
+            return None
+
+    normal_vec = np.cross(rel_hand(PINKY_MCP, WRIST), rel_hand(INDEX_FINGER_MCP, WRIST))
     normal_unit_vec = normal_vec / np.linalg.norm(normal_vec)
 
     def list_to_xyz(x):
         x = list(map(lambda y: round(y, 2), x))
         return dict(x=x[0], y=x[1], z=x[2])
 
-    # Make zoom bigger and invert
-    new_eye = list_to_xyz(normal_unit_vec * 2.0 * -1.0)
+    # Invert, for some reason
+    normal_unit_vec = normal_unit_vec * -1.0
+    normal_unit_vec[1] *= 2.0
+
+    # Stay a consistent distance from the origin
+    dist = 2
+    magnitude = math.sqrt(reduce(add, [a**2 for a in normal_unit_vec]))
+    normal_unit_vec = [a / magnitude * dist for a in normal_unit_vec]
+
+    new_eye = list_to_xyz(normal_unit_vec)
     return {
         # Adjust locations to match camera position
         "x": new_eye["z"],
         "y": new_eye["x"],
-        "z": new_eye["y"] * 2.0,
+        "z": new_eye["y"],
     }
+
+
+def xyz_mean(points):
+    return dict(
+        x=mean([p["x"] for p in points]),
+        y=mean([p["y"] for p in points]),
+        z=mean([p["z"] for p in points]),
+    )

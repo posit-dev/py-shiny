@@ -1,8 +1,5 @@
 import numpy as np
 from plotly import graph_objects as go
-from shinywidgets import output_widget, register_widget
-
-from shiny import ui
 
 # Code taken from https://plotly.com/python/3d-line-plots/
 # * `brownian_motion()` is a function that generates a random walk
@@ -25,17 +22,12 @@ def brownian_data(n=100, mu=(0.0, 0.00), sigma=(0.1, 0.1), S0=(1.0, 1.0)):
     return {
         "x": brownian_motion(T=1, N=n, mu=mu[0], sigma=sigma[0], S0=S0[0]),
         "y": brownian_motion(T=1, N=n, mu=mu[1], sigma=sigma[1], S0=S0[1]),
+        # "y": [i for i in range(n)],
         "z": [i for i in range(n)],
     }
 
 
-def brownian_ui(name, **kwargs):
-    return ui.TagList(
-        output_widget(name, **kwargs),
-    )
-
-
-def brownian_widget(name):
+def brownian_widget(width=600, height=600):
     widget = go.FigureWidget(
         data=[
             go.Scatter3d(
@@ -50,8 +42,7 @@ def brownian_widget(name):
                 line=dict(color="darkblue", width=2),
             )
         ],
-        layout={"showlegend": False},
+        layout={"showlegend": False, "width": width, "height": height},
     )
 
-    register_widget(name, widget)
     return widget
