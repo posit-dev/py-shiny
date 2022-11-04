@@ -70,7 +70,7 @@ class HandInputBinding extends Shiny.InputBinding {
   getRatePolicy(el) {
     return {
       policy: "throttle",
-      delay: 50
+      delay: el.dataset.throttleDelay ?? 100
     };
   }
 
@@ -78,6 +78,7 @@ class HandInputBinding extends Shiny.InputBinding {
     const id = this.getId(el);
     const options = JSON.parse(el.content.querySelector("script").innerText);
     const debug = el.matches(".mediapipe-hand-input-debug");
+    const precision = el.dataset.precision || 3;
 
     const videoEl = document.createElement("video");
     videoEl.style.display = "none";
@@ -95,10 +96,23 @@ class HandInputBinding extends Shiny.InputBinding {
 
     mediapipeHand({callback: (value) => {
       // We should allow the options to indicate what values are desired by the server.
-      // Until then, just send the multiHandLandmarks, as this shrinks the data
-      // considerably. Also consider not passing such high-precision data, we can round
-      // by quite a bit.
-      el.mediapipe_result = value ? {multiHandLandmarks: value.multiHandLandmarks} : value;
+
+      if (value) {
+        // Quick and dirty rounding to 4 decimals
+        value = JSON.parse(JSON.stringify(value, function(key, value) {
+          if (key === "image") {
+            return undefined;
+          }
+
+          if (typeof(value) === "number") {
+            return +value.toFixed(precision);
+          } else {
+            return value;
+          }
+        }));
+      }
+
+      el.mediapipe_result = value;
       callback(true);
     }, videoElement: videoEl, canvasElement: canvasEl, options, debug});
   }

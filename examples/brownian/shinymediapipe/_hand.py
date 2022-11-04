@@ -35,14 +35,24 @@ def dependencies() -> list[HTMLDependency]:
 
 
 def input_hand(
-    id: str, options: Optional[HandOptions] = None, *, debug: bool = False
+    id: str,
+    options: Optional[HandOptions] = None,
+    *,
+    debug: bool = False,
+    throttle_delay_secs: float = 0.1,
+    precision: int = 3,
 ) -> Tag:
     id = resolve_id(id)
     if options is None:
         options = hand_options()
 
     return tags.template(
-        {"id": id, "class": "mediapipe-hand-input"},
+        {
+            "id": id,
+            "class": "mediapipe-hand-input",
+            "data-throttle-delay": throttle_delay_secs * 1000,
+            "data-precision": precision,
+        },
         {"class": "mediapipe-hand-input-debug"} if debug else None,
         dependencies(),
         tags.script(json.dumps(options), type="application/json"),

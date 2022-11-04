@@ -28,11 +28,13 @@ PINKY_DIP = 19
 PINKY_TIP = 20
 
 
-def hand_to_camera_eye(hand, detect_ok=False):
-    # TODO: Recognize the difference between left and right hand! Right now, switching
-    # hands rotates by 180 degrees
+def hand_to_camera_eye(hands, detect_ok=False):
+    # TODO: Pointing straight at the camera should not change (much) from the default
+    # position
+    # TODO: Use spherical coordinates instead of cartesian
 
-    hand = hand["multiHandLandmarks"][0]
+    left_hand = hands["multiHandedness"][0]["index"] == 0
+    hand = hands["multiHandLandmarks"][0]
 
     def rel_hand(start_pos: int, end_pos: int):
         return np.subtract(list(hand[start_pos].values()), list(hand[end_pos].values()))
@@ -45,7 +47,16 @@ def hand_to_camera_eye(hand, detect_ok=False):
         if ok_dist < ref_dist * 2:
             return None
 
-    normal_vec = np.cross(rel_hand(PINKY_MCP, WRIST), rel_hand(INDEX_FINGER_MCP, WRIST))
+    if left_hand:
+        normal_vec = np.cross(
+            rel_hand(PINKY_MCP, WRIST),
+            rel_hand(INDEX_FINGER_MCP, WRIST),
+        )
+    else:
+        normal_vec = np.cross(
+            rel_hand(INDEX_FINGER_MCP, WRIST),
+            rel_hand(PINKY_MCP, WRIST),
+        )
     normal_unit_vec = normal_vec / np.linalg.norm(normal_vec)
 
     def list_to_xyz(x):

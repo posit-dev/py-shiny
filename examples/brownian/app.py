@@ -21,7 +21,7 @@ debug = True
 app_ui = ui.page_fluid(
     ui.input_action_button("data_btn", "New Data"),
     output_widget("plot"),
-    input_hand("hand", debug=debug),
+    input_hand("hand", debug=debug, throttle_delay_secs=0.05),
     (
         ui.panel_fixed(
             ui.div(ui.tags.strong("x:"), ui.output_text("x_debug", inline=True)),
