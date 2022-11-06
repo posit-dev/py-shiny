@@ -72,7 +72,8 @@ def server(input, output, session):
         hand_val = input.hand()
         req(hand_val)
 
-        req(res := hand_to_camera_eye(hand_val, detect_ok=True))
+        res = hand_to_camera_eye(hand_val, detect_ok=True)
+        req(res)
         return res
 
     # The raw data is a little jittery. Smooth it out by averaging a few samples
