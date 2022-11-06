@@ -69,9 +69,11 @@ def server(input, output, session):
     @reactive.Calc
     def camera_eye():
         """The eye position, as reflected by the hand input"""
-        hand_val = req(input.hand())
+        hand_val = input.hand()
+        req(hand_val)
 
-        return req(hand_to_camera_eye(hand_val, detect_ok=True))
+        req(res := hand_to_camera_eye(hand_val, detect_ok=True))
+        return res
 
     # The raw data is a little jittery. Smooth it out by averaging a few samples
     smooth_camera_eye = reactive_smooth(n_samples=5, smoother=xyz_mean)(camera_eye)
