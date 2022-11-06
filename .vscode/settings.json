@@ -9,7 +9,11 @@
     "[python]": {
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+        },
     },
+    "isort.args":["--profile", "black"],
     "editor.rulers": [
         88
     ],
