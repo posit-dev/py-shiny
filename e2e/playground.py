@@ -18,22 +18,64 @@ def assert_el_has_class(loc: Locator, cls: str):
     assert el_cls.index(cls) >= 0
 
 
-def float_attr(loc: Locator, key: str, timeout: Timeout = None) -> (float | None):
-    ret = loc.get_attribute(key, timeout=timeout)
-    if ret is not None:
-        ret = float(ret)
+R = typing.TypeVar("R")
+
+## Pylance could not find the return type of `float_attr = maybe_cast_attr_gen(float)`.
+## However, vscode could display the return type of `float_attr` correctly.
+# Generic method generator to cast a non-None attribute value to a type
+# def maybe_cast_attr_gen(
+#     fn: typing.Callable[[typing.Any], R]
+# ) -> typing.Callable[[Locator, str, Timeout], R | None]:
+#     def cast_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> R | None:
+#         ret = loc.get_attribute(attr_name, timeout=timeout)
+#         if ret is not None:
+#             ret = fn(ret)
+#         return ret
+#     return cast_attr
+# float_attr = maybe_cast_attr_gen(float)
+# str_attr = maybe_cast_attr_gen(str)
+
+
+def maybe_cast_attr(
+    fn: typing.Callable[[typing.Any], R],
+    loc: Locator,
+    attr_name: str,
+    timeout: Timeout = None,
+) -> R | None:
+    ret = loc.get_attribute(attr_name, timeout=timeout)
+    if not isinstance(ret, type(None)):
+        ret = fn(ret)
     return ret
+
+
+def float_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> float | None:
+    return maybe_cast_attr(fn=float, loc=loc, attr_name=attr_name, timeout=timeout)
+
+
+def str_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> str | None:
+    return maybe_cast_attr(fn=str, loc=loc, attr_name=attr_name, timeout=timeout)
+
+
+def verify_input_form(input_type: str, loc: Locator, container: Locator):
+    assert_el_has_class(loc, "form-control")
+    type_attr = loc.get_attribute("type")
+    if type_attr is None:
+        raise AssertionError("Element has no 'type' attribute")
+    assert type_attr == input_type
+
+    assert_el_has_class(container, "form-group")
+    assert_el_has_class(container, "shiny-input-container")
 
 
 def expect_attr(
     loc: Locator, attr_name: str, value: AttrValue | None, timeout: Timeout = None
 ):
     """Expect an attribute to have a value. If `value` is `None`, then an immediate assertion is made on the attribute's existence."""
-    if type(value) is None:
+    if isinstance(value, type(None)):
         has_attr = loc.evaluate(
             f"el => el.hasAttribute('{attr_name}')", timeout=timeout
         )
-        assert has_attr, f"Element does not have attribute {attr_name}"
+        assert not has_attr, f"Element does not have attribute {attr_name}"
         return
 
     value = typing.cast(AttrValue, value)
@@ -83,7 +125,7 @@ class SimpleRootInput:
 #   * Provide `value` methods as a convenience
 
 
-class NumericInputDos(SimpleRootInput):
+class NumericInput(SimpleRootInput):
     # id: str,
     # label: TagChildArg,
     # value: float,
@@ -108,23 +150,14 @@ class NumericInputDos(SimpleRootInput):
             self.verify()
 
     def verify(self):
-        assert_el_has_class(self.loc, "form-control")
-        type_attr = self.loc.get_attribute("type")
-        if type_attr is None:
-            raise AssertionError("Element has no 'type' attribute")
-        assert type_attr == "number"
-
-        assert_el_has_class(self.container, "form-group")
-        assert_el_has_class(self.container, "shiny-input-container")
+        verify_input_form("number", self.loc, self.container)
 
     def set(self, value: float, *, timeout: Timeout = None):
         self.loc.fill(str(value), timeout=timeout)
 
     def value(self, *, timeout: Timeout = None) -> float:
-        self.loc_label
-
         # Should we use jquery?
-        # return self.locations["label"].evaluate("el => $(el).val()", timeout=timeout)
+        # return self.loc_label.evaluate("el => $(el).val()", timeout=timeout)
 
         # # TODO int or float depending on step size?
         # step_val = step_fn(timeout)
@@ -149,8 +182,11 @@ class NumericInputDos(SimpleRootInput):
     def value_step(self, *, timeout: Timeout = None) -> (float | None):
         return float_attr(self.loc, "step", timeout=timeout)
 
-    def value_width(self, *, timeout: Timeout = None) -> (float | None):
-        return float_attr(self.loc, "width", timeout=timeout)
+    def value_width(self, *, timeout: Timeout = None) -> (str | None):
+        return str_attr(self.loc, "width", timeout=timeout)
+
+    def expect_value(self, value: str, *, timeout: Timeout = None):
+        self.expect.to_have_value(value, timeout=timeout)
 
     def expect_label_to_have_text(self, value: str, *, timeout: Timeout = None):
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
@@ -172,3 +208,78 @@ class NumericInputDos(SimpleRootInput):
         self, value: AttrValue | None, *, timeout: Timeout = None
     ):
         expect_attr(self.loc, "width", value=value, timeout=timeout)
+
+
+class TextInput(SimpleRootInput):
+    # id: str,
+    # label: TagChildArg,
+    # value: str = "",
+    # *,
+    # width: Optional[str] = None,
+    # placeholder: Optional[str] = None,
+    # autocomplete: Optional[str] = "off",
+    # spellcheck: Optional[Literal["true", "false"]] = None,
+    def __init__(self, page: Page, id: str, *, verify: bool = True):
+        super().__init__(
+            page,
+            id=id,
+            # container="../",
+            container="div.shiny-input-container",
+            loc=f"input#{id}[type=text].shiny-bound-input",
+        )
+
+        self.loc_label = self.container.locator("label")
+
+        # Must be last
+        if verify:
+            self.verify()
+
+    def verify(self):
+        verify_input_form("text", self.loc, self.container)
+
+    def set(self, value: str, *, timeout: Timeout = None):
+        self.loc.fill(str(value), timeout=timeout)
+
+    def value(self, *, timeout: Timeout = None) -> str:
+        return self.loc.input_value(timeout=timeout)
+
+    def value_label(self, *, timeout: Timeout = None) -> (str | None):
+        return self.loc_label.text_content(timeout=timeout)
+
+    def value_width(self, *, timeout: Timeout = None) -> (str | None):
+        return str_attr(self.loc, "width", timeout=timeout)
+
+    def value_placeholder(self, *, timeout: Timeout = None) -> (str | None):
+        return str_attr(self.loc, "placeholder", timeout=timeout)
+
+    def value_autocomplete(self, *, timeout: Timeout = None) -> (str | None):
+        return str_attr(self.loc, "autocomplete", timeout=timeout)
+
+    def value_spellcheck(self, *, timeout: Timeout = None) -> (str | None):
+        return str_attr(self.loc, "spellcheck", timeout=timeout)
+
+    def expect_value(self, value: str, *, timeout: Timeout = None):
+        self.expect.to_have_value(value, timeout=timeout)
+
+    def expect_label_to_have_text(self, value: str, *, timeout: Timeout = None):
+        playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
+
+    def expect_width_to_have_value(
+        self, value: AttrValue | None, *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "width", value=value, timeout=timeout)
+
+    def expect_placeholder_to_have_value(
+        self, value: AttrValue | None, *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "placeholder", value=value, timeout=timeout)
+
+    def expect_autocomplete_to_have_value(
+        self, value: AttrValue | None, *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "autocomplete", value=value, timeout=timeout)
+
+    def expect_spellcheck_to_have_value(
+        self, value: typing.Literal["true", "false"] | None, *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "spellcheck", value=value, timeout=timeout)
