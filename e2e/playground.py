@@ -4,6 +4,7 @@
 
 import typing
 
+from htmltools import TagFunction
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
@@ -56,7 +57,8 @@ def str_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> str | Non
     return maybe_cast_attr(fn=str, loc=loc, attr_name=attr_name, timeout=timeout)
 
 
-def verify_input_form(input_type: str, loc: Locator, container: Locator):
+def verify_input_form(input_type: str, *, id: str, loc: Locator, container: Locator):
+    playwright_expect(loc).to_have_id(id)
     assert_el_has_class(loc, "form-control")
     type_attr = loc.get_attribute("type")
     if type_attr is None:
@@ -150,7 +152,7 @@ class NumericInput(SimpleRootInput):
             self.verify()
 
     def verify(self):
-        verify_input_form("number", self.loc, self.container)
+        verify_input_form("number", id=self.id, loc=self.loc, container=self.container)
 
     def set(self, value: float, *, timeout: Timeout = None):
         self.loc.fill(str(value), timeout=timeout)
@@ -235,7 +237,7 @@ class TextInput(SimpleRootInput):
             self.verify()
 
     def verify(self):
-        verify_input_form("text", self.loc, self.container)
+        verify_input_form("text", id=self.id, loc=self.loc, container=self.container)
 
     def set(self, value: str, *, timeout: Timeout = None):
         self.loc.fill(str(value), timeout=timeout)
@@ -283,3 +285,96 @@ class TextInput(SimpleRootInput):
         self, value: typing.Literal["true", "false"] | None, *, timeout: Timeout = None
     ):
         expect_attr(self.loc, "spellcheck", value=value, timeout=timeout)
+
+
+class SimpleOutput:
+    id: str
+    loc: Locator
+
+    def __init__(
+        self,
+        page: Page,
+        *,
+        id: str,
+        loc: str,
+    ):
+        self.page = page
+        self.id = id
+        self.loc = page.locator(loc)
+
+    @property
+    def expect(self):
+        return playwright_expect(self.loc)
+
+
+# Question?
+# * How should parameters like `placeholder`/`inline`/`container_tag` be handled?
+#  * They seem more like they are for the `verify` method, but they are also used to query the object. It seems like too much information for the user to provide. idk...
+
+
+class TextOutputBase(SimpleOutput):
+    # cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
+    # return tags.pre(id=resolve_id(id), class_=cls)
+
+    def __init__(self, page: Page, id: str, loc: str, *, verify: bool = True):
+        super().__init__(
+            page,
+            id=id,
+            loc=loc,
+        )
+
+        # Must be last
+        if verify:
+            self.verify()
+
+    def verify(self):
+        playwright_expect(self.loc).to_have_id(self.id)
+        assert_el_has_class(self.loc, "shiny-text-output")
+
+    def value(self, *, timeout: Timeout = None) -> str | None:
+        return self.loc.text_content(timeout=timeout)
+
+    def expect_value(self, value: str, *, timeout: Timeout = None):
+        self.expect.to_have_text(value, timeout=timeout)
+
+
+class TextOutput(TextOutputBase):
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+        *,
+        inline: bool = False,
+        container_tag: str | None = None,
+        verify: bool = True,
+    ):
+        if container_tag is None:
+            container_tag = "span" if inline else "div"
+        super().__init__(
+            page,
+            id=id,
+            loc=f"{container_tag}#{id}.shiny-text-output",
+            verify=verify,
+        )
+
+
+class TextVerbatimOutput(TextOutputBase):
+    def __init__(self, page: Page, id: str, *, verify: bool = True):
+        super().__init__(
+            page,
+            id=id,
+            loc=f"pre#{id}.shiny-text-output",
+            verify=verify,
+        )
+
+        # Must be last
+        if verify:
+            self.verify()
+
+    def expect_has_placeholder(
+        self, has_placeholder: bool = False, *, timeout: Timeout = None
+    ):
+        if has_placeholder:
+            self.expect.to_have_class("noplaceholder", timeout=timeout)
+        else:
+            self.expect.not_to_have_class("noplaceholder", timeout=timeout)

@@ -2,7 +2,7 @@
 # pyright: reportUnknownMemberType=false
 
 from conftest import ShinyAppProc, create_doc_example_fixture
-from playground import TextInput
+from playground import TextInput, TextVerbatimOutput
 from playwright.sync_api import Page, expect
 
 app = create_doc_example_fixture("input_text")
@@ -61,8 +61,9 @@ def test_input_text_app(page: Page, app: ShinyAppProc) -> None:
     caption = TextInput(page, "caption")
     caption.expect.to_have_value("Data summary")
 
-    output = page.locator("#value")
-    expect(output).to_have_text("Data summary")
+    value = TextVerbatimOutput(page, "value")
+    value.expect_value("Data summary")
 
     caption.set("test value")
     caption.expect.to_have_value("test value")
+    value.expect_value("test value")

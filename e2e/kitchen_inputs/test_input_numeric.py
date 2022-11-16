@@ -2,7 +2,7 @@
 # pyright: reportUnknownMemberType=false
 
 from conftest import ShinyAppProc, create_doc_example_fixture
-from playground import NumericInput
+from playground import NumericInput, TextVerbatimOutput
 from playwright.sync_api import Page, expect
 
 app = create_doc_example_fixture("input_numeric")
@@ -78,9 +78,12 @@ def test_input_numeric_app(page: Page, app: ShinyAppProc) -> None:
     # obs.label.expect.to_have_text("Observed")
     obs.expect.to_have_value("10")
 
+    value = TextVerbatimOutput(page, "value")
+    value.expect_value("10")
+
     output = page.locator("#value")
     expect(output).to_have_text("10")
 
     obs.loc.fill("21")
     obs.expect.to_have_value("21")
-    expect(output).to_have_text("21")
+    value.expect_value("21")
