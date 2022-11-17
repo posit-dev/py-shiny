@@ -120,8 +120,8 @@ class InputWithContainer:
         page: Page,
         *,
         id: str,
-        container: str,
         loc: str,
+        container: str = "div.shiny-input-container",
     ):
         self.page = page
         # Needed?!? This is covered by `self.loc_root` and possibly `self.loc`
@@ -138,6 +138,31 @@ class InputWithContainer:
     #     return playwright_expect(self.loc)
 
 
+class InputWithLabel(InputWithContainer):
+    def __init__(
+        self,
+        page: Page,
+        *,
+        id: str,
+        loc: str,
+        container: str = "div.shiny-input-container",
+    ):
+        super().__init__(
+            page,
+            id=id,
+            container=container,
+            loc=f"input#{id}.shiny-bound-input",
+        )
+
+        self.loc_label = self.container.locator("label")
+
+    def value_label(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
+        return self.loc_label.text_content(timeout=timeout)
+
+    def expect_label_to_have_text(self, value: str, *, timeout: Timeout = None):
+        playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
+
+
 # Class definitions
 # * Fields
 #   * Try to mirror playwright as much as possible.
@@ -151,7 +176,7 @@ class InputWithContainer:
 #   * Provide `value` methods as a convenience
 
 
-class InputNumeric(InputWithContainer):
+class InputNumeric(InputWithLabel):
     # id: str,
     # label: TagChildArg,
     # value: float,
@@ -164,12 +189,8 @@ class InputNumeric(InputWithContainer):
         super().__init__(
             page,
             id=id,
-            # container="../",
-            container="div.shiny-input-container",
             loc=f"input#{id}[type=number].shiny-bound-input",
         )
-
-        self.loc_label = self.container.locator("label")
 
         # Must be last
         if verify:
@@ -196,9 +217,6 @@ class InputNumeric(InputWithContainer):
 
         return float(self.loc.input_value(timeout=timeout))
 
-    def value_label(self, *, timeout: Timeout = None) -> (str | None):
-        return self.loc_label.text_content(timeout=timeout)
-
     def value_min(self, *, timeout: Timeout = None) -> typing.Union[float, None]:
         return float_attr(self.loc, "min", timeout=timeout)
 
@@ -213,9 +231,6 @@ class InputNumeric(InputWithContainer):
 
     def expect_value(self, value: str, *, timeout: Timeout = None):
         self.expect.to_have_value(value, timeout=timeout)
-
-    def expect_label_to_have_text(self, value: str, *, timeout: Timeout = None):
-        playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
     def expect_min_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
         assert type(value) is not None
@@ -236,7 +251,7 @@ class InputNumeric(InputWithContainer):
         expect_attr(self.loc, "width", value=value, timeout=timeout)
 
 
-class InputText(InputWithContainer):
+class InputText(InputWithLabel):
     # id: str,
     # label: TagChildArg,
     # value: str = "",
@@ -249,8 +264,6 @@ class InputText(InputWithContainer):
         super().__init__(
             page,
             id=id,
-            # container="../",
-            container="div.shiny-input-container",
             loc=f"input#{id}[type=text].shiny-bound-input",
         )
 
@@ -269,9 +282,6 @@ class InputText(InputWithContainer):
     def value(self, *, timeout: Timeout = None) -> str:
         return self.loc.input_value(timeout=timeout)
 
-    def value_label(self, *, timeout: Timeout = None) -> (str | None):
-        return self.loc_label.text_content(timeout=timeout)
-
     def value_width(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
         return str_attr(self.loc, "width", timeout=timeout)
 
@@ -286,9 +296,6 @@ class InputText(InputWithContainer):
 
     def expect_value(self, value: str, *, timeout: Timeout = None):
         self.expect.to_have_value(value, timeout=timeout)
-
-    def expect_label_to_have_text(self, value: str, *, timeout: Timeout = None):
-        playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
     def expect_width_to_have_value(
         self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
