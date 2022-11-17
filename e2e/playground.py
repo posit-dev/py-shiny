@@ -2,13 +2,27 @@
 
 # pyright: reportUnknownMemberType=false
 
+import sys
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
 import typing
 
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
-AttrValue = str | typing.Pattern[str]
-Timeout = float | None
+if sys.version_info >= (3, 10):
+    AttrValue = typing.Union[str, typing.Pattern[str]]
+else:
+    # # When testing on Python 3.7, 3.8, 3.9:
+    # AttrValue = str | typing.Pattern[str]
+    # E   TypeError: unsupported operand type(s) for |: 'type' and '_GenericAlias'
+    AttrValue = str
+
+Timeout = typing.Union[float, None]
 
 
 def assert_el_has_class(loc: Locator, cls: str):
@@ -25,8 +39,8 @@ R = typing.TypeVar("R")
 # Generic method generator to cast a non-None attribute value to a type
 # def maybe_cast_attr_gen(
 #     fn: typing.Callable[[typing.Any], R]
-# ) -> typing.Callable[[Locator, str, Timeout], R | None]:
-#     def cast_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> R | None:
+# ) -> typing.Callable[[Locator, str, Timeout], typing.Union[R, None]]:
+#     def cast_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> typing.Union[R, None]:
 #         ret = loc.get_attribute(attr_name, timeout=timeout)
 #         if ret is not None:
 #             ret = fn(ret)
@@ -41,18 +55,22 @@ def maybe_cast_attr(
     loc: Locator,
     attr_name: str,
     timeout: Timeout = None,
-) -> R | None:
+) -> typing.Union[R, None]:
     ret = loc.get_attribute(attr_name, timeout=timeout)
     if not isinstance(ret, type(None)):
         ret = fn(ret)
     return ret
 
 
-def float_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> float | None:
+def float_attr(
+    loc: Locator, attr_name: str, timeout: Timeout = None
+) -> typing.Union[float, None]:
     return maybe_cast_attr(fn=float, loc=loc, attr_name=attr_name, timeout=timeout)
 
 
-def str_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> str | None:
+def str_attr(
+    loc: Locator, attr_name: str, timeout: Timeout = None
+) -> typing.Union[str, None]:
     return maybe_cast_attr(fn=str, loc=loc, attr_name=attr_name, timeout=timeout)
 
 
@@ -69,7 +87,10 @@ def verify_input_form(input_type: str, *, id: str, loc: Locator, container: Loca
 
 
 def expect_attr(
-    loc: Locator, attr_name: str, value: AttrValue | None, timeout: Timeout = None
+    loc: Locator,
+    attr_name: str,
+    value: typing.Union[AttrValue, None],
+    timeout: Timeout = None,
 ):
     """Expect an attribute to have a value. If `value` is `None`, then an immediate assertion is made on the attribute's existence."""
     if isinstance(value, type(None)):
@@ -84,7 +105,7 @@ def expect_attr(
 
 
 ######################################################
-## Outputs
+# # Inputs
 ######################################################
 
 
@@ -107,13 +128,12 @@ class InputWithContainer:
         self.id = id
         self.container = page.locator(container).filter(has=page.locator(loc))
         self.loc = self.container.locator(loc)
-        # self.timeout = timeout
 
     @property
     def expect(self):
         return playwright_expect(self.loc)
 
-    ## Requires a PR to playwright to call `obj.__expect__()` method; Desired API
+    # # Requires a PR to playwright to call `obj.__expect__()` method; Desired API
     # def __expect__(self) -> LocatorAssertions:
     #     return playwright_expect(self.loc)
 
@@ -179,16 +199,16 @@ class InputNumeric(InputWithContainer):
     def value_label(self, *, timeout: Timeout = None) -> (str | None):
         return self.loc_label.text_content(timeout=timeout)
 
-    def value_min(self, *, timeout: Timeout = None) -> (float | None):
+    def value_min(self, *, timeout: Timeout = None) -> typing.Union[float, None]:
         return float_attr(self.loc, "min", timeout=timeout)
 
-    def value_max(self, *, timeout: Timeout = None) -> (float | None):
+    def value_max(self, *, timeout: Timeout = None) -> typing.Union[float, None]:
         return float_attr(self.loc, "max", timeout=timeout)
 
-    def value_step(self, *, timeout: Timeout = None) -> (float | None):
+    def value_step(self, *, timeout: Timeout = None) -> typing.Union[float, None]:
         return float_attr(self.loc, "step", timeout=timeout)
 
-    def value_width(self, *, timeout: Timeout = None) -> (str | None):
+    def value_width(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
         return str_attr(self.loc, "width", timeout=timeout)
 
     def expect_value(self, value: str, *, timeout: Timeout = None):
@@ -206,12 +226,12 @@ class InputNumeric(InputWithContainer):
         expect_attr(self.loc, "max", value=value, timeout=timeout)
 
     def expect_step_to_have_value(
-        self, value: AttrValue | None, *, timeout: Timeout = None
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
     ):
         expect_attr(self.loc, "step", value=value, timeout=timeout)
 
     def expect_width_to_have_value(
-        self, value: AttrValue | None, *, timeout: Timeout = None
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
     ):
         expect_attr(self.loc, "width", value=value, timeout=timeout)
 
@@ -252,16 +272,16 @@ class InputText(InputWithContainer):
     def value_label(self, *, timeout: Timeout = None) -> (str | None):
         return self.loc_label.text_content(timeout=timeout)
 
-    def value_width(self, *, timeout: Timeout = None) -> (str | None):
+    def value_width(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
         return str_attr(self.loc, "width", timeout=timeout)
 
-    def value_placeholder(self, *, timeout: Timeout = None) -> (str | None):
+    def value_placeholder(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
         return str_attr(self.loc, "placeholder", timeout=timeout)
 
-    def value_autocomplete(self, *, timeout: Timeout = None) -> (str | None):
+    def value_autocomplete(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
         return str_attr(self.loc, "autocomplete", timeout=timeout)
 
-    def value_spellcheck(self, *, timeout: Timeout = None) -> (str | None):
+    def value_spellcheck(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
         return str_attr(self.loc, "spellcheck", timeout=timeout)
 
     def expect_value(self, value: str, *, timeout: Timeout = None):
@@ -271,22 +291,25 @@ class InputText(InputWithContainer):
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
     def expect_width_to_have_value(
-        self, value: AttrValue | None, *, timeout: Timeout = None
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
     ):
         expect_attr(self.loc, "width", value=value, timeout=timeout)
 
     def expect_placeholder_to_have_value(
-        self, value: AttrValue | None, *, timeout: Timeout = None
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
     ):
         expect_attr(self.loc, "placeholder", value=value, timeout=timeout)
 
     def expect_autocomplete_to_have_value(
-        self, value: AttrValue | None, *, timeout: Timeout = None
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
     ):
         expect_attr(self.loc, "autocomplete", value=value, timeout=timeout)
 
     def expect_spellcheck_to_have_value(
-        self, value: typing.Literal["true", "false"] | None, *, timeout: Timeout = None
+        self,
+        value: typing.Union[Literal["true", "false"], None],
+        *,
+        timeout: Timeout = None,
     ):
         expect_attr(self.loc, "spellcheck", value=value, timeout=timeout)
 
@@ -294,7 +317,7 @@ class InputText(InputWithContainer):
 
 
 ######################################################
-## Outputs
+# # Outputs
 ######################################################
 
 
@@ -337,7 +360,7 @@ class OutputTextBase(OutputSimple):
         playwright_expect(self.loc).to_have_id(self.id)
         assert_el_has_class(self.loc, "shiny-text-output")
 
-    def value(self, *, timeout: Timeout = None) -> str | None:
+    def value(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
         return self.loc.text_content(timeout=timeout)
 
     def expect_value(self, value: str, *, timeout: Timeout = None):
@@ -351,7 +374,7 @@ class OutputText(OutputTextBase):
         id: str,
         *,
         inline: bool = False,
-        container_tag: str | None = None,
+        container_tag: typing.Union[str, None] = None,
         verify: bool = True,
     ):
         if container_tag is None:
