@@ -121,3 +121,36 @@ def test_barret_numeric(page: Page, app: ShinyAppProc) -> None:
     obs.set_value(3)
     # Can not use `assert` methods as it needs to wait for the next value
     assert obs.value == 3, "object equals 3"
+
+
+# # Dynamic classes
+# Undo this once python 3.11 is allowed for `@typing.dataclass_transform()`
+# which would allow for dynamic methods.
+# This would massively reduce boilerplate and keep all methods consistent.
+InputClass = typing.TypeVar("InputClass", bound=InputWithContainer)
+def add_str_attr_methods(attr: str):
+    def decorator(cls: type[InputClass]) -> type[InputClass]:
+        # @functools.wraps(cls)
+
+        def value_fn(
+            self: type[InputClass], *, timeout: Timeout = None
+        ) -> (typing.Union[str, None]):
+            return str_attr(self.loc, "width", timeout=timeout)
+
+        def expect_attr_to_have_value(
+            self: type[InputClass], value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+        ):
+            expect_attr(self.loc, "width", value=value, timeout=timeout)
+
+        setattr(cls, f"value_{attr}", value_fn)
+        setattr(cls, f"expect_{attr}_to_have_value", expect_attr_to_have_value)
+
+        return cls  # returning func means func can still be used normally
+
+    return decorator
+
+
+@add_str_attr_methods("width")
+@typing.dataclass_transform()
+class InputText2(InputWithLabel):
+    pass

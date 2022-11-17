@@ -321,8 +321,6 @@ class InputText(InputWithLabel):
         expect_attr(self.loc, "spellcheck", value=value, timeout=timeout)
 
 
-
-
 ######################################################
 # # Outputs
 ######################################################
