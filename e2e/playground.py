@@ -100,7 +100,6 @@ def expect_attr(
         assert not has_attr, f"Element does not have attribute {attr_name}"
         return
 
-    value = typing.cast(AttrValue, value)
     playwright_expect(loc).to_have_attribute(attr_name, value, timeout=timeout)
 
 
