@@ -3,9 +3,6 @@
 # pyright: reportUnknownMemberType=false
 
 
-
-
-
 from playwright.sync_api import Page
 
 

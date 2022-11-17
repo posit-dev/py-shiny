@@ -4,7 +4,6 @@
 
 import typing
 
-from htmltools import TagFunction
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
@@ -21,8 +20,8 @@ def assert_el_has_class(loc: Locator, cls: str):
 
 R = typing.TypeVar("R")
 
-## Pylance could not find the return type of `float_attr = maybe_cast_attr_gen(float)`.
-## However, vscode could display the return type of `float_attr` correctly.
+# # Pylance could not find the return type of `float_attr = maybe_cast_attr_gen(float)`.
+# # However, vscode could display the return type of `float_attr` correctly.
 # Generic method generator to cast a non-None attribute value to a type
 # def maybe_cast_attr_gen(
 #     fn: typing.Callable[[typing.Any], R]
@@ -305,11 +304,6 @@ class SimpleOutput:
     @property
     def expect(self):
         return playwright_expect(self.loc)
-
-
-# Question?
-# * How should parameters like `placeholder`/`inline`/`container_tag` be handled?
-#  * They seem more like they are for the `verify` method, but they are also used to query the object. It seems like too much information for the user to provide. idk...
 
 
 class TextOutputBase(SimpleOutput):
