@@ -2,7 +2,7 @@
 # pyright: reportUnknownMemberType=false
 
 from conftest import ShinyAppProc, create_doc_example_fixture
-from playground import TextInput, TextVerbatimOutput
+from playground import InputText, OutputTextVerbatim
 from playwright.sync_api import Page, expect
 
 app = create_doc_example_fixture("input_text")
@@ -13,7 +13,7 @@ def test_input_text_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     # page.set_default_timeout(1000)
 
-    caption = TextInput(page, "caption")
+    caption = InputText(page, "caption")
     caption.expect.to_have_value("Data summary")
     expect(caption.loc).to_have_value("Data summary")
 
@@ -48,7 +48,7 @@ def test_input_text_kitchen(page: Page, app: ShinyAppProc) -> None:
 def test_input_text_typical(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    caption = TextInput(page, "caption")
+    caption = InputText(page, "caption")
     caption.expect.to_have_value("Data summary")
     caption.set("test value")
     caption.expect.not_to_have_value("Data summary")
@@ -58,10 +58,10 @@ def test_input_text_typical(page: Page, app: ShinyAppProc) -> None:
 def test_input_text_app(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
-    caption = TextInput(page, "caption")
+    caption = InputText(page, "caption")
     caption.expect.to_have_value("Data summary")
 
-    value = TextVerbatimOutput(page, "value")
+    value = OutputTextVerbatim(page, "value")
     value.expect_value("Data summary")
 
     caption.set("test value")

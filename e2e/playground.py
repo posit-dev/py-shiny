@@ -83,7 +83,12 @@ def expect_attr(
     playwright_expect(loc).to_have_attribute(attr_name, value, timeout=timeout)
 
 
-class SimpleRootInput:
+######################################################
+## Outputs
+######################################################
+
+
+class InputWithContainer:
     # timeout: Timeout
     id: str
     container: Locator
@@ -126,7 +131,7 @@ class SimpleRootInput:
 #   * Provide `value` methods as a convenience
 
 
-class NumericInput(SimpleRootInput):
+class InputNumeric(InputWithContainer):
     # id: str,
     # label: TagChildArg,
     # value: float,
@@ -211,7 +216,7 @@ class NumericInput(SimpleRootInput):
         expect_attr(self.loc, "width", value=value, timeout=timeout)
 
 
-class TextInput(SimpleRootInput):
+class InputText(InputWithContainer):
     # id: str,
     # label: TagChildArg,
     # value: str = "",
@@ -286,7 +291,14 @@ class TextInput(SimpleRootInput):
         expect_attr(self.loc, "spellcheck", value=value, timeout=timeout)
 
 
-class SimpleOutput:
+
+
+######################################################
+## Outputs
+######################################################
+
+
+class OutputSimple:
     id: str
     loc: Locator
 
@@ -306,7 +318,7 @@ class SimpleOutput:
         return playwright_expect(self.loc)
 
 
-class TextOutputBase(SimpleOutput):
+class OutputTextBase(OutputSimple):
     # cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
     # return tags.pre(id=resolve_id(id), class_=cls)
 
@@ -332,7 +344,7 @@ class TextOutputBase(SimpleOutput):
         self.expect.to_have_text(value, timeout=timeout)
 
 
-class TextOutput(TextOutputBase):
+class OutputText(OutputTextBase):
     def __init__(
         self,
         page: Page,
@@ -352,7 +364,7 @@ class TextOutput(TextOutputBase):
         )
 
 
-class TextVerbatimOutput(TextOutputBase):
+class OutputTextVerbatim(OutputTextBase):
     def __init__(self, page: Page, id: str, *, verify: bool = True):
         super().__init__(
             page,
