@@ -15,13 +15,8 @@ import typing
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
-if sys.version_info >= (3, 10):
-    AttrValue = typing.Union[str, typing.Pattern[str]]
-else:
-    # # When testing on Python 3.7, 3.8, 3.9:
-    # AttrValue = str | typing.Pattern[str]
-    # E   TypeError: unsupported operand type(s) for |: 'type' and '_GenericAlias'
-    AttrValue = str
+AttrValue = typing.Union[str, typing.Pattern[str]]
+StyleValue = typing.Union[str, typing.Pattern[str]]
 
 Timeout = typing.Union[float, None]
 
@@ -75,7 +70,15 @@ def str_attr(
     return maybe_cast_attr(fn=str, loc=loc, attr_name=attr_name, timeout=timeout)
 
 
-def verify_input_form(input_type: str, *, id: str, loc: Locator, container: Locator):
+def int_attr(
+    loc: Locator, attr_name: str, timeout: Timeout = None
+) -> typing.Union[int, None]:
+    return maybe_cast_attr(fn=int, loc=loc, attr_name=attr_name, timeout=timeout)
+
+
+def verify_input_form(
+    input_type: str, *, id: str, loc: Locator, loc_container: Locator
+):
     playwright_expect(loc).to_have_id(id)
     assert_el_has_class(loc, "form-control")
     type_attr = loc.get_attribute("type")
@@ -83,8 +86,8 @@ def verify_input_form(input_type: str, *, id: str, loc: Locator, container: Loca
         raise AssertionError("Element has no 'type' attribute")
     assert type_attr == input_type
 
-    assert_el_has_class(container, "form-group")
-    assert_el_has_class(container, "shiny-input-container")
+    assert_el_has_class(loc_container, "form-group")
+    assert_el_has_class(loc_container, "shiny-input-container")
 
 
 def expect_attr(
@@ -95,6 +98,7 @@ def expect_attr(
 ):
     """Expect an attribute to have a value. If `value` is `None`, then the attribute should not exist."""
     if isinstance(value, type(None)):
+        # if isinstance(value, type(None)):
         # Not allowed to have any value for the attribute
         playwright_expect(loc).not_to_have_attribute(
             attr_name, re.compile(r".*"), timeout=timeout
@@ -102,6 +106,29 @@ def expect_attr(
         return
 
     playwright_expect(loc).to_have_attribute(attr_name, value, timeout=timeout)
+
+
+def expect_el_style(
+    loc: Locator,
+    css_key: str,
+    # Str representation for value. Will be put in a regex with `css_key`
+    css_value: typing.Union[StyleValue, None],
+    timeout: Timeout = None,
+):
+    """Expect a style to have a value. If `value` is `None`, then the style should not exist."""
+    if isinstance(css_value, type(None)):
+        # Not allowed to have any value for the style
+        playwright_expect(loc).not_to_have_attribute(
+            "style", re.compile(f"{css_key}\\s*:"), timeout=timeout
+        )
+        return
+
+    if isinstance(css_value, str):
+        css_value = re.compile(css_value)
+
+    playwright_expect(loc).to_have_attribute(
+        "style", re.compile(f"{css_key}\\s*:\\s*{css_value.pattern}"), timeout=timeout
+    )
 
 
 ######################################################
@@ -121,13 +148,13 @@ class InputWithContainer:
         *,
         id: str,
         loc: str,
-        container: str = "div.shiny-input-container",
+        loc_container: str = "div.shiny-input-container",
     ):
         self.page = page
         # Needed?!? This is covered by `self.loc_root` and possibly `self.loc`
         self.id = id
-        self.container = page.locator(container).filter(has=page.locator(loc))
-        self.loc = self.container.locator(loc)
+        self.loc_container = page.locator(loc_container).filter(has=page.locator(loc))
+        self.loc = self.loc_container.locator(loc)
 
     @property
     def expect(self):
@@ -145,16 +172,16 @@ class InputWithLabel(InputWithContainer):
         *,
         id: str,
         loc: str,
-        container: str = "div.shiny-input-container",
+        loc_container: str = "div.shiny-input-container",
     ):
         super().__init__(
             page,
             id=id,
-            container=container,
-            loc=f"input#{id}.shiny-bound-input",
+            loc_container=loc_container,
+            loc=loc,
         )
 
-        self.loc_label = self.container.locator("label")
+        self.loc_label = self.loc_container.locator("label")
 
     def value_label(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
         return self.loc_label.text_content(timeout=timeout)
@@ -197,7 +224,9 @@ class InputNumeric(InputWithLabel):
             self.verify()
 
     def verify(self):
-        verify_input_form("number", id=self.id, loc=self.loc, container=self.container)
+        verify_input_form(
+            "number", id=self.id, loc=self.loc, loc_container=self.loc_container
+        )
 
     def set(self, value: float, *, timeout: Timeout = None):
         self.loc.fill(str(value), timeout=timeout)
@@ -267,14 +296,16 @@ class InputText(InputWithLabel):
             loc=f"input#{id}[type=text].shiny-bound-input",
         )
 
-        self.loc_label = self.container.locator("label")
+        self.loc_label = self.loc_container.locator("label")
 
         # Must be last
         if verify:
             self.verify()
 
     def verify(self):
-        verify_input_form("text", id=self.id, loc=self.loc, container=self.container)
+        verify_input_form(
+            "text", id=self.id, loc=self.loc, loc_container=self.loc_container
+        )
 
     def set(self, value: str, *, timeout: Timeout = None):
         self.loc.fill(str(value), timeout=timeout)
@@ -306,6 +337,139 @@ class InputText(InputWithLabel):
         self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
     ):
         expect_attr(self.loc, "placeholder", value=value, timeout=timeout)
+
+    def expect_autocomplete_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "autocomplete", value=value, timeout=timeout)
+
+    def expect_spellcheck_to_have_value(
+        self,
+        value: typing.Union[Literal["true", "false"], None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc, "spellcheck", value=value, timeout=timeout)
+
+
+Resize = typing.Union[
+    Literal["none"], Literal["both"], Literal["horizontal"], Literal["vertical"]
+]
+
+
+class InputTextArea(InputWithLabel):
+    # def input_text_area(
+    # id: str,
+    # label: TagChildArg,
+    # value: str = "",
+    # *,
+    # width: Optional[str] = None,
+    # height: Optional[str] = None,
+    # cols: Optional[int] = None,
+    # rows: Optional[int] = None,
+    # placeholder: Optional[str] = None,
+    # resize: Optional[
+    #     Union[
+    #         Literal["none"], Literal["both"], Literal["horizontal"], Literal["vertical"]
+    #     ]
+    # ] = None,
+    # autocomplete: Optional[str] = None,
+    # spellcheck: Optional[Literal["true", "false"]] = None,
+    def __init__(self, page: Page, id: str, *, verify: bool = True):
+        super().__init__(
+            page,
+            id=id,
+            loc=f"textarea#{id}.shiny-bound-input",
+        )
+
+        # Must be last
+        if verify:
+            self.verify()
+
+    def verify(self):
+        pass
+
+    def set(self, value: str, *, timeout: Timeout = None):
+        self.loc.fill(value, timeout=timeout)
+
+    def value(self, *, timeout: Timeout = None) -> str:
+        return self.loc.input_value(timeout=timeout)
+
+    def value_width(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
+        ret = self.loc_container.get_attribute("style", timeout=timeout) or ""
+        m = re.search(r"width:\s*([^\s;]+)", ret)
+        if m:
+            # Return match
+            return m.group(1)
+        return None
+
+    def value_height(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
+        ret = self.loc.get_attribute("style", timeout=timeout) or ""
+        m = re.search(r"height:\s*([^\s;]+)", ret)
+        if m:
+            # Return match
+            return m.group(1)
+        return None
+
+    def value_cols(self, *, timeout: Timeout = None) -> typing.Union[int, None]:
+        return int_attr(self.loc, "cols", timeout=timeout)
+
+    def value_rows(self, *, timeout: Timeout = None) -> typing.Union[int, None]:
+        return int_attr(self.loc, "rows", timeout=timeout)
+
+    def value_placeholder(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
+        return str_attr(self.loc, "placeholder", timeout=timeout)
+
+    def value_resize(self, *, timeout: Timeout = None) -> typing.Union[Resize, None]:
+        ret = str_attr(self.loc, "resize", timeout=timeout)
+        return typing.cast(Resize, ret)
+
+    def value_autocomplete(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
+        return str_attr(self.loc, "autocomplete", timeout=timeout)
+
+    def value_spellcheck(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
+        return str_attr(self.loc, "spellcheck", timeout=timeout)
+
+    def expect_value(self, value: str, *, timeout: Timeout = None):
+        self.expect.to_have_value(value, timeout=timeout)
+
+    def expect_width_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        if value is None:
+            expect_el_style(self.loc_container, "width", None, timeout=timeout)
+            expect_el_style(self.loc, "width", "100%", timeout=timeout)
+        else:
+            expect_el_style(self.loc_container, "width", value, timeout=timeout)
+            expect_el_style(self.loc, "width", None, timeout=timeout)
+
+    def expect_height_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_el_style(self.loc, "height", value, timeout=timeout)
+
+    def expect_cols_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "cols", value=value, timeout=timeout)
+
+    def expect_rows_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "rows", value=value, timeout=timeout)
+
+    def expect_placeholder_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "placeholder", value=value, timeout=timeout)
+
+    def expect_resize_to_have_value(
+        self,
+        value: typing.Union[Resize, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc, "resize", value=value, timeout=timeout)
 
     def expect_autocomplete_to_have_value(
         self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
