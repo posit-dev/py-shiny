@@ -128,6 +128,8 @@ def test_barret_numeric(page: Page, app: ShinyAppProc) -> None:
 # which would allow for dynamic methods.
 # This would massively reduce boilerplate and keep all methods consistent.
 InputClass = typing.TypeVar("InputClass", bound=InputWithContainer)
+
+
 def add_str_attr_methods(attr: str):
     def decorator(cls: type[InputClass]) -> type[InputClass]:
         # @functools.wraps(cls)
@@ -138,7 +140,10 @@ def add_str_attr_methods(attr: str):
             return str_attr(self.loc, "width", timeout=timeout)
 
         def expect_attr_to_have_value(
-            self: type[InputClass], value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+            self: type[InputClass],
+            value: typing.Union[AttrValue, None],
+            *,
+            timeout: Timeout = None,
         ):
             expect_attr(self.loc, "width", value=value, timeout=timeout)
 
@@ -150,7 +155,11 @@ def add_str_attr_methods(attr: str):
     return decorator
 
 
+@add_float_attr_methods("min")
+@add_float_attr_methods("max")
+@add_int_attr_methods("step")
 @add_str_attr_methods("width")
+@add_str_attr_methods("height")
 @typing.dataclass_transform()
 class InputText2(InputWithLabel):
     pass
