@@ -76,20 +76,6 @@ def int_attr(
     return maybe_cast_attr(fn=int, loc=loc, attr_name=attr_name, timeout=timeout)
 
 
-def verify_input_form(
-    input_type: str, *, id: str, loc: Locator, loc_container: Locator
-):
-    playwright_expect(loc).to_have_id(id)
-    assert_el_has_class(loc, "form-control")
-    type_attr = loc.get_attribute("type")
-    if type_attr is None:
-        raise AssertionError("Element has no 'type' attribute")
-    assert type_attr == input_type
-
-    assert_el_has_class(loc_container, "form-group")
-    assert_el_has_class(loc_container, "shiny-input-container")
-
-
 def expect_attr(
     loc: Locator,
     attr_name: str,
@@ -212,20 +198,11 @@ class InputNumeric(InputWithLabel):
     # max: Optional[float] = None,
     # step: Optional[float] = None,
     # width: Optional[str] = None,
-    def __init__(self, page: Page, id: str, *, verify: bool = True):
+    def __init__(self, page: Page, id: str):
         super().__init__(
             page,
             id=id,
             loc=f"input#{id}[type=number].shiny-bound-input",
-        )
-
-        # Must be last
-        if verify:
-            self.verify()
-
-    def verify(self):
-        verify_input_form(
-            "number", id=self.id, loc=self.loc, loc_container=self.loc_container
         )
 
     def set(self, value: float, *, timeout: Timeout = None):
@@ -289,7 +266,7 @@ class InputText(InputWithLabel):
     # placeholder: Optional[str] = None,
     # autocomplete: Optional[str] = "off",
     # spellcheck: Optional[Literal["true", "false"]] = None,
-    def __init__(self, page: Page, id: str, *, verify: bool = True):
+    def __init__(self, page: Page, id: str):
         super().__init__(
             page,
             id=id,
@@ -297,15 +274,6 @@ class InputText(InputWithLabel):
         )
 
         self.loc_label = self.loc_container.locator("label")
-
-        # Must be last
-        if verify:
-            self.verify()
-
-    def verify(self):
-        verify_input_form(
-            "text", id=self.id, loc=self.loc, loc_container=self.loc_container
-        )
 
     def set(self, value: str, *, timeout: Timeout = None):
         self.loc.fill(str(value), timeout=timeout)
@@ -375,19 +343,12 @@ class InputTextArea(InputWithLabel):
     # ] = None,
     # autocomplete: Optional[str] = None,
     # spellcheck: Optional[Literal["true", "false"]] = None,
-    def __init__(self, page: Page, id: str, *, verify: bool = True):
+    def __init__(self, page: Page, id: str):
         super().__init__(
             page,
             id=id,
             loc=f"textarea#{id}.shiny-bound-input",
         )
-
-        # Must be last
-        if verify:
-            self.verify()
-
-    def verify(self):
-        pass
 
     def set(self, value: str, *, timeout: Timeout = None):
         self.loc.fill(value, timeout=timeout)
@@ -514,20 +475,12 @@ class OutputTextBase(OutputSimple):
     # cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
     # return tags.pre(id=resolve_id(id), class_=cls)
 
-    def __init__(self, page: Page, id: str, loc: str, *, verify: bool = True):
+    def __init__(self, page: Page, id: str, loc: str):
         super().__init__(
             page,
             id=id,
             loc=loc,
         )
-
-        # Must be last
-        if verify:
-            self.verify()
-
-    def verify(self):
-        playwright_expect(self.loc).to_have_id(self.id)
-        assert_el_has_class(self.loc, "shiny-text-output")
 
     def value(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
         return self.loc.text_content(timeout=timeout)
@@ -544,30 +497,15 @@ class OutputText(OutputTextBase):
         *,
         inline: bool = False,
         container_tag: typing.Union[str, None] = None,
-        verify: bool = True,
     ):
         if container_tag is None:
             container_tag = "span" if inline else "div"
-        super().__init__(
-            page,
-            id=id,
-            loc=f"{container_tag}#{id}.shiny-text-output",
-            verify=verify,
-        )
+        super().__init__(page, id=id, loc=f"{container_tag}#{id}.shiny-text-output")
 
 
 class OutputTextVerbatim(OutputTextBase):
-    def __init__(self, page: Page, id: str, *, verify: bool = True):
-        super().__init__(
-            page,
-            id=id,
-            loc=f"pre#{id}.shiny-text-output",
-            verify=verify,
-        )
-
-        # Must be last
-        if verify:
-            self.verify()
+    def __init__(self, page: Page, id: str):
+        super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
 
     def expect_has_placeholder(
         self, has_placeholder: bool = False, *, timeout: Timeout = None
