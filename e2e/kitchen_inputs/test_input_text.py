@@ -1,6 +1,8 @@
 # See https://github.com/microsoft/playwright-python/issues/1532
 # pyright: reportUnknownMemberType=false
 
+import re
+
 from conftest import ShinyAppProc, create_doc_example_fixture
 from playground import InputText, OutputTextVerbatim
 from playwright.sync_api import Page, expect
@@ -30,11 +32,10 @@ def test_input_text_kitchen(page: Page, app: ShinyAppProc) -> None:
     # # Better approach
     expect(caption.loc_label).to_have_text("Caption:")
     expect(caption.loc).to_have_value("Data summary")
-    # Can not test for the absence of something when waiting is involved
-    # expect(obs.loc).not_to_have_attribute("width")
-    # expect(obs.loc).not_to_have_attribute("placeholder")
+    expect(caption.loc).not_to_have_attribute("width", re.compile(r".*"))
+    expect(caption.loc).not_to_have_attribute("placeholder", re.compile(r".*"))
     expect(caption.loc).to_have_attribute("autocomplete", "off")
-    # expect(obs.loc).not_to_have_attribute("spellcheck")
+    expect(caption.loc).not_to_have_attribute("spellcheck", re.compile(r".*"))
 
     # Best approach
     caption.expect_label_to_have_text("Caption:")

@@ -1,5 +1,6 @@
 # See https://github.com/microsoft/playwright-python/issues/1532
 # pyright: reportUnknownMemberType=false
+import re
 
 from conftest import ShinyAppProc, create_doc_example_fixture
 from playground import InputNumeric, OutputTextVerbatim
@@ -44,8 +45,7 @@ def test_input_numeric_kitchen(page: Page, app: ShinyAppProc) -> None:
     expect(obs.loc).to_have_value("10")
     expect(obs.loc).to_have_attribute("min", "1")
     expect(obs.loc).to_have_attribute("max", "100")
-    # Can not test for the absence of something when waiting is involved
-    # expect(obs.loc).not_to_have_attribute("step")
+    expect(obs.loc).not_to_have_attribute("step", re.compile(r".*"))
 
     # Best approach
     obs.expect_label_to_have_text("Observations:")

@@ -2,6 +2,7 @@
 
 # pyright: reportUnknownMemberType=false
 
+import re
 import sys
 
 if sys.version_info >= (3, 8):
@@ -92,12 +93,12 @@ def expect_attr(
     value: typing.Union[AttrValue, None],
     timeout: Timeout = None,
 ):
-    """Expect an attribute to have a value. If `value` is `None`, then an immediate assertion is made on the attribute's existence."""
+    """Expect an attribute to have a value. If `value` is `None`, then the attribute should not exist."""
     if isinstance(value, type(None)):
-        has_attr = loc.evaluate(
-            f"el => el.hasAttribute('{attr_name}')", timeout=timeout
+        # Not allowed to have any value for the attribute
+        playwright_expect(loc).not_to_have_attribute(
+            attr_name, re.compile(r".*"), timeout=timeout
         )
-        assert not has_attr, f"Element does not have attribute {attr_name}"
         return
 
     playwright_expect(loc).to_have_attribute(attr_name, value, timeout=timeout)
