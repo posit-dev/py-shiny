@@ -12,6 +12,41 @@ import typing
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
+"""
+Done:
+* input_numeric
+* input_text
+* input_text_area
+* output_text
+* output_text_verbatim
+
+Waiting:
+* button:
+    * input_action_button
+    * input_action_link
+* click:
+    * input_checkbox
+    * input_checkbox_group
+    * input_switch
+    * input_radio_buttons
+* date:
+    * input_date
+    * input_date_range
+* options:
+    * input_select
+    * input_selectize
+* unique:
+    * input_file
+    * input_password
+    * input_slider
+* outputs:
+    * output_plot
+    * output_image
+    * output_table
+    * output_ui
+"""
+
+
 AttrValue = typing.Union[str, typing.Pattern[str]]
 StyleValue = typing.Union[str, typing.Pattern[str]]
 
