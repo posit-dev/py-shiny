@@ -1,7 +1,4 @@
 """Barret Facade classes for working with Shiny inputs/outputs in Playwright"""
-
-# pyright: reportUnknownMemberType=false
-
 import re
 import sys
 
@@ -494,13 +491,29 @@ class OutputText(OutputTextBase):
         self,
         page: Page,
         id: str,
-        *,
-        inline: bool = False,
-        container_tag: typing.Union[str, None] = None,
     ):
-        if container_tag is None:
-            container_tag = "span" if inline else "div"
-        super().__init__(page, id=id, loc=f"{container_tag}#{id}.shiny-text-output")
+        super().__init__(page, id=id, loc=f"#{id}.shiny-text-output")
+
+    def expect_container_tag(
+        self,
+        container_tag: typing.Union[Literal["span"], Literal["div"], str],
+        timeout: Timeout = None,
+    ):
+        # Could not find an expect method to find the tag name
+        # So trying to perform the expectation manually by waiting for attached state,
+        # then asserting
+
+        # Make sure the tag exists
+        self.loc.wait_for(state="attached", timeout=timeout)
+        # Get the tag name
+        tag_name = self.loc.evaluate_handle("el => el.tagName", timeout=timeout)
+        assert (
+            tag_name is container_tag
+        ), f"Container tag is {container_tag}, not {tag_name}"
+
+    def expect_inline(self, inline: bool = False, *, timeout: Timeout = None):
+        container_tag = "span" if inline else "div"
+        self.expect_container_tag(container_tag=container_tag, timeout=timeout)
 
 
 class OutputTextVerbatim(OutputTextBase):
@@ -508,9 +521,9 @@ class OutputTextVerbatim(OutputTextBase):
         super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
 
     def expect_has_placeholder(
-        self, has_placeholder: bool = False, *, timeout: Timeout = None
+        self, placeholder: bool = False, *, timeout: Timeout = None
     ):
-        if has_placeholder:
+        if placeholder:
             self.expect.to_have_class("noplaceholder", timeout=timeout)
         else:
             self.expect.not_to_have_class("noplaceholder", timeout=timeout)
