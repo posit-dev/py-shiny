@@ -1,6 +1,3 @@
-# See https://github.com/microsoft/playwright-python/issues/1532
-# pyright: reportUnknownMemberType=false
-
 import re
 
 from conftest import ShinyAppProc, create_doc_example_fixture

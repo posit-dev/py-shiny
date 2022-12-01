@@ -51,6 +51,7 @@ AttrValue = typing.Union[str, typing.Pattern[str]]
 StyleValue = typing.Union[str, typing.Pattern[str]]
 
 Timeout = typing.Union[float, None]
+InitLocator = typing.Union[Locator, str]
 
 
 def assert_el_has_class(loc: Locator, cls: str):
@@ -110,7 +111,7 @@ def int_attr(
 
 def expect_attr(
     loc: Locator,
-    attr_name: str,
+    name: str,
     value: typing.Union[AttrValue, None],
     timeout: Timeout = None,
 ):
@@ -119,11 +120,11 @@ def expect_attr(
         # if isinstance(value, type(None)):
         # Not allowed to have any value for the attribute
         playwright_expect(loc).not_to_have_attribute(
-            attr_name, re.compile(r".*"), timeout=timeout
+            name, re.compile(r".*"), timeout=timeout
         )
         return
 
-    playwright_expect(loc).to_have_attribute(attr_name, value, timeout=timeout)
+    playwright_expect(loc).to_have_attribute(name=name, value=value, timeout=timeout)
 
 
 def expect_el_style(
@@ -154,10 +155,9 @@ def expect_el_style(
 ######################################################
 
 
-class InputWithContainer:
+class InputBase:
     # timeout: Timeout
     id: str
-    container: Locator
     loc: Locator
 
     def __init__(
@@ -165,14 +165,14 @@ class InputWithContainer:
         page: Page,
         *,
         id: str,
-        loc: str,
-        loc_container: str = "div.shiny-input-container",
+        loc: InitLocator,
     ):
         self.page = page
         # Needed?!? This is covered by `self.loc_root` and possibly `self.loc`
         self.id = id
-        self.loc_container = page.locator(loc_container).filter(has=page.locator(loc))
-        self.loc = self.loc_container.locator(loc)
+        if isinstance(loc, str):
+            loc = page.locator(loc)
+        self.loc = loc
 
     @property
     def expect(self):
@@ -183,14 +183,53 @@ class InputWithContainer:
     #     return playwright_expect(self.loc)
 
 
+class InputWithContainer(InputBase):
+    # timeout: Timeout
+    id: str
+    container: Locator
+    loc: Locator
+
+    def __init__(
+        self,
+        page: Page,
+        *,
+        id: str,
+        loc: InitLocator,
+        loc_container: InitLocator = "div.shiny-input-container",
+    ):
+
+        loc_is_str = isinstance(loc, str)
+        loc_container_is_str = isinstance(loc_container, str)
+
+        if loc_is_str and loc_container_is_str:
+            loc_container = page.locator(loc_container).filter(
+                # `page.locator(loc)` is executed from within `loc_container`
+                has=page.locator(loc)
+            )
+            loc = loc_container.locator(loc)
+        elif not loc_is_str and not loc_container_is_str:
+            ...  # Do nothing; Use values as is
+        else:
+            raise ValueError(
+                "`loc` and `loc_container` must both be strings or both be Locators"
+            )
+
+        super().__init__(
+            page,
+            id=id,
+            loc=loc,
+        )
+        self.loc_container = loc_container
+
+
 class InputWithLabel(InputWithContainer):
     def __init__(
         self,
         page: Page,
         *,
         id: str,
-        loc: str,
-        loc_container: str = "div.shiny-input-container",
+        loc: InitLocator,
+        loc_container: InitLocator = "div.shiny-input-container",
     ):
         super().__init__(
             page,
@@ -478,12 +517,79 @@ class InputTextArea(InputWithLabel):
         expect_attr(self.loc, "spellcheck", value=value, timeout=timeout)
 
 
+class InputActionBase(InputBase):
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+        loc: InitLocator,
+    ):
+        super().__init__(
+            page,
+            id=id,
+            loc=loc,
+        )
+
+    def value_label(self, *, timeout: Timeout = None) -> str:
+        """Will return include icon if present"""
+        return self.loc.inner_html(timeout=timeout)
+
+    def expect_label_to_have_text(self, value: str, *, timeout: Timeout = None):
+        """Must include icon if present"""
+        self.expect.to_have_text(value, timeout=timeout)
+
+    def click(self, *, timeout: Timeout = None, **kwargs: typing.Any):
+        self.loc.click(timeout=timeout, **kwargs)
+
+
+class InputActionButton(InputActionBase):
+    # label: TagChildArg,
+    # icon: TagChildArg = None,
+    # width: Optional[str] = None,
+
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+    ):
+        super().__init__(
+            page,
+            id=id,
+            loc=f"button#{id}.action-button",
+        )
+
+    def value_width(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
+        return str_attr(self.loc, "width", timeout=timeout)
+
+    def expect_width_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "width", value=value, timeout=timeout)
+
+
+class InputActionLink(InputActionBase):
+    # label: TagChildArg,
+    # icon: TagChildArg = None,
+    # width: Optional[str] = None,
+
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+    ):
+        super().__init__(
+            page,
+            id=id,
+            loc=f"a#{id}.action-button",
+        )
+
+
 ######################################################
 # # Outputs
 ######################################################
 
 
-class OutputSimple:
+class OutputBase:
     id: str
     loc: Locator
 
@@ -492,22 +598,25 @@ class OutputSimple:
         page: Page,
         *,
         id: str,
-        loc: str,
+        loc: InitLocator,
     ):
         self.page = page
         self.id = id
-        self.loc = page.locator(loc)
+
+        if isinstance(loc, str):
+            loc = page.locator(loc)
+        self.loc = loc
 
     @property
     def expect(self):
         return playwright_expect(self.loc)
 
 
-class OutputTextBase(OutputSimple):
+class OutputTextBase(OutputBase):
     # cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
     # return tags.pre(id=resolve_id(id), class_=cls)
 
-    def __init__(self, page: Page, id: str, loc: str):
+    def __init__(self, page: Page, id: str, loc: InitLocator):
         super().__init__(
             page,
             id=id,
