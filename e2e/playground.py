@@ -9,7 +9,7 @@ else:
 
 import typing
 
-from playwright.sync_api import ElementHandle, Locator, Page
+from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
 """
@@ -208,6 +208,7 @@ class InputWithContainer(InputBase):
                 # `page.locator(loc)` is executed from within `loc_container`
                 has=page.locator(loc)
             )
+
             loc = loc_container.locator(loc)
         elif not loc_is_str and not loc_container_is_str:
             ...  # Do nothing; Use values as is
@@ -682,12 +683,15 @@ class InputCheckboxGroup(InputWithLabel):
             loc_label=f"label#{id}-label",
         )
         # `loc_container` does not need to contain checked items
+        # But we should have `self.loc` be `self.loc_selected`
         self.loc = self.loc_container.locator("label input[type=checkbox]:checked")
         # Same value
         self.loc_selected = self.loc
+
         self.loc_choices = self.loc_container.locator("label input[type=checkbox]")
         self.loc_choice_labels = self.loc_container.locator(
-            "label", has=self.page.locator("input[type=checkbox]")
+            "label",
+            has=self.page.locator("input[type=checkbox]"),
         )
 
     def set(
@@ -710,9 +714,6 @@ class InputCheckboxGroup(InputWithLabel):
             checkbox_value = checkbox.input_value(timeout=timeout)
             checkbox.set_checked(checkbox_value in selected, timeout=timeout, **kwargs)
 
-    # def selected_labels(self, *, timeout: Timeout = None) -> Locator:
-    #     return self.loc.locator("label", has=self.page.locator("input:checked"))
-
     def value_width(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
         return str_attr(self.loc_container, "width", timeout=timeout)
 
@@ -721,110 +722,14 @@ class InputCheckboxGroup(InputWithLabel):
     ):
         expect_attr(self.loc_container, "width", value=value, timeout=timeout)
 
-    # def _choices(self, *, timeout: Timeout = None) -> typing.List[CheckboxGroupItem]:
-    #     self.loc_choice_labels.wait_for(state="attached", timeout=timeout)
-    #     labels = self.loc_choice_labels.element_handles()
-
-    #     ret: typing.List[CheckboxGroupItem] = []
-    #     for label_el in labels:
-    #         checkbox_el = typing.cast(
-    #             ElementHandle, label_el.query_selector("input[type=checkbox]")
-    #         )
-    #         value = checkbox_el.input_value(timeout=timeout)
-    #         is_checked = checkbox_el.is_checked()  # No timeout param
-    #         label = label_el.inner_text()
-    #         ret.append(
-    #             CheckboxGroupItem(
-    #                 is_checked=is_checked,
-    #                 label=label,
-    #                 value=value,
-    #             )
-    #         )
-    #     return ret
-
-    # def value_choices(self, *, timeout: Timeout = None) -> typing.List[str]:
-    #     return [choice.value for choice in self._choices(timeout=timeout)]
-
-    #     checkbox_loc = self.loc.locator("input[type=checkbox]")
-    #     checkbox_loc.wait_for(state="attached", timeout=timeout)
-    #     return [
-    #         checkbox.input_value(timeout=timeout)
-    #         for checkbox in checkbox_loc.element_handles()
-    #     ]
-
-    #     choices = typing.cast(
-    #         # typing.List[str], check_labels.inner_text(timeout=timeout)
-    #     )
-    #     return choices
-
-    #     check_labels = self.loc.locator("label")
-    #     choices = typing.cast(
-    #         typing.List[str], check_labels.inner_text(timeout=timeout)
-    #     )
-    #     return choices
-
-    #     # return self.loc.locator("input[type=checkbox]").input_value(timeout=timeout)
-    #     # el_handles = self.loc.locator("input[type=checkbox]").element_handles()
-    #     # choices: typing.List[str] = []
-    #     # for el_handle in el_handles:
-    #     #     # el_handle.scroll_into_view_if_needed(timeout=timeout)
-    #     #     # el_handle.wait_for_element_state("stable", timeout=timeout)
-    #     #     # el_handle.wait_for_element_state("enabled", timeout=timeout)
-    #     #     val: str = el_handle.input_value(timeout=timeout)
-    #     #     choices.append(val)
-    #     # return choices
-
-    # def value_selected(self, *, timeout: Timeout = None) -> typing.List[str]:
-    #     # return [
-    #     #     choice.value
-    #     #     for choice in self._choices(timeout=timeout)
-    #     #     if choice.is_checked
-    #     # ]
-    #     checkbox_loc = self.loc.locator("input[type=checkbox]")
-    #     checkbox_loc.wait_for(state="attached", timeout=timeout)
-    #     return [
-    #         checkbox.input_value(timeout=timeout)
-    #         for checkbox in checkbox_loc.element_handles()
-    #         if checkbox.is_checked()
-    #     ]
-
-    #     # choices = typing.cast(typing.List[str], checkboxes.input_value(timeout=timeout))
-    #     # checked_arr = typing.cast(
-    #     #     typing.List[bool], checkboxes.is_checked(timeout=timeout)
-    #     # )
-    #     # return [choice for checked, choice in zip(checked_arr, choices) if checked]
-
-    #     check_labels = self.loc.locator("label")
-    #     choices = typing.cast(
-    #         typing.List[str], check_labels.inner_text(timeout=timeout)
-    #     )
-    #     checked_arr = typing.cast(
-    #         typing.List[bool], check_labels.locator("input[type=checkbox]").is_checked()
-    #     )
-    #     selected = [choice for choice, checked in zip(choices, checked_arr) if checked]
-    #     return selected
-
-    # def value_choice_labels(self, *, timeout: Timeout = None) -> typing.List[str]:
-    #     self.loc_choice_labels
-    #     return [choice.label for choice in self._choices(timeout=timeout)]
-
-    #     label_loc = self.loc.locator("label")
-    #     label_loc.wait_for(state="attached", timeout=timeout)
-    #     return [label.inner_text() for label in label_loc.element_handles()]
-
     def expect_choices(
         self,
         choices: typing.List[typing.Union[typing.Pattern[str], str]],
         *,
         timeout: Timeout = None,
     ):
-        # playwright_expect(self.loc_choices).to_have_value(
-        #     value=typing.cast(typing.Union[typing.Pattern[str], str], choices),
-        #     timeout=timeout,
-        # )
         # Make sure the locator as all choices
         # Make sure the locator has len(uniq_choices) input elements
-        # self.loc_choices = self.loc_container.locator("label input")
         uniq_choices = list(dict.fromkeys(choices))
         assert len(uniq_choices) == len(choices), "`choices` must be unique"
 
@@ -838,9 +743,6 @@ class InputCheckboxGroup(InputWithLabel):
             )
         loc_all_choices = loc_all_choices.locator("label input[type=checkbox]")
         playwright_expect(loc_all_choices).to_have_count(len(choices), timeout=timeout)
-
-        # input_checkbox_group_choices = self.value_choices(timeout=timeout)
-        # assert choices == input_checkbox_group_choices
 
     def expect_selected(
         self,
@@ -873,12 +775,6 @@ class InputCheckboxGroup(InputWithLabel):
             )
         loc_selected = loc_selected.locator("label input[type=checkbox]:checked")
         playwright_expect(loc_selected).to_have_count(len(selected))
-        # playwright_expect(self.loc_selected).to_have_value(
-        #     value=typing.cast(typing.Union[typing.Pattern[str], str], selected),
-        #     timeout=timeout,
-        # )
-        # input_checkbox_group_selected = self.value_selected(timeout=timeout)
-        # assert selected == input_checkbox_group_selected
 
     def expect_choice_labels(
         self,
@@ -894,14 +790,6 @@ class InputCheckboxGroup(InputWithLabel):
             labels,
             timeout=timeout,
         )
-        # input_checkbox_group_labels = self.value_labels(timeout=timeout)
-        # assert labels == input_checkbox_group_labels
-
-    def value_inline(self, *, timeout: Timeout = None) -> bool:
-        class_val = self.loc_choice_labels.element_handle(
-            timeout=timeout
-        ).get_attribute("class")
-        return re.search(r"checkbox-inline", class_val or "") is not None
 
     def expect_inline(self, inline: bool, *, timeout: Timeout = None):
         # Check the first input element for the class value
