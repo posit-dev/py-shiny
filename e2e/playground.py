@@ -21,22 +21,21 @@ Done:
 * input_action_link
 * input_checkbox
 * input_checkbox_group
-* input_switch
 * input_numeric
+* input_radio_buttons
+* input_select
+* input_selectize
+* input_switch
 * input_text
 * input_text_area
 * output_text
 * output_text_verbatim
 
+
 Waiting:
-* click:
-    * input_radio_buttons
 * date:
     * input_date
     * input_date_range
-* options:
-    * input_select
-    * input_selectize
 * unique:
     * input_file
     * input_password
@@ -167,20 +166,6 @@ class _InputWithContainerP(_InputBaseP, Protocol):
     loc_container: Locator
 
 
-class _WidthP(Protocol):
-    _loc_width: Locator
-
-
-class _WidthLocP(_WidthP, Protocol):
-    loc: Locator
-    ...
-
-
-class _WidthContainerP(_WidthP, Protocol):
-    loc_container: Locator
-    ...
-
-
 # class A:
 #     def foo(self) -> "A":
 #         return self
@@ -308,36 +293,36 @@ class _InputWithLabel(_InputWithContainer):
 #   * Provide `value` methods as a convenience
 
 
-class _Width:
-    _loc_width: Locator
-
-    def value_width(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
-        return str_attr(self._loc_width, "width", timeout=timeout)
+class _WidthLoc:
+    def value_width(
+        self: _InputBaseP,
+        *,
+        timeout: Timeout = None,
+    ) -> typing.Union[str, None]:
+        return str_attr(self.loc, "width", timeout=timeout)
 
     def expect_width_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+        self: _InputBaseP,
+        value: typing.Union[AttrValue, None],
+        *,
+        timeout: Timeout = None,
     ):
-        expect_attr(self._loc_width, "width", value=value, timeout=timeout)
+        expect_attr(self.loc, "width", value=value, timeout=timeout)
 
 
-class _WidthLoc(_Width):
-    def __init__(
-        self: _WidthLocP,
-        *args: typing.Any,
-        **kwargs: typing.Any,
+class _WidthContainer:
+    def value_width(
+        self: _InputWithContainerP, *, timeout: Timeout = None
+    ) -> typing.Union[str, None]:
+        return str_attr(self.loc_container, "width", timeout=timeout)
+
+    def expect_width_to_have_value(
+        self: _InputWithContainerP,
+        value: typing.Union[AttrValue, None],
+        *,
+        timeout: Timeout = None,
     ):
-        super().__init__(*args, **kwargs)
-        self._loc_width = self.loc
-
-
-class _WidthContainer(_Width):
-    def __init__(
-        self: _WidthContainerP,
-        *args: typing.Any,
-        **kwargs: typing.Any,
-    ):
-        super().__init__(*args, **kwargs)
-        self._loc_width = self.loc_container
+        expect_attr(self.loc_container, "width", value=value, timeout=timeout)
 
 
 class InputNumeric(
@@ -495,11 +480,9 @@ Resize = typing.Union[
 
 
 class InputTextArea(_Placeholder, _Autocomplete, _Spellcheck, _InputWithLabel):
-    # def input_text_area(
     # id: str,
     # label: TagChildArg,
     # value: str = "",
-    # *,
     # width: Optional[str] = None,
     # height: Optional[str] = None,
     # cols: Optional[int] = None,
@@ -586,6 +569,218 @@ class InputTextArea(_Placeholder, _Autocomplete, _Spellcheck, _InputWithLabel):
         timeout: Timeout = None,
     ):
         expect_attr(self.loc, "resize", value=value, timeout=timeout)
+
+
+class _InputSelectBase(_WidthLoc, _InputWithLabel):
+    loc_selected: Locator
+    loc_choices: Locator
+    loc_choice_groups: Locator
+    loc_select: Locator
+
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+        *,
+        select_class: str = "",
+    ):
+        super().__init__(
+            page,
+            id=id,
+            loc=f"select#{id}.shiny-bound-input{select_class}",
+            loc_label=f"label[for='{id}']",
+        )
+        # `loc_container` does not need to contain selected items
+        # But we should have `self.loc` be `self.loc_selected`
+        self.loc = self.loc_container.locator("option:checked")
+        # Same value
+        self.loc_selected = self.loc
+
+        self.loc_select = self.loc_container.locator(f"select#{self.id}")
+        self.loc_choices = self.loc_select.locator("option")
+        self.loc_choice_groups = self.loc_select.locator("optgroup")
+        # self.loc_choice_labels = self.loc_container.locator(
+        #     "label",
+        #     has=self.page.locator("option"),
+        # )
+
+    def set(
+        self,
+        selected: typing.Union[str, typing.List[str]],
+        *,
+        timeout: Timeout = None,
+    ):
+        if isinstance(selected, str):
+            selected = [selected]
+        self.loc_select.select_option(value=selected, timeout=timeout)
+
+    def expect_choices(
+        self,
+        choices: typing.Union[typing.List[str], None],
+        *,
+        timeout: Timeout = None,
+    ):
+        """Expect choices to be in order"""
+        # Playwright doesn't like lists of size 0. Instead, use `None`
+        if choices is not None and len(choices) == 0:
+            choices = None
+        if choices is None:
+            playwright_expect(self.loc_choices).to_have_count(0, timeout=timeout)
+            return
+
+        _RadioButtonCheckboxGroupBase._expect_locator_values_in_list(
+            self,
+            "option",
+            "choices",
+            choices,
+            timeout=timeout,
+        )
+
+    def expect_selected(
+        self,
+        selected: typing.Union[
+            typing.List[
+                typing.Union[
+                    typing.Pattern[str],
+                    str,
+                ]
+            ],
+            typing.Union[
+                typing.Pattern[str],
+                str,
+            ],
+            None,
+        ],
+        *,
+        timeout: Timeout = None,
+    ):
+        """Expect choices to be in order"""
+        # Playwright doesn't like lists of size 0. Instead, use `None`
+        if isinstance(selected, list) and len(selected) == 0:
+            selected = None
+        if selected is None:
+            playwright_expect(self.loc_selected).to_have_count(0, timeout=timeout)
+            return
+
+        ex_selected = playwright_expect(self.loc_select)
+        if isinstance(selected, list):
+            ex_selected.to_have_values(selected, timeout=timeout)
+        else:
+            ex_selected.to_have_value(selected, timeout=timeout)
+
+        # _RadioButtonCheckboxGroupBase._expect_locator_values_in_list(
+        #     self,
+        #     "option",
+        #     "selected",
+        #     selected,
+        #     timeout=timeout,
+        #     is_checked=True,
+        # )
+
+    def expect_choice_groups(
+        self,
+        choice_groups: typing.Union[
+            typing.List[str],
+            None,
+        ],
+        *,
+        timeout: Timeout = None,
+    ):
+        """Expect choices to be in order"""
+        # Playwright doesn't like lists of size 0. Instead, use `None`
+        if choice_groups is not None and len(choice_groups) == 0:
+            choice_groups = None
+        if choice_groups is None:
+            playwright_expect(self.loc_choice_groups).to_have_count(0, timeout=timeout)
+            return
+
+        _RadioButtonCheckboxGroupBase._expect_locator_values_in_list(
+            self,
+            "optgroup",
+            "choice_groups",
+            choice_groups,
+            timeout=timeout,
+            key="label",
+        )
+
+    def expect_choice_labels(
+        self,
+        choice_labels: typing.Union[
+            typing.List[
+                typing.Union[
+                    typing.Pattern[str],
+                    str,
+                ]
+            ],
+            None,
+        ],
+        *,
+        timeout: Timeout = None,
+    ):
+        # Playwright doesn't like lists of size 0. Instead, use `None`
+        if choice_labels is not None and len(choice_labels) == 0:
+            choice_labels = None
+        if choice_labels is None:
+            playwright_expect(self.loc_choices).to_have_count(0, timeout=timeout)
+            return
+        playwright_expect(
+            self.loc_container.locator(f"select#{self.id} option")
+        ).to_have_text(choice_labels, timeout=timeout)
+
+    # multiple: bool = False,
+    def expect_multiple(self, multiple: bool, *, timeout: Timeout = None):
+        ex_multiple = playwright_expect(self.loc_select)
+        if multiple:
+            ex_multiple.to_have_attribute("multiple", "True", timeout=timeout)
+        else:
+            ex_multiple.not_to_have_attribute(
+                "multiple", re.compile(r".*"), timeout=timeout
+            )
+
+    def expect_size_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(
+            self.loc_select,
+            "size",
+            value=value,
+            timeout=timeout,
+        )
+
+
+class InputSelect(_InputSelectBase):
+    # id: str,
+    # label: TagChildArg,
+    # choices: SelectChoicesArg,
+    # selected: Optional[Union[str, List[str]]] = None,
+    # multiple: bool = False,
+    # selectize: bool = False,
+    # width: Optional[str] = None,
+    # size: Optional[str] = None,
+    def __init__(self, page: Page, id: str):
+        super().__init__(
+            page,
+            id=id,
+            select_class="",
+        )
+
+    # selectize: bool = False,
+    def expect_selectize(self, selectize: bool, *, timeout: Timeout = None):
+        # class_=None if selectize else "form-select",
+        ex_selectize = playwright_expect(self.loc_select)
+        if selectize:
+            ex_selectize.not_to_have_class(re.compile("form-select"), timeout=timeout)
+        else:
+            ex_selectize.to_have_class(re.compile("form-select"), timeout=timeout)
+
+
+class InputSelectize(_InputSelectBase):
+    def __init__(self, page: Page, id: str):
+        super().__init__(
+            page,
+            id=id,
+            select_class=".form-select",
+        )
 
 
 class _InputActionBase(_InputBase):
@@ -728,15 +923,17 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
             )
 
     def _expect_locator_values_in_list(
-        self,
-        kind: str,
+        self: _InputWithContainerP,
+        el_type: str,
         arr_name: str,
         arr: typing.List[str],
         *,
         is_checked: typing.Union[bool, None] = None,
         timeout: Timeout = None,
+        key: str = "value",
     ):
-        # Make sure the locator as all of arr
+        # Make sure the locator has all of arr
+
         # Make sure the locator has len(uniq_arr) input elements
         assert len(arr) == len(list(dict.fromkeys(arr))), f"`{arr_name}` must be unique"
 
@@ -750,27 +947,29 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
 
         # Find all items in set
         loc_container = self.loc_container
-        # for item, i in zip(arr, range(len(arr))):
-        for item in arr:
-            loc_container = loc_container.locator(
-                # self
-                "xpath=.",
-                # Make sure input exists
-                has=self.page.locator(
-                    f"label input[type={kind}][value={item}]{is_checked_str}"
-                ),
-                # TODO-barret; Add location info to Locator
-                # has=page.locator(f"label input[type={kind}]{is_checked_str}")
-                # .nth(i)
-                # .locator(
-                #     # self
-                #     "xpath=.",
-                #     # Make sure input has value
-                #     has=page.locator(f"input[value={item}]"),
-                # ),
+        for (item, i) in zip(arr, range(len(arr))):
+            # # Simple approach if position wasn't needed
+            # has_locator = self.page.locator(
+            #     f"{el_type}[{key}='{item}']{is_checked_str}"
+            # )
+
+            has_locator = self.page.locator(f"{el_type}{is_checked_str}")
+            # Go up one element as CSS does not have "self" selector
+            # We can leverage this as the HTML structure is very nested.
+            # This approach will break if there are matching siblings
+            has_locator = has_locator.nth(i).locator("..")
+            # Find direct child that matches selector
+            has_locator = has_locator.locator(
+                f"> {el_type}[{key}='{item}']{is_checked_str}"
             )
-        # make sure other items are not in set
-        loc_inputs = loc_container.locator(f"label input[type={kind}]{is_checked_str}")
+
+            loc_container = loc_container.locator(
+                # Return self
+                "xpath=.",
+                has=has_locator,
+            )
+        # Make sure other items are not in set
+        loc_inputs = loc_container.locator(f"{el_type}{is_checked_str}")
         # TODO-barret; Look into adding a try-catch around this and then performing the locator check using multiple expectations to get better error messages
         playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
 
@@ -823,6 +1022,7 @@ class InputCheckboxGroup(
         checkbox_loc = self.loc_choices
         checkbox_loc.nth(0).wait_for(state="attached", timeout=timeout)
 
+        # TODO-barret; Could do with multiple locator calls, but unchecking the values without the known values would be difficult.
         for checkbox in checkbox_loc.element_handles():
             checkbox_value = checkbox.input_value(timeout=timeout)
             checkbox.set_checked(checkbox_value in selected, timeout=timeout, **kwargs)
@@ -834,7 +1034,7 @@ class InputCheckboxGroup(
         timeout: Timeout = None,
     ):
         self._expect_locator_values_in_list(
-            "checkbox",
+            "input[type=checkbox]",
             "choices",
             choices,
             timeout=timeout,
@@ -854,7 +1054,7 @@ class InputCheckboxGroup(
             return
 
         self._expect_locator_values_in_list(
-            "checkbox",
+            "input[type=checkbox]",
             "selected",
             selected,
             timeout=timeout,
@@ -904,18 +1104,9 @@ class InputRadioButtons(
         **kwargs: typing.Any,
     ):
 
-        # We are wanting to delay retriving the value of the radio as long as possible
-        self.loc_choices.nth(0).wait_for(state="attached", timeout=timeout)
-
         self.loc_container.locator(
             f"label input[type=radio][value='{selected}']"
         ).check(timeout=timeout)
-
-        # for radio_button in self.loc_choices.element_handles():
-        #     radio_button_value = radio_button.input_value(timeout=timeout)
-        #     radio_button.set_checked(
-        #         radio_button_value is selected, timeout=timeout, **kwargs
-        #     )
 
     def expect_choices(
         self,
@@ -924,7 +1115,7 @@ class InputRadioButtons(
         timeout: Timeout = None,
     ):
         self._expect_locator_values_in_list(
-            "radio",
+            "input[type=radio]",
             "choices",
             choices,
             timeout=timeout,
@@ -1003,6 +1194,7 @@ class OutputText(_OutputTextValue):
         # Make sure the tag exists
         self.loc.wait_for(state="attached", timeout=timeout)
         # Get the tag name
+        # TODO-barret; Can this be done with locator and not an element handle?
         tag_name = self.loc.evaluate_handle("el => el.tagName", timeout=timeout)
         assert (
             tag_name is container_tag
