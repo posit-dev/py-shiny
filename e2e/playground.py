@@ -22,6 +22,7 @@ Done:
 * input_checkbox
 * input_checkbox_group
 * input_numeric
+* input_password
 * input_radio_buttons
 * input_select
 * input_selectize
@@ -38,7 +39,6 @@ Waiting:
     * input_date_range
 * unique:
     * input_file
-    * input_password
     * input_slider
 * outputs:
     * output_plot
@@ -126,6 +126,19 @@ def expect_attr(
         return
 
     playwright_expect(loc).to_have_attribute(name=name, value=value, timeout=timeout)
+
+
+def get_el_style(
+    loc: Locator,
+    css_key: str,
+    timeout: Timeout = None,
+):
+    ret = loc.get_attribute("style", timeout=timeout) or ""
+    m = re.search(css_key + r":\s*([^\s;]+)", ret)
+    if m:
+        # Return match
+        return m.group(1)
+    return None
 
 
 def expect_el_style(
@@ -474,6 +487,48 @@ class InputText(
         self.expect.to_have_value(value, timeout=timeout)
 
 
+class InputPassword(
+    _Placeholder,
+    _InputWithLabel,
+):
+    # id: str,
+    # label: TagChildArg,
+    # value: str = "",
+    # *,
+    # width: Optional[str] = None,
+    # placeholder: Optional[str] = None,
+    ...
+
+    def __init__(self, page: Page, id: str):
+        super().__init__(
+            page,
+            id=id,
+            loc=f"input#{id}[type=password].shiny-bound-input",
+        )
+
+        self.loc_label = self.loc_container.locator("label")
+
+    def set(self, value: str, *, timeout: Timeout = None):
+        self.loc.fill(str(value), timeout=timeout)
+
+    def value(self, *, timeout: Timeout = None) -> str:
+        return self.loc.input_value(timeout=timeout)
+
+    def expect_value(self, value: str, *, timeout: Timeout = None):
+        self.expect.to_have_value(value, timeout=timeout)
+
+    def get_width(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
+        return get_el_style(self.loc_container, "width", timeout=timeout)
+
+    def expect_width_to_have_value(
+        self,
+        value: typing.Union[AttrValue, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_el_style(self.loc_container, "width", value, timeout=timeout)
+
+
 Resize = typing.Union[
     Literal["none"], Literal["both"], Literal["horizontal"], Literal["vertical"]
 ]
@@ -509,20 +564,10 @@ class InputTextArea(_Placeholder, _Autocomplete, _Spellcheck, _InputWithLabel):
         return self.loc.input_value(timeout=timeout)
 
     def value_width(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
-        ret = self.loc_container.get_attribute("style", timeout=timeout) or ""
-        m = re.search(r"width:\s*([^\s;]+)", ret)
-        if m:
-            # Return match
-            return m.group(1)
-        return None
+        return get_el_style(self.loc_container, "width", timeout=timeout)
 
     def value_height(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
-        ret = self.loc.get_attribute("style", timeout=timeout) or ""
-        m = re.search(r"height:\s*([^\s;]+)", ret)
-        if m:
-            # Return match
-            return m.group(1)
-        return None
+        return get_el_style(self.loc_container, "height", timeout=timeout)
 
     def value_cols(self, *, timeout: Timeout = None) -> typing.Union[int, None]:
         return int_attr(self.loc, "cols", timeout=timeout)
