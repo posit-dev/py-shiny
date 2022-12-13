@@ -1,4 +1,5 @@
 """Barret Facade classes for working with Shiny inputs/outputs in Playwright"""
+import pathlib
 import re
 import sys
 
@@ -10,7 +11,7 @@ else:
 
 import typing
 
-from playwright.sync_api import Locator, Page
+from playwright.sync_api import FilePayload, Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
 """
@@ -21,6 +22,7 @@ Done:
 * input_action_link
 * input_checkbox
 * input_checkbox_group
+* input_file
 * input_numeric
 * input_password
 * input_radio_buttons
@@ -38,7 +40,6 @@ Waiting:
     * input_date
     * input_date_range
 * unique:
-    * input_file
     * input_slider
 * outputs:
     * output_plot
@@ -162,6 +163,16 @@ def expect_el_style(
     playwright_expect(loc).to_have_attribute(
         "style", re.compile(f"{css_key}\\s*:\\s*{css_value.pattern}"), timeout=timeout
     )
+
+
+def expect_multiple(loc: Locator, multiple: bool, timeout: Timeout = None):
+    ex_multiple = playwright_expect(loc)
+    if multiple:
+        ex_multiple.to_have_attribute("multiple", "True", timeout=timeout)
+    else:
+        ex_multiple.not_to_have_attribute(
+            "multiple", re.compile(r".*"), timeout=timeout
+        )
 
 
 ######################################################
@@ -774,13 +785,7 @@ class _InputSelectBase(_WidthLoc, _InputWithLabel):
 
     # multiple: bool = False,
     def expect_multiple(self, multiple: bool, *, timeout: Timeout = None):
-        ex_multiple = playwright_expect(self.loc_select)
-        if multiple:
-            ex_multiple.to_have_attribute("multiple", "True", timeout=timeout)
-        else:
-            ex_multiple.not_to_have_attribute(
-                "multiple", re.compile(r".*"), timeout=timeout
-            )
+        expect_multiple(self.loc_select, multiple, timeout=timeout)
 
     def expect_size_to_have_value(
         self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
@@ -1178,6 +1183,95 @@ class InputRadioButtons(
             return
 
         playwright_expect(self.loc_selected).to_have_value(selected, timeout=timeout)
+
+
+class InputFile(
+    # _Placeholder,
+    _InputWithLabel,
+):
+    # id: str,
+    # label: TagChildArg,
+    # *,
+    # multiple: bool = False,
+    # accept: Optional[Union[str, List[str]]] = None,
+    # width: Optional[str] = None,
+    # button_label: str = "Browse...",
+    # placeholder: str = "No file selected",
+    # capture: Optional[Literal["environment", "user"]] = None,
+    # with page.expect_file_chooser() as fc_info:
+    #     page.get_by_text("Upload").click()
+    # file_chooser = fc_info.value
+    # file_chooser.set_files("myfile.pdf")
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+    ):
+        super().__init__(
+            page,
+            id=id,
+            loc=f"input[type=file]#{id}",
+            loc_label=f"label[id={id}-label]",
+        )
+        self.loc_file_input = self.loc
+        self.loc_button = self.loc_container.locator("label span.btn")
+        self.loc_file_display = self.loc_container.locator("input[type=text]")
+
+    def set(
+        self,
+        file_path: typing.Union[
+            str,
+            pathlib.Path,
+            FilePayload,
+            typing.List[typing.Union[str, pathlib.Path]],
+            typing.List[FilePayload],
+        ],
+        *,
+        timeout: Timeout = None,
+    ):
+        self.loc.set_input_files(file_path, timeout=timeout)
+
+    def expect_files(
+        self,
+        files: typing.Union[str, typing.List[str], None],
+        *,
+        timeout: Timeout = None,
+    ):
+        # TODO-barret; Find method to get files, or remove method
+        # TODO-barret; Test value being sent to shiny?
+        NotImplementedError("`expect_files()` is not implemented")
+
+    def expect_multiple(self, multiple: bool, *, timeout: Timeout = None):
+        expect_multiple(self.loc, multiple, timeout=timeout)
+
+    def expect_accept(
+        self,
+        accept: typing.Union[str, typing.List[str], None],
+        *,
+        timeout: Timeout = None,
+    ):
+        if isinstance(accept, typing.List):
+            accept = ",".join(accept)
+        expect_attr(self.loc, "accept", accept, timeout=timeout)
+
+    def expect_width(self, width: typing.Union[str, None], *, timeout: Timeout = None):
+        expect_el_style(self.loc_container, "width", width, timeout=timeout)
+
+    def expect_button_label(self, button_label: str, *, timeout: Timeout = None):
+        playwright_expect(self.loc_button).to_have_text(button_label, timeout=timeout)
+
+    def expect_capture(
+        self,
+        capture: typing.Union[Literal["environment", "user"], None] = None,
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc, "capture", capture, timeout=timeout)
+
+    def expect_placeholder_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc_file_display, "placeholder", value=value, timeout=timeout)
 
 
 ######################################################
