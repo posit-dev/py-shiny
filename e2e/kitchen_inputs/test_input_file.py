@@ -1,5 +1,3 @@
-import re
-
 from conftest import ShinyAppProc, create_doc_example_fixture
 from playground import InputFile
 from playwright.sync_api import FilePayload, Page, expect

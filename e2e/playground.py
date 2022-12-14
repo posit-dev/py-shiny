@@ -28,6 +28,7 @@ Done:
 * input_radio_buttons
 * input_select
 * input_selectize
+* input_slider
 * input_switch
 * input_text
 * input_text_area
@@ -39,8 +40,6 @@ Waiting:
 * date:
     * input_date
     * input_date_range
-* unique:
-    * input_slider
 * outputs:
     * output_plot
     * output_image
@@ -1272,6 +1271,166 @@ class InputFile(
         self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
     ):
         expect_attr(self.loc_file_display, "placeholder", value=value, timeout=timeout)
+
+
+class InputSlider(_WidthLoc, _InputWithLabel):
+    # id: str,
+    # label: TagChildArg,
+    # min: SliderValueArg,
+    # max: SliderValueArg,
+    # value: Union[SliderValueArg, Iterable[SliderValueArg]],
+    # step: Optional[SliderStepArg] = None,
+    # ticks: bool = True,
+    # animate: Union[bool, AnimationOptions] = False,
+    # width: Optional[str] = None,
+    # sep: str = ",",
+    # pre: Optional[str] = None,
+    # post: Optional[str] = None,
+    # time_format: Optional[str] = None,
+    # timezone: Optional[str] = None,
+    # drag_range: bool = True,
+
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+    ):
+        super().__init__(
+            page,
+            id=id,
+            loc=f"input#{id}",
+            loc_label=f"label#{id}-label",
+        )
+
+    def expect_value(self, value: typing.Union[str, None], *, timeout: Timeout = None):
+        # TODO-barret; implement
+        NotImplementedError("Need to get the value somehow")
+
+    def set(self, fraction: float) -> None:
+        if fraction > 1 or fraction < 0:
+            raise ValueError("`fraction` must be between 0 and 1")
+
+        self.loc_container.wait_for(state="visible")
+        self.loc_container.scroll_into_view_if_needed()
+
+        handle = self.loc_container.locator(".irs-handle")
+        handle_bb = handle.bounding_box()
+        if handle_bb is None:
+            raise RuntimeError("Couldn't find bounding box for .irs-handle")
+
+        handle_center = (
+            handle_bb.get("x") + (handle_bb.get("width") / 2),
+            handle_bb.get("y") + (handle_bb.get("height") / 2),
+        )
+
+        grid = self.loc_container.locator(".irs-grid")
+        grid_bb = grid.bounding_box()
+        if grid_bb is None:
+            raise RuntimeError("Couldn't find bounding box for .irs-grid")
+
+        mouse = self.loc_container.page.mouse
+        mouse.move(handle_center[0], handle_center[1])
+        mouse.down()
+        mouse.move(
+            grid_bb.get("x") + (fraction * grid_bb.get("width")), handle_center[1]
+        )
+        mouse.up()
+
+    def expect_animate(self, exists: bool, *, timeout: Timeout = None):
+        animate_count = 1 if exists else 0
+        playwright_expect(
+            self.loc_container.locator(".slider-animate-container")
+        ).to_have_count(animate_count)
+
+    def expect_animate_loop_to_have_value(
+        self, loop: typing.Union[bool, None], *, timeout: Timeout = None
+    ):
+        if not loop:
+            loop = None
+        expect_attr(
+            self.loc_container.locator(".slider-animate-container a"),
+            "data-loop",
+            str(loop),
+            timeout=timeout,
+        )
+
+    def expect_animate_interval_to_have_value(
+        self, interval: typing.Union[int, None], *, timeout: Timeout = None
+    ):
+        interval_str = str(interval) if interval else None
+        expect_attr(
+            self.loc_container.locator(".slider-animate-container a"),
+            "data-interval",
+            interval_str,
+            timeout=timeout,
+        )
+
+    # TODO-barret; Test other animate play button and pause button?
+    # Testing the HTML seems like too much.
+    # Testing the text seems like it is not useful.
+
+    # TODO-barret; All methods below:
+    # Could maybe use better formats for the values, but am going to leave as `str` for now
+
+    def expect_min_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "data-min", value=value, timeout=timeout)
+
+    def expect_max_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "data-max", value=value, timeout=timeout)
+
+    # def expect_from_to_have_value(
+    #     self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    # ):
+    #     expect_attr(self.loc, "data-from", value=value, timeout=timeout)
+
+    def expect_step_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "data-step", value=value, timeout=timeout)
+
+    def expect_ticks_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "data-grid", value=value, timeout=timeout)
+
+    def expect_sep_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "data-prettify-separator", value=value, timeout=timeout)
+
+    def expect_pre_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "data-prefix", value=value, timeout=timeout)
+
+    def expect_post_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "data-postfix", value=value, timeout=timeout)
+
+    # def expect_data_type_to_have_value(
+    #     self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    # ):
+    #     expect_attr(self.loc, "data-data-type", value=value, timeout=timeout)
+
+    def expect_time_format_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "data-time-format", value=value, timeout=timeout)
+
+    def expect_timezone_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "data-timezone", value=value, timeout=timeout)
+
+    def expect_drag_range_to_have_value(
+        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    ):
+        expect_attr(self.loc, "data-drag-interval", value=value, timeout=timeout)
 
 
 ######################################################
