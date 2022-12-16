@@ -1,4 +1,6 @@
 """Barret Facade classes for working with Shiny inputs/outputs in Playwright"""
+import datetime
+import json
 import pathlib
 import re
 import sys
@@ -17,11 +19,16 @@ from playwright.sync_api import expect as playwright_expect
 """
 Questions:
 * While `expect_*_to_have_value()` matches the setup of `expect(x).to_have_value()`, it is a bit verbose. Should we just use `expect_*()` as we only use it in a single context? (Only adding the suffix if other methods like `to_have_html()` or `to_have_text()` would make sense.)
+    * Ans: Try things out
+* `_DateBase` is signaled as private, but `InputDateRange` will have two fields of `date_start` and `date_end`. Due to how the init selectors are created, they are not `InputDate` instances. Should we make `_DateBase` public?
+* Can Date pickers set the `value` attribute on the corresponding input element? If so, we could use `expect_value()` to check the value of the input element.
 Done:
 * input_action_button
 * input_action_link
 * input_checkbox
 * input_checkbox_group
+* input_date
+* input_date_range
 * input_file
 * input_numeric
 * input_password
@@ -37,9 +44,6 @@ Done:
 
 
 Waiting:
-* date:
-    * input_date
-    * input_date_range
 * outputs:
     * output_plot
     * output_image
@@ -1431,6 +1435,372 @@ class InputSlider(_WidthLoc, _InputWithLabel):
         self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
     ):
         expect_attr(self.loc, "data-drag-interval", value=value, timeout=timeout)
+
+
+def _date_str(date: typing.Union[datetime.date, str, None]) -> typing.Union[str, None]:
+    if date is None:
+        return None
+    elif isinstance(date, datetime.date):
+        return str(date)
+    else:
+        return str(datetime.date.fromisoformat(date))
+
+
+class _DateBase(_WidthContainer, _InputWithLabel):
+    # id: str,
+    # label: TagChildArg,
+    # value: Optional[Union[date, str]] = None,
+    # min: Optional[Union[date, str]] = None,
+    # max: Optional[Union[date, str]] = None,
+    # format: str = "yyyy-mm-dd",
+    # startview: str = "month",
+    # weekstart: int = 0,
+    # language: str = "en",
+    # width: Optional[str] = None,
+    # autoclose: bool = True,
+    # datesdisabled: Optional[List[str]] = None,
+    # daysofweekdisabled: Optional[List[int]] = None,
+    def set(
+        self: _InputWithContainerP,
+        value: typing.Union[datetime.date, str, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        value_str = _date_str(value)
+        if value_str is None:
+            self.loc.fill("", timeout=timeout)
+            return
+
+        self.loc.fill(value_str, timeout=timeout)
+        # TODO-barret; How to trigger the update without opening the date picker?
+        self.loc.evaluate('(el) => $(el).bsDatepicker("update");')
+
+    def expect_value(
+        self,
+        value: typing.Union[datetime.date, str, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        # Not using `_date_str()` as we want ability to supply non ISO formatted dates
+        if isinstance(value, datetime.date):
+            value = str(value)
+
+        if value is None:
+            self.expect.to_be_empty(timeout=timeout)
+        else:
+            self.expect.to_have_value(value, timeout=timeout)
+
+    def expect_min_date(
+        self,
+        value: typing.Union[datetime.date, str, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc, "data-min-date", value=_date_str(value), timeout=timeout)
+
+    def expect_max_date(
+        self,
+        value: typing.Union[datetime.date, str, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc, "data-max-date", value=_date_str(value), timeout=timeout)
+
+    def expect_format(
+        self,
+        value: typing.Union[str, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc, "data-date-format", value=value, timeout=timeout)
+
+    def expect_startview(
+        self,
+        value: typing.Union[str, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc, "data-date-start-view", value=value, timeout=timeout)
+
+    def expect_weekstart(
+        self,
+        value: typing.Union[int, str, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc, "data-date-week-start", value=str(value), timeout=timeout)
+
+    def expect_language(
+        self,
+        value: typing.Union[str, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc, "data-date-language", value=value, timeout=timeout)
+
+    # autoclose: bool = True,
+    def expect_autoclose(
+        self,
+        # TODO-barret; None value supported?
+        value: typing.Union[str, bool, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        if isinstance(value, bool):
+            value = str(value).lower()
+        expect_attr(self.loc, "data-date-autoclose", value=str(value), timeout=timeout)
+
+    def expect_datesdisabled(
+        self,
+        value: typing.Union[typing.List[str], None],
+        *,
+        timeout: Timeout = None,
+    ):
+        if isinstance(value, list):
+            assert len(value) > 0, "`value` must be `None` or a non-empty list"
+        value_str = "null" if value is None else json.dumps(value)
+        expect_attr(
+            self.loc,
+            "data-date-dates-disabled",
+            value=value_str,
+            timeout=timeout,
+        )
+
+    def expect_daysofweekdisabled(
+        self,
+        value: typing.Union[typing.List[int], None],
+        *,
+        timeout: Timeout = None,
+    ):
+        if isinstance(value, list):
+            assert len(value) > 0, "`value` must be `None` or a non-empty list"
+        value_str = "null" if value is None else json.dumps(value)
+        expect_attr(
+            self.loc,
+            "data-date-days-of-week-disabled",
+            value=value_str,
+            timeout=timeout,
+        )
+
+
+class InputDate(_DateBase):
+    def __init__(self, page: Page, id: str):
+        super().__init__(
+            page,
+            id=id,
+            loc="input[type=text].form-control",
+            loc_label=f"label#{id}-label",
+            loc_container=f"div#{id}.shiny-input-container",
+        )
+
+
+class InputDateRange(_WidthContainer, _InputWithLabel):
+    # id: str,
+    # label: TagChildArg,
+    # *,
+    # start: Optional[Union[date, str]] = None,
+    # end: Optional[Union[date, str]] = None,
+    # min: Optional[Union[date, str]] = None,
+    # max: Optional[Union[date, str]] = None,
+    # format: str = "yyyy-mm-dd",
+    # startview: str = "month",
+    # weekstart: int = 0,
+    # language: str = "en",
+    # separator: str = " to ",
+    # width: Optional[str] = None,
+    # autoclose: bool = True,
+
+    loc_separator: Locator
+    loc_start: Locator
+    loc_end: Locator
+    date_start: _DateBase
+    date_end: _DateBase
+
+    def __init__(self, page: Page, id: str):
+        super().__init__(
+            page,
+            id=id,
+            loc="input[type=text].form-control",
+            loc_label=f"label#{id}-label",
+            loc_container=f"div#{id}.shiny-input-container",
+        )
+        self.loc_separator = self.loc_container.locator(".input-daterange > span")
+        self.loc_start = self.loc.nth(0)
+        self.loc_end = self.loc.nth(1)
+        self.date_start = _DateBase(
+            page,
+            id=id,
+            loc=self.loc_start,
+            loc_label=self.loc_label,
+            loc_container=self.loc_container,
+        )
+        self.date_end = _DateBase(
+            page,
+            id=id,
+            loc=self.loc_end,
+            loc_label=self.loc_label,
+            loc_container=self.loc_container,
+        )
+
+    def set(
+        self,
+        # TODO-barret; Should this be a list or a tuple?
+        value: typing.Union[
+            typing.Tuple[
+                typing.Union[datetime.date, str, None],
+                typing.Union[datetime.date, str, None],
+            ],
+            None,
+        ],
+        *,
+        timeout: Timeout = None,
+    ):
+        if value is None:
+            value = (None, None)
+        self.date_start.set(value=value[0], timeout=timeout)
+        self.date_end.set(value=value[1], timeout=timeout)
+
+    def expect_value(
+        self,
+        # TODO-barret; Should this be a list or a tuple?
+        value: typing.Union[
+            typing.Tuple[
+                typing.Union[datetime.date, str, None],
+                typing.Union[datetime.date, str, None],
+            ],
+            None,
+        ],
+        *,
+        timeout: Timeout = None,
+    ):
+
+        start_val = None
+        end_val = None
+        if not (value is None):
+            # Not using `_date_str()` as we want ability to supply non ISO formatted dates
+            start_val = value[0]
+            if isinstance(start_val, datetime.date):
+                start_val = str(start_val)
+            end_val = value[1]
+            if isinstance(end_val, datetime.date):
+                end_val = str(end_val)
+
+        if start_val is None:
+            start_val = ""
+        if end_val is None:
+            end_val = ""
+
+        # We can not use `[value={value}]` within Locators.
+        # The physical `value` attribute is never set, so we can not select on it.
+        # We must as the start and end values individually, rather than at the same time like the checkboxgroup input.
+        self.date_start.expect_value(start_val, timeout=timeout)
+        self.date_end.expect_value(end_val, timeout=timeout)
+
+        # loc_dates = self.loc_container
+        # loc_dates = loc_dates.locator(
+        #     "xpath=.",
+        #     has=self.page.locator(f"input:nth-child(1)[type=text][value={start_val}]"),
+        # )
+        # loc_dates = loc_dates.locator(
+        #     "xpath=.",
+        #     has=self.page.locator(f"input:nth-child(3)[type=text][value={end_val}]"),
+        # )
+        # playwright_expect(loc_dates).to_have_count(
+        #     int(not (value is None)),
+        #     timeout=timeout,
+        # )
+        # if False:
+        #     # TODO-future?; This should be in a try catch around the item above for better diagnostics
+        #     self.date_start.expect_value(start_val, timeout=timeout)
+        #     self.date_end.expect_value(end_val, timeout=timeout)
+
+    # min: Optional[Union[date, str]] = None,
+    def expect_min_date(
+        self,
+        value: typing.Union[datetime.date, str, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        # These values should be the same, so checking both independently seems fair
+        self.date_start.expect_min_date(value, timeout=timeout)
+        self.date_end.expect_min_date(value, timeout=timeout)
+
+    # max: Optional[Union[date, str]] = None,
+    def expect_max_date(
+        self,
+        value: typing.Union[datetime.date, str, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        # These values should be the same, so checking both independently seems fair
+        self.date_start.expect_max_date(value, timeout=timeout)
+        self.date_end.expect_max_date(value, timeout=timeout)
+
+    # format: str = "yyyy-mm-dd",
+    def expect_format(
+        self,
+        value: str,
+        *,
+        timeout: Timeout = None,
+    ):
+        # These values should be the same, so checking both independently seems fair
+        self.date_start.expect_format(value, timeout=timeout)
+        self.date_end.expect_format(value, timeout=timeout)
+
+    # startview: str = "month",
+    def expect_startview(
+        self,
+        value: str,
+        *,
+        timeout: Timeout = None,
+    ):
+        # These values should be the same, so checking both independently seems fair
+        self.date_start.expect_startview(value, timeout=timeout)
+        self.date_end.expect_startview(value, timeout=timeout)
+
+    # weekstart: int = 0,
+    def expect_weekstart(
+        self,
+        value: int,
+        *,
+        timeout: Timeout = None,
+    ):
+        # These values should be the same, so checking both independently seems fair
+        self.date_start.expect_weekstart(value, timeout=timeout)
+        self.date_end.expect_weekstart(value, timeout=timeout)
+
+    # language: str = "en",
+    def expect_language(
+        self,
+        value: str,
+        *,
+        timeout: Timeout = None,
+    ):
+        # These values should be the same, so checking both independently seems fair
+        self.date_start.expect_language(value, timeout=timeout)
+        self.date_end.expect_language(value, timeout=timeout)
+
+    # separator: str = " to ",
+    def expect_separator(
+        self,
+        value: str,
+        *,
+        timeout: Timeout = None,
+    ):
+        playwright_expect(self.loc_separator).to_have_text(value, timeout=timeout)
+
+    # width: Optional[str] = None,
+
+    # autoclose: bool = True,
+    def expect_autoclose(
+        self,
+        value: bool,
+        *,
+        timeout: Timeout = None,
+    ):
+        # These values should be the same, so checking both independently seems fair
+        self.date_start.expect_autoclose(value, timeout=timeout)
+        self.date_end.expect_autoclose(value, timeout=timeout)
 
 
 ######################################################
