@@ -22,6 +22,8 @@ Questions:
     * Ans: Try things out
 * `_DateBase` is signaled as private, but `InputDateRange` will have two fields of `date_start` and `date_end`. Due to how the init selectors are created, they are not `InputDate` instances. Should we make `_DateBase` public?
 * Can Date pickers set the `value` attribute on the corresponding input element? If so, we could use `expect_value()` to check the value of the input element.
+* In `test_output_table.py`, why can't I write `barret = ["1", "2"]; table.expect_column_labels(barret)`? (Typing issue)
+
 Done:
 * input_action_button
 * input_action_link
@@ -41,14 +43,10 @@ Done:
 * input_text_area
 * output_image
 * output_plot
+* output_table
 * output_text
 * output_text_verbatim
 * output_ui
-
-
-Waiting:
-* outputs:
-    * output_table
 """
 
 
