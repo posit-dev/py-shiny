@@ -2003,3 +2003,14 @@ class OutputPlot(_OutputImageBase):
     # inline: bool = False
     def __init__(self, page: Page, id: str):
         super().__init__(page, id=id, loc_classes=".shiny-plot-output")
+
+
+class OutputUi(_OutputContainer, _OutputBase):
+    # id: str,
+    # inline: bool = False,
+    # container: Optional[TagFunction] = None,
+    def __init__(self, page: Page, id: str):
+        super().__init__(page, id=id, loc=f"#{id}")
+
+    # TODO-barret; Should we do `expect_html_to_have_value()`?
+    # Thinking they can call `expect(self.loc).to_have_html(value)` directly as Shiny does not own that value, the user does.
