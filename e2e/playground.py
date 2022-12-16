@@ -43,12 +43,12 @@ Done:
 * output_plot
 * output_text
 * output_text_verbatim
+* output_ui
 
 
 Waiting:
 * outputs:
     * output_table
-    * output_ui
 """
 
 
@@ -2014,3 +2014,65 @@ class OutputUi(_OutputContainer, _OutputBase):
 
     # TODO-barret; Should we do `expect_html_to_have_value()`?
     # Thinking they can call `expect(self.loc).to_have_html(value)` directly as Shiny does not own that value, the user does.
+
+
+class OutputTable(_OutputBase):
+    # id: str,
+    # **kwargs: TagAttrArg
+    def __init__(self, page: Page, id: str):
+        super().__init__(page, id=id, loc=f"#{id}")
+
+    def expect_column_labels(
+        self,
+        labels: typing.Union[typing.List[typing.Union[str, typing.Pattern[str]]], None],
+        *,
+        timeout: Timeout = None,
+    ):
+        if isinstance(labels, list) and len(labels) == 0:
+            labels = None
+
+        if labels is None:
+            playwright_expect(self.loc.locator("thead th")).to_have_count(
+                0, timeout=timeout
+            )
+        else:
+            playwright_expect(self.loc.locator("thead th")).to_have_text(
+                labels, timeout=timeout
+            )
+
+    def expect_column_text(
+        self,
+        column: int,
+        # Can't use `None` as we don't know how many rows exist
+        text: typing.List[AttrValue],
+        *,
+        timeout: Timeout = None,
+    ):
+        playwright_expect(
+            self.loc.locator(f"tbody tr td:nth-child({column})")
+        ).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+    def expect_n_col(
+        self,
+        n: int,
+        *,
+        timeout: Timeout = None,
+    ):
+        playwright_expect(self.loc.locator("thead th")).to_have_count(
+            n,
+            timeout=timeout,
+        )
+
+    def expect_n_row(
+        self,
+        n: int,
+        *,
+        timeout: Timeout = None,
+    ):
+        playwright_expect(self.loc.locator("tbody tr")).to_have_count(
+            n,
+            timeout=timeout,
+        )
