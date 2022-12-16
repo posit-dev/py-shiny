@@ -2,7 +2,7 @@ import datetime
 import typing
 
 from conftest import ShinyAppProc, create_doc_example_fixture
-from playground import InputDate
+from playground import InputDate, Literal
 from playwright.sync_api import Page, expect
 
 app = create_doc_example_fixture("input_date")
@@ -10,7 +10,7 @@ app = create_doc_example_fixture("input_date")
 
 def expect_date(
     date: InputDate,
-    value: typing.Union[datetime.date, str, typing.Literal["today"]] = "today",
+    value: typing.Union[datetime.date, str, Literal["today"]] = "today",
     *,
     label: str = "Date:",
     autoclose: bool = True,
