@@ -39,14 +39,14 @@ Done:
 * input_switch
 * input_text
 * input_text_area
+* output_image
+* output_plot
 * output_text
 * output_text_verbatim
 
 
 Waiting:
 * outputs:
-    * output_plot
-    * output_image
     * output_table
     * output_ui
 """
@@ -1914,20 +1914,21 @@ class OutputTextVerbatim(_OutputTextValue):
             self.expect.not_to_have_class("noplaceholder", timeout=timeout)
 
 
-class OutputImage(_OutputInlineContainer, _OutputBase):
+class _OutputImageBase(_OutputInlineContainer, _OutputBase):
     # id: str
     # width: str = "100%"
     # height: str = "400px"
     # inline: bool = False
-    loc_img: Locator
 
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str, loc_classes: str = ""):
         super().__init__(
             page,
             id=id,
-            loc=f"#{id}.shiny-image-output",
+            loc=f"#{id}.shiny-image-output{loc_classes}",
         )
         self.loc_img = self.loc.locator("img")
+
+    loc_img: Locator
 
     def expect_height_to_have_value(
         self,
@@ -1935,7 +1936,7 @@ class OutputImage(_OutputInlineContainer, _OutputBase):
         *,
         timeout: Timeout = None,
     ):
-        self.expect_inline(inline=True, timeout=timeout)
+        self.expect_inline(inline=value is None, timeout=timeout)
         expect_el_style(self.loc, "height", value, timeout=timeout)
 
     def expect_width_to_have_value(
@@ -1944,7 +1945,7 @@ class OutputImage(_OutputInlineContainer, _OutputBase):
         *,
         timeout: Timeout = None,
     ):
-        self.expect_inline(inline=True, timeout=timeout)
+        self.expect_inline(inline=value is None, timeout=timeout)
         expect_el_style(self.loc, "width", value, timeout=timeout)
 
     def expect_img_src(
@@ -1986,3 +1987,19 @@ class OutputImage(_OutputInlineContainer, _OutputBase):
         timeout: Timeout = None,
     ):
         expect_attr(self.loc_img, "style", value, timeout=timeout)
+
+
+class OutputImage(_OutputImageBase):
+    def __init__(self, page: Page, id: str):
+        super().__init__(page, id=id)
+        self.loc_img = self.loc.locator("img")
+
+
+class OutputPlot(_OutputImageBase):
+    # shiny-plot-output
+    # id: str
+    # width: str = "100%"
+    # height: str = "400px"
+    # inline: bool = False
+    def __init__(self, page: Page, id: str):
+        super().__init__(page, id=id, loc_classes=".shiny-plot-output")
