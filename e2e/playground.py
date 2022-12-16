@@ -1808,6 +1808,11 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
 ######################################################
 
 
+class _OutputBaseP(Protocol):
+    id: str
+    loc: Locator
+
+
 class _OutputBase:
     id: str
     loc: Locator
@@ -1842,17 +1847,23 @@ class _OutputTextValue(_OutputBase):
         self.expect.to_have_text(value, timeout=timeout)
 
 
-class OutputText(_OutputTextValue):
-    def __init__(
-        self,
-        page: Page,
-        id: str,
-    ):
-        super().__init__(page, id=id, loc=f"#{id}.shiny-text-output")
+class _OutputContainerP(_OutputBaseP, Protocol):
+    expect_container_tag: typing.Callable[
+        # [
+        #     _OutputBaseP,
+        #     typing.Union[Literal["span"], Literal["div"], str],
+        #     Timeout,
+        # ],
+        ...,  # TODO-barret; Can't get this to work
+        None,
+    ]
 
+
+class _OutputContainer:
     def expect_container_tag(
-        self,
-        container_tag: typing.Union[Literal["span"], Literal["div"], str],
+        self: _OutputBaseP,
+        tag_name: typing.Union[Literal["span"], Literal["div"], str],
+        *,
         timeout: Timeout = None,
     ):
         # Could not find an expect method to find the tag name
@@ -1863,14 +1874,31 @@ class OutputText(_OutputTextValue):
         self.loc.wait_for(state="attached", timeout=timeout)
         # Get the tag name
         # TODO-barret; Can this be done with locator and not an element handle?
-        tag_name = self.loc.evaluate_handle("el => el.tagName", timeout=timeout)
+        found_tag_name = str(
+            self.loc.evaluate_handle(
+                "el => el.tagName.toLowerCase()", timeout=timeout
+            ).json_value()
+        )
         assert (
-            tag_name is container_tag
-        ), f"Container tag is {container_tag}, not {tag_name}"
+            tag_name == found_tag_name
+        ), f"Container tag is `{found_tag_name}`, not `{tag_name}`"
 
-    def expect_inline(self, inline: bool = False, *, timeout: Timeout = None):
-        container_tag = "span" if inline else "div"
-        self.expect_container_tag(container_tag=container_tag, timeout=timeout)
+
+class _OutputInlineContainer(_OutputContainer):
+    def expect_inline(
+        self: _OutputContainerP, inline: bool = False, *, timeout: Timeout = None
+    ):
+        tag_name = "span" if inline else "div"
+        self.expect_container_tag(tag_name, timeout=timeout)
+
+
+class OutputText(_OutputInlineContainer, _OutputTextValue):
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+    ):
+        super().__init__(page, id=id, loc=f"#{id}.shiny-text-output")
 
 
 class OutputTextVerbatim(_OutputTextValue):
@@ -1884,3 +1912,77 @@ class OutputTextVerbatim(_OutputTextValue):
             self.expect.to_have_class("noplaceholder", timeout=timeout)
         else:
             self.expect.not_to_have_class("noplaceholder", timeout=timeout)
+
+
+class OutputImage(_OutputInlineContainer, _OutputBase):
+    # id: str
+    # width: str = "100%"
+    # height: str = "400px"
+    # inline: bool = False
+    loc_img: Locator
+
+    def __init__(self, page: Page, id: str):
+        super().__init__(
+            page,
+            id=id,
+            loc=f"#{id}.shiny-image-output",
+        )
+        self.loc_img = self.loc.locator("img")
+
+    def expect_height_to_have_value(
+        self,
+        value: typing.Union[AttrValue, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        self.expect_inline(inline=True, timeout=timeout)
+        expect_el_style(self.loc, "height", value, timeout=timeout)
+
+    def expect_width_to_have_value(
+        self,
+        value: typing.Union[AttrValue, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        self.expect_inline(inline=True, timeout=timeout)
+        expect_el_style(self.loc, "width", value, timeout=timeout)
+
+    def expect_img_src(
+        self,
+        value: typing.Union[AttrValue, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc_img, "src", value, timeout=timeout)
+
+    def expect_img_width(
+        self,
+        value: typing.Union[AttrValue, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc_img, "width", value, timeout=timeout)
+
+    def expect_img_height(
+        self,
+        value: typing.Union[AttrValue, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc_img, "height", value, timeout=timeout)
+
+    def expect_img_alt(
+        self,
+        value: typing.Union[AttrValue, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc_img, "alt", value, timeout=timeout)
+
+    def expect_img_style(
+        self,
+        value: typing.Union[AttrValue, None],
+        *,
+        timeout: Timeout = None,
+    ):
+        expect_attr(self.loc_img, "style", value, timeout=timeout)
