@@ -15,7 +15,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.plot(alt="A histogram")
     # reactive.event() to invalidate the plot when the button is pressed but not when
     # the slider is changed
-    @reactive.event(lambda: input.go, ignore_none=False)
+    @reactive.event(input.go, ignore_none=False)
     def plot():
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(input.n())
