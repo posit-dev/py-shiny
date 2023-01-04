@@ -375,16 +375,27 @@ class InputNumeric(
     def expect_value(self, value: str, *, timeout: Timeout = None):
         self.expect.to_have_value(value, timeout=timeout)
 
-    def expect_min_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
-        assert type(value) is not None
+    def expect_min_to_have_value(
+        self,
+        value: typing.Union[AttrValue, None],
+        *,
+        timeout: Timeout = None,
+    ):
         expect_attr(self.loc, "min", value=value, timeout=timeout)
 
-    def expect_max_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
-        assert type(value) is not None
+    def expect_max_to_have_value(
+        self,
+        value: typing.Union[AttrValue, None],
+        *,
+        timeout: Timeout = None,
+    ):
         expect_attr(self.loc, "max", value=value, timeout=timeout)
 
     def expect_step_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+        self,
+        value: typing.Union[AttrValue, None],
+        *,
+        timeout: Timeout = None,
     ):
         expect_attr(self.loc, "step", value=value, timeout=timeout)
 
