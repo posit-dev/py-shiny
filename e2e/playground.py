@@ -49,9 +49,12 @@ Done:
 * output_ui
 """
 
+OptionalStr = typing.Optional[str]
+OptionalInt = typing.Optional[int]
 
-AttrValue = typing.Union[str, typing.Pattern[str]]
-StyleValue = typing.Union[str, typing.Pattern[str]]
+PatternOrStr = typing.Union[str, typing.Pattern[str]]
+AttrValue = typing.Union[PatternOrStr, None]
+StyleValue = typing.Union[PatternOrStr, None]
 
 Timeout = typing.Union[float, None]
 InitLocator = typing.Union[Locator, str]
@@ -87,7 +90,7 @@ def maybe_cast_attr(
     loc: Locator,
     attr_name: str,
     timeout: Timeout = None,
-) -> typing.Union[R, None]:
+) -> typing.Optional[R]:
     ret = loc.get_attribute(attr_name, timeout=timeout)
     if ret is not None:
         ret = fn(ret)
@@ -96,26 +99,24 @@ def maybe_cast_attr(
 
 def float_attr(
     loc: Locator, attr_name: str, timeout: Timeout = None
-) -> typing.Union[float, None]:
+) -> typing.Optional[float]:
     return maybe_cast_attr(fn=float, loc=loc, attr_name=attr_name, timeout=timeout)
 
 
 def str_attr(
     loc: Locator, attr_name: str, timeout: Timeout = None
-) -> typing.Union[str, None]:
+) -> typing.Optional[str]:
     return maybe_cast_attr(fn=str, loc=loc, attr_name=attr_name, timeout=timeout)
 
 
-def int_attr(
-    loc: Locator, attr_name: str, timeout: Timeout = None
-) -> typing.Union[int, None]:
+def int_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> OptionalInt:
     return maybe_cast_attr(fn=int, loc=loc, attr_name=attr_name, timeout=timeout)
 
 
 def expect_attr(
     loc: Locator,
     name: str,
-    value: typing.Union[AttrValue, None],
+    value: AttrValue,
     timeout: Timeout = None,
 ):
     """Expect an attribute to have a value. If `value` is `None`, then the attribute should not exist."""
@@ -147,7 +148,7 @@ def expect_el_style(
     loc: Locator,
     css_key: str,
     # Str representation for value. Will be put in a regex with `css_key`
-    css_value: typing.Union[StyleValue, None],
+    css_value: StyleValue,
     timeout: Timeout = None,
 ):
     """Expect a style to have a value. If `value` is `None`, then the style should not exist."""
@@ -274,10 +275,15 @@ class _InputWithLabel(_InputWithContainer):
             loc_label = self.loc_container.locator(loc_label)
         self.loc_label = loc_label
 
-    def value_label(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
+    def value_label(self, *, timeout: Timeout = None) -> typing.Optional[str]:
         return self.loc_label.text_content(timeout=timeout)
 
-    def expect_label_to_have_text(self, value: str, *, timeout: Timeout = None):
+    def expect_label_to_have_text(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ):
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
 
@@ -299,12 +305,12 @@ class _WidthLoc:
         self: _InputBaseP,
         *,
         timeout: Timeout = None,
-    ) -> typing.Union[str, None]:
+    ) -> typing.Optional[str]:
         return str_attr(self.loc, "width", timeout=timeout)
 
     def expect_width_to_have_value(
         self: _InputBaseP,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -314,12 +320,12 @@ class _WidthLoc:
 class _WidthContainer:
     def value_width(
         self: _InputWithContainerP, *, timeout: Timeout = None
-    ) -> typing.Union[str, None]:
+    ) -> typing.Optional[str]:
         return str_attr(self.loc_container, "width", timeout=timeout)
 
     def expect_width_to_have_value(
         self: _InputWithContainerP,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -345,7 +351,7 @@ class InputNumeric(
             loc=f"input#{id}[type=number].shiny-bound-input",
         )
 
-    def set(self, value: float, *, timeout: Timeout = None):
+    def set(self, value: typing.Union[float, str], *, timeout: Timeout = None):
         self.loc.fill(str(value), timeout=timeout)
 
     def value(self, *, timeout: Timeout = None) -> float:
@@ -363,21 +369,26 @@ class InputNumeric(
 
         return float(self.loc.input_value(timeout=timeout))
 
-    def value_min(self, *, timeout: Timeout = None) -> typing.Union[float, None]:
+    def value_min(self, *, timeout: Timeout = None) -> typing.Optional[float]:
         return float_attr(self.loc, "min", timeout=timeout)
 
-    def value_max(self, *, timeout: Timeout = None) -> typing.Union[float, None]:
+    def value_max(self, *, timeout: Timeout = None) -> typing.Optional[float]:
         return float_attr(self.loc, "max", timeout=timeout)
 
-    def value_step(self, *, timeout: Timeout = None) -> typing.Union[float, None]:
+    def value_step(self, *, timeout: Timeout = None) -> typing.Optional[float]:
         return float_attr(self.loc, "step", timeout=timeout)
 
-    def expect_value(self, value: str, *, timeout: Timeout = None):
+    def expect_value(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ):
         self.expect.to_have_value(value, timeout=timeout)
 
     def expect_min_to_have_value(
         self,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -385,7 +396,7 @@ class InputNumeric(
 
     def expect_max_to_have_value(
         self,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -393,7 +404,7 @@ class InputNumeric(
 
     def expect_step_to_have_value(
         self,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -405,7 +416,7 @@ class _Spellcheck:
         self: _InputBaseP,
         *,
         timeout: Timeout = None,
-    ) -> typing.Union[str, None]:
+    ) -> typing.Optional[str]:
         return str_attr(self.loc, "spellcheck", timeout=timeout)
 
     def expect_spellcheck_to_have_value(
@@ -423,12 +434,12 @@ class _Placeholder:
         self: _InputBaseP,
         *,
         timeout: Timeout = None,
-    ) -> typing.Union[str, None]:
+    ) -> typing.Optional[str]:
         return str_attr(self.loc, "placeholder", timeout=timeout)
 
     def expect_placeholder_to_have_value(
         self: _InputBaseP,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -440,12 +451,12 @@ class _Autocomplete:
         self: _InputBaseP,
         *,
         timeout: Timeout = None,
-    ) -> typing.Union[str, None]:
+    ) -> typing.Optional[str]:
         return str_attr(self.loc, "autocomplete", timeout=timeout)
 
     def expect_autocomplete_to_have_value(
         self: _InputBaseP,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -482,7 +493,12 @@ class InputText(
     def value(self, *, timeout: Timeout = None) -> str:
         return self.loc.input_value(timeout=timeout)
 
-    def expect_value(self, value: str, *, timeout: Timeout = None):
+    def expect_value(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ):
         self.expect.to_have_value(value, timeout=timeout)
 
 
@@ -508,31 +524,34 @@ class InputPassword(
         self.loc_label = self.loc_container.locator("label")
 
     def set(self, value: str, *, timeout: Timeout = None):
-        self.loc.fill(str(value), timeout=timeout)
+        self.loc.fill(value, timeout=timeout)
 
     def value(self, *, timeout: Timeout = None) -> str:
         return self.loc.input_value(timeout=timeout)
 
-    def expect_value(self, value: str, *, timeout: Timeout = None):
+    def expect_value(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ):
         self.expect.to_have_value(value, timeout=timeout)
 
-    def get_width(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
+    def get_width(self, *, timeout: Timeout = None) -> typing.Optional[str]:
         return get_el_style(self.loc_container, "width", timeout=timeout)
 
     # This class does not inherit from `_WidthContainer`
     # as the width is in the element style
     def expect_width_to_have_value(
         self,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
         expect_el_style(self.loc_container, "width", value, timeout=timeout)
 
 
-Resize = typing.Union[
-    Literal["none"], Literal["both"], Literal["horizontal"], Literal["vertical"]
-]
+Resize = Literal["none", "both", "horizontal", "vertical"]
 
 
 class InputTextArea(_Placeholder, _Autocomplete, _Spellcheck, _InputWithLabel):
@@ -545,9 +564,7 @@ class InputTextArea(_Placeholder, _Autocomplete, _Spellcheck, _InputWithLabel):
     # rows: Optional[int] = None,
     # placeholder: Optional[str] = None,
     # resize: Optional[
-    #     Union[
-    #         Literal["none"], Literal["both"], Literal["horizontal"], Literal["vertical"]
-    #     ]
+    #     Literal["none", "both", "horizontal", "vertical"]
     # ] = None,
     # autocomplete: Optional[str] = None,
     # spellcheck: Optional[Literal["true", "false"]] = None,
@@ -564,28 +581,26 @@ class InputTextArea(_Placeholder, _Autocomplete, _Spellcheck, _InputWithLabel):
     def value(self, *, timeout: Timeout = None) -> str:
         return self.loc.input_value(timeout=timeout)
 
-    def value_width(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
+    def value_width(self, *, timeout: Timeout = None) -> OptionalStr:
         return get_el_style(self.loc_container, "width", timeout=timeout)
 
-    def value_height(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
+    def value_height(self, *, timeout: Timeout = None) -> OptionalStr:
         return get_el_style(self.loc_container, "height", timeout=timeout)
 
-    def value_cols(self, *, timeout: Timeout = None) -> typing.Union[int, None]:
+    def value_cols(self, *, timeout: Timeout = None) -> OptionalInt:
         return int_attr(self.loc, "cols", timeout=timeout)
 
-    def value_rows(self, *, timeout: Timeout = None) -> typing.Union[int, None]:
+    def value_rows(self, *, timeout: Timeout = None) -> OptionalInt:
         return int_attr(self.loc, "rows", timeout=timeout)
 
-    def value_resize(self, *, timeout: Timeout = None) -> typing.Union[Resize, None]:
+    def value_resize(self, *, timeout: Timeout = None) -> typing.Optional[Resize]:
         ret = str_attr(self.loc, "resize", timeout=timeout)
         return typing.cast(Resize, ret)
 
-    def expect_value(self, value: str, *, timeout: Timeout = None):
+    def expect_value(self, value: PatternOrStr, *, timeout: Timeout = None):
         self.expect.to_have_value(value, timeout=timeout)
 
-    def expect_width_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
-    ):
+    def expect_width_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
         if value is None:
             expect_el_style(self.loc_container, "width", None, timeout=timeout)
             expect_el_style(self.loc, "width", "100%", timeout=timeout)
@@ -593,19 +608,13 @@ class InputTextArea(_Placeholder, _Autocomplete, _Spellcheck, _InputWithLabel):
             expect_el_style(self.loc_container, "width", value, timeout=timeout)
             expect_el_style(self.loc, "width", None, timeout=timeout)
 
-    def expect_height_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
-    ):
+    def expect_height_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
         expect_el_style(self.loc, "height", value, timeout=timeout)
 
-    def expect_cols_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
-    ):
+    def expect_cols_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
         expect_attr(self.loc, "cols", value=value, timeout=timeout)
 
-    def expect_rows_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
-    ):
+    def expect_rows_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
         expect_attr(self.loc, "rows", value=value, timeout=timeout)
 
     def expect_resize_to_have_value(
@@ -662,6 +671,7 @@ class _InputSelectBase(_WidthLoc, _InputWithLabel):
 
     def expect_choices(
         self,
+        # TODO; support patterns?
         choices: typing.Union[typing.List[str], None],
         *,
         timeout: Timeout = None,
@@ -684,19 +694,7 @@ class _InputSelectBase(_WidthLoc, _InputWithLabel):
 
     def expect_selected(
         self,
-        selected: typing.Union[
-            typing.List[
-                typing.Union[
-                    typing.Pattern[str],
-                    str,
-                ]
-            ],
-            typing.Union[
-                typing.Pattern[str],
-                str,
-            ],
-            None,
-        ],
+        selected: typing.Union[typing.List[PatternOrStr], PatternOrStr, None],
         *,
         timeout: Timeout = None,
     ):
@@ -726,6 +724,7 @@ class _InputSelectBase(_WidthLoc, _InputWithLabel):
     def expect_choice_groups(
         self,
         choice_groups: typing.Union[
+            # TODO; support patterns?
             typing.List[str],
             None,
         ],
@@ -751,15 +750,7 @@ class _InputSelectBase(_WidthLoc, _InputWithLabel):
 
     def expect_choice_labels(
         self,
-        choice_labels: typing.Union[
-            typing.List[
-                typing.Union[
-                    typing.Pattern[str],
-                    str,
-                ]
-            ],
-            None,
-        ],
+        choice_labels: typing.Union[typing.List[PatternOrStr], None],
         *,
         timeout: Timeout = None,
     ):
@@ -777,9 +768,7 @@ class _InputSelectBase(_WidthLoc, _InputWithLabel):
     def expect_multiple(self, multiple: bool, *, timeout: Timeout = None):
         expect_multiple(self.loc_select, multiple, timeout=timeout)
 
-    def expect_size_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
-    ):
+    def expect_size_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
         expect_attr(
             self.loc_select,
             "size",
@@ -829,7 +818,12 @@ class _InputActionBase(_InputBase):
         """Will include icon if present"""
         return self.loc.inner_html(timeout=timeout)
 
-    def expect_label_to_have_text(self, value: str, *, timeout: Timeout = None):
+    def expect_label_to_have_text(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ):
         """Must include icon if present"""
         self.expect.to_have_text(value, timeout=timeout)
 
@@ -939,11 +933,7 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
 
     def expect_choice_labels(
         self,
-        labels: typing.Union[
-            str,
-            typing.Pattern[str],
-            typing.List[typing.Union[str, typing.Pattern[str]]],
-        ],
+        labels: typing.Union[PatternOrStr, typing.List[PatternOrStr]],
         *,
         timeout: Timeout = None,
     ):
@@ -966,9 +956,10 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
         self: _InputWithContainerP,
         el_type: str,
         arr_name: str,
+        # TODO; support patterns?
         arr: typing.List[str],
         *,
-        is_checked: typing.Union[bool, None] = None,
+        is_checked: typing.Optional[bool] = None,
         timeout: Timeout = None,
         key: str = "value",
     ):
@@ -1069,6 +1060,7 @@ class InputCheckboxGroup(
 
     def expect_choices(
         self,
+        # TODO; support patterns?
         choices: typing.List[str],
         *,
         timeout: Timeout = None,
@@ -1082,6 +1074,7 @@ class InputCheckboxGroup(
 
     def expect_selected(
         self,
+        # TODO; support patterns?
         selected: typing.Union[typing.List[str], None],
         *,
         timeout: Timeout = None,
@@ -1150,6 +1143,7 @@ class InputRadioButtons(
 
     def expect_choices(
         self,
+        # TODO; support patterns?
         choices: typing.List[str],
         *,
         timeout: Timeout = None,
@@ -1163,7 +1157,7 @@ class InputRadioButtons(
 
     def expect_selected(
         self,
-        selected: typing.Union[str, None],
+        selected: typing.Union[PatternOrStr, None],
         *,
         timeout: Timeout = None,
     ):
@@ -1236,7 +1230,7 @@ class InputFile(
 
     def expect_accept(
         self,
-        accept: typing.Union[str, typing.List[str], None],
+        accept: typing.Union[typing.List[str], AttrValue],
         *,
         timeout: Timeout = None,
     ):
@@ -1244,22 +1238,27 @@ class InputFile(
             accept = ",".join(accept)
         expect_attr(self.loc, "accept", accept, timeout=timeout)
 
-    def expect_width(self, width: typing.Union[str, None], *, timeout: Timeout = None):
+    def expect_width(self, width: StyleValue, *, timeout: Timeout = None):
         expect_el_style(self.loc_container, "width", width, timeout=timeout)
 
-    def expect_button_label(self, button_label: str, *, timeout: Timeout = None):
+    def expect_button_label(
+        self,
+        button_label: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ):
         playwright_expect(self.loc_button).to_have_text(button_label, timeout=timeout)
 
     def expect_capture(
         self,
-        capture: typing.Union[Literal["environment", "user"], None] = None,
+        capture: typing.Union[Literal["environment", "user"], None],
         *,
         timeout: Timeout = None,
     ):
         expect_attr(self.loc, "capture", capture, timeout=timeout)
 
     def expect_placeholder_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+        self, value: AttrValue, *, timeout: Timeout = None
     ):
         expect_attr(self.loc_file_display, "placeholder", value=value, timeout=timeout)
 
@@ -1293,19 +1292,19 @@ class InputSlider(_WidthLoc, _InputWithLabel):
             loc_label=f"label#{id}-label",
         )
 
-    def expect_value(self, value: typing.Union[str, None], *, timeout: Timeout = None):
+    def expect_value(self, value: AttrValue, *, timeout: Timeout = None):
         # TODO-barret; implement
         NotImplementedError("Need to get the value somehow")
 
-    def set(self, fraction: float) -> None:
+    def set(self, fraction: float, *, timeout: Timeout = None) -> None:
         if fraction > 1 or fraction < 0:
             raise ValueError("`fraction` must be between 0 and 1")
 
-        self.loc_container.wait_for(state="visible")
-        self.loc_container.scroll_into_view_if_needed()
+        self.loc_container.wait_for(state="visible", timeout=timeout)
+        self.loc_container.scroll_into_view_if_needed(timeout=timeout)
 
         handle = self.loc_container.locator(".irs-handle")
-        handle_bb = handle.bounding_box()
+        handle_bb = handle.bounding_box(timeout=timeout)
         if handle_bb is None:
             raise RuntimeError("Couldn't find bounding box for .irs-handle")
 
@@ -1315,7 +1314,7 @@ class InputSlider(_WidthLoc, _InputWithLabel):
         )
 
         grid = self.loc_container.locator(".irs-grid")
-        grid_bb = grid.bounding_box()
+        grid_bb = grid.bounding_box(timeout=timeout)
         if grid_bb is None:
             raise RuntimeError("Couldn't find bounding box for .irs-grid")
 
@@ -1334,19 +1333,23 @@ class InputSlider(_WidthLoc, _InputWithLabel):
         ).to_have_count(animate_count)
 
     def expect_animate_loop_to_have_value(
-        self, loop: typing.Union[bool, None], *, timeout: Timeout = None
+        self, loop: typing.Union[bool, AttrValue], *, timeout: Timeout = None
     ):
-        if not loop:
-            loop = None
+        if isinstance(loop, bool):
+            if not loop:
+                loop = None
+            else:
+                loop = "true"
+
         expect_attr(
             self.loc_container.locator(".slider-animate-container a"),
             "data-loop",
-            str(loop),
+            loop,
             timeout=timeout,
         )
 
     def expect_animate_interval_to_have_value(
-        self, interval: typing.Union[int, None], *, timeout: Timeout = None
+        self, interval: typing.Union[int, AttrValue], *, timeout: Timeout = None
     ):
         interval_str = str(interval) if interval else None
         expect_attr(
@@ -1363,70 +1366,58 @@ class InputSlider(_WidthLoc, _InputWithLabel):
     # TODO-barret; All methods below:
     # Could maybe use better formats for the values, but am going to leave as `str` for now
 
-    def expect_min_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
-    ):
+    def expect_min_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
         expect_attr(self.loc, "data-min", value=value, timeout=timeout)
 
-    def expect_max_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
-    ):
+    def expect_max_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
         expect_attr(self.loc, "data-max", value=value, timeout=timeout)
 
     # def expect_from_to_have_value(
-    #     self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    #     self, value: AttrValue, *, timeout: Timeout = None
     # ):
     #     expect_attr(self.loc, "data-from", value=value, timeout=timeout)
 
-    def expect_step_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
-    ):
+    def expect_step_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
         expect_attr(self.loc, "data-step", value=value, timeout=timeout)
 
-    def expect_ticks_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
-    ):
+    def expect_ticks_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
         expect_attr(self.loc, "data-grid", value=value, timeout=timeout)
 
-    def expect_sep_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
-    ):
+    def expect_sep_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
         expect_attr(self.loc, "data-prettify-separator", value=value, timeout=timeout)
 
-    def expect_pre_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
-    ):
+    def expect_pre_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
         expect_attr(self.loc, "data-prefix", value=value, timeout=timeout)
 
-    def expect_post_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
-    ):
+    def expect_post_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
         expect_attr(self.loc, "data-postfix", value=value, timeout=timeout)
 
     # def expect_data_type_to_have_value(
-    #     self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+    #     self, value: AttrValue, *, timeout: Timeout = None
     # ):
     #     expect_attr(self.loc, "data-data-type", value=value, timeout=timeout)
 
     def expect_time_format_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+        self, value: AttrValue, *, timeout: Timeout = None
     ):
         expect_attr(self.loc, "data-time-format", value=value, timeout=timeout)
 
     def expect_timezone_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+        self, value: AttrValue, *, timeout: Timeout = None
     ):
         expect_attr(self.loc, "data-timezone", value=value, timeout=timeout)
 
     def expect_drag_range_to_have_value(
-        self, value: typing.Union[AttrValue, None], *, timeout: Timeout = None
+        self, value: AttrValue, *, timeout: Timeout = None
     ):
         expect_attr(self.loc, "data-drag-interval", value=value, timeout=timeout)
 
 
-def _date_str(date: typing.Union[datetime.date, str, None]) -> typing.Union[str, None]:
+def _date_str(date: typing.Union[datetime.date, AttrValue]) -> OptionalStr:
     if date is None:
         return None
+    elif isinstance(date, typing.Pattern):
+        return date.pattern
     elif isinstance(date, datetime.date):
         return str(date)
     else:
@@ -1464,7 +1455,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
 
     def expect_value(
         self,
-        value: typing.Union[datetime.date, str, None],
+        value: typing.Union[datetime.date, AttrValue],
         *,
         timeout: Timeout = None,
     ):
@@ -1479,7 +1470,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
 
     def expect_min_date(
         self,
-        value: typing.Union[datetime.date, str, None],
+        value: typing.Union[datetime.date, AttrValue],
         *,
         timeout: Timeout = None,
     ):
@@ -1487,7 +1478,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
 
     def expect_max_date(
         self,
-        value: typing.Union[datetime.date, str, None],
+        value: typing.Union[datetime.date, AttrValue],
         *,
         timeout: Timeout = None,
     ):
@@ -1495,7 +1486,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
 
     def expect_format(
         self,
-        value: typing.Union[str, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -1503,7 +1494,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
 
     def expect_startview(
         self,
-        value: typing.Union[str, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -1511,15 +1502,17 @@ class _DateBase(_WidthContainer, _InputWithLabel):
 
     def expect_weekstart(
         self,
-        value: typing.Union[int, str, None],
+        value: typing.Union[int, AttrValue],
         *,
         timeout: Timeout = None,
     ):
-        expect_attr(self.loc, "data-date-week-start", value=str(value), timeout=timeout)
+        if isinstance(value, int):
+            value = str(value)
+        expect_attr(self.loc, "data-date-week-start", value=value, timeout=timeout)
 
     def expect_language(
         self,
-        value: typing.Union[str, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -1529,7 +1522,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
     def expect_autoclose(
         self,
         # TODO-barret; None value supported?
-        value: typing.Union[str, bool, None],
+        value: typing.Union[AttrValue, bool],
         *,
         timeout: Timeout = None,
     ):
@@ -1652,8 +1645,8 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
         # TODO-barret; Should this be a list or a tuple?
         value: typing.Union[
             typing.Tuple[
-                typing.Union[datetime.date, str, None],
-                typing.Union[datetime.date, str, None],
+                typing.Union[datetime.date, PatternOrStr, None],
+                typing.Union[datetime.date, PatternOrStr, None],
             ],
             None,
         ],
@@ -1704,7 +1697,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
     # min: Optional[Union[date, str]] = None,
     def expect_min_date(
         self,
-        value: typing.Union[datetime.date, str, None],
+        value: typing.Union[datetime.date, AttrValue],
         *,
         timeout: Timeout = None,
     ):
@@ -1715,7 +1708,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
     # max: Optional[Union[date, str]] = None,
     def expect_max_date(
         self,
-        value: typing.Union[datetime.date, str, None],
+        value: typing.Union[datetime.date, AttrValue],
         *,
         timeout: Timeout = None,
     ):
@@ -1726,7 +1719,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
     # format: str = "yyyy-mm-dd",
     def expect_format(
         self,
-        value: str,
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -1737,7 +1730,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
     # startview: str = "month",
     def expect_startview(
         self,
-        value: str,
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -1748,7 +1741,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
     # weekstart: int = 0,
     def expect_weekstart(
         self,
-        value: int,
+        value: typing.Union[int, AttrValue],
         *,
         timeout: Timeout = None,
     ):
@@ -1759,7 +1752,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
     # language: str = "en",
     def expect_language(
         self,
-        value: str,
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -1770,7 +1763,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
     # separator: str = " to ",
     def expect_separator(
         self,
-        value: str,
+        value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ):
@@ -1827,10 +1820,10 @@ class _OutputTextValue(_OutputBase):
     # cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
     # return tags.pre(id=resolve_id(id), class_=cls)
 
-    def value(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
+    def value(self, *, timeout: Timeout = None) -> str:
         return self.loc.inner_text(timeout=timeout)
 
-    def expect_value(self, value: str, *, timeout: Timeout = None):
+    def expect_value(self, value: PatternOrStr, *, timeout: Timeout = None):
         self.expect.to_have_text(value, timeout=timeout)
 
 
@@ -1838,7 +1831,7 @@ class _OutputContainerP(_OutputBaseP, Protocol):
     expect_container_tag: typing.Callable[
         # [
         #     _OutputBaseP,
-        #     typing.Union[Literal["span"], Literal["div"], str],
+        #     typing.Union[Literal["span", "div"], str],
         #     Timeout,
         # ],
         ...,  # TODO-barret; Can't get this to work
@@ -1849,7 +1842,7 @@ class _OutputContainerP(_OutputBaseP, Protocol):
 class _OutputContainer:
     def expect_container_tag(
         self: _OutputBaseP,
-        tag_name: typing.Union[Literal["span"], Literal["div"], str],
+        tag_name: typing.Union[Literal["span", "div"], str],
         *,
         timeout: Timeout = None,
     ):
@@ -1919,7 +1912,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
 
     def expect_height_to_have_value(
         self,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -1928,7 +1921,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
 
     def expect_width_to_have_value(
         self,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -1937,7 +1930,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
 
     def expect_img_src(
         self,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -1945,7 +1938,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
 
     def expect_img_width(
         self,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -1953,7 +1946,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
 
     def expect_img_height(
         self,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -1961,7 +1954,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
 
     def expect_img_alt(
         self,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -1969,7 +1962,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
 
     def expect_img_style(
         self,
-        value: typing.Union[AttrValue, None],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ):
@@ -2011,7 +2004,7 @@ class OutputTable(_OutputBase):
 
     def expect_column_labels(
         self,
-        labels: typing.Union[typing.List[typing.Union[str, typing.Pattern[str]]], None],
+        labels: typing.Union[typing.List[PatternOrStr], None],
         *,
         timeout: Timeout = None,
     ):
@@ -2031,7 +2024,7 @@ class OutputTable(_OutputBase):
         self,
         column: int,
         # Can't use `None` as we don't know how many rows exist
-        text: typing.List[AttrValue],
+        text: typing.List[PatternOrStr],
         *,
         timeout: Timeout = None,
     ):
