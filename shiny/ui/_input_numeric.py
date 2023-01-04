@@ -1,6 +1,6 @@
 __all__ = ("input_numeric",)
 
-from typing import Optional
+from typing import Optional, Union
 
 from htmltools import Tag, TagChildArg, css, div, tags
 
@@ -13,7 +13,7 @@ from ._utils import shiny_input_label
 def input_numeric(
     id: str,
     label: TagChildArg,
-    value: float,
+    value: Union[float, None],
     *,
     min: Optional[float] = None,
     max: Optional[float] = None,
