@@ -61,7 +61,7 @@ Timeout = typing.Union[float, None]
 InitLocator = typing.Union[Locator, str]
 
 
-def assert_el_has_class(loc: Locator, cls: str):
+def assert_el_has_class(loc: Locator, cls: str) -> None:
     el_cls = loc.get_attribute("class")
     if el_cls is None:
         raise AssertionError("Element has no class attribute")
@@ -119,7 +119,7 @@ def expect_attr(
     name: str,
     value: AttrValue,
     timeout: Timeout = None,
-):
+) -> None:
     """Expect an attribute to have a value. If `value` is `None`, then the attribute should not exist."""
     if value is None:
         # if isinstance(value, type(None)):
@@ -136,7 +136,7 @@ def get_el_style(
     loc: Locator,
     css_key: str,
     timeout: Timeout = None,
-):
+) -> typing.Optional[str]:
     ret = loc.get_attribute("style", timeout=timeout) or ""
     m = re.search(css_key + r":\s*([^\s;]+)", ret)
     if m:
@@ -151,7 +151,7 @@ def expect_el_style(
     # Str representation for value. Will be put in a regex with `css_key`
     css_value: StyleValue,
     timeout: Timeout = None,
-):
+) -> None:
     """Expect a style to have a value. If `value` is `None`, then the style should not exist."""
     if isinstance(css_value, type(None)):
         # Not allowed to have any value for the style
@@ -168,7 +168,7 @@ def expect_el_style(
     )
 
 
-def expect_multiple(loc: Locator, multiple: bool, timeout: Timeout = None):
+def expect_multiple(loc: Locator, multiple: bool, timeout: Timeout = None) -> None:
     ex_multiple = playwright_expect(loc)
     if multiple:
         ex_multiple.to_have_attribute("multiple", "True", timeout=timeout)
@@ -205,7 +205,7 @@ class _InputBase:
         *,
         id: str,
         loc: InitLocator,
-    ):
+    ) -> None:
         self.page = page
         # Needed?!? This is covered by `self.loc_root` and possibly `self.loc`
         self.id = id
@@ -214,6 +214,7 @@ class _InputBase:
         self.loc = loc
 
     @property
+    # TODO; Can not publicly find `LocatorAssertions` in `playwright`
     def expect(self):
         return playwright_expect(self.loc)
 
@@ -228,7 +229,7 @@ class _InputWithContainer(_InputBase):
         id: str,
         loc: InitLocator,
         loc_container: InitLocator = "div.shiny-input-container",
-    ):
+    ) -> None:
 
         loc_is_str = isinstance(loc, str)
         loc_container_is_str = isinstance(loc_container, str)
@@ -264,7 +265,7 @@ class _InputWithLabel(_InputWithContainer):
         loc: InitLocator,
         loc_container: InitLocator = "div.shiny-input-container",
         loc_label: InitLocator = "label",
-    ):
+    ) -> None:
         super().__init__(
             page,
             id=id,
@@ -284,7 +285,7 @@ class _InputWithLabel(_InputWithContainer):
         value: TextValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if value is None:
             value = ""
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
@@ -316,7 +317,7 @@ class _WidthLoc:
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc, "width", value=value, timeout=timeout)
 
 
@@ -331,7 +332,7 @@ class _WidthContainer:
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc_container, "width", value=value, timeout=timeout)
 
 
@@ -347,14 +348,16 @@ class InputNumeric(
     # max: Optional[float] = None,
     # step: Optional[float] = None,
     # width: Optional[str] = None,
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
             id=id,
             loc=f"input#{id}[type=number].shiny-bound-input",
         )
 
-    def set(self, value: typing.Union[float, str, None], *, timeout: Timeout = None):
+    def set(
+        self, value: typing.Union[float, str, None], *, timeout: Timeout = None
+    ) -> None:
         if value is None:
             value = ""
         self.loc.fill(str(value), timeout=timeout)
@@ -388,7 +391,7 @@ class InputNumeric(
         value: TextValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if value is None:
             value = ""
         self.expect.to_have_value(value, timeout=timeout)
@@ -398,7 +401,7 @@ class InputNumeric(
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc, "min", value=value, timeout=timeout)
 
     def expect_max_to_have_value(
@@ -406,7 +409,7 @@ class InputNumeric(
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc, "max", value=value, timeout=timeout)
 
     def expect_step_to_have_value(
@@ -414,7 +417,7 @@ class InputNumeric(
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc, "step", value=value, timeout=timeout)
 
 
@@ -431,7 +434,7 @@ class _Spellcheck:
         value: typing.Union[Literal["true", "false"], None],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # self.spellcheck.expect_to_have_value(value, timeout=timeout)
         expect_attr(self.loc, "spellcheck", value=value, timeout=timeout)
 
@@ -449,7 +452,7 @@ class _Placeholder:
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc, "placeholder", value=value, timeout=timeout)
 
 
@@ -466,7 +469,7 @@ class _Autocomplete:
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc, "autocomplete", value=value, timeout=timeout)
 
 
@@ -485,7 +488,7 @@ class InputText(
     # placeholder: Optional[str] = None,
     # autocomplete: Optional[str] = "off",
     # spellcheck: Optional[Literal["true", "false"]] = None,
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
             id=id,
@@ -494,7 +497,7 @@ class InputText(
 
         self.loc_label = self.loc_container.locator("label")
 
-    def set(self, value: typing.Union[str, None], *, timeout: Timeout = None):
+    def set(self, value: typing.Union[str, None], *, timeout: Timeout = None) -> None:
         if value is None:
             value = ""
         self.loc.fill(str(value), timeout=timeout)
@@ -507,7 +510,7 @@ class InputText(
         value: TextValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if value is None:
             value = ""
         self.expect.to_have_value(value, timeout=timeout)
@@ -525,7 +528,7 @@ class InputPassword(
     # placeholder: Optional[str] = None,
     ...
 
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
             id=id,
@@ -534,7 +537,7 @@ class InputPassword(
 
         self.loc_label = self.loc_container.locator("label")
 
-    def set(self, value: typing.Union[str, None], *, timeout: Timeout = None):
+    def set(self, value: typing.Union[str, None], *, timeout: Timeout = None) -> None:
         if value is None:
             value = ""
         self.loc.fill(value, timeout=timeout)
@@ -547,7 +550,7 @@ class InputPassword(
         value: TextValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if value is None:
             value = ""
         self.expect.to_have_value(value, timeout=timeout)
@@ -562,14 +565,19 @@ class InputPassword(
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_el_style(self.loc_container, "width", value, timeout=timeout)
 
 
 Resize = Literal["none", "both", "horizontal", "vertical"]
 
 
-class InputTextArea(_Placeholder, _Autocomplete, _Spellcheck, _InputWithLabel):
+class InputTextArea(
+    _Placeholder,
+    _Autocomplete,
+    _Spellcheck,
+    _InputWithLabel,
+):
     # id: str,
     # label: TagChildArg,
     # value: str = "",
@@ -583,14 +591,14 @@ class InputTextArea(_Placeholder, _Autocomplete, _Spellcheck, _InputWithLabel):
     # ] = None,
     # autocomplete: Optional[str] = None,
     # spellcheck: Optional[Literal["true", "false"]] = None,
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
             id=id,
             loc=f"textarea#{id}.shiny-bound-input",
         )
 
-    def set(self, value: str, *, timeout: Timeout = None):
+    def set(self, value: str, *, timeout: Timeout = None) -> None:
         self.loc.fill(value, timeout=timeout)
 
     def value(self, *, timeout: Timeout = None) -> str:
@@ -617,12 +625,14 @@ class InputTextArea(_Placeholder, _Autocomplete, _Spellcheck, _InputWithLabel):
         value: TextValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if value is None:
             value = ""
         self.expect.to_have_value(value, timeout=timeout)
 
-    def expect_width_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
+    def expect_width_to_have_value(
+        self, value: AttrValue, *, timeout: Timeout = None
+    ) -> None:
         if value is None:
             expect_el_style(self.loc_container, "width", None, timeout=timeout)
             expect_el_style(self.loc, "width", "100%", timeout=timeout)
@@ -630,13 +640,19 @@ class InputTextArea(_Placeholder, _Autocomplete, _Spellcheck, _InputWithLabel):
             expect_el_style(self.loc_container, "width", value, timeout=timeout)
             expect_el_style(self.loc, "width", None, timeout=timeout)
 
-    def expect_height_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
+    def expect_height_to_have_value(
+        self, value: AttrValue, *, timeout: Timeout = None
+    ) -> None:
         expect_el_style(self.loc, "height", value, timeout=timeout)
 
-    def expect_cols_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
+    def expect_cols_to_have_value(
+        self, value: AttrValue, *, timeout: Timeout = None
+    ) -> None:
         expect_attr(self.loc, "cols", value=value, timeout=timeout)
 
-    def expect_rows_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
+    def expect_rows_to_have_value(
+        self, value: AttrValue, *, timeout: Timeout = None
+    ) -> None:
         expect_attr(self.loc, "rows", value=value, timeout=timeout)
 
     def expect_resize_to_have_value(
@@ -644,11 +660,14 @@ class InputTextArea(_Placeholder, _Autocomplete, _Spellcheck, _InputWithLabel):
         value: typing.Union[Resize, None],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc, "resize", value=value, timeout=timeout)
 
 
-class _InputSelectBase(_WidthLoc, _InputWithLabel):
+class _InputSelectBase(
+    _WidthLoc,
+    _InputWithLabel,
+):
     loc_selected: Locator
     loc_choices: Locator
     loc_choice_groups: Locator
@@ -660,7 +679,7 @@ class _InputSelectBase(_WidthLoc, _InputWithLabel):
         id: str,
         *,
         select_class: str = "",
-    ):
+    ) -> None:
         super().__init__(
             page,
             id=id,
@@ -686,7 +705,7 @@ class _InputSelectBase(_WidthLoc, _InputWithLabel):
         selected: typing.Union[str, typing.List[str]],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if isinstance(selected, str):
             selected = [selected]
         self.loc_select.select_option(value=selected, timeout=timeout)
@@ -697,7 +716,7 @@ class _InputSelectBase(_WidthLoc, _InputWithLabel):
         choices: typing.Union[typing.List[str], None],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         """Expect choices to be in order"""
         # Playwright doesn't like lists of size 0. Instead, use `None`
         if choices is not None and len(choices) == 0:
@@ -719,7 +738,7 @@ class _InputSelectBase(_WidthLoc, _InputWithLabel):
         selected: typing.Union[typing.List[PatternOrStr], PatternOrStr, None],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         """Expect choices to be in order"""
         # Playwright doesn't like lists of size 0. Instead, use `None`
         if isinstance(selected, list) and len(selected) == 0:
@@ -752,7 +771,7 @@ class _InputSelectBase(_WidthLoc, _InputWithLabel):
         ],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         """Expect choices to be in order"""
         # Playwright doesn't like lists of size 0. Instead, use `None`
         if choice_groups is not None and len(choice_groups) == 0:
@@ -775,7 +794,7 @@ class _InputSelectBase(_WidthLoc, _InputWithLabel):
         choice_labels: typing.Union[typing.List[PatternOrStr], None],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # Playwright doesn't like lists of size 0. Instead, use `None`
         if choice_labels is not None and len(choice_labels) == 0:
             choice_labels = None
@@ -787,10 +806,12 @@ class _InputSelectBase(_WidthLoc, _InputWithLabel):
         ).to_have_text(choice_labels, timeout=timeout)
 
     # multiple: bool = False,
-    def expect_multiple(self, multiple: bool, *, timeout: Timeout = None):
+    def expect_multiple(self, multiple: bool, *, timeout: Timeout = None) -> None:
         expect_multiple(self.loc_select, multiple, timeout=timeout)
 
-    def expect_size_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
+    def expect_size_to_have_value(
+        self, value: AttrValue, *, timeout: Timeout = None
+    ) -> None:
         expect_attr(
             self.loc_select,
             "size",
@@ -808,7 +829,7 @@ class InputSelect(_InputSelectBase):
     # selectize: bool = False,
     # width: Optional[str] = None,
     # size: Optional[str] = None,
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
             id=id,
@@ -816,7 +837,7 @@ class InputSelect(_InputSelectBase):
         )
 
     # selectize: bool = False,
-    def expect_selectize(self, selectize: bool, *, timeout: Timeout = None):
+    def expect_selectize(self, selectize: bool, *, timeout: Timeout = None) -> None:
         # class_=None if selectize else "form-select",
         ex_selectize = playwright_expect(self.loc_select)
         if selectize:
@@ -826,7 +847,7 @@ class InputSelect(_InputSelectBase):
 
 
 class InputSelectize(_InputSelectBase):
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
             id=id,
@@ -845,14 +866,14 @@ class _InputActionBase(_InputBase):
         value: TextValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         """Must include icon if present"""
 
         if value is None:
             value = ""
         self.expect.to_have_text(value, timeout=timeout)
 
-    def click(self, *, timeout: Timeout = None, **kwargs: typing.Any):
+    def click(self, *, timeout: Timeout = None, **kwargs: typing.Any) -> None:
         self.loc.click(timeout=timeout, **kwargs)
 
 
@@ -868,7 +889,7 @@ class InputActionButton(
         self,
         page: Page,
         id: str,
-    ):
+    ) -> None:
         super().__init__(
             page,
             id=id,
@@ -884,7 +905,7 @@ class InputActionLink(_InputActionBase):
         self,
         page: Page,
         id: str,
-    ):
+    ) -> None:
         super().__init__(
             page,
             id=id,
@@ -904,23 +925,25 @@ class InputCheckboxBase(
     # label: TagChildArg
     # value: bool = False
     # width: Optional[str] = None
-    def __init__(self, page: Page, id: str, loc: InitLocator):
+    def __init__(self, page: Page, id: str, loc: InitLocator) -> None:
         super().__init__(
             page,
             id=id,
             loc=loc,
         )
 
-    def set(self, value: bool, *, timeout: Timeout = None, **kwargs: typing.Any):
+    def set(
+        self, value: bool, *, timeout: Timeout = None, **kwargs: typing.Any
+    ) -> None:
         self.loc.set_checked(value, timeout=timeout, **kwargs)
 
-    def toggle(self, *, timeout: Timeout = None, **kwargs: typing.Any):
+    def toggle(self, *, timeout: Timeout = None, **kwargs: typing.Any) -> None:
         self.loc.click(timeout=timeout, **kwargs)
 
     def value(self, *, timeout: Timeout = None) -> bool:
         return self.loc.is_checked(timeout=timeout)
 
-    def expect_to_be_checked(self, value: bool, *, timeout: Timeout = None):
+    def expect_to_be_checked(self, value: bool, *, timeout: Timeout = None) -> None:
         if value:
             self.expect.to_be_checked(timeout=timeout)
         else:
@@ -932,7 +955,7 @@ class InputCheckbox(InputCheckboxBase):
         self,
         page: Page,
         id: str,
-    ):
+    ) -> None:
         super().__init__(
             page,
             id=id,
@@ -945,7 +968,7 @@ class InputSwitch(InputCheckboxBase):
         self,
         page: Page,
         id: str,
-    ):
+    ) -> None:
         super().__init__(
             page,
             id=id,
@@ -961,13 +984,13 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
         labels: typing.Union[PatternOrStr, typing.List[PatternOrStr]],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         playwright_expect(self.loc_choice_labels).to_have_text(
             labels,
             timeout=timeout,
         )
 
-    def expect_inline(self, inline: bool, *, timeout: Timeout = None):
+    def expect_inline(self, inline: bool, *, timeout: Timeout = None) -> None:
         if inline:
             playwright_expect(self.loc_container).to_have_class(
                 "shiny-input-container-inline", timeout=timeout
@@ -987,7 +1010,7 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
         is_checked: typing.Optional[bool] = None,
         timeout: Timeout = None,
         key: str = "value",
-    ):
+    ) -> None:
         # Make sure the locator has all of arr
 
         # Make sure the locator has len(uniq_arr) input elements
@@ -1043,7 +1066,7 @@ class InputCheckboxGroup(
         self,
         page: Page,
         id: str,
-    ):
+    ) -> None:
         super().__init__(
             page,
             id=id,
@@ -1070,7 +1093,7 @@ class InputCheckboxGroup(
         *,
         timeout: Timeout = None,
         **kwargs: typing.Any,
-    ):
+    ) -> None:
 
         if isinstance(selected, str):
             selected = [selected]
@@ -1089,7 +1112,7 @@ class InputCheckboxGroup(
         choices: typing.List[str],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         self._expect_locator_values_in_list(
             "input[type=checkbox]",
             "choices",
@@ -1103,7 +1126,7 @@ class InputCheckboxGroup(
         selected: typing.Union[typing.List[str], None],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # Playwright doesn't like lists of size 0. Instead, use `None`
         if selected is not None and len(selected) == 0:
             selected = None
@@ -1134,7 +1157,7 @@ class InputRadioButtons(
         self,
         page: Page,
         id: str,
-    ):
+    ) -> None:
         super().__init__(
             page,
             id=id,
@@ -1160,7 +1183,7 @@ class InputRadioButtons(
         *,
         timeout: Timeout = None,
         **kwargs: typing.Any,
-    ):
+    ) -> None:
 
         self.loc_container.locator(
             f"label input[type=radio][value='{selected}']"
@@ -1172,7 +1195,7 @@ class InputRadioButtons(
         choices: typing.List[str],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         self._expect_locator_values_in_list(
             "input[type=radio]",
             "choices",
@@ -1185,7 +1208,7 @@ class InputRadioButtons(
         selected: TextValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # Playwright doesn't like lists of size 0. Instead, use `None`
         if selected is None:
             playwright_expect(self.loc_selected).to_have_count(0, timeout=timeout)
@@ -1215,7 +1238,7 @@ class InputFile(
         self,
         page: Page,
         id: str,
-    ):
+    ) -> None:
         super().__init__(
             page,
             id=id,
@@ -1237,7 +1260,7 @@ class InputFile(
         ],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         self.loc.set_input_files(file_path, timeout=timeout)
 
     def expect_files(
@@ -1245,12 +1268,12 @@ class InputFile(
         files: typing.Union[str, typing.List[str], None],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # TODO-barret; Find method to get files, or remove method
         # TODO-barret; Test value being sent to shiny?
         NotImplementedError("`expect_files()` is not implemented")
 
-    def expect_multiple(self, multiple: bool, *, timeout: Timeout = None):
+    def expect_multiple(self, multiple: bool, *, timeout: Timeout = None) -> None:
         expect_multiple(self.loc, multiple, timeout=timeout)
 
     def expect_accept(
@@ -1258,12 +1281,12 @@ class InputFile(
         accept: typing.Union[typing.List[str], AttrValue],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if isinstance(accept, typing.List):
             accept = ",".join(accept)
         expect_attr(self.loc, "accept", accept, timeout=timeout)
 
-    def expect_width(self, width: StyleValue, *, timeout: Timeout = None):
+    def expect_width(self, width: StyleValue, *, timeout: Timeout = None) -> None:
         expect_el_style(self.loc_container, "width", width, timeout=timeout)
 
     def expect_button_label(
@@ -1271,7 +1294,7 @@ class InputFile(
         button_label: TextValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if button_label is None:
             button_label = ""
         playwright_expect(self.loc_button).to_have_text(button_label, timeout=timeout)
@@ -1281,12 +1304,12 @@ class InputFile(
         capture: typing.Union[Literal["environment", "user"], None],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc, "capture", capture, timeout=timeout)
 
     def expect_placeholder_to_have_value(
         self, value: AttrValue, *, timeout: Timeout = None
-    ):
+    ) -> None:
         expect_attr(self.loc_file_display, "placeholder", value=value, timeout=timeout)
 
 
@@ -1311,7 +1334,7 @@ class InputSlider(_WidthLoc, _InputWithLabel):
         self,
         page: Page,
         id: str,
-    ):
+    ) -> None:
         super().__init__(
             page,
             id=id,
@@ -1319,7 +1342,7 @@ class InputSlider(_WidthLoc, _InputWithLabel):
             loc_label=f"label#{id}-label",
         )
 
-    def expect_value(self, value: AttrValue, *, timeout: Timeout = None):
+    def expect_value(self, value: AttrValue, *, timeout: Timeout = None) -> None:
         # TODO-barret; implement
         NotImplementedError("Need to get the value somehow")
 
@@ -1353,7 +1376,7 @@ class InputSlider(_WidthLoc, _InputWithLabel):
         )
         mouse.up()
 
-    def expect_animate(self, exists: bool, *, timeout: Timeout = None):
+    def expect_animate(self, exists: bool, *, timeout: Timeout = None) -> None:
         animate_count = 1 if exists else 0
         playwright_expect(
             self.loc_container.locator(".slider-animate-container")
@@ -1361,7 +1384,7 @@ class InputSlider(_WidthLoc, _InputWithLabel):
 
     def expect_animate_loop_to_have_value(
         self, loop: typing.Union[bool, AttrValue], *, timeout: Timeout = None
-    ):
+    ) -> None:
         if isinstance(loop, bool):
             if not loop:
                 loop = None
@@ -1376,8 +1399,11 @@ class InputSlider(_WidthLoc, _InputWithLabel):
         )
 
     def expect_animate_interval_to_have_value(
-        self, interval: typing.Union[int, AttrValue], *, timeout: Timeout = None
-    ):
+        self,
+        interval: typing.Union[int, AttrValue],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
         interval_str = str(interval) if interval else None
         expect_attr(
             self.loc_container.locator(".slider-animate-container a"),
@@ -1393,50 +1419,64 @@ class InputSlider(_WidthLoc, _InputWithLabel):
     # TODO-barret; All methods below:
     # Could maybe use better formats for the values, but am going to leave as `str` for now
 
-    def expect_min_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
+    def expect_min_to_have_value(
+        self, value: AttrValue, *, timeout: Timeout = None
+    ) -> None:
         expect_attr(self.loc, "data-min", value=value, timeout=timeout)
 
-    def expect_max_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
+    def expect_max_to_have_value(
+        self, value: AttrValue, *, timeout: Timeout = None
+    ) -> None:
         expect_attr(self.loc, "data-max", value=value, timeout=timeout)
 
     # def expect_from_to_have_value(
     #     self, value: AttrValue, *, timeout: Timeout = None
-    # ):
+    # ) -> None:
     #     expect_attr(self.loc, "data-from", value=value, timeout=timeout)
 
-    def expect_step_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
+    def expect_step_to_have_value(
+        self, value: AttrValue, *, timeout: Timeout = None
+    ) -> None:
         expect_attr(self.loc, "data-step", value=value, timeout=timeout)
 
-    def expect_ticks_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
+    def expect_ticks_to_have_value(
+        self, value: AttrValue, *, timeout: Timeout = None
+    ) -> None:
         expect_attr(self.loc, "data-grid", value=value, timeout=timeout)
 
-    def expect_sep_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
+    def expect_sep_to_have_value(
+        self, value: AttrValue, *, timeout: Timeout = None
+    ) -> None:
         expect_attr(self.loc, "data-prettify-separator", value=value, timeout=timeout)
 
-    def expect_pre_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
+    def expect_pre_to_have_value(
+        self, value: AttrValue, *, timeout: Timeout = None
+    ) -> None:
         expect_attr(self.loc, "data-prefix", value=value, timeout=timeout)
 
-    def expect_post_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
+    def expect_post_to_have_value(
+        self, value: AttrValue, *, timeout: Timeout = None
+    ) -> None:
         expect_attr(self.loc, "data-postfix", value=value, timeout=timeout)
 
     # def expect_data_type_to_have_value(
     #     self, value: AttrValue, *, timeout: Timeout = None
-    # ):
+    # ) -> None:
     #     expect_attr(self.loc, "data-data-type", value=value, timeout=timeout)
 
     def expect_time_format_to_have_value(
         self, value: AttrValue, *, timeout: Timeout = None
-    ):
+    ) -> None:
         expect_attr(self.loc, "data-time-format", value=value, timeout=timeout)
 
     def expect_timezone_to_have_value(
         self, value: AttrValue, *, timeout: Timeout = None
-    ):
+    ) -> None:
         expect_attr(self.loc, "data-timezone", value=value, timeout=timeout)
 
     def expect_drag_range_to_have_value(
         self, value: AttrValue, *, timeout: Timeout = None
-    ):
+    ) -> None:
         expect_attr(self.loc, "data-drag-interval", value=value, timeout=timeout)
 
 
@@ -1470,7 +1510,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
         value: typing.Union[datetime.date, str, None],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         value_str = _date_str(value)
         if value_str is None:
             self.loc.fill("", timeout=timeout)
@@ -1485,7 +1525,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
         value: typing.Union[datetime.date, AttrValue],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # Not using `_date_str()` as we want ability to supply non ISO formatted dates
         if isinstance(value, datetime.date):
             value = str(value)
@@ -1500,7 +1540,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
         value: typing.Union[datetime.date, AttrValue],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc, "data-min-date", value=_date_str(value), timeout=timeout)
 
     def expect_max_date(
@@ -1508,7 +1548,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
         value: typing.Union[datetime.date, AttrValue],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc, "data-max-date", value=_date_str(value), timeout=timeout)
 
     def expect_format(
@@ -1516,7 +1556,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc, "data-date-format", value=value, timeout=timeout)
 
     def expect_startview(
@@ -1524,7 +1564,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc, "data-date-start-view", value=value, timeout=timeout)
 
     def expect_weekstart(
@@ -1532,7 +1572,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
         value: typing.Union[int, AttrValue],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if isinstance(value, int):
             value = str(value)
         expect_attr(self.loc, "data-date-week-start", value=value, timeout=timeout)
@@ -1542,7 +1582,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc, "data-date-language", value=value, timeout=timeout)
 
     # autoclose: bool = True,
@@ -1552,7 +1592,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
         value: typing.Union[AttrValue, bool],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if isinstance(value, bool):
             value = str(value).lower()
         expect_attr(self.loc, "data-date-autoclose", value=str(value), timeout=timeout)
@@ -1562,7 +1602,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
         value: typing.Union[typing.List[str], None],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if isinstance(value, list):
             assert len(value) > 0, "`value` must be `None` or a non-empty list"
         value_str = "null" if value is None else json.dumps(value)
@@ -1578,7 +1618,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
         value: typing.Union[typing.List[int], None],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if isinstance(value, list):
             assert len(value) > 0, "`value` must be `None` or a non-empty list"
         value_str = "null" if value is None else json.dumps(value)
@@ -1591,7 +1631,7 @@ class _DateBase(_WidthContainer, _InputWithLabel):
 
 
 class InputDate(_DateBase):
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
             id=id,
@@ -1623,7 +1663,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
     date_start: _DateBase
     date_end: _DateBase
 
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
             id=id,
@@ -1661,7 +1701,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
         ],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if value is None:
             value = (None, None)
         self.date_start.set(value=value[0], timeout=timeout)
@@ -1679,7 +1719,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
         ],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
 
         start_val = None
         end_val = None
@@ -1727,7 +1767,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
         value: typing.Union[datetime.date, AttrValue],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # These values should be the same, so checking both independently seems fair
         self.date_start.expect_min_date(value, timeout=timeout)
         self.date_end.expect_min_date(value, timeout=timeout)
@@ -1738,7 +1778,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
         value: typing.Union[datetime.date, AttrValue],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # These values should be the same, so checking both independently seems fair
         self.date_start.expect_max_date(value, timeout=timeout)
         self.date_end.expect_max_date(value, timeout=timeout)
@@ -1749,7 +1789,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # These values should be the same, so checking both independently seems fair
         self.date_start.expect_format(value, timeout=timeout)
         self.date_end.expect_format(value, timeout=timeout)
@@ -1760,7 +1800,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # These values should be the same, so checking both independently seems fair
         self.date_start.expect_startview(value, timeout=timeout)
         self.date_end.expect_startview(value, timeout=timeout)
@@ -1771,7 +1811,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
         value: typing.Union[int, AttrValue],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # These values should be the same, so checking both independently seems fair
         self.date_start.expect_weekstart(value, timeout=timeout)
         self.date_end.expect_weekstart(value, timeout=timeout)
@@ -1782,7 +1822,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # These values should be the same, so checking both independently seems fair
         self.date_start.expect_language(value, timeout=timeout)
         self.date_end.expect_language(value, timeout=timeout)
@@ -1793,7 +1833,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
         value: TextValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if value is None:
             value = ""
         playwright_expect(self.loc_separator).to_have_text(value, timeout=timeout)
@@ -1806,7 +1846,7 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
         value: bool,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # These values should be the same, so checking both independently seems fair
         self.date_start.expect_autoclose(value, timeout=timeout)
         self.date_end.expect_autoclose(value, timeout=timeout)
@@ -1832,7 +1872,7 @@ class _OutputBase:
         *,
         id: str,
         loc: InitLocator,
-    ):
+    ) -> None:
         self.page = page
         self.id = id
 
@@ -1841,6 +1881,7 @@ class _OutputBase:
         self.loc = loc
 
     @property
+    # TODO; Return type
     def expect(self):
         return playwright_expect(self.loc)
 
@@ -1857,7 +1898,7 @@ class _OutputTextValue(_OutputBase):
         value: TextValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if value is None:
             value = ""
         self.expect.to_have_text(value, timeout=timeout)
@@ -1881,7 +1922,7 @@ class _OutputContainer:
         tag_name: typing.Union[Literal["span", "div"], str],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         # Could not find an expect method to find the tag name
         # So trying to perform the expectation manually by waiting for attached state,
         # then asserting
@@ -1903,7 +1944,7 @@ class _OutputContainer:
 class _OutputInlineContainer(_OutputContainer):
     def expect_inline(
         self: _OutputContainerP, inline: bool = False, *, timeout: Timeout = None
-    ):
+    ) -> None:
         tag_name = "span" if inline else "div"
         self.expect_container_tag(tag_name, timeout=timeout)
 
@@ -1913,17 +1954,17 @@ class OutputText(_OutputInlineContainer, _OutputTextValue):
         self,
         page: Page,
         id: str,
-    ):
+    ) -> None:
         super().__init__(page, id=id, loc=f"#{id}.shiny-text-output")
 
 
 class OutputTextVerbatim(_OutputTextValue):
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
 
     def expect_has_placeholder(
         self, placeholder: bool = False, *, timeout: Timeout = None
-    ):
+    ) -> None:
         if placeholder:
             self.expect.to_have_class("noplaceholder", timeout=timeout)
         else:
@@ -1936,7 +1977,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
     # height: str = "400px"
     # inline: bool = False
 
-    def __init__(self, page: Page, id: str, loc_classes: str = ""):
+    def __init__(self, page: Page, id: str, loc_classes: str = "") -> None:
         super().__init__(
             page,
             id=id,
@@ -1951,7 +1992,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         self.expect_inline(inline=value is None, timeout=timeout)
         expect_el_style(self.loc, "height", value, timeout=timeout)
 
@@ -1960,7 +2001,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         self.expect_inline(inline=value is None, timeout=timeout)
         expect_el_style(self.loc, "width", value, timeout=timeout)
 
@@ -1969,7 +2010,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc_img, "src", value, timeout=timeout)
 
     def expect_img_width(
@@ -1977,7 +2018,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc_img, "width", value, timeout=timeout)
 
     def expect_img_height(
@@ -1985,7 +2026,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc_img, "height", value, timeout=timeout)
 
     def expect_img_alt(
@@ -1993,7 +2034,7 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc_img, "alt", value, timeout=timeout)
 
     def expect_img_style(
@@ -2001,12 +2042,12 @@ class _OutputImageBase(_OutputInlineContainer, _OutputBase):
         value: AttrValue,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         expect_attr(self.loc_img, "style", value, timeout=timeout)
 
 
 class OutputImage(_OutputImageBase):
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id)
         self.loc_img = self.loc.locator("img")
 
@@ -2017,7 +2058,7 @@ class OutputPlot(_OutputImageBase):
     # width: str = "100%"
     # height: str = "400px"
     # inline: bool = False
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc_classes=".shiny-plot-output")
 
 
@@ -2025,7 +2066,7 @@ class OutputUi(_OutputContainer, _OutputBase):
     # id: str,
     # inline: bool = False,
     # container: Optional[TagFunction] = None,
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc=f"#{id}")
 
     # TODO-barret; Should we do `expect_html_to_have_value()`?
@@ -2035,7 +2076,7 @@ class OutputUi(_OutputContainer, _OutputBase):
 class OutputTable(_OutputBase):
     # id: str,
     # **kwargs: TagAttrArg
-    def __init__(self, page: Page, id: str):
+    def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc=f"#{id}")
 
     def expect_column_labels(
@@ -2043,7 +2084,7 @@ class OutputTable(_OutputBase):
         labels: typing.Union[typing.List[PatternOrStr], None],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         if isinstance(labels, list) and len(labels) == 0:
             labels = None
 
@@ -2063,7 +2104,7 @@ class OutputTable(_OutputBase):
         text: typing.List[PatternOrStr],
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         playwright_expect(
             self.loc.locator(f"tbody tr td:nth-child({column})")
         ).to_have_text(
@@ -2076,7 +2117,7 @@ class OutputTable(_OutputBase):
         n: int,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         playwright_expect(self.loc.locator("thead th")).to_have_count(
             n,
             timeout=timeout,
@@ -2087,7 +2128,7 @@ class OutputTable(_OutputBase):
         n: int,
         *,
         timeout: Timeout = None,
-    ):
+    ) -> None:
         playwright_expect(self.loc.locator("tbody tr")).to_have_count(
             n,
             timeout=timeout,
