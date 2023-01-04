@@ -53,6 +53,7 @@ OptionalStr = typing.Optional[str]
 OptionalInt = typing.Optional[int]
 
 PatternOrStr = typing.Union[str, typing.Pattern[str]]
+TextValue = typing.Union[PatternOrStr, None]
 AttrValue = typing.Union[PatternOrStr, None]
 StyleValue = typing.Union[PatternOrStr, None]
 
@@ -280,10 +281,12 @@ class _InputWithLabel(_InputWithContainer):
 
     def expect_label_to_have_text(
         self,
-        value: PatternOrStr,
+        value: TextValue,
         *,
         timeout: Timeout = None,
     ):
+        if value is None:
+            value = ""
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
 
@@ -351,7 +354,9 @@ class InputNumeric(
             loc=f"input#{id}[type=number].shiny-bound-input",
         )
 
-    def set(self, value: typing.Union[float, str], *, timeout: Timeout = None):
+    def set(self, value: typing.Union[float, str, None], *, timeout: Timeout = None):
+        if value is None:
+            value = ""
         self.loc.fill(str(value), timeout=timeout)
 
     def value(self, *, timeout: Timeout = None) -> float:
@@ -380,10 +385,12 @@ class InputNumeric(
 
     def expect_value(
         self,
-        value: PatternOrStr,
+        value: TextValue,
         *,
         timeout: Timeout = None,
     ):
+        if value is None:
+            value = ""
         self.expect.to_have_value(value, timeout=timeout)
 
     def expect_min_to_have_value(
@@ -487,7 +494,9 @@ class InputText(
 
         self.loc_label = self.loc_container.locator("label")
 
-    def set(self, value: str, *, timeout: Timeout = None):
+    def set(self, value: typing.Union[str, None], *, timeout: Timeout = None):
+        if value is None:
+            value = ""
         self.loc.fill(str(value), timeout=timeout)
 
     def value(self, *, timeout: Timeout = None) -> str:
@@ -495,10 +504,12 @@ class InputText(
 
     def expect_value(
         self,
-        value: PatternOrStr,
+        value: TextValue,
         *,
         timeout: Timeout = None,
     ):
+        if value is None:
+            value = ""
         self.expect.to_have_value(value, timeout=timeout)
 
 
@@ -523,7 +534,9 @@ class InputPassword(
 
         self.loc_label = self.loc_container.locator("label")
 
-    def set(self, value: str, *, timeout: Timeout = None):
+    def set(self, value: typing.Union[str, None], *, timeout: Timeout = None):
+        if value is None:
+            value = ""
         self.loc.fill(value, timeout=timeout)
 
     def value(self, *, timeout: Timeout = None) -> str:
@@ -531,10 +544,12 @@ class InputPassword(
 
     def expect_value(
         self,
-        value: PatternOrStr,
+        value: TextValue,
         *,
         timeout: Timeout = None,
     ):
+        if value is None:
+            value = ""
         self.expect.to_have_value(value, timeout=timeout)
 
     def get_width(self, *, timeout: Timeout = None) -> typing.Optional[str]:
@@ -597,7 +612,14 @@ class InputTextArea(_Placeholder, _Autocomplete, _Spellcheck, _InputWithLabel):
         ret = str_attr(self.loc, "resize", timeout=timeout)
         return typing.cast(Resize, ret)
 
-    def expect_value(self, value: PatternOrStr, *, timeout: Timeout = None):
+    def expect_value(
+        self,
+        value: TextValue,
+        *,
+        timeout: Timeout = None,
+    ):
+        if value is None:
+            value = ""
         self.expect.to_have_value(value, timeout=timeout)
 
     def expect_width_to_have_value(self, value: AttrValue, *, timeout: Timeout = None):
@@ -820,11 +842,14 @@ class _InputActionBase(_InputBase):
 
     def expect_label_to_have_text(
         self,
-        value: PatternOrStr,
+        value: TextValue,
         *,
         timeout: Timeout = None,
     ):
         """Must include icon if present"""
+
+        if value is None:
+            value = ""
         self.expect.to_have_text(value, timeout=timeout)
 
     def click(self, *, timeout: Timeout = None, **kwargs: typing.Any):
@@ -1157,7 +1182,7 @@ class InputRadioButtons(
 
     def expect_selected(
         self,
-        selected: typing.Union[PatternOrStr, None],
+        selected: TextValue,
         *,
         timeout: Timeout = None,
     ):
@@ -1243,10 +1268,12 @@ class InputFile(
 
     def expect_button_label(
         self,
-        button_label: PatternOrStr,
+        button_label: TextValue,
         *,
         timeout: Timeout = None,
     ):
+        if button_label is None:
+            button_label = ""
         playwright_expect(self.loc_button).to_have_text(button_label, timeout=timeout)
 
     def expect_capture(
@@ -1763,10 +1790,12 @@ class InputDateRange(_WidthContainer, _InputWithLabel):
     # separator: str = " to ",
     def expect_separator(
         self,
-        value: PatternOrStr,
+        value: TextValue,
         *,
         timeout: Timeout = None,
     ):
+        if value is None:
+            value = ""
         playwright_expect(self.loc_separator).to_have_text(value, timeout=timeout)
 
     # width: Optional[str] = None,
@@ -1823,7 +1852,14 @@ class _OutputTextValue(_OutputBase):
     def value(self, *, timeout: Timeout = None) -> str:
         return self.loc.inner_text(timeout=timeout)
 
-    def expect_value(self, value: PatternOrStr, *, timeout: Timeout = None):
+    def expect_value(
+        self,
+        value: TextValue,
+        *,
+        timeout: Timeout = None,
+    ):
+        if value is None:
+            value = ""
         self.expect.to_have_text(value, timeout=timeout)
 
 
