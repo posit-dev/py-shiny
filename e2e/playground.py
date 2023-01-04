@@ -89,7 +89,7 @@ def maybe_cast_attr(
     timeout: Timeout = None,
 ) -> typing.Union[R, None]:
     ret = loc.get_attribute(attr_name, timeout=timeout)
-    if not isinstance(ret, type(None)):
+    if ret is not None:
         ret = fn(ret)
     return ret
 
@@ -119,7 +119,7 @@ def expect_attr(
     timeout: Timeout = None,
 ):
     """Expect an attribute to have a value. If `value` is `None`, then the attribute should not exist."""
-    if isinstance(value, type(None)):
+    if value is None:
         # if isinstance(value, type(None)):
         # Not allowed to have any value for the attribute
         playwright_expect(loc).not_to_have_attribute(
@@ -191,24 +191,6 @@ class _InputWithContainerP(_InputBaseP, Protocol):
     loc_container: Locator
 
 
-# class A:
-#     def foo(self) -> "A":
-#         return self
-
-# class B(A):
-#     def foo(self) -> "B":
-#         return self
-
-
-# from abc import ABC
-
-
-# class InputA(ABC):
-#     @abstractmethod
-#     def my_abstract_method(self, arg1):
-#         pass
-
-
 class _InputBase:
     # timeout: Timeout
     id: str
@@ -232,12 +214,6 @@ class _InputBase:
     @property
     def expect(self):
         return playwright_expect(self.loc)
-
-    # # Requires a PR to playwright to call `obj.__expect__()` method; Desired API
-    # def __expect__(self) -> LocatorAssertions:
-    #     return playwright_expect(self.loc)
-    def foo(self, x: int, y: int, z: int):
-        return x + y + z
 
 
 class _InputWithContainer(_InputBase):
