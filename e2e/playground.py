@@ -508,6 +508,8 @@ class InputPassword(
     def get_width(self, *, timeout: Timeout = None) -> typing.Union[str, None]:
         return get_el_style(self.loc_container, "width", timeout=timeout)
 
+    # This class does not inherit from `_WidthContainer`
+    # as the width is in the element style
     def expect_width_to_have_value(
         self,
         value: typing.Union[AttrValue, None],
