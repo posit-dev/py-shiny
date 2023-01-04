@@ -7,17 +7,23 @@ __all__ = (
     "output_ui",
 )
 
-from typing import Optional
+from typing import Dict, Optional, Union
 
 from htmltools import Tag, TagAttrArg, TagFunction, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
+from ._image_output_opts import ClickOpts, click_opts, format_opt_names
 
 
 @add_example()
 def output_plot(
-    id: str, width: str = "100%", height: str = "400px", inline: bool = False
+    id: str,
+    width: str = "100%",
+    height: str = "400px",
+    *,
+    inline: bool = False,
+    click: Optional[str] = None,
 ) -> Tag:
     """
     Create a output container for a static plot.
@@ -45,14 +51,25 @@ def output_plot(
     ~shiny.render.plot
     ~shiny.ui.output_image
     """
-    res = output_image(id=resolve_id(id), width=width, height=height, inline=inline)
+    res = output_image(
+        id=resolve_id(id),
+        width=width,
+        height=height,
+        inline=inline,
+        click=click,
+    )
     res.add_class("shiny-plot-output")
     return res
 
 
 @add_example()
 def output_image(
-    id: str, width: str = "100%", height: str = "400px", inline: bool = False
+    id: str,
+    width: str = "100%",
+    height: str = "400px",
+    *,
+    inline: bool = False,
+    click: Optional[Union[str, ClickOpts]] = None,
 ) -> Tag:
     """
     Create a output container for a static image.
@@ -79,7 +96,20 @@ def output_image(
     """
     func = tags.span if inline else div
     style = None if inline else css(width=width, height=height)
-    return func(id=resolve_id(id), class_="shiny-image-output", style=style)
+
+    args: Dict[str, str] = dict()
+
+    if click is not None:
+        if isinstance(click, str):
+            click = click_opts(id=click)
+        args.update(**format_opt_names(click, "click"))
+
+    return func(
+        id=resolve_id(id),
+        class_="shiny-image-output",
+        style=style,
+        **args,
+    )
 
 
 @add_example()
@@ -178,7 +208,7 @@ def output_ui(
     id: str,
     inline: bool = False,
     container: Optional[TagFunction] = None,
-    **kwargs: TagAttrArg
+    **kwargs: TagAttrArg,
 ) -> Tag:
     """
     Create a output container for a UI (i.e., HTML) element.
