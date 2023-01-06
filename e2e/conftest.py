@@ -11,6 +11,7 @@ from types import TracebackType
 from typing import IO, Callable, Generator, List, Optional, TextIO, Type, Union
 
 import pytest
+
 import shiny._utils
 
 __all__ = (
