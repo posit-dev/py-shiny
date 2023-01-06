@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* The `width` parameters for `input_select` and `input_slider` now work properly. (Thanks, @bartverweire!)
+
 ### Other changes
 
 

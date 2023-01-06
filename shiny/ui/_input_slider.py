@@ -175,7 +175,6 @@ def input_slider(
     props: Dict[str, TagAttrArg] = {
         "class_": "js-range-slider",
         "id": id,
-        "style": css(width=width),
         "data_skin": "shiny",
         # TODO: do we need to worry about scientific notation (i.e., formatNoSci()?)
         "data_min": str(min_num),
@@ -211,6 +210,7 @@ def input_slider(
         tags.input(**props),
         *ionrangeslider_deps(),
         class_="form-group shiny-input-container",
+        style=css(width=width),
     )
 
     if animate is False:
