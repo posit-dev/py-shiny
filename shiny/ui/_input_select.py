@@ -5,7 +5,7 @@ __all__ = (
 
 from typing import List, Mapping, Optional, Tuple, Union, cast
 
-from htmltools import Tag, TagChildArg, TagList, div, tags
+from htmltools import Tag, TagChildArg, TagList, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -175,7 +175,6 @@ def input_select(
                 id=id,
                 class_=None if selectize else "form-select",
                 multiple=multiple,
-                width=width,
                 size=size,
             ),
             (
@@ -188,6 +187,7 @@ def input_select(
             ),
         ),
         class_="form-group shiny-input-container",
+        style=css(width=width),
     )
 
 
