@@ -10,6 +10,7 @@ else:
     from typing_extensions import Literal, Protocol
 
 from ..types import ImgData
+from ._coordmap import get_coordmap
 
 
 # Use this protocol to avoid needing to maintain working stubs for matplotlib. If
@@ -21,6 +22,9 @@ class MplFigure(Protocol):
         h: Optional[float] = None,
         forward: bool = True,
     ):
+        ...
+
+    def set_dpi(self, val: float):
         ...
 
     def savefig(
@@ -93,16 +97,19 @@ def try_render_matplotlib(
         return (False, None)
 
     try:
-        fig.set_size_inches(width / ppi, height / ppi)
+        import matplotlib.pyplot as plt
 
-        bbox_inches = kwargs.pop("bbox_inches", "tight")
+        fig.set_size_inches(width / ppi, height / ppi)
+        fig.set_dpi(ppi * pixelratio)
+
+        plt.tight_layout()
+        coordmap = get_coordmap(fig)
 
         with io.BytesIO() as buf:
             fig.savefig(
                 buf,
                 format="png",
                 dpi=ppi * pixelratio,
-                bbox_inches=bbox_inches,
                 **kwargs,
             )
             buf.seek(0)
@@ -122,12 +129,15 @@ def try_render_matplotlib(
         if alt is not None:
             res["alt"] = alt
 
+        if coordmap is not None:
+            res["coordmap"] = coordmap
+
         return (True, res)
 
     finally:
         import matplotlib.pyplot  # pyright: ignore[reportMissingTypeStubs]
 
-        matplotlib.pyplot.close(fig)  # pyright: ignore[reportUnknownMemberType]
+        matplotlib.pyplot.close(fig)  # pyright: ignore[reportGeneralTypeIssues]
 
 
 def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, None]:
