@@ -91,6 +91,8 @@ class ImgData(TypedDict):
     """The ``alt`` attribute of the ``<img>`` tag."""
     style: NotRequired[str]
     """The ``style`` attribute of the ``<img>`` tag."""
+    coordmap: NotRequired[Any]
+    """TODO """
 
 
 @add_example()

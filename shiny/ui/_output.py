@@ -13,7 +13,13 @@ from htmltools import Tag, TagAttrArg, TagFunction, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from ._image_output_opts import ClickOpts, click_opts, format_opt_names
+from ._image_output_opts import (
+    BrushOpts,
+    ClickOpts,
+    brush_opts,
+    click_opts,
+    format_opt_names,
+)
 
 
 @add_example()
@@ -23,7 +29,8 @@ def output_plot(
     height: str = "400px",
     *,
     inline: bool = False,
-    click: Optional[str] = None,
+    click: Optional[Union[str, ClickOpts]] = None,
+    brush: Optional[Union[str, BrushOpts]] = None,
 ) -> Tag:
     """
     Create a output container for a static plot.
@@ -57,6 +64,7 @@ def output_plot(
         height=height,
         inline=inline,
         click=click,
+        brush=brush,
     )
     res.add_class("shiny-plot-output")
     return res
@@ -70,6 +78,7 @@ def output_image(
     *,
     inline: bool = False,
     click: Optional[Union[str, ClickOpts]] = None,
+    brush: Optional[Union[str, BrushOpts]] = None,
 ) -> Tag:
     """
     Create a output container for a static image.
@@ -103,6 +112,12 @@ def output_image(
         if isinstance(click, str):
             click = click_opts(id=click)
         args.update(**format_opt_names(click, "click"))
+
+    if brush is not None:
+        if isinstance(brush, str):
+            brush = brush_opts(id=brush)
+            print(brush)
+        args.update(**format_opt_names(brush, "brush"))
 
     return func(
         id=resolve_id(id),
