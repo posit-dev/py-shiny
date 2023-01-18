@@ -3,14 +3,28 @@ import sys
 from typing import Dict, Union
 
 if sys.version_info >= (3, 8):
-    from typing import TypedDict
+    from typing import Literal, TypedDict
 else:
-    from typing_extensions import TypedDict
+    from typing_extensions import Literal, TypedDict
 
 
 class ClickOpts(TypedDict):
     id: str
     clip: bool
+
+
+class DblClickOpts(TypedDict):
+    id: str
+    clip: bool
+    delay: int
+
+
+class HoverOpts(TypedDict):
+    id: str
+    delay: int
+    delayType: Literal["debounce", "throttle"]
+    clip: bool
+    nullOutside: bool
 
 
 class BrushOpts(TypedDict):
@@ -19,7 +33,7 @@ class BrushOpts(TypedDict):
     stroke: str
     opacity: float
     delay: int
-    delayType: str
+    delayType: Literal["debounce", "throttle"]
     clip: bool
     direction: str
     resetOnNew: bool
@@ -56,6 +70,36 @@ def click_opts(
     }
 
 
+def dblclick_opts(
+    id: str,
+    *,
+    delay: int = 400,
+    clip: bool = True,
+) -> DblClickOpts:
+    return {
+        "id": id,
+        "delay": delay,
+        "clip": clip,
+    }
+
+
+def hover_opts(
+    id: str,
+    *,
+    delay: int = 300,
+    delay_type: Literal["debounce", "throttle"] = "debounce",
+    clip: bool = True,
+    null_outside: bool = True,
+) -> HoverOpts:
+    return {
+        "id": id,
+        "delay": delay,
+        "delayType": delay_type,
+        "clip": clip,
+        "nullOutside": null_outside,
+    }
+
+
 def brush_opts(
     id: str,
     *,
@@ -63,10 +107,10 @@ def brush_opts(
     stroke: str = "#036",
     opacity: float = 0.25,
     delay: int = 300,
-    delayType: str = "debounce",
+    delay_type: Literal["debounce", "throttle"] = "debounce",
     clip: bool = True,
     direction: str = "xy",
-    resetOnNew: bool = False,
+    reset_on_new: bool = False,
 ) -> BrushOpts:
 
     return {
@@ -75,8 +119,8 @@ def brush_opts(
         "stroke": stroke,
         "opacity": opacity,
         "delay": delay,
-        "delayType": delayType,
+        "delayType": delay_type,
         "clip": clip,
         "direction": direction,
-        "resetOnNew": resetOnNew,
+        "resetOnNew": reset_on_new,
     }

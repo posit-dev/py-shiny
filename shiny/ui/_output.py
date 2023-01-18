@@ -16,9 +16,13 @@ from .._namespaces import resolve_id
 from ._image_output_opts import (
     BrushOpts,
     ClickOpts,
+    DblClickOpts,
+    HoverOpts,
     brush_opts,
     click_opts,
+    dblclick_opts,
     format_opt_names,
+    hover_opts,
 )
 
 
@@ -30,6 +34,8 @@ def output_plot(
     *,
     inline: bool = False,
     click: Optional[Union[str, ClickOpts]] = None,
+    dblclick: Optional[Union[str, DblClickOpts]] = None,
+    hover: Optional[Union[str, HoverOpts]] = None,
     brush: Optional[Union[str, BrushOpts]] = None,
 ) -> Tag:
     """
@@ -64,6 +70,8 @@ def output_plot(
         height=height,
         inline=inline,
         click=click,
+        dblclick=dblclick,
+        hover=hover,
         brush=brush,
     )
     res.add_class("shiny-plot-output")
@@ -78,6 +86,8 @@ def output_image(
     *,
     inline: bool = False,
     click: Optional[Union[str, ClickOpts]] = None,
+    dblclick: Optional[Union[str, DblClickOpts]] = None,
+    hover: Optional[Union[str, HoverOpts]] = None,
     brush: Optional[Union[str, BrushOpts]] = None,
 ) -> Tag:
     """
@@ -112,6 +122,16 @@ def output_image(
         if isinstance(click, str):
             click = click_opts(id=click)
         args.update(**format_opt_names(click, "click"))
+
+    if dblclick is not None:
+        if isinstance(dblclick, str):
+            dblclick = dblclick_opts(id=dblclick)
+        args.update(**format_opt_names(dblclick, "dblclick"))
+
+    if hover is not None:
+        if isinstance(hover, str):
+            hover = hover_opts(id=hover)
+        args.update(**format_opt_names(hover, "hover"))
 
     if brush is not None:
         if isinstance(brush, str):
