@@ -1868,11 +1868,13 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
 class _OutputBaseP(Protocol):
     id: str
     loc: Locator
+    page: Page
 
 
 class _OutputBase:
     id: str
     loc: Locator
+    page: Page
 
     def __init__(
         self,
