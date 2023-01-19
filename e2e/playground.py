@@ -1699,7 +1699,6 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
 
     def set(
         self,
-        # TODO-barret; Should this be a list or a tuple?
         value: typing.Union[
             typing.Tuple[
                 typing.Union[datetime.date, str, None],
@@ -1717,7 +1716,6 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
 
     def expect_value(
         self,
-        # TODO-barret; Should this be a list or a tuple?
         value: typing.Union[
             typing.Tuple[
                 typing.Union[datetime.date, PatternOrStr, None],
@@ -1748,26 +1746,9 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         # We can not use `[value={value}]` within Locators.
         # The physical `value` attribute is never set, so we can not select on it.
         # We must as the start and end values individually, rather than at the same time like the checkboxgroup input.
+        # TODO-future; Composable expectations
         self.date_start.expect_value(start_val, timeout=timeout)
         self.date_end.expect_value(end_val, timeout=timeout)
-
-        # loc_dates = self.loc_container
-        # loc_dates = loc_dates.locator(
-        #     "xpath=.",
-        #     has=self.page.locator(f"input:nth-child(1)[type=text][value={start_val}]"),
-        # )
-        # loc_dates = loc_dates.locator(
-        #     "xpath=.",
-        #     has=self.page.locator(f"input:nth-child(3)[type=text][value={end_val}]"),
-        # )
-        # playwright_expect(loc_dates).to_have_count(
-        #     int(not (value is None)),
-        #     timeout=timeout,
-        # )
-        # if False:
-        #     # TODO-future?; This should be in a try catch around the item above for better diagnostics
-        #     self.date_start.expect_value(start_val, timeout=timeout)
-        #     self.date_end.expect_value(end_val, timeout=timeout)
 
     # min: Optional[Union[date, str]] = None,
     def expect_min_date(
@@ -1776,7 +1757,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
-        # These values should be the same, so checking both independently seems fair
+        # TODO-future; Composable expectations
         self.date_start.expect_min_date(value, timeout=timeout)
         self.date_end.expect_min_date(value, timeout=timeout)
 
@@ -1787,7 +1768,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
-        # These values should be the same, so checking both independently seems fair
+        # TODO-future; Composable expectations
         self.date_start.expect_max_date(value, timeout=timeout)
         self.date_end.expect_max_date(value, timeout=timeout)
 
@@ -1798,7 +1779,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
-        # These values should be the same, so checking both independently seems fair
+        # TODO-future; Composable expectations
         self.date_start.expect_format(value, timeout=timeout)
         self.date_end.expect_format(value, timeout=timeout)
 
@@ -1809,7 +1790,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
-        # These values should be the same, so checking both independently seems fair
+        # TODO-future; Composable expectations
         self.date_start.expect_startview(value, timeout=timeout)
         self.date_end.expect_startview(value, timeout=timeout)
 
@@ -1820,7 +1801,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
-        # These values should be the same, so checking both independently seems fair
+        # TODO-future; Composable expectations
         self.date_start.expect_weekstart(value, timeout=timeout)
         self.date_end.expect_weekstart(value, timeout=timeout)
 
@@ -1831,7 +1812,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
-        # These values should be the same, so checking both independently seems fair
+        # TODO-future; Composable expectations
         self.date_start.expect_language(value, timeout=timeout)
         self.date_end.expect_language(value, timeout=timeout)
 
@@ -1855,7 +1836,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
-        # These values should be the same, so checking both independently seems fair
+        # TODO-future; Composable expectations
         self.date_start.expect_autoclose(value, timeout=timeout)
         self.date_end.expect_autoclose(value, timeout=timeout)
 
