@@ -1921,6 +1921,8 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
     # height: str = "400px"
     # inline: bool = False
 
+    loc_img: Locator
+
     def __init__(self, page: Page, id: str, loc_classes: str = "") -> None:
         super().__init__(
             page,
@@ -1928,8 +1930,6 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
             loc=f"#{id}.shiny-image-output{loc_classes}",
         )
         self.loc_img = self.loc.locator("img")
-
-    loc_img: Locator
 
     def expect_height_to_have_value(
         self,
@@ -1991,7 +1991,6 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
 class OutputImage(_OutputImageBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id)
-        self.loc_img = self.loc.locator("img")
 
 
 class OutputPlot(_OutputImageBase):
