@@ -2081,11 +2081,26 @@ class OutputUi(_OutputContainerM, _OutputBase):
     # Thinking they can call `expect(self.loc).to_have_html(value)` directly as Shiny does not own that value, the user does.
 
 
+# When making selectors, use `xpath` so that direct decendents can be checked
 class OutputTable(_OutputBase):
     # id: str,
     # **kwargs: TagAttrArg
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc=f"#{id}")
+
+    def expect_cell(
+        self,
+        text: TextValue,
+        row: int,
+        col: int,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        if text is None:
+            text = ""
+        playwright_expect(
+            self.loc.locator(f"xpath=./table/tbody/tr[{row}]/td[{col}]")
+        ).to_have_text(text, timeout=timeout)
 
     def expect_column_labels(
         self,
@@ -2097,13 +2112,13 @@ class OutputTable(_OutputBase):
             labels = None
 
         if labels is None:
-            playwright_expect(self.loc.locator("thead th")).to_have_count(
-                0, timeout=timeout
-            )
+            playwright_expect(
+                self.loc.locator("xpath=./table/thead/tr/th")
+            ).to_have_count(0, timeout=timeout)
         else:
-            playwright_expect(self.loc.locator("thead th")).to_have_text(
-                labels, timeout=timeout
-            )
+            playwright_expect(
+                self.loc.locator("xpath=./table/thead/tr/th")
+            ).to_have_text(labels, timeout=timeout)
 
     def expect_column_text(
         self,
@@ -2114,7 +2129,7 @@ class OutputTable(_OutputBase):
         timeout: Timeout = None,
     ) -> None:
         playwright_expect(
-            self.loc.locator(f"tbody tr td:nth-child({column})")
+            self.loc.locator(f"xpath=./table/tbody/tr/td[{column}]")
         ).to_have_text(
             text,
             timeout=timeout,
@@ -2126,7 +2141,7 @@ class OutputTable(_OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        playwright_expect(self.loc.locator("thead th")).to_have_count(
+        playwright_expect(self.loc.locator("xpath=./table/thead/tr/th")).to_have_count(
             n,
             timeout=timeout,
         )
@@ -2137,7 +2152,7 @@ class OutputTable(_OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        playwright_expect(self.loc.locator("tbody tr")).to_have_count(
+        playwright_expect(self.loc.locator("xpath=./table/tbody/tr")).to_have_count(
             n,
             timeout=timeout,
         )

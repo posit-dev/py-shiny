@@ -13,6 +13,9 @@ def test_output_plot_kitchen(page: Page, app: ShinyAppProc) -> None:
     table.expect_n_col(11)
     table.expect_n_row(32)
 
+    table.expect_cell("93", 3, 4)
+    table.expect_cell("2.875", 2, 6)
+
     table.expect_column_labels(
         [
             "mpg",
