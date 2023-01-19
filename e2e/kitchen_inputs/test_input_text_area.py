@@ -16,15 +16,7 @@ def test_input_text_area_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     expect(caption.loc_label).to_have_text("Caption:")
 
-    # # Bad approach
-    assert caption.value() == "Data summary", "value is 'Data summary'"
-    assert caption.value_label() == "Caption:", "value is 'Caption:'"
-    assert caption.value_width() is None, "width is None by default"
-    assert caption.value_placeholder() is None, "placeholder is None by default"
-    assert caption.value_autocomplete() is None, "autocomplete is None by default"
-    assert caption.value_spellcheck() is None, "spellcheck is None by default"
-
-    # # Better approach
+    # Better approach
     expect(caption.loc_label).to_have_text("Caption:")
     expect(caption.loc).to_have_value("Data summary")
     expect(caption.loc).not_to_have_attribute("width", re.compile(r".*"))

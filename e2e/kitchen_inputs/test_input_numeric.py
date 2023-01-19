@@ -1,5 +1,3 @@
-import re
-
 from conftest import ShinyAppProc, create_doc_example_fixture
 from playground import InputNumeric, OutputTextVerbatim
 from playwright.sync_api import Page, expect
@@ -32,20 +30,6 @@ def test_input_numeric_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     expect(obs.loc_label).to_have_text("Observations:")
 
-    # Bad approach
-    assert obs.value() == 10, "value is 10"
-    assert obs.value_min() == 1.0, "value_min is 1"
-    assert obs.value_max() == 100.0, "value_max is 100"
-    assert obs.value_step() is None, "value_step is None"
-
-    # Better approach
-    expect(obs.loc_label).to_have_text("Observations:")
-    expect(obs.loc).to_have_value("10")
-    expect(obs.loc).to_have_attribute("min", "1")
-    expect(obs.loc).to_have_attribute("max", "100")
-    expect(obs.loc).not_to_have_attribute("step", re.compile(r".*"))
-
-    # Best approach
     obs.expect_label_to_have_text("Observations:")
     obs.expect_value("10")
     obs.expect_min_to_have_value("1")

@@ -310,9 +310,6 @@ class _InputWithLabel(_InputWithContainer):
             loc_label = self.loc_container.locator(loc_label)
         self.loc_label = loc_label
 
-    def value_label(self, *, timeout: Timeout = None) -> typing.Optional[str]:
-        return self.loc_label.text_content(timeout=timeout)
-
     def expect_label_to_have_text(
         self,
         value: TextValue,
@@ -325,13 +322,6 @@ class _InputWithLabel(_InputWithContainer):
 
 
 class _WidthLocM:
-    def value_width(
-        self: _InputBaseP,
-        *,
-        timeout: Timeout = None,
-    ) -> typing.Optional[str]:
-        return str_attr(self.loc, "width", timeout=timeout)
-
     def expect_width_to_have_value(
         self: _InputBaseP,
         value: AttrValue,
@@ -342,11 +332,6 @@ class _WidthLocM:
 
 
 class _WidthContainerM:
-    def value_width(
-        self: _InputWithContainerP, *, timeout: Timeout = None
-    ) -> typing.Optional[str]:
-        return str_attr(self.loc_container, "width", timeout=timeout)
-
     def expect_width_to_have_value(
         self: _InputWithContainerP,
         value: AttrValue,
@@ -381,30 +366,6 @@ class InputNumeric(
         if value is None:
             value = ""
         set_text(self.loc, str(value), timeout=timeout)
-
-    def value(self, *, timeout: Timeout = None) -> float:
-        # Should we use jquery?
-        # return self.loc_label.evaluate("el => $(el).val()", timeout=timeout)
-
-        # # TODO int or float depending on step size?
-        # step_val = step_fn(timeout)
-
-        # conv_method = int
-        # if step_val is None or not step_val.is_integer():
-        #     conv_method = float
-        # value = self.loc.input_value()
-        # return conv_method(value)
-
-        return float(self.loc.input_value(timeout=timeout))
-
-    def value_min(self, *, timeout: Timeout = None) -> typing.Optional[float]:
-        return float_attr(self.loc, "min", timeout=timeout)
-
-    def value_max(self, *, timeout: Timeout = None) -> typing.Optional[float]:
-        return float_attr(self.loc, "max", timeout=timeout)
-
-    def value_step(self, *, timeout: Timeout = None) -> typing.Optional[float]:
-        return float_attr(self.loc, "step", timeout=timeout)
 
     def expect_value(
         self,
@@ -442,13 +403,6 @@ class InputNumeric(
 
 
 class _SpellcheckM:
-    def value_spellcheck(
-        self: _InputBaseP,
-        *,
-        timeout: Timeout = None,
-    ) -> typing.Optional[str]:
-        return str_attr(self.loc, "spellcheck", timeout=timeout)
-
     def expect_spellcheck_to_have_value(
         self: _InputBaseP,
         value: typing.Union[Literal["true", "false"], None],
@@ -460,13 +414,6 @@ class _SpellcheckM:
 
 
 class _PlaceholderM:
-    def value_placeholder(
-        self: _InputBaseP,
-        *,
-        timeout: Timeout = None,
-    ) -> typing.Optional[str]:
-        return str_attr(self.loc, "placeholder", timeout=timeout)
-
     def expect_placeholder_to_have_value(
         self: _InputBaseP,
         value: AttrValue,
@@ -477,13 +424,6 @@ class _PlaceholderM:
 
 
 class _AutocompleteM:
-    def value_autocomplete(
-        self: _InputBaseP,
-        *,
-        timeout: Timeout = None,
-    ) -> typing.Optional[str]:
-        return str_attr(self.loc, "autocomplete", timeout=timeout)
-
     def expect_autocomplete_to_have_value(
         self: _InputBaseP,
         value: AttrValue,
@@ -522,9 +462,6 @@ class InputText(
             value = ""
         set_text(self.loc, str(value), timeout=timeout)
 
-    def value(self, *, timeout: Timeout = None) -> str:
-        return self.loc.input_value(timeout=timeout)
-
     def expect_value(
         self,
         value: TextValue,
@@ -561,9 +498,6 @@ class InputPassword(
         if value is None:
             value = ""
         set_text(self.loc, str(value), timeout=timeout)
-
-    def value(self, *, timeout: Timeout = None) -> str:
-        return self.loc.input_value(timeout=timeout)
 
     def expect_value(
         self,
@@ -620,25 +554,6 @@ class InputTextArea(
 
     def set(self, value: str, *, timeout: Timeout = None) -> None:
         set_text(self.loc, value, timeout=timeout)
-
-    def value(self, *, timeout: Timeout = None) -> str:
-        return self.loc.input_value(timeout=timeout)
-
-    def value_width(self, *, timeout: Timeout = None) -> OptionalStr:
-        return get_el_style(self.loc_container, "width", timeout=timeout)
-
-    def value_height(self, *, timeout: Timeout = None) -> OptionalStr:
-        return get_el_style(self.loc_container, "height", timeout=timeout)
-
-    def value_cols(self, *, timeout: Timeout = None) -> OptionalInt:
-        return int_attr(self.loc, "cols", timeout=timeout)
-
-    def value_rows(self, *, timeout: Timeout = None) -> OptionalInt:
-        return int_attr(self.loc, "rows", timeout=timeout)
-
-    def value_resize(self, *, timeout: Timeout = None) -> typing.Optional[Resize]:
-        ret = str_attr(self.loc, "resize", timeout=timeout)
-        return typing.cast(Resize, ret)
 
     def expect_value(
         self,
@@ -877,10 +792,6 @@ class InputSelectize(_InputSelectBase):
 
 class _InputActionBase(_InputBase):
     # TODO-barret; Should these label methods be different?
-    def value_label(self, *, timeout: Timeout = None) -> str:
-        """Will include icon if present"""
-        return self.loc.inner_html(timeout=timeout)
-
     def expect_label_to_have_text(
         self,
         value: TextValue,
@@ -959,9 +870,6 @@ class InputCheckboxBase(
 
     def toggle(self, *, timeout: Timeout = None, **kwargs: typing.Any) -> None:
         self.loc.click(timeout=timeout, **kwargs)
-
-    def value(self, *, timeout: Timeout = None) -> bool:
-        return self.loc.is_checked(timeout=timeout)
 
     def expect_to_be_checked(self, value: bool, *, timeout: Timeout = None) -> None:
         if value:
@@ -1117,7 +1025,7 @@ class InputCheckboxGroup(
 
         if isinstance(selected, str):
             selected = [selected]
-        # We are wanting to delay retriving the value of the checkbox as long as possible
+        # We are wanting to delay retrieving the value of the checkbox as long as possible
         checkbox_loc = self.loc_choices
         checkbox_loc.nth(0).wait_for(state="attached", timeout=timeout)
 
@@ -1860,9 +1768,6 @@ class _OutputBase:
 class _OutputTextValue(_OutputBase):
     # cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
     # return tags.pre(id=resolve_id(id), class_=cls)
-
-    def value(self, *, timeout: Timeout = None) -> str:
-        return self.loc.inner_text(timeout=timeout)
 
     def expect_value(
         self,
