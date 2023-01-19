@@ -165,6 +165,20 @@ def expect_attr(
     playwright_expect(loc).to_have_attribute(name=name, value=value, timeout=timeout)
 
 
+def expect_class_value(
+    loc: Locator,
+    cls: str,
+    has_class: bool,
+    timeout: Timeout = None,
+) -> None:
+    """Expect a locator to have (or not to have) a class value"""
+    cls_regex = re.compile(rf"\b{cls}\b")
+    if has_class:
+        playwright_expect(loc).to_have_class(cls_regex, timeout=timeout)
+    else:
+        playwright_expect(loc).not_to_have_class(cls_regex, timeout=timeout)
+
+
 def get_el_style(
     loc: Locator,
     css_key: str,
@@ -721,10 +735,12 @@ class InputSelect(_InputSelectBase):
     # selectize: bool = False,
     def expect_selectize(self, selectize: bool, *, timeout: Timeout = None) -> None:
         # class_=None if selectize else "form-select",
-        if selectize:
-            self.expect.not_to_have_class(re.compile("form-select"), timeout=timeout)
-        else:
-            self.expect.to_have_class(re.compile("form-select"), timeout=timeout)
+        expect_class_value(
+            self.loc,
+            "form-select",
+            has_class=not selectize,
+            timeout=timeout,
+        )
 
 
 class InputSelectize(_InputSelectBase):
@@ -865,14 +881,12 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
         )
 
     def expect_inline(self, inline: bool, *, timeout: Timeout = None) -> None:
-        if inline:
-            playwright_expect(self.loc_container).to_have_class(
-                "shiny-input-container-inline", timeout=timeout
-            )
-        else:
-            playwright_expect(self.loc_container).not_to_have_class(
-                "shiny-input-container-inline", timeout=timeout
-            )
+        expect_class_value(
+            self.loc_container,
+            "shiny-input-container-inline",
+            has_class=inline,
+            timeout=timeout,
+        )
 
     def _expect_locator_values_in_list(
         self: _InputWithContainerP,
@@ -1761,10 +1775,12 @@ class OutputTextVerbatim(_OutputTextValue):
     def expect_has_placeholder(
         self, placeholder: bool = False, *, timeout: Timeout = None
     ) -> None:
-        if placeholder:
-            self.expect.to_have_class("noplaceholder", timeout=timeout)
-        else:
-            self.expect.not_to_have_class("noplaceholder", timeout=timeout)
+        expect_class_value(
+            self.loc,
+            cls="noplaceholder",
+            has_class=not placeholder,
+            timeout=timeout,
+        )
 
 
 class _OutputImageBase(_OutputInlineContainerM, _OutputBase):

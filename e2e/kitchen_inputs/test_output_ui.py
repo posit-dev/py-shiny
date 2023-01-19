@@ -1,5 +1,3 @@
-# import re
-
 from conftest import ShinyAppProc, create_doc_example_fixture
 from playground import InputActionButton, InputSlider, InputText, OutputUi
 from playwright.sync_api import Page, expect
