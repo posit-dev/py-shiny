@@ -404,7 +404,7 @@ class InputNumeric(
         expect_attr(self.loc, "step", value=value, timeout=timeout)
 
 
-class _SpellcheckM:
+class _ExpectSpellcheckAttrM:
     def expect_spellcheck_to_have_value(
         self: _InputBaseP,
         value: typing.Union[Literal["true", "false"], None],
@@ -415,7 +415,7 @@ class _SpellcheckM:
         expect_attr(self.loc, "spellcheck", value=value, timeout=timeout)
 
 
-class _PlaceholderM:
+class _ExpectPlaceholderAttrM:
     def expect_placeholder_to_have_value(
         self: _InputBaseP,
         value: AttrValue,
@@ -425,7 +425,7 @@ class _PlaceholderM:
         expect_attr(self.loc, "placeholder", value=value, timeout=timeout)
 
 
-class _AutocompleteM:
+class _ExpectAutocompleteAttrM:
     def expect_autocomplete_to_have_value(
         self: _InputBaseP,
         value: AttrValue,
@@ -439,9 +439,9 @@ class InputText(
     _SetTextM,
     _ExpectTextInputValueM,
     _WidthLocM,
-    _PlaceholderM,
-    _AutocompleteM,
-    _SpellcheckM,
+    _ExpectPlaceholderAttrM,
+    _ExpectAutocompleteAttrM,
+    _ExpectSpellcheckAttrM,
     _InputWithLabel,
 ):
     # id: str,
@@ -461,9 +461,9 @@ class InputText(
 
 
 class InputPassword(
-    _PlaceholderM,
     _SetTextM,
     _ExpectTextInputValueM,
+    _ExpectPlaceholderAttrM,
     _InputWithLabel,
 ):
     # id: str,
@@ -499,10 +499,11 @@ Resize = Literal["none", "both", "horizontal", "vertical"]
 
 
 class InputTextArea(
-    _PlaceholderM,
-    _AutocompleteM,
-    _SpellcheckM,
     _SetTextM,
+    _ExpectTextInputValueM,
+    _ExpectPlaceholderAttrM,
+    _ExpectAutocompleteAttrM,
+    _ExpectSpellcheckAttrM,
     _InputWithLabel,
 ):
     # id: str,
@@ -1106,7 +1107,7 @@ class InputRadioButtons(
 
 
 class InputFile(
-    # _PlaceholderM,
+    # _ExpectPlaceholderAttrM,
     _InputWithLabel,
 ):
     # id: str,
