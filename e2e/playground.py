@@ -2077,8 +2077,13 @@ class OutputUi(_OutputContainerM, _OutputBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc=f"#{id}")
 
-    # TODO-barret; Should we do `expect_html_to_have_value()`?
-    # Thinking they can call `expect(self.loc).to_have_html(value)` directly as Shiny does not own that value, the user does.
+    # TODO-barret; Should we try verify that `recalculating` class is not present?
+    def expect_to_be_empty(self, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc).to_be_empty(timeout=timeout)
+        ...
+
+    def expect_not_to_be_empty(self, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc).not_to_be_empty(timeout=timeout)
 
 
 # When making selectors, use `xpath` so that direct decendents can be checked
