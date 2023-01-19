@@ -567,7 +567,6 @@ class _InputSelectBase(
     loc_selected: Locator
     loc_choices: Locator
     loc_choice_groups: Locator
-    loc_select: Locator
 
     def __init__(
         self,
@@ -582,19 +581,9 @@ class _InputSelectBase(
             loc=f"select#{id}.shiny-bound-input{select_class}",
             loc_label=f"label[for='{id}']",
         )
-        # `loc_container` does not need to contain selected items
-        # But we should have `self.loc` be `self.loc_selected`
-        self.loc = self.loc_container.locator("option:checked")
-        # Same value
-        self.loc_selected = self.loc
-
-        self.loc_select = self.loc_container.locator(f"select#{self.id}")
-        self.loc_choices = self.loc_select.locator("option")
-        self.loc_choice_groups = self.loc_select.locator("optgroup")
-        # self.loc_choice_labels = self.loc_container.locator(
-        #     "label",
-        #     has=self.page.locator("option"),
-        # )
+        self.loc_selected = self.loc.locator("option:checked")
+        self.loc_choices = self.loc.locator("option")
+        self.loc_choice_groups = self.loc.locator("optgroup")
 
     def set(
         self,
@@ -604,7 +593,7 @@ class _InputSelectBase(
     ) -> None:
         if isinstance(selected, str):
             selected = [selected]
-        self.loc_select.select_option(value=selected, timeout=timeout)
+        self.loc.select_option(value=selected, timeout=timeout)
 
     def expect_choices(
         self,
@@ -643,11 +632,10 @@ class _InputSelectBase(
             playwright_expect(self.loc_selected).to_have_count(0, timeout=timeout)
             return
 
-        ex_selected = playwright_expect(self.loc_select)
         if isinstance(selected, list):
-            ex_selected.to_have_values(selected, timeout=timeout)
+            self.expect.to_have_values(selected, timeout=timeout)
         else:
-            ex_selected.to_have_value(selected, timeout=timeout)
+            self.expect.to_have_value(selected, timeout=timeout)
 
         # _RadioButtonCheckboxGroupBase._expect_locator_values_in_list(
         #     self,
@@ -697,19 +685,17 @@ class _InputSelectBase(
         if choice_labels is None:
             playwright_expect(self.loc_choices).to_have_count(0, timeout=timeout)
             return
-        playwright_expect(
-            self.loc_container.locator(f"select#{self.id} option")
-        ).to_have_text(choice_labels, timeout=timeout)
+        playwright_expect(self.loc_choices).to_have_text(choice_labels, timeout=timeout)
 
     # multiple: bool = False,
     def expect_multiple(self, multiple: bool, *, timeout: Timeout = None) -> None:
-        expect_multiple(self.loc_select, multiple, timeout=timeout)
+        expect_multiple(self.loc, multiple, timeout=timeout)
 
     def expect_size_to_have_value(
         self, value: AttrValue, *, timeout: Timeout = None
     ) -> None:
         expect_attr(
-            self.loc_select,
+            self.loc,
             "size",
             value=value,
             timeout=timeout,
@@ -735,11 +721,10 @@ class InputSelect(_InputSelectBase):
     # selectize: bool = False,
     def expect_selectize(self, selectize: bool, *, timeout: Timeout = None) -> None:
         # class_=None if selectize else "form-select",
-        ex_selectize = playwright_expect(self.loc_select)
         if selectize:
-            ex_selectize.not_to_have_class(re.compile("form-select"), timeout=timeout)
+            self.expect.not_to_have_class(re.compile("form-select"), timeout=timeout)
         else:
-            ex_selectize.to_have_class(re.compile("form-select"), timeout=timeout)
+            self.expect.to_have_class(re.compile("form-select"), timeout=timeout)
 
 
 class InputSelectize(_InputSelectBase):
@@ -959,19 +944,16 @@ class InputCheckboxGroup(
         super().__init__(
             page,
             id=id,
-            loc="label input[type=checkbox]",
+            # `div` that contains all input checkbox tags
+            # Similar to `select` tag in `InputSelect`'s `loc`
+            loc="div.shiny-options-group",
             loc_container=f"div#{id}.shiny-input-checkboxgroup.shiny-bound-input",
             loc_label=f"label#{id}-label",
         )
 
-        # `loc_container` does not need to contain checked items
-        # But we should have `self.loc` be `self.loc_selected`
-        self.loc = self.loc_container.locator("label input[type=checkbox]:checked")
-        # Same value
-        self.loc_selected = self.loc
-
-        self.loc_choices = self.loc_container.locator("label input[type=checkbox]")
-        self.loc_choice_labels = self.loc_container.locator(
+        self.loc_selected = self.loc.locator("label input[type=checkbox]:checked")
+        self.loc_choices = self.loc.locator("label input[type=checkbox]")
+        self.loc_choice_labels = self.loc.locator(
             "label",
             has=self.page.locator("input[type=checkbox]"),
         )
@@ -1050,18 +1032,15 @@ class InputRadioButtons(
         super().__init__(
             page,
             id=id,
-            loc="label input[type=radio]",
+            # `div` that contains all input checkbox tags
+            # Similar to `select` tag in `InputSelect`'s `loc`
+            loc="div.shiny-options-group",
             loc_container=f"div#{id}.shiny-input-radiogroup.shiny-bound-input",
             loc_label=f"label#{id}-label",
         )
-        # `loc_container` does not need to contain checked items
-        # But we should have `self.loc` be `self.loc_selected`
-        self.loc = self.loc_container.locator("label input[type=radio]:checked")
-        # Same value
-        self.loc_selected = self.loc
-
-        self.loc_choices = self.loc_container.locator("label input[type=radio]")
-        self.loc_choice_labels = self.loc_container.locator(
+        self.loc_selected = self.loc.locator("label input[type=radio]:checked")
+        self.loc_choices = self.loc.locator("label input[type=radio]")
+        self.loc_choice_labels = self.loc.locator(
             "label",
             has=self.page.locator("input[type=radio]"),
         )
@@ -1885,11 +1864,10 @@ class OutputUi(_OutputInlineContainerM, _OutputBase):
 
     # TODO-barret; Should we try verify that `recalculating` class is not present?
     def expect_to_be_empty(self, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc).to_be_empty(timeout=timeout)
-        ...
+        self.expect.to_be_empty(timeout=timeout)
 
     def expect_not_to_be_empty(self, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc).not_to_be_empty(timeout=timeout)
+        self.expect.not_to_be_empty(timeout=timeout)
 
 
 # When making selectors, use `xpath` so that direct decendents can be checked
