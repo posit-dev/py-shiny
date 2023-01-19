@@ -26,7 +26,7 @@ def expect_date(
 ) -> None:
 
     date.expect_value(datetime.date.today() if value == "today" else value)
-    date.expect_autoclose(autoclose)
+    date.expect_autoclose(str(autoclose).lower())
     date.expect_datesdisabled(datesdisabled)
     date.expect_daysofweekdisabled(daysofweekdisabled)
     date.expect_format(format)

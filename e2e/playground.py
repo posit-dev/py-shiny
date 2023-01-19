@@ -1597,13 +1597,11 @@ class _DateBase(_WidthContainerM, _InputWithLabel):
     def expect_autoclose(
         self,
         # TODO-barret; None value supported?
-        value: typing.Union[AttrValue, bool],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
-        if isinstance(value, bool):
-            value = str(value).lower()
-        expect_attr(self.loc, "data-date-autoclose", value=str(value), timeout=timeout)
+        expect_attr(self.loc, "data-date-autoclose", value=value, timeout=timeout)
 
     def expect_datesdisabled(
         self,
@@ -1832,7 +1830,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
     # autoclose: bool = True,
     def expect_autoclose(
         self,
-        value: bool,
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:

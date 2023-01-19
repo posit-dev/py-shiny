@@ -30,7 +30,7 @@ def expect_date_range(
     start_value = datetime.date.today() if start_value == "today" else start_value
     end_value = datetime.date.today() if end_value == "today" else end_value
     date.expect_value((start_value, end_value))
-    date.expect_autoclose(autoclose)
+    date.expect_autoclose(str(autoclose).lower())
     # # Not supported in `input_date_range()`
     # date.expect_datesdisabled(datesdisabled)
     # date.expect_daysofweekdisabled(daysofweekdisabled)
