@@ -2001,7 +2001,6 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        self.expect_inline(inline=value is None, timeout=timeout)
         expect_el_style(self.loc, "height", value, timeout=timeout)
 
     def expect_width_to_have_value(
@@ -2010,7 +2009,6 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        self.expect_inline(inline=value is None, timeout=timeout)
         expect_el_style(self.loc, "width", value, timeout=timeout)
 
     def expect_img_src(
