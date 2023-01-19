@@ -304,7 +304,7 @@ class _InputWithLabel(_InputWithContainer):
 #   * Provide `value` methods as a convenience
 
 
-class _WidthLoc:
+class _WidthLocM:
     def value_width(
         self: _InputBaseP,
         *,
@@ -321,7 +321,7 @@ class _WidthLoc:
         expect_attr(self.loc, "width", value=value, timeout=timeout)
 
 
-class _WidthContainer:
+class _WidthContainerM:
     def value_width(
         self: _InputWithContainerP, *, timeout: Timeout = None
     ) -> typing.Optional[str]:
@@ -337,7 +337,7 @@ class _WidthContainer:
 
 
 class InputNumeric(
-    _WidthLoc,
+    _WidthLocM,
     _InputWithLabel,
 ):
     # id: str,
@@ -421,7 +421,7 @@ class InputNumeric(
         expect_attr(self.loc, "step", value=value, timeout=timeout)
 
 
-class _Spellcheck:
+class _SpellcheckM:
     def value_spellcheck(
         self: _InputBaseP,
         *,
@@ -439,7 +439,7 @@ class _Spellcheck:
         expect_attr(self.loc, "spellcheck", value=value, timeout=timeout)
 
 
-class _Placeholder:
+class _PlaceholderM:
     def value_placeholder(
         self: _InputBaseP,
         *,
@@ -456,7 +456,7 @@ class _Placeholder:
         expect_attr(self.loc, "placeholder", value=value, timeout=timeout)
 
 
-class _Autocomplete:
+class _AutocompleteM:
     def value_autocomplete(
         self: _InputBaseP,
         *,
@@ -474,10 +474,10 @@ class _Autocomplete:
 
 
 class InputText(
-    _WidthLoc,
-    _Placeholder,
-    _Autocomplete,
-    _Spellcheck,
+    _WidthLocM,
+    _PlaceholderM,
+    _AutocompleteM,
+    _SpellcheckM,
     _InputWithLabel,
 ):
     # id: str,
@@ -517,7 +517,7 @@ class InputText(
 
 
 class InputPassword(
-    _Placeholder,
+    _PlaceholderM,
     _InputWithLabel,
 ):
     # id: str,
@@ -558,7 +558,7 @@ class InputPassword(
     def get_width(self, *, timeout: Timeout = None) -> typing.Optional[str]:
         return get_el_style(self.loc_container, "width", timeout=timeout)
 
-    # This class does not inherit from `_WidthContainer`
+    # This class does not inherit from `_WidthContainerM`
     # as the width is in the element style
     def expect_width_to_have_value(
         self,
@@ -573,9 +573,9 @@ Resize = Literal["none", "both", "horizontal", "vertical"]
 
 
 class InputTextArea(
-    _Placeholder,
-    _Autocomplete,
-    _Spellcheck,
+    _PlaceholderM,
+    _AutocompleteM,
+    _SpellcheckM,
     _InputWithLabel,
 ):
     # id: str,
@@ -665,7 +665,7 @@ class InputTextArea(
 
 
 class _InputSelectBase(
-    _WidthLoc,
+    _WidthLocM,
     _InputWithLabel,
 ):
     loc_selected: Locator
@@ -878,7 +878,7 @@ class _InputActionBase(_InputBase):
 
 
 class InputActionButton(
-    _WidthLoc,
+    _WidthLocM,
     _InputActionBase,
 ):
     # label: TagChildArg,
@@ -919,7 +919,7 @@ class InputActionLink(_InputActionBase):
 
 
 class InputCheckboxBase(
-    _WidthContainer,
+    _WidthContainerM,
     _InputWithLabel,
 ):
     # label: TagChildArg
@@ -1054,7 +1054,7 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
 
 
 class InputCheckboxGroup(
-    _WidthContainer,
+    _WidthContainerM,
     _RadioButtonCheckboxGroupBase,
 ):
     # label: TagChildArg,
@@ -1144,7 +1144,7 @@ class InputCheckboxGroup(
 
 
 class InputRadioButtons(
-    _WidthContainer,
+    _WidthContainerM,
     _RadioButtonCheckboxGroupBase,
 ):
     # id: str,
@@ -1218,7 +1218,7 @@ class InputRadioButtons(
 
 
 class InputFile(
-    # _Placeholder,
+    # _PlaceholderM,
     _InputWithLabel,
 ):
     # id: str,
@@ -1313,7 +1313,7 @@ class InputFile(
         expect_attr(self.loc_file_display, "placeholder", value=value, timeout=timeout)
 
 
-class InputSlider(_WidthLoc, _InputWithLabel):
+class InputSlider(_WidthLocM, _InputWithLabel):
     # id: str,
     # label: TagChildArg,
     # min: SliderValueArg,
@@ -1491,7 +1491,7 @@ def _date_str(date: typing.Union[datetime.date, AttrValue]) -> OptionalStr:
         return str(datetime.date.fromisoformat(date))
 
 
-class _DateBase(_WidthContainer, _InputWithLabel):
+class _DateBase(_WidthContainerM, _InputWithLabel):
     # id: str,
     # label: TagChildArg,
     # value: Optional[Union[date, str]] = None,
@@ -1641,7 +1641,7 @@ class InputDate(_DateBase):
         )
 
 
-class InputDateRange(_WidthContainer, _InputWithLabel):
+class InputDateRange(_WidthContainerM, _InputWithLabel):
     # id: str,
     # label: TagChildArg,
     # *,
@@ -1916,7 +1916,7 @@ class _OutputContainerP(_OutputBaseP, Protocol):
     ]
 
 
-class _OutputContainer:
+class _OutputContainerM:
     def expect_container_tag(
         self: _OutputBaseP,
         tag_name: typing.Union[Literal["span", "div"], str],
@@ -1941,7 +1941,7 @@ class _OutputContainer:
         ), f"Container tag is `{found_tag_name}`, not `{tag_name}`"
 
 
-class _OutputInlineContainer(_OutputContainer):
+class _OutputInlineContainerM(_OutputContainerM):
     def expect_inline(
         self: _OutputContainerP, inline: bool = False, *, timeout: Timeout = None
     ) -> None:
@@ -1949,7 +1949,7 @@ class _OutputInlineContainer(_OutputContainer):
         self.expect_container_tag(tag_name, timeout=timeout)
 
 
-class OutputText(_OutputInlineContainer, _OutputTextValue):
+class OutputText(_OutputInlineContainerM, _OutputTextValue):
     def __init__(
         self,
         page: Page,
@@ -1971,7 +1971,7 @@ class OutputTextVerbatim(_OutputTextValue):
             self.expect.not_to_have_class("noplaceholder", timeout=timeout)
 
 
-class _OutputImageBase(_OutputInlineContainer, _OutputBase):
+class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
     # id: str
     # width: str = "100%"
     # height: str = "400px"
@@ -2062,7 +2062,7 @@ class OutputPlot(_OutputImageBase):
         super().__init__(page, id=id, loc_classes=".shiny-plot-output")
 
 
-class OutputUi(_OutputContainer, _OutputBase):
+class OutputUi(_OutputContainerM, _OutputBase):
     # id: str,
     # inline: bool = False,
     # container: Optional[TagFunction] = None,
