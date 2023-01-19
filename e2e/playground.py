@@ -82,6 +82,18 @@ Timeout = typing.Union[float, None]
 InitLocator = typing.Union[Locator, str]
 
 
+def set_text(
+    loc: Locator,
+    text: str,
+    *,
+    delay: typing.Union[float, None] = None,
+    timeout: Timeout = None,
+) -> None:
+    # TODO-future; Composable set() method
+    loc.fill("", timeout=timeout)  # Reset the value
+    loc.type(text, delay=delay, timeout=timeout)  # Type the value
+
+
 def assert_el_has_class(loc: Locator, cls: str) -> None:
     el_cls = loc.get_attribute("class")
     if el_cls is None:
@@ -174,7 +186,7 @@ def expect_el_style(
     timeout: Timeout = None,
 ) -> None:
     """Expect a style to have a value. If `value` is `None`, then the style should not exist."""
-    if isinstance(css_value, type(None)):
+    if css_value is None:
         # Not allowed to have any value for the style
         playwright_expect(loc).not_to_have_attribute(
             "style", re.compile(f"{css_key}\\s*:"), timeout=timeout
@@ -368,7 +380,7 @@ class InputNumeric(
     ) -> None:
         if value is None:
             value = ""
-        self.loc.fill(str(value), timeout=timeout)
+        set_text(self.loc, str(value), timeout=timeout)
 
     def value(self, *, timeout: Timeout = None) -> float:
         # Should we use jquery?
@@ -508,7 +520,7 @@ class InputText(
     def set(self, value: typing.Union[str, None], *, timeout: Timeout = None) -> None:
         if value is None:
             value = ""
-        self.loc.fill(str(value), timeout=timeout)
+        set_text(self.loc, str(value), timeout=timeout)
 
     def value(self, *, timeout: Timeout = None) -> str:
         return self.loc.input_value(timeout=timeout)
@@ -548,7 +560,7 @@ class InputPassword(
     def set(self, value: typing.Union[str, None], *, timeout: Timeout = None) -> None:
         if value is None:
             value = ""
-        self.loc.fill(value, timeout=timeout)
+        set_text(self.loc, str(value), timeout=timeout)
 
     def value(self, *, timeout: Timeout = None) -> str:
         return self.loc.input_value(timeout=timeout)
@@ -607,7 +619,7 @@ class InputTextArea(
         )
 
     def set(self, value: str, *, timeout: Timeout = None) -> None:
-        self.loc.fill(value, timeout=timeout)
+        set_text(self.loc, value, timeout=timeout)
 
     def value(self, *, timeout: Timeout = None) -> str:
         return self.loc.input_value(timeout=timeout)
@@ -1510,9 +1522,8 @@ class _DateBase(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
-        self.loc.fill(value, timeout=timeout)
-        # TODO-barret; How to trigger the update without opening the date picker?
-        self.loc.evaluate('(el) => $(el).bsDatepicker("update");')
+        # Type slow like a human
+        set_text(self.loc, value, delay=100, timeout=timeout)
 
     def expect_value(
         self,
