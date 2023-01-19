@@ -12,6 +12,8 @@ def test_output_ui_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     more_controls = OutputUi(page, "moreControls")
 
+    more_controls.expect_inline(False)
+
     more_controls.expect_to_be_empty()
     expect(more_controls.loc).to_have_text("")
     expect(page.locator("#n")).to_have_count(0)

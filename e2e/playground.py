@@ -1931,22 +1931,8 @@ class _OutputContainerM:
         *,
         timeout: Timeout = None,
     ) -> None:
-        # Could not find an expect method to find the tag name
-        # So trying to perform the expectation manually by waiting for attached state,
-        # then asserting
-
-        # Make sure the tag exists
-        self.loc.wait_for(state="attached", timeout=timeout)
-        # Get the tag name
-        # TODO-barret; Can this be done with locator and not an element handle?
-        found_tag_name = str(
-            self.loc.evaluate_handle(
-                "el => el.tagName.toLowerCase()", timeout=timeout
-            ).json_value()
-        )
-        assert (
-            tag_name == found_tag_name
-        ), f"Container tag is `{found_tag_name}`, not `{tag_name}`"
+        loc = self.loc.locator(f"xpath=self::{tag_name}")
+        playwright_expect(loc).to_have_count(1, timeout=timeout)
 
 
 class _OutputInlineContainerM(_OutputContainerM):
@@ -2068,7 +2054,7 @@ class OutputPlot(_OutputImageBase):
         super().__init__(page, id=id, loc_classes=".shiny-plot-output")
 
 
-class OutputUi(_OutputContainerM, _OutputBase):
+class OutputUi(_OutputInlineContainerM, _OutputBase):
     # id: str,
     # inline: bool = False,
     # container: Optional[TagFunction] = None,
