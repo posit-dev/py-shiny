@@ -1913,15 +1913,13 @@ class _OutputTextValue(_OutputBase):
 
 
 class _OutputContainerP(_OutputBaseP, Protocol):
-    expect_container_tag: typing.Callable[
-        # [
-        #     _OutputBaseP,
-        #     typing.Union[Literal["span", "div"], str],
-        #     Timeout,
-        # ],
-        ...,  # TODO-barret; Can't get this to work
-        None,
-    ]
+    def expect_container_tag(
+        self: _OutputBaseP,
+        tag_name: typing.Union[Literal["span", "div"], str],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        ...
 
 
 class _OutputContainerM:
