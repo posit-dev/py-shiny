@@ -341,7 +341,26 @@ class _WidthContainerM:
         expect_attr(self.loc_container, "width", value=value, timeout=timeout)
 
 
+class _SetTextM:
+    def set(self: _InputBaseP, value: str, *, timeout: Timeout = None) -> None:
+        set_text(self.loc, value, timeout=timeout)
+
+
+class _ExpectTextInputValueM:
+    def expect_value(
+        self: _InputBaseP,
+        value: TextValue,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        if value is None:
+            value = ""
+        playwright_expect(self.loc).to_have_value(value, timeout=timeout)
+
+
 class InputNumeric(
+    _SetTextM,
+    _ExpectTextInputValueM,
     _WidthLocM,
     _InputWithLabel,
 ):
@@ -359,23 +378,6 @@ class InputNumeric(
             id=id,
             loc=f"input#{id}[type=number].shiny-bound-input",
         )
-
-    def set(
-        self, value: typing.Union[float, str, None], *, timeout: Timeout = None
-    ) -> None:
-        if value is None:
-            value = ""
-        set_text(self.loc, str(value), timeout=timeout)
-
-    def expect_value(
-        self,
-        value: TextValue,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        if value is None:
-            value = ""
-        self.expect.to_have_value(value, timeout=timeout)
 
     def expect_min_to_have_value(
         self,
@@ -434,6 +436,8 @@ class _AutocompleteM:
 
 
 class InputText(
+    _SetTextM,
+    _ExpectTextInputValueM,
     _WidthLocM,
     _PlaceholderM,
     _AutocompleteM,
@@ -455,26 +459,11 @@ class InputText(
             loc=f"input#{id}[type=text].shiny-bound-input",
         )
 
-        self.loc_label = self.loc_container.locator("label")
-
-    def set(self, value: typing.Union[str, None], *, timeout: Timeout = None) -> None:
-        if value is None:
-            value = ""
-        set_text(self.loc, str(value), timeout=timeout)
-
-    def expect_value(
-        self,
-        value: TextValue,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        if value is None:
-            value = ""
-        self.expect.to_have_value(value, timeout=timeout)
-
 
 class InputPassword(
     _PlaceholderM,
+    _SetTextM,
+    _ExpectTextInputValueM,
     _InputWithLabel,
 ):
     # id: str,
@@ -491,23 +480,6 @@ class InputPassword(
             id=id,
             loc=f"input#{id}[type=password].shiny-bound-input",
         )
-
-        self.loc_label = self.loc_container.locator("label")
-
-    def set(self, value: typing.Union[str, None], *, timeout: Timeout = None) -> None:
-        if value is None:
-            value = ""
-        set_text(self.loc, str(value), timeout=timeout)
-
-    def expect_value(
-        self,
-        value: TextValue,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        if value is None:
-            value = ""
-        self.expect.to_have_value(value, timeout=timeout)
 
     def get_width(self, *, timeout: Timeout = None) -> typing.Optional[str]:
         return get_el_style(self.loc_container, "width", timeout=timeout)
@@ -530,6 +502,7 @@ class InputTextArea(
     _PlaceholderM,
     _AutocompleteM,
     _SpellcheckM,
+    _SetTextM,
     _InputWithLabel,
 ):
     # id: str,
@@ -551,19 +524,6 @@ class InputTextArea(
             id=id,
             loc=f"textarea#{id}.shiny-bound-input",
         )
-
-    def set(self, value: str, *, timeout: Timeout = None) -> None:
-        set_text(self.loc, value, timeout=timeout)
-
-    def expect_value(
-        self,
-        value: TextValue,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        if value is None:
-            value = ""
-        self.expect.to_have_value(value, timeout=timeout)
 
     def expect_width_to_have_value(
         self, value: AttrValue, *, timeout: Timeout = None
@@ -1408,7 +1368,11 @@ class InputSlider(_WidthLocM, _InputWithLabel):
         expect_attr(self.loc, "data-drag-interval", value=value, timeout=timeout)
 
 
-class _DateBase(_WidthContainerM, _InputWithLabel):
+class _DateBase(
+    _SetTextM,
+    _WidthContainerM,
+    _InputWithLabel,
+):
     # id: str,
     # label: TagChildArg,
     # value: Optional[Union[date, str]] = None,
@@ -1423,15 +1387,7 @@ class _DateBase(_WidthContainerM, _InputWithLabel):
     # datesdisabled: Optional[List[str]] = None,
     # daysofweekdisabled: Optional[List[int]] = None,
 
-    def set(
-        self: _InputWithContainerP,
-        # Due to the `language` parameter, we can't use `datetime.date` as the type
-        value: str,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        # Type slow like a human
-        set_text(self.loc, value, delay=100, timeout=timeout)
+    # Due to the `language` parameter, we can't use `datetime.date` as a value type
 
     def expect_value(
         self,
