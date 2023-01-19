@@ -967,7 +967,7 @@ class InputCheckbox(InputCheckboxBase):
         super().__init__(
             page,
             id=id,
-            loc=f"input#{id}[type=checkbox].shiny-bound-input",
+            loc=f"div.checkbox > label > input#{id}[type=checkbox].shiny-bound-input",
         )
 
 
@@ -980,7 +980,7 @@ class InputSwitch(InputCheckboxBase):
         super().__init__(
             page,
             id=id,
-            loc=f"input#{id}[type=checkbox].shiny-bound-input",
+            loc=f"div.form-switch > input#{id}[type=checkbox].shiny-bound-input",
         )
 
 
