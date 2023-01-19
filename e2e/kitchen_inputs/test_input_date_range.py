@@ -10,8 +10,8 @@ app = create_doc_example_fixture("input_date_range")
 
 def expect_date_range(
     date: InputDateRange,
-    start_value: typing.Union[datetime.date, str, Literal["today"]] = "today",
-    end_value: typing.Union[datetime.date, str, Literal["today"]] = "today",
+    start_value: typing.Union[str, Literal["today"]] = "today",
+    end_value: typing.Union[str, Literal["today"]] = "today",
     *,
     label: str = "Date:",
     autoclose: bool = True,
@@ -27,8 +27,8 @@ def expect_date_range(
     separator: str = " to ",
 ) -> None:
 
-    start_value = datetime.date.today() if start_value == "today" else start_value
-    end_value = datetime.date.today() if end_value == "today" else end_value
+    start_value = str(datetime.date.today()) if start_value == "today" else start_value
+    end_value = str(datetime.date.today()) if end_value == "today" else end_value
     date.expect_value((start_value, end_value))
     date.expect_autoclose(str(autoclose).lower())
     # # Not supported in `input_date_range()`
@@ -71,8 +71,8 @@ def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     expect_date_range(
         InputDateRange(page, "daterange4"),
-        datetime.date(2001, 1, 1),
-        datetime.date(2010, 12, 31),
+        str(datetime.date(2001, 1, 1)),
+        str(datetime.date(2010, 12, 31)),
     )
     expect_date_range(
         InputDateRange(page, "daterange5"),

@@ -1,5 +1,4 @@
 """Barret Facade classes for working with Shiny inputs/outputs in Playwright"""
-import datetime
 import json
 import pathlib
 import re
@@ -1488,17 +1487,6 @@ class InputSlider(_WidthLocM, _InputWithLabel):
         expect_attr(self.loc, "data-drag-interval", value=value, timeout=timeout)
 
 
-def _date_str(date: typing.Union[datetime.date, AttrValue]) -> OptionalStr:
-    if date is None:
-        return None
-    elif isinstance(date, typing.Pattern):
-        return date.pattern
-    elif isinstance(date, datetime.date):
-        return str(date)
-    else:
-        return str(datetime.date.fromisoformat(date))
-
-
 class _DateBase(_WidthContainerM, _InputWithLabel):
     # id: str,
     # label: TagChildArg,
@@ -1513,31 +1501,28 @@ class _DateBase(_WidthContainerM, _InputWithLabel):
     # autoclose: bool = True,
     # datesdisabled: Optional[List[str]] = None,
     # daysofweekdisabled: Optional[List[int]] = None,
+
     def set(
         self: _InputWithContainerP,
-        value: typing.Union[datetime.date, str, None],
+        # Due to the `language` parameter, we can't use `datetime.date` as the type
+        value: typing.Union[str, None],
         *,
         timeout: Timeout = None,
     ) -> None:
-        value_str = _date_str(value)
-        if value_str is None:
+        if value is None:
             self.loc.fill("", timeout=timeout)
             return
 
-        self.loc.fill(value_str, timeout=timeout)
+        self.loc.fill(value, timeout=timeout)
         # TODO-barret; How to trigger the update without opening the date picker?
         self.loc.evaluate('(el) => $(el).bsDatepicker("update");')
 
     def expect_value(
         self,
-        value: typing.Union[datetime.date, AttrValue],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
-        # Not using `_date_str()` as we want ability to supply non ISO formatted dates
-        if isinstance(value, datetime.date):
-            value = str(value)
-
         if value is None:
             self.expect.to_be_empty(timeout=timeout)
         else:
@@ -1545,19 +1530,19 @@ class _DateBase(_WidthContainerM, _InputWithLabel):
 
     def expect_min_date(
         self,
-        value: typing.Union[datetime.date, AttrValue],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-min-date", value=_date_str(value), timeout=timeout)
+        expect_attr(self.loc, "data-min-date", value=value, timeout=timeout)
 
     def expect_max_date(
         self,
-        value: typing.Union[datetime.date, AttrValue],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_attr(self.loc, "data-max-date", value=_date_str(value), timeout=timeout)
+        expect_attr(self.loc, "data-max-date", value=value, timeout=timeout)
 
     def expect_format(
         self,
@@ -1699,8 +1684,8 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         self,
         value: typing.Union[
             typing.Tuple[
-                typing.Union[datetime.date, str, None],
-                typing.Union[datetime.date, str, None],
+                typing.Union[str, None],
+                typing.Union[str, None],
             ],
             None,
         ],
@@ -1716,8 +1701,8 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         self,
         value: typing.Union[
             typing.Tuple[
-                typing.Union[datetime.date, PatternOrStr, None],
-                typing.Union[datetime.date, PatternOrStr, None],
+                AttrValue,
+                AttrValue,
             ],
             None,
         ],
@@ -1727,14 +1712,10 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
 
         start_val = None
         end_val = None
+
         if not (value is None):
-            # Not using `_date_str()` as we want ability to supply non ISO formatted dates
             start_val = value[0]
-            if isinstance(start_val, datetime.date):
-                start_val = str(start_val)
             end_val = value[1]
-            if isinstance(end_val, datetime.date):
-                end_val = str(end_val)
 
         if start_val is None:
             start_val = ""
@@ -1751,7 +1732,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
     # min: Optional[Union[date, str]] = None,
     def expect_min_date(
         self,
-        value: typing.Union[datetime.date, AttrValue],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1762,7 +1743,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
     # max: Optional[Union[date, str]] = None,
     def expect_max_date(
         self,
-        value: typing.Union[datetime.date, AttrValue],
+        value: AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:

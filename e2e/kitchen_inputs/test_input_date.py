@@ -10,7 +10,7 @@ app = create_doc_example_fixture("input_date")
 
 def expect_date(
     date: InputDate,
-    value: typing.Union[datetime.date, str, Literal["today"]] = "today",
+    value: typing.Union[str, Literal["today"]] = "today",
     *,
     label: str = "Date:",
     autoclose: bool = True,
@@ -25,7 +25,7 @@ def expect_date(
     width: typing.Union[str, None] = None,
 ) -> None:
 
-    date.expect_value(datetime.date.today() if value == "today" else value)
+    date.expect_value(str(datetime.date.today()) if value == "today" else value)
     date.expect_autoclose(str(autoclose).lower())
     date.expect_datesdisabled(datesdisabled)
     date.expect_daysofweekdisabled(daysofweekdisabled)
