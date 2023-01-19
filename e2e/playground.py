@@ -47,6 +47,27 @@ Done:
 * output_text
 * output_text_verbatim
 * output_ui
+
+# Class definitions
+* Fields
+  * Try to mirror playwright as much as possible.
+  * There are no properties, only methods; This allows for timeout values to be passed through and for complex methods.
+    * Locators will stay as properties
+  * Don't sub-class. For now, use `_` separatation and use `loc` or `value` as a prefix
+* Approach
+  * Use locators / playwright_expect as much as possible
+    * It should not be necessary to use `assert` directly.
+    * MUST wait for `Locator`s to do their job
+  * DO NOT provide `value` methods
+  * Add _set_ methods only if a user would perform them
+
+# Mixins
+* Use mixins to add consistent functionality to different classes
+* These classes should **never** be instantiated directly
+* Use `typing.Protocol` to define the interface of what is required on `self`
+* Add methods to the mixin if they are consistently used across multiple classes
+  * If a method is only used in one class, it should be defined in that class
+  * If a method is used inconsistently, make/use a helper method
 """
 
 OptionalStr = typing.Optional[str]
@@ -289,19 +310,6 @@ class _InputWithLabel(_InputWithContainer):
         if value is None:
             value = ""
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
-
-
-# Class definitions
-# * Fields
-#   * Try to mirror playwright as much as possible.
-#   * There are no properties, only methods; This allows for timeout values to be passed through and for complex methods.
-#     * Locators will stay as properties
-#   * Don't sub-class. For now, use `_` separatation and use `loc` or `value` as a prefix
-# * Approach
-#   * Use locators / playwright_expect as much as possible
-#     * It should not be necessary to use `assert` directly.
-#     * MUST wait for `Locator`s to do their job
-#   * Provide `value` methods as a convenience
 
 
 class _WidthLocM:
