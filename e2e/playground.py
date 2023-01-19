@@ -22,6 +22,7 @@ Questions:
 * `_DateBase` is signaled as private, but `InputDateRange` will have two fields of `date_start` and `date_end`. Due to how the init selectors are created, they are not `InputDate` instances. Should we make `_DateBase` public?
 * Can Date pickers set the `value` attribute on the corresponding input element? If so, we could use `expect_value()` to check the value of the input element.
 * In `test_output_table.py`, why can't I write `barret = ["1", "2"]; table.expect_column_labels(barret)`? (Typing issue)
+* For set methods or expect_value methods, should we not allow `None` as a value? Ex: InputDateRange does not allow this, but InputText does (upgrades `None` to `""`)
 
 Done:
 * input_action_button
@@ -1505,14 +1506,10 @@ class _DateBase(_WidthContainerM, _InputWithLabel):
     def set(
         self: _InputWithContainerP,
         # Due to the `language` parameter, we can't use `datetime.date` as the type
-        value: typing.Union[str, None],
+        value: str,
         *,
         timeout: Timeout = None,
     ) -> None:
-        if value is None:
-            self.loc.fill("", timeout=timeout)
-            return
-
         self.loc.fill(value, timeout=timeout)
         # TODO-barret; How to trigger the update without opening the date picker?
         self.loc.evaluate('(el) => $(el).bsDatepicker("update");')
@@ -1682,52 +1679,45 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
 
     def set(
         self,
-        value: typing.Union[
-            typing.Tuple[
-                typing.Union[str, None],
-                typing.Union[str, None],
-            ],
-            None,
+        value: typing.Tuple[
+            typing.Union[str, None],
+            typing.Union[str, None],
         ],
         *,
         timeout: Timeout = None,
     ) -> None:
-        if value is None:
-            value = (None, None)
-        self.date_start.set(value=value[0], timeout=timeout)
-        self.date_end.set(value=value[1], timeout=timeout)
+        start = value[0]
+        end = value[1]
+        # TODO-future; Composable set() methods?
+        if start is not None:
+            self.date_start.set(value=start, timeout=timeout)
+        if end is not None:
+            self.date_end.set(value=end, timeout=timeout)
 
     def expect_value(
         self,
-        value: typing.Union[
-            typing.Tuple[
-                AttrValue,
-                AttrValue,
-            ],
-            None,
+        value: typing.Tuple[
+            AttrValue,
+            AttrValue,
         ],
         *,
         timeout: Timeout = None,
     ) -> None:
 
-        start_val = None
-        end_val = None
+        start_val = value[0]
+        end_val = value[1]
 
-        if not (value is None):
-            start_val = value[0]
-            end_val = value[1]
-
-        if start_val is None:
-            start_val = ""
-        if end_val is None:
-            end_val = ""
+        if start_val is None and end_val is None:
+            raise ValueError("Both `start_val` and `end_val` can not be `None`")
 
         # We can not use `[value={value}]` within Locators.
         # The physical `value` attribute is never set, so we can not select on it.
         # We must as the start and end values individually, rather than at the same time like the checkboxgroup input.
         # TODO-future; Composable expectations
-        self.date_start.expect_value(start_val, timeout=timeout)
-        self.date_end.expect_value(end_val, timeout=timeout)
+        if not (start_val is None):
+            self.date_start.expect_value(start_val, timeout=timeout)
+        if not (end_val is None):
+            self.date_end.expect_value(end_val, timeout=timeout)
 
     # min: Optional[Union[date, str]] = None,
     def expect_min_date(
