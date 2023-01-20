@@ -270,6 +270,8 @@ def try_render_plotnine(
         data = base64.b64encode(buf.read())
         data_str = data.decode("utf-8")
 
+        coordmap = get_coordmap(x.draw(show=False))
+
     res: ImgData = {
         "src": "data:image/png;base64," + data_str,
         "width": "100%",
@@ -279,5 +281,8 @@ def try_render_plotnine(
 
     if alt is not None:
         res["alt"] = alt
+
+    if coordmap is not None:
+        res["coordmap"] = coordmap
 
     return (True, res)
