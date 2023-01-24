@@ -1276,6 +1276,10 @@ class InputSlider(_WidthLocM, _InputWithLabel):
     # timezone: Optional[str] = None,
     # drag_range: bool = True,
 
+    loc_irs: Locator
+    loc_irs_label: Locator
+    loc_irs_ticks: Locator
+
     def __init__(
         self,
         page: Page,
@@ -1287,12 +1291,74 @@ class InputSlider(_WidthLocM, _InputWithLabel):
             loc=f"input#{id}",
             loc_label=f"label#{id}-label",
         )
+        self.loc_irs = self.loc_container.locator("> .irs.irs--shiny")
+        self.loc_irs_label = self.loc_irs.locator("> .irs > .irs-single")
+        self.loc_irs_ticks = self.loc_irs.locator("> .irs-grid > .irs-grid-text")
 
-    def expect_value(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        # TODO-barret; implement
-        NotImplementedError("Need to get the value somehow")
+    def expect_tick_labels_to_have_text(
+        self,
+        value: typing.List[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc_irs_ticks).to_have_text(value, timeout=timeout)
 
-    def set(self, fraction: float, *, timeout: Timeout = None) -> None:
+    def expect_value(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_irs_label).to_have_text(value, timeout=timeout)
+
+    def set(self, value: str, *, timeout: Timeout = None) -> None:
+        self.loc_container.wait_for(state="visible", timeout=timeout)
+        self.loc_container.scroll_into_view_if_needed(timeout=timeout)
+
+        handle = self.loc_container.locator(".irs-handle")
+        handle_bb = handle.bounding_box(timeout=timeout)
+        if handle_bb is None:
+            raise RuntimeError("Couldn't find bounding box for .irs-handle")
+
+        handle_center = (
+            handle_bb["x"] + (handle_bb["width"] / 2),
+            handle_bb["y"] + (handle_bb["height"] / 2),
+        )
+
+        grid = self.loc_container.locator(".irs-grid")
+        grid_bb = grid.bounding_box(timeout=timeout)
+        if grid_bb is None:
+            raise RuntimeError("Couldn't find bounding box for .irs-grid")
+
+        mouse = self.loc_container.page.mouse
+        mouse.move(handle_center[0], handle_center[1])
+        mouse.down()
+
+        # Move all the way to the left
+        mouse.move(grid_bb["x"], handle_center[1])
+
+        # For each pixel in the grid width, check the text label
+        pxls: int = 0
+        found = False
+        values_found: typing.Dict[str, bool] = {}
+        while pxls <= grid_bb["width"] + 1:
+            # Get value
+            cur_val = self.loc_irs_label.inner_text()
+            values_found[cur_val] = True
+
+            # Quit if found
+            if cur_val == value:
+                found = True
+                break
+
+            # Not found; move handle to the right
+            mouse.move(grid_bb["x"] + pxls, handle_center[1])
+            pxls += 1
+
+        mouse.up()
+        if not found:
+            values_found_txt = ", ".join([f"'{key}'" for key in values_found.keys()])
+            raise ValueError(
+                f"Could not find value '{value}' when moving slider from left to right\nValues found:\n{values_found_txt}"
+            )
+
+    # TODO-barret; Remove? InputSlider.set(value: str) is more intuitive
+    def set_fraction(self, fraction: float, *, timeout: Timeout = None) -> None:
         if fraction > 1 or fraction < 0:
             raise ValueError("`fraction` must be between 0 and 1")
 

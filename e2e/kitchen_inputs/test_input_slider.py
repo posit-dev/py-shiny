@@ -12,10 +12,15 @@ def test_input_slider_kitchen(page: Page, slider_app: ShinyAppProc) -> None:
     # page.set_default_timeout(1000)
 
     obs = InputSlider(page, "obs")
-    # file1.expect.to_have_value("Data summary")
-    # expect(file1.loc).to_have_value("Data summary")
 
     expect(obs.loc_label).to_have_text("Number of bins:")
+
+    obs.expect_tick_labels_to_have_text(
+        # Don't know why it is not this value. But the bottom value is found consistently.
+        # ["10", "20", "30", "40", "50", "60", "70", "80", "90", "100"]
+        ["10", "19", "28", "37", "46", "55", "64", "73", "82", "91", "100"]
+    )
+    obs.expect_value("30")
 
     obs.expect_animate(False)
     # obs.expect_animate_interval_to_have_value(500)
@@ -33,9 +38,18 @@ def test_input_slider_kitchen(page: Page, slider_app: ShinyAppProc) -> None:
     obs.expect_timezone_to_have_value(None)
     obs.expect_drag_range_to_have_value(None)
 
-    obs.set(42.0 / 100.0)
+    obs.set("42")
+    obs.expect_value("42")
 
-    # TODO-barret; test plot output
+    obs.set_fraction((21.0 - 10.0) / (100.0 - 10.0))
+    obs.expect_value("21")
+
+    try:
+        obs.set("not-a-number", timeout=200)
+    except ValueError as e:
+        print(e)
+
+    # TODO-future; test plot output? Tests below do a better job of making sure the slider is working.
 
 
 def test_input_slider_output(page: Page, template_app: ShinyAppProc) -> None:
@@ -46,9 +60,9 @@ def test_input_slider_output(page: Page, template_app: ShinyAppProc) -> None:
 
     txt.expect_value("n*2 is 40")
     slider.expect_label_to_have_text("N")
-    # slider.expect_value("20")
+    slider.expect_value("20")
 
-    slider.set(42.0 / 100.0)
-    # slider.expect_value("42")
+    slider.set("42")
+    slider.expect_value("42")
 
     txt.expect_value("n*2 is 84")
