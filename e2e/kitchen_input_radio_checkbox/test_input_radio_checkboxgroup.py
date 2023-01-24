@@ -1,11 +1,5 @@
 from conftest import ShinyAppProc
-from playground import (
-    InputCheckboxGroup,
-    InputRadioButtons,
-    PatternOrStr,
-    TextValue,
-    typing,
-)
+from playground import InputCheckboxGroup, InputRadioButtons, PatternOrStr, typing
 from playwright.sync_api import Page, expect
 
 
