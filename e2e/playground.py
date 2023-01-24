@@ -920,21 +920,20 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
             #     f"{el_type}[{key}='{item}']{is_checked_str}"
             # )
 
+            # Get all elements of type
             has_locator = self.page.locator(f"{el_type}{is_checked_str}")
-            # Go up one element as CSS does not have "self" selector
-            # We can leverage this as the HTML structure is very nested.
-            # This approach will break if there are matching siblings
-            has_locator = has_locator.nth(i).locator("..")
-            # Find direct child that matches selector
-            has_locator = has_locator.locator(
-                f"> {el_type}[{key}='{item}']{is_checked_str}"
-            )
+            # Get the `n`th matching element
+            has_locator = has_locator.nth(i)
+            # Make sure that element has the correct attribute value
+            has_locator = has_locator.locator(f'xpath=self::*[@{key}="{item}"]')
 
+            # Given the container, make sure it contains this locator
             loc_container = loc_container.locator(
                 # Return self
                 "xpath=.",
                 has=has_locator,
             )
+
         # Make sure other items are not in set
         loc_inputs = loc_container.locator(f"{el_type}{is_checked_str}")
         # TODO-barret; Look into adding a try-catch around this and then performing the locator check using multiple expectations to get better error messages
