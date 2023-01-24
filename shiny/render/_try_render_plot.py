@@ -116,7 +116,8 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Union[Figure, None]:
     # should cover most, if not all, of these (it doesn't cover Animation, though).
     # https://matplotlib.org/stable/api/artist_api.html
     if isinstance(x, Artist):
-        return x.get_figure()
+        # Pyright 1.1.290 seems to fail type narrowing and needs a cast here.
+        return cast(Artist, x).get_figure()  # pyright: reportUnnecessaryCast=false
 
     # Some other custom figure-like classes such as seaborn.axisgrid.FacetGrid attach
     # their figure as an attribute
