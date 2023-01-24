@@ -48,10 +48,16 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 	rm -rf typings/
 
-typings/uvicorn/__init__.pyi:
+typings/uvicorn:
 	pyright --createstub uvicorn
 
-pyright: typings/uvicorn/__init__.pyi ## type check with pyright
+typings/numpy:
+	pyright --createstub numpy
+
+typings/matplotlib:
+	pyright --createstub matplotlib
+
+pyright: typings/uvicorn typings/numpy typings/matplotlib ## type check with pyright
 	pyright
 
 lint: ## check style with flake8
