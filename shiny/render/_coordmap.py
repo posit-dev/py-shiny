@@ -2,7 +2,7 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, List, Tuple, Union, cast
 
 from ..types import Coordmap, CoordmapDims, CoordmapPanelDomain, CoordmapPanelRange
 
@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     import numpy.typing as npt
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
+    from matplotlib.transforms import Transform
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -27,8 +28,8 @@ def get_coordmap(fig: Figure) -> Union[Coordmap, None]:
         "height": dims_ar[1],
     }
 
-    domain_xlim = axes.get_xlim()
-    domain_ylim = axes.get_ylim()
+    domain_xlim = cast(Tuple[float, float], axes.get_xlim())
+    domain_ylim = cast(Tuple[float, float], axes.get_ylim())
 
     # Data coordinates of plotting area
     domain: CoordmapPanelDomain = {
@@ -39,7 +40,9 @@ def get_coordmap(fig: Figure) -> Union[Coordmap, None]:
     }
 
     # Pixel coordinates of plotting area
-    range_ar: npt.NDArray[np.double] = axes.transData.transform(
+    transdata: Transform = axes.transData  # pyright: reportGeneralTypeIssues=false
+
+    range_ar: npt.NDArray[np.double] = transdata.transform(
         [
             domain["left"],
             domain["bottom"],
