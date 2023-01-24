@@ -203,7 +203,7 @@ def try_render_plotnine(
         data = base64.b64encode(buf.read())
         data_str = data.decode("utf-8")
 
-        coordmap = get_coordmap(x.draw(show=False))
+        coordmap = get_coordmap(cast(PlotnineFigure, x).draw(show=False))
 
     res: ImgData = {
         "src": "data:image/png;base64," + data_str,
