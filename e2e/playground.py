@@ -25,6 +25,7 @@ Questions:
 * For set methods or expect_value methods, should we not allow `None` as a value? Ex: InputDateRange does not allow this, but InputText does (upgrades `None` to `""`)
 
 * Should we guard against nest shiny input objects? (Should we tighten up the selectors?). CSS selector to only select first occurance: https://stackoverflow.com/a/71749400/591574
+* TODO-barret; Make sure multiple usage of `timeout` has the proper values. Should followup usages be `0` to force it to be immediate? (Is `0` the right value?)
 
 Done:
 * input_action_button
@@ -890,6 +891,59 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
             timeout=timeout,
         )
 
+    def _assert_is_unique(
+        self: _InputWithContainerP, arr: typing.List[str], msg: str
+    ) -> None:
+        assert len(arr) == len(list(dict.fromkeys(arr))), msg
+
+    def _is_checked_str(
+        self: _InputWithContainerP,
+        is_checked: typing.Union[bool, None],
+    ) -> str:
+        if is_checked is None:
+            return ""
+        elif is_checked:
+            return ":checked"
+        else:
+            NotImplementedError("`is_checked = FALSE` is not verified yet")
+            return ":not(:checked)"
+
+    def _expect_locator_contains_values_in_list(
+        self: _InputWithContainerP,
+        el_type: str,
+        arr_name: str,
+        # TODO-barret; support patterns?
+        arr: typing.List[str],
+        *,
+        is_checked: typing.Optional[bool] = None,
+        timeout: Timeout = None,
+        key: str = "value",
+    ) -> None:
+        # Make sure the locator contains all of `arr`
+
+        # Make sure the locator has len(uniq_arr) input elements
+        _RadioButtonCheckboxGroupBase._assert_is_unique(
+            self, arr, f"`{arr_name}` must be unique"
+        )
+        is_checked_str = _RadioButtonCheckboxGroupBase._is_checked_str(self, is_checked)
+
+        # Find all items in set
+        loc_container = self.loc_container
+        for item in arr:
+            # Given the container, make sure it contains this locator
+            loc_container = loc_container.locator(
+                # Return self
+                "xpath=.",
+                # Simple approach as position is not needed
+                has=self.page.locator(
+                    f"{el_type}[{key}='{item}']{is_checked_str}",
+                ),
+            )
+
+        # If we are only looking to see if *some* (not *these only*) elements exist,
+        # then we only need to check if the container locator (which must contain the elements) can be found
+        playwright_expect(loc_container).to_have_count(1, timeout=timeout)
+
     def _expect_locator_values_in_list(
         self: _InputWithContainerP,
         el_type: str,
@@ -901,27 +955,17 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
         timeout: Timeout = None,
         key: str = "value",
     ) -> None:
-        # Make sure the locator has all of arr
+        # Make sure the locator has exactly `arr` values
 
         # Make sure the locator has len(uniq_arr) input elements
-        assert len(arr) == len(list(dict.fromkeys(arr))), f"`{arr_name}` must be unique"
-
-        if is_checked is None:
-            is_checked_str = ""
-        elif is_checked:
-            is_checked_str = ":checked"
-        else:
-            NotImplementedError("`is_checked = FALSE` is not verified yet")
-            is_checked_str = ":not(:checked)"
+        _RadioButtonCheckboxGroupBase._assert_is_unique(
+            self, arr, f"`{arr_name}` must be unique"
+        )
+        is_checked_str = _RadioButtonCheckboxGroupBase._is_checked_str(self, is_checked)
 
         # Find all items in set
         loc_container = self.loc_container
         for (item, i) in zip(arr, range(len(arr))):
-            # # Simple approach if position wasn't needed
-            # has_locator = self.page.locator(
-            #     f"{el_type}[{key}='{item}']{is_checked_str}"
-            # )
-
             # Get all elements of type
             has_locator = self.page.locator(f"{el_type}{is_checked_str}")
             # Get the `n`th matching element
@@ -937,8 +981,9 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
             )
 
         # Make sure other items are not in set
+        # If we know all elements are contained in the container,
+        # and all elements all unique, then it should have a count of `len(arr)`
         loc_inputs = loc_container.locator(f"{el_type}{is_checked_str}")
-        # TODO-barret; Look into adding a try-catch around this and then performing the locator check using multiple expectations to get better error messages
         playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
 
 
@@ -984,12 +1029,21 @@ class InputCheckboxGroup(
 
         if isinstance(selected, str):
             selected = [selected]
-        # We are wanting to delay retrieving the value of the checkbox as long as possible
-        checkbox_loc = self.loc_choices
-        checkbox_loc.nth(0).wait_for(state="attached", timeout=timeout)
 
-        # TODO-barret; Could do with multiple locator calls, but unchecking the values without the known values would be difficult.
-        for checkbox in checkbox_loc.element_handles():
+        # Make sure the selected items exist
+        # Similar to `self.expect_choices(choices = selected)`, but with
+        # `is_exact=False` to allow for values not in `selected`.
+        self._expect_locator_contains_values_in_list(
+            el_type="input[type=checkbox]",
+            arr_name="selected",
+            arr=selected,
+            timeout=timeout,
+        )
+
+        # Could do with multiple locator calls,
+        # but unchecking the elements that are not in `selected` is not possible
+        # as `set_checked()` likes a single element.
+        for checkbox in self.loc_choices.element_handles():
             checkbox_value = checkbox.input_value(timeout=timeout)
             checkbox.set_checked(checkbox_value in selected, timeout=timeout, **kwargs)
 
