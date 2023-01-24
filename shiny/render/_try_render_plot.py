@@ -1,11 +1,19 @@
+# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
+# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
+from __future__ import annotations
+
 import base64
 import io
-from typing import Any, List, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
 
-from ..types import ImgData, MplArtist, MplFigure, PlotnineFigure
+from ..types import ImgData, PlotnineFigure
 from ._coordmap import get_coordmap
 
 TryPlotResult = Tuple[bool, Union[ImgData, None]]
+
+
+if TYPE_CHECKING:
+    from matplotlib.figure import Figure
 
 
 # Try to render a matplotlib object (or the global figure, if it's been used). If `fig`
@@ -70,17 +78,11 @@ def try_render_matplotlib(
         matplotlib.pyplot.close(fig)  # pyright: ignore[reportGeneralTypeIssues]
 
 
-def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, None]:
+def get_matplotlib_figure(x: object, allow_global: bool) -> Union[Figure, None]:
     import matplotlib.pyplot as plt
-    from matplotlib.animation import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
-        Animation,
-    )
-    from matplotlib.artist import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
-        Artist,
-    )
-    from matplotlib.figure import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
-        Figure,
-    )
+    from matplotlib.animation import Animation
+    from matplotlib.artist import Artist
+    from matplotlib.figure import Figure
 
     # Detect usage of pyplot global figure
     # TODO: Might be good to detect non-empty plt.get_fignums() before we call the user
@@ -90,7 +92,7 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, Non
         x is None and len(plt.get_fignums()) > 0
     ):  # pyright: reportUnknownArgumentType=false, reportUnknownMemberType=false
         if allow_global:
-            return cast(MplFigure, plt.gcf())
+            return plt.gcf()
         else:
             # Must close the global figure so we don't stay in this state forever
             plt.close(plt.gcf())
@@ -100,7 +102,7 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, Non
             )
 
     if isinstance(x, Figure):
-        return cast(MplFigure, x)
+        return x
 
     if isinstance(x, Animation):
         raise RuntimeError(
@@ -114,13 +116,13 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, Non
     # should cover most, if not all, of these (it doesn't cover Animation, though).
     # https://matplotlib.org/stable/api/artist_api.html
     if isinstance(x, Artist):
-        return cast(MplArtist, x).get_figure()
+        return x.get_figure()
 
     # Some other custom figure-like classes such as seaborn.axisgrid.FacetGrid attach
     # their figure as an attribute
     fig = getattr(x, "figure", None)
     if isinstance(fig, Figure):
-        return cast(MplFigure, fig)
+        return fig
 
     # Sometimes generic plot() methods will return an iterable of Artists,
     # If they all refer to the same figure, then it seems reasonable to use it

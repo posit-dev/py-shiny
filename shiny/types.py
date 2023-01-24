@@ -12,19 +12,8 @@ __all__ = (
     "SilentCancelOutputException",
 )
 
-import os
 import sys
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    BinaryIO,
-    Dict,
-    List,
-    Optional,
-    TextIO,
-    Tuple,
-    Union,
-)
+from typing import Any, BinaryIO, Dict, List, Optional, Tuple, Union
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -42,10 +31,6 @@ else:
 from htmltools import TagChildArg
 
 from ._docstring import add_example
-
-if TYPE_CHECKING:
-    import numpy as np
-    import numpy.typing as npt
 
 
 # Sentinel value - indicates a missing value in a function call.
@@ -202,77 +187,6 @@ class NavSetArg(Protocol):
 # =============================================================================
 # Types for plots and images
 # =============================================================================
-
-# Use this protocol to avoid needing to maintain working stubs for matplotlib. If
-# good stubs ever become available for matplotlib, use those instead.
-class MplTransform(Protocol):
-    def transform(
-        self, values: Union["npt.NDArray[np.double]", List[float]]
-    ) -> "npt.NDArray[np.double]":
-        ...
-
-
-class MplAxes(Protocol):
-    transData: MplTransform
-
-    def get_xlim(self) -> "npt.NDArray[np.double]":
-        ...
-
-    def get_ylim(self) -> "npt.NDArray[np.double]":
-        ...
-
-
-class MplFigure(Protocol):
-    def get_size_inches(self) -> "npt.NDArray[np.double]":
-        ...
-
-    def set_size_inches(
-        self,
-        w: Union[Tuple[float, float], float],
-        h: Optional[float] = None,
-        forward: bool = True,
-    ):
-        ...
-
-    def get_dpi(self) -> float:
-        ...
-
-    def set_dpi(self, val: float):
-        ...
-
-    def get_axes(self) -> List[MplAxes]:
-        ...
-
-    def savefig(
-        self,
-        fname: Union[str, TextIO, BinaryIO, os.PathLike[Any]],
-        dpi: Union[float, Literal["figure"], None] = None,
-        # facecolor="w",
-        # edgecolor="w",
-        # orientation="portrait",
-        # papertype=None,
-        format: Optional[str] = None,
-        # transparent=False,
-        bbox_inches: object = None,
-        # pad_inches=0.1,
-        # frameon=None,
-        # metadata=None,
-    ):
-        ...
-
-
-class MplArtist(Protocol):
-    def get_figure(self) -> MplFigure:
-        ...
-
-
-class MplAnimation(Protocol):
-    def pause(self):
-        ...
-
-    def resume(self):
-        ...
-
 
 # Use this protocol to avoid needing to maintain working stubs for plotnint. If
 # good stubs ever become available for plotnine, use those instead.
