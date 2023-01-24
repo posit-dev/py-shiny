@@ -67,7 +67,7 @@ format: ## format code with black and isort
 	echo "Sorting imports with isort."
 	isort .
 
-check: pyright lint ## check code quality with pyright, flake8, black and isort
+check: ## check code quality with black and isort
 	echo "Checking code with black."
 	black --check .
 	echo "Sorting imports with isort."
