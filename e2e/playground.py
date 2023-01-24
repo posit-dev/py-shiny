@@ -1162,6 +1162,10 @@ class InputFile(
     # _ExpectPlaceholderAttrM,
     _InputWithLabel,
 ):
+    loc_button: Locator
+    loc_file_display: Locator
+    loc_progress: Locator
+
     # id: str,
     # label: TagChildArg,
     # *,
@@ -1186,9 +1190,9 @@ class InputFile(
             loc=f"input[type=file]#{id}",
             loc_label=f"label[id={id}-label]",
         )
-        self.loc_file_input = self.loc
         self.loc_button = self.loc_container.locator("label span.btn")
         self.loc_file_display = self.loc_container.locator("input[type=text]")
+        self.loc_progress = self.loc_container.locator(".progress-bar")
 
     def set(
         self,
@@ -1201,19 +1205,20 @@ class InputFile(
         ],
         *,
         timeout: Timeout = None,
+        expect_complete_timeout: Timeout = 30 * 1000,
     ) -> None:
         self.loc.set_input_files(file_path, timeout=timeout)
+        if expect_complete_timeout is not None:
+            self.expect_complete(timeout=expect_complete_timeout)
 
-    def expect_files(
+    def expect_complete(
         self,
-        files: typing.Union[str, typing.List[str], None],
         *,
         timeout: Timeout = None,
     ) -> None:
-        # TODO-barret; Find method to get files, or remove method
-        # TODO-barret; Test value being sent to shiny?
-        NotImplementedError("`expect_files()` is not implemented")
+        expect_el_style(self.loc_progress, "width", "100%", timeout=timeout)
 
+    # TODO-barret; Test multiple file upload
     def expect_multiple(self, multiple: bool, *, timeout: Timeout = None) -> None:
         expect_multiple(self.loc, multiple, timeout=timeout)
 

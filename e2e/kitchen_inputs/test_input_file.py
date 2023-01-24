@@ -38,4 +38,6 @@ def test_input_file_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     expect(file1.loc_file_display).to_have_value(file_info.get("name"))
 
-    # TODO-barret; test output table
+    file1.expect_complete()
+
+    # TODO-barret; Test UI output to not be empty
