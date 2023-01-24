@@ -51,13 +51,10 @@ clean-test: ## remove test and coverage artifacts
 typings/uvicorn:
 	pyright --createstub uvicorn
 
-typings/numpy:
-	pyright --createstub numpy
-
 typings/matplotlib:
 	pyright --createstub matplotlib
 
-pyright: typings/uvicorn typings/numpy typings/matplotlib ## type check with pyright
+pyright: typings/uvicorn typings/matplotlib ## type check with pyright
 	pyright
 
 lint: ## check style with flake8
