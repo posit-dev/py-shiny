@@ -613,7 +613,7 @@ class _InputSelectBase(
 
     def expect_choices(
         self,
-        # TODO; support patterns?
+        # TODO-barret; support patterns?
         choices: typing.Union[typing.List[str], None],
         *,
         timeout: Timeout = None,
@@ -628,9 +628,9 @@ class _InputSelectBase(
 
         _RadioButtonCheckboxGroupBase._expect_locator_values_in_list(
             self,
-            "option",
-            "choices",
-            choices,
+            el_type="option",
+            arr_name="choices",
+            arr=choices,
             timeout=timeout,
         )
 
@@ -655,9 +655,9 @@ class _InputSelectBase(
 
         # _RadioButtonCheckboxGroupBase._expect_locator_values_in_list(
         #     self,
-        #     "option",
-        #     "selected",
-        #     selected,
+        #     el_type="option",
+        #     arr_name="selected",
+        #     arr=selected,
         #     timeout=timeout,
         #     is_checked=True,
         # )
@@ -665,7 +665,7 @@ class _InputSelectBase(
     def expect_choice_groups(
         self,
         choice_groups: typing.Union[
-            # TODO; support patterns?
+            # TODO-barret; support patterns?
             typing.List[str],
             None,
         ],
@@ -682,9 +682,9 @@ class _InputSelectBase(
 
         _RadioButtonCheckboxGroupBase._expect_locator_values_in_list(
             self,
-            "optgroup",
-            "choice_groups",
-            choice_groups,
+            el_type="optgroup",
+            arr_name="choice_groups",
+            arr=choice_groups,
             timeout=timeout,
             key="label",
         )
@@ -894,7 +894,7 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
         self: _InputWithContainerP,
         el_type: str,
         arr_name: str,
-        # TODO; support patterns?
+        # TODO-barret; support patterns?
         arr: typing.List[str],
         *,
         is_checked: typing.Optional[bool] = None,
@@ -995,21 +995,21 @@ class InputCheckboxGroup(
 
     def expect_choices(
         self,
-        # TODO; support patterns?
+        # TODO-barret; support patterns?
         choices: typing.List[str],
         *,
         timeout: Timeout = None,
     ) -> None:
         self._expect_locator_values_in_list(
-            "input[type=checkbox]",
-            "choices",
-            choices,
+            el_type="input[type=checkbox]",
+            arr_name="choices",
+            arr=choices,
             timeout=timeout,
         )
 
     def expect_selected(
         self,
-        # TODO; support patterns?
+        # TODO-barret; support patterns?
         selected: typing.Union[typing.List[str], None],
         *,
         timeout: Timeout = None,
@@ -1022,9 +1022,9 @@ class InputCheckboxGroup(
             return
 
         self._expect_locator_values_in_list(
-            "input[type=checkbox]",
-            "selected",
-            selected,
+            el_type="input[type=checkbox]",
+            arr_name="selected",
+            arr=selected,
             timeout=timeout,
             is_checked=True,
         )
@@ -1070,21 +1070,23 @@ class InputRadioButtons(
         **kwargs: typing.Any,
     ) -> None:
 
+        # Only need to set.
+        # The Browser will _unset_ the previously selected radio button
         self.loc_container.locator(
             f"label input[type=radio][value='{selected}']"
         ).check(timeout=timeout)
 
     def expect_choices(
         self,
-        # TODO; support patterns?
+        # TODO-barret; support patterns?
         choices: typing.List[str],
         *,
         timeout: Timeout = None,
     ) -> None:
         self._expect_locator_values_in_list(
-            "input[type=radio]",
-            "choices",
-            choices,
+            el_type="input[type=radio]",
+            arr_name="choices",
+            arr=choices,
             timeout=timeout,
         )
 
