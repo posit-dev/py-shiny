@@ -24,6 +24,8 @@ Questions:
 * In `test_output_table.py`, why can't I write `barret = ["1", "2"]; table.expect_column_labels(barret)`? (Typing issue)
 * For set methods or expect_value methods, should we not allow `None` as a value? Ex: InputDateRange does not allow this, but InputText does (upgrades `None` to `""`)
 
+* Should we guard against nest shiny input objects? (Should we tighten up the selectors?). CSS selector to only select first occurance: https://stackoverflow.com/a/71749400/591574
+
 Done:
 * input_action_button
 * input_action_link
@@ -957,18 +959,19 @@ class InputCheckboxGroup(
         super().__init__(
             page,
             id=id,
-            # `div` that contains all input checkbox tags
             # Similar to `select` tag in `InputSelect`'s `loc`
-            loc="div.shiny-options-group",
+            # loc should be the `.shiny-bound-input` element
+            # This happens to be the container
+            loc="xpath=.",
             loc_container=f"div#{id}.shiny-input-checkboxgroup.shiny-bound-input",
             loc_label=f"label#{id}-label",
         )
 
-        self.loc_selected = self.loc.locator("label input[type=checkbox]:checked")
-        self.loc_choices = self.loc.locator("label input[type=checkbox]")
+        self.loc_selected = self.loc.locator("label > input[type=checkbox]:checked")
+        self.loc_choices = self.loc.locator("label > input[type=checkbox]")
         self.loc_choice_labels = self.loc.locator(
             "label",
-            has=self.page.locator("input[type=checkbox]"),
+            has=self.page.locator("> input[type=checkbox]"),
         )
 
     def set(
@@ -1045,17 +1048,18 @@ class InputRadioButtons(
         super().__init__(
             page,
             id=id,
-            # `div` that contains all input checkbox tags
             # Similar to `select` tag in `InputSelect`'s `loc`
-            loc="div.shiny-options-group",
+            # loc should be the `.shiny-bound-input` element
+            # This happens to be the container
+            loc="xpath=.",
             loc_container=f"div#{id}.shiny-input-radiogroup.shiny-bound-input",
             loc_label=f"label#{id}-label",
         )
-        self.loc_selected = self.loc.locator("label input[type=radio]:checked")
-        self.loc_choices = self.loc.locator("label input[type=radio]")
+        self.loc_selected = self.loc.locator("label > input[type=radio]:checked")
+        self.loc_choices = self.loc.locator("label > input[type=radio]")
         self.loc_choice_labels = self.loc.locator(
             "label",
-            has=self.page.locator("input[type=radio]"),
+            has=self.page.locator("> input[type=radio]"),
         )
 
     def set(
