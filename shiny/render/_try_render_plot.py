@@ -1,79 +1,9 @@
 import base64
 import io
-import os
-import sys
-from typing import Any, BinaryIO, List, Optional, TextIO, Tuple, Union, cast
+from typing import Any, List, Optional, Tuple, Union, cast
 
-if sys.version_info >= (3, 8):
-    from typing import Literal, Protocol
-else:
-    from typing_extensions import Literal, Protocol
-
-from ..types import ImgData
+from ..types import ImgData, MplArtist, MplFigure, PlotnineFigure
 from ._coordmap import get_coordmap
-
-
-# Use this protocol to avoid needing to maintain working stubs for matplotlib. If
-# good stubs ever become available for matplotlib, use those instead.
-class MplFigure(Protocol):
-    def set_size_inches(
-        self,
-        w: Union[Tuple[float, float], float],
-        h: Optional[float] = None,
-        forward: bool = True,
-    ):
-        ...
-
-    def set_dpi(self, val: float):
-        ...
-
-    def savefig(
-        self,
-        fname: Union[str, TextIO, BinaryIO, "os.PathLike[Any]"],
-        dpi: Union[float, Literal["figure"], None] = None,
-        # facecolor="w",
-        # edgecolor="w",
-        # orientation="portrait",
-        # papertype=None,
-        format: Optional[str] = None,
-        # transparent=False,
-        bbox_inches: object = None,
-        # pad_inches=0.1,
-        # frameon=None,
-        # metadata=None,
-    ):
-        ...
-
-
-class MplArtist(Protocol):
-    def get_figure(self) -> MplFigure:
-        ...
-
-
-class MplAnimation(Protocol):
-    def pause(self):
-        ...
-
-    def resume(self):
-        ...
-
-
-# Use this protocol to avoid needing to maintain working stubs for plotnint. If
-# good stubs ever become available for plotnine, use those instead.
-class PlotnineFigure(Protocol):
-    def save(
-        self,
-        filename: BinaryIO,
-        format: str,
-        units: str,
-        dpi: float,
-        width: float,
-        height: float,
-        verbose: bool,
-        bbox_inches: object = None,
-    ):
-        ...
-
 
 TryPlotResult = Tuple[bool, Union[ImgData, None]]
 

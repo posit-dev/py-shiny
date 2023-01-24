@@ -12,8 +12,19 @@ __all__ = (
     "SilentCancelOutputException",
 )
 
+import os
 import sys
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Dict,
+    List,
+    Optional,
+    TextIO,
+    Tuple,
+    Union,
+)
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -24,13 +35,17 @@ else:
     from typing_extensions import NotRequired, TypedDict
 
 if sys.version_info >= (3, 8):
-    from typing import Protocol
+    from typing import Literal, Protocol
 else:
-    from typing_extensions import Protocol
+    from typing_extensions import Literal, Protocol
 
 from htmltools import TagChildArg
 
 from ._docstring import add_example
+
+if TYPE_CHECKING:
+    import numpy as np
+    import numpy.typing as npt
 
 
 # Sentinel value - indicates a missing value in a function call.
@@ -182,3 +197,187 @@ class NavSetArg(Protocol):
         returns a value is used to determine the container's ``selected`` value).
         """
         ...
+
+
+# =============================================================================
+# Types for plots and images
+# =============================================================================
+
+# Use this protocol to avoid needing to maintain working stubs for matplotlib. If
+# good stubs ever become available for matplotlib, use those instead.
+class MplTransform(Protocol):
+    def transform(
+        self, values: Union["npt.NDArray[np.double]", List[float]]
+    ) -> "npt.NDArray[np.double]":
+        ...
+
+
+class MplAxes(Protocol):
+    transData: MplTransform
+
+    def get_xlim(self) -> "npt.NDArray[np.double]":
+        ...
+
+    def get_ylim(self) -> "npt.NDArray[np.double]":
+        ...
+
+
+class MplFigure(Protocol):
+    def get_size_inches(self) -> "npt.NDArray[np.double]":
+        ...
+
+    def set_size_inches(
+        self,
+        w: Union[Tuple[float, float], float],
+        h: Optional[float] = None,
+        forward: bool = True,
+    ):
+        ...
+
+    def get_dpi(self) -> float:
+        ...
+
+    def set_dpi(self, val: float):
+        ...
+
+    def get_axes(self) -> List[MplAxes]:
+        ...
+
+    def savefig(
+        self,
+        fname: Union[str, TextIO, BinaryIO, os.PathLike[Any]],
+        dpi: Union[float, Literal["figure"], None] = None,
+        # facecolor="w",
+        # edgecolor="w",
+        # orientation="portrait",
+        # papertype=None,
+        format: Optional[str] = None,
+        # transparent=False,
+        bbox_inches: object = None,
+        # pad_inches=0.1,
+        # frameon=None,
+        # metadata=None,
+    ):
+        ...
+
+
+class MplArtist(Protocol):
+    def get_figure(self) -> MplFigure:
+        ...
+
+
+class MplAnimation(Protocol):
+    def pause(self):
+        ...
+
+    def resume(self):
+        ...
+
+
+# Use this protocol to avoid needing to maintain working stubs for plotnint. If
+# good stubs ever become available for plotnine, use those instead.
+class PlotnineFigure(Protocol):
+    def save(
+        self,
+        filename: BinaryIO,
+        format: str,
+        units: str,
+        dpi: float,
+        width: float,
+        height: float,
+        verbose: bool,
+        bbox_inches: object = None,
+    ):
+        ...
+
+
+class CoordmapDims(TypedDict):
+    width: float
+    height: float
+
+
+class CoordmapPanelLog(TypedDict):
+    x: Union[bool, None]
+    y: Union[bool, None]
+
+
+class CoordmapPanelDomain(TypedDict):
+    left: float
+    right: float
+    bottom: float
+    top: float
+
+
+class CoordmapPanelRange(TypedDict):
+    left: float
+    right: float
+    bottom: float
+    top: float
+
+
+class CoordmapPanelMapping(TypedDict):
+    x: NotRequired[str]
+    y: NotRequired[str]
+    panelvar1: NotRequired[str]
+    panelvar2: NotRequired[str]
+
+
+class CoordmapPanelvarMapping(TypedDict):
+    panelvar1: NotRequired[str]
+    panelvar2: NotRequired[str]
+
+
+class CoordmapPanel(TypedDict):
+    panels: NotRequired[int]
+    row: NotRequired[int]
+    col: NotRequired[int]
+    panel_vars: NotRequired[CoordmapPanelvarMapping]
+    log: CoordmapPanelLog
+    domain: CoordmapPanelDomain
+    mapping: CoordmapPanelMapping
+    range: CoordmapPanelRange
+
+
+class Coordmap(TypedDict):
+    panels: List[CoordmapPanel]
+    dims: CoordmapDims
+
+
+class CoordXY(TypedDict):
+    x: float
+    y: float
+
+
+# Data structure sent from client to server when a plot is clicked, double-clicked, or
+# hovered.
+class CoordInfo(TypedDict):
+    x: float
+    y: float
+    coords_css: CoordXY
+    coords_img: CoordXY
+    img_css_ratio: CoordXY
+    panelvar1: NotRequired[str]
+    panelvar2: NotRequired[str]
+    mapping: CoordmapPanelMapping
+    domain: CoordmapPanelDomain
+    range: CoordmapPanelRange
+    log: CoordmapPanelLog
+    # .nonce: float
+
+
+class BrushInfo(TypedDict):
+    xmin: float
+    xmax: float
+    ymin: float
+    ymax: float
+    coords_css: CoordXY
+    coords_img: CoordXY
+    img_css_ratio: CoordXY
+    panelvar1: NotRequired[str]
+    panelvar2: NotRequired[str]
+    mapping: CoordmapPanelMapping
+    domain: CoordmapPanelDomain
+    range: CoordmapPanelRange
+    log: CoordmapPanelLog
+    direction: Literal["x", "y", "xy"]
+    # .nonce: float
