@@ -13,7 +13,12 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import TypedDict
 
-from .types import CoordInfo, CoordXY
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
+from .types import BrushInfo, CoordInfo, CoordXY
 
 if TYPE_CHECKING:
     import numpy.typing as npt
@@ -25,12 +30,75 @@ class SeriesXY(TypedDict):
     y: pd.Series[float]
 
 
+def brushed_points(
+    df: pd.DataFrame,
+    brush: Union[BrushInfo, None],
+    xvar: Optional[str] = None,
+    yvar: Optional[str] = None,
+    *,
+    all_rows: bool = False,
+) -> pd.DataFrame:
+    import pandas as pd
+
+    new_df = df.copy()
+
+    if brush is None:
+        if all_rows:
+            new_df["selected_"] = False
+        else:
+            new_df = new_df.loc[[]]
+
+        return new_df
+
+    if "xmin" not in brush:
+        raise ValueError(
+            "brushedPoints requires a brush object with xmin, xmax, ymin, and ymax."
+        )
+
+    # Which direction(s) the brush is selecting over. Direction can be 'x', 'y',
+    # or 'xy'.
+    use_x = "x" in brush["direction"]
+    use_y = "y" in brush["direction"]
+
+    # TODO: Try to extract vars from brush object
+
+    # Filter out x and y values
+    keep_rows: pd.Series[bool] = pd.Series(True, index=new_df.index)
+    if use_x:
+        if xvar is None:
+            raise ValueError(
+                "brushedPoints: not able to automatically infer `xvar` from brush"
+            )
+        if xvar not in new_df:
+            raise ValueError(f"brushedPoints: `xvar` ({xvar}) not in dataframe")
+        keep_rows &= within_brush(new_df[xvar], brush, "x")
+
+    if use_y:
+        if yvar is None:
+            raise ValueError(
+                "brushedPoints: not able to automatically infer `yvar` from brush"
+            )
+        if yvar not in new_df:
+            raise ValueError(f"brushedPoints: `yvar` ({yvar}) not in dataframe")
+        keep_rows &= within_brush(new_df[yvar], brush, "y")
+
+    # TODO: Find which rows are matches for the panel vars (if present)
+
+    if all_rows:
+        new_df["selected_"] = False
+        new_df.loc[keep_rows, "selected_"] = True
+    else:
+        new_df = new_df.loc[keep_rows]
+
+    return new_df
+
+
 def near_points(
     df: pd.DataFrame,
     coordinfo: Union[CoordInfo, None],
-    *,
     xvar: Optional[str] = None,
     yvar: Optional[str] = None,
+    *,
     threshold: float = 5,
     add_dist: bool = False,
     all_rows: bool = False,
@@ -120,9 +188,6 @@ def near_points(
 
     if all_rows:
         # Add selected_ column if needed
-        # selected: pd.Series[bool] = pd.Series(data=False, index=new_df.index)
-        # selected.iloc[keep_idx] = True
-        # new_df["selected_"] = selected
         new_df["selected_"] = False
         new_df.iloc[
             keep_idx, new_df.columns.get_loc("selected_")
@@ -131,6 +196,22 @@ def near_points(
         new_df = new_df.iloc[keep_idx]
 
     return new_df
+
+
+# ===============================================================================
+# Helper functions
+# ===============================================================================
+# Helper to determine if data values are within the limits of
+# an input brush
+
+
+def within_brush(
+    vals: pd.Series[float], brush: BrushInfo, var: Literal["x", "y"] = "x"
+) -> pd.Series[bool]:
+    # brush = fortify_discrete_limits(brush)
+    # vals = as_number(vals, brush["domain"]["discrete_limits"][var])
+    # TODO: handle NAs?
+    return (vals >= brush[var + "min"]) & (vals <= brush[var + "max"])
 
 
 # ===============================================================================
