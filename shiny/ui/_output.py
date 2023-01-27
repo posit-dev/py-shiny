@@ -13,7 +13,7 @@ from htmltools import Tag, TagAttrArg, TagFunction, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from ._image_output_opts import (
+from ._plot_output_opts import (
     BrushOpts,
     ClickOpts,
     DblClickOpts,

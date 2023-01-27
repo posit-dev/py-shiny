@@ -2,6 +2,9 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
+__all__ = ("brushed_points", "near_points")
+
+
 import sys
 from typing import TYPE_CHECKING, Optional, Union
 
