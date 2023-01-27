@@ -179,7 +179,7 @@ def near_points(
 
     # Order by distance
     dists = dists.iloc[keep_idx]
-    keep_idx: npt.NDArray[np.intp] = keep_idx[dists.rank().to_numpy("int") - 1]
+    keep_idx: npt.NDArray[np.intp] = keep_idx[dists.argsort()]
 
     # # Keep max number of rows
     # if (!is.null(maxpoints) && length(keep_idx) > maxpoints) {
