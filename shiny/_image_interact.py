@@ -100,6 +100,7 @@ def near_points(
     yvar: Optional[str] = None,
     *,
     threshold: float = 5,
+    max_points: Optional[int] = None,
     add_dist: bool = False,
     all_rows: bool = False,
 ) -> pd.DataFrame:
@@ -181,10 +182,9 @@ def near_points(
     dists = dists.iloc[keep_idx]
     keep_idx: npt.NDArray[np.intp] = keep_idx[dists.argsort()]
 
-    # # Keep max number of rows
-    # if (!is.null(maxpoints) && length(keep_idx) > maxpoints) {
-    #     keep_idx <- keep_idx[seq_len(maxpoints)]
-    # }
+    # Keep max number of rows
+    if max_points is not None and len(keep_idx) > max_points:
+        keep_idx = keep_idx[:max_points]
 
     if all_rows:
         # Add selected_ column if needed
