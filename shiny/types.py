@@ -247,7 +247,7 @@ class CoordmapPanelvarMapping(TypedDict):
 
 
 class CoordmapPanel(TypedDict):
-    panels: NotRequired[int]
+    panel: NotRequired[int]
     row: NotRequired[int]
     col: NotRequired[int]
     panel_vars: NotRequired[CoordmapPanelvarMapping]
