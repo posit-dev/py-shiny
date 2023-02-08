@@ -1,7 +1,7 @@
 from shiny import *
 
 app_ui = ui.page_fluid(
-    ui.input_selectize("x", "Server side selectize", choices=None, multiple=True),
+    ui.input_selectize("x", "Server side selectize", choices=[], multiple=True),
 )
 
 
