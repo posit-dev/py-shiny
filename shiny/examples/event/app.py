@@ -2,7 +2,7 @@ import random
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.markdown(
         f"""
         This example demonstrates how `@reactive.event()` can be used to restrict

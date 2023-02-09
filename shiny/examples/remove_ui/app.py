@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_action_button("rmv", "Remove UI"),
     ui.input_text("txt", "Click button above to remove me"),
 )

@@ -2,7 +2,7 @@ import starlette.responses
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.markdown(
         """
         ## Sticky load balancing test

@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.tags.p("The checkbox group controls the select input"),
     ui.input_checkbox_group(
         "inCheckboxGroup", "Input checkbox", ["Item A", "Item B", "Item C"]

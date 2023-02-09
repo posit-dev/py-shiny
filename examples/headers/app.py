@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.h3("HTTP request headers"),
     ui.output_text_verbatim("headers", placeholder=True),
     ui.h3("User and groups"),

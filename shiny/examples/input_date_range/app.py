@@ -2,7 +2,7 @@ from datetime import date
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_date_range(
         "daterange1", "Date range:", start="2001-01-01", end="2010-12-31"
     ),

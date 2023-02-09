@@ -2,7 +2,7 @@ from htmltools import HTML
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_radio_buttons(
         "rb",
         "Choose one:",

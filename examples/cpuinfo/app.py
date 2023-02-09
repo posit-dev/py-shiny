@@ -27,7 +27,7 @@ SAMPLE_PERIOD = 1
 
 ncpu = cpu_count(logical=True)
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.tags.style(
         """
         /* Don't apply fade effect, it's constantly recalculating */

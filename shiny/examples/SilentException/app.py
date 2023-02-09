@@ -1,7 +1,7 @@
 from shiny import *
 from shiny.types import SilentException
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_text(
         "txt",
         "Enter text to see it displayed below the input",

@@ -1,7 +1,7 @@
 from shiny import *
 from shiny.types import ImgData
 
-app_ui = ui.page_fluid(ui.output_image("image"))
+app_ui = ui.page_fixed(ui.output_image("image"))
 
 
 def server(input: Inputs, output: Outputs, session: Session):

@@ -3,7 +3,7 @@ from starlette.responses import JSONResponse
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_action_button("serve", "Click to serve"), ui.div(id="messages")
 )
 

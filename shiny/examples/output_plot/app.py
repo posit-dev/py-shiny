@@ -3,7 +3,7 @@ import numpy as np
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_slider(
         "n", "input_slider()", min=10, max=100, value=50, step=5, animate=True
     ),

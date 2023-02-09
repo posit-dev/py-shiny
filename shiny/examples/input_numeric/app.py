@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_numeric("obs", "Observations:", 10, min=1, max=100),
     ui.output_text_verbatim("value"),
 )

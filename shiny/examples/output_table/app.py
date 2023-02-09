@@ -8,7 +8,7 @@ dir = pathlib.Path(__file__).parent
 mtcars = pd.read_csv(dir / "mtcars.csv")
 
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_checkbox("highlight", "Highlight min/max values"),
     ui.output_table("result"),
     # Legend

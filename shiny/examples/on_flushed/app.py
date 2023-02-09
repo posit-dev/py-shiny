@@ -2,7 +2,7 @@ from datetime import datetime
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_action_button("flush", "Trigger flush"),
     ui.output_ui("n_clicks"),
     ui.div(id="flush_time"),

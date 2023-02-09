@@ -3,7 +3,7 @@ import numpy as np
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_slider("n", "Number of observations", min=0, max=1000, value=500),
     ui.input_action_link("go", "Go!"),
     ui.output_plot("plot"),

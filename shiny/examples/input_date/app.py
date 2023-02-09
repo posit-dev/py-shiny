@@ -2,7 +2,7 @@ from datetime import date
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_date("date1", "Date:", value="2016-02-29"),
     # Default value is the date in client's time zone
     ui.input_date("date2", "Date:"),

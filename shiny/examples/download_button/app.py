@@ -5,7 +5,7 @@ import numpy as np
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.download_button("downloadData", "Download"),
 )
 

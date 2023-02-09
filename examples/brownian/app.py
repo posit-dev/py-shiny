@@ -18,7 +18,7 @@ if not (Path(__file__).parent / "shinymediapipe" / "node_modules").is_dir():
 # Set to True to see underlying XYZ values and canvas
 debug = True
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_action_button("data_btn", "New Data"),
     output_widget("plot"),
     input_hand("hand", debug=debug, throttle_delay_secs=0.05),

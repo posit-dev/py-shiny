@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.panel_title("A basic absolute panel example", "Demo"),
     ui.panel_absolute(
         ui.panel_well(

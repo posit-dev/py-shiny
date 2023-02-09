@@ -35,8 +35,8 @@ class App:
     Parameters
     ----------
     ui
-        The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fluid` or
-        :func:`~shiny.ui.page_fixed`, with layouts and controls nested inside). You can
+        The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fixed` or
+        :func:`~shiny.ui.page_fluid`, with layouts and controls nested inside). You can
         also pass a function that takes a :class:`~starlette.requests.Request` and
         returns a UI definition, if you need the UI definition to be created dynamically
         for each pageview.
@@ -55,7 +55,7 @@ class App:
 
         from shiny import *
 
-        app_ui = ui.page_fluid("Hello Shiny!")
+        app_ui = ui.page_fixed("Hello Shiny!")
 
         def server(input: Inputs, output: Outputs, session: Session):
             pass

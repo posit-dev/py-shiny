@@ -6,7 +6,7 @@ from shiny import *
 
 dir = pathlib.Path(__file__).parent
 
-app_ui = ui.page_fluid(ui.output_table("result"), class_="p-3")
+app_ui = ui.page_fixed(ui.output_table("result"), class_="p-3")
 
 
 @reactive.file_reader(dir / "mtcars.csv")

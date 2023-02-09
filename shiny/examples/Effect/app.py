@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(ui.input_action_button("btn", "Press me!"))
+app_ui = ui.page_fixed(ui.input_action_button("btn", "Press me!"))
 
 
 def server(input: Inputs, output: Outputs, session: Session):

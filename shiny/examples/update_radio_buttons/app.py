@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.tags.p("The first radio button group controls the second"),
     ui.input_radio_buttons(
         "inRadioButtons", "Input radio buttons", ["Item A", "Item B", "Item C"]

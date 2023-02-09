@@ -2,7 +2,7 @@ import random
 
 from shiny import *
 
-app_ui = ui.page_fluid(ui.output_ui("value"))
+app_ui = ui.page_fixed(ui.output_ui("value"))
 
 
 def server(input: Inputs, output: Outputs, session: Session):

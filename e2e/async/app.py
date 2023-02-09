@@ -14,7 +14,7 @@ def calc(value: str) -> str:
     return m.digest().hex()
 
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_text_area(
         "value", "Value to sha256sum", value="The quick brown fox", rows=5, width="100%"
     ),

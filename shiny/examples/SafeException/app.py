@@ -1,7 +1,7 @@
 from shiny import *
 from shiny.types import SafeException
 
-app_ui = ui.page_fluid(ui.output_ui("safe"), ui.output_ui("unsafe"))
+app_ui = ui.page_fixed(ui.output_ui("safe"), ui.output_ui("unsafe"))
 
 
 def server(input: Inputs, output: Outputs, session: Session):

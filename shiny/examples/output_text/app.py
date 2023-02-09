@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_text("txt", "Enter the text to display below:"),
     ui.row(
         ui.column(6, ui.output_text("text")),

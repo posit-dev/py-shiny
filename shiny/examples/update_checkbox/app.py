@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_slider("controller", "Controller", min=0, max=1, value=0, step=1),
     ui.input_checkbox("inCheckbox", "Input checkbox"),
 )

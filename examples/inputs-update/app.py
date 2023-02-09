@@ -3,7 +3,7 @@ from datetime import date
 from shiny import *
 from shiny.ui import h2, tags
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.panel_title("Changing the values of inputs from the server"),
     ui.row(
         ui.column(

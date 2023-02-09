@@ -2,7 +2,7 @@ from pathlib import Path
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.tags.link(href="css/styles.css", rel="stylesheet"),
     ui.tags.div(
         "If you see this text, it failed",

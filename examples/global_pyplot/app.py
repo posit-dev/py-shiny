@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 
 from shiny import App, Inputs, Outputs, Session, render, ui
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_checkbox("render", "Render", value=True),
     ui.panel_conditional(
         "input.render",

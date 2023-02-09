@@ -55,7 +55,7 @@ def counter_wrapper_server(
 # =============================================================================
 # App that uses module
 # =============================================================================
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     counter_ui("counter1", "Counter 1"),
     counter_wrapper_ui("counter2_wrapper"),
     ui.output_ui("counter3_ui"),

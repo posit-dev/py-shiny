@@ -3,7 +3,7 @@ import numpy as np
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_slider("obs", "Number of bins:", min=10, max=100, value=30),
     ui.output_plot("distPlot"),
 )

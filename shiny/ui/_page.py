@@ -128,7 +128,9 @@ def page_fluid(
     *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
 ) -> Tag:
     """
-    Create a fluid page.
+    Create a page, putting contents in a container that spans the full width of the
+    browser window. (In Bootstrap terms, this is a
+    `fluid container <https://getbootstrap.com/docs/5.2/layout/containers/#fluid-containers>`_.)
 
     Parameters
     ----------
@@ -166,7 +168,13 @@ def page_fixed(
     *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
 ) -> Tag:
     """
-    Create a fixed page.
+    Create a page, putting contents in a container that uses a fixed width (or more
+    precisely, a fixed width for each
+    `device size class <https://getbootstrap.com/docs/5.2/layout/breakpoints/>`_). This
+    is a great starting point for most Shiny apps.
+
+    In Bootstrap terms, this is a
+    `default container <https://getbootstrap.com/docs/5.2/layout/containers/#fluid-containers>`_.
 
     Parameters
     ----------

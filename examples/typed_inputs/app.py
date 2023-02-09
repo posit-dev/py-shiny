@@ -4,7 +4,7 @@ import typing
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_numeric("n", "N", 20),
     ui.input_numeric("n2", "N2", 50),
     ui.input_checkbox("checkbox", "Checkbox", True),

@@ -2,7 +2,7 @@ from htmltools import br
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_action_button("update", "Update other buttons and link"),
     br(),
     ui.input_action_button("goButton", "Go"),

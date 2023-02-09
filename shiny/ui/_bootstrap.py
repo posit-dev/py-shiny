@@ -314,7 +314,7 @@ def panel_title(
     This result of this function causes a side effect of adding a title tag to the head
     of the document (this is necessary for the browser to display the title in the
     browser window). You can also specify a page title explicitly using the title
-    parameter of the top-level page function (e.g., :func:`~shiny.ui.page_fluid`).
+    parameter of the top-level page function (e.g., :func:`~shiny.ui.page_fixed`).
     """
 
     if isinstance(title, str):

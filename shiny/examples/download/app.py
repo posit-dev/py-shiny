@@ -27,7 +27,7 @@ def make_example(id: str, label: str, title: str, desc: str, extra: Any = None):
     )
 
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.row(
         make_example(
             "download1",

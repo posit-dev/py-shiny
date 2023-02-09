@@ -117,7 +117,7 @@ def input_text_area(
         Value of the visible character columns of the input, e.g. 80. This argument will
         only take effect if there is not a CSS width rule defined for this element; such
         a rule could come from the width argument of this function or from a containing
-        page layout such as :func:`~shiny.ui.page_fluid`.
+        page layout such as :func:`~shiny.ui.page_fixed`.
     rows
         The value of the visible character rows of the input, e.g. 6. If the height
         argument is specified, height will take precedence in the browser's rendering.

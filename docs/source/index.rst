@@ -29,7 +29,7 @@ namespace pollution. Namely, it gives you:
 
     from shiny import *
 
-    app_ui = ui.page_fluid(
+    app_ui = ui.page_fixed(
       ui.input_slider("n", "Value of n", min=1, max=10, value=5),
       ui.output_text("n2")
     )
@@ -56,9 +56,9 @@ Create a user interface page container.
 .. autosummary::
     :toctree: reference/
 
-    ui.page_navbar
-    ui.page_fluid
     ui.page_fixed
+    ui.page_fluid
+    ui.page_navbar
     ui.page_bootstrap
 
 

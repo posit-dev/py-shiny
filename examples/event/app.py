@@ -3,7 +3,7 @@ import asyncio
 from shiny import *
 from shiny.ui import tags
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     tags.p(
         """
       The first time you click the button, you should see a 1 appear below the button,

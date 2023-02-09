@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(ui.panel_title("Page title", "Window title"))
+app_ui = ui.page_fixed(ui.panel_title("Page title", "Window title"))
 
 
 def server(input: Inputs, output: Outputs, session: Session):

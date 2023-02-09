@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_text("msg", "Enter a message"),
     ui.input_action_button("submit", "Submit the message"),
     # It'd be better to use ui.insert_ui() in order to implement this kind of

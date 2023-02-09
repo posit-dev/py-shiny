@@ -34,7 +34,7 @@ def counter_server(
 # =============================================================================
 # App that uses module
 # =============================================================================
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     counter_ui("counter1", "Counter 1"),
     counter_ui("counter2", "Counter 2"),
 )

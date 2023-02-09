@@ -2,7 +2,7 @@ from datetime import datetime
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_action_button("close", "Close the session"),
 )
 

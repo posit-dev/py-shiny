@@ -3,7 +3,7 @@ import pandas as pd
 from shiny import *
 from shiny.types import FileInfo
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.layout_sidebar(
         ui.panel_sidebar(
             ui.input_file("file1", "Choose CSV File", accept=[".csv"], multiple=False),

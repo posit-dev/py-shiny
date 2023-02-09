@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_checkbox("show", "Show radio buttons", False),
     ui.panel_conditional(
         "input.show", ui.input_radio_buttons("radio", "Choose ", ["slider", "select"])

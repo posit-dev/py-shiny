@@ -3,7 +3,7 @@ import time
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_action_button("first", "Invalidate first (slow) computation"),
     ui.input_action_button("second", "Invalidate second (fast) computation"),
     ui.br(),

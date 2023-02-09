@@ -20,7 +20,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     ...
 
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.h3("Non-module version"),
     my_ui("Lorem ipsum dolor sit amet"),
     ui.hr(),

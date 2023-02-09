@@ -88,7 +88,7 @@ def stock_quotes() -> pd.DataFrame:
 
 # === Define the Shiny UI and server ===============================
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.row(
         ui.column(
             8,

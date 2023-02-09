@@ -3,7 +3,7 @@ import numpy as np
 
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.row(
         ui.column(4, ui.input_slider("n", "N", min=0, max=100, value=20)),
         ui.column(8, ui.output_plot("plot")),

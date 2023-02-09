@@ -1,6 +1,6 @@
 from shiny import *
 
-ui_app = ui.page_fluid(
+ui_app = ui.page_fixed(
     ui.markdown(
         """
         # Hello World

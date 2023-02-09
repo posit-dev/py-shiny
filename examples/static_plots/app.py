@@ -46,7 +46,7 @@ nav = ui.navset_pill_list(
 )
 
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.panel_title(ui.h2("Py-Shiny static plotting examples", class_="text-center")),
     ui.br(class_="py-3"),
     ui.div(nav, style="max-width: 90%; margin: auto"),

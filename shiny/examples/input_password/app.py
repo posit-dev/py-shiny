@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_password("password", "Password:"),
     ui.input_action_button("go", "Go"),
     ui.output_text_verbatim("value"),

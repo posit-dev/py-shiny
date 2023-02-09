@@ -1,6 +1,6 @@
 from shiny import *
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_slider("controller", "Controller", min=0, max=20, value=10),
     ui.input_text("inText", "Input text"),
     ui.input_text("inText2", "Input text 2"),

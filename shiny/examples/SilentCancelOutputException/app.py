@@ -1,7 +1,7 @@
 from shiny import *
 from shiny.types import SilentCancelOutputException
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.input_text(
         "txt",
         "Delete the input text completely: it won't get removed below the input",
