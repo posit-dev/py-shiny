@@ -160,7 +160,7 @@ def input_select(
     """
 
     choices_ = _normalize_choices(choices)
-    if selected is None:
+    if selected is None and not multiple:
         selected = _find_first_option(choices_)
 
     choices_tags = _render_choices(choices_, selected)
