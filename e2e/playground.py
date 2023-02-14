@@ -285,12 +285,18 @@ class _InputWithContainer(_InputBase):
         loc_container_is_str = isinstance(loc_container, str)
 
         if loc_is_str and loc_container_is_str:
-            loc_container = page.locator(loc_container).filter(
-                # `page.locator(loc)` is executed from within `loc_container`
-                has=page.locator(loc)
-            )
+            loc_container = page.locator(loc_container)
+            if loc == "xpath=.":
+                # If `loc` is self, then use `loc_container` as `loc`
+                loc = loc_container
 
-            loc = loc_container.locator(loc)
+            else:
+                loc_container = loc_container.filter(
+                    # `page.locator(loc)` is executed from within `loc_container`
+                    has=page.locator(loc)
+                )
+
+                loc = loc_container.locator(loc)
         elif not loc_is_str and not loc_container_is_str:
             ...  # Do nothing; Use values as is
         else:
