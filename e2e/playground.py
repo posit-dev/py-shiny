@@ -627,8 +627,9 @@ class _InputSelectBase(
             playwright_expect(self.loc_choices).to_have_count(0, timeout=timeout)
             return
 
-        _RadioButtonCheckboxGroupBase._expect_locator_values_in_list(
-            self,
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
             el_type="option",
             arr_name="choices",
             arr=choices,
@@ -654,8 +655,9 @@ class _InputSelectBase(
         else:
             self.expect.to_have_value(selected, timeout=timeout)
 
-        # _RadioButtonCheckboxGroupBase._expect_locator_values_in_list(
-        #     self,
+        # _MultipleDomItems.expect_locator_values_in_list(
+        #     page=self.page,
+        #     loc_container=self.loc_container,
         #     el_type="option",
         #     arr_name="selected",
         #     arr=selected,
@@ -681,8 +683,9 @@ class _InputSelectBase(
             playwright_expect(self.loc_choice_groups).to_have_count(0, timeout=timeout)
             return
 
-        _RadioButtonCheckboxGroupBase._expect_locator_values_in_list(
-            self,
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
             el_type="optgroup",
             arr_name="choice_groups",
             arr=choice_groups,
@@ -869,6 +872,100 @@ class InputSwitch(InputCheckboxBase):
         )
 
 
+class _MultipleDomItems:
+    @staticmethod
+    def assert_arr_is_unique(arr: typing.List[str], msg: str) -> None:
+        assert len(arr) == len(list(dict.fromkeys(arr))), msg
+
+    @staticmethod
+    def checked_css_str(
+        is_checked: typing.Union[bool, None],
+    ) -> str:
+        if is_checked is None:
+            return ""
+        elif is_checked:
+            return ":checked"
+        else:
+            raise NotImplementedError("`is_checked = FALSE` is not verified yet")
+            return ":not(:checked)"
+
+    @staticmethod
+    def expect_locator_contains_values_in_list(
+        *,
+        page: Page,
+        loc_container: Locator,
+        el_type: str,
+        arr_name: str,
+        # TODO-barret; support patterns?
+        arr: typing.List[str],
+        is_checked: typing.Optional[bool] = None,
+        timeout: Timeout = None,
+        key: str = "value",
+    ) -> None:
+        # Make sure the locator contains all of `arr`
+
+        # Make sure the locator has len(uniq_arr) input elements
+        _MultipleDomItems.assert_arr_is_unique(arr, f"`{arr_name}` must be unique")
+        is_checked_str = _MultipleDomItems.checked_css_str(is_checked)
+
+        # Find all items in set
+        for item in arr:
+            # Given the container, make sure it contains this locator
+            loc_container = loc_container.locator(
+                # Return self
+                "xpath=.",
+                # Simple approach as position is not needed
+                has=page.locator(
+                    f"{el_type}[{key}='{item}']{is_checked_str}",
+                ),
+            )
+
+        # If we are only looking to see if *some* (not *these only*) elements exist,
+        # then we only need to check if the container locator (which must contain the elements) can be found
+        playwright_expect(loc_container).to_have_count(1, timeout=timeout)
+
+    @staticmethod
+    def expect_locator_values_in_list(
+        *,
+        page: Page,
+        loc_container: Locator,
+        el_type: str,
+        arr_name: str,
+        # TODO-barret; support patterns?
+        arr: typing.List[str],
+        is_checked: typing.Optional[bool] = None,
+        timeout: Timeout = None,
+        key: str = "value",
+    ) -> None:
+        # Make sure the locator has exactly `arr` values
+
+        # Make sure the locator has len(uniq_arr) input elements
+        _MultipleDomItems.assert_arr_is_unique(arr, f"`{arr_name}` must be unique")
+        is_checked_str = _MultipleDomItems.checked_css_str(is_checked)
+
+        # Find all items in set
+        for (item, i) in zip(arr, range(len(arr))):
+            # Get all elements of type
+            has_locator = page.locator(f"{el_type}{is_checked_str}")
+            # Get the `n`th matching element
+            has_locator = has_locator.nth(i)
+            # Make sure that element has the correct attribute value
+            has_locator = has_locator.locator(f'xpath=self::*[@{key}="{item}"]')
+
+            # Given the container, make sure it contains this locator
+            loc_container = loc_container.locator(
+                # Return self
+                "xpath=.",
+                has=has_locator,
+            )
+
+        # Make sure other items are not in set
+        # If we know all elements are contained in the container,
+        # and all elements all unique, then it should have a count of `len(arr)`
+        loc_inputs = loc_container.locator(f"{el_type}{is_checked_str}")
+        playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
+
+
 class _RadioButtonCheckboxGroupBase(_InputWithLabel):
     loc_choice_labels: Locator
 
@@ -890,101 +987,6 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
             has_class=inline,
             timeout=timeout,
         )
-
-    def _assert_is_unique(
-        self: _InputWithContainerP, arr: typing.List[str], msg: str
-    ) -> None:
-        assert len(arr) == len(list(dict.fromkeys(arr))), msg
-
-    def _is_checked_str(
-        self: _InputWithContainerP,
-        is_checked: typing.Union[bool, None],
-    ) -> str:
-        if is_checked is None:
-            return ""
-        elif is_checked:
-            return ":checked"
-        else:
-            raise NotImplementedError("`is_checked = FALSE` is not verified yet")
-            return ":not(:checked)"
-
-    def _expect_locator_contains_values_in_list(
-        self: _InputWithContainerP,
-        el_type: str,
-        arr_name: str,
-        # TODO-barret; support patterns?
-        arr: typing.List[str],
-        *,
-        is_checked: typing.Optional[bool] = None,
-        timeout: Timeout = None,
-        key: str = "value",
-    ) -> None:
-        # Make sure the locator contains all of `arr`
-
-        # Make sure the locator has len(uniq_arr) input elements
-        _RadioButtonCheckboxGroupBase._assert_is_unique(
-            self, arr, f"`{arr_name}` must be unique"
-        )
-        is_checked_str = _RadioButtonCheckboxGroupBase._is_checked_str(self, is_checked)
-
-        # Find all items in set
-        loc_container = self.loc_container
-        for item in arr:
-            # Given the container, make sure it contains this locator
-            loc_container = loc_container.locator(
-                # Return self
-                "xpath=.",
-                # Simple approach as position is not needed
-                has=self.page.locator(
-                    f"{el_type}[{key}='{item}']{is_checked_str}",
-                ),
-            )
-
-        # If we are only looking to see if *some* (not *these only*) elements exist,
-        # then we only need to check if the container locator (which must contain the elements) can be found
-        playwright_expect(loc_container).to_have_count(1, timeout=timeout)
-
-    def _expect_locator_values_in_list(
-        self: _InputWithContainerP,
-        el_type: str,
-        arr_name: str,
-        # TODO-barret; support patterns?
-        arr: typing.List[str],
-        *,
-        is_checked: typing.Optional[bool] = None,
-        timeout: Timeout = None,
-        key: str = "value",
-    ) -> None:
-        # Make sure the locator has exactly `arr` values
-
-        # Make sure the locator has len(uniq_arr) input elements
-        _RadioButtonCheckboxGroupBase._assert_is_unique(
-            self, arr, f"`{arr_name}` must be unique"
-        )
-        is_checked_str = _RadioButtonCheckboxGroupBase._is_checked_str(self, is_checked)
-
-        # Find all items in set
-        loc_container = self.loc_container
-        for (item, i) in zip(arr, range(len(arr))):
-            # Get all elements of type
-            has_locator = self.page.locator(f"{el_type}{is_checked_str}")
-            # Get the `n`th matching element
-            has_locator = has_locator.nth(i)
-            # Make sure that element has the correct attribute value
-            has_locator = has_locator.locator(f'xpath=self::*[@{key}="{item}"]')
-
-            # Given the container, make sure it contains this locator
-            loc_container = loc_container.locator(
-                # Return self
-                "xpath=.",
-                has=has_locator,
-            )
-
-        # Make sure other items are not in set
-        # If we know all elements are contained in the container,
-        # and all elements all unique, then it should have a count of `len(arr)`
-        loc_inputs = loc_container.locator(f"{el_type}{is_checked_str}")
-        playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
 
 
 class InputCheckboxGroup(
@@ -1037,7 +1039,9 @@ class InputCheckboxGroup(
         # Make sure the selected items exist
         # Similar to `self.expect_choices(choices = selected)`, but with
         # `is_exact=False` to allow for values not in `selected`.
-        self._expect_locator_contains_values_in_list(
+        _MultipleDomItems.expect_locator_contains_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
             el_type="input[type=checkbox]",
             arr_name="selected",
             arr=selected,
@@ -1058,7 +1062,9 @@ class InputCheckboxGroup(
         *,
         timeout: Timeout = None,
     ) -> None:
-        self._expect_locator_values_in_list(
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
             el_type="input[type=checkbox]",
             arr_name="choices",
             arr=choices,
@@ -1079,7 +1085,9 @@ class InputCheckboxGroup(
             playwright_expect(self.loc_selected).to_have_count(0, timeout=timeout)
             return
 
-        self._expect_locator_values_in_list(
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
             el_type="input[type=checkbox]",
             arr_name="selected",
             arr=selected,
@@ -1145,7 +1153,9 @@ class InputRadioButtons(
         *,
         timeout: Timeout = None,
     ) -> None:
-        self._expect_locator_values_in_list(
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
             el_type="input[type=radio]",
             arr_name="choices",
             arr=choices,
