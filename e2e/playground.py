@@ -1012,10 +1012,14 @@ class InputCheckboxGroup(
             loc_label=f"label#{id}-label",
         )
 
-        self.loc_selected = self.loc.locator("label > input[type=checkbox]:checked")
-        self.loc_choices = self.loc.locator("label > input[type=checkbox]")
+        self.loc_selected = self.loc.locator(
+            "> .shiny-options-group > .checkbox > label > input[type=checkbox]:checked"
+        )
+        self.loc_choices = self.loc.locator(
+            "> .shiny-options-group > .checkbox > label > input[type=checkbox]"
+        )
         self.loc_choice_labels = self.loc.locator(
-            "label",
+            "> .shiny-options-group > .checkbox > label",
             has=self.page.locator("> input[type=checkbox]"),
         )
 
@@ -1109,10 +1113,14 @@ class InputRadioButtons(
             loc_container=f"div#{id}.shiny-input-radiogroup.shiny-bound-input",
             loc_label=f"label#{id}-label",
         )
-        self.loc_selected = self.loc.locator("> label > input[type=radio]:checked")
-        self.loc_choices = self.loc.locator("> label > input[type=radio]")
+        self.loc_selected = self.loc.locator(
+            "> .shiny-options-group > .radio > label > input[type=radio]:checked"
+        )
+        self.loc_choices = self.loc.locator(
+            "> .shiny-options-group > .radio > label > input[type=radio]"
+        )
         self.loc_choice_labels = self.loc.locator(
-            "label",
+            "> .shiny-options-group > .radio > label",
             has=self.page.locator("> input[type=radio]"),
         )
 
