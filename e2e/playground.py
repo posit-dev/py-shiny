@@ -914,6 +914,13 @@ class _MultipleDomItems:
         _MultipleDomItems.assert_arr_is_unique(arr, f"`{arr_name}` must be unique")
         is_checked_str = _MultipleDomItems.checked_css_str(is_checked)
 
+        # If there are no items, then we should not have any elements
+        if len(arr) == 0:
+            playwright_expect(
+                loc_container.locator(f"{el_type}{is_checked_str}")
+            ).to_have_count(0, timeout=timeout)
+            return
+
         # Find all items in set
         for item in arr:
             # Given the container, make sure it contains this locator
@@ -948,6 +955,13 @@ class _MultipleDomItems:
         # Make sure the locator has len(uniq_arr) input elements
         _MultipleDomItems.assert_arr_is_unique(arr, f"`{arr_name}` must be unique")
         is_checked_str = _MultipleDomItems.checked_css_str(is_checked)
+
+        # If there are no items, then we should not have any elements
+        if len(arr) == 0:
+            playwright_expect(
+                loc_container.locator(f"{el_type}{is_checked_str}")
+            ).to_have_count(0, timeout=timeout)
+            return
 
         # Find all items in set
         for (item, i) in zip(arr, range(len(arr))):
@@ -1041,6 +1055,8 @@ class InputCheckboxGroup(
 
         if isinstance(selected, str):
             selected = [selected]
+
+        assert len(selected) > 0, "Must select at least one item"
 
         # Make sure the selected items exist
         # Similar to `self.expect_choices(choices = selected)`, but with
