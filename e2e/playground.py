@@ -905,7 +905,7 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
         elif is_checked:
             return ":checked"
         else:
-            NotImplementedError("`is_checked = FALSE` is not verified yet")
+            raise NotImplementedError("`is_checked = FALSE` is not verified yet")
             return ":not(:checked)"
 
     def _expect_locator_contains_values_in_list(
@@ -1109,8 +1109,8 @@ class InputRadioButtons(
             loc_container=f"div#{id}.shiny-input-radiogroup.shiny-bound-input",
             loc_label=f"label#{id}-label",
         )
-        self.loc_selected = self.loc.locator("label > input[type=radio]:checked")
-        self.loc_choices = self.loc.locator("label > input[type=radio]")
+        self.loc_selected = self.loc.locator("> label > input[type=radio]:checked")
+        self.loc_choices = self.loc.locator("> label > input[type=radio]")
         self.loc_choice_labels = self.loc.locator(
             "label",
             has=self.page.locator("> input[type=radio]"),
