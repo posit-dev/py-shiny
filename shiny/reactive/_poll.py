@@ -68,10 +68,10 @@ def poll(
         changed. The return value should be something that can be compared inexpensively
         using `==`. Both regular functions and coroutine functions are allowed.
 
-        Note that the `poll_func` should NOT return a bool that indicates whether the data
-        source has changed. Rather, each `poll_func` return value will be checked for
-        equality with its preceding `poll_func` return value (using `==` semantics by
-        default), and if it differs, the data source will be considered changed.
+        Note that the `poll_func` should NOT return a bool that indicates whether the
+        data source has changed. Rather, each `poll_func` return value will be checked
+        for equality with its preceding `poll_func` return value (using `==` semantics
+        by default), and if it differs, the data source will be considered changed.
     interval_secs
         The number of seconds to wait after each `poll_func` invocation before polling
         again. Note: depending on what other tasks are executing, the actual wait time
@@ -86,9 +86,9 @@ def poll(
         for more details.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`. If there is no current session (i.e.
-       `poll` is being created outside of the server function), the lifetime of this
-       reactive poll object will not be tied to any specific session.
+        :func:`~shiny.session.get_current_session`. If there is no current session (i.e.
+        `poll` is being created outside of the server function), the lifetime of this
+        reactive poll object will not be tied to any specific session.
 
     Returns
     -------
@@ -261,9 +261,9 @@ def file_reader(
         for more details.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`. If there is no current session (i.e.
-       `poll` is being created outside of the server function), the lifetime of this
-       reactive poll object will not be tied to any specific session.
+        :func:`~shiny.session.get_current_session`. If there is no current session (i.e.
+        `poll` is being created outside of the server function), the lifetime of this
+        reactive poll object will not be tied to any specific session.
 
     Returns
     -------

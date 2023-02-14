@@ -62,7 +62,7 @@ html_theme_options = {
 
 html_title = "for Python"
 
-html_logo = "images/shiny-logo.png"
+html_logo = "images/shiny-hex.svg"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
