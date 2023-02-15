@@ -54,14 +54,10 @@ def try_render_matplotlib(
             data = base64.b64encode(buf.read())
             data_str = data.decode("utf-8")
 
-        # N.B. matplotlib.tight_layout() causes the intrinsic file size can be different
-        # from the requested size (i.e., the container size). So, scale the image to fit
-        # in the container while preserving the aspect ratio.
         res: ImgData = {
             "src": "data:image/png;base64," + data_str,
             "width": "100%",
             "height": "100%",
-            "style": "object-fit:contain",
         }
 
         if alt is not None:
@@ -225,7 +221,6 @@ def try_render_plotnine(
         "src": "data:image/png;base64," + data_str,
         "width": "100%",
         "height": "100%",
-        "style": "object-fit:contain",
     }
 
     if alt is not None:
