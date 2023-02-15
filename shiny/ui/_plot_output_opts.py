@@ -112,7 +112,6 @@ def brush_opts(
     direction: str = "xy",
     reset_on_new: bool = False,
 ) -> BrushOpts:
-
     return {
         "id": id,
         "fill": fill,

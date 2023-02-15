@@ -35,6 +35,7 @@ from ._docstring import add_example
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
+
 # Sentinel value - indicates a missing value in a function call.
 class MISSING_TYPE:
     pass
@@ -189,6 +190,7 @@ class NavSetArg(Protocol):
 # =============================================================================
 # Types for plots and images
 # =============================================================================
+
 
 # Use this protocol to avoid needing to maintain working stubs for plotnint. If
 # good stubs ever become available for plotnine, use those instead.

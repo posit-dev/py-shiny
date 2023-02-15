@@ -223,6 +223,7 @@ def within_brush(
 # These functions have direct analogs in Javascript code, except these are
 # vectorized for x and y.
 
+
 # Map a value x from a domain to a range. If clip is true, clip it to the
 # range.
 def map_linear(
