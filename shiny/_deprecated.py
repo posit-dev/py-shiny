@@ -11,6 +11,7 @@ __all__ = (
     "event",
 )
 
+
 # Create our own warning class instead of using built-in DeprecationWarning, because we
 # want to be able to control display of these messages without interfering with the
 # user's control of DeprecationWarning.

@@ -47,7 +47,6 @@ class Nav:
     def resolve(
         self, selected: Optional[str], context: Dict[str, Any]
     ) -> Tuple[TagChildArg, TagChildArg]:
-
         # Nothing to do for nav_control()/nav_spacer()
         if self.content is None:
             return self.nav, None
@@ -953,7 +952,6 @@ def render_navset(
     selected: Optional[str],
     context: Dict[str, Any],
 ) -> Tuple[Tag, Tag]:
-
     tabsetid = private_random_int(1000, 10000)
 
     # If the user hasn't provided a selected value, use the first one

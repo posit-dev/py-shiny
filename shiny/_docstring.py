@@ -14,6 +14,7 @@ ex_dir: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "examples
 FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
 
+
 # This class is used to mark docstrings when @add_example() is used, so that an error
 # will be thrown if @doc_format() is used afterward. This is to avoid an error when
 # the example contains curly braces -- the @doc_format() decorator will try to evaluate
@@ -53,7 +54,6 @@ def add_example(
     """
 
     def _(func: F) -> F:
-
         # To avoid a performance hit on `import shiny`, we only add examples to the
         # docstrings if this env variable is set (as it is in docs/source/conf.py).
         if os.getenv("SHINY_ADD_EXAMPLES") != "true":

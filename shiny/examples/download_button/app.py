@@ -9,6 +9,7 @@ app_ui = ui.page_fluid(
     ui.download_button("downloadData", "Download"),
 )
 
+
 # For more examples of different types of download handlers, see:
 # https://github.com/rstudio/py-shiny/blob/68ffc27/examples/download/app.py#L90
 def server(input: Inputs, output: Outputs, session: Session):

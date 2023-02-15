@@ -41,7 +41,6 @@ def test_module_ui():
 
 @pytest.mark.asyncio
 async def test_session_scoping():
-
     sessions: Dict[str, Union[Session, None, str]] = {}
 
     @module.server

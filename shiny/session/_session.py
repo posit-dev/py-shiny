@@ -273,7 +273,6 @@ class Session(object, metaclass=SessionMeta):
                         return
 
                     async with lock():
-
                         if message_obj["method"] == "init":
                             verify_state(ConnectionState.Start)
 
@@ -326,7 +325,7 @@ class Session(object, metaclass=SessionMeta):
                 self._run_session_end_tasks()
 
     def _manage_inputs(self, data: Dict[str, object]) -> None:
-        for (key, val) in data.items():
+        for key, val in data.items():
             keys = key.split(":")
             if len(keys) > 2:
                 raise ValueError(
@@ -489,7 +488,6 @@ class Session(object, metaclass=SessionMeta):
                         wrapped_contents: AsyncIterable[bytes]
 
                         if isinstance(contents, AsyncIterable):
-
                             # Need to wrap the app-author-provided iterator in a
                             # callback that installs the appropriate context mgrs.
                             # We already use this context mgrs further up in the
@@ -800,7 +798,6 @@ class Session(object, metaclass=SessionMeta):
         return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(name)}?nonce={urllib.parse.quote(nonce)}"
 
     def _process_ui(self, ui: TagChildArg) -> RenderedDeps:
-
         res = TagList(ui).render()
         deps: List[Dict[str, Any]] = []
         for dep in res["dependencies"]:
@@ -865,6 +862,7 @@ class SessionProxy:
 # ======================================================================================
 # Inputs
 # ======================================================================================
+
 
 # TODO: provide a real input typing example when we have an answer for that
 # https://github.com/rstudio/py-shiny/issues/70

@@ -177,7 +177,6 @@ async def test_coro_hybrid_throw():
 
 @pytest.mark.asyncio
 async def test_coro_hybrid_throw_later():
-
     state = 0
 
     async def test_task_throw_later():

@@ -208,7 +208,7 @@ def _render_choices(
     if x is None:
         return result
 
-    for (k, v) in x.items():
+    for k, v in x.items():
         if isinstance(v, Mapping):
             result.append(
                 tags.optgroup(
@@ -241,7 +241,7 @@ def _find_first_option(x: _SelectChoices) -> Optional[str]:
     if x is None:
         return None
 
-    for (k, v) in x.items():
+    for k, v in x.items():
         if isinstance(v, dict):
             result = _find_first_option(cast(_SelectChoices, v))
             if result is not None:
