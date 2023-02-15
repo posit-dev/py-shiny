@@ -218,8 +218,8 @@ class CoordmapDims(TypedDict):
 
 
 class CoordmapPanelLog(TypedDict):
-    x: Union[bool, None]
-    y: Union[bool, None]
+    x: Union[float, None]
+    y: Union[float, None]
 
 
 class CoordmapPanelDomain(TypedDict):

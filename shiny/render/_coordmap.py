@@ -9,6 +9,7 @@ from ..types import (
     CoordmapDims,
     CoordmapPanel,
     CoordmapPanelDomain,
+    CoordmapPanelLog,
     CoordmapPanelRange,
 )
 
@@ -82,6 +83,17 @@ def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPan
         "top": height - range_ar[3],
     }
 
+    log: CoordmapPanelLog = {"x": None, "y": None}
+    if axes.axes.xaxis._scale.name == "log":
+        log["x"] = axes.xaxis._scale.base
+        domain["left"] = axes.xaxis._scale._transform.transform(domain["left"])
+        domain["right"] = axes.xaxis._scale._transform.transform(domain["right"])
+
+    if axes.yaxis._scale.name == "log":
+        log["y"] = axes.yaxis._scale.base
+        domain["top"] = axes.yaxis._scale._transform.transform(domain["top"])
+        domain["bottom"] = axes.yaxis._scale._transform.transform(domain["bottom"])
+
     return {
         "panel": panel_num,
         "row": spspec.rowspan.start + 1,  # pyright: reportUnknownVariableType=false
@@ -92,7 +104,7 @@ def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPan
         # },
         "domain": domain,
         "range": range,
-        "log": {"x": None, "y": None},
+        "log": log,
         "mapping": {
             # "x": "wt",
             # "y": "mpg",
