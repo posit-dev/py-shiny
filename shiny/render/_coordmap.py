@@ -11,6 +11,7 @@ from ..types import (
     CoordmapPanelDomain,
     CoordmapPanelLog,
     CoordmapPanelRange,
+    PlotnineFigure,
 )
 
 if TYPE_CHECKING:
@@ -112,3 +113,29 @@ def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPan
             # "panelvar2": "am",
         },
     }
+
+
+def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Union[Coordmap, None]:
+    coordmap = get_coordmap(fig)
+
+    if coordmap is None:
+        return None
+
+    # Plotnine figures handle log scales a bit differently from regular matplotlib
+    # Figures. Instead of using log scales in the matplotlib Figure object, it adds log
+    # scales in the ggplot object. We need to massage the coordmap at this point to
+    # reflect this.
+    for scale in p.scales:
+        if type(scale._trans).__name__ == "log10_trans":
+            if "x" in scale.aesthetics:
+                dir_xy = "x"
+            elif "y" in scale.aesthetics:
+                dir_xy = "y"
+            else:
+                continue
+
+            # Assume all panels use the same log scale.
+            for i in range(len(coordmap["panels"])):
+                coordmap["panels"][i]["log"][dir_xy] = scale._trans.base
+
+    return coordmap

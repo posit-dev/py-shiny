@@ -7,7 +7,7 @@ import io
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
 
 from ..types import ImgData, PlotnineFigure
-from ._coordmap import get_coordmap
+from ._coordmap import get_coordmap, get_coordmap_plotnine
 
 TryPlotResult = Tuple[bool, Union[ImgData, None]]
 
@@ -199,7 +199,7 @@ def try_render_plotnine(
                 verbose=False,
                 **kwargs,
             )
-            coordmap = get_coordmap(res.figure)
+            coordmap = get_coordmap_plotnine(x, res.figure)
             res.figure.savefig(**res.kwargs)
         else:
             x.save(

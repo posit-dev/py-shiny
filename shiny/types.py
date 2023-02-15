@@ -195,6 +195,8 @@ class NavSetArg(Protocol):
 # Use this protocol to avoid needing to maintain working stubs for plotnint. If
 # good stubs ever become available for plotnine, use those instead.
 class PlotnineFigure(Protocol):
+    scales: List[Any]
+
     def save(
         self,
         filename: BinaryIO,
