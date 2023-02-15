@@ -185,25 +185,41 @@ def try_render_plotnine(
     if not isinstance(x, ggplot):
         return (False, None)
 
-    bbox_inches = kwargs.pop("bbox_inches", "tight")
+    x = cast(PlotnineFigure, x)
 
     with io.BytesIO() as buf:
-        cast(PlotnineFigure, x).save(
-            filename=buf,
-            format="png",
-            units="in",
-            dpi=ppi * pixelratio,
-            width=width / ppi,
-            height=height / ppi,
-            verbose=False,
-            bbox_inches=bbox_inches,
-            **kwargs,
-        )
+        # save_helper was added in plotnine 0.10.1-dev. If this method exists, we can
+        # use it to get the matplotlib Figure object, which we can then use to get the
+        # coordmap. Once this version of plotnine is released and in common use, we can
+        # add a version dependency and remove the conditional code.
+        if hasattr(x, "save_helper"):
+            res = x.save_helper(  # pyright: reportGeneralTypeIssues=false
+                filename=buf,
+                format="png",
+                units="in",
+                dpi=ppi * pixelratio,
+                width=width / ppi,
+                height=height / ppi,
+                verbose=False,
+                **kwargs,
+            )
+            coordmap = get_coordmap(res.figure)
+            res.figure.savefig(**res.kwargs)
+        else:
+            x.save(
+                filename=buf,
+                format="png",
+                units="in",
+                dpi=ppi * pixelratio,
+                width=width / ppi,
+                height=height / ppi,
+                verbose=False,
+                **kwargs,
+            )
+            coordmap = None
         buf.seek(0)
         data = base64.b64encode(buf.read())
         data_str = data.decode("utf-8")
-
-        coordmap = get_coordmap(cast(PlotnineFigure, x).draw(show=False))
 
     res: ImgData = {
         "src": "data:image/png;base64," + data_str,
