@@ -1,3 +1,5 @@
+# pyright: reportUnnecessaryComparison=false
+
 __all__ = (
     "input_select",
     "input_selectize",

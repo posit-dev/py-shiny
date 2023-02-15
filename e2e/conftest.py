@@ -52,8 +52,6 @@ class OutputStream:
                 except ValueError:
                     # This is raised when the stream is closed
                     break
-                if line is None:
-                    break
                 if line != "":
                     with self._cond:
                         self._lines.append(line)
