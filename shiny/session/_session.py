@@ -265,7 +265,9 @@ class Session(object, metaclass=SessionMeta):
                             message, object_hook=_utils.lists_to_tuples
                         )
                     except json.JSONDecodeError:
-                        warnings.warn("ERROR: Invalid JSON message", SessionWarning)
+                        warnings.warn(
+                            "ERROR: Invalid JSON message", SessionWarning, stacklevel=2
+                        )
                         return
 
                     if "method" not in message_obj:
@@ -403,6 +405,7 @@ class Session(object, metaclass=SessionMeta):
                 warnings.warn(
                     "Received uploadEnd message for non-existent upload operation.",
                     SessionWarning,
+                    stacklevel=2,
                 )
                 return None
             file_data = upload_op.finish()
@@ -462,6 +465,7 @@ class Session(object, metaclass=SessionMeta):
                                     "@session.download(filename=) to specify one "
                                     "manually",
                                     SessionWarning,
+                                    stacklevel=2,
                                 )
                                 filename = download_id
 

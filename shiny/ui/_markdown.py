@@ -85,7 +85,8 @@ def default_md_renderer(
         except ModuleNotFoundError:
             warnings.warn(
                 "The 'autolinking' feature of GitHub flavored markdown requires the "
-                "linkify-it package. Install it with `pip install linkify-it`."
+                "linkify-it package. Install it with `pip install linkify-it`.",
+                stacklevel=2,
             )
         # Inspired by MyST-Parser's gfm-only option
         # https://github.com/executablebooks/MyST-Parser/blob/ce1245b25/myst_parser/main.py#L257-L269
@@ -99,7 +100,8 @@ def default_md_renderer(
         except ModuleNotFoundError:
             warnings.warn(
                 "The 'tasklists' feature of GitHub flavored markdown requires the "
-                "mdit_py_plugins package. Install it with `pip install mdit_py_plugins`."
+                "mdit_py_plugins package. Install it with `pip install mdit_py_plugins`.",
+                stacklevel=2,
             )
 
     def _render(text: str) -> str:

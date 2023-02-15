@@ -24,7 +24,7 @@ warnings.simplefilter("always", ShinyDeprecationWarning)
 
 
 def warn_deprecated(message: str):
-    warnings.warn(message, ShinyDeprecationWarning)
+    warnings.warn(message, ShinyDeprecationWarning, stacklevel=3)
 
 
 def render_text():

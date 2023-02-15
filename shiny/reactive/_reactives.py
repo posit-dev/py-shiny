@@ -538,7 +538,9 @@ class Effect_:
             except Exception as e:
                 traceback.print_exc()
 
-                warnings.warn("Error in Effect: " + str(e), ReactiveWarning)
+                warnings.warn(
+                    "Error in Effect: " + str(e), ReactiveWarning, stacklevel=2
+                )
                 if self._session:
                     await self._session._unhandled_error(e)
 
