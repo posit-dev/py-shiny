@@ -127,18 +127,29 @@ def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Union[Coordmap, Non
     # scales in the ggplot object. We need to massage the coordmap at this point to
     # reflect this.
     for scale in p.scales:
-        if _is_log_trans(scale._trans):
-            if "x" in scale.aesthetics:
-                dir_xy = "x"
-            elif "y" in scale.aesthetics:
-                dir_xy = "y"
-            else:
-                # Some scales (like color) are not for x or y. Skip them.
-                continue
+        if "x" in scale.aesthetics:
+            dir_xy = "x"
+        elif "y" in scale.aesthetics:
+            dir_xy = "y"
+        else:
+            # Some scales (like color) are not for x or y. Skip them.
+            continue
 
+        if _is_log_trans(scale._trans):
             # Assume all panels use the same log scale.
             for i in range(len(coordmap["panels"])):
                 coordmap["panels"][i]["log"][dir_xy] = scale._trans.base
+
+        if _is_reverse_trans(scale._trans):
+            # Assume all panels use the same log scale.
+            for i in range(len(coordmap["panels"])):
+                domain = coordmap["panels"][i]["domain"]
+                if dir_xy == "x":
+                    coordmap["panels"][i]["domain"]["left"] = -domain["left"]
+                    coordmap["panels"][i]["domain"]["right"] = -domain["right"]
+                elif dir_xy == "y":
+                    coordmap["panels"][i]["domain"]["top"] = -domain["top"]
+                    coordmap["panels"][i]["domain"]["bottom"] = -domain["bottom"]
 
     # Plotnine figures can also have transforms in the coordinates. We will assume that
     # they're not used along with log scales, because that would be really strange.
@@ -158,3 +169,8 @@ def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Union[Coordmap, Non
 # Given a Plotnine transform object, report whether it is a log transform.
 def _is_log_trans(trans: object) -> bool:
     return re.fullmatch("log.*_trans", type(trans).__name__)
+
+
+# Given a Plotnine transform object, report whether it is a reverse transform.
+def _is_reverse_trans(trans: object) -> bool:
+    return type(trans).__name__ == "reverse_trans"
