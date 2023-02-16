@@ -196,6 +196,7 @@ class NavSetArg(Protocol):
 # good stubs ever become available for plotnine, use those instead.
 class PlotnineFigure(Protocol):
     scales: List[Any]
+    coordinates: Any
 
     def save(
         self,

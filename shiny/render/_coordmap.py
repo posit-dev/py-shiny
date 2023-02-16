@@ -2,6 +2,7 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, List, Tuple, Union, cast
 
 from ..types import (
@@ -126,16 +127,34 @@ def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Union[Coordmap, Non
     # scales in the ggplot object. We need to massage the coordmap at this point to
     # reflect this.
     for scale in p.scales:
-        if type(scale._trans).__name__ == "log10_trans":
+        if _is_log_trans(scale._trans):
             if "x" in scale.aesthetics:
                 dir_xy = "x"
             elif "y" in scale.aesthetics:
                 dir_xy = "y"
             else:
+                # Some scales (like color) are not for x or y. Skip them.
                 continue
 
             # Assume all panels use the same log scale.
             for i in range(len(coordmap["panels"])):
                 coordmap["panels"][i]["log"][dir_xy] = scale._trans.base
 
+    # Plotnine figures can also have transforms in the coordinates. We will assume that
+    # they're not used along with log scales, because that would be really strange.
+    if hasattr(p.coordinates, "trans_x") and _is_log_trans(p.coordinates.trans_x):
+        # Assume all panels use the same log scale.
+        for i in range(len(coordmap["panels"])):
+            coordmap["panels"][i]["log"]["x"] = p.coordinates.trans_x.base
+
+    if hasattr(p.coordinates, "trans_y") and _is_log_trans(p.coordinates.trans_y):
+        # Assume all panels use the same log scale.
+        for i in range(len(coordmap["panels"])):
+            coordmap["panels"][i]["log"]["y"] = p.coordinates.trans_y.base
+
     return coordmap
+
+
+# Given a Plotnine transform object, report whether it is a log transform.
+def _is_log_trans(trans: object) -> bool:
+    return re.fullmatch("log.*_trans", type(trans).__name__)
