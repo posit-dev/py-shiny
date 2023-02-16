@@ -122,10 +122,16 @@ def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Union[Coordmap, Non
     if coordmap is None:
         return None
 
-    # Plotnine figures handle log scales a bit differently from regular matplotlib
-    # Figures. Instead of using log scales in the matplotlib Figure object, it adds log
-    # scales in the ggplot object. We need to massage the coordmap at this point to
-    # reflect this.
+    # Plotnine/ggplot figures can contain some information that is not in the matplotlib
+    # Figure object that is generated.
+
+    if "x" in p.mapping:
+        for i in range(len(coordmap["panels"])):
+            coordmap["panels"][i]["mapping"]["x"] = p.mapping["x"]
+    if "y" in p.mapping:
+        for i in range(len(coordmap["panels"])):
+            coordmap["panels"][i]["mapping"]["y"] = p.mapping["y"]
+
     for scale in p.scales:
         if "x" in scale.aesthetics:
             dir_xy = "x"
@@ -135,6 +141,9 @@ def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Union[Coordmap, Non
             # Some scales (like color) are not for x or y. Skip them.
             continue
 
+        # Plotnine objects handle log scales a bit differently from regular matplotlib
+        # Figures. Instead of using log scales in the matplotlib Figure object, it adds
+        # log scales in the ggplot object.
         if _is_log_trans(scale._trans):
             # Assume all panels use the same log scale.
             for i in range(len(coordmap["panels"])):

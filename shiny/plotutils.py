@@ -68,6 +68,8 @@ def brushed_points(
     # Filter out x and y values
     keep_rows: pd.Series[bool] = pd.Series(True, index=new_df.index)
     if use_x:
+        if xvar is None and "x" in brush["mapping"]:
+            xvar = brush["mapping"]["x"]
         if xvar is None:
             raise ValueError(
                 "brushedPoints: not able to automatically infer `xvar` from brush"
@@ -77,6 +79,8 @@ def brushed_points(
         keep_rows &= within_brush(new_df[xvar], brush, "x")
 
     if use_y:
+        if yvar is None and "y" in brush["mapping"]:
+            yvar = brush["mapping"]["y"]
         if yvar is None:
             raise ValueError(
                 "brushedPoints: not able to automatically infer `yvar` from brush"
@@ -131,10 +135,14 @@ def near_points(
         yvar = coordinfo_mapping["y"]
 
     if xvar is None:
+        if xvar is None and "x" in coordinfo["mapping"]:
+            xvar = coordinfo["mapping"]["x"]
         raise ValueError(
             "nearPoints: not able to automatically infer `xvar` from coordinfo"
         )
     if yvar is None:
+        if yvar is None and "y" in coordinfo["mapping"]:
+            yvar = coordinfo["mapping"]["y"]
         raise ValueError(
             "nearPoints: not able to automatically infer `yvar` from coordinfo"
         )
