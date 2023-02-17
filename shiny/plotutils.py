@@ -1,3 +1,5 @@
+# pyright: reportUnknownArgumentType=false
+
 # Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
@@ -38,6 +40,8 @@ def brushed_points(
     brush: Union[BrushInfo, None],
     xvar: Optional[str] = None,
     yvar: Optional[str] = None,
+    panelvar1: Optional[str] = None,
+    panelvar2: Optional[str] = None,
     *,
     all_rows: bool = False,
 ) -> pd.DataFrame:
@@ -55,15 +59,13 @@ def brushed_points(
 
     if "xmin" not in brush:
         raise ValueError(
-            "brushedPoints requires a brush object with xmin, xmax, ymin, and ymax."
+            "brushed_points requires a brush object with xmin, xmax, ymin, and ymax."
         )
 
     # Which direction(s) the brush is selecting over. Direction can be 'x', 'y',
     # or 'xy'.
     use_x = "x" in brush["direction"]
     use_y = "y" in brush["direction"]
-
-    # TODO: Try to extract vars from brush object
 
     # Filter out x and y values
     keep_rows: pd.Series[bool] = pd.Series(True, index=new_df.index)
@@ -72,10 +74,10 @@ def brushed_points(
             xvar = brush["mapping"]["x"]
         if xvar is None:
             raise ValueError(
-                "brushedPoints: not able to automatically infer `xvar` from brush"
+                "brushed_points: not able to automatically infer `xvar` from brush. You must supply `xvar` to brushed_points()"
             )
         if xvar not in new_df:
-            raise ValueError(f"brushedPoints: `xvar` ({xvar}) not in dataframe")
+            raise ValueError(f"brushed_points: `xvar` ({xvar}) not in dataframe")
         keep_rows &= within_brush(new_df[xvar], brush, "x")
 
     if use_y:
@@ -83,13 +85,28 @@ def brushed_points(
             yvar = brush["mapping"]["y"]
         if yvar is None:
             raise ValueError(
-                "brushedPoints: not able to automatically infer `yvar` from brush"
+                "brushed_points: not able to automatically infer `yvar` from brush. You must supply `yvar` to brushed_points()"
             )
         if yvar not in new_df:
-            raise ValueError(f"brushedPoints: `yvar` ({yvar}) not in dataframe")
+            raise ValueError(f"brushed_points: `yvar` ({yvar}) not in dataframe")
         keep_rows &= within_brush(new_df[yvar], brush, "y")
 
-    # TODO: Find which rows are matches for the panel vars (if present)
+    # Find which rows are matches for the panel vars (if present)
+    if panelvar1 is None and "panelvar1" in brush["mapping"]:
+        panelvar1 = brush["mapping"]["panelvar1"]
+        if panelvar1 not in new_df:
+            raise ValueError(
+                f"brushed_points: `panelvar1` ({panelvar1}) not in dataframe"
+            )
+        keep_rows &= new_df[panelvar1] == brush["panelvar1"]  # pyright: ignore
+
+    if panelvar2 is None and "panelvar2" in brush["mapping"]:
+        panelvar2 = brush["mapping"]["panelvar2"]
+        if panelvar2 not in new_df:
+            raise ValueError(
+                f"brushed_points: `panelvar2` ({panelvar2}) not in dataframe"
+            )
+        keep_rows &= new_df[panelvar2] == brush["panelvar2"]  # pyright: ignore
 
     if all_rows:
         new_df["selected_"] = False
@@ -105,6 +122,8 @@ def near_points(
     coordinfo: Union[CoordInfo, None],
     xvar: Optional[str] = None,
     yvar: Optional[str] = None,
+    panelvar1: Optional[str] = None,
+    panelvar2: Optional[str] = None,
     *,
     threshold: float = 5,
     max_points: Optional[int] = None,
@@ -138,19 +157,19 @@ def near_points(
         if xvar is None and "x" in coordinfo["mapping"]:
             xvar = coordinfo["mapping"]["x"]
         raise ValueError(
-            "nearPoints: not able to automatically infer `xvar` from coordinfo"
+            "near_points: not able to automatically infer `xvar` from coordinfo. You must supply `xvar` to near_points()"
         )
     if yvar is None:
         if yvar is None and "y" in coordinfo["mapping"]:
             yvar = coordinfo["mapping"]["y"]
         raise ValueError(
-            "nearPoints: not able to automatically infer `yvar` from coordinfo"
+            "near_points: not able to automatically infer `yvar` from coordinfo. You must supply `yvar` to near_points()"
         )
 
     if xvar not in new_df.columns:
-        raise ValueError(f"nearPoints: `xvar` ('{xvar}')  not in names of input")
+        raise ValueError(f"near_points: `xvar` ('{xvar}')  not in names of input.")
     if yvar not in new_df.columns:
-        raise ValueError(f"nearPoints: `yvar` ('{yvar}')  not in names of input")
+        raise ValueError(f"near_points: `yvar` ('{yvar}')  not in names of input.")
 
     # TODO:
     # fortify discrete limits
@@ -179,15 +198,22 @@ def near_points(
 
     keep_rows = dists <= threshold
 
-    # # Find which rows are matches for the panel vars (if present)
-    # if (!is.null(panelvar1))
-    #     keep_rows <- keep_rows & panelMatch(coordinfo$panelvar1, df[[panelvar1]])
-    # if (!is.null(panelvar2))
-    #     keep_rows <- keep_rows & panelMatch(coordinfo$panelvar2, df[[panelvar2]])
+    # Find which rows are matches for the panel vars (if present)
+    if panelvar1 is None and "panelvar1" in coordinfo["mapping"]:
+        panelvar1 = coordinfo["mapping"]["panelvar1"]
+        if panelvar1 not in new_df:
+            raise ValueError(f"near_points: `panelvar1` ({panelvar1}) not in dataframe")
+        keep_rows &= new_df[panelvar1] == coordinfo["panelvar1"]  # pyright: ignore
+
+    if panelvar2 is None and "panelvar2" in coordinfo["mapping"]:
+        panelvar2 = coordinfo["mapping"]["panelvar2"]
+        if panelvar2 not in new_df:
+            raise ValueError(f"near_points: `panelvar2` ({panelvar2}) not in dataframe")
+        keep_rows &= new_df[panelvar2] == coordinfo["panelvar2"]  # pyright: ignore
 
     # Track the row indices to keep (note this is the row position, 0, 1, 2, not the
     # pandas index column, which can have arbitrary values).
-    keep_idx = np.where(keep_rows)[0]  # pyright: reportUnknownMemberType=false
+    keep_idx = np.where(keep_rows)[0]  # pyright: ignore[reportUnknownMemberType]
 
     # Order by distance
     dists = dists.iloc[keep_idx]
@@ -201,8 +227,11 @@ def near_points(
         # Add selected_ column if needed
         new_df["selected_"] = False
         new_df.iloc[
-            keep_idx, new_df.columns.get_loc("selected_")
-        ] = True  # pyright: reportUnknownArgumentType=false
+            keep_idx,
+            new_df.columns.get_loc(  # pyright: ignore[reportUnknownMemberType]
+                "selected_"
+            ),
+        ] = True
     else:
         new_df = new_df.iloc[keep_idx]
 
