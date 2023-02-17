@@ -142,65 +142,63 @@ def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Union[Coordmap, Non
     mappings = _get_mappings(p)
 
     for i in range(len(coordmap["panels"])):
-        coordmap["panels"][i]["mapping"] = mappings.copy()
+        # Copy the panel object; we'll mutate it, and then assign the copy back.
+        panel = deepcopy(coordmap["panels"][i])
+        panel_num = panel["panel"]
 
-        panel_num = coordmap["panels"][i]["panel"]
+        panel["mapping"] = mappings.copy()
 
         # Slice out the row of the layout data frame that corresponds to this panel.
         layout_row = p.layout.layout.loc[p.layout.layout["PANEL"] == panel_num]
-        if "panelvar1" in coordmap["panels"][i]["mapping"]:
-            coordmap["panels"][i]["panel_vars"] = {}
-            panelvar1 = coordmap["panels"][i]["mapping"]["panelvar1"]  # type: ignore
+
+        # Get values of panelvars
+        if "panelvar1" in panel["mapping"]:
+            panel["panel_vars"] = {}
+            panelvar1 = panel["mapping"]["panelvar1"]  # type: ignore
             # If panelvar1 is, say, "cyl", then panelvar1_val will be something like 4.
             # Convert to float; otherwise it may be a type which is not JSON
             # serializable, like numpy.int64.
             panelvar1_val = float(layout_row[panelvar1].iloc[0])
-            coordmap["panels"][i]["panel_vars"]["panelvar1"] = panelvar1_val  # type: ignore
+            panel["panel_vars"]["panelvar1"] = panelvar1_val  # type: ignore
 
-        if "panelvar2" in coordmap["panels"][i]["mapping"]:
-            panelvar2 = coordmap["panels"][i]["mapping"]["panelvar2"]  # type: ignore
+        if "panelvar2" in panel["mapping"]:
+            panelvar2 = panel["mapping"]["panelvar2"]  # type: ignore
             panelvar2_val = float(layout_row[panelvar2].iloc[0])
-            coordmap["panels"][i]["panel_vars"]["panelvar2"] = panelvar2_val  # type: ignore
+            panel["panel_vars"]["panelvar2"] = panelvar2_val  # type: ignore
 
-    for scale in p.scales:
-        if "x" in scale.aesthetics:
-            dir_xy = "x"
-        elif "y" in scale.aesthetics:
-            dir_xy = "y"
-        else:
-            # Some scales (like color) are not for x or y. Skip them.
-            continue
+        # Get x and y scales
+        xscale_num = layout_row["SCALE_X"].iloc[0]
+        yscale_num = layout_row["SCALE_Y"].iloc[0]
+        xscale = p.layout.panel_scales_x[xscale_num - 1]
+        yscale = p.layout.panel_scales_y[yscale_num - 1]
 
         # Plotnine objects handle log scales a bit differently from regular matplotlib
         # Figures. Instead of using log scales in the matplotlib Figure object, it adds
         # log scales in the ggplot object.
-        if _is_log_trans(scale._trans):
-            # Assume all panels use the same log scale.
-            for i in range(len(coordmap["panels"])):
-                coordmap["panels"][i]["log"][dir_xy] = scale._trans.base
+        if _is_log_trans(xscale._trans):
+            panel["log"]["x"] = xscale._trans.base
+        if _is_log_trans(yscale._trans):
+            panel["log"]["y"] = yscale._trans.base
 
-        if _is_reverse_trans(scale._trans):
-            # Assume all panels use the same log scale.
-            for i in range(len(coordmap["panels"])):
-                domain = coordmap["panels"][i]["domain"]
-                if dir_xy == "x":
-                    coordmap["panels"][i]["domain"]["left"] = -domain["left"]
-                    coordmap["panels"][i]["domain"]["right"] = -domain["right"]
-                elif dir_xy == "y":
-                    coordmap["panels"][i]["domain"]["top"] = -domain["top"]
-                    coordmap["panels"][i]["domain"]["bottom"] = -domain["bottom"]
+        if _is_reverse_trans(xscale._trans):
+            domain = panel["domain"]
+            panel["domain"]["left"] = -domain["left"]
+            panel["domain"]["right"] = -domain["right"]
+        if _is_reverse_trans(yscale._trans):
+            domain = panel["domain"]
+            panel["domain"]["top"] = -domain["top"]
+            panel["domain"]["bottom"] = -domain["bottom"]
 
-    # Plotnine figures can also have transforms in the coordinates. We will assume that
-    # they're not used along with log scales, because that would be really strange.
-    if hasattr(p.coordinates, "trans_x") and _is_log_trans(p.coordinates.trans_x):
-        # Assume all panels use the same log scale.
-        for i in range(len(coordmap["panels"])):
-            coordmap["panels"][i]["log"]["x"] = p.coordinates.trans_x.base
+        # Plotnine figures can also have transforms in the coordinates. We will assume
+        # that log coord transforms are not used along with log scales, because that
+        # would be really strange.
+        if hasattr(p.layout.coord, "trans_x") and _is_log_trans(p.layout.coord.trans_x):
+            panel["log"]["x"] = p.layout.coord.trans_x.base
+        if hasattr(p.layout.coord, "trans_y") and _is_log_trans(p.layout.coord.trans_y):
+            panel["log"]["y"] = p.layout.coord.trans_y.base
 
-    if hasattr(p.coordinates, "trans_y") and _is_log_trans(p.coordinates.trans_y):
-        # Assume all panels use the same log scale.
-        for i in range(len(coordmap["panels"])):
-            coordmap["panels"][i]["log"]["y"] = p.coordinates.trans_y.base
+        # Assign temporary panel object back to coordmap.
+        coordmap["panels"][i] = panel
 
     return coordmap
 
