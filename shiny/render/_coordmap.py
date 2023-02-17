@@ -225,9 +225,15 @@ def _get_mappings(p: PlotnineFigure) -> CoordmapPanelMapping:
         (mapping["x"], mapping["y"]) = (mapping["y"], mapping["x"])
 
     # The names (not values) of panel vars are the same across all panels.
-    if hasattr(p.facet, "cols"):
-        mapping["panelvar1"] = p.facet.cols[0]
-    if hasattr(p.facet, "rows"):
-        mapping["panelvar2"] = p.facet.rows[0]
+    if type(p.layout.facet).__name__ == "facet_grid":
+        n = 1
+        if len(p.layout.facet.cols) > 0:
+            mapping[f"panelvar{n}"] = p.layout.facet.cols[0]
+            n += 1
+        if len(p.layout.facet.rows) > 0:
+            mapping[f"panelvar{n}"] = p.layout.facet.rows[0]
+
+    elif type(p.layout.facet).__name__ == "facet_wrap":
+        mapping["panelvar1"] = p.layout.facet.vars[0]
 
     return mapping
