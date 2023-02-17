@@ -154,17 +154,15 @@ def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Union[Coordmap, Non
         # Get values of panelvars
         if "panelvar1" in panel["mapping"]:
             panel["panel_vars"] = {}
-            panelvar1 = panel["mapping"]["panelvar1"]  # type: ignore
+            panelvar1 = panel["mapping"]["panelvar1"]  # pyright: ignore
             # If panelvar1 is, say, "cyl", then panelvar1_val will be something like 4.
-            # Convert to float; otherwise it may be a type which is not JSON
-            # serializable, like numpy.int64.
-            panelvar1_val = float(layout_row[panelvar1].iloc[0])
-            panel["panel_vars"]["panelvar1"] = panelvar1_val  # type: ignore
+            panelvar1_val = _simplify_type(layout_row[panelvar1].iloc[0])
+            panel["panel_vars"]["panelvar1"] = panelvar1_val  # pyright: ignore
 
         if "panelvar2" in panel["mapping"]:
-            panelvar2 = panel["mapping"]["panelvar2"]  # type: ignore
-            panelvar2_val = float(layout_row[panelvar2].iloc[0])
-            panel["panel_vars"]["panelvar2"] = panelvar2_val  # type: ignore
+            panelvar2 = panel["mapping"]["panelvar2"]  # pyright: ignore
+            panelvar2_val = _simplify_type(layout_row[panelvar2].iloc[0])
+            panel["panel_vars"]["panelvar2"] = panelvar2_val  # pyright: ignore
 
         # Get x and y scales
         xscale_num = layout_row["SCALE_X"].iloc[0]
@@ -175,16 +173,16 @@ def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Union[Coordmap, Non
         # Plotnine objects handle log scales a bit differently from regular matplotlib
         # Figures. Instead of using log scales in the matplotlib Figure object, it adds
         # log scales in the ggplot object.
-        if _is_log_trans(xscale._trans):
+        if hasattr(xscale, "_trans") and _is_log_trans(xscale._trans):
             panel["log"]["x"] = xscale._trans.base
-        if _is_log_trans(yscale._trans):
+        if hasattr(yscale, "_trans") and _is_log_trans(yscale._trans):
             panel["log"]["y"] = yscale._trans.base
 
-        if _is_reverse_trans(xscale._trans):
+        if hasattr(xscale, "_trans") and _is_reverse_trans(xscale._trans):
             domain = panel["domain"]
             panel["domain"]["left"] = -domain["left"]
             panel["domain"]["right"] = -domain["right"]
-        if _is_reverse_trans(yscale._trans):
+        if hasattr(yscale, "_trans") and _is_reverse_trans(yscale._trans):
             domain = panel["domain"]
             panel["domain"]["top"] = -domain["top"]
             panel["domain"]["bottom"] = -domain["bottom"]
@@ -237,3 +235,16 @@ def _get_mappings(p: PlotnineFigure) -> CoordmapPanelMapping:
         mapping["panelvar1"] = p.layout.facet.vars[0]
 
     return mapping
+
+
+# Sometimes columns are types that are not JSON serializable, like np.int64. Convert
+# these to types that are JSON serializable.
+def _simplify_type(x: Any) -> Any:
+    import numpy as np
+
+    if isinstance(x, np.integer):
+        return int(x)  # pyright: ignore[reportUnknownArgumentType]
+    elif isinstance(x, np.floating):
+        return float(x)  # pyright: ignore[reportUnknownArgumentType]
+    else:
+        return x

@@ -8,7 +8,7 @@ __all__ = ("brushed_points", "near_points")
 
 
 import sys
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, cast
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -30,7 +30,10 @@ if TYPE_CHECKING:
     import pandas as pd
 
 
-class SeriesXY(TypedDict):
+DataFrameColumn = Union["pd.Series[float]", "pd.Series[str]", "pd.Categorical"]
+
+
+class SeriesFloatXY(TypedDict):
     x: pd.Series[float]
     y: pd.Series[float]
 
@@ -171,21 +174,17 @@ def near_points(
     if yvar not in new_df.columns:
         raise ValueError(f"near_points: `yvar` ('{yvar}')  not in names of input.")
 
-    # TODO:
-    # fortify discrete limits
-    # as_number
-
-    x: pd.Series[float] = df[xvar]
-    y: pd.Series[float] = df[yvar]
+    x: pd.Series[float] = to_float(new_df[xvar])
+    y: pd.Series[float] = to_float(new_df[yvar])
 
     # Get the coordinates of the point (in img pixel coordinates)
     point_img: CoordXY = coordinfo["coords_img"]
 
     # Get coordinates of data points (in img pixel coordinates)
-    data_img: SeriesXY = scale_coords(x, y, coordinfo)
+    data_img: SeriesFloatXY = scale_coords(x, y, coordinfo)
 
     # Get x/y distances (in css coordinates)
-    dist_css: SeriesXY = {
+    dist_css: SeriesFloatXY = {
         "x": (data_img["x"] - point_img["x"]) / coordinfo["img_css_ratio"]["x"],
         "y": (data_img["y"] - point_img["y"]) / coordinfo["img_css_ratio"]["y"],
     }
@@ -242,16 +241,36 @@ def near_points(
 # Helper functions
 # ===============================================================================
 # Helper to determine if data values are within the limits of
-# an input brush
-
-
+# an input brush.
 def within_brush(
-    vals: pd.Series[float], brush: BrushInfo, var: Literal["x", "y"] = "x"
+    vals: DataFrameColumn,
+    brush: BrushInfo,
+    var: Literal["x", "y"] = "x",
 ) -> pd.Series[bool]:
-    # brush = fortify_discrete_limits(brush)
-    # vals = as_number(vals, brush["domain"]["discrete_limits"][var])
-    # TODO: handle NAs?
+    vals = to_float(vals)
     return (vals >= brush[var + "min"]) & (vals <= brush[var + "max"])
+
+
+def to_float(x: DataFrameColumn) -> pd.Series[float]:
+    import pandas as pd
+
+    """Convert int/float/str/categorical Series to a float Series.
+
+    If the input is a int or float Series, this returns a copy. Otherwise, it returns a
+    new Series object.
+    """
+    print(x)
+    if x.dtype == "category":
+        x = cast("pd.Series[float]", x.cat.codes + 1)  # pyright: ignore
+    elif x.dtype == "object":
+        # Values will be strings, hopefully
+        x = cast(
+            "pd.Series[float]", x.astype("category").cat.codes + 1  # pyright: ignore
+        )
+    else:
+        raise ValueError("within_brush: unsupported dtype for x")
+
+    return x
 
 
 # ===============================================================================
@@ -310,7 +329,7 @@ def scale_coords(
     x: pd.Series[float],
     y: pd.Series[float],
     coordinfo: CoordInfo,
-) -> SeriesXY:
+) -> SeriesFloatXY:
     domain = coordinfo["domain"]
     range = coordinfo["range"]
     log = coordinfo["log"]
