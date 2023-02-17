@@ -197,6 +197,9 @@ class NavSetArg(Protocol):
 class PlotnineFigure(Protocol):
     scales: List[Any]
     coordinates: Any
+    facet: Any
+    layout: Any
+    mapping: Dict[str, str]
 
     def save(
         self,
@@ -240,22 +243,22 @@ class CoordmapPanelRange(TypedDict):
 
 
 class CoordmapPanelMapping(TypedDict):
-    x: NotRequired[str]
-    y: NotRequired[str]
+    x: Union[str, None]
+    y: Union[str, None]
     panelvar1: NotRequired[str]
     panelvar2: NotRequired[str]
 
 
-class CoordmapPanelvarMapping(TypedDict):
-    panelvar1: NotRequired[str]
-    panelvar2: NotRequired[str]
+class CoordmapPanelvarValues(TypedDict):
+    panelvar1: NotRequired[float]
+    panelvar2: NotRequired[float]
 
 
 class CoordmapPanel(TypedDict):
-    panel: NotRequired[int]
+    panel: int
     row: NotRequired[int]
     col: NotRequired[int]
-    panel_vars: NotRequired[CoordmapPanelvarMapping]
+    panel_vars: NotRequired[CoordmapPanelvarValues]
     log: CoordmapPanelLog
     domain: CoordmapPanelDomain
     mapping: CoordmapPanelMapping

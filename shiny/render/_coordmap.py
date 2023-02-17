@@ -1,9 +1,12 @@
+# pyright: reportUnknownMemberType=false
+
 # Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, List, Tuple, Union, cast
+from copy import deepcopy
+from typing import TYPE_CHECKING, Any, List, Tuple, Union, cast
 
 from ..types import (
     Coordmap,
@@ -11,6 +14,7 @@ from ..types import (
     CoordmapPanel,
     CoordmapPanelDomain,
     CoordmapPanelLog,
+    CoordmapPanelMapping,
     CoordmapPanelRange,
     PlotnineFigure,
 )
@@ -35,7 +39,7 @@ def get_coordmap(fig: Figure) -> Union[Coordmap, None]:
         "height": dims_ar[1],
     }
 
-    all_axes: List[Axes] = fig.get_axes()  # pyright: reportUnknownMemberType=false
+    all_axes: List[Axes] = fig.get_axes()  # pyright: ignore[reportUnknownMemberType]
 
     panels: List[CoordmapPanel] = []
     for i, axes in enumerate(all_axes):
@@ -51,7 +55,9 @@ def get_coordmap(fig: Figure) -> Union[Coordmap, None]:
 
 
 def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPanel:
-    spspec: SubplotSpec = axes.get_subplotspec()
+    spspec: SubplotSpec = (
+        axes.get_subplotspec()  # pyright: ignore[reportGeneralTypeIssues]
+    )
 
     domain_xlim = cast(Tuple[float, float], axes.get_xlim())
     domain_ylim = cast(Tuple[float, float], axes.get_ylim())
@@ -65,7 +71,7 @@ def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPan
     }
 
     # Pixel coordinates of plotting area
-    transdata: Transform = axes.transData  # pyright: reportGeneralTypeIssues=false
+    transdata: Transform = axes.transData  # pyright: ignore[reportGeneralTypeIssues]
 
     range_ar: npt.NDArray[np.double] = transdata.transform(
         [
@@ -86,20 +92,22 @@ def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPan
     }
 
     log: CoordmapPanelLog = {"x": None, "y": None}
-    if axes.axes.xaxis._scale.name == "log":
-        log["x"] = axes.xaxis._scale.base
-        domain["left"] = axes.xaxis._scale._transform.transform(domain["left"])
-        domain["right"] = axes.xaxis._scale._transform.transform(domain["right"])
+    xaxis: Any = axes.xaxis  # pyright: ignore[reportGeneralTypeIssues]
+    if xaxis._scale.name == "log":
+        log["x"] = xaxis._scale.base
+        domain["left"] = xaxis._scale._transform.transform(domain["left"])
+        domain["right"] = xaxis._scale._transform.transform(domain["right"])
 
-    if axes.yaxis._scale.name == "log":
-        log["y"] = axes.yaxis._scale.base
-        domain["top"] = axes.yaxis._scale._transform.transform(domain["top"])
-        domain["bottom"] = axes.yaxis._scale._transform.transform(domain["bottom"])
+    yaxis: Any = axes.yaxis  # pyright: ignore[reportGeneralTypeIssues]
+    if yaxis._scale.name == "log":
+        log["y"] = yaxis._scale.base
+        domain["top"] = yaxis._scale._transform.transform(domain["top"])
+        domain["bottom"] = yaxis._scale._transform.transform(domain["bottom"])
 
     return {
         "panel": panel_num,
-        "row": spspec.rowspan.start + 1,  # pyright: reportUnknownVariableType=false
-        "col": spspec.colspan.start + 1,  # pyright: reportUnknownVariableType=false
+        "row": spspec.rowspan.start + 1,
+        "col": spspec.colspan.start + 1,
         # "panel_vars": {
         #     "panelvar1": "4",
         #     "panelvar2": "1",
@@ -108,6 +116,8 @@ def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPan
         "range": range,
         "log": log,
         "mapping": {
+            "x": None,
+            "y": None,
             # "x": "wt",
             # "y": "mpg",
             # "panelvar1": "cyl",
@@ -122,15 +132,35 @@ def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Union[Coordmap, Non
     if coordmap is None:
         return None
 
+    p = deepcopy(p)
+    p._build()  # pyright: ignore[reportGeneralTypeIssues]
+
     # Plotnine/ggplot figures can contain some information that is not in the matplotlib
     # Figure object that is generated.
 
-    if "x" in p.mapping:
-        for i in range(len(coordmap["panels"])):
-            coordmap["panels"][i]["mapping"]["x"] = p.mapping["x"]
-    if "y" in p.mapping:
-        for i in range(len(coordmap["panels"])):
-            coordmap["panels"][i]["mapping"]["y"] = p.mapping["y"]
+    # The mappings are shared across all panels, so just get them once.
+    mappings = _get_mappings(p)
+
+    for i in range(len(coordmap["panels"])):
+        coordmap["panels"][i]["mapping"] = mappings.copy()
+
+        panel_num = coordmap["panels"][i]["panel"]
+
+        # Slice out the row of the layout data frame that corresponds to this panel.
+        layout_row = p.layout.layout.loc[p.layout.layout["PANEL"] == panel_num]
+        if "panelvar1" in coordmap["panels"][i]["mapping"]:
+            coordmap["panels"][i]["panel_vars"] = {}
+            panelvar1 = coordmap["panels"][i]["mapping"]["panelvar1"]  # type: ignore
+            # If panelvar1 is, say, "cyl", then panelvar1_val will be something like 4.
+            # Convert to float; otherwise it may be a type which is not JSON
+            # serializable, like numpy.int64.
+            panelvar1_val = float(layout_row[panelvar1].iloc[0])
+            coordmap["panels"][i]["panel_vars"]["panelvar1"] = panelvar1_val  # type: ignore
+
+        if "panelvar2" in coordmap["panels"][i]["mapping"]:
+            panelvar2 = coordmap["panels"][i]["mapping"]["panelvar2"]  # type: ignore
+            panelvar2_val = float(layout_row[panelvar2].iloc[0])
+            coordmap["panels"][i]["panel_vars"]["panelvar2"] = panelvar2_val  # type: ignore
 
     for scale in p.scales:
         if "x" in scale.aesthetics:
@@ -177,9 +207,29 @@ def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Union[Coordmap, Non
 
 # Given a Plotnine transform object, report whether it is a log transform.
 def _is_log_trans(trans: object) -> bool:
-    return re.fullmatch("log.*_trans", type(trans).__name__)
+    return bool(re.fullmatch("log.*_trans", type(trans).__name__))
 
 
 # Given a Plotnine transform object, report whether it is a reverse transform.
 def _is_reverse_trans(trans: object) -> bool:
     return type(trans).__name__ == "reverse_trans"
+
+
+def _get_mappings(p: PlotnineFigure) -> CoordmapPanelMapping:
+    mapping: CoordmapPanelMapping = {"x": None, "y": None}
+
+    if "x" in p.mapping:
+        mapping["x"] = p.mapping["x"]
+    if "y" in p.mapping:
+        mapping["y"] = p.mapping["y"]
+
+    if type(p.layout.coord).__name__ == "coord_flip":
+        (mapping["x"], mapping["y"]) = (mapping["y"], mapping["x"])
+
+    # The names (not values) of panel vars are the same across all panels.
+    if hasattr(p.facet, "cols"):
+        mapping["panelvar1"] = p.facet.cols[0]
+    if hasattr(p.facet, "rows"):
+        mapping["panelvar2"] = p.facet.rows[0]
+
+    return mapping
