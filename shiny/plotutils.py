@@ -26,11 +26,18 @@ else:
 from .types import BrushInfo, CoordInfo, CoordXY
 
 if TYPE_CHECKING:
+    import numpy as np
     import numpy.typing as npt
     import pandas as pd
 
 
-DataFrameColumn = Union["pd.Series[float]", "pd.Series[str]", "pd.Categorical"]
+DataFrameColumn = Union[
+    "pd.Series[int]",
+    "pd.Series[float]",
+    "pd.Series[str]",
+    "pd.Series[np.datetime64]",
+    "pd.Categorical",
+]
 
 
 class SeriesFloatXY(TypedDict):
@@ -253,24 +260,34 @@ def within_brush(
 
 def to_float(x: DataFrameColumn) -> pd.Series[float]:
     import pandas as pd
+    import pandas.api.types as ptypes
 
     """Convert int/float/str/categorical Series to a float Series.
 
     If the input is a int or float Series, this returns a copy. Otherwise, it returns a
     new Series object.
     """
-    print(x)
-    if x.dtype == "category":
-        x = cast("pd.Series[float]", x.cat.codes + 1)  # pyright: ignore
-    elif x.dtype == "object":
-        # Values will be strings, hopefully
-        x = cast(
+    if ptypes.is_numeric_dtype(x):  # pyright: ignore[reportUnknownMemberType]
+        return cast("pd.Series[float]", x)
+    elif ptypes.is_categorical_dtype(x):  # pyright: ignore[reportUnknownMemberType]
+        return cast("pd.Series[float]", x.cat.codes + 1)  # pyright: ignore
+    elif ptypes.is_string_dtype(x):  # pyright: ignore[reportUnknownMemberType]
+        return cast(
             "pd.Series[float]", x.astype("category").cat.codes + 1  # pyright: ignore
         )
-    else:
-        raise ValueError("within_brush: unsupported dtype for x")
+    elif ptypes.is_datetime64_any_dtype(x):  # pyright: ignore[reportUnknownMemberType]
+        # We need to convert the pandas datetimes, which are in nanoseconds since epoch,
+        # to matplotlib datetimes, which are in days since epoch..
+        return (
+            cast(
+                "pd.Series[int]",
+                pd.Series(x.astype("int")),  # pyright: ignore
+            )
+            / (24 * 60 * 60)
+            / 1e9
+        )
 
-    return x
+    raise ValueError("to_float: unsupported dtype for x")
 
 
 # ===============================================================================
