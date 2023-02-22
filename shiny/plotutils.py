@@ -55,6 +55,46 @@ def brushed_points(
     *,
     all_rows: bool = False,
 ) -> pd.DataFrame:
+    """Find rows of data selected on an interactive plot.
+
+    This function is used with interactive plots. It returns the rows of a data frame
+    which are under a brush.
+
+    It currently supports plots created by matplotlib, seaborn, and plotnine. If
+    plotnine is used, it can usually automatically infer the x and y variables, along
+    with variables used for facets.
+
+    Parameters
+    ----------
+    df
+        A pandas DataFrame from which to select rows.
+    brush
+        The data from a brush, like `input.myplot_brush()`.
+    xvar
+        The name of the column in `df` that contains the x values. (Note that when using
+        plotnine, `xvar`, `yvar`, `panelvar1`, and `panelvar2` can usually be
+        automatically inferred from the brush data.)
+    yvar
+        The name of the column in `df` that contains the y values.
+    panelvar1
+        The name of the column in `df` that contains the first variable used for
+        subpanels (if subpanels are used).
+    panelvar2
+        The name of the column in `df` that contains the second variable used for
+        subpanels.
+    all_rows
+        If `False` (the default), return a data frame containing only the rows that are
+        selected. If `True`, then all rows from the data frame will be returned, along
+        with an additional column named `selected_`, which indicates whether or not each
+        row was selected.
+
+    Returns
+    -------
+        A pandas DataFrame containing the rows selected by the brush. If `all_rows` is
+        `True`, then all rows from the original data will be returned, along with an
+        additional column named `selected_`, which indicates whether or not each row was
+        selected.
+    """
     import pandas as pd
 
     new_df = df.copy()
@@ -140,6 +180,56 @@ def near_points(
     add_dist: bool = False,
     all_rows: bool = False,
 ) -> pd.DataFrame:
+    """Find rows of data selected on an interactive plot.
+
+    This function is used with interactive plots. It returns the rows of a data frame
+    which are under a brush.
+
+    It currently supports plots created by matplotlib, seaborn, and plotnine. If
+    plotnine is used, it can usually automatically infer the x and y variables, along
+    with variables used for facets.
+
+    Parameters
+    ----------
+    df
+        A pandas DataFrame from which to select rows.
+    coordinfo
+        The data from a click/dblclick/hover event, like `input.myplot_click()`.
+    xvar
+        The name of the column in `df` that contains the x values. (Note that when using
+        plotnine, `xvar`, `yvar`, `panelvar1`, and `panelvar2` can usually be
+        automatically inferred from the brush data.)
+    yvar
+        The name of the column in `df` that contains the y values.
+    panelvar1
+        The name of the column in `df` that contains the first variable used for
+        subpanels (if subpanels are used).
+    panelvar2
+        The name of the column in `df` that contains the second variable used for
+        subpanels.
+    threshold
+        A maximum distance (in pixels) to the pointer location. Rows in the data frame
+        will be selected if the distance to the pointer is less than `threshold`.
+    max_points
+        Maximum number of rows to return. If `None` (the default), will return all rows
+        within the threshold distance.
+    add_dist
+        If `True`, add a column named `dist_` that contains the distance from the
+        coordinate to the point, in pixels. When no pointer event has yet occurred, the
+        value of `dist_` will be `numpy.NaN`.
+    all_rows
+        If `False` (the default), return a data frame containing only the rows that are
+        selected. If `True`, then all rows from the data frame will be returned, along
+        with an additional column named `selected_`, which indicates whether or not each
+        row was selected.
+
+    Returns
+    -------
+        A pandas DataFrame containing the rows selected by the brush. If `all_rows` is
+        `True`, then all rows from the original data will be returned, along with an
+        additional column named `selected_`, which indicates whether or not each row was
+        selected.
+    """
     import numpy as np
 
     new_df = df.copy()
