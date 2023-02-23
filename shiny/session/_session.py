@@ -873,6 +873,11 @@ class SessionProxy:
 class Inputs:
     """
     A class representing Shiny input values.
+
+    This class provides access to a :class:`~shiny.session.Session`'s input values. The
+    input values are reactive :class:`~shiny.reactive.Values`, and can be accessed with
+    the ``[]`` operator, or with ``.``. For example, if there is an input named ``x``,
+    it can be accessed via ``input["x"]()`` or ``input.x()``.
     """
 
     def __init__(
@@ -915,6 +920,13 @@ class Inputs:
 
     def __delattr__(self, key: str) -> None:
         self.__delitem__(key)
+
+    def __contains__(self, key: str) -> bool:
+        # This looks simple, but does a number of things. By accessing `self[key]`, it
+        # indirectly calls `__getitem__`, which applies a namespace to the key, and
+        # it populates the key if it doesn't exist yet. It then calls `is_set()`, which
+        # creates a reactive dependency, and returns whether the value is set.
+        return self[key].is_set()
 
 
 # ======================================================================================
