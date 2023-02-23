@@ -18,7 +18,11 @@
         88
     ],
     "files.exclude": {
-        "**/__pycache__": true
+        "**/__pycache__": true,
+        "build/**": true
     },
     "autoDocstring.guessTypes": false,
+    "search.exclude": {
+        "build/**": true
+    },
 }
