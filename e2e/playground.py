@@ -280,7 +280,6 @@ class _InputWithContainer(_InputBase):
         loc: InitLocator,
         loc_container: InitLocator = "div.shiny-input-container",
     ) -> None:
-
         loc_is_str = isinstance(loc, str)
         loc_container_is_str = isinstance(loc_container, str)
 
@@ -964,7 +963,7 @@ class _MultipleDomItems:
             return
 
         # Find all items in set
-        for (item, i) in zip(arr, range(len(arr))):
+        for item, i in zip(arr, range(len(arr))):
             # Get all elements of type
             has_locator = page.locator(f"{el_type}{is_checked_str}")
             # Get the `n`th matching element
@@ -1034,16 +1033,22 @@ class InputCheckboxGroup(
             loc_label=f"label#{id}-label",
         )
 
-        self.loc_selected = self.loc.locator(
-            "> .shiny-options-group > .checkbox > label > input[type=checkbox]:checked"
-        )
-        self.loc_choices = self.loc.locator(
-            "> .shiny-options-group > .checkbox > label > input[type=checkbox]"
-        )
-        self.loc_choice_labels = self.loc.locator(
-            "> .shiny-options-group > .checkbox > label",
-            has=self.page.locator("> input[type=checkbox]"),
-        )
+        # # Regular example
+        #     <div class="shiny-options-group">
+        #       <div class="checkbox">
+        #         <label>
+        #           <input type="checkbox" name="check1" value="red">
+        #           <span><span style="color: #FF0000;">RED</span></span>
+        # # Inline example
+        #     <div class="shiny-options-group">
+        #       <label class="checkbox-inline">
+        #         <input type="checkbox" name="check2" value="magenta">
+        #         <span><span style="color: #FF00AA;">MAGENTA</span></span>
+        input_checkbox = f"> .shiny-options-group input[type=checkbox][name={id}]"
+        self.loc_selected = self.loc.locator(f"{input_checkbox}:checked")
+        self.loc_choices = self.loc.locator(f"{input_checkbox}")
+        # Get sibling <span> containing the label text
+        self.loc_choice_labels = self.loc.locator(f"{input_checkbox} + span")
 
     def set(
         self,
@@ -1052,7 +1057,6 @@ class InputCheckboxGroup(
         timeout: Timeout = None,
         **kwargs: typing.Any,
     ) -> None:
-
         if isinstance(selected, str):
             selected = [selected]
 
@@ -1143,16 +1147,23 @@ class InputRadioButtons(
             loc_container=f"div#{id}.shiny-input-radiogroup.shiny-bound-input",
             loc_label=f"label#{id}-label",
         )
-        self.loc_selected = self.loc.locator(
-            "> .shiny-options-group > .radio > label > input[type=radio]:checked"
-        )
-        self.loc_choices = self.loc.locator(
-            "> .shiny-options-group > .radio > label > input[type=radio]"
-        )
-        self.loc_choice_labels = self.loc.locator(
-            "> .shiny-options-group > .radio > label",
-            has=self.page.locator("> input[type=radio]"),
-        )
+
+        # # Regular example
+        #     <div class="shiny-options-group">
+        #       <div class="radio">
+        #         <label>
+        #           <input type="radio" name="radio1" value="a" checked="checked">
+        #           <span><span style="color:red;">A</span></span>
+        # # Inline example
+        #     <div class="shiny-options-group">
+        #       <label class="radio-inline">
+        #         <input type="radio" name="radio2" value="d" checked="checked">
+        #         <span><span style="color:purple;">D</span></span>
+        input_radio = f"> .shiny-options-group input[type=radio][name={id}]"
+        self.loc_selected = self.loc.locator(f"{input_radio}:checked")
+        self.loc_choices = self.loc.locator(f"{input_radio}")
+        # Get sibling <span> containing the label text
+        self.loc_choice_labels = self.loc.locator(f"{input_radio} + span")
 
     def set(
         self,
@@ -1161,7 +1172,6 @@ class InputRadioButtons(
         timeout: Timeout = None,
         **kwargs: typing.Any,
     ) -> None:
-
         # Only need to set.
         # The Browser will _unset_ the previously selected radio button
         self.loc_container.locator(
