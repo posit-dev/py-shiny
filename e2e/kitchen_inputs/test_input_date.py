@@ -24,7 +24,6 @@ def expect_date(
     weekstart: int = 0,
     width: typing.Union[str, None] = None,
 ) -> None:
-
     date.expect_value(str(datetime.date.today()) if value == "today" else value)
     date.expect_autoclose(str(autoclose).lower())
     date.expect_datesdisabled(datesdisabled)

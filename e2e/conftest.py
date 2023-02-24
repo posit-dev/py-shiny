@@ -8,7 +8,7 @@ import threading
 from pathlib import PurePath
 from time import sleep
 from types import TracebackType
-from typing import IO, Callable, Generator, List, Optional, TextIO, Type, Union, cast
+from typing import IO, Callable, Generator, List, Optional, TextIO, Type, Union
 
 import pytest
 

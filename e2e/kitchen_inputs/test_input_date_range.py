@@ -26,7 +26,6 @@ def expect_date_range(
     width: typing.Union[str, None] = None,
     separator: str = " to ",
 ) -> None:
-
     start_value = str(datetime.date.today()) if start_value == "today" else start_value
     end_value = str(datetime.date.today()) if end_value == "today" else end_value
     date.expect_value((start_value, end_value))
