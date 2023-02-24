@@ -8,7 +8,6 @@ from shiny._utils import AsyncCallbacks, Callbacks, private_seed, random_port
 
 
 def test_randomness():
-
     current_state = random.getstate()
     try:
         # Make sure the public stream of randomness is independent of the private stream

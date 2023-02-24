@@ -1,3 +1,5 @@
+# pyright: reportUnnecessaryComparison=false
+
 __all__ = (
     "input_select",
     "input_selectize",
@@ -208,7 +210,7 @@ def _render_choices(
     if x is None:
         return result
 
-    for (k, v) in x.items():
+    for k, v in x.items():
         if isinstance(v, Mapping):
             result.append(
                 tags.optgroup(
@@ -241,7 +243,7 @@ def _find_first_option(x: Union[_SelectChoices, None]) -> Optional[str]:
     if x is None:
         return None
 
-    for (k, v) in x.items():
+    for k, v in x.items():
         if isinstance(v, dict):
             result = _find_first_option(cast(_SelectChoices, v))
             if result is not None:

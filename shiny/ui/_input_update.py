@@ -111,6 +111,7 @@ def update_action_button(
 update_action_link = update_action_button
 update_action_link.__doc__ = update_action_button.__doc__
 
+
 # -----------------------------------------------------------------------------
 # input_check_radio.py
 # -----------------------------------------------------------------------------
@@ -613,7 +614,7 @@ def update_selectize(
     # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]
     flat_choices: List[FlatSelectChoice] = []
     if choices is not None:
-        for (k, v) in _normalize_choices(choices).items():
+        for k, v in _normalize_choices(choices).items():
             if not isinstance(v, Mapping):
                 flat_choices.append(
                     FlatSelectChoice(value=k, label=session._process_ui(v)["html"])
@@ -860,6 +861,7 @@ update_text_area.__doc__ = update_text.__doc__
 # -----------------------------------------------------------------------------
 # navs.py
 # -----------------------------------------------------------------------------
+
 
 # TODO: we should probably provide a nav_select() alias for this as well
 @add_example()

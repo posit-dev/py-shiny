@@ -7,6 +7,7 @@ from plotly import graph_objects as go
 
 rs = np.random.RandomState()
 
+
 # https://plotly.com/python/3d-line-plots/
 def brownian_motion(T=1, N=100, mu=0.1, sigma=0.01, S0=20):
     dt = float(T) / N

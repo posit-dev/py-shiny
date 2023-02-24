@@ -776,7 +776,6 @@ async def test_invalidate_later_invalidation():
 
 @pytest.mark.asyncio
 async def test_mock_time():
-
     mock_time = MockTime()
 
     with mock_time():
@@ -1382,7 +1381,6 @@ async def test_effect_async_pausing():
 
 @pytest.mark.asyncio
 async def test_observer_async_suspended_resumed_observers_run_at_most_once():
-
     a = Value(1)
 
     @Effect()

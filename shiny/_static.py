@@ -51,7 +51,6 @@ def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> List[
 
 
 def print_shinylive_local_info() -> None:
-
     print(
         f"""    Local shinylive dir:
         {get_default_shinylive_dir()}

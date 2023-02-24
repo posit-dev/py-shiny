@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The `req()` function now returns its first argument (assuming none of its arguments are falsey). This lets you perform validation on expressions as you assign, return, or pass them, without needing to introduce a separate statement just to call `req()`.
 
+* Added `Input.__contains__` method, so that (for example) one could write an expression like `if "x" in inputs`. (#402)
+
 ### Bug fixes
 
 * The `width` parameters for `input_select` and `input_slider` now work properly. (Thanks, @bartverweire!) (#386)

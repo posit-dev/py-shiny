@@ -52,10 +52,6 @@ class OutputStream:
                 except ValueError:
                     # This is raised when the stream is closed
                     break
-                # pylance says `line` can never be `None`
-                line = cast(Union[str, None], line)
-                if line is None:
-                    break
                 if line != "":
                     with self._cond:
                         self._lines.append(line)

@@ -65,6 +65,7 @@ OT = TypeVar("OT")
 # RenderFunction/RenderFunctionAsync base class
 # ======================================================================================
 
+
 # A RenderFunction object is given a user-provided function which returns an IT. When
 # the .__call___ method is invoked, it calls the user-provided function (which returns
 # an IT), then converts the IT to an OT. Note that in many cases but not all, IT and OT
@@ -207,7 +208,6 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
         return _utils.run_coro_sync(self._run())
 
     async def _run(self) -> Union[ImgData, None]:
-
         inputs = self._session.root_scope().input
 
         # Reactively read some information about the plot.

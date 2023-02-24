@@ -35,6 +35,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal, TypedDict
 
+
 # This is the same as the FileContentJson type in TypeScript.
 class FileContentJson(TypedDict):
     name: str

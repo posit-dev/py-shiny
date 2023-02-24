@@ -3,7 +3,7 @@
 import importlib
 import sys
 from types import ModuleType
-from typing import cast
+from typing import Union, cast
 
 if sys.version_info < (3, 9):
     raise RuntimeError("This script requires Python 3.9 or later")
@@ -25,8 +25,8 @@ def gen_init_py(package_name: str) -> None:
         if isinstance(submodule, ModuleType):
             # print(submodule)
             all = getattr(submodule, "__all__", None)
+            all = cast(Union[tuple[str], None], all)
             if all is not None:
-                all = cast(tuple[str], all)
                 if not submodule.__name__.startswith(pkg.__name__ + "."):
                     continue
                     # print(

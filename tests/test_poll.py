@@ -244,7 +244,6 @@ async def test_file_reader():
 @pytest.mark.asyncio
 async def test_file_reader_error():
     async with OnEndedSessionCallbacks():
-
         tmpfile1 = tempfile.NamedTemporaryFile(delete=False)
         mock_time = MockTime()
         with mock_time():
