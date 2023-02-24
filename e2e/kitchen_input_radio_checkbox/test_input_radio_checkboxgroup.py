@@ -12,7 +12,7 @@ def test_input_checkbox_group_kitchen(page: Page, local_app: ShinyAppProc) -> No
     check2 = InputCheckboxGroup(page, "check2")
 
     def assert_radio_check(
-        x: InputRadioButtons | InputCheckboxGroup,
+        x: typing.Union[InputRadioButtons, InputCheckboxGroup],
         label: str,
         choices: typing.List[str],
         choice_labels: typing.List[PatternOrStr],
