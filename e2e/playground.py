@@ -1379,6 +1379,9 @@ class InputSlider(_WidthLocM, _InputWithLabel):
         mouse = self.loc_container.page.mouse
         mouse.move(handle_center[0], handle_center[1])
         mouse.down()
+        # Release like a "reset" to slow the slider down and let the label update
+        mouse.up()
+        mouse.down()
 
         # Move all the way to the left
         mouse.move(grid_bb["x"], handle_center[1])
