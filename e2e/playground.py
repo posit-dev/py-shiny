@@ -1261,6 +1261,7 @@ class InputFile(
         if expect_complete_timeout is not None:
             self.expect_complete(timeout=expect_complete_timeout)
 
+    # TODO-barret: Let's make sure that if the upload errors out, expect_complete() fails.
     def expect_complete(
         self,
         *,
