@@ -25,8 +25,8 @@ def gen_init_py(package_name: str) -> None:
         if isinstance(submodule, ModuleType):
             # print(submodule)
             all = getattr(submodule, "__all__", None)
-            all = cast(tuple[str], all)
             if all is not None:
+                all = cast(tuple[str], all)
                 if not submodule.__name__.startswith(pkg.__name__ + "."):
                     continue
                     # print(

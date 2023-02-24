@@ -8,7 +8,7 @@ import threading
 from pathlib import PurePath
 from time import sleep
 from types import TracebackType
-from typing import IO, Callable, Generator, List, Optional, TextIO, Type, Union
+from typing import IO, Callable, Generator, List, Optional, TextIO, Type, Union, cast
 
 import pytest
 
@@ -52,6 +52,8 @@ class OutputStream:
                 except ValueError:
                     # This is raised when the stream is closed
                     break
+                # pylance says `line` can never be `None`
+                line = cast(Union[str, None], line)
                 if line is None:
                     break
                 if line != "":
