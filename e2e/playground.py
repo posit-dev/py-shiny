@@ -1376,10 +1376,13 @@ class InputSlider(_WidthLocM, _InputWithLabel):
         pxls: int = 0
         found = False
         values_found: typing.Dict[str, bool] = {}
+        max_values_found = 15
         while pxls <= grid_bb["width"] + 1:
             # Get value
             cur_val = self.loc_irs_label.inner_text()
-            values_found[cur_val] = True
+            # Only store what could be used
+            if len(values_found) <= max_values_found + 1:
+                values_found[cur_val] = True
 
             # Quit if found
             if cur_val == value:
@@ -1392,9 +1395,14 @@ class InputSlider(_WidthLocM, _InputWithLabel):
 
         mouse.up()
         if not found:
-            values_found_txt = ", ".join([f"'{key}'" for key in values_found.keys()])
+            key_arr = list(values_found.keys())
+            trail_txt = ""
+            if len(key_arr) > max_values_found:
+                key_arr = key_arr[:max_values_found]
+                trail_txt = ", ..."
+            values_found_txt = ", ".join([f'"{key}"' for key in key_arr])
             raise ValueError(
-                f"Could not find value '{value}' when moving slider from left to right\nValues found:\n{values_found_txt}"
+                f"Could not find value '{value}' when moving slider from left to right\nValues found:\n{values_found_txt}{trail_txt}"
             )
 
     # TODO-barret; Remove? InputSlider.set(value: str) is more intuitive
@@ -1742,7 +1750,6 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
-
         start_val = value[0]
         end_val = value[1]
 

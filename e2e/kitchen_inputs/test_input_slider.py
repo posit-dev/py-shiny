@@ -16,8 +16,6 @@ def test_input_slider_kitchen(page: Page, slider_app: ShinyAppProc) -> None:
     expect(obs.loc_label).to_have_text("Number of bins:")
 
     obs.expect_tick_labels_to_have_text(
-        # Don't know why it is not this value. But the bottom value is found consistently.
-        # ["10", "20", "30", "40", "50", "60", "70", "80", "90", "100"]
         ["10", "19", "28", "37", "46", "55", "64", "73", "82", "91", "100"]
     )
     obs.expect_value("30")
@@ -47,9 +45,10 @@ def test_input_slider_kitchen(page: Page, slider_app: ShinyAppProc) -> None:
     try:
         obs.set("not-a-number", timeout=200)
     except ValueError as e:
-        print(e)
-
-    # TODO-future; test plot output? Tests below do a better job of making sure the slider is working.
+        values_found = '"10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", ...'
+        assert values_found in str(
+            e
+        ), "Error message should contain the list of first 15 valid values"
 
 
 def test_input_slider_output(page: Page, template_app: ShinyAppProc) -> None:
