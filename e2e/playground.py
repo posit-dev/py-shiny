@@ -2095,7 +2095,9 @@ class OutputTable(_OutputBase):
         if text is None:
             text = ""
         playwright_expect(
-            self.loc.locator(f"xpath=./table/tbody/tr[{row}]/td[{col}]")
+            self.loc.locator(
+                f"xpath=./table/tbody/tr[{row}]/td[{col}] | ./table/tbody/tr[{row}]/th[{col}]"
+            )
         ).to_have_text(text, timeout=timeout)
 
     def expect_column_labels(
@@ -2137,7 +2139,10 @@ class OutputTable(_OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        playwright_expect(self.loc.locator("xpath=./table/thead/tr/th")).to_have_count(
+        playwright_expect(
+            # self.loc.locator("xpath=./table/thead/tr[1]/(td|th)")
+            self.loc.locator("xpath=./table/thead/tr[1]/td | ./table/thead/tr[1]/th")
+        ).to_have_count(
             n,
             timeout=timeout,
         )
