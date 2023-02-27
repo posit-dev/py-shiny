@@ -26,17 +26,15 @@ else:
 from .types import BrushInfo, CoordInfo, CoordXY
 
 if TYPE_CHECKING:
-    import numpy as np
     import numpy.typing as npt
     import pandas as pd
-
 
 DataFrameColumn = Union[
     "pd.Series[int]",
     "pd.Series[float]",
     "pd.Series[str]",
-    "pd.Series[np.datetime64]",
     "pd.Categorical",
+    "pd.DatetimeIndex",
 ]
 
 
