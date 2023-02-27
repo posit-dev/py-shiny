@@ -49,11 +49,40 @@ def output_plot(
     id
         An input id.
     width
-        The CSS width, e.g. '400px', or '100%'
+        The CSS width, e.g. '400px', or '100%'.
     height
-        The CSS height, e.g. '100%' or '600px'
+        The CSS height, e.g. '100%' or '600px'.
     inline
-        If ``True``, the result is displayed inline
+        If ``True``, the result is displayed inline.
+    click
+        This can be `None` (the default), a string, or an object created by
+        :func:`~shiny.ui.click_opts`. If you use a string value like `"plot_click"` (or
+        equivalently, `click_opts(id="plot_click")`), the plot will send coordinates to
+        the server whenever it is clicked, and the value will be accessible via
+        `input.plot_click()`. The value will be a dictionary with `x` and `y` elements
+        indicating the mouse position.
+    dblclick
+        This is just like the `click` parameter, but for double-click events.
+    hover
+        Similar to the `click` argument, this can be `None` (the default), a string, or
+        an object created by :func:`~shiny.ui.hover_opts`. If you use a string value
+        like `"plot_hover"` (or equivalently, `hover_opts(id="plot_hover")`), the plot
+        will send coordinates to the server pauses on the plot, and the value will be
+        accessible via `input.plot_hover()`. The value will be a named list with `x` and
+        `y` elements indicating the mouse position. To control the hover time or hover
+        delay type, use :func:`~shiny.ui.hover_opts`.
+    brush
+        Similar to the `click` argument, this can be `None` (the default), a string, or
+        an object created by :func:`~shiny.ui.brush_opts`. If you use a string value
+        like `"plot_brush"` (or equivalently, `brush_opts(id="plot_brush")`), the plot
+        will allow the user to "brush" in the plotting area, and will send information
+        about the brushed area to the server, and the value will be accessible via
+        `input.plot_brush()`. Brushing means that the user will be able to draw a
+        rectangle in the plotting area and drag it around. The value will be a named
+        list with `xmin`, `xmax`, `ymin`, and `ymax` elements indicating the brush area.
+        To control the brush behavior, use :func:`~shiny.ui.brush_opts`. Multiple
+        `output_image`/`output_plot` calls may share the same `id` value; brushing one
+        image or plot will cause any other brushes with the same `id` to disappear.
 
     Returns
     -------
@@ -61,8 +90,7 @@ def output_plot(
 
     See Also
     -------
-    ~shiny.render.plot
-    ~shiny.ui.output_image
+    ~shiny.render.plot ~shiny.ui.output_image
     """
     res = output_image(
         id=resolve_id(id),
@@ -98,11 +126,40 @@ def output_image(
     id
         An input id.
     width
-        The CSS width, e.g. '400px', or '100%'
+        The CSS width, e.g. '400px', or '100%'.
     height
-        The CSS height, e.g. '100%' or '600px'
+        The CSS height, e.g. '100%' or '600px'.
     inline
-        If ``True``, the result is displayed inline
+        If ``True``, the result is displayed inline.
+    click
+        This can be `None` (the default), a string, or an object created by
+        :func:`~shiny.ui.click_opts`. If you use a string value like `"plot_click"` (or
+        equivalently, `click_opts(id="plot_click")`), the plot will send coordinates to
+        the server whenever it is clicked, and the value will be accessible via
+        `input.plot_click()`. The value will be a dictionary with `x` and `y` elements
+        indicating the mouse position.
+    dblclick
+        This is just like the `click` parameter, but for double-click events.
+    hover
+        Similar to the `click` argument, this can be `None` (the default), a string, or
+        an object created by :func:`~shiny.ui.hover_opts`. If you use a string value
+        like `"plot_hover"` (or equivalently, `hover_opts(id="plot_hover")`), the plot
+        will send coordinates to the server pauses on the plot, and the value will be
+        accessible via `input.plot_hover()`. The value will be a named list with `x` and
+        `y` elements indicating the mouse position. To control the hover time or hover
+        delay type, use :func:`~shiny.ui.hover_opts`.
+    brush
+        Similar to the `click` argument, this can be `None` (the default), a string, or
+        an object created by :func:`~shiny.ui.brush_opts`. If you use a string value
+        like `"plot_brush"` (or equivalently, `brush_opts(id="plot_brush")`), the plot
+        will allow the user to "brush" in the plotting area, and will send information
+        about the brushed area to the server, and the value will be accessible via
+        `input.plot_brush()`. Brushing means that the user will be able to draw a
+        rectangle in the plotting area and drag it around. The value will be a named
+        list with `xmin`, `xmax`, `ymin`, and `ymax` elements indicating the brush area.
+        To control the brush behavior, use :func:`~shiny.ui.brush_opts`. Multiple
+        `output_image`/`output_plot` calls may share the same `id` value; brushing one
+        image or plot will cause any other brushes with the same `id` to disappear.
 
     Returns
     -------
