@@ -3,24 +3,32 @@ import sys
 from typing import Dict, Union
 
 if sys.version_info >= (3, 8):
-    from typing import Literal, TypedDict
+    from typing import Literal
 else:
-    from typing_extensions import Literal, TypedDict
+    from typing_extensions import Literal
+
+# Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
+# they should both come from the same typing module.
+# https://peps.python.org/pep-0655/#usage-in-python-3-11
+if sys.version_info >= (3, 11):
+    from typing import NotRequired, TypedDict
+else:
+    from typing_extensions import NotRequired, TypedDict
 
 
 class ClickOpts(TypedDict):
-    id: str
+    id: NotRequired[str]
     clip: bool
 
 
 class DblClickOpts(TypedDict):
-    id: str
+    id: NotRequired[str]
     clip: bool
     delay: int
 
 
 class HoverOpts(TypedDict):
-    id: str
+    id: NotRequired[str]
     delay: int
     delayType: Literal["debounce", "throttle"]
     clip: bool
@@ -28,7 +36,7 @@ class HoverOpts(TypedDict):
 
 
 class BrushOpts(TypedDict):
-    id: str
+    id: NotRequired[str]
     fill: str
     stroke: str
     opacity: float
@@ -43,7 +51,7 @@ class BrushOpts(TypedDict):
 # is a TypedDict, and that is _not_ a subclass of Dict because it doesn't support some
 # Dict operations, like removing items specified in the TypedDict.
 def format_opt_names(
-    opts: Union[Dict[str, Union[str, bool]], ClickOpts],
+    opts: Union[ClickOpts, DblClickOpts, HoverOpts, BrushOpts],
     prefix: str,
 ) -> Dict[str, str]:
     new_opts: Dict[str, str] = dict()
@@ -60,31 +68,26 @@ def format_opt_names(
 
 
 def click_opts(
-    id: str,
     *,
     clip: bool = True,
 ) -> ClickOpts:
     return {
-        "id": id,
         "clip": clip,
     }
 
 
 def dblclick_opts(
-    id: str,
     *,
     delay: int = 400,
     clip: bool = True,
 ) -> DblClickOpts:
     return {
-        "id": id,
         "delay": delay,
         "clip": clip,
     }
 
 
 def hover_opts(
-    id: str,
     *,
     delay: int = 300,
     delay_type: Literal["debounce", "throttle"] = "debounce",
@@ -92,7 +95,6 @@ def hover_opts(
     null_outside: bool = True,
 ) -> HoverOpts:
     return {
-        "id": id,
         "delay": delay,
         "delayType": delay_type,
         "clip": clip,
@@ -101,7 +103,6 @@ def hover_opts(
 
 
 def brush_opts(
-    id: str,
     *,
     fill: str = "#9cf",
     stroke: str = "#036",
@@ -113,7 +114,6 @@ def brush_opts(
     reset_on_new: bool = False,
 ) -> BrushOpts:
     return {
-        "id": id,
         "fill": fill,
         "stroke": stroke,
         "opacity": opacity,

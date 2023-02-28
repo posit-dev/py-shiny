@@ -32,6 +32,17 @@ def current_namespace() -> ResolvedId:
 
 
 def resolve_id(id: Id) -> ResolvedId:
+    """
+    Resolve an ID, possibly with a module namespace.
+
+    Parameters
+    ----------
+    Args
+        id: An ID.
+
+    Returns
+        An ID (if in a module, this will contain a namespace prefix).
+    """
     curr_ns = _current_namespace.get()
     return curr_ns(id)
 

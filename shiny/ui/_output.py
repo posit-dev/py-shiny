@@ -33,10 +33,10 @@ def output_plot(
     height: str = "400px",
     *,
     inline: bool = False,
-    click: Optional[Union[str, ClickOpts]] = None,
-    dblclick: Optional[Union[str, DblClickOpts]] = None,
-    hover: Optional[Union[str, HoverOpts]] = None,
-    brush: Optional[Union[str, BrushOpts]] = None,
+    click: Union[bool, ClickOpts] = False,
+    dblclick: Union[bool, DblClickOpts] = False,
+    hover: Union[bool, HoverOpts] = False,
+    brush: Union[bool, BrushOpts] = False,
 ) -> Tag:
     """
     Create a output container for a static plot.
@@ -55,34 +55,34 @@ def output_plot(
     inline
         If ``True``, the result is displayed inline.
     click
-        This can be `None` (the default), a string, or an object created by
-        :func:`~shiny.ui.click_opts`. If you use a string value like `"plot_click"` (or
-        equivalently, `click_opts(id="plot_click")`), the plot will send coordinates to
-        the server whenever it is clicked, and the value will be accessible via
-        `input.plot_click()`. The value will be a dictionary with `x` and `y` elements
+        This can be a boolean or an object created by :func:`~shiny.ui.click_opts`. The
+        default is `False`, but if you use `True` (or equivalently, `click_opts()`), the
+        plot will send coordinates to the server whenever it is clicked, and the value
+        will be accessible via `input.xx_click()`, where `xx` is replaced with the ID of
+        this plot. The input value will be a dictionary with `x` and `y` elements
         indicating the mouse position.
     dblclick
         This is just like the `click` parameter, but for double-click events.
     hover
-        Similar to the `click` argument, this can be `None` (the default), a string, or
-        an object created by :func:`~shiny.ui.hover_opts`. If you use a string value
-        like `"plot_hover"` (or equivalently, `hover_opts(id="plot_hover")`), the plot
-        will send coordinates to the server pauses on the plot, and the value will be
-        accessible via `input.plot_hover()`. The value will be a named list with `x` and
-        `y` elements indicating the mouse position. To control the hover time or hover
-        delay type, use :func:`~shiny.ui.hover_opts`.
+        Similar to the `click` argument, this can be a boolean or an object created by
+        :func:`~shiny.ui.hover_opts`. The default is `False`, but if you use `True` (or
+        equivalently, `hover_opts()`), the plot will send coordinates to the server
+        whenever it is clicked, and the value will be accessible via `input.xx_hover()`,
+        where `xx` is replaced with the ID of this plot. The input value will be a
+        dictionary with `x` and `y` elements indicating the mouse position. To control
+        the hover time or hover delay type, use :func:`~shiny.ui.hover_opts`.
     brush
-        Similar to the `click` argument, this can be `None` (the default), a string, or
-        an object created by :func:`~shiny.ui.brush_opts`. If you use a string value
-        like `"plot_brush"` (or equivalently, `brush_opts(id="plot_brush")`), the plot
-        will allow the user to "brush" in the plotting area, and will send information
-        about the brushed area to the server, and the value will be accessible via
-        `input.plot_brush()`. Brushing means that the user will be able to draw a
-        rectangle in the plotting area and drag it around. The value will be a named
-        list with `xmin`, `xmax`, `ymin`, and `ymax` elements indicating the brush area.
-        To control the brush behavior, use :func:`~shiny.ui.brush_opts`. Multiple
-        `output_image`/`output_plot` calls may share the same `id` value; brushing one
-        image or plot will cause any other brushes with the same `id` to disappear.
+        Similar to the `click` argument, this can be a boolean or an object created by
+        :func:`~shiny.ui.brush_opts`. The default is `False`, but if you use `True` (or
+        equivalently, `brush_opts()`), the plot will allow the user to "brush" in the
+        plotting area, and will send information about the brushed area to the server,
+        and the value will be accessible via `input.plot_brush()`. Brushing means that
+        the user will be able to draw a rectangle in the plotting area and drag it
+        around. The value will be a named list with `xmin`, `xmax`, `ymin`, and `ymax`
+        elements indicating the brush area. To control the brush behavior, use
+        :func:`~shiny.ui.brush_opts`. Multiple `output_image`/`output_plot` calls may
+        share the same `id` value; brushing one image or plot will cause any other
+        brushes with the same `id` to disappear.
 
     Returns
     -------
@@ -93,7 +93,7 @@ def output_plot(
     ~shiny.render.plot ~shiny.ui.output_image
     """
     res = output_image(
-        id=resolve_id(id),
+        id=id,
         width=width,
         height=height,
         inline=inline,
@@ -113,10 +113,10 @@ def output_image(
     height: str = "400px",
     *,
     inline: bool = False,
-    click: Optional[Union[str, ClickOpts]] = None,
-    dblclick: Optional[Union[str, DblClickOpts]] = None,
-    hover: Optional[Union[str, HoverOpts]] = None,
-    brush: Optional[Union[str, BrushOpts]] = None,
+    click: Union[bool, ClickOpts] = False,
+    dblclick: Union[bool, DblClickOpts] = False,
+    hover: Union[bool, HoverOpts] = False,
+    brush: Union[bool, BrushOpts] = False,
 ) -> Tag:
     """
     Create a output container for a static image.
@@ -132,34 +132,34 @@ def output_image(
     inline
         If ``True``, the result is displayed inline.
     click
-        This can be `None` (the default), a string, or an object created by
-        :func:`~shiny.ui.click_opts`. If you use a string value like `"plot_click"` (or
-        equivalently, `click_opts(id="plot_click")`), the plot will send coordinates to
-        the server whenever it is clicked, and the value will be accessible via
-        `input.plot_click()`. The value will be a dictionary with `x` and `y` elements
+        This can be a boolean or an object created by :func:`~shiny.ui.click_opts`. The
+        default is `False`, but if you use `True` (or equivalently, `click_opts()`), the
+        plot will send coordinates to the server whenever it is clicked, and the value
+        will be accessible via `input.xx_click()`, where `xx` is replaced with the ID of
+        this plot. The input value will be a dictionary with `x` and `y` elements
         indicating the mouse position.
     dblclick
         This is just like the `click` parameter, but for double-click events.
     hover
-        Similar to the `click` argument, this can be `None` (the default), a string, or
-        an object created by :func:`~shiny.ui.hover_opts`. If you use a string value
-        like `"plot_hover"` (or equivalently, `hover_opts(id="plot_hover")`), the plot
-        will send coordinates to the server pauses on the plot, and the value will be
-        accessible via `input.plot_hover()`. The value will be a named list with `x` and
-        `y` elements indicating the mouse position. To control the hover time or hover
-        delay type, use :func:`~shiny.ui.hover_opts`.
+        Similar to the `click` argument, this can be a boolean or an object created by
+        :func:`~shiny.ui.hover_opts`. The default is `False`, but if you use `True` (or
+        equivalently, `hover_opts()`), the plot will send coordinates to the server
+        whenever it is clicked, and the value will be accessible via `input.xx_hover()`,
+        where `xx` is replaced with the ID of this plot. The input value will be a
+        dictionary with `x` and `y` elements indicating the mouse position. To control
+        the hover time or hover delay type, use :func:`~shiny.ui.hover_opts`.
     brush
-        Similar to the `click` argument, this can be `None` (the default), a string, or
-        an object created by :func:`~shiny.ui.brush_opts`. If you use a string value
-        like `"plot_brush"` (or equivalently, `brush_opts(id="plot_brush")`), the plot
-        will allow the user to "brush" in the plotting area, and will send information
-        about the brushed area to the server, and the value will be accessible via
-        `input.plot_brush()`. Brushing means that the user will be able to draw a
-        rectangle in the plotting area and drag it around. The value will be a named
-        list with `xmin`, `xmax`, `ymin`, and `ymax` elements indicating the brush area.
-        To control the brush behavior, use :func:`~shiny.ui.brush_opts`. Multiple
-        `output_image`/`output_plot` calls may share the same `id` value; brushing one
-        image or plot will cause any other brushes with the same `id` to disappear.
+        Similar to the `click` argument, this can be a boolean or an object created by
+        :func:`~shiny.ui.brush_opts`. The default is `False`, but if you use `True` (or
+        equivalently, `brush_opts()`), the plot will allow the user to "brush" in the
+        plotting area, and will send information about the brushed area to the server,
+        and the value will be accessible via `input.plot_brush()`. Brushing means that
+        the user will be able to draw a rectangle in the plotting area and drag it
+        around. The value will be a named list with `xmin`, `xmax`, `ymin`, and `ymax`
+        elements indicating the brush area. To control the brush behavior, use
+        :func:`~shiny.ui.brush_opts`. Multiple `output_image`/`output_plot` calls may
+        share the same `id` value; brushing one image or plot will cause any other
+        brushes with the same `id` to disappear.
 
     Returns
     -------
@@ -175,29 +175,34 @@ def output_image(
 
     args: Dict[str, str] = dict()
 
-    if click is not None:
-        if isinstance(click, str):
-            click = click_opts(id=click)
+    id_resolved = resolve_id(id)
+
+    if click is not False:
+        if click is True:
+            click = click_opts()
+        click["id"] = id_resolved + "_click"
         args.update(**format_opt_names(click, "click"))
 
-    if dblclick is not None:
-        if isinstance(dblclick, str):
-            dblclick = dblclick_opts(id=dblclick)
+    if dblclick is not False:
+        if dblclick is True:
+            dblclick = dblclick_opts()
+        dblclick["id"] = id_resolved + "_dblclick"
         args.update(**format_opt_names(dblclick, "dblclick"))
 
-    if hover is not None:
-        if isinstance(hover, str):
-            hover = hover_opts(id=hover)
+    if hover is not False:
+        if hover is True:
+            hover = hover_opts()
+        hover["id"] = id_resolved + "_hover"
         args.update(**format_opt_names(hover, "hover"))
 
-    if brush is not None:
-        if isinstance(brush, str):
-            brush = brush_opts(id=brush)
-            print(brush)
+    if brush is not False:
+        if brush is True:
+            brush = brush_opts()
+        brush["id"] = id_resolved + "_brush"
         args.update(**format_opt_names(brush, "brush"))
 
     return func(
-        id=resolve_id(id),
+        id=id_resolved,
         class_="shiny-image-output",
         style=style,
         **args,
