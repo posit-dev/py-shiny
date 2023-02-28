@@ -1,3 +1,4 @@
+from __future__ import annotations
 import re
 from contextlib import contextmanager
 from contextvars import ContextVar, Token

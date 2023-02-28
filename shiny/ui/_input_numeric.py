@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = ("input_numeric",)
 
 from typing import Optional

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "output_plot",
     "output_image",
@@ -178,7 +180,7 @@ def output_ui(
     id: str,
     inline: bool = False,
     container: Optional[TagFunction] = None,
-    **kwargs: TagAttrArg
+    **kwargs: TagAttrArg,
 ) -> Tag:
     """
     Create a output container for a UI (i.e., HTML) element.

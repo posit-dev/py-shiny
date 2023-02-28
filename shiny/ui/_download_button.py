@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = ("download_button", "download_link")
 
 from typing import Optional

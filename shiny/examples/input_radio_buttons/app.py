@@ -1,3 +1,4 @@
+from __future__ import annotations
 from htmltools import HTML
 
 from shiny import *

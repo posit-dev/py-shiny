@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TypeVar, cast
 
 from ._docstring import add_example

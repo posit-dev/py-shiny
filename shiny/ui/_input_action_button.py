@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = ("input_action_button", "input_action_link")
 
 from typing import Optional

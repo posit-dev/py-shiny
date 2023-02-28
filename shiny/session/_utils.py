@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = ("get_current_session", "session_context", "require_active_session")
 
 import sys

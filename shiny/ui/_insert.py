@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = ("insert_ui", "remove_ui")
 
 import sys

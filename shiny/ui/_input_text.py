@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = ("input_text", "input_text_area")
 
 import sys

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from queue import PriorityQueue
 from typing import Generic, Tuple, TypeVar
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "page_navbar",
     "page_fluid",
@@ -39,7 +41,7 @@ def page_navbar(
     collapsible: bool = True,
     fluid: bool = True,
     window_title: Union[str, MISSING_TYPE] = MISSING,
-    lang: Optional[str] = None
+    lang: Optional[str] = None,
 ) -> Tag:
     """
     Create a navbar with a navs bar and a title.
@@ -116,7 +118,7 @@ def page_navbar(
                 bg=bg,
                 inverse=inverse,
                 collapsible=collapsible,
-                fluid=fluid
+                fluid=fluid,
             )
         ),
         lang=lang,

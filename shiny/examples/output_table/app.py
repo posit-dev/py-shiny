@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pathlib
 
 import pandas as pd

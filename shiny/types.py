@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # Needed for NotRequired with Python 3.7 - 3.9
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations

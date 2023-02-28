@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = ("current_namespace", "resolve_id", "ui", "server")
 
 import sys

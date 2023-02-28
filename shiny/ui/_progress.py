@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = ("Progress",)
 
 from types import TracebackType

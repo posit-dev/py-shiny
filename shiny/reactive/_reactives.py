@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Reactive components"""
 
 __all__ = ("Value", "Calc", "Calc_", "CalcAsync_", "Effect", "Effect_", "event")

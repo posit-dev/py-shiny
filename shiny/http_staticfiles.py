@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 We can't use starlette's StaticFiles when running in wasm mode, because it launches a
 thread. Instead, use our own crappy version. Fortunately, this is all we need.

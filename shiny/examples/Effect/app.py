@@ -1,3 +1,4 @@
+from __future__ import annotations
 from shiny import *
 
 app_ui = ui.page_fluid(ui.input_action_button("btn", "Press me!"))

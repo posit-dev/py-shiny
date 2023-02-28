@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Information about the execution environment for Shiny
 """

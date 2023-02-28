@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Tools for reactively rendering output for the user interface.
 """

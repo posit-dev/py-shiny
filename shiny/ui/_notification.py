@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = ("notification_show", "notification_remove")
 
 import sys

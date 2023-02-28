@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Dict, cast
 
 import starlette.exceptions as exceptions

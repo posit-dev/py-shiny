@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "update_action_button",
     "update_action_link",

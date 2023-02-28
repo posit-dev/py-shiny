@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = ("input_date", "input_date_range")
 
 import json

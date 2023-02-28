@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Low-level reactive components."""
 
 __all__ = ("isolate", "invalidate_later", "flush", "on_flushed", "get_current_context")
