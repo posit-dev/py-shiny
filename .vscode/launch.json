@@ -20,6 +20,15 @@
       "module": "pytest",
       "args": [],
       "justMyCode": true
+    },
+    {
+      "name": "Sphinx build",
+      "type": "python",
+      "request": "launch",
+      "module": "sphinx.cmd.build",
+      "justMyCode": false,
+      "args": ["-M", "html", "source", "build"],
+      "cwd": "${workspaceFolder}/docs"
     }
   ]
 }

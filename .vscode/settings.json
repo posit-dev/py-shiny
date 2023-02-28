@@ -21,4 +21,5 @@
         "**/__pycache__": true
     },
     "autoDocstring.guessTypes": false,
+    "esbonio.sphinx.confDir": "",
 }

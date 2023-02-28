@@ -34,7 +34,6 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
-    "sphinx_autodoc_typehints",
     "myst_parser",
     "pyshinyapp",  # custom shiny extention for embedded apps in docs
 ]
@@ -97,7 +96,29 @@ html_context = {
 # Instead, add them to the docs/source/sphinxext/ directory and add the name to the
 # extensions list above (as done for pyshinyapp).
 
+# Show type annotations in the description, not the signature.
+autodoc_typehints = "description"
+
+# Show type annotations even for parameters that are not documented.
+autodoc_typehints_description_target = "all"
+
+# Prevent these type aliases from being expanded.
+autodoc_type_aliases = {
+    "TagAttrArg": "htmltools.TagAttrArg",
+    "TagChild": "htmltools.TagChild",
+    "TagChildArg": "htmltools.TagChildArg",
+}
+
+intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
+
+
+def autodoc_process_signature(
+    app, what, name, obj, options, signature, return_annotation
+):
+    print(return_annotation)
+
 
 def setup(app: Sphinx) -> None:
     app.add_js_file("js/fix-logo-link.js")
     app.add_js_file("js/disable-keypress.js")
+    app.connect("autodoc-process-signature", autodoc_process_signature)

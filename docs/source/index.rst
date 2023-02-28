@@ -47,6 +47,14 @@ namespace pollution. Namely, it gives you:
 API Reference
 =============
 
+.. currentmodule:: htmltools
+
+.. autosummary::
+    :toctree: reference/
+
+    TagChildArg
+
+
 .. currentmodule:: shiny
 
 Page containers
