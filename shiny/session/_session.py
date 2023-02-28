@@ -317,6 +317,7 @@ class Session(object, metaclass=SessionMeta):
                 ...
             except Exception as e:
                 try:
+                    print(repr(e))
                     self._send_error_response(str(e))
                 except Exception:
                     pass
