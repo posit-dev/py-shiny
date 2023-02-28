@@ -27,10 +27,6 @@ if TYPE_CHECKING:
     from matplotlib.gridspec import SubplotSpec
     from matplotlib.transforms import Transform
 
-# Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
-# they should both come from the same typing module.
-# https://peps.python.org/pep-0655/#usage-in-python-3-11
-
 
 def get_coordmap(fig: Figure) -> Union[Coordmap, None]:
     dims_ar: npt.NDArray[np.double] = fig.get_size_inches() * fig.get_dpi()
