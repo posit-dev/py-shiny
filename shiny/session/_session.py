@@ -1,3 +1,7 @@
+# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
+# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
+from __future__ import annotations
+
 __all__ = ("Session", "Inputs", "Outputs")
 
 import contextlib
@@ -151,11 +155,11 @@ class Session(object, metaclass=SessionMeta):
     ns: ResolvedId = Root
 
     # These declarations are here only for pyright and stubgen to generate stub files.
-    app: "App"
+    app: App
     id: str
     http_conn: HTTPConnection
-    input: "Inputs"
-    output: "Outputs"
+    input: Inputs
+    output: Outputs
     user: Union[str, None]
     groups: Union[List[str], None]
 
@@ -163,7 +167,7 @@ class Session(object, metaclass=SessionMeta):
     # Initialization
     # ==========================================================================
     def __init__(
-        self, app: "App", id: str, conn: Connection, debug: bool = False
+        self, app: App, id: str, conn: Connection, debug: bool = False
     ) -> None:
         self.app: App = app
         self.id: str = id
@@ -565,7 +569,7 @@ class Session(object, metaclass=SessionMeta):
         self._request_flush()
 
     def _send_insert_ui(
-        self, selector: str, multiple: bool, where: str, content: "RenderedDeps"
+        self, selector: str, multiple: bool, where: str, content: RenderedDeps
     ) -> None:
         msg = {
             "selector": selector,
@@ -811,18 +815,18 @@ class Session(object, metaclass=SessionMeta):
 
         return {"deps": deps, "html": res["html"]}
 
-    def make_scope(self, id: Id) -> "Session":
+    def make_scope(self, id: Id) -> Session:
         ns = self.ns(id)
         return SessionProxy(parent=self, ns=ns)  # type: ignore
 
-    def root_scope(self) -> "Session":
+    def root_scope(self) -> Session:
         return self
 
 
 class SessionProxy:
     ns: ResolvedId
-    input: "Inputs"
-    output: "Outputs"
+    input: Inputs
+    output: Outputs
 
     def __init__(self, parent: Session, ns: ResolvedId) -> None:
         self._parent = parent

@@ -1,3 +1,7 @@
+# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
+# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
+from __future__ import annotations
+
 import re
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
@@ -5,7 +9,7 @@ from typing import Pattern, Union
 
 
 class ResolvedId(str):
-    def __call__(self, id: "Id") -> "ResolvedId":
+    def __call__(self, id: Id) -> ResolvedId:
         if isinstance(id, ResolvedId):
             return id
 
