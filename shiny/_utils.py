@@ -46,10 +46,10 @@ def drop_none(x: dict[str, Any]) -> dict[str, object]:
 # won't work for converting "top-level" lists to tuples
 def lists_to_tuples(x: object) -> object:
     if isinstance(x, dict):
-        x = cast(dict[str, object], x)
+        x = cast("dict[str, object]", x)
         return {k: lists_to_tuples(v) for k, v in x.items()}
     elif isinstance(x, list):
-        x = cast(list[object], x)
+        x = cast("list[object]", x)
         return tuple(lists_to_tuples(y) for y in x)
     else:
         # TODO: are there other mutable iterators that we want to make read only?
