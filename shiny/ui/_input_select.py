@@ -25,9 +25,9 @@ _SelectChoices = Union[_Choices, _OptGrpChoices]
 # Formats available to the user
 SelectChoicesArg = Union[
     # ["a", "b", "c"]
-    list[str],
+    "list[str]",
     # ("a", "b", "c")
-    tuple[str, ...],
+    "tuple[str, ...]",
     # {"a": "Choice A", "b": tags.i("Choice B")}
     _Choices,
     # optgroup {"Group A": {"a1": "Choice A1", "a2": tags.i("Choice A2")}, "Group B": {}}
