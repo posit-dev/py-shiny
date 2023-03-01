@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import importlib
 import importlib.util
@@ -8,7 +10,7 @@ import shutil
 import sys
 import types
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Optional
 
 import click
 import uvicorn
@@ -103,7 +105,7 @@ any of the following will work:
     show_default=True,
 )
 def run(
-    app: Union[str, shiny.App],
+    app: str | shiny.App,
     host: str,
     port: int,
     autoreload_port: int,
@@ -129,7 +131,7 @@ def run(
 
 
 def run_app(
-    app: Union[str, shiny.App] = "app:app",
+    app: str | shiny.App = "app:app",
     host: str = "127.0.0.1",
     port: int = 8000,
     autoreload_port: int = 0,
@@ -212,7 +214,7 @@ def run_app(
     if app_dir:
         app_dir = os.path.realpath(app_dir)
 
-    log_config: Dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
+    log_config: dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
 
     if reload and app_dir is not None:
         reload_dirs = [app_dir]
@@ -251,7 +253,7 @@ def run_app(
 
 
 def setup_hot_reload(
-    log_config: Dict[str, Any],
+    log_config: dict[str, Any],
     autoreload_port: int,
     app_port: int,
     launch_browser: bool,
@@ -269,7 +271,7 @@ def setup_hot_reload(
     _autoreload.start_server(autoreload_port, app_port, launch_browser)
 
 
-def setup_launch_browser(log_config: Dict[str, Any]):
+def setup_launch_browser(log_config: dict[str, Any]):
     log_config["handlers"]["shiny_launch_browser"] = {
         "class": "shiny._launchbrowser.LaunchBrowserHandler",
         "level": "INFO",
@@ -279,7 +281,7 @@ def setup_launch_browser(log_config: Dict[str, Any]):
     log_config["loggers"]["uvicorn.error"]["handlers"].append("shiny_launch_browser")
 
 
-def maybe_setup_rsw_proxying(log_config: Dict[str, Any]) -> None:
+def maybe_setup_rsw_proxying(log_config: dict[str, Any]) -> None:
     # Replace localhost URLs emitted to the log, with proxied URLs
     if _hostenv.is_workbench():
         if "filters" not in log_config:
@@ -294,7 +296,7 @@ def is_file(app: str) -> bool:
     return "/" in app or app.endswith(".py")
 
 
-def resolve_app(app: str, app_dir: Optional[str]) -> Tuple[str, Optional[str]]:
+def resolve_app(app: str, app_dir: Optional[str]) -> tuple[str, Optional[str]]:
     # The `app` parameter can be:
     #
     # - A module:attribute name

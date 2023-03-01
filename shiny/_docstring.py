@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import json
 import os
 import sys
-from typing import Any, Callable, List, TypeVar
+from typing import Any, Callable, TypeVar
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -67,7 +69,7 @@ def add_example(
         if not os.path.exists(example_file):
             raise ValueError(f"No example for {fn_name}")
 
-        other_files: List[str] = []
+        other_files: list[str] = []
         for f in os.listdir(example_dir):
             abs_f = os.path.join(example_dir, f)
             if os.path.isfile(abs_f) and f != "app.py":
@@ -88,7 +90,7 @@ def add_example(
 
         # When rendering a standalone app, put the code above it (maybe this should be
         # handled by the directive itself?)
-        example_prefix: List[str] = []
+        example_prefix: list[str] = []
         if directive == "shinyapp::":
             example_prefix.extend(
                 [

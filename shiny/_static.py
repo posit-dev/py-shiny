@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import os
 import re
 import shutil
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 
 def remove_shinylive_local(
@@ -39,7 +41,7 @@ def get_default_shinylive_dir() -> Path:
     return Path(appdirs.user_cache_dir("shiny")) / "shinylive"
 
 
-def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> List[str]:
+def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> list[str]:
     if shinylive_dir is None:
         shinylive_dir = get_default_shinylive_dir()
 

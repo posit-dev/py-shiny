@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import html
 import http
@@ -6,7 +8,7 @@ import os
 import secrets
 import threading
 import webbrowser
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional
 
 from asgiref.typing import (
     ASGI3Application,
@@ -113,7 +115,7 @@ class InjectAutoreloadMiddleware:
         if scope["type"] != "http" or scope["path"] != "/" or len(self.script) == 0:
             return await self.app(scope, receive, send)
 
-        def mangle_callback(body: bytes) -> Tuple[bytes, bool]:
+        def mangle_callback(body: bytes) -> tuple[bytes, bool]:
             if b"</head>" in body:
                 return (body.replace(b"</head>", self.script, 1), True)
             else:
@@ -200,7 +202,7 @@ async def _coro_main(
     # leads to confusion if all you get is an error.
     async def process_request(
         path: str, request_headers: websockets.datastructures.Headers
-    ) -> Optional[Tuple[http.HTTPStatus, websockets.datastructures.HeadersLike, bytes]]:
+    ) -> Optional[tuple[http.HTTPStatus, websockets.datastructures.HeadersLike, bytes]]:
         # If there's no Upgrade header, it's not a WebSocket request.
         if request_headers.get("Upgrade") is None:
             return (http.HTTPStatus.MOVED_PERMANENTLY, [("Location", app_url)], b"")
@@ -219,7 +221,7 @@ class ResponseMangler:
     """
 
     def __init__(
-        self, send: ASGISendCallable, mangler: Callable[[bytes], Tuple[bytes, bool]]
+        self, send: ASGISendCallable, mangler: Callable[[bytes], tuple[bytes, bool]]
     ) -> None:
         # The underlying ASGI send function
         self._send = send

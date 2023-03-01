@@ -9,6 +9,8 @@ nothing we could disclose that an attacker wouldn't already have access to. The 
 not true when running in native Python, we want to be as safe as possible.
 """
 
+from __future__ import annotations
+
 __all__ = (
     "StaticFiles",
     "FileResponse",
@@ -34,7 +36,7 @@ else:
     import os.path
     import pathlib
     import urllib.parse
-    from typing import Iterable, List, MutableMapping, Optional, Tuple, Union
+    from typing import Iterable, MutableMapping, Optional
 
     from starlette.responses import PlainTextResponse
     from starlette.types import Receive, Scope, Send
@@ -45,7 +47,7 @@ else:
         dir: pathlib.Path
         root_path: str
 
-        def __init__(self, *, directory: Union[str, os.PathLike[str]]):
+        def __init__(self, *, directory: str | os.PathLike[str]):
             self.dir = pathlib.Path(os.path.realpath(os.path.normpath(directory)))
 
         async def __call__(self, scope: Scope, receive: Receive, send: Send):
@@ -80,8 +82,8 @@ else:
                 return await FileResponse(final_path)(scope, receive, send)
 
     def _traverse_url_path(
-        dir: pathlib.Path, path_segments: List[str]
-    ) -> Tuple[Optional[pathlib.Path], bool]:
+        dir: pathlib.Path, path_segments: list[str]
+    ) -> tuple[Optional[pathlib.Path], bool]:
         assert len(path_segments) > 0
 
         new_dir = dir
@@ -161,7 +163,7 @@ else:
 
     def _convert_headers(
         headers: Optional[MutableMapping[str, str]], media_type: Optional[str] = None
-    ) -> Iterable[Tuple[bytes, bytes]]:
+    ) -> Iterable[tuple[bytes, bytes]]:
         if headers is None:
             headers = {}
 
