@@ -1506,13 +1506,15 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
 
         # Slow it down a bit. Like "type" for text, but to allow the slider label to catch up
         # This should be done for every `mouse.move()` call
-        def slow_move(x: float, y: float):
+        sleep_time = 0.05
+
+        def slow_move(x: float, y: float, delay: float = sleep_time) -> None:
             mouse.move(x, y)
-            time.sleep(0.01)
+            time.sleep(delay)
 
         # Move all the way to the left
         handle_center_y = handle_center.get("y")
-        slow_move(start_x, handle_center_y)
+        slow_move(start_x, handle_center_y, delay=10 * sleep_time)
 
         # For each pixel in the grid width, check the text label
         pxls: int = 0
