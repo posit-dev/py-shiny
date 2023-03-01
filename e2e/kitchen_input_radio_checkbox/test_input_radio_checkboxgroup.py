@@ -16,7 +16,7 @@ def test_input_checkbox_group_kitchen(page: Page, local_app: ShinyAppProc) -> No
         label: str,
         choices: typing.List[str],
         choice_labels: typing.List[PatternOrStr],
-        selected: str | typing.List[str],
+        selected: typing.Union[str, typing.List[str]],
         inline: bool,
     ) -> None:
         expect(x.loc_label).to_have_text(label)

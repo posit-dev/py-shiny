@@ -1477,7 +1477,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         handle_center: Position,
         grid_bb: FloatRect,
         start_x: float,
-        direction: typing.Union[typing.Literal["left"], typing.Literal["right"]],
+        direction: typing.Union[Literal["left"], Literal["right"]],
         max_err_values: int = 15,
     ) -> None:
         if direction == "left":
