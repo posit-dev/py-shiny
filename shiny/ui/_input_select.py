@@ -1,11 +1,13 @@
 # pyright: reportUnnecessaryComparison=false
 
+from __future__ import annotations
+
 __all__ = (
     "input_select",
     "input_selectize",
 )
 
-from typing import List, Mapping, Optional, Tuple, Union, cast
+from typing import Mapping, Optional, Union, cast
 
 from htmltools import Tag, TagChildArg, TagList, css, div, tags
 
@@ -23,9 +25,9 @@ _SelectChoices = Union[_Choices, _OptGrpChoices]
 # Formats available to the user
 SelectChoicesArg = Union[
     # ["a", "b", "c"]
-    List[str],
+    list[str],
     # ("a", "b", "c")
-    Tuple[str, ...],
+    tuple[str, ...],
     # {"a": "Choice A", "b": tags.i("Choice B")}
     _Choices,
     # optgroup {"Group A": {"a1": "Choice A1", "a2": tags.i("Choice A2")}, "Group B": {}}
@@ -47,7 +49,7 @@ def input_selectize(
     label: TagChildArg,
     choices: SelectChoicesArg,
     *,
-    selected: Optional[Union[str, List[str]]] = None,
+    selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
@@ -107,7 +109,7 @@ def input_select(
     label: TagChildArg,
     choices: SelectChoicesArg,
     *,
-    selected: Optional[Union[str, List[str]]] = None,
+    selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     selectize: bool = False,
     width: Optional[str] = None,
@@ -203,7 +205,7 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
 
 
 def _render_choices(
-    x: _SelectChoices, selected: Optional[Union[str, List[str]]] = None
+    x: _SelectChoices, selected: Optional[str | list[str]] = None
 ) -> TagList:
     result = TagList()
 

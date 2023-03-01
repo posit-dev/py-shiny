@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "nav",
     "nav_menu",
@@ -15,7 +17,7 @@ __all__ = (
 import copy
 import re
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Optional, cast
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -45,8 +47,8 @@ class Nav:
         self.content = content
 
     def resolve(
-        self, selected: Optional[str], context: Dict[str, Any]
-    ) -> Tuple[TagChildArg, TagChildArg]:
+        self, selected: Optional[str], context: dict[str, Any]
+    ) -> tuple[TagChildArg, TagChildArg]:
         # Nothing to do for nav_control()/nav_spacer()
         if self.content is None:
             return self.nav, None
@@ -199,14 +201,14 @@ def nav_spacer() -> Nav:
 
 
 class NavMenu:
-    nav_controls: List[NavSetArg]
+    nav_controls: list[NavSetArg]
     title: TagChildArg
     value: str
     align: Literal["left", "right"]
 
     def __init__(
         self,
-        *args: Union[NavSetArg, str],
+        *args: NavSetArg | str,
         title: TagChildArg,
         value: str,
         align: Literal["left", "right"] = "left",
@@ -219,8 +221,8 @@ class NavMenu:
     def resolve(
         self,
         selected: Optional[str],
-        context: Dict[str, Any],
-    ) -> Tuple[TagChildArg, TagChildArg]:
+        context: dict[str, Any],
+    ) -> tuple[TagChildArg, TagChildArg]:
         nav, content = render_navset(
             *self.nav_controls,
             ul_class=f"dropdown-menu {'dropdown-menu-right' if self.align == 'right' else ''}",
@@ -264,7 +266,7 @@ class NavMenu:
         raise NotImplementedError("nav_menu() must appear within navset_*() container.")
 
 
-def menu_string_as_nav(x: Union[str, NavSetArg]) -> NavSetArg:
+def menu_string_as_nav(x: str | NavSetArg) -> NavSetArg:
     if not isinstance(x, str):
         return x
 
@@ -278,7 +280,7 @@ def menu_string_as_nav(x: Union[str, NavSetArg]) -> NavSetArg:
 
 def nav_menu(
     title: TagChildArg,
-    *args: Union[Nav, str],
+    *args: Nav | str,
     value: Optional[str] = None,
     icon: TagChildArg = None,
     align: Literal["left", "right"] = "left",
@@ -337,7 +339,7 @@ def nav_menu(
 
 
 class NavSet:
-    args: Tuple[NavSetArg]
+    args: tuple[NavSetArg]
     ul_class: str
     id: Optional[str]
     selected: Optional[str]
@@ -360,7 +362,7 @@ class NavSet:
         self.header = header
         self.footer = footer
 
-    def tagify(self) -> Union[TagList, Tag]:
+    def tagify(self) -> TagList | Tag:
         id = self.id
         ul_class = self.ul_class
         if id is not None:
@@ -371,7 +373,7 @@ class NavSet:
         )
         return self.layout(nav, content)
 
-    def layout(self, nav: TagChildArg, content: TagChildArg) -> Union[TagList, Tag]:
+    def layout(self, nav: TagChildArg, content: TagChildArg) -> TagList | Tag:
         return TagList(nav, self.header, content, self.footer)
 
 
@@ -674,7 +676,7 @@ def navset_pill_card(
 
 class NavSetPillList(NavSet):
     well: bool
-    widths: Tuple[int, int]
+    widths: tuple[int, int]
 
     def __init__(
         self,
@@ -685,7 +687,7 @@ class NavSetPillList(NavSet):
         header: TagChildArg = None,
         footer: TagChildArg = None,
         well: bool = True,
-        widths: Tuple[int, int] = (4, 8),
+        widths: tuple[int, int] = (4, 8),
     ) -> None:
         super().__init__(
             *args,
@@ -713,7 +715,7 @@ def navset_pill_list(
     header: TagChildArg = None,
     footer: TagChildArg = None,
     well: bool = True,
-    widths: Tuple[int, int] = (4, 8),
+    widths: tuple[int, int] = (4, 8),
 ) -> NavSet:
     """
     Render nav items as a vertical pillset.
@@ -950,8 +952,8 @@ def render_navset(
     ul_class: str,
     id: Optional[str],
     selected: Optional[str],
-    context: Dict[str, Any],
-) -> Tuple[Tag, Tag]:
+    context: dict[str, Any],
+) -> tuple[Tag, Tag]:
     tabsetid = private_random_int(1000, 10000)
 
     # If the user hasn't provided a selected value, use the first one

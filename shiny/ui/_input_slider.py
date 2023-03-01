@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "input_slider",
     "SliderValueArg",
@@ -8,7 +10,7 @@ __all__ = (
 import math
 import sys
 from datetime import date, datetime, timedelta
-from typing import Dict, Iterable, Optional, TypeVar, Union, cast
+from typing import Iterable, Optional, TypeVar, Union, cast
 
 from htmltools import HTML, Tag, TagAttrArg, TagChildArg, css, div, tags
 
@@ -67,11 +69,11 @@ def input_slider(
     label: TagChildArg,
     min: SliderValueArg,
     max: SliderValueArg,
-    value: Union[SliderValueArg, Iterable[SliderValueArg]],
+    value: SliderValueArg | Iterable[SliderValueArg],
     *,
     step: Optional[SliderStepArg] = None,
     ticks: bool = True,
-    animate: Union[bool, AnimationOptions] = False,
+    animate: bool | AnimationOptions = False,
     width: Optional[str] = None,
     sep: str = ",",
     pre: Optional[str] = None,
@@ -172,7 +174,7 @@ def input_slider(
 
     id = resolve_id(id)
 
-    props: Dict[str, TagAttrArg] = {
+    props: dict[str, TagAttrArg] = {
         "class_": "js-range-slider",
         "id": id,
         "data_skin": "shiny",
@@ -245,7 +247,7 @@ def _slider_type(x: SliderValueArg) -> str:
     return "number"
 
 
-def _as_numeric(x: Union[SliderStepArg, datetime, date]) -> float:
+def _as_numeric(x: SliderStepArg | datetime | date) -> float:
     if isinstance(x, timedelta):
         return x.total_seconds() * 1000
     if isinstance(x, datetime):
@@ -255,9 +257,7 @@ def _as_numeric(x: Union[SliderStepArg, datetime, date]) -> float:
     return x
 
 
-def _find_step_size(
-    min: Union[int, float], max: Union[int, float]
-) -> Union[int, float]:
+def _find_step_size(min: int | float, max: int | float) -> int | float:
     # TODO: this is a naive version of shiny::findStepSize() that might be susceptible to
     # rounding errors? https://github.com/rstudio/shiny/pull/1956
     range = max - min
@@ -285,9 +285,9 @@ pause_icon = """<svg viewBox="0 0 448 512" preserveAspectRatio="none" aria-hidde
 </svg>"""
 
 
-def _play_icon() -> Union[Tag, HTML]:
+def _play_icon() -> Tag | HTML:
     return HTML(play_icon)
 
 
-def _pause_icon() -> Union[Tag, HTML]:
+def _pause_icon() -> Tag | HTML:
     return HTML(pause_icon)

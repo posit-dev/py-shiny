@@ -1,11 +1,11 @@
-from typing import List
+from __future__ import annotations
 
 from htmltools import HTML, HTMLDependency
 
 from ..html_dependencies import jquery_deps
 
 
-def bootstrap_deps() -> List[HTMLDependency]:
+def bootstrap_deps() -> list[HTMLDependency]:
     dep = HTMLDependency(
         name="bootstrap",
         version="5.0.1",
@@ -17,7 +17,7 @@ def bootstrap_deps() -> List[HTMLDependency]:
     return deps
 
 
-def ionrangeslider_deps() -> List[HTMLDependency]:
+def ionrangeslider_deps() -> list[HTMLDependency]:
     return [
         HTMLDependency(
             name="ionrangeslider",
