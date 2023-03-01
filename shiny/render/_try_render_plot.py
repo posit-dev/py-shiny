@@ -74,7 +74,7 @@ def try_render_matplotlib(
         matplotlib.pyplot.close(fig)  # pyright: ignore[reportGeneralTypeIssues]
 
 
-def get_matplotlib_figure(x: object, allow_global: bool) -> Union[Figure, None]:
+def get_matplotlib_figure(x: object, allow_global: bool) -> Figure | None:
     import matplotlib.pyplot as plt
     from matplotlib.animation import Animation
     from matplotlib.artist import Artist
