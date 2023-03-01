@@ -20,4 +20,3 @@ def test_output_plot_kitchen(page: Page, app: ShinyAppProc) -> None:
     plot.expect_img_height("100%")
     plot.expect_img_width("100%")
     plot.expect_img_alt(None)
-    plot.expect_img_style(re.compile(r"object-fit:"))

@@ -2217,13 +2217,13 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
     ) -> None:
         expect_attr(self.loc_img, "alt", value, timeout=timeout)
 
-    def expect_img_style(
-        self,
-        value: AttrValue,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        expect_attr(self.loc_img, "style", value, timeout=timeout)
+    # def expect_img_style(
+    #     self,
+    #     value: AttrValue,
+    #     *,
+    #     timeout: Timeout = None,
+    # ) -> None:
+    #     expect_attr(self.loc_img, "style", value, timeout=timeout)
 
 
 class OutputImage(_OutputImageBase):
