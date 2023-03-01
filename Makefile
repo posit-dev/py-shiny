@@ -48,10 +48,13 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 	rm -rf typings/
 
-typings/uvicorn/__init__.pyi:
+typings/uvicorn:
 	pyright --createstub uvicorn
 
-pyright: typings/uvicorn/__init__.pyi ## type check with pyright
+typings/matplotlib:
+	pyright --createstub matplotlib
+
+pyright: typings/uvicorn typings/matplotlib ## type check with pyright
 	pyright
 
 lint: ## check style with flake8
@@ -64,7 +67,7 @@ format: ## format code with black and isort
 	echo "Sorting imports with isort."
 	isort .
 
-check: pyright lint ## check code quality with pyright, flake8, black and isort
+check: ## check code quality with black and isort
 	echo "Checking code with black."
 	black --check .
 	echo "Sorting imports with isort."

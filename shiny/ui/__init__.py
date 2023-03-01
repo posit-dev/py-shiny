@@ -17,6 +17,7 @@ from ._bootstrap import (
     help_text,
 )
 from ._download_button import download_button, download_link
+from ._plot_output_opts import brush_opts, click_opts, dblclick_opts, hover_opts
 from ._input_action_button import input_action_button, input_action_link
 from ._input_check_radio import (
     input_checkbox,
@@ -118,6 +119,10 @@ __all__ = (
     "help_text",
     "download_button",
     "download_link",
+    "brush_opts",
+    "click_opts",
+    "dblclick_opts",
+    "hover_opts",
     "input_action_button",
     "input_action_link",
     "input_checkbox",

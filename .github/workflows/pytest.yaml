@@ -58,7 +58,7 @@ jobs:
           make test
 
       - name: Type check with pyright
-        if: steps.install.outcome == 'success' && (success() || failure())
+        if: matrix.python-version >= 3.8 && steps.install.outcome == 'success' && (success() || failure())
         run: |
           make pyright
 

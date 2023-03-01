@@ -13,7 +13,7 @@ __all__ = (
 )
 
 import sys
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Optional, Tuple, Union
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -24,13 +24,16 @@ else:
     from typing_extensions import NotRequired, TypedDict
 
 if sys.version_info >= (3, 8):
-    from typing import Protocol
+    from typing import Literal, Protocol
 else:
-    from typing_extensions import Protocol
+    from typing_extensions import Literal, Protocol
 
 from htmltools import TagChildArg
 
 from ._docstring import add_example
+
+if TYPE_CHECKING:
+    from matplotlib.figure import Figure
 
 
 # Sentinel value - indicates a missing value in a function call.
@@ -91,6 +94,8 @@ class ImgData(TypedDict):
     """The ``alt`` attribute of the ``<img>`` tag."""
     style: NotRequired[str]
     """The ``style`` attribute of the ``<img>`` tag."""
+    coordmap: NotRequired[Any]
+    """TODO """
 
 
 @add_example()
@@ -180,3 +185,126 @@ class NavSetArg(Protocol):
         returns a value is used to determine the container's ``selected`` value).
         """
         ...
+
+
+# =============================================================================
+# Types for plots and images
+# =============================================================================
+
+
+# Use this protocol to avoid needing to maintain working stubs for plotnint. If
+# good stubs ever become available for plotnine, use those instead.
+class PlotnineFigure(Protocol):
+    scales: List[Any]
+    coordinates: Any
+    facet: Any
+    layout: Any
+    mapping: Dict[str, str]
+
+    def save(
+        self,
+        filename: BinaryIO,
+        format: str,
+        units: str,
+        dpi: float,
+        width: float,
+        height: float,
+        verbose: bool,
+        bbox_inches: object = None,
+    ):
+        ...
+
+    def draw(self, show: bool) -> Figure:
+        ...
+
+
+class CoordmapDims(TypedDict):
+    width: float
+    height: float
+
+
+class CoordmapPanelLog(TypedDict):
+    x: Union[float, None]
+    y: Union[float, None]
+
+
+class CoordmapPanelDomain(TypedDict):
+    left: float
+    right: float
+    bottom: float
+    top: float
+
+
+class CoordmapPanelRange(TypedDict):
+    left: float
+    right: float
+    bottom: float
+    top: float
+
+
+class CoordmapPanelMapping(TypedDict):
+    x: Union[str, None]
+    y: Union[str, None]
+    panelvar1: NotRequired[str]
+    panelvar2: NotRequired[str]
+
+
+class CoordmapPanelvarValues(TypedDict):
+    panelvar1: NotRequired[float]
+    panelvar2: NotRequired[float]
+
+
+class CoordmapPanel(TypedDict):
+    panel: int
+    row: NotRequired[int]
+    col: NotRequired[int]
+    panel_vars: NotRequired[CoordmapPanelvarValues]
+    log: CoordmapPanelLog
+    domain: CoordmapPanelDomain
+    mapping: CoordmapPanelMapping
+    range: CoordmapPanelRange
+
+
+class Coordmap(TypedDict):
+    panels: List[CoordmapPanel]
+    dims: CoordmapDims
+
+
+class CoordXY(TypedDict):
+    x: float
+    y: float
+
+
+# Data structure sent from client to server when a plot is clicked, double-clicked, or
+# hovered.
+class CoordInfo(TypedDict):
+    x: float
+    y: float
+    coords_css: CoordXY
+    coords_img: CoordXY
+    img_css_ratio: CoordXY
+    panelvar1: NotRequired[str]
+    panelvar2: NotRequired[str]
+    mapping: CoordmapPanelMapping
+    domain: CoordmapPanelDomain
+    range: CoordmapPanelRange
+    log: CoordmapPanelLog
+    # .nonce: float
+
+
+class BrushInfo(TypedDict):
+    xmin: float
+    xmax: float
+    ymin: float
+    ymax: float
+    coords_css: CoordXY
+    coords_img: CoordXY
+    img_css_ratio: CoordXY
+    panelvar1: NotRequired[str]
+    panelvar2: NotRequired[str]
+    mapping: CoordmapPanelMapping
+    domain: CoordmapPanelDomain
+    range: CoordmapPanelRange
+    log: CoordmapPanelLog
+    direction: Literal["x", "y", "xy"]
+    # .nonce: float
