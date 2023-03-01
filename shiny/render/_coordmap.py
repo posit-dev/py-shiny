@@ -55,8 +55,8 @@ def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPan
         axes.get_subplotspec()  # pyright: ignore[reportGeneralTypeIssues]
     )
 
-    domain_xlim = cast(tuple[float, float], axes.get_xlim())
-    domain_ylim = cast(tuple[float, float], axes.get_ylim())
+    domain_xlim = cast("tuple[float, float]", axes.get_xlim())
+    domain_ylim = cast("tuple[float, float]", axes.get_ylim())
 
     # Data coordinates of plotting area
     domain: CoordmapPanelDomain = {
