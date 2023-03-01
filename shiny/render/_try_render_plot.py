@@ -1,77 +1,19 @@
+# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
+# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
+from __future__ import annotations
+
 import base64
 import io
-import os
-import sys
-from typing import Any, BinaryIO, List, Optional, TextIO, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
 
-if sys.version_info >= (3, 8):
-    from typing import Literal, Protocol
-else:
-    from typing_extensions import Literal, Protocol
-
-from ..types import ImgData
-
-
-# Use this protocol to avoid needing to maintain working stubs for matplotlib. If
-# good stubs ever become available for matplotlib, use those instead.
-class MplFigure(Protocol):
-    def set_size_inches(
-        self,
-        w: Union[Tuple[float, float], float],
-        h: Optional[float] = None,
-        forward: bool = True,
-    ):
-        ...
-
-    def savefig(
-        self,
-        fname: Union[str, TextIO, BinaryIO, "os.PathLike[Any]"],
-        dpi: Union[float, Literal["figure"], None] = None,
-        # facecolor="w",
-        # edgecolor="w",
-        # orientation="portrait",
-        # papertype=None,
-        format: Optional[str] = None,
-        # transparent=False,
-        bbox_inches: object = None,
-        # pad_inches=0.1,
-        # frameon=None,
-        # metadata=None,
-    ):
-        ...
-
-
-class MplArtist(Protocol):
-    def get_figure(self) -> MplFigure:
-        ...
-
-
-class MplAnimation(Protocol):
-    def pause(self):
-        ...
-
-    def resume(self):
-        ...
-
-
-# Use this protocol to avoid needing to maintain working stubs for plotnint. If
-# good stubs ever become available for plotnine, use those instead.
-class PlotnineFigure(Protocol):
-    def save(
-        self,
-        filename: BinaryIO,
-        format: str,
-        units: str,
-        dpi: float,
-        width: float,
-        height: float,
-        verbose: bool,
-        bbox_inches: object = None,
-    ):
-        ...
-
+from ..types import ImgData, PlotnineFigure
+from ._coordmap import get_coordmap, get_coordmap_plotnine
 
 TryPlotResult = Tuple[bool, Union[ImgData, None]]
+
+
+if TYPE_CHECKING:
+    from matplotlib.figure import Figure
 
 
 # Try to render a matplotlib object (or the global figure, if it's been used). If `fig`
@@ -93,54 +35,50 @@ def try_render_matplotlib(
         return (False, None)
 
     try:
-        fig.set_size_inches(width / ppi, height / ppi)
+        import matplotlib.pyplot as plt
 
-        bbox_inches = kwargs.pop("bbox_inches", "tight")
+        fig.set_size_inches(width / ppi, height / ppi)
+        fig.set_dpi(ppi * pixelratio)
+
+        plt.tight_layout()
+        coordmap = get_coordmap(fig)
 
         with io.BytesIO() as buf:
             fig.savefig(
                 buf,
                 format="png",
                 dpi=ppi * pixelratio,
-                bbox_inches=bbox_inches,
                 **kwargs,
             )
             buf.seek(0)
             data = base64.b64encode(buf.read())
             data_str = data.decode("utf-8")
 
-        # N.B. matplotlib.tight_layout() causes the intrinsic file size can be different
-        # from the requested size (i.e., the container size). So, scale the image to fit
-        # in the container while preserving the aspect ratio.
         res: ImgData = {
             "src": "data:image/png;base64," + data_str,
             "width": "100%",
             "height": "100%",
-            "style": "object-fit:contain",
         }
 
         if alt is not None:
             res["alt"] = alt
+
+        if coordmap is not None:
+            res["coordmap"] = coordmap
 
         return (True, res)
 
     finally:
         import matplotlib.pyplot  # pyright: ignore[reportMissingTypeStubs]
 
-        matplotlib.pyplot.close(fig)  # pyright: ignore[reportUnknownMemberType]
+        matplotlib.pyplot.close(fig)  # pyright: ignore[reportGeneralTypeIssues]
 
 
-def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, None]:
+def get_matplotlib_figure(x: object, allow_global: bool) -> Union[Figure, None]:
     import matplotlib.pyplot as plt
-    from matplotlib.animation import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
-        Animation,
-    )
-    from matplotlib.artist import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
-        Artist,
-    )
-    from matplotlib.figure import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false
-        Figure,
-    )
+    from matplotlib.animation import Animation
+    from matplotlib.artist import Artist
+    from matplotlib.figure import Figure
 
     # Detect usage of pyplot global figure
     # TODO: Might be good to detect non-empty plt.get_fignums() before we call the user
@@ -150,7 +88,7 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, Non
         x is None and len(plt.get_fignums()) > 0
     ):  # pyright: reportUnknownArgumentType=false, reportUnknownMemberType=false
         if allow_global:
-            return cast(MplFigure, plt.gcf())
+            return plt.gcf()
         else:
             # Must close the global figure so we don't stay in this state forever
             plt.close(plt.gcf())
@@ -160,7 +98,7 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, Non
             )
 
     if isinstance(x, Figure):
-        return cast(MplFigure, x)
+        return x
 
     if isinstance(x, Animation):
         raise RuntimeError(
@@ -174,13 +112,14 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Union[MplFigure, Non
     # should cover most, if not all, of these (it doesn't cover Animation, though).
     # https://matplotlib.org/stable/api/artist_api.html
     if isinstance(x, Artist):
-        return cast(MplArtist, x).get_figure()
+        # Pyright 1.1.290 seems to fail type narrowing and needs a cast here.
+        return cast(Artist, x).get_figure()  # pyright: reportUnnecessaryCast=false
 
     # Some other custom figure-like classes such as seaborn.axisgrid.FacetGrid attach
     # their figure as an attribute
     fig = getattr(x, "figure", None)
     if isinstance(fig, Figure):
-        return cast(MplFigure, fig)
+        return fig
 
     # Sometimes generic plot() methods will return an iterable of Artists,
     # If they all refer to the same figure, then it seems reasonable to use it
@@ -242,20 +181,38 @@ def try_render_plotnine(
     if not isinstance(x, ggplot):
         return (False, None)
 
-    bbox_inches = kwargs.pop("bbox_inches", "tight")
+    x = cast(PlotnineFigure, x)
 
     with io.BytesIO() as buf:
-        cast(PlotnineFigure, x).save(
-            filename=buf,
-            format="png",
-            units="in",
-            dpi=ppi * pixelratio,
-            width=width / ppi,
-            height=height / ppi,
-            verbose=False,
-            bbox_inches=bbox_inches,
-            **kwargs,
-        )
+        # save_helper was added in plotnine 0.10.1-dev. If this method exists, we can
+        # use it to get the matplotlib Figure object, which we can then use to get the
+        # coordmap. Once this version of plotnine is released and in common use, we can
+        # add a version dependency and remove the conditional code.
+        if hasattr(x, "save_helper"):
+            res = x.save_helper(  # pyright: reportGeneralTypeIssues=false
+                filename=buf,
+                format="png",
+                units="in",
+                dpi=ppi * pixelratio,
+                width=width / ppi,
+                height=height / ppi,
+                verbose=False,
+                **kwargs,
+            )
+            coordmap = get_coordmap_plotnine(x, res.figure)
+            res.figure.savefig(**res.kwargs)
+        else:
+            x.save(
+                filename=buf,
+                format="png",
+                units="in",
+                dpi=ppi * pixelratio,
+                width=width / ppi,
+                height=height / ppi,
+                verbose=False,
+                **kwargs,
+            )
+            coordmap = None
         buf.seek(0)
         data = base64.b64encode(buf.read())
         data_str = data.decode("utf-8")
@@ -264,10 +221,12 @@ def try_render_plotnine(
         "src": "data:image/png;base64," + data_str,
         "width": "100%",
         "height": "100%",
-        "style": "object-fit:contain",
     }
 
     if alt is not None:
         res["alt"] = alt
+
+    if coordmap is not None:
+        res["coordmap"] = coordmap
 
     return (True, res)

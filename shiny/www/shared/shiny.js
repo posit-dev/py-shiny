@@ -1,4 +1,4 @@
-/*! shiny 1.7.4.9001 | (c) 2012-2023 RStudio, PBC. | License: GPL-3 | file LICENSE */
+/*! shiny 1.7.4.9002 | (c) 2012-2023 RStudio, PBC. | License: GPL-3 | file LICENSE */
 "use strict";
 (function() {
   var __create = Object.create;
@@ -12339,6 +12339,7 @@
   var import_jquery31 = __toESM(require_jquery());
   function createClickHandler(inputId, clip, coordmap) {
     var clickInfoSender = coordmap.mouseCoordinateSender(inputId, clip);
+    clickInfoSender(null);
     return {
       mousedown: function mousedown(e) {
         if (e.which !== 1)
@@ -12358,6 +12359,7 @@
       hoverInfoSender = new Throttler(null, sendHoverInfo, delay);
     else
       hoverInfoSender = new Debouncer(null, sendHoverInfo, delay);
+    hoverInfoSender.immediateCall(null);
     var mouseout;
     if (nullOutside)
       mouseout = function mouseout2() {
@@ -12423,6 +12425,7 @@
     } else {
       brushInfoSender = new Debouncer(null, sendBrushInfo, opts.brushDelay);
     }
+    brushInfoSender.immediateCall();
     function mousedown(e) {
       if (brush.isBrushing() || brush.isDragging() || brush.isResizing())
         return;
@@ -15843,7 +15846,7 @@
   var windowShiny2;
   function setShiny(windowShiny_) {
     windowShiny2 = windowShiny_;
-    windowShiny2.version = "1.7.4.9001";
+    windowShiny2.version = "1.7.4.9002";
     var _initInputBindings = initInputBindings(), inputBindings = _initInputBindings.inputBindings, fileInputBinding2 = _initInputBindings.fileInputBinding;
     var _initOutputBindings = initOutputBindings(), outputBindings = _initOutputBindings.outputBindings;
     setFileInputBinding(fileInputBinding2);

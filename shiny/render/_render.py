@@ -1,3 +1,7 @@
+# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
+# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
+from __future__ import annotations
+
 __all__ = (
     "RenderFunction",
     "RenderFunctionAsync",
@@ -78,7 +82,7 @@ class RenderFunction(Generic[IT, OT]):
     def __call__(self) -> OT:
         raise NotImplementedError
 
-    def set_metadata(self, session: "Session", name: str) -> None:
+    def set_metadata(self, session: Session, name: str) -> None:
         """When RenderFunctions are assigned to Output object slots, this method
         is used to pass along session and name information.
         """
@@ -523,10 +527,10 @@ class RenderTable(RenderFunction[object, Union["RenderedDeps", None]]):
         # passed an async function, it will not change it.
         self._fn: RenderTableFuncAsync = _utils.wrap_async(fn)
 
-    def __call__(self) -> Union["RenderedDeps", None]:
+    def __call__(self) -> Union[RenderedDeps, None]:
         return _utils.run_coro_sync(self._run())
 
-    async def _run(self) -> Union["RenderedDeps", None]:
+    async def _run(self) -> Union[RenderedDeps, None]:
         x = await self._fn()
 
         if x is None:
@@ -580,7 +584,7 @@ class RenderTableAsync(RenderTable, RenderFunctionAsync[object, Union[ImgData, N
             **kwargs,
         )
 
-    async def __call__(self) -> Union["RenderedDeps", None]:  # type: ignore
+    async def __call__(self) -> Union[RenderedDeps, None]:  # type: ignore
         return await self._run()
 
 
@@ -681,10 +685,10 @@ class RenderUI(RenderFunction[TagChildArg, Union["RenderedDeps", None]]):
         # passed an async function, it will not change it.
         self._fn: RenderUIFuncAsync = _utils.wrap_async(fn)
 
-    def __call__(self) -> Union["RenderedDeps", None]:
+    def __call__(self) -> Union[RenderedDeps, None]:
         return _utils.run_coro_sync(self._run())
 
-    async def _run(self) -> Union["RenderedDeps", None]:
+    async def _run(self) -> Union[RenderedDeps, None]:
         ui: TagChildArg = await self._fn()
         if ui is None:
             return None
@@ -700,7 +704,7 @@ class RenderUIAsync(
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderUIFunc, fn))
 
-    async def __call__(self) -> Union["RenderedDeps", None]:  # type: ignore
+    async def __call__(self) -> Union[RenderedDeps, None]:  # type: ignore
         return await self._run()
 
 

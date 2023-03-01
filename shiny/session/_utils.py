@@ -1,3 +1,7 @@
+# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
+# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
+from __future__ import annotations
+
 __all__ = ("get_current_session", "session_context", "require_active_session")
 
 import sys
@@ -24,12 +28,12 @@ class RenderedDeps(TypedDict):
 # ==============================================================================
 # Context manager for current session (AKA current reactive domain)
 # ==============================================================================
-_current_session: ContextVar[Optional["Session"]] = ContextVar(
+_current_session: ContextVar[Optional[Session]] = ContextVar(
     "current_session", default=None
 )
 
 
-def get_current_session() -> Optional["Session"]:
+def get_current_session() -> Optional[Session]:
     """
     Get the current user session.
 
@@ -51,7 +55,7 @@ def get_current_session() -> Optional["Session"]:
 
 
 @contextmanager
-def session_context(session: Optional["Session"]):
+def session_context(session: Optional[Session]):
     """
     Context manager for current session.
 
@@ -69,7 +73,7 @@ def session_context(session: Optional["Session"]):
         _current_session.reset(token)
 
 
-def require_active_session(session: Optional["Session"]) -> "Session":
+def require_active_session(session: Optional[Session]) -> Session:
     """
     Raise an exception if no Shiny session is currently active.
 
