@@ -26,7 +26,6 @@ from typing import (
     Iterable,
     Optional,
     TypeVar,
-    Union,
     cast,
     overload,
 )
@@ -114,7 +113,7 @@ class ClientMessageOther(ClientMessage):
 #
 # (Not currently supported is Awaitable[str], could be added easily enough if needed.)
 DownloadHandler = Callable[
-    [], Union[str, Iterable[Union[bytes, str]], AsyncIterable[Union[bytes, str]]]
+    [], "str | Iterable[bytes | str] | AsyncIterable[bytes | str]"
 ]
 
 DynamicRouteHandler = Callable[[Request], ASGIApp]
