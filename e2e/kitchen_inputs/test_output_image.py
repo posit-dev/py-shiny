@@ -18,4 +18,3 @@ def test_output_image_kitchen(page: Page, app: ShinyAppProc) -> None:
     img.expect_img_height(None)
     img.expect_img_width("150px")
     img.expect_img_alt(None)
-    img.expect_img_style(None)

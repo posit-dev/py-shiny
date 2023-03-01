@@ -1544,7 +1544,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
             trail_txt = ""
             if len(key_arr) > max_err_values:
                 key_arr = key_arr[:max_err_values]
-                trail_txt = ", ..."
+                trail_txt = f", ...\nTo display more values, increase `set(max_err_values={max_err_values})`"
             values_found_txt = ", ".join([f'"{key}"' for key in key_arr])
             raise ValueError(
                 f"Could not find value '{value}' when moving slider from {error_msg_direction}\n"

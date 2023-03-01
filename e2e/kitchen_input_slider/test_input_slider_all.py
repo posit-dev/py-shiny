@@ -25,7 +25,7 @@ def test_slider_regular(page: Page, local_app: ShinyAppProc) -> None:
     s0.expect_animate(exists=False)
     OutputTextVerbatim(page, "txt0").expect_value("500")
 
-    new_val = "241"
+    new_val = "36"
     s0.set(new_val)
     s0.expect_value(new_val)
     OutputTextVerbatim(page, "txt0").expect_value(new_val)
@@ -50,8 +50,8 @@ def test_slider_range(page: Page, local_app: ShinyAppProc) -> None:
     s1.expect_animate(exists=False)
     OutputTextVerbatim(page, "txt0").expect_value("500")
 
-    new_val = ("673", "885")
-    s1.set(new_val)
+    new_val = ("671", "885")
+    s1.set(new_val, max_err_values=1000)
     try:
         s1.expect_value((None, None))
     except ValueError as e:
