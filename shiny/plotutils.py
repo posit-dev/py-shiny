@@ -45,7 +45,7 @@ class SeriesFloatXY(TypedDict):
 
 def brushed_points(
     df: pd.DataFrame,
-    brush: Union[BrushInfo, None],
+    brush: BrushInfo | None,
     xvar: Optional[str] = None,
     yvar: Optional[str] = None,
     panelvar1: Optional[str] = None,
@@ -167,7 +167,7 @@ def brushed_points(
 
 def near_points(
     df: pd.DataFrame,
-    coordinfo: Union[CoordInfo, None],
+    coordinfo: CoordInfo | None,
     xvar: Optional[str] = None,
     yvar: Optional[str] = None,
     panelvar1: Optional[str] = None,
