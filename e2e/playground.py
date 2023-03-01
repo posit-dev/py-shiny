@@ -3,6 +3,7 @@ import json
 import pathlib
 import re
 import sys
+import time
 
 if sys.version_info >= (3, 8):
     from typing import Literal, Protocol
@@ -12,7 +13,7 @@ else:
 
 import typing
 
-from playwright.sync_api import FilePayload, Locator, Page
+from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
 
 """
@@ -1310,7 +1311,7 @@ class InputFile(
         expect_attr(self.loc_file_display, "placeholder", value=value, timeout=timeout)
 
 
-class InputSlider(_WidthLocM, _InputWithLabel):
+class _InputSliderBase(_WidthLocM, _InputWithLabel):
     # id: str,
     # label: TagChildArg,
     # min: SliderValueArg,
@@ -1328,8 +1329,8 @@ class InputSlider(_WidthLocM, _InputWithLabel):
     # drag_range: bool = True,
 
     loc_irs: Locator
-    loc_irs_label: Locator
     loc_irs_ticks: Locator
+    loc_play_pause: Locator
 
     def __init__(
         self,
@@ -1343,8 +1344,10 @@ class InputSlider(_WidthLocM, _InputWithLabel):
             loc_label=f"label#{id}-label",
         )
         self.loc_irs = self.loc_container.locator("> .irs.irs--shiny")
-        self.loc_irs_label = self.loc_irs.locator("> .irs > .irs-single")
         self.loc_irs_ticks = self.loc_irs.locator("> .irs-grid > .irs-grid-text")
+        self.loc_play_pause = self.loc_container.locator(
+            "> .slider-animate-container a"
+        )
 
     def expect_tick_labels_to_have_text(
         self,
@@ -1354,144 +1357,58 @@ class InputSlider(_WidthLocM, _InputWithLabel):
     ) -> None:
         playwright_expect(self.loc_irs_ticks).to_have_text(value, timeout=timeout)
 
-    def expect_value(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc_irs_label).to_have_text(value, timeout=timeout)
-
-    def set(self, value: str, *, timeout: Timeout = None) -> None:
-        self.loc_container.wait_for(state="visible", timeout=timeout)
-        self.loc_container.scroll_into_view_if_needed(timeout=timeout)
-
-        handle = self.loc_container.locator(".irs-handle")
-        handle_bb = handle.bounding_box(timeout=timeout)
-        if handle_bb is None:
-            raise RuntimeError("Couldn't find bounding box for .irs-handle")
-
-        handle_center = (
-            handle_bb["x"] + (handle_bb["width"] / 2),
-            handle_bb["y"] + (handle_bb["height"] / 2),
-        )
-
-        grid = self.loc_container.locator(".irs-grid")
-        grid_bb = grid.bounding_box(timeout=timeout)
-        if grid_bb is None:
-            raise RuntimeError("Couldn't find bounding box for .irs-grid")
-
-        mouse = self.loc_container.page.mouse
-        mouse.move(handle_center[0], handle_center[1])
-        mouse.down()
-        # Release like a "reset" to slow the slider down and let the label update
-        mouse.up()
-        mouse.down()
-
-        # Move all the way to the left
-        mouse.move(grid_bb["x"], handle_center[1])
-
-        # For each pixel in the grid width, check the text label
-        pxls: int = 0
-        found = False
-        values_found: typing.Dict[str, bool] = {}
-        max_values_found = 15
-        while pxls <= grid_bb["width"] + 1:
-            # Get value
-            cur_val = self.loc_irs_label.inner_text()
-            # Only store what could be used
-            if len(values_found) <= max_values_found + 1:
-                values_found[cur_val] = True
-
-            # Quit if found
-            if cur_val == value:
-                found = True
-                break
-
-            # Not found; move handle to the right
-            mouse.move(grid_bb["x"] + pxls, handle_center[1])
-            pxls += 1
-
-        mouse.up()
-        if not found:
-            key_arr = list(values_found.keys())
-            trail_txt = ""
-            if len(key_arr) > max_values_found:
-                key_arr = key_arr[:max_values_found]
-                trail_txt = ", ..."
-            values_found_txt = ", ".join([f'"{key}"' for key in key_arr])
-            raise ValueError(
-                f"Could not find value '{value}' when moving slider from left to right\nValues found:\n{values_found_txt}{trail_txt}"
-            )
-
-    # TODO-barret; Remove? InputSlider.set(value: str) is more intuitive
-    def set_fraction(self, fraction: float, *, timeout: Timeout = None) -> None:
-        if fraction > 1 or fraction < 0:
-            raise ValueError("`fraction` must be between 0 and 1")
-
-        self.loc_container.wait_for(state="visible", timeout=timeout)
-        self.loc_container.scroll_into_view_if_needed(timeout=timeout)
-
-        handle = self.loc_container.locator(".irs-handle")
-        handle_bb = handle.bounding_box(timeout=timeout)
-        if handle_bb is None:
-            raise RuntimeError("Couldn't find bounding box for .irs-handle")
-
-        handle_center = (
-            handle_bb.get("x") + (handle_bb.get("width") / 2),
-            handle_bb.get("y") + (handle_bb.get("height") / 2),
-        )
-
-        grid = self.loc_container.locator(".irs-grid")
-        grid_bb = grid.bounding_box(timeout=timeout)
-        if grid_bb is None:
-            raise RuntimeError("Couldn't find bounding box for .irs-grid")
-
-        mouse = self.loc_container.page.mouse
-        mouse.move(handle_center[0], handle_center[1])
-        mouse.down()
-        mouse.move(
-            grid_bb.get("x") + (fraction * grid_bb.get("width")), handle_center[1]
-        )
-        mouse.up()
-
     def expect_animate(self, exists: bool, *, timeout: Timeout = None) -> None:
         animate_count = 1 if exists else 0
-        playwright_expect(
-            self.loc_container.locator(".slider-animate-container")
-        ).to_have_count(animate_count)
+        playwright_expect(self.loc_play_pause).to_have_count(animate_count)
 
-    def expect_animate_loop_to_have_value(
-        self, loop: typing.Union[bool, AttrValue], *, timeout: Timeout = None
-    ) -> None:
-        if isinstance(loop, bool):
-            if not loop:
-                loop = None
-            else:
-                loop = "true"
-
-        expect_attr(
-            self.loc_container.locator(".slider-animate-container a"),
-            "data-loop",
-            loop,
-            timeout=timeout,
-        )
-
-    def expect_animate_interval_to_have_value(
+    # This method doesn't feel like it should accept text as the user does not control the value
+    # They only control either `True` or `False`
+    def expect_animate_options(
         self,
-        interval: typing.Union[int, AttrValue],
         *,
+        loop: bool = True,
+        interval: typing.Union[PatternOrStr, int] = 500,
         timeout: Timeout = None,
     ) -> None:
+        if not loop:
+            loop_str = None
+        else:
+            loop_str = ""
         interval_str = str(interval) if interval else None
+
+        # TODO-future; Composable expectations
+        self.expect_animate(exists=True, timeout=timeout)
         expect_attr(
-            self.loc_container.locator(".slider-animate-container a"),
+            self.loc_play_pause,
+            "data-loop",
+            loop_str,
+            timeout=timeout,
+        )
+        expect_attr(
+            self.loc_play_pause,
             "data-interval",
             interval_str,
             timeout=timeout,
         )
 
-    # TODO-barret; Test other animate play button and pause button?
-    # Testing the HTML seems like too much.
-    # Testing the text seems like it is not useful.
+    # No `toggle` method as short animations with no loops can cause the button to
+    # become `play` over and over again. Instead, have explicit `play` and `pause`
+    # methods.
+    def click_play(self, *, timeout: Timeout = None) -> None:
+        self.loc_container.wait_for(state="visible", timeout=timeout)
+        self.loc_container.scroll_into_view_if_needed(timeout=timeout)
+        expect_class_value(
+            self.loc_play_pause, "playing", has_class=False, timeout=timeout
+        )
+        self.loc_play_pause.click()
 
-    # TODO-barret; All methods below:
-    # Could maybe use better formats for the values, but am going to leave as `str` for now
+    def click_pause(self, *, timeout: Timeout = None) -> None:
+        self.loc_container.wait_for(state="visible", timeout=timeout)
+        self.loc_container.scroll_into_view_if_needed(timeout=timeout)
+        expect_class_value(
+            self.loc_play_pause, "playing", has_class=True, timeout=timeout
+        )
+        self.loc_play_pause.click()
 
     def expect_min_to_have_value(
         self, value: AttrValue, *, timeout: Timeout = None
@@ -1502,11 +1419,6 @@ class InputSlider(_WidthLocM, _InputWithLabel):
         self, value: AttrValue, *, timeout: Timeout = None
     ) -> None:
         expect_attr(self.loc, "data-max", value=value, timeout=timeout)
-
-    # def expect_from_to_have_value(
-    #     self, value: AttrValue, *, timeout: Timeout = None
-    # ) -> None:
-    #     expect_attr(self.loc, "data-from", value=value, timeout=timeout)
 
     def expect_step_to_have_value(
         self, value: AttrValue, *, timeout: Timeout = None
@@ -1552,6 +1464,273 @@ class InputSlider(_WidthLocM, _InputWithLabel):
         self, value: AttrValue, *, timeout: Timeout = None
     ) -> None:
         expect_attr(self.loc, "data-drag-interval", value=value, timeout=timeout)
+
+    def _wait_for_container(self, *, timeout: Timeout = None) -> None:
+        self.loc_container.wait_for(state="visible", timeout=timeout)
+        self.loc_container.scroll_into_view_if_needed(timeout=timeout)
+
+    def _set_helper(
+        self,
+        *,
+        value: str,
+        irs_label: Locator,
+        handle_center: Position,
+        grid_bb: FloatRect,
+        start_x: float,
+        direction: typing.Union[typing.Literal["left"], typing.Literal["right"]],
+        max_err_values: int = 15,
+    ) -> None:
+        if direction == "left":
+            pixel_increment = -1
+            error_msg_direction = "right to left"
+            min_pxls = -1 * (grid_bb["width"] + 1)
+
+            def should_continue(cur_pxls: float) -> bool:
+                return cur_pxls > min_pxls
+
+        elif direction == "right":
+            pixel_increment = 1
+            error_msg_direction = "left to right"
+            max_pxls = grid_bb["width"] + 1
+
+            def should_continue(cur_pxls: float) -> bool:
+                return cur_pxls <= max_pxls
+
+        else:
+            raise ValueError(f"Invalid direction: {direction}")
+
+        # Move mouse to handle center and press down on mouse
+        mouse = self.loc_container.page.mouse
+        mouse.move(handle_center.get("x"), handle_center.get("y"))
+        mouse.down()
+
+        # Slow it down a bit. Like "type" for text, but to allow the slider label to catch up
+        # This should be done for every `mouse.move()` call
+        def slow_move(x: float, y: float):
+            mouse.move(x, y)
+            time.sleep(0.01)
+
+        # Move all the way to the left
+        handle_center_y = handle_center.get("y")
+        slow_move(start_x, handle_center_y)
+
+        # For each pixel in the grid width, check the text label
+        pxls: int = 0
+        found = False
+        values_found: typing.Dict[str, bool] = {}
+        cur_val = None
+        while should_continue(pxls):
+            # Get value
+            cur_val = irs_label.inner_text()
+            # Only store what could be used
+            if len(values_found) <= max_err_values + 1:
+                values_found[cur_val] = True
+
+            # Quit if found
+            if cur_val == value:
+                found = True
+                break
+
+            # Not found; move handle to the right
+            slow_move(start_x + pxls, handle_center_y)
+
+            pxls += pixel_increment
+
+        mouse.up()
+        if not found:
+            key_arr = list(values_found.keys())
+            trail_txt = ""
+            if len(key_arr) > max_err_values:
+                key_arr = key_arr[:max_err_values]
+                trail_txt = ", ..."
+            values_found_txt = ", ".join([f'"{key}"' for key in key_arr])
+            raise ValueError(
+                f"Could not find value '{value}' when moving slider from {error_msg_direction}\n"
+                + f"Values found:\n{values_found_txt}{trail_txt}"
+            )
+
+    def _grid_bb(self, *, timeout: Timeout = None) -> FloatRect:
+        grid = self.loc_container.locator(".irs-grid")
+        grid_bb = grid.bounding_box(timeout=timeout)
+        if grid_bb is None:
+            raise RuntimeError("Couldn't find bounding box for .irs-grid")
+        return grid_bb
+
+    def _handle_center(
+        self,
+        handle: Locator,
+        *,
+        name: str,
+        timeout: Timeout = None,
+    ) -> Position:
+        handle_bb = handle.bounding_box(timeout=timeout)
+        if handle_bb is None:
+            raise RuntimeError(f"Couldn't find bounding box for {name}")
+
+        handle_center: Position = {
+            "x": handle_bb.get("x") + (handle_bb.get("width") / 2),
+            "y": handle_bb.get("y") + (handle_bb.get("height") / 2),
+        }
+        return handle_center
+
+
+class InputSlider(_InputSliderBase):
+    loc_irs_label: Locator
+
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+    ) -> None:
+        super().__init__(page, id=id)
+        self.loc_irs_label = self.loc_irs.locator("> .irs > .irs-single")
+
+    def expect_value(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_irs_label).to_have_text(value, timeout=timeout)
+
+    def set(
+        self,
+        value: str,
+        *,
+        max_err_values: int = 15,
+        timeout: Timeout = None,
+    ) -> None:
+        self._wait_for_container(timeout=timeout)
+
+        handle = self.loc_irs.locator("> .irs-handle")
+        handle_center = self._handle_center(handle, name="handle", timeout=timeout)
+        grid_bb = self._grid_bb(timeout=timeout)
+
+        self._set_helper(
+            value=value,
+            irs_label=self.loc_irs_label,
+            handle_center=handle_center,
+            grid_bb=grid_bb,
+            start_x=grid_bb["x"],
+            direction="right",
+            max_err_values=max_err_values,
+        )
+
+
+class InputSliderRange(_InputSliderBase):
+    loc_irs_label_from: Locator
+    loc_irs_label_to: Locator
+
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+    ) -> None:
+        super().__init__(page, id=id)
+        self.loc_irs_label_from = self.loc_irs.locator("> .irs > .irs-from")
+        self.loc_irs_label_to = self.loc_irs.locator("> .irs > .irs-to")
+
+    def expect_value(
+        self,
+        value: typing.Tuple[TextValue, TextValue],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        from_val = value[0]
+        to_val = value[1]
+        if (from_val is None) and (to_val is None):
+            raise ValueError("Both `value` tuple entries cannot be `None`")
+
+        # TODO-future; Composable expectations
+        if from_val is not None:
+            playwright_expect(self.loc_irs_label_from).to_have_text(
+                from_val, timeout=timeout
+            )
+        if to_val is not None:
+            playwright_expect(self.loc_irs_label_to).to_have_text(
+                to_val, timeout=timeout
+            )
+
+    def _set_fraction(
+        self,
+        handle: Locator,
+        fraction: float,
+        *,
+        name: str,
+        timeout: Timeout = None,
+    ) -> None:
+        if fraction > 1 or fraction < 0:
+            raise ValueError("`fraction` must be between 0 and 1")
+
+        handle_center = self._handle_center(handle, name=name, timeout=timeout)
+        grid_bb = self._grid_bb(timeout=timeout)
+        mouse = self.loc_container.page.mouse
+        mouse.move(x=handle_center.get("x"), y=handle_center.get("y"))
+        mouse.down()
+        mouse.move(
+            grid_bb.get("x") + (fraction * grid_bb.get("width")),
+            handle_center.get("y"),
+        )
+        mouse.up()
+
+    def set(
+        self,
+        value: typing.Tuple[
+            typing.Union[str, None],
+            typing.Union[str, None],
+        ],
+        *,
+        max_err_values: int = 15,
+        timeout: Timeout = None,
+    ) -> None:
+        self.loc_container.wait_for(state="visible", timeout=timeout)
+        self.loc_container.scroll_into_view_if_needed(timeout=timeout)
+
+        value_from = value[0]
+        value_to = value[1]
+        if (value_from is None) and (value_to is None):
+            raise ValueError("Both `value` tuple entries cannot be `None`")
+
+        handle_from = self.loc_irs.locator("> .irs-handle.from")
+        handle_to = self.loc_irs.locator("> .irs-handle.to")
+        if value_from is not None:
+            # Move `from` handle to the far left
+            self._set_fraction(handle_from, 0, name="`from` handle", timeout=timeout)
+        if value_to is not None:
+            # Move `to` handle to the far right
+            self._set_fraction(handle_to, 1, name="`to` handle", timeout=timeout)
+
+        handle_center_from = self._handle_center(
+            handle_from, name="`from` handle", timeout=timeout
+        )
+        grid_bb = self._grid_bb(timeout=timeout)
+
+        # Handles are [possibly] now at their respective extreme value
+        # Now let's move them towards the other end until we find the corresponding str
+
+        if value_from is not None:
+            self._set_helper(
+                value=value_from,
+                irs_label=self.loc_irs_label_from,
+                handle_center=handle_center_from,
+                grid_bb=grid_bb,
+                # Start at the far left
+                start_x=grid_bb["x"],
+                # And move to the right
+                direction="right",
+                max_err_values=max_err_values,
+            )
+
+        handle_center_to = self._handle_center(
+            handle_to, name="`to` handle", timeout=timeout
+        )
+        if value_to is not None:
+            self._set_helper(
+                value=value_to,
+                irs_label=self.loc_irs_label_to,
+                handle_center=handle_center_to,
+                grid_bb=grid_bb,
+                # Start at the far right
+                start_x=grid_bb["x"] + grid_bb["width"],
+                # And move to the left
+                direction="left",
+                max_err_values=max_err_values,
+            )
 
 
 class _DateBase(
