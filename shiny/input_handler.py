@@ -5,7 +5,7 @@ from __future__ import annotations
 __all__ = ("input_handlers",)
 
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Dict
 
 if TYPE_CHECKING:
     from .session import Session
@@ -15,7 +15,7 @@ from .types import ActionButtonValue
 InputHandlerType = Callable[[Any, str, "Session"], Any]
 
 
-class _InputHandlers(dict[str, InputHandlerType]):
+class _InputHandlers(Dict[str, InputHandlerType]):
     def __init__(self):
         super().__init__()
 
