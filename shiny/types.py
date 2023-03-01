@@ -13,7 +13,7 @@ __all__ = (
 )
 
 import sys
-from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, BinaryIO, Optional
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -86,9 +86,9 @@ class ImgData(TypedDict):
 
     src: str
     """The ``src`` attribute of the ``<img>`` tag."""
-    width: NotRequired[Union[str, float]]
+    width: NotRequired[str | float]
     """The ``width`` attribute of the ``<img>`` tag."""
-    height: NotRequired[Union[str, float]]
+    height: NotRequired[str | float]
     """The ``height`` attribute of the ``<img>`` tag."""
     alt: NotRequired[str]
     """The ``alt`` attribute of the ``<img>`` tag."""
@@ -162,8 +162,8 @@ class NavSetArg(Protocol):
     """
 
     def resolve(
-        self, selected: Optional[str], context: Dict[str, Any]
-    ) -> Tuple[TagChildArg, TagChildArg]:
+        self, selected: Optional[str], context: dict[str, Any]
+    ) -> tuple[TagChildArg, TagChildArg]:
         """
         Resolve information provided by the navigation container.
 
@@ -195,11 +195,11 @@ class NavSetArg(Protocol):
 # Use this protocol to avoid needing to maintain working stubs for plotnint. If
 # good stubs ever become available for plotnine, use those instead.
 class PlotnineFigure(Protocol):
-    scales: List[Any]
+    scales: list[Any]
     coordinates: Any
     facet: Any
     layout: Any
-    mapping: Dict[str, str]
+    mapping: dict[str, str]
 
     def save(
         self,
@@ -224,8 +224,8 @@ class CoordmapDims(TypedDict):
 
 
 class CoordmapPanelLog(TypedDict):
-    x: Union[float, None]
-    y: Union[float, None]
+    x: float | None
+    y: float | None
 
 
 class CoordmapPanelDomain(TypedDict):
@@ -243,8 +243,8 @@ class CoordmapPanelRange(TypedDict):
 
 
 class CoordmapPanelMapping(TypedDict):
-    x: Union[str, None]
-    y: Union[str, None]
+    x: str | None
+    y: str | None
     panelvar1: NotRequired[str]
     panelvar2: NotRequired[str]
 
@@ -266,7 +266,7 @@ class CoordmapPanel(TypedDict):
 
 
 class Coordmap(TypedDict):
-    panels: List[CoordmapPanel]
+    panels: list[CoordmapPanel]
     dims: CoordmapDims
 
 

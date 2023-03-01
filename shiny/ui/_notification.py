@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 __all__ = ("notification_show", "notification_remove")
 
 import sys
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -19,7 +21,7 @@ from ..session import Session, require_active_session
 def notification_show(
     ui: TagChildArg,
     action: Optional[TagList] = None,
-    duration: Optional[Union[int, float]] = 5,
+    duration: Optional[int | float] = 5,
     close_button: bool = True,
     id: Optional[str] = None,
     type: Literal["default", "message", "warning", "error"] = "default",
@@ -70,7 +72,7 @@ def notification_show(
 
     id = id if id else rand_hex(8)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "html": ui_["html"],
         "action": action_["html"],
         "deps": ui_["deps"] + action_["deps"],

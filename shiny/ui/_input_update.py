@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "update_action_button",
     "update_action_link",
@@ -20,7 +22,7 @@ import json
 import re
 import sys
 from datetime import date
-from typing import List, Mapping, Optional, Tuple, Union
+from typing import Mapping, Optional
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
@@ -197,7 +199,7 @@ def update_checkbox_group(
     *,
     label: Optional[str] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[Union[str, List[str]]] = None,
+    selected: Optional[str | list[str]] = None,
     inline: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -300,7 +302,7 @@ def _update_choice_input(
     type: Literal["checkbox", "radio"],
     label: Optional[str] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[Union[str, List[str]]] = None,
+    selected: Optional[str | list[str]] = None,
     inline: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -328,9 +330,9 @@ def update_date(
     id: str,
     *,
     label: Optional[str] = None,
-    value: Optional[Union[date, str]] = None,
-    min: Optional[Union[date, str]] = None,
-    max: Optional[Union[date, str]] = None,
+    value: Optional[date | str] = None,
+    min: Optional[date | str] = None,
+    max: Optional[date | str] = None,
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -378,10 +380,10 @@ def update_date_range(
     id: str,
     *,
     label: Optional[str] = None,
-    start: Optional[Union[date, str]] = None,
-    end: Optional[Union[date, str]] = None,
-    min: Optional[Union[date, str]] = None,
-    max: Optional[Union[date, str]] = None,
+    start: Optional[date | str] = None,
+    end: Optional[date | str] = None,
+    min: Optional[date | str] = None,
+    max: Optional[date | str] = None,
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -494,7 +496,7 @@ def update_select(
     *,
     label: Optional[str] = None,
     choices: Optional[SelectChoicesArg] = None,
-    selected: Optional[Union[str, List[str]]] = None,
+    selected: Optional[str | list[str]] = None,
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -563,7 +565,7 @@ def update_selectize(
     *,
     label: Optional[str] = None,
     choices: Optional[SelectChoicesArg] = None,
-    selected: Optional[Union[str, List[str]]] = None,
+    selected: Optional[str | list[str]] = None,
     # TODO: we need the equivalent of base::I()/htmlwidgets::JS() for marking strings as strings to be evaluated
     # options: Optional[Dict[str, str]] = None,
     server: bool = False,
@@ -612,7 +614,7 @@ def update_selectize(
 
     # Transform choices to a list of dicts (this is the form the client wants)
     # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]
-    flat_choices: List[FlatSelectChoice] = []
+    flat_choices: list[FlatSelectChoice] = []
     if choices is not None:
         for k, v in _normalize_choices(choices).items():
             if not isinstance(v, Mapping):
@@ -662,7 +664,7 @@ def update_selectize(
         conjunction = any if qparams.get("conju", "and") == "or" else all
 
         # i.e. searchFields (defaults to ['label'])
-        search_fields: List[str] = json.loads(qparams.get("field", "['label']"))
+        search_fields: list[str] = json.loads(qparams.get("field", "['label']"))
         if len(search_fields) == 0:
             raise ValueError("The selectize.js searchFields option must be non-empty")
 
@@ -684,7 +686,7 @@ def update_selectize(
                 "The selectize.js valueField option must be set to 'value'"
             )
 
-        filtered_choices: List[FlatSelectChoice] = []
+        filtered_choices: list[FlatSelectChoice] = []
         for choice in flat_choices:
             # Short-circuit if we've reached the max number of options
             if (len(filtered_choices) + len(selected_choices)) > max_options:
@@ -729,9 +731,7 @@ def update_slider(
     id: str,
     *,
     label: Optional[str] = None,
-    value: Optional[
-        Union[SliderValueArg, Tuple[SliderValueArg, SliderValueArg]]
-    ] = None,
+    value: Optional[SliderValueArg | tuple[SliderValueArg, SliderValueArg]] = None,
     min: Optional[SliderValueArg] = None,
     max: Optional[SliderValueArg] = None,
     step: Optional[SliderStepArg] = None,

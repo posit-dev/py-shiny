@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 __all__ = (
     "input_checkbox",
     "input_checkbox_group",
     "input_radio_buttons",
 )
 
-from typing import List, Mapping, Optional, Union
+from typing import Mapping, Optional, Union
 
 from htmltools import Tag, TagChildArg, css, div, span, tags
 
@@ -16,7 +18,7 @@ from ._utils import shiny_input_label
 _Choices = Mapping[str, TagChildArg]
 
 # Formats available to the user
-ChoicesArg = Union[List[str], _Choices]
+ChoicesArg = Union["list[str]", _Choices]
 
 
 @add_example()
@@ -142,7 +144,7 @@ def input_checkbox_group(
     label: TagChildArg,
     choices: ChoicesArg,
     *,
-    selected: Optional[Union[str, List[str]]] = None,
+    selected: Optional[str | list[str]] = None,
     inline: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
@@ -276,7 +278,7 @@ def _generate_options(
     id: str,
     type: str,
     choices: ChoicesArg,
-    selected: Optional[Union[str, List[str]]],
+    selected: Optional[str | list[str]],
     inline: bool,
 ) -> Tag:
     choicez = _normalize_choices(choices)

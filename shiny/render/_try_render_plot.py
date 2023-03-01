@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import base64
 import io
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, cast
 
 from ..types import ImgData, PlotnineFigure
 from ._coordmap import get_coordmap, get_coordmap_plotnine
 
-TryPlotResult = Tuple[bool, Union[ImgData, None]]
+TryPlotResult = Tuple[bool, "ImgData| None"]
 
 
 if TYPE_CHECKING:
@@ -74,7 +74,7 @@ def try_render_matplotlib(
         matplotlib.pyplot.close(fig)  # pyright: ignore[reportGeneralTypeIssues]
 
 
-def get_matplotlib_figure(x: object, allow_global: bool) -> Union[Figure, None]:
+def get_matplotlib_figure(x: object, allow_global: bool) -> Figure | None:
     import matplotlib.pyplot as plt
     from matplotlib.animation import Animation
     from matplotlib.artist import Artist
@@ -112,8 +112,7 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Union[Figure, None]:
     # should cover most, if not all, of these (it doesn't cover Animation, though).
     # https://matplotlib.org/stable/api/artist_api.html
     if isinstance(x, Artist):
-        # Pyright 1.1.290 seems to fail type narrowing and needs a cast here.
-        return cast(Artist, x).get_figure()  # pyright: reportUnnecessaryCast=false
+        return x.get_figure()
 
     # Some other custom figure-like classes such as seaborn.axisgrid.FacetGrid attach
     # their figure as an attribute

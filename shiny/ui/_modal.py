@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "modal_button",
     "modal",
@@ -6,7 +8,7 @@ __all__ = (
 )
 
 import sys
-from typing import Optional, Union
+from typing import Optional
 
 from shiny.types import MISSING, MISSING_TYPE
 
@@ -58,7 +60,7 @@ def modal_button(
         type="button",
         data_dismiss="modal",
         data_bs_dismiss="modal",
-        **kwargs
+        **kwargs,
     )
 
 
@@ -66,11 +68,11 @@ def modal_button(
 def modal(
     *args: TagChildArg,
     title: Optional[str] = None,
-    footer: Union[TagChildArg, MISSING_TYPE] = MISSING,
+    footer: TagChildArg | MISSING_TYPE = MISSING,
     size: Literal["m", "s", "l", "xl"] = "m",
     easy_close: bool = False,
     fade: bool = True,
-    **kwargs: TagAttrArg
+    **kwargs: TagAttrArg,
 ) -> Tag:
     """
     Creates the UI for a modal dialog, using Bootstrap's modal class. Modals are

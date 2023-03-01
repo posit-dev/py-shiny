@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, List, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..types import (
     Coordmap,
@@ -28,16 +28,16 @@ if TYPE_CHECKING:
     from matplotlib.transforms import Transform
 
 
-def get_coordmap(fig: Figure) -> Union[Coordmap, None]:
+def get_coordmap(fig: Figure) -> Coordmap | None:
     dims_ar: npt.NDArray[np.double] = fig.get_size_inches() * fig.get_dpi()
     dims: CoordmapDims = {
         "width": dims_ar[0],
         "height": dims_ar[1],
     }
 
-    all_axes: List[Axes] = fig.get_axes()  # pyright: ignore[reportUnknownMemberType]
+    all_axes: list[Axes] = fig.get_axes()  # pyright: ignore[reportUnknownMemberType]
 
-    panels: List[CoordmapPanel] = []
+    panels: list[CoordmapPanel] = []
     for i, axes in enumerate(all_axes):
         panel = get_coordmap_panel(axes, i + 1, dims["height"])
         panels.append(panel)
@@ -55,8 +55,8 @@ def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPan
         axes.get_subplotspec()  # pyright: ignore[reportGeneralTypeIssues]
     )
 
-    domain_xlim = cast(Tuple[float, float], axes.get_xlim())
-    domain_ylim = cast(Tuple[float, float], axes.get_ylim())
+    domain_xlim = cast("tuple[float, float]", axes.get_xlim())
+    domain_ylim = cast("tuple[float, float]", axes.get_ylim())
 
     # Data coordinates of plotting area
     domain: CoordmapPanelDomain = {
@@ -122,7 +122,7 @@ def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPan
     }
 
 
-def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Union[Coordmap, None]:
+def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Coordmap | None:
     coordmap = get_coordmap(fig)
 
     if coordmap is None:

@@ -66,7 +66,7 @@ _current_namespace: ContextVar[ResolvedId] = ContextVar(
 
 
 @contextmanager
-def namespace_context(id: Union[Id, None]):
+def namespace_context(id: Id | None):
     namespace = resolve_id(id) if id else Root
     token: Token[ResolvedId] = _current_namespace.set(namespace)
     try:

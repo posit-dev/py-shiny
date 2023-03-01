@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "page_navbar",
     "page_fluid",
@@ -6,7 +8,7 @@ __all__ = (
 )
 
 import sys
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -28,7 +30,7 @@ from ._utils import get_window_title
 
 def page_navbar(
     *args: NavSetArg,
-    title: Optional[Union[str, Tag, TagList]] = None,
+    title: Optional[str | Tag | TagList] = None,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     position: Literal["static-top", "fixed-top", "fixed-bottom"] = "static-top",
@@ -38,8 +40,8 @@ def page_navbar(
     inverse: bool = False,
     collapsible: bool = True,
     fluid: bool = True,
-    window_title: Union[str, MISSING_TYPE] = MISSING,
-    lang: Optional[str] = None
+    window_title: str | MISSING_TYPE = MISSING,
+    lang: Optional[str] = None,
 ) -> Tag:
     """
     Create a navbar with a navs bar and a title.
@@ -116,7 +118,7 @@ def page_navbar(
                 bg=bg,
                 inverse=inverse,
                 collapsible=collapsible,
-                fluid=fluid
+                fluid=fluid,
             )
         ),
         lang=lang,

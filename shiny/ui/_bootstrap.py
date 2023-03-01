@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "row",
     "column",
@@ -13,7 +15,7 @@ __all__ = (
 )
 
 import sys
-from typing import Optional, Union
+from typing import Optional
 
 from shiny.types import MISSING, MISSING_TYPE
 
@@ -293,7 +295,7 @@ def panel_conditional(
 
 @add_example()
 def panel_title(
-    title: Union[str, Tag, TagList], window_title: Union[str, MISSING_TYPE] = MISSING
+    title: str | Tag | TagList, window_title: str | MISSING_TYPE = MISSING
 ) -> TagList:
     """
     Create title(s) for the application.

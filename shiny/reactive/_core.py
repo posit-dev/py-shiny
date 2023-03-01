@@ -1,5 +1,7 @@
 """Low-level reactive components."""
 
+from __future__ import annotations
+
 __all__ = ("isolate", "invalidate_later", "flush", "on_flushed", "get_current_context")
 
 import asyncio
@@ -9,7 +11,7 @@ import traceback
 import typing
 import warnings
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Awaitable, Callable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Awaitable, Callable, Optional, TypeVar
 
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
@@ -280,7 +282,7 @@ def lock() -> asyncio.Lock:
 
 @add_example()
 def invalidate_later(
-    delay: float, *, session: Union[MISSING_TYPE, "Session", None] = MISSING
+    delay: float, *, session: "MISSING_TYPE | Session | None" = MISSING
 ) -> None:
     """
     Scheduled Invalidation
