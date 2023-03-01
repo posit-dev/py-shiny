@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import base64
 import io
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, cast
 
 from ..types import ImgData, PlotnineFigure
 from ._coordmap import get_coordmap, get_coordmap_plotnine
 
-TryPlotResult = Tuple[bool, Union[ImgData, None]]
+TryPlotResult = Tuple[bool, "ImgData| None"]
 
 
 if TYPE_CHECKING:
