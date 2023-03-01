@@ -50,7 +50,7 @@ def test_slider_range(page: Page, local_app: ShinyAppProc) -> None:
     s1.expect_animate(exists=False)
     OutputTextVerbatim(page, "txt0").expect_value("500")
 
-    new_val = ("671", "885")
+    new_val = ("605", "885")
     s1.set(new_val, max_err_values=1000)
     try:
         s1.expect_value((None, None))
