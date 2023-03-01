@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from matplotlib.transforms import Transform
 
 
-def get_coordmap(fig: Figure) -> Union[Coordmap, None]:
+def get_coordmap(fig: Figure) -> Coordmap | None:
     dims_ar: npt.NDArray[np.double] = fig.get_size_inches() * fig.get_dpi()
     dims: CoordmapDims = {
         "width": dims_ar[0],
