@@ -15,7 +15,7 @@ def test_input_checkbox_group_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     colors.expect_choices(["red", "green", "blue"])
     colors.expect_choice_labels(["Red", "Green", "Blue"])
-    colors.expect_selected(None)
+    colors.expect_selected([])
     colors.expect_inline(False)
 
     colors.expect_width_to_have_value(None)

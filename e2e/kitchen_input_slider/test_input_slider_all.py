@@ -5,6 +5,8 @@ from conftest import ShinyAppProc
 from playground import InputSlider, InputSliderRange, OutputTextVerbatim
 from playwright.sync_api import Page
 
+from shiny.types import MISSING
+
 
 def test_slider_regular(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
@@ -53,11 +55,11 @@ def test_slider_range(page: Page, local_app: ShinyAppProc) -> None:
     new_val = ("605", "885")
     s1.set(new_val, max_err_values=1000)
     try:
-        s1.expect_value((None, None))
+        s1.expect_value((MISSING, MISSING))  # type: ignore
     except ValueError as e:
         assert re.search("tuple entries cannot", str(e))
-    s1.expect_value((new_val[0], None))
-    s1.expect_value((None, new_val[1]))
+    s1.expect_value((new_val[0], MISSING))
+    s1.expect_value((MISSING, new_val[1]))
     s1.expect_value(new_val)
     OutputTextVerbatim(page, "txt1").expect_value(f"({new_val[0]}, {new_val[1]})")
 

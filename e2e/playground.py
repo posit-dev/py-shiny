@@ -16,6 +16,8 @@ import typing
 from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
 
+from shiny.types import MISSING, MISSING_TYPE
+
 """
 Questions:
 * While `expect_*_to_have_value()` matches the setup of `expect(x).to_have_value()`, it is a bit verbose. Should we just use `expect_*()` as we only use it in a single context? (Only adding the suffix if other methods like `to_have_html()` or `to_have_text()` would make sense.)
@@ -77,17 +79,39 @@ Done:
 
 OptionalStr = typing.Optional[str]
 OptionalInt = typing.Optional[int]
+OptionalFloat = typing.Optional[float]
+OptionalBool = typing.Optional[bool]
 
 # TODO-barret; Add new types that are `PatternOrStr | MISSINGTYPE`
 
 PatternOrStr = typing.Union[str, typing.Pattern[str]]
-TextValue = typing.Union[PatternOrStr, None]
+# TextValue = typing.Union[PatternOrStr, None]
 AttrValue = typing.Union[PatternOrStr, None]
 StyleValue = typing.Union[PatternOrStr, None]
 
 
 Timeout = typing.Union[float, None]
 InitLocator = typing.Union[Locator, str]
+
+R = typing.TypeVar("R")
+M1 = typing.TypeVar("M1")
+M2 = typing.TypeVar("M2")
+
+
+def is_missing(x: typing.Any) -> typing.TypeGuard[MISSING_TYPE]:
+    return isinstance(x, MISSING_TYPE)
+
+
+def not_is_missing(x: typing.Union[R, MISSING_TYPE]) -> typing.TypeGuard[R]:
+    return not isinstance(x, MISSING_TYPE)
+
+
+def maybe_missing(
+    x: typing.Union[M1, MISSING_TYPE], default: M2
+) -> typing.Union[M1, M2]:
+    if isinstance(x, MISSING_TYPE):
+        return default
+    return x
 
 
 def set_text(
@@ -108,8 +132,6 @@ def assert_el_has_class(loc: Locator, cls: str) -> None:
         raise AssertionError("Element has no class attribute")
     assert el_cls.index(cls) >= 0
 
-
-R = typing.TypeVar("R")
 
 # # Pylance could not find the return type of `float_attr = maybe_cast_attr_gen(float)`.
 # # However, vscode could display the return type of `float_attr` correctly.
@@ -139,15 +161,11 @@ def maybe_cast_attr(
     return ret
 
 
-def float_attr(
-    loc: Locator, attr_name: str, timeout: Timeout = None
-) -> typing.Optional[float]:
+def float_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> OptionalFloat:
     return maybe_cast_attr(fn=float, loc=loc, attr_name=attr_name, timeout=timeout)
 
 
-def str_attr(
-    loc: Locator, attr_name: str, timeout: Timeout = None
-) -> typing.Optional[str]:
+def str_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> OptionalStr:
     return maybe_cast_attr(fn=str, loc=loc, attr_name=attr_name, timeout=timeout)
 
 
@@ -191,7 +209,7 @@ def get_el_style(
     loc: Locator,
     css_key: str,
     timeout: Timeout = None,
-) -> typing.Optional[str]:
+) -> OptionalStr:
     ret = loc.get_attribute("style", timeout=timeout) or ""
     m = re.search(css_key + r":\s*([^\s;]+)", ret)
     if m:
@@ -374,12 +392,10 @@ class _SetTextM:
 class _ExpectTextInputValueM:
     def expect_value(
         self: _InputBaseP,
-        value: TextValue,
+        value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
-        if value is None:
-            value = ""
         playwright_expect(self.loc).to_have_value(value, timeout=timeout)
 
 
@@ -506,14 +522,14 @@ class InputPassword(
             loc=f"input#{id}[type=password].shiny-bound-input",
         )
 
-    def get_width(self, *, timeout: Timeout = None) -> typing.Optional[str]:
+    def get_width(self, *, timeout: Timeout = None) -> OptionalStr:
         return get_el_style(self.loc_container, "width", timeout=timeout)
 
     # This class does not inherit from `_WidthContainerM`
     # as the width is in the element style
     def expect_width_to_have_value(
         self,
-        value: AttrValue,
+        value: StyleValue,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -552,7 +568,7 @@ class InputTextArea(
         )
 
     def expect_width_to_have_value(
-        self, value: AttrValue, *, timeout: Timeout = None
+        self, value: StyleValue, *, timeout: Timeout = None
     ) -> None:
         if value is None:
             expect_el_style(self.loc_container, "width", None, timeout=timeout)
@@ -562,7 +578,7 @@ class InputTextArea(
             expect_el_style(self.loc, "width", None, timeout=timeout)
 
     def expect_height_to_have_value(
-        self, value: AttrValue, *, timeout: Timeout = None
+        self, value: StyleValue, *, timeout: Timeout = None
     ) -> None:
         expect_el_style(self.loc, "height", value, timeout=timeout)
 
@@ -623,15 +639,13 @@ class _InputSelectBase(
     def expect_choices(
         self,
         # TODO-barret; support patterns?
-        choices: typing.Union[typing.List[str], None],
+        choices: typing.List[str],
         *,
         timeout: Timeout = None,
     ) -> None:
         """Expect choices to be in order"""
-        # Playwright doesn't like lists of size 0. Instead, use `None`
-        if choices is not None and len(choices) == 0:
-            choices = None
-        if choices is None:
+        # Playwright doesn't like lists of size 0. Instead, check for empty locator
+        if len(choices) == 0:
             playwright_expect(self.loc_choices).to_have_count(0, timeout=timeout)
             return
 
@@ -646,19 +660,17 @@ class _InputSelectBase(
 
     def expect_selected(
         self,
-        selected: typing.Union[typing.List[PatternOrStr], PatternOrStr, None],
+        selected: typing.Union[PatternOrStr, typing.List[PatternOrStr]],
         *,
         timeout: Timeout = None,
     ) -> None:
         """Expect choices to be in order"""
-        # Playwright doesn't like lists of size 0. Instead, use `None`
-        if isinstance(selected, list) and len(selected) == 0:
-            selected = None
-        if selected is None:
+        # Playwright doesn't like lists of size 0
+        if isinstance(selected, typing.List) and len(selected) == 0:
             playwright_expect(self.loc_selected).to_have_count(0, timeout=timeout)
             return
 
-        if isinstance(selected, list):
+        if isinstance(selected, typing.List):
             self.expect.to_have_values(selected, timeout=timeout)
         else:
             self.expect.to_have_value(selected, timeout=timeout)
@@ -675,19 +687,14 @@ class _InputSelectBase(
 
     def expect_choice_groups(
         self,
-        choice_groups: typing.Union[
-            # TODO-barret; support patterns?
-            typing.List[str],
-            None,
-        ],
+        # TODO-barret; support patterns?
+        choice_groups: typing.List[str],
         *,
         timeout: Timeout = None,
     ) -> None:
         """Expect choices to be in order"""
         # Playwright doesn't like lists of size 0. Instead, use `None`
-        if choice_groups is not None and len(choice_groups) == 0:
-            choice_groups = None
-        if choice_groups is None:
+        if len(choice_groups) == 0:
             playwright_expect(self.loc_choice_groups).to_have_count(0, timeout=timeout)
             return
 
@@ -703,14 +710,12 @@ class _InputSelectBase(
 
     def expect_choice_labels(
         self,
-        choice_labels: typing.Union[typing.List[PatternOrStr], None],
+        choice_labels: typing.List[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
         # Playwright doesn't like lists of size 0. Instead, use `None`
-        if choice_labels is not None and len(choice_labels) == 0:
-            choice_labels = None
-        if choice_labels is None:
+        if len(choice_labels) == 0:
             playwright_expect(self.loc_choices).to_have_count(0, timeout=timeout)
             return
         playwright_expect(self.loc_choices).to_have_text(choice_labels, timeout=timeout)
@@ -770,14 +775,12 @@ class _InputActionBase(_InputBase):
     # TODO-barret; Should these label methods be different?
     def expect_label_to_have_text(
         self,
-        value: TextValue,
+        value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
         """Must include icon if present"""
 
-        if value is None:
-            value = ""
         self.expect.to_have_text(value, timeout=timeout)
 
     def click(self, *, timeout: Timeout = None, **kwargs: typing.Any) -> None:
@@ -887,11 +890,11 @@ class _MultipleDomItems:
 
     @staticmethod
     def checked_css_str(
-        is_checked: typing.Union[bool, None],
+        is_checked: typing.Union[bool, MISSING_TYPE] = MISSING,
     ) -> str:
-        if is_checked is None:
+        if is_missing(is_checked):
             return ""
-        elif is_checked:
+        if is_checked:
             return ":checked"
         else:
             raise NotImplementedError("`is_checked = FALSE` is not verified yet")
@@ -906,7 +909,7 @@ class _MultipleDomItems:
         arr_name: str,
         # TODO-barret; support patterns?
         arr: typing.List[str],
-        is_checked: typing.Optional[bool] = None,
+        is_checked: typing.Union[bool, MISSING_TYPE] = MISSING,
         timeout: Timeout = None,
         key: str = "value",
     ) -> None:
@@ -948,7 +951,7 @@ class _MultipleDomItems:
         arr_name: str,
         # TODO-barret; support patterns?
         arr: typing.List[str],
-        is_checked: typing.Optional[bool] = None,
+        is_checked: typing.Union[bool, MISSING_TYPE] = MISSING,
         timeout: Timeout = None,
         key: str = "value",
     ) -> None:
@@ -993,12 +996,16 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
 
     def expect_choice_labels(
         self,
-        labels: typing.Union[PatternOrStr, typing.List[PatternOrStr]],
+        labels: typing.List[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
+        if len(labels) == 1:
+            labels_val = labels[0]
+        else:
+            labels_val = labels
         playwright_expect(self.loc_choice_labels).to_have_text(
-            labels,
+            labels_val,
             timeout=timeout,
         )
 
@@ -1055,15 +1062,14 @@ class InputCheckboxGroup(
 
     def set(
         self,
-        selected: typing.Union[str, typing.List[str]],
+        # TODO-future; support patterns?
+        selected: typing.List[str],
         *,
         timeout: Timeout = None,
         **kwargs: typing.Any,
     ) -> None:
-        if isinstance(selected, str):
-            selected = [selected]
-
-        assert len(selected) > 0, "Must select at least one item"
+        typing.assert_type(selected, typing.List[str])
+        assert len(selected) > 0, "Must set at least one item"
 
         # Make sure the selected items exist
         # Similar to `self.expect_choices(choices = selected)`, but with
@@ -1086,7 +1092,7 @@ class InputCheckboxGroup(
 
     def expect_choices(
         self,
-        # TODO-barret; support patterns?
+        # TODO-future; support patterns?
         choices: typing.List[str],
         *,
         timeout: Timeout = None,
@@ -1102,15 +1108,13 @@ class InputCheckboxGroup(
 
     def expect_selected(
         self,
-        # TODO-barret; support patterns?
-        selected: typing.Union[typing.List[str], None],
+        # TODO-future; support patterns?
+        selected: typing.List[str],
         *,
         timeout: Timeout = None,
     ) -> None:
-        # Playwright doesn't like lists of size 0. Instead, use `None`
-        if selected is not None and len(selected) == 0:
-            selected = None
-        if selected is None:
+        # Playwright doesn't like lists of size 0
+        if len(selected) == 0:
             playwright_expect(self.loc_selected).to_have_count(0, timeout=timeout)
             return
 
@@ -1199,7 +1203,7 @@ class InputRadioButtons(
 
     def expect_selected(
         self,
-        selected: TextValue,
+        selected: typing.Union[PatternOrStr, None],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1291,12 +1295,10 @@ class InputFile(
 
     def expect_button_label(
         self,
-        button_label: TextValue,
+        button_label: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
-        if button_label is None:
-            button_label = ""
         playwright_expect(self.loc_button).to_have_text(button_label, timeout=timeout)
 
     def expect_capture(
@@ -1634,21 +1636,25 @@ class InputSliderRange(_InputSliderBase):
 
     def expect_value(
         self,
-        value: typing.Tuple[TextValue, TextValue],
+        value: typing.Union[
+            typing.Tuple[PatternOrStr, PatternOrStr],
+            typing.Tuple[PatternOrStr, MISSING_TYPE],
+            typing.Tuple[MISSING_TYPE, PatternOrStr],
+        ],
         *,
         timeout: Timeout = None,
     ) -> None:
         from_val = value[0]
         to_val = value[1]
-        if (from_val is None) and (to_val is None):
-            raise ValueError("Both `value` tuple entries cannot be `None`")
+        if is_missing(from_val) and is_missing(to_val):
+            raise ValueError("Both `value` tuple entries cannot be `MISSING_TYPE`")
 
         # TODO-future; Composable expectations
-        if from_val is not None:
+        if not_is_missing(from_val):
             playwright_expect(self.loc_irs_label_from).to_have_text(
                 from_val, timeout=timeout
             )
-        if to_val is not None:
+        if not_is_missing(to_val):
             playwright_expect(self.loc_irs_label_to).to_have_text(
                 to_val, timeout=timeout
             )
@@ -1677,9 +1683,10 @@ class InputSliderRange(_InputSliderBase):
 
     def set(
         self,
-        value: typing.Tuple[
-            typing.Union[str, None],
-            typing.Union[str, None],
+        value: typing.Union[
+            typing.Tuple[str, str],
+            typing.Tuple[str, MISSING_TYPE],
+            typing.Tuple[MISSING_TYPE, str],
         ],
         *,
         max_err_values: int = 15,
@@ -1690,15 +1697,15 @@ class InputSliderRange(_InputSliderBase):
 
         value_from = value[0]
         value_to = value[1]
-        if (value_from is None) and (value_to is None):
+        if is_missing(value_from) and is_missing(value_to):
             raise ValueError("Both `value` tuple entries cannot be `None`")
 
         handle_from = self.loc_irs.locator("> .irs-handle.from")
         handle_to = self.loc_irs.locator("> .irs-handle.to")
-        if value_from is not None:
+        if not_is_missing(value_from):
             # Move `from` handle to the far left
             self._set_fraction(handle_from, 0, name="`from` handle", timeout=timeout)
-        if value_to is not None:
+        if not_is_missing(value_to):
             # Move `to` handle to the far right
             self._set_fraction(handle_to, 1, name="`to` handle", timeout=timeout)
 
@@ -1710,7 +1717,7 @@ class InputSliderRange(_InputSliderBase):
         # Handles are [possibly] now at their respective extreme value
         # Now let's move them towards the other end until we find the corresponding str
 
-        if value_from is not None:
+        if not_is_missing(value_from):
             self._set_helper(
                 value=value_from,
                 irs_label=self.loc_irs_label_from,
@@ -1726,7 +1733,7 @@ class InputSliderRange(_InputSliderBase):
         handle_center_to = self._handle_center(
             handle_to, name="`to` handle", timeout=timeout
         )
-        if value_to is not None:
+        if not_is_missing(value_to):
             self._set_helper(
                 value=value_to,
                 irs_label=self.loc_irs_label_to,
@@ -1763,14 +1770,14 @@ class _DateBase(
 
     def expect_value(
         self,
-        value: AttrValue,
+        value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
-        if value is None:
-            self.expect.to_be_empty(timeout=timeout)
-        else:
-            self.expect.to_have_value(value, timeout=timeout)
+        # if value is None:
+        #     self.expect.to_be_empty(timeout=timeout)
+        # else:
+        self.expect.to_have_value(value, timeout=timeout)
 
     def expect_min_date(
         self,
@@ -1943,9 +1950,10 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
 
     def expect_value(
         self,
-        value: typing.Tuple[
-            AttrValue,
-            AttrValue,
+        value: typing.Union[
+            typing.Tuple[PatternOrStr, PatternOrStr],
+            typing.Tuple[PatternOrStr, MISSING_TYPE],
+            typing.Tuple[MISSING_TYPE, PatternOrStr],
         ],
         *,
         timeout: Timeout = None,
@@ -1953,16 +1961,16 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         start_val = value[0]
         end_val = value[1]
 
-        if start_val is None and end_val is None:
-            raise ValueError("Both `start_val` and `end_val` can not be `None`")
+        if is_missing(start_val) and is_missing(end_val):
+            raise ValueError("Both `start_val` and `end_val` can not be `MISSING_TYPE`")
 
         # We can not use `[value={value}]` within Locators.
         # The physical `value` attribute is never set, so we can not select on it.
         # We must as the start and end values individually, rather than at the same time like the checkboxgroup input.
         # TODO-future; Composable expectations
-        if not (start_val is None):
+        if not_is_missing(start_val):
             self.date_start.expect_value(start_val, timeout=timeout)
-        if not (end_val is None):
+        if not_is_missing(end_val):
             self.date_end.expect_value(end_val, timeout=timeout)
 
     # min: Optional[Union[date, str]] = None,
@@ -2034,12 +2042,10 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
     # separator: str = " to ",
     def expect_separator(
         self,
-        value: TextValue,
+        value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
-        if value is None:
-            value = ""
         playwright_expect(self.loc_separator).to_have_text(value, timeout=timeout)
 
     # width: Optional[str] = None,
@@ -2098,12 +2104,10 @@ class _OutputTextValue(_OutputBase):
 
     def expect_value(
         self,
-        value: TextValue,
+        value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
-        if value is None:
-            value = ""
         self.expect.to_have_text(value, timeout=timeout)
 
 
@@ -2178,7 +2182,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
 
     def expect_height_to_have_value(
         self,
-        value: AttrValue,
+        value: StyleValue,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2186,7 +2190,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
 
     def expect_width_to_have_value(
         self,
-        value: AttrValue,
+        value: StyleValue,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2272,14 +2276,12 @@ class OutputTable(_OutputBase):
 
     def expect_cell(
         self,
-        text: TextValue,
+        text: PatternOrStr,
         row: int,
         col: int,
         *,
         timeout: Timeout = None,
     ) -> None:
-        if text is None:
-            text = ""
         playwright_expect(
             self.loc.locator(
                 f"xpath=./table/tbody/tr[{row}]/td[{col}] | ./table/tbody/tr[{row}]/th[{col}]"
