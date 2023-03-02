@@ -24,6 +24,7 @@ Questions:
 * Can Date pickers set the `value` attribute on the corresponding input element? If so, we could use `expect_value()` to check the value of the input element.
 * In `test_output_table.py`, why can't I write `barret = ["1", "2"]; table.expect_column_labels(barret)`? (Typing issue)
 * For set methods or expect_value methods, should we not allow `None` as a value? Ex: InputDateRange does not allow this, but InputText does (upgrades `None` to `""`)
+    * Ans w/ Winston: Be strict and do not upgrade unless necessary
 
 * Should we guard against nest shiny input objects? (Should we tighten up the selectors?). CSS selector to only select first occurance: https://stackoverflow.com/a/71749400/591574
 * TODO-barret; Make sure multiple usage of `timeout` has the proper values. Should followup usages be `0` to force it to be immediate? (Is `0` the right value?)
@@ -77,10 +78,13 @@ Done:
 OptionalStr = typing.Optional[str]
 OptionalInt = typing.Optional[int]
 
+# TODO-barret; Add new types that are `PatternOrStr | MISSINGTYPE`
+
 PatternOrStr = typing.Union[str, typing.Pattern[str]]
 TextValue = typing.Union[PatternOrStr, None]
 AttrValue = typing.Union[PatternOrStr, None]
 StyleValue = typing.Union[PatternOrStr, None]
+
 
 Timeout = typing.Union[float, None]
 InitLocator = typing.Union[Locator, str]
@@ -335,12 +339,10 @@ class _InputWithLabel(_InputWithContainer):
 
     def expect_label_to_have_text(
         self,
-        value: TextValue,
+        value: PatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
-        if value is None:
-            value = ""
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
 
@@ -1367,14 +1369,17 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         self,
         *,
         loop: bool = True,
-        interval: typing.Union[PatternOrStr, int] = 500,
+        interval: float = 500,
+        # TODO-barret; Use the types below; Make expectations conditional
+        # loop: typing.Union[bool, MISSING_TYPE] = MISSING,
+        # interval: typing.Union[float, MISSING_TYPE] = MISSING,
         timeout: Timeout = None,
     ) -> None:
         if not loop:
             loop_str = None
         else:
             loop_str = ""
-        interval_str = str(interval) if interval else None
+        interval_str = str(interval)
 
         # TODO-future; Composable expectations
         self.expect_animate(exists=True, timeout=timeout)

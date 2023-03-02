@@ -48,7 +48,7 @@ def test_slider_range(page: Page, local_app: ShinyAppProc) -> None:
     s1.expect_timezone_to_have_value(None)
     s1.expect_drag_range_to_have_value("true")
     s1.expect_animate(exists=False)
-    OutputTextVerbatim(page, "txt0").expect_value("500")
+    OutputTextVerbatim(page, "txt1").expect_value("(200, 500)")
 
     new_val = ("605", "885")
     s1.set(new_val, max_err_values=1000)
