@@ -77,3 +77,40 @@ def test_input_checkbox_group_kitchen(page: Page, local_app: ShinyAppProc) -> No
     check2.set(["orange", "teal"])
 
     assert_selected("b", "f", ["red", "blue"], ["orange", "teal"])
+
+
+def test_selector_assertions(page: Page, local_app: ShinyAppProc) -> None:
+    page.goto(local_app.url)
+    # Fail quickly
+    timeout = 100
+
+    # Non-existent div
+    try:
+        not_exist = InputRadioButtons(page, "does-not-exist")
+        not_exist.expect_choices(["a", "b", "c"], timeout=timeout)
+    except AssertionError as e:
+        assert "expected to have count '1'" in str(e)
+        assert "Actual value: 0" in str(e)
+
+    check1 = InputCheckboxGroup(page, "check1")
+
+    # Make sure it works
+    check1.expect_choices(["red", "green", "blue"])
+    # Too many
+    try:
+        check1.expect_choices(["red", "green", "blue", "test_value"], timeout=timeout)
+    except AssertionError as e:
+        assert "expected to have count '4'" in str(e)
+        assert "Actual value: 3" in str(e)
+    # Not enough
+    try:
+        check1.expect_choices(["red", "green"], timeout=timeout)
+    except AssertionError as e:
+        assert "expected to have count '2'" in str(e)
+        assert "Actual value: 3" in str(e)
+    # Wrong value
+    try:
+        check1.expect_choices(["red", "green", "test_value"], timeout=timeout)
+    except AssertionError as e:
+        assert "attribute 'test_value'" in str(e)
+        assert "Actual value: blue" in str(e)

@@ -942,6 +942,7 @@ class _MultipleDomItems:
 
         # If we are only looking to see if *some* (not *these only*) elements exist,
         # then we only need to check if the container locator (which must contain the elements) can be found
+        # TODO-barret; debug expectations
         playwright_expect(loc_container).to_have_count(1, timeout=timeout)
 
     @staticmethod
@@ -963,17 +964,20 @@ class _MultipleDomItems:
         _MultipleDomItems.assert_arr_is_unique(arr, f"`{arr_name}` must be unique")
         is_checked_str = _MultipleDomItems.checked_css_str(is_checked)
 
+        item_selector = f"{el_type}{is_checked_str}"
+
         # If there are no items, then we should not have any elements
         if len(arr) == 0:
-            playwright_expect(
-                loc_container.locator(f"{el_type}{is_checked_str}")
-            ).to_have_count(0, timeout=timeout)
+            playwright_expect(loc_container.locator(item_selector)).to_have_count(
+                0, timeout=timeout
+            )
             return
+        loc_container_orig = loc_container
 
         # Find all items in set
         for item, i in zip(arr, range(len(arr))):
             # Get all elements of type
-            has_locator = page.locator(f"{el_type}{is_checked_str}")
+            has_locator = page.locator(item_selector)
             # Get the `n`th matching element
             has_locator = has_locator.nth(i)
             # Make sure that element has the correct attribute value
@@ -989,8 +993,25 @@ class _MultipleDomItems:
         # Make sure other items are not in set
         # If we know all elements are contained in the container,
         # and all elements all unique, then it should have a count of `len(arr)`
-        loc_inputs = loc_container.locator(f"{el_type}{is_checked_str}")
-        playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
+        loc_inputs = loc_container.locator(item_selector)
+        try:
+            playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
+        except AssertionError:
+            # Debug expections
+
+            # Expecting container to exist (count = 1)
+            playwright_expect(loc_container_orig).to_have_count(1, timeout=timeout)
+
+            # Expecting the container to contain {len(arr)} items
+            playwright_expect(loc_container_orig.locator(item_selector)).to_have_count(
+                len(arr), timeout=timeout
+            )
+
+            for item, i in zip(arr, range(len(arr))):
+                # Expecting item `{i}` to be `{item}`
+                playwright_expect(
+                    loc_container_orig.locator(item_selector).nth(i)
+                ).to_have_attribute(key, item, timeout=timeout)
 
 
 class _RadioButtonCheckboxGroupBase(_InputWithLabel):
@@ -2046,7 +2067,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
     # autoclose: bool = True,
     def expect_autoclose(
         self,
-        value: AttrValue,
+        value: typing.Union[Literal["true"], Literal["false"]],
         *,
         timeout: Timeout = None,
     ) -> None:
