@@ -106,6 +106,13 @@ def not_is_missing(x: typing.Union[R, MISSING_TYPE]) -> typing.TypeGuard[R]:
     return not isinstance(x, MISSING_TYPE)
 
 
+def all_missing(*args: typing.Any) -> typing.TypeGuard[MISSING_TYPE]:
+    for arg in args:
+        if not_is_missing(arg):
+            return False
+    return True
+
+
 def maybe_missing(
     x: typing.Union[M1, MISSING_TYPE], default: M2
 ) -> typing.Union[M1, M2]:
@@ -638,7 +645,7 @@ class _InputSelectBase(
 
     def expect_choices(
         self,
-        # TODO-barret; support patterns?
+        # TODO-future; support patterns?
         choices: typing.List[str],
         *,
         timeout: Timeout = None,
@@ -687,7 +694,7 @@ class _InputSelectBase(
 
     def expect_choice_groups(
         self,
-        # TODO-barret; support patterns?
+        # TODO-future; support patterns?
         choice_groups: typing.List[str],
         *,
         timeout: Timeout = None,
@@ -907,7 +914,7 @@ class _MultipleDomItems:
         loc_container: Locator,
         el_type: str,
         arr_name: str,
-        # TODO-barret; support patterns?
+        # TODO-future; support patterns?
         arr: typing.List[str],
         is_checked: typing.Union[bool, MISSING_TYPE] = MISSING,
         timeout: Timeout = None,
@@ -949,7 +956,7 @@ class _MultipleDomItems:
         loc_container: Locator,
         el_type: str,
         arr_name: str,
-        # TODO-barret; support patterns?
+        # TODO-future; support patterns?
         arr: typing.List[str],
         is_checked: typing.Union[bool, MISSING_TYPE] = MISSING,
         timeout: Timeout = None,
@@ -1187,7 +1194,7 @@ class InputRadioButtons(
 
     def expect_choices(
         self,
-        # TODO-barret; support patterns?
+        # TODO-future; support patterns?
         choices: typing.List[str],
         *,
         timeout: Timeout = None,
@@ -1370,33 +1377,28 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
     def expect_animate_options(
         self,
         *,
-        loop: bool = True,
-        interval: float = 500,
-        # TODO-barret; Use the types below; Make expectations conditional
-        # loop: typing.Union[bool, MISSING_TYPE] = MISSING,
-        # interval: typing.Union[float, MISSING_TYPE] = MISSING,
+        loop: typing.Union[bool, MISSING_TYPE] = MISSING,
+        interval: typing.Union[float, MISSING_TYPE] = MISSING,
         timeout: Timeout = None,
     ) -> None:
-        if not loop:
-            loop_str = None
-        else:
-            loop_str = ""
-        interval_str = str(interval)
-
+        if all_missing(loop, interval):
+            raise ValueError("Must provide at least one of `loop` or `interval`")
         # TODO-future; Composable expectations
         self.expect_animate(exists=True, timeout=timeout)
-        expect_attr(
-            self.loc_play_pause,
-            "data-loop",
-            loop_str,
-            timeout=timeout,
-        )
-        expect_attr(
-            self.loc_play_pause,
-            "data-interval",
-            interval_str,
-            timeout=timeout,
-        )
+        if not_is_missing(loop):
+            expect_attr(
+                self.loc_play_pause,
+                "data-loop",
+                "" if loop else None,
+                timeout=timeout,
+            )
+        if not_is_missing(interval):
+            expect_attr(
+                self.loc_play_pause,
+                "data-interval",
+                str(interval),
+                timeout=timeout,
+            )
 
     # No `toggle` method as short animations with no loops can cause the button to
     # become `play` over and over again. Instead, have explicit `play` and `pause`
@@ -1644,10 +1646,10 @@ class InputSliderRange(_InputSliderBase):
         *,
         timeout: Timeout = None,
     ) -> None:
+        if all_missing(*value):
+            raise ValueError("Both `value` tuple entries cannot be `MISSING_TYPE`")
         from_val = value[0]
         to_val = value[1]
-        if is_missing(from_val) and is_missing(to_val):
-            raise ValueError("Both `value` tuple entries cannot be `MISSING_TYPE`")
 
         # TODO-future; Composable expectations
         if not_is_missing(from_val):
@@ -1692,14 +1694,13 @@ class InputSliderRange(_InputSliderBase):
         max_err_values: int = 15,
         timeout: Timeout = None,
     ) -> None:
-        self.loc_container.wait_for(state="visible", timeout=timeout)
-        self.loc_container.scroll_into_view_if_needed(timeout=timeout)
+        if all_missing(*value):
+            raise ValueError("Both `value` tuple entries cannot be `MISSING_TYPE`")
 
         value_from = value[0]
         value_to = value[1]
-        if is_missing(value_from) and is_missing(value_to):
-            raise ValueError("Both `value` tuple entries cannot be `None`")
-
+        self.loc_container.wait_for(state="visible", timeout=timeout)
+        self.loc_container.scroll_into_view_if_needed(timeout=timeout)
         handle_from = self.loc_irs.locator("> .irs-handle.from")
         handle_to = self.loc_irs.locator("> .irs-handle.to")
         if not_is_missing(value_from):
@@ -1958,12 +1959,10 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
         *,
         timeout: Timeout = None,
     ) -> None:
+        if all_missing(*value):
+            raise ValueError("Both `start_val` and `end_val` can not be `MISSING_TYPE`")
         start_val = value[0]
         end_val = value[1]
-
-        if is_missing(start_val) and is_missing(end_val):
-            raise ValueError("Both `start_val` and `end_val` can not be `MISSING_TYPE`")
-
         # We can not use `[value={value}]` within Locators.
         # The physical `value` attribute is never set, so we can not select on it.
         # We must as the start and end values individually, rather than at the same time like the checkboxgroup input.
