@@ -82,13 +82,9 @@ OptionalInt = typing.Optional[int]
 OptionalFloat = typing.Optional[float]
 OptionalBool = typing.Optional[bool]
 
-# TODO-barret; Add new types that are `PatternOrStr | MISSINGTYPE`
-
 PatternOrStr = typing.Union[str, typing.Pattern[str]]
-# TextValue = typing.Union[PatternOrStr, None]
 AttrValue = typing.Union[PatternOrStr, None]
 StyleValue = typing.Union[PatternOrStr, None]
-
 
 Timeout = typing.Union[float, None]
 InitLocator = typing.Union[Locator, str]
@@ -779,7 +775,6 @@ class InputSelectize(_InputSelectBase):
 
 
 class _InputActionBase(_InputBase):
-    # TODO-barret; Should these label methods be different?
     def expect_label_to_have_text(
         self,
         value: PatternOrStr,
@@ -1275,7 +1270,7 @@ class InputFile(
         if expect_complete_timeout is not None:
             self.expect_complete(timeout=expect_complete_timeout)
 
-    # TODO-barret: Let's make sure that if the upload errors out, expect_complete() fails.
+    # TODO-future: Let's make sure that if the upload errors out, expect_complete() fails.
     def expect_complete(
         self,
         *,
@@ -1283,7 +1278,7 @@ class InputFile(
     ) -> None:
         expect_el_style(self.loc_progress, "width", "100%", timeout=timeout)
 
-    # TODO-barret; Test multiple file upload
+    # TODO-future; Test multiple file upload
     def expect_multiple(self, multiple: bool, *, timeout: Timeout = None) -> None:
         expect_multiple(self.loc, multiple, timeout=timeout)
 
@@ -1833,8 +1828,7 @@ class _DateBase(
     # autoclose: bool = True,
     def expect_autoclose(
         self,
-        # TODO-barret; None value supported?
-        value: AttrValue,
+        value: typing.Union[Literal["true"], Literal["false"]],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2258,7 +2252,7 @@ class OutputUi(_OutputInlineContainerM, _OutputBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc=f"#{id}")
 
-    # TODO-barret; Should we try verify that `recalculating` class is not present?
+    # TODO-future; Should we try verify that `recalculating` class is not present? Do this for all outputs!
     def expect_to_be_empty(self, *, timeout: Timeout = None) -> None:
         self.expect.to_be_empty(timeout=timeout)
 
