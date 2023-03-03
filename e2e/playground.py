@@ -157,35 +157,36 @@ def expect_class_value(
     timeout: Timeout = None,
 ) -> None:
     """Expect a locator to have (or not to have) a class value"""
-    cls_regex = re.compile(rf"\b{re.escape(cls)}\b")
+    cls_regex = re.compile(rf"(^|\s+){re.escape(cls)}(\s+|$)")
     if has_class:
         playwright_expect(loc).to_have_class(cls_regex, timeout=timeout)
     else:
         playwright_expect(loc).not_to_have_class(cls_regex, timeout=timeout)
 
 
-def style_pattern(key: str, value: PatternOrStr) -> typing.Pattern[str]:
+def style_match_str(key: str, value: PatternOrStr) -> typing.Pattern[str]:
     if isinstance(value, str):
         value_str = re.escape(value)
     else:
         value_str = value.pattern
-    return re.compile(rf"(^|\b){re.escape(key)}\s*:\s*\b{value_str}(\b|;|$)")
+    return re.compile(rf"(^|;)\s*{re.escape(key)}\s*:\s*{value_str}\s*(;|$)")
 
 
-def attr_match_str(key: str, value: PatternOrStr) -> str:
-    if isinstance(value, str):
-        # `key` is `value`
-        return f'{key}="{re.escape(value)}"'
-    else:
-        typing.assert_type(value, re.Pattern[str])
-        # `key` contains `value`
-        return f'{key}*="{value.pattern}"'
+def attr_match_str(key: str, value: str) -> str:
+    # Escape double quotes
+    value_str = value.replace('"', '\\"')
+    # `key` is `value`
+    return f'{key}="{value_str}"'
+    # typing.assert_type(value, re.Pattern[str])
+    # # `key` contains `value`
+    # return f'{key}*="{value.pattern}"'
 
 
 def xpath_match_str(key: str, value: PatternOrStr) -> str:
     if isinstance(value, str):
-        # `key` is `value`
+        # Escape double quotes
         value_str = value.replace('"', '\\"')
+        # `key` is `value`
         return f'@{key}="{value_str}"'
     else:
         typing.assert_type(value, re.Pattern[str])
@@ -212,7 +213,7 @@ def expect_el_style(
 
     playwright_expect(loc).to_have_attribute(
         "style",
-        style_pattern(css_key, css_value),
+        style_match_str(css_key, css_value),
         timeout=timeout,
     )
 
