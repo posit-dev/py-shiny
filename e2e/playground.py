@@ -94,7 +94,7 @@ M1 = typing.TypeVar("M1")
 M2 = typing.TypeVar("M2")
 
 
-def is_missing(x: typing.Any) -> typing.TypeGuard[MISSING_TYPE]:
+def is_missing(x: object) -> typing.TypeGuard[MISSING_TYPE]:
     return isinstance(x, MISSING_TYPE)
 
 
@@ -102,7 +102,7 @@ def not_is_missing(x: typing.Union[R, MISSING_TYPE]) -> typing.TypeGuard[R]:
     return not isinstance(x, MISSING_TYPE)
 
 
-def all_missing(*args: typing.Any) -> typing.TypeGuard[MISSING_TYPE]:
+def all_missing(*args: object) -> typing.TypeGuard[MISSING_TYPE]:
     for arg in args:
         if not_is_missing(arg):
             return False
@@ -747,7 +747,7 @@ class _InputActionBase(_InputBase):
 
         self.expect.to_have_text(value, timeout=timeout)
 
-    def click(self, *, timeout: Timeout = None, **kwargs: typing.Any) -> None:
+    def click(self, *, timeout: Timeout = None, **kwargs: object) -> None:
         self.loc.click(timeout=timeout, **kwargs)
 
 
@@ -806,12 +806,10 @@ class InputCheckboxBase(
             loc=loc,
         )
 
-    def set(
-        self, value: bool, *, timeout: Timeout = None, **kwargs: typing.Any
-    ) -> None:
+    def set(self, value: bool, *, timeout: Timeout = None, **kwargs: object) -> None:
         self.loc.set_checked(value, timeout=timeout, **kwargs)
 
-    def toggle(self, *, timeout: Timeout = None, **kwargs: typing.Any) -> None:
+    def toggle(self, *, timeout: Timeout = None, **kwargs: object) -> None:
         self.loc.click(timeout=timeout, **kwargs)
 
     def expect_to_be_checked(self, value: bool, *, timeout: Timeout = None) -> None:
@@ -1078,7 +1076,7 @@ class InputCheckboxGroup(
         selected: typing.List[str],
         *,
         timeout: Timeout = None,
-        **kwargs: typing.Any,
+        **kwargs: object,
     ) -> None:
         # Having an arr of size 0 is allowed. Will uncheck everything
         typing.assert_type(selected, typing.List[str])
@@ -1197,7 +1195,7 @@ class InputRadioButtons(
         selected: str,
         *,
         timeout: Timeout = None,
-        **kwargs: typing.Any,
+        **kwargs: object,
     ) -> None:
         typing.assert_type(selected, str)
         # Only need to set.
