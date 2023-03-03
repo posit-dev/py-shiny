@@ -14,9 +14,9 @@ def test_input_checkbox_group_kitchen(page: Page, local_app: ShinyAppProc) -> No
     def assert_radio_check(
         x: typing.Union[InputRadioButtons, InputCheckboxGroup],
         label: str,
-        choices: typing.List[str],
+        choices: typing.List[PatternOrStr],
         choice_labels: typing.List[PatternOrStr],
-        selected: typing.Union[str, typing.List[str]],
+        selected: typing.Union[PatternOrStr, typing.List[PatternOrStr]],
         inline: bool,
     ) -> None:
         expect(x.loc_label).to_have_text(label)
@@ -34,7 +34,7 @@ def test_input_checkbox_group_kitchen(page: Page, local_app: ShinyAppProc) -> No
         x.expect_inline(inline)
 
     def assert_selected(
-        r1: str, r2: str, c1: typing.List[str], c2: typing.List[str]
+        r1: str, r2: str, c1: typing.List[PatternOrStr], c2: typing.List[PatternOrStr]
     ) -> None:
         assert_radio_check(
             radio1,

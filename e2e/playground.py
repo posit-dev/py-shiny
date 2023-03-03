@@ -1,4 +1,4 @@
-"""Barret Facade classes for working with Shiny inputs/outputs in Playwright"""
+"""Facade classes for working with Shiny inputs/outputs in Playwright"""
 import json
 import pathlib
 import re
@@ -176,7 +176,7 @@ def attr_match_str(key: str, value: PatternOrStr) -> str:
     else:
         typing.assert_type(value, re.Pattern[str])
         # `key` contains `value`
-        return f"{key}={value.pattern}"
+        return f'{key}*="{value.pattern}"'
 
 
 def xpath_match_str(key: str, value: PatternOrStr) -> str:
@@ -849,7 +849,10 @@ class InputSwitch(InputCheckboxBase):
 
 class _MultipleDomItems:
     @staticmethod
-    def assert_arr_is_unique(arr: typing.List[PatternOrStr], msg: str) -> None:
+    def assert_arr_is_unique(
+        arr: typing.Union[typing.List[str], typing.List[PatternOrStr]],
+        msg: str,
+    ) -> None:
         assert len(arr) == len(list(dict.fromkeys(arr))), msg
 
     @staticmethod
@@ -871,12 +874,14 @@ class _MultipleDomItems:
         loc_container: Locator,
         el_type: str,
         arr_name: str,
-        arr: typing.List[PatternOrStr],
+        arr: typing.List[str],
         is_checked: typing.Union[bool, MISSING_TYPE] = MISSING,
         timeout: Timeout = None,
         key: str = "value",
     ) -> None:
         # Make sure the locator contains all of `arr`
+
+        typing.assert_type(arr, typing.List[str])
 
         # Make sure the locator has len(uniq_arr) input elements
         _MultipleDomItems.assert_arr_is_unique(arr, f"`{arr_name}` must be unique")
@@ -914,13 +919,13 @@ class _MultipleDomItems:
 
             for item in arr:
                 # Expecting item `{item}` to exist in container
-                # Allow for greater than 1 match
+                # Perform exact matches on strings.
                 playwright_expect(
                     # Simple approach as position is not needed
                     loc_container_orig.locator(
                         f"{el_type}[{attr_match_str(key, item)}]{is_checked_str}",
                     )
-                ).not_to_have_count(0, timeout=timeout)
+                ).to_have_count(1, timeout=timeout)
 
             # Could not find the reason why. Raising the original error.
             raise e
@@ -1069,13 +1074,14 @@ class InputCheckboxGroup(
 
     def set(
         self,
-        selected: typing.List[PatternOrStr],
+        # Allow `selected` to be a single Pattern to perform matching against many items
+        selected: typing.List[str],
         *,
         timeout: Timeout = None,
         **kwargs: typing.Any,
     ) -> None:
         # Having an arr of size 0 is allowed. Will uncheck everything
-        typing.assert_type(selected, typing.List[PatternOrStr])
+        typing.assert_type(selected, typing.List[str])
 
         # Make sure the selected items exist
         # Similar to `self.expect_choices(choices = selected)`, but with
@@ -1193,10 +1199,11 @@ class InputRadioButtons(
         timeout: Timeout = None,
         **kwargs: typing.Any,
     ) -> None:
+        typing.assert_type(selected, str)
         # Only need to set.
         # The Browser will _unset_ the previously selected radio button
         self.loc_container.locator(
-            f"label input[type=radio][value='{re.escape(selected)}']"
+            f"label input[type=radio][{attr_match_str('value', selected)}]"
         ).check(timeout=timeout)
 
     def expect_choices(
