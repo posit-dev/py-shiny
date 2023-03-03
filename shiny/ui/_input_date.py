@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 __all__ = ("input_date", "input_date_range")
 
 import json
 from datetime import date
-from typing import List, Optional, Union
+from typing import Optional
 
 from htmltools import Tag, TagAttrArg, TagChildArg, css, div, span, tags
 
@@ -17,17 +19,17 @@ def input_date(
     id: str,
     label: TagChildArg,
     *,
-    value: Optional[Union[date, str]] = None,
-    min: Optional[Union[date, str]] = None,
-    max: Optional[Union[date, str]] = None,
+    value: Optional[date | str] = None,
+    min: Optional[date | str] = None,
+    max: Optional[date | str] = None,
     format: str = "yyyy-mm-dd",
     startview: str = "month",
     weekstart: int = 0,
     language: str = "en",
     width: Optional[str] = None,
     autoclose: bool = True,
-    datesdisabled: Optional[List[str]] = None,
-    daysofweekdisabled: Optional[List[int]] = None,
+    datesdisabled: Optional[list[str]] = None,
+    daysofweekdisabled: Optional[list[int]] = None,
 ) -> Tag:
     """
     Creates a text input which, when clicked on, brings up a calendar that the user can
@@ -133,10 +135,10 @@ def input_date_range(
     id: str,
     label: TagChildArg,
     *,
-    start: Optional[Union[date, str]] = None,
-    end: Optional[Union[date, str]] = None,
-    min: Optional[Union[date, str]] = None,
-    max: Optional[Union[date, str]] = None,
+    start: Optional[date | str] = None,
+    end: Optional[date | str] = None,
+    min: Optional[date | str] = None,
+    max: Optional[date | str] = None,
     format: str = "yyyy-mm-dd",
     startview: str = "month",
     weekstart: int = 0,
@@ -265,9 +267,9 @@ def input_date_range(
 
 def _date_input_tag(
     id: str,
-    value: Optional[Union[date, str]],
-    min: Optional[Union[date, str]],
-    max: Optional[Union[date, str]],
+    value: Optional[date | str],
+    min: Optional[date | str],
+    max: Optional[date | str],
     format: str,
     startview: str,
     weekstart: int,
@@ -295,7 +297,7 @@ def _date_input_tag(
     )
 
 
-def _as_date_attr(x: Optional[Union[date, str]]) -> Optional[str]:
+def _as_date_attr(x: Optional[date | str]) -> Optional[str]:
     if x is None:
         return None
     if isinstance(x, date):

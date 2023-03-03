@@ -34,7 +34,6 @@ from typing import (
     Generic,
     Optional,
     TypeVar,
-    Union,
     overload,
 )
 
@@ -94,18 +93,18 @@ class RenderFunction(Generic[IT, OT]):
 # method is marked here as async; you can't have a single class where one method could
 # be either sync or async.
 class RenderFunctionAsync(RenderFunction[IT, OT]):
-    async def __call__(self) -> OT:  # type: ignore
+    async def __call__(self) -> OT:  # pyright: ignore[reportIncompatibleMethodOverride]
         raise NotImplementedError
 
 
 # ======================================================================================
 # RenderText
 # ======================================================================================
-RenderTextFunc = Callable[[], Union[str, None]]
-RenderTextFuncAsync = Callable[[], Awaitable[Union[str, None]]]
+RenderTextFunc = Callable[[], "str | None"]
+RenderTextFuncAsync = Callable[[], Awaitable["str | None"]]
 
 
-class RenderText(RenderFunction[Union[str, None], Union[str, None]]):
+class RenderText(RenderFunction["str | None", "str | None"]):
     def __init__(self, fn: RenderTextFunc) -> None:
         super().__init__(fn)
         # The Render*Async subclass will pass in an async function, but it tells the
@@ -113,43 +112,41 @@ class RenderText(RenderFunction[Union[str, None], Union[str, None]]):
         # passed an async function, it will not change it.
         self._fn: RenderTextFuncAsync = _utils.wrap_async(fn)
 
-    def __call__(self) -> Union[str, None]:
+    def __call__(self) -> str | None:
         return _utils.run_coro_sync(self._run())
 
-    async def _run(self) -> Union[str, None]:
+    async def _run(self) -> str | None:
         res = await self._fn()
         if res is None:
             return None
         return str(res)
 
 
-class RenderTextAsync(
-    RenderText, RenderFunctionAsync[Union[str, None], Union[str, None]]
-):
+class RenderTextAsync(RenderText, RenderFunctionAsync["str | None", "str | None"]):
     def __init__(self, fn: RenderTextFuncAsync) -> None:
         if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderTextFunc, fn))
 
-    async def __call__(self) -> Union[str, None]:  # type: ignore
+    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+    ) -> str | None:
         return await self._run()
 
 
 @overload
-def text(fn: Union[RenderTextFunc, RenderTextFuncAsync]) -> RenderText:
+def text(fn: RenderTextFunc | RenderTextFuncAsync) -> RenderText:
     ...
 
 
 @overload
-def text() -> Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], RenderText]:
+def text() -> Callable[[RenderTextFunc | RenderTextFuncAsync], RenderText]:
     ...
 
 
 def text(
-    fn: Optional[Union[RenderTextFunc, RenderTextFuncAsync]] = None
-) -> Union[
-    RenderText, Callable[[Union[RenderTextFunc, RenderTextFuncAsync]], RenderText]
-]:
+    fn: Optional[RenderTextFunc | RenderTextFuncAsync] = None,
+) -> RenderText | Callable[[RenderTextFunc | RenderTextFuncAsync], RenderText]:
     """
     Reactively render text.
 
@@ -169,7 +166,7 @@ def text(
     ~shiny.ui.output_text
     """
 
-    def wrapper(fn: Union[RenderTextFunc, RenderTextFuncAsync]) -> RenderText:
+    def wrapper(fn: RenderTextFunc | RenderTextFuncAsync) -> RenderText:
         if _utils.is_async_callable(fn):
             return RenderTextAsync(fn)
         else:
@@ -193,7 +190,7 @@ RenderPlotFunc = Callable[[], object]
 RenderPlotFuncAsync = Callable[[], Awaitable[object]]
 
 
-class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
+class RenderPlot(RenderFunction[object, "ImgData | None"]):
     _ppi: float = 96
     _is_userfn_async = False
 
@@ -208,10 +205,10 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
         # passed an async function, it will not change it.
         self._fn: RenderPlotFuncAsync = _utils.wrap_async(fn)
 
-    def __call__(self) -> Union[ImgData, None]:
+    def __call__(self) -> ImgData | None:
         return _utils.run_coro_sync(self._run())
 
-    async def _run(self) -> Union[ImgData, None]:
+    async def _run(self) -> ImgData | None:
         inputs = self._session.root_scope().input
 
         # Reactively read some information about the plot.
@@ -242,7 +239,7 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
         # If a try_render function returns a tuple that starts with False, then the next
         # try_render function should be tried. If none succeed, an error is raised.
         ok: bool
-        result: Union[ImgData, None]
+        result: ImgData | None
 
         if "plotnine" in sys.modules:
             ok, result = try_render_plotnine(
@@ -284,7 +281,7 @@ class RenderPlot(RenderFunction[object, Union[ImgData, None]]):
         )
 
 
-class RenderPlotAsync(RenderPlot, RenderFunctionAsync[object, Union[ImgData, None]]):
+class RenderPlotAsync(RenderPlot, RenderFunctionAsync[object, "ImgData | None"]):
     _is_userfn_async = True
 
     def __init__(
@@ -294,12 +291,14 @@ class RenderPlotAsync(RenderPlot, RenderFunctionAsync[object, Union[ImgData, Non
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderPlotFunc, fn), alt=alt, **kwargs)
 
-    async def __call__(self) -> Union[ImgData, None]:  # type: ignore
+    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+    ) -> ImgData | None:
         return await self._run()
 
 
 @overload
-def plot(fn: Union[RenderPlotFunc, RenderPlotFuncAsync]) -> RenderPlot:
+def plot(fn: RenderPlotFunc | RenderPlotFuncAsync) -> RenderPlot:
     ...
 
 
@@ -308,19 +307,17 @@ def plot(
     *,
     alt: Optional[str] = None,
     **kwargs: Any,
-) -> Callable[[Union[RenderPlotFunc, RenderPlotFuncAsync]], RenderPlot]:
+) -> Callable[[RenderPlotFunc | RenderPlotFuncAsync], RenderPlot]:
     ...
 
 
 # TODO: Use more specific types for render.plot
 def plot(
-    fn: Optional[Union[RenderPlotFunc, RenderPlotFuncAsync]] = None,
+    fn: Optional[RenderPlotFunc | RenderPlotFuncAsync] = None,
     *,
     alt: Optional[str] = None,
     **kwargs: Any,
-) -> Union[
-    RenderPlot, Callable[[Union[RenderPlotFunc, RenderPlotFuncAsync]], RenderPlot]
-]:
+) -> RenderPlot | Callable[[RenderPlotFunc | RenderPlotFuncAsync], RenderPlot]:
     """
     Reactively render a plot object as an HTML image.
 
@@ -364,7 +361,7 @@ def plot(
     ~shiny.render.image
     """
 
-    def wrapper(fn: Union[RenderPlotFunc, RenderPlotFuncAsync]) -> RenderPlot:
+    def wrapper(fn: RenderPlotFunc | RenderPlotFuncAsync) -> RenderPlot:
         if _utils.is_async_callable(fn):
             return RenderPlotAsync(fn, alt=alt, **kwargs)
         else:
@@ -379,11 +376,11 @@ def plot(
 # ======================================================================================
 # RenderImage
 # ======================================================================================
-RenderImageFunc = Callable[[], Union[ImgData, None]]
-RenderImageFuncAsync = Callable[[], Awaitable[Union[ImgData, None]]]
+RenderImageFunc = Callable[[], "ImgData | None"]
+RenderImageFuncAsync = Callable[[], Awaitable["ImgData | None"]]
 
 
-class RenderImage(RenderFunction[Union[ImgData, None], Union[ImgData, None]]):
+class RenderImage(RenderFunction["ImgData | None", "ImgData | None"]):
     def __init__(
         self,
         fn: RenderImageFunc,
@@ -397,11 +394,11 @@ class RenderImage(RenderFunction[Union[ImgData, None], Union[ImgData, None]]):
         # passed an async function, it will not change it.
         self._fn: RenderImageFuncAsync = _utils.wrap_async(fn)
 
-    def __call__(self) -> Union[ImgData, None]:
+    def __call__(self) -> ImgData | None:
         return _utils.run_coro_sync(self._run())
 
-    async def _run(self) -> Union[ImgData, None]:
-        res: Union[ImgData, None] = await self._fn()
+    async def _run(self) -> ImgData | None:
+        res: ImgData | None = await self._fn()
         if res is None:
             return None
 
@@ -419,19 +416,21 @@ class RenderImage(RenderFunction[Union[ImgData, None], Union[ImgData, None]]):
 
 
 class RenderImageAsync(
-    RenderImage, RenderFunctionAsync[Union[ImgData, None], Union[ImgData, None]]
+    RenderImage, RenderFunctionAsync["ImgData | None", "ImgData | None"]
 ):
     def __init__(self, fn: RenderImageFuncAsync, delete_file: bool = False) -> None:
         if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderImageFunc, fn), delete_file=delete_file)
 
-    async def __call__(self) -> Union[ImgData, None]:  # type: ignore
+    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+    ) -> ImgData | None:
         return await self._run()
 
 
 @overload
-def image(fn: Union[RenderImageFunc, RenderImageFuncAsync]) -> RenderImage:
+def image(fn: RenderImageFunc | RenderImageFuncAsync) -> RenderImage:
     ...
 
 
@@ -439,17 +438,15 @@ def image(fn: Union[RenderImageFunc, RenderImageFuncAsync]) -> RenderImage:
 def image(
     *,
     delete_file: bool = False,
-) -> Callable[[Union[RenderImageFunc, RenderImageFuncAsync]], RenderImage]:
+) -> Callable[[RenderImageFunc | RenderImageFuncAsync], RenderImage]:
     ...
 
 
 def image(
-    fn: Optional[Union[RenderImageFunc, RenderImageFuncAsync]] = None,
+    fn: Optional[RenderImageFunc | RenderImageFuncAsync] = None,
     *,
     delete_file: bool = False,
-) -> Union[
-    RenderImage, Callable[[Union[RenderImageFunc, RenderImageFuncAsync]], RenderImage]
-]:
+) -> RenderImage | Callable[[RenderImageFunc | RenderImageFuncAsync], RenderImage]:
     """
     Reactively render a image file as an HTML image.
 
@@ -476,7 +473,7 @@ def image(
     ~shiny.render.plot
     """
 
-    def wrapper(fn: Union[RenderImageFunc, RenderImageFuncAsync]) -> RenderImage:
+    def wrapper(fn: RenderImageFunc | RenderImageFuncAsync) -> RenderImage:
         if _utils.is_async_callable(fn):
             return RenderImageAsync(fn, delete_file=delete_file)
         else:
@@ -507,7 +504,7 @@ class PandasCompatible(Protocol):
         ...
 
 
-class RenderTable(RenderFunction[object, Union["RenderedDeps", None]]):
+class RenderTable(RenderFunction[object, "RenderedDeps | None"]):
     def __init__(
         self,
         fn: RenderTableFunc,
@@ -527,10 +524,10 @@ class RenderTable(RenderFunction[object, Union["RenderedDeps", None]]):
         # passed an async function, it will not change it.
         self._fn: RenderTableFuncAsync = _utils.wrap_async(fn)
 
-    def __call__(self) -> Union[RenderedDeps, None]:
+    def __call__(self) -> RenderedDeps | None:
         return _utils.run_coro_sync(self._run())
 
-    async def _run(self) -> Union[RenderedDeps, None]:
+    async def _run(self) -> RenderedDeps | None:
         x = await self._fn()
 
         if x is None:
@@ -564,7 +561,7 @@ class RenderTable(RenderFunction[object, Union["RenderedDeps", None]]):
         return {"deps": [], "html": html}
 
 
-class RenderTableAsync(RenderTable, RenderFunctionAsync[object, Union[ImgData, None]]):
+class RenderTableAsync(RenderTable, RenderFunctionAsync[object, "ImgData | None"]):
     def __init__(
         self,
         fn: RenderTableFuncAsync,
@@ -584,12 +581,14 @@ class RenderTableAsync(RenderTable, RenderFunctionAsync[object, Union[ImgData, N
             **kwargs,
         )
 
-    async def __call__(self) -> Union[RenderedDeps, None]:  # type: ignore
+    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+    ) -> RenderedDeps | None:
         return await self._run()
 
 
 @overload
-def table(fn: Union[RenderTableFunc, RenderTableFuncAsync]) -> RenderTable:
+def table(fn: RenderTableFunc | RenderTableFuncAsync) -> RenderTable:
     ...
 
 
@@ -600,21 +599,19 @@ def table(
     classes: str = "table shiny-table w-auto",
     border: int = 0,
     **kwargs: Any,
-) -> Callable[[Union[RenderTableFunc, RenderTableFuncAsync]], RenderTable]:
+) -> Callable[[RenderTableFunc | RenderTableFuncAsync], RenderTable]:
     ...
 
 
 # TODO: Use more specific types for render.table
 def table(
-    fn: Optional[Union[RenderTableFunc, RenderTableFuncAsync]] = None,
+    fn: Optional[RenderTableFunc | RenderTableFuncAsync] = None,
     *,
     index: bool = False,
     classes: str = "table shiny-table w-auto",
     border: int = 0,
     **kwargs: Any,
-) -> Union[
-    RenderTable, Callable[[Union[RenderTableFunc, RenderTableFuncAsync]], RenderTable]
-]:
+) -> RenderTable | Callable[[RenderTableFunc | RenderTableFuncAsync], RenderTable]:
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
 
@@ -654,7 +651,7 @@ def table(
     ~shiny.ui.output_table
     """
 
-    def wrapper(fn: Union[RenderTableFunc, RenderTableFuncAsync]) -> RenderTable:
+    def wrapper(fn: RenderTableFunc | RenderTableFuncAsync) -> RenderTable:
         if _utils.is_async_callable(fn):
             return RenderTableAsync(
                 fn, index=index, classes=classes, border=border, **kwargs
@@ -677,7 +674,7 @@ RenderUIFunc = Callable[[], TagChildArg]
 RenderUIFuncAsync = Callable[[], Awaitable[TagChildArg]]
 
 
-class RenderUI(RenderFunction[TagChildArg, Union["RenderedDeps", None]]):
+class RenderUI(RenderFunction[TagChildArg, "RenderedDeps | None"]):
     def __init__(self, fn: RenderUIFunc) -> None:
         super().__init__(fn)
         # The Render*Async subclass will pass in an async function, but it tells the
@@ -685,10 +682,10 @@ class RenderUI(RenderFunction[TagChildArg, Union["RenderedDeps", None]]):
         # passed an async function, it will not change it.
         self._fn: RenderUIFuncAsync = _utils.wrap_async(fn)
 
-    def __call__(self) -> Union[RenderedDeps, None]:
+    def __call__(self) -> RenderedDeps | None:
         return _utils.run_coro_sync(self._run())
 
-    async def _run(self) -> Union[RenderedDeps, None]:
+    async def _run(self) -> RenderedDeps | None:
         ui: TagChildArg = await self._fn()
         if ui is None:
             return None
@@ -696,31 +693,31 @@ class RenderUI(RenderFunction[TagChildArg, Union["RenderedDeps", None]]):
         return self._session._process_ui(ui)
 
 
-class RenderUIAsync(
-    RenderUI, RenderFunctionAsync[TagChildArg, Union["RenderedDeps", None]]
-):
+class RenderUIAsync(RenderUI, RenderFunctionAsync[TagChildArg, "RenderedDeps| None"]):
     def __init__(self, fn: RenderUIFuncAsync) -> None:
         if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(typing.cast(RenderUIFunc, fn))
 
-    async def __call__(self) -> Union[RenderedDeps, None]:  # type: ignore
+    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+    ) -> RenderedDeps | None:
         return await self._run()
 
 
 @overload
-def ui(fn: Union[RenderUIFunc, RenderUIFuncAsync]) -> RenderUI:
+def ui(fn: RenderUIFunc | RenderUIFuncAsync) -> RenderUI:
     ...
 
 
 @overload
-def ui() -> Callable[[Union[RenderUIFunc, RenderUIFuncAsync]], RenderUI]:
+def ui() -> Callable[[RenderUIFunc | RenderUIFuncAsync], RenderUI]:
     ...
 
 
 def ui(
-    fn: Optional[Union[RenderUIFunc, RenderUIFuncAsync]] = None
-) -> Union[RenderUI, Callable[[Union[RenderUIFunc, RenderUIFuncAsync]], RenderUI]]:
+    fn: Optional[RenderUIFunc | RenderUIFuncAsync] = None,
+) -> RenderUI | Callable[[RenderUIFunc | RenderUIFuncAsync], RenderUI]:
     """
     Reactively render HTML content.
 
@@ -741,7 +738,7 @@ def ui(
     """
 
     def wrapper(
-        fn: Union[Callable[[], TagChildArg], Callable[[], Awaitable[TagChildArg]]]
+        fn: Callable[[], TagChildArg] | Callable[[], Awaitable[TagChildArg]]
     ) -> RenderUI:
         if _utils.is_async_callable(fn):
             return RenderUIAsync(fn)

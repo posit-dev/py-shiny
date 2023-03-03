@@ -3,16 +3,7 @@ from __future__ import annotations
 import functools
 import os
 from operator import eq
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Optional,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, TypeVar, cast
 
 from .. import _utils, reactive
 from .._docstring import add_example
@@ -28,12 +19,12 @@ T = TypeVar("T")
 
 @add_example()
 def poll(
-    poll_func: Union[Callable[[], Any], Callable[[], Awaitable[Any]]],
+    poll_func: Callable[[], Any] | Callable[[], Awaitable[Any]],
     interval_secs: float = 1,
     *,
     equals: Callable[[Any, Any], bool] = eq,
     priority: int = 0,
-    session: Union[MISSING_TYPE, "Session", None] = MISSING,
+    session: MISSING_TYPE | Session | None = MISSING,
 ) -> Callable[[Callable[[], T]], Callable[[], T]]:
     """
     Create a reactive polling object.
@@ -211,13 +202,14 @@ def poll(
 
 @add_example()
 def file_reader(
-    filepath: Union[
-        str, os.PathLike[str], Callable[[], str], Callable[[], os.PathLike[str]]
-    ],
+    filepath: str
+    | os.PathLike[str]
+    | Callable[[], str]
+    | Callable[[], os.PathLike[str]],
     interval_secs: float = 1,
     *,
     priority: int = 1,
-    session: Union[MISSING_TYPE, "Session", None] = MISSING,
+    session: MISSING_TYPE | Session | None = MISSING,
 ) -> Callable[[Callable[[], T]], Callable[[], T]]:
     """
     Create a reactive file reader.

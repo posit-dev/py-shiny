@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import re
 import sys
-from typing import Dict, Union
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -51,10 +52,10 @@ class BrushOpts(TypedDict):
 # is a TypedDict, and that is _not_ a subclass of Dict because it doesn't support some
 # Dict operations, like removing items specified in the TypedDict.
 def format_opt_names(
-    opts: Union[ClickOpts, DblClickOpts, HoverOpts, BrushOpts],
+    opts: ClickOpts | DblClickOpts | HoverOpts | BrushOpts,
     prefix: str,
-) -> Dict[str, str]:
-    new_opts: Dict[str, str] = dict()
+) -> dict[str, str]:
+    new_opts: dict[str, str] = dict()
     for key, value in opts.items():
         new_key = f"data-{prefix}-" + re.sub("([A-Z])", "-\\1", key).lower()
         new_value = str(value)

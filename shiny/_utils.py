@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import functools
@@ -10,18 +12,7 @@ import secrets
 import socketserver
 import sys
 import tempfile
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, Awaitable, Callable, Optional, TypeVar, cast
 
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
@@ -46,7 +37,7 @@ def rand_hex(bytes: int) -> str:
     return format_str.format(secrets.randbits(bytes * 8))
 
 
-def drop_none(x: Dict[str, Any]) -> Dict[str, object]:
+def drop_none(x: dict[str, Any]) -> dict[str, object]:
     return {k: v for k, v in x.items() if v is not None}
 
 
@@ -55,10 +46,10 @@ def drop_none(x: Dict[str, Any]) -> Dict[str, object]:
 # won't work for converting "top-level" lists to tuples
 def lists_to_tuples(x: object) -> object:
     if isinstance(x, dict):
-        x = cast(Dict[str, object], x)
+        x = cast("dict[str, object]", x)
         return {k: lists_to_tuples(v) for k, v in x.items()}
     elif isinstance(x, list):
-        x = cast(List[object], x)
+        x = cast("list[object]", x)
         return tuple(lists_to_tuples(y) for y in x)
     else:
         # TODO: are there other mutable iterators that we want to make read only?
@@ -66,7 +57,7 @@ def lists_to_tuples(x: object) -> object:
 
 
 def guess_mime_type(
-    url: Union[str, "os.PathLike[str]"],
+    url: "str | os.PathLike[str]",
     default: str = "application/octet-stream",
     strict: bool = True,
 ) -> str:
@@ -165,7 +156,7 @@ T = TypeVar("T")
 
 
 def wrap_async(
-    fn: Union[Callable[[], Awaitable[T]], Callable[[], T]]
+    fn: Callable[[], Awaitable[T]] | Callable[[], T]
 ) -> Callable[[], Awaitable[T]]:
     """
     Given a synchronous function that returns T, return an async function that wraps the
@@ -185,7 +176,7 @@ def wrap_async(
 
 
 def is_async_callable(
-    obj: Union[Callable[..., T], Callable[..., Awaitable[T]]]
+    obj: Callable[..., T] | Callable[..., Awaitable[T]]
 ) -> TypeGuard[Callable[..., Awaitable[T]]]:
     """
     Returns True if `obj` is an `async def` function, or if it's an object with a
@@ -310,7 +301,7 @@ def run_coro_hybrid(coro: Awaitable[T]) -> "asyncio.Future[T]":
 # ==============================================================================
 class Callbacks:
     def __init__(self) -> None:
-        self._callbacks: dict[int, Tuple[Callable[[], None], bool]] = {}
+        self._callbacks: dict[int, tuple[Callable[[], None], bool]] = {}
         self._id: int = 0
 
     def register(
@@ -345,7 +336,7 @@ class Callbacks:
 
 class AsyncCallbacks:
     def __init__(self) -> None:
-        self._callbacks: dict[int, Tuple[Callable[[], Awaitable[None]], bool]] = {}
+        self._callbacks: dict[int, tuple[Callable[[], Awaitable[None]], bool]] = {}
         self._id: int = 0
 
     def register(

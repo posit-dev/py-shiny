@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import logging
 import os
 import re
 import typing
 from ipaddress import ip_address
 from subprocess import run
-from typing import Dict, Pattern
+from typing import Pattern
 from urllib.parse import urlparse
 
 
@@ -16,7 +18,7 @@ def is_proxy_env() -> bool:
     return is_workbench()
 
 
-port_cache: Dict[int, str] = {}
+port_cache: dict[int, str] = {}
 
 
 def get_proxy_url(url: str) -> str:

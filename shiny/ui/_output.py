@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "output_plot",
     "output_image",
@@ -7,7 +9,7 @@ __all__ = (
     "output_ui",
 )
 
-from typing import Dict, Optional, Union
+from typing import Optional
 
 from htmltools import Tag, TagAttrArg, TagFunction, css, div, tags
 
@@ -33,10 +35,10 @@ def output_plot(
     height: str = "400px",
     *,
     inline: bool = False,
-    click: Union[bool, ClickOpts] = False,
-    dblclick: Union[bool, DblClickOpts] = False,
-    hover: Union[bool, HoverOpts] = False,
-    brush: Union[bool, BrushOpts] = False,
+    click: bool | ClickOpts = False,
+    dblclick: bool | DblClickOpts = False,
+    hover: bool | HoverOpts = False,
+    brush: bool | BrushOpts = False,
 ) -> Tag:
     """
     Create a output container for a static plot.
@@ -113,10 +115,10 @@ def output_image(
     height: str = "400px",
     *,
     inline: bool = False,
-    click: Union[bool, ClickOpts] = False,
-    dblclick: Union[bool, DblClickOpts] = False,
-    hover: Union[bool, HoverOpts] = False,
-    brush: Union[bool, BrushOpts] = False,
+    click: bool | ClickOpts = False,
+    dblclick: bool | DblClickOpts = False,
+    hover: bool | HoverOpts = False,
+    brush: bool | BrushOpts = False,
 ) -> Tag:
     """
     Create a output container for a static image.
@@ -173,7 +175,7 @@ def output_image(
     func = tags.span if inline else div
     style = None if inline else css(width=width, height=height)
 
-    args: Dict[str, str] = dict()
+    args: dict[str, str] = dict()
 
     id_resolved = resolve_id(id)
 

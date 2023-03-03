@@ -1,5 +1,7 @@
 """Reactive components"""
 
+from __future__ import annotations
+
 __all__ = ("Value", "Calc", "Calc_", "CalcAsync_", "Effect", "Effect_", "event")
 
 import functools
@@ -10,10 +12,8 @@ from typing import (
     Awaitable,
     Callable,
     Generic,
-    List,
     Optional,
     TypeVar,
-    Union,
     cast,
     overload,
 )
@@ -89,9 +89,9 @@ class Value(Generic[T]):
     # If `value` is MISSING, then `get()` will raise a SilentException, until a new
     # value is set. Calling `unset()` will set the value to MISSING.
     def __init__(
-        self, value: Union[T, MISSING_TYPE] = MISSING, *, read_only: bool = False
+        self, value: T | MISSING_TYPE = MISSING, *, read_only: bool = False
     ) -> None:
-        self._value: Union[T, MISSING_TYPE] = value
+        self._value: T | MISSING_TYPE = value
         self._read_only: bool = read_only
         self._value_dependents: Dependents = Dependents()
         self._is_set_dependents: Dependents = Dependents()
@@ -213,7 +213,7 @@ class Calc_(Generic[T]):
         self,
         fn: CalcFunction[T],
         *,
-        session: Union[MISSING_TYPE, "Session", None] = MISSING,
+        session: "MISSING_TYPE | Session | None" = MISSING,
     ) -> None:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
@@ -318,7 +318,7 @@ class CalcAsync_(Calc_[T]):
         self,
         fn: CalcFunctionAsync[T],
         *,
-        session: Union[MISSING_TYPE, "Session", None] = MISSING,
+        session: "MISSING_TYPE | Session | None" = MISSING,
     ) -> None:
         if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
@@ -361,17 +361,17 @@ def Calc(fn: CalcFunction[T]) -> Calc_[T]:
 # works out.
 @overload
 def Calc(
-    *, session: Union[MISSING_TYPE, "Session", None] = MISSING
+    *, session: "MISSING_TYPE | Session | None" = MISSING
 ) -> Callable[[CalcFunction[T]], Calc_[T]]:
     ...
 
 
 @add_example()
 def Calc(
-    fn: Optional[Union[CalcFunction[T], CalcFunctionAsync[T]]] = None,
+    fn: Optional[CalcFunction[T] | CalcFunctionAsync[T]] = None,
     *,
-    session: Union[MISSING_TYPE, "Session", None] = MISSING,
-) -> Union[Calc_[T], Callable[[CalcFunction[T]], Calc_[T]]]:
+    session: "MISSING_TYPE | Session | None" = MISSING,
+) -> Calc_[T] | Callable[[CalcFunction[T]], Calc_[T]]:
     """
     Mark a function as a reactive calculation.
 
@@ -407,7 +407,7 @@ def Calc(
     ~shiny.event
     """
 
-    def create_calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc_[T]:
+    def create_calc(fn: CalcFunction[T] | CalcFunctionAsync[T]) -> Calc_[T]:
         if _utils.is_async_callable(fn):
             return CalcAsync_(fn, session=session)
         else:
@@ -440,11 +440,11 @@ class Effect_:
 
     def __init__(
         self,
-        fn: Union[EffectFunction, EffectFunctionAsync],
+        fn: EffectFunction | EffectFunctionAsync,
         *,
         suspended: bool = False,
         priority: int = 0,
-        session: Union[MISSING_TYPE, "Session", None] = MISSING,
+        session: "MISSING_TYPE | Session | None" = MISSING,
     ) -> None:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
@@ -616,7 +616,7 @@ class Effect_:
 
 
 @overload
-def Effect(fn: Union[EffectFunction, EffectFunctionAsync]) -> Effect_:
+def Effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_:
     ...
 
 
@@ -625,19 +625,19 @@ def Effect(
     *,
     suspended: bool = False,
     priority: int = 0,
-    session: Union[MISSING_TYPE, "Session", None] = MISSING,
-) -> Callable[[Union[EffectFunction, EffectFunctionAsync]], Effect_]:
+    session: "MISSING_TYPE | Session | None" = MISSING,
+) -> Callable[[EffectFunction | EffectFunctionAsync], Effect_]:
     ...
 
 
 @add_example()
 def Effect(
-    fn: Optional[Union[EffectFunction, EffectFunctionAsync]] = None,
+    fn: Optional[EffectFunction | EffectFunctionAsync] = None,
     *,
     suspended: bool = False,
     priority: int = 0,
-    session: Union[MISSING_TYPE, "Session", None] = MISSING,
-) -> Union[Effect_, Callable[[Union[EffectFunction, EffectFunctionAsync]], Effect_]]:
+    session: "MISSING_TYPE | Session | None" = MISSING,
+) -> Effect_ | Callable[[EffectFunction | EffectFunctionAsync], Effect_]:
     """
     Mark a function as a reactive side effect.
 
@@ -680,7 +680,7 @@ def Effect(
     ~shiny.event
     """
 
-    def create_effect(fn: Union[EffectFunction, EffectFunctionAsync]) -> Effect_:
+    def create_effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_:
         fn = cast(EffectFunction, fn)
         return Effect_(fn, suspended=suspended, priority=priority, session=session)
 
@@ -695,7 +695,7 @@ def Effect(
 # ==============================================================================
 @add_example()
 def event(
-    *args: Union[Callable[[], object], Callable[[], Awaitable[object]]],
+    *args: Callable[[], object] | Callable[[], Awaitable[object]],
     ignore_none: bool = True,
     ignore_init: bool = False,
 ) -> Callable[[Callable[[], T]], Callable[[], T]]:
@@ -775,7 +775,7 @@ def event(
         initialized = False
 
         async def trigger() -> None:
-            vals: List[object] = []
+            vals: list[object] = []
             for arg in args:
                 if is_async_callable(arg):
                     v = await arg()

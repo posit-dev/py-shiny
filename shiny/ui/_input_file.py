@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 __all__ = ("input_file",)
 
 import sys
-from typing import List, Optional, Union
+from typing import Optional
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -21,7 +23,7 @@ def input_file(
     label: TagChildArg,
     *,
     multiple: bool = False,
-    accept: Optional[Union[str, List[str]]] = None,
+    accept: Optional[str | list[str]] = None,
     width: Optional[str] = None,
     button_label: str = "Browse...",
     placeholder: str = "No file selected",

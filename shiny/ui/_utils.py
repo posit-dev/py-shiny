@@ -1,4 +1,6 @@
-from typing import Optional, Union
+from __future__ import annotations
+
+from typing import Optional
 
 from htmltools import (
     HTMLDependency,
@@ -19,8 +21,8 @@ def shiny_input_label(id: str, label: TagChildArg = None) -> Tag:
 
 
 def get_window_title(
-    title: Optional[Union[str, Tag, TagList]],
-    window_title: Union[str, MISSING_TYPE] = MISSING,
+    title: Optional[str | Tag | TagList],
+    window_title: str | MISSING_TYPE = MISSING,
 ) -> Optional[HTMLDependency]:
     if title is not None and isinstance(window_title, MISSING_TYPE):
         window_title = _find_child_strings(title)
@@ -31,7 +33,7 @@ def get_window_title(
         return head_content(tags.title(window_title))
 
 
-def _find_child_strings(x: Union[Tag, TagList, TagChild]) -> str:
+def _find_child_strings(x: Tag | TagList | TagChild) -> str:
     if isinstance(x, Tag) and x.name not in ("script", "style"):
         x = x.children
     if isinstance(x, TagList):
