@@ -921,12 +921,13 @@ class _MultipleDomItems:
         _MultipleDomItems.assert_arr_is_unique(arr, f"`{arr_name}` must be unique")
         is_checked_str = _MultipleDomItems.checked_css_str(is_checked)
 
-        # If there are no items, then we should not have any elements
+        # If there are no items, then the container needs to exist.
+        # All containers contain 0 items.
         if len(arr) == 0:
-            playwright_expect(
-                loc_container.locator(f"{el_type}{is_checked_str}")
-            ).to_have_count(0, timeout=timeout)
+            playwright_expect(loc_container).to_have_count(1, timeout=timeout)
             return
+
+        loc_container_orig = loc_container
 
         # Find all items in set
         for item in arr:
@@ -942,8 +943,25 @@ class _MultipleDomItems:
 
         # If we are only looking to see if *some* (not *these only*) elements exist,
         # then we only need to check if the container locator (which must contain the elements) can be found
-        # TODO-barret; debug expectations
-        playwright_expect(loc_container).to_have_count(1, timeout=timeout)
+        try:
+            playwright_expect(loc_container).to_have_count(1, timeout=timeout)
+        except AssertionError as e:
+            # Debug expections
+
+            # Expecting container to exist (count = 1)
+            playwright_expect(loc_container_orig).to_have_count(1, timeout=timeout)
+
+            for item in arr:
+                # Expecting item `{item}` to exist in container
+                playwright_expect(
+                    # Simple approach as position is not needed
+                    loc_container_orig.locator(
+                        f"{el_type}[{key}='{item}']{is_checked_str}",
+                    )
+                ).to_have_count(1, timeout=timeout)
+
+            # Could not find the reason why. Raising the original error.
+            raise e
 
     @staticmethod
     def expect_locator_values_in_list(
@@ -996,7 +1014,7 @@ class _MultipleDomItems:
         loc_inputs = loc_container.locator(item_selector)
         try:
             playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
-        except AssertionError:
+        except AssertionError as e:
             # Debug expections
 
             # Expecting container to exist (count = 1)
@@ -1012,6 +1030,9 @@ class _MultipleDomItems:
                 playwright_expect(
                     loc_container_orig.locator(item_selector).nth(i)
                 ).to_have_attribute(key, item, timeout=timeout)
+
+            # Could not find the reason why. Raising the original error.
+            raise e
 
 
 class _RadioButtonCheckboxGroupBase(_InputWithLabel):
@@ -1091,8 +1112,8 @@ class InputCheckboxGroup(
         timeout: Timeout = None,
         **kwargs: typing.Any,
     ) -> None:
+        # Having an arr of size 0 is allowed. Will uncheck everything
         typing.assert_type(selected, typing.List[str])
-        assert len(selected) > 0, "Must set at least one item"
 
         # Make sure the selected items exist
         # Similar to `self.expect_choices(choices = selected)`, but with

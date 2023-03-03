@@ -79,7 +79,7 @@ def test_input_checkbox_group_kitchen(page: Page, local_app: ShinyAppProc) -> No
     assert_selected("b", "f", ["red", "blue"], ["orange", "teal"])
 
 
-def test_selector_assertions(page: Page, local_app: ShinyAppProc) -> None:
+def test_locator_debugging(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
     # Fail quickly
     timeout = 100
@@ -114,3 +114,41 @@ def test_selector_assertions(page: Page, local_app: ShinyAppProc) -> None:
     except AssertionError as e:
         assert "attribute 'test_value'" in str(e)
         assert "Actual value: blue" in str(e)
+
+
+def test_locator_existance(page: Page, local_app: ShinyAppProc) -> None:
+    page.goto(local_app.url)
+    # Fail quickly
+    timeout = 100
+
+    # Non-existent div
+    try:
+        not_exist = InputCheckboxGroup(page, "does-not-exist")
+        not_exist.set(["green"], timeout=timeout)
+    except AssertionError as e:
+        assert "expected to have count '1'" in str(e)
+        assert "Actual value: 0" in str(e)
+
+    check1 = InputCheckboxGroup(page, "check1")
+
+    # Make sure it works
+    check1.set([])
+    check1.expect_selected([])
+    check1.set(["green"])
+    check1.expect_selected(["green"])
+
+    # Different value
+    try:
+        check1.set(["test_value"], timeout=timeout)
+    except AssertionError as e:
+        assert "expected to have count '1'" in str(e)
+        assert "Actual value: 0" in str(e)
+
+    # Extra value
+    try:
+        check1.set(["blue", "test_value"], timeout=timeout)
+    except AssertionError as e:
+        assert "expected to have count '1'" in str(e)
+        assert "Actual value: 0" in str(e)
+
+    check1.expect_selected(["green"])
