@@ -98,6 +98,9 @@ def is_missing(x: object) -> typing.TypeGuard[MISSING_TYPE]:
     return isinstance(x, MISSING_TYPE)
 
 
+# TypeGuard does not work for `not isinstance(x, MISSING_TYPE)`
+# See discussion for `StrictTypeGuard`: https://github.com/python/typing/discussions/1013
+# Until then, we need `not_is_missing(x=)` to narrow within an `if` statement
 def not_is_missing(x: typing.Union[R, MISSING_TYPE]) -> typing.TypeGuard[R]:
     return not isinstance(x, MISSING_TYPE)
 
