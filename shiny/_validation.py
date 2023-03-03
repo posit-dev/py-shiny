@@ -9,7 +9,7 @@ T = TypeVar("T")
 @add_example()
 def req(*args: T, cancel_output: bool = False) -> T:
     """
-    Throw a silent exception for falsey values.
+    Throw a silent exception for falsy values.
 
     This is a convenient shorthand for throwing :func:`~shiny.types.SilentException` /
     :func:`~shiny.types.SilentCancelOutputException` if any of the arguments are falsey.
