@@ -129,53 +129,6 @@ def set_text(
     loc.type(text, delay=delay, timeout=timeout)  # Type the value
 
 
-def assert_el_has_class(loc: Locator, cls: str) -> None:
-    el_cls = loc.get_attribute("class")
-    if el_cls is None:
-        raise AssertionError("Element has no class attribute")
-    assert el_cls.index(cls) >= 0
-
-
-# # Pylance could not find the return type of `float_attr = maybe_cast_attr_gen(float)`.
-# # However, vscode could display the return type of `float_attr` correctly.
-# Generic method generator to cast a non-None attribute value to a type
-# def maybe_cast_attr_gen(
-#     fn: typing.Callable[[typing.Any], R]
-# ) -> typing.Callable[[Locator, str, Timeout], typing.Union[R, None]]:
-#     def cast_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> typing.Union[R, None]:
-#         ret = loc.get_attribute(attr_name, timeout=timeout)
-#         if ret is not None:
-#             ret = fn(ret)
-#         return ret
-#     return cast_attr
-# float_attr = maybe_cast_attr_gen(float)
-# str_attr = maybe_cast_attr_gen(str)
-
-
-def maybe_cast_attr(
-    fn: typing.Callable[[typing.Any], R],
-    loc: Locator,
-    attr_name: str,
-    timeout: Timeout = None,
-) -> typing.Optional[R]:
-    ret = loc.get_attribute(attr_name, timeout=timeout)
-    if ret is not None:
-        ret = fn(ret)
-    return ret
-
-
-def float_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> OptionalFloat:
-    return maybe_cast_attr(fn=float, loc=loc, attr_name=attr_name, timeout=timeout)
-
-
-def str_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> OptionalStr:
-    return maybe_cast_attr(fn=str, loc=loc, attr_name=attr_name, timeout=timeout)
-
-
-def int_attr(loc: Locator, attr_name: str, timeout: Timeout = None) -> OptionalInt:
-    return maybe_cast_attr(fn=int, loc=loc, attr_name=attr_name, timeout=timeout)
-
-
 def expect_attr(
     loc: Locator,
     name: str,
@@ -201,24 +154,40 @@ def expect_class_value(
     timeout: Timeout = None,
 ) -> None:
     """Expect a locator to have (or not to have) a class value"""
-    cls_regex = re.compile(rf"\b{cls}\b")
+    cls_regex = re.compile(rf"\b{re.escape(cls)}\b")
     if has_class:
         playwright_expect(loc).to_have_class(cls_regex, timeout=timeout)
     else:
         playwright_expect(loc).not_to_have_class(cls_regex, timeout=timeout)
 
 
-def get_el_style(
-    loc: Locator,
-    css_key: str,
-    timeout: Timeout = None,
-) -> OptionalStr:
-    ret = loc.get_attribute("style", timeout=timeout) or ""
-    m = re.search(css_key + r":\s*([^\s;]+)", ret)
-    if m:
-        # Return match
-        return m.group(1)
-    return None
+def style_pattern(key: str, value: PatternOrStr) -> typing.Pattern[str]:
+    if isinstance(value, str):
+        value_str = re.escape(value)
+    else:
+        value_str = value.pattern
+    return re.compile(rf"(^|\b){re.escape(key)}\s*:\s*\b{value_str}(\b|;|$)")
+
+
+def attr_match_str(key: str, value: PatternOrStr) -> str:
+    if isinstance(value, str):
+        # `key` is `value`
+        return f'{key}="{re.escape(value)}"'
+    else:
+        typing.assert_type(value, re.Pattern[str])
+        # `key` contains `value`
+        return f"{key}={value.pattern}"
+
+
+def xpath_match_str(key: str, value: PatternOrStr) -> str:
+    if isinstance(value, str):
+        # `key` is `value`
+        value_str = value.replace('"', '\\"')
+        return f'@{key}="{value_str}"'
+    else:
+        typing.assert_type(value, re.Pattern[str])
+        # `key` contains `value`
+        return f'matches(@{key}, "{value.pattern}")'
 
 
 def expect_el_style(
@@ -232,26 +201,22 @@ def expect_el_style(
     if css_value is None:
         # Not allowed to have any value for the style
         playwright_expect(loc).not_to_have_attribute(
-            "style", re.compile(f"{css_key}\\s*:"), timeout=timeout
+            "style",
+            re.compile(rf"\b{re.escape(css_key)}\s*:"),
+            timeout=timeout,
         )
         return
 
-    if isinstance(css_value, str):
-        css_value = re.compile(css_value)
-
     playwright_expect(loc).to_have_attribute(
-        "style", re.compile(f"{css_key}\\s*:\\s*{css_value.pattern}"), timeout=timeout
+        "style",
+        style_pattern(css_key, css_value),
+        timeout=timeout,
     )
 
 
 def expect_multiple(loc: Locator, multiple: bool, timeout: Timeout = None) -> None:
-    ex_multiple = playwright_expect(loc)
-    if multiple:
-        ex_multiple.to_have_attribute("multiple", "True", timeout=timeout)
-    else:
-        ex_multiple.not_to_have_attribute(
-            "multiple", re.compile(r".*"), timeout=timeout
-        )
+    value = "True" if multiple else None
+    expect_el_style(loc, "multiple", value, timeout=timeout)
 
 
 ######################################################
@@ -525,9 +490,6 @@ class InputPassword(
             loc=f"input#{id}[type=password].shiny-bound-input",
         )
 
-    def get_width(self, *, timeout: Timeout = None) -> OptionalStr:
-        return get_el_style(self.loc_container, "width", timeout=timeout)
-
     # This class does not inherit from `_WidthContainerM`
     # as the width is in the element style
     def expect_width_to_have_value(
@@ -642,7 +604,7 @@ class _InputSelectBase(
     def expect_choices(
         self,
         # TODO-future; support patterns?
-        choices: typing.List[str],
+        choices: typing.List[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -691,7 +653,7 @@ class _InputSelectBase(
     def expect_choice_groups(
         self,
         # TODO-future; support patterns?
-        choice_groups: typing.List[str],
+        choice_groups: typing.List[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -887,7 +849,7 @@ class InputSwitch(InputCheckboxBase):
 
 class _MultipleDomItems:
     @staticmethod
-    def assert_arr_is_unique(arr: typing.List[str], msg: str) -> None:
+    def assert_arr_is_unique(arr: typing.List[PatternOrStr], msg: str) -> None:
         assert len(arr) == len(list(dict.fromkeys(arr))), msg
 
     @staticmethod
@@ -909,8 +871,7 @@ class _MultipleDomItems:
         loc_container: Locator,
         el_type: str,
         arr_name: str,
-        # TODO-future; support patterns?
-        arr: typing.List[str],
+        arr: typing.List[PatternOrStr],
         is_checked: typing.Union[bool, MISSING_TYPE] = MISSING,
         timeout: Timeout = None,
         key: str = "value",
@@ -937,7 +898,7 @@ class _MultipleDomItems:
                 "xpath=.",
                 # Simple approach as position is not needed
                 has=page.locator(
-                    f"{el_type}[{key}='{item}']{is_checked_str}",
+                    f"{el_type}[{attr_match_str(key, item)}]{is_checked_str}",
                 ),
             )
 
@@ -953,12 +914,13 @@ class _MultipleDomItems:
 
             for item in arr:
                 # Expecting item `{item}` to exist in container
+                # Allow for greater than 1 match
                 playwright_expect(
                     # Simple approach as position is not needed
                     loc_container_orig.locator(
-                        f"{el_type}[{key}='{item}']{is_checked_str}",
+                        f"{el_type}[{attr_match_str(key, item)}]{is_checked_str}",
                     )
-                ).to_have_count(1, timeout=timeout)
+                ).not_to_have_count(0, timeout=timeout)
 
             # Could not find the reason why. Raising the original error.
             raise e
@@ -970,8 +932,7 @@ class _MultipleDomItems:
         loc_container: Locator,
         el_type: str,
         arr_name: str,
-        # TODO-future; support patterns?
-        arr: typing.List[str],
+        arr: typing.List[PatternOrStr],
         is_checked: typing.Union[bool, MISSING_TYPE] = MISSING,
         timeout: Timeout = None,
         key: str = "value",
@@ -999,7 +960,9 @@ class _MultipleDomItems:
             # Get the `n`th matching element
             has_locator = has_locator.nth(i)
             # Make sure that element has the correct attribute value
-            has_locator = has_locator.locator(f'xpath=self::*[@{key}="{item}"]')
+            has_locator = has_locator.locator(
+                f"xpath=self::*[{xpath_match_str(key, item)}]"
+            )
 
             # Given the container, make sure it contains this locator
             loc_container = loc_container.locator(
@@ -1106,14 +1069,13 @@ class InputCheckboxGroup(
 
     def set(
         self,
-        # TODO-future; support patterns?
-        selected: typing.List[str],
+        selected: typing.List[PatternOrStr],
         *,
         timeout: Timeout = None,
         **kwargs: typing.Any,
     ) -> None:
         # Having an arr of size 0 is allowed. Will uncheck everything
-        typing.assert_type(selected, typing.List[str])
+        typing.assert_type(selected, typing.List[PatternOrStr])
 
         # Make sure the selected items exist
         # Similar to `self.expect_choices(choices = selected)`, but with
@@ -1127,17 +1089,26 @@ class InputCheckboxGroup(
             timeout=timeout,
         )
 
+        def in_selected(value: str) -> bool:
+            for item in selected:
+                if isinstance(item, str):
+                    if item == value:
+                        return True
+                elif isinstance(item, typing.Pattern):
+                    if item.search(value):
+                        return True
+            return False
+
         # Could do with multiple locator calls,
         # but unchecking the elements that are not in `selected` is not possible
         # as `set_checked()` likes a single element.
         for checkbox in self.loc_choices.element_handles():
-            checkbox_value = checkbox.input_value(timeout=timeout)
-            checkbox.set_checked(checkbox_value in selected, timeout=timeout, **kwargs)
+            is_selected = in_selected(checkbox.input_value(timeout=timeout))
+            checkbox.set_checked(is_selected, timeout=timeout, **kwargs)
 
     def expect_choices(
         self,
-        # TODO-future; support patterns?
-        choices: typing.List[str],
+        choices: typing.List[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1152,8 +1123,7 @@ class InputCheckboxGroup(
 
     def expect_selected(
         self,
-        # TODO-future; support patterns?
-        selected: typing.List[str],
+        selected: typing.List[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1226,13 +1196,12 @@ class InputRadioButtons(
         # Only need to set.
         # The Browser will _unset_ the previously selected radio button
         self.loc_container.locator(
-            f"label input[type=radio][value='{selected}']"
+            f"label input[type=radio][value='{re.escape(selected)}']"
         ).check(timeout=timeout)
 
     def expect_choices(
         self,
-        # TODO-future; support patterns?
-        choices: typing.List[str],
+        choices: typing.List[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2317,6 +2286,8 @@ class OutputTable(_OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
+        typing.assert_type(row, int)
+        typing.assert_type(col, int)
         playwright_expect(
             self.loc.locator(
                 f"xpath=./table/tbody/tr[{row}]/td[{col}] | ./table/tbody/tr[{row}]/th[{col}]"
@@ -2343,14 +2314,15 @@ class OutputTable(_OutputBase):
 
     def expect_column_text(
         self,
-        column: int,
+        col: int,
         # Can't use `None` as we don't know how many rows exist
         text: typing.List[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
+        typing.assert_type(col, int)
         playwright_expect(
-            self.loc.locator(f"xpath=./table/tbody/tr/td[{column}]")
+            self.loc.locator(f"xpath=./table/tbody/tr/td[{col}]")
         ).to_have_text(
             text,
             timeout=timeout,
