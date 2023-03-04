@@ -1,4 +1,6 @@
-from typing import TypeVar, cast
+from __future__ import annotations
+
+from typing import TypeVar, overload
 
 from ._docstring import add_example
 from .types import SilentCancelOutputException, SilentException
@@ -6,8 +8,18 @@ from .types import SilentCancelOutputException, SilentException
 T = TypeVar("T")
 
 
-@add_example()
+@overload
+def req(*, cancel_output: bool = False) -> None:
+    ...
+
+
+@overload
 def req(*args: T, cancel_output: bool = False) -> T:
+    ...
+
+
+@add_example()
+def req(*args: T, cancel_output: bool = False) -> T | None:
     """
     Throw a silent exception for falsy values.
 
@@ -26,6 +38,9 @@ def req(*args: T, cancel_output: bool = False) -> T:
     -------
         The first argument.
     """
+    if len(args) == 0:
+        return None
+
     for arg in args:
         if not arg:
             if cancel_output:
@@ -33,4 +48,4 @@ def req(*args: T, cancel_output: bool = False) -> T:
             else:
                 raise SilentException()
 
-    return cast(T, None) if len(args) == 0 else args[0]
+    return args[0]
