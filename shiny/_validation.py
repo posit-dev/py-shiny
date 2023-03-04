@@ -24,7 +24,7 @@ def req(*args: T, cancel_output: bool = False) -> T | None:
     Throw a silent exception for falsy values.
 
     This is a convenient shorthand for throwing :func:`~shiny.types.SilentException` /
-    :func:`~shiny.types.SilentCancelOutputException` if any of the arguments are falsey.
+    :func:`~shiny.types.SilentCancelOutputException` if any of the arguments are falsy.
 
     Parameters
     ----------
@@ -36,7 +36,7 @@ def req(*args: T, cancel_output: bool = False) -> T | None:
 
     Returns
     -------
-        The first argument.
+        The first argument. If no arguments are provided, returns ``None``.
     """
     if len(args) == 0:
         return None
