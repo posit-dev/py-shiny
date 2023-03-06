@@ -19,7 +19,7 @@ from ._utils import shiny_input_label
 def input_text(
     id: str,
     label: TagChildArg,
-    value: Union[str, None] = "",
+    value: str = "",
     *,
     width: Optional[str] = None,
     placeholder: Optional[str] = None,
@@ -87,7 +87,7 @@ def input_text(
 def input_text_area(
     id: str,
     label: TagChildArg,
-    value: Union[str, None] = "",
+    value: str = "",
     *,
     width: Optional[str] = None,
     height: Optional[str] = None,
