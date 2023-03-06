@@ -1,10 +1,12 @@
-from conftest import ShinyAppProc
-from playground import InputSwitch
+from conftest import ShinyAppProc, create_doc_example_fixture
+from playground import InputSwitch, OutputText
 from playwright.sync_api import Page, expect
 
+app = create_doc_example_fixture("input_switch")
 
-def test_input_switch_kitchen(page: Page, local_app: ShinyAppProc) -> None:
-    page.goto(local_app.url)
+
+def test_input_switch_kitchen(page: Page, app: ShinyAppProc) -> None:
+    page.goto(app.url)
 
     somevalue = InputSwitch(page, "somevalue")
     somevalue.expect_label_to_have_text
@@ -15,7 +17,7 @@ def test_input_switch_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     somevalue.expect_to_be_checked(False)
     somevalue.expect_width_to_have_value(None)
 
-    # TODO-barret test output value
+    OutputText(page, "value").expect_value("")
 
     somevalue.set(True)
 
@@ -27,4 +29,4 @@ def test_input_switch_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     somevalue.toggle()
     somevalue.expect_to_be_checked(True)
 
-    # TODO-barret test output value
+    OutputText(page, "value").expect_value("Some value: ")
