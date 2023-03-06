@@ -1,7 +1,7 @@
 __all__ = ("input_text", "input_text_area")
 
 import sys
-from typing import Optional, Union
+from typing import Optional
 
 if sys.version_info >= (3, 8):
     from typing import Literal

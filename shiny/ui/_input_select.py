@@ -195,7 +195,7 @@ def input_select(
     )
 
 
-def _normalize_choices(x: Union[SelectChoicesArg, None]) -> _SelectChoices:
+def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
     if x is None:
         raise TypeError("`choices` must be a list, tuple, or dict.")
     elif isinstance(x, (list, tuple)):
@@ -241,7 +241,7 @@ def _render_choices(
 #     "Group A": {},
 #     "Group B": {"Choice B1": "b1", "Choice B2": "b2"},
 # }
-def _find_first_option(x: Union[_SelectChoices, None]) -> Optional[str]:
+def _find_first_option(x: _SelectChoices) -> Optional[str]:
     if x is None:
         return None
 
