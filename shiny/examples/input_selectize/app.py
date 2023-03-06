@@ -9,6 +9,7 @@ app_ui = ui.page_fluid(
             "West Coast": {"WA": "Washington", "OR": "Oregon", "CA": "California"},
             "Midwest": {"MN": "Minnesota", "WI": "Wisconsin", "IA": "Iowa"},
         },
+        multiple=True,
     ),
     ui.output_text("value"),
 )
