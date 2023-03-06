@@ -205,7 +205,7 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
 
 
 def _render_choices(
-    x: _SelectChoices | None, selected: Optional[str | list[str]] = None
+    x: _SelectChoices, selected: Optional[str | list[str]] = None
 ) -> TagList:
     result = TagList()
 
