@@ -4,14 +4,17 @@ import pathlib
 import re
 import sys
 import time
+import typing
 
 if sys.version_info >= (3, 8):
     from typing import Literal, Protocol
 else:
-    from typing_extensions import Literal
-    from typing_extensions import Protocol
+    from typing_extensions import Literal, Protocol
 
-import typing
+if sys.version_info >= (3, 10):
+    from typing import TypeGuard
+else:
+    from typing_extensions import TypeGuard
 
 from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
@@ -94,18 +97,18 @@ M1 = typing.TypeVar("M1")
 M2 = typing.TypeVar("M2")
 
 
-def is_missing(x: object) -> typing.TypeGuard[MISSING_TYPE]:
+def is_missing(x: object) -> TypeGuard[MISSING_TYPE]:
     return isinstance(x, MISSING_TYPE)
 
 
 # TypeGuard does not work for `not isinstance(x, MISSING_TYPE)`
 # See discussion for `StrictTypeGuard`: https://github.com/python/typing/discussions/1013
 # Until then, we need `not_is_missing(x=)` to narrow within an `if` statement
-def not_is_missing(x: typing.Union[R, MISSING_TYPE]) -> typing.TypeGuard[R]:
+def not_is_missing(x: typing.Union[R, MISSING_TYPE]) -> TypeGuard[R]:
     return not isinstance(x, MISSING_TYPE)
 
 
-def all_missing(*args: object) -> typing.TypeGuard[MISSING_TYPE]:
+def all_missing(*args: object) -> TypeGuard[MISSING_TYPE]:
     for arg in args:
         if not_is_missing(arg):
             return False
