@@ -31,41 +31,16 @@ else:
 
 """
 Questions:
+* `_DateBase` is signaled as private, but `InputDateRange` will have two fields of `date_start` and `date_end`. Due to how the init selectors are created, they are not `InputDate` instances. Should we make `_DateBase` public?
+
 * While `expect_*_to_have_value()` matches the setup of `expect(x).to_have_value()`, it is a bit verbose. Should we just use `expect_*()` as we only use it in a single context? (Only adding the suffix if other methods like `to_have_html()` or `to_have_text()` would make sense.)
     * Ans: Try things out
-* `_DateBase` is signaled as private, but `InputDateRange` will have two fields of `date_start` and `date_end`. Due to how the init selectors are created, they are not `InputDate` instances. Should we make `_DateBase` public?
-* Can Date pickers set the `value` attribute on the corresponding input element? If so, we could use `expect_value()` to check the value of the input element.
-* In `test_output_table.py`, why can't I write `barret = ["1", "2"]; table.expect_column_labels(barret)`? (Typing issue)
-* For set methods or expect_value methods, should we not allow `None` as a value? Ex: InputDateRange does not allow this, but InputText does (upgrades `None` to `""`)
-    * Ans w/ Winston: Be strict and do not upgrade unless necessary
 
-* Should we guard against nest shiny input objects? (Should we tighten up the selectors?). CSS selector to only select first occurance: https://stackoverflow.com/a/71749400/591574
-* TODO-barret; Make sure multiple usage of `timeout` has the proper values. Should followup usages be `0` to force it to be immediate? (Is `0` the right value?)
+* TODO-future; Make sure multiple usage of `timeout` has the proper values. Should followup usages be `0` to force it to be immediate? (Is `0` the right value?)
+    * Ans: There was no definition of "now" for a timeout. 0 disables the timeout.
+"""
 
-Done:
-* input_action_button
-* input_action_link
-* input_checkbox
-* input_checkbox_group
-* input_date
-* input_date_range
-* input_file
-* input_numeric
-* input_password
-* input_radio_buttons
-* input_select
-* input_selectize
-* input_slider
-* input_switch
-* input_text
-* input_text_area
-* output_image
-* output_plot
-* output_table
-* output_text
-* output_text_verbatim
-* output_ui
-
+"""
 # Class definitions
 * Fields
   * Try to mirror playwright as much as possible.
@@ -77,8 +52,10 @@ Done:
     * It should not be necessary to use `assert` directly.
     * MUST wait for `Locator`s to do their job
   * DO NOT provide `value` methods
-  * Add _set_ methods only if a user would perform them
+  * Add _set_ methods (or set like methods) only if a user would perform them
+"""
 
+"""
 # Mixins
 * Use mixins to add consistent functionality to different classes
 * These classes should **never** be instantiated directly
@@ -87,6 +64,7 @@ Done:
   * If a method is only used in one class, it should be defined in that class
   * If a method is used inconsistently, make/use a helper method
 """
+
 
 OptionalStr = typing.Optional[str]
 OptionalInt = typing.Optional[int]
