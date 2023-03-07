@@ -197,7 +197,10 @@ def xpath_match_str(key: str, value: PatternOrStr) -> str:
         # `key` is `value`
         return f'@{key}="{value_str}"'
     else:
-        assert_type(value, re.Pattern[str])
+        # Disabling type assertion for earlier versions of Python
+        if sys.version_info >= (3, 9):
+            assert_type(value, re.Pattern[str])
+
         # `key` contains `value`
         return f'matches(@{key}, "{value.pattern}")'
 
