@@ -6,7 +6,7 @@ import json
 from datetime import date
 from typing import Optional
 
-from htmltools import Tag, TagAttrArg, TagChildArg, css, div, span, tags
+from htmltools import Tag, TagAttrValue, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -17,7 +17,7 @@ from ._utils import shiny_input_label
 @add_example()
 def input_date(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     *,
     value: Optional[date | str] = None,
     min: Optional[date | str] = None,
@@ -133,7 +133,7 @@ def input_date(
 @add_example()
 def input_date_range(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     *,
     start: Optional[date | str] = None,
     end: Optional[date | str] = None,
@@ -275,7 +275,7 @@ def _date_input_tag(
     weekstart: int,
     language: str,
     autoclose: bool,
-    **kwargs: TagAttrArg,
+    **kwargs: TagAttrValue,
 ):
     return tags.input(
         datepicker_deps(),

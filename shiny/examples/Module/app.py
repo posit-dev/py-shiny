@@ -5,7 +5,7 @@ from shiny import *
 # Counter module
 # ============================================================
 @module.ui
-def counter_ui(label: str = "Increment counter") -> ui.TagChildArg:
+def counter_ui(label: str = "Increment counter") -> ui.TagChild:
     return ui.div(
         {"style": "border: 1px solid #ccc; border-radius: 5px; margin: 5px 0;"},
         ui.h2("This is " + label),

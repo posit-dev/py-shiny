@@ -28,7 +28,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal, Protocol
 
-from htmltools import TagChildArg
+from htmltools import TagChild
 
 from ._docstring import add_example
 
@@ -163,7 +163,7 @@ class NavSetArg(Protocol):
 
     def resolve(
         self, selected: Optional[str], context: dict[str, Any]
-    ) -> tuple[TagChildArg, TagChildArg]:
+    ) -> tuple[TagChild, TagChild]:
         """
         Resolve information provided by the navigation container.
 

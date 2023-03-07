@@ -10,7 +10,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal
 
-from htmltools import TagChildArg, TagList
+from htmltools import TagChild
 
 from .._docstring import add_example
 from .._utils import rand_hex
@@ -19,8 +19,9 @@ from ..session import Session, require_active_session
 
 @add_example()
 def notification_show(
-    ui: TagChildArg,
-    action: Optional[TagList] = None,
+    ui: TagChild,
+    *,
+    action: Optional[TagChild] = None,
     duration: Optional[int | float] = 5,
     close_button: bool = True,
     id: Optional[str] = None,
@@ -89,7 +90,7 @@ def notification_show(
     return id
 
 
-def notification_remove(id: str, session: Optional[Session] = None) -> str:
+def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
     """
     Remove a notification.
 
