@@ -96,7 +96,9 @@ OptionalBool = typing.Optional[bool]
 
 PatternStr = typing.Pattern[str]
 PatternOrStr = typing.Union[str, PatternStr]
-ListPatternOrStr = typing.Union[list[PatternOrStr], list[str], list[PatternStr]]
+ListPatternOrStr = typing.Union[
+    typing.List[PatternOrStr], typing.List[str], typing.List[PatternStr]
+]
 AttrValue = typing.Union[PatternOrStr, None]
 StyleValue = typing.Union[PatternOrStr, None]
 
