@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import typing
 
@@ -10,19 +12,19 @@ app = create_doc_example_fixture("input_date")
 
 def expect_date(
     date: InputDate,
-    value: typing.Union[str, Literal["today"]] = "today",
+    value: str | Literal["today"] = "today",
     *,
     label: str = "Date:",
     autoclose: bool = True,
-    datesdisabled: typing.Union[typing.List[str], None] = None,
-    daysofweekdisabled: typing.Union[typing.List[int], None] = None,
+    datesdisabled: typing.Optional[list[str]] = None,
+    daysofweekdisabled: typing.Optional[list[int]] = None,
     format: str = "yyyy-mm-dd",
     language: str = "en",
-    max_date: typing.Union[str, None] = None,
-    min_date: typing.Union[str, None] = None,
+    max_date: typing.Optional[str] = None,
+    min_date: typing.Optional[str] = None,
     startview: str = "month",
     weekstart: int = 0,
-    width: typing.Union[str, None] = None,
+    width: typing.Optional[str] = None,
 ) -> None:
     date.expect_value(str(datetime.date.today()) if value == "today" else value)
     autoclose_str = "true" if autoclose else "false"

@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from e2e.playground import typing
 from shiny import *
 
-slider_nums: typing.List[int] = []
+slider_nums: list[int] = []
 
 
 def slider_row(

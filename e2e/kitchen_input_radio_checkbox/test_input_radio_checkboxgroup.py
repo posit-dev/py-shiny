@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from conftest import ShinyAppProc
-from playground import InputCheckboxGroup, InputRadioButtons, PatternOrStr, typing
+from playground import InputCheckboxGroup, InputRadioButtons, PatternOrStr
 from playwright.sync_api import Page, expect
 
 
@@ -12,11 +14,11 @@ def test_input_checkbox_group_kitchen(page: Page, local_app: ShinyAppProc) -> No
     check2 = InputCheckboxGroup(page, "check2")
 
     def assert_radio_check(
-        x: typing.Union[InputRadioButtons, InputCheckboxGroup],
+        x: InputRadioButtons | InputCheckboxGroup,
         label: str,
-        choices: typing.List[PatternOrStr],
-        choice_labels: typing.List[PatternOrStr],
-        selected: typing.Union[PatternOrStr, typing.List[PatternOrStr]],
+        choices: list[PatternOrStr],
+        choice_labels: list[PatternOrStr],
+        selected: PatternOrStr | list[PatternOrStr],
         inline: bool,
     ) -> None:
         expect(x.loc_label).to_have_text(label)
@@ -34,7 +36,7 @@ def test_input_checkbox_group_kitchen(page: Page, local_app: ShinyAppProc) -> No
         x.expect_inline(inline)
 
     def assert_selected(
-        r1: str, r2: str, c1: typing.List[PatternOrStr], c2: typing.List[PatternOrStr]
+        r1: str, r2: str, c1: list[PatternOrStr], c2: list[PatternOrStr]
     ) -> None:
         assert_radio_check(
             radio1,

@@ -1,10 +1,17 @@
 """Facade classes for working with Shiny inputs/outputs in Playwright"""
+from __future__ import annotations
+
 import json
 import pathlib
 import re
 import sys
 import time
 import typing
+
+from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
+from playwright.sync_api import expect as playwright_expect
+
+from shiny.types import MISSING, MISSING_TYPE
 
 if sys.version_info >= (3, 8):
     from typing import Literal, Protocol
@@ -22,10 +29,6 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import assert_type
 
-from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
-from playwright.sync_api import expect as playwright_expect
-
-from shiny.types import MISSING, MISSING_TYPE
 
 """
 Questions:
@@ -91,12 +94,14 @@ OptionalInt = typing.Optional[int]
 OptionalFloat = typing.Optional[float]
 OptionalBool = typing.Optional[bool]
 
-PatternOrStr = typing.Union[str, typing.Pattern[str]]
-AttrValue = typing.Union[PatternOrStr, None]
-StyleValue = typing.Union[PatternOrStr, None]
+PatternStr = typing.Pattern[str]
+PatternOrStr = str | PatternStr
+ListPatternOrStr = list[PatternOrStr] | list[str] | list[PatternStr]
+AttrValue = PatternOrStr | None
+StyleValue = PatternOrStr | None
 
-Timeout = typing.Union[float, None]
-InitLocator = typing.Union[Locator, str]
+Timeout = float | None
+InitLocator = Locator | str
 
 R = typing.TypeVar("R")
 M1 = typing.TypeVar("M1")
@@ -110,7 +115,7 @@ def is_missing(x: object) -> TypeGuard[MISSING_TYPE]:
 # TypeGuard does not work for `not isinstance(x, MISSING_TYPE)`
 # See discussion for `StrictTypeGuard`: https://github.com/python/typing/discussions/1013
 # Until then, we need `not_is_missing(x=)` to narrow within an `if` statement
-def not_is_missing(x: typing.Union[R, MISSING_TYPE]) -> TypeGuard[R]:
+def not_is_missing(x: R | MISSING_TYPE) -> TypeGuard[R]:
     return not isinstance(x, MISSING_TYPE)
 
 
@@ -121,9 +126,7 @@ def all_missing(*args: object) -> TypeGuard[MISSING_TYPE]:
     return True
 
 
-def maybe_missing(
-    x: typing.Union[M1, MISSING_TYPE], default: M2
-) -> typing.Union[M1, M2]:
+def maybe_missing(x: M1 | MISSING_TYPE, default: M2) -> M1 | M2:
     if isinstance(x, MISSING_TYPE):
         return default
     return x
@@ -133,7 +136,7 @@ def set_text(
     loc: Locator,
     text: str,
     *,
-    delay: typing.Union[float, None] = None,
+    delay: OptionalFloat = None,
     timeout: Timeout = None,
 ) -> None:
     # TODO-future; Composable set() method
@@ -173,7 +176,7 @@ def expect_class_value(
         playwright_expect(loc).not_to_have_class(cls_regex, timeout=timeout)
 
 
-def style_match_str(key: str, value: PatternOrStr) -> typing.Pattern[str]:
+def style_match_str(key: str, value: PatternOrStr) -> PatternStr:
     if isinstance(value, str):
         value_str = re.escape(value)
     else:
@@ -432,7 +435,7 @@ class InputNumeric(
 class _ExpectSpellcheckAttrM:
     def expect_spellcheck_to_have_value(
         self: _InputBaseP,
-        value: typing.Union[Literal["true", "false"], None],
+        value: Literal["true", "false"] | None,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -575,7 +578,7 @@ class InputTextArea(
 
     def expect_resize_to_have_value(
         self,
-        value: typing.Union[Resize, None],
+        value: Resize | None,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -609,7 +612,7 @@ class _InputSelectBase(
 
     def set(
         self,
-        selected: typing.Union[str, typing.List[str]],
+        selected: str | list[str],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -620,7 +623,7 @@ class _InputSelectBase(
     def expect_choices(
         self,
         # TODO-future; support patterns?
-        choices: typing.List[PatternOrStr],
+        choices: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -641,17 +644,17 @@ class _InputSelectBase(
 
     def expect_selected(
         self,
-        selected: typing.Union[PatternOrStr, typing.List[PatternOrStr]],
+        selected: PatternOrStr | ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
         """Expect choices to be in order"""
         # Playwright doesn't like lists of size 0
-        if isinstance(selected, typing.List) and len(selected) == 0:
+        if isinstance(selected, list) and len(selected) == 0:
             playwright_expect(self.loc_selected).to_have_count(0, timeout=timeout)
             return
 
-        if isinstance(selected, typing.List):
+        if isinstance(selected, list):
             self.expect.to_have_values(selected, timeout=timeout)
         else:
             self.expect.to_have_value(selected, timeout=timeout)
@@ -669,7 +672,7 @@ class _InputSelectBase(
     def expect_choice_groups(
         self,
         # TODO-future; support patterns?
-        choice_groups: typing.List[PatternOrStr],
+        choice_groups: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -691,7 +694,7 @@ class _InputSelectBase(
 
     def expect_choice_labels(
         self,
-        choice_labels: typing.List[PatternOrStr],
+        choice_labels: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -720,7 +723,7 @@ class InputSelect(_InputSelectBase):
     # id: str,
     # label: TagChildArg,
     # choices: SelectChoicesArg,
-    # selected: Optional[Union[str, List[str]]] = None,
+    # selected: Optional[Union[str, list[str]]] = None,
     # multiple: bool = False,
     # selectize: bool = False,
     # width: Optional[str] = None,
@@ -864,14 +867,14 @@ class InputSwitch(InputCheckboxBase):
 class _MultipleDomItems:
     @staticmethod
     def assert_arr_is_unique(
-        arr: typing.Union[typing.List[str], typing.List[PatternOrStr]],
+        arr: ListPatternOrStr,
         msg: str,
     ) -> None:
         assert len(arr) == len(list(dict.fromkeys(arr))), msg
 
     @staticmethod
     def checked_css_str(
-        is_checked: typing.Union[bool, MISSING_TYPE] = MISSING,
+        is_checked: bool | MISSING_TYPE = MISSING,
     ) -> str:
         if is_missing(is_checked):
             return ""
@@ -888,14 +891,14 @@ class _MultipleDomItems:
         loc_container: Locator,
         el_type: str,
         arr_name: str,
-        arr: typing.List[str],
-        is_checked: typing.Union[bool, MISSING_TYPE] = MISSING,
+        arr: list[str],
+        is_checked: bool | MISSING_TYPE = MISSING,
         timeout: Timeout = None,
         key: str = "value",
     ) -> None:
         # Make sure the locator contains all of `arr`
 
-        assert_type(arr, typing.List[str])
+        assert_type(arr, list[str])
 
         # Make sure the locator has len(uniq_arr) input elements
         _MultipleDomItems.assert_arr_is_unique(arr, f"`{arr_name}` must be unique")
@@ -951,8 +954,8 @@ class _MultipleDomItems:
         loc_container: Locator,
         el_type: str,
         arr_name: str,
-        arr: typing.List[PatternOrStr],
-        is_checked: typing.Union[bool, MISSING_TYPE] = MISSING,
+        arr: ListPatternOrStr,
+        is_checked: bool | MISSING_TYPE = MISSING,
         timeout: Timeout = None,
         key: str = "value",
     ) -> None:
@@ -1022,7 +1025,7 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
 
     def expect_choice_labels(
         self,
-        labels: typing.List[PatternOrStr],
+        labels: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1050,7 +1053,7 @@ class InputCheckboxGroup(
 ):
     # label: TagChildArg,
     # choices: ChoicesArg,
-    # selected: Optional[Union[str, List[str]]] = None,
+    # selected: Optional[Union[str, list[str]]] = None,
     # inline: bool = False,
     # width: Optional[str] = None,
     def __init__(
@@ -1089,13 +1092,13 @@ class InputCheckboxGroup(
     def set(
         self,
         # Allow `selected` to be a single Pattern to perform matching against many items
-        selected: typing.List[str],
+        selected: list[str],
         *,
         timeout: Timeout = None,
         **kwargs: object,
     ) -> None:
         # Having an arr of size 0 is allowed. Will uncheck everything
-        assert_type(selected, typing.List[str])
+        assert_type(selected, list[str])
 
         # Make sure the selected items exist
         # Similar to `self.expect_choices(choices = selected)`, but with
@@ -1128,7 +1131,7 @@ class InputCheckboxGroup(
 
     def expect_choices(
         self,
-        choices: typing.List[PatternOrStr],
+        choices: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1143,7 +1146,7 @@ class InputCheckboxGroup(
 
     def expect_selected(
         self,
-        selected: typing.List[PatternOrStr],
+        selected: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1222,7 +1225,7 @@ class InputRadioButtons(
 
     def expect_choices(
         self,
-        choices: typing.List[PatternOrStr],
+        choices: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1237,7 +1240,7 @@ class InputRadioButtons(
 
     def expect_selected(
         self,
-        selected: typing.Union[PatternOrStr, None],
+        selected: PatternOrStr | None,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1261,7 +1264,7 @@ class InputFile(
     # label: TagChildArg,
     # *,
     # multiple: bool = False,
-    # accept: Optional[Union[str, List[str]]] = None,
+    # accept: Optional[Union[str, list[str]]] = None,
     # width: Optional[str] = None,
     # button_label: str = "Browse...",
     # placeholder: str = "No file selected",
@@ -1287,13 +1290,11 @@ class InputFile(
 
     def set(
         self,
-        file_path: typing.Union[
-            str,
-            pathlib.Path,
-            FilePayload,
-            typing.List[typing.Union[str, pathlib.Path]],
-            typing.List[FilePayload],
-        ],
+        file_path: str
+        | pathlib.Path
+        | FilePayload
+        | list[str | pathlib.Path]
+        | list[FilePayload],
         *,
         timeout: Timeout = None,
         expect_complete_timeout: Timeout = 30 * 1000,
@@ -1316,11 +1317,11 @@ class InputFile(
 
     def expect_accept(
         self,
-        accept: typing.Union[typing.List[str], AttrValue],
+        accept: list[str] | AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
-        if isinstance(accept, typing.List):
+        if isinstance(accept, list):
             accept = ",".join(accept)
         expect_attr(self.loc, "accept", accept, timeout=timeout)
 
@@ -1337,7 +1338,7 @@ class InputFile(
 
     def expect_capture(
         self,
-        capture: typing.Union[Literal["environment", "user"], None],
+        capture: Literal["environment", "user"] | None,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1389,7 +1390,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
 
     def expect_tick_labels_to_have_text(
         self,
-        value: typing.List[PatternOrStr],
+        value: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1404,8 +1405,8 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
     def expect_animate_options(
         self,
         *,
-        loop: typing.Union[bool, MISSING_TYPE] = MISSING,
-        interval: typing.Union[float, MISSING_TYPE] = MISSING,
+        loop: bool | MISSING_TYPE = MISSING,
+        interval: float | MISSING_TYPE = MISSING,
         timeout: Timeout = None,
     ) -> None:
         if all_missing(loop, interval):
@@ -1513,7 +1514,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
         handle_center: Position,
         grid_bb: FloatRect,
         start_x: float,
-        direction: typing.Union[Literal["left"], Literal["right"]],
+        direction: Literal["left", "right"],
         max_err_values: int = 15,
     ) -> None:
         if direction == "left":
@@ -1665,11 +1666,9 @@ class InputSliderRange(_InputSliderBase):
 
     def expect_value(
         self,
-        value: typing.Union[
-            typing.Tuple[PatternOrStr, PatternOrStr],
-            typing.Tuple[PatternOrStr, MISSING_TYPE],
-            typing.Tuple[MISSING_TYPE, PatternOrStr],
-        ],
+        value: typing.Tuple[PatternOrStr, PatternOrStr]
+        | typing.Tuple[PatternOrStr, MISSING_TYPE]
+        | typing.Tuple[MISSING_TYPE, PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1712,11 +1711,9 @@ class InputSliderRange(_InputSliderBase):
 
     def set(
         self,
-        value: typing.Union[
-            typing.Tuple[str, str],
-            typing.Tuple[str, MISSING_TYPE],
-            typing.Tuple[MISSING_TYPE, str],
-        ],
+        value: typing.Tuple[str, str]
+        | typing.Tuple[str, MISSING_TYPE]
+        | typing.Tuple[MISSING_TYPE, str],
         *,
         max_err_values: int = 15,
         timeout: Timeout = None,
@@ -1791,8 +1788,8 @@ class _DateBase(
     # language: str = "en",
     # width: Optional[str] = None,
     # autoclose: bool = True,
-    # datesdisabled: Optional[List[str]] = None,
-    # daysofweekdisabled: Optional[List[int]] = None,
+    # datesdisabled: Optional[list[str]] = None,
+    # daysofweekdisabled: Optional[list[int]] = None,
 
     # Due to the `language` parameter, we can't use `datetime.date` as a value type
 
@@ -1841,7 +1838,7 @@ class _DateBase(
 
     def expect_weekstart(
         self,
-        value: typing.Union[int, AttrValue],
+        value: int | AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1860,7 +1857,7 @@ class _DateBase(
     # autoclose: bool = True,
     def expect_autoclose(
         self,
-        value: typing.Union[Literal["true"], Literal["false"]],
+        value: Literal["true", "false"],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1868,7 +1865,7 @@ class _DateBase(
 
     def expect_datesdisabled(
         self,
-        value: typing.Union[typing.List[str], None],
+        value: list[str] | None,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1884,7 +1881,7 @@ class _DateBase(
 
     def expect_daysofweekdisabled(
         self,
-        value: typing.Union[typing.List[int], None],
+        value: list[int] | None,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1961,8 +1958,8 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
     def set(
         self,
         value: typing.Tuple[
-            typing.Union[str, None],
-            typing.Union[str, None],
+            str | None,
+            str | None,
         ],
         *,
         timeout: Timeout = None,
@@ -1977,11 +1974,9 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
 
     def expect_value(
         self,
-        value: typing.Union[
-            typing.Tuple[PatternOrStr, PatternOrStr],
-            typing.Tuple[PatternOrStr, MISSING_TYPE],
-            typing.Tuple[MISSING_TYPE, PatternOrStr],
-        ],
+        value: typing.Tuple[PatternOrStr, PatternOrStr]
+        | typing.Tuple[PatternOrStr, MISSING_TYPE]
+        | typing.Tuple[MISSING_TYPE, PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2045,7 +2040,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
     # weekstart: int = 0,
     def expect_weekstart(
         self,
-        value: typing.Union[int, AttrValue],
+        value: int | AttrValue,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2078,7 +2073,7 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
     # autoclose: bool = True,
     def expect_autoclose(
         self,
-        value: typing.Union[Literal["true"], Literal["false"]],
+        value: Literal["true", "false"],
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2139,7 +2134,7 @@ class _OutputTextValue(_OutputBase):
 class _OutputContainerP(_OutputBaseP, Protocol):
     def expect_container_tag(
         self: _OutputBaseP,
-        tag_name: typing.Union[Literal["span", "div"], str],
+        tag_name: Literal["span", "div"] | str,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2149,7 +2144,7 @@ class _OutputContainerP(_OutputBaseP, Protocol):
 class _OutputContainerM:
     def expect_container_tag(
         self: _OutputBaseP,
-        tag_name: typing.Union[Literal["span", "div"], str],
+        tag_name: Literal["span", "div"] | str,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2317,7 +2312,7 @@ class OutputTable(_OutputBase):
 
     def expect_column_labels(
         self,
-        labels: typing.Union[typing.List[PatternOrStr], None],
+        labels: ListPatternOrStr | None,
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2337,7 +2332,7 @@ class OutputTable(_OutputBase):
         self,
         col: int,
         # Can't use `None` as we don't know how many rows exist
-        text: typing.List[PatternOrStr],
+        text: ListPatternOrStr,
         *,
         timeout: Timeout = None,
     ) -> None:
