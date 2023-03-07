@@ -16,6 +16,11 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import TypeGuard
 
+if sys.version_info >= (3, 11):
+    from typing import assert_type
+else:
+    from typing_extensions import assert_type
+
 from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
 
@@ -180,7 +185,7 @@ def attr_match_str(key: str, value: str) -> str:
     value_str = value.replace('"', '\\"')
     # `key` is `value`
     return f'{key}="{value_str}"'
-    # typing.assert_type(value, re.Pattern[str])
+    # assert_type(value, re.Pattern[str])
     # # `key` contains `value`
     # return f'{key}*="{value.pattern}"'
 
@@ -192,7 +197,7 @@ def xpath_match_str(key: str, value: PatternOrStr) -> str:
         # `key` is `value`
         return f'@{key}="{value_str}"'
     else:
-        typing.assert_type(value, re.Pattern[str])
+        assert_type(value, re.Pattern[str])
         # `key` contains `value`
         return f'matches(@{key}, "{value.pattern}")'
 
@@ -886,7 +891,7 @@ class _MultipleDomItems:
     ) -> None:
         # Make sure the locator contains all of `arr`
 
-        typing.assert_type(arr, typing.List[str])
+        assert_type(arr, typing.List[str])
 
         # Make sure the locator has len(uniq_arr) input elements
         _MultipleDomItems.assert_arr_is_unique(arr, f"`{arr_name}` must be unique")
@@ -1086,7 +1091,7 @@ class InputCheckboxGroup(
         **kwargs: object,
     ) -> None:
         # Having an arr of size 0 is allowed. Will uncheck everything
-        typing.assert_type(selected, typing.List[str])
+        assert_type(selected, typing.List[str])
 
         # Make sure the selected items exist
         # Similar to `self.expect_choices(choices = selected)`, but with
@@ -1204,7 +1209,7 @@ class InputRadioButtons(
         timeout: Timeout = None,
         **kwargs: object,
     ) -> None:
-        typing.assert_type(selected, str)
+        assert_type(selected, str)
         # Only need to set.
         # The Browser will _unset_ the previously selected radio button
         self.loc_container.locator(
@@ -2298,8 +2303,8 @@ class OutputTable(_OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        typing.assert_type(row, int)
-        typing.assert_type(col, int)
+        assert_type(row, int)
+        assert_type(col, int)
         playwright_expect(
             self.loc.locator(
                 f"xpath=./table/tbody/tr[{row}]/td[{col}] | ./table/tbody/tr[{row}]/th[{col}]"
@@ -2332,7 +2337,7 @@ class OutputTable(_OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        typing.assert_type(col, int)
+        assert_type(col, int)
         playwright_expect(
             self.loc.locator(f"xpath=./table/tbody/tr/td[{col}]")
         ).to_have_text(
