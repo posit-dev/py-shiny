@@ -28,13 +28,9 @@ jobs:
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
-      - name: Check out and install htmltools
+      - name: Install dev version of htmltools
         run: |
-          cd ..
-          git clone https://github.com/rstudio/py-htmltools.git
-          cd py-htmltools
-          pip install wheel
-          make install
+          pip install wheel https://github.com/rstudio/py-htmltools/tarball/main
 
       # - name: Check out and install fontawesome
       #   run: |
