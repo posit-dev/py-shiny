@@ -1,8 +1,5 @@
-# See https://github.com/microsoft/playwright-python/issues/1532
-# pyright: reportUnknownMemberType=false
-
-import controls
 from conftest import ShinyAppProc, create_doc_example_fixture
+from playground import InputNumeric
 from playwright.sync_api import Page, expect
 
 app = create_doc_example_fixture("input_numeric")
@@ -12,7 +9,7 @@ def test_input_numeric(page: Page, app: ShinyAppProc) -> None:
     # with page and app:
     page.goto(app.url)
 
-    obs = controls.NumericInput(page, "obs")
+    obs = InputNumeric(page, "obs")
     # obs.label.expect.to_have_text("Observed")
     obs.expect.to_have_value("10")
 
