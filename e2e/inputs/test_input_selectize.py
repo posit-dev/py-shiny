@@ -11,7 +11,7 @@ def test_input_selectize_kitchen(page: Page, app: ShinyAppProc) -> None:
     state = InputSelectize(page, "state")
 
     expect(state.loc_label).to_have_text("Choose a state:")
-    state.expect_label_to_have_text("Choose a state:")
+    state.expect_label("Choose a state:")
 
     state.expect_choices(["NY", "NJ", "CT", "WA", "OR", "CA", "MN", "WI", "IA"])
     state.expect_choice_labels(
@@ -32,7 +32,7 @@ def test_input_selectize_kitchen(page: Page, app: ShinyAppProc) -> None:
     state.expect_selected("NY")
     state.expect_multiple(False)
 
-    state.expect_width_to_have_value(None)
+    state.expect_width(None)
 
     state.set("IA")
 

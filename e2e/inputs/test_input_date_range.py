@@ -42,7 +42,7 @@ def expect_date_range(
     date.expect_min_date(min_date)
     date.expect_startview(startview)
     date.expect_weekstart(weekstart)
-    date.expect_width_to_have_value(width)
+    date.expect_width(width)
     date.expect_separator(separator)
 
 
@@ -51,7 +51,7 @@ def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     daterange1 = InputDateRange(page, "daterange1")
 
-    daterange1.expect_label_to_have_text("Date range:")
+    daterange1.expect_label("Date range:")
     expect(daterange1.loc_label).to_have_text("Date range:")
 
     expect_date_range(daterange1, "2001-01-01", "2010-12-31")

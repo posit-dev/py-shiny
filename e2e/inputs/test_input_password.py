@@ -14,10 +14,10 @@ def test_input_password_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     expect(password.loc_label).to_have_text("Password:")
 
-    password.expect_label_to_have_text("Password:")
+    password.expect_label("Password:")
     password.expect_value("")
-    password.expect_width_to_have_value(None)
-    password.expect_placeholder_to_have_value(None)
+    password.expect_width(None)
+    password.expect_placeholder(None)
 
     password_value = "test password"
     password.set(password_value)

@@ -30,12 +30,12 @@ def test_input_numeric_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     expect(obs.loc_label).to_have_text("Observations:")
 
-    obs.expect_label_to_have_text("Observations:")
+    obs.expect_label("Observations:")
     obs.expect_value("10")
-    obs.expect_min_to_have_value("1")
-    obs.expect_max_to_have_value("100")
-    obs.expect_step_to_have_value(None)
-    obs.expect_width_to_have_value(None)
+    obs.expect_min("1")
+    obs.expect_max("100")
+    obs.expect_step(None)
+    obs.expect_width(None)
 
 
 def test_input_numeric_typical(page: Page, app: ShinyAppProc) -> None:

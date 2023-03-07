@@ -22,7 +22,7 @@ def test_input_checkbox_group_kitchen(page: Page, local_app: ShinyAppProc) -> No
         inline: bool,
     ) -> None:
         expect(x.loc_label).to_have_text(label)
-        x.expect_label_to_have_text(label)
+        x.expect_label(label)
         x.expect_choices(choices)
         x.expect_choice_labels(choice_labels)
         if isinstance(x, InputRadioButtons):

@@ -21,9 +21,9 @@ def test_input_file_kitchen(page: Page, app: ShinyAppProc) -> None:
     file1.expect_button_label("Browse...")
     file1.expect_capture(None)
     # file1.expect_files(None)
-    file1.expect_label_to_have_text("Choose CSV File")
+    file1.expect_label("Choose CSV File")
     file1.expect_multiple(False)
-    file1.expect_placeholder_to_have_value("No file selected")
+    file1.expect_placeholder("No file selected")
     file1.expect_width(None)
 
     file_info: FilePayload = {

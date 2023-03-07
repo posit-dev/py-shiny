@@ -15,26 +15,26 @@ def test_input_slider_kitchen(page: Page, slider_app: ShinyAppProc) -> None:
 
     expect(obs.loc_label).to_have_text("Number of bins:")
 
-    obs.expect_tick_labels_to_have_text(
+    obs.expect_tick_labels(
         ["10", "19", "28", "37", "46", "55", "64", "73", "82", "91", "100"]
     )
     obs.expect_value("30")
 
     obs.expect_animate(False)
-    # obs.expect_animate_interval_to_have_value(500)
-    # obs.expect_animate_loop_to_have_value(True)
-    obs.expect_min_to_have_value("10")
-    obs.expect_max_to_have_value("100")
-    # obs.expect_from_to_have_value()
-    obs.expect_step_to_have_value("1")
-    obs.expect_ticks_to_have_value("true")
-    obs.expect_sep_to_have_value(",")
-    obs.expect_pre_to_have_value(None)
-    obs.expect_post_to_have_value(None)
-    # obs.expect_data_type_to_have_value()
-    obs.expect_time_format_to_have_value(None)
-    obs.expect_timezone_to_have_value(None)
-    obs.expect_drag_range_to_have_value(None)
+    # obs.expect_animate_interval(500)
+    # obs.expect_animate_loop(True)
+    obs.expect_min("10")
+    obs.expect_max("100")
+    # obs.expect_from()
+    obs.expect_step("1")
+    obs.expect_ticks("true")
+    obs.expect_sep(",")
+    obs.expect_pre(None)
+    obs.expect_post(None)
+    # obs.expect_data_type()
+    obs.expect_time_format(None)
+    obs.expect_timezone(None)
+    obs.expect_drag_range(None)
 
     obs.set("42")
     obs.expect_value("42")
@@ -66,7 +66,7 @@ def test_input_slider_output(page: Page, template_app: ShinyAppProc) -> None:
     txt = OutputTextVerbatim(page, "txt")
 
     txt.expect_value("n*2 is 40")
-    slider.expect_label_to_have_text("N")
+    slider.expect_label("N")
     slider.expect_value("20")
 
     slider.set("42")

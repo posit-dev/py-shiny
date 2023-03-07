@@ -37,7 +37,7 @@ def expect_date(
     date.expect_min_date(min_date)
     date.expect_startview(startview)
     date.expect_weekstart(weekstart)
-    date.expect_width_to_have_value(width)
+    date.expect_width(width)
 
 
 def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
@@ -45,7 +45,7 @@ def test_input_date_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     date1 = InputDate(page, "date1")
 
-    date1.expect_label_to_have_text("Date:")
+    date1.expect_label("Date:")
     expect(date1.loc_label).to_have_text("Date:")
 
     expect_date(date1, "2016-02-29")

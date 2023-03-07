@@ -24,35 +24,35 @@ def check_vals(page: Page, label: str, num: int):
     opt_vals = [f"option-{num}-{type}" for type in ["A", "B"]]
 
     text = InputText(page, "inText")
-    text.expect_label_to_have_text(f"New {label}")
+    text.expect_label(f"New {label}")
     text.expect_value(f"New text {num}")
 
     innum = InputNumeric(page, "inNumber")
-    innum.expect_label_to_have_text("Number input:")
+    innum.expect_label("Number input:")
     innum.expect_value(str(num))
 
     innum2 = InputNumeric(page, "inNumber2")
-    innum2.expect_label_to_have_text(f"Number {label}")
+    innum2.expect_label(f"Number {label}")
     innum2.expect_value(str(num))
 
     slider = InputSlider(page, "inSlider")
-    slider.expect_label_to_have_text(f"Slider {label}")
+    slider.expect_label(f"Slider {label}")
     slider.expect_value(str(num))
 
     slider2 = InputSliderRange(page, "inSlider2")
-    slider2.expect_label_to_have_text("Slider input 2:")
+    slider2.expect_label("Slider input 2:")
     slider2.expect_value((str(num - 1), str(num + 1)))
 
     slider3 = InputSliderRange(page, "inSlider3")
     slider3.expect_value((MISSING, str(num + 2)))
-    slider3.expect_label_to_have_text("Slider input 3:")
+    slider3.expect_label("Slider input 3:")
 
     date = InputDate(page, "inDate")
-    date.expect_label_to_have_text(f"Date {label}")
+    date.expect_label(f"Date {label}")
     date.expect_value(f"2013-04-{num:02}")
 
     date_range_input = InputDateRange(page, "inDateRange")
-    date_range_input.expect_label_to_have_text(f"Date range {label}")
+    date_range_input.expect_label(f"Date range {label}")
     date_range_input.date_start.expect_value(f"2013-01-{num:02}")
     date_range_input.date_end.expect_value(f"2013-12-{num:02}")
     # TODO-future; Check min/max date
@@ -60,29 +60,29 @@ def check_vals(page: Page, label: str, num: int):
     # max=date(2030, 1, num),
 
     cb = InputCheckbox(page, "inCheckbox")
-    cb.expect_label_to_have_text("Checkbox input")
-    cb.expect_to_be_checked((num % 2) == 1)
+    cb.expect_label("Checkbox input")
+    cb.expect_checked((num % 2) == 1)
 
     cb_grp_input = InputCheckboxGroup(page, "inCheckboxGroup")
-    cb_grp_input.expect_label_to_have_text(f"Checkbox group {label}")
+    cb_grp_input.expect_label(f"Checkbox group {label}")
     cb_grp_input.expect_choices(opt_vals)
     cb_grp_input.expect_choice_labels(opt_labels)
     cb_grp_input.expect_selected([opt_vals[0]])
 
     radio_btns_input = InputRadioButtons(page, "inRadio")
-    radio_btns_input.expect_label_to_have_text(f"Radio {label}")
+    radio_btns_input.expect_label(f"Radio {label}")
     radio_btns_input.expect_choice_labels(opt_labels)
     radio_btns_input.expect_choices(opt_vals)
     radio_btns_input.expect_selected(opt_vals[0])
 
     select = InputSelect(page, "inSelect")
-    select.expect_label_to_have_text(f"Select {label}")
+    select.expect_label(f"Select {label}")
     select.expect_choice_labels(opt_labels)
     select.expect_choices(opt_vals)
     select.expect_selected(opt_vals[0])
 
     selectize = InputSelect(page, "inSelect2")
-    selectize.expect_label_to_have_text(f"Select label {label}")
+    selectize.expect_label(f"Select label {label}")
     selectize.expect_choices(opt_vals)
     selectize.expect_selected(opt_vals[1])
 

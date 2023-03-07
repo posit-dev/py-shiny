@@ -27,12 +27,12 @@ def test_input_text_kitchen(page: Page, app: ShinyAppProc) -> None:
     expect(caption.loc).not_to_have_attribute("spellcheck", re.compile(r".*"))
 
     # Best approach
-    caption.expect_label_to_have_text("Caption:")
+    caption.expect_label("Caption:")
     caption.expect_value("Data summary")
-    caption.expect_width_to_have_value(None)
-    caption.expect_placeholder_to_have_value(None)
-    caption.expect_autocomplete_to_have_value("off")
-    caption.expect_spellcheck_to_have_value(None)
+    caption.expect_width(None)
+    caption.expect_placeholder(None)
+    caption.expect_autocomplete("off")
+    caption.expect_spellcheck(None)
 
 
 def test_input_text_typical(page: Page, app: ShinyAppProc) -> None:

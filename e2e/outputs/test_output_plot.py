@@ -13,8 +13,8 @@ def test_output_plot_kitchen(page: Page, app: ShinyAppProc) -> None:
     plot = OutputPlot(page, "p")
 
     plot.expect_inline(inline=False)
-    plot.expect_height_to_have_value("400px")
-    plot.expect_width_to_have_value("100%")
+    plot.expect_height("400px")
+    plot.expect_width("100%")
 
     plot.expect_img_src(re.compile(r"data:image/png;base64"))
     plot.expect_img_height("100%")
