@@ -899,7 +899,7 @@ class _MultipleDomItems:
     ) -> None:
         # Make sure the locator contains all of `arr`
 
-        assert_type(arr, list[str])
+        assert_type(arr, typing.List[str])
 
         # Make sure the locator has len(uniq_arr) input elements
         _MultipleDomItems.assert_arr_is_unique(arr, f"`{arr_name}` must be unique")
@@ -1099,7 +1099,7 @@ class InputCheckboxGroup(
         **kwargs: object,
     ) -> None:
         # Having an arr of size 0 is allowed. Will uncheck everything
-        assert_type(selected, list[str])
+        assert_type(selected, typing.List[str])
 
         # Make sure the selected items exist
         # Similar to `self.expect_choices(choices = selected)`, but with
