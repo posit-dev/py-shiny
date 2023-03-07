@@ -1,5 +1,5 @@
 from conftest import ShinyAppProc
-from playground import InputCheckbox
+from controls import InputCheckbox
 from playwright.sync_api import Page, expect
 
 

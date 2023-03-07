@@ -1,7 +1,7 @@
 import re
 
 from conftest import ShinyAppProc, create_doc_example_fixture
-from playground import InputText, OutputTextVerbatim
+from controls import InputText, OutputTextVerbatim
 from playwright.sync_api import Page, expect
 
 app = create_doc_example_fixture("input_text")

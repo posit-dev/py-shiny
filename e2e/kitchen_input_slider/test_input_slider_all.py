@@ -2,7 +2,7 @@ import re
 import time
 
 from conftest import ShinyAppProc
-from playground import InputSlider, InputSliderRange, OutputTextVerbatim
+from controls import InputSlider, InputSliderRange, OutputTextVerbatim
 from playwright.sync_api import Page
 
 from shiny.types import MISSING

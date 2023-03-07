@@ -1,7 +1,7 @@
 # pyright: reportUnknownMemberType=false
 
 from conftest import ShinyAppProc, create_example_fixture
-from playground import (
+from controls import (
     MISSING,
     InputCheckbox,
     InputCheckboxGroup,

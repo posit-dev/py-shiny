@@ -1,5 +1,5 @@
 from conftest import ShinyAppProc, create_doc_example_fixture
-from playground import InputActionButton, InputActionLink
+from controls import InputActionButton, InputActionLink
 from playwright.sync_api import Page, expect
 
 app = create_doc_example_fixture("update_action_button")

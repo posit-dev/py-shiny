@@ -1,5 +1,5 @@
 from conftest import ShinyAppProc, create_doc_example_fixture
-from playground import InputCheckbox
+from controls import InputCheckbox
 from playwright.sync_api import Page, expect
 
 app = create_doc_example_fixture("input_checkbox")

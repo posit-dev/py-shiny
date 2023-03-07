@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from e2e.playground import typing
+from e2e.controls import typing
 from shiny import *
 
 slider_nums: list[int] = []

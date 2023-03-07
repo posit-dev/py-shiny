@@ -1,5 +1,5 @@
 from conftest import ShinyAppProc, create_doc_example_fixture
-from playground import OutputTable
+from controls import OutputTable
 from playwright.sync_api import Page
 
 app = create_doc_example_fixture("output_table")

@@ -1,7 +1,7 @@
 import re
 
 from conftest import ShinyAppProc, create_doc_example_fixture
-from playground import OutputImage
+from controls import OutputImage
 from playwright.sync_api import Page
 
 app = create_doc_example_fixture("output_image")

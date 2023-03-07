@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from conftest import ShinyAppProc
-from playground import InputCheckboxGroup, InputRadioButtons, PatternOrStr
+from controls import InputCheckboxGroup, InputRadioButtons, PatternOrStr
 from playwright.sync_api import Page, expect
 
 

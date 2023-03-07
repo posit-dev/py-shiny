@@ -1,6 +1,6 @@
 import re
 
-from e2e.playground import attr_match_str, style_match_str, xpath_match_str
+from e2e.controls import attr_match_str, style_match_str, xpath_match_str
 
 
 def test_style_match_str() -> None:

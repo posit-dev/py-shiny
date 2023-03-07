@@ -1,5 +1,5 @@
 from conftest import ShinyAppProc, create_doc_example_fixture
-from playground import InputSlider, OutputTextVerbatim
+from controls import InputSlider, OutputTextVerbatim
 from playwright.sync_api import Page, expect
 
 slider_app = create_doc_example_fixture("input_slider")
