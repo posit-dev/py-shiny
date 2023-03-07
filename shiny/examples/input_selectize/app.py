@@ -5,9 +5,9 @@ app_ui = ui.page_fluid(
         "state",
         "Choose a state:",
         {
-            "East Coast": {"NY": "NY", "NJ": "NJ", "CT": "CT"},
-            "West Coast": {"WA": "WA", "OR": "OR", "CA": "CA"},
-            "Midwest": {"MN": "MN", "WI": "WI", "IA": "IA"},
+            "East Coast": {"NY": "New York", "NJ": "New Jersey", "CT": "Connecticut"},
+            "West Coast": {"WA": "Washington", "OR": "Oregon", "CA": "California"},
+            "Midwest": {"MN": "Minnesota", "WI": "Wisconsin", "IA": "Iowa"},
         },
         multiple=True,
     ),

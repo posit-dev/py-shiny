@@ -1,16 +1,16 @@
 from shiny import *
 
 app_ui = ui.page_fluid(
-    ui.input_text_area("caption", "Caption:", "Data summary"),
-    ui.output_text_verbatim("value"),
+    ui.input_switch("somevalue", "Some value", False),
+    ui.output_ui("value"),
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
     @output
-    @render.text
+    @render.ui
     def value():
-        return input.caption()
+        return input.somevalue()
 
 
 app = App(app_ui, server)

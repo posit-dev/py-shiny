@@ -94,7 +94,7 @@ def input_text_area(
     cols: Optional[int] = None,
     rows: Optional[int] = None,
     placeholder: Optional[str] = None,
-    resize: Optional[str] = None,
+    resize: Optional[Literal["none", "both", "horizontal", "vertical"]] = None,
     autocomplete: Optional[str] = None,
     spellcheck: Optional[Literal["true", "false"]] = None,
 ) -> Tag:

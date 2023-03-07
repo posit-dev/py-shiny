@@ -74,6 +74,7 @@ def input_checkbox(
     )
 
 
+@add_example()
 def input_switch(
     id: str, label: TagChildArg, value: bool = False, *, width: Optional[str] = None
 ) -> Tag:
