@@ -95,13 +95,13 @@ OptionalFloat = typing.Optional[float]
 OptionalBool = typing.Optional[bool]
 
 PatternStr = typing.Pattern[str]
-PatternOrStr = str | PatternStr
-ListPatternOrStr = list[PatternOrStr] | list[str] | list[PatternStr]
-AttrValue = PatternOrStr | None
-StyleValue = PatternOrStr | None
+PatternOrStr = typing.Union[str, PatternStr]
+ListPatternOrStr = typing.Union[list[PatternOrStr], list[str], list[PatternStr]]
+AttrValue = typing.Union[PatternOrStr, None]
+StyleValue = typing.Union[PatternOrStr, None]
 
-Timeout = float | None
-InitLocator = Locator | str
+Timeout = typing.Union[float, None]
+InitLocator = typing.Union[Locator, str]
 
 R = typing.TypeVar("R")
 M1 = typing.TypeVar("M1")
