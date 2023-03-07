@@ -28,6 +28,11 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import assert_type
 
+"""
+TODO-barret;
+* Do not use verbose methods as we do not need to differentiate between `expect_label()` and `expect_label_to_have_text()` as there is not `expect_label_to_have_html()` or `expect_label_to_have_attribute()` methods.
+"""
+
 
 """
 Questions:
@@ -141,21 +146,40 @@ def expect_attr(
     playwright_expect(loc).to_have_attribute(name=name, value=value, timeout=timeout)
 
 
-def expect_class_value(
+def _expect_class_value(
     loc: Locator,
     cls: str,
     has_class: bool,
     timeout: Timeout = None,
 ) -> None:
     """Expect a locator to have (or not to have) a class value"""
-    cls_regex = re.compile(rf"(^|\s+){re.escape(cls)}(\s+|$)")
     if has_class:
-        playwright_expect(loc).to_have_class(cls_regex, timeout=timeout)
+        expect_to_have_class(loc, cls, timeout=timeout)
     else:
-        playwright_expect(loc).not_to_have_class(cls_regex, timeout=timeout)
+        expect_not_to_have_class(loc, cls, timeout=timeout)
 
 
-def style_match_str(key: str, value: PatternOrStr) -> PatternStr:
+def expect_to_have_class(
+    loc: Locator,
+    cls: str,
+    timeout: Timeout = None,
+) -> None:
+    """Expect a locator to contain a class value"""
+    cls_regex = re.compile(rf"(^|\s+){re.escape(cls)}(\s+|$)")
+    playwright_expect(loc).to_have_class(cls_regex, timeout=timeout)
+
+
+def expect_not_to_have_class(
+    loc: Locator,
+    cls: str,
+    timeout: Timeout = None,
+) -> None:
+    """Expect a locator not to contain a class value"""
+    cls_regex = re.compile(rf"(^|\s+){re.escape(cls)}(\s+|$)")
+    playwright_expect(loc).not_to_have_class(cls_regex, timeout=timeout)
+
+
+def _style_match_str(key: str, value: PatternOrStr) -> PatternStr:
     if isinstance(value, str):
         value_str = re.escape(value)
     else:
@@ -163,7 +187,7 @@ def style_match_str(key: str, value: PatternOrStr) -> PatternStr:
     return re.compile(rf"(^|;)\s*{re.escape(key)}\s*:\s*{value_str}\s*(;|$)")
 
 
-def attr_match_str(key: str, value: str) -> str:
+def _attr_match_str(key: str, value: str) -> str:
     # Escape double quotes
     value_str = value.replace('"', '\\"')
     # `key` is `value`
@@ -173,7 +197,7 @@ def attr_match_str(key: str, value: str) -> str:
     # return f'{key}*="{value.pattern}"'
 
 
-def xpath_match_str(key: str, value: PatternOrStr) -> str:
+def _xpath_match_str(key: str, value: PatternOrStr) -> str:
     if isinstance(value, str):
         # Escape double quotes
         value_str = value.replace('"', '\\"')
@@ -188,14 +212,14 @@ def xpath_match_str(key: str, value: PatternOrStr) -> str:
         return f'matches(@{key}, "{value.pattern}")'
 
 
-def expect_el_style(
+def expect_to_have_style(
     loc: Locator,
     css_key: str,
     # Str representation for value. Will be put in a regex with `css_key`
     css_value: StyleValue,
     timeout: Timeout = None,
 ) -> None:
-    """Expect a style to have a value. If `value` is `None`, then the style should not exist."""
+    """Expect the `style` attribute to have a value. If `value` is `None`, then the style attribute should not exist."""
     if css_value is None:
         # Not allowed to have any value for the style
         playwright_expect(loc).not_to_have_attribute(
@@ -207,14 +231,14 @@ def expect_el_style(
 
     playwright_expect(loc).to_have_attribute(
         "style",
-        style_match_str(css_key, css_value),
+        _style_match_str(css_key, css_value),
         timeout=timeout,
     )
 
 
-def expect_multiple(loc: Locator, multiple: bool, timeout: Timeout = None) -> None:
+def _expect_multiple(loc: Locator, multiple: bool, timeout: Timeout = None) -> None:
     value = "True" if multiple else None
-    expect_el_style(loc, "multiple", value, timeout=timeout)
+    expect_to_have_style(loc, "multiple", value, timeout=timeout)
 
 
 ######################################################
@@ -496,7 +520,7 @@ class InputPassword(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_el_style(self.loc_container, "width", value, timeout=timeout)
+        expect_to_have_style(self.loc_container, "width", value, timeout=timeout)
 
 
 Resize = Literal["none", "both", "horizontal", "vertical"]
@@ -534,16 +558,16 @@ class InputTextArea(
         self, value: StyleValue, *, timeout: Timeout = None
     ) -> None:
         if value is None:
-            expect_el_style(self.loc_container, "width", None, timeout=timeout)
-            expect_el_style(self.loc, "width", "100%", timeout=timeout)
+            expect_to_have_style(self.loc_container, "width", None, timeout=timeout)
+            expect_to_have_style(self.loc, "width", "100%", timeout=timeout)
         else:
-            expect_el_style(self.loc_container, "width", value, timeout=timeout)
-            expect_el_style(self.loc, "width", None, timeout=timeout)
+            expect_to_have_style(self.loc_container, "width", value, timeout=timeout)
+            expect_to_have_style(self.loc, "width", None, timeout=timeout)
 
     def expect_height_to_have_value(
         self, value: StyleValue, *, timeout: Timeout = None
     ) -> None:
-        expect_el_style(self.loc, "height", value, timeout=timeout)
+        expect_to_have_style(self.loc, "height", value, timeout=timeout)
 
     def expect_cols_to_have_value(
         self, value: AttrValue, *, timeout: Timeout = None
@@ -685,7 +709,7 @@ class _InputSelectBase(
 
     # multiple: bool = False,
     def expect_multiple(self, multiple: bool, *, timeout: Timeout = None) -> None:
-        expect_multiple(self.loc, multiple, timeout=timeout)
+        _expect_multiple(self.loc, multiple, timeout=timeout)
 
     def expect_size_to_have_value(
         self, value: AttrValue, *, timeout: Timeout = None
@@ -717,7 +741,7 @@ class InputSelect(_InputSelectBase):
     # selectize: bool = False,
     def expect_selectize(self, selectize: bool, *, timeout: Timeout = None) -> None:
         # class_=None if selectize else "form-select",
-        expect_class_value(
+        _expect_class_value(
             self.loc,
             "form-select",
             has_class=not selectize,
@@ -790,7 +814,7 @@ class InputActionLink(_InputActionBase):
 #     * input_radio_buttons
 
 
-class InputCheckboxBase(
+class _InputCheckboxBase(
     _WidthContainerM,
     _InputWithLabel,
 ):
@@ -817,7 +841,7 @@ class InputCheckboxBase(
             self.expect.not_to_be_checked(timeout=timeout)
 
 
-class InputCheckbox(InputCheckboxBase):
+class InputCheckbox(_InputCheckboxBase):
     def __init__(
         self,
         page: Page,
@@ -830,7 +854,7 @@ class InputCheckbox(InputCheckboxBase):
         )
 
 
-class InputSwitch(InputCheckboxBase):
+class InputSwitch(_InputCheckboxBase):
     def __init__(
         self,
         page: Page,
@@ -899,7 +923,7 @@ class _MultipleDomItems:
                 "xpath=.",
                 # Simple approach as position is not needed
                 has=page.locator(
-                    f"{el_type}[{attr_match_str(key, item)}]{is_checked_str}",
+                    f"{el_type}[{_attr_match_str(key, item)}]{is_checked_str}",
                 ),
             )
 
@@ -919,7 +943,7 @@ class _MultipleDomItems:
                 playwright_expect(
                     # Simple approach as position is not needed
                     loc_container_orig.locator(
-                        f"{el_type}[{attr_match_str(key, item)}]{is_checked_str}",
+                        f"{el_type}[{_attr_match_str(key, item)}]{is_checked_str}",
                     )
                 ).to_have_count(1, timeout=timeout)
 
@@ -962,7 +986,7 @@ class _MultipleDomItems:
             has_locator = has_locator.nth(i)
             # Make sure that element has the correct attribute value
             has_locator = has_locator.locator(
-                f"xpath=self::*[{xpath_match_str(key, item)}]"
+                f"xpath=self::*[{_xpath_match_str(key, item)}]"
             )
 
             # Given the container, make sure it contains this locator
@@ -1018,7 +1042,7 @@ class _RadioButtonCheckboxGroupBase(_InputWithLabel):
         )
 
     def expect_inline(self, inline: bool, *, timeout: Timeout = None) -> None:
-        expect_class_value(
+        _expect_class_value(
             self.loc_container,
             "shiny-input-container-inline",
             has_class=inline,
@@ -1199,7 +1223,7 @@ class InputRadioButtons(
         # Only need to set.
         # The Browser will _unset_ the previously selected radio button
         self.loc_container.locator(
-            f"label input[type=radio][{attr_match_str('value', selected)}]"
+            f"label input[type=radio][{_attr_match_str('value', selected)}]"
         ).check(timeout=timeout)
 
     def expect_choices(
@@ -1288,11 +1312,11 @@ class InputFile(
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_el_style(self.loc_progress, "width", "100%", timeout=timeout)
+        expect_to_have_style(self.loc_progress, "width", "100%", timeout=timeout)
 
     # TODO-future; Test multiple file upload
     def expect_multiple(self, multiple: bool, *, timeout: Timeout = None) -> None:
-        expect_multiple(self.loc, multiple, timeout=timeout)
+        _expect_multiple(self.loc, multiple, timeout=timeout)
 
     def expect_accept(
         self,
@@ -1305,7 +1329,7 @@ class InputFile(
         expect_attr(self.loc, "accept", accept, timeout=timeout)
 
     def expect_width(self, width: StyleValue, *, timeout: Timeout = None) -> None:
-        expect_el_style(self.loc_container, "width", width, timeout=timeout)
+        expect_to_have_style(self.loc_container, "width", width, timeout=timeout)
 
     def expect_button_label(
         self,
@@ -1413,7 +1437,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
     def click_play(self, *, timeout: Timeout = None) -> None:
         self.loc_container.wait_for(state="visible", timeout=timeout)
         self.loc_container.scroll_into_view_if_needed(timeout=timeout)
-        expect_class_value(
+        _expect_class_value(
             self.loc_play_pause, "playing", has_class=False, timeout=timeout
         )
         self.loc_play_pause.click()
@@ -1421,7 +1445,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
     def click_pause(self, *, timeout: Timeout = None) -> None:
         self.loc_container.wait_for(state="visible", timeout=timeout)
         self.loc_container.scroll_into_view_if_needed(timeout=timeout)
-        expect_class_value(
+        _expect_class_value(
             self.loc_play_pause, "playing", has_class=True, timeout=timeout
         )
         self.loc_play_pause.click()
@@ -2155,7 +2179,7 @@ class OutputTextVerbatim(_OutputTextValue):
     def expect_has_placeholder(
         self, placeholder: bool = False, *, timeout: Timeout = None
     ) -> None:
-        expect_class_value(
+        _expect_class_value(
             self.loc,
             cls="noplaceholder",
             has_class=not placeholder,
@@ -2185,7 +2209,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_el_style(self.loc, "height", value, timeout=timeout)
+        expect_to_have_style(self.loc, "height", value, timeout=timeout)
 
     def expect_width_to_have_value(
         self,
@@ -2193,7 +2217,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
-        expect_el_style(self.loc, "width", value, timeout=timeout)
+        expect_to_have_style(self.loc, "width", value, timeout=timeout)
 
     def expect_img_src(
         self,
