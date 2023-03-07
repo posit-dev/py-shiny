@@ -1,5 +1,5 @@
 from conftest import ShinyAppProc, create_doc_example_fixture
-from playground import InputSwitch, OutputText
+from playground import InputSwitch, OutputUi
 from playwright.sync_api import Page, expect
 
 app = create_doc_example_fixture("input_switch")
@@ -17,7 +17,7 @@ def test_input_switch_kitchen(page: Page, app: ShinyAppProc) -> None:
     somevalue.expect_to_be_checked(False)
     somevalue.expect_width_to_have_value(None)
 
-    OutputText(page, "value").expect_value("")
+    expect(OutputUi(page, "value").loc).to_have_text("False")
 
     somevalue.set(True)
 
@@ -29,4 +29,4 @@ def test_input_switch_kitchen(page: Page, app: ShinyAppProc) -> None:
     somevalue.toggle()
     somevalue.expect_to_be_checked(True)
 
-    OutputText(page, "value").expect_value("Some value: ")
+    expect(OutputUi(page, "value").loc).to_have_text("True")
