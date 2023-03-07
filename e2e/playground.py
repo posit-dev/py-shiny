@@ -11,7 +11,8 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal, Protocol
 
-if sys.version_info >= (3, 10):
+sys_version_info_greater_than_3_10 = sys.version_info >= (3, 10)
+if sys_version_info_greater_than_3_10:
     from typing import TypeGuard
 else:
     from typing_extensions import TypeGuard
@@ -198,7 +199,7 @@ def xpath_match_str(key: str, value: PatternOrStr) -> str:
         return f'@{key}="{value_str}"'
     else:
         # Disabling type assertion for earlier versions of Python
-        if sys.version_info >= (3, 9):
+        if sys_version_info_greater_than_3_10:
             assert_type(value, re.Pattern[str])
 
         # `key` contains `value`
