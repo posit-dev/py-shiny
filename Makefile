@@ -109,6 +109,9 @@ dist: clean ## builds source and wheel package
 	ls -l dist
 
 ## install the package to the active Python's site-packages
-# Note that py-htmltools/ must be a sibling directory of py-shiny/.
+# Note that instead of --force-reinstall, we uninstall and then install, because
+# --force-reinstall also reinstalls all deps. And if we also used --no-deps, then the
+# deps wouldn't be installed the first time.
 install: dist
-	python3 -m pip install --force-reinstall dist/shiny*.whl --find-links ../py-htmltools/dist/
+	pip uninstall -y shiny
+	python3 -m pip install dist/shiny*.whl
