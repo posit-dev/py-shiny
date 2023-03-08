@@ -12,7 +12,7 @@ from typing import Any, Optional
 # Tagifiable isn't used directly in this file, but it seems to necessary to import
 # it somewhere for Sphinx to work cleanly.
 from htmltools import Tagifiable  # pyright: ignore[reportUnusedImport] # noqa: F401
-from htmltools import Tag, TagChildArg, TagList, div, tags
+from htmltools import Tag, TagChild, TagList, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -29,8 +29,8 @@ def page_navbar(
     id: Optional[str] = None,
     selected: Optional[str] = None,
     position: Literal["static-top", "fixed-top", "fixed-bottom"] = "static-top",
-    header: Optional[TagChildArg] = None,
-    footer: Optional[TagChildArg] = None,
+    header: Optional[TagChild] = None,
+    footer: Optional[TagChild] = None,
     bg: Optional[str] = None,
     inverse: bool = False,
     collapsible: bool = True,

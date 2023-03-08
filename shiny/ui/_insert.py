@@ -2,7 +2,7 @@ __all__ = ("insert_ui", "remove_ui")
 
 from typing import Optional
 
-from htmltools import TagChildArg
+from htmltools import TagChild
 
 from .._docstring import add_example
 from .._typing_extensions import Literal
@@ -11,7 +11,7 @@ from ..session import Session, require_active_session
 
 @add_example()
 def insert_ui(
-    ui: TagChildArg,
+    ui: TagChild,
     selector: str,
     where: Literal["beforeBegin", "afterBegin", "beforeEnd", "afterEnd"] = "beforeEnd",
     multiple: bool = False,

@@ -2,7 +2,7 @@ __all__ = ("input_text", "input_text_area")
 
 from typing import Optional
 
-from htmltools import Tag, TagChildArg, css, div, tags
+from htmltools import Tag, TagChild, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -13,7 +13,7 @@ from ._utils import shiny_input_label
 @add_example()
 def input_text(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     value: str = "",
     *,
     width: Optional[str] = None,
@@ -81,7 +81,7 @@ def input_text(
 @add_example()
 def input_text_area(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     value: str = "",
     *,
     width: Optional[str] = None,

@@ -37,12 +37,12 @@ from typing import (
     overload,
 )
 
-# These aren't used directly in this file, but they seems necessary for Sphinx to work
+# These aren't used directly in this file, but they seem necessary for Sphinx to work
 # cleanly.
 from htmltools import Tag  # pyright: ignore[reportUnusedImport] # noqa: F401
-from htmltools import TagChildArg  # pyright: ignore[reportUnusedImport] # noqa: F401
 from htmltools import Tagifiable  # pyright: ignore[reportUnusedImport] # noqa: F401
 from htmltools import TagList  # pyright: ignore[reportUnusedImport] # noqa: F401
+from htmltools import TagChild
 
 if TYPE_CHECKING:
     from ..session import Session
@@ -666,11 +666,11 @@ def table(
 # ======================================================================================
 # RenderUI
 # ======================================================================================
-RenderUIFunc = Callable[[], TagChildArg]
-RenderUIFuncAsync = Callable[[], Awaitable[TagChildArg]]
+RenderUIFunc = Callable[[], TagChild]
+RenderUIFuncAsync = Callable[[], Awaitable[TagChild]]
 
 
-class RenderUI(RenderFunction[TagChildArg, "RenderedDeps | None"]):
+class RenderUI(RenderFunction[TagChild, "RenderedDeps | None"]):
     def __init__(self, fn: RenderUIFunc) -> None:
         super().__init__(fn)
         # The Render*Async subclass will pass in an async function, but it tells the
@@ -682,14 +682,14 @@ class RenderUI(RenderFunction[TagChildArg, "RenderedDeps | None"]):
         return _utils.run_coro_sync(self._run())
 
     async def _run(self) -> RenderedDeps | None:
-        ui: TagChildArg = await self._fn()
+        ui: TagChild = await self._fn()
         if ui is None:
             return None
 
         return self._session._process_ui(ui)
 
 
-class RenderUIAsync(RenderUI, RenderFunctionAsync[TagChildArg, "RenderedDeps| None"]):
+class RenderUIAsync(RenderUI, RenderFunctionAsync[TagChild, "RenderedDeps| None"]):
     def __init__(self, fn: RenderUIFuncAsync) -> None:
         if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
@@ -719,7 +719,7 @@ def ui(
 
     Returns
     -------
-    A decorator for a function that returns an object of type `~shiny.ui.TagChildArg`.
+    A decorator for a function that returns an object of type `~shiny.ui.TagChild`.
 
     Tip
     ----
@@ -734,7 +734,7 @@ def ui(
     """
 
     def wrapper(
-        fn: Callable[[], TagChildArg] | Callable[[], Awaitable[TagChildArg]]
+        fn: Callable[[], TagChild] | Callable[[], Awaitable[TagChild]]
     ) -> RenderUI:
         if _utils.is_async_callable(fn):
             return RenderUIAsync(fn)

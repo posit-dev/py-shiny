@@ -4,7 +4,7 @@ __all__ = ("input_file",)
 
 from typing import Optional
 
-from htmltools import Tag, TagChildArg, css, div, span, tags
+from htmltools import Tag, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -15,7 +15,7 @@ from ._utils import shiny_input_label
 @add_example()
 def input_file(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     *,
     multiple: bool = False,
     accept: Optional[str | list[str]] = None,

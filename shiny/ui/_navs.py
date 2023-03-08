@@ -18,7 +18,7 @@ import copy
 import re
 from typing import Any, Optional, cast
 
-from htmltools import Tag, TagChildArg, TagList, div, tags
+from htmltools import Tag, TagChild, TagList, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -43,7 +43,7 @@ class Nav:
 
     def resolve(
         self, selected: Optional[str], context: dict[str, Any]
-    ) -> tuple[TagChildArg, TagChildArg]:
+    ) -> tuple[TagChild, TagChild]:
         # Nothing to do for nav_control()/nav_spacer()
         if self.content is None:
             return self.nav, None
@@ -89,10 +89,10 @@ class Nav:
 
 @add_example()
 def nav(
-    title: TagChildArg,
-    *args: TagChildArg,
+    title: TagChild,
+    *args: TagChild,
     value: Optional[str] = None,
-    icon: TagChildArg = None,
+    icon: TagChild = None,
 ) -> Nav:
     """
     Create a nav item pointing to some internal content.
@@ -144,7 +144,7 @@ def nav(
     )
 
 
-def nav_control(*args: TagChildArg) -> Nav:
+def nav_control(*args: TagChild) -> Nav:
     """
     Place a control in the navigation container.
 
@@ -197,14 +197,14 @@ def nav_spacer() -> Nav:
 
 class NavMenu:
     nav_controls: list[NavSetArg]
-    title: TagChildArg
+    title: TagChild
     value: str
     align: Literal["left", "right"]
 
     def __init__(
         self,
         *args: NavSetArg | str,
-        title: TagChildArg,
+        title: TagChild,
         value: str,
         align: Literal["left", "right"] = "left",
     ) -> None:
@@ -217,7 +217,7 @@ class NavMenu:
         self,
         selected: Optional[str],
         context: dict[str, Any],
-    ) -> tuple[TagChildArg, TagChildArg]:
+    ) -> tuple[TagChild, TagChild]:
         nav, content = render_navset(
             *self.nav_controls,
             ul_class=f"dropdown-menu {'dropdown-menu-right' if self.align == 'right' else ''}",
@@ -274,10 +274,10 @@ def menu_string_as_nav(x: str | NavSetArg) -> NavSetArg:
 
 
 def nav_menu(
-    title: TagChildArg,
+    title: TagChild,
     *args: Nav | str,
     value: Optional[str] = None,
-    icon: TagChildArg = None,
+    icon: TagChild = None,
     align: Literal["left", "right"] = "left",
 ) -> NavMenu:
     """
@@ -338,8 +338,8 @@ class NavSet:
     ul_class: str
     id: Optional[str]
     selected: Optional[str]
-    header: TagChildArg
-    footer: TagChildArg
+    header: TagChild
+    footer: TagChild
 
     def __init__(
         self,
@@ -347,8 +347,8 @@ class NavSet:
         ul_class: str,
         id: Optional[str],
         selected: Optional[str],
-        header: TagChildArg = None,
-        footer: TagChildArg = None,
+        header: TagChild = None,
+        footer: TagChild = None,
     ) -> None:
         self.args = args
         self.ul_class = ul_class
@@ -368,7 +368,7 @@ class NavSet:
         )
         return self.layout(nav, content)
 
-    def layout(self, nav: TagChildArg, content: TagChildArg) -> TagList | Tag:
+    def layout(self, nav: TagChild, content: TagChild) -> TagList | Tag:
         return TagList(nav, self.header, content, self.footer)
 
 
@@ -379,8 +379,8 @@ def navset_tab(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    header: TagChildArg = None,
-    footer: TagChildArg = None,
+    header: TagChild = None,
+    footer: TagChild = None,
 ) -> NavSet:
     """
     Render nav items as a tabset.
@@ -432,8 +432,8 @@ def navset_pill(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    header: TagChildArg = None,
-    footer: TagChildArg = None,
+    header: TagChild = None,
+    footer: TagChild = None,
 ) -> NavSet:
     """
     Render nav items as a pillset.
@@ -485,8 +485,8 @@ def navset_hidden(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    header: TagChildArg = None,
-    footer: TagChildArg = None,
+    header: TagChild = None,
+    footer: TagChild = None,
 ) -> NavSet:
     """
     Render nav contents without the nav items.
@@ -539,8 +539,8 @@ class NavSetCard(NavSet):
         ul_class: str,
         id: Optional[str],
         selected: Optional[str],
-        header: TagChildArg = None,
-        footer: TagChildArg = None,
+        header: TagChild = None,
+        footer: TagChild = None,
         placement: Literal["above", "below"] = "above",
     ) -> None:
         super().__init__(
@@ -553,7 +553,7 @@ class NavSetCard(NavSet):
         )
         self.placement = placement
 
-    def layout(self, nav: TagChildArg, content: TagChildArg) -> Tag:
+    def layout(self, nav: TagChild, content: TagChild) -> Tag:
         if self.placement == "below":
             return card(self.header, content, self.footer, footer=nav)
         else:
@@ -564,8 +564,8 @@ def navset_tab_card(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    header: TagChildArg = None,
-    footer: TagChildArg = None,
+    header: TagChild = None,
+    footer: TagChild = None,
 ) -> NavSetCard:
     """
     Render nav items as a tabset inside a card container.
@@ -617,8 +617,8 @@ def navset_pill_card(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    header: TagChildArg = None,
-    footer: TagChildArg = None,
+    header: TagChild = None,
+    footer: TagChild = None,
     placement: Literal["above", "below"] = "above",
 ) -> NavSetCard:
     """
@@ -679,8 +679,8 @@ class NavSetPillList(NavSet):
         ul_class: str,
         id: Optional[str],
         selected: Optional[str],
-        header: TagChildArg = None,
-        footer: TagChildArg = None,
+        header: TagChild = None,
+        footer: TagChild = None,
         well: bool = True,
         widths: tuple[int, int] = (4, 8),
     ) -> None:
@@ -695,7 +695,7 @@ class NavSetPillList(NavSet):
         self.well = well
         self.widths = widths
 
-    def layout(self, nav: TagChildArg, content: TagChildArg) -> Tag:
+    def layout(self, nav: TagChild, content: TagChild) -> Tag:
         widths = self.widths
         return row(
             column(widths[0], nav, class_="well" if self.well else None),
@@ -707,8 +707,8 @@ def navset_pill_list(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    header: TagChildArg = None,
-    footer: TagChildArg = None,
+    header: TagChild = None,
+    footer: TagChild = None,
     well: bool = True,
     widths: tuple[int, int] = (4, 8),
 ) -> NavSet:
@@ -768,7 +768,7 @@ def navset_pill_list(
 
 
 class NavSetBar(NavSet):
-    title: TagChildArg
+    title: TagChild
     position: Literal["static-top", "fixed-top", "fixed-bottom", "sticky-top"]
     bg: Optional[str]
     inverse: bool
@@ -779,14 +779,14 @@ class NavSetBar(NavSet):
         self,
         *args: NavSetArg,
         ul_class: str,
-        title: TagChildArg,
+        title: TagChild,
         id: Optional[str],
         selected: Optional[str],
         position: Literal[
             "static-top", "fixed-top", "fixed-bottom", "sticky-top"
         ] = "static-top",
-        header: TagChildArg = None,
-        footer: TagChildArg = None,
+        header: TagChild = None,
+        footer: TagChild = None,
         bg: Optional[str] = None,
         # TODO: default to 'auto', like we have in R (parse color via webcolors?)
         inverse: bool = False,
@@ -808,7 +808,7 @@ class NavSetBar(NavSet):
         self.collapsible = collapsible
         self.fluid = fluid
 
-    def layout(self, nav: TagChildArg, content: TagChildArg) -> TagList:
+    def layout(self, nav: TagChild, content: TagChild) -> TagList:
         nav_container = div(
             {"class": "container-fluid" if self.fluid else "container"},
             tags.a({"class": "navbar-brand", "href": "#"}, self.title),
@@ -855,14 +855,14 @@ class NavSetBar(NavSet):
 
 def navset_bar(
     *args: NavSetArg,
-    title: TagChildArg,
+    title: TagChild,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     position: Literal[
         "static-top", "fixed-top", "fixed-bottom", "sticky-top"
     ] = "static-top",
-    header: TagChildArg = None,
-    footer: TagChildArg = None,
+    header: TagChild = None,
+    footer: TagChild = None,
     bg: Optional[str] = None,
     # TODO: default to 'auto', like we have in R (parse color via webcolors?)
     inverse: bool = False,
@@ -970,9 +970,7 @@ def render_navset(
     return ul_tag, div_tag
 
 
-def card(
-    *args: TagChildArg, header: TagChildArg = None, footer: TagChildArg = None
-) -> Tag:
+def card(*args: TagChild, header: TagChild = None, footer: TagChild = None) -> Tag:
     if header:
         header = div(header, class_="card-header")
     if footer:

@@ -11,7 +11,7 @@ import math
 from datetime import date, datetime, timedelta
 from typing import Iterable, Optional, TypeVar, Union, cast
 
-from htmltools import HTML, Tag, TagAttrArg, TagChildArg, css, div, tags
+from htmltools import HTML, Tag, TagAttrValue, TagChild, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -51,14 +51,14 @@ class AnimationOptions(TypedDict):
 
     interval: NotRequired[int]
     loop: NotRequired[bool]
-    play_button: NotRequired[TagChildArg]
-    pause_button: NotRequired[TagChildArg]
+    play_button: NotRequired[TagChild]
+    pause_button: NotRequired[TagChild]
 
 
 @add_example()
 def input_slider(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     min: SliderValueArg,
     max: SliderValueArg,
     value: SliderValueArg | Iterable[SliderValueArg],
@@ -166,7 +166,7 @@ def input_slider(
 
     id = resolve_id(id)
 
-    props: dict[str, TagAttrArg] = {
+    props: dict[str, TagAttrValue] = {
         "class_": "js-range-slider",
         "id": id,
         "data_skin": "shiny",

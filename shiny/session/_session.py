@@ -29,7 +29,7 @@ from typing import (
     overload,
 )
 
-from htmltools import TagChildArg, TagList
+from htmltools import TagChild, TagList
 from starlette.requests import HTTPConnection, Request
 from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 from starlette.types import ASGIApp
@@ -796,7 +796,7 @@ class Session(object, metaclass=SessionMeta):
         nonce = _utils.rand_hex(8)
         return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(name)}?nonce={urllib.parse.quote(nonce)}"
 
-    def _process_ui(self, ui: TagChildArg) -> RenderedDeps:
+    def _process_ui(self, ui: TagChild) -> RenderedDeps:
         res = TagList(ui).render()
         deps: list[dict[str, Any]] = []
         for dep in res["dependencies"]:
