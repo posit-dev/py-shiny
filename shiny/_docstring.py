@@ -2,14 +2,9 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from typing import Any, Callable, TypeVar
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
+from ._typing_extensions import Literal
 
 ex_dir: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "examples")
 

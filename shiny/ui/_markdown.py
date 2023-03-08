@@ -1,19 +1,14 @@
 __all__ = ("markdown",)
 
 import importlib
-import sys
 import textwrap
 import warnings
 from typing import Callable, Optional
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
 from htmltools import HTML
 
 from .._docstring import add_example
+from .._typing_extensions import Literal
 
 
 @add_example()

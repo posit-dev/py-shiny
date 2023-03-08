@@ -1,20 +1,8 @@
 from __future__ import annotations
 
 import re
-import sys
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
-# Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
-# they should both come from the same typing module.
-# https://peps.python.org/pep-0655/#usage-in-python-3-11
-if sys.version_info >= (3, 11):
-    from typing import NotRequired, TypedDict
-else:
-    from typing_extensions import NotRequired, TypedDict
+from _typing_extensions import Literal, NotRequired, TypedDict
 
 
 class ClickOpts(TypedDict):

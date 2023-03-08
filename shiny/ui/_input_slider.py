@@ -8,7 +8,6 @@ __all__ = (
 )
 
 import math
-import sys
 from datetime import date, datetime, timedelta
 from typing import Iterable, Optional, TypeVar, Union, cast
 
@@ -16,16 +15,9 @@ from htmltools import HTML, Tag, TagAttrArg, TagChildArg, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
+from .._typing_extensions import NotRequired, TypedDict
 from ._html_dependencies import ionrangeslider_deps
 from ._utils import shiny_input_label
-
-# Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
-# they should both come from the same typing module.
-# https://peps.python.org/pep-0655/#usage-in-python-3-11
-if sys.version_info >= (3, 11):
-    from typing import NotRequired, TypedDict
-else:
-    from typing_extensions import NotRequired, TypedDict
 
 # TODO: validate value(s) are within (min,max)?
 

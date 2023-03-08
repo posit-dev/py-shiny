@@ -11,7 +11,6 @@ import functools
 import json
 import os
 import re
-import sys
 import traceback
 import typing
 import urllib.parse
@@ -30,16 +29,10 @@ from typing import (
     overload,
 )
 
+from htmltools import TagChildArg, TagList
 from starlette.requests import HTTPConnection, Request
 from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 from starlette.types import ASGIApp
-
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
-
-from htmltools import TagChildArg, TagList
 
 if TYPE_CHECKING:
     from .._app import App
@@ -49,6 +42,7 @@ from .._connection import Connection, ConnectionClosed
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from .._namespaces import Id, ResolvedId, Root
+from .._typing_extensions import TypedDict
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect, Effect_, Value, flush, isolate

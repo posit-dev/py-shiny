@@ -7,19 +7,14 @@ __all__ = (
     "modal_remove",
 )
 
-import sys
 from typing import Optional
-
-from shiny.types import MISSING, MISSING_TYPE
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 from htmltools import HTML, Tag, TagAttrArg, TagChildArg, div, tags
 
+from shiny.types import MISSING, MISSING_TYPE
+
 from .._docstring import add_example
+from .._typing_extensions import Literal
 from ..session import Session, require_active_session
 
 

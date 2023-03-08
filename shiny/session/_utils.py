@@ -4,7 +4,6 @@ from __future__ import annotations
 
 __all__ = ("get_current_session", "session_context", "require_active_session")
 
-import sys
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
@@ -13,11 +12,7 @@ if TYPE_CHECKING:
     from ._session import Session
 
 from .._namespaces import namespace_context
-
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
+from .._typing_extensions import TypedDict
 
 
 class RenderedDeps(TypedDict):
