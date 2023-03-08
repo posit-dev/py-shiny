@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from _typing_extensions import Literal, NotRequired, TypedDict
+from .._typing_extensions import Literal, NotRequired, TypedDict
 
 
 class ClickOpts(TypedDict):
