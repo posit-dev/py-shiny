@@ -80,8 +80,9 @@ from ._progress import Progress
 from htmltools import (
     TagList,
     Tag,
-    TagChildArg,
-    TagAttrArg,
+    TagChild,
+    TagAttrs,
+    TagAttrValue,
     tags,
     HTML,
     head_content,
@@ -191,8 +192,9 @@ __all__ = (
     # Items below are from htmltools
     "TagList",
     "Tag",
-    "TagChildArg",
-    "TagAttrArg",
+    "TagChild",
+    "TagAttrs",
+    "TagAttrValue",
     "tags",
     "HTML",
     "head_content",

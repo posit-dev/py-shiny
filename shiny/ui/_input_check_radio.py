@@ -8,14 +8,14 @@ __all__ = (
 
 from typing import Mapping, Optional, Union
 
-from htmltools import Tag, TagChildArg, css, div, span, tags
+from htmltools import Tag, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from ._utils import shiny_input_label
 
 # Canonical format for representing select options.
-_Choices = Mapping[str, TagChildArg]
+_Choices = Mapping[str, TagChild]
 
 # Formats available to the user
 ChoicesArg = Union["list[str]", _Choices]
@@ -23,7 +23,7 @@ ChoicesArg = Union["list[str]", _Choices]
 
 @add_example()
 def input_checkbox(
-    id: str, label: TagChildArg, value: bool = False, *, width: Optional[str] = None
+    id: str, label: TagChild, value: bool = False, *, width: Optional[str] = None
 ) -> Tag:
     """
     Create a checkbox that can be used to specify logical values.
@@ -76,7 +76,7 @@ def input_checkbox(
 
 @add_example()
 def input_switch(
-    id: str, label: TagChildArg, value: bool = False, *, width: Optional[str] = None
+    id: str, label: TagChild, value: bool = False, *, width: Optional[str] = None
 ) -> Tag:
     """
     Create a switch that can be used to specify logical values. Similar to
@@ -117,7 +117,7 @@ def input_switch(
 
 def _input_checkbox(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     class_: str = "form-check",
     value: bool = False,
     *,
@@ -142,7 +142,7 @@ def _input_checkbox(
 @add_example()
 def input_checkbox_group(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     choices: ChoicesArg,
     *,
     selected: Optional[str | list[str]] = None,
@@ -211,7 +211,7 @@ def input_checkbox_group(
 @add_example()
 def input_radio_buttons(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     choices: ChoicesArg,
     *,
     selected: Optional[str] = None,
@@ -313,7 +313,7 @@ def _generate_option(
     id: str,
     type: str,
     value: str,
-    label: TagChildArg,
+    label: TagChild,
     checked: bool,
     inline: bool,
 ) -> Tag:

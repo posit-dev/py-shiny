@@ -39,7 +39,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import TypedDict
 
-from htmltools import TagChildArg, TagList
+from htmltools import TagChild, TagList
 
 if TYPE_CHECKING:
     from .._app import App
@@ -802,7 +802,7 @@ class Session(object, metaclass=SessionMeta):
         nonce = _utils.rand_hex(8)
         return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(name)}?nonce={urllib.parse.quote(nonce)}"
 
-    def _process_ui(self, ui: TagChildArg) -> RenderedDeps:
+    def _process_ui(self, ui: TagChild) -> RenderedDeps:
         res = TagList(ui).render()
         deps: list[dict[str, Any]] = []
         for dep in res["dependencies"]:

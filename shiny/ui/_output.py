@@ -11,7 +11,7 @@ __all__ = (
 
 from typing import Optional
 
-from htmltools import Tag, TagAttrArg, TagFunction, css, div, tags
+from htmltools import Tag, TagAttrValue, TagFunction, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -281,7 +281,7 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
 
 
 @add_example()
-def output_table(id: str, **kwargs: TagAttrArg) -> Tag:
+def output_table(id: str, **kwargs: TagAttrValue) -> Tag:
     """
     Create a output container for a table.
 
@@ -307,7 +307,7 @@ def output_ui(
     id: str,
     inline: bool = False,
     container: Optional[TagFunction] = None,
-    **kwargs: TagAttrArg,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Create a output container for a UI (i.e., HTML) element.

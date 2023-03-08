@@ -8,7 +8,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal
 
-from htmltools import TagChildArg
+from htmltools import TagChild
 
 from .._docstring import add_example
 from ..session import Session, require_active_session
@@ -16,7 +16,7 @@ from ..session import Session, require_active_session
 
 @add_example()
 def insert_ui(
-    ui: TagChildArg,
+    ui: TagChild,
     selector: str,
     where: Literal["beforeBegin", "afterBegin", "beforeEnd", "afterEnd"] = "beforeEnd",
     multiple: bool = False,

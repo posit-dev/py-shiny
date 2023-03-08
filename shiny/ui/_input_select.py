@@ -9,14 +9,14 @@ __all__ = (
 
 from typing import Mapping, Optional, Union, cast
 
-from htmltools import Tag, TagChildArg, TagList, css, div, tags
+from htmltools import Tag, TagChild, TagList, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from ._html_dependencies import selectize_deps
 from ._utils import shiny_input_label
 
-_Choices = Mapping[str, TagChildArg]
+_Choices = Mapping[str, TagChild]
 _OptGrpChoices = Mapping[str, _Choices]
 
 # Canonical format for representing select options.
@@ -46,7 +46,7 @@ A list of strings, usually of length 1, with the value of the selected items. Wh
 @add_example()
 def input_selectize(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     choices: SelectChoicesArg,
     *,
     selected: Optional[str | list[str]] = None,
@@ -106,7 +106,7 @@ def input_selectize(
 @add_example()
 def input_select(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     choices: SelectChoicesArg,
     *,
     selected: Optional[str | list[str]] = None,

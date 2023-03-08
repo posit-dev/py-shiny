@@ -6,8 +6,8 @@ from htmltools import (
     HTMLDependency,
     Tag,
     TagChild,
-    TagChildArg,
     TagList,
+    TagNode,
     head_content,
     tags,
 )
@@ -15,7 +15,7 @@ from htmltools import (
 from ..types import MISSING, MISSING_TYPE
 
 
-def shiny_input_label(id: str, label: TagChildArg = None) -> Tag:
+def shiny_input_label(id: str, label: TagChild = None) -> Tag:
     cls = "control-label" + ("" if label else " shiny-label-null")
     return tags.label(label, class_=cls, id=id + "-label", for_=id)
 
@@ -33,7 +33,7 @@ def get_window_title(
         return head_content(tags.title(window_title))
 
 
-def _find_child_strings(x: Tag | TagList | TagChild) -> str:
+def _find_child_strings(x: TagList | TagNode) -> str:
     if isinstance(x, Tag) and x.name not in ("script", "style"):
         x = x.children
     if isinstance(x, TagList):

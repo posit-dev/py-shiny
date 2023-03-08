@@ -37,7 +37,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal, TypedDict
 
-from htmltools import TagChildArg
+from htmltools import TagChild
 
 from .._docstring import add_example, doc_format
 from .._namespaces import resolve_id
@@ -76,7 +76,7 @@ def update_action_button(
     id: str,
     *,
     label: Optional[str] = None,
-    icon: TagChildArg = None,
+    icon: TagChild = None,
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -104,7 +104,7 @@ def update_action_button(
     """
 
     session = require_active_session(session)
-    # TODO: supporting a TagChildArg for label would require changes to shiny.js
+    # TODO: supporting a TagChild for label would require changes to shiny.js
     # https://github.com/rstudio/shiny/issues/1140
     msg = {"label": label, "icon": session._process_ui(icon)["html"] if icon else None}
     session.send_input_message(id, drop_none(msg))
