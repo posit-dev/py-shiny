@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
-        python-version: [3.7, 3.8, 3.9, "3.10", 3.11]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
       fail-fast: false
 
     steps:
@@ -54,7 +54,7 @@ jobs:
           make test
 
       - name: Type check with pyright
-        if: matrix.python-version >= 3.8 && steps.install.outcome == 'success' && (success() || failure())
+        if: matrix.python-version != '3.7' && steps.install.outcome == 'success' && (success() || failure())
         run: |
           make pyright
 
