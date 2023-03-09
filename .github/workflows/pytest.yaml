@@ -30,7 +30,7 @@ jobs:
 
       - name: Install dev version of rstudio packages
         run: |
-          pip install -r .github/requirements_gha.txt
+          pip install wheel -r .github/requirements_gha.txt
 
       - name: Install dependencies
         run: pip install -e ".[dev,docs,test]"
