@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
+* Switched to new types from htmltools 0.1.5. (#416)
 
 ## [0.2.9] - 2022-11-03
 
