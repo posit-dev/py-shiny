@@ -1,0 +1,3 @@
+-e git+https://github.com/rstudio/py-htmltools.git@main#egg=htmltools
+-e git+https://github.com/rstudio/py-shinywidgets.git@main#egg=shinywidgets
+-e git+https://github.com/rstudio/py-faicons.git@main#egg=faicons

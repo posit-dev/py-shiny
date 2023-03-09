@@ -28,6 +28,12 @@ If you want to do development on Shiny for Python:
 pip install -e ".[dev,docs,test]"
 ```
 
+To install all Shiny related packages from GitHub:
+
+```sh
+pip install -r .github/requirements_gha.txt
+```
+
 Additionally, you can install pre-commit hooks which will automatically reformat and lint the code when you make a commit:
 
 ```sh
