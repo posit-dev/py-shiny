@@ -29,11 +29,10 @@ from htmltools import (
     tags,
 )
 
-from shiny.types import MISSING, MISSING_TYPE
-
 from .._docstring import add_example
 from .._typing_extensions import Literal
 from ..module import current_namespace
+from ..types import MISSING, MISSING_TYPE
 from ._html_dependencies import jqui_deps
 from ._utils import get_window_title
 

@@ -11,11 +11,10 @@ from typing import Optional
 
 from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, div, tags
 
-from shiny.types import MISSING, MISSING_TYPE
-
 from .._docstring import add_example
 from .._typing_extensions import Literal
 from ..session import Session, require_active_session
+from ..types import MISSING, MISSING_TYPE
 
 
 def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue) -> Tag:
