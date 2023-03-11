@@ -76,7 +76,7 @@ jobs:
           cd docs && make html
 
       - name: Run e2e tests
-        if: steps.install.outcome == 'success' && (success() || failure())
+        if: github.event_name != 'release' && steps.install.outcome == 'success' && (success() || failure())
         run: |
           make e2e
 
