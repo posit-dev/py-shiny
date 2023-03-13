@@ -37,7 +37,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal, TypedDict
 
-from htmltools import TagChild
+from htmltools import HTML, TagChild, TagList, tags
 
 from .._docstring import add_example, doc_format
 from .._namespaces import resolve_id
@@ -566,8 +566,7 @@ def update_selectize(
     label: Optional[str] = None,
     choices: Optional[SelectChoicesArg] = None,
     selected: Optional[str | list[str]] = None,
-    # TODO: we need the equivalent of base::I()/htmlwidgets::JS() for marking strings as strings to be evaluated
-    # options: Optional[Dict[str, str]] = None,
+    options: Optional[dict[str, str | float | HTML]] = None,
     server: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -611,6 +610,18 @@ def update_selectize(
         return update_select(
             id, label=label, choices=choices, selected=selected, session=session
         )
+
+    if options is not None:
+        js_keys = [key for key, value in options.items() if isinstance(value, HTML)]
+        cfg = TagList(
+            tags.script(
+                json.dumps(options),
+                type="application/json",
+                data_for=id,
+                data_eval=json.dumps(js_keys),
+            )
+        )
+        session.send_input_message(id, drop_none({"config": cfg.get_html_string()}))
 
     # Transform choices to a list of dicts (this is the form the client wants)
     # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]
