@@ -53,7 +53,7 @@ def input_selectize(
     selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
-    options: Optional[dict[str, str | float]] = None,
+    options: Optional[dict[str, str | float | HTML]] = None,
 ) -> Tag:
     """
     Create a select list that can be used to choose a single or multiple items from a
@@ -181,7 +181,6 @@ def input_select(
         options = {}
 
     js_keys = [key for key, value in options.items() if isinstance(value, HTML)]
-
     choices_tags = _render_choices(choices_, selected)
 
     id = resolve_id(id)
