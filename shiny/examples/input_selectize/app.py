@@ -26,7 +26,7 @@ app_ui = ui.page_fluid(
         multiple=True,
         options=(
             {
-                "maxOptions": 3,
+                "placeholder": "Customize with JavaScript",
                 "render": HTML(
                     '{option: function(item, escape) {return "<div><strong>Select " + item.label + "</strong></div>";}}'
                 ),
