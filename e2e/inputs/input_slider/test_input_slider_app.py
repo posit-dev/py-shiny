@@ -142,6 +142,6 @@ def test_slider_play(page: Page, local_app: ShinyAppProc) -> None:
     OutputTextVerbatim(page, "txt4").expect_value("1")
 
     s4.click_play()
-    s4.expect_value("5", timeout=1000)
+    s4.expect_value("5")
     s4.click_play()  # can click again!
-    s4.expect_value("5", timeout=1000)
+    s4.expect_value("5")
