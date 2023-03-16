@@ -5,7 +5,19 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## [UNRELEASED]
+
+### New features
+
+
+### Bug fixes
+
+
+### Other changes
+
+
+## [0.2.10] - 2023-03-11
 
 ### New features
 
@@ -22,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * When `input_select` or `input_selectize` were not given an explicit `select` argument, they always chose the first item, which is correct when `multiple=False`, but not when `multiple=True`. Now when `multiple=True`, the first item is no longer automatically selected. (#396)
 
 ### Other changes
+
+* Switched to new types from htmltools 0.1.5. (#416)
 
 
 ## [0.2.9] - 2022-11-03
