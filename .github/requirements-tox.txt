@@ -1,2 +1,0 @@
-https://github.com/rstudio/py-htmltools/tarball/main
-https://github.com/rstudio/py-faicons/tarball/main

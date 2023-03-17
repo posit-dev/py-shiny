@@ -67,7 +67,7 @@ jobs:
       - name: Run e2e tests
         if: github.event_name != 'release' && steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make test-e2e
+          make e2e
 
   deploy:
     name: "Deploy to PyPI"
