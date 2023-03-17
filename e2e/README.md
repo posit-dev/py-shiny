@@ -19,6 +19,12 @@ The following commands can be run from the repo root:
 ```sh
 # Run all e2e tests
 make e2e
+
+# Run just the tests in e2e/async/
+make e2e FILE=e2e/async
+
+# Run just the tests in e2e/async/, in headed mode
+make e2e FILE="--headed e2e/async"
 ```
 
 ## Shiny app fixtures
