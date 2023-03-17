@@ -394,6 +394,27 @@ async def test_isolate_async_prevents_dependency():
 
 
 # ======================================================================
+# Effects warn if user function returns a value
+# ======================================================================
+@pytest.mark.asyncio
+async def test_effect_no_return_value():
+    # Should warn because of non-None return value
+    @Effect  # pyright: ignore[reportGeneralTypeIssues]
+    def o1():
+        return 1
+
+    with pytest.warns(ReactiveWarning):
+        await flush()
+
+    # Should not warn because of None return value
+    @Effect()  # pyright: ignore[reportGeneralTypeIssues]
+    def o2():
+        ...
+
+    await flush()
+
+
+# ======================================================================
 # Priority for effects
 # ======================================================================
 @pytest.mark.asyncio
