@@ -1,4 +1,4 @@
-.PHONY: help clean clean-test clean-pyc clean-build docs help lint test e2e test-all
+.PHONY: help clean clean-test clean-pyc clean-build docs help lint test e2e
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -77,15 +77,9 @@ test: ## run tests quickly with the default Python
 	python3 tests/asyncio_prevent.py
 	pytest
 
-test-e2e: ## run tests quickly with the default Python
+e2e: ## run tests quickly with the default Python
 	playwright install --with-deps
 	pytest e2e --browser webkit --browser firefox --browser chromium  --numprocesses auto
-
-e2e: ## run e2e tests with playwright
-	tox
-
-test-all: ## run tests on every Python version with tox
-	tox
 
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source shiny -m pytest
