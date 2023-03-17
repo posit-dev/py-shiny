@@ -21,7 +21,6 @@ import base64
 import json
 import os
 import shutil
-import sys
 from os.path import abspath, dirname, join
 
 from docutils.nodes import Element, SkipNode
@@ -30,10 +29,7 @@ from htmltools import css
 from sphinx.application import Sphinx
 from sphinx.util.docutils import SphinxDirective
 
-if sys.version_info >= (3, 8):
-    from typing import Literal, TypedDict
-else:
-    from typing_extensions import Literal, TypedDict
+from shiny._typing_extensions import Literal, TypedDict
 
 
 # This is the same as the FileContentJson type in TypeScript.

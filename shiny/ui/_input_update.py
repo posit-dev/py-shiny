@@ -20,27 +20,16 @@ __all__ = (
 
 import json
 import re
-import sys
 from datetime import date
 from typing import Mapping, Optional
 
+from htmltools import TagChild
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-if sys.version_info >= (3, 11):
-    from typing import NotRequired
-else:
-    from typing_extensions import NotRequired
-
-if sys.version_info >= (3, 8):
-    from typing import Literal, TypedDict
-else:
-    from typing_extensions import Literal, TypedDict
-
-from htmltools import TagChild
-
 from .._docstring import add_example, doc_format
 from .._namespaces import resolve_id
+from .._typing_extensions import Literal, NotRequired, TypedDict
 from .._utils import drop_none
 from ..session import Session, require_active_session
 from ._input_check_radio import ChoicesArg, _generate_options

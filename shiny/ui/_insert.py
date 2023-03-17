@@ -1,16 +1,11 @@
 __all__ = ("insert_ui", "remove_ui")
 
-import sys
 from typing import Optional
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 from htmltools import TagChild
 
 from .._docstring import add_example
+from .._typing_extensions import Literal
 from ..session import Session, require_active_session
 
 

@@ -14,10 +14,7 @@ import sys
 import tempfile
 from typing import Any, Awaitable, Callable, Optional, TypeVar, cast
 
-if sys.version_info >= (3, 10):
-    from typing import TypeGuard
-else:
-    from typing_extensions import TypeGuard
+from ._typing_extensions import TypeGuard
 
 if sys.version_info >= (3, 8):
     CancelledError = asyncio.CancelledError

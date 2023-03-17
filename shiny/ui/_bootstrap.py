@@ -14,15 +14,7 @@ __all__ = (
     "help_text",
 )
 
-import sys
 from typing import Optional
-
-from shiny.types import MISSING, MISSING_TYPE
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 from htmltools import (
     Tag,
@@ -38,7 +30,9 @@ from htmltools import (
 )
 
 from .._docstring import add_example
+from .._typing_extensions import Literal
 from ..module import current_namespace
+from ..types import MISSING, MISSING_TYPE
 from ._html_dependencies import jqui_deps
 from ._utils import get_window_title
 

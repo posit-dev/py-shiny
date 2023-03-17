@@ -1,17 +1,12 @@
 __all__ = ("input_text", "input_text_area")
 
-import sys
 from typing import Optional
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 from htmltools import Tag, TagChild, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
+from .._typing_extensions import Literal
 from ._utils import shiny_input_label
 
 

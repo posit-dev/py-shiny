@@ -77,6 +77,10 @@ test: ## run tests quickly with the default Python
 	python3 tests/asyncio_prevent.py
 	pytest
 
+test-e2e: ## run tests quickly with the default Python
+	playwright install --with-deps
+	pytest e2e --browser webkit --browser firefox --browser chromium  --numprocesses auto
+
 e2e: ## run e2e tests with playwright
 	tox
 
@@ -115,3 +119,6 @@ dist: clean ## builds source and wheel package
 install: dist
 	pip uninstall -y shiny
 	python3 -m pip install dist/shiny*.whl
+
+install-deps: ## install dependencies
+	pip install -e ".[dev,docs,test]"

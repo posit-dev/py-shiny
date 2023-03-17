@@ -12,25 +12,12 @@ __all__ = (
     "SilentCancelOutputException",
 )
 
-import sys
 from typing import TYPE_CHECKING, Any, BinaryIO, Optional
-
-# Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
-# they should both come from the same typing module.
-# https://peps.python.org/pep-0655/#usage-in-python-3-11
-if sys.version_info >= (3, 11):
-    from typing import NotRequired, TypedDict
-else:
-    from typing_extensions import NotRequired, TypedDict
-
-if sys.version_info >= (3, 8):
-    from typing import Literal, Protocol
-else:
-    from typing_extensions import Literal, Protocol
 
 from htmltools import TagChild
 
 from ._docstring import add_example
+from ._typing_extensions import Literal, NotRequired, Protocol, TypedDict
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure

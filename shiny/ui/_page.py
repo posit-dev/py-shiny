@@ -7,13 +7,7 @@ __all__ = (
     "page_bootstrap",
 )
 
-import sys
 from typing import Any, Optional
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 # Tagifiable isn't used directly in this file, but it seems to necessary to import
 # it somewhere for Sphinx to work cleanly.
@@ -22,6 +16,7 @@ from htmltools import Tag, TagChild, TagList, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
+from .._typing_extensions import Literal
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._html_dependencies import bootstrap_deps
 from ._navs import navset_bar

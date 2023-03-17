@@ -7,22 +7,9 @@ from __future__ import annotations
 __all__ = ("brushed_points", "near_points")
 
 
-import sys
 from typing import TYPE_CHECKING, Optional, Union, cast
 
-# Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
-# they should both come from the same typing module.
-# https://peps.python.org/pep-0655/#usage-in-python-3-11
-if sys.version_info >= (3, 11):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
+from ._typing_extensions import Literal, TypedDict
 from .types import BrushInfo, CoordInfo, CoordXY
 
 if TYPE_CHECKING:

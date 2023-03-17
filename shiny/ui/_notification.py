@@ -2,17 +2,12 @@ from __future__ import annotations
 
 __all__ = ("notification_show", "notification_remove")
 
-import sys
 from typing import Any, Optional
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 from htmltools import TagChild
 
 from .._docstring import add_example
+from .._typing_extensions import Literal
 from .._utils import rand_hex
 from ..session import Session, require_active_session
 

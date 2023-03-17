@@ -37,11 +37,6 @@ from typing import (
     overload,
 )
 
-if sys.version_info >= (3, 8):
-    from typing import Protocol, runtime_checkable
-else:
-    from typing_extensions import Protocol, runtime_checkable
-
 # These aren't used directly in this file, but they seem necessary for Sphinx to work
 # cleanly.
 from htmltools import Tag  # pyright: ignore[reportUnusedImport] # noqa: F401
@@ -55,6 +50,7 @@ if TYPE_CHECKING:
 
 from .. import _utils
 from .._namespaces import ResolvedId
+from .._typing_extensions import Protocol, runtime_checkable
 from ..types import ImgData
 from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_plotnine
 

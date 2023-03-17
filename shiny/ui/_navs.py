@@ -16,18 +16,13 @@ __all__ = (
 
 import copy
 import re
-import sys
 from typing import Any, Optional, cast
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 from htmltools import Tag, TagChild, TagList, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
+from .._typing_extensions import Literal
 from .._utils import private_random_int
 from ..types import NavSetArg
 from ._bootstrap import column, row
