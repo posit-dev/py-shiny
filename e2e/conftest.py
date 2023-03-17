@@ -125,9 +125,10 @@ class ShinyAppProc:
         self.close()
 
     def wait_until_ready(self, timeoutSecs: float) -> None:
-        if self.stderr.wait_for(
-            lambda line: "Uvicorn running on" in line, timeoutSecs=timeoutSecs
-        ):
+        def stderr_uvicorn(line: str) -> bool:
+            return "Uvicorn running on" in line
+
+        if self.stderr.wait_for(stderr_uvicorn, timeoutSecs=timeoutSecs):
             return
         else:
             raise RuntimeError("Shiny app exited without ever becoming ready")
