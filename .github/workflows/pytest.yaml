@@ -70,8 +70,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 'latest'
+          cache: npm
           cache-dependency-path: examples/brownian/shinymediapipe/package-lock.json
-
+      - name: Install e2e example dependencies
+        if: github.event_name != 'release' && steps.install.outcome == 'success' && (success() || failure())
+        working-directory: examples/brownian/shinymediapipe
+        run: |
+          npm ci
       - name: Run e2e tests
         if: github.event_name != 'release' && steps.install.outcome == 'success' && (success() || failure())
         run: |
