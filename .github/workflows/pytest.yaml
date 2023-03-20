@@ -64,6 +64,14 @@ jobs:
         run: |
           cd docs && make html
 
+
+      - name: Prep e2e tests
+        if: github.event_name != 'release' && steps.install.outcome == 'success' && (success() || failure())
+        uses: actions/setup-node@v3
+        with:
+          node-version: 'latest'
+          cache-dependency-path: examples/brownian/shinymediapipe/package-lock.json
+
       - name: Run e2e tests
         if: github.event_name != 'release' && steps.install.outcome == 'success' && (success() || failure())
         run: |
