@@ -25,6 +25,12 @@ example_apps: typing.List[str] = [
     *get_apps(here / "../../shiny/examples"),
 ]
 
+app_idle_wait = {"duration": 300, "timeout": 5 * 1000}
+app_hard_wait: typing.Dict[str, int] = {
+    "brownian": 250,
+    "ui-func": 250,
+}
+
 
 # Altered from `shinytest2:::app_wait_for_idle()`
 # https://github.com/rstudio/shinytest2/blob/b8fdce681597e9610fc078aa6e376134c404f3bd/R/app-driver-wait.R
@@ -102,13 +108,19 @@ def test_examples(page: Page, ex_app_path: str) -> None:
     with app:
         page.goto(app.url)
 
-        if "brownian" in ex_app_path or "ui-func" in ex_app_path:
+        app_name = os.path.basename(os.path.dirname(ex_app_path))
+
+        if app_name in app_hard_wait.keys():
             # Apps are constantly invalidating and will not stabilize
-            # Instead, wait for 500 milliseconds
-            page.wait_for_timeout(500)
+            # Instead, wait for specific amount of time
+            page.wait_for_timeout(app_hard_wait[app_name])
         else:
             # Wait for app to stop updating
-            wait_for_idle_app(page, timeout=5 * 1000)
+            wait_for_idle_app(
+                page,
+                duration=app_idle_wait["duration"],
+                timeout=app_idle_wait["timeout"],
+            )
 
         assert len(console_errors) == 0, (
             "In app "
