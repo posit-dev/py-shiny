@@ -9,26 +9,33 @@ from playwright.sync_api import ConsoleMessage, Page
 here = PurePath(__file__).parent
 
 
-def get_apps(path: PurePath) -> typing.List[str]:
+def get_apps(path: str) -> typing.List[str]:
+    full_path = here / path
     app_paths: typing.List[str] = []
-    for item in os.listdir(path):
-        item_path = os.path.join(path, item)
-        if os.path.isdir(item_path):
-            app_path = os.path.join(item_path, "app.py")
+    for folder in os.listdir(full_path):
+        folder_path = os.path.join(full_path, folder)
+        if os.path.isdir(folder_path):
+            app_path = os.path.join(folder_path, "app.py")
             if os.path.isfile(app_path):
-                app_paths.append(app_path)
+                # Return relative app path
+                app_paths.append(os.path.join(path, folder, "app.py"))
     return app_paths
 
 
 example_apps: typing.List[str] = [
-    *get_apps(here / "../../examples"),
-    *get_apps(here / "../../shiny/examples"),
+    *get_apps("../../examples"),
+    *get_apps("../../shiny/examples"),
 ]
 
 app_idle_wait = {"duration": 300, "timeout": 5 * 1000}
 app_hard_wait: typing.Dict[str, int] = {
     "brownian": 250,
     "ui-func": 250,
+}
+app_allow_errors: typing.Dict[str, bool | typing.List[str]] = {
+    "SafeException": True,
+    "global_pyplot": True,
+    "static_plots": ["PlotnineWarning", "RuntimeWarning"],
 }
 
 
@@ -94,7 +101,7 @@ def wait_for_idle_app(
 @pytest.mark.examples
 @pytest.mark.parametrize("ex_app_path", example_apps)
 def test_examples(page: Page, ex_app_path: str) -> None:
-    app = run_shiny_app(ex_app_path, wait_for_start=True)
+    app = run_shiny_app(here / ex_app_path, wait_for_start=True)
 
     console_errors: typing.List[str] = []
 
@@ -121,6 +128,35 @@ def test_examples(page: Page, ex_app_path: str) -> None:
                 duration=app_idle_wait["duration"],
                 timeout=app_idle_wait["timeout"],
             )
+
+        # Check for py-shiny errors
+        error_lines = str(app.stderr).splitlines()
+        if app_name in app_allow_errors:
+            app_allowable_errors = app_allow_errors[app_name]
+        else:
+            app_allowable_errors = False
+
+        # If all errors are not allowed, check for unexpected errors
+        if not (app_allowable_errors is True):
+            # Remove ^INFO lines
+            error_lines = [line for line in error_lines if not line.startswith("INFO:")]
+            # If there is an array of allowable errors, remove them from errors. Ex: `PlotnineWarning`
+            if isinstance(app_allowable_errors, list):
+                error_lines = [
+                    line
+                    for line in error_lines
+                    if not any(
+                        [error_txt in line for error_txt in app_allowable_errors]
+                    )
+                ]
+                app_allowable_errors = False
+            try:
+                assert len(error_lines) == 0
+            except AssertionError:
+                # Better debug message
+                assert not any(["Traceback" in line for line in error_lines])
+                # If not found, print all of stderr in a failed test
+                assert len(error_lines) == 0
 
         assert len(console_errors) == 0, (
             "In app "
