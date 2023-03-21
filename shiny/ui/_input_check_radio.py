@@ -18,7 +18,14 @@ from ._utils import shiny_input_label
 _Choices = Mapping[str, TagChild]
 
 # Formats available to the user
-ChoicesArg = Union["list[str]", _Choices]
+ChoicesArg = Union[
+    # ["a", "b", "c"]
+    "list[str]",
+    # ("a", "b", "c")
+    "tuple[str, ...]",
+    # {"a": "Choice A", "b": tags.i("Choice B")}
+    _Choices,
+]
 
 
 @add_example()
@@ -279,7 +286,7 @@ def _generate_options(
     id: str,
     type: str,
     choices: ChoicesArg,
-    selected: Optional[str | list[str]],
+    selected: Optional[str | list[str] | tuple[str, ...]],
     inline: bool,
 ) -> Tag:
     choicez = _normalize_choices(choices)
@@ -290,7 +297,9 @@ def _generate_options(
         else:
             selected = []
 
-    if not isinstance(selected, list):
+    if isinstance(selected, tuple):
+        selected = list(selected)
+    elif not isinstance(selected, list):
         selected = [selected]
 
     return div(
@@ -330,7 +339,7 @@ def _generate_option(
 
 
 def _normalize_choices(x: ChoicesArg) -> _Choices:
-    if isinstance(x, list):
+    if isinstance(x, (list, tuple)):
         return {k: k for k in x}
     else:
         return x
