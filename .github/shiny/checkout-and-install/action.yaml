@@ -1,0 +1,33 @@
+name: 'checkout-and-install'
+description: 'Action that checks out repo, installs python, and installs py-shiny with dependencies'
+inputs:
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: "3.11"
+runs:
+  using: "composite"
+  steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Upgrade pip
+        shell: bash
+        run: python -m pip install --upgrade pip
+
+      # TODO-future; Cache pip dependencies; See if installed library can be hashed
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          make install-deps
+
+      - name: Install
+        id: install
+        shell: bash
+        run: |
+          make install

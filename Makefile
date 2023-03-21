@@ -121,3 +121,7 @@ install: dist
 
 install-deps: ## install dependencies
 	pip install -e ".[dev,docs,test]"
+
+# ## If caching is ever used, we could run:
+# install-deps: ## install latest dependencies
+# 	pip install --editable ".[dev,docs,test]" --upgrade --upgrade-strategy eager
