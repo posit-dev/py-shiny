@@ -1,11 +1,11 @@
 import json
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from htmltools import HTMLDependency, Tag, tags
 
 from shiny.module import resolve_id
 
-HandOptions = dict[str, Any]
+HandOptions = Dict[str, Any]
 
 
 def dependencies() -> list[HTMLDependency]:
