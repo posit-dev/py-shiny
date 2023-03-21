@@ -32,10 +32,13 @@ app_hard_wait: typing.Dict[str, int] = {
     "brownian": 250,
     "ui-func": 250,
 }
-app_allow_errors: typing.Dict[str, typing.Union[bool, typing.List[str]]] = {
+app_allow_shiny_errors: typing.Dict[str, typing.Union[bool, typing.List[str]]] = {
     "SafeException": True,
     "global_pyplot": True,
     "static_plots": ["PlotnineWarning", "RuntimeWarning"],
+}
+app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
+    "brownian": ["Failed to acquire camera feed:"],
 }
 
 
@@ -131,8 +134,8 @@ def test_examples(page: Page, ex_app_path: str) -> None:
 
         # Check for py-shiny errors
         error_lines = str(app.stderr).splitlines()
-        if app_name in app_allow_errors:
-            app_allowable_errors = app_allow_errors[app_name]
+        if app_name in app_allow_shiny_errors:
+            app_allowable_errors = app_allow_shiny_errors[app_name]
         else:
             app_allowable_errors = False
 
@@ -158,6 +161,16 @@ def test_examples(page: Page, ex_app_path: str) -> None:
                 # If not found, print all of stderr in a failed test
                 assert len(error_lines) == 0
 
+        # Check for JavaScript errors
+        if app_name in app_allow_js_errors:
+            # Remove any errors that are allowed
+            console_errors = [
+                line
+                for line in console_errors
+                if not any(
+                    [error_txt in line for error_txt in app_allow_js_errors[app_name]]
+                )
+            ]
         assert len(console_errors) == 0, (
             "In app "
             + ex_app_path
