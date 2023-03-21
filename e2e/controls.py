@@ -380,7 +380,7 @@ class InputNumeric(
     _InputWithLabel,
 ):
     # id: str,
-    # label: TagChildArg,
+    # label: TagChild,
     # value: float,
     # *,
     # min: Optional[float] = None,
@@ -460,7 +460,7 @@ class InputText(
     _InputWithLabel,
 ):
     # id: str,
-    # label: TagChildArg,
+    # label: TagChild,
     # value: str = "",
     # *,
     # width: Optional[str] = None,
@@ -482,7 +482,7 @@ class InputPassword(
     _InputWithLabel,
 ):
     # id: str,
-    # label: TagChildArg,
+    # label: TagChild,
     # value: str = "",
     # *,
     # width: Optional[str] = None,
@@ -519,7 +519,7 @@ class InputTextArea(
     _InputWithLabel,
 ):
     # id: str,
-    # label: TagChildArg,
+    # label: TagChild,
     # value: str = "",
     # width: Optional[str] = None,
     # height: Optional[str] = None,
@@ -698,7 +698,7 @@ class _InputSelectBase(
 
 class InputSelect(_InputSelectBase):
     # id: str,
-    # label: TagChildArg,
+    # label: TagChild,
     # choices: SelectChoicesArg,
     # selected: Optional[Union[str, list[str]]] = None,
     # multiple: bool = False,
@@ -751,8 +751,8 @@ class InputActionButton(
     _WidthLocM,
     _InputActionBase,
 ):
-    # label: TagChildArg,
-    # icon: TagChildArg = None,
+    # label: TagChild,
+    # icon: TagChild = None,
     # width: Optional[str] = None,
 
     def __init__(
@@ -768,8 +768,8 @@ class InputActionButton(
 
 
 class InputActionLink(_InputActionBase):
-    # label: TagChildArg,
-    # icon: TagChildArg = None,
+    # label: TagChild,
+    # icon: TagChild = None,
 
     def __init__(
         self,
@@ -792,7 +792,7 @@ class _InputCheckboxBase(
     _WidthContainerM,
     _InputWithLabel,
 ):
-    # label: TagChildArg
+    # label: TagChild
     # value: bool = False
     # width: Optional[str] = None
     def __init__(self, page: Page, id: str, loc: InitLocator) -> None:
@@ -1028,7 +1028,7 @@ class InputCheckboxGroup(
     _WidthContainerM,
     _RadioButtonCheckboxGroupBase,
 ):
-    # label: TagChildArg,
+    # label: TagChild,
     # choices: ChoicesArg,
     # selected: Optional[Union[str, list[str]]] = None,
     # inline: bool = False,
@@ -1148,7 +1148,7 @@ class InputRadioButtons(
     _RadioButtonCheckboxGroupBase,
 ):
     # id: str,
-    # label: TagChildArg,
+    # label: TagChild,
     # choices: ChoicesArg,
     # selected: Optional[str] = None,
     # inline: bool = False,
@@ -1238,7 +1238,7 @@ class InputFile(
     loc_progress: Locator
 
     # id: str,
-    # label: TagChildArg,
+    # label: TagChild,
     # *,
     # multiple: bool = False,
     # accept: Optional[Union[str, list[str]]] = None,
@@ -1327,7 +1327,7 @@ class InputFile(
 
 class _InputSliderBase(_WidthLocM, _InputWithLabel):
     # id: str,
-    # label: TagChildArg,
+    # label: TagChild,
     # min: SliderValueArg,
     # max: SliderValueArg,
     # value: Union[SliderValueArg, Iterable[SliderValueArg]],
@@ -1733,7 +1733,7 @@ class _DateBase(
     _InputWithLabel,
 ):
     # id: str,
-    # label: TagChildArg,
+    # label: TagChild,
     # value: Optional[Union[date, str]] = None,
     # min: Optional[Union[date, str]] = None,
     # max: Optional[Union[date, str]] = None,
@@ -1864,7 +1864,7 @@ class InputDate(_DateBase):
 
 class InputDateRange(_WidthContainerM, _InputWithLabel):
     # id: str,
-    # label: TagChildArg,
+    # label: TagChild,
     # *,
     # start: Optional[Union[date, str]] = None,
     # end: Optional[Union[date, str]] = None,
