@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from htmltools import HTMLDependency, Tag, tags
 
@@ -8,7 +10,7 @@ from shiny.module import resolve_id
 HandOptions = Dict[str, Any]
 
 
-def dependencies() -> list[HTMLDependency]:
+def dependencies() -> List[HTMLDependency]:
     def subdep(name: str) -> HTMLDependency:
         return HTMLDependency(
             f"@mediapipe/{name}",
