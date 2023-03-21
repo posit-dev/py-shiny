@@ -15,6 +15,7 @@ jobs:
       matrix:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
         python-version: ["3.11", "3.10", "3.9", "3.8", "3.7"]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
       fail-fast: false
 
     steps:
