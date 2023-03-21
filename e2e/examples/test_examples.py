@@ -32,7 +32,7 @@ app_hard_wait: typing.Dict[str, int] = {
     "brownian": 250,
     "ui-func": 250,
 }
-app_allow_errors: typing.Dict[str, bool | typing.List[str]] = {
+app_allow_errors: typing.Dict[str, typing.Union[bool, typing.List[str]]] = {
     "SafeException": True,
     "global_pyplot": True,
     "static_plots": ["PlotnineWarning", "RuntimeWarning"],
