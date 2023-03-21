@@ -14,7 +14,8 @@ jobs:
     strategy:
       matrix:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.11", "3.10", "3.9", "3.8", "3.7"]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
       fail-fast: false
 
     steps:
@@ -54,11 +55,12 @@ jobs:
 
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     if: github.event_name != 'release'
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.11", "3.10", "3.9", "3.8", "3.7"]
+        os: [ubuntu-latest]
       fail-fast: false
 
     steps:
@@ -73,11 +75,12 @@ jobs:
           make e2e
 
   examples:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     if: github.event_name != 'release'
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.11", "3.10", "3.9", "3.8", "3.7"]
+        os: [ubuntu-latest]
       fail-fast: false
 
     steps:
