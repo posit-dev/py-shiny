@@ -188,7 +188,7 @@ def update_checkbox_group(
     *,
     label: Optional[str] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[str | list[str]] = None,
+    selected: Optional[str | list[str] | tuple[str, ...]] = None,
     inline: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -291,7 +291,7 @@ def _update_choice_input(
     type: Literal["checkbox", "radio"],
     label: Optional[str] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[str | list[str]] = None,
+    selected: Optional[str | list[str] | tuple[str, ...]] = None,
     inline: bool = False,
     session: Optional[Session] = None,
 ) -> None:
