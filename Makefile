@@ -75,13 +75,16 @@ check: ## check code quality with black and isort
 
 test: ## run tests quickly with the default Python
 	python3 tests/asyncio_prevent.py
-	pytest
+	pytest tests
 
 # Default `FILE` to `e2e` if not specified
 FILE:=e2e
 e2e: ## run tests quickly with the default Python
 	playwright install --with-deps
-	pytest $(FILE) --browser webkit --browser firefox --browser chromium  --numprocesses auto
+	pytest $(FILE) -m "not examples"
+e2e-examples: ## run tests quickly with the default Python
+	playwright install --with-deps
+	pytest $(FILE) -m "examples"
 
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source shiny -m pytest

@@ -85,6 +85,7 @@ def wait_for_idle_app(
 
 
 # Run this test for each example app
+@pytest.mark.examples
 @pytest.mark.parametrize("ex_app_path", example_apps)
 def test_examples(page: Page, ex_app_path: str) -> None:
     app = run_shiny_app(ex_app_path, wait_for_start=True)
