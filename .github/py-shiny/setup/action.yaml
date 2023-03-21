@@ -25,7 +25,6 @@ runs:
           make install-deps
 
       - name: Install
-        id: install
         shell: bash
         run: |
           make install
