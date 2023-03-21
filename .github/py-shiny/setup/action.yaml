@@ -1,5 +1,5 @@
-name: 'checkout-and-install'
-description: 'Action that checks out repo, installs python, and installs py-shiny with dependencies'
+name: 'setup py-shiny'
+description: 'Action that installs python, installs py-shiny dependencies, and installs py-shiny'
 inputs:
   python-version:
     description: 'Python version to use'
@@ -8,8 +8,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-      - uses: actions/checkout@v3
-
       - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v4
         with:

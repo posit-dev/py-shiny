@@ -18,8 +18,9 @@ jobs:
       fail-fast: false
 
     steps:
-      - name: Checkout and install py-shiny
-        uses: ./.github/shiny/checkout-and-install
+      - uses: actions/checkout@v3
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -60,8 +61,9 @@ jobs:
       fail-fast: false
 
     steps:
-      - name: Checkout and install py-shiny
-        uses: ./.github/shiny/checkout-and-install
+      - uses: actions/checkout@v3
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -78,8 +80,9 @@ jobs:
       fail-fast: false
 
     steps:
-      - name: Checkout and install py-shiny
-        uses: ./.github/shiny/checkout-and-install
+      - uses: actions/checkout@v3
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
 
