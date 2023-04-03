@@ -338,14 +338,15 @@ class App:
         # (Some HTMLDependencies only carry head content, and have no source on disk.)
         if dep.source:
             paths = dep.source_path_map(lib_prefix=self.lib_prefix)
-            self._dependency_handler.routes.insert(
-                0,
-                starlette.routing.Mount(
-                    "/" + paths["href"],
-                    StaticFiles(directory=paths["source"]),
-                    name=dep.name + "-" + str(dep.version),
-                ),
-            )
+            if paths["source"] != "":
+                self._dependency_handler.routes.insert(
+                    0,
+                    starlette.routing.Mount(
+                        "/" + paths["href"],
+                        StaticFiles(directory=paths["source"]),
+                        name=dep.name + "-" + str(dep.version),
+                    ),
+                )
 
         self._registered_dependencies[dep.name] = dep
 
