@@ -5,4 +5,7 @@
   "reportUnusedFunction":  "none",
   "reportPrivateUsage": "none",
   "reportUnnecessaryIsInstance": "none",
+  // Temporary workaround for bug in pyright 1.1.301:
+  //   https://github.com/microsoft/pyright/issues/4862
+  "stubPath": "./typings"
 }
