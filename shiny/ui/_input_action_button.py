@@ -53,6 +53,7 @@ def input_action_button(
     return tags.button(
         {"class": "btn btn-default action-button", "style": css(width=width)},
         icon,
+        None if icon is None else " ",
         label,
         id=resolve_id(id),
         type="button",
