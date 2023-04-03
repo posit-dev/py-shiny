@@ -2,6 +2,7 @@ from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_action_button("minus", "-1"),
+    " ",
     ui.input_action_button("plus", "+1"),
     ui.br(),
     ui.output_text("value"),
