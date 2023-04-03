@@ -72,6 +72,7 @@ def input_checkbox(
                     type="checkbox",
                     checked="checked" if value else None,
                 ),
+                " ",
                 span(label),
             ),
             class_="checkbox",
@@ -138,6 +139,7 @@ def _input_checkbox(
                 type="checkbox",
                 checked="checked" if value else None,
             ),
+            " ",
             tags.label(label, class_="form-check-label", for_=resolve_id(id)),
             class_=class_,
         ),
@@ -333,9 +335,9 @@ def _generate_option(
         checked="checked" if checked else None,
     )
     if inline:
-        return tags.label(input, span(label), class_=type + "-inline")
+        return tags.label(input, " ", span(label), class_=type + "-inline")
     else:
-        return div(tags.label(input, span(label)), class_=type)
+        return div(tags.label(input, " ", span(label)), class_=type)
 
 
 def _normalize_choices(x: ChoicesArg) -> _Choices:
