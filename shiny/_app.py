@@ -334,8 +334,12 @@ class App:
         # the user is requesting THIS dependency. Therefore, it should be available to
         # the user independent of any previous versions of the dependency being served.
 
-        # Note: htmltools does do dependency de-duplication and finds the highest
-        # version to return. However, dynamic UI and callable UI do not run through the same filter over time. When using callable UI functions, UI dependencies are reset on refresh. So if a dependency makes it here, it is not necessarily the highest version served over time but is the highest version for this particular UI. Therefore, serve it must be served.
+        # Note: htmltools does de-duplicate dependencies and finds the highest version
+        # to return. However, dynamic UI and callable UI do not run through the same
+        # filter over time. When using callable UI functions, UI dependencies are reset
+        # on refresh. So if a dependency makes it here, it is not necessarily the
+        # highest version served over time but is the highest version for this
+        # particular UI. Therefore, serve it must be served.
         dep_name = html_dep_name(dep)
         if dep_name in self._registered_dependencies:
             return
