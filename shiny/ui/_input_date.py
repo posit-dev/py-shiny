@@ -42,14 +42,14 @@ def input_date(
     label
         An input label.
     value
-        The starting date. Either a :func:`~datetime.date` object, or a string in
+        The starting date. Either a :class:`~datetime.date` object, or a string in
         `yyyy-mm-dd` format. If None (the default), will use the current date in the
         client's time zone.
     min
-        The minimum allowed date. Either a :func:`~datetime.date` object, or a string in
+        The minimum allowed date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format.
     max
-        The maximum allowed date. Either a :func:`~datetime.date` object, or a string in
+        The maximum allowed date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format.
     format
         The format of the date to display in the browser. Defaults to `"yyyy-mm-dd"`.
@@ -101,7 +101,7 @@ def input_date(
     ------
     .. admonition:: Server value
 
-        A :func:`~datetime.date` object.
+        A :class:`~datetime.date` object.
 
     See Also
     -------
@@ -158,18 +158,18 @@ def input_date_range(
     label
         An input label.
     start
-        The initial start date. Either a :func:`~datetime.date` object, or a string in
+        The initial start date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format. If ``None`` (the default), will use the current date in the
         client's time zone.
     end
-        The initial end date. Either a :func:`~datetime.date` object, or a string in
+        The initial end date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format. If ``None`` (the default), will use the current date in the
         client's time zone.
     min
-        The minimum allowed date. Either a :func:`~datetime.date` object, or a string in
+        The minimum allowed date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format.
     max
-        The maximum allowed date. Either a :func:`~datetime.date` object, or a string in
+        The maximum allowed date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format.
     format
         The format of the date to display in the browser.
@@ -218,7 +218,7 @@ def input_date_range(
     ------
     .. admonition:: Server value
 
-        A tuple of :func:`~datetime.date` objects.
+        A tuple of :class:`~datetime.date` objects.
 
     See Also
     -------
