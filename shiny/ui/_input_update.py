@@ -385,11 +385,11 @@ def update_date_range(
     label
         An input label.
     start
-        The initial start date. Either a :func:`~datetime.date` object, or a string in
+        The initial start date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format. If ``None`` (the default), will use the current date in the
         client's time zone.
     end
-        The initial end date. Either a :func:`~datetime.date` object, or a string in
+        The initial end date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format. If ``None`` (the default), will use the current date in the
         client's time zone.
     min
@@ -749,13 +749,13 @@ def update_slider(
         single number. If the values are dates, step is in days; if the values are
         date-times, step is in seconds.
     time_format
-        Only used if the slider values are :func:`~datetime.date` or
-        :func:`~datetime.datetime` objects. A time format string, to be passed to the
+        Only used if the slider values are :class:`~datetime.date` or
+        :class:`~datetime.datetime` objects. A time format string, to be passed to the
         Javascript strftime library. See https://github.com/samsonjs/strftime for more
         details. For Dates, the default is "%F" (like "2015-07-01"), and for Datetimes,
         the default is "%F %T" (like "2015-07-01 15:32:10").
     timezone
-        Only used if the values are :func:`~datetime.datetime` objects. A string
+        Only used if the values are :class:`~datetime.datetime` objects. A string
         specifying the time zone offset for the displayed times, in the format "+HHMM"
         or "-HHMM". If ``None`` (the default), times will be displayed in the browser's
         time zone. The value "+0000" will result in UTC time.
