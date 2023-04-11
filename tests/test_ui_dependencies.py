@@ -34,7 +34,7 @@ def test_duplicate_deps():
     # Put v3 in the middle to make sure a higher version can be added
     deps = [some_dep2, some_dep3, some_dep1]
 
-    app = App(ui.div("ui goes here"))
+    app = App(ui.div("ui goes here"), server=None)
 
     # During a page refresh, the same session is kept alive. This means the mapping of `app._registered_dependencies` is kept. However, the dependencies requested by the user can be different when using a UI function.
 
