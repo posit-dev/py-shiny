@@ -136,7 +136,7 @@ async def test_async_callbacks():
     assert cb4.exec_count == 1  # Registered during previous invoke(), was called
 
 
-# Timeout within 2 seconds (not)
+# Timeout within 2 seconds
 @pytest.mark.timeout(2)
 def test_random_port():
     assert random_port(9000, 9000) == 9000
