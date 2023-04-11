@@ -136,15 +136,51 @@ async def test_async_callbacks():
     assert cb4.exec_count == 1  # Registered during previous invoke(), was called
 
 
+# Timeout within 2 seconds
+@pytest.mark.timeout(2)
 def test_random_port():
     assert random_port(9000, 9000) == 9000
 
+    # Starting port
+    port = 9001
+    # Test a set of continguous ports
+    num_ports = 10
+    # Number of times to try to find a port range
+    n = 100
+
+    # Find a range of `num_ports` ports that are all available
+    attempts = 0
+    for _ in range(n):
+        attempts += 1
+        j = 0
+        try:
+            for j in range(num_ports):
+                random_port(port + j, port + j)
+            # If we reach this point, we have found a plausible range of ports to use
+            break
+
+        except RuntimeError as e:
+            print(e)
+            # Port `port + j` is busy,
+            # Shift the test range and try again
+            port += j + 1
+            print(port)
+    # If no port is available, throw an error
+    # `attempts` should be << n
+    if attempts == n:
+        raise RuntimeError(
+            f"Could not find {num_ports} continguous ports to use for testing in {n} tries"
+        )
+
     seen: Set[int] = set()
-    # Ensure that 10 unique random ports are eventually generated. If not (e.g. if the
+    # Ensure that `num_ports` unique random ports are eventually generated. If not (e.g. if the
     # max port number is treated as exclusive instead of inclusive, say) then the while
     # loop will not exit and the test will timeout.
-    while len(seen) < 10:
-        seen.add(random_port(9001, 9010))
+    max_port = port + num_ports - 1
+    while len(seen) < num_ports:
+        seen.add(random_port(port, max_port))
+
+    assert len(seen) == num_ports
 
 
 def test_random_port_unusable():

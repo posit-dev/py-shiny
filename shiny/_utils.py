@@ -102,7 +102,7 @@ def random_port(
     while n > 0:
         if (max - min + 1) <= len(unusable):
             break
-        port = round(random.random() * (max - min) + min)
+        port = random.randint(min, max)
         if port in unusable:
             continue
         try:
