@@ -387,7 +387,7 @@ def Calc(
     ----------
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Returns
     -------
@@ -665,7 +665,7 @@ def Effect(
         Positive, negative, and zero values are allowed.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Returns
     -------

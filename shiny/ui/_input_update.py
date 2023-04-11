@@ -128,7 +128,7 @@ def update_checkbox(
         A new value.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -165,7 +165,7 @@ def update_switch(
         A new value.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -211,7 +211,7 @@ def update_checkbox_group(
         If ``True``, the result is displayed inline
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -263,7 +263,7 @@ def update_radio_buttons(
         If ``True```, the result is displayed inline
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -342,7 +342,7 @@ def update_date(
         The maximum allowed value.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -398,7 +398,7 @@ def update_date_range(
         The maximum allowed value.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -507,7 +507,7 @@ def update_select(
         The values that should be initially selected, if any.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -583,7 +583,7 @@ def update_selectize(
         (i.e., only use the client-side version of selectize.js)
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -761,7 +761,7 @@ def update_slider(
         time zone. The value "+0000" will result in UTC time.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -827,7 +827,7 @@ def update_text(
         A hint as to what can be entered into the control.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -869,7 +869,7 @@ def update_navs(
         The values that should be initially selected, if any.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----

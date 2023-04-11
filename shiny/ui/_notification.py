@@ -49,7 +49,7 @@ def notification_show(
         "message" (blue), "warning" (yellow), or "error" (red).
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Returns
     -------
@@ -95,7 +95,7 @@ def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
         A notification ``id``.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Returns
     -------

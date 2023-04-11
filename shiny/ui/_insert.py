@@ -54,7 +54,7 @@ def insert_ui(
         run (default).
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -117,7 +117,7 @@ def remove_ui(
         run (default).
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     See Also
     -------

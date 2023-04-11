@@ -161,7 +161,7 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
         Typically a :func:`modal` instance.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     See Also
     -------
@@ -185,7 +185,7 @@ def modal_remove(session: Optional[Session] = None) -> None:
     ----------
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     See Also
     -------

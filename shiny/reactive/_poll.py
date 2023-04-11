@@ -243,9 +243,6 @@ def file_reader(
         The number of seconds to wait after each time the file metadata is checked.
         Note: depending on what other tasks are executing, the actual wait time may far
         exceed this value.
-    equals
-        The function that will be used to compare each `poll_func` return value with its
-        immediate predecessor.
     priority
         Reactive polling is implemented using an ~shiny.reactive.Effect to call
         `poll_func` on a timer; use the `priority` argument to control the order of this

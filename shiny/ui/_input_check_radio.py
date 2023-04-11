@@ -246,6 +246,7 @@ def input_radio_buttons(
         If ``True``, the result is displayed inline
     width
         The CSS width, e.g. '400px', or '100%'
+
     Returns
     -------
     A UI element

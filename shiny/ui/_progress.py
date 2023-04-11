@@ -26,7 +26,7 @@ class Progress:
         ``min``.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
     """
 
     _style = "notification"

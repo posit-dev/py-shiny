@@ -731,8 +731,6 @@ def navset_pill_list(
         UI to display below the selected content.
     well
         ``True`` to place a well (gray rounded rectangle) around the navigation list.
-    fluid
-        ``True`` to use fluid layout; `False` to use fixed layout.
     widths
         Column widths of the navigation list and tabset content areas respectively.
 
