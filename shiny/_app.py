@@ -89,7 +89,7 @@ class App:
     def __init__(
         self,
         ui: Tag | TagList | Callable[[Request], Tag | TagList],
-        server: Optional[Callable[[Inputs, Outputs, Session], None]] = None,
+        server: Optional[Callable[[Inputs, Outputs, Session], None]],
         *,
         static_assets: Optional["str" | "os.PathLike[str]"] = None,
         debug: bool = False,
