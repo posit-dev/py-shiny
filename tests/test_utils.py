@@ -173,7 +173,7 @@ def test_random_port():
         )
 
     seen: Set[int] = set()
-    # Ensure that `k` unique random ports are eventually generated. If not (e.g. if the
+    # Ensure that `num_ports` unique random ports are eventually generated. If not (e.g. if the
     # max port number is treated as exclusive instead of inclusive, say) then the while
     # loop will not exit and the test will timeout.
     max_port = port + num_ports - 1
