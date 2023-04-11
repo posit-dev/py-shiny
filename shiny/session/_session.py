@@ -516,6 +516,12 @@ class Session(object, metaclass=SessionMeta):
 
                             wrapped_contents = wrap_content_sync()
 
+                        # In streaming downloads, we send a 200 response, but if an
+                        # error occurs in the middle of it, the client needs to know.
+                        # With chunked encoding, the client will know if an error occurs
+                        # if it does not receive a terminating (empty) chunk.
+                        headers["Transfer-Encoding"] = "chunked"
+
                         return StreamingResponse(
                             wrapped_contents,
                             200,
