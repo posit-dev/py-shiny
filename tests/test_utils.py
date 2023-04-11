@@ -143,17 +143,19 @@ def test_random_port():
 
     # Starting port
     port = 9001
-    # Test `k` continguous ports
-    k = 10
+    # Test a set of continguous ports
+    num_ports = 10
     # Number of times to try to find a port range
     n = 100
 
-    # Find a range of `k` ports that are all available
+    # Find a range of `num_ports` ports that are all available
     for i in range(n):
-        assert i < n - 1, f"Could not find {k} continguous ports to use for testing"
+        assert (
+            i < n - 1
+        ), f"Could not find {num_ports} continguous ports to use for testing"
         j = 0
         try:
-            for j in range(k):
+            for j in range(num_ports):
                 random_port(port + j, port + j)
             # If we reach this point, we have found a plausible range of ports to use
             break
@@ -169,11 +171,11 @@ def test_random_port():
     # Ensure that `k` unique random ports are eventually generated. If not (e.g. if the
     # max port number is treated as exclusive instead of inclusive, say) then the while
     # loop will not exit and the test will timeout.
-    max_port = port + k - 1
-    while len(seen) < k:
+    max_port = port + num_ports - 1
+    while len(seen) < num_ports:
         seen.add(random_port(port, max_port))
 
-    assert len(seen) == k
+    assert len(seen) == num_ports
 
 
 def test_random_port_unusable():
