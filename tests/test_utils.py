@@ -149,10 +149,9 @@ def test_random_port():
     n = 100
 
     # Find a range of `num_ports` ports that are all available
-    for i in range(n):
-        assert (
-            i < n - 1
-        ), f"Could not find {num_ports} continguous ports to use for testing"
+    attempts = 0
+    for _ in range(n):
+        attempts += 1
         j = 0
         try:
             for j in range(num_ports):
@@ -166,6 +165,12 @@ def test_random_port():
             # Shift the test range and try again
             port += j + 1
             print(port)
+    # If no port is available, throw an error
+    # `attempts` should be << n
+    if attempts == n:
+        raise RuntimeError(
+            f"Could not find {num_ports} continguous ports to use for testing in {n} tries"
+        )
 
     seen: Set[int] = set()
     # Ensure that `k` unique random ports are eventually generated. If not (e.g. if the
