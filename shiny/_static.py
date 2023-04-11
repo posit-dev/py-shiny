@@ -36,9 +36,9 @@ def remove_shinylive_local(
 
 
 def get_default_shinylive_dir() -> Path:
-    import appdirs
+    import appdirs  # pyright: ignore[reportMissingTypeStubs]
 
-    return Path(appdirs.user_cache_dir("shiny")) / "shinylive"
+    return Path(appdirs.user_cache_dir("shiny")) / "shinylive"  # pyright: ignore
 
 
 def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> list[str]:

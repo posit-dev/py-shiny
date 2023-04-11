@@ -29,13 +29,13 @@ if TYPE_CHECKING:
 
 
 def get_coordmap(fig: Figure) -> Coordmap | None:
-    dims_ar: npt.NDArray[np.double] = fig.get_size_inches() * fig.get_dpi()
+    dims_ar = cast("npt.NDArray[np.double]", fig.get_size_inches() * fig.get_dpi())
     dims: CoordmapDims = {
         "width": dims_ar[0],
         "height": dims_ar[1],
     }
 
-    all_axes: list[Axes] = fig.get_axes()  # pyright: ignore[reportUnknownMemberType]
+    all_axes = cast("list[Axes]", fig.get_axes())
 
     panels: list[CoordmapPanel] = []
     for i, axes in enumerate(all_axes):
@@ -51,9 +51,7 @@ def get_coordmap(fig: Figure) -> Coordmap | None:
 
 
 def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPanel:
-    spspec: SubplotSpec = (
-        axes.get_subplotspec()  # pyright: ignore[reportGeneralTypeIssues]
-    )
+    spspec = cast("SubplotSpec", axes.get_subplotspec())
 
     domain_xlim = cast("tuple[float, float]", axes.get_xlim())
     domain_ylim = cast("tuple[float, float]", axes.get_ylim())
@@ -67,15 +65,20 @@ def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPan
     }
 
     # Pixel coordinates of plotting area
-    transdata: Transform = axes.transData  # pyright: ignore[reportGeneralTypeIssues]
+    transdata = cast(
+        "Transform", axes.transData  # pyright: ignore[reportGeneralTypeIssues]
+    )
 
-    range_ar: npt.NDArray[np.double] = transdata.transform(
-        [
-            domain["left"],
-            domain["bottom"],
-            domain["right"],
-            domain["top"],
-        ]
+    range_ar = cast(
+        "npt.NDArray[np.double]",
+        transdata.transform(
+            [
+                domain["left"],
+                domain["bottom"],
+                domain["right"],
+                domain["top"],
+            ]
+        ),
     )
 
     # The values from transData.transform() have origin in the bottom-left, but we need

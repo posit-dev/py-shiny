@@ -1,4 +1,4 @@
-.PHONY: help clean clean-test clean-pyc clean-build docs help lint test e2e
+.PHONY: help clean clean-test clean-pyc clean-build docs help lint test e2e e2e-examples
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -14,7 +14,7 @@ define PRINT_HELP_PYSCRIPT
 import re, sys
 
 for line in sys.stdin:
-	match = re.match(r'^([a-zA-Z_-]+):.*?## (.*)$$', line)
+	match = re.match(r'^([a-zA-Z1-9_-]+):.*?## (.*)$$', line)
 	if match:
 		target, help = match.groups()
 		print("%-20s %s" % (target, help))
@@ -79,10 +79,12 @@ test: ## run tests quickly with the default Python
 
 # Default `FILE` to `e2e` if not specified
 FILE:=e2e
-e2e: ## run tests quickly with the default Python
+
+e2e: ## end-to-end tests with playwright
 	playwright install --with-deps
 	pytest $(FILE) -m "not examples"
-e2e-examples: ## run tests quickly with the default Python
+
+e2e-examples: ## end-to-end tests on examples with playwright
 	playwright install --with-deps
 	pytest $(FILE) -m "examples"
 
