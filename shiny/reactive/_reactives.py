@@ -59,15 +59,14 @@ class Value(Generic[T]):
     Note
     ----
     A reactive value may only be read from within a reactive function (e.g.,
-    :func:`Calc`, :func:`Effect`, :func:`shiny.render.text`, etc.) and, when doing so,
-    the function takes a reactive dependency on the value (i.e., when the value changes,
-    the calling reactive function will re-execute).
+    :func:`~shiny.reactive.Calc`, :func:`~shiny.reactive.Effect`,
+    :func:`shiny.render.text`, etc.) and, when doing so, the function takes a reactive
+    dependency on the value (i.e., when the value changes, the calling reactive function
+    will re-execute).
 
     See Also
     --------
-    ~shiny.Inputs
-    Calc
-    Effect
+    ~shiny.Inputs ~shiny.reactive.Calc ~shiny.reactive.Effect
     """
 
     # These overloads are necessary so that the following hold:
@@ -206,7 +205,7 @@ class Calc_(Generic[T]):
     Warning
     -------
     Most users shouldn't use this class directly to initialize a reactive calculation
-    (instead, use the :func:`Calc` decorator).
+    (instead, use the :func:`~shiny.reactive.Calc` decorator).
     """
 
     def __init__(
@@ -311,7 +310,7 @@ class CalcAsync_(Calc_[T]):
     Warning
     -------
     Most users shouldn't use this class directly to initialize a reactive calculation
-    (instead, use the :func:`Calc` decorator).
+    (instead, use the :func:`~shiny.reactive.Calc` decorator).
     """
 
     def __init__(
@@ -641,11 +640,12 @@ def Effect(
     """
     Mark a function as a reactive side effect.
 
-    A reactive effect is like a reactive calculation (:func:`Calc`) in that it can read
-    reactive values and call reactive calculations, and will automatically re-execute
-    when those dependencies change. But unlike reactive calculations, it doesn't return
-    a result and can't be used as an input to other reactive expressions. Thus,
-    observers are only useful for their side effects (for example, performing I/O).
+    A reactive effect is like a reactive calculation (:func:`~shiny.reactive.Calc`) in
+    that it can read reactive values and call reactive calculations, and will
+    automatically re-execute when those dependencies change. But unlike reactive
+    calculations, it doesn't return a result and can't be used as an input to other
+    reactive expressions. Thus, observers are only useful for their side effects (for
+    example, performing I/O).
 
     Another contrast between reactive calculations and effects is their execution
     strategy. Reactive calculations use lazy evaluation; that is, when their
