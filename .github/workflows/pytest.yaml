@@ -46,14 +46,6 @@ jobs:
         run: |
           make check
 
-      - name: Build API docs
-        if: steps.install.outcome == 'success' && (success() || failure())
-        env:
-          SHINYLIVE_SRC: ""
-        run: |
-          cd docs && make html
-
-
   e2e:
     runs-on: ${{ matrix.os }}
     if: github.event_name != 'release'
