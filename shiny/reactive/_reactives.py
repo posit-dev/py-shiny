@@ -38,7 +38,17 @@ T = TypeVar("T")
 @add_example()
 class Value(Generic[T]):
     """
-    Create a reactive value
+    Create a reactive value.
+
+    Reactive values are the source of reactivity in Shiny. Changes to reactive values
+    invalidate downstream reactive functions (:func:`~shiny.reactive.Calc`,
+    :func:`~shiny.reactive.Effect`, and `render` functions decorated with `@output`).
+    When these functions are invalidated, they get scheduled to re-execute.
+
+    Shiny input values are read-only reactive values. For example, `input.x` is a
+    reactive value object, and to get the current value, you can call `input.x()` or
+    `input.x.get()`. When you do that inside of a reactive function, the function takes
+    a dependency on the reactive value.
 
     Parameters
     ----------
@@ -104,7 +114,7 @@ class Value(Generic[T]):
 
         Returns
         -------
-        The reactive value.
+        A value.
 
         Raises
         ------
