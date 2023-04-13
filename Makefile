@@ -1,4 +1,4 @@
-.PHONY: help clean clean-test clean-pyc clean-build docs help lint test e2e e2e-examples
+.PHONY: help clean clean-test clean-pyc clean-build help lint test e2e e2e-examples
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -94,16 +94,6 @@ coverage: ## check code coverage quickly with the default Python
 	coverage html
 	$(BROWSER) htmlcov/index.html
 
-docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/shiny.rst
-	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ shiny
-	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
-	$(BROWSER) docs/build/html/index.html
-
-servedocs: docs ## compile the docs watching for changes
-	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
 release: dist ## package and upload a release
 	twine upload dist/*
@@ -122,8 +112,8 @@ install: dist
 	python3 -m pip install dist/shiny*.whl
 
 install-deps: ## install dependencies
-	pip install -e ".[dev,docs,test]"
+	pip install -e ".[dev,test]"
 
 # ## If caching is ever used, we could run:
 # install-deps: ## install latest dependencies
-# 	pip install --editable ".[dev,docs,test]" --upgrade --upgrade-strategy eager
+# 	pip install --editable ".[dev,test]" --upgrade --upgrade-strategy eager
