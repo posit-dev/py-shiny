@@ -34,7 +34,8 @@ def get_current_session() -> Optional[Session]:
 
     Returns
     -------
-    The current session if one is active, otherwise ``None``.
+    :
+        The current session if one is active, otherwise ``None``.
 
     Note
     ----
@@ -80,7 +81,8 @@ def require_active_session(session: Optional[Session]) -> Session:
 
     Returns
     -------
-    The session.
+    :
+        The session.
 
     Note
     ----

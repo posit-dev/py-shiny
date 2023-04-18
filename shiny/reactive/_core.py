@@ -201,18 +201,19 @@ def isolate():
     Ordinarily, the simple act of reading a reactive value causes a relationship to be
     established between the caller and the reactive value, where a change to the
     reactive value will cause the caller to re-execute. (The same applies for the act of
-    getting a reactive expression's value.) `with isolate()` lets you read a
-    reactive value or expression without establishing this relationship.
+    getting a reactive expression's value.) `with isolate()` lets you read a reactive
+    value or expression without establishing this relationship.
 
-    ``with isolate()`` can also be useful for calling reactive expression at the console,
-    which can be useful for debugging. To do so, wrap the calls to the reactive
+    ``with isolate()`` can also be useful for calling reactive expression at the
+    console, which can be useful for debugging. To do so, wrap the calls to the reactive
     expression with ``with isolate()``.
 
     Returns
     -------
-    A context manager that executes the given expression in a scope where reactive
-    values can be read, but do not cause the reactive scope of the caller to be
-    re-evaluated when they change.
+    :
+        A context manager that executes the given expression in a scope where reactive
+        values can be read, but do not cause the reactive scope of the caller to be
+        re-evaluated when they change.
 
     See Also
     --------
@@ -228,7 +229,8 @@ def get_current_context() -> Context:
 
     Returns
     -------
-    A :class:`~Context`.
+    :
+        A :class:`~Context`.
 
     Raises
     ------
@@ -265,7 +267,8 @@ def on_flushed(
 
     Returns
     -------
-    A function that can be used to unregister the callback.
+    :
+        A function that can be used to unregister the callback.
 
     See Also
     --------

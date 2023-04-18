@@ -78,7 +78,8 @@ def input_selectize(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
@@ -146,7 +147,8 @@ def input_select(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------

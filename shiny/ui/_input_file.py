@@ -59,7 +59,8 @@ def input_file(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     -----

@@ -646,7 +646,8 @@ class Session(object, metaclass=SessionMeta):
 
         Returns
         -------
-        A function that can be used to cancel the registration.
+        :
+            A function that can be used to cancel the registration.
         """
         return self._flush_callbacks.register(fn, once)
 
@@ -666,7 +667,8 @@ class Session(object, metaclass=SessionMeta):
 
         Returns
         -------
-        A function that can be used to cancel the registration.
+        :
+            A function that can be used to cancel the registration.
         """
         return self._flushed_callbacks.register(fn, once)
 
@@ -717,7 +719,8 @@ class Session(object, metaclass=SessionMeta):
 
         Returns
         -------
-        A function that can be used to cancel the registration.
+        :
+            A function that can be used to cancel the registration.
         """
         return self._on_ended_callbacks.register(fn)
 
@@ -752,7 +755,8 @@ class Session(object, metaclass=SessionMeta):
 
         Returns
         -------
-        The decorated function.
+        :
+            The decorated function.
         """
 
         def wrapper(fn: DownloadHandler):
@@ -795,6 +799,7 @@ class Session(object, metaclass=SessionMeta):
 
         Returns
         -------
+        :
             The URL path for the route.
         """
 

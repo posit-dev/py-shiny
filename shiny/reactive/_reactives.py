@@ -59,7 +59,8 @@ class Value(Generic[T]):
 
     Returns
     -------
-    An instance of a reactive value.
+    :
+        An instance of a reactive value.
 
     Raises
     ------
@@ -114,7 +115,8 @@ class Value(Generic[T]):
 
         Returns
         -------
-        A value.
+        :
+            A value.
 
         Raises
         ------
@@ -142,7 +144,8 @@ class Value(Generic[T]):
 
         Returns
         -------
-        ``True`` if the value was set to a different value and ``False`` otherwise.
+        :
+            ``True`` if the value was set to a different value and ``False`` otherwise.
 
         Raises
         ------
@@ -174,7 +177,8 @@ class Value(Generic[T]):
 
         Returns
         -------
-        ``True`` if the value was set prior to this unsetting.
+        :
+            ``True`` if the value was set prior to this unsetting.
         """
         self.set(MISSING)  # type: ignore
 
@@ -184,7 +188,8 @@ class Value(Generic[T]):
 
         Returns
         -------
-        ``True`` if the value is set, ``False`` otherwise.
+        :
+            ``True`` if the value is set, ``False`` otherwise.
         """
 
         self._is_set_dependents.register()
@@ -400,7 +405,8 @@ def Calc(
 
     Returns
     -------
-    A decorator that marks a function as a reactive calculation.
+    :
+        A decorator that marks a function as a reactive calculation.
 
     Tip
     ---
@@ -679,7 +685,8 @@ def Effect(
 
     Returns
     -------
-    A decorator that marks a function as a reactive effect (:class:`Effect_`).
+    :
+        A decorator that marks a function as a reactive effect (:class:`Effect_`).
 
     See Also
     --------
@@ -740,7 +747,8 @@ def event(
 
     Returns
     -------
-    A decorator that marks a function as an event handler.
+    :
+        A decorator that marks a function as an event handler.
 
     Tip
     ----

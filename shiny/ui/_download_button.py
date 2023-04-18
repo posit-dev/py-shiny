@@ -36,7 +36,8 @@ def download_button(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     --------
@@ -90,7 +91,8 @@ def download_link(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     --------

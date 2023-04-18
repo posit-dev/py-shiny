@@ -53,7 +53,8 @@ def notification_show(
 
     Returns
     -------
-    The notification's ``id``.
+    :
+        The notification's ``id``.
 
     See Also
     -------
@@ -99,7 +100,8 @@ def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
 
     Returns
     -------
-    The notification's ``id``.
+    :
+        The notification's ``id``.
 
     See Also
     -------

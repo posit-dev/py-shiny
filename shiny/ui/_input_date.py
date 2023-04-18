@@ -79,7 +79,8 @@ def input_date(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Note
     ----
@@ -196,7 +197,8 @@ def input_date_range(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Note
     ----

@@ -48,7 +48,8 @@ def input_checkbox(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
@@ -104,7 +105,8 @@ def input_switch(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
@@ -181,7 +183,8 @@ def input_checkbox_group(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
@@ -249,7 +252,8 @@ def input_radio_buttons(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------

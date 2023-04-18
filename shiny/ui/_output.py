@@ -88,7 +88,8 @@ def output_plot(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     -------
@@ -165,7 +166,8 @@ def output_image(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     -------
@@ -229,7 +231,8 @@ def output_text(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Note
     ----
@@ -264,7 +267,8 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     -------
@@ -294,6 +298,7 @@ def output_table(id: str, **kwargs: TagAttrValue) -> Tag:
 
     Returns
     -------
+    :
 
     See Also
     -------
@@ -325,7 +330,8 @@ def output_ui(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     -------

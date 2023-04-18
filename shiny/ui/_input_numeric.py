@@ -42,7 +42,8 @@ def input_numeric(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------

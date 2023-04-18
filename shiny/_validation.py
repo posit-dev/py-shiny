@@ -36,6 +36,7 @@ def req(*args: T, cancel_output: bool = False) -> T | None:
 
     Returns
     -------
+    :
         The first argument. If no arguments are provided, returns ``None``.
     """
     if len(args) == 0:

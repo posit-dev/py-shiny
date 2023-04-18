@@ -36,7 +36,8 @@ def input_action_button(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------
@@ -86,7 +87,8 @@ def input_action_link(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------

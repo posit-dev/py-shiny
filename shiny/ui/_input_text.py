@@ -48,7 +48,8 @@ def input_text(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------
@@ -134,7 +135,8 @@ def input_text_area(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------

@@ -46,8 +46,8 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     Layout UI components using Bootstrap's grid layout system. Use ``row()`` to group
     elements that should appear on the same line (if the browser has adequate width) and
     :func:`~shiny.ui.column` to define how much horizontal space within a 12-unit wide
-    grid each on of these elements should occupy. See the `layout guide
-    <https://shiny.rstudio.com/articles/layout-guide.html>`_ for more context and
+    grid each on of these elements should occupy. See the [layout
+    guide](https://shiny.rstudio.com/articles/layout-guide.html>) for more context and
     examples.
 
     Parameters
@@ -59,7 +59,8 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -89,7 +90,8 @@ def column(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -136,7 +138,8 @@ def layout_sidebar(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     -------
@@ -162,7 +165,8 @@ def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -192,7 +196,8 @@ def panel_sidebar(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -225,7 +230,8 @@ def panel_main(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -269,7 +275,8 @@ def panel_conditional(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Note
     ----
@@ -318,7 +325,8 @@ def panel_title(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Note
     ----
@@ -351,7 +359,8 @@ def panel_fixed(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> TagList:
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -420,7 +429,8 @@ def panel_absolute(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Tip
     ----
@@ -470,7 +480,8 @@ def help_text(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
     """
 
     return span({"class": "help-block"}, *args, **kwargs)

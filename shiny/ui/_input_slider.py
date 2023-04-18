@@ -42,7 +42,8 @@ class AnimationOptions(TypedDict):
 
     Returns
     -------
-    A TypedDict.
+    :
+        A TypedDict.
 
     See Also
     --------
@@ -124,7 +125,8 @@ def input_slider(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------

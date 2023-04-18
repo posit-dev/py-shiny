@@ -85,7 +85,8 @@ def page_navbar(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -144,7 +145,8 @@ def page_fluid(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -182,7 +184,8 @@ def page_fixed(
         Attributes on the page level container.
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -218,7 +221,8 @@ def page_bootstrap(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------

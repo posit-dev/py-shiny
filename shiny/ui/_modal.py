@@ -33,7 +33,8 @@ def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue)
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     -------
@@ -94,7 +95,8 @@ def modal(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     -------

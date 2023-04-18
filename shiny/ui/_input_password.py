@@ -36,7 +36,8 @@ def input_password(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------

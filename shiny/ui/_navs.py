@@ -305,7 +305,8 @@ def nav_menu(
 
     Returns
     -------
-    A UI element representing both the navigation menu.
+    :
+        A UI element representing both the navigation menu.
 
     See Also
     -------

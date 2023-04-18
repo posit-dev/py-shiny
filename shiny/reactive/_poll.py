@@ -83,7 +83,8 @@ def poll(
 
     Returns
     -------
-    A decorator that should be applied to a no-argument function that (expensively)
+    :
+        A decorator that should be applied to a no-argument function that (expensively)
     reads whatever data is desired. (This function may be a regular function or a
     coroutine function.) The result of the decorator is a reactive ~shiny.reactive.Calc
     that always returns up-to-date data, and invalidates callers when changes are
@@ -256,7 +257,8 @@ def file_reader(
 
     Returns
     -------
-    A decorator that should be applied to a no-argument function that (expensively)
+    :
+        A decorator that should be applied to a no-argument function that (expensively)
     reads whatever data is desired. (This function may be a regular function or a
     coroutine function.) The result of the decorator is a reactive ~shiny.reactive.Calc
     that always returns up-to-date data, and invalidates callers when changes are

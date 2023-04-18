@@ -148,7 +148,8 @@ def text(
 
     Returns
     -------
-    A decorator for a function that returns a string.
+    :
+        A decorator for a function that returns a string.
 
     Tip
     ----
@@ -329,7 +330,8 @@ def plot(
 
     Returns
     -------
-    A decorator for a function that returns any of the following:
+    :
+        A decorator for a function that returns any of the following:
 
         1. A :class:`matplotlib.figure.Figure` instance.
         2. An :class:`matplotlib.artist.Artist` instance.
@@ -453,7 +455,8 @@ def image(
 
     Returns
     -------
-    A decorator for a function that returns an `~shiny.types.ImgData` object.
+    :
+        A decorator for a function that returns an `~shiny.types.ImgData` object.
 
     Tip
     ----
@@ -628,7 +631,8 @@ def table(
 
     Returns
     -------
-    A decorator for a function that returns any of the following:
+    :
+        A decorator for a function that returns any of the following:
 
         1. A pandas :class:`DataFrame` object.
         2. A pandas :class:`Styler` object.
@@ -719,7 +723,8 @@ def ui(
 
     Returns
     -------
-    A decorator for a function that returns an object of type `~shiny.ui.TagChild`.
+    :
+        A decorator for a function that returns an object of type `~shiny.ui.TagChild`.
 
     Tip
     ----

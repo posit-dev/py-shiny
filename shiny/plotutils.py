@@ -75,6 +75,7 @@ def brushed_points(
 
     Returns
     -------
+    :
         A pandas DataFrame containing the rows selected by the brush. If `all_rows` is
         `True`, then all rows from the original data will be returned, along with an
         additional column named `selected_`, which indicates whether or not each row was
@@ -210,6 +211,7 @@ def near_points(
 
     Returns
     -------
+    :
         A pandas DataFrame containing the rows selected by the brush. If `all_rows` is
         `True`, then all rows from the original data will be returned, along with an
         additional column named `selected_`, which indicates whether or not each row was

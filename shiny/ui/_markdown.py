@@ -32,6 +32,7 @@ def markdown(
 
     Returns
     -------
+    :
         An :func:`ui.HTML` string of the rendered markdown.
 
     Note
