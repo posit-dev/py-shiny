@@ -7,12 +7,9 @@ __all__ = (
     "page_bootstrap",
 )
 
-from typing import Any, Optional
+from typing import Optional, Sequence
 
-# Tagifiable isn't used directly in this file, but it seems to necessary to import
-# it somewhere for Sphinx to work cleanly.
-from htmltools import Tagifiable  # pyright: ignore[reportUnusedImport] # noqa: F401
-from htmltools import Tag, TagChild, TagList, div, tags
+from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -24,7 +21,7 @@ from ._utils import get_window_title
 
 
 def page_navbar(
-    *args: NavSetArg,
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     title: Optional[str | Tag | TagList] = None,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -39,7 +36,7 @@ def page_navbar(
     lang: Optional[str] = None,
 ) -> Tag:
     """
-    Create a navbar with a navs bar and a title.
+    Create a page with a navbar and a title.
 
     Parameters
     ----------
@@ -123,7 +120,10 @@ def page_navbar(
 
 @add_example()
 def page_fluid(
-    *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
+    *args: TagChild | TagAttrs,
+    title: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: str,
 ) -> Tag:
     """
     Create a fluid page.
@@ -162,7 +162,10 @@ def page_fluid(
 
 @add_example()
 def page_fixed(
-    *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
+    *args: TagChild | TagAttrs,
+    title: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: str,
 ) -> Tag:
     """
     Create a fixed page.
@@ -201,7 +204,7 @@ def page_fixed(
 
 # TODO: implement theme (just Bootswatch for now?)
 def page_bootstrap(
-    *args: Any, title: Optional[str] = None, lang: Optional[str] = None
+    *args: TagChild | TagAttrs, title: Optional[str] = None, lang: Optional[str] = None
 ) -> Tag:
     """
     Create a Bootstrap UI page container.
@@ -230,6 +233,5 @@ def page_bootstrap(
     :func:`~shiny.ui.page_navbar`
     """
 
-    page = TagList(*bootstrap_deps(), *args)
     head = tags.title(title) if title else None
-    return tags.html(tags.head(head), tags.body(page), lang=lang)
+    return tags.html(tags.head(head), tags.body(*bootstrap_deps(), *args), lang=lang)
