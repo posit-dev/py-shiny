@@ -358,7 +358,7 @@ def to_float(x: DataFrameColumn) -> pd.Series[float]:
         return (
             cast(
                 "pd.Series[int]",
-                pd.Series(x.astype("int")),  # pyright: ignore
+                pd.Series(x.astype("int64")),  # pyright: ignore
             )
             / (24 * 60 * 60)
             / 1e9

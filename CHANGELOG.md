@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Fixed #456: plot interaction with datetimes raised errors on 32-bit platforms due. (#457)
+
 ### Other changes
 
 * When pyright creates type stubs for shiny, it now will include types imported in `_typing_extensions.py`.
