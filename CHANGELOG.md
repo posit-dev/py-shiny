@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
+* When pyright creates type stubs for shiny, it now will include types imported in `_typing_extensions.py`.
+
 
 ## [0.3.1] - 2023-04-18
 
