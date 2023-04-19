@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
+* `page_navbar` now accepts shinyswatch themes. (#455)
 
 
 ## [0.3.0] - 2023-04-03

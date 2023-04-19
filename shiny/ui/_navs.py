@@ -16,9 +16,9 @@ __all__ = (
 
 import copy
 import re
-from typing import Any, Optional, cast
+from typing import Any, Optional, Sequence, cast
 
-from htmltools import Tag, TagChild, TagList, div, tags
+from htmltools import MetadataNode, Tag, TagChild, TagList, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -335,7 +335,7 @@ def nav_menu(
 
 
 class NavSet:
-    args: tuple[NavSetArg]
+    args: tuple[NavSetArg | MetadataNode]
     ul_class: str
     id: Optional[str]
     selected: Optional[str]
@@ -344,7 +344,7 @@ class NavSet:
 
     def __init__(
         self,
-        *args: NavSetArg,
+        *args: NavSetArg | MetadataNode,
         ul_class: str,
         id: Optional[str],
         selected: Optional[str],
@@ -676,7 +676,7 @@ class NavSetPillList(NavSet):
 
     def __init__(
         self,
-        *args: NavSetArg,
+        *args: NavSetArg | MetadataNode,
         ul_class: str,
         id: Optional[str],
         selected: Optional[str],
@@ -705,7 +705,7 @@ class NavSetPillList(NavSet):
 
 
 def navset_pill_list(
-    *args: NavSetArg,
+    *args: NavSetArg | MetadataNode,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -776,7 +776,7 @@ class NavSetBar(NavSet):
 
     def __init__(
         self,
-        *args: NavSetArg,
+        *args: NavSetArg | MetadataNode,
         ul_class: str,
         title: TagChild,
         id: Optional[str],
@@ -853,7 +853,7 @@ class NavSetBar(NavSet):
 
 
 def navset_bar(
-    *args: NavSetArg,
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     title: TagChild,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -922,8 +922,16 @@ def navset_bar(
     See :func:`~shiny.ui.nav`.
     """
 
+    # If args contains any lists, flatten them into args.
+    new_args: Sequence[NavSetArg | MetadataNode] = []
+    for arg in args:
+        if isinstance(arg, (list, tuple)):
+            new_args.extend(arg)
+        else:
+            new_args.append(cast(NavSetArg, arg))
+
     return NavSetBar(
-        *args,
+        *new_args,
         ul_class="nav navbar-nav",
         id=resolve_id(id) if id else None,
         selected=selected,
@@ -942,7 +950,7 @@ def navset_bar(
 # Utilities for rendering navs
 # -----------------------------------------------------------------------------\
 def render_navset(
-    *items: NavSetArg,
+    *items: NavSetArg | MetadataNode,
     ul_class: str,
     id: Optional[str],
     selected: Optional[str],
@@ -950,16 +958,26 @@ def render_navset(
 ) -> tuple[Tag, Tag]:
     tabsetid = private_random_int(1000, 10000)
 
+    # Separate MetadataNodes from NavSetArgs.
+    metadata_args = [x for x in items if isinstance(x, MetadataNode)]
+    navset_args = [x for x in items if not isinstance(x, MetadataNode)]
+
     # If the user hasn't provided a selected value, use the first one
     if selected is None:
-        for x in items:
+        for x in navset_args:
             selected = x.get_value()
             if selected is not None:
                 break
 
-    ul_tag = tags.ul(bootstrap_deps(), class_=ul_class, id=id, data_tabsetid=tabsetid)
+    ul_tag = tags.ul(
+        bootstrap_deps(),
+        metadata_args,
+        class_=ul_class,
+        id=id,
+        data_tabsetid=tabsetid,
+    )
     div_tag = div(class_="tab-content", data_tabsetid=tabsetid)
-    for i, x in enumerate(items):
+    for i, x in enumerate(navset_args):
         nav, contents = x.resolve(
             selected, {**context, "tabsetid": tabsetid, "index": i}
         )
