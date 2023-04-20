@@ -12,8 +12,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         ex_dir = Path(__file__).resolve().parent.parent
         img: ImgData = {
-            "src": str(ex_dir / "output_image" / "rstudio-logo.png"),
-            "width": "150px",
+            "src": str(ex_dir / "output_image" / "posit-logo.png"),
+            "width": "100px",
         }
         return img
 
