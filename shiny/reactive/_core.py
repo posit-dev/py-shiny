@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-__all__ = ("isolate", "invalidate_later", "flush", "on_flushed", "get_current_context")
+__all__ = (
+    "isolate",
+    "invalidate_later",
+    "flush",
+    "lock",
+    "on_flushed",
+    "get_current_context",
+)
 
 import asyncio
 import contextlib
@@ -279,7 +286,13 @@ def on_flushed(
 
 
 def lock() -> asyncio.Lock:
-    """A lock that should be held whenever manipulating the reactive graph."""
+    """
+    A lock that should be held whenever manipulating the reactive graph.
+
+    For example, this makes it safe to set a :class:`~reactive.Value` and call
+    :func:`~reactive.flush()` from a different :class:`~asyncio.Task` than the one that
+    is running the Shiny :class:`~shiny.Session`.
+    """
     return _reactive_environment.lock
 
 
