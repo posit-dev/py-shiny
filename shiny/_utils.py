@@ -14,7 +14,7 @@ import sys
 import tempfile
 from typing import Any, Awaitable, Callable, Optional, TypeVar, cast
 
-from ._typing_extensions import TypeGuard
+from ._typing_extensions import ParamSpec, TypeGuard
 
 if sys.version_info >= (3, 8):
     CancelledError = asyncio.CancelledError
@@ -150,11 +150,12 @@ random.setstate(current_random_state)
 # ==============================================================================
 
 T = TypeVar("T")
+P = ParamSpec("P")
 
 
 def wrap_async(
-    fn: Callable[[], Awaitable[T]] | Callable[[], T]
-) -> Callable[[], Awaitable[T]]:
+    fn: Callable[P, T] | Callable[P, Awaitable[T]]
+) -> Callable[P, Awaitable[T]]:
     """
     Given a synchronous function that returns T, return an async function that wraps the
     original function. If the input function is already async, then return it unchanged.
@@ -163,18 +164,18 @@ def wrap_async(
     if is_async_callable(fn):
         return fn
 
-    fn = cast(Callable[[], T], fn)
+    fn = cast(Callable[P, T], fn)
 
     @functools.wraps(fn)
-    async def fn_async() -> T:
-        return fn()
+    async def fn_async(*args: P.args, **kwargs: P.kwargs) -> T:
+        return fn(*args, **kwargs)
 
     return fn_async
 
 
 def is_async_callable(
-    obj: Callable[..., T] | Callable[..., Awaitable[T]]
-) -> TypeGuard[Callable[..., Awaitable[T]]]:
+    obj: Callable[P, T] | Callable[P, Awaitable[T]]
+) -> TypeGuard[Callable[P, Awaitable[T]]]:
     """
     Returns True if `obj` is an `async def` function, or if it's an object with a
     `__call__` method which is an `async def` function. This function should generally
