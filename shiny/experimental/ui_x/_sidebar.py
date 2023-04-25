@@ -2,21 +2,21 @@ from __future__ import annotations
 
 import numbers
 import random
-from pathlib import PurePath
 from typing import Optional
 
-from htmltools import HTMLDependency, Tag, TagAttrs, TagChild, css, div, tags
+from htmltools import Tag, TagAttrs, TagChild, css, div, tags
 
 from shiny._typing_extensions import Literal
 
-from ._color import get_color_contrast_x
-from ._css import CssUnitX
+from ._color import get_color_contrast
+from ._css import CssUnit
 from ._css import trinary as _trinary
-from ._css import validate_css_unit_x
-from ._fill import bind_fill_role as _bind_fill_role
+from ._css import validate_css_unit
+from ._fill import bind_fill_role
+from ._htmldeps import sidebar_dependency
 
 
-class SidebarX:
+class Sidebar:
     def __init__(
         self,
         tag: Tag,
@@ -34,18 +34,18 @@ class SidebarX:
         self.max_height_mobile = max_height_mobile
 
 
-def sidebar_x(
+def sidebar(
     *args: TagChild | TagAttrs,
     width: int = 250,
     position: Literal["left", "right"] = "left",
     open: Literal["desktop", "open", "closed", "always"] = "desktop",
     id: Optional[str] = None,
-    title: TagChild | str = None,
+    title: TagChild | str | numbers.Number = None,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
     class_: Optional[str] = None,
     max_height_mobile: Optional[str | float] = None,
-) -> SidebarX:
+) -> Sidebar:
     # TODO: validate `open`, bg, fg, class_, max_height_mobile
     # TODO: Add type annotations
 
@@ -56,9 +56,9 @@ def sidebar_x(
         id = f"bslib-sidebar-{random.randint(1000, 10000)}"
 
     if fg is None and bg is not None:
-        fg = get_color_contrast_x(bg)
+        fg = get_color_contrast(bg)
     if bg is None and fg is not None:
-        bg = get_color_contrast_x(fg)
+        bg = get_color_contrast(fg)
 
     if isinstance(title, str) or isinstance(title, numbers.Number):
         title = div(str(title), class_="sidebar-title")
@@ -66,7 +66,7 @@ def sidebar_x(
     collapse_tag = None
     if open != "always":
         collapse_tag = tags.button(
-            collapse_icon_x(),
+            collapse_icon(),
             class_="collapse-toggle",
             type="button",
             title="Toggle sidebar",
@@ -84,7 +84,7 @@ def sidebar_x(
         style=css(background_color=bg, color=fg),
     )
 
-    return SidebarX(
+    return Sidebar(
         tag=tag,
         collapse_tag=collapse_tag,
         position=position,
@@ -94,7 +94,7 @@ def sidebar_x(
     )
 
 
-def collapse_icon_x() -> Tag:
+def collapse_icon() -> Tag:
     return tags.svg(
         dict(
             xmlns="http://www.w3.org/2000/svg",
@@ -114,8 +114,8 @@ def collapse_icon_x() -> Tag:
     )
 
 
-def layout_sidebar_x(
-    sidebar: SidebarX,
+def layout_sidebar(
+    sidebar: Sidebar,
     *args: TagChild | TagAttrs,
     fillable: bool = False,
     fill: bool = True,
@@ -124,14 +124,14 @@ def layout_sidebar_x(
     border: Optional[str] = None,
     border_radius: Optional[bool] = None,
     border_color: Optional[str] = None,
-    height: Optional[CssUnitX] = None,
+    height: Optional[CssUnit] = None,
 ) -> Tag:
     # TODO: validate sidebar object, border, border_radius, colors
 
     if fg is None and bg is not None:
-        fg = get_color_contrast_x(bg)
+        fg = get_color_contrast(bg)
     if bg is None and fg is not None:
-        bg = get_color_contrast_x(fg)
+        bg = get_color_contrast(fg)
 
     main = div(
         *args,
@@ -140,7 +140,7 @@ def layout_sidebar_x(
         style=css(background_color=bg, color=fg),
     )
 
-    main = _bind_fill_role(main, container=fillable)
+    main = bind_fill_role(main, container=fillable)
 
     contents = [main, sidebar.tag, sidebar.collapse_tag]
 
@@ -156,8 +156,8 @@ def layout_sidebar_x(
     # div(attrname=value, .children=[child])
 
     res = div(
-        sidebar_dependency_x(),
-        sidebar_js_init_x(),
+        sidebar_dependency(),
+        sidebar_js_init(),
         dict(class_="bslib-sidebar-layout"),
         dict(class_="sidebar-right") if right else None,
         dict(class_="sidebar-collapsed") if sidebar.open == "closed" else None,
@@ -166,14 +166,14 @@ def layout_sidebar_x(
         data_bslib_sidebar_border=_trinary(border),
         data_bslib_sidebar_border_radius=_trinary(border_radius),
         style=css(
-            __bslib_sidebar_width=validate_css_unit_x(sidebar.width),
+            __bslib_sidebar_width=validate_css_unit(sidebar.width),
             __bs_card_border_color=border_color,
-            height=validate_css_unit_x(height),
-            __bslib_sidebar_max_height_mobile=validate_css_unit_x(max_height_mobile),
+            height=validate_css_unit(height),
+            __bslib_sidebar_max_height_mobile=validate_css_unit(max_height_mobile),
         ),
     )
 
-    res = _bind_fill_role(res, item=fill)
+    res = bind_fill_role(res, item=fill)
 
     # res <- as.card_item(res)
     # as_fragment(
@@ -182,7 +182,7 @@ def layout_sidebar_x(
     return res
 
 
-def sidebar_js_init_x() -> Tag:
+def sidebar_js_init() -> Tag:
     return tags.script(
         dict(data_bslib_sidebar_init=True),
         """
@@ -215,19 +215,4 @@ def sidebar_js_init_x() -> Tag:
         }
         }
         """,
-    )
-
-
-ex_www_path = PurePath(__file__).parent.parent / "www"
-
-
-def sidebar_dependency_x() -> HTMLDependency:
-    return HTMLDependency(
-        "bslib-sidebar-x",
-        "0.0.0",
-        source={
-            "package": "shiny",
-            "subdir": str(ex_www_path / "sidebar"),
-        },
-        script={"src": "sidebar.min.js"},
     )

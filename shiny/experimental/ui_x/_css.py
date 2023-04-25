@@ -3,7 +3,13 @@ from __future__ import annotations
 import numbers
 from typing import Optional, Union
 
-CssUnitX = Union[numbers.Number, int, float, str]
+CssUnit = Union[
+    # TODO: pylance really doesn't like `numbers.Number`.
+    #       Instead, use `int` and `float`
+    int,
+    float,
+    str,
+]
 
 
 def trinary(x: Optional[bool | str]) -> None | str:
@@ -19,7 +25,7 @@ def classes(*args: Optional[str]) -> Optional[str]:
     return " ".join([x for x in args if x is not None])
 
 
-def validate_css_unit_x(value: None | CssUnitX) -> None | str:
+def validate_css_unit(value: None | CssUnit) -> None | str:
     # TODO: Actually validate. Or don't validate, but then change
     # the function name to to_css_unit() or something.
     # TODO: pylance can't figure out if an `int` or `float` is a `numbers.Number` (which
@@ -29,6 +35,8 @@ def validate_css_unit_x(value: None | CssUnitX) -> None | str:
         or isinstance(value, float)
         or isinstance(value, int)
     ):
+        if value == 0.0:
+            return "0px"
         return "{:f}px".format(value)
     else:
         return value

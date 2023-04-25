@@ -6,28 +6,28 @@ from htmltools import TagAttrs, TagChild, css, tags
 
 from shiny import ui
 
-from ._css import CssUnitX, validate_css_unit_x
-from ._fill import bind_fill_role as _bind_fill_role
+from ._css import CssUnit, validate_css_unit
+from ._fill import bind_fill_role
 
 
-def page_fillable_x(
+def page_fillable(
     *args: TagChild | TagAttrs,
-    padding: Optional[CssUnitX] = None,
-    gap: Optional[CssUnitX] = None,
+    padding: Optional[CssUnit] = None,
+    gap: Optional[CssUnit] = None,
     fill_mobile: bool = False,
     title: Optional[str] = None,
     lang: Optional[str] = None,
 ):
     style = css(
         # TODO: validate_css_padding(padding)
-        padding=validate_css_unit_x(padding),
-        gap=validate_css_unit_x(gap),
+        padding=validate_css_unit(padding),
+        gap=validate_css_unit(gap),
         __bslib_page_fill_mobile_height="100%" if fill_mobile else "auto",
     )
 
     return ui.page_bootstrap(
         tags.head(tags.style("html { height: 100%; }")),
-        _bind_fill_role(
+        bind_fill_role(
             tags.body(class_="bslib-page-fill", style=style, *args),
             container=True,
         ),
