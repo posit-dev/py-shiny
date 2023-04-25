@@ -125,9 +125,11 @@ def server(input: Inputs, output: Outputs, session: Session):
                 showcase=ui.tags.img(src=f"{name}.png", height="100%"),
             )
             for name in species
+            # Only include boxes for _selected_ species
+            if name in input.species()
         ]
 
-        return layout_column_wrap_x(1 / 3, *value_boxes)
+        return layout_column_wrap_x(1 / len(value_boxes), *value_boxes)
 
 
 app = App(
