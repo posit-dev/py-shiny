@@ -328,10 +328,20 @@ class App:
             self._register_web_dependency(dep)
 
     def _register_web_dependency(self, dep: HTMLDependency) -> None:
-        if (
-            dep.name in self._registered_dependencies
-            and dep.version >= self._registered_dependencies[dep.name].version
-        ):
+        # If the dependency has been seen before, quit early.
+
+        # Even if the htmldependency version is higher or lower, the HTML being sent to
+        # the user is requesting THIS dependency. Therefore, it should be available to
+        # the user independent of any previous versions of the dependency being served.
+
+        # Note: htmltools does de-duplicate dependencies and finds the highest version
+        # to return. However, dynamic UI and callable UI do not run through the same
+        # filter over time. When using callable UI functions, UI dependencies are reset
+        # on refresh. So if a dependency makes it here, it is not necessarily the
+        # highest version served over time but is the highest version for this
+        # particular UI. Therefore, serve it must be served.
+        dep_name = html_dep_name(dep)
+        if dep_name in self._registered_dependencies:
             return
 
         # For HTMLDependencies that have sources on disk, mount the source dir.
@@ -344,11 +354,11 @@ class App:
                     starlette.routing.Mount(
                         "/" + paths["href"],
                         StaticFiles(directory=paths["source"]),
-                        name=dep.name + "-" + str(dep.version),
+                        name=dep_name,
                     ),
                 )
 
-        self._registered_dependencies[dep.name] = dep
+        self._registered_dependencies[dep_name] = dep
 
     def _render_page(self, ui: Tag | TagList, lib_prefix: str) -> RenderedHTML:
         ui_res = copy.copy(ui)
@@ -365,3 +375,7 @@ def is_uifunc(x: Tag | TagList | Callable[[Request], Tag | TagList]):
         return False
     else:
         return True
+
+
+def html_dep_name(dep: HTMLDependency) -> str:
+    return dep.name + "-" + str(dep.version)

@@ -16,5 +16,5 @@ def test_output_image_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     img.expect_img_src(re.compile(r"data:image/png;base64"))
     img.expect_img_height(None)
-    img.expect_img_width("150px")
+    img.expect_img_width("100px")
     img.expect_img_alt(None)
