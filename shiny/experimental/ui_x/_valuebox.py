@@ -7,7 +7,8 @@ from htmltools import Tag, TagAttrs, TagChild, css, div
 
 from shiny._typing_extensions import TypeGuard
 
-from ._card import CardItem, card, card_body
+from ._card import card, card_body
+from ._card_item import CardItem
 from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
 from ._layout import layout_column_wrap
