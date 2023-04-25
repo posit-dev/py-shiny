@@ -20,6 +20,8 @@ from shiny.experimental.ui_x import (
 
 sns.set_theme()
 
+www_dir = Path(__file__).parent.resolve() / "www"
+
 df = pd.read_csv(Path(__file__).parent / "penguins.csv", na_values="NA")
 numeric_cols: list[str] = df.select_dtypes(include=["float64"]).columns.tolist()
 species: list[str] = df["Species"].unique().tolist()
@@ -112,7 +114,13 @@ def server(input: Inputs, output: Outputs, session: Session):
             )
 
         if not input.by_species():
-            return penguin_value_box("Penguins", len(df.index), bg_palette["default"])
+            return penguin_value_box(
+                "Penguins",
+                len(df.index),
+                bg_palette["default"],
+                # Artwork by @allison_horst
+                showcase=ui.tags.img(src="penguins.png", width="100%"),
+            )
 
         value_boxes = [
             penguin_value_box(
@@ -133,5 +141,5 @@ def server(input: Inputs, output: Outputs, session: Session):
 app = App(
     app_ui,
     server,
-    static_assets=str(Path(__file__).parent.resolve() / "www"),
+    static_assets=str(www_dir),
 )
