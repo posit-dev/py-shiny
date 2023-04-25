@@ -8,20 +8,8 @@ import pandas as pd
 import seaborn as sns
 from _colors import bg_palette, palette
 
+import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
-from shiny.experimental.ui_x import (
-    card_body_x,
-    card_footer_x,
-    card_header_x,
-    card_image_x,
-    card_x,
-    layout_column_wrap_x,
-    layout_sidebar_x,
-    output_plot_x,
-    page_fillable_x,
-    sidebar_x,
-    value_box_x,
-)
 
 sns.set_theme()
 
@@ -32,10 +20,12 @@ numeric_cols: list[str] = df.select_dtypes(include=["float64"]).columns.tolist()
 species: list[str] = df["Species"].unique().tolist()
 species.sort()
 
-app_ui = page_fillable_x(
+app_ui = x.ui.page_fillable(
     # shinyswatch.theme.minty(),
-    layout_sidebar_x(
-        sidebar_x(
+    x.ui.layout_sidebar(
+        x.ui.sidebar(
+            # Artwork by @allison_horst
+            ui.tags.img(src="penguins.png", width="100%", class_="mb-3"),
             ui.input_selectize(
                 "xvar",
                 "X variable",
@@ -54,20 +44,18 @@ app_ui = page_fillable_x(
             ui.hr(),
             ui.input_switch("by_species", "Show species", value=True),
             ui.input_switch("show_margins", "Show marginal plots", value=True),
-            # Artwork by @allison_horst
-            ui.tags.img(src="penguins.png", width="100%"),
         ),
-        card_x(
-            card_header_x("My Title"),
-            card_image_x(
+        x.ui.card(
+            x.ui.card_header("My Title"),
+            x.ui.card_image(
                 file=str(www_dir / "penguins.png"),
                 href="https://github.com/rstudio/shiny",
             ),
-            card_body_x(
+            x.ui.card_body(
                 "🎶 It's my [body] and I'll [type what] I want to!",
                 class_="p-0",
             ),
-            card_footer_x(
+            x.ui.card_footer(
                 "Copyright 2023 Posit, PBC",
                 class_="fs-6",
             ),
@@ -79,7 +67,7 @@ app_ui = page_fillable_x(
         else None,
         ui.output_ui("value_boxes"),
         # ui.output_text_verbatim("brush"),
-        output_plot_x("scatter", fill=True, brush=ui.brush_opts()),
+        x.ui.output_plot("scatter", fill=True, brush=ui.brush_opts()),
         fill=True,
         fillable=True,
     ),
@@ -133,7 +121,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         df = filtered_df()
 
         def penguin_value_box(title: str, count: int, bgcol: str, showcase=None):
-            return value_box_x(
+            return x.ui.value_box(
                 f"{title}",
                 count,
                 # ui.h1(HTML("$1 <i>Billion</i> Dollars")),
@@ -174,7 +162,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             if name in input.species()
         ]
 
-        return layout_column_wrap_x(1 / len(value_boxes), *value_boxes)
+        return x.ui.layout_column_wrap(1 / len(value_boxes), *value_boxes)
 
 
 app = App(
