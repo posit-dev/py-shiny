@@ -4,6 +4,11 @@ from ._card_item import (
     as_card_items as as_card_items_x,
     as_card_item as as_card_item_x,
     is_card_item as is_card_item_x,
+    CardItem as CardItemX,
+    card_header as card_header_x,
+    card_body as card_body_x,
+    card_image as card_image_x,
+    card_footer as card_footer_x,
 )
 from ._card import card as card_x
 from ._layout import layout_column_wrap as layout_column_wrap_x
@@ -26,6 +31,11 @@ __all__ = (
     "as_card_items_x",
     "card_x",
     "is_card_item_x",
+    "CardItemX",
+    "card_header_x",
+    "card_body_x",
+    "card_image_x",
+    "card_footer_x",
     # Layout
     "layout_column_wrap_x",
     # ValueBox

@@ -4,9 +4,8 @@ from typing import Optional
 
 from htmltools import HTML, Tag, TagChild, css, div, tags
 
-from ._card_body import card_body
 from ._card_full_screen import full_screen_toggle
-from ._card_item import WrapperCallable, as_card_items
+from ._card_item import WrapperCallable, as_card_items, card_body
 from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
 
