@@ -85,9 +85,8 @@ def server(input: Inputs, output: Outputs, session: Session):
             palette=palette,
             hue="Species" if input.by_species() else None,
             hue_order=species,
+            legend=False,
         )
-        if input.by_species():
-            plt.legend(loc="lower right")
 
     @output
     @render.ui
