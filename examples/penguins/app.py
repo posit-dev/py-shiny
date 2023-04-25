@@ -93,7 +93,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         def penguin_value_box(title: str, count: int, bgcol: str, showcase=None):
             return value_box_x(
-                f"{title}:",
+                f"{title}",
                 count,
                 # ui.h1(HTML("$1 <i>Billion</i> Dollars")),
                 # ui.span(
