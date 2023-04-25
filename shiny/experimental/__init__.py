@@ -1,3 +1,3 @@
-from . import ui_x
+from . import ui
 
-__all__ = ("ui_x",)
+__all__ = ("ui",)
