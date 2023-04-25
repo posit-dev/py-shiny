@@ -112,7 +112,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             )
 
         if not input.by_species():
-            return penguin_value_box("Penguins", len(df.index), palette["default"])
+            return penguin_value_box("Penguins", len(df.index), bg_palette["default"])
 
         value_boxes = [
             penguin_value_box(
