@@ -1,3 +1,6 @@
+# TODO-future: Add filter of X varaible to reduce the data? (Here we would show "Gentoo" has count 0, rather than remove if no data exists)
+# TODO-future: Add brushing to zoom into the plot. The counts should represent the data in the zoomed area. (Single click would zoom out)
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -11,6 +14,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from shiny.experimental.ui_x import (
     layout_column_wrap_x,
     layout_sidebar_x,
+    output_plot_x,
     page_fillable_x,
     sidebar_x,
     value_box_x,
@@ -22,8 +26,6 @@ df = pd.read_csv(Path(__file__).parent / "penguins.csv", na_values="NA")
 numeric_cols: list[str] = df.select_dtypes(include=["float64"]).columns.tolist()
 species: list[str] = df["Species"].unique().tolist()
 species.sort()
-
-value_box_height = "100px"
 
 app_ui = page_fillable_x(
     # shinyswatch.theme.minty(),
@@ -51,8 +53,9 @@ app_ui = page_fillable_x(
             ui.tags.img(src="penguins.png", width="100%"),
         ),
         ui.output_ui("value_boxes"),
-        ui.output_plot("scatter", height=f"calc(100% - {value_box_height})"),
+        output_plot_x("scatter", fill=True),
         fill=True,
+        fillable=True,
     ),
 )
 
@@ -107,8 +110,8 @@ def server(input: Inputs, output: Outputs, session: Session):
                 showcase=showcase,
                 theme_color=None,
                 style=f"background-color: {bgcol};",
-                height=value_box_height,
                 # full_screen=True,
+                height="100px",
             )
 
         if not input.by_species():
