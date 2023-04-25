@@ -10,6 +10,11 @@ from _colors import bg_palette, palette
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from shiny.experimental.ui_x import (
+    card_body_x,
+    card_footer_x,
+    card_header_x,
+    card_image_x,
+    card_x,
     layout_column_wrap_x,
     layout_sidebar_x,
     output_plot_x,
@@ -52,8 +57,29 @@ app_ui = page_fillable_x(
             # Artwork by @allison_horst
             ui.tags.img(src="penguins.png", width="100%"),
         ),
+        card_x(
+            card_header_x("My Title"),
+            card_image_x(
+                file=str(www_dir / "penguins.png"),
+                href="https://github.com/rstudio/shiny",
+            ),
+            card_body_x(
+                "🎶 It's my [body] and I'll [type what] I want to!",
+                class_="p-0",
+            ),
+            card_footer_x(
+                "Copyright 2023 Posit, PBC",
+                class_="fs-6",
+            ),
+            height=135,
+            fill=False,
+            full_screen=True,
+        )
+        if False
+        else None,
         ui.output_ui("value_boxes"),
-        output_plot_x("scatter", fill=True),
+        # ui.output_text_verbatim("brush"),
+        output_plot_x("scatter", fill=True, brush=ui.brush_opts()),
         fill=True,
         fillable=True,
     ),
@@ -67,8 +93,21 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         # This calculation "req"uires that at least one species is selected
         req(len(input.species()) > 0)
+
+        if False:
+            if "scatter_brush" in input:
+                info = input.scatter_brush()
+                print(str(info))
+            else:
+                print("No brush!")
+
         # Filter the rows so we only include the desired species
         return df[df["Species"].isin(input.species())]
+
+    @output
+    @render.text
+    def brush():
+        return str(input.scatter_brush())
 
     @output
     @render.plot
