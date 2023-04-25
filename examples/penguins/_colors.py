@@ -12,12 +12,9 @@ palette: dict[str, tuple[float, float, float]] = {
     "default": sns.color_palette()[0],  # type: ignore
 }
 
-
 bg_palette = {}
 # bgcols: list[str] = sns.color_palette().as_hex()
 # Use `sns.set_style("whitegrid")` to help find approx alpha value
 for name, col in palette.items():
-    bg_palette[name] = mpl_colors.to_hex(mpl_colors.to_rgba(col, 0.25), keep_alpha=True)  # type: ignore
-
-
-# default_color: str = sns.color_palette().as_hex()[0]  # type: ignore
+    # Adjusted n_colors until `axe` accessibility did not complain about color contrast
+    bg_palette[name] = mpl_colors.to_hex(sns.light_palette(col, n_colors=7)[1])  # type: ignore

@@ -109,8 +109,8 @@ def server(input: Inputs, output: Outputs, session: Session):
                 showcase=showcase,
                 theme_color=None,
                 style=f"background-color: {bgcol};",
-                # full_screen=True,
                 height="100px",
+                full_screen=True,
             )
 
         if not input.by_species():
