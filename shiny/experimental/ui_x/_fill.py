@@ -10,6 +10,7 @@ from ._htmldeps import fill_dependencies
 def bind_fill_role(
     tag: Tag,
     *,
+    # TODO: change `item` and `container` to `fill` and `fillable` respectively
     item: Optional[bool] = None,
     container: Optional[bool] = None,
 ) -> Tag:

@@ -8,6 +8,12 @@ from ._card_item import (
 from ._card import card as card_x
 from ._layout import layout_column_wrap as layout_column_wrap_x
 from ._valuebox import value_box as value_box_x
+from ._fill import bind_fill_role as bind_fill_role_x
+from ._output import (
+    output_image as output_image_x,
+    output_plot as output_plot_x,
+    output_ui as output_ui_x,
+)
 
 __all__ = (
     # Sidebar
@@ -24,4 +30,10 @@ __all__ = (
     "layout_column_wrap_x",
     # ValueBox
     "value_box_x",
+    # Fill
+    "bind_fill_role_x",
+    # Output
+    "output_image_x",
+    "output_plot_x",
+    "output_ui_x",
 )
