@@ -25,7 +25,9 @@ app_ui = x.ui.page_fillable(
     x.ui.layout_sidebar(
         x.ui.sidebar(
             # Artwork by @allison_horst
-            ui.tags.img(src="penguins.png", width="100%", class_="mb-3"),
+            ui.tags.img(
+                src="palmerpenguins.png", width="80%", class_="mt-0 mb-2 mx-auto"
+            ),
             ui.input_selectize(
                 "xvar",
                 "X variable",
