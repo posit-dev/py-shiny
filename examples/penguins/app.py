@@ -126,6 +126,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             return x.ui.value_box(
                 f"{title}",
                 count,
+                {"class_": "pt-1 pb-0"},
                 # ui.h1(HTML("$1 <i>Billion</i> Dollars")),
                 # ui.span(
                 #     # bsicons::bs_icon("arrow-up"),
@@ -138,7 +139,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 showcase=showcase,
                 theme_color=None,
                 style=f"background-color: {bgcol};",
-                height="100px",
+                height="90px",
                 full_screen=True,
             )
 
