@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import seaborn as sns
 import shinyswatch
-from _colors import bg_palette, palette
+from colors import bg_palette, palette
 
 import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui

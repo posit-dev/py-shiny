@@ -2,13 +2,13 @@ import matplotlib.colors as mpl_colors
 import seaborn as sns  # type: ignore
 
 # "darkorange", "purple", "cyan4"
-_colors = [[255, 140, 0], [160, 32, 240], [0, 139, 139]]
-_colors = [(r / 255.0, g / 255.0, b / 255.0) for r, g, b in _colors]
+colors = [[255, 140, 0], [160, 32, 240], [0, 139, 139]]
+colors = [(r / 255.0, g / 255.0, b / 255.0) for r, g, b in colors]
 
 palette: dict[str, tuple[float, float, float]] = {
-    "Adelie": _colors[0],
-    "Chinstrap": _colors[1],
-    "Gentoo": _colors[2],
+    "Adelie": colors[0],
+    "Chinstrap": colors[1],
+    "Gentoo": colors[2],
     "default": sns.color_palette()[0],  # type: ignore
 }
 
