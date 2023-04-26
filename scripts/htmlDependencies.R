@@ -1,7 +1,12 @@
 #!/usr/bin/env Rscript
 
+versions <- list()
+
 pak::pkg_install("rstudio/bslib")
 # pak::pkg_install("cran::bslib")
+
+versions["shiny_html_deps"] <- as.character(packageVersion("shiny"))
+versions["bslib"] <- as.character(packageVersion("bslib"))
 
 bslib_info <- sessioninfo::package_info("bslib")
 bslib_info_list <- bslib_info[bslib_info$package == "bslib", , drop = TRUE]
@@ -9,7 +14,8 @@ bslib_info_list <- bslib_info[bslib_info$package == "bslib", , drop = TRUE]
 library(htmltools)
 library(bslib)
 
-www <- file.path(getwd(), "shiny", "www")
+shiny_path <- file.path(getwd(), "shiny")
+www <- file.path(shiny_path, "www")
 unlink(www, recursive = TRUE)
 dir.create(www)
 
@@ -35,10 +41,12 @@ withr::with_options(
   list(htmltools.dir.version = FALSE),
   lapply(deps, copyDependencyToDir, "shiny/www/shared")
 )
+bs_ver <- names(bslib::versions())[bslib::versions() == "5"]
+versions["bootstrap"] <- bs_ver
 jsonlite::write_json(
   list(
     bslib_version = bslib_info_list$source,
-    bootstrap_version = names(bslib::versions())[bslib::versions() == "5"]
+    bootstrap_version = bs_ver
   ),
   "shiny/www/shared/bootstrap/version.json",
   pretty = TRUE, auto_unbox = TRUE
@@ -51,10 +59,12 @@ jsonlite::write_json(
 # comes in via the bootstrap HTMLDependency()
 unlink("shiny/www/shared/bs3compat/", recursive = TRUE)
 
+requirejs_version <- "2.3.6"
+versions["requirejs"] <- requirejs_version
 requirejs <- file.path(www, "shared", "requirejs")
 dir.create(requirejs)
 download.file(
-  "https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js",
+  paste0("https://cdnjs.cloudflare.com/ajax/libs/require.js/", requirejs_version, "/require.min.js"),
   file.path(requirejs, "require.min.js")
 )
 
@@ -65,4 +75,21 @@ cat(
   paste(readLines(shims), collapse = "\n"),
   file = file.path(requirejs, "require.min.js"),
   append = TRUE
+)
+
+
+version_vars <- paste0(names(versions), " = ", "\"", versions, "\"\n", collapse = "")
+version_all <- paste0(
+  collapse = "",
+  "__all__ = (\n",
+  paste0("    \"", names(versions), "\",\n", collapse = ""),
+  ")\n"
+)
+cat(
+  file = file.path(shiny_path, "_versions.py"),
+  version_vars,
+  "\n",
+  version_all,
+  # paste0("versions = ", versions_txt),
+  sep = ""
 )

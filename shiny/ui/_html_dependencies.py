@@ -1,25 +1,12 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 from htmltools import HTML, HTMLDependency
 
+from .._versions import bootstrap as bootstrap_version
 from ..html_dependencies import jquery_deps
 
 
 def bootstrap_deps() -> list[HTMLDependency]:
-    bootstrap_version_file = (
-        Path(__file__).parent.parent.resolve()
-        / "www"
-        / "shared"
-        / "bootstrap"
-        / "version.json"
-    )
-    with open(bootstrap_version_file) as bvf:
-        version_txt = bvf.read()
-        bootstrap_version = json.loads(version_txt).get("bootstrap_version", "5")
-
     dep = HTMLDependency(
         name="bootstrap",
         version=bootstrap_version,
