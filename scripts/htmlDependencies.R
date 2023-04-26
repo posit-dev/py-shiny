@@ -1,5 +1,11 @@
 #!/usr/bin/env Rscript
 
+# pak::pkg_install("rstudio/bslib")
+pak::pkg_install("cran::bslib")
+
+bslib_info <- sessioninfo::package_info("bslib")
+bslib_info_list <- bslib_info[bslib_info$package == "bslib", , drop = TRUE]
+
 library(htmltools)
 library(bslib)
 
@@ -28,6 +34,14 @@ deps <- bs_theme_dependencies(bs_theme(version = 5))
 withr::with_options(
   list(htmltools.dir.version = FALSE),
   lapply(deps, copyDependencyToDir, "shiny/www/shared")
+)
+jsonlite::write_json(
+  list(
+    bslib_version = bslib_info_list$source,
+    bootstrap_version = names(bslib::versions())[bslib::versions() == "5"]
+  ),
+  "shiny/www/shared/bootstrap/version.json",
+  pretty = TRUE, auto_unbox = TRUE
 )
 
 # This additional bs3compat HTMLDependency() only holds
