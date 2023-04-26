@@ -16,6 +16,7 @@ from ._output import (
     output_plot,
     output_ui,
 )
+from ._input_text import input_text_area
 
 __all__ = (
     # Sidebar
@@ -40,4 +41,6 @@ __all__ = (
     "output_image",
     "output_plot",
     "output_ui",
+    # input_text_area
+    "input_text_area",
 )
