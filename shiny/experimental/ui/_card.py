@@ -94,7 +94,7 @@ def card(
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
     fill: bool = True,
-    class_: Optional[str] = None,
+    class_: Optional[str] = None,  # Applies after `bind_fill_role()`
     wrapper: WrapperCallable | None = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
@@ -121,6 +121,7 @@ def card(
     tag.append(card_js_init())
 
     tag = bind_fill_role(tag, container=True, item=fill)
+    # Give the user an opportunity to override the classes added by bind_fill_role()
     if class_ is not None:
         tag.add_class(class_)
     return tag

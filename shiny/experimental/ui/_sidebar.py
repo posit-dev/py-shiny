@@ -43,7 +43,7 @@ def sidebar(
     title: TagChild | str | numbers.Number = None,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
-    class_: Optional[str] = None,
+    class_: Optional[str] = None,  # Consider using `**kwargs` instead
     max_height_mobile: Optional[str | float] = None,
 ) -> Sidebar:
     # TODO: validate `open`, bg, fg, class_, max_height_mobile

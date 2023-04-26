@@ -49,7 +49,7 @@ def value_box(
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
     fill: bool = True,
-    class_: Optional[str] = None,
+    class_: Optional[str] = None,  # Applies after `bind_fill_role()` inside `card()`
     **kwargs: TagAttrValue,
 ) -> Tag:
     if showcase_layout is None:
@@ -59,13 +59,10 @@ def value_box(
     if isinstance(value, str) or isinstance(value, numbers.Number):
         value = div(str(value), class_="h2 mb-2")
 
-    attribs = kwargs
-    children = args
-
     contents = div(
         title,
         value,
-        *children,
+        *args,
         class_="value-box-area",
     )
     contents = bind_fill_role(contents, container=True, item=True)
@@ -83,7 +80,7 @@ def value_box(
         height=height,
         max_height=max_height,
         fill=fill,
-        **attribs,
+        **kwargs,
     )
 
 

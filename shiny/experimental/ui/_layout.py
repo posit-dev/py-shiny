@@ -63,7 +63,7 @@ def layout_column_wrap(
     height: Optional[CssUnit] = None,
     height_mobile: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
-    class_: Optional[str] = None,
+    class_: Optional[str] = None,  # Applies after `bind_fill_role()`
     **kwargs: TagAttrValue,
 ):
     attribs = kwargs
@@ -119,6 +119,7 @@ def layout_column_wrap(
     # pdb.set_trace()
 
     tag = bind_fill_role(tag, item=fill)
+    # Give the user an opportunity to override the classes added by bind_fill_role()
     if class_ is not None:
         tag.add_class(class_)
 

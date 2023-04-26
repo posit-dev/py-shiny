@@ -63,7 +63,7 @@ def card_body(
     height: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
     fill: bool = True,
-    class_: Optional[str] = None,
+    class_: Optional[str] = None,  # Applies after `bind_fill_role()`
     **kwargs: TagAttrValue,
 ) -> CardItem:
     if max_height_full_screen == "__max_height__":
@@ -94,7 +94,7 @@ def card_body(
 
     tag = bind_fill_role(tag, item=fill, container=fillable)
 
-    # Make sure user has the opportunity to override the classes added by bindFillRole()
+    # Give the user an opportunity to override the classes added by bind_fill_role()
     if class_ is not None:
         tag.add_class(class_)
 
@@ -188,12 +188,11 @@ def card_title(
 # @export
 def card_header(
     *args: TagChild | TagAttrs,
-    class_: Optional[str] = None,
     container: TagCallable = tags.div,
     **kwargs: TagAttrValue,
 ) -> CardItem:
     return as_card_item(
-        container({"class": "card-header"}, {"class": class_}, *args, **kwargs)
+        container({"class": "card-header"}, *args, **kwargs),
     )
 
 
@@ -201,11 +200,10 @@ def card_header(
 # @export
 def card_footer(
     *args: TagChild | TagAttrs,
-    class_: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> CardItem:
     return as_card_item(
-        tags.div({"class": "card-footer"}, {"class": class_}, *args, **kwargs)
+        tags.div({"class": "card-footer"}, *args, **kwargs),
     )
 
 
@@ -232,7 +230,7 @@ def card_image(
     href: Optional[str] = None,
     border_radius: Literal["top", "bottom", "all", "none"] = "top",
     mime_type: Optional[str] = None,
-    class_: Optional[str] = None,
+    class_: Optional[str] = None,  # Applies after `bind_fill_role()`
     height: Optional[CssUnit] = None,
     fill: bool = True,
     width: Optional[CssUnit] = None,
@@ -268,6 +266,7 @@ def card_image(
     )
 
     image = bind_fill_role(image, item=fill)
+    # Give the user an opportunity to override the classes added by bind_fill_role()
     if class_ is not None:
         image.add_class(class_)
 

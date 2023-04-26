@@ -7,6 +7,9 @@ from htmltools import Tag
 from ._htmldeps import fill_dependencies
 
 
+# TODO-future: Find a way to allow users to pass `class_` within `**kwargs`, rather than
+# manually handling it so that it can override the classes added by `bind_fill_role()`.
+# Ex: `card_body()`, `card_image()`, `card()`, `layout_column_wrap()` and by extension `value_box()` or any method that calls the first four
 def bind_fill_role(
     tag: Tag,
     *,
