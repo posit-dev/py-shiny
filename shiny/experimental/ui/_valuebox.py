@@ -19,23 +19,18 @@ def is_01_scalar(x: object) -> TypeGuard[float]:
 
 
 # It seems to be to use % over fr here since there is no gap on the grid
-def validate_width_unit(x: str | float) -> str:
-    if is_01_scalar(x):
-        scaled_x = 100 * x
-        scaled_not_x = 100 * (1 - x)
-        return f"{scaled_x}% {scaled_not_x}%"
+def to_width_unit(x: str | float) -> str:
+    if isinstance(x, float):
+        return validate_css_unit(x)
+
+    if isinstance(x, str) and x.endswith("%") and x.count("%") == 1:
+        x1_num = float(x[:-1])
+        x2_num = 100 - x1_num
+        return f"{x1_num}% {x2_num}%"
 
     # TODO: validateCssUnit() should maybe support fr units?
     # return(paste(x, collapse = " "))
-    return str(x)
-
-
-def validate_height_unit(x: str | float) -> str:
-    if is_01_scalar(x):
-        return f"{100 * x}%"
-
-    height_unit = validate_css_unit(x)
-    return height_unit
+    return validate_css_unit(x)
 
 
 def value_box(
@@ -100,9 +95,9 @@ def value_box(
 # @export
 # @rdname value_box
 def showcase_left_center(
-    width: float = 0.3,
+    width: CssUnit = "30%",
     max_height: CssUnit = "100px",
-    max_height_full_screen: CssUnit = 0.67,
+    max_height_full_screen: CssUnit = "67%",
 ) -> Callable[[TagChild | TagAttrs, Tag], CardItem]:
     return showcase_layout_(
         width=width,
@@ -115,9 +110,9 @@ def showcase_left_center(
 # @export
 # @rdname value_box
 def showcase_top_right(
-    width: float = 0.3,
+    width: CssUnit = "30%",
     max_height: CssUnit = "75px",
-    max_height_full_screen: CssUnit = 0.67,
+    max_height_full_screen: CssUnit = "67%",
 ) -> Callable[[TagChild | TagAttrs, Tag], CardItem]:
     if is_01_scalar(width):
         width = 1 - width
@@ -135,9 +130,10 @@ def showcase_layout_(
     max_height_full_screen: CssUnit,
     top_right: bool,
 ) -> Callable[[TagChild | TagAttrs, Tag], CardItem]:
-    width_css_unit = validate_width_unit(width)
-    max_height_css_unit = validate_height_unit(max_height)
-    max_height_full_screen_css_unit = validate_height_unit(max_height_full_screen)
+    # Do not "magically" turn `0.3` into `"30%"` as it is not clear to the user when it happens
+    width_css_unit = to_width_unit(width)
+    max_height_css_unit = validate_css_unit(max_height)
+    max_height_full_screen_css_unit = validate_css_unit(max_height_full_screen)
 
     def _showcase_layout(showcase: TagChild | TagAttrs, contents: Tag) -> CardItem:
         css_args = {

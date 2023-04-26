@@ -42,9 +42,9 @@ def validate_css_unit(value: CssUnit) -> str:
 
 
 def validate_css_unit(value: None | CssUnit) -> None | str:
-    # TODO: Actually validate. Or don't validate, but then change
+    # TODO-future: Actually validate. Or don't validate, but then change
     # the function name to to_css_unit() or something.
-    # TODO: pylance can't figure out if an `int` or `float` is a `numbers.Number` (which
+    # TODO-future: pylance can't figure out if an `int` or `float` is a `numbers.Number` (which
     # is it). For now, use the extra types
     if (
         isinstance(value, numbers.Number)
