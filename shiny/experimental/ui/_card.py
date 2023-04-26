@@ -106,6 +106,9 @@ def card(
     # pdb.set_trace()
 
     tag = div(
+        *children,
+        full_screen_toggle() if full_screen else None,
+        card_js_init(),
         {
             "class": "card bslib-card",
             "style": css(
@@ -115,10 +118,6 @@ def card(
         },
         **kwargs,
     )
-    tag.append(*children)
-    if full_screen:
-        tag.append(full_screen_toggle())
-    tag.append(card_js_init())
 
     tag = bind_fill_role(tag, container=True, item=fill)
     # Give the user an opportunity to override the classes added by bind_fill_role()
