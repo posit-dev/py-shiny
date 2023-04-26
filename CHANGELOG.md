@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [UNRELEASED]
+
+### New features
+
+### Bug fixes
+
+### Other changes
+
+
 ## [0.3.3] - 2023-04-26
 
 ### New features
@@ -17,8 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * The bootstrap HTMLDependency is now created using the dev version of `{bslib}` to get the latest features. (#462)
 
 * Added `shiny.experimental.ui.input_text_area()`, which supports auto-resizing height to fit the content when `autoresize=True`. (#463)
-
-### Bug fixes
 
 ### Other changes
 
