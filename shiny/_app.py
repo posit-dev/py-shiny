@@ -75,7 +75,7 @@ class App:
     """
     Whether or not to show a generic message (``SANITIZE_ERRORS=True``) or the actual
     message (``SANITIZE_ERRORS=False``) in the app UI when an error occurs. This flag
-    may default to ``True`` in some production environments (e.g., RStudio Connect).
+    may default to ``True`` in some production environments (e.g., Posit Connect).
     """
 
     sanitize_error_msg: str = "An error has occurred. Check your logs or contact the app author for clarification."

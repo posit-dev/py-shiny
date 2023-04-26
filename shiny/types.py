@@ -91,7 +91,7 @@ class SafeException(Exception):
     Throw a safe exception.
 
     When ``shiny.App.SANITIZE_ERRORS`` is ``True`` (which is the case
-    in some production environments like RStudio Connect), exceptions are sanitized
+    in some production environments like Posit Connect), exceptions are sanitized
     to prevent leaking of sensitive information. This class provides a way to
     generate an error that is OK to be displayed to the user.
     """
