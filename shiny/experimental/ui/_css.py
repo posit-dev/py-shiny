@@ -12,6 +12,16 @@ CssUnit = Union[
 ]
 
 
+@overload
+def trinary(x: None) -> None:
+    ...
+
+
+@overload
+def trinary(x: bool | str) -> str:
+    ...
+
+
 def trinary(x: bool | str | None) -> None | str:
     if x is None:
         return None
@@ -19,10 +29,6 @@ def trinary(x: bool | str | None) -> None | str:
         return "true"
     else:
         return "false"
-
-
-def classes(*args: str | None) -> str:
-    return " ".join([x for x in args if x is not None])
 
 
 @overload

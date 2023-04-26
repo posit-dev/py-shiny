@@ -4,14 +4,14 @@ import numbers
 import random
 from typing import Optional
 
-from htmltools import Tag, TagAttrs, TagChild, css, div, tags
+from htmltools import Tag, TagAttrs, TagChild, css, div
+from htmltools import svg as svgtags
+from htmltools import tags
 
 from shiny._typing_extensions import Literal
 
 from ._color import get_color_contrast
-from ._css import CssUnit
-from ._css import trinary as _trinary
-from ._css import validate_css_unit
+from ._css import CssUnit, trinary, validate_css_unit
 from ._fill import bind_fill_role
 from ._htmldeps import sidebar_dependency
 
@@ -49,9 +49,7 @@ def sidebar(
     # TODO: validate `open`, bg, fg, class_, max_height_mobile
     # TODO: Add type annotations
 
-    if id is not None:
-        class_ = "bslib-sidebar-input" + ("" if not class_ else (" " + class_))
-    elif open != "always":
+    if id is None and open != "always":
         # but always provide id when collapsible for accessibility reasons
         id = f"bslib-sidebar-{random.randint(1000, 10000)}"
 
@@ -71,12 +69,13 @@ def sidebar(
             type="button",
             title="Toggle sidebar",
             style=css(background_color=bg, color=fg),
-            aria_expanded="true" if open in ["open", "desktop"] else "false",
+            aria_expanded=trinary(open in ["open", "desktop"]),
             aria_controls=id,
         )
 
     tag = div(
         div(title, *args, class_="sidebar-content"),
+        {"class": "bslib-sidebar-input"} if id is not None else None,
         {"class": "sidebar"},
         id=id,
         role="complementary",
@@ -96,21 +95,16 @@ def sidebar(
 
 def collapse_icon() -> Tag:
     return tags.svg(
-        dict(
-            xmlns="http://www.w3.org/2000/svg",
-            viewBox="0 0 16 16",
-            class_="bi bi-chevron-down collapse-icon",
-            style="fill:currentColor;",
-            aria_hidden="true",
-            role="img",
+        svgtags.path(
+            fill_rule="evenodd",
+            d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z",
         ),
-        Tag(
-            "path",
-            dict(
-                fill_rule="evenodd",
-                d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z",
-            ),
-        ),
+        xmlns="http://www.w3.org/2000/svg",
+        viewBox="0 0 16 16",
+        class_="bi bi-chevron-down collapse-icon",
+        style="fill:currentColor;",
+        aria_hidden="true",
+        role="img",
     )
 
 
@@ -150,21 +144,16 @@ def layout_sidebar(
         "250px" if height is None else "50%"
     )
 
-    # div(child, attrname=value)
-    # div({"attrname": "value"}, child)
-    # div(dict(attrname=value), child)
-    # div(attrname=value, .children=[child])
-
     res = div(
         sidebar_dependency(),
         sidebar_js_init(),
-        dict(class_="bslib-sidebar-layout"),
-        dict(class_="sidebar-right") if right else None,
-        dict(class_="sidebar-collapsed") if sidebar.open == "closed" else None,
+        {"class": "bslib-sidebar-layout"},
+        {"class": "sidebar-right"} if right else None,
+        {"class": "sidebar-collapsed"} if sidebar.open == "closed" else None,
         *contents,
         data_sidebar_init_auto_collapse="true" if sidebar.open == "desktop" else None,
-        data_bslib_sidebar_border=_trinary(border),
-        data_bslib_sidebar_border_radius=_trinary(border_radius),
+        data_bslib_sidebar_border=trinary(border),
+        data_bslib_sidebar_border_radius=trinary(border_radius),
         style=css(
             __bslib_sidebar_width=validate_css_unit(sidebar.width),
             __bs_card_border_color=border_color,
@@ -184,7 +173,7 @@ def layout_sidebar(
 
 def sidebar_js_init() -> Tag:
     return tags.script(
-        dict(data_bslib_sidebar_init=True),
+        {"data_bslib_sidebar_init": True},
         """
         var thisScript = document.querySelector('script[data-bslib-sidebar-init]');
         thisScript.removeAttribute('data-bslib-sidebar-init');

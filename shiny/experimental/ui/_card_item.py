@@ -87,8 +87,10 @@ def card_body(
     }
     tag = tags.div(
         *args,
-        {"class": "card-body"},
-        {"style": css(**div_style_args)},
+        {
+            "class": "card-body",
+            "style": css(**div_style_args),
+        },
         **kwargs,
     )
 
@@ -252,15 +254,15 @@ def card_image(
     }
 
     image = tags.img(
-        {"src": src},
-        {"class": "img-fluid"},
-        {"class": card_class_map.get(border_radius, None)},
         {
+            "src": src,
+            "class": "img-fluid",
             "style": css(
                 height=validate_css_unit(height),
                 width=validate_css_unit(width),
-            )
+            ),
         },
+        {"class": card_class_map.get(border_radius, None)},
         *args,
         **kwargs,
     )

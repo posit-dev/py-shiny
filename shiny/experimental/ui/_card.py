@@ -106,12 +106,12 @@ def card(
     # pdb.set_trace()
 
     tag = div(
-        {"class": "card bslib-card"},
         {
+            "class": "card bslib-card",
             "style": css(
                 height=validate_css_unit(height),
                 max_height=validate_css_unit(max_height),
-            )
+            ),
         },
         **kwargs,
     )

@@ -111,8 +111,10 @@ def layout_column_wrap(
     }
 
     tag = div(
-        {"class": "bslib-column-wrap"},
-        {"style": css(**tag_style_css)},
+        {
+            "class": "bslib-column-wrap",
+            "style": css(**tag_style_css),
+        },
         *upgraded_children,
         **attribs,
     )
