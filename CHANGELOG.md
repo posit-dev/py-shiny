@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `penguins` example. (462)
 
+* The bootstrap HTMLDependency is now created using the dev version of `{bslib}` to get the latest features. (#462)
+
 ### Bug fixes
 
 ### Other changes
