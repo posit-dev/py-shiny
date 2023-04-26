@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import base64
 import mimetypes
-from typing import Optional, Protocol
+from typing import Optional, Protocol, overload
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, Tagifiable, css, tags
 
@@ -120,6 +120,22 @@ def is_card_item(x: object) -> TypeGuard[CardItem]:
 class WrapperCallable(Protocol):
     def __call__(self, *args: TagChild) -> CardItem:
         ...
+
+
+@overload
+def as_card_items(
+    *children: TagChild | None,  # `TagAttrs` are not allowed here
+    wrapper: None,
+) -> list[TagChild]:
+    ...
+
+
+@overload
+def as_card_items(
+    *children: TagChild | None,  # `TagAttrs` are not allowed here
+    wrapper: WrapperCallable,
+) -> list[CardItem]:
+    ...
 
 
 def as_card_items(

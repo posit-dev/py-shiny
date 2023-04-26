@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import Optional
 
-from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, css, div, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, tags
 
 from ._card_full_screen import full_screen_toggle
 from ._card_item import WrapperCallable, as_card_items, card_body
 from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
+from ._utils import separate_args_into_children_and_attrs
 
 # class Page:
 #     x: Tag
@@ -101,12 +102,12 @@ def card(
     if wrapper is None:
         wrapper = card_body
 
-    children = as_card_items(*args, wrapper=wrapper)
-
-    # pdb.set_trace()
+    children, attrs = separate_args_into_children_and_attrs(*args)
+    children = as_card_items(*children, wrapper=wrapper)
 
     tag = div(
         *children,
+        *attrs,
         full_screen_toggle() if full_screen else None,
         card_js_init(),
         {
