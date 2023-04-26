@@ -70,6 +70,7 @@ def value_box(
     if showcase is not None:
         contents = showcase_layout(showcase, contents)
 
+    # Must use `class_` in `card()` as it must be applied after `bind_fill_role()`
     theme_class_str = f" bg-{theme_color}" if theme_color else ""
     class_str = f" {class_}" if class_ is not None else ""
 

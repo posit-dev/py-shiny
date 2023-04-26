@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import base64
+import io
 import mimetypes
+from pathlib import Path, PurePath
 from typing import Optional, Protocol
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
@@ -235,7 +237,7 @@ class ImgContainer(Protocol):
 
 
 def card_image(
-    file: Optional[str],
+    file: str | Path | PurePath | io.BytesIO | None,
     *args: TagChild | TagAttrs,
     href: Optional[str] = None,
     border_radius: Literal["top", "bottom", "all", "none"] = "top",
@@ -249,11 +251,20 @@ def card_image(
 ) -> CardItem:
     src = None
     if file is not None:
-        with open(file, "rb") as img_file:
-            b64_str = base64.b64encode(img_file.read()).decode("utf-8")
+        if isinstance(file, io.BytesIO):
+            b64_str = base64.b64encode(file.read()).decode("utf-8")
             if mime_type is None:
-                mime_type = mimetypes.guess_type(file)[0]
+                raise ValueError(
+                    "`mime_type` must be provided when passing an in-memory buffer"
+                )
             src = f"data:{mime_type};base64,{b64_str}"
+
+        elif isinstance(file, (str, Path, PurePath)):
+            with open(file, "rb") as img_file:
+                b64_str = base64.b64encode(img_file.read()).decode("utf-8")
+                if mime_type is None:
+                    mime_type = mimetypes.guess_type(file)[0]
+                src = f"data:{mime_type};base64,{b64_str}"
 
     card_class_map = {
         "all": "card-img",
