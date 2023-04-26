@@ -3,6 +3,8 @@
 
 from pathlib import Path
 
+from typing import List
+
 import pandas as pd
 import seaborn as sns
 import shinyswatch
@@ -16,8 +18,8 @@ sns.set_theme()
 www_dir = Path(__file__).parent.resolve() / "www"
 
 df = pd.read_csv(Path(__file__).parent / "penguins.csv", na_values="NA")
-numeric_cols: list[str] = df.select_dtypes(include=["float64"]).columns.tolist()
-species: list[str] = df["Species"].unique().tolist()
+numeric_cols: List[str] = df.select_dtypes(include=["float64"]).columns.tolist()
+species: List[str] = df["Species"].unique().tolist()
 species.sort()
 
 app_ui = x.ui.page_fillable(
