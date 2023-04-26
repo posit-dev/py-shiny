@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
-# pak::pkg_install("rstudio/bslib")
-pak::pkg_install("cran::bslib")
+pak::pkg_install("rstudio/bslib")
+# pak::pkg_install("cran::bslib")
 
 bslib_info <- sessioninfo::package_info("bslib")
 bslib_info_list <- bslib_info[bslib_info$package == "bslib", , drop = TRUE]
