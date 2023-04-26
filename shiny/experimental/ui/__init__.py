@@ -3,8 +3,6 @@ from ._page import page_fillable
 from ._card_item import (
     CardItem,
     as_card_items,
-    as_card_item,
-    is_card_item,
     card_header,
     card_body,
     card_image,
@@ -28,9 +26,7 @@ __all__ = (
     "page_fillable",
     # Card
     "CardItem",
-    "as_card_item",
     "as_card_items",
-    "is_card_item",
     "card",
     "card_header",
     "card_body",

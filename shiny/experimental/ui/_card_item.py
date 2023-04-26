@@ -16,10 +16,10 @@ from ._fill import bind_fill_role
 class CardItem:
     def __init__(
         self,
-        item: Tag,
-        # item: Tagifiable,
+        x: Tag,
+        # x: Tagifiable,
     ):
-        self.item = item
+        self.x = x
 
     def tagify(self) -> Tag:
         # TODO-barret: This would be nice if we could just use the return value of
@@ -101,20 +101,7 @@ def card_body(
     if class_ is not None:
         tag.add_class(class_)
 
-    return as_card_item(tag)
-
-
-# @describeIn card_body Mark an object as a card item. This will prevent the
-#   [card()] from putting the object inside a `wrapper` (i.e., a
-#   `card_body()`).
-# @param x an object to test (or coerce to) a card item.
-# @export
-def as_card_item(x: Tag) -> CardItem:
-    return CardItem(item=x)
-
-
-def is_card_item(x: object) -> TypeGuard[CardItem]:
-    return isinstance(x, CardItem)
+    return CardItem(tag)
 
 
 # https://mypy.readthedocs.io/en/stable/protocols.html#callback-protocols
@@ -163,7 +150,7 @@ def as_card_items(
         children_to_wrap = []
 
     for child in children_vals:
-        if is_card_item(child):
+        if isinstance(child, CardItem):
             if state == "wrap":
                 wrap_children()
             state = "asis"
