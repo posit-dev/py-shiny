@@ -35,7 +35,6 @@ def validate_height_unit(x: str | float) -> str:
         return f"{100 * x}%"
 
     height_unit = validate_css_unit(x)
-    assert height_unit is not None
     return height_unit
 
 
@@ -51,7 +50,7 @@ def value_box(
     max_height: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
-    **kwargs: TagChild | TagAttrs,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     if showcase_layout is None:
         showcase_layout = showcase_left_center()
@@ -149,8 +148,7 @@ def showcase_layout_(
         }
         showcase_container = div(
             showcase,
-            {"class_": "value-box-showcase"},
-            {"class_": "overflow-hidden"},
+            {"class": "value-box-showcase overflow-hidden"},
             {"class_": "showcase-top-right"} if top_right else None,
             style=css(**css_args),
         )

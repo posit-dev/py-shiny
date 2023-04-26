@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `shiny.experimental` as a place to put experimental features. When using Shiny's experimental features, we recommend importing them by calling `import shiny.experimental as x`, so that all local function calls must start with `x` (e.g. `x.ui.card()`) to signify the method may be changed/removed without warning or future support. (#462)
 
-* Added `penguins` example. (462)
+* Added `penguins` example. (#462)
 
 * The bootstrap HTMLDependency is now created using the dev version of `{bslib}` to get the latest features. (#462)
 

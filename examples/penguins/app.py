@@ -47,26 +47,6 @@ app_ui = x.ui.page_fillable(
             ui.input_switch("by_species", "Show species", value=True),
             ui.input_switch("show_margins", "Show marginal plots", value=True),
         ),
-        x.ui.card(
-            x.ui.card_header("My Title"),
-            x.ui.card_image(
-                file=str(www_dir / "penguins.png"),
-                href="https://github.com/rstudio/shiny",
-            ),
-            x.ui.card_body(
-                "🎶 It's my [body] and I'll [type what] I want to!",
-                class_="p-0",
-            ),
-            x.ui.card_footer(
-                "Copyright 2023 Posit, PBC",
-                class_="fs-6",
-            ),
-            height=135,
-            fill=False,
-            full_screen=True,
-        )
-        if False
-        else None,
         ui.output_ui("value_boxes"),
         # ui.output_text_verbatim("brush"),
         x.ui.output_plot("scatter", fill=True, brush=ui.brush_opts()),
@@ -79,7 +59,7 @@ app_ui = x.ui.page_fillable(
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Calc
     def filtered_df() -> pd.DataFrame:
-        """Returns a Polars data frame that includes only the desired rows"""
+        """Returns a Pandas data frame that includes only the desired rows"""
 
         # This calculation "req"uires that at least one species is selected
         req(len(input.species()) > 0)

@@ -55,7 +55,7 @@ from ._fill import bind_fill_role
 #
 def layout_column_wrap(
     width: Optional[CssUnit],
-    *args: TagChild | TagAttrs,
+    *args: TagChild,   # TagAttrs are not allowed here
     fixed_width: bool = False,
     heights_equal: Literal["all", "row"] = "all",
     fill: bool = True,
@@ -66,8 +66,6 @@ def layout_column_wrap(
     class_: Optional[str] = None,
     **kwargs: TagChild,
 ):
-    assert type(width) != "list"
-    assert heights_equal in ("all", "row")
     attribs = kwargs
     children = args
 
@@ -113,7 +111,7 @@ def layout_column_wrap(
     }
 
     tag = div(
-        {"class_": "bslib-column-wrap"},
+        {"class": "bslib-column-wrap"},
         {"style": css(**tag_style_css)},
         *upgraded_children,
         **attribs,

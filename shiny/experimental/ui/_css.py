@@ -12,16 +12,16 @@ CssUnit = Union[
 ]
 
 
-def trinary(x: Optional[bool | str]) -> None | str:
+def trinary(x:bool | str | None) -> None | str:
     if x is None:
         return None
-    if x:
+    elif x:
         return "true"
     else:
         return "false"
 
 
-def classes(*args: Optional[str]) -> Optional[str]:
+def classes(*args: str | None) -> str:
     return " ".join([x for x in args if x is not None])
 
 
@@ -35,8 +35,9 @@ def validate_css_unit(value: None | CssUnit) -> None | str:
         or isinstance(value, float)
         or isinstance(value, int)
     ):
-        if value == 0.0:
-            return "0px"
+        # Explicit check for 0 because floats may format to have many decimals.
+        if value == 0:
+            return "0"
         return "{:f}px".format(value)
     else:
         return value

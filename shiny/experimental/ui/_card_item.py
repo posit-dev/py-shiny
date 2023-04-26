@@ -15,7 +15,7 @@ from ._fill import bind_fill_role
 class CardItem:
     def __init__(
         self,
-        item: Tag,
+        item: Tagifiable,
     ):
         self.item = item
 
@@ -235,19 +235,13 @@ def card_image(
             if mime_type is None:
                 mime_type = mimetypes.guess_type(file)[0]
             src = f"data:{mime_type};base64,{b64_str}"
-            print(src[:100])
 
-        # raise RuntimeError("TODO: Implement data uri encoding")
-        # src = base64enc::dataURI(
-        #   file = file, mime = mime_type %||% mime::guess_type(file)
-        # )
 
     card_class_map = {
         "all": "card-img",
         "top": "card-img-top",
         "bottom": "card-img-bottom",
     }
-    card_class_map.get(border_radius, None)
 
     image = tags.img(
         {"src": src},
