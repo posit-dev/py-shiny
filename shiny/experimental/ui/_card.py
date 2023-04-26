@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from htmltools import HTML, Tag, TagAttrs, TagChild, css, div, tags
+from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, css, div, tags
 
 from ._card_full_screen import full_screen_toggle
 from ._card_item import WrapperCallable, as_card_items, card_body
@@ -96,7 +96,7 @@ def card(
     fill: bool = True,
     class_: Optional[str] = None,
     wrapper: WrapperCallable | None = None,
-    **kwargs: TagChild,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     if wrapper is None:
         wrapper = card_body
@@ -113,9 +113,9 @@ def card(
                 max_height=validate_css_unit(max_height),
             )
         },
-        **kwargs,  # !!!attribs
+        **kwargs,
     )
-    tag.append(*children)  # !!!children
+    tag.append(*children)
     if full_screen:
         tag.append(full_screen_toggle())
     tag.append(card_js_init())

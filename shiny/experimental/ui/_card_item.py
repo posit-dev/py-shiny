@@ -64,7 +64,7 @@ def card_body(
     gap: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
-    **kwargs: TagChild,
+    **kwargs: TagAttrValue,
 ) -> CardItem:
     if max_height_full_screen == "__max_height__":
         max_height_full_screen = max_height
@@ -121,7 +121,7 @@ class WrapperCallable(Protocol):
 
 
 def as_card_items(
-    *children: TagChild | None, # `TagAttrs` are not allowed here
+    *children: TagChild | None,  # `TagAttrs` are not allowed here
     wrapper: WrapperCallable | None,
 ) -> list[CardItem] | list[TagChild]:
     # We don't want NULLs creating empty card bodies

@@ -3,7 +3,7 @@ from __future__ import annotations
 # import pdb
 from typing import Optional
 
-from htmltools import TagChild, css, div
+from htmltools import TagAttrValue, TagChild, css, div
 
 from shiny._typing_extensions import Literal
 
@@ -64,7 +64,7 @@ def layout_column_wrap(
     height_mobile: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
     class_: Optional[str] = None,
-    **kwargs: TagChild,
+    **kwargs: TagAttrValue,
 ):
     attribs = kwargs
     children = args
