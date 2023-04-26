@@ -129,9 +129,8 @@ def card(
 
 def card_js_init() -> Tag:
     return tags.script(
-        {"data-bslib-card-needs-init": ""},
-        HTML(
-            """\
+        {"data-bslib-card-needs-init": True},
+        """\
       var thisScript = document.querySelector('script[data-bslib-card-needs-init]');
       if (!thisScript) throw new Error('Failed to register card() resize observer');
 
@@ -169,6 +168,5 @@ def card_js_init() -> Tag:
           $(el).data('bslib-output-observer', true);
         }
       });
-    """
-        ),
+    """,
     )
