@@ -3,9 +3,9 @@
 
 from pathlib import Path
 
-# import shinyswatch
 import pandas as pd
 import seaborn as sns
+import shinyswatch
 from _colors import bg_palette, palette
 
 import shiny.experimental as x
@@ -21,7 +21,7 @@ species: list[str] = df["Species"].unique().tolist()
 species.sort()
 
 app_ui = x.ui.page_fillable(
-    # shinyswatch.theme.minty(),
+    shinyswatch.theme.pulse(),
     x.ui.layout_sidebar(
         x.ui.sidebar(
             # Artwork by @allison_horst
