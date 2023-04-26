@@ -149,7 +149,7 @@ def showcase_layout_(
         showcase_container = div(
             showcase,
             {"class": "value-box-showcase overflow-hidden"},
-            {"class_": "showcase-top-right"} if top_right else None,
+            {"class": "showcase-top-right"} if top_right else None,
             style=css(**css_args),
         )
         showcase_container = bind_fill_role(

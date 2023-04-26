@@ -52,7 +52,7 @@ class CardItem:
 #
 # @describeIn card_body A general container for the "main content" of a [card()].
 def card_body(
-    *args: TagChild,
+    *args: TagChild | TagAttrs,
     fillable: bool = True,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
@@ -118,7 +118,8 @@ class WrapperCallable(Protocol):
 
 
 def as_card_items(
-    *children: TagChild | None, wrapper: WrapperCallable | None
+    *children: TagChild | None, # `TagAttrs` are not allowed here
+    wrapper: WrapperCallable | None,
 ) -> list[CardItem] | list[TagChild]:
     # We don't want NULLs creating empty card bodies
     children_vals = [child for child in children if child is not None]
@@ -163,13 +164,18 @@ def as_card_items(
 # https://mypy.readthedocs.io/en/stable/protocols.html#callback-protocols
 class TagCallable(Protocol):  # Should this be exported from htmltools?
     def __call__(
-        self, *args: TagChild | TagAttrs, _add_ws: bool = True, **kwargs: TagAttrValue
+        self,
+        *args: TagChild | TagAttrs,
+        _add_ws: bool = True,
+        **kwargs: TagAttrValue,
     ) -> Tag:
         ...
 
 
 def card_title(
-    *args: TagChild | TagAttrs, container: TagCallable = tags.h5, **kwargs: TagAttrValue
+    *args: TagChild | TagAttrs,
+    container: TagCallable = tags.h5,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     return container(*args, **kwargs)
 
@@ -191,7 +197,9 @@ def card_header(
 # @describeIn card_body A header (with border and background color) for the `card()`. Typically appears after a `card_body()`.
 # @export
 def card_footer(
-    *args: TagChild | TagAttrs, class_: Optional[str] = None, **kwargs: TagAttrValue
+    *args: TagChild | TagAttrs,
+    class_: Optional[str] = None,
+    **kwargs: TagAttrValue,
 ) -> CardItem:
     return as_card_item(
         tags.div({"class": "card-footer"}, {"class": class_}, *args, **kwargs)

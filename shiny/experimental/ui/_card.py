@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from htmltools import HTML, Tag, TagChild, css, div, tags
+from htmltools import HTML, Tag, TagAttrs, TagChild, css, div, tags
 
 from ._card_full_screen import full_screen_toggle
 from ._card_item import WrapperCallable, as_card_items, card_body
@@ -89,7 +89,7 @@ from ._fill import bind_fill_role
 # }
 #
 def card(
-    *args: TagChild,
+    *args: TagChild | TagAttrs,
     full_screen: bool = False,
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,

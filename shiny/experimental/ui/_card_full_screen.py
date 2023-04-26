@@ -7,8 +7,8 @@ from ._htmldeps import card_full_screen_dep
 
 def full_screen_toggle() -> Tag:
     return tags.span(
-        {"class_": "bslib-full-screen-enter"},
-        {"class_": "badge rounded-pill bg-dark"},
+        {"class": "bslib-full-screen-enter"},
+        {"class": "badge rounded-pill bg-dark"},
         {"data-bs-toggle": "tooltip"},
         {"data-bs-placement": "bottom"},
         {"title": "Expand"},
