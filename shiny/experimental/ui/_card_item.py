@@ -15,11 +15,14 @@ from ._fill import bind_fill_role
 class CardItem:
     def __init__(
         self,
-        item: Tagifiable,
+        item: Tag,
+        # item: Tagifiable,
     ):
         self.item = item
 
     def tagify(self) -> Tag:
+        # TODO-barret: This would be nice if we could just use the return value of
+        #              Tagifiable.tagify() as the return type!
         return self.item.tagify()
 
 
