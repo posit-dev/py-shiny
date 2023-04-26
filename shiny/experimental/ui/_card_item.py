@@ -189,10 +189,10 @@ class TagCallable(Protocol):  # Should this be exported from htmltools?
 
 def card_title(
     *args: TagChild | TagAttrs,
-    container: TagCallable = tags.h5,
+    _container: TagCallable = tags.h5,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    return container(*args, **kwargs)
+    return _container(*args, **kwargs)
 
 
 # @describeIn card_body A header (with border and background color) for the `card()`. Typically appears before a `card_body()`.
