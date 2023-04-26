@@ -122,7 +122,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def value_boxes():
         df = filtered_df()
 
-        def penguin_value_box(title: str, count: int, bgcol: str, showcase=None):
+        def penguin_value_box(title: str, count: int, bgcol: str, showcase_img: str):
             return x.ui.value_box(
                 f"{title}",
                 count,
@@ -136,7 +136,13 @@ def server(input: Inputs, output: Outputs, session: Session):
                 # showcase = bsicons::bs_icon("piggy-bank"),
                 # showcase=f"{name}!",
                 # class_="bg-success",
-                showcase=showcase,
+                showcase=x.ui.bind_fill_role(
+                    ui.tags.img(
+                        {"style": "object-fit:contain;"},
+                        src=showcase_img,
+                    ),
+                    item=True,
+                ),
                 theme_color=None,
                 style=f"background-color: {bgcol};",
                 height="90px",
@@ -149,7 +155,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 len(df.index),
                 bg_palette["default"],
                 # Artwork by @allison_horst
-                showcase=ui.tags.img(src="penguins.png", width="100%"),
+                showcase_img="penguins.png",
             )
 
         value_boxes = [
@@ -158,7 +164,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 len(df[df["Species"] == name]),
                 bg_palette[name],
                 # Artwork by @allison_horst
-                showcase=ui.tags.img(src=f"{name}.png", height="100%"),
+                showcase_img=f"{name}.png",
             )
             for name in species
             # Only include boxes for _selected_ species
