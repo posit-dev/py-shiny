@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The bootstrap HTMLDependency is now created using the dev version of `{bslib}` to get the latest features. (#462)
 
+* Added `shiny.experimental.ui.input_text_area()`, which supports auto-resizing height to fit the content when `autoresize=True`. (#463)
+
 ### Bug fixes
 
 ### Other changes
