@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import numbers
-from typing import Optional, Union
+from typing import Union, overload
 
 CssUnit = Union[
     # TODO: pylance really doesn't like `numbers.Number`.
@@ -12,7 +12,7 @@ CssUnit = Union[
 ]
 
 
-def trinary(x:bool | str | None) -> None | str:
+def trinary(x: bool | str | None) -> None | str:
     if x is None:
         return None
     elif x:
@@ -23,6 +23,16 @@ def trinary(x:bool | str | None) -> None | str:
 
 def classes(*args: str | None) -> str:
     return " ".join([x for x in args if x is not None])
+
+
+@overload
+def validate_css_unit(value: None) -> None:
+    ...
+
+
+@overload
+def validate_css_unit(value: CssUnit) -> str:
+    ...
 
 
 def validate_css_unit(value: None | CssUnit) -> None | str:

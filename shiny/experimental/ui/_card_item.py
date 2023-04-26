@@ -236,7 +236,6 @@ def card_image(
                 mime_type = mimetypes.guess_type(file)[0]
             src = f"data:{mime_type};base64,{b64_str}"
 
-
     card_class_map = {
         "all": "card-img",
         "top": "card-img-top",

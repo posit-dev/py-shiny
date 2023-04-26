@@ -3,7 +3,7 @@ from __future__ import annotations
 # import pdb
 from typing import Optional
 
-from htmltools import TagAttrs, TagChild, css, div
+from htmltools import TagChild, css, div
 
 from shiny._typing_extensions import Literal
 
@@ -55,7 +55,7 @@ from ._fill import bind_fill_role
 #
 def layout_column_wrap(
     width: Optional[CssUnit],
-    *args: TagChild,   # TagAttrs are not allowed here
+    *args: TagChild,  # TagAttrs are not allowed here
     fixed_width: bool = False,
     heights_equal: Literal["all", "row"] = "all",
     fill: bool = True,

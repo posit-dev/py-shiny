@@ -25,7 +25,10 @@ def fill_dependencies() -> HTMLDependency:
     return HTMLDependency(
         "htmltools-fill",
         "0.0.0.0",
-        source={"package": "shiny", "subdir": str(ex_www_path),},
+        source={
+            "package": "shiny",
+            "subdir": str(ex_www_path),
+        },
         stylesheet={"href": "fill.css"},
     )
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import numbers
 from typing import Callable, Optional
 
-from htmltools import Tag, TagAttrs, TagChild, css, div
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
 from shiny._typing_extensions import TypeGuard
 
