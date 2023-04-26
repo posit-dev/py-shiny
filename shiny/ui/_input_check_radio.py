@@ -340,9 +340,18 @@ def _generate_option(
         checked="checked" if checked else None,
     )
     if inline:
-        return tags.label(input, " ", span(label), class_=type + "-inline")
+        return tags.label(
+            input,
+            " ",
+            span(label),
+            class_=type + "-inline",
+            _add_ws=True,
+        )
     else:
-        return div(tags.label(input, " ", span(label)), class_=type)
+        return div(
+            tags.label(input, " ", span(label)),
+            class_=type,
+        )
 
 
 def _normalize_choices(x: ChoicesArg) -> _Choices:
