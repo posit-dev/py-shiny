@@ -7,4 +7,5 @@ recursive-exclude * *.py[co]
 recursive-include docs *.rst conf.py Makefile make.bat *.jpg *.png *.gif
 
 recursive-include shiny/www *
+recursive-include shiny/experimental/www *
 recursive-include shiny/examples *

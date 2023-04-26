@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from htmltools import HTML, HTMLDependency
 
+from .._versions import bootstrap as bootstrap_version
 from ..html_dependencies import jquery_deps
 
 
 def bootstrap_deps() -> list[HTMLDependency]:
     dep = HTMLDependency(
         name="bootstrap",
-        version="5.0.1",
+        version=bootstrap_version,
         source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
         script={"src": "bootstrap.bundle.min.js"},
         stylesheet={"href": "bootstrap.min.css"},
