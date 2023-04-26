@@ -9,7 +9,7 @@ from htmltools import Tag, TagAttrValue, TagFunction, css, div, tags
 
 from shiny._docstring import add_example
 from shiny._namespaces import resolve_id
-from shiny._typing_extensions import Literal
+from shiny.types import MISSING, MISSING_TYPE
 from shiny.ui._plot_output_opts import (
     BrushOpts,
     ClickOpts,
@@ -37,7 +37,7 @@ def output_plot(
     hover: bool | HoverOpts = False,
     brush: bool | BrushOpts = False,
     # NEW
-    fill: bool | Literal["!inline"] = True,
+    fill: bool | MISSING_TYPE = MISSING,
     # /NEW
 ) -> Tag:
     """
@@ -97,7 +97,7 @@ def output_plot(
     """
 
     # NEW
-    if fill == "!inline":
+    if isinstance(fill, MISSING_TYPE):
         fill = not inline
     # /NEW
 

@@ -7,6 +7,7 @@ from typing import Optional, Protocol, overload
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, Tagifiable, css, tags
 
 from shiny._typing_extensions import Literal, TypeGuard
+from shiny.types import MISSING, MISSING_TYPE
 
 from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
@@ -59,14 +60,14 @@ def card_body(
     fillable: bool = True,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
-    max_height_full_screen: Optional[CssUnit] = "__max_height__",
+    max_height_full_screen: Optional[CssUnit] | MISSING_TYPE = MISSING,
     height: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,  # Applies after `bind_fill_role()`
     **kwargs: TagAttrValue,
 ) -> CardItem:
-    if max_height_full_screen == "__max_height__":
+    if isinstance(max_height_full_screen, MISSING_TYPE):
         max_height_full_screen = max_height
     if fillable:
         # TODO-future: Make sure shiny >= v1.7.4
