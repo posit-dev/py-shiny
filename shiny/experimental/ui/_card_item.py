@@ -2,29 +2,31 @@ from __future__ import annotations
 
 import base64
 import mimetypes
-from typing import Optional, Protocol, overload
+from typing import Optional, Protocol
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, Tagifiable, css, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
-from shiny._typing_extensions import Literal, TypeGuard
+from shiny._typing_extensions import Literal
 from shiny.types import MISSING, MISSING_TYPE
 
 from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
 
+# T = TypeVar("T", bound=Tagifiable)
+
 
 class CardItem:
     def __init__(
         self,
-        x: Tag,
-        # x: Tagifiable,
+        x: TagChild,
     ):
-        self.x = x
+        self._x = x
 
-    def tagify(self) -> Tag:
-        # TODO-barret: This would be nice if we could just use the return value of
-        #              Tagifiable.tagify() as the return type!
-        return self.item.tagify()
+    def get_item(self) -> TagChild:
+        return self._x
+
+    # def tagify(self) -> TagList | Tag | MetadataNode | str:
+    #     return self._x.tagify()
 
 
 # Card items
@@ -110,31 +112,21 @@ class WrapperCallable(Protocol):
         ...
 
 
-@overload
 def as_card_items(
-    *children: TagChild | None,  # `TagAttrs` are not allowed here
-    wrapper: None,
-) -> list[TagChild]:
-    ...
-
-
-@overload
-def as_card_items(
-    *children: TagChild | None,  # `TagAttrs` are not allowed here
-    wrapper: WrapperCallable,
-) -> list[CardItem]:
-    ...
-
-
-def as_card_items(
-    *children: TagChild | None,  # `TagAttrs` are not allowed here
+    *children: TagChild | CardItem | None,  # `TagAttrs` are not allowed here
     wrapper: WrapperCallable | None,
-) -> list[CardItem] | list[TagChild]:
+) -> list[CardItem]:
     # We don't want NULLs creating empty card bodies
     children_vals = [child for child in children if child is not None]
 
     if not callable(wrapper):
-        return children_vals
+        ret: list[CardItem] = []
+        for child in children_vals:
+            if isinstance(child, CardItem):
+                ret.append(child)
+            else:
+                ret.append(CardItem(child))
+        return ret
 
     # Any children that are `is.card_item` should be included verbatim. Any
     # children that are not, should be wrapped in card_body(). Consecutive children
@@ -163,6 +155,18 @@ def as_card_items(
         wrap_children()
 
     return new_children
+
+
+def card_items_to_tag_children(card_items: list[CardItem]) -> list[TagChild]:
+    return [card_item.get_item() for card_item in card_items]
+
+
+def wrap_children_in_card(
+    *children: TagChild | CardItem | None,  # `TagAttrs` are not allowed here
+    wrapper: WrapperCallable | None,
+) -> list[TagChild]:
+    card_items = as_card_items(*children, wrapper=wrapper)
+    return card_items_to_tag_children(card_items)
 
 
 # @describeIn card_body Similar to `card_header()` but without the border and background color.
@@ -197,7 +201,7 @@ def card_header(
     container: TagCallable = tags.div,
     **kwargs: TagAttrValue,
 ) -> CardItem:
-    return as_card_item(
+    return CardItem(
         container({"class": "card-header"}, *args, **kwargs),
     )
 
@@ -208,7 +212,7 @@ def card_footer(
     *args: TagChild | TagAttrs,
     **kwargs: TagAttrValue,
 ) -> CardItem:
-    return as_card_item(
+    return CardItem(
         tags.div({"class": "card-footer"}, *args, **kwargs),
     )
 
@@ -226,7 +230,7 @@ def card_footer(
 
 
 class ImgContainer(Protocol):
-    def __call__(self, *args: Tag) -> Tagifiable:
+    def __call__(self, *args: Tag) -> CardItem:
         ...
 
 
@@ -242,7 +246,7 @@ def card_image(
     width: Optional[CssUnit] = None,
     container: ImgContainer = card_body,
     **kwargs: TagAttrValue,
-) -> Tagifiable:
+) -> CardItem:
     src = None
     if file is not None:
         with open(file, "rb") as img_file:
@@ -280,6 +284,6 @@ def card_image(
         image = bind_fill_role(tags.a(image, href=href), container=True, item=True)
 
     if callable(container):
-        image = container(image)
-
-    return image
+        return container(image)
+    else:
+        return CardItem(image)

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import NamedTuple, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, tags
 
+from shiny.types import MISSING, MISSING_TYPE
+
 from ._card_full_screen import full_screen_toggle
-from ._card_item import WrapperCallable, as_card_items, card_body
+from ._card_item import CardItem, WrapperCallable, card_body, wrap_children_in_card
 from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
-from ._utils import separate_args_into_children_and_attrs
 
 # class Page:
 #     x: Tag
@@ -90,20 +91,20 @@ from ._utils import separate_args_into_children_and_attrs
 # }
 #
 def card(
-    *args: TagChild | TagAttrs,
+    *args: TagChild | TagAttrs | CardItem,
     full_screen: bool = False,
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,  # Applies after `bind_fill_role()`
-    wrapper: WrapperCallable | None = None,
+    wrapper: WrapperCallable | None | MISSING_TYPE = MISSING,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    if wrapper is None:
+    if isinstance(wrapper, MISSING_TYPE):
         wrapper = card_body
 
     children, attrs = separate_args_into_children_and_attrs(*args)
-    children = as_card_items(*children, wrapper=wrapper)
+    children = wrap_children_in_card(*children, wrapper=wrapper)
 
     tag = div(
         *children,
@@ -125,6 +126,26 @@ def card(
     if class_ is not None:
         tag.add_class(class_)
     return tag
+
+
+class ChildrenAndAttrs(NamedTuple):
+    children: list[TagChild | CardItem]
+    attrs: list[TagAttrs]
+
+
+def separate_args_into_children_and_attrs(
+    *args: TagChild | TagAttrs | CardItem,
+) -> ChildrenAndAttrs:
+    children: list[TagChild | CardItem] = []
+    attrs: list[TagAttrs] = []
+
+    for arg in args:
+        if isinstance(arg, dict):
+            attrs.append(arg)
+        else:
+            children.append(arg)
+
+    return ChildrenAndAttrs(children, attrs)
 
 
 def card_js_init() -> Tag:

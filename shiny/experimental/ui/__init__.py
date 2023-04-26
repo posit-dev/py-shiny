@@ -2,7 +2,6 @@ from ._sidebar import layout_sidebar, sidebar
 from ._page import page_fillable
 from ._card_item import (
     CardItem,
-    as_card_items,
     card_header,
     card_body,
     card_image,
@@ -26,7 +25,6 @@ __all__ = (
     "page_fillable",
     # Card
     "CardItem",
-    "as_card_items",
     "card",
     "card_header",
     "card_body",
