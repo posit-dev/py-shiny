@@ -2,7 +2,6 @@
 # TODO-future: Add brushing to zoom into the plot. The counts should represent the data in the zoomed area. (Single click would zoom out)
 
 from pathlib import Path
-
 from typing import List
 
 import pandas as pd
