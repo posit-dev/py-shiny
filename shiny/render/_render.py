@@ -532,14 +532,12 @@ class RenderTable(RenderFunction[object, "RenderedDeps | None"]):
         if x is None:
             return None
 
-        import pandas  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false,reportMissingImports=false,reportMissingModuleSource=false
+        import pandas
         import pandas.io.formats.style
 
         html: str
-        if isinstance(
-            x, pandas.io.formats.style.Styler
-        ):  # pyright: reportUnknownMemberType=false
-            html = x.to_html(**self._kwargs)  # pyright: reportGeneralTypeIssues=false
+        if isinstance(x, pandas.io.formats.style.Styler):
+            html = x.to_html(**self._kwargs)
         else:
             if not isinstance(x, pandas.DataFrame):
                 if not isinstance(x, PandasCompatible):
@@ -551,7 +549,8 @@ class RenderTable(RenderFunction[object, "RenderedDeps | None"]):
                 x = x.to_pandas()
 
             df = typing.cast(pandas.DataFrame, x)
-            html = df.to_html(
+
+            html = df.to_html(  # pyright: ignore[reportUnknownMemberType]
                 index=self._index,
                 classes=self._classes,
                 border=self._border,

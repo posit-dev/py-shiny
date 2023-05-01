@@ -29,7 +29,9 @@ def try_render_matplotlib(
     alt: Optional[str],
     **kwargs: object,
 ) -> TryPlotResult:
-    fig = get_matplotlib_figure(x, allow_global)
+    fig = get_matplotlib_figure(  # pyright: ignore[reportUnknownVariableType]
+        x, allow_global
+    )
 
     if fig is None:
         return (False, None)
@@ -37,14 +39,16 @@ def try_render_matplotlib(
     try:
         import matplotlib.pyplot as plt
 
-        fig.set_size_inches(width / ppi, height / ppi)
-        fig.set_dpi(ppi * pixelratio)
+        fig.set_size_inches(  # pyright: ignore[reportUnknownMemberType]
+            width / ppi, height / ppi
+        )
+        fig.set_dpi(ppi * pixelratio)  # pyright: ignore[reportUnknownMemberType]
 
-        plt.tight_layout()
+        plt.tight_layout()  # pyright: ignore[reportUnknownMemberType]
         coordmap = get_coordmap(fig)
 
         with io.BytesIO() as buf:
-            fig.savefig(
+            fig.savefig(  # pyright: ignore[reportUnknownMemberType]
                 buf,
                 format="png",
                 dpi=ppi * pixelratio,
@@ -69,12 +73,14 @@ def try_render_matplotlib(
         return (True, res)
 
     finally:
-        import matplotlib.pyplot  # pyright: ignore[reportMissingTypeStubs]
+        import matplotlib.pyplot
 
-        matplotlib.pyplot.close(fig)  # pyright: ignore[reportGeneralTypeIssues]
+        matplotlib.pyplot.close(fig)  # pyright: ignore[reportUnknownMemberType]
 
 
-def get_matplotlib_figure(x: object, allow_global: bool) -> Figure | None:
+def get_matplotlib_figure(
+    x: object, allow_global: bool
+) -> Figure | None:  # pyright: ignore
     import matplotlib.pyplot as plt
     from matplotlib.animation import Animation
     from matplotlib.artist import Artist
@@ -85,13 +91,19 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Figure | None:
     #   function, which would mean we will false-positive here. Maybe we warn in that
     #   case, maybe we ignore gcf(), maybe both.
     if (
-        x is None and len(plt.get_fignums()) > 0
-    ):  # pyright: reportUnknownArgumentType=false, reportUnknownMemberType=false
+        x is None
+        and len(
+            plt.get_fignums()  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+        )
+        > 0
+    ):
         if allow_global:
-            return plt.gcf()
+            return (
+                plt.gcf()  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+            )
         else:
             # Must close the global figure so we don't stay in this state forever
-            plt.close(plt.gcf())
+            plt.close(plt.gcf())  # pyright: ignore[reportUnknownMemberType]
             raise RuntimeError(
                 "matplotlib.pyplot cannot be used from an async render function; "
                 "please use matplotlib's object-oriented interface instead"
@@ -112,7 +124,9 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Figure | None:
     # should cover most, if not all, of these (it doesn't cover Animation, though).
     # https://matplotlib.org/stable/api/artist_api.html
     if isinstance(x, Artist):
-        return x.get_figure()
+        return (
+            x.get_figure()  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        )
 
     # Some other custom figure-like classes such as seaborn.axisgrid.FacetGrid attach
     # their figure as an attribute
@@ -124,9 +138,11 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Figure | None:
     # If they all refer to the same figure, then it seems reasonable to use it
     # https://docs.xarray.dev/en/latest/user-guide/plotting.html#dimension-along-y-axis
     if isinstance(x, (list, tuple)):
-        figs = [get_matplotlib_figure(y, allow_global) for y in cast(List[Any], x)]
-        if len(set(figs)) == 1:
-            return figs[0]
+        figs = [  # pyright: ignore[reportUnknownVariableType]
+            get_matplotlib_figure(y, allow_global) for y in cast(List[Any], x)
+        ]
+        if len(set(figs)) == 1:  # pyright: ignore[reportUnknownArgumentType]
+            return figs[0]  # pyright: ignore[reportUnknownVariableType]
 
     return None
 
@@ -140,7 +156,7 @@ def try_render_pil(
     alt: Optional[str] = None,
     **kwargs: object,
 ) -> TryPlotResult:
-    import PIL.Image  # pyright: ignore[reportMissingModuleSource]
+    import PIL.Image
 
     if not isinstance(x, PIL.Image.Image):
         return (False, None)
@@ -173,9 +189,8 @@ def try_render_plotnine(
     alt: Optional[str] = None,
     **kwargs: object,
 ) -> TryPlotResult:
-    from plotnine.ggplot import (  # pyright: reportMissingTypeStubs=false,reportUnknownVariableType=false,reportMissingImports=false
-        ggplot,
-    )
+    # Must use `pyright: ignore` otherwise Black formats the comments into a single line
+    from plotnine.ggplot import ggplot  # pyright: ignore
 
     if not isinstance(x, ggplot):
         return (False, None)
@@ -188,7 +203,7 @@ def try_render_plotnine(
         # coordmap. Once this version of plotnine is released and in common use, we can
         # add a version dependency and remove the conditional code.
         if hasattr(x, "save_helper"):
-            res = x.save_helper(  # pyright: reportGeneralTypeIssues=false
+            res = x.save_helper(  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues, reportUnknownVariableType]
                 filename=buf,
                 format="png",
                 units="in",
@@ -198,8 +213,13 @@ def try_render_plotnine(
                 verbose=False,
                 **kwargs,
             )
-            coordmap = get_coordmap_plotnine(x, res.figure)
-            res.figure.savefig(**res.kwargs)
+            coordmap = get_coordmap_plotnine(
+                x,
+                res.figure,  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
+            )
+            res.figure.savefig(  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
+                **res.kwargs  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
+            )
         else:
             x.save(
                 filename=buf,
