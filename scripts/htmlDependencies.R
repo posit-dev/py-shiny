@@ -31,6 +31,8 @@ withr::with_tempdir({
 
 # Don't need legacy (hopefully)
 fs::dir_delete(fs::path(www, "shared", "legacy"))
+# Don't need dataTables (hopefully)
+fs::dir_delete(fs::path(www, "shared", "datatables"))
 
 # jQuery will come in via bslib (below)
 fs::file_delete(
