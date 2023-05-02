@@ -12,14 +12,9 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect()
+    @reactive.Effect
     def _():
         x = input.inCheckboxGroup()
-
-        if x is None:
-            x = []
-        elif isinstance(x, str):
-            x = [x]
 
         # Can also set the label and select items
         ui.update_checkbox_group(

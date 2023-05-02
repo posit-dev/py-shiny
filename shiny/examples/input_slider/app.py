@@ -1,6 +1,7 @@
-from shiny import *
 import matplotlib.pyplot as plt
 import numpy as np
+
+from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_slider("obs", "Number of bins:", min=10, max=100, value=30),
@@ -9,8 +10,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output()
-    @render_plot()
+    @output
+    @render.plot
     def distPlot():
         np.random.seed(19680801)
         x = 100 + 15 * np.random.randn(437)

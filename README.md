@@ -1,42 +1,31 @@
 Shiny for Python
 ================
 
-This repository contains an implementation of Shiny for Python. It works with Python 3.7 and above.
+See the [Shiny for Python website](https://shiny.rstudio.com/py/).
 
-## Usage
 
-First clone the [py-htmltools](https://github.com/rstudio/py-htmltools) repository and install the package:
+## Installation
 
-```sh
-git clone https://github.com/rstudio/py-htmltools.git
-cd py-htmltools
-pip install -r requirements.txt
-make install
-```
-
-Next, clone this repository and install it
+To install the latest release from PyPI:
 
 ```sh
-git clone https://github.com/rstudio/prism.git
-cd prism
-pip install -r requirements.txt
-make install
+pip install shiny
 ```
 
-To run an example app:
+To install the latest development version from this repository:
 
 ```sh
-python3 examples/inputs/app.py
+pip install https://github.com/rstudio/py-shiny/tarball/main
 ```
 
-Then visit the app by pointing a web browser to http://localhost:8000/.
+More detailed installation instructions, including the use of `conda`, are [also available](https://shiny.rstudio.com/py/docs/install.html).
 
 ## Development
 
-If you want to do development, run:
+If you want to do development on Shiny for Python:
 
 ```sh
-pip install -r requirements-dev.txt
+pip install -e ".[dev,test]"
 ```
 
 Additionally, you can install pre-commit hooks which will automatically reformat and lint the code when you make a commit:

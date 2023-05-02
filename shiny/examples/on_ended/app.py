@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from shiny import *
 
 app_ui = ui.page_fluid(
@@ -12,8 +13,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     session.on_ended(log)
 
-    @reactive.Effect()
-    @event(input.close)
+    @reactive.Effect
+    @reactive.event(input.close)
     async def _():
         await session.close()
 

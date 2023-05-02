@@ -1,18 +1,23 @@
+# pyright: reportUnnecessaryComparison=false
+
+from __future__ import annotations
+
 __all__ = (
     "input_select",
     "input_selectize",
 )
 
-from typing import Optional, Dict, Union, List
+from typing import Mapping, Optional, Union, cast
 
-from htmltools import Tag, tags, div, TagChildArg, TagList
+from htmltools import Tag, TagChild, TagList, css, div, tags
 
 from .._docstring import add_example
+from .._namespaces import resolve_id
 from ._html_dependencies import selectize_deps
 from ._utils import shiny_input_label
 
-_Choices = Dict[str, TagChildArg]
-_OptGrpChoices = Dict[str, _Choices]
+_Choices = Mapping[str, TagChild]
+_OptGrpChoices = Mapping[str, _Choices]
 
 # Canonical format for representing select options.
 _SelectChoices = Union[_Choices, _OptGrpChoices]
@@ -20,12 +25,15 @@ _SelectChoices = Union[_Choices, _OptGrpChoices]
 # Formats available to the user
 SelectChoicesArg = Union[
     # ["a", "b", "c"]
-    List[str],
+    "list[str]",
+    # ("a", "b", "c")
+    "tuple[str, ...]",
     # {"a": "Choice A", "b": tags.i("Choice B")}
     _Choices,
     # optgroup {"Group A": {"a1": "Choice A1", "a2": tags.i("Choice A2")}, "Group B": {}}
     _OptGrpChoices,
 ]
+
 
 _topics = {
     "Server value": """
@@ -38,10 +46,10 @@ A list of strings, usually of length 1, with the value of the selected items. Wh
 @add_example()
 def input_selectize(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     choices: SelectChoicesArg,
     *,
-    selected: Optional[str] = None,
+    selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
@@ -70,14 +78,15 @@ def input_selectize(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
     .. admonition:: Server value
 
-    A list of strings, usually of length 1, with the value of the selected items. When
-    ``multiple=True`` and nothing is selected, this value will be ``None``.
+        A list of strings, usually of length 1, with the value of the selected items. When
+        ``multiple=True`` and nothing is selected, this value will be ``None``.
 
     See Also
     -------
@@ -98,10 +107,10 @@ def input_selectize(
 @add_example()
 def input_select(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     choices: SelectChoicesArg,
     *,
-    selected: Optional[str] = None,
+    selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     selectize: bool = False,
     width: Optional[str] = None,
@@ -138,14 +147,15 @@ def input_select(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
     .. admonition:: Server value
 
-    A list of strings, usually of length 1, with the value of the selected items. When
-    ``multiple=True`` and nothing is selected, this value will be ``None``.
+        A list of strings, usually of length 1, with the value of the selected items. When
+        ``multiple=True`` and nothing is selected, this value will be ``None``.
 
     See Also
     -------
@@ -156,10 +166,12 @@ def input_select(
     """
 
     choices_ = _normalize_choices(choices)
-    if selected is None:
+    if selected is None and not multiple:
         selected = _find_first_option(choices_)
 
     choices_tags = _render_choices(choices_, selected)
+
+    id = resolve_id(id)
 
     return div(
         shiny_input_label(id, label),
@@ -169,7 +181,6 @@ def input_select(
                 id=id,
                 class_=None if selectize else "form-select",
                 multiple=multiple,
-                width=width,
                 size=size,
             ),
             (
@@ -182,23 +193,42 @@ def input_select(
             ),
         ),
         class_="form-group shiny-input-container",
+        style=css(width=width),
     )
 
 
 def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
-    if isinstance(x, list):
+    if x is None:
+        raise TypeError("`choices` must be a list, tuple, or dict.")
+    elif isinstance(x, (list, tuple)):
         return {k: k for k in x}
     else:
         return x
 
 
-def _render_choices(x: _SelectChoices, selected: Optional[str] = None) -> List[Tag]:
-    result: List[Tag] = []
-    for (k, v) in x.items():
-        if isinstance(v, dict):
-            result.append(tags.optgroup(*(_render_choices(v, selected)), label=k))
+def _render_choices(
+    x: _SelectChoices, selected: Optional[str | list[str]] = None
+) -> TagList:
+    result = TagList()
+
+    if x is None:
+        return result
+
+    for k, v in x.items():
+        if isinstance(v, Mapping):
+            result.append(
+                tags.optgroup(
+                    *(_render_choices(cast(_SelectChoices, v), selected)), label=k
+                )
+            )
         else:
-            result.append(tags.option(v, value=k, selected=(k == selected)))
+            is_selected = False
+            if isinstance(selected, list):
+                is_selected = k in selected
+            else:
+                is_selected = k == selected
+
+            result.append(tags.option(v, value=k, selected=is_selected))
 
     return result
 
@@ -214,9 +244,12 @@ def _render_choices(x: _SelectChoices, selected: Optional[str] = None) -> List[T
 #     "Group B": {"Choice B1": "b1", "Choice B2": "b2"},
 # }
 def _find_first_option(x: _SelectChoices) -> Optional[str]:
-    for (k, v) in x.items():
+    if x is None:
+        return None
+
+    for k, v in x.items():
         if isinstance(v, dict):
-            result = _find_first_option(v)
+            result = _find_first_option(cast(_SelectChoices, v))
             if result is not None:
                 return result
         else:

@@ -1,40 +1,41 @@
+# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
+# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
+from __future__ import annotations
+
 __all__ = ("get_current_session", "session_context", "require_active_session")
 
-import sys
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 
 if TYPE_CHECKING:
     from ._session import Session
 
-
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
+from .._namespaces import namespace_context
+from .._typing_extensions import TypedDict
 
 
 class RenderedDeps(TypedDict):
-    deps: List[Dict[str, Any]]
+    deps: list[dict[str, Any]]
     html: str
 
 
 # ==============================================================================
 # Context manager for current session (AKA current reactive domain)
 # ==============================================================================
-_current_session: ContextVar[Optional["Session"]] = ContextVar(
+_current_session: ContextVar[Optional[Session]] = ContextVar(
     "current_session", default=None
 )
 
 
-def get_current_session() -> Optional["Session"]:
+def get_current_session() -> Optional[Session]:
     """
     Get the current user session.
 
     Returns
     -------
-    The current session if one is active, otherwise ``None``.
+    :
+        The current session if one is active, otherwise ``None``.
 
     Note
     ----
@@ -50,7 +51,7 @@ def get_current_session() -> Optional["Session"]:
 
 
 @contextmanager
-def session_context(session: Optional["Session"]):
+def session_context(session: Optional[Session]):
     """
     Context manager for current session.
 
@@ -60,14 +61,15 @@ def session_context(session: Optional["Session"]):
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
     """
-    token: Token[Union[Session, None]] = _current_session.set(session)
+    token: Token[Session | None] = _current_session.set(session)
     try:
-        yield
+        with namespace_context(session.ns if session else None):
+            yield
     finally:
         _current_session.reset(token)
 
 
-def require_active_session(session: Optional["Session"]) -> "Session":
+def require_active_session(session: Optional[Session]) -> Session:
     """
     Raise an exception if no Shiny session is currently active.
 
@@ -79,7 +81,8 @@ def require_active_session(session: Optional["Session"]) -> "Session":
 
     Returns
     -------
-    The session.
+    :
+        The session.
 
     Note
     ----
@@ -128,14 +131,14 @@ def require_active_session(session: Optional["Session"]) -> "Session":
 T = TypeVar("T", str, int)
 
 
-def read_thunk(thunk: Union[Callable[[], T], T]) -> T:
+def read_thunk(thunk: Callable[[], T] | T) -> T:
     if callable(thunk):
         return thunk()
     else:
         return thunk
 
 
-def read_thunk_opt(thunk: Optional[Union[Callable[[], T], T]]) -> Optional[T]:
+def read_thunk_opt(thunk: Optional[Callable[[], T] | T]) -> Optional[T]:
     if thunk is None:
         return None
     elif callable(thunk):

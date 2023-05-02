@@ -1,9 +1,16 @@
+from __future__ import annotations
+
+import copy
 import importlib
 import importlib.util
 import os
+import platform
+import re
+import shutil
 import sys
 import types
-from typing import Optional, Union, Tuple
+from pathlib import Path
+from typing import Any, Optional
 
 import click
 import uvicorn
@@ -11,8 +18,10 @@ import uvicorn.config
 
 import shiny
 
+from . import _autoreload, _hostenv, _static, _utils
 
-@click.group()
+
+@click.group()  # pyright: ignore[reportUnknownMemberType]
 def main() -> None:
     pass
 
@@ -21,7 +30,7 @@ stop_shortcut = "Ctrl+C"
 
 
 @main.command(
-    help=f"""Runs a Shiny app. Press {stop_shortcut} to stop.
+    help=f"""Run a Shiny app (press {stop_shortcut} to stop).
 
 The APP argument indicates the Python file (or module) and attribute where the
 shiny.App object can be found. For example, if the current directory contains
@@ -48,11 +57,15 @@ any of the following will work:
     "--port",
     type=int,
     default=8000,
-    help="Bind socket to this port.",
+    help="Bind socket to this port. If 0, a random port will be used.",
     show_default=True,
 )
 @click.option(
-    "--debug", is_flag=True, default=False, help="Enable debug mode.", hidden=True
+    "--autoreload-port",
+    type=int,
+    default=0,
+    help="Bind autoreload socket to this port. If 0, a random port will be used. Ignored if --reload is not used.",
+    show_default=True,
 )
 @click.option("--reload", is_flag=True, default=False, help="Enable auto-reload.")
 @click.option(
@@ -84,40 +97,50 @@ any of the following will work:
     help="Treat APP as an application factory, i.e. a () -> <ASGI app> callable.",
     show_default=True,
 )
+@click.option(
+    "--launch-browser",
+    is_flag=True,
+    default=False,
+    help="Launch app browser after app starts, using the Python webbrowser module.",
+    show_default=True,
+)
 def run(
-    app: Union[str, shiny.App],
+    app: str | shiny.App,
     host: str,
     port: int,
-    debug: bool,
+    autoreload_port: int,
     reload: bool,
     ws_max_size: int,
     log_level: str,
     app_dir: str,
     factory: bool,
+    launch_browser: bool,
 ) -> None:
     return run_app(
         app,
         host=host,
         port=port,
-        debug=debug,
+        autoreload_port=autoreload_port,
         reload=reload,
         ws_max_size=ws_max_size,
         log_level=log_level,
         app_dir=app_dir,
         factory=factory,
+        launch_browser=launch_browser,
     )
 
 
 def run_app(
-    app: Union[str, shiny.App] = "app:app",
+    app: str | shiny.App = "app:app",
     host: str = "127.0.0.1",
     port: int = 8000,
-    debug: bool = False,
+    autoreload_port: int = 0,
     reload: bool = False,
     ws_max_size: int = 16777216,
     log_level: Optional[str] = None,
     app_dir: Optional[str] = ".",
     factory: bool = False,
+    launch_browser: bool = False,
 ) -> None:
     """
     Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop.
@@ -136,9 +159,10 @@ def run_app(
     host
         The address that the app should listen on.
     port
-        The port that the app should listen on.
-    debug
-        Enable debug mode.
+        The port that the app should listen on. Set to 0 to use a random port.
+    autoreload_port
+        The port that should be used for an additional websocket that is used to support
+        hot-reload. Set to 0 to use a random port.
     reload
         Enable auto-reload.
     ws_max_size
@@ -147,6 +171,10 @@ def run_app(
         Log level.
     app_dir
         Look for ``app`` under this directory (by adding this to the ``PYTHONPATH``).
+    factory
+        Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
+    launch_browser
+        Launch app browser after app starts, using the Python webbrowser module.
 
     Tip
     ---
@@ -173,31 +201,102 @@ def run_app(
         run_app("myapp:my_app", app_dir="..")
     """
 
+    # If port is 0, randomize
+    if port == 0:
+        port = _utils.random_port(host=host)
+
+    os.environ["SHINY_HOST"] = host
+    os.environ["SHINY_PORT"] = str(port)
+
     if isinstance(app, str):
         app, app_dir = resolve_app(app, app_dir)
 
     if app_dir:
         app_dir = os.path.realpath(app_dir)
 
-    uvicorn.run(
-        app,  # type: ignore
+    log_config: dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
+
+    if reload and app_dir is not None:
+        reload_dirs = [app_dir]
+    else:
+        reload_dirs = []
+
+    if reload:
+        if autoreload_port == 0:
+            autoreload_port = _utils.random_port(host=host)
+
+        if autoreload_port == port:
+            sys.stderr.write(
+                "Autoreload port is already being used by the app; disabling autoreload\n"
+            )
+            reload = False
+        else:
+            setup_hot_reload(log_config, autoreload_port, port, launch_browser)
+
+    if launch_browser and not reload:
+        setup_launch_browser(log_config)
+
+    maybe_setup_rsw_proxying(log_config)
+
+    uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
+        app,  # pyright: ignore[reportGeneralTypeIssues]
         host=host,
         port=port,
-        debug=debug,
         reload=reload,
-        reload_dirs=[app_dir] if reload else [],
+        reload_dirs=reload_dirs,
         ws_max_size=ws_max_size,
         log_level=log_level,
+        log_config=log_config,
         app_dir=app_dir,
         factory=factory,
     )
+
+
+def setup_hot_reload(
+    log_config: dict[str, Any],
+    autoreload_port: int,
+    app_port: int,
+    launch_browser: bool,
+) -> None:
+    # The only way I've found to get notified when uvicorn decides to reload, is by
+    # inserting a custom log handler.
+    log_config["handlers"]["shiny_hot_reload"] = {
+        "class": "shiny._autoreload.HotReloadHandler",
+        "level": "INFO",
+    }
+    if "handlers" not in log_config["loggers"]["uvicorn.error"]:
+        log_config["loggers"]["uvicorn.error"]["handlers"] = []
+    log_config["loggers"]["uvicorn.error"]["handlers"].append("shiny_hot_reload")
+
+    _autoreload.start_server(autoreload_port, app_port, launch_browser)
+
+
+def setup_launch_browser(log_config: dict[str, Any]):
+    log_config["handlers"]["shiny_launch_browser"] = {
+        "class": "shiny._launchbrowser.LaunchBrowserHandler",
+        "level": "INFO",
+    }
+    if "handlers" not in log_config["loggers"]["uvicorn.error"]:
+        log_config["loggers"]["uvicorn.error"]["handlers"] = []
+    log_config["loggers"]["uvicorn.error"]["handlers"].append("shiny_launch_browser")
+
+
+def maybe_setup_rsw_proxying(log_config: dict[str, Any]) -> None:
+    # Replace localhost URLs emitted to the log, with proxied URLs
+    if _hostenv.is_workbench():
+        if "filters" not in log_config:
+            log_config["filters"] = {}
+        log_config["filters"]["rsw_proxy"] = {"()": "shiny._hostenv.ProxyUrlFilter"}
+        if "filters" not in log_config["handlers"]["default"]:
+            log_config["handlers"]["default"]["filters"] = []
+        log_config["handlers"]["default"]["filters"].append("rsw_proxy")
 
 
 def is_file(app: str) -> bool:
     return "/" in app or app.endswith(".py")
 
 
-def resolve_app(app: str, app_dir: Optional[str]) -> Tuple[str, Optional[str]]:
+def resolve_app(app: str, app_dir: Optional[str]) -> tuple[str, Optional[str]]:
     # The `app` parameter can be:
     #
     # - A module:attribute name
@@ -206,7 +305,13 @@ def resolve_app(app: str, app_dir: Optional[str]) -> Tuple[str, Optional[str]]:
     #   - directory (look for app:app inside of it)
     # - A module name (look for :app) inside of it
 
-    module, _, attr = app.partition(":")
+    if platform.system() == "Windows" and re.match("^[a-zA-Z]:[/\\\\]", app):
+        # On Windows, need special handling of ':' in some cases, like these:
+        #   shiny run c:/Users/username/Documents/myapp/app.py
+        #   shiny run c:\Users\username\Documents\myapp\app.py
+        module, attr = app, ""
+    else:
+        module, _, attr = app.partition(":")
     if not module:
         raise ImportError("The APP parameter cannot start with ':'.")
     if not attr:
@@ -247,3 +352,84 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
     # missing dependencies can be misreported to the user as the app module itself not
     # being found.
     return importlib.import_module(module)
+
+
+@main.command(
+    help="""Create a Shiny application from a template.
+
+APPDIR is the directory to the Shiny application. A file named app.py will be created in
+that directory.
+
+After creating the application, you use `shiny run`:
+
+    shiny run APPDIR/app.py --reload
+"""
+)
+@click.argument("appdir", type=str, default=".")
+def create(appdir: str) -> None:
+    app_dir = Path(appdir)
+    app_path = app_dir / "app.py"
+    if app_path.exists():
+        print(f"Error: Can't create {app_path} because it already exists.")
+        sys.exit(1)
+
+    if not app_dir.exists():
+        app_dir.mkdir()
+
+    shutil.copyfile(
+        Path(__file__).parent / "examples" / "template" / "app.py", app_path
+    )
+
+    print(f"Created Shiny app at {app_dir / 'app.py'}")
+
+
+@main.command(
+    help="""The functionality from `shiny static` has been moved to the shinylive package.
+Please install shinylive and use `shinylive export` instead of `shiny static`:
+
+  \b
+  shiny static-assets remove
+  pip install shinylive
+  shinylive export APPDIR DESTDIR
+
+""",
+    context_settings=dict(
+        ignore_unknown_options=True,
+        allow_extra_args=True,
+    ),
+)
+def static() -> None:
+    print(
+        """The functionality from `shiny static` has been moved to the shinylive package.
+Please install shinylive and use `shinylive export` instead of `shiny static`:
+
+  shiny static-assets remove
+  pip install shinylive
+  shinylive export APPDIR DESTDIR
+"""
+    )
+    sys.exit(1)
+
+
+@main.command(
+    no_args_is_help=True,
+    help="""Manage local copy of assets for static app deployment. (Deprecated)
+
+    \b
+    Commands:
+        remove: Remove local copies of assets.
+        info: Print information about the local assets.
+
+""",
+)
+@click.argument("command", type=str)
+def static_assets(command: str) -> None:
+    dir = _static.get_default_shinylive_dir()
+
+    if command == "remove":
+        print(f"Removing {dir}")
+        _static.remove_shinylive_local(shinylive_dir=dir)
+    elif command == "info":
+        _static.print_shinylive_local_info()
+    else:
+        raise click.UsageError(f"Unknown command: {command}")

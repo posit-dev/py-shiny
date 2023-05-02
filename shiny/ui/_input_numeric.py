@@ -2,17 +2,19 @@ __all__ = ("input_numeric",)
 
 from typing import Optional
 
-from htmltools import tags, Tag, div, css, TagChildArg
+from htmltools import Tag, TagChild, css, div, tags
 
 from .._docstring import add_example
+from .._namespaces import resolve_id
 from ._utils import shiny_input_label
 
 
 @add_example()
 def input_numeric(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     value: float,
+    *,
     min: Optional[float] = None,
     max: Optional[float] = None,
     step: Optional[float] = None,
@@ -40,7 +42,8 @@ def input_numeric(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
@@ -56,7 +59,7 @@ def input_numeric(
     return div(
         shiny_input_label(id, label),
         tags.input(
-            id=id,
+            id=resolve_id(id),
             type="number",
             class_="form-control",
             value=value,

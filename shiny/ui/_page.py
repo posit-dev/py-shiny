@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "page_navbar",
     "page_fluid",
@@ -5,48 +7,36 @@ __all__ = (
     "page_bootstrap",
 )
 
-import sys
-from typing import Optional, Any, List, Union
-from warnings import warn
+from typing import Optional, Sequence
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
-from htmltools import (
-    HTMLDependency,
-    tags,
-    Tag,
-    TagList,
-    div,
-    TagChildArg,
-    head_content,
-)
+from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, div, tags
 
 from .._docstring import add_example
+from .._namespaces import resolve_id
+from .._typing_extensions import Literal
+from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._html_dependencies import bootstrap_deps
-from ._navs import navs_bar
-from ..types import MISSING, MISSING_TYPE
+from ._navs import navset_bar
+from ._utils import get_window_title
 
 
 def page_navbar(
-    *args: TagChildArg,  # Create a type for nav()?
-    title: Optional[Union[str, Tag, TagList]] = None,
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
+    title: Optional[str | Tag | TagList] = None,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     position: Literal["static-top", "fixed-top", "fixed-bottom"] = "static-top",
-    header: Optional[TagChildArg] = None,
-    footer: Optional[TagChildArg] = None,
+    header: Optional[TagChild] = None,
+    footer: Optional[TagChild] = None,
     bg: Optional[str] = None,
     inverse: bool = False,
     collapsible: bool = True,
     fluid: bool = True,
-    window_title: Union[str, MISSING_TYPE] = MISSING,
-    lang: Optional[str] = None
+    window_title: str | MISSING_TYPE = MISSING,
+    lang: Optional[str] = None,
 ) -> Tag:
     """
-    Create a navbar with a navs bar and a title.
+    Create a page with a navbar and a title.
 
     Parameters
     ----------
@@ -92,13 +82,14 @@ def page_navbar(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
     :func:`~shiny.ui.nav`
     :func:`~shiny.ui.nav_menu`
-    :func:`~shiny.ui.navs_bar`
+    :func:`~shiny.ui.navset_bar`
     :func:`~shiny.ui.page_fluid`
 
     Example
@@ -109,10 +100,10 @@ def page_navbar(
     return tags.html(
         get_window_title(title, window_title),
         tags.body(
-            navs_bar(
+            navset_bar(
                 *args,
                 title=title,
-                id=id,
+                id=resolve_id(id) if id else None,
                 selected=selected,
                 position=position,
                 header=header,
@@ -120,34 +111,19 @@ def page_navbar(
                 bg=bg,
                 inverse=inverse,
                 collapsible=collapsible,
-                fluid=fluid
+                fluid=fluid,
             )
         ),
         lang=lang,
     )
 
 
-def get_window_title(
-    title: Optional[Union[str, Tag, TagList]],
-    window_title: Union[str, MISSING_TYPE] = MISSING,
-) -> Optional[HTMLDependency]:
-    if title is not None and isinstance(window_title, MISSING_TYPE):
-        # Try to infer window_title from contents of title
-        window_title = " ".join(_find_characters(title))
-        if not window_title:
-            warn(
-                "Unable to infer a `window_title` default from `title`. Consider providing a character string to `window_title`."
-            )
-
-    if isinstance(window_title, MISSING_TYPE):
-        return None
-    else:
-        return head_content(tags.title(window_title))
-
-
 @add_example()
 def page_fluid(
-    *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
+    *args: TagChild | TagAttrs,
+    title: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: str,
 ) -> Tag:
     """
     Create a fluid page.
@@ -169,7 +145,8 @@ def page_fluid(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -185,7 +162,10 @@ def page_fluid(
 
 @add_example()
 def page_fixed(
-    *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
+    *args: TagChild | TagAttrs,
+    title: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: str,
 ) -> Tag:
     """
     Create a fixed page.
@@ -207,7 +187,8 @@ def page_fixed(
         Attributes on the page level container.
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -223,7 +204,7 @@ def page_fixed(
 
 # TODO: implement theme (just Bootswatch for now?)
 def page_bootstrap(
-    *args: Any, title: Optional[str] = None, lang: Optional[str] = None
+    *args: TagChild | TagAttrs, title: Optional[str] = None, lang: Optional[str] = None
 ) -> Tag:
     """
     Create a Bootstrap UI page container.
@@ -243,7 +224,8 @@ def page_bootstrap(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -251,15 +233,5 @@ def page_bootstrap(
     :func:`~shiny.ui.page_navbar`
     """
 
-    page = TagList(*bootstrap_deps(), *args)
     head = tags.title(title) if title else None
-    return tags.html(tags.head(head), tags.body(page), lang=lang)
-
-
-def _find_characters(x: Any) -> List[str]:
-    if isinstance(x, str):
-        return [x]
-    elif isinstance(x, list):
-        return [y for y in x if isinstance(y, str)]
-    else:
-        return []
+    return tags.html(tags.head(head), tags.body(*bootstrap_deps(), *args), lang=lang)

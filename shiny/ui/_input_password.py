@@ -2,17 +2,19 @@ __all__ = ("input_password",)
 
 from typing import Optional
 
-from htmltools import tags, Tag, div, css, TagChildArg
+from htmltools import Tag, TagChild, css, div, tags
 
 from .._docstring import add_example
+from .._namespaces import resolve_id
 from ._utils import shiny_input_label
 
 
 @add_example()
 def input_password(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     value: str = "",
+    *,
     width: Optional[str] = None,
     placeholder: Optional[str] = None,
 ) -> Tag:
@@ -34,11 +36,13 @@ def input_password(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
     .. admonition:: Server value
+
         A string of the password input. The default value is unless value is provided.
 
     See Also
@@ -48,7 +52,7 @@ def input_password(
     return div(
         shiny_input_label(id, label),
         tags.input(
-            id=id,
+            id=resolve_id(id),
             type="password",
             value=value,
             class_="form-control",

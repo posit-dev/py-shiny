@@ -1,7 +1,7 @@
-from shiny import *
-from shiny.types import ImgData
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
+from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_slider(
@@ -12,8 +12,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output()
-    @render_plot()
+    @output
+    @render.plot
     def p():
         np.random.seed(19680801)
         x_rand = 100 + 15 * np.random.randn(437)

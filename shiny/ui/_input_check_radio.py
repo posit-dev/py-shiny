@@ -1,27 +1,36 @@
+from __future__ import annotations
+
 __all__ = (
     "input_checkbox",
     "input_checkbox_group",
     "input_radio_buttons",
 )
 
-from typing import Optional, Dict, Union, List, Tuple
+from typing import Mapping, Optional, Union
 
-from htmltools import tags, Tag, div, span, css, TagChildArg
-
+from htmltools import Tag, TagChild, css, div, span, tags
 
 from .._docstring import add_example
+from .._namespaces import resolve_id
 from ._utils import shiny_input_label
 
 # Canonical format for representing select options.
-_Choices = Dict[str, TagChildArg]
+_Choices = Mapping[str, TagChild]
 
 # Formats available to the user
-ChoicesArg = Union[List[str], _Choices]
+ChoicesArg = Union[
+    # ["a", "b", "c"]
+    "list[str]",
+    # ("a", "b", "c")
+    "tuple[str, ...]",
+    # {"a": "Choice A", "b": tags.i("Choice B")}
+    _Choices,
+]
 
 
 @add_example()
 def input_checkbox(
-    id: str, label: TagChildArg, value: bool = False, width: Optional[str] = None
+    id: str, label: TagChild, value: bool = False, *, width: Optional[str] = None
 ) -> Tag:
     """
     Create a checkbox that can be used to specify logical values.
@@ -39,7 +48,8 @@ def input_checkbox(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
@@ -49,6 +59,7 @@ def input_checkbox(
 
     See Also
     -------
+    ~shiny.ui.input_switch
     ~shiny.ui.update_checkbox
     ~shiny.ui.input_checkbox_group
     ~shiny.ui.input_radio_buttons
@@ -58,8 +69,11 @@ def input_checkbox(
         div(
             tags.label(
                 tags.input(
-                    id=id, type="checkbox", checked="checked" if value else None
+                    id=resolve_id(id),
+                    type="checkbox",
+                    checked="checked" if value else None,
                 ),
+                " ",
                 span(label),
             ),
             class_="checkbox",
@@ -70,11 +84,79 @@ def input_checkbox(
 
 
 @add_example()
+def input_switch(
+    id: str, label: TagChild, value: bool = False, *, width: Optional[str] = None
+) -> Tag:
+    """
+    Create a switch that can be used to specify logical values. Similar to
+    ~shiny.ui.input_checkbox, but implies to the user that the change will take effect
+    immediately.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    value
+        Initial value.
+    width
+        The CSS width, e.g. '400px', or '100%'
+
+    Returns
+    -------
+    :
+        A UI element.
+
+    Notes
+    ------
+    .. admonition:: Server value
+
+        ``True`` if checked, ``False`` otherwise.
+
+    See Also
+    -------
+    ~shiny.ui.input_checkbox
+    ~shiny.ui.update_switch
+    ~shiny.ui.input_checkbox_group
+    ~shiny.ui.input_radio_buttons
+    """
+
+    return _input_checkbox(id, label, "form-check form-switch", value, width=width)
+
+
+def _input_checkbox(
+    id: str,
+    label: TagChild,
+    class_: str = "form-check",
+    value: bool = False,
+    *,
+    width: Optional[str] = None,
+) -> Tag:
+    return div(
+        div(
+            tags.input(
+                id=resolve_id(id),
+                class_="form-check-input",
+                type="checkbox",
+                checked="checked" if value else None,
+            ),
+            " ",
+            tags.label(label, class_="form-check-label", for_=resolve_id(id)),
+            class_=class_,
+        ),
+        class_="form-group shiny-input-container",
+        style=css(width=width),
+    )
+
+
+@add_example()
 def input_checkbox_group(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     choices: ChoicesArg,
-    selected: Optional[Union[str, List[str]]] = None,
+    *,
+    selected: Optional[str | list[str]] = None,
     inline: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
@@ -101,13 +183,14 @@ def input_checkbox_group(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
     .. admonition:: Server value
 
-        A list of string(s) with the selected value(s) (if any).
+        A tuple of string(s) with the selected value(s) (if any).
 
     See Also
     -------
@@ -118,7 +201,7 @@ def input_checkbox_group(
 
     input_label = shiny_input_label(id, label)
     options = _generate_options(
-        id=id,
+        id=resolve_id(id),
         type="checkbox",
         choices=choices,
         selected=selected,
@@ -127,7 +210,7 @@ def input_checkbox_group(
     return div(
         input_label,
         options,
-        id=id,
+        id=resolve_id(id),
         style=css(width=width),
         class_="form-group shiny-input-checkboxgroup shiny-input-container"
         + (" shiny-input-container-inline" if inline else ""),
@@ -140,8 +223,9 @@ def input_checkbox_group(
 @add_example()
 def input_radio_buttons(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     choices: ChoicesArg,
+    *,
     selected: Optional[str] = None,
     inline: bool = False,
     width: Optional[str] = None,
@@ -165,9 +249,11 @@ def input_radio_buttons(
         If ``True``, the result is displayed inline
     width
         The CSS width, e.g. '400px', or '100%'
+
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------
@@ -184,7 +270,7 @@ def input_radio_buttons(
 
     input_label = shiny_input_label(id, label)
     options = _generate_options(
-        id=id,
+        id=resolve_id(id),
         type="radio",
         choices=choices,
         selected=selected,
@@ -193,7 +279,7 @@ def input_radio_buttons(
     return div(
         input_label,
         options,
-        id=id,
+        id=resolve_id(id),
         style=css(width=width),
         class_="form-group shiny-input-radiogroup shiny-input-container"
         + (" shiny-input-container-inline" if inline else ""),
@@ -207,15 +293,32 @@ def _generate_options(
     id: str,
     type: str,
     choices: ChoicesArg,
-    selected: Optional[Union[str, List[str]]],
+    selected: Optional[str | list[str] | tuple[str, ...]],
     inline: bool,
-):
+) -> Tag:
     choicez = _normalize_choices(choices)
-    if type == "radio" and not selected:
-        selected = list(choicez.keys())[0]
+
+    if selected is None:
+        if type == "radio":
+            selected = list(choicez.keys())[0]
+        else:
+            selected = []
+
+    if isinstance(selected, tuple):
+        selected = list(selected)
+    elif not isinstance(selected, list):
+        selected = [selected]
+
     return div(
-        *[
-            _generate_option(id, type, choice, selected, inline)
+        [
+            _generate_option(
+                id,
+                type,
+                value=choice[0],
+                label=choice[1],
+                checked=choice[0] in selected,
+                inline=inline,
+            )
             for choice in choicez.items()
         ],
         class_="shiny-options-group",
@@ -225,15 +328,11 @@ def _generate_options(
 def _generate_option(
     id: str,
     type: str,
-    choice: Tuple[str, TagChildArg],
-    selected: Optional[Union[str, List[str]]],
+    value: str,
+    label: TagChild,
+    checked: bool,
     inline: bool,
-):
-    value, label = choice
-    if isinstance(selected, list):
-        checked = value in selected
-    else:
-        checked = value == selected
+) -> Tag:
     input = tags.input(
         type=type,
         name=id,
@@ -241,13 +340,22 @@ def _generate_option(
         checked="checked" if checked else None,
     )
     if inline:
-        return tags.label(input, span(label), class_=type + "-inline")
+        return tags.label(
+            input,
+            " ",
+            span(label),
+            class_=type + "-inline",
+            _add_ws=True,
+        )
     else:
-        return div(tags.label(input, span(label)), class_=type)
+        return div(
+            tags.label(input, " ", span(label)),
+            class_=type,
+        )
 
 
 def _normalize_choices(x: ChoicesArg) -> _Choices:
-    if isinstance(x, list):
+    if isinstance(x, (list, tuple)):
         return {k: k for k in x}
     else:
         return x

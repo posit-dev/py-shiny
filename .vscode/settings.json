@@ -1,7 +1,6 @@
 {
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true,
-    "python.analysis.typeCheckingMode": "strict",
     "python.formatting.provider": "black",
     "python.linting.flake8Enabled": true,
     "editor.tabSize": 2,
@@ -10,18 +9,20 @@
     "[python]": {
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+        },
     },
-    "python.analysis.diagnosticSeverityOverrides": {
-        "reportImportCycles":  "none",
-        "reportUnusedFunction":  "none",
-        "reportPrivateUsage": "none",
-        "reportUnnecessaryIsInstance": "none"
-    },
+    "isort.args":["--profile", "black"],
     "editor.rulers": [
         88
     ],
     "files.exclude": {
-        "**/__pycache__": true
+        "**/__pycache__": true,
+        "build/**": true
     },
     "autoDocstring.guessTypes": false,
+    "search.exclude": {
+        "build/**": true
+    },
 }

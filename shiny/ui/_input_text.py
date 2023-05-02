@@ -2,22 +2,27 @@ __all__ = ("input_text", "input_text_area")
 
 from typing import Optional
 
-from htmltools import tags, Tag, div, css, TagChildArg
+from htmltools import Tag, TagChild, css, div, tags
 
 from .._docstring import add_example
+from .._namespaces import resolve_id
+from .._typing_extensions import Literal
 from ._utils import shiny_input_label
 
 
 @add_example()
 def input_text(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     value: str = "",
+    *,
     width: Optional[str] = None,
     placeholder: Optional[str] = None,
+    autocomplete: Optional[str] = "off",
+    spellcheck: Optional[Literal["true", "false"]] = None,
 ) -> Tag:
     """
-    Create an input control for entry of unstructured text values
+    Create an input control for entry of text values
 
     Parameters
     ----------
@@ -31,16 +36,27 @@ def input_text(
         The CSS width, e.g. '400px', or '100%'
     placeholder
         A hint as to what can be entered into the control.
+    autocomplete
+        Whether to enable browser autocompletion of the text input (default is None).
+        If None, then it will use the browser's default behavior. Other possible values
+        include "on", "off", "name", "username", and "email". See
+        https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete for
+        more.
+    spellcheck
+        Whether to enable browser spell checking of the text input (default is None). If
+        None, then it will use the browser's default behavior.
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------
     .. admonition:: Server value
 
-        A string containing the current text input. The default value is ``""`` unless ``value`` is provided.
+        A string containing the current text input. The default value is ``""`` unless
+        ``value`` is provided.
 
     See Also
     -------
@@ -50,11 +66,13 @@ def input_text(
     return div(
         shiny_input_label(id, label),
         tags.input(
-            id=id,
+            id=resolve_id(id),
             type="text",
             class_="form-control",
             value=value,
             placeholder=placeholder,
+            autocomplete=autocomplete,
+            spellcheck=spellcheck,
         ),
         class_="form-group shiny-input-container",
         style=css(width=width),
@@ -64,14 +82,17 @@ def input_text(
 @add_example()
 def input_text_area(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     value: str = "",
+    *,
     width: Optional[str] = None,
     height: Optional[str] = None,
     cols: Optional[int] = None,
     rows: Optional[int] = None,
     placeholder: Optional[str] = None,
-    resize: Optional[str] = None,
+    resize: Optional[Literal["none", "both", "horizontal", "vertical"]] = None,
+    autocomplete: Optional[str] = None,
+    spellcheck: Optional[Literal["true", "false"]] = None,
 ) -> Tag:
     """
     Create a textarea input control for entry of unstructured text values.
@@ -102,10 +123,20 @@ def input_text_area(
         Which directions the textarea box can be resized. Can be one of "both", "none",
         "vertical", and "horizontal". The default, ``None``, will use the client
         browser's default setting for resizing textareas.
+    autocomplete
+        Whether to enable browser autocompletion of the text input (default is "off").
+        If None, then it will use the browser's default behavior. Other possible values
+        include "on", "name", "username", and "email". See
+        https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete for
+        more.
+    spellcheck
+        Whether to enable browser spell checking of the text input (default is None). If
+        None, then it will use the browser's default behavior.
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------
@@ -124,12 +155,14 @@ def input_text_area(
 
     area = tags.textarea(
         value,
-        id=id,
+        id=resolve_id(id),
         class_="form-control",
         style=css(width=None if width else "100%", height=height, resize=resize),
         placeholder=placeholder,
         rows=rows,
         cols=cols,
+        autocomplete=autocomplete,
+        spellcheck=spellcheck,
     )
 
     return div(

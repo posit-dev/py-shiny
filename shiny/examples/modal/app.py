@@ -6,8 +6,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect()
-    @event(input.show)
+    @reactive.Effect
+    @reactive.event(input.show)
     def _():
         m = ui.modal(
             "This is a somewhat important message.",

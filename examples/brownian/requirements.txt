@@ -1,0 +1,4 @@
+numpy
+shiny
+plotly
+shinywidgets

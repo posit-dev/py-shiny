@@ -1,22 +1,17 @@
 __all__ = ("insert_ui", "remove_ui")
 
-import sys
 from typing import Optional
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
-from htmltools import TagChildArg
+from htmltools import TagChild
 
 from .._docstring import add_example
+from .._typing_extensions import Literal
 from ..session import Session, require_active_session
 
 
 @add_example()
 def insert_ui(
-    ui: TagChildArg,
+    ui: TagChild,
     selector: str,
     where: Literal["beforeBegin", "afterBegin", "beforeEnd", "afterEnd"] = "beforeEnd",
     multiple: bool = False,
@@ -59,12 +54,12 @@ def insert_ui(
         run (default).
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
     This function allows you to dynamically add arbitrary UI into your app, whenever you
-    want, as many times as you want. Unlike :func:`~shiny.render_ui`, the UI generated
+    want, as many times as you want. Unlike :func:`~shiny.render.ui`, the UI generated
     with `insert_ui` is persistent: once it's created, it stays there until removed by
     :func:`remove_ui`. Each new call to `insert_ui` creates more UI objects, in addition
     to the ones already there (all independent from one another). To update a part of
@@ -74,7 +69,7 @@ def insert_ui(
     See Also
     --------
     ~shiny.ui.remove_ui
-    ~shiny.render_ui
+    ~shiny.render.ui
     """
 
     session = require_active_session(session)
@@ -122,12 +117,12 @@ def remove_ui(
         run (default).
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     See Also
     -------
     ~shiny.ui.insert_ui
-    ~shiny.render_ui
+    ~shiny.render.ui
     """
 
     session = require_active_session(session)

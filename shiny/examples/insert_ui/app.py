@@ -6,8 +6,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect()
-    @event(input.add)
+    @reactive.Effect
+    @reactive.event(input.add)
     def _():
         ui.insert_ui(
             ui.input_text("txt" + str(input.add()), "Enter some text"),

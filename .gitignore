@@ -105,3 +105,6 @@ typings/
 
 docs/source/generated/
 docs/source/reference/
+
+.DS_Store
+.Rproj.user

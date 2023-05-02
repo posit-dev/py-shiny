@@ -1,18 +1,26 @@
 """A package for building reactive web applications."""
 
+__version__ = "0.3.3.9000"
+
 from ._shinyenv import is_pyodide as _is_pyodide
 
 # User-facing subpackages that should be available on `from shiny import *`
 from . import reactive
-from .render import *
-from .session import *
+from . import render
+from .session import (
+    Session,
+    Inputs,
+    Outputs,
+)
+from . import session
 from . import ui
 
 # Private submodules that have some user-facing functionality
 from ._app import App
-from ._decorators import event
-from ._modules import Module
 from ._validation import req
+from ._deprecated import *
+
+from . import module
 
 if _is_pyodide:
     # In pyodide, avoid importing _main because it imports packages that aren't
@@ -21,8 +29,6 @@ if _is_pyodide:
 else:
     from ._main import run_app
 
-# User-facing submodules that should *not* be available on `from shiny import *`
-from . import types
 
 # N.B.: we intentionally don't import 'developer-facing' submodules (e.g.,
 # html_dependencies) so that they aren't super visible when you `import shiny`, but
@@ -37,21 +43,20 @@ __all__ = (
     "ui",
     # _app.py
     "App",
-    # _decorators.py
-    "event",
     # _main.py
     "run_app",
     # _modules.py
-    "Module",
-    # _render.py
-    "render_text",
-    "render_plot",
-    "render_image",
-    "render_ui",
+    "module",
     # _session.py
     "Session",
     "Inputs",
     "Outputs",
     # _validation.py
     "req",
+    # _deprecated.py
+    "render_text",
+    "render_plot",
+    "render_image",
+    "render_ui",
+    "event",
 )

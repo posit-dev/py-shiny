@@ -1,9 +1,12 @@
 """
 Tools for working within a (user) session context.
 """
-
-from ._session import *
-from ._utils import *
+from ._session import Session, Inputs, Outputs
+from ._utils import (  # noqa: F401
+    get_current_session,
+    session_context,  # pyright: ignore[reportUnusedImport]
+    require_active_session,
+)
 
 __all__ = (
     "Session",

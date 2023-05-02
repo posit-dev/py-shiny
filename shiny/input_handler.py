@@ -1,7 +1,11 @@
+# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
+# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
+from __future__ import annotations
+
 __all__ = ("input_handlers",)
 
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Callable, Dict, Union, List, Any
+from typing import TYPE_CHECKING, Any, Callable, Dict
 
 if TYPE_CHECKING:
     from .session import Session
@@ -27,16 +31,14 @@ class _InputHandlers(Dict[str, InputHandlerType]):
     def remove(self, type: str):
         del self[type]
 
-    def _process_value(
-        self, type: str, value: Any, name: str, session: "Session"
-    ) -> Any:
+    def _process_value(self, type: str, value: Any, name: str, session: Session) -> Any:
         handler = self.get(type)
         if handler is None:
             raise ValueError("No input handler registered for type: " + type)
         return handler(value, name, session)
 
 
-input_handlers = _InputHandlers()
+input_handlers: _InputHandlers = _InputHandlers()
 input_handlers.__doc__ = """
 Manage Shiny input handlers.
 
@@ -89,25 +91,23 @@ On the Javascript side, the associated input binding must have a corresponding
 
 
 @input_handlers.add("shiny.date")
-def _(
-    value: Union[str, List[str]], name: str, session: "Session"
-) -> Union[date, List[date]]:
+def _(value: str | list[str], name: str, session: Session) -> date | tuple[date, date]:
     if isinstance(value, str):
         return datetime.strptime(value, "%Y-%m-%d").date()
-    return [datetime.strptime(v, "%Y-%m-%d").date() for v in value]
+    return tuple(datetime.strptime(v, "%Y-%m-%d").date() for v in value)
 
 
 @input_handlers.add("shiny.datetime")
 def _(
-    value: Union[int, float, List[int], List[float]], name: str, session: "Session"
-) -> Union[datetime, List[datetime]]:
+    value: int | float | list[int] | list[float], name: str, session: Session
+) -> datetime | tuple[datetime, datetime]:
     if isinstance(value, (int, float)):
         return datetime.utcfromtimestamp(value)
-    return [datetime.utcfromtimestamp(v) for v in value]
+    return tuple(datetime.utcfromtimestamp(v) for v in value)
 
 
 @input_handlers.add("shiny.action")
-def _(value: int, name: str, session: "Session") -> ActionButtonValue:
+def _(value: int, name: str, session: Session) -> ActionButtonValue:
     # TODO: ActionButtonValue() class can probably be removed
     return ActionButtonValue(value)
 
@@ -117,17 +117,17 @@ def _(value: int, name: str, session: "Session") -> ActionButtonValue:
 
 
 @input_handlers.add("shiny.number")
-def _(value: str, name: str, session: "Session") -> str:
+def _(value: str, name: str, session: Session) -> str:
     return value
 
 
 # TODO: implement when we have bookmarking
 @input_handlers.add("shiny.password")
-def _(value: str, name: str, session: "Session") -> str:
+def _(value: str, name: str, session: Session) -> str:
     return value
 
 
 # TODO: implement when we have bookmarking
 @input_handlers.add("shiny.file")
-def _(value: Any, name: str, session: "Session") -> Any:
+def _(value: Any, name: str, session: Session) -> Any:
     return value

@@ -1,37 +1,41 @@
+from __future__ import annotations
+
 __all__ = (
     "update_action_button",
     "update_action_link",
     "update_checkbox",
+    "update_switch",
     "update_checkbox_group",
     "update_radio_buttons",
     "update_date",
     "update_date_range",
     "update_numeric",
     "update_select",
+    "update_selectize",
     "update_slider",
     "update_text",
     "update_text_area",
     "update_navs",
 )
 
+import json
+import re
 from datetime import date
-import sys
-from typing import Optional, Union, Tuple, List
+from typing import Mapping, Optional
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
+from htmltools import TagChild
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
 
-from htmltools import TagChildArg
-
-from .._docstring import doc_format, add_example
+from .._docstring import add_example, doc_format
+from .._namespaces import resolve_id
+from .._typing_extensions import Literal, NotRequired, TypedDict
+from .._utils import drop_none
+from ..session import Session, require_active_session
 from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
 from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
-from ._input_slider import SliderValueArg, SliderStepArg, _slider_type, _as_numeric
-from .._utils import drop_none
-from ..session import Session, require_active_session
+from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
 
 _note = """
     The input updater functions send a message to the client, telling it to change the
@@ -55,13 +59,13 @@ _note = """
 # -----------------------------------------------------------------------------
 # input_action_button.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_action_button(
     id: str,
     *,
     label: Optional[str] = None,
-    icon: TagChildArg = None,
+    icon: TagChild = None,
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -89,7 +93,7 @@ def update_action_button(
     """
 
     session = require_active_session(session)
-    # TODO: supporting a TagChildArg for label would require changes to shiny.js
+    # TODO: supporting a TagChild for label would require changes to shiny.js
     # https://github.com/rstudio/shiny/issues/1140
     msg = {"label": label, "icon": session._process_ui(icon)["html"] if icon else None}
     session.send_input_message(id, drop_none(msg))
@@ -98,11 +102,12 @@ def update_action_button(
 update_action_link = update_action_button
 update_action_link.__doc__ = update_action_button.__doc__
 
+
 # -----------------------------------------------------------------------------
 # input_check_radio.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_checkbox(
     id: str,
     *,
@@ -123,7 +128,7 @@ def update_checkbox(
         A new value.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -140,13 +145,50 @@ def update_checkbox(
 
 
 @doc_format(note=_note)
+def update_switch(
+    id: str,
+    *,
+    label: Optional[str] = None,
+    value: Optional[bool] = None,
+    session: Optional[Session] = None,
+) -> None:
+    """
+    Change the value of a switch input on the client.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    value
+        A new value.
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        :func:`~shiny.session.get_current_session`.
+
+    Note
+    ----
+    {note}
+
+    See Also
+    -------
+    ~shiny.ui.input_switch
+    """
+
+    session = require_active_session(session)
+    msg = {"label": label, "value": value}
+    session.send_input_message(id, drop_none(msg))
+
+
 @add_example()
+@doc_format(note=_note)
 def update_checkbox_group(
     id: str,
     *,
     label: Optional[str] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[Union[str, List[str]]] = None,
+    selected: Optional[str | list[str] | tuple[str, ...]] = None,
     inline: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -169,7 +211,7 @@ def update_checkbox_group(
         If ``True``, the result is displayed inline
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -181,7 +223,7 @@ def update_checkbox_group(
     """
 
     _update_choice_input(
-        id=id,
+        id=resolve_id(id),
         type="checkbox",
         label=label,
         choices=choices,
@@ -191,8 +233,8 @@ def update_checkbox_group(
     )
 
 
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_radio_buttons(
     id: str,
     *,
@@ -221,7 +263,7 @@ def update_radio_buttons(
         If ``True```, the result is displayed inline
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -233,7 +275,7 @@ def update_radio_buttons(
     """
 
     _update_choice_input(
-        id=id,
+        id=resolve_id(id),
         type="radio",
         label=label,
         choices=choices,
@@ -249,7 +291,7 @@ def _update_choice_input(
     type: Literal["checkbox", "radio"],
     label: Optional[str] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[Union[str, List[str]]] = None,
+    selected: Optional[str | list[str] | tuple[str, ...]] = None,
     inline: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -257,7 +299,11 @@ def _update_choice_input(
     options = None
     if choices is not None:
         opts = _generate_options(
-            id=id, type=type, choices=choices, selected=selected, inline=inline
+            id=resolve_id(id),
+            type=type,
+            choices=choices,
+            selected=selected,
+            inline=inline,
         )
         options = session._process_ui(opts)["html"]
     msg = {"label": label, "options": options, "value": selected}
@@ -267,15 +313,15 @@ def _update_choice_input(
 # -----------------------------------------------------------------------------
 # input_date.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_date(
     id: str,
     *,
     label: Optional[str] = None,
-    value: Optional[Union[date, str]] = None,
-    min: Optional[Union[date, str]] = None,
-    max: Optional[Union[date, str]] = None,
+    value: Optional[date | str] = None,
+    min: Optional[date | str] = None,
+    max: Optional[date | str] = None,
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -296,7 +342,7 @@ def update_date(
         The maximum allowed value.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -317,16 +363,16 @@ def update_date(
     session.send_input_message(id, drop_none(msg))
 
 
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_date_range(
     id: str,
     *,
     label: Optional[str] = None,
-    start: Optional[Union[date, str]] = None,
-    end: Optional[Union[date, str]] = None,
-    min: Optional[Union[date, str]] = None,
-    max: Optional[Union[date, str]] = None,
+    start: Optional[date | str] = None,
+    end: Optional[date | str] = None,
+    min: Optional[date | str] = None,
+    max: Optional[date | str] = None,
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -339,11 +385,11 @@ def update_date_range(
     label
         An input label.
     start
-        The initial start date. Either a :func:`~datetime.date` object, or a string in
+        The initial start date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format. If ``None`` (the default), will use the current date in the
         client's time zone.
     end
-        The initial end date. Either a :func:`~datetime.date` object, or a string in
+        The initial end date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format. If ``None`` (the default), will use the current date in the
         client's time zone.
     min
@@ -352,7 +398,7 @@ def update_date_range(
         The maximum allowed value.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -377,8 +423,8 @@ def update_date_range(
 # -----------------------------------------------------------------------------
 # input_numeric.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_numeric(
     id: str,
     *,
@@ -432,14 +478,14 @@ def update_numeric(
 # -----------------------------------------------------------------------------
 # input_select.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_select(
     id: str,
     *,
     label: Optional[str] = None,
     choices: Optional[SelectChoicesArg] = None,
-    selected: Optional[str] = None,
+    selected: Optional[str | list[str]] = None,
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -456,12 +502,12 @@ def update_select(
         that if a dictionary is provided, the keys are used as the (input) values so
         that the dictionary values can hold HTML labels. A dictionary of dictionaries is
         also supported, and in that case, the top-level keys are treated as
-        ``<optgroup>``
-    labels. selected
+        ``<optgroup>`` labels.
+    selected
         The values that should be initially selected, if any.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -470,9 +516,14 @@ def update_select(
     See Also
     -------
     ~shiny.ui.input_select
+    ~shiny.ui.update_selectize
     """
 
     session = require_active_session(session)
+
+    selected_values = selected
+    if isinstance(selected, str):
+        selected_values = [selected]
 
     if choices is None:
         options = None
@@ -485,23 +536,191 @@ def update_select(
     msg = {
         "label": label,
         "options": options,
-        "selected": selected,
+        "value": selected_values,
     }
     session.send_input_message(id, drop_none(msg))
+
+
+class FlatSelectChoice(TypedDict):
+    label: str
+    value: str
+    optgroup: NotRequired[str]
+
+
+@add_example()
+@doc_format(note=_note)
+def update_selectize(
+    id: str,
+    *,
+    label: Optional[str] = None,
+    choices: Optional[SelectChoicesArg] = None,
+    selected: Optional[str | list[str]] = None,
+    # TODO: we need the equivalent of base::I()/htmlwidgets::JS() for marking strings as strings to be evaluated
+    # options: Optional[Dict[str, str]] = None,
+    server: bool = False,
+    session: Optional[Session] = None,
+) -> None:
+    """
+    Change the value of a selectize.js powered input on the client.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    label
+        An input label.
+    choices
+        Either a list of choices or a dictionary mapping choice values to labels. Note
+        that if a dictionary is provided, the keys are used as the (input) values so
+        that the dictionary values can hold HTML labels. A dictionary of dictionaries is
+        also supported, and in that case, the top-level keys are treated as
+        ``<optgroup>`` labels.
+    selected
+        The values that should be initially selected, if any.
+    server
+        Whether to store choices on the server side, and load the select options
+        dynamically on searching, instead of writing all choices into the page at once
+        (i.e., only use the client-side version of selectize.js)
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        :func:`~shiny.session.get_current_session`.
+
+    Note
+    ----
+    {note}
+
+    See Also
+    -------
+    ~shiny.ui.input_selectize
+    """
+
+    session = require_active_session(session)
+
+    if not server:
+        return update_select(
+            id, label=label, choices=choices, selected=selected, session=session
+        )
+
+    # Transform choices to a list of dicts (this is the form the client wants)
+    # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]
+    flat_choices: list[FlatSelectChoice] = []
+    if choices is not None:
+        for k, v in _normalize_choices(choices).items():
+            if not isinstance(v, Mapping):
+                flat_choices.append(
+                    FlatSelectChoice(value=k, label=session._process_ui(v)["html"])
+                )
+            else:  # The optgroup case
+                flat_choices.extend(
+                    [
+                        FlatSelectChoice(
+                            optgroup=k, value=k2, label=session._process_ui(v2)["html"]
+                        )
+                        for (k2, v2) in v.items()
+                    ]
+                )
+
+    selected_values = selected
+    if isinstance(selected, str):
+        selected_values = [selected]
+
+    # Find any selected choices now so we have them ready to send to the client
+    if selected_values is None:
+        selected_choices = []
+    else:
+        selected_choices = [x for x in flat_choices if x["value"] in selected_values]
+
+    def selectize_choices_json(request: Request) -> Response:
+        if choices is None:
+            return Response([], status_code=200)
+
+        # N.B. relevant query parameters that shiny.js setscan be found here
+        # https://github.com/rstudio/shiny/blob/78d77ce/srcts/src/bindings/input/selectInput.ts#L138-L142
+        qparams = request.query_params
+
+        # The (space-separated) input value(s) in lower-case (for case-insensitive matching)
+        keywords = set(re.split(r"\s+", qparams.get("query", "").lower()))
+
+        # Also note that the user (at least someday) has the ability to customize any of
+        # these options https://github.com/rstudio/shiny/blob/78d77ce/srcts/src/bindings/input/selectInput.ts#L231
+        #
+        # For most options this is fine, but searchField/valueField require some validation.
+
+        # i.e. maxOptions (defaults to 1000)
+        max_options = int(qparams.get("maxop", 1000))
+
+        # i.e. searchConjunction (defaults to 'and', but can also be 'or')
+        conjunction = any if qparams.get("conju", "and") == "or" else all
+
+        # i.e. searchFields (defaults to ['label'])
+        search_fields: list[str] = json.loads(qparams.get("field", "['label']"))
+        if len(search_fields) == 0:
+            raise ValueError("The selectize.js searchFields option must be non-empty")
+
+        # For some odd (probably wrong) reason, shiny.js is wrapping searchFields in an additional array
+        # https://github.com/rstudio/shiny/blob/78d77ce/srcts/src/bindings/input/selectInput.ts#L139
+        # https://github.com/rstudio/shiny/blob/78d77c/R/update-input.R#L801
+        if isinstance(search_fields[0], list):
+            search_fields = search_fields[0]
+
+        if set(search_fields).difference(set(["label", "value", "optgroup"])):
+            raise ValueError(
+                "The selectize.js searchFields option must contain some combination of: "
+                + "'label', 'value', and 'optgroup'"
+            )
+
+        # i.e. valueField (defaults to 'value')
+        if qparams.get("value", "value") != "value":
+            raise ValueError(
+                "The selectize.js valueField option must be set to 'value'"
+            )
+
+        filtered_choices: list[FlatSelectChoice] = []
+        for choice in flat_choices:
+            # Short-circuit if we've reached the max number of options
+            if (len(filtered_choices) + len(selected_choices)) > max_options:
+                break
+
+            # If this is a selected value, *don't* add it here (add after this loop)
+            if selected_values and choice["value"] in selected_values:
+                continue
+
+            match = False
+            for f in search_fields:
+                val: Optional[str] = choice.get(f, None)
+                # optgroup could be requested, but not necessarily present/relevant
+                if val is None:
+                    continue
+                if conjunction([x in val.lower() for x in keywords]):
+                    match = True
+
+            if match:
+                filtered_choices.append(choice)
+
+        if selected_choices:
+            filtered_choices.extend(selected_choices)
+
+        return JSONResponse(filtered_choices, status_code=200)
+
+    msg = {
+        "label": label,
+        "value": selected_values,
+        "url": session.dynamic_route(f"update_selectize_{id}", selectize_choices_json),
+    }
+
+    return session.send_input_message(id, drop_none(msg))
 
 
 # -----------------------------------------------------------------------------
 # input_slider.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_slider(
     id: str,
     *,
     label: Optional[str] = None,
-    value: Optional[
-        Union[SliderValueArg, Tuple[SliderValueArg, SliderValueArg]]
-    ] = None,
+    value: Optional[SliderValueArg | tuple[SliderValueArg, SliderValueArg]] = None,
     min: Optional[SliderValueArg] = None,
     max: Optional[SliderValueArg] = None,
     step: Optional[SliderStepArg] = None,
@@ -530,19 +749,19 @@ def update_slider(
         single number. If the values are dates, step is in days; if the values are
         date-times, step is in seconds.
     time_format
-        Only used if the slider values are :func:`~datetime.date` or
-        :func:`~datetime.datetime` objects. A time format string, to be passed to the
+        Only used if the slider values are :class:`~datetime.date` or
+        :class:`~datetime.datetime` objects. A time format string, to be passed to the
         Javascript strftime library. See https://github.com/samsonjs/strftime for more
         details. For Dates, the default is "%F" (like "2015-07-01"), and for Datetimes,
         the default is "%F %T" (like "2015-07-01 15:32:10").
     timezone
-        Only used if the values are :func:`~datetime.datetime` objects. A string
+        Only used if the values are :class:`~datetime.datetime` objects. A string
         specifying the time zone offset for the displayed times, in the format "+HHMM"
         or "-HHMM". If ``None`` (the default), times will be displayed in the browser's
         time zone. The value "+0000" will result in UTC time.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -583,8 +802,8 @@ def update_slider(
 # -----------------------------------------------------------------------------
 # input_text.py
 # -----------------------------------------------------------------------------
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_text(
     id: str,
     *,
@@ -608,7 +827,7 @@ def update_text(
         A hint as to what can be entered into the control.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -632,9 +851,10 @@ update_text_area.__doc__ = update_text.__doc__
 # navs.py
 # -----------------------------------------------------------------------------
 
+
 # TODO: we should probably provide a nav_select() alias for this as well
-@doc_format(note=_note)
 @add_example()
+@doc_format(note=_note)
 def update_navs(
     id: str, selected: Optional[str] = None, session: Optional[Session] = None
 ) -> None:
@@ -649,7 +869,7 @@ def update_navs(
         The values that should be initially selected, if any.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -657,8 +877,8 @@ def update_navs(
 
     See Also
     -------
-    ~shiny.ui.navs_tab
-    ~shiny.ui.navs_pill
+    ~shiny.ui.navset_tab
+    ~shiny.ui.navset_pill
     ~shiny.ui.page_navbar
     """
 

@@ -1,19 +1,32 @@
 """Low-level reactive components."""
 
-__all__ = ("isolate", "invalidate_later", "flush", "on_flushed", "get_current_context")
+from __future__ import annotations
+
+__all__ = (
+    "isolate",
+    "invalidate_later",
+    "flush",
+    "lock",
+    "on_flushed",
+    "get_current_context",
+)
 
 import asyncio
 import contextlib
-from contextvars import ContextVar
 import time
 import traceback
 import typing
-from typing import Callable, Optional, Awaitable, TypeVar
 import warnings
+from contextvars import ContextVar
+from typing import TYPE_CHECKING, Awaitable, Callable, Optional, TypeVar
 
+from .. import _utils
 from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example
-from .. import _utils
+from ..types import MISSING, MISSING_TYPE
+
+if TYPE_CHECKING:
+    from ..session import Session
 
 T = TypeVar("T")
 
@@ -100,7 +113,7 @@ class Dependents:
         # Invalidate all dependents. This gets all the dependents as list, then iterates
         # over the list. It's done this way instead of iterating over keys because it's
         # possible that a dependent is removed from the dict while iterating over it.
-        # https://github.com/rstudio/prism/issues/26
+        # https://github.com/rstudio/py-shiny/issues/26
         ids = sorted(self._dependents.keys())
         for dep_ctx in [self._dependents[id] for id in ids]:
             dep_ctx.invalidate()
@@ -115,8 +128,23 @@ class ReactiveEnvironment:
         )
         self._next_id: int = 0
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
-        self.lock = asyncio.Lock()
+        self._lock: Optional[asyncio.Lock] = None
         self._flushed_callbacks = _utils.AsyncCallbacks()
+
+    @property
+    def lock(self) -> asyncio.Lock:
+        """
+        Lock that protects this ReactiveEnvironment. It must be lazily created, because
+        at the time the module is loaded, there generally isn't a running asyncio loop
+        yet. This causes the asyncio.Lock to be created with a different loop than it
+        will be invoked from later; when that happens, acquire() will succeed if there's
+        no contention, but throw a "hey you're on the wrong loop" error if there is.
+        """
+        if self._lock is None:
+            # Ensure we have a loop; get_running_loop() throws an error if we don't
+            asyncio.get_running_loop()
+            self._lock = asyncio.Lock()
+        return self._lock
 
     def next_id(self) -> int:
         """Return the next available id"""
@@ -180,18 +208,19 @@ def isolate():
     Ordinarily, the simple act of reading a reactive value causes a relationship to be
     established between the caller and the reactive value, where a change to the
     reactive value will cause the caller to re-execute. (The same applies for the act of
-    getting a reactive expression's value.) `with isolate()` lets you read a
-    reactive value or expression without establishing this relationship.
+    getting a reactive expression's value.) `with isolate()` lets you read a reactive
+    value or expression without establishing this relationship.
 
-    ``with isolate()`` can also be useful for calling reactive expression at the console,
-    which can be useful for debugging. To do so, wrap the calls to the reactive
+    ``with isolate()`` can also be useful for calling reactive expression at the
+    console, which can be useful for debugging. To do so, wrap the calls to the reactive
     expression with ``with isolate()``.
 
     Returns
     -------
-    A context manager that executes the given expression in a scope where reactive
-    values can be read, but do not cause the reactive scope of the caller to be
-    re-evaluated when they change.
+    :
+        A context manager that executes the given expression in a scope where reactive
+        values can be read, but do not cause the reactive scope of the caller to be
+        re-evaluated when they change.
 
     See Also
     --------
@@ -207,7 +236,8 @@ def get_current_context() -> Context:
 
     Returns
     -------
-    A :class:`~Context`.
+    :
+        A :class:`~Context`.
 
     Raises
     ------
@@ -244,7 +274,8 @@ def on_flushed(
 
     Returns
     -------
-    A function that can be used to unregister the callback.
+    :
+        A function that can be used to unregister the callback.
 
     See Also
     --------
@@ -255,12 +286,20 @@ def on_flushed(
 
 
 def lock() -> asyncio.Lock:
-    """A lock that should be held whenever manipulating the reactive graph."""
+    """
+    A lock that should be held whenever manipulating the reactive graph.
+
+    For example, this makes it safe to set a :class:`~reactive.Value` and call
+    :func:`~reactive.flush()` from a different :class:`~asyncio.Task` than the one that
+    is running the Shiny :class:`~shiny.Session`.
+    """
     return _reactive_environment.lock
 
 
 @add_example()
-def invalidate_later(delay: float) -> None:
+def invalidate_later(
+    delay: float, *, session: "MISSING_TYPE | Session | None" = MISSING
+) -> None:
     """
     Scheduled Invalidation
 
@@ -275,12 +314,19 @@ def invalidate_later(delay: float) -> None:
     Note
     ----
     When called within a reactive function (i.e., :func:`Effect`, :func:`Calc`,
-    :func:`render_ui`, etc.), that reactive context is invalidated (and re-executes)
+    :func:`render.ui`, etc.), that reactive context is invalidated (and re-executes)
     after the interval has passed. The re-execution will reset the invalidation flag, so
     in a typical use case, the object will keep re-executing and waiting for the
     specified interval. It's possible to stop this cycle by adding conditional logic
     that prevents the ``invalidate_later`` from being run.
     """
+
+    if isinstance(session, MISSING_TYPE):
+        from ..session import get_current_session
+
+        # If no session is provided, autodetect the current session (this
+        # could be None if outside of a session).
+        session = get_current_session()
 
     ctx = get_current_context()
     # Pass an absolute time to our subtask, rather than passing the delay directly, in
@@ -289,6 +335,10 @@ def invalidate_later(delay: float) -> None:
     deadline = time.monotonic() + delay
 
     cancellable = True
+    # unsub is used to unsubscribe from session.on_ended when time expires. We don't
+    # want a ton of event handler registrations sitting there uselessly, keeping object
+    # graphs from being gc'd.
+    unsub: Optional[Callable[[], None]] = None
 
     async def _task(ctx: Context, deadline: float):
         nonlocal cancellable
@@ -315,11 +365,16 @@ def invalidate_later(delay: float) -> None:
         except BaseException:
             traceback.print_exc()
             raise
+        finally:
+            if unsub:
+                unsub()
 
     task = asyncio.create_task(_task(ctx, deadline))
 
     def cancel_task():
-        if cancellable:
+        if cancellable and not task.cancelled():
             task.cancel()
 
     ctx.on_invalidate(cancel_task)
+    if session:
+        unsub = session.on_ended(cancel_task)

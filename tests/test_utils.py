@@ -1,5 +1,52 @@
+import random
+import socketserver
+from typing import List, Set
+
 import pytest
-from shiny._utils import AsyncCallbacks, Callbacks
+
+from shiny._utils import AsyncCallbacks, Callbacks, private_seed, random_port
+
+
+def test_randomness():
+    current_state = random.getstate()
+    try:
+        # Make sure the public stream of randomness is independent of the private stream
+        # https://github.com/rstudio/py-shiny/issues/140
+        pub = random.randint(0, 100000000)
+        with private_seed():
+            priv = random.randint(0, 100000000)
+        pub2 = random.randint(0, 100000000)
+        with private_seed():
+            priv2 = random.randint(0, 100000000)
+        assert pub != priv and priv != pub2 and pub2 != priv2
+
+        # By setting the same seed, we should get the same randomness
+        random.seed(0)
+        public = [random.randint(0, 100000000) for _ in range(3)]
+        with private_seed():
+            random.seed(0)
+            private = [random.randint(0, 100000000) for _ in range(3)]
+        assert public == private
+
+        # Interleaved calls to private and public should give the same randomness
+        public: List[float] = []
+        private: List[float] = []
+        random.seed(0)
+        with private_seed():
+            random.seed(0)
+        public.append(random.randint(0, 100000000))
+        with private_seed():
+            private.append(random.randint(0, 100000000))
+        with private_seed():
+            private.append(random.randint(0, 100000000))
+        public.append(random.randint(0, 100000000))
+        public.append(random.randint(0, 100000000))
+        with private_seed():
+            private.append(random.randint(0, 100000000))
+        assert public == private
+
+    finally:
+        random.setstate(current_state)
 
 
 def test_callbacks():
@@ -87,3 +134,62 @@ async def test_async_callbacks():
     assert cb2.exec_count == 1  # Unregistered by previous invoke, not called again
     assert cb3.exec_count == 1  # once=True, so not called again
     assert cb4.exec_count == 1  # Registered during previous invoke(), was called
+
+
+# Timeout within 2 seconds
+@pytest.mark.timeout(2)
+def test_random_port():
+    assert random_port(9000, 9000) == 9000
+
+    # Starting port
+    port = 9001
+    # Test a set of continguous ports
+    num_ports = 10
+    # Number of times to try to find a port range
+    n = 100
+
+    # Find a range of `num_ports` ports that are all available
+    attempts = 0
+    for _ in range(n):
+        attempts += 1
+        j = 0
+        try:
+            for j in range(num_ports):
+                random_port(port + j, port + j)
+            # If we reach this point, we have found a plausible range of ports to use
+            break
+
+        except RuntimeError as e:
+            print(e)
+            # Port `port + j` is busy,
+            # Shift the test range and try again
+            port += j + 1
+            print(port)
+    # If no port is available, throw an error
+    # `attempts` should be << n
+    if attempts == n:
+        raise RuntimeError(
+            f"Could not find {num_ports} continguous ports to use for testing in {n} tries"
+        )
+
+    seen: Set[int] = set()
+    # Ensure that `num_ports` unique random ports are eventually generated. If not (e.g. if the
+    # max port number is treated as exclusive instead of inclusive, say) then the while
+    # loop will not exit and the test will timeout.
+    max_port = port + num_ports - 1
+    while len(seen) < num_ports:
+        seen.add(random_port(port, max_port))
+
+    assert len(seen) == num_ports
+
+
+def test_random_port_unusable():
+    # 6000 is an unsafe port, make sure that it fails
+    with pytest.raises(RuntimeError, match="Failed to find a usable random port"):
+        random_port(6000, 6000)
+
+
+def test_random_port_starvation():
+    with socketserver.TCPServer(("127.0.0.1", 9000), socketserver.BaseRequestHandler):
+        with pytest.raises(RuntimeError, match="Failed to find a usable random port"):
+            random_port(9000, 9000)

@@ -2,6 +2,7 @@ from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_action_button("show", "Show"),
+    " ",
     ui.input_action_button("remove", "Remove"),
 )
 
@@ -10,8 +11,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     ids: list[str] = []
     n: int = 0
 
-    @reactive.Effect()
-    @event(input.show)
+    @reactive.Effect
+    @reactive.event(input.show)
     def _():
         nonlocal ids
         nonlocal n
@@ -20,8 +21,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         ids.append(id)
         n += 1
 
-    @reactive.Effect()
-    @event(input.remove)
+    @reactive.Effect
+    @reactive.event(input.remove)
     def _():
         nonlocal ids
         if ids:

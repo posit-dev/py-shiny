@@ -19,8 +19,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect()
-    @event(input.submit)
+    @reactive.Effect
+    @reactive.event(input.submit)
     async def _():
         await session.send_custom_message("append_msg", {"msg": input.msg()})
 

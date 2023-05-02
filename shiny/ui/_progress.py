@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 __all__ = ("Progress",)
 
-from typing import Optional, Dict, Any
+from types import TracebackType
+from typing import Optional, Type
 from warnings import warn
 
 from .._docstring import add_example
-from .._utils import run_coro_sync, rand_hex
+from .._utils import rand_hex
 from ..session import Session, require_active_session
 
 
@@ -23,10 +26,14 @@ class Progress:
         ``min``.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
     """
 
     _style = "notification"
+
+    min: int
+    max: int
+    value: float | None
 
     def __init__(
         self, min: int = 0, max: int = 1, session: Optional[Session] = None
@@ -39,7 +46,18 @@ class Progress:
         self._session = require_active_session(session)
 
         msg = {"id": self._id, "style": self._style}
-        self._send_progress("open", msg)
+        self._session._send_progress("open", msg)
+
+    def __enter__(self) -> "Progress":
+        return self
+
+    def __exit__(
+        self,
+        exctype: Optional[Type[BaseException]],
+        excinst: Optional[BaseException],
+        exctb: Optional[TracebackType],
+    ) -> None:
+        self.close()
 
     def set(
         self,
@@ -84,7 +102,9 @@ class Progress:
             "style": self._style,
         }
 
-        self._send_progress("update", {k: v for k, v in msg.items() if v is not None})
+        self._session._send_progress(
+            "update", {k: v for k, v in msg.items() if v is not None}
+        )
 
     def inc(
         self,
@@ -121,7 +141,8 @@ class Progress:
 
     def close(self) -> None:
         """
-        Close the progress bar.
+        Close the progress bar. You can also use the Progress object as a context
+        manager, which will cause the progress bar to close on exit.
 
         Parameters
         ----------
@@ -136,12 +157,5 @@ class Progress:
             warn("Attempting to close progress, but progress already closed.")
             return None
 
-        self._send_progress("close", {"id": self._id, "style": self._style})
+        self._session._send_progress("close", {"id": self._id, "style": self._style})
         self._closed = True
-
-    def _send_progress(self, type: str, message: Dict[str, Any]) -> None:
-        run_coro_sync(
-            self._session._send_message(
-                {"progress": {"type": type, "message": message}}
-            )
-        )

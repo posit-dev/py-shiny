@@ -7,8 +7,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect()
-    @event(input.rmv)
+    @reactive.Effect
+    @reactive.event(input.rmv)
     def _():
         ui.remove_ui(selector="div:has(> #txt)")
 

@@ -2,19 +2,21 @@ __all__ = ("download_button", "download_link")
 
 from typing import Optional
 
-from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
+from htmltools import Tag, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
+from .._namespaces import resolve_id
 from .._shinyenv import is_pyodide
 
 
 @add_example()
 def download_button(
     id: str,
-    label: TagChildArg,
-    icon: TagChildArg = None,
+    label: TagChild,
+    *,
+    icon: TagChild = None,
     width: Optional[str] = None,
-    **kwargs: TagAttrArg,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Create a download button
@@ -34,7 +36,8 @@ def download_button(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     --------
@@ -46,7 +49,7 @@ def download_button(
         icon,
         label,
         {"class": "btn btn-default shiny-download-link", "style": css(width=width)},
-        id=id,
+        id=resolve_id(id),
         # This is a fake link that just results in a 404. It will be replaced by a
         # working link after the server side logic runs, so this link will only be
         # visited in cases where the user clicks the button too fast, or if the server
@@ -64,10 +67,11 @@ def download_button(
 @add_example()
 def download_link(
     id: str,
-    label: TagChildArg,
-    icon: TagChildArg = None,
+    label: TagChild,
+    *,
+    icon: TagChild = None,
     width: Optional[str] = None,
-    **kwargs: TagAttrArg,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Create a download button
@@ -87,7 +91,8 @@ def download_link(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     --------
@@ -99,7 +104,7 @@ def download_link(
         icon,
         label,
         {"class": "shiny-download-link", "style": css(width=width)},
-        id=id,
+        id=resolve_id(id),
         href="session/0/download/missing_download",
         target="_blank",
         download=None if is_pyodide else True,

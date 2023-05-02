@@ -1,14 +1,14 @@
 import asyncio
-import os
 import io
+import os
 from datetime import date
 from typing import Any
 
-from shiny import *
-from shiny.ui import div, p
-
 import matplotlib.pyplot as plt
 import numpy as np
+
+from shiny import *
+from shiny.ui import div, p
 
 
 def make_example(id: str, label: str, title: str, desc: str, extra: Any = None):
@@ -44,7 +44,9 @@ app_ui = ui.page_fluid(
             desc="Downloads a PNG that's generated on the fly.",
             extra=[
                 ui.input_text("title", "Plot title", "Random scatter plot"),
-                ui.input_slider("num_points", "Number of data points", 1, 100, 50),
+                ui.input_slider(
+                    "num_points", "Number of data points", min=1, max=100, value=50
+                ),
             ],
         ),
     ),
@@ -96,8 +98,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         determines what the browser will name the downloaded file.
         """
 
-        x = np.random.uniform(size=session.input["num_points"])
-        y = np.random.uniform(size=session.input["num_points"])
+        print(input.num_points())
+        x = np.random.uniform(size=input.num_points())
+        y = np.random.uniform(size=input.num_points())
         plt.figure()
         plt.scatter(x, y)
         plt.title(input.title())
@@ -114,7 +117,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         yield "新,1,2\n"
         yield "型,4,5\n"
 
-    @session.download(name="download4", filename="failuretest.txt")
+    @session.download(id="download4", filename="failuretest.txt")
     async def _():
         yield "hello"
         raise Exception("This error was caused intentionally")

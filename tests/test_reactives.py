@@ -1,14 +1,16 @@
 """Tests for `shiny.reactive`."""
 
-import pytest
 import asyncio
 from typing import List
 
-from shiny.input_handler import ActionButtonValue
-from shiny.reactive._core import ReactiveWarning
-from shiny._decorators import *
-from shiny.reactive import *
+import pytest
+
+from shiny import App, render, ui
+from shiny._connection import MockConnection
 from shiny._validation import SilentException, req
+from shiny.input_handler import ActionButtonValue
+from shiny.reactive import *
+from shiny.reactive._core import ReactiveWarning
 
 from .mocktime import MockTime
 
@@ -203,11 +205,11 @@ async def test_recursive_async_calc():
     v = Value(5)
 
     @Calc()
-    async def r():
+    async def r() -> int:
         if v() == 0:
             return 0
         v.set(v() - 1)
-        await r()
+        return await r()
 
     @Effect()
     async def o():
@@ -620,7 +622,7 @@ async def test_calc_error_rethrow():
 # ======================================================================
 # Invalidating dependents
 # ======================================================================
-# For https://github.com/rstudio/prism/issues/26
+# For https://github.com/rstudio/py-shiny/issues/26
 @pytest.mark.asyncio
 async def test_dependent_invalidation():
     trigger = Value(0)
@@ -774,7 +776,6 @@ async def test_invalidate_later_invalidation():
 
 @pytest.mark.asyncio
 async def test_mock_time():
-
     mock_time = MockTime()
 
     with mock_time():
@@ -796,7 +797,7 @@ async def test_mock_time():
 
 
 # ------------------------------------------------------------
-# @event() works as expected
+# @reactive.event() works as expected
 # ------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_event_decorator():
@@ -1091,6 +1092,130 @@ async def test_event_silent_exception_async():
 
 
 # ------------------------------------------------------------
+# @event() throws runtime errors if passed wrong type
+# ------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_event_type_check():
+    conn = MockConnection()
+    session = App(ui.TagList(), None)._create_session(conn)
+    output = session.output
+
+    with pytest.raises(TypeError):
+        # Should complain about missing argument to @event().
+        @event()
+        async def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain that @event() can't take the result of @Effect (which returns
+        # None).
+        @event(lambda: 1)  # type: ignore
+        @Effect()
+        async def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain that @event must be applied before @Calc.
+        @event(lambda: 1)
+        @Calc()
+        async def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain that @event must be applied before @render.text. At some point
+        # in the future, this may be allowed.
+        @event(lambda: 1)  # No static type error, unfortunately.
+        @render.text
+        async def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain that @event must be applied before @output.
+        @event(lambda: 1)  # type: ignore
+        @output
+        @render.text
+        async def _():
+            ...
+
+    # These are OK
+    @event(lambda: 1)
+    async def _():
+        ...
+
+    @Effect()
+    @event(lambda: 1)
+    async def _():
+        ...
+
+    @Calc()
+    @event(lambda: 1)
+    async def _():
+        ...
+
+    @render.text
+    @event(lambda: 1)
+    async def _():
+        ...
+
+
+# ------------------------------------------------------------
+# @output() throws runtime errors if passed wrong type
+# ------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_output_type_check():
+    conn = MockConnection()
+    session = App(ui.TagList(), None)._create_session(conn)
+    output = session.output
+
+    with pytest.raises(TypeError):
+        # Should complain about bare function
+        @output  # type: ignore
+        def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain about @event
+        @output  # type: ignore
+        @event(lambda: 1)
+        def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain about @event, even with render.text. Although maybe in the
+        # future this will be allowed.
+        @output  # type: ignore
+        @event(lambda: 1)
+        @render.text
+        def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain about @Calc
+        @output  # type: ignore
+        @Calc
+        def _():
+            ...
+
+    with pytest.raises(TypeError):
+        # Should complain about @Effet
+        @output  # type: ignore
+        @Effect
+        def _():
+            ...
+
+    @output
+    @render.text
+    def _():
+        ...
+
+    @output
+    @render.plot
+    @event(lambda: 1)
+    def _():
+        ...
+
+
+# ------------------------------------------------------------
 # @effect()'s .suspend()/.resume() works as expected
 # ------------------------------------------------------------
 @pytest.mark.asyncio
@@ -1256,7 +1381,6 @@ async def test_effect_async_pausing():
 
 @pytest.mark.asyncio
 async def test_observer_async_suspended_resumed_observers_run_at_most_once():
-
     a = Value(1)
 
     @Effect()
