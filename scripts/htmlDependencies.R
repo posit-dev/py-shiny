@@ -14,32 +14,36 @@ bslib_info_list <- bslib_info[bslib_info$package == "bslib", , drop = TRUE]
 library(htmltools)
 library(bslib)
 
-shiny_path <- file.path(getwd(), "shiny")
-www <- file.path(shiny_path, "www")
-unlink(www, recursive = TRUE)
-dir.create(www)
+shiny_path <- fs::path(getwd(), "shiny")
+www <- fs::path(shiny_path, "www")
+if (fs::dir_exists(www)) fs::dir_delete(www)
+fs::dir_create(www)
 
 # Copy over shiny's www/shared directory
 withr::with_tempdir({
   cmd <- paste("git clone --depth 1 --branch main https://github.com/rstudio/shiny")
   system(cmd)
-  file.copy(
+  fs::dir_copy(
     "shiny/inst/www/shared",
-    www, recursive = TRUE
+    www
   )
 })
 
 # Don't need legacy (hopefully)
-unlink(file.path(www, "shared", "legacy"), recursive = TRUE)
+fs::dir_delete(fs::path(www, "shared", "legacy"))
+# Don't need dataTables (hopefully)
+fs::dir_delete(fs::path(www, "shared", "datatables"))
 
 # jQuery will come in via bslib (below)
-unlink(Sys.glob(file.path(www, "shared", "jquery*")))
+fs::file_delete(
+  fs::dir_ls(fs::path(www, "shared"), type = "file", regexp = "jquery")
+)
 
 # Upgrade to Bootstrap 5 by default
 deps <- bs_theme_dependencies(bs_theme(version = 5))
 withr::with_options(
   list(htmltools.dir.version = FALSE),
-  lapply(deps, copyDependencyToDir, "shiny/www/shared")
+  ignore <- lapply(deps, copyDependencyToDir, "shiny/www/shared")
 )
 bs_ver <- names(bslib::versions())[bslib::versions() == "5"]
 versions["bootstrap"] <- bs_ver
@@ -57,23 +61,23 @@ jsonlite::write_json(
 # since we're generating BS5+ tab markup. Note, however,
 # we still do have bs3compat's CSS on the page, which
 # comes in via the bootstrap HTMLDependency()
-unlink("shiny/www/shared/bs3compat/", recursive = TRUE)
+fs::dir_delete(fs::path(www, "shared", "bs3compat"))
 
 requirejs_version <- "2.3.6"
 versions["requirejs"] <- requirejs_version
-requirejs <- file.path(www, "shared", "requirejs")
-dir.create(requirejs)
+requirejs <- fs::path(www, "shared", "requirejs")
+fs::dir_create(requirejs)
 download.file(
   paste0("https://cdnjs.cloudflare.com/ajax/libs/require.js/", requirejs_version, "/require.min.js"),
-  file.path(requirejs, "require.min.js")
+  fs::path(requirejs, "require.min.js")
 )
 
-shims <- file.path(getwd(), "scripts", "define-shims.js")
+shims <- fs::path(getwd(), "scripts", "define-shims.js")
 
 cat(
   "\n\n",
   paste(readLines(shims), collapse = "\n"),
-  file = file.path(requirejs, "require.min.js"),
+  file = fs::path(requirejs, "require.min.js"),
   append = TRUE
 )
 
@@ -86,7 +90,7 @@ version_all <- paste0(
   ")\n"
 )
 cat(
-  file = file.path(shiny_path, "_versions.py"),
+  file = fs::path(shiny_path, "_versions.py"),
   version_vars,
   "\n",
   version_all,
