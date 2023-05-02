@@ -7,7 +7,7 @@ import tempfile
 from typing import Dict, Literal, Tuple
 
 # TODO: maybe these include_*() functions should actually live in htmltools?
-from htmltools import tags, Tag, TagAttrArg, HTMLDependency
+from htmltools import HTMLDependency, Tag, TagAttrArg, tags
 from htmltools._util import hash_deterministic
 
 from .._docstring import add_example
@@ -237,7 +237,6 @@ def include_html(
 def create_include_dependency(
     name: str, path: str, include_files: bool
 ) -> Tuple[HTMLDependency, str]:
-
     dep = HTMLDependency(
         name,
         DEFAULT_VERSION,
