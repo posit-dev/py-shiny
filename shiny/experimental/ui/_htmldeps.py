@@ -7,8 +7,8 @@ from htmltools import HTMLDependency
 from shiny import __version__ as shiny_package_version
 
 x_www = PurePath(__file__).parent.parent / "www"
-x_components_path = x_www / "components"
-x_fill_path = x_www / "fill"
+x_components_path = x_www / "bslib" / "components"
+x_fill_path = x_www / "htmltools" / "fill"
 
 
 def card_full_screen_dependency() -> HTMLDependency:
@@ -41,7 +41,7 @@ def sidebar_dependency() -> HTMLDependency:
         "0.0.0",
         source={
             "package": "shiny",
-            "subdir": str(x_components_path / "sidebar"),
+            "subdir": str(x_components_path),
         },
         script={"src": "sidebar.min.js"},
     )
@@ -53,7 +53,7 @@ def accordion_dependency() -> HTMLDependency:
         version=shiny_package_version,
         source={
             "package": "shiny",
-            "subdir": str(x_components_path / "accordion"),
+            "subdir": str(x_components_path),
         },
         script={"src": "accordion.min.js"},
     )

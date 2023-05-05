@@ -1,5 +1,5 @@
 import shiny.experimental as x
-from shiny import App, Inputs, Outputs, Session, reactive, req, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 
 def make_panel(letter: str) -> x.ui.AccordionPanel:
@@ -13,15 +13,16 @@ items = [make_panel(letter) for letter in "ABCD"]
 
 accordion = x.ui.accordion(*items, id="acc")
 app_ui = ui.page_fluid(
-    ui.column(
-        12,
+    ui.tags.div(
         ui.input_action_button("toggle_b", "Open/Close B"),
         ui.input_action_button("open_all", "Open All"),
         ui.input_action_button("close_all", "Close All"),
         ui.input_action_button("alternate", "Alternate"),
         ui.input_action_button("toggle_efg", "Add/Remove EFG"),
         ui.input_action_button("toggle_updates", "Add/Remove Updates"),
+        class_="d-flex",
     ),
+    ui.output_text_verbatim("acc_txt", placeholder=True),
     accordion,
 )
 
@@ -127,9 +128,10 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
         has_updates = not has_updates
 
-    @reactive.Effect
-    def _():
-        print(f"input.acc(): {input.acc()}")
+    @output
+    @render.text
+    def acc_txt():
+        return f"input.acc(): {input.acc()}"
 
 
 app = App(app_ui, server)
