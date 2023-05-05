@@ -10,7 +10,8 @@ from ._card_item import (
 from ._card import card
 from ._layout import layout_column_wrap
 from ._valuebox import value_box
-from ._fill import bind_fill_role
+
+# from ._fill import bind_fill_role
 from ._output import (
     output_image,
     output_plot,
@@ -47,7 +48,7 @@ __all__ = (
     # ValueBox
     "value_box",
     # Fill
-    "bind_fill_role",
+    # "bind_fill_role",
     # Output
     "output_image",
     "output_plot",
