@@ -40,7 +40,7 @@ shiny_path <- fs::path(getwd(), "shiny")
 www <- fs::path(shiny_path, "www")
 www_shared <- fs::path(www, "shared")
 x_www <- fs::path(shiny_path, "experimental", "www")
-x_www_components <- fs::path(x_www, "components")
+x_www_components <- fs::path(x_www, "bslib", "components")
 
 # Copy over shiny's www/shared directory
 copy_from_pkg <- function(pkg_name, pkg_dir, local_dir) {
@@ -82,7 +82,7 @@ fs::file_delete(
 fs::file_delete(fs::path(x_www_components, "tag-require.js"))
 
 # Copy over htmltools's fill directory
-copy_from_pkg("htmltools", "fill", fs::path(x_www, "fill"))
+copy_from_pkg("htmltools", "fill", fs::path(x_www, "htmltools", "fill"))
 
 
 
