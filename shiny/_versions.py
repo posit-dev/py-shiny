@@ -1,4 +1,4 @@
-shiny_html_deps = "1.7.4"
+shiny_html_deps = "1.7.4.9002"
 bslib = "0.4.2.9000"
 bootstrap = "5.2.2"
 requirejs = "2.3.6"

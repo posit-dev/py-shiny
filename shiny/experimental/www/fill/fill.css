@@ -4,13 +4,11 @@
   overflow: auto;
   width: 100%;
 }
-
-.html-fill-container>.html-fill-item {
+.html-fill-container > .html-fill-item {
   flex: 1 1 auto;
   overflow: auto;
   width: 100%;
 }
-
-.html-fill-container>.html-fill-item.html-fill-item-overflow-hidden {
+.html-fill-container > .html-fill-item.html-fill-item-overflow-hidden {
   overflow: hidden;
 }
