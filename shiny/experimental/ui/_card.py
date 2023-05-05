@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import NamedTuple, Optional
+from typing import Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, tags
 
@@ -10,6 +10,7 @@ from ._card_full_screen import full_screen_toggle
 from ._card_item import CardItem, WrapperCallable, card_body, wrap_children_in_card
 from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
+from ._utils import split_args_into_attrs_and_not_attrs
 
 # class Page:
 #     x: Tag
@@ -103,7 +104,7 @@ def card(
     if isinstance(wrapper, MISSING_TYPE):
         wrapper = card_body
 
-    children, attrs = separate_args_into_children_and_attrs(*args)
+    attrs, children = split_args_into_attrs_and_not_attrs(*args)
     children = wrap_children_in_card(*children, wrapper=wrapper)
 
     tag = div(
@@ -126,26 +127,6 @@ def card(
     if class_ is not None:
         tag.add_class(class_)
     return tag
-
-
-class ChildrenAndAttrs(NamedTuple):
-    children: list[TagChild | CardItem]
-    attrs: list[TagAttrs]
-
-
-def separate_args_into_children_and_attrs(
-    *args: TagChild | TagAttrs | CardItem,
-) -> ChildrenAndAttrs:
-    children: list[TagChild | CardItem] = []
-    attrs: list[TagAttrs] = []
-
-    for arg in args:
-        if isinstance(arg, dict):
-            attrs.append(arg)
-        else:
-            children.append(arg)
-
-    return ChildrenAndAttrs(children, attrs)
 
 
 def card_js_init() -> Tag:

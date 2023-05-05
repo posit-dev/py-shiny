@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from htmltools import HTML, Tag, tags
 
-from ._htmldeps import card_full_screen_dep
+from ._htmldeps import card_full_screen_dependency
 
 
 def full_screen_toggle() -> Tag:
@@ -14,7 +14,7 @@ def full_screen_toggle() -> Tag:
             "title": "Expand",
         },
         full_screen_toggle_icon(),
-        card_full_screen_dep(),
+        card_full_screen_dependency(),
     )
 
 

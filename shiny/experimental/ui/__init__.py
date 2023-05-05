@@ -17,6 +17,17 @@ from ._output import (
     output_ui,
 )
 from ._input_text import input_text_area
+from ._accordion import (
+    AccordionPanel,
+    accordion,
+    accordion_panel,
+    accordion_panel_set,
+    accordion_panel_open,
+    accordion_panel_close,
+    accordion_panel_insert,
+    accordion_panel_remove,
+    accordion_panel_update,
+)
 
 __all__ = (
     # Sidebar
@@ -43,4 +54,14 @@ __all__ = (
     "output_ui",
     # input_text_area
     "input_text_area",
+    # Accordion
+    "AccordionPanel",
+    "accordion",
+    "accordion_panel",
+    "accordion_panel_set",
+    "accordion_panel_open",
+    "accordion_panel_close",
+    "accordion_panel_insert",
+    "accordion_panel_remove",
+    "accordion_panel_update",
 )

@@ -4,12 +4,9 @@ from typing import Optional
 
 from htmltools import Tag
 
-from ._htmldeps import fill_dependencies
+from ._htmldeps import fill_dependency
 
 
-# TODO-future: Find a way to allow users to pass `class_` within `**kwargs`, rather than
-# manually handling it so that it can override the classes added by `bind_fill_role()`.
-# Ex: `card_body()`, `card_image()`, `card()`, `layout_column_wrap()` and by extension `value_box()` or any method that calls the first four
 # TODO-future:
 # From @wch:
 # > For functions like this, which modify the original object, I think the Pythonic way
@@ -27,6 +24,10 @@ def bind_fill_role(
 ) -> Tag:
     if item is not None:
         if item:
+            # TODO-barret; prepend the `html-fill-item` so that the class value has least preference. This would make it so that `class_` is handled properly within python and the tag could easily use `tag.add_attrs(*args, **kwargs)` to add the overriding classes and attributes
+            # TODO-barret: Find a way to allow users to pass `class_` within `**kwargs`, rather than
+            # manually handling it so that it can override the classes added by `bind_fill_role()`.
+            # Ex: `card_body()`, `card_image()`, `card()`, `layout_column_wrap()` and by extension `value_box()` or any method that calls the first four
             tag.add_class("html-fill-item")
         else:
             # TODO: this remove_class method doesn't exist, but that's what we want
@@ -36,7 +37,7 @@ def bind_fill_role(
     if container is not None:
         if container:
             tag.add_class("html-fill-container")
-            tag.append(fill_dependencies())
+            tag.append(fill_dependency())
         else:
             # TODO: this remove_class method doesn't exist, but that's what we want
             # tag.remove_class("html-fill-container")
