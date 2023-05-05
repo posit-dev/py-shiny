@@ -18,13 +18,14 @@ from ._utils import split_args_into_attrs_and_not_attrs
 class AccordionPanel:
     _args: tuple[TagChild | TagAttrs, ...]
     _kwargs: dict[str, TagAttrValue]
-    _value: str
+
+    _data_value: str  # Read within `accordion()`
     _icon: TagChild | None
     _title: TagChild | None
     _id: str | None
 
-    _is_open: bool
-    _is_multiple: bool
+    _is_open: bool  # Set within `accordion()`
+    _is_multiple: bool  # Set within `accordion()`
 
     def __init__(
         self,
@@ -43,15 +44,6 @@ class AccordionPanel:
         self._kwargs = kwargs
         self._is_multiple = False
         self._is_open = True
-
-    def set_open(self, open: bool) -> None:
-        self._is_open = open
-
-    def set_multiple(self, multiple: bool) -> None:
-        self._is_multiple = multiple
-
-    def get_data_value(self) -> str:
-        return self._data_value
 
     def resolve(self) -> Tag:
         btn_attrs = {}
@@ -184,7 +176,7 @@ def accordion(
         if not isinstance(open, list):
             open = [open]
         #
-        is_open = [panel.get_data_value() in open for panel in panels]
+        is_open = [panel._data_value in open for panel in panels]
 
     # Open the first panel by default
     if open is not False and len(is_open) > 0 and not any(is_open):
@@ -203,8 +195,8 @@ def accordion(
         binding_class_value = {"class": "bslib-accordion-input"}
 
     for panel, open in zip(panels, is_open):
-        panel.set_multiple(multiple)
-        panel.set_open(open)
+        panel._is_multiple = multiple
+        panel._is_open = open
 
     panel_tags = [panel.resolve() for panel in panels]
 
