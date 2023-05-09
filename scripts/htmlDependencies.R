@@ -3,13 +3,14 @@
 versions <- list()
 
 # Use local lib path for installing packages so we don't pollute the user's library
-# withr::local_temp_libpaths()
+withr::local_temp_libpaths()
 
 pak::pkg_install(c("rstudio/bslib@main", "rstudio/shiny@main", "rstudio/htmltools@main"))
 # pak::pkg_install(c("cran::bslib", "cran::shiny"))
 
 versions["shiny_html_deps"] <- as.character(packageVersion("shiny"))
 versions["bslib"] <- as.character(packageVersion("bslib"))
+versions["htmltools"] <- as.character(packageVersion("htmltools"))
 
 pkg_source_version <- function(pkg_name) {
   pkg_info <- sessioninfo::package_info(pkg_name)

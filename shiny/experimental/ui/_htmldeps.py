@@ -5,6 +5,7 @@ from pathlib import PurePath
 from htmltools import HTMLDependency
 
 from shiny import __version__ as shiny_package_version
+from shiny._versions import htmltools as htmltools_version
 
 x_www = PurePath(__file__).parent.parent / "www"
 x_components_path = x_www / "bslib" / "components"
@@ -26,7 +27,7 @@ def card_full_screen_dependency() -> HTMLDependency:
 def fill_dependency() -> HTMLDependency:
     return HTMLDependency(
         "htmltools-fill",
-        "0.0.0.0",
+        htmltools_version,
         source={
             "package": "shiny",
             "subdir": str(x_fill_path),
