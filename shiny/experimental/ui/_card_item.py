@@ -243,9 +243,8 @@ def card_image(
     height: Optional[CssUnit] = None,
     fill: bool = True,
     width: Optional[CssUnit] = None,
-    container: ImgContainer = card_body,
     **kwargs: TagAttrValue,
-) -> CardItem:
+) -> Tag:
     src = None
     if file is not None:
         if isinstance(file, io.BytesIO):
@@ -291,7 +290,4 @@ def card_image(
     if href is not None:
         image = bind_fill_role(tags.a(image, href=href), container=True, item=True)
 
-    if callable(container):
-        return container(image)
-    else:
-        return CardItem(image)
+    return image
