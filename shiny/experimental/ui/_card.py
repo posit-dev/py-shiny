@@ -10,7 +10,7 @@ from ._card_full_screen import full_screen_toggle
 from ._card_item import CardItem, WrapperCallable, card_body, wrap_children_in_card
 from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
-from ._utils import split_args_into_attrs_and_not_attrs
+from ._utils import consolidate_attrs
 
 # class Page:
 #     x: Tag
@@ -104,7 +104,7 @@ def card(
     if isinstance(wrapper, MISSING_TYPE):
         wrapper = card_body
 
-    attrs, children = split_args_into_attrs_and_not_attrs(*args)
+    attrs, children = consolidate_attrs(*args)
     children = wrap_children_in_card(*children, wrapper=wrapper)
 
     tag = div(

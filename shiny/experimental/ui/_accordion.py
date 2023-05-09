@@ -12,7 +12,7 @@ from shiny.types import MISSING, MISSING_TYPE
 
 from ._css import CssUnit, validate_css_unit
 from ._htmldeps import accordion_dependency
-from ._utils import split_args_into_attrs_and_not_attrs
+from ._utils import consolidate_attrs
 
 
 class AccordionPanel:
@@ -160,7 +160,7 @@ def accordion(
     # TODO-bookmarking: Restore input here
     # open = restore_input(id = id, default = open)
 
-    attrs, panels = split_args_into_attrs_and_not_attrs(*args)
+    attrs, panels = consolidate_attrs(*args)
     for panel in panels:
         if not isinstance(panel, AccordionPanel):
             raise TypeError(

@@ -55,6 +55,7 @@ from ._fill import bind_fill_role
 #
 def layout_column_wrap(
     width: Optional[CssUnit],
+    # TODO-barret; support TagAttrs via consolidate method
     *args: TagChild,  # `TagAttrs` are not allowed here
     fixed_width: bool = False,
     heights_equal: Literal["all", "row"] = "all",
@@ -118,7 +119,6 @@ def layout_column_wrap(
         *upgraded_children,
         **attribs,
     )
-    # pdb.set_trace()
 
     tag = bind_fill_role(tag, item=fill)
     # Give the user an opportunity to override the classes added by bind_fill_role()
