@@ -73,10 +73,7 @@ def card_body(
 ) -> CardItem:
     if isinstance(max_height_full_screen, MISSING_TYPE):
         max_height_full_screen = max_height
-    if fillable:
-        # TODO-future: Make sure shiny >= v1.7.4
-        # TODO-future: Make sure htmlwidgets >= 1.6.0
-        ...
+
     div_style_args = {
         "min-height": validate_css_unit(min_height),
         "--bslib-card-body-max-height": validate_css_unit(max_height),
@@ -189,10 +186,10 @@ class TagCallable(Protocol):  # Should this be exported from htmltools?
 
 def card_title(
     *args: TagChild | TagAttrs,
-    _container: TagCallable = tags.h5,
+    container: TagCallable = tags.h5,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    return _container(*args, **kwargs)
+    return container(*args, **kwargs)
 
 
 # @describeIn card_body A header (with border and background color) for the `card()`. Typically appears before a `card_body()`.
