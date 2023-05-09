@@ -108,10 +108,6 @@ def card(
     children = wrap_children_in_card(*children, wrapper=wrapper)
 
     tag = div(
-        *children,
-        *attrs,
-        full_screen_toggle() if full_screen else None,
-        card_js_init(),
         {
             "class": "card bslib-card",
             "style": css(
@@ -119,6 +115,10 @@ def card(
                 max_height=validate_css_unit(max_height),
             ),
         },
+        *children,
+        *attrs,
+        full_screen_toggle() if full_screen else None,
+        card_js_init(),
         **kwargs,
     )
 
