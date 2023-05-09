@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, overload
 
 from htmltools import TagAttrs, TagChild, css, tags
 
@@ -12,7 +12,7 @@ from ._fill import bind_fill_role
 
 def page_fillable(
     *args: TagChild | TagAttrs,
-    padding: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
     gap: Optional[CssUnit] = None,
     fill_mobile: bool = False,
     title: Optional[str] = None,
@@ -20,7 +20,7 @@ def page_fillable(
 ):
     style = css(
         # TODO: validate_css_padding(padding)
-        padding=validate_css_unit(padding),
+        padding=validate_css_padding(padding),
         gap=validate_css_unit(gap),
         __bslib_page_fill_mobile_height="100%" if fill_mobile else "auto",
     )
@@ -34,3 +34,23 @@ def page_fillable(
         title=title,
         lang=lang,
     )
+
+
+@overload
+def validate_css_padding(padding: CssUnit | list[CssUnit]) -> str:
+    ...
+
+
+@overload
+def validate_css_padding(padding: None) -> None:
+    ...
+
+
+def validate_css_padding(padding: CssUnit | list[CssUnit] | None) -> str | None:
+    if padding is None:
+        return None
+
+    if not isinstance(padding, list):
+        padding = [padding]
+
+    return " ".join(validate_css_unit(p) for p in padding)
