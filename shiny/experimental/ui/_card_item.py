@@ -6,15 +6,22 @@ import mimetypes
 from pathlib import Path, PurePath
 from typing import Optional, Protocol
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
+from htmltools import (
+    MetadataNode,
+    Tag,
+    TagAttrs,
+    TagAttrValue,
+    TagChild,
+    TagList,
+    css,
+    tags,
+)
 
 from shiny._typing_extensions import Literal
 from shiny.types import MISSING, MISSING_TYPE
 
 from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
-
-# T = TypeVar("T", bound=Tagifiable)
 
 
 class CardItem:
@@ -27,8 +34,10 @@ class CardItem:
     def resolve(self) -> TagChild:
         return self._x
 
-    # def tagify(self) -> TagList | Tag | MetadataNode | str:
-    #     return self._x.tagify()
+    def tagify(self) -> TagList | Tag | MetadataNode | str:
+        # TODO-future; Do not wrap in a `div`, forcing a return a return type of TagList;
+        # TODO-future; Handle the elements directly
+        return tags.div(self._x).tagify().children
 
 
 # Card items
