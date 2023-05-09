@@ -115,13 +115,11 @@ def layout_sidebar(
     fill: bool = True,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
-    border: Optional[str] = None,
+    border: Optional[bool] = None,
     border_radius: Optional[bool] = None,
     border_color: Optional[str] = None,
     height: Optional[CssUnit] = None,
 ) -> Tag:
-    # TODO: validate sidebar object, border, border_radius, colors
-
     if fg is None and bg is not None:
         fg = get_color_contrast(bg)
     if bg is None and fg is not None:
