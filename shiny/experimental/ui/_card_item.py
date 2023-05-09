@@ -24,7 +24,7 @@ class CardItem:
     ):
         self._x = x
 
-    def get_item(self) -> TagChild:
+    def resolve(self) -> TagChild:
         return self._x
 
     # def tagify(self) -> TagList | Tag | MetadataNode | str:
@@ -160,7 +160,7 @@ def as_card_items(
 
 
 def card_items_to_tag_children(card_items: list[CardItem]) -> list[TagChild]:
-    return [card_item.get_item() for card_item in card_items]
+    return [card_item.resolve() for card_item in card_items]
 
 
 def wrap_children_in_card(
