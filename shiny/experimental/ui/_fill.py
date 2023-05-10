@@ -18,29 +18,54 @@ from ._htmldeps import fill_dependency
 def bind_fill_role(
     tag: Tag,
     *,
-    # TODO-barret: change `item` and `container` to `fill` and `fillable` respectively
     item: Optional[bool] = None,
     container: Optional[bool] = None,
 ) -> Tag:
     if item is not None:
         if item:
-            # TODO-barret; prepend the `html-fill-item` so that the class value has least preference. This would make it so that `class_` is handled properly within python and the tag could easily use `tag.add_attrs(*args, **kwargs)` to add the overriding classes and attributes
             # TODO-barret: Find a way to allow users to pass `class_` within `**kwargs`, rather than
             # manually handling it so that it can override the classes added by `bind_fill_role()`.
             # Ex: `card_body()`, `card_image()`, `card()`, `layout_column_wrap()` and by extension `value_box()` or any method that calls the first four
-            tag.add_class("html-fill-item")
+            tag_prepend_class(tag, "html-fill-item")
         else:
-            # TODO: this remove_class method doesn't exist, but that's what we want
-            # tag.remove_class("html-fill-item")
-            ...
+            tag_remove_class(tag, "html-fill-item")
 
     if container is not None:
         if container:
-            tag.add_class("html-fill-container")
+            tag_prepend_class(tag, "html-fill-container")
             tag.append(fill_dependency())
         else:
-            # TODO: this remove_class method doesn't exist, but that's what we want
-            # tag.remove_class("html-fill-container")
-            ...
+            tag_remove_class(tag, "html-fill-container")
 
+    return tag
+
+
+# Tag.add_class(x: str) -> Self[Tag]:
+#     cls = self.attrs.get("class")
+#     if cls:
+#         x = cls + " " + x
+#     self.attrs["class"] = x
+#     return self
+
+
+def tag_prepend_class(tag: Tag, x: str) -> Tag:
+    cls = tag.attrs.get("class")
+    if cls:
+        # Prepend the class!
+        x = x + " " + cls
+    tag.attrs["class"] = x
+    return tag
+
+
+def tag_remove_class(tag: Tag, x: str) -> Tag:
+    cls = tag.attrs.get("class")
+    if not cls:
+        return tag
+    if x == cls:
+        tag.attrs.pop("class")
+        return tag
+
+    tag.attrs["class"] = " ".join(
+        [cls_val for cls_val in cls.split(" ") if cls_val != x]
+    )
     return tag
