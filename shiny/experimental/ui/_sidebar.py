@@ -143,7 +143,6 @@ def layout_sidebar(
         *contents,
         sidebar_dependency(),
         sidebar_init_js(),
-        data_sidebar_init_auto_collapse="true" if sidebar.open == "desktop" else None,
         data_bslib_sidebar_init="true" if sidebar.open != "always" else None,
         data_bslib_sidebar_open=sidebar.open,
         data_bslib_sidebar_border=trinary(border),
