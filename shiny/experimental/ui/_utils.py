@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from shiny._typing_extensions import TypeGuard
 import typing
 
 from htmltools import TagAttrs, TagAttrValue, TagChild, div
+
+from shiny._typing_extensions import TypeGuard
 
 T = typing.TypeVar("T", bound=TagChild)
 
@@ -11,7 +12,6 @@ T = typing.TypeVar("T", bound=TagChild)
 TagAttrDict = typing.Dict[str, str]
 
 
-# TODO-barret; leverage `consolidate_attrs()` with `class_` and `**kwargs`
 def consolidate_attrs(
     *args: T | TagAttrs,
     **kwargs: TagAttrValue,

@@ -63,10 +63,10 @@ def layout_column_wrap(
     height: Optional[CssUnit] = None,
     height_mobile: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
-    class_: Optional[str] = None,  # Applies after `bind_fill_role()`
+    class_: Optional[str] = None,
     **kwargs: TagAttrValue,
 ):
-    attrs, children = consolidate_attrs(*args, **kwargs)
+    attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
 
     colspec: str | None = None
     if width is not None:
@@ -117,9 +117,4 @@ def layout_column_wrap(
         **attrs,
     )
 
-    tag = bind_fill_role(tag, item=fill)
-    # Give the user an opportunity to override the classes added by bind_fill_role()
-    if class_ is not None:
-        tag.add_class(class_)
-
-    return tag
+    return bind_fill_role(tag, item=fill)

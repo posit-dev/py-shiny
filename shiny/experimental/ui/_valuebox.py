@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numbers
+import typing
 from typing import Callable, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
@@ -10,7 +11,7 @@ from ._card_item import CardItem
 from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
 from ._layout import layout_column_wrap
-from ._utils import is_01_scalar
+from ._utils import consolidate_attrs, is_01_scalar
 
 
 # It seems to be to use % over fr here since there is no gap on the grid
@@ -39,9 +40,11 @@ def value_box(
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
     fill: bool = True,
-    class_: Optional[str] = None,  # Applies after `bind_fill_role()` inside `card()`
+    class_: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
+    attrs, children = consolidate_attrs(*args, **kwargs)
+
     if showcase_layout is None:
         showcase_layout = showcase_left_center()
     if isinstance(title, str) or isinstance(title, numbers.Number):
@@ -52,7 +55,7 @@ def value_box(
     contents = div(
         title,
         value,
-        *args,
+        *children,
         class_="value-box-area",
     )
     contents = bind_fill_role(contents, container=True, item=True)
@@ -66,12 +69,17 @@ def value_box(
 
     return card(
         contents,
+        # Must be before `attrs` so that `class_` is applied before any `attrs` values
+        {"class": f"bslib-value-box border-0{theme_class_str}"},
+        # TODO-barret: Why is `TagAttrDict` not accepted here as a `TagAttrs` object?
+        # TagAttrDict: Dict[str, str]
+        # TagAttrs: Dict[str, str | float | bool | None]
+        typing.cast(TagAttrs, attrs),
         class_=f"bslib-value-box border-0{theme_class_str}{class_str}",
         full_screen=full_screen,
         height=height,
         max_height=max_height,
         fill=fill,
-        **kwargs,
     )
 
 

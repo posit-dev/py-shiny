@@ -77,7 +77,7 @@ def card_body(
     height: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
     fill: bool = True,
-    class_: Optional[str] = None,  # Applies after `bind_fill_role()`
+    class_: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> CardItem:
     if isinstance(max_height_full_screen, MISSING_TYPE):
@@ -102,16 +102,13 @@ def card_body(
             "class": "card-body",
             "style": css(**div_style_args),
         },
+        class_=class_,
         **kwargs,
     )
 
-    tag = bind_fill_role(tag, item=fill, container=fillable)
-
-    # Give the user an opportunity to override the classes added by bind_fill_role()
-    if class_ is not None:
-        tag.add_class(class_)
-
-    return CardItem(tag)
+    return CardItem(
+        bind_fill_role(tag, item=fill, container=fillable),
+    )
 
 
 # https://mypy.readthedocs.io/en/stable/protocols.html#callback-protocols
@@ -248,7 +245,7 @@ def card_image(
     href: Optional[str] = None,
     border_radius: Literal["top", "bottom", "all", "none"] = "top",
     mime_type: Optional[str] = None,
-    class_: Optional[str] = None,  # Applies after `bind_fill_role()`
+    class_: Optional[str] = None,
     height: Optional[CssUnit] = None,
     fill: bool = True,
     width: Optional[CssUnit] = None,
@@ -288,13 +285,11 @@ def card_image(
         },
         {"class": card_class_map.get(border_radius, None)},
         *args,
+        class_=class_,
         **kwargs,
     )
 
     image = bind_fill_role(image, item=fill)
-    # Give the user an opportunity to override the classes added by bind_fill_role()
-    if class_ is not None:
-        image.add_class(class_)
 
     if href is not None:
         image = bind_fill_role(tags.a(image, href=href), container=True, item=True)

@@ -12,30 +12,6 @@ from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
 from ._utils import consolidate_attrs
 
-# class Page:
-#     x: Tag
-#     def __init__(
-#         self,
-#         x: Tag,
-#     ):
-#         self.x = x
-
-
-# class Fragment:
-#     x: Tag
-#     page: Page
-#     def __init__(
-#         self,
-#         x: Tag,
-#         page: Page,
-#     ):
-#         self.x = x
-#         self.page = page
-
-
-# def as_fragment(x: Tag, page: Page) -> Fragment:
-#     return Fragment(x=x, page=page)
-
 
 # A Bootstrap card component
 #
@@ -97,14 +73,14 @@ def card(
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
     fill: bool = True,
-    class_: Optional[str] = None,  # Applies after `bind_fill_role()`
+    class_: Optional[str] = None,
     wrapper: WrapperCallable | None | MISSING_TYPE = MISSING,
     **kwargs: TagAttrValue,
 ) -> Tag:
     if isinstance(wrapper, MISSING_TYPE):
         wrapper = card_body
 
-    attrs, children = consolidate_attrs(*args)
+    attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
     children = wrap_children_in_card(*children, wrapper=wrapper)
 
     tag = div(
@@ -119,14 +95,9 @@ def card(
         *attrs,
         full_screen_toggle() if full_screen else None,
         card_js_init(),
-        **kwargs,
     )
 
-    tag = bind_fill_role(tag, container=True, item=fill)
-    # Give the user an opportunity to override the classes added by bind_fill_role()
-    if class_ is not None:
-        tag.add_class(class_)
-    return tag
+    return bind_fill_role(tag, container=True, item=fill)
 
 
 def card_js_init() -> Tag:

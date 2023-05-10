@@ -5,6 +5,7 @@ from typing import Optional
 from htmltools import Tag
 
 from ._htmldeps import fill_dependency
+from ._tag import tag_prepend_class, tag_remove_class
 
 
 # TODO-future:
@@ -37,35 +38,4 @@ def bind_fill_role(
         else:
             tag_remove_class(tag, "html-fill-container")
 
-    return tag
-
-
-# Tag.add_class(x: str) -> Self[Tag]:
-#     cls = self.attrs.get("class")
-#     if cls:
-#         x = cls + " " + x
-#     self.attrs["class"] = x
-#     return self
-
-
-def tag_prepend_class(tag: Tag, x: str) -> Tag:
-    cls = tag.attrs.get("class")
-    if cls:
-        # Prepend the class!
-        x = x + " " + cls
-    tag.attrs["class"] = x
-    return tag
-
-
-def tag_remove_class(tag: Tag, x: str) -> Tag:
-    cls = tag.attrs.get("class")
-    if not cls:
-        return tag
-    if x == cls:
-        tag.attrs.pop("class")
-        return tag
-
-    tag.attrs["class"] = " ".join(
-        [cls_val for cls_val in cls.split(" ") if cls_val != x]
-    )
     return tag
