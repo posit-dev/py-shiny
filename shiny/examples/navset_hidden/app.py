@@ -1,13 +1,14 @@
 from shiny import *
+from shiny import experimental as x
 
 app_ui = ui.page_fluid(
-    ui.layout_sidebar(
-        ui.panel_sidebar(
+    x.ui.layout_sidebar(
+        x.ui.panel_sidebar(
             ui.input_radio_buttons(
                 "controller", "Controller", ["1", "2", "3"], selected="1"
             )
         ),
-        ui.panel_main(
+        x.ui.panel_main(
             ui.navset_hidden(
                 ui.nav(None, "Panel 1 content", value="panel1"),
                 ui.nav(None, "Panel 2 content", value="panel2"),

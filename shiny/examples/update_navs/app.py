@@ -1,11 +1,12 @@
 from shiny import *
+from shiny import experimental as x
 
 app_ui = ui.page_fluid(
-    ui.layout_sidebar(
-        ui.panel_sidebar(
+    x.ui.layout_sidebar(
+        x.ui.panel_sidebar(
             ui.input_slider("controller", "Controller", min=1, max=3, value=1)
         ),
-        ui.panel_main(
+        x.ui.panel_main(
             ui.navset_tab_card(
                 ui.nav("Panel 1", "Panel 1 content", value="panel1"),
                 ui.nav("Panel 2", "Panel 2 content", value="panel2"),

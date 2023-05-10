@@ -1,4 +1,4 @@
-from ._sidebar import layout_sidebar, sidebar
+from ._sidebar import layout_sidebar, sidebar, sidebar_toggle, panel_main, panel_sidebar
 from ._page import page_fillable
 from ._card_item import (
     CardItem,
@@ -30,10 +30,14 @@ from ._accordion import (
     accordion_panel_update,
 )
 
+
 __all__ = (
     # Sidebar
     "layout_sidebar",
     "sidebar",
+    "sidebar_toggle",
+    "panel_main",
+    "panel_sidebar",
     # Page
     "page_fillable",
     # Card
