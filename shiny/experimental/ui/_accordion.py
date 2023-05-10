@@ -208,9 +208,8 @@ def accordion(
                 width=validate_css_unit(width), height=validate_css_unit(height)
             ),
         },
-        {"class": "autoclose"}
-        if not multiple
-        else None,  # just for ease of identifying autoclosing client-side
+        # just for ease of identifying autoclosing client-side
+        {"class": "autoclose"} if not multiple else None,
         binding_class_value,
         {"class": class_} if class_ else None,
         accordion_dependency(),
