@@ -5,22 +5,17 @@ from typing import Callable, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
-from shiny._typing_extensions import TypeGuard
-
 from ._card import card, card_body
 from ._card_item import CardItem
 from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
 from ._layout import layout_column_wrap
-
-
-def is_01_scalar(x: object) -> TypeGuard[float]:
-    return isinstance(x, float) and x >= 0.0 and x <= 1.0
+from ._utils import is_01_scalar
 
 
 # It seems to be to use % over fr here since there is no gap on the grid
-def to_width_unit(x: str | float) -> str:
-    if isinstance(x, float):
+def to_width_unit(x: str | float | int | numbers.Number) -> str:
+    if isinstance(x, numbers.Number):
         return validate_css_unit(x)
 
     if isinstance(x, str) and x.endswith("%") and x.count("%") == 1:
@@ -28,7 +23,7 @@ def to_width_unit(x: str | float) -> str:
         x2_num = 100 - x1_num
         return f"{x1_num}% {x2_num}%"
 
-    # TODO: validateCssUnit() should maybe support fr units?
+    # TODO-bslib: validateCssUnit() should maybe support fr units?
     # return(paste(x, collapse = " "))
     return validate_css_unit(x)
 

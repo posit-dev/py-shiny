@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from shiny._typing_extensions import TypeGuard
 import typing
 
 from htmltools import TagAttrs, TagAttrValue, TagChild, div
@@ -19,3 +20,7 @@ def consolidate_attrs(
     # While returning `tag.children` works, it is nice to have a minimal type hint
     children = typing.cast(list[T], tag.children)
     return (tag.attrs, children)
+
+
+def is_01_scalar(x: object) -> TypeGuard[float]:
+    return isinstance(x, float) and x >= 0.0 and x <= 1.0

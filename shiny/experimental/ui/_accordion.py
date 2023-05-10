@@ -76,7 +76,7 @@ class AccordionPanel:
                 "data-value": self._data_value,
             },
             # Use a <span.h2> instead of <h2> so that it doesn't get included in rmd/pkgdown/qmd TOC
-            # TODO: can we provide a way to put more stuff in the header? Like maybe some right-aligned controls?
+            # TODO-bslib: can we provide a way to put more stuff in the header? Like maybe some right-aligned controls?
             tags.span(
                 {"class": "accordion-header h2"},
                 btn,
