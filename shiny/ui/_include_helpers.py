@@ -1,23 +1,25 @@
-__all__ = ("include_javascript", "include_css", "include_html")
+from __future__ import annotations
+
+__all__ = ("include_js", "include_css")
 
 import glob
+import hashlib
 import os
 import shutil
 import tempfile
-from typing import Dict, Literal, Tuple
 
 # TODO: maybe these include_*() functions should actually live in htmltools?
-from htmltools import HTMLDependency, Tag, TagAttrArg, tags
-from htmltools._util import hash_deterministic
+from htmltools import HTMLDependency, Tag, TagAttrs, tags
 
 from .._docstring import add_example
+from .._typing_extensions import Literal
 
 # TODO: it's bummer that, when method="link_files" and path is in the same directory
 # as the app, the app's source will be included. Should we just not copy .py/.r files?
 
 
 @add_example()
-def include_javascript(
+def include_js(
     path: str, *, method: Literal["link", "link_files", "inline"] = "link"
 ) -> Tag:
     """
@@ -59,17 +61,21 @@ def include_javascript(
 
     .. code-block:: python
 
-    from htmltools import head_content from shiny import ui
+
 
     ui.fluidPage(
-        head_content(ui.include_javascript("custom.js"))
+        head_content(ui.include_js("custom.js")),
+    )
+
+    # Alternately you can inline Javscript by changing the method.
+    ui.fluidPage(
+        head_content(ui.include_js("custom.js", method = "inline")),
     )
 
     See Also
     --------
     ~ui.tags.script
     ~include_css
-    ~include_html
     """
 
     if method == "inline":
@@ -129,15 +135,20 @@ def include_css(
     from htmltools import head_content from shiny import ui
 
     ui.fluidPage(
-        head_content(ui.include_css("custom.css"))
+        head_content(ui.include_css("custom.css")),
+
+        # You can also inline css by passing a dictionary with a `style` element.
+        ui.div(
+            {"style": "font-weight: bold;"},
+            ui.p("Some text!"),
+        )
     )
 
     See Also
     --------
     ~ui.tags.style
     ~ui.tags.link
-    ~include_javascript
-    ~include_html
+    ~include_js
     """
 
     if method == "inline":
@@ -153,82 +164,6 @@ def include_css(
     return tags.link(dep, href=src, rel="stylesheet")
 
 
-# TODO: maybe support remote URLs?
-@add_example()
-def include_html(
-    path: str,
-    *,
-    method: Literal["link", "link_files"] = "link",
-    attrs: Dict[str, TagAttrArg] = {},
-) -> Tag:
-    """
-    Include an HTML file
-
-    Parameters
-    ----------
-    path
-        A path to an HTML file.
-    method
-        One of the following:
-          * ``"link"``: Link to the CSS file via a :func:`~ui.tags.link` tag.
-          * ``"link_files"``: Same as ``"link"``, but also allow for the HTML file to
-            request other files within ``path``'s immediate parent directory (e.g.,
-            include an HTML ``<img>`` that points to another local file). This isn't the
-            default behavior because you should **be careful not to include files in the
-            same directory as ``path`` that contain sensitive information**. A good
-            general rule of thumb to follow is to have ``path`` be located in a
-            subdirectory of the app directory. For example, if the app's source is
-            located at ``/app/app.py``, then ``path`` should be somewhere like
-            ``/app/html/index.html`` (and all the other relevant accompanying 'safe'
-            files should be located under ``/app/html/``).
-    attrs
-        Additional attributes to add to the :func:`~ui.tags.iframe` tag.
-
-    Returns
-    -------
-    A :func:`~ui.tags.iframe` tag.
-
-    Note
-    ----
-    For safety reasons, this function includes the HTML file as a
-    :func:`~ui.tags.iframe`, which means it's 'isolated' from the rest of the parent
-    document. If instead, you don't want to isolate (meaning, among other things, you
-    want the HTML inherit CSS styles from the parent document), you can do something
-    like this:
-
-    .. code-block:: python
-        from shiny import ui
-
-        with open("custom.html", "r", encoding="utf-8") as f:
-            custom_html = ui.HTML(f.read())
-
-        app_ui = ui.page_fluid(..., custom_html, ...)
-
-    See also
-    --------
-    ~ui.tags.iframe
-    ~ui.HTML
-    ~include_javascript
-    ~include_css
-    """
-
-    include_files = method == "link_files"
-    path_dest, hash = maybe_copy_files(path, include_files)
-
-    dep, src = create_include_dependency(
-        "include-html-" + hash, path_dest, include_files
-    )
-
-    default_attrs: Dict[str, TagAttrArg] = {
-        "src": src,
-        "scrolling": "no",
-        "seamless": "seamless",
-        "frameBorder": "0",
-    }
-
-    return tags.iframe(default_attrs, dep, **attrs)
-
-
 # ---------------------------------------------------------------------------
 # Include helpers
 # ---------------------------------------------------------------------------
@@ -236,7 +171,7 @@ def include_html(
 
 def create_include_dependency(
     name: str, path: str, include_files: bool
-) -> Tuple[HTMLDependency, str]:
+) -> tuple[HTMLDependency, str]:
     dep = HTMLDependency(
         name,
         DEFAULT_VERSION,
@@ -252,7 +187,7 @@ def create_include_dependency(
     return dep, src
 
 
-def maybe_copy_files(path: str, include_files: bool) -> Tuple[str, str]:
+def maybe_copy_files(path: str, include_files: bool) -> tuple[str, str]:
     hash = get_hash(path, include_files)
 
     # To avoid unnecessary work when the same file is included multiple times,
@@ -290,6 +225,13 @@ def get_hash(path: str, include_files: bool) -> str:
 
 def get_file_key(path: str) -> str:
     return path + "-" + str(os.path.getmtime(path))
+
+
+def hash_deterministic(s: str) -> str:
+    """
+    Returns a deterministic hash of the given string.
+    """
+    return hashlib.sha1(s.encode("utf-8")).hexdigest()
 
 
 def read_utf8(path: str) -> str:
