@@ -296,7 +296,7 @@ def near_points(
 
     # Track the row indices to keep (note this is the row position, 0, 1, 2, not the
     # pandas index column, which can have arbitrary values).
-    keep_idx = np.where(keep_rows)[0]  # pyright: ignore[reportUnknownMemberType]
+    keep_idx = np.where(keep_rows)[0]
 
     # Order by distance
     dists = dists.iloc[keep_idx]

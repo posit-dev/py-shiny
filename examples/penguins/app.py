@@ -49,8 +49,7 @@ app_ui = x.ui.page_fillable(
             ui.input_switch("show_margins", "Show marginal plots", value=True),
         ),
         ui.output_ui("value_boxes"),
-        # ui.output_text_verbatim("brush"),
-        x.ui.output_plot("scatter", fill=True, brush=ui.brush_opts()),
+        x.ui.output_plot("scatter", fill=True),
         fill=True,
         fillable=True,
     ),
@@ -65,20 +64,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         # This calculation "req"uires that at least one species is selected
         req(len(input.species()) > 0)
 
-        if False:
-            if "scatter_brush" in input:
-                info = input.scatter_brush()
-                print(str(info))
-            else:
-                print("No brush!")
-
         # Filter the rows so we only include the desired species
         return df[df["Species"].isin(input.species())]
-
-    @output
-    @render.text
-    def brush():
-        return str(input.scatter_brush())
 
     @output
     @render.plot
@@ -105,23 +92,11 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         def penguin_value_box(title: str, count: int, bgcol: str, showcase_img: str):
             return x.ui.value_box(
-                f"{title}",
+                title,
                 count,
                 {"class_": "pt-1 pb-0"},
-                # ui.h1(HTML("$1 <i>Billion</i> Dollars")),
-                # ui.span(
-                #     # bsicons::bs_icon("arrow-up"),
-                #     # "X",
-                #     " 30% VS PREVIOUS 30 DAYS",
-                # ),
-                # showcase = bsicons::bs_icon("piggy-bank"),
-                # showcase=f"{name}!",
-                # class_="bg-success",
                 showcase=x.ui.bind_fill_role(
-                    ui.tags.img(
-                        {"style": "object-fit:contain;"},
-                        src=showcase_img,
-                    ),
+                    ui.tags.img({"style": "object-fit:contain;"}, src=showcase_img),
                     item=True,
                 ),
                 theme_color=None,

@@ -35,7 +35,10 @@ def get_coordmap(fig: Figure) -> Coordmap | None:
         "height": dims_ar[1],
     }
 
-    all_axes = cast("list[Axes]", fig.get_axes())
+    all_axes = cast(
+        "list[Axes]",  # pyright: ignore
+        fig.get_axes(),
+    )
 
     panels: list[CoordmapPanel] = []
     for i, axes in enumerate(all_axes):
