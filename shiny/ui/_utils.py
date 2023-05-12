@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, overload
 
 from htmltools import (
     HTMLDependency,
@@ -18,6 +18,30 @@ from ..types import MISSING, MISSING_TYPE
 def shiny_input_label(id: str, label: TagChild = None) -> Tag:
     cls = "control-label" + ("" if label else " shiny-label-null")
     return tags.label(label, class_=cls, id=id + "-label", for_=id)
+
+
+@overload
+def get_window_title(
+    title: None,
+    window_title: MISSING_TYPE,
+) -> None:
+    ...
+
+
+@overload
+def get_window_title(
+    title: None,
+    window_title: str,
+) -> HTMLDependency:
+    ...
+
+
+@overload
+def get_window_title(
+    title: str | Tag | TagList,
+    window_title: str | MISSING_TYPE,
+) -> HTMLDependency:
+    ...
 
 
 def get_window_title(

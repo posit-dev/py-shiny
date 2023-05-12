@@ -1,5 +1,5 @@
 from ._sidebar import layout_sidebar, sidebar, sidebar_toggle, panel_main, panel_sidebar
-from ._page import page_fillable
+from ._page import page_fillable, page_navbar
 from ._card_item import (
     CardItem,
     card_header,
@@ -40,6 +40,7 @@ __all__ = (
     "panel_sidebar",
     # Page
     "page_fillable",
+    "page_navbar",
     # Card
     "CardItem",
     "card",
