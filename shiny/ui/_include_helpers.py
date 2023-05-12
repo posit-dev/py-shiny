@@ -20,7 +20,7 @@ from .._typing_extensions import Literal
 
 @add_example()
 def include_js(
-    path: str, *, method: Literal["link", "link_files", "inline"] = "link"
+    path: str, *, method: Literal["link", "link_files", "inline"] = "link", **kwargs
 ) -> Tag:
     """
     Include a JavaScript file
@@ -46,6 +46,8 @@ def include_js(
             should be located under ``/app/js/``).
           * ``"inline"``: Inline the JS file contents within a :func:`~ui.tags.script`
             tag.
+    *kwargs
+        Attributes which are passed on to `~ui.tags.script`
 
 
     Returns
@@ -79,14 +81,14 @@ def include_js(
     """
 
     if method == "inline":
-        return tags.script(read_utf8(path), type="text/javascript")
+        return tags.script(read_utf8(path), type="text/javascript", **kwargs)
 
     include_files = method == "link_files"
     path_dest, hash = maybe_copy_files(path, include_files)
 
     dep, src = create_include_dependency("include-js-" + hash, path_dest, include_files)
 
-    return tags.script(dep, src=src)
+    return tags.script(dep, src=src, **kwargs)
 
 
 @add_example()
