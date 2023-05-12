@@ -9,7 +9,7 @@ import shutil
 import tempfile
 
 # TODO: maybe these include_*() functions should actually live in htmltools?
-from htmltools import HTMLDependency, Tag, tags
+from htmltools import HTMLDependency, Tag, TagAttrValue, tags
 
 from .._docstring import add_example
 from .._typing_extensions import Literal
@@ -20,7 +20,10 @@ from .._typing_extensions import Literal
 
 @add_example()
 def include_js(
-    path: str, *, method: Literal["link", "link_files", "inline"] = "link", **kwargs
+    path: str,
+    *,
+    method: Literal["link", "link_files", "inline"] = "link",
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Include a JavaScript file
