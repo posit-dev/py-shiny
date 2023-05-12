@@ -2,6 +2,8 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
+import json
+
 __all__ = (
     "RenderFunction",
     "RenderFunctionAsync",
@@ -34,6 +36,7 @@ from typing import (
     Generic,
     Optional,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -534,6 +537,9 @@ class RenderTable(RenderFunction[object, "RenderedDeps | None"]):
 
         import pandas
         import pandas.io.formats.style
+
+        if "json" in self._kwargs and self._kwargs["json"]:
+            return json.loads(cast(str, x.to_json(orient="split")))
 
         html: str
         if isinstance(x, pandas.io.formats.style.Styler):

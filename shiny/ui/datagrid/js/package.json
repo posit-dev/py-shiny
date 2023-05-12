@@ -1,0 +1,25 @@
+{
+  "name": "glide-data-grid-binding",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -noEmit && esbuild --bundle index.tsx --outdir=dist --sourcemap --tree-shaking=true --minify",
+    "watch": "npx nodemon --exec 'npm run build' --watch index.tsx package.json"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@glideapps/glide-data-grid": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/jquery": "^3.5.16",
+    "@types/react": "^18.0.33",
+    "@types/react-dom": "^18.0.11",
+    "@types/rstudio-shiny": "github:rstudio/shiny#v1.7.4",
+    "esbuild": "^0.17.15",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^5.0.3"
+  }
+}
