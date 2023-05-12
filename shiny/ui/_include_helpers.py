@@ -9,7 +9,7 @@ import shutil
 import tempfile
 
 # TODO: maybe these include_*() functions should actually live in htmltools?
-from htmltools import HTMLDependency, Tag, TagAttrs, tags
+from htmltools import HTMLDependency, Tag, tags
 
 from .._docstring import add_example
 from .._typing_extensions import Literal
