@@ -151,6 +151,10 @@ const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
     }): boolean => {
       const { ctx, column, columnIndex, theme, rect, isSelected } = args;
 
+      if (columnIndex < 0) {
+        return false;
+      }
+
       let x = rect.x;
       let x2 = x + rect.width;
       x += theme.cellHorizontalPadding;
