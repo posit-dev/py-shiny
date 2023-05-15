@@ -5,8 +5,7 @@ from typing import Callable, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
-from shiny._typing_extensions import TypeGuard
-
+from ..._typing_extensions import TypeGuard
 from ._card import card, card_body
 from ._card_item import CardItem
 from ._css import CssUnit, validate_css_unit

@@ -11,7 +11,12 @@ import typing
 from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
 
-from shiny._typing_extensions import Literal, Protocol, TypeGuard, assert_type
+from shiny._typing_extensions import (  # pyright: ignore[reportPrivateImportUsage]
+    Literal,
+    Protocol,
+    TypeGuard,
+    assert_type,
+)
 from shiny.types import MISSING, MISSING_TYPE
 
 """
