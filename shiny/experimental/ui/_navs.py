@@ -20,13 +20,13 @@ from typing import Any, Optional, Sequence, cast
 
 from htmltools import MetadataNode, Tag, TagChild, TagList, div, tags
 
-from shiny._docstring import add_example
-from shiny._namespaces import resolve_id
-from shiny._typing_extensions import Literal
-from shiny._utils import private_random_int
-from shiny.types import NavSetArg
-from shiny.ui._bootstrap import column, row
-from shiny.ui._html_dependencies import bootstrap_deps
+from ..._docstring import add_example
+from ..._namespaces import resolve_id
+from ..._typing_extensions import Literal
+from ..._utils import private_random_int
+from ...types import NavSetArg
+from ...ui._bootstrap import column, row
+from ...ui._html_dependencies import bootstrap_deps
 
 from ._fill import bind_fill_role
 from ._sidebar import Sidebar, layout_sidebar

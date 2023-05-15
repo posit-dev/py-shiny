@@ -4,7 +4,7 @@ import typing
 
 from htmltools import TagAttrs, TagAttrValue, TagChild, div
 
-from shiny._typing_extensions import TypeGuard
+from ..._typing_extensions import TypeGuard
 
 T = typing.TypeVar("T", bound=TagChild)
 
