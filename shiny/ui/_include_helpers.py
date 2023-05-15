@@ -66,8 +66,6 @@ def include_js(
 
     .. code-block:: python
 
-
-
     ui.fluidPage(
         head_content(ui.include_js("custom.js")),
     )
