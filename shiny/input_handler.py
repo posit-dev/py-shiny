@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict
 if TYPE_CHECKING:
     from .session import Session
 
+
 from .types import ActionButtonValue
 
 InputHandlerType = Callable[[Any, str, "Session"], Any]
