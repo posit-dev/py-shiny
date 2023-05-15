@@ -6,7 +6,7 @@ from typing import Dict, Union, cast
 import pytest
 from htmltools import Tag, TagList
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, module, reactive, ui
 from shiny._connection import MockConnection
 from shiny._namespaces import resolve_id
 from shiny.session import get_current_session

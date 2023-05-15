@@ -2,7 +2,11 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
-__all__ = ("get_current_session", "session_context", "require_active_session")
+__all__ = (
+    "get_current_session",
+    "session_context",
+    "require_active_session",
+)
 
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
