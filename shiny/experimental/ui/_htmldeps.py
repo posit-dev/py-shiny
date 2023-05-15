@@ -12,15 +12,15 @@ x_components_path = x_www / "bslib" / "components"
 x_fill_path = x_www / "htmltools" / "fill"
 
 
-def card_full_screen_dependency() -> HTMLDependency:
+def card_dependency() -> HTMLDependency:
     return HTMLDependency(
-        name="shiny-card-full-screen",
+        name="bslib-card",
         version=bslib_version,
         source={
             "package": "shiny",
             "subdir": str(x_components_path),
         },
-        script={"src": "card-full-screen.js"},
+        script={"src": "card.min.js"},
     )
 
 
