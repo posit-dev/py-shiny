@@ -8,9 +8,9 @@ from typing import Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
-from shiny._typing_extensions import Literal, Protocol
 from shiny.types import MISSING, MISSING_TYPE
 
+from ..._typing_extensions import Literal, Protocol
 from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
 
