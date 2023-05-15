@@ -5,7 +5,8 @@ from typing import Optional
 
 from htmltools import TagAttrValue, TagChild, css, div
 
-from ..._typing_extensions import Literal
+from shiny._typing_extensions import Literal
+
 from ._css import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
 

@@ -8,7 +8,8 @@ from htmltools import Tag, TagAttrs, TagChild, css, div
 from htmltools import svg as svgtags
 from htmltools import tags
 
-from ..._typing_extensions import Literal
+from shiny._typing_extensions import Literal
+
 from ._color import get_color_contrast
 from ._css import CssUnit, trinary, validate_css_unit
 from ._fill import bind_fill_role
