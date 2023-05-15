@@ -49,7 +49,7 @@ def include_js(
             should be located under ``/app/js/``).
           * ``"inline"``: Inline the JS file contents within a :func:`~ui.tags.script`
             tag.
-    *kwargs
+    **kwargs
         Attributes which are passed on to `~ui.tags.script`
 
 
