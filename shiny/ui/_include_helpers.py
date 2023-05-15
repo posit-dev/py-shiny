@@ -55,7 +55,8 @@ def include_js(
 
     Returns
     -------
-    A :func:`~ui.tags.script` tag.
+    :
+        A :func:`~ui.tags.script` tag.
 
     Note
     ----
