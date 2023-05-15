@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc -noEmit && esbuild --bundle index.tsx --outdir=dist --sourcemap --tree-shaking=true --minify",
-    "watch": "npx nodemon --exec 'npm run build' --watch index.tsx package.json"
+    "build": "tsc -noEmit && esbuild --bundle index.tsx --outdir=dist --sourcemap",
+    "watch": "npx nodemon --exec 'npm run build' --watch *.tsx package.json"
   },
   "author": "",
   "license": "MIT",

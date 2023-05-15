@@ -32,6 +32,8 @@ interface PandasData {
 interface WrappedGridProps {
   id: string;
   data: PandasData;
+  width?: string;
+  height?: string;
 }
 
 interface SortEntry {
@@ -42,23 +44,17 @@ interface SortEntry {
 const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
   const data = props.data;
 
-  const [sortList, setSortList] = React.useState<ReadonlyArray<SortEntry>>([]);
+  const [sortList, setSortList] = React.useState<readonly SortEntry[]>([]);
 
-  const sortedData = React.useMemo<CellData>(() => {
-    if (sortList.length === 0) {
-      return data.data;
-    }
-    const newRows = [...data.data];
-    sortList.forEach(({ columnIndex, desc }) => {
-      const descFactor = desc ? -1 : 1;
-      newRows.sort((rowA, rowB) => {
-        // TODO: More sophisticated sorting. (Dates, times?)
-        const a = rowA[columnIndex];
-        const b = rowB[columnIndex];
-        return descFactor * (a < b ? -1 : a > b ? 1 : 0);
-      });
+  const { data: sortedData, rowNums: originalRowNums } = React.useMemo<{
+    data: CellData;
+    rowNums: ReadonlyArray<number>;
+  }>(() => {
+    return applySort(data.data, sortList, (rowA, rowB, columnIndex) => {
+      const a = rowA[columnIndex];
+      const b = rowB[columnIndex];
+      return a < b ? -1 : a > b ? 1 : 0;
     });
-    return newRows;
   }, [data.data, sortList]);
 
   const getContent = React.useCallback(
@@ -110,25 +106,25 @@ const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
     [sortedData] // dependencies
   );
 
+  console.log(originalRowNums);
+
   const onCellEdited = React.useCallback(
     (cell: Item, newValue: EditableGridCell): void => {
-      // TODO: MUST FIX THIS. Currently, the cell coordinates are post-sorting; this
-      // must be fixed so that the row is as it appears in the original data! Maybe we
-      // can include the post-sorted row index as a separate property, but the original
-      // index is by far the more important. (Or, maybe, disable editing for sortable
-      // grids?)
       Shiny.setInputValue(
         props.id + "_cell_edit",
         {
           col: cell[0],
-          row: cell[1],
+          // Go from row number in the visible grid, to the row
+          // number in the original data.
+          row: originalRowNums[cell[1]],
+          sorted_row: cell[1],
           new_value: newValue.data,
           cell_kind: newValue.kind,
         },
         { priority: "event" }
       );
     },
-    []
+    [originalRowNums]
   );
 
   const columns = data.columns.map((col) => {
@@ -326,7 +322,8 @@ const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
       onCellEdited={onCellEdited}
       drawHeader={drawHeaderCustom}
       onHeaderMenuClick={onSortClick}
-      height="400px"
+      height={props.height}
+      width={props.width}
       rowMarkers="clickable-number"
       // rangeSelect?: "none" | "cell" | "rect" | "multi-cell" | "multi-rect"; // default rect
       // columnSelect?: "none" | "single" | "multi"; // default multi
@@ -334,6 +331,51 @@ const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
     />
   );
 };
+
+/**
+ * Sorts items by the comparator, but instead of returning a sorted array, returns the
+ * indices of the items in sorted order.
+ */
+function sortOrder<T>(
+  items: ReadonlyArray<T>,
+  comparator: (a: T, b: T) => number
+): Array<number> {
+  const indices = items.map((_, index) => index);
+  indices.sort((indexA, indexB) => comparator(items[indexA], items[indexB]));
+  return indices;
+}
+
+/**
+ * Retrieve items[indices]
+ */
+function mget<T>(
+  items: ReadonlyArray<T>,
+  indices: ReadonlyArray<number>
+): ReadonlyArray<T> {
+  return indices.map((i) => items[i]);
+}
+
+function applySort<T>(
+  data: readonly T[],
+  sortList: readonly SortEntry[],
+  comparator: (a: T, b: T, columnIndex: number) => number
+): { data: readonly T[]; rowNums: readonly number[] } {
+  if (sortList.length === 0) {
+    return { data, rowNums: data.map((_, i) => i) };
+  }
+  let newRows = [...data] as readonly T[];
+  let originalRowNums = newRows.map((_, i) => i) as readonly number[];
+  sortList.forEach(({ columnIndex, desc }) => {
+    const descFactor = desc ? -1 : 1;
+    const sortIndices = sortOrder(
+      newRows,
+      (a, b) => descFactor * comparator(a, b, columnIndex)
+    );
+    newRows = mget(newRows, sortIndices);
+    originalRowNums = mget(originalRowNums, sortIndices);
+  });
+  return { data: newRows, rowNums: originalRowNums };
+}
 
 const roots = new WeakMap<HTMLElement, Root>();
 
@@ -361,7 +403,9 @@ class GlideDataGridBinding extends Shiny.OutputBinding {
 
     const id = this.getId(el);
 
-    root.render(data && <WrappedGrid id={id} data={data as PandasData} />);
+    root.render(
+      data && <WrappedGrid id={id} data={data as PandasData} height="500px" />
+    );
   }
 }
 Shiny.outputBindings.register(new GlideDataGridBinding(), "shinyGlideDataGrid");

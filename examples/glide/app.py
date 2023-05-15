@@ -1,11 +1,9 @@
 import pandas as pd
 import seaborn as sns
-import shinyswatch
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 app_ui = ui.page_fluid(
-    # shinyswatch.get_theme("darkly"),
     ui.input_select("dataset", "Dataset", sns.get_dataset_names()),
     ui.output_data_grid("grid"),
 )
