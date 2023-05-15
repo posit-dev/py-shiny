@@ -37,9 +37,9 @@ def include_js(
           * ``"link"``: Link to the JS file via a :func:`~ui.tags.script` tag. This
             method is generally preferrable to ``"inline"`` since it allows the browser
             to cache the file.
-          * ``"link_files"``: Same as ``"link"``, but also allow for the CSS file to
+          * ``"link_files"``: Same as ``"link"``, but also allow for the JS file to
             request other files within ``path``'s immediate parent directory (e.g.,
-            ``fetch()`` the contents of another file). Note that this isn't the default
+            ``import()` another file, if it is loaded with `type="module"`). Note that this isn't the default
             behavior because you should **be careful not to include files in the same
             directory as ``path`` that contain sensitive information**. A good general
             rule of thumb to follow is to have ``path`` be located in a subdirectory of
