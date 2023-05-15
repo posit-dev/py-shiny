@@ -51,9 +51,9 @@ jobs:
     if: github.event_name != 'release'
     strategy:
       matrix:
-        python-version: ["3.11", "3.10", "3.9", "3.8", "3.7"]
+        python-version: ["3.7"]
         os: [ubuntu-latest]
-      fail-fast: false
+      fail-fast: true
 
     steps:
       - uses: actions/checkout@v3
