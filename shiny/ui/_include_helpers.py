@@ -7,6 +7,7 @@ import hashlib
 import os
 import shutil
 import tempfile
+from pathlib import Path
 
 # TODO: maybe these include_*() functions should actually live in htmltools?
 from htmltools import HTMLDependency, Tag, TagAttrValue, tags
@@ -20,7 +21,7 @@ from .._typing_extensions import Literal
 
 @add_example()
 def include_js(
-    path: str,
+    path: Path | str,
     *,
     method: Literal["link", "link_files", "inline"] = "link",
     **kwargs: TagAttrValue,
@@ -67,14 +68,14 @@ def include_js(
 
     .. code-block:: python
 
-    ui.fluidPage(
-        head_content(ui.include_js("custom.js")),
-    )
+        ui.fluidPage(
+            head_content(ui.include_js("custom.js")),
+        )
 
-    # Alternately you can inline Javscript by changing the method.
-    ui.fluidPage(
-        head_content(ui.include_js("custom.js", method = "inline")),
-    )
+        # Alternately you can inline Javscript by changing the method.
+        ui.fluidPage(
+            head_content(ui.include_js("custom.js", method = "inline")),
+        )
 
     See Also
     --------
@@ -83,7 +84,7 @@ def include_js(
     """
 
     if method == "inline":
-        return tags.script(read_utf8(path), type="text/javascript", **kwargs)
+        return tags.script(read_utf8(path), **kwargs)
 
     include_files = method == "link_files"
     path_dest, hash = maybe_copy_files(path, include_files)
@@ -122,10 +123,13 @@ def include_css(
           * ``"inline"``: Inline the CSS file contents within a :func:`~ui.tags.style`
             tag.
 
+
     Returns
     -------
-    If ``method="inline"``, returns a :func:`~ui.tags.style` tag; otherwise, returns a
-    :func:`~ui.tags.link` tag.
+    :
+
+        If ``method="inline"``, returns a :func:`~ui.tags.style` tag; otherwise, returns a
+        :func:`~ui.tags.link` tag.
 
     Note
     ----
@@ -136,17 +140,17 @@ def include_css(
 
     .. code-block:: python
 
-    from htmltools import head_content from shiny import ui
+        from htmltools import head_content from shiny import ui
 
-    ui.fluidPage(
-        head_content(ui.include_css("custom.css")),
+        ui.fluidPage(
+            head_content(ui.include_css("custom.css")),
 
-        # You can also inline css by passing a dictionary with a `style` element.
-        ui.div(
-            {"style": "font-weight: bold;"},
-            ui.p("Some text!"),
+            # You can also inline css by passing a dictionary with a `style` element.
+            ui.div(
+                {"style": "font-weight: bold;"},
+                ui.p("Some text!"),
+            )
         )
-    )
 
     See Also
     --------
@@ -191,7 +195,7 @@ def create_include_dependency(
     return dep, src
 
 
-def maybe_copy_files(path: str, include_files: bool) -> tuple[str, str]:
+def maybe_copy_files(path: Path | str, include_files: bool) -> tuple[str, str]:
     hash = get_hash(path, include_files)
 
     # To avoid unnecessary work when the same file is included multiple times,
@@ -217,7 +221,7 @@ def maybe_copy_files(path: str, include_files: bool) -> tuple[str, str]:
     return path_dest, hash
 
 
-def get_hash(path: str, include_files: bool) -> str:
+def get_hash(path: Path | str, include_files: bool) -> str:
     if include_files:
         key = get_file_key(path)
     else:
@@ -227,8 +231,9 @@ def get_hash(path: str, include_files: bool) -> str:
     return hash_deterministic(key)
 
 
-def get_file_key(path: str) -> str:
-    return path + "-" + str(os.path.getmtime(path))
+def get_file_key(path: Path | str) -> str:
+    path_str = str(path) if isinstance(path, Path) else path
+    return path_str + "-" + str(os.path.getmtime(path_str))
 
 
 def hash_deterministic(s: str) -> str:
@@ -238,7 +243,7 @@ def hash_deterministic(s: str) -> str:
     return hashlib.sha1(s.encode("utf-8")).hexdigest()
 
 
-def read_utf8(path: str) -> str:
+def read_utf8(path: Path | str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 
