@@ -4,21 +4,39 @@ on:
   push:
 
 jobs:
-  e2e:
-    runs-on: ${{ matrix.os }}
+  build:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8"]
-        os: [ubuntu-latest]
-      fail-fast: false
+        # "3.10" must be a string; otherwise it is interpreted as 3.1.
+        python-version: ["3.11"]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+      fail-fast: true
 
     steps:
       - uses: actions/checkout@v3
       - name: Setup py-shiny
+        id: install
         uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Run End-to-End tests
+      - name: Run unit tests
+        if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make e2e
+          make test
+
+      - name: Type check with pyright
+        if: matrix.python-version != '3.7' && steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          make pyright
+
+      - name: Lint with flake8
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          make lint
+
+      - name: black and isort
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          make check
