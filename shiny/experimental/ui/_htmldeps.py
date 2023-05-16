@@ -4,8 +4,8 @@ from pathlib import PurePath
 
 from htmltools import HTMLDependency
 
-from shiny._versions import bslib as bslib_version
-from shiny._versions import htmltools as htmltools_version
+from ..._versions import bslib as bslib_version
+from ..._versions import htmltools as htmltools_version
 
 x_www = PurePath(__file__).parent.parent / "www"
 x_components_path = x_www / "bslib" / "components"

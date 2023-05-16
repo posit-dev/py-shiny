@@ -13,12 +13,11 @@ from htmltools import (
     tags,
 )
 
-from shiny import ui
-from shiny._typing_extensions import Literal
-from shiny.types import MISSING, MISSING_TYPE, NavSetArg
-from shiny.ui import page_bootstrap
-from shiny.ui._utils import get_window_title
-
+from ..._typing_extensions import Literal
+from ...types import MISSING, MISSING_TYPE, NavSetArg
+from ...ui import page_bootstrap
+from ...ui._utils import get_window_title
+from .. import ui
 from ._css import CssUnit, validate_css_unit
 from ._fill import as_fillable_container
 from ._navs import navset_bar

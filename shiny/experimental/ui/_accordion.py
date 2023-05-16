@@ -5,11 +5,10 @@ from typing import Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
-from shiny._typing_extensions import Literal
-from shiny._utils import drop_none
-from shiny.session import Session, require_active_session
-from shiny.types import MISSING, MISSING_TYPE
-
+from ..._typing_extensions import Literal
+from ..._utils import drop_none
+from ...session import Session, require_active_session
+from ...types import MISSING, MISSING_TYPE
 from ._css import CssUnit, validate_css_unit
 from ._htmldeps import accordion_dependency
 from ._utils import consolidate_attrs

@@ -1,7 +1,8 @@
 from data import adjectives, animals, dark_color, light_color
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session
 from shiny import experimental as x
+from shiny import reactive, render, ui
 
 app_ui = ui.page_fixed(
     ui.h1("Toggle Sidebars"),
