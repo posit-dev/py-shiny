@@ -7,7 +7,7 @@ from htmltools import TagAttrs, TagAttrValue, TagChild, css, div
 from shiny._typing_extensions import Literal
 
 from ._css import CssUnit, validate_css_unit
-from ._fill import bind_fill_role
+from ._fill import as_fillable_container, bind_fill_role
 from ._utils import consolidate_attrs, is_01_scalar
 
 
@@ -88,9 +88,8 @@ def layout_column_wrap(
     upgraded_children: list[TagChild] = []
     for child_value in children:
         upgraded_children.append(
-            bind_fill_role(
+            as_fillable_container(
                 div(bind_fill_role(div(child_value), container=fillable, item=True)),
-                container=True,
             )
         )
     tag_style_css = {

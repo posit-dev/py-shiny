@@ -9,7 +9,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 from ._card import card, card_body
 from ._card_item import CardItem
 from ._css import CssUnit, validate_css_unit
-from ._fill import bind_fill_role
+from ._fill import as_fill_carrier, bind_fill_role
 from ._layout import layout_column_wrap
 from ._utils import consolidate_attrs, is_01_scalar
 
@@ -58,7 +58,7 @@ def value_box(
         *children,
         class_="value-box-area",
     )
-    contents = bind_fill_role(contents, container=True, item=True)
+    contents = as_fill_carrier(contents)
 
     if showcase is not None:
         contents = showcase_layout(showcase, contents)
@@ -149,9 +149,7 @@ def showcase_layout_(
             {"class": "showcase-top-right"} if top_right else None,
             style=css(**css_args),
         )
-        showcase_container = bind_fill_role(
-            showcase_container, container=True, item=True
-        )
+        showcase_container = as_fill_carrier(showcase_container)
 
         if not top_right:
             contents.add_class("border-start")

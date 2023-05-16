@@ -20,7 +20,7 @@ from shiny.ui import page_bootstrap
 from shiny.ui._utils import get_window_title
 
 from ._css import CssUnit, validate_css_unit
-from ._fill import bind_fill_role
+from ._fill import as_fillable_container
 from ._navs import navset_bar
 from ._sidebar import Sidebar
 from ._utils import consolidate_attrs
@@ -172,13 +172,12 @@ def page_fillable(
 
     return ui.page_bootstrap(
         tags.head(tags.style("html { height: 100%; }")),
-        bind_fill_role(
+        as_fillable_container(
             tags.body(
                 {"class_": "bslib-page-fill", "style": style},
                 *children,
                 **attrs,
             ),
-            container=True,
         ),
         title=title,
         lang=lang,

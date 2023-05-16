@@ -18,7 +18,7 @@ from ...types import NavSetArg
 from ...ui._html_dependencies import bootstrap_deps
 from ._card import CardItem, card
 from ._card_item import card_body, card_footer, card_header
-from ._fill import bind_fill_role
+from ._fill import as_fill_carrier, bind_fill_role
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import tag_add_style
 
@@ -396,7 +396,7 @@ class NavSetBar(NavSet):
             )
             # If fillable is truthy, the .container also needs to be fillable
             if self.fillable:
-                content_div = bind_fill_role(content_div, container=True, item=True)
+                content_div = as_fill_carrier(content_div)
         else:
             content_div = div(
                 layout_sidebar(
@@ -413,7 +413,7 @@ class NavSetBar(NavSet):
 
             # Always have the sidebar layout fill its parent (in this case
             # fillable controls whether the _main_ content portion is fillable)
-            content_div = bind_fill_role(content_div, container=True, item=True)
+            content_div = as_fill_carrier(content_div)
 
         return TagList(nav_final, content_div)
 
@@ -427,7 +427,7 @@ def make_tabs_fillable(
 
     # Even if only one .tab-pane wants fillable behavior, the .tab-content
     # must to be a fillable container.
-    content = bind_fill_role(content, container=True, item=True)
+    content = as_fill_carrier(content)
 
     for child in content.children:
         # Only work on Tags
@@ -443,7 +443,7 @@ def make_tabs_fillable(
                 continue
         if navbar:
             child = tag_add_style(child, "--bslib-navbar-margin=0;")
-        child = bind_fill_role(child, container=True, item=True)
+        child = as_fill_carrier(child)
 
     return content
 

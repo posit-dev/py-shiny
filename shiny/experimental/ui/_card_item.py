@@ -21,7 +21,7 @@ from shiny._typing_extensions import Literal
 from shiny.types import MISSING, MISSING_TYPE
 
 from ._css import CssUnit, validate_css_unit
-from ._fill import bind_fill_role
+from ._fill import as_fill_carrier, bind_fill_role
 
 
 class CardItem:
@@ -292,6 +292,6 @@ def card_image(
     image = bind_fill_role(image, item=fill)
 
     if href is not None:
-        image = bind_fill_role(tags.a(image, href=href), container=True, item=True)
+        image = as_fill_carrier(tags.a(image, href=href))
 
     return image
