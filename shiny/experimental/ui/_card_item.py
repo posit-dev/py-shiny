@@ -237,8 +237,10 @@ def card_image(
     height: Optional[CssUnit] = None,
     fill: bool = True,
     width: Optional[CssUnit] = None,
+    # Required so that multiple `card_images()` are not put in the same `card()`
+    container: ImgContainer = card_body,
     **kwargs: TagAttrValue,
-) -> Tag:
+) -> CardItem:
     src = None
     if file is not None:
         if isinstance(file, io.BytesIO):
@@ -282,4 +284,7 @@ def card_image(
     if href is not None:
         image = as_fill_carrier(tags.a(image, href=href))
 
-    return image
+    if container:
+        return container(image)
+    else:
+        return CardItem(image)
