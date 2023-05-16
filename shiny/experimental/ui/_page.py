@@ -17,7 +17,6 @@ from ..._typing_extensions import Literal
 from ...types import MISSING, MISSING_TYPE, NavSetArg
 from ...ui import page_bootstrap
 from ...ui._utils import get_window_title
-from .. import ui
 from ._css import CssUnit, validate_css_unit
 from ._fill import as_fillable_container
 from ._navs import navset_bar
@@ -169,7 +168,7 @@ def page_fillable(
         __bslib_page_fill_mobile_height="100%" if fill_mobile else "auto",
     )
 
-    return ui.page_bootstrap(
+    return page_bootstrap(
         tags.head(tags.style("html { height: 100%; }")),
         as_fillable_container(
             tags.body(
