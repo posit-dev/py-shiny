@@ -12,7 +12,17 @@ from ._card import card
 from ._layout import layout_column_wrap
 from ._valuebox import value_box
 
-# from ._fill import bind_fill_role
+from ._fill import (
+    # bind_fill_role,
+    as_fill_carrier,
+    as_fillable_container,
+    as_fill_item,
+    remove_all_fill,
+    is_fill_carrier,
+    is_fillable_container,
+    is_fill_item,
+)
+
 from ._output import (
     output_image,
     output_plot,
@@ -59,6 +69,13 @@ __all__ = (
     "value_box",
     # Fill
     # "bind_fill_role",
+    "as_fill_carrier",
+    "as_fillable_container",
+    "as_fill_item",
+    "remove_all_fill",
+    "is_fill_carrier",
+    "is_fillable_container",
+    "is_fill_item",
     # Output
     "output_image",
     "output_plot",

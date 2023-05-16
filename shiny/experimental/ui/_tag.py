@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from typing import TypeVar
+
 from htmltools import Tag, css
+
+TagT = TypeVar("TagT", bound="Tag")
 
 # Tag.add_class(x: str) -> Self[Tag]:
 #     cls = self.attrs.get("class")
@@ -12,7 +16,7 @@ from htmltools import Tag, css
 
 # Do not export
 # "Prepend" version of `tag.add_class(class_)`
-def tag_prepend_class(tag: Tag, class_: str) -> Tag:
+def tag_prepend_class(tag: TagT, class_: str) -> TagT:
     cls = tag.attrs.get("class")
     if cls:
         # Prepend the class!
@@ -21,7 +25,7 @@ def tag_prepend_class(tag: Tag, class_: str) -> Tag:
     return tag
 
 
-def tag_remove_class(tag: Tag, x: str) -> Tag:
+def tag_remove_class(tag: TagT, x: str) -> TagT:
     """
     Remove a class value from the HTML class attribute.
 
@@ -49,9 +53,8 @@ def tag_remove_class(tag: Tag, x: str) -> Tag:
 
 
 def tag_add_style(
-    tag: Tag, *style: str, collapse_: str = "", **kwargs: str | float | None
-) -> Tag:
-    raise RuntimeError("Method currently not used. Remove this error message to use.")
+    tag: TagT, *style: str, collapse_: str = "", **kwargs: str | float | None
+) -> TagT:
     """
     Add a style value(s) to the HTML style attribute.
 
