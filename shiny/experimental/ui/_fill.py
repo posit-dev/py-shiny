@@ -86,6 +86,22 @@ fill_container_class = "html-fill-container"
 # # Inner does fill outer
 # if (interactive()) browsable(tagz)
 #
+def add_role(
+    tag: TagT, *, condition: bool | None, class_: str, overwrite: bool = False
+) -> TagT:
+    if condition is None:
+        return tag
+
+    # Remove the class if it already exists and we're going to add it,
+    # or if we're requiring it to be removed
+    if (condition and tag.has_class(class_)) or overwrite:
+        tag = tag_remove_class(tag, class_)
+
+    if condition:
+        tag = tag_prepend_class(tag, class_)
+    return tag
+
+
 def bind_fill_role(
     tag: TagT,
     *,
@@ -93,21 +109,18 @@ def bind_fill_role(
     container: Optional[bool] = None,
     overwrite: bool = False,
 ) -> TagT:
-    def add_role(tag: TagT, condition: bool | None, class_: str) -> TagT:
-        if condition is None:
-            return tag
-
-        # Remove the class if it already exists and we're going to add it,
-        # or if we're requiring it to be removed
-        if (condition and tag.has_class(class_)) or overwrite:
-            tag = tag_remove_class(tag, class_)
-
-        if condition:
-            tag = tag_prepend_class(tag, class_)
-        return tag
-
-    tag = add_role(tag, item, fill_item_class)
-    tag = add_role(tag, container, fill_container_class)
+    tag = add_role(
+        tag,
+        condition=item,
+        class_=fill_item_class,
+        overwrite=overwrite,
+    )
+    tag = add_role(
+        tag,
+        condition=container,
+        class_=fill_container_class,
+        overwrite=overwrite,
+    )
     return tag
 
 

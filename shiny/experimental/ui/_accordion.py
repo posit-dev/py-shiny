@@ -375,6 +375,17 @@ def accordion_panel_remove(
     )
 
 
+T = TypeVar("T")
+
+
+def missing_none_x(x: T | None | MISSING_TYPE) -> T | Literal[""] | None:
+    if isinstance(x, MISSING_TYPE):
+        return None
+    if x is None:
+        return ""
+    return x
+
+
 # @describeIn accordion_panel_set update a [accordion_panel()].
 # @inheritParams accordion_panel
 # @export
@@ -388,14 +399,6 @@ def accordion_panel_update(
     session: Optional[Session] = None,
 ) -> None:
     session = require_active_session(session)
-    T = TypeVar("T")
-
-    def missing_none_x(x: T | None | MISSING_TYPE) -> T | Literal[""] | None:
-        if isinstance(x, MISSING_TYPE):
-            return None
-        if x is None:
-            return ""
-        return x
 
     title = missing_none_x(title)
     value = missing_none_x(value)
