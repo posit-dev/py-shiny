@@ -6,16 +6,7 @@ import mimetypes
 from pathlib import Path, PurePath
 from typing import Optional
 
-from htmltools import (
-    MetadataNode,
-    Tag,
-    TagAttrs,
-    TagAttrValue,
-    TagChild,
-    TagList,
-    css,
-    tags,
-)
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, css, tags
 
 from ..._typing_extensions import Literal, Protocol
 from ...types import MISSING, MISSING_TYPE
@@ -33,10 +24,8 @@ class CardItem:
     def resolve(self) -> TagChild:
         return self._x
 
-    def tagify(self) -> TagList | Tag | MetadataNode | str:
-        # TODO-future; Do not wrap in a `div`, forcing a return a return type of TagList;
-        # TODO-future; Handle the elements directly
-        return tags.div(self._x).tagify().children
+    def tagify(self) -> TagList:
+        return TagList(self._x).tagify()
 
 
 # Card items
