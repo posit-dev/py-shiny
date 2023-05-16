@@ -255,7 +255,7 @@ def accordion_panel(
 # Send message before the next flush since things like remove/insert may
 # remove/create input/output values. Also do this for set/open/close since,
 # you might want to open a panel after inserting it.
-def send_panel_message(
+def _send_panel_message(
     id: str,
     session: Session | None,
     **kwargs: object,
@@ -290,9 +290,9 @@ def _accordion_panel_action(
     if not isinstance(values, bool):
         if not isinstance(values, list):
             values = [values]
-        assert_list_str(values)
+        _assert_list_str(values)
 
-    send_panel_message(
+    _send_panel_message(
         id,
         session,
         method=method,
@@ -347,12 +347,12 @@ def accordion_panel_insert(
     if position not in ("after", "before"):
         raise ValueError("`position` must be either 'after' or 'before'")
     session = require_active_session(session)
-    send_panel_message(
+    _send_panel_message(
         id,
         session,
         method="insert",
         panel=session._process_ui(panel.resolve()),
-        target=None if target is None else assert_str(target),
+        target=None if target is None else _assert_str(target),
         position=position,
     )
 
@@ -367,18 +367,18 @@ def accordion_panel_remove(
     if not isinstance(target, list):
         target = [target]
 
-    send_panel_message(
+    _send_panel_message(
         id,
         session,
         method="remove",
-        target=assert_list_str(target),
+        target=_assert_list_str(target),
     )
 
 
 T = TypeVar("T")
 
 
-def missing_none_x(x: T | None | MISSING_TYPE) -> T | Literal[""] | None:
+def _missing_none_x(x: T | None | MISSING_TYPE) -> T | Literal[""] | None:
     if isinstance(x, MISSING_TYPE):
         return None
     if x is None:
@@ -400,28 +400,28 @@ def accordion_panel_update(
 ) -> None:
     session = require_active_session(session)
 
-    title = missing_none_x(title)
-    value = missing_none_x(value)
-    icon = missing_none_x(icon)
-    send_panel_message(
+    title = _missing_none_x(title)
+    value = _missing_none_x(value)
+    icon = _missing_none_x(icon)
+    _send_panel_message(
         id,
         session,
         method="update",
-        target=assert_str(target),
-        value=None if value is None else assert_str(value),
+        target=_assert_str(target),
+        value=None if value is None else _assert_str(value),
         body=None if len(body) == 0 else session._process_ui(body),
         title=None if title is None else session._process_ui(title),
         icon=None if icon is None else session._process_ui(icon),
     )
 
 
-def assert_str(x: str) -> str:
+def _assert_str(x: str) -> str:
     if not isinstance(x, str):
         raise TypeError(f"Expected str, got {type(x)}")
     return x
 
 
-def assert_list_str(x: list[str]) -> list[str]:
+def _assert_list_str(x: list[str]) -> list[str]:
     if not isinstance(x, list):
         raise TypeError(f"Expected list, got {type(x)}")
     for i, x_i in enumerate(x):
