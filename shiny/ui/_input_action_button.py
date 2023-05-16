@@ -48,7 +48,7 @@ def input_action_button(
     See Also
     -------
     ~shiny.ui.input_action_link
-    ~shiny.event
+    ~shiny.reactive.event
     """
 
     return tags.button(
@@ -99,7 +99,7 @@ def input_action_link(
     See Also
     -------
     ~shiny.ui.input_action_button
-    ~shiny.event
+    ~shiny.reactive.event
     """
 
     return tags.a(
