@@ -18,7 +18,7 @@ def consolidate_attrs(
 ) -> tuple[TagAttrDict, list[T]]:
     tag = div(*args, **kwargs)
     # While returning `tag.children` works, it is nice to have a minimal type hint
-    children = typing.cast(list[T], tag.children)
+    children = typing.cast(typing.List[T], tag.children)
     return (tag.attrs, children)
 
 
