@@ -9,7 +9,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 from ._card import card, card_body
 from ._card_item import CardItem
 from ._css import CssUnit, validate_css_unit
-from ._fill import as_fill_carrier, bind_fill_role
+from ._fill import as_fill_carrier
 from ._layout import layout_column_wrap
 from ._utils import consolidate_attrs, is_01_scalar
 

@@ -18,7 +18,7 @@ from ...types import NavSetArg
 from ...ui._html_dependencies import bootstrap_deps
 from ._card import CardItem, card
 from ._card_item import card_body, card_footer, card_header
-from ._fill import as_fill_carrier, bind_fill_role
+from ._fill import as_fill_carrier
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import tag_add_style
 
