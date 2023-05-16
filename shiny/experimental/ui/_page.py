@@ -31,7 +31,7 @@ def page_navbar(
     title: Optional[str | Tag | TagList] = None,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    sidebar: Optional[TagChild] = None,
+    sidebar: Optional[Sidebar] = None,
     # Only page_navbar gets enhancedtreatement for `fillable`
     # If an `*args`'s `data-value` attr string is in `fillable`, then the component is fillable
     fillable: bool | list[str] = False,
