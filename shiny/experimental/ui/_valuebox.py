@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numbers
-import typing
 from typing import Callable, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
@@ -43,7 +42,14 @@ def value_box(
     class_: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    attrs, children = consolidate_attrs(*args, **kwargs)
+    attrs, children = consolidate_attrs(
+        # Must be before `attrs` so that `class_` is applied before any `attrs` values
+        {"class": "bslib-value-box border-0"},
+        {"class": f"bg-{theme_color}"} if theme_color else None,
+        *args,
+        class_=class_,
+        **kwargs,
+    )
 
     if showcase_layout is None:
         showcase_layout = showcase_left_center()
@@ -64,18 +70,10 @@ def value_box(
         contents = showcase_layout(showcase, contents)
 
     # Must use `class_` in `card()` as it must be applied after `bind_fill_role()`
-    theme_class_str = f" bg-{theme_color}" if theme_color else ""
-    class_str = f" {class_}" if class_ is not None else ""
 
     return card(
         contents,
-        # Must be before `attrs` so that `class_` is applied before any `attrs` values
-        {"class": f"bslib-value-box border-0{theme_class_str}"},
-        # TODO-barret: Why is `TagAttrDict` not accepted here as a `TagAttrs` object?
-        # TagAttrDict: Dict[str, str]
-        # TagAttrs: Dict[str, str | float | bool | None]
-        typing.cast(TagAttrs, attrs),
-        class_=f"bslib-value-box border-0{theme_class_str}{class_str}",
+        attrs,
         full_screen=full_screen,
         height=height,
         max_height=max_height,

@@ -93,7 +93,7 @@ def card(
             "data-bslib-card-init": True,
         },
         *children,
-        *attrs,
+        attrs,
         full_screen_toggle() if full_screen else None,
         card_dependency(),
         card_js_init(),

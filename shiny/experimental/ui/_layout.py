@@ -111,8 +111,8 @@ def layout_column_wrap(
             "class": "bslib-column-wrap",
             "style": css(**tag_style_css),
         },
+        attrs,
         *upgraded_children,
-        **attrs,
     )
 
     return bind_fill_role(tag, item=fill)

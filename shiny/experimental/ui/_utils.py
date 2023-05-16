@@ -8,18 +8,20 @@ from ..._typing_extensions import TypeGuard
 
 T = typing.TypeVar("T", bound=TagChild)
 
-# Export this type from htmltools
-TagAttrDict = typing.Dict[str, str]
-
 
 def consolidate_attrs(
     *args: T | TagAttrs,
     **kwargs: TagAttrValue,
-) -> tuple[TagAttrDict, list[T]]:
+) -> tuple[TagAttrs, list[T]]:
     tag = div(*args, **kwargs)
-    # While returning `tag.children` works, it is nice to have a minimal type hint
-    children = typing.cast(typing.List[T], tag.children)
-    return (tag.attrs, children)
+
+    # `TagAttrs` currently isn't compatible with `htmltools._core.TagAttrDict`
+    # https://github.com/rstudio/py-htmltools/pull/55
+    attrs = typing.cast(TagAttrs, tag.attrs)
+
+    # Do not alter children structure (like `TagList` does)
+    children = [child for child in args if not isinstance(child, dict)]
+    return (attrs, children)
 
 
 def is_01_scalar(x: object) -> TypeGuard[float]:

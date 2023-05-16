@@ -159,7 +159,7 @@ def accordion(
     # TODO-bookmarking: Restore input here
     # open = restore_input(id = id, default = open)
 
-    attrs, panels = consolidate_attrs(*args)
+    attrs, panels = consolidate_attrs(*args, class_=class_, **kwargs)
     for panel in panels:
         if not isinstance(panel, AccordionPanel):
             raise TypeError(
@@ -210,11 +210,9 @@ def accordion(
         # just for ease of identifying autoclosing client-side
         {"class": "autoclose"} if not multiple else None,
         binding_class_value,
-        {"class": class_} if class_ else None,
         accordion_dependency(),
-        *attrs,
+        attrs,
         *panel_tags,
-        **kwargs,
     )
     return tag
 
@@ -226,10 +224,10 @@ def accordion(
 # @export
 def accordion_panel(
     title: TagChild,
-    *body: TagChild | TagAttrs,
+    *args: TagChild | TagAttrs,
     value: Optional[str] | MISSING_TYPE = MISSING,
     icon: Optional[TagChild] = None,
-    **attrs: TagAttrValue,
+    **kwargs: TagAttrValue,
 ) -> AccordionPanel:
     if value is MISSING:
         if isinstance(title, str):
@@ -243,12 +241,12 @@ def accordion_panel(
     id = f"bslib-accordion-panel-{random.randint(1000, 10000)}"
 
     return AccordionPanel(
-        *body,
+        *args,
         data_value=value,
         icon=icon,
         title=title,
         id=id,
-        **attrs,
+        **kwargs,
     )
 
 

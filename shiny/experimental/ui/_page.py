@@ -173,8 +173,8 @@ def page_fillable(
         as_fillable_container(
             tags.body(
                 {"class_": "bslib-page-fill", "style": style},
+                attrs,
                 *children,
-                **attrs,
             ),
         ),
         title=title,
