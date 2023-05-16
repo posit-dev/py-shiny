@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import shiny.experimental as x
 from shiny import App, ui
 from shiny.types import NavSetArg
