@@ -1,12 +1,12 @@
-import os
+from pathlib import Path
 
 from shiny import *
 
-css_file = os.path.join(os.path.dirname(__file__), "css/styles.css")
+css_file = Path(__file__).parent / "css" / "styles.css"
 
 app_ui = ui.page_fluid(
     "Almost before we knew it, we had left the ground!!!",
-    ui.include_css(css_file, method="link_files"),
+    ui.include_css(css_file),
     ui.div(
         # Style individual elements with an attribute dictionary.
         {"style": "font-weight: bold"},

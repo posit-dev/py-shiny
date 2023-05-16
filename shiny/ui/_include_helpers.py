@@ -82,12 +82,13 @@ def include_js(
     ~ui.tags.script
     ~include_css
     """
+    file_path = check_path(path)
 
     if method == "inline":
-        return tags.script(read_utf8(path), **kwargs)
+        return tags.script(read_utf8(file_path), **kwargs)
 
     include_files = method == "link_files"
-    path_dest, hash = maybe_copy_files(path, include_files)
+    path_dest, hash = maybe_copy_files(file_path, include_files)
 
     dep, src = create_include_dependency("include-js-" + hash, path_dest, include_files)
 
@@ -159,11 +160,12 @@ def include_css(
     ~include_js
     """
 
+    file_path = check_path(path)
     if method == "inline":
-        return tags.style(read_utf8(path), type="text/css")
+        return tags.style(read_utf8(file_path), type="text/css")
 
     include_files = method == "link_files"
-    path_dest, hash = maybe_copy_files(path, include_files)
+    path_dest, hash = maybe_copy_files(file_path, include_files)
 
     dep, src = create_include_dependency(
         "include-css-" + hash, path_dest, include_files
@@ -175,6 +177,17 @@ def include_css(
 # ---------------------------------------------------------------------------
 # Include helpers
 # ---------------------------------------------------------------------------
+
+
+def check_path(path: Path | str) -> Path:
+    path = Path(path)
+    if not path.exists():
+        err = f"""
+        {path.absolute()} does not exist.
+        Files are typically placed in the app directory and refered to with 'Path(__file__) / {path.name}'
+        """
+        raise RuntimeError(err)
+    return path
 
 
 def create_include_dependency(
@@ -232,8 +245,8 @@ def get_hash(path: Path | str, include_files: bool) -> str:
 
 
 def get_file_key(path: Path | str) -> str:
-    path_str = str(path) if isinstance(path, Path) else path
-    return path_str + "-" + str(os.path.getmtime(path_str))
+    path = Path(path)
+    return str(path) + "-" + str(path.stat().st_mtime)
 
 
 def hash_deterministic(s: str) -> str:
