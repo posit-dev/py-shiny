@@ -8,9 +8,9 @@ from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, TagList, css,
 from htmltools import svg as svgtags
 from htmltools import tags
 
-from shiny._deprecated import warn_deprecated
-from shiny._typing_extensions import Literal
-from shiny.session import Session, require_active_session
+from ..._deprecated import warn_deprecated
+from ..._typing_extensions import Literal
+from ...session import Session, require_active_session
 
 # from ._color import get_color_contrast
 from ._css import CssUnit, trinary, validate_css_unit

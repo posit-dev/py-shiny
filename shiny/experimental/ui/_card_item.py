@@ -4,7 +4,7 @@ import base64
 import io
 import mimetypes
 from pathlib import Path, PurePath
-from typing import Optional, Protocol
+from typing import Optional
 
 from htmltools import (
     MetadataNode,
@@ -17,9 +17,8 @@ from htmltools import (
     tags,
 )
 
-from shiny._typing_extensions import Literal
-from shiny.types import MISSING, MISSING_TYPE
-
+from ..._typing_extensions import Literal, Protocol
+from ...types import MISSING, MISSING_TYPE
 from ._css import CssUnit, validate_css_unit
 from ._fill import as_fill_carrier, bind_fill_role
 

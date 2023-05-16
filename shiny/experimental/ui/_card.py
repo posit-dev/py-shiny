@@ -4,8 +4,7 @@ from typing import Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, tags
 
-from shiny.types import MISSING, MISSING_TYPE
-
+from ...types import MISSING, MISSING_TYPE
 from ._card_full_screen import full_screen_toggle
 from ._card_item import CardItem, WrapperCallable, card_body, wrap_children_in_card
 from ._css import CssUnit, validate_css_unit

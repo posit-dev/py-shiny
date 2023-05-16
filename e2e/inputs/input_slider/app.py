@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from e2e.controls import typing
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 slider_nums: list[int] = []
 
