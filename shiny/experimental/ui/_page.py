@@ -114,12 +114,12 @@ def page_navbar(
     # (which is a sibling of the <nav>) to always fill the page
     if fillable is False and sidebar is None:
         # `page_func = page_bootstrap` throws type errors. Wrap in a function to get around them
-        def page_func(*args: TagChild | TagAttrs, **kwargs: object) -> Tag:
+        def page_func(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
             return page_bootstrap(*args, **kwargs)
 
     else:
 
-        def page_func(*args: TagChild | TagAttrs, **kwargs: object) -> Tag:
+        def page_func(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
             return page_fillable(
                 *args,
                 fill_mobile=fill_mobile,
@@ -172,7 +172,7 @@ def page_fillable(
         tags.head(tags.style("html { height: 100%; }")),
         as_fillable_container(
             tags.body(
-                {"class_": "bslib-page-fill", "style": style},
+                {"class": "bslib-page-fill", "style": style},
                 attrs,
                 *children,
             ),

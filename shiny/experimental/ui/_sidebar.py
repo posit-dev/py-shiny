@@ -114,6 +114,8 @@ def layout_sidebar(
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
+    assert isinstance(sidebar, Sidebar)
+
     # TODO-future; implement
     # if fg is None and bg is not None:
     #     fg = get_color_contrast(bg)
@@ -125,12 +127,7 @@ def layout_sidebar(
         *args,
         **kwargs,
     )
-
     main = bind_fill_role(main, container=fillable)
-
-    contents = [main, sidebar.tag, sidebar.collapse_tag]
-
-    right = sidebar.position == "right"
 
     max_height_mobile = sidebar.max_height_mobile or (
         "250px" if height is None else "50%"
@@ -138,9 +135,11 @@ def layout_sidebar(
 
     res = div(
         {"class": "bslib-sidebar-layout"},
-        {"class": "sidebar-right"} if right else None,
+        {"class": "sidebar-right"} if sidebar.position == "right" else None,
         {"class": "sidebar-collapsed"} if sidebar.open == "closed" else None,
-        *contents,
+        main,
+        sidebar.tag,
+        sidebar.collapse_tag,
         sidebar_dependency(),
         sidebar_init_js(),
         data_bslib_sidebar_init="true" if sidebar.open != "always" else None,
@@ -172,7 +171,7 @@ def sidebar_toggle(
 ) -> None:
     session = require_active_session(session)
 
-    method: Literal["toggle", "open", "close"] = "toggle"
+    method: Literal["toggle", "open", "close"]
     if open is None or open == "toggle":
         method = "toggle"
     elif open is True or open == "open":
@@ -215,7 +214,7 @@ def sidebar_init_js() -> Tag:
     # container into a web component
     return tags.script(
         {"data-bslib-sidebar-init": True},
-        HTML("bslib.Sidebar.initCollapsibleAll()"),
+        "bslib.Sidebar.initCollapsibleAll()",
     )
 
 

@@ -78,14 +78,14 @@ def tag_add_style(
     :
         The modified tag.
     """
-    css_str = css(collapse_=collapse_, **kwargs)
-    if css_str is not None:
-        style += (css_str,)
-    style_str = " ".join(style)
+    style_tuple = (
+        tag.attrs.get("style"),
+        *style,
+        css(collapse_=collapse_, **kwargs),
+    )
+    non_none_style_tuple = (s for s in style_tuple if s is not None)
+    style_str = collapse_.join(non_none_style_tuple)
 
-    # Append to existing style value if it exists
-    style_attr = tag.attrs.get("style")
-    if style_attr:
-        style_str = style_attr + " " + style_str
-    tag.attrs["style"] = style_str
+    if style_str:
+        tag.attrs["style"] = style_str
     return tag

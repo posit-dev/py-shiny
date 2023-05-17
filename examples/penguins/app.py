@@ -94,7 +94,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             return x.ui.value_box(
                 title,
                 count,
-                {"class_": "pt-1 pb-0"},
+                {"class": "pt-1 pb-0"},
                 showcase=x.ui.as_fill_item(
                     ui.tags.img({"style": "object-fit:contain;"}, src=showcase_img)
                 ),

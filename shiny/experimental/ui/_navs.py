@@ -383,7 +383,7 @@ class NavSetBar(NavSet):
         else:
             nav_final.add_class(f"bg-{'dark' if self.inverse else 'light'}")
 
-        content = make_tabs_fillable(content, self.fillable is not False, navbar=True)
+        content = make_tabs_fillable(content, self.fillable, navbar=True)
 
         # 2023-05-11; Do not wrap `row()` around `self.header` and `self.footer`
         contents: list[TagChild] = [
@@ -420,7 +420,7 @@ class NavSetBar(NavSet):
 
 # Given a .tab-content container, mark each relevant .tab-pane as a fill container/item.
 def make_tabs_fillable(
-    content: Tag, fillable: bool = False, navbar: bool = False
+    content: Tag, fillable: bool | list[str] = False, navbar: bool = False
 ) -> Tag:
     if not fillable:
         return content

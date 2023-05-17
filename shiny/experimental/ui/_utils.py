@@ -6,13 +6,13 @@ from htmltools import TagAttrs, TagAttrValue, TagChild, div
 
 from ..._typing_extensions import TypeGuard
 
-T = typing.TypeVar("T", bound=TagChild)
+TagChildT = typing.TypeVar("TagChildT", bound=TagChild)
 
 
 def consolidate_attrs(
-    *args: T | TagAttrs,
+    *args: TagChildT | TagAttrs,
     **kwargs: TagAttrValue,
-) -> tuple[TagAttrs, list[T]]:
+) -> tuple[TagAttrs, list[TagChildT]]:
     tag = div(*args, **kwargs)
 
     # `TagAttrs` currently isn't compatible with `htmltools._core.TagAttrDict`

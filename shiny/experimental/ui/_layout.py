@@ -54,7 +54,7 @@ from ._utils import consolidate_attrs, is_01_scalar
 #
 def layout_column_wrap(
     width: Optional[CssUnit],
-    *args: TagChild | TagAttrs,  # `TagAttrs` are not allowed here
+    *args: TagChild | TagAttrs,
     fixed_width: bool = False,
     heights_equal: Literal["all", "row"] = "all",
     fill: bool = True,

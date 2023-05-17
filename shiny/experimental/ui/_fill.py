@@ -287,7 +287,6 @@ def renders_to_tag_class(
         x = x.tagify()
 
     if not isinstance(x, Tag):
-        # TODO: should this be an error?
         return False
     return x.has_class(class_)
 
