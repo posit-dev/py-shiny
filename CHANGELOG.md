@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added `include_js()` and `include_css()`, for easily including JS and CSS files in an application. (#127)
+
 ### Bug fixes
 
 ### Other changes
