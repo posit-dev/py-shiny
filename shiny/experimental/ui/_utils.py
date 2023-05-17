@@ -17,7 +17,9 @@ def consolidate_attrs(
 
     # `TagAttrs` currently isn't compatible with `htmltools._core.TagAttrDict`
     # https://github.com/rstudio/py-htmltools/pull/55
-    attrs = typing.cast(TagAttrs, tag.attrs)
+    # Convert to a plain dict to avoid getting custom methods from TagAttrDict
+    # Cast to `TagAttrs` so that `Tag` functions will accept the dictionary.
+    attrs = typing.cast(TagAttrs, dict(tag.attrs))
 
     # Do not alter children structure (like `TagList` does)
     children = [child for child in args if not isinstance(child, dict)]
