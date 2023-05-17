@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numbers
 from typing import Callable, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
@@ -14,8 +13,8 @@ from ._utils import consolidate_attrs, is_01_scalar
 
 
 # It seems to be to use % over fr here since there is no gap on the grid
-def to_width_unit(x: str | float | int | numbers.Number) -> str:
-    if isinstance(x, numbers.Number):
+def to_width_unit(x: str | float | int) -> str:
+    if isinstance(x, (int, float)):
         return validate_css_unit(x)
 
     if isinstance(x, str) and x.endswith("%") and x.count("%") == 1:
@@ -29,8 +28,8 @@ def to_width_unit(x: str | float | int | numbers.Number) -> str:
 
 
 def value_box(
-    title: TagChild | str | numbers.Number,
-    value: TagChild | str | numbers.Number,
+    title: TagChild,
+    value: TagChild,
     *args: TagChild | TagAttrs,
     showcase: Optional[TagChild] = None,
     showcase_layout: Callable[[TagChild, Tag], CardItem] | None = None,
@@ -53,9 +52,9 @@ def value_box(
 
     if showcase_layout is None:
         showcase_layout = showcase_left_center()
-    if isinstance(title, str) or isinstance(title, numbers.Number):
+    if isinstance(title, (str, int, float)):
         title = div(str(title), class_="h6 mb-1")
-    if isinstance(value, str) or isinstance(value, numbers.Number):
+    if isinstance(title, (str, int, float)):
         value = div(str(value), class_="h2 mb-2")
 
     contents = div(

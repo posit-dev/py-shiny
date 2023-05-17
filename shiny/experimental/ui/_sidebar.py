@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import numbers
 import random
 from typing import Optional
 
-from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, TagList, css, div
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, css, div
 from htmltools import svg as svgtags
 from htmltools import tags
 
@@ -48,7 +47,7 @@ def sidebar(
     position: Literal["left", "right"] = "left",
     open: Literal["desktop", "open", "closed", "always"] = "desktop",
     id: Optional[str] = None,
-    title: TagChild | str | numbers.Number = None,
+    title: TagChild | str = None,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
     class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
@@ -66,7 +65,7 @@ def sidebar(
     # if bg is None and fg is not None:
     #     bg = get_color_contrast(fg)
 
-    if isinstance(title, str) or isinstance(title, numbers.Number):
+    if isinstance(title, (str, int, float)):
         title = div(str(title), class_="sidebar-title")
 
     collapse_tag = None

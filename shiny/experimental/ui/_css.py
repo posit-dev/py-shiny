@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import numbers
 from typing import Union, overload
 
 CssUnit = Union[
     int,
     float,
     str,
-    numbers.Number,
 ]
 
 
@@ -43,13 +41,7 @@ def validate_css_unit(value: CssUnit) -> str:
 def validate_css_unit(value: None | CssUnit) -> None | str:
     # TODO-future: Actually validate. Or don't validate, but then change
     # the function name to to_css_unit() or something.
-    if (
-        isinstance(value, numbers.Number)
-        # TODO-future: pylance can't figure out if an `int` or `float` is a `numbers.Number` (which
-        # is it). For now, use the extra types
-        or isinstance(value, float)
-        or isinstance(value, int)
-    ):
+    if isinstance(value, (float, int)):
         # Explicit check for 0 because floats may format to have many decimals.
         if value == 0:
             return "0"
