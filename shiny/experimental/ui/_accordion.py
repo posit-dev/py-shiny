@@ -170,7 +170,7 @@ def accordion(
     if open is None:
         is_open = [False for _ in panels]
     elif isinstance(open, bool):
-        is_open = [True for _ in panels]
+        is_open = [open for _ in panels]
     else:
         if not isinstance(open, list):
             open = [open]
