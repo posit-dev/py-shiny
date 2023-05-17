@@ -11,51 +11,51 @@ import {
   Theme,
   Rectangle,
   getMiddleCenterBias,
+  GridSelection,
+  CompactSelection,
 } from "@glideapps/glide-data-grid";
 import React, { ReactElement } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { SpriteManager } from "@glideapps/glide-data-grid/dist/ts/data-grid/data-grid-sprites";
 
-interface DummyItem {
-  name: string;
-  company: string;
-  email: string;
-  phone: string;
-}
-type CellData = ReadonlyArray<ReadonlyArray<any>>;
+import { CellData, SortEntry } from "./types";
+import { useSortColumns } from "./grid-sort";
+
 interface PandasData {
   columns: ReadonlyArray<string>;
-  // index: ReadonlyArray<string>;
+  index: ReadonlyArray<string>;
   data: CellData;
-}
-
-interface WrappedGridProps {
-  id: string;
-  data: PandasData;
+  options: DataGridOptions;
   width?: string;
   height?: string;
 }
 
-interface SortEntry {
-  columnIndex: number;
-  desc: boolean;
+interface DataGridOptions {
+  row_selection: boolean;
+  column_selection: boolean;
+  range_selection: boolean;
+  cell_selection: boolean;
+}
+
+interface WrappedGridProps {
+  id: string;
+  columns: ReadonlyArray<string>;
+  index: ReadonlyArray<string>;
+  rows: CellData;
+  options: DataGridOptions;
+  width?: string;
+  height?: string;
 }
 
 const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
-  const data = props.data;
+  const { id, columns, index, rows, options, height, width } = props;
 
-  const [sortList, setSortList] = React.useState<readonly SortEntry[]>([]);
-
-  const { data: sortedData, rowNums: originalRowNums } = React.useMemo<{
-    data: CellData;
-    rowNums: ReadonlyArray<number>;
-  }>(() => {
-    return applySort(data.data, sortList, (rowA, rowB, columnIndex) => {
-      const a = rowA[columnIndex];
-      const b = rowB[columnIndex];
-      return a < b ? -1 : a > b ? 1 : 0;
+  const { currentSort, sortedData, onSortClick, mapSortedRowToUnsorted } =
+    useSortColumns({
+      rows,
     });
-  }, [data.data, sortList]);
+
+  let editable = true; // TODO: Make configurable
 
   const getContent = React.useCallback(
     (cell: Item): GridCell => {
@@ -70,7 +70,7 @@ const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
           allowOverlay: true,
           displayData: d + "",
           data: d,
-          readonly: false,
+          readonly: !editable,
         };
       } else if (typeof d === "number") {
         kind = GridCellKind.Number;
@@ -79,7 +79,7 @@ const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
           allowOverlay: true,
           displayData: d + "",
           data: d,
-          readonly: false,
+          readonly: !editable,
         };
       } else if (typeof d === "boolean") {
         kind = GridCellKind.Boolean;
@@ -87,7 +87,7 @@ const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
           kind,
           allowOverlay: false,
           data: d,
-          readonly: false,
+          readonly: !editable,
         };
       } else {
         // TODO: Figure out what to do in this case
@@ -100,13 +100,11 @@ const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
         allowOverlay: false,
         displayData: d + "",
         data: d,
-        readonly: false,
+        readonly: !editable,
       };
     },
     [sortedData] // dependencies
   );
-
-  console.log(originalRowNums);
 
   const onCellEdited = React.useCallback(
     (cell: Item, newValue: EditableGridCell): void => {
@@ -116,7 +114,7 @@ const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
           col: cell[0],
           // Go from row number in the visible grid, to the row
           // number in the original data.
-          row: originalRowNums[cell[1]],
+          row: mapSortedRowToUnsorted(cell[1]),
           sorted_row: cell[1],
           new_value: newValue.data,
           cell_kind: newValue.kind,
@@ -124,16 +122,8 @@ const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
         { priority: "event" }
       );
     },
-    [originalRowNums]
+    [mapSortedRowToUnsorted]
   );
-
-  const columns = data.columns.map((col) => {
-    return {
-      title: col,
-      id: col,
-      hasMenu: true, // Used for sort indicator
-    };
-  });
 
   const drawHeaderCustom = React.useCallback(
     (args: {
@@ -162,12 +152,10 @@ const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
       let y = rect.y + rect.height / 2;
 
       const sortable = true;
-      const lastSortEntry =
-        sortList.length === 0 ? null : sortList[sortList.length - 1];
       const sort: "asc" | "desc" | null =
-        lastSortEntry?.columnIndex !== columnIndex
+        currentSort?.columnIndex !== columnIndex
           ? null
-          : lastSortEntry.desc
+          : currentSort.desc
           ? "desc"
           : "asc";
 
@@ -220,57 +208,24 @@ const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
       ctx.fillText(column.title, x, y, x2 - x);
       return true;
     },
-    [sortList]
+    [currentSort]
   );
   const ref = React.useRef<DataEditorRef>();
 
-  const onSortClick = React.useCallback(
-    (col: number, screenPosition: Rectangle): void => {
-      // We need to be careful here to not mutate any items; neither the sortList array
-      // nor the SortEntry objects it contains.
-
-      // Decide whether we should sort descending or ascending.
-      let targetDesc: boolean;
-      const idx = sortList.findIndex(({ columnIndex }) => columnIndex === col);
-      if (idx >= 0) {
-        if (idx === sortList.length - 1) {
-          // 1. If the most recent sort entry is for this column, flip the direction.
-          targetDesc = !sortList[idx].desc;
-        } else {
-          // 2. If we have an earlier sort entry for this column, use that direction.
-          //    I'm hoping this is convenient when repeatedly flipping back and forth
-          //    between two columns, one of which only makes sense in descending order.)
-          targetDesc = sortList[idx].desc;
-        }
-      } else {
-        // 3. In the absence of other info, use ascending.
-        targetDesc = false;
-      }
-
-      // Need this just so we know to call updateCell on the previous sort item
-      const lastSortCol =
-        sortList.length === 0
-          ? null
-          : sortList[sortList.length - 1].columnIndex;
-
-      setSortList(
-        sortList
-          .filter(({ columnIndex }) => columnIndex !== col)
-          .concat({ columnIndex: col, desc: targetDesc })
-      );
-
-      // TODO: Ask Nick if there's a better way to do this
-      setTimeout(() => {
-        // If this doesn't happen in a setTimeout, the redraw occurs using the old copy
-        // of the drawHeaderCustom callback
+  // Update header cells affected by changes to the sort
+  React.useEffect(() => {
+    const col = currentSort?.columnIndex;
+    if (col !== null) {
+      ref.current.updateCells([{ cell: [col, -1] }]);
+    }
+    return () => {
+      if (col !== null) {
+        // When currentSort changes next time, re-update the same header because it's
+        // probably lost its sort arrow now.
         ref.current.updateCells([{ cell: [col, -1] }]);
-        if (lastSortCol !== null && lastSortCol !== col) {
-          ref.current.updateCells([{ cell: [lastSortCol, -1] }]);
-        }
-      }, 0);
-    },
-    [sortList]
-  );
+      }
+    };
+  }, [currentSort]);
 
   const darkTheme: Partial<Theme> = {
     accentColor: "#8c96ff",
@@ -317,69 +272,90 @@ const WrappedGrid: React.FC<WrappedGridProps> = (props) => {
     // lineHeight: 0
   };
 
+  const colDefs = columns.map((col) => {
+    return {
+      title: col,
+      id: col,
+      hasMenu: true, // Used for sort indicator
+    };
+  });
+
+  const [gridSelection, setGridSelection] =
+    React.useState<GridSelection>(undefined);
+
+  const onGridSelectionChange = (newSelection: GridSelection) => {
+    // if (!options.cell_selection && !options.range_selection && newSelection.current?.cell) {
+    //   // Convert cell selection to row selection
+    //   newSelection = {
+    //     rows: CompactSelection.fromSingleSelection(
+    //       newSelection.current.cell[1]
+    //     ),
+    //     columns: CompactSelection.empty(),
+    //   };
+    // }
+    setGridSelection(newSelection);
+
+    Shiny.setInputValue(
+      props.id + "_column_selection",
+      newSelection.columns.toArray() // TODO: Pass column names
+    );
+    Shiny.setInputValue(
+      props.id + "_row_selection",
+      newSelection.rows.toArray().map(mapSortedRowToUnsorted)
+    );
+    if (newSelection.current?.cell) {
+      let [col, row] = newSelection.current!.cell;
+      row = mapSortedRowToUnsorted(row);
+      Shiny.setInputValue(props.id + "_cell_selection", { col, row });
+    } else {
+      Shiny.setInputValue(props.id + "_cell_selection", null);
+    }
+    if (newSelection.current?.range) {
+      const { x, y, width, height } = newSelection.current?.range;
+      const cols = [];
+      for (let i = x; i < x + width; i++) {
+        cols.push(i);
+      }
+      const rows = [];
+      for (let i = y; i < y + height; i++) {
+        rows.push(i);
+      }
+      Shiny.setInputValue(props.id + "_range_selection", {
+        cols,
+        rows: rows.map(mapSortedRowToUnsorted),
+      });
+    } else {
+      Shiny.setInputValue(props.id + "_range_selection", null);
+    }
+  };
+
   return (
     <DataEditor
       ref={ref}
       getCellContent={getContent}
-      columns={columns}
-      rows={data.data.length}
+      // getCellsForSelection={true}
+      columns={colDefs}
+      rows={rows.length}
       onCellEdited={onCellEdited}
       drawHeader={drawHeaderCustom}
       onHeaderMenuClick={onSortClick}
+      gridSelection={gridSelection}
+      onGridSelectionChange={onGridSelectionChange}
       height={props.height}
       width={props.width}
       rowMarkers="clickable-number"
-      // rangeSelect?: "none" | "cell" | "rect" | "multi-cell" | "multi-rect"; // default rect
-      // columnSelect?: "none" | "single" | "multi"; // default multi
-      // rowSelect?: "none" | "single" | "multi"; // default multi
+      rowSelect={options.row_selection ? "multi" : "none"}
+      columnSelect={options.column_selection ? "multi" : "none"}
+      rangeSelect={
+        options.range_selection
+          ? "rect"
+          : options.cell_selection
+          ? "cell"
+          : "none"
+      }
     />
   );
 };
-
-/**
- * Sorts items by the comparator, but instead of returning a sorted array, returns the
- * indices of the items in sorted order.
- */
-function sortOrder<T>(
-  items: ReadonlyArray<T>,
-  comparator: (a: T, b: T) => number
-): Array<number> {
-  const indices = items.map((_, index) => index);
-  indices.sort((indexA, indexB) => comparator(items[indexA], items[indexB]));
-  return indices;
-}
-
-/**
- * Retrieve items[indices]
- */
-function mget<T>(
-  items: ReadonlyArray<T>,
-  indices: ReadonlyArray<number>
-): ReadonlyArray<T> {
-  return indices.map((i) => items[i]);
-}
-
-function applySort<T>(
-  data: readonly T[],
-  sortList: readonly SortEntry[],
-  comparator: (a: T, b: T, columnIndex: number) => number
-): { data: readonly T[]; rowNums: readonly number[] } {
-  if (sortList.length === 0) {
-    return { data, rowNums: data.map((_, i) => i) };
-  }
-  let newRows = [...data] as readonly T[];
-  let originalRowNums = newRows.map((_, i) => i) as readonly number[];
-  sortList.forEach(({ columnIndex, desc }) => {
-    const descFactor = desc ? -1 : 1;
-    const sortIndices = sortOrder(
-      newRows,
-      (a, b) => descFactor * comparator(a, b, columnIndex)
-    );
-    newRows = mget(newRows, sortIndices);
-    originalRowNums = mget(originalRowNums, sortIndices);
-  });
-  return { data: newRows, rowNums: originalRowNums };
-}
 
 const roots = new WeakMap<HTMLElement, Root>();
 
@@ -407,8 +383,27 @@ class GlideDataGridBinding extends Shiny.OutputBinding {
 
     const id = this.getId(el);
 
+    const {
+      columns,
+      index,
+      data: rows,
+      options,
+      width,
+      height,
+    } = data as PandasData;
+
     root.render(
-      data && <WrappedGrid id={id} data={data as PandasData} height="500px" />
+      data && (
+        <WrappedGrid
+          id={id}
+          columns={columns}
+          index={index}
+          rows={rows}
+          options={options}
+          width={width}
+          height={height}
+        />
+      )
     );
   }
 }

@@ -6,6 +6,11 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 app_ui = ui.page_fluid(
     ui.input_select("dataset", "Dataset", sns.get_dataset_names()),
     ui.output_data_grid("grid"),
+    ui.panel_absolute(
+        ui.output_text_verbatim("detail"),
+        right="10px",
+        bottom="10px",
+    ),
 )
 
 
@@ -17,7 +22,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return df.set(sns.load_dataset(req(input.dataset())))
 
     @output
-    @render.table(json=True)
+    @render.data_grid(height="500px", row_selection=True)
     def grid():
         return df()
 
@@ -28,6 +33,18 @@ def server(input: Inputs, output: Outputs, session: Session):
         df_copy = df().copy()
         df_copy.iat[edit["row"], edit["col"]] = edit["new_value"]
         df.set(df_copy)
+
+    @output
+    @render.text
+    def detail():
+        if input.grid_row_selection() is not None:
+            # "split", "records", "index", "columns", "values", "table"
+
+            return (
+                df()
+                .iloc[list(input.grid_row_selection())]
+                .to_json(None, orient="records", indent=2)
+            )
 
 
 app = App(app_ui, server)
