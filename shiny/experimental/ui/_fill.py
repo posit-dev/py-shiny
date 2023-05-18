@@ -4,6 +4,7 @@ from typing import Optional, TypeVar
 
 from htmltools import Tag, TagChild, Tagifiable
 
+from ..._typing_extensions import Literal, Protocol, runtime_checkable
 from ._css import CssUnit, validate_css_unit
 from ._tag import tag_add_style, tag_prepend_class, tag_remove_class
 
@@ -172,7 +173,7 @@ def as_fill_carrier(
     style: Optional[str] = None,
     # css_selector: Optional[str],
 ) -> TagT:
-    tag = add_class_and_styles(
+    tag = _add_class_and_styles(
         tag,
         class_=class_,
         style=style,
@@ -200,7 +201,7 @@ def as_fillable_container(
     style: Optional[str] = None,
     # css_selector: Optional[str] = None,
 ) -> TagT:
-    tag = add_class_and_styles(
+    tag = _add_class_and_styles(
         tag,
         class_=class_,
         style=style,
@@ -226,7 +227,7 @@ def as_fill_item(
     style: Optional[str] = None,
     # css_selector: Optional[str] = None,
 ) -> TagT:
-    tag = add_class_and_styles(
+    tag = _add_class_and_styles(
         tag,
         class_=class_,
         style=style,
@@ -259,39 +260,60 @@ def is_fill_carrier(x: Tag) -> bool:
 
 # @rdname as_fill_carrier
 # @export
-def is_fillable_container(x: TagChild) -> bool:
+def is_fillable_container(x: TagChild | FillingLayout) -> bool:
     # TODO-future; Handle widgets
     # # won't actually work until (htmltools#334) gets fixed
     # renders_to_tag_class(x, fill_container_class, ".html-widget")
 
-    return renders_to_tag_class(x, fill_container_class)
+    return is_fill_layout(x, layout="fillable")
 
 
-def is_fill_item(x: TagChild) -> bool:
+def is_fill_item(x: TagChild | FillingLayout) -> bool:
     # TODO-future; Handle widgets
     # # won't actually work until (htmltools#334) gets fixed
     # renders_to_tag_class(x, fill_item_class, ".html-widget")
 
-    return renders_to_tag_class(x, fill_item_class)
+    return is_fill_layout(x, layout="fill")
 
 
-def renders_to_tag_class(
-    x: TagChild,
-    class_: str,
-    #  selector: Optional[str]= None,
+def is_fill_layout(
+    x: TagChild | FillingLayout,
+    layout: Literal["fill", "fillable"],
+    recurse: bool = True,
 ) -> bool:
-    # if isinstance(x, TagFunction):
-    #     x = x()
-
-    if isinstance(x, Tagifiable):
-        x = x.tagify()
-
-    if not isinstance(x, Tag):
+    if not isinstance(x, (Tag, Tagifiable, FillingLayout)):
         return False
-    return x.has_class(class_)
+
+    # x: Tag | FillingLayout | Tagifiable
+
+    if layout == "fill":
+        if isinstance(x, Tag):
+            return x.has_class(fill_item_class)
+        if isinstance(x, FillingLayout):
+            return x.is_fill_item()
+
+    elif layout == "fillable":
+        if isinstance(x, Tag):
+            return x.has_class(fill_container_class)
+        if isinstance(x, FillingLayout):
+            return x.is_fillable_container()
+
+    # x: Tagifiable and not (Tag or FillingLayout)
+    raise TypeError(
+        f"`is_fill_layout(x=)` must be a `Tag` or implement the `FillingLayout` protocol methods TODO-barret expand on method names. Received object of type: `{type(x).__name__}`"
+    )
 
 
-def add_class_and_styles(
+@runtime_checkable
+class FillingLayout(Protocol):
+    def is_fill_item(self) -> bool:
+        raise NotImplementedError()
+
+    def is_fillable_container(self) -> bool:
+        raise NotImplementedError()
+
+
+def _add_class_and_styles(
     tag: TagT,
     *,
     class_: Optional[str] = None,
