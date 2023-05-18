@@ -169,7 +169,7 @@ def input_slider(
     id = resolve_id(id)
 
     props: dict[str, TagAttrValue] = {
-        "class_": "js-range-slider",
+        "class": "js-range-slider",
         "id": id,
         "data_skin": "shiny",
         # TODO: do we need to worry about scientific notation (i.e., formatNoSci()?)

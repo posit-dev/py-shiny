@@ -232,6 +232,5 @@ def page_bootstrap(
     :func:`~shiny.ui.page_fluid`
     :func:`~shiny.ui.page_navbar`
     """
-
     head = tags.title(title) if title else None
     return tags.html(tags.head(head), tags.body(*bootstrap_deps(), *args), lang=lang)

@@ -6,14 +6,12 @@ import mimetypes
 from pathlib import Path, PurePath
 from typing import Optional
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, css, tags
 
 from ..._typing_extensions import Literal, Protocol
 from ...types import MISSING, MISSING_TYPE
 from ._css import CssUnit, validate_css_unit
-from ._fill import bind_fill_role
-
-# T = TypeVar("T", bound=Tagifiable)
+from ._fill import as_fill_carrier, bind_fill_role
 
 
 class CardItem:
@@ -23,11 +21,11 @@ class CardItem:
     ):
         self._x = x
 
-    def get_item(self) -> TagChild:
+    def resolve(self) -> TagChild:
         return self._x
 
-    # def tagify(self) -> TagList | Tag | MetadataNode | str:
-    #     return self._x.tagify()
+    def tagify(self) -> TagList:
+        return TagList(self._x).tagify()
 
 
 # Card items
@@ -67,15 +65,12 @@ def card_body(
     height: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
     fill: bool = True,
-    class_: Optional[str] = None,  # Applies after `bind_fill_role()`
+    class_: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> CardItem:
     if isinstance(max_height_full_screen, MISSING_TYPE):
         max_height_full_screen = max_height
-    if fillable:
-        # TODO-future: Make sure shiny >= v1.7.4
-        # TODO-future: Make sure htmlwidgets >= 1.6.0
-        ...
+
     div_style_args = {
         "min-height": validate_css_unit(min_height),
         "--bslib-card-body-max-height": validate_css_unit(max_height),
@@ -95,16 +90,13 @@ def card_body(
             "class": "card-body",
             "style": css(**div_style_args),
         },
+        class_=class_,
         **kwargs,
     )
 
-    tag = bind_fill_role(tag, item=fill, container=fillable)
-
-    # Give the user an opportunity to override the classes added by bind_fill_role()
-    if class_ is not None:
-        tag.add_class(class_)
-
-    return CardItem(tag)
+    return CardItem(
+        bind_fill_role(tag, item=fill, container=fillable),
+    )
 
 
 # https://mypy.readthedocs.io/en/stable/protocols.html#callback-protocols
@@ -159,7 +151,7 @@ def as_card_items(
 
 
 def card_items_to_tag_children(card_items: list[CardItem]) -> list[TagChild]:
-    return [card_item.get_item() for card_item in card_items]
+    return [card_item.resolve() for card_item in card_items]
 
 
 def wrap_children_in_card(
@@ -188,10 +180,10 @@ class TagCallable(Protocol):  # Should this be exported from htmltools?
 
 def card_title(
     *args: TagChild | TagAttrs,
-    _container: TagCallable = tags.h5,
+    container: TagCallable = tags.h5,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    return _container(*args, **kwargs)
+    return container(*args, **kwargs)
 
 
 # @describeIn card_body A header (with border and background color) for the `card()`. Typically appears before a `card_body()`.
@@ -241,10 +233,11 @@ def card_image(
     href: Optional[str] = None,
     border_radius: Literal["top", "bottom", "all", "none"] = "top",
     mime_type: Optional[str] = None,
-    class_: Optional[str] = None,  # Applies after `bind_fill_role()`
+    class_: Optional[str] = None,
     height: Optional[CssUnit] = None,
     fill: bool = True,
     width: Optional[CssUnit] = None,
+    # Required so that multiple `card_images()` are not put in the same `card()`
     container: ImgContainer = card_body,
     **kwargs: TagAttrValue,
 ) -> CardItem:
@@ -282,18 +275,16 @@ def card_image(
         },
         {"class": card_class_map.get(border_radius, None)},
         *args,
+        class_=class_,
         **kwargs,
     )
 
     image = bind_fill_role(image, item=fill)
-    # Give the user an opportunity to override the classes added by bind_fill_role()
-    if class_ is not None:
-        image.add_class(class_)
 
     if href is not None:
-        image = bind_fill_role(tags.a(image, href=href), container=True, item=True)
+        image = as_fill_carrier(tags.a(image, href=href))
 
-    if callable(container):
+    if container:
         return container(image)
     else:
         return CardItem(image)

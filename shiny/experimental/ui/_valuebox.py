@@ -1,25 +1,20 @@
 from __future__ import annotations
 
-import numbers
 from typing import Callable, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
-from ..._typing_extensions import TypeGuard
 from ._card import card, card_body
 from ._card_item import CardItem
 from ._css import CssUnit, validate_css_unit
-from ._fill import bind_fill_role
+from ._fill import as_fill_carrier
 from ._layout import layout_column_wrap
-
-
-def is_01_scalar(x: object) -> TypeGuard[float]:
-    return isinstance(x, float) and x >= 0.0 and x <= 1.0
+from ._utils import consolidate_attrs, is_01_scalar
 
 
 # It seems to be to use % over fr here since there is no gap on the grid
-def to_width_unit(x: str | float) -> str:
-    if isinstance(x, float):
+def to_width_unit(x: str | float | int) -> str:
+    if isinstance(x, (int, float)):
         return validate_css_unit(x)
 
     if isinstance(x, str) and x.endswith("%") and x.count("%") == 1:
@@ -27,14 +22,14 @@ def to_width_unit(x: str | float) -> str:
         x2_num = 100 - x1_num
         return f"{x1_num}% {x2_num}%"
 
-    # TODO: validateCssUnit() should maybe support fr units?
+    # TODO-bslib: validateCssUnit() should maybe support fr units?
     # return(paste(x, collapse = " "))
     return validate_css_unit(x)
 
 
 def value_box(
-    title: TagChild | str | numbers.Number,
-    value: TagChild | str | numbers.Number,
+    title: TagChild,
+    value: TagChild,
     *args: TagChild | TagAttrs,
     showcase: Optional[TagChild] = None,
     showcase_layout: Callable[[TagChild, Tag], CardItem] | None = None,
@@ -43,39 +38,45 @@ def value_box(
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
     fill: bool = True,
-    class_: Optional[str] = None,  # Applies after `bind_fill_role()` inside `card()`
+    class_: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
+    attrs, children = consolidate_attrs(
+        # Must be before `attrs` so that `class_` is applied before any `attrs` values
+        {"class": "bslib-value-box border-0"},
+        {"class": f"bg-{theme_color}"} if theme_color else None,
+        *args,
+        class_=class_,
+        **kwargs,
+    )
+
     if showcase_layout is None:
         showcase_layout = showcase_left_center()
-    if isinstance(title, str) or isinstance(title, numbers.Number):
+    if isinstance(title, (str, int, float)):
         title = div(str(title), class_="h6 mb-1")
-    if isinstance(value, str) or isinstance(value, numbers.Number):
+    if isinstance(title, (str, int, float)):
         value = div(str(value), class_="h2 mb-2")
 
     contents = div(
         title,
         value,
-        *args,
+        *children,
         class_="value-box-area",
     )
-    contents = bind_fill_role(contents, container=True, item=True)
+    contents = as_fill_carrier(contents)
 
     if showcase is not None:
         contents = showcase_layout(showcase, contents)
 
     # Must use `class_` in `card()` as it must be applied after `bind_fill_role()`
-    theme_class_str = f" bg-{theme_color}" if theme_color else ""
-    class_str = f" {class_}" if class_ is not None else ""
 
     return card(
         contents,
-        class_=f"bslib-value-box border-0{theme_class_str}{class_str}",
+        attrs,
         full_screen=full_screen,
         height=height,
         max_height=max_height,
         fill=fill,
-        **kwargs,
     )
 
 
@@ -145,9 +146,7 @@ def showcase_layout_(
             {"class": "showcase-top-right"} if top_right else None,
             style=css(**css_args),
         )
-        showcase_container = bind_fill_role(
-            showcase_container, container=True, item=True
-        )
+        showcase_container = as_fill_carrier(showcase_container)
 
         if not top_right:
             contents.add_class("border-start")

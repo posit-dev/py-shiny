@@ -1,3 +1,3 @@
 def get_color_contrast(color: str) -> str:
-    # TODO: Implement
+    # TODO-future: Implement
     return color
