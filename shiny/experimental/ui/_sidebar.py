@@ -121,10 +121,17 @@ def layout_sidebar(
     # if bg is None and fg is not None:
     #     bg = get_color_contrast(fg)
 
+    attrs, children = consolidate_attrs(*args, **kwargs)
+    # TODO-future: >= 2023-11-01); Once `panel_main()` is removed, we can remove this loop
+    for child in children:
+        if isinstance(child, DeprecatedPanelMain):
+            attrs = consolidate_attrs(attrs, child.attrs)[0]
+            # child.children will be handled when tagified
+
     main = div(
         {"role": "main", "class": "main", "style": css(background_color=bg, color=fg)},
-        *args,
-        **kwargs,
+        attrs,
+        *children,
     )
     main = bind_fill_role(main, container=fillable)
 
@@ -236,7 +243,6 @@ def panel_sidebar(
     return sidebar(
         *args,
         width=f"{int(width / 12 * 100)}%",
-        open="always",
         **kwargs,
     )
 
@@ -245,7 +251,7 @@ def panel_main(
     *args: TagChild | TagAttrs,
     width: int = 8,
     **kwargs: TagAttrValue,
-) -> TagList:
+) -> TagList | DeprecatedPanelMain:
     """Deprecated. Please supply `panel_main(*args)` directly to `layout_sidebar()`."""
     # TODO-future: >= 2023-11-01; Add deprecation message below
     # warn_deprecated(
@@ -254,8 +260,23 @@ def panel_main(
     # warn if keys are being ignored
     attrs, children = consolidate_attrs(*args, **kwargs)
     if len(attrs) > 0:
+        return DeprecatedPanelMain(attrs=attrs, children=children)
         warn_deprecated(
             "`*args: TagAttrs` or `**kwargs: TagAttrValue` values supplied to `panel_main()` are being ignored. Please supply them directly to `layout_sidebar()`."
         )
 
     return TagList(*children)
+
+
+class DeprecatedPanelMain:
+    # Store `attrs` for `layout_sidebar()` to retrieve
+    attrs: TagAttrs
+    # Return `children` in `layout_sidebar()` via `.tagify()` method
+    children: list[TagChild]
+
+    def __init__(self, *, attrs: TagAttrs, children: list[TagChild]) -> None:
+        self.attrs = attrs
+        self.children = children
+
+    def tagify(self) -> TagList:
+        return TagList(self.children).tagify()
