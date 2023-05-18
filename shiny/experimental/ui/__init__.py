@@ -13,6 +13,7 @@ from ._layout import layout_column_wrap
 from ._valuebox import value_box
 
 from ._fill import (
+    FillingLayout,
     # bind_fill_role,
     as_fill_carrier,
     as_fillable_container,
@@ -68,6 +69,7 @@ __all__ = (
     # ValueBox
     "value_box",
     # Fill
+    "FillingLayout",
     # "bind_fill_role",
     "as_fill_carrier",
     "as_fillable_container",
