@@ -226,11 +226,17 @@ def panel_sidebar(
     **kwargs: TagAttrValue,
 ) -> Sidebar:
     """Deprecated. Please use `ui.sidebar()` instead of `ui.panel_sidebar()`."""
-    warn_deprecated("`panel_sidebar()` is deprecated. Please use `sidebar()` instead.")
+    # TODO-future: >= 2023-11-01; Add deprecation message below
+    # Plan of action:
+    # * No deprecation messages today (2023-05-18), and existing code _just works_.
+    # * Change all examples to use the new API.
+    # * In, say, 6 months, start emitting messages for code that uses the old API.
+
+    # warn_deprecated("Please use `sidebar()` instead of `panel_sidebar()`. `panel_sidebar()` will go away in a future version of Shiny.")
     return sidebar(
         *args,
-        # id="bslib-panel-sidebar",
         width=f"{int(width / 12 * 100)}%",
+        open="always",
         **kwargs,
     )
 
@@ -240,15 +246,16 @@ def panel_main(
     width: int = 8,
     **kwargs: TagAttrValue,
 ) -> TagList:
-    """Deprecated. Please supply `*args` directly to `layout_sidebar()` instead."""
-    warn_deprecated(
-        "`panel_main()` is deprecated. Please supply `*args` directly to `layout_sidebar()` instead."
-    )
+    """Deprecated. Please supply `panel_main(*args)` directly to `layout_sidebar()`."""
+    # TODO-future: >= 2023-11-01; Add deprecation message below
+    # warn_deprecated(
+    #     "Please supply `panel_main(*args)` directly to `layout_sidebar()`."
+    # )
     # warn if keys are being ignored
     attrs, children = consolidate_attrs(*args, **kwargs)
     if len(attrs) > 0:
         warn_deprecated(
-            "`*args: TagAttrs` or `**kwargs: TagAttrValue` values supplied to `panel_main()` are being ignored"
+            "`*args: TagAttrs` or `**kwargs: TagAttrValue` values supplied to `panel_main()` are being ignored. Please supply them directly to `layout_sidebar()`."
         )
 
     return TagList(*children)
