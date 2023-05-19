@@ -9,9 +9,20 @@ from ..._typing_extensions import Literal
 from ..._utils import drop_none
 from ...session import Session, require_active_session
 from ...types import MISSING, MISSING_TYPE
-from ._css import CssUnit, validate_css_unit
+from ._css_unit import CssUnit, validate_css_unit
 from ._htmldeps import accordion_dependency
 from ._utils import consolidate_attrs
+
+__all__ = (
+    "accordion",
+    "accordion_panel",
+    "accordion_panel_close",
+    "accordion_panel_insert",
+    "accordion_panel_open",
+    "accordion_panel_remove",
+    "accordion_panel_set",
+    "accordion_panel_update",
+)
 
 
 class AccordionPanel:

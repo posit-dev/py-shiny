@@ -5,7 +5,7 @@ from typing import Optional
 from htmltools import TagAttrs, TagAttrValue, TagChild, css, div
 
 from ..._typing_extensions import Literal
-from ._css import CssUnit, validate_css_unit
+from ._css_unit import CssUnit, validate_css_unit
 from ._fill import as_fillable_container, bind_fill_role
 from ._utils import consolidate_attrs, is_01_scalar
 

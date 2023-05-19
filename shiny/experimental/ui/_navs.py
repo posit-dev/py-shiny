@@ -16,8 +16,7 @@ from ..._typing_extensions import Literal
 from ..._utils import private_random_int
 from ...types import NavSetArg
 from ...ui._html_dependencies import bootstrap_deps
-from ._card import CardItem, card
-from ._card_item import card_body, card_footer, card_header
+from ._card import CardItem, card, card_body, card_footer, card_header
 from ._fill import as_fill_carrier
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import tag_add_style
@@ -111,12 +110,12 @@ class NavSet:
         if id is not None:
             ul_class += " shiny-tab-input"
 
-        nav, content = render_navset(
+        nav, content = _render_navset(
             *self.args, ul_class=ul_class, id=id, selected=self.selected, context={}
         )
         return self.layout(nav, content)
 
-    # Types must match output of `render_navset() -> Tuple[Tag, Tag]`
+    # Types must match output of `_render_navset() -> Tuple[Tag, Tag]`
     def layout(self, nav: Tag, content: Tag) -> TagList | Tag:
         return TagList(nav, self.header, content, self.footer)
 
@@ -183,7 +182,7 @@ class NavSetCard(NavSet):
 
 
 def navset_card_body(content: Tag, sidebar: Optional[Sidebar] = None) -> CardItem:
-    content = make_tabs_fillable(content, fillable=True)
+    content = _make_tabs_fillable(content, fillable=True)
     if sidebar:
         content = layout_sidebar(sidebar, content, fillable=True, border=False)
     return CardItem(content)
@@ -383,7 +382,7 @@ class NavSetBar(NavSet):
         else:
             nav_final.add_class(f"bg-{'dark' if self.inverse else 'light'}")
 
-        content = make_tabs_fillable(content, self.fillable, navbar=True)
+        content = _make_tabs_fillable(content, self.fillable, navbar=True)
 
         # 2023-05-11; Do not wrap `row()` around `self.header` and `self.footer`
         contents: list[TagChild] = [
@@ -419,7 +418,7 @@ class NavSetBar(NavSet):
 
 
 # Given a .tab-content container, mark each relevant .tab-pane as a fill container/item.
-def make_tabs_fillable(
+def _make_tabs_fillable(
     content: Tag, fillable: bool | list[str] = False, navbar: bool = False
 ) -> Tag:
     if not fillable:
@@ -549,7 +548,7 @@ def navset_bar(
 # -----------------------------------------------------------------------------
 # Utilities for rendering navs
 # -----------------------------------------------------------------------------\
-def render_navset(
+def _render_navset(
     *items: NavSetArg | MetadataNode,
     ul_class: str,
     id: Optional[str],

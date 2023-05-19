@@ -4,27 +4,17 @@ from typing import Callable, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
-from ._card import card, card_body
-from ._card_item import CardItem
-from ._css import CssUnit, validate_css_unit
+from ._card import CardItem, card, card_body
+from ._css_unit import CssUnit, to_width_unit, validate_css_unit
 from ._fill import as_fill_carrier
 from ._layout import layout_column_wrap
 from ._utils import consolidate_attrs, is_01_scalar
 
-
-# It seems to be to use % over fr here since there is no gap on the grid
-def to_width_unit(x: str | float | int) -> str:
-    if isinstance(x, (int, float)):
-        return validate_css_unit(x)
-
-    if isinstance(x, str) and x.endswith("%") and x.count("%") == 1:
-        x1_num = float(x[:-1])
-        x2_num = 100 - x1_num
-        return f"{x1_num}% {x2_num}%"
-
-    # TODO-bslib: validateCssUnit() should maybe support fr units?
-    # return(paste(x, collapse = " "))
-    return validate_css_unit(x)
+__all__ = (
+    "value_box",
+    "showcase_left_center",
+    "showcase_top_right",
+)
 
 
 def value_box(
@@ -99,7 +89,7 @@ def showcase_left_center(
     max_height: CssUnit = "100px",
     max_height_full_screen: CssUnit = "67%",
 ) -> Callable[[TagChild | TagAttrs, Tag], CardItem]:
-    return showcase_layout_(
+    return _showcase_layout(
         width=width,
         max_height=max_height,
         max_height_full_screen=max_height_full_screen,
@@ -116,7 +106,7 @@ def showcase_top_right(
 ) -> Callable[[TagChild | TagAttrs, Tag], CardItem]:
     if is_01_scalar(width):
         width = 1 - width
-    return showcase_layout_(
+    return _showcase_layout(
         width=width,
         max_height=max_height,
         max_height_full_screen=max_height_full_screen,
@@ -124,7 +114,7 @@ def showcase_top_right(
     )
 
 
-def showcase_layout_(
+def _showcase_layout(
     width: CssUnit,
     max_height: CssUnit,
     max_height_full_screen: CssUnit,
@@ -135,7 +125,7 @@ def showcase_layout_(
     max_height_css_unit = validate_css_unit(max_height)
     max_height_full_screen_css_unit = validate_css_unit(max_height_full_screen)
 
-    def _showcase_layout(showcase: TagChild | TagAttrs, contents: Tag) -> CardItem:
+    def _layout(showcase: TagChild | TagAttrs, contents: Tag) -> CardItem:
         css_args = {
             "--bslib-value-box-max-height": max_height_css_unit,
             "--bslib-value-box-max-height-full-screen": max_height_full_screen_css_unit,
@@ -173,4 +163,4 @@ def showcase_layout_(
             style=css(padding=0),
         )
 
-    return _showcase_layout
+    return _layout

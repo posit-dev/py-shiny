@@ -12,10 +12,10 @@ from ..._typing_extensions import Literal
 from ...session import Session, require_active_session
 
 # from ._color import get_color_contrast
-from ._css import CssUnit, trinary, validate_css_unit
+from ._css_unit import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
 from ._htmldeps import sidebar_dependency
-from ._utils import consolidate_attrs
+from ._utils import consolidate_attrs, trinary
 
 
 class Sidebar:
@@ -71,7 +71,7 @@ def sidebar(
     collapse_tag = None
     if open != "always":
         collapse_tag = tags.button(
-            collapse_icon(),
+            _collapse_icon(),
             class_="collapse-toggle",
             type="button",
             title="Toggle sidebar",
@@ -147,7 +147,7 @@ def layout_sidebar(
         sidebar.tag,
         sidebar.collapse_tag,
         sidebar_dependency(),
-        sidebar_init_js(),
+        _sidebar_init_js(),
         data_bslib_sidebar_init="true" if sidebar.open != "always" else None,
         data_bslib_sidebar_open=sidebar.open,
         data_bslib_sidebar_border=trinary(border),
@@ -199,7 +199,7 @@ def sidebar_toggle(
     session.on_flush(callback, once=True)
 
 
-def collapse_icon() -> Tag:
+def _collapse_icon() -> Tag:
     return tags.svg(
         svgtags.path(
             fill_rule="evenodd",
@@ -214,7 +214,7 @@ def collapse_icon() -> Tag:
     )
 
 
-def sidebar_init_js() -> Tag:
+def _sidebar_init_js() -> Tag:
     # Note: if we want to avoid inline `<script>` tags in the future for
     # initialization code, we might be able to do so by turning the sidebar layout
     # container into a web component

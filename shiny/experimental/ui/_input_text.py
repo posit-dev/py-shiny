@@ -1,13 +1,13 @@
 __all__ = ("input_text_area",)
 
-from pathlib import PurePath
 from typing import Optional
 
-from htmltools import HTMLDependency, Tag, TagChild, css, div, tags
+from htmltools import Tag, TagChild, css, div, tags
 
 from ..._docstring import add_example
 from ..._namespaces import resolve_id
 from ..._typing_extensions import Literal
+from ._htmldeps import autoresize_dependency
 
 
 @add_example()
@@ -108,28 +108,15 @@ def input_text_area(
     )
 
     return div(
-        shiny_input_label(id, label),
+        _shiny_input_label(id, label),
         area,
-        _autoresize_dependency() if autoresize else None,
+        autoresize_dependency() if autoresize else None,
         class_="form-group shiny-input-container",
         style=css(width=width),
     )
 
 
-ex_www_path = PurePath(__file__).parent.parent / "www"
-
-
-def _autoresize_dependency():
-    return HTMLDependency(
-        "shiny-textarea-autoresize",
-        "0.0.0",
-        source={"package": "shiny", "subdir": str(ex_www_path)},
-        script={"src": "textarea-autoresize.js"},
-        stylesheet={"href": "textarea-autoresize.css"},
-    )
-
-
 # Originally from ui._utils, but we can't seem to import ..ui._utils
-def shiny_input_label(id: str, label: TagChild = None) -> Tag:
+def _shiny_input_label(id: str, label: TagChild = None) -> Tag:
     cls = "control-label" + ("" if label else " shiny-label-null")
     return tags.label(label, class_=cls, id=id + "-label", for_=id)

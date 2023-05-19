@@ -5,7 +5,7 @@ from typing import Optional, TypeVar
 from htmltools import Tag, TagChild, Tagifiable
 
 from ..._typing_extensions import Literal, Protocol, runtime_checkable
-from ._css import CssUnit, validate_css_unit
+from ._css_unit import CssUnit, validate_css_unit
 from ._tag import tag_add_style, tag_prepend_class, tag_remove_class
 
 __all__ = (
@@ -17,6 +17,7 @@ __all__ = (
     "is_fill_carrier",
     "is_fillable_container",
     "is_fill_item",
+    "FillingLayout",
 )
 
 TagT = TypeVar("TagT", bound="Tag")
@@ -87,7 +88,7 @@ fill_container_class = "html-fill-container"
 # # Inner does fill outer
 # if (interactive()) browsable(tagz)
 #
-def add_role(
+def _add_role(
     tag: TagT, *, condition: bool | None, class_: str, overwrite: bool = False
 ) -> TagT:
     if condition is None:
@@ -110,13 +111,13 @@ def bind_fill_role(
     container: Optional[bool] = None,
     overwrite: bool = False,
 ) -> TagT:
-    tag = add_role(
+    tag = _add_role(
         tag,
         condition=item,
         class_=fill_item_class,
         overwrite=overwrite,
     )
-    tag = add_role(
+    tag = _add_role(
         tag,
         condition=container,
         class_=fill_container_class,
@@ -265,7 +266,7 @@ def is_fillable_container(x: TagChild | FillingLayout) -> bool:
     # # won't actually work until (htmltools#334) gets fixed
     # renders_to_tag_class(x, fill_container_class, ".html-widget")
 
-    return is_fill_layout(x, layout="fillable")
+    return _is_fill_layout(x, layout="fillable")
 
 
 def is_fill_item(x: TagChild | FillingLayout) -> bool:
@@ -273,10 +274,10 @@ def is_fill_item(x: TagChild | FillingLayout) -> bool:
     # # won't actually work until (htmltools#334) gets fixed
     # renders_to_tag_class(x, fill_item_class, ".html-widget")
 
-    return is_fill_layout(x, layout="fill")
+    return _is_fill_layout(x, layout="fill")
 
 
-def is_fill_layout(
+def _is_fill_layout(
     x: TagChild | FillingLayout,
     layout: Literal["fill", "fillable"],
     recurse: bool = True,
@@ -300,7 +301,7 @@ def is_fill_layout(
 
     # x: Tagifiable and not (Tag or FillingLayout)
     raise TypeError(
-        f"`is_fill_layout(x=)` must be a `Tag` or implement the `FillingLayout` protocol methods TODO-barret expand on method names. Received object of type: `{type(x).__name__}`"
+        f"`_is_fill_layout(x=)` must be a `Tag` or implement the `FillingLayout` protocol methods TODO-barret expand on method names. Received object of type: `{type(x).__name__}`"
     )
 
 
