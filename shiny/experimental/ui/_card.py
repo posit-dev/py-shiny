@@ -27,7 +27,6 @@ from ._utils import consolidate_attrs
 
 __all__ = (
     "CardItem",
-    "as_card_items",
     "card",
     "card_body",
     "card_title",
@@ -246,12 +245,16 @@ class WrapperCallable(Protocol):
         ...
 
 
-def as_card_items(
+def _as_card_items(
     *children: TagChild | CardItem | None,  # `TagAttrs` are not allowed here
     wrapper: WrapperCallable | None,
 ) -> list[CardItem]:
-    # We don't want NULLs creating empty card bodies
+    # We don't want `None`s creating empty card bodies
     children_vals = [child for child in children if child is not None]
+
+    attrs, children_vals = consolidate_attrs(*children_vals)
+    if len(attrs) > 0:
+        raise ValueError("`TagAttrs` are not allowed in `_as_card_items(*children=)`.")
 
     if not callable(wrapper):
         ret: list[CardItem] = []
@@ -295,7 +298,7 @@ def _wrap_children_in_card(
     *children: TagChild | CardItem | None,  # `TagAttrs` are not allowed here
     wrapper: WrapperCallable | None,
 ) -> list[TagChild]:
-    card_items = as_card_items(*children, wrapper=wrapper)
+    card_items = _as_card_items(*children, wrapper=wrapper)
     tag_children = [card_item.resolve() for card_item in card_items]
     return tag_children
 
