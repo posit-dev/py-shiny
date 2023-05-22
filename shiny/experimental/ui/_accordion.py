@@ -105,58 +105,7 @@ class AccordionPanel:
         return self.resolve().tagify()
 
 
-# Create a vertically collapsing accordion
-#
-# @param ... Named arguments become attributes on the `<div class="accordion">`
-#   element. Unnamed arguments should be `accordion_panel()`s.
-# @param id If provided, you can use `input$id` in your server logic to
-#   determine which of the `accordion_panel()`s are currently active. The value
-#   will correspond to the `accordion_panel()`'s `value` argument.
-# @param open A character vector of `accordion_panel()` `value`s to open
-#   (i.e., show) by default. The default value of `NULL` will open the first
-#   `accordion_panel()`. Use a value of `TRUE` to open all (or `FALSE` to
-#   open none) of the items. It's only possible to open more than one panel
-#   when `multiple=TRUE`.
-# @param multiple Whether multiple `accordion_panel()` can be `open` at once.
-# @param class Additional CSS classes to include on the accordion div.
-# @param width,height Any valid CSS unit; for example, height="100%".
-#
-# @references <https://getbootstrap.com/docs/5.2/components/accordion/>
-#
-# @export
-# @seealso [accordion_panel_set()]
-# @examples
-#
-# items <- lapply(LETTERS, function(x) {
-#   accordion_panel(paste("Section", x), paste("Some narrative for section", x))
-# })
-#
-# # First shown by default
-# accordion(!!!items)
-# # Nothing shown by default
-# accordion(!!!items, open = FALSE)
-# # Everything shown by default
-# accordion(!!!items, open = TRUE)
-#
-# # Show particular sections
-# accordion(!!!items, open = "Section B")
-# accordion(!!!items, open = c("Section A", "Section B"))
-#
-# # Provide an id to create a shiny input binding
-# if (interactive()) {
-#   library(shiny)
-#
-#   ui <- page_fluid(
-#     accordion(!!!items, id = "acc")
-#   )
-#
-#   server <- function(input, output) {
-#     observe(print(input$acc))
-#   }
-#
-#   shinyApp(ui, server)
-# }
-#
+# TODO-maindocs; @add_example()
 def accordion(
     *args: AccordionPanel | TagAttrs,
     id: Optional[str] = None,
@@ -167,6 +116,58 @@ def accordion(
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
+    """
+    Create a vertically collapsing accordion.
+
+    Parameters
+    ----------
+    *args
+        `~shiny.experimental.ui.AccordionPanel` objects returned from
+        :func:`~shiny.experimental.ui.accordion_panel()`. Or tag attributes supplied to
+        the returned `Tag` object.
+    id
+        If provided, you can use `input.id()` in your server logic to determine which of
+        the :func:`~shiny.experimental.ui.accordion_panel()`s are currently active. The
+        value will correspond to the :func:`~shiny.experimental.ui.accordion_panel()`'s
+        `value` argument.
+    open
+        A list of :func:`~shiny.experimental.ui.accordion_panel()` values to open (i.e.,
+        show) by default. The default value of `None` will open the first
+        :func:`~shiny.experimental.ui.accordion_panel()`. Use a value of `True` to open
+        all (or `False` to open none) of the items. It's only possible to open more than
+        one panel when `multiple=True`.
+    multiple
+        Whether multiple :func:`~shiny.experimental.ui.accordion_panel()` can be open at
+        once.
+    class
+        Additional CSS classes to include on the accordion div.
+    width
+        Any valid CSS unit; for example, height="100%".
+    height
+        Any valid CSS unit; for example, height="100%".
+    **kwargs
+        Attributes to this tag.
+
+    Returns
+    -------
+    Accordion panel Tag object.
+
+
+    References
+    ----------
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+
+    See Also
+    --------
+    * ~shiny.experimental.ui.accordion_panel
+    * ~shiny.experimental.ui.accordion_panel_set
+    * ~shiny.experimental.ui.accordion_panel_open
+    * ~shiny.experimental.ui.accordion_panel_close
+    * ~shiny.experimental.ui.accordion_panel_insert
+    * ~shiny.experimental.ui.accordion_panel_remove
+    * ~shiny.experimental.ui.accordion_panel_update
+    """
+
     # TODO-bookmarking: Restore input here
     # open = restore_input(id = id, default = open)
 
@@ -228,11 +229,7 @@ def accordion(
     return tag
 
 
-# @rdname accordion
-# @param title A title to appear in the `accordion_panel()`'s header.
-# @param value A character string that uniquely identifies this panel.
-# @param icon A [htmltools::tag] child (e.g., [bsicons::bs_icon()]) which is positioned just before the `title`.
-# @export
+# TODO-maindocs; @add_example()
 def accordion_panel(
     title: TagChild,
     *args: TagChild | TagAttrs,
@@ -240,6 +237,44 @@ def accordion_panel(
     icon: Optional[TagChild] = None,
     **kwargs: TagAttrValue,
 ) -> AccordionPanel:
+    """
+    Single accordion panel.
+
+    Parameters
+    ----------
+    title
+        A title to appear in the `accordion_panel()`'s header.
+    *args
+        Contents to the accordion panel body. Or tag attributes supplied to the returned
+        `Tag` object.
+    value
+        A character string that uniquely identifies this panel. If `MISSING`, the
+        `title` will be used.
+    icon
+        A `Tag` which is positioned just before the `title`.
+    **kwargs
+        Tag attributes to the `accordion-body` div Tag.
+
+    Returns
+    -------
+    `AccordionPanel` object.
+
+
+    References
+    ----------
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+
+    See Also
+    --------
+    * ~shiny.experimental.ui.accordion
+    * ~shiny.experimental.ui.accordion_panel_set
+    * ~shiny.experimental.ui.accordion_panel_open
+    * ~shiny.experimental.ui.accordion_panel_close
+    * ~shiny.experimental.ui.accordion_panel_insert
+    * ~shiny.experimental.ui.accordion_panel_remove
+    * ~shiny.experimental.ui.accordion_panel_update
+    """
+
     if value is MISSING:
         if isinstance(title, str):
             value = title
@@ -274,21 +309,6 @@ def _send_panel_message(
     session.on_flush(lambda: session.send_input_message(id, message), once=True)
 
 
-# Dynamically update accordions
-#
-# Dynamically (i.e., programmatically) update/modify [`accordion()`]s in a
-# Shiny app. These functions require an `id` to be provided to the
-# `accordion()` and must also be called within an active Shiny session.
-#
-# @param id an character string that matches an existing [accordion()]'s `id`.
-# @param values either a character string (used to identify particular
-#   [accordion_panel()](s) by their `value`) or `TRUE` (i.e., all `values`).
-# @param session a shiny session object (the default should almost always be
-#   used).
-#
-# @describeIn accordion_panel_set same as `accordion_panel_open()`, except it
-#   also closes any currently open panels.
-# @export
 def _accordion_panel_action(
     *,
     id: str,
@@ -309,43 +329,122 @@ def _accordion_panel_action(
     )
 
 
+# TODO-maindocs; @add_example()
 def accordion_panel_set(
     id: str,
     values: bool | str | list[str],
     session: Optional[Session] = None,
 ) -> None:
+    """
+    Dynamically set accordions panel state
+
+    Dynamically (i.e., programmatically) update/modify [`accordion()`]s in a Shiny app.
+    These functions require an `id` to be provided to the `accordion()` and must also be
+    called within an active Shiny session.
+
+    Parameters
+    ----------
+    id
+        A string that matches an existing `accordion()`'s `id`.
+    values
+        either a string or list of strings (used to identify particular
+        `accordion_panel()`(s) by their `value`) or a `bool` to set the state of all
+        panels.
+    session
+        A shiny session object (the default should almost always be used).
+
+    References
+    ----------
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+
+    See Also
+    --------
+    * ~shiny.experimental.ui.accordion
+    * ~shiny.experimental.ui.accordion_panel
+    * ~shiny.experimental.ui.accordion_panel_open
+    * ~shiny.experimental.ui.accordion_panel_close
+    * ~shiny.experimental.ui.accordion_panel_insert
+    * ~shiny.experimental.ui.accordion_panel_remove
+    * ~shiny.experimental.ui.accordion_panel_update
+    """
     _accordion_panel_action(id=id, method="set", values=values, session=session)
 
 
-# @describeIn accordion_panel_set open [accordion_panel()]s.
-# @export
+# TODO-maindocs; @add_example()
 def accordion_panel_open(
     id: str,
     values: bool | str | list[str],
     session: Optional[Session] = None,
 ) -> None:
+    """
+    Open a set of `accordion_panel()`s.
+
+    Parameters
+    ----------
+    id
+        A string that matches an existing `accordion()`'s `id`.
+    values
+        either a string or list of strings (used to identify particular
+        `accordion_panel()`(s) by their `value`) or a `bool` to set the state of all
+        panels.
+    session
+        A shiny session object (the default should almost always be used).
+
+    References
+    ----------
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+
+    See Also
+    --------
+    * ~shiny.experimental.ui.accordion
+    * ~shiny.experimental.ui.accordion_panel
+    * ~shiny.experimental.ui.accordion_panel_set
+    * ~shiny.experimental.ui.accordion_panel_close
+    * ~shiny.experimental.ui.accordion_panel_insert
+    * ~shiny.experimental.ui.accordion_panel_remove
+    * ~shiny.experimental.ui.accordion_panel_update
+    """
     _accordion_panel_action(id=id, method="open", values=values, session=session)
 
 
-# @describeIn accordion_panel_set close [accordion_panel()]s.
-# @export
+# TODO-maindocs; @add_example()
 def accordion_panel_close(
     id: str,
     values: bool | str | list[str],
     session: Optional[Session] = None,
 ) -> None:
+    """
+    Close a set of [accordion_panel()]s.
+
+    Parameters
+    ----------
+    id
+        A string that matches an existing `accordion()`'s `id`.
+    values
+        either a string or list of strings (used to identify particular
+        `accordion_panel()`(s) by their `value`) or a `bool` to set the state of all
+        panels.
+    session
+        A shiny session object (the default should almost always be used).
+
+    References
+    ----------
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+
+    See Also
+    --------
+    * ~shiny.experimental.ui.accordion
+    * ~shiny.experimental.ui.accordion_panel
+    * ~shiny.experimental.ui.accordion_panel_set
+    * ~shiny.experimental.ui.accordion_panel_open
+    * ~shiny.experimental.ui.accordion_panel_insert
+    * ~shiny.experimental.ui.accordion_panel_remove
+    * ~shiny.experimental.ui.accordion_panel_update
+    """
     _accordion_panel_action(id=id, method="close", values=values, session=session)
 
 
-# @param panel an [accordion_panel()].
-# @param target The `value` of an existing panel to insert next to. If
-#   removing: the `value` of the [accordion_panel()] to remove.
-# @param position Should `panel` be added before or after the target? When
-#   `target` is `NULL` (the default), `"after"` will append after the last
-#   panel and `"before"` will prepend before the first panel.
-#
-# @describeIn accordion_panel_set insert a new [accordion_panel()]
-# @export
+# TODO-maindocs; @add_example()
 def accordion_panel_insert(
     id: str,
     panel: AccordionPanel,
@@ -353,6 +452,39 @@ def accordion_panel_insert(
     position: Literal["after", "before"] = "after",
     session: Optional[Session] = None,
 ) -> None:
+    """
+    Insert an `accordion_panel()`
+
+    Parameters
+    ----------
+    id
+        A string that matches an existing `accordion()`'s `id`.
+    panel
+        An :func:`~shiny.experimental.ui.accordion_panel()` object to insert.
+    target
+        The `value` of an existing panel to insert next to.
+    position
+        Should `panel` be added before or after the target? When `target=None`,
+        `"after"` will append after the last panel and `"before"` will prepend before
+        the first panel.
+    session
+        A shiny session object (the default should almost always be used).
+
+    References
+    ----------
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+
+    See Also
+    --------
+    * ~shiny.experimental.ui.accordion
+    * ~shiny.experimental.ui.accordion_panel
+    * ~shiny.experimental.ui.accordion_panel_set
+    * ~shiny.experimental.ui.accordion_panel_open
+    * ~shiny.experimental.ui.accordion_panel_close
+    * ~shiny.experimental.ui.accordion_panel_remove
+    * ~shiny.experimental.ui.accordion_panel_update
+    """
+
     if position not in ("after", "before"):
         raise ValueError("`position` must be either 'after' or 'before'")
     session = require_active_session(session)
@@ -366,13 +498,38 @@ def accordion_panel_insert(
     )
 
 
-# @describeIn accordion_panel_set remove [accordion_panel()]s.
-# @export
+# TODO-maindocs; @add_example()
 def accordion_panel_remove(
     id: str,
     target: str | list[str],
     session: Optional[Session] = None,
 ) -> None:
+    """
+    Remove an `accordion_panel()`
+
+    Parameters
+    ----------
+    id
+        A string that matches an existing `accordion()`'s `id`.
+    target
+        The `value` of an existing panel to remove.
+    session
+        A shiny session object (the default should almost always be used).
+
+    References
+    ----------
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+
+    See Also
+    --------
+    * ~shiny.experimental.ui.accordion
+    * ~shiny.experimental.ui.accordion_panel
+    * ~shiny.experimental.ui.accordion_panel_set
+    * ~shiny.experimental.ui.accordion_panel_open
+    * ~shiny.experimental.ui.accordion_panel_close
+    * ~shiny.experimental.ui.accordion_panel_insert
+    * ~shiny.experimental.ui.accordion_panel_update
+    """
     if not isinstance(target, list):
         target = [target]
 
@@ -395,9 +552,7 @@ def _missing_none_x(x: T | None | MISSING_TYPE) -> T | Literal[""] | None:
     return x
 
 
-# @describeIn accordion_panel_set update a [accordion_panel()].
-# @inheritParams accordion_panel
-# @export
+# TODO-maindocs; @add_example()
 def accordion_panel_update(
     id: str,
     target: str,
@@ -407,6 +562,45 @@ def accordion_panel_update(
     icon: TagChild | None | MISSING_TYPE = MISSING,
     session: Optional[Session] = None,
 ) -> None:
+    """
+    Dynamically update accordions panel contents
+
+    Dynamically (i.e., programmatically) update/modify `accordion_panels()`s in a Shiny app.
+    These functions require an `id` to be provided to the `accordion()` and must also be
+    called within an active Shiny session.
+
+    Parameters
+    ----------
+    id
+        A string that matches an existing `accordion()`'s `id`.
+    target
+        The `value` of an existing panel to update.
+    *body
+        If provided, the new body contents of the panel.
+    title
+        If not missing, the new title of the panel.
+    value
+        If not missing, the new value of the panel.
+    icon
+        If not missing, the new icon of the panel.
+    session
+        A shiny session object (the default should almost always be used).
+
+    References
+    ----------
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+
+    See Also
+    --------
+    * ~shiny.experimental.ui.accordion
+    * ~shiny.experimental.ui.accordion_panel
+    * ~shiny.experimental.ui.accordion_panel_set
+    * ~shiny.experimental.ui.accordion_panel_open
+    * ~shiny.experimental.ui.accordion_panel_close
+    * ~shiny.experimental.ui.accordion_panel_insert
+    * ~shiny.experimental.ui.accordion_panel_remove
+    """
+
     session = require_active_session(session)
 
     title = _missing_none_x(title)
