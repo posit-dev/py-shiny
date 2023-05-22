@@ -46,9 +46,11 @@ def nav_insert(
         :func:`~shiny.ui.nav_menu`.
     target
         The ``value`` of an existing :func:`shiny.ui.nav` item, next to which tab will
-        be added.
+        be added. Can also be ``None``; see ``position``.
     position
-        The position of the new nav item relative to the target nav item.
+        The position of the new nav item relative to the target nav item. If
+        ``target=None``, then ``"before"`` means the new nav item should be inserted at
+        the head of the navlist, and ``"after"`` is the end.
     select
         Whether the nav item should be selected upon insertion.
     session
