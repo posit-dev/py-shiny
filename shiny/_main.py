@@ -67,7 +67,12 @@ any of the following will work:
     help="Bind autoreload socket to this port. If 0, a random port will be used. Ignored if --reload is not used.",
     show_default=True,
 )
-@click.option("--reload", is_flag=True, default=False, help="Enable auto-reload.")
+@click.option(
+    "--reload",
+    is_flag=True,
+    default=False,
+    help="Enable auto-reload, when these types of files change: .py .css .js .html",
+)
 @click.option(
     "--ws-max-size",
     type=int,
@@ -244,6 +249,7 @@ def run_app(
         port=port,
         reload=reload,
         reload_dirs=reload_dirs,
+        reload_includes=["*.py", "*.css", "*.js", "*.html"],
         ws_max_size=ws_max_size,
         log_level=log_level,
         log_config=log_config,
