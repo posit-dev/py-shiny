@@ -561,7 +561,7 @@ class Session(object, metaclass=SessionMeta):
         message
             The message to send.
         """
-        msg: dict[str, object] = {"id": id, "message": message}
+        msg: dict[str, object] = {"id": self.ns(id), "message": message}
         self._outbound_message_queues["input_messages"].append(msg)
         self._request_flush()
 

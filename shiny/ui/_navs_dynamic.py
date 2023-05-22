@@ -14,6 +14,7 @@ else:
     from typing_extensions import Literal
 
 from .._docstring import add_example
+from .._namespaces import resolve_id
 from .._utils import run_coro_sync
 from ..session import Session, require_active_session
 from ..types import NavSetArg
@@ -76,7 +77,7 @@ def nav_insert(
     )
 
     msg = {
-        "inputId": session.ns(id),
+        "inputId": resolve_id(id),
         "liTag": session._process_ui(li_tag),
         "divTag": session._process_ui(div_tag),
         "menuName": None,
@@ -115,7 +116,7 @@ def nav_remove(id: str, target: str, session: Optional[Session] = None) -> None:
 
     session = require_active_session(session)
 
-    msg = {"inputId": session.ns(id), "target": target}
+    msg = {"inputId": resolve_id(id), "target": target}
 
     def callback() -> None:
         run_coro_sync(session._send_message({"shiny-remove-tab": msg}))
@@ -156,10 +157,11 @@ def nav_show(
 
     session = require_active_session(session)
 
+    id = resolve_id(id)
     if select:
         update_navs(id, selected=target)
 
-    msg = {"inputId": session.ns(id), "target": target, "type": "show"}
+    msg = {"inputId": id, "target": target, "type": "show"}
 
     def callback() -> None:
         run_coro_sync(session._send_message({"shiny-change-tab-visibility": msg}))
@@ -191,7 +193,7 @@ def nav_hide(id: str, target: str, session: Optional[Session] = None) -> None:
 
     session = require_active_session(session)
 
-    msg = {"inputId": session.ns(id), "target": target, "type": "hide"}
+    msg = {"inputId": resolve_id(id), "target": target, "type": "hide"}
 
     def callback() -> None:
         run_coro_sync(session._send_message({"shiny-change-tab-visibility": msg}))
