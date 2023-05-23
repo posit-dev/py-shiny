@@ -4,7 +4,7 @@ from pathlib import PurePath
 
 from htmltools import HTMLDependency
 
-from ....shiny import __version__ as shiny_version
+from ... import __version__ as shiny_version
 from ..._versions import bslib as bslib_version
 from ..._versions import htmltools as htmltools_version
 

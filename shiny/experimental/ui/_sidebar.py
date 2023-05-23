@@ -41,6 +41,7 @@ class Sidebar:
     #     return self.tag.tagify()
 
 
+# TODO-maindocs; @add_example()
 def sidebar(
     *args: TagChild | TagAttrs,
     width: CssUnit = 250,
@@ -100,6 +101,7 @@ def sidebar(
     )
 
 
+# TODO-maindocs; @add_example()
 def layout_sidebar(
     sidebar: Sidebar,
     *args: TagChild | TagAttrs,
@@ -170,6 +172,7 @@ def layout_sidebar(
 # @param session A Shiny session object (the default should almost always be
 #   used).
 # @export
+# TODO-maindocs; @add_example()
 def sidebar_toggle(
     id: str,
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,

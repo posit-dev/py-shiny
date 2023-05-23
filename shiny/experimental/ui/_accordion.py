@@ -123,8 +123,8 @@ def accordion(
     ----------
     *args
         `~shiny.experimental.ui.AccordionPanel` objects returned from
-        :func:`~shiny.experimental.ui.accordion_panel()`. Or tag attributes supplied to
-        the returned `Tag` object.
+        :func:`~shiny.experimental.ui.accordion_panel()`. Or tag attributes that are
+        supplied to the returned `Tag` object.
     id
         If provided, you can use `input.id()` in your server logic to determine which of
         the :func:`~shiny.experimental.ui.accordion_panel()`s are currently active. The
@@ -150,7 +150,8 @@ def accordion(
 
     Returns
     -------
-    Accordion panel Tag object.
+    :
+        Accordion panel Tag object.
 
 
     References
@@ -245,8 +246,8 @@ def accordion_panel(
     title
         A title to appear in the `accordion_panel()`'s header.
     *args
-        Contents to the accordion panel body. Or tag attributes supplied to the returned
-        `Tag` object.
+        Contents to the accordion panel body. Or tag attributes that are supplied to the
+        returned `Tag` object.
     value
         A character string that uniquely identifies this panel. If `MISSING`, the
         `title` will be used.
@@ -257,7 +258,8 @@ def accordion_panel(
 
     Returns
     -------
-    `AccordionPanel` object.
+    :
+        `AccordionPanel` object.
 
 
     References
