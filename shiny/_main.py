@@ -233,17 +233,19 @@ def run_app(
         else:
             setup_hot_reload(log_config, autoreload_port, port, launch_browser)
 
-    reload_args: dict[str, bool | str | list[str]] = (
-        {}
-        if reload is False
-        else {
+    reload_args: dict[str, bool | str | list[str]] = {}
+    if reload:
+        reload_dirs = []
+        if app_dir is not None:
+            reload_dirs = [app_dir]
+
+        reload_args = {
             "reload": reload,
             # Adding `reload_includes` param while `reload=False` produces an warning
             # https://github.com/encode/uvicorn/blob/d43afed1cfa018a85c83094da8a2dd29f656d676/uvicorn/config.py#L298-L304
             "reload_includes": ["*.py", "*.css", "*.js", "*.html"],
-            "reload_dirs": [app_dir] if reload and app_dir is not None else [],
+            "reload_dirs": reload_dirs,
         }
-    )
 
     if launch_browser and not reload:
         setup_launch_browser(log_config)
