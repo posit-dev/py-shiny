@@ -5,22 +5,24 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc -noEmit && node build.mjs",
-    "watch": "npx nodemon --exec 'npm run build' --watch \"*.tsx\" --watch package.json --watch build.mjs"
+    "watch": "npx nodemon --exec 'npm run build' --ignore dist/ --ext '*'"
   },
   "author": "",
   "license": "MIT",
-  "dependencies": {
-    "@glideapps/glide-data-grid": "^5.2.1"
-  },
   "devDependencies": {
     "@fal-works/esbuild-plugin-global-externals": "^2.1.2",
+    "@tanstack/react-virtual": "^3.0.0-alpha.0",
     "@types/jquery": "^3.5.16",
     "@types/react": "^18.0.33",
     "@types/react-dom": "^18.0.11",
     "@types/rstudio-shiny": "github:rstudio/shiny#v1.7.4",
     "esbuild": "^0.17.15",
+    "eslint": "^8.40.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "typescript": "^5.0.3"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "^8.9.1"
   }
 }
