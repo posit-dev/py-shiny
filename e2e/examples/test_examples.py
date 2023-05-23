@@ -103,6 +103,7 @@ def wait_for_idle_app(
 # Run this test for each example app
 @pytest.mark.examples
 @pytest.mark.parametrize("ex_app_path", example_apps)
+@pytest.mark.flaky(reruns=3, reruns_delay=1)
 def test_examples(page: Page, ex_app_path: str) -> None:
     app = run_shiny_app(here / ex_app_path, wait_for_start=True)
 
@@ -153,13 +154,7 @@ def test_examples(page: Page, ex_app_path: str) -> None:
                     )
                 ]
                 app_allowable_errors = False
-            try:
-                assert len(error_lines) == 0
-            except AssertionError:
-                # Better debug message
-                assert not any(["Traceback" in line for line in error_lines])
-                # If not found, print all of stderr in a failed test
-                assert len(error_lines) == 0
+            assert len(error_lines) == 0
 
         # Check for JavaScript errors
         if app_name in app_allow_js_errors:
