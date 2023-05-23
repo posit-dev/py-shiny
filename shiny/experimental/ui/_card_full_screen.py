@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from htmltools import HTML, Tag, tags
 
-from ._htmldeps import card_full_screen_dep
-
 
 def full_screen_toggle() -> Tag:
     return tags.span(
@@ -14,7 +12,6 @@ def full_screen_toggle() -> Tag:
             "title": "Expand",
         },
         full_screen_toggle_icon(),
-        card_full_screen_dep(),
     )
 
 

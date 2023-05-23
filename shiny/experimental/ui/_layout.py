@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-# import pdb
 from typing import Optional
 
-from htmltools import TagAttrValue, TagChild, css, div
+from htmltools import TagAttrs, TagAttrValue, TagChild, css, div
 
-from shiny._typing_extensions import Literal
-
+from ..._typing_extensions import Literal
 from ._css import CssUnit, validate_css_unit
-from ._fill import bind_fill_role
+from ._fill import as_fillable_container, bind_fill_role
+from ._utils import consolidate_attrs, is_01_scalar
 
 
 # A grid-like, column-first, layout
@@ -55,7 +54,7 @@ from ._fill import bind_fill_role
 #
 def layout_column_wrap(
     width: Optional[CssUnit],
-    *args: TagChild,  # `TagAttrs` are not allowed here
+    *args: TagChild | TagAttrs,
     fixed_width: bool = False,
     heights_equal: Literal["all", "row"] = "all",
     fill: bool = True,
@@ -63,20 +62,18 @@ def layout_column_wrap(
     height: Optional[CssUnit] = None,
     height_mobile: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
-    class_: Optional[str] = None,  # Applies after `bind_fill_role()`
+    class_: Optional[str] = None,
     **kwargs: TagAttrValue,
 ):
-    attribs = kwargs
-    children = args
+    attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
 
     colspec: str | None = None
     if width is not None:
-        width_num = float(width)
-        if width_num > 0.0 and width_num <= 1.0:
-            num_cols = 1.0 / width_num
+        if is_01_scalar(width) and width > 0.0:
+            num_cols = 1.0 / width
             if not num_cols.is_integer():
                 raise ValueError(
-                    "Could not interpret width argument; see ?layout_column_wrap"
+                    "Could not interpret `layout_column_wrap(width=)` argument"
                 )
             colspec = " ".join(["1fr" for _ in range(int(num_cols))])
         else:
@@ -90,9 +87,8 @@ def layout_column_wrap(
     upgraded_children: list[TagChild] = []
     for child_value in children:
         upgraded_children.append(
-            bind_fill_role(
+            as_fillable_container(
                 div(bind_fill_role(div(child_value), container=fillable, item=True)),
-                container=True,
             )
         )
     tag_style_css = {
@@ -115,14 +111,8 @@ def layout_column_wrap(
             "class": "bslib-column-wrap",
             "style": css(**tag_style_css),
         },
+        attrs,
         *upgraded_children,
-        **attribs,
     )
-    # pdb.set_trace()
 
-    tag = bind_fill_role(tag, item=fill)
-    # Give the user an opportunity to override the classes added by bind_fill_role()
-    if class_ is not None:
-        tag.add_class(class_)
-
-    return tag
+    return bind_fill_role(tag, item=fill)
