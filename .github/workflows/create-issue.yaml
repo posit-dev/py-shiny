@@ -1,0 +1,29 @@
+on:
+  issues:
+    types: [opened]
+
+name: Create Jira Story for new Github Issues
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Jira Example - Create
+    steps:
+    - name: Login
+      uses: atlassian/gajira-login@v3
+      env:
+        JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+        JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+        JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+    - name: Jira Create Ticket
+      uses:  atlassian/gajira-create@v3
+      with:
+        project: SFP
+        issuetype: Story
+        summary: ${{ github.event.issue.title }}
+        description: ${{ github.event.issue.body }}
+        # set external reference link
+        fields: '{"customfield_10104": "${{ github.event.issue.html_url }}"}'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
