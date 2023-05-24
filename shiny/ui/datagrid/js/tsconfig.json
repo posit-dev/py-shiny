@@ -11,5 +11,5 @@
     "isolatedModules": true,
     "esModuleInterop": true
   },
-  "files": ["index.tsx"]
+  "include": ["**/*.tsx", "**/*.ts"]
 }

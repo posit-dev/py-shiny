@@ -1,0 +1,123 @@
+:root,
+:host {
+  --shiny-datagrid-font-size: 0.9em;
+  --shiny-datagrid-padding: 0.3em 0.5em;
+
+  --shiny-datagrid-grid-header-bgcolor: #eee;
+  --shiny-datagrid-grid-header-gridlines-color: #ccc;
+  --shiny-datagrid-grid-header-gridlines-style: solid;
+
+  --shiny-datagrid-grid-gridlines-color: #ccc;
+  --shiny-datagrid-grid-gridlines-style: solid;
+
+  --shiny-datagrid-table-header-bottom-border: 1px solid black;
+}
+
+.shiny-data-grid svg.sort-arrow {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-bottom: 0.15em;
+}
+
+.shiny-data-grid {
+  > table {
+    border-collapse: separate;
+    border-spacing: 0;
+
+    > thead {
+      position: sticky;
+      top: 0;
+      > th {
+        white-space: nowrap;
+      }
+    }
+  }
+}
+
+.shiny-data-grid.shiny-data-grid-table {
+  > table {
+    > thead > tr:last-child > th {
+      border-bottom: var(--shiny-datagrid-table-header-bottom-border);
+    }
+  }
+}
+
+/*
+ *
+ * # GRID STYLES
+ *
+ */
+
+.shiny-data-grid.shiny-data-grid-grid {
+  > table {
+    font-size: var(--shiny-datagrid-font-size);
+
+    > thead > tr > th {
+      background-color: var(--shiny-datagrid-grid-header-bgcolor);
+      padding: var(--shiny-datagrid-padding);
+    }
+
+    > tbody > tr > td {
+      padding: var(--shiny-datagrid-padding);
+    }
+  }
+}
+
+/* ## Grid borders */
+
+.shiny-data-grid.shiny-data-grid-grid {
+  > table {
+    border-collapse: separate;
+
+    > thead {
+      > tr {
+        &:first-child > th {
+          border-top-style: var(--shiny-datagrid-grid-gridlines-style);
+        }
+
+        > th {
+          border: 1px var(--shiny-datagrid-grid-gridlines-style)
+            var(--shiny-datagrid-grid-header-gridlines-color);
+          border-top-style: none;
+          border-left-style: none;
+
+          &:first-child {
+            border-left-style: var(--shiny-datagrid-grid-gridlines-style);
+          }
+        }
+      }
+    }
+
+    > tbody > tr > td {
+      border: 1px var(--shiny-datagrid-grid-gridlines-style)
+        var(--shiny-datagrid-grid-gridlines-color);
+      border-top-style: none;
+      border-left-style: none;
+
+      &:first-child {
+        border-left-style: var(--shiny-datagrid-grid-gridlines-style);
+      }
+    }
+  }
+
+  &.scrolling {
+    border: var(--shiny-datagrid-grid-gridlines-style)
+      var(--shiny-datagrid-grid-header-gridlines-color);
+
+    > table > thead > tr:first-child > th {
+      border-top-style: none;
+    }
+    > table > tbody > tr:last-child > td {
+      border-bottom-style: none;
+    }
+    > table > thead > tr > th:first-child,
+    > table > tbody > tr > td:first-child {
+      border-left-style: none;
+    }
+    > table > thead > tr > th:last-child,
+    > table > tbody > tr > td:last-child {
+      border-right-style: none;
+    }
+  }
+}

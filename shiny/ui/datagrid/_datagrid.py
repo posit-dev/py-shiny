@@ -13,7 +13,8 @@ react_deps = HTMLDependency(
         "package": "shiny",
         "subdir": "ui/datagrid/js/dist/",
     },
-    script=[{"src": "react.production.min.js"}],
+    # script=[{"src": "react.production.min.js"}],
+    script=[{"src": "react.development.js"}],
 )
 
 react_dom_deps = HTMLDependency(
@@ -23,7 +24,8 @@ react_dom_deps = HTMLDependency(
         "package": "shiny",
         "subdir": "ui/datagrid/js/dist/",
     },
-    script=[{"src": "react-dom.production.min.js"}],
+    # script=[{"src": "react-dom.production.min.js"}],
+    script=[{"src": "react-dom.development.js"}],
 )
 
 glide_data_grid_deps = HTMLDependency(

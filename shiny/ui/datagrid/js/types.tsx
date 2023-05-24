@@ -1,4 +1,4 @@
-export type CellData = ReadonlyArray<ReadonlyArray<any>>;
+export type CellData = unknown[][];
 
 export interface SortEntry {
   readonly columnIndex: number;

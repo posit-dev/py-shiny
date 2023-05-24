@@ -2,12 +2,12 @@ import * as fs from "fs/promises";
 import * as esbuild from "esbuild";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
+import { sassPlugin } from "esbuild-sass-plugin";
+import { globalExternals } from "@fal-works/esbuild-plugin-global-externals";
 
 function namedExports(module) {
   return Object.keys(module).filter((x) => x !== "default");
 }
-
-import { globalExternals } from "@fal-works/esbuild-plugin-global-externals";
 
 /** Mapping from module paths to global variables */
 const globals = {
@@ -56,5 +56,6 @@ await esbuild.build({
   outdir: "dist",
   minify: true,
   sourcemap: true,
-  plugins: [globalExternals(globals)],
+  plugins: [globalExternals(globals), sassPlugin()],
+  target: ["safari12"],
 });
