@@ -27,6 +27,8 @@ class Sidebar:
         open: Literal["desktop", "open", "closed", "always"],
         width: CssUnit,
         max_height_mobile: Optional[str | float],
+        color_fg: Optional[str],
+        color_bg: Optional[str],
     ):
         self.tag = tag
         self.collapse_tag = collapse_tag
@@ -34,6 +36,8 @@ class Sidebar:
         self.open = open
         self.width = width
         self.max_height_mobile = max_height_mobile
+        self.color_fg = color_fg
+        self.color_bg = color_bg
 
     # # This does not contain the `collapse_tag`
     # # The `Sidebar` class should use it's fields, not this method
@@ -75,7 +79,6 @@ def sidebar(
             class_="collapse-toggle",
             type="button",
             title="Toggle sidebar",
-            style=css(background_color=bg, color=fg),
             aria_expanded=trinary(open in ["open", "desktop"]),
             aria_controls=id,
         )
@@ -87,7 +90,6 @@ def sidebar(
         id=id,
         role="complementary",
         class_=class_,
-        style=css(background_color=bg, color=fg),
     )
 
     return Sidebar(
@@ -97,6 +99,8 @@ def sidebar(
         open=open,
         width=width,
         max_height_mobile=max_height_mobile,
+        color_fg=fg,
+        color_bg=bg,
     )
 
 
@@ -154,6 +158,8 @@ def layout_sidebar(
         data_bslib_sidebar_border_radius=trinary(border_radius),
         style=css(
             __bslib_sidebar_width=validate_css_unit(sidebar.width),
+            __bslib_sidebar_bg=validate_css_unit(sidebar.color_bg),
+            __bslib_sidebar_fg=validate_css_unit(sidebar.color_fg),
             __bs_card_border_color=border_color,
             height=validate_css_unit(height),
             __bslib_sidebar_max_height_mobile=validate_css_unit(max_height_mobile),
