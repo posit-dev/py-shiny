@@ -6,6 +6,7 @@ from htmltools import Tag, TagChild, Tagifiable
 
 from ..._typing_extensions import Literal, Protocol, runtime_checkable
 from ._css import CssUnit, validate_css_unit
+from ._htmldeps import fill_dependency
 from ._tag import tag_add_style, tag_prepend_class, tag_remove_class
 
 __all__ = (
@@ -100,6 +101,7 @@ def add_role(
 
     if condition:
         tag = tag_prepend_class(tag, class_)
+        tag.append(fill_dependency())
     return tag
 
 
