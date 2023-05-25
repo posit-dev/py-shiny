@@ -12,6 +12,7 @@ from htmltools import (
     TagAttrs,
     TagAttrValue,
     TagChild,
+    Tagifiable,
     TagList,
     css,
     div,
@@ -335,7 +336,7 @@ class TagCallable(Protocol):  # Should this be exported from htmltools?
         *args: TagChild | TagAttrs,
         _add_ws: bool = True,
         **kwargs: TagAttrValue,
-    ) -> Tag:
+    ) -> Tagifiable:
         ...
 
 
@@ -344,7 +345,7 @@ def card_title(
     *args: TagChild | TagAttrs,
     container: TagCallable = tags.h5,
     **kwargs: TagAttrValue,
-) -> Tag:
+) -> Tagifiable:
     """
     Card title container
 
@@ -459,7 +460,7 @@ def card_footer(
 
 
 class ImgContainer(Protocol):
-    def __call__(self, *args: Tag) -> CardItem | Tag | TagList:
+    def __call__(self, *args: Tag) -> Tagifiable:
         ...
 
 
@@ -477,7 +478,7 @@ def card_image(
     # Required so that multiple `card_images()` are not put in the same `card()`
     container: ImgContainer = card_body,
     **kwargs: TagAttrValue,
-) -> CardItem:
+) -> Tagifiable:
     """
     Card image container
 
