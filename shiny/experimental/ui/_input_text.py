@@ -4,13 +4,15 @@ from typing import Optional
 
 from htmltools import Tag, TagChild, css, div, tags
 
-from ..._docstring import add_example
+# from ..._docstring import add_example
 from ..._namespaces import resolve_id
 from ..._typing_extensions import Literal
+from ...ui._utils import shiny_input_label
 from ._htmldeps import autoresize_dependency
 
 
-@add_example()
+# TODO-maindocs;
+# @add_example()
 def input_text_area(
     id: str,
     label: TagChild,
@@ -108,15 +110,9 @@ def input_text_area(
     )
 
     return div(
-        _shiny_input_label(id, label),
+        shiny_input_label(id, label),
         area,
         autoresize_dependency() if autoresize else None,
         class_="form-group shiny-input-container",
         style=css(width=width),
     )
-
-
-# Originally from ui._utils, but we can't seem to import ..ui._utils
-def _shiny_input_label(id: str, label: TagChild = None) -> Tag:
-    cls = "control-label" + ("" if label else " shiny-label-null")
-    return tags.label(label, class_=cls, id=id + "-label", for_=id)
