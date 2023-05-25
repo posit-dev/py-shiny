@@ -9,6 +9,17 @@ from ._css_unit import CssUnit, validate_css_unit
 from ._htmldeps import fill_dependency
 from ._tag import tag_add_style, tag_prepend_class, tag_remove_class
 
+"""
+examples:
+    - [ ] remove_all_fill
+    - [ ] is_fill_carrier
+    - [ ] is_fillable_container
+    - [ ] is_fill_item
+    - [ ] AsFillingLayout
+    - [ ] IsFillingLayout
+"""
+
+
 __all__ = (
     "bind_fill_role",
     "as_fill_carrier",
