@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, TypeVar
 
-from htmltools import Tag, TagChild, Tagifiable
+from htmltools import Tag, TagChild, Tagifiable, css
 
 from ..._typing_extensions import Literal, Protocol, runtime_checkable
 from ._css_unit import CssUnit, validate_css_unit
@@ -18,9 +18,11 @@ __all__ = (
     "is_fill_carrier",
     "is_fillable_container",
     "is_fill_item",
-    "FillingLayout",
+    "AsFillingLayout",
+    "IsFillingLayout",
 )
 
+TagAsFillingLayoutT = TypeVar("TagAsFillingLayoutT", bound="Tag | AsFillingLayout")
 TagT = TypeVar("TagT", bound="Tag")
 
 
@@ -38,57 +40,6 @@ fill_container_class = "html-fill-container"
 # > If it is not utilizing `nonlocal foo`, then it should be returned. Even if it is altered in-place
 
 
-# Allow tags to intelligently fill their container
-#
-# Create fill containers and items. If a fill item is a direct child of a fill
-# container, and that container has an opinionated height, then the item is
-# allowed to grow and shrink to its container's size.
-#
-# @param x a [tag()] object. Can also be a valid [tagQuery()] input if
-#   `.cssSelector` is specified.
-# @param ... currently unused.
-# @param item whether or not to treat `x` as a fill item.
-# @param container whether or not to treat `x` as a fill container. Note this
-#   will the CSS `display` property on the tag to `flex`, which changes the way
-#   it does layout of it's direct children. Thus, one should be careful not to
-#   mark a tag as a fill container when it needs to rely on other `display`
-#   behavior.
-# @param overwrite whether or not to override previous calls to
-#   `bindFillRole()` (e.g., to remove the item/container role from a tag).
-# @param .cssSelector A character string containing a CSS selector for
-#   targeting particular (inner) tag(s) of interest. For more details on what
-#   selector(s) are supported, see [tagAppendAttributes()].
-#
-# @returns The original tag object (`x`) with additional attributes (and a
-#   [htmlDependency()]).
-#
-# @export
-# @examples
-#
-# tagz <- div(
-#   id = "outer",
-#   style = css(
-#     height = "600px",
-#     border = "3px red solid"
-#   ),
-#   div(
-#     id = "inner",
-#     style = css(
-#       height = "400px",
-#       border = "3px blue solid"
-#     )
-#   )
-# )
-#
-# # Inner doesn't fill outer
-# if (interactive()) browsable(tagz)
-#
-# tagz <- bindFillRole(tagz, container = TRUE)
-# tagz <- bindFillRole(tagz, item = TRUE, .cssSelector = "#inner")
-#
-# # Inner does fill outer
-# if (interactive()) browsable(tagz)
-#
 def _add_role(
     tag: TagT, *, condition: bool | None, class_: str, overwrite: bool = False
 ) -> TagT:
@@ -113,6 +64,33 @@ def bind_fill_role(
     container: Optional[bool] = None,
     overwrite: bool = False,
 ) -> TagT:
+    """
+    Allow tags to intelligently fill their container
+
+    Create fill containers and items. If a fill item is a direct child of a fill
+    container, and that container has an opinionated height, then the item is allowed to
+    grow and shrink to its container's size.
+
+    Parameters
+    ----------
+    tag
+        a T object.
+    item
+        whether or not to treat `tag` as a fill item.
+    container
+        whether or not to treat `x` as a fill container. Note, this will set the CSS
+        `display` property on the tag to `flex` which can change how its direct children
+        are rendered. Thus, one should be careful not to mark a tag as a fill container
+        when it needs to rely on other `display` behavior.
+    overwrite
+        whether or not to override previous calls to
+        `bind_fill_role()` (e.g., to remove the item/container role from a tag).
+
+    Returns
+    -------
+    The original tag object (`tag`) with additional attributes (and a
+    `~shiny.ui.HtmlDependency`).
+    """
     tag = _add_role(
         tag,
         condition=item,
@@ -132,54 +110,57 @@ def bind_fill_role(
 
 
 # Test and/or coerce fill behavior
-#
-# @description Filling layouts in bslib are built on the foundation of fillable
-# containers and fill items (fill carriers are both fillable and
-# fill). This is why most bslib components (e.g., [card()], [card_body()],
-# [layout_sidebar()]) possess both `fillable` and `fill` arguments (to control
-# their fill behavior). However, sometimes it's useful to add, remove, and/or
-# test fillable/fill properties on arbitrary [htmltools::tag()], which these
-# functions are designed to do.
-#
-# @references <https://rstudio.github.io/bslib/articles/filling.html>
-#
-# @details Although `as_fill()`, `as_fillable()`, and `as_fill_carrier()`
-# can work with non-tag objects that have a [as.tags] method (e.g., htmlwidgets),
-# they return the "tagified" version of that object
-#
-# @return
-#   * For `as_fill()`, `as_fillable()`, and `as_fill_carrier()`: the _tagified_
-#     version `x`, with relevant tags modified to possess the relevant fill
-#     properties.
-#   * For `is_fill()`, `is_fillable()`, and `is_fill_carrier()`: a logical vector,
-#     with length matching the number of top-level tags that possess the relevant
-#     fill properties.
-#
-# @param x a [htmltools::tag()].
-# @param ... currently ignored.
-# @param min_height,max_height Any valid [CSS unit][htmltools::validateCssUnit]
-#   (e.g., `150`).
-# @param gap Any valid [CSS unit][htmltools::validateCssUnit].
+
+# TODO-future; When `css_selector` can be implemented, the three parameters below should be added where appropriate
 # @param class A character vector of class names to add to the tag.
 # @param style A character vector of CSS properties to add to the tag.
 # @param css_selector A character string containing a CSS selector for
 #   targeting particular (inner) tag(s) of interest. For more details on what
 #   selector(s) are supported, see [tagAppendAttributes()].
-# @export
+
+
 def as_fill_carrier(
     tag: TagT,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
-    class_: Optional[str] = None,
-    style: Optional[str] = None,
+    # class_: Optional[str] = None,
+    # style: Optional[str] = None,
     # css_selector: Optional[str],
 ) -> TagT:
+    """
+    Make a tag a fill carrier
+
+    Filling layouts are built on the foundation of _fillable containers_ and _fill
+    items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
+    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
+    :func:`~shiny.experiemental.ui.card_body()`,
+    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    arguments (to control their fill behavior). However, sometimes it's useful to add,
+    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
+    these functions are designed to do.
+
+    Parameters
+    ----------
+    tag
+        a Tag object.
+    min_height,max_height,gap
+        Any valid CSS unit (e.g., `150`) to be applied to `tag`.
+
+    See Also
+    --------
+    * :func:`~shiny.experimental.ui.as_fill_item`
+    * :func:`~shiny.experimental.ui.as_fillable_container`
+    * :func:`~shiny.experimental.ui.remove_all_fill`
+    * :func:`~shiny.experimental.ui.is_fill_carrier`
+    * :func:`~shiny.experimental.ui.is_fill_item`
+    * :func:`~shiny.experimental.ui.is_fillable_container`
+    """
     tag = _add_class_and_styles(
         tag,
-        class_=class_,
-        style=style,
+        # class_=class_,
+        # style=style,
         min_height=min_height,
         max_height=max_height,
         gap=gap,
@@ -192,25 +173,62 @@ def as_fill_carrier(
     )
 
 
-# @rdname as_fill_carrier
-# @export
 def as_fillable_container(
-    tag: TagT,
+    tag: TagAsFillingLayoutT,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
-    class_: Optional[str] = None,
-    style: Optional[str] = None,
+    # class_: Optional[str] = None,
+    # style: Optional[str] = None,
     # css_selector: Optional[str] = None,
-) -> TagT:
+) -> TagAsFillingLayoutT:
+    """
+    Coerce a tag to be a fillable container
+
+    Filling layouts are built on the foundation of _fillable containers_ and _fill
+    items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
+    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
+    :func:`~shiny.experiemental.ui.card_body()`,
+    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    arguments (to control their fill behavior). However, sometimes it's useful to add,
+    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
+    these functions are designed to do.
+
+    Parameters
+    ----------
+    tag
+        a Tag object.
+    min_height,max_height,gap
+        Any valid CSS unit (e.g., `150`) to be applied to `tag`.
+
+
+    See Also
+    --------
+    * :func:`~shiny.experimental.ui.as_fill_carrier`
+    * :func:`~shiny.experimental.ui.as_fill_item`
+    * :func:`~shiny.experimental.ui.as_fillable_container`
+    * :func:`~shiny.experimental.ui.remove_all_fill`
+    * :func:`~shiny.experimental.ui.is_fill_carrier`
+    * :func:`~shiny.experimental.ui.is_fill_item`
+    * :func:`~shiny.experimental.ui.is_fillable_container`
+    """
+    if isinstance(tag, AsFillingLayout):
+        # tag.add_class(class_)
+        new_style = _style_units_to_str(
+            min_height=min_height, max_height=max_height, gap=gap
+        )
+        if new_style:
+            tag.add_style(new_style)
+        return tag.as_fillable_container()
+
     tag = _add_class_and_styles(
         tag,
-        class_=class_,
-        style=style,
-        min_height=validate_css_unit(min_height),
-        max_height=validate_css_unit(max_height),
-        gap=validate_css_unit(gap),
+        # class_=class_,
+        # style=style,
+        min_height=min_height,
+        max_height=max_height,
+        gap=gap,
     )
     return bind_fill_role(
         tag,
@@ -219,23 +237,57 @@ def as_fillable_container(
     )
 
 
-# @rdname as_fill_carrier
-# @export
 def as_fill_item(
-    tag: TagT,
+    tag: TagAsFillingLayoutT,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
-    class_: Optional[str] = None,
-    style: Optional[str] = None,
+    # class_: Optional[str] = None,
+    # style: Optional[str] = None,
     # css_selector: Optional[str] = None,
-) -> TagT:
+) -> TagAsFillingLayoutT:
+    """
+    Coerce a tag to a fill item
+
+    Filling layouts are built on the foundation of _fillable containers_ and _fill
+    items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
+    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
+    :func:`~shiny.experiemental.ui.card_body()`,
+    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    arguments (to control their fill behavior). However, sometimes it's useful to add,
+    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
+    these functions are designed to do.
+
+    Parameters
+    ----------
+    tag
+        a Tag object.
+    min_height,max_height
+        Any valid CSS unit (e.g., `150`) to be applied to `tag`.
+
+
+    See Also
+    --------
+    * :func:`~shiny.experimental.ui.as_fill_carrier`
+    * :func:`~shiny.experimental.ui.as_fillable_container`
+    * :func:`~shiny.experimental.ui.remove_all_fill`
+    * :func:`~shiny.experimental.ui.is_fill_carrier`
+    * :func:`~shiny.experimental.ui.is_fill_item`
+    * :func:`~shiny.experimental.ui.is_fillable_container`
+    """
+    if isinstance(tag, AsFillingLayout):
+        # tag.add_class(class_)
+        new_style = _style_units_to_str(min_height=min_height, max_height=max_height)
+        if new_style:
+            tag.add_style(new_style)
+        return tag.as_fill_item()
+
     tag = _add_class_and_styles(
         tag,
-        class_=class_,
-        style=style,
-        min_height=validate_css_unit(min_height),
-        max_height=validate_css_unit(max_height),
+        # class_=class_,
+        # style=style,
+        min_height=min_height,
+        max_height=max_height,
     )
     return bind_fill_role(
         tag,
@@ -244,9 +296,38 @@ def as_fill_item(
     )
 
 
-# @rdname as_fill_carrier
-# @export
-def remove_all_fill(tag: TagT) -> TagT:
+def remove_all_fill(tag: TagAsFillingLayoutT) -> TagAsFillingLayoutT:
+    """
+    Remove any filling layouts from a tag
+
+    Filling layouts are built on the foundation of _fillable containers_ and _fill
+    items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
+    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
+    :func:`~shiny.experiemental.ui.card_body()`,
+    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    arguments (to control their fill behavior). However, sometimes it's useful to add,
+    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
+    these functions are designed to do.
+
+    Parameters
+    ----------
+    tag
+        a Tag object.
+
+
+    See Also
+    --------
+    * :func:`~shiny.experimental.ui.as_fill_carrier`
+    * :func:`~shiny.experimental.ui.as_fill_item`
+    * :func:`~shiny.experimental.ui.as_fillable_container`
+    * :func:`~shiny.experimental.ui.is_fill_carrier`
+    * :func:`~shiny.experimental.ui.is_fill_item`
+    * :func:`~shiny.experimental.ui.is_fillable_container`
+    """
+
+    if isinstance(tag, AsFillingLayout):
+        return tag.remove_all_fill()
+
     return bind_fill_role(
         tag,
         item=False,
@@ -255,15 +336,67 @@ def remove_all_fill(tag: TagT) -> TagT:
     )
 
 
-# @rdname as_fill_carrier
-# @export
-def is_fill_carrier(x: Tag) -> bool:
+def is_fill_carrier(x: Tag | IsFillingLayout) -> bool:
+    """
+    Test a tag for being a fill carrier
+
+    Filling layouts are built on the foundation of _fillable containers_ and _fill
+    items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
+    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
+    :func:`~shiny.experiemental.ui.card_body()`,
+    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    arguments (to control their fill behavior). However, sometimes it's useful to add,
+    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
+    these functions are designed to do.
+
+    Parameters
+    ----------
+    tag
+        a Tag object.
+
+
+    See Also
+    --------
+    * :func:`~shiny.experimental.ui.as_fill_carrier`
+    * :func:`~shiny.experimental.ui.as_fill_item`
+    * :func:`~shiny.experimental.ui.as_fillable_container`
+    * :func:`~shiny.experimental.ui.remove_all_fill`
+    * :func:`~shiny.experimental.ui.is_fill_item`
+    * :func:`~shiny.experimental.ui.is_fillable_container`
+    """
     return is_fillable_container(x) and is_fill_item(x)
 
 
-# @rdname as_fill_carrier
-# @export
-def is_fillable_container(x: TagChild | FillingLayout) -> bool:
+def is_fillable_container(x: TagChild | IsFillingLayout) -> bool:
+    """
+    Test a tag for being a fillable container
+
+    Filling layouts are built on the foundation of _fillable containers_ and _fill
+    items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
+    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
+    :func:`~shiny.experiemental.ui.card_body()`,
+    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    arguments (to control their fill behavior). However, sometimes it's useful to add,
+    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
+    these functions are designed to do.
+
+    Parameters
+    ----------
+    tag
+        a Tag object.
+    min_height,max_height,gap
+        Any valid CSS unit (e.g., `150`) to be applied to `tag`.
+
+
+    See Also
+    --------
+    * :func:`~shiny.experimental.ui.as_fill_carrier`
+    * :func:`~shiny.experimental.ui.as_fill_item`
+    * :func:`~shiny.experimental.ui.as_fillable_container`
+    * :func:`~shiny.experimental.ui.remove_all_fill`
+    * :func:`~shiny.experimental.ui.is_fill_item`
+    * :func:`~shiny.experimental.ui.is_fillable_container`
+    """
     # TODO-future; Handle widgets
     # # won't actually work until (htmltools#334) gets fixed
     # renders_to_tag_class(x, fill_container_class, ".html-widget")
@@ -271,7 +404,34 @@ def is_fillable_container(x: TagChild | FillingLayout) -> bool:
     return _is_fill_layout(x, layout="fillable")
 
 
-def is_fill_item(x: TagChild | FillingLayout) -> bool:
+def is_fill_item(x: TagChild | IsFillingLayout) -> bool:
+    """
+    Test a tag for being a fill item
+
+    Filling layouts are built on the foundation of _fillable containers_ and _fill
+    items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
+    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
+    :func:`~shiny.experiemental.ui.card_body()`,
+    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    arguments (to control their fill behavior). However, sometimes it's useful to add,
+    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
+    these functions are designed to do.
+
+    Parameters
+    ----------
+    tag
+        a Tag object.
+
+
+    See Also
+    --------
+    * :func:`~shiny.experimental.ui.as_fill_carrier`
+    * :func:`~shiny.experimental.ui.as_fill_item`
+    * :func:`~shiny.experimental.ui.as_fillable_container`
+    * :func:`~shiny.experimental.ui.remove_all_fill`
+    * :func:`~shiny.experimental.ui.is_fill_carrier`
+    * :func:`~shiny.experimental.ui.is_fillable_container`
+    """
     # TODO-future; Handle widgets
     # # won't actually work until (htmltools#334) gets fixed
     # renders_to_tag_class(x, fill_item_class, ".html-widget")
@@ -280,60 +440,104 @@ def is_fill_item(x: TagChild | FillingLayout) -> bool:
 
 
 def _is_fill_layout(
-    x: TagChild | FillingLayout,
+    x: TagChild | IsFillingLayout,
     layout: Literal["fill", "fillable"],
     recurse: bool = True,
 ) -> bool:
-    if not isinstance(x, (Tag, Tagifiable, FillingLayout)):
+    if not isinstance(x, (Tag, Tagifiable, IsFillingLayout)):
         return False
 
-    # x: Tag | FillingLayout | Tagifiable
+    # x: Tag | IsFillingLayout | Tagifiable
 
     if layout == "fill":
         if isinstance(x, Tag):
             return x.has_class(fill_item_class)
-        if isinstance(x, FillingLayout):
+        if isinstance(x, IsFillingLayout):
             return x.is_fill_item()
 
     elif layout == "fillable":
         if isinstance(x, Tag):
             return x.has_class(fill_container_class)
-        if isinstance(x, FillingLayout):
+        if isinstance(x, IsFillingLayout):
             return x.is_fillable_container()
 
-    # x: Tagifiable and not (Tag or FillingLayout)
+    # x: Tagifiable and not (Tag or IsFillingLayout)
     raise TypeError(
-        f"`_is_fill_layout(x=)` must be a `Tag` or implement the `FillingLayout` protocol methods TODO-barret expand on method names. Received object of type: `{type(x).__name__}`"
+        f"`_is_fill_layout(x=)` must be a `Tag` or implement the `IsFillingLayout` protocol methods TODO-barret expand on method names. Received object of type: `{type(x).__name__}`"
     )
 
 
 @runtime_checkable
-class FillingLayout(Protocol):
+class IsFillingLayout(Protocol):
     def is_fill_item(self) -> bool:
-        raise NotImplementedError()
+        ...
 
     def is_fillable_container(self) -> bool:
-        raise NotImplementedError()
+        ...
+
+
+T = TypeVar("T")
+
+
+@runtime_checkable
+class AsFillingLayout(Protocol):
+    def add_class(
+        self: T,
+        class_: str,
+        *,
+        # Currently Unused
+        css_selector: Optional[str] = None,
+    ) -> T:
+        ...
+
+    def add_style(
+        self: T,
+        style: str,
+        *,
+        # Currently Unused
+        css_selector: Optional[str] = None,
+    ) -> T:
+        ...
+
+    def as_fill_item(
+        self: T,
+    ) -> T:
+        ...
+
+    def as_fillable_container(
+        self: T,
+    ) -> T:
+        ...
+
+    def remove_all_fill(
+        self: T,
+    ) -> T:
+        ...
 
 
 def _add_class_and_styles(
     tag: TagT,
-    *,
-    class_: Optional[str] = None,
-    style: Optional[str] = None,
+    # *,
+    # class_: Optional[str] = None,
+    # style: Optional[str] = None,
     # css_selector: Optional[str] = None,
-    **kwargs: Optional[CssUnit],
+    **kwargs: CssUnit | None,
 ) -> TagT:
-    if style or (len(kwargs) > 0):
-        style_items: dict[str, CssUnit] = {}
-        for k, v in kwargs.items():
-            if v is not None:
-                style_items[k] = validate_css_unit(v)
+    if len(kwargs) > 0:
         tag = tag_add_style(
             tag,
-            style=style,
-            **style_items,
+            # style,
+            _style_units_to_str(**kwargs),
         )
-    if class_:
-        tag.add_class(class_)
+    # if class_:
+    #     tag.add_class(class_)
     return tag
+
+
+def _style_units_to_str(**kwargs: CssUnit | None) -> str | None:
+    style_items: dict[str, CssUnit] = {}
+    for k, v in kwargs.items():
+        if v is not None:
+            style_items[k] = validate_css_unit(v)
+
+    return css(**style_items)
