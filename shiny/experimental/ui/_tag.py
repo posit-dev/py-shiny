@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TypeVar
 
-from htmltools import Tag, css
+from htmltools import Tag
 
 TagT = TypeVar("TagT", bound="Tag")
 
@@ -53,7 +53,8 @@ def tag_remove_class(tag: TagT, x: str) -> TagT:
 
 
 def tag_add_style(
-    tag: TagT, *style: str, collapse_: str = "", **kwargs: str | float | None
+    tag: TagT,
+    *style: str | None,
 ) -> TagT:
     """
     Add a style value(s) to the HTML style attribute.
@@ -78,13 +79,12 @@ def tag_add_style(
     :
         The modified tag.
     """
-    style_tuple = (
+    styles = (
         tag.attrs.get("style"),
         *style,
-        css(collapse_=collapse_, **kwargs),
     )
-    non_none_style_tuple = (s for s in style_tuple if s is not None)
-    style_str = collapse_.join(non_none_style_tuple)
+    non_none_style_tuple = (s for s in styles if s is not None)
+    style_str = "".join(non_none_style_tuple)
 
     if style_str:
         tag.attrs["style"] = style_str
