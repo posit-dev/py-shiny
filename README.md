@@ -5,7 +5,7 @@ Shiny for Python is the best way to build fast, beautiful web applications in Py
 
 To learn more about Shiny see the [Shiny for Python website](https://shiny.rstudio.com/py/). If you're new to the framework we recommend these resources:
 
--   Why [Shiny is better](https://posit.co/blog/why-shiny-for-python/) than Dash and Streamlit.
+-   How [Shiny is different](https://posit.co/blog/why-shiny-for-python/) from Dash and Streamlit.
 
 -   How [reactive programming](https://shiny.rstudio.com/py/docs/reactive-programming.html) can help you build better applications.
 
