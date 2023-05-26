@@ -160,13 +160,13 @@ def accordion(
 
     See Also
     --------
-    * ~shiny.experimental.ui.accordion_panel
-    * ~shiny.experimental.ui.accordion_panel_set
-    * ~shiny.experimental.ui.accordion_panel_open
-    * ~shiny.experimental.ui.accordion_panel_close
-    * ~shiny.experimental.ui.accordion_panel_insert
-    * ~shiny.experimental.ui.accordion_panel_remove
-    * ~shiny.experimental.ui.accordion_panel_update
+    * :func:`~shiny.experimental.ui.accordion_panel`
+    * :func:`~shiny.experimental.ui.accordion_panel_set`
+    * :func:`~shiny.experimental.ui.accordion_panel_open`
+    * :func:`~shiny.experimental.ui.accordion_panel_close`
+    * :func:`~shiny.experimental.ui.accordion_panel_insert`
+    * :func:`~shiny.experimental.ui.accordion_panel_remove`
+    * :func:`~shiny.experimental.ui.accordion_panel_update`
     """
 
     # TODO-bookmarking: Restore input here
@@ -268,13 +268,13 @@ def accordion_panel(
 
     See Also
     --------
-    * ~shiny.experimental.ui.accordion
-    * ~shiny.experimental.ui.accordion_panel_set
-    * ~shiny.experimental.ui.accordion_panel_open
-    * ~shiny.experimental.ui.accordion_panel_close
-    * ~shiny.experimental.ui.accordion_panel_insert
-    * ~shiny.experimental.ui.accordion_panel_remove
-    * ~shiny.experimental.ui.accordion_panel_update
+    * :func:`~shiny.experimental.ui.accordion`
+    * :func:`~shiny.experimental.ui.accordion_panel_set`
+    * :func:`~shiny.experimental.ui.accordion_panel_open`
+    * :func:`~shiny.experimental.ui.accordion_panel_close`
+    * :func:`~shiny.experimental.ui.accordion_panel_insert`
+    * :func:`~shiny.experimental.ui.accordion_panel_remove`
+    * :func:`~shiny.experimental.ui.accordion_panel_update`
     """
 
     if value is MISSING:
@@ -361,13 +361,13 @@ def accordion_panel_set(
 
     See Also
     --------
-    * ~shiny.experimental.ui.accordion
-    * ~shiny.experimental.ui.accordion_panel
-    * ~shiny.experimental.ui.accordion_panel_open
-    * ~shiny.experimental.ui.accordion_panel_close
-    * ~shiny.experimental.ui.accordion_panel_insert
-    * ~shiny.experimental.ui.accordion_panel_remove
-    * ~shiny.experimental.ui.accordion_panel_update
+    * :func:`~shiny.experimental.ui.accordion`
+    * :func:`~shiny.experimental.ui.accordion_panel`
+    * :func:`~shiny.experimental.ui.accordion_panel_open`
+    * :func:`~shiny.experimental.ui.accordion_panel_close`
+    * :func:`~shiny.experimental.ui.accordion_panel_insert`
+    * :func:`~shiny.experimental.ui.accordion_panel_remove`
+    * :func:`~shiny.experimental.ui.accordion_panel_update`
     """
     _accordion_panel_action(id=id, method="set", values=values, session=session)
 
@@ -398,13 +398,13 @@ def accordion_panel_open(
 
     See Also
     --------
-    * ~shiny.experimental.ui.accordion
-    * ~shiny.experimental.ui.accordion_panel
-    * ~shiny.experimental.ui.accordion_panel_set
-    * ~shiny.experimental.ui.accordion_panel_close
-    * ~shiny.experimental.ui.accordion_panel_insert
-    * ~shiny.experimental.ui.accordion_panel_remove
-    * ~shiny.experimental.ui.accordion_panel_update
+    * :func:`~shiny.experimental.ui.accordion`
+    * :func:`~shiny.experimental.ui.accordion_panel`
+    * :func:`~shiny.experimental.ui.accordion_panel_set`
+    * :func:`~shiny.experimental.ui.accordion_panel_close`
+    * :func:`~shiny.experimental.ui.accordion_panel_insert`
+    * :func:`~shiny.experimental.ui.accordion_panel_remove`
+    * :func:`~shiny.experimental.ui.accordion_panel_update`
     """
     _accordion_panel_action(id=id, method="open", values=values, session=session)
 
@@ -435,13 +435,13 @@ def accordion_panel_close(
 
     See Also
     --------
-    * ~shiny.experimental.ui.accordion
-    * ~shiny.experimental.ui.accordion_panel
-    * ~shiny.experimental.ui.accordion_panel_set
-    * ~shiny.experimental.ui.accordion_panel_open
-    * ~shiny.experimental.ui.accordion_panel_insert
-    * ~shiny.experimental.ui.accordion_panel_remove
-    * ~shiny.experimental.ui.accordion_panel_update
+    * :func:`~shiny.experimental.ui.accordion`
+    * :func:`~shiny.experimental.ui.accordion_panel`
+    * :func:`~shiny.experimental.ui.accordion_panel_set`
+    * :func:`~shiny.experimental.ui.accordion_panel_open`
+    * :func:`~shiny.experimental.ui.accordion_panel_insert`
+    * :func:`~shiny.experimental.ui.accordion_panel_remove`
+    * :func:`~shiny.experimental.ui.accordion_panel_update`
     """
     _accordion_panel_action(id=id, method="close", values=values, session=session)
 
@@ -478,13 +478,13 @@ def accordion_panel_insert(
 
     See Also
     --------
-    * ~shiny.experimental.ui.accordion
-    * ~shiny.experimental.ui.accordion_panel
-    * ~shiny.experimental.ui.accordion_panel_set
-    * ~shiny.experimental.ui.accordion_panel_open
-    * ~shiny.experimental.ui.accordion_panel_close
-    * ~shiny.experimental.ui.accordion_panel_remove
-    * ~shiny.experimental.ui.accordion_panel_update
+    * :func:`~shiny.experimental.ui.accordion`
+    * :func:`~shiny.experimental.ui.accordion_panel`
+    * :func:`~shiny.experimental.ui.accordion_panel_set`
+    * :func:`~shiny.experimental.ui.accordion_panel_open`
+    * :func:`~shiny.experimental.ui.accordion_panel_close`
+    * :func:`~shiny.experimental.ui.accordion_panel_remove`
+    * :func:`~shiny.experimental.ui.accordion_panel_update`
     """
 
     if position not in ("after", "before"):
@@ -524,13 +524,13 @@ def accordion_panel_remove(
 
     See Also
     --------
-    * ~shiny.experimental.ui.accordion
-    * ~shiny.experimental.ui.accordion_panel
-    * ~shiny.experimental.ui.accordion_panel_set
-    * ~shiny.experimental.ui.accordion_panel_open
-    * ~shiny.experimental.ui.accordion_panel_close
-    * ~shiny.experimental.ui.accordion_panel_insert
-    * ~shiny.experimental.ui.accordion_panel_update
+    * :func:`~shiny.experimental.ui.accordion`
+    * :func:`~shiny.experimental.ui.accordion_panel`
+    * :func:`~shiny.experimental.ui.accordion_panel_set`
+    * :func:`~shiny.experimental.ui.accordion_panel_open`
+    * :func:`~shiny.experimental.ui.accordion_panel_close`
+    * :func:`~shiny.experimental.ui.accordion_panel_insert`
+    * :func:`~shiny.experimental.ui.accordion_panel_update`
     """
     if not isinstance(target, list):
         target = [target]
@@ -594,13 +594,13 @@ def accordion_panel_update(
 
     See Also
     --------
-    * ~shiny.experimental.ui.accordion
-    * ~shiny.experimental.ui.accordion_panel
-    * ~shiny.experimental.ui.accordion_panel_set
-    * ~shiny.experimental.ui.accordion_panel_open
-    * ~shiny.experimental.ui.accordion_panel_close
-    * ~shiny.experimental.ui.accordion_panel_insert
-    * ~shiny.experimental.ui.accordion_panel_remove
+    * :func:`~shiny.experimental.ui.accordion`
+    * :func:`~shiny.experimental.ui.accordion_panel`
+    * :func:`~shiny.experimental.ui.accordion_panel_set`
+    * :func:`~shiny.experimental.ui.accordion_panel_open`
+    * :func:`~shiny.experimental.ui.accordion_panel_close`
+    * :func:`~shiny.experimental.ui.accordion_panel_insert`
+    * :func:`~shiny.experimental.ui.accordion_panel_remove`
     """
 
     session = require_active_session(session)
