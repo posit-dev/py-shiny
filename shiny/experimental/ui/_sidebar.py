@@ -122,7 +122,8 @@ def sidebar(
 
     Returns
     -------
-    A `Sidebar` object.
+    :
+        A `Sidebar` object.
 
     See Also
     --------
@@ -228,7 +229,8 @@ def layout_sidebar(
 
     Returns
     -------
-    A `Tag` object.
+    :
+        A `Tag` object.
 
     See Also
     --------

@@ -99,8 +99,9 @@ def bind_fill_role(
 
     Returns
     -------
-    The original tag object (`tag`) with additional attributes (and a
-    `~shiny.ui.HtmlDependency`).
+    :
+        The original tag object (`tag`) with additional attributes (and a
+        `~shiny.ui.HtmlDependency`).
     """
     tag = _add_role(
         tag,

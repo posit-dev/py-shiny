@@ -12,7 +12,7 @@ from ._card import (
 )
 
 from ._layout import layout_column_wrap
-from ._valuebox import value_box
+from ._valuebox import value_box, showcase_left_center, showcase_top_right
 
 from ._fill import (
     AsFillingLayout,
@@ -72,6 +72,8 @@ __all__ = (
     "layout_column_wrap",
     # ValueBox
     "value_box",
+    "showcase_left_center",
+    "showcase_top_right",
     # Fill
     "AsFillingLayout",
     "IsFillingLayout",

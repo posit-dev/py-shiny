@@ -64,13 +64,9 @@ def card(
     full_screen
         If `True`, an icon will appear when hovering over the card body. Clicking the
         icon expands the card to fit viewport size.
-    height
+    height,max_height
         Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
         `full_screen` (in this case, consider setting a `height` in
-        :func:`~shiny.experimental.ui.card_body()`).
-    max_height
-        Any valid CSS unit (e.g., `max_height="200px"`). Doesn't apply when a card is
-        made `full_screen` (in this case, consider setting a `height` in
         :func:`~shiny.experimental.ui.card_body()`).
     fill
         Whether or not to allow the card to grow/shrink to fit a fillable container with
@@ -198,12 +194,9 @@ def card_body(
         resolved `Tag` object.
     fillable
         Whether or not the card item should be a fillable (i.e. flexbox) container.
-    min_height
-        Any valid CSS length unit.
-    max_height
-        Any valid CSS length unit.
-    max_height_full_screen
-        Any valid CSS length unit. If missing, it is set to `max_height`.
+    min_height,max_height,max_height_full_screen
+        Any valid CSS length unit. If `max_height_full_screen` is missing, it is set to
+        `max_height`.
     height
         Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
         `full_screen` (in this case, consider setting a `height` in
