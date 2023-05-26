@@ -124,10 +124,19 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
     rowData.length
   );
 
+  // Reset sorting whenever dataset changes
+  useEffect(() => {
+    return () => {
+      table.resetSorting();
+    };
+  }, [data]);
+
   const tableStyle = data.options.style ?? "grid";
   const containerClass =
     tableStyle === "grid" ? "shiny-data-grid-grid" : "shiny-data-grid-table";
   const tableClass = tableStyle === "table" ? "table table-sm" : null;
+
+  const headerRowCount = table.getHeaderGroups().length;
 
   const scrollingClass =
     containerRef.current?.scrollHeight > containerRef.current?.clientHeight
@@ -142,17 +151,19 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
       >
         <table
           className={tableClass}
+          aria-rowcount={rowData.length}
           style={{ width: width === null || width === "auto" ? null : "100%" }}
         >
           <thead ref={theadRef} style={{ backgroundColor: bgcolor }}>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
+            {table.getHeaderGroups().map((headerGroup, i) => (
+              <tr key={headerGroup.id} aria-rowindex={i + 1}>
                 {headerGroup.headers.map((header) => {
                   return (
                     <th
                       key={header.id}
                       colSpan={header.colSpan}
                       style={{ width: header.getSize() }}
+                      scope="col"
                     >
                       {header.isPlaceholder ? null : (
                         <div
@@ -190,6 +201,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
                 <tr
                   key={virtualRow.key}
                   data-index={virtualRow.index}
+                  aria-rowindex={virtualRow.index + headerRowCount}
+                  data-key={row.id}
                   ref={rowVirtualizer.measureElement}
                 >
                   {row.getVisibleCells().map((cell) => {
