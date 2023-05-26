@@ -11,6 +11,12 @@
   --shiny-datagrid-grid-gridlines-style: solid;
 
   --shiny-datagrid-table-header-bottom-border: 1px solid black;
+
+  --shiny-datagrid-grid-body-hover-bgcolor: var(
+    --shiny-datagrid-grid-header-bgcolor
+  );
+  --shiny-datagrid-grid-body-selected-bgcolor: var(--bs-primary);
+  --shiny-datagrid-grid-body-selected-color: var(--bs-light);
 }
 
 .shiny-data-grid svg.sort-arrow {
@@ -58,8 +64,23 @@
       padding: var(--shiny-datagrid-padding);
     }
 
-    > tbody > tr > td {
-      padding: var(--shiny-datagrid-padding);
+    > tbody > tr {
+      &:hover {
+        --shiny-datagrid-grid-gridlines-color: inherit;
+        background-color: var(--shiny-datagrid-grid-body-hover-bgcolor);
+      }
+
+      &.selected {
+        --shiny-datagrid-grid-gridlines-color: var(
+          --shiny-datagrid-grid-body-selected-bgcolor
+        );
+        background-color: var(--shiny-datagrid-grid-body-selected-bgcolor);
+        color: var(--shiny-datagrid-grid-body-selected-color);
+      }
+
+      > td {
+        padding: var(--shiny-datagrid-padding);
+      }
     }
   }
 }

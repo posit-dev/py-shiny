@@ -24,6 +24,8 @@ import { VirtualItem, useVirtualizer } from "@tanstack/react-virtual";
 import { CellData } from "./types";
 import { sortArrowUp, sortArrowDown } from "./sort-arrows";
 import { useSummary } from "./table-summary";
+import { useCallback } from "react";
+import { SelectionMode, useSelection } from "./selection";
 
 // TODO: Right-align numeric columns, maybe change font
 // TODO: Row selection
@@ -124,17 +126,42 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
     rowData.length
   );
 
-  // Reset sorting whenever dataset changes
-  useEffect(() => {
-    return () => {
-      table.resetSorting();
-    };
-  }, [data]);
-
   const tableStyle = data.options.style ?? "grid";
   const containerClass =
     tableStyle === "grid" ? "shiny-data-grid-grid" : "shiny-data-grid-table";
   const tableClass = tableStyle === "table" ? "table table-sm" : null;
+
+  const rowSelection = useSelection<string, HTMLTableRowElement>(
+    SelectionMode.Multi,
+    (el) => el.dataset.key,
+    (fromKey, toKey) => {
+      // TODO: Refactor into separate/pure function
+      const rowModel = table.getSortedRowModel();
+      let fromIdx = rowModel.rows.findIndex((row) => row.id === fromKey);
+      let toIdx = rowModel.rows.findIndex((row) => row.id === toKey);
+      if (fromIdx < 0 || toIdx < 0) {
+        return [];
+      }
+      if (fromIdx > toIdx) {
+        // Swap order to simplify things
+        [fromIdx, toIdx] = [toIdx, fromIdx];
+      }
+      const keys = [];
+      for (let i = fromIdx; i <= toIdx; i++) {
+        keys.push(rowModel.rows[i].id);
+      }
+      return keys;
+    },
+    "selected"
+  );
+
+  // Reset sorting whenever dataset changes
+  useEffect(() => {
+    return () => {
+      table.resetSorting();
+      rowSelection.clear();
+    };
+  }, [data]);
 
   const headerRowCount = table.getHeaderGroups().length;
 
@@ -204,6 +231,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
                   aria-rowindex={virtualRow.index + headerRowCount}
                   data-key={row.id}
                   ref={rowVirtualizer.measureElement}
+                  className={rowSelection.has(row.id) ? "selected" : undefined}
+                  {...rowSelection.handlers()}
                 >
                   {row.getVisibleCells().map((cell) => {
                     return (
