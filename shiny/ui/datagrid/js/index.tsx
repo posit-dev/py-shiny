@@ -23,6 +23,7 @@ import {
 import { VirtualItem, useVirtualizer } from "@tanstack/react-virtual";
 import { CellData } from "./types";
 import { sortArrowUp, sortArrowDown } from "./sort-arrows";
+import { useSummary } from "./table-summary";
 
 // TODO: Right-align numeric columns, maybe change font
 // TODO: Row selection
@@ -37,6 +38,7 @@ import { sortArrowUp, sortArrowDown } from "./sort-arrows";
 // TODO: Accessibility review
 // TODO: Drag to resize columns
 // TODO: Drag to resize table/grid
+// TODO: Row numbers
 
 interface DataGridOptions {
   style?: "table" | "grid";
@@ -114,66 +116,13 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
       ? totalSize - (virtualRows?.[virtualRows.length - 1]?.end || 0)
       : 0;
 
-  const summary = useMemo(() => {
-    const summaryOption = data.options.summary ?? true;
-    if (!summaryOption) {
-      return null;
-    }
-
-    const template =
-      typeof summaryOption === "string"
-        ? summaryOption
-        : "Viewing rows {start} through {end} of {total}";
-
-    if (!containerRef.current) {
-      return null;
-    }
-    if (virtualRows.length === 0) {
-      return "Viewing 0 rows";
-    }
-
-    const top = containerRef.current.scrollTop;
-    const bot =
-      top + containerRef.current.clientHeight - theadRef.current.clientHeight;
-
-    let firstRow: VirtualItem | null = null;
-    let lastRow: VirtualItem | null = null;
-    for (let i = 0; i < virtualRows.length; i++) {
-      const item = virtualRows[i];
-      const middle = item.start + item.size / 2;
-      if (!firstRow && middle > top) {
-        firstRow = item;
-        lastRow = item;
-      }
-      if (middle > bot) {
-        break;
-      }
-      lastRow = item;
-    }
-
-    if (firstRow.index === 0 && lastRow.index === rowData.length - 1) {
-      // Viewing all rows; no need for a summary
-      return null;
-    }
-
-    return template.replace(/\{(start|end|total)\}/g, (substr, token) => {
-      if (token === "start") {
-        return firstRow.index + 1 + "";
-      } else if (token === "end") {
-        return lastRow.index + 1 + "";
-      } else if (token === "total") {
-        return rowData.length + "";
-      } else {
-        return substr;
-      }
-    });
-  }, [
+  const summary = useSummary(
     data.options.summary,
-    containerRef.current?.scrollTop,
-    containerRef.current?.scrollHeight,
+    containerRef?.current,
     virtualRows,
-    rowData,
-  ]);
+    theadRef.current,
+    rowData.length
+  );
 
   const tableStyle = data.options.style ?? "grid";
   const containerClass =
@@ -262,7 +211,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
           </tbody>
         </table>
       </div>
-      {summary && <div>{summary}</div>}
+      {summary}
     </>
   );
 };
