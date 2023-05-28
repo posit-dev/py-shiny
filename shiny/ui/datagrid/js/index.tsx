@@ -45,6 +45,7 @@ import { CellData } from "./types";
 interface DataGridOptions {
   style?: "table" | "grid";
   summary?: boolean | string;
+  rowSelectionMode?: SelectionMode;
 }
 
 interface PandasData {
@@ -131,31 +132,19 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
     tableStyle === "grid" ? "shiny-data-grid-grid" : "shiny-data-grid-table";
   const tableClass = tableStyle === "table" ? "table table-sm" : null;
 
+  const rowSelectionMode = data.options.rowSelectionMode ?? SelectionMode.Multi;
+  const canMultiSelect =
+    rowSelectionMode === SelectionMode.Multi ||
+    rowSelectionMode === SelectionMode.MultiSet;
+
   const rowSelection = useSelection<string, HTMLTableRowElement>(
-    SelectionMode.Multi,
+    rowSelectionMode,
     (el) => el.dataset.key,
-    (fromKey, toKey) => {
-      // TODO: Refactor into separate/pure function
-      const rowModel = table.getSortedRowModel();
-      let fromIdx = rowModel.rows.findIndex((row) => row.id === fromKey);
-      let toIdx = rowModel.rows.findIndex((row) => row.id === toKey);
-      if (fromIdx < 0 || toIdx < 0) {
-        return [];
-      }
-      if (fromIdx > toIdx) {
-        // Swap order to simplify things
-        [fromIdx, toIdx] = [toIdx, fromIdx];
-      }
-      const keys = [];
-      for (let i = fromIdx; i <= toIdx; i++) {
-        keys.push(rowModel.rows[i].id);
-      }
-      return keys;
-    },
-    "selected"
+    (fromKey, toKey) =>
+      findKeysBetween(table.getSortedRowModel(), fromKey, toKey)
   );
 
-  // Reset sorting whenever dataset changes
+  // Reset sorting and selection whenever dataset changes. (Should we do this?)
   useEffect(() => {
     return () => {
       table.resetSorting();
@@ -169,6 +158,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
     containerRef.current?.scrollHeight > containerRef.current?.clientHeight
       ? "scrolling"
       : "";
+
   return (
     <>
       <div
@@ -179,6 +169,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
         <table
           className={tableClass}
           aria-rowcount={rowData.length}
+          aria-multiselectable={canMultiSelect}
           style={{ width: width === null || width === "auto" ? null : "100%" }}
         >
           <thead ref={theadRef} style={{ backgroundColor: bgcolor }}>
@@ -231,7 +222,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
                   aria-rowindex={virtualRow.index + headerRowCount}
                   data-key={row.id}
                   ref={rowVirtualizer.measureElement}
-                  className={rowSelection.has(row.id) ? "selected" : undefined}
+                  aria-selected={rowSelection.has(row.id)}
                   {...rowSelection.handlers()}
                 >
                   {row.getVisibleCells().map((cell) => {
@@ -257,6 +248,27 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
     </>
   );
 };
+
+function findKeysBetween<TData>(
+  rowModel: RowModel<TData>,
+  fromKey: string,
+  toKey: string
+): readonly string[] {
+  let fromIdx = rowModel.rows.findIndex((row) => row.id === fromKey);
+  let toIdx = rowModel.rows.findIndex((row) => row.id === toKey);
+  if (fromIdx < 0 || toIdx < 0) {
+    return [];
+  }
+  if (fromIdx > toIdx) {
+    // Swap order to simplify things
+    [fromIdx, toIdx] = [toIdx, fromIdx];
+  }
+  const keys = [];
+  for (let i = fromIdx; i <= toIdx; i++) {
+    keys.push(rowModel.rows[i].id);
+  }
+  return keys;
+}
 
 const roots = new WeakMap<HTMLElement, Root>();
 

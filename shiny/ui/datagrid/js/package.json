@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc -noEmit && tsx build.ts",
+    "build": "tsc -noEmit && eslint . && tsx build.ts",
     "watch": "npx nodemon --exec 'npm run build' --ignore dist/ --ext '*'"
   },
   "author": "",

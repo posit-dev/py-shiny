@@ -15,8 +15,8 @@
   --shiny-datagrid-grid-body-hover-bgcolor: var(
     --shiny-datagrid-grid-header-bgcolor
   );
-  --shiny-datagrid-grid-body-selected-bgcolor: var(--bs-primary);
-  --shiny-datagrid-grid-body-selected-color: var(--bs-light);
+  --shiny-datagrid-grid-body-selected-bgcolor: #b4d5fe;
+  --shiny-datagrid-grid-body-selected-color: var(--bs-dark);
 }
 
 .shiny-data-grid svg.sort-arrow {
@@ -70,7 +70,7 @@
         background-color: var(--shiny-datagrid-grid-body-hover-bgcolor);
       }
 
-      &.selected {
+      &[aria-selected="true"] {
         --shiny-datagrid-grid-gridlines-color: var(
           --shiny-datagrid-grid-body-selected-bgcolor
         );

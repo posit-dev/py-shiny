@@ -10,6 +10,7 @@ module.exports = {
     "plugin:@typescript-eslint/eslint-recommended",
     "plugin:@typescript-eslint/recommended",
   ],
+  ignorePatterns: ["dist/*"],
   overrides: [],
   parser: "@typescript-eslint/parser",
   parserOptions: {

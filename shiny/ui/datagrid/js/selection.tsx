@@ -12,21 +12,23 @@ export interface SelectionSet<TKey, TElement extends HTMLElement> {
 }
 
 export enum SelectionMode {
-  None = 0,
-  Single,
-  Multi,
-  MultiSet,
+  None = "none",
+  Single = "single",
+  Multi = "multi",
+  MultiSet = "multi-set",
 }
 
 export function useSelection<TKey, TElement extends HTMLElement>(
   mode: SelectionMode,
   keyAccessor: (el: TElement) => TKey,
-  between?: (from: TKey, to: TKey) => ReadonlyArray<TKey>,
-  selectionClassName = "selected"
+  between?: (from: TKey, to: TKey) => ReadonlyArray<TKey>
 ): SelectionSet<TKey, TElement> {
   const [selectedKeys, setSelectedKeys] = useState<ImmutableSet<TKey>>(
     ImmutableSet.empty()
   );
+
+  // The anchor is the item that was most recently selected with a click or ctrl-click,
+  // and is used to determine the "other end" of a shift-click selection operation.
   const [anchor, setAnchor] = useState<TKey | null>(null);
 
   const onMouseDown = (event: React.MouseEvent<TElement, MouseEvent>): void => {
@@ -77,6 +79,8 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   };
 }
 
+const isMac = /^Mac/.test(window.navigator.platform);
+
 function performMouseDownAction<TKey, TElement>(
   mode: SelectionMode,
   between: (from: TKey, to: TKey) => readonly TKey[],
@@ -85,10 +89,12 @@ function performMouseDownAction<TKey, TElement>(
   key: TKey,
   anchor: TKey | null
 ): { selection: ImmutableSet<TKey>; anchor?: TKey | null } {
-  let { ctrlKey, metaKey } = event;
   const { shiftKey, altKey } = event;
-  if (window.navigator.platform.match(/^Mac/)) {
-    [ctrlKey, metaKey] = [metaKey, ctrlKey];
+  const ctrlKey = isMac ? event.metaKey : event.ctrlKey;
+  const metaKey = isMac ? event.ctrlKey : event.metaKey;
+
+  if (metaKey || altKey) {
+    return null;
   }
 
   if (mode === SelectionMode.MultiSet) {
@@ -96,25 +102,22 @@ function performMouseDownAction<TKey, TElement>(
   } else if (mode === SelectionMode.Single) {
     return { selection: ImmutableSet.empty<TKey>().add(key) };
   } else if (mode === SelectionMode.Multi) {
-    if (ctrlKey && !shiftKey) {
+    if (shiftKey && ctrlKey) {
+      // Ctrl-Shift-click: Add anchor row through current row to selection
+      const toSelect = between(anchor, key);
+      return { selection: selectedKeys.add(...toSelect) };
+    } else if (ctrlKey) {
       // Ctrl-click: toggle the current row and make it anchor
       return { selection: selectedKeys.toggle(key), anchor: key };
-    } else if (shiftKey && !ctrlKey) {
+    } else if (shiftKey) {
       // Shift-click: replace selection with anchor row through current row
       if (anchor !== null && between) {
         const toSelect = between(anchor, key);
         return { selection: ImmutableSet.empty<TKey>().add(...toSelect) };
       }
-    } else if (shiftKey && ctrlKey) {
-      // Ctrl-Shift-click: Add anchor row through current row to selection
-      const toSelect = between(anchor, key);
-      return { selection: selectedKeys.add(...toSelect) };
-    } else if (!shiftKey && !ctrlKey) {
+    } else {
       // Regular click: Select the current row and make it anchor
       return { selection: ImmutableSet.empty<TKey>().add(key), anchor: key };
-    } else {
-      return;
     }
-    event.preventDefault();
   }
 }
