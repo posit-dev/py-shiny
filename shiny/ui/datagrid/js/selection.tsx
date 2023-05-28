@@ -1,5 +1,6 @@
 import * as React from "react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { ImmutableSet } from "./immutable-set";
 
 export interface SelectionSet<TKey, TElement extends HTMLElement> {
   has(key: TKey): boolean;
@@ -76,47 +77,6 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   };
 }
 
-class ImmutableSet<T> {
-  private _set: Set<T>;
-
-  private constructor(set: Set<T>) {
-    this._set = set;
-  }
-
-  static empty<T>(): ImmutableSet<T> {
-    return new ImmutableSet(new Set());
-  }
-
-  has(value: T): boolean {
-    return this._set.has(value);
-  }
-
-  add(...values: T[]): ImmutableSet<T> {
-    const newSet = new Set(this._set.keys());
-    for (const value of values) {
-      newSet.add(value);
-    }
-    return new ImmutableSet(newSet);
-  }
-
-  toggle(value: T): ImmutableSet<T> {
-    if (this.has(value)) {
-      return this.delete(value);
-    } else {
-      return this.add(value);
-    }
-  }
-
-  delete(value: T): ImmutableSet<T> {
-    const newSet = new Set(this._set.keys());
-    newSet.delete(value);
-    return new ImmutableSet(newSet);
-  }
-
-  clear(): ImmutableSet<T> {
-    return ImmutableSet.empty();
-  }
-}
 function performMouseDownAction<TKey, TElement>(
   mode: SelectionMode,
   between: (from: TKey, to: TKey) => readonly TKey[],
