@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Sequence, overload
+from typing import Optional, Sequence
 
 from htmltools import (
     MetadataNode,
@@ -17,7 +17,7 @@ from ..._typing_extensions import Literal
 from ...types import MISSING, MISSING_TYPE, NavSetArg
 from ...ui import page_bootstrap
 from ...ui._utils import get_window_title
-from ._css import CssUnit, validate_css_unit
+from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
 from ._fill import as_fillable_container
 from ._navs import navset_bar
 from ._sidebar import Sidebar
@@ -180,23 +180,3 @@ def page_fillable(
         title=title,
         lang=lang,
     )
-
-
-@overload
-def validate_css_padding(padding: CssUnit | list[CssUnit]) -> str:
-    ...
-
-
-@overload
-def validate_css_padding(padding: None) -> None:
-    ...
-
-
-def validate_css_padding(padding: CssUnit | list[CssUnit] | None) -> str | None:
-    if padding is None:
-        return None
-
-    if not isinstance(padding, list):
-        padding = [padding]
-
-    return " ".join(validate_css_unit(p) for p in padding)

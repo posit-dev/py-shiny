@@ -1,19 +1,22 @@
 from ._sidebar import layout_sidebar, sidebar, sidebar_toggle, panel_main, panel_sidebar
 from ._page import page_fillable, page_navbar
 from ._navs import navset_bar, navset_tab_card, navset_pill_card
-from ._card_item import (
+from ._card import (
     CardItem,
+    card,
     card_header,
+    card_title,
     card_body,
     card_image,
     card_footer,
 )
-from ._card import card
+
 from ._layout import layout_column_wrap
-from ._valuebox import value_box
+from ._valuebox import value_box, showcase_left_center, showcase_top_right
 
 from ._fill import (
-    FillingLayout,
+    AsFillingLayout,
+    IsFillingLayout,
     # bind_fill_role,
     as_fill_carrier,
     as_fillable_container,
@@ -61,6 +64,7 @@ __all__ = (
     "CardItem",
     "card",
     "card_header",
+    "card_title",
     "card_body",
     "card_image",
     "card_footer",
@@ -68,8 +72,11 @@ __all__ = (
     "layout_column_wrap",
     # ValueBox
     "value_box",
+    "showcase_left_center",
+    "showcase_top_right",
     # Fill
-    "FillingLayout",
+    "AsFillingLayout",
+    "IsFillingLayout",
     # "bind_fill_role",
     "as_fill_carrier",
     "as_fillable_container",

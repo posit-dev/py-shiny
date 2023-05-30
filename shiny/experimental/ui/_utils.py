@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typing
+from typing import overload
 
 from htmltools import TagAttrs, TagAttrValue, TagChild, div
 
@@ -28,3 +29,22 @@ def consolidate_attrs(
 
 def is_01_scalar(x: object) -> TypeGuard[float]:
     return isinstance(x, float) and x >= 0.0 and x <= 1.0
+
+
+@overload
+def trinary(x: None) -> None:
+    ...
+
+
+@overload
+def trinary(x: bool | str) -> str:
+    ...
+
+
+def trinary(x: bool | str | None) -> None | str:
+    if x is None:
+        return None
+    elif x:
+        return "true"
+    else:
+        return "false"

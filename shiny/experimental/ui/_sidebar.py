@@ -12,10 +12,10 @@ from ..._typing_extensions import Literal
 from ...session import Session, require_active_session
 
 # from ._color import get_color_contrast
-from ._css import CssUnit, trinary, validate_css_unit
+from ._css_unit import CssUnit, validate_css_unit
 from ._fill import bind_fill_role
 from ._htmldeps import sidebar_dependency
-from ._utils import consolidate_attrs
+from ._utils import consolidate_attrs, trinary
 
 
 class Sidebar:
@@ -45,6 +45,7 @@ class Sidebar:
     #     return self.tag.tagify()
 
 
+# TODO-maindocs; @add_example()
 def sidebar(
     *args: TagChild | TagAttrs,
     width: CssUnit = 250,
@@ -57,6 +58,80 @@ def sidebar(
     class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
     max_height_mobile: Optional[str | float] = None,
 ) -> Sidebar:
+    # See [this article](https://rstudio.github.io/bslib/articles/sidebars.html)
+    #   to learn more.
+    # TODO-future; If color contrast is implemented. Docs for `bg` and `fg`:
+    #     If only one of either is provided, an
+    #     accessible contrasting color is provided for the opposite color, e.g. setting
+    #     `bg` chooses an appropriate `fg` color.
+
+    """
+    Sidebar element
+
+    Create a collapsing sidebar layout by providing a `sidebar()` object to the
+    `sidebar=` argument of:
+
+    * :func:`~shiny.experimental.ui.layout_sidebar()`
+      * Creates a sidebar layout component which can be dropped inside any
+        :func:`~shiny.ui.page()` or `:func:`~shiny.experimental.ui.card()` context.
+    * :func:`~shiny.experimental.ui.page_navbar()`, :func:`~shiny.experimental.ui.navset_card_tab()`, and :func:`~shiny.experimental.ui.navset_card_pill()`
+      * Creates a multi page/tab UI with a singular `sidebar()` (which is
+        shown on every page/tab).
+
+    Parameters
+    ----------
+    *args
+        Contents to the sidebar. Or tag attributes that are supplied to the
+        resolved `Tag` object.
+    width
+        A valid CSS unit used for the width of the sidebar.
+    position
+        Where the sidebar should appear relative to the main content.
+    open
+        The initial state of the sidebar, choosing from the following options:
+
+        * `"desktop"`: The sidebar starts open on desktop screen, closed on mobile.
+            This is default sidebar behavior.
+        * `"open"` or `True`: The sidebar starts open.
+        * `"closed"` or `False`: The sidebar starts closed.
+        * `"always"` or `None`: The sidebar is always open and cannot be closed.
+
+        In `sidebar_toggle()`, `open` indicates the desired state of the sidebar,
+        where the default of `open = None` will cause the sidebar to be toggled
+        open if closed or vice versa. Note that `sidebar_toggle()` can only open or
+        close the sidebar, so it does not support the `"desktop"` and `"always"`
+        options.
+    id
+        A character string. Required if wanting to re-actively read (or update) the
+        `collapsible` state in a Shiny app.
+    title
+        A character title to be used as the sidebar title, which will be wrapped in a
+        `<div>` element with class `sidebar-title`. You can also provide a custom
+        :func:`~shiny.htmltools.tag()` for the title element, in which case you'll
+        likely want to give this element `class = "sidebar-title"`.
+    bg,fg
+        A background or foreground color.
+    class_
+        CSS classes for the sidebar container element, in addition to the fixed
+        `.sidebar` class.
+    max_height_mobile
+        The maximum height of the horizontal sidebar when viewed on mobile devices.
+        The default is `250px` unless the sidebar is included in a
+        :func:`~shiny.experimental.ui.layout_sidebar()` with a specified height, in
+        which case the default is to take up no more than 50% of the layout container.
+
+    Returns
+    -------
+    :
+        A `Sidebar` object.
+
+    See Also
+    --------
+    * :func:`~shiny.experimental.ui.layout_sidebar()`
+    * :func:`~shiny.experimental.ui.navset_navbar()`
+    * :func:`~shiny.experimental.ui.navset_card_tab()`
+    * :func:`~shiny.experimental.ui.navset_card_pill()`
+    """
     # TODO-future; validate `open`, bg, fg, class_, max_height_mobile
 
     if id is None and open != "always":
@@ -75,7 +150,7 @@ def sidebar(
     collapse_tag = None
     if open != "always":
         collapse_tag = tags.button(
-            collapse_icon(),
+            _collapse_icon(),
             class_="collapse-toggle",
             type="button",
             title="Toggle sidebar",
@@ -84,7 +159,11 @@ def sidebar(
         )
 
     tag = div(
-        div(title, *args, class_="sidebar-content"),
+        div(
+            title,
+            {"class": "sidebar-content"},
+            *args,
+        ),
         {"class": "bslib-sidebar-input"} if id is not None else None,
         {"class": "sidebar"},
         id=id,
@@ -104,6 +183,7 @@ def sidebar(
     )
 
 
+# TODO-maindocs; @add_example()
 def layout_sidebar(
     sidebar: Sidebar,
     *args: TagChild | TagAttrs,
@@ -117,6 +197,45 @@ def layout_sidebar(
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
+    """
+    Sidebar layout
+
+    Create a sidebar layout component which can be dropped inside any
+    :func:`~shiny.ui.page()` or :func:`~shiny.experimental.ui.card()` context.
+
+    Parameters
+    ----------
+    sidebar
+        A `Sidebar` object created by :func:`~shiny.experimental.ui.sidebar()`.
+    *args
+        Contents to the main content area. Or tag attributes that are supplied to the
+        resolved `Tag` object.
+    fillable
+        Whether or not the main content area should be wrapped in a fillable container.
+        See :func:`~shiny.experimental.ui.as_fillable_container()` for details.
+    fill
+        Whether or not the sidebar layout should be wrapped in a fillable container. See
+        :func:`~shiny.experimental.ui.as_fill_item()` for details.
+    bg,fg
+        A background or foreground color.
+    border
+        Whether or not to show a border around the sidebar layout.
+    border_radius
+        Whether or not to round the corners of the sidebar layout.
+    border_color
+        A border color.
+    height
+        Any valid CSS unit to use for the height.
+
+    Returns
+    -------
+    :
+        A `Tag` object.
+
+    See Also
+    --------
+    * :func:`~shiny.experimental.ui.sidebar()`
+    """
     assert isinstance(sidebar, Sidebar)
 
     # TODO-future; implement
@@ -151,7 +270,7 @@ def layout_sidebar(
         sidebar.tag,
         sidebar.collapse_tag,
         sidebar_dependency(),
-        sidebar_init_js(),
+        _sidebar_init_js(),
         data_bslib_sidebar_init="true" if sidebar.open != "always" else None,
         data_bslib_sidebar_open=sidebar.open,
         data_bslib_sidebar_border=trinary(border),
@@ -171,16 +290,38 @@ def layout_sidebar(
     return res
 
 
-# @describeIn sidebar Toggle a `sidebar()` state during an active Shiny user
-#   session.
-# @param session A Shiny session object (the default should almost always be
-#   used).
-# @export
+# TODO-maindocs; @add_example()
 def sidebar_toggle(
     id: str,
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
     session: Session | None = None,
 ) -> None:
+    """
+    Toggle a sidebar
+
+    Toggle a `sidebar()` state during an active Shiny user session.
+
+    Parameters
+    ----------
+    id
+        The `id` of the `sidebar()` to toggle.
+    open
+        The desired state of the sidebar, choosing from the following options:
+
+        * `None`: toggle sidebar open/closed
+        * `"open"` or `True`: The sidebar starts open.
+        * `"closed"` or `False`: The sidebar starts closed.
+
+        Note that `sidebar_toggle()` can only open or close the sidebar, so it does not
+        support the `"desktop"` and `"always"`
+    session
+        A Shiny session object (the default should almost always be used).
+
+    See Also
+    --------
+    * :func:`~shiny.experimental.ui.sidebar()`
+    * :func:`~shiny.experimental.ui.layout_sidebar()`
+    """
     session = require_active_session(session)
 
     method: Literal["toggle", "open", "close"]
@@ -205,7 +346,7 @@ def sidebar_toggle(
     session.on_flush(callback, once=True)
 
 
-def collapse_icon() -> Tag:
+def _collapse_icon() -> Tag:
     return tags.svg(
         svgtags.path(
             fill_rule="evenodd",
@@ -220,7 +361,7 @@ def collapse_icon() -> Tag:
     )
 
 
-def sidebar_init_js() -> Tag:
+def _sidebar_init_js() -> Tag:
     # Note: if we want to avoid inline `<script>` tags in the future for
     # initialization code, we might be able to do so by turning the sidebar layout
     # container into a web component
