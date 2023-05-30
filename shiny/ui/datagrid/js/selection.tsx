@@ -125,7 +125,8 @@ function performMouseDownAction<TKey, TElement>(
   key: TKey,
   anchor: TKey | null
 ): { selection: ImmutableSet<TKey>; anchor?: TKey | null } {
-  let { shiftKey, ctrlKey, altKey, metaKey } = event;
+  let { ctrlKey, metaKey } = event;
+  const { shiftKey, altKey } = event;
   if (window.navigator.platform.match(/^Mac/)) {
     [ctrlKey, metaKey] = [metaKey, ctrlKey];
   }
