@@ -1,31 +1,31 @@
 import "./styles.scss";
 
-import React, {
-  FC,
-  useMemo,
-  useRef,
-  StrictMode,
-  useEffect,
-  useLayoutEffect,
-} from "react";
-import { createRoot, Root } from "react-dom/client";
 import {
   ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
   Row,
   RowModel,
   Table,
   TableOptions,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { VirtualItem, useVirtualizer } from "@tanstack/react-virtual";
-import { CellData } from "./types";
-import { sortArrowUp, sortArrowDown } from "./sort-arrows";
-import { useSummary } from "./table-summary";
-import { useCallback } from "react";
+import React, {
+  FC,
+  StrictMode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
+import { Root, createRoot } from "react-dom/client";
 import { SelectionMode, useSelection } from "./selection";
+import { sortArrowDown, sortArrowUp } from "./sort-arrows";
+import { useSummary } from "./table-summary";
+import { CellData } from "./types";
 
 // TODO: Right-align numeric columns, maybe change font
 // TODO: Row selection
