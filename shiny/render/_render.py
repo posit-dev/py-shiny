@@ -340,7 +340,7 @@ def plot(
            :class:`matplotlib.figure.Figure` instance.
         5. A :class:`PIL.Image.Image` instance.
 
-    It's also possible to use the `matplotlib.pyplot` interface; in that case, your
+    It's also possible to use the ``matplotlib.pyplot`` interface; in that case, your
     function should just call pyplot functions and not return anything. (Note that if
     the decorated function is async, then it's not safe to use pyplot. Shiny will detect
     this case and throw an error asking you to use matplotlib's object-oriented

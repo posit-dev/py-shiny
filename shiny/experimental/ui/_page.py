@@ -20,8 +20,64 @@ from ...ui._utils import get_window_title
 from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
 from ._fill import as_fillable_container
 from ._navs import navset_bar
-from ._sidebar import Sidebar
+from ._sidebar import Sidebar, layout_sidebar
 from ._utils import consolidate_attrs
+
+
+def page_sidebar(
+    *args: TagChild | TagAttrs,
+    sidebar: Optional[Sidebar | TagChild | TagAttrs] = None,
+    title: Optional[str | Tag | TagList] = None,
+    fillable: bool = True,
+    fillable_mobile: bool = False,
+    window_title: str | MISSING_TYPE = MISSING,
+    lang: Optional[str] = None,
+):
+    """
+    Create a page with a sidebar and a title.
+
+    Parameters
+    ----------
+    args
+        UI elements.
+    sidebar
+        Content to display in the sidebar.
+    title
+        A title to display at the top of the page.
+    fillable
+        Whether or not the main content area should be considered a fillable
+        (i.e., flexbox) container.
+    fillable_mobile
+        Whether or not ``fillable`` should apply on mobile devices.
+    window_title
+        The browser's window title (defaults to the host URL of the page). Can also be
+        set as a side effect via :func:`~shiny.ui.panel_title`.
+    lang
+        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+        default, `None`, results in an empty string.
+
+    Returns
+    """
+
+    if isinstance(title, str):
+        title = tags.h1(title, class_="bslib-page-title")
+
+    return page_fillable(
+        title,
+        layout_sidebar(
+            *args,
+            sidebar=sidebar,
+            fillable=fillable,
+            border=False,
+            border_radius=False,
+        ),
+        get_window_title(title, window_title=window_title),
+        padding=0,
+        gap=0,
+        lang=lang,
+        fillable_mobile=fillable_mobile,
+    )
 
 
 def page_navbar(
@@ -32,8 +88,10 @@ def page_navbar(
     sidebar: Optional[Sidebar] = None,
     # Only page_navbar gets enhancedtreatement for `fillable`
     # If an `*args`'s `data-value` attr string is in `fillable`, then the component is fillable
-    fillable: bool | list[str] = False,
-    fill_mobile: bool = False,
+    fillable: bool | list[str] = True,
+    fillable_mobile: bool = False,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
     position: Literal["static-top", "fixed-top", "fixed-bottom"] = "static-top",
     header: Optional[TagChild] = None,
     footer: Optional[TagChild] = None,
@@ -61,6 +119,12 @@ def page_navbar(
     selected
         Choose a particular nav item to select by default value (should match it's
         ``value``).
+    sidebar
+        A :func:`~shiny.ui.sidebar` component to display on every page.
+    fillable
+        TODO: document
+    fillable_mobile
+        TODO: document
     position
         Determines whether the navbar should be displayed at the top of the page with
         normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or
@@ -122,7 +186,7 @@ def page_navbar(
         def page_func(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
             return page_fillable(
                 *args,
-                fill_mobile=fill_mobile,
+                fillable_mobile=fillable_mobile,
                 padding=0,
                 gap=0,
                 **kwargs,
@@ -136,6 +200,8 @@ def page_navbar(
             selected=selected,
             sidebar=sidebar,
             fillable=fillable,
+            gap=gap,
+            padding=padding,
             position=position,
             header=header,
             footer=footer,
@@ -155,7 +221,7 @@ def page_fillable(
     *args: TagChild | TagAttrs,
     padding: Optional[CssUnit | list[CssUnit]] = None,
     gap: Optional[CssUnit] = None,
-    fill_mobile: bool = False,
+    fillable_mobile: bool = False,
     title: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
@@ -165,14 +231,14 @@ def page_fillable(
     style = css(
         padding=validate_css_padding(padding),
         gap=validate_css_unit(gap),
-        __bslib_page_fill_mobile_height="100%" if fill_mobile else "auto",
+        __bslib_page_fill_mobile_height="100%" if fillable_mobile else "auto",
     )
 
     return page_bootstrap(
         tags.head(tags.style("html { height: 100%; }")),
         as_fillable_container(
             tags.body(
-                {"class": "bslib-page-fill", "style": style},
+                {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
                 attrs,
                 *children,
             ),

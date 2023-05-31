@@ -21,7 +21,7 @@ from htmltools import (
 
 from ..._typing_extensions import Literal, Protocol
 from ...types import MISSING, MISSING_TYPE
-from ._css_unit import CssUnit, validate_css_unit
+from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
 from ._fill import as_fill_carrier, bind_fill_role
 from ._htmldeps import card_dependency
 from ._utils import consolidate_attrs
@@ -106,7 +106,7 @@ def card(
 
     tag = div(
         {
-            "class": "card bslib-card",
+            "class": "card bslib-card bslib-mb-spacer",
             "style": css(
                 height=validate_css_unit(height),
                 max_height=validate_css_unit(max_height),
@@ -175,6 +175,7 @@ def card_body(
     max_height: Optional[CssUnit] = None,
     max_height_full_screen: Optional[CssUnit] | MISSING_TYPE = MISSING,
     height: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
     gap: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
@@ -240,13 +241,14 @@ def card_body(
         "margin-bottom": "auto",
         # .card-body already adds `flex: 1 1 auto` so make sure to override it
         "flex": "1 1 auto" if fill else "0 0 auto",
+        "padding": validate_css_padding(padding),
         "gap": validate_css_unit(gap),
         "height": validate_css_unit(height),
     }
     tag = tags.div(
         *args,
         {
-            "class": "card-body",
+            "class": "card-body bslib-gap-spacing",
             "style": css(**div_style_args),
         },
         class_=class_,

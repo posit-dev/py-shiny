@@ -12,7 +12,7 @@ from ..._typing_extensions import Literal
 from ...session import Session, require_active_session
 
 # from ._color import get_color_contrast
-from ._css_unit import CssUnit, validate_css_unit
+from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
 from ._fill import bind_fill_role
 from ._htmldeps import sidebar_dependency
 from ._utils import consolidate_attrs, trinary
@@ -185,15 +185,17 @@ def sidebar(
 
 # TODO-maindocs; @add_example()
 def layout_sidebar(
-    sidebar: Sidebar,
     *args: TagChild | TagAttrs,
-    fillable: bool = False,
+    sidebar: Optional[Sidebar | TagChild | TagAttrs] = None,
+    fillable: bool = True,
     fill: bool = True,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
     border: Optional[bool] = None,
     border_radius: Optional[bool] = None,
     border_color: Optional[str] = None,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
@@ -224,6 +226,10 @@ def layout_sidebar(
         Whether or not to round the corners of the sidebar layout.
     border_color
         A border color.
+    gap
+        TODO: document
+    padding
+        TODO: document
     height
         Any valid CSS unit to use for the height.
 
@@ -236,6 +242,9 @@ def layout_sidebar(
     --------
     * :func:`~shiny.experimental.ui.sidebar()`
     """
+    if sidebar is None:
+        sidebar = _sidebar_func()
+
     assert isinstance(sidebar, Sidebar)
 
     # TODO-future; implement
@@ -252,7 +261,17 @@ def layout_sidebar(
             # child.children will be handled when tagified
 
     main = div(
-        {"role": "main", "class": "main", "style": css(background_color=bg, color=fg)},
+        {
+            "role": "main",
+            "class": f"main{' bslib-gap-spacing' if fillable else ''}",
+            ""
+            "style": css(
+                background_color=bg,
+                color=fg,
+                gap=validate_css_unit(gap),
+                padding=validate_css_padding(padding),
+            ),
+        },
         attrs,
         *children,
     )
@@ -344,6 +363,9 @@ def sidebar_toggle(
         session.send_input_message(id, {"method": method})
 
     session.on_flush(callback, once=True)
+
+
+_sidebar_func = sidebar
 
 
 def _collapse_icon() -> Tag:

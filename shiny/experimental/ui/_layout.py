@@ -106,10 +106,8 @@ def layout_column_wrap(
         # Always provide the `height:auto` default so that the CSS variable
         # doesn't get inherited in a scenario like
         # layout_column_wrap(height=200, layout, layout_column_wrap(...))
-        "--bslib-column-wrap-height": validate_css_unit(
-            "auto" if height is None else height
-        ),
-        "--bslib-column-wrap-height-mobile": validate_css_unit(
+        "--bslib-grid-height": validate_css_unit("auto" if height is None else height),
+        "--bslib-grid-height-mobile": validate_css_unit(
             "auto" if height_mobile is None else height_mobile
         ),
         "gap": validate_css_unit(gap),
@@ -117,7 +115,7 @@ def layout_column_wrap(
 
     tag = div(
         {
-            "class": "bslib-column-wrap",
+            "class": "bslib-grid",
             "style": css(**tag_style_css),
         },
         attrs,
