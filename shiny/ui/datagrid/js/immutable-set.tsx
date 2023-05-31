@@ -10,6 +10,10 @@ export class ImmutableSet<T> {
     return this._empty as ImmutableSet<T>;
   }
 
+  static just<T>(...values: T[]): ImmutableSet<T> {
+    return this.empty<T>().add(...values);
+  }
+
   has(value: T): boolean {
     return this._set.has(value);
   }

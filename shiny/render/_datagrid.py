@@ -2,11 +2,23 @@ from __future__ import annotations
 
 import json
 import typing
-from typing import Any, Awaitable, Callable, Optional, cast, overload
+from dataclasses import asdict, dataclass
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Literal,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+    overload,
+)
 
 from .. import _utils
 from .._typing_extensions import Protocol, runtime_checkable
 from ..render import RenderFunction, RenderFunctionAsync
+
 
 # ======================================================================================
 # RenderDataGrid
@@ -15,6 +27,17 @@ from ..render import RenderFunction, RenderFunctionAsync
 #   Union[pandas.DataFrame, <protocol with .to_pandas()>]
 # However, if we did that, we'd have to import pandas at load time, which adds
 # a nontrivial amount of overhead. So for now, we're just using `object`.
+@dataclass
+class DataGridOptions:
+    style: Union[Literal["table"], Literal["grid"]] = "table"
+    summary: Union[bool, str] = True
+    row_selection_mode: Union[
+        Literal["none"], Literal["single"], Literal["multi"], Literal["multi-set"]
+    ] = "none"
+
+
+DataGridResult = Union[None, object, Tuple[object, DataGridOptions]]
+
 RenderDataGridFunc = Callable[[], object]
 RenderDataGridFuncAsync = Callable[[], Awaitable[object]]
 
@@ -26,7 +49,7 @@ class PandasCompatible(Protocol):
         ...
 
 
-class RenderDataGrid(RenderFunction[object, object]):
+class RenderDataGrid(RenderFunction[DataGridResult, object]):
     def __init__(
         self,
         fn: RenderDataGridFunc,
@@ -61,6 +84,13 @@ class RenderDataGrid(RenderFunction[object, object]):
         if x is None:
             return None
 
+        options: DataGridOptions
+        if isinstance(x, Tuple):
+            options = cast(DataGridOptions, x[1])
+            x = cast(object, x[0])
+        else:
+            options = DataGridOptions()
+
         import pandas as pd
 
         if not isinstance(x, pd.DataFrame):
@@ -79,19 +109,14 @@ class RenderDataGrid(RenderFunction[object, object]):
             df.to_json(None, orient="split")  # pyright: ignore[reportUnknownMemberType]
         )
 
-        res["options"] = dict(
-            row_selection=self._row_selection,
-            column_selection=self._column_selection,
-            cell_selection=self._cell_selection,
-            range_selection=self._range_selection,
-        )
+        res["options"] = asdict(options)
         res["width"] = self._width
         res["height"] = self._height
 
         return res
 
 
-class RenderDataGridAsync(RenderDataGrid, RenderFunctionAsync[object, object]):
+class RenderDataGridAsync(RenderDataGrid, RenderFunctionAsync[DataGridResult, object]):
     def __init__(
         self,
         fn: RenderDataGridFuncAsync,

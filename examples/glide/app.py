@@ -2,6 +2,7 @@ import pandas as pd
 import seaborn as sns
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
+from shiny.render._datagrid import DataGridOptions
 
 app_ui = ui.page_fluid(
     ui.input_select("dataset", "Dataset", sns.get_dataset_names()),
@@ -22,9 +23,11 @@ def server(input: Inputs, output: Outputs, session: Session):
         return df.set(sns.load_dataset(req(input.dataset())))
 
     @output
-    @render.data_grid(height="500px", row_selection=True)
+    @render.data_grid(height="400px")
     def grid():
-        return df()
+        return df(), DataGridOptions(style="grid", row_selection_mode="single")
+        # Alternative API:
+        # return DataGrid(df(), style="grid", row_selection_mode="multi-set")
 
     @reactive.Effect
     @reactive.event(input.grid_cell_edit)

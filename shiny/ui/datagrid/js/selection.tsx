@@ -6,8 +6,9 @@ export interface SelectionSet<TKey, TElement extends HTMLElement> {
   has(key: TKey): boolean;
   set(key: TKey, selected: boolean): void;
   clear(): void;
-  handlers(): {
+  itemHandlers(): {
     onMouseDown: (event: React.MouseEvent<TElement, MouseEvent>) => void;
+    onKeyDown: (event: React.KeyboardEvent<TElement>) => void;
   };
 }
 
@@ -21,6 +22,7 @@ export enum SelectionMode {
 export function useSelection<TKey, TElement extends HTMLElement>(
   mode: SelectionMode,
   keyAccessor: (el: TElement) => TKey,
+  focusOffset: (start: TKey, offset: number) => TKey,
   between?: (from: TKey, to: TKey) => ReadonlyArray<TKey>
 ): SelectionSet<TKey, TElement> {
   const [selectedKeys, setSelectedKeys] = useState<ImmutableSet<TKey>>(
@@ -49,10 +51,49 @@ export function useSelection<TKey, TElement extends HTMLElement>(
     );
     if (result) {
       setSelectedKeys(result.selection);
-      if (typeof result.anchor !== "undefined") {
-        setAnchor(result.anchor);
+      if (result.anchor) {
+        setAnchor(key);
+        el.focus();
       }
       event.preventDefault();
+    }
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<TElement>): void => {
+    if (mode === SelectionMode.None) {
+      return;
+    }
+
+    const el = event.currentTarget as TElement;
+    const key = keyAccessor(el);
+    const selected = selectedKeys.has(key);
+
+    if (mode === SelectionMode.Single) {
+      if (event.key === " " || event.key === "Enter") {
+        if (selectedKeys.has(key)) {
+          setSelectedKeys(ImmutableSet.empty());
+        } else {
+          setSelectedKeys(ImmutableSet.just(key));
+        }
+        event.preventDefault();
+      } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        const targetKey = focusOffset(key, event.key === "ArrowUp" ? -1 : 1);
+        if (targetKey) {
+          event.preventDefault();
+          if (selected) {
+            setSelectedKeys(ImmutableSet.just(targetKey));
+          }
+        }
+      }
+    } else if (mode === SelectionMode.MultiSet) {
+      if (event.key === " " || event.key === "Enter") {
+        setSelectedKeys(selectedKeys.toggle(key));
+        event.preventDefault();
+      } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        if (focusOffset(key, event.key === "ArrowUp" ? -1 : 1)) {
+          event.preventDefault();
+        }
+      }
     }
   };
 
@@ -73,8 +114,8 @@ export function useSelection<TKey, TElement extends HTMLElement>(
       setSelectedKeys(selectedKeys.clear());
     },
 
-    handlers() {
-      return { onMouseDown };
+    itemHandlers() {
+      return { onMouseDown, onKeyDown };
     },
   };
 }
@@ -88,7 +129,7 @@ function performMouseDownAction<TKey, TElement>(
   event: React.MouseEvent<TElement, MouseEvent>,
   key: TKey,
   anchor: TKey | null
-): { selection: ImmutableSet<TKey>; anchor?: TKey | null } {
+): { selection: ImmutableSet<TKey>; anchor?: true } {
   const { shiftKey, altKey } = event;
   const ctrlKey = isMac ? event.metaKey : event.ctrlKey;
   const metaKey = isMac ? event.ctrlKey : event.metaKey;
@@ -98,9 +139,20 @@ function performMouseDownAction<TKey, TElement>(
   }
 
   if (mode === SelectionMode.MultiSet) {
-    return { selection: selectedKeys.toggle(key) };
+    return { selection: selectedKeys.toggle(key), anchor: true };
   } else if (mode === SelectionMode.Single) {
-    return { selection: ImmutableSet.empty<TKey>().add(key) };
+    if (ctrlKey && !shiftKey) {
+      // Ctrl-click is like simple click, except it removes selection if an item is
+      // already selected
+      if (selectedKeys.has(key)) {
+        return { selection: ImmutableSet.empty(), anchor: true };
+      } else {
+        return { selection: ImmutableSet.just(key), anchor: true };
+      }
+    } else {
+      // Simple click sets selection, always
+      return { selection: ImmutableSet.just(key), anchor: true };
+    }
   } else if (mode === SelectionMode.Multi) {
     if (shiftKey && ctrlKey) {
       // Ctrl-Shift-click: Add anchor row through current row to selection
@@ -108,16 +160,16 @@ function performMouseDownAction<TKey, TElement>(
       return { selection: selectedKeys.add(...toSelect) };
     } else if (ctrlKey) {
       // Ctrl-click: toggle the current row and make it anchor
-      return { selection: selectedKeys.toggle(key), anchor: key };
+      return { selection: selectedKeys.toggle(key), anchor: true };
     } else if (shiftKey) {
       // Shift-click: replace selection with anchor row through current row
       if (anchor !== null && between) {
         const toSelect = between(anchor, key);
-        return { selection: ImmutableSet.empty<TKey>().add(...toSelect) };
+        return { selection: ImmutableSet.just(...toSelect) };
       }
     } else {
       // Regular click: Select the current row and make it anchor
-      return { selection: ImmutableSet.empty<TKey>().add(key), anchor: key };
+      return { selection: ImmutableSet.just(key), anchor: true };
     }
   }
 }

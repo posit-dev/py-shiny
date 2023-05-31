@@ -65,6 +65,10 @@
     }
 
     > tbody > tr {
+      &:focus-visible {
+        outline: 5px auto Highlight;
+        outline: 5px auto -webkit-focus-ring-color;
+      }
       &:hover {
         --shiny-datagrid-grid-gridlines-color: inherit;
         background-color: var(--shiny-datagrid-grid-body-hover-bgcolor);

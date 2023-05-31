@@ -20,12 +20,14 @@ import React, {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { Root, createRoot } from "react-dom/client";
 import { SelectionMode, useSelection } from "./selection";
 import { sortArrowDown, sortArrowUp } from "./sort-arrows";
 import { useSummary } from "./table-summary";
 import { CellData } from "./types";
+import { findFirstItemInView } from "./dom-utils";
 
 // TODO: Right-align numeric columns, maybe change font
 // TODO: Row selection
@@ -45,7 +47,7 @@ import { CellData } from "./types";
 interface DataGridOptions {
   style?: "table" | "grid";
   summary?: boolean | string;
-  rowSelectionMode?: SelectionMode;
+  row_selection_mode?: SelectionMode;
 }
 
 interface PandasData {
@@ -120,19 +122,21 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
       : 0;
 
   const summary = useSummary(
-    data.options.summary,
+    data.options["summary"],
     containerRef?.current,
     virtualRows,
     theadRef.current,
     rowData.length
   );
 
-  const tableStyle = data.options.style ?? "grid";
+  const tableStyle = data.options["style"] ?? "grid";
   const containerClass =
     tableStyle === "grid" ? "shiny-data-grid-grid" : "shiny-data-grid-table";
   const tableClass = tableStyle === "table" ? "table table-sm" : null;
 
-  const rowSelectionMode = data.options.rowSelectionMode ?? SelectionMode.Multi;
+  const rowSelectionMode =
+    data.options["row_selection_mode"] ?? SelectionMode.Multi;
+  const canSelect = rowSelectionMode !== SelectionMode.None;
   const canMultiSelect =
     rowSelectionMode === SelectionMode.Multi ||
     rowSelectionMode === SelectionMode.MultiSet;
@@ -140,9 +144,55 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
   const rowSelection = useSelection<string, HTMLTableRowElement>(
     rowSelectionMode,
     (el) => el.dataset.key,
+    (key, offset) => {
+      const rowModel = table.getSortedRowModel();
+      let index = rowModel.rows.findIndex((row) => row.id === key);
+      if (index < 0) {
+        return null;
+      }
+      index += offset;
+      if (index < 0 || index >= rowModel.rows.length) {
+        return null;
+      }
+      const targetKey = rowModel.rows[index].id;
+      rowVirtualizer.scrollToIndex(index);
+      setTimeout(() => {
+        const targetEl = containerRef.current?.querySelector(
+          `[data-key='${targetKey}']`
+        ) as HTMLElement | null;
+        targetEl?.focus();
+      }, 0);
+      return targetKey;
+    },
     (fromKey, toKey) =>
       findKeysBetween(table.getSortedRowModel(), fromKey, toKey)
   );
+
+  const onContainerFocus = React.useCallback(
+    (event: React.FocusEvent) => {
+      // When focus is within (or on, but we only really care about within) the
+      // container, remove it from the tab order. If we don't set the tab stop to -1,
+      // then the logic below (that, on container focus, moves focus to the first item)
+      // causes Shift-Tab from a focused item to break, as focus moves to the container
+      // and then (back) to the first item.
+      setTabIndex(-1);
+
+      if (event.target !== event.currentTarget) {
+        // Not interested in capturing, only care about focus on the container itself
+        return;
+      }
+      findFirstItemInView(
+        containerRef.current,
+        containerRef.current.querySelectorAll("[tabindex='-1']"),
+        { top: theadRef.current.clientHeight }
+      )?.focus();
+    },
+    [containerRef.current, theadRef.current]
+  );
+
+  const onContainerBlur = React.useCallback((event: React.FocusEvent) => {
+    setTabIndex(0);
+  }, []);
 
   // Reset sorting and selection whenever dataset changes. (Should we do this?)
   useEffect(() => {
@@ -159,12 +209,17 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
       ? "scrolling"
       : "";
 
+  const [tabIndex, setTabIndex] = useState(0);
+
   return (
     <>
       <div
         className={`shiny-data-grid ${containerClass} ${scrollingClass}`}
         ref={containerRef}
+        onFocus={onContainerFocus}
+        onBlur={onContainerBlur}
         style={{ width, maxHeight: height, overflow: "auto" }}
+        tabIndex={tabIndex}
       >
         <table
           className={tableClass}
@@ -223,7 +278,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
                   data-key={row.id}
                   ref={rowVirtualizer.measureElement}
                   aria-selected={rowSelection.has(row.id)}
-                  {...rowSelection.handlers()}
+                  tabIndex={-1}
+                  {...rowSelection.itemHandlers()}
                 >
                   {row.getVisibleCells().map((cell) => {
                     return (
