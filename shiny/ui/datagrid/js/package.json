@@ -4,15 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc -noEmit && node build.mjs",
+    "build": "tsc -noEmit && tsx build.ts",
     "watch": "npx nodemon --exec 'npm run build' --ignore dist/ --ext '*'"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@fal-works/esbuild-plugin-global-externals": "^2.1.2",
+    "@preact/compat": "^17.1.2",
     "@tanstack/react-virtual": "^3.0.0-beta.54",
     "@types/jquery": "^3.5.16",
+    "@types/node": "^20.2.5",
     "@types/react": "^18.0.33",
     "@types/react-dom": "^18.0.11",
     "@types/rstudio-shiny": "github:rstudio/shiny#v1.7.4",
@@ -22,8 +23,14 @@
     "esbuild-sass-plugin": "^2.9.0",
     "eslint": "^8.41.0",
     "eslint-plugin-react": "^7.32.2",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "postcss": "^8.4.24",
+    "postcss-modules": "^6.0.0",
+    "preact": "^10.15.1",
+    "prettier": "^2.8.8",
+    "prettier-plugin-organize-imports": "^3.2.2",
+    "react": "npm:@preact/compat@^17.1.2",
+    "react-dom": "npm:@preact/compat@^17.1.2",
+    "tsx": "^3.12.7",
     "typescript": "^5.0.3"
   },
   "dependencies": {

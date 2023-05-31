@@ -2,49 +2,29 @@ from __future__ import annotations
 
 __all__ = ("output_data_grid",)
 
-from htmltools import HTMLDependency, Tag, div
+from htmltools import HTMLDependency, Tag
 
+from ... import __version__
 from ..._namespaces import resolve_id
 
-react_deps = HTMLDependency(
-    "react",
-    "18.2.0",
-    source={
-        "package": "shiny",
-        "subdir": "ui/datagrid/js/dist/",
-    },
-    # script=[{"src": "react.production.min.js"}],
-    script=[{"src": "react.development.js"}],
-)
 
-react_dom_deps = HTMLDependency(
-    "react-dom",
-    "18.2.0",
-    source={
-        "package": "shiny",
-        "subdir": "ui/datagrid/js/dist/",
-    },
-    # script=[{"src": "react-dom.production.min.js"}],
-    script=[{"src": "react-dom.development.js"}],
-)
-
-glide_data_grid_deps = HTMLDependency(
-    "shiny-glide-data-grid",
-    "0.0.1",
-    source={
-        "package": "shiny",
-        "subdir": "ui/datagrid/js/dist",
-    },
-    script=[{"src": "index.js"}],
-    stylesheet=[{"href": "index.css"}],
-)
+def data_grid_deps() -> HTMLDependency:
+    return HTMLDependency(
+        name="shiny-glide-data-grid",
+        version=__version__,
+        source={
+            "package": "shiny",
+            "subdir": "ui/datagrid/js/dist",
+        },
+        script=[
+            {"src": "index.js", "type": "module"},
+        ],
+    )
 
 
 def output_data_grid(id: str) -> Tag:
-    return div(
-        react_deps,
-        react_dom_deps,
-        glide_data_grid_deps,
+    return Tag(
+        "shiny-glide-data-grid-output",
+        data_grid_deps(),
         id=resolve_id(id),
-        class_="shiny-glide-data-grid-output",
     )

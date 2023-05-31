@@ -1,31 +1,31 @@
-import "./styles.scss";
+import css from "./styles.scss";
 
-import React, {
-  FC,
-  useMemo,
-  useRef,
-  StrictMode,
-  useEffect,
-  useLayoutEffect,
-} from "react";
-import { createRoot, Root } from "react-dom/client";
 import {
   ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
   Row,
   RowModel,
   Table,
   TableOptions,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { VirtualItem, useVirtualizer } from "@tanstack/react-virtual";
-import { CellData } from "./types";
-import { sortArrowUp, sortArrowDown } from "./sort-arrows";
-import { useSummary } from "./table-summary";
-import { useCallback } from "react";
+import React, {
+  FC,
+  StrictMode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
+import { Root, createRoot } from "react-dom/client";
 import { SelectionMode, useSelection } from "./selection";
+import { sortArrowDown, sortArrowUp } from "./sort-arrows";
+import { useSummary } from "./table-summary";
+import { CellData } from "./types";
 
 // TODO: Right-align numeric columns, maybe change font
 // TODO: Row selection
@@ -262,39 +262,11 @@ const roots = new WeakMap<HTMLElement, Root>();
 
 class ShinyDataGridBinding extends Shiny.OutputBinding {
   find(scope: HTMLElement | JQuery<HTMLElement>): JQuery<HTMLElement> {
-    return $(scope).find(".shiny-glide-data-grid-output");
+    return $(scope).find("shiny-glide-data-grid-output");
   }
 
-  renderValue(el: HTMLElement, data: unknown): void {
-    let root = roots.get(el);
-    if (!root) {
-      root = createRoot(el);
-      roots.set(el, root);
-    }
-
-    const id = this.getId(el);
-
-    const {
-      columns,
-      index,
-      data: rows,
-      options,
-      width,
-      height,
-    } = data as PandasData;
-
-    root.render(
-      data && (
-        <StrictMode>
-          <ShinyDataGrid
-            data={data as PandasData}
-            bgcolor={getComputedBgColor(el)}
-            width={width ?? "100%"}
-            height={height ?? "500px"}
-          ></ShinyDataGrid>
-        </StrictMode>
-      )
-    );
+  renderValue(el: ShinyDataGridOutput, data: unknown): void {
+    el.renderValue(data);
   }
 }
 Shiny.outputBindings.register(new ShinyDataGridBinding(), "shinyDataGrid");
@@ -352,3 +324,59 @@ function getStyle(el: Element, styleProp: string): string | undefined {
 //   // ...
 // }
 // Shiny.outputBindings.registerReact(MyReactDataGrid, ".shiny-glide-data-grid-output");
+
+const cssTemplate = document.createElement("template");
+cssTemplate.innerHTML = `<style>${css}</style>`;
+
+export class ShinyDataGridOutput extends HTMLElement {
+  reactRoot?: Root;
+
+  connectedCallback() {
+    this.attachShadow({ mode: "open" });
+
+    this.shadowRoot!.appendChild(cssTemplate.content.cloneNode(true));
+
+    const myDiv = document.createElement("div");
+    this.shadowRoot!.appendChild(myDiv);
+
+    this.reactRoot = createRoot(myDiv);
+
+    // If there is a <script class="data"> element it contains static data.
+    // Render it now.
+    const dataEl = this.querySelector(
+      "script.data"
+    ) as HTMLScriptElement | null;
+    if (dataEl) {
+      const data = JSON.parse(dataEl.innerText);
+      this.renderValue(data);
+    }
+  }
+
+  renderValue(data: unknown) {
+    const {
+      columns,
+      index,
+      data: rows,
+      options,
+      width,
+      height,
+    } = data as PandasData;
+
+    if (!data) {
+      return;
+    }
+
+    this.reactRoot!.render(
+      <StrictMode>
+        <ShinyDataGrid
+          data={data as PandasData}
+          bgcolor={getComputedBgColor(this)}
+          width={width ?? "100%"}
+          height={height ?? "500px"}
+        ></ShinyDataGrid>
+      </StrictMode>
+    );
+  }
+}
+
+customElements.define("shiny-glide-data-grid-output", ShinyDataGridOutput);
