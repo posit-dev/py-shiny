@@ -12,6 +12,7 @@ from ..._typing_extensions import Literal
 from ...session import Session, require_active_session
 
 # from ._color import get_color_contrast
+from ._card import CardItem
 from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
 from ._fill import bind_fill_role
 from ._htmldeps import sidebar_dependency
@@ -198,7 +199,7 @@ def layout_sidebar(
     padding: Optional[CssUnit | list[CssUnit]] = None,
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
-) -> Tag:
+) -> CardItem:
     """
     Sidebar layout
 
@@ -242,8 +243,8 @@ def layout_sidebar(
     --------
     * :func:`~shiny.experimental.ui.sidebar()`
     """
-    if sidebar is None:
-        sidebar = _sidebar_func()
+    if not isinstance(sidebar, Sidebar):
+        sidebar = _sidebar_func(sidebar)
 
     assert isinstance(sidebar, Sidebar)
 
@@ -306,7 +307,7 @@ def layout_sidebar(
 
     res = bind_fill_role(res, item=fill)
 
-    return res
+    return CardItem(res)
 
 
 # TODO-maindocs; @add_example()
@@ -395,7 +396,7 @@ def _sidebar_init_js() -> Tag:
 
 ########################################################
 
-
+# TODO: use class to single out sidebar value (in layout_sidebar)
 def panel_sidebar(
     *args: TagChild | TagAttrs,
     width: int = 4,
