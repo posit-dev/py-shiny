@@ -3,7 +3,7 @@ import seaborn as sns
 from shinyswatch.theme import darkly
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
-from shiny.render import DataGrid
+from shiny.render import DataGrid, DataTable
 
 
 def app_ui(req):
@@ -22,6 +22,7 @@ def app_ui(req):
             {"none": "(None)", "single": "Single", "multi-toggle": "Multiple"},
             selected="multi-toggle",
         ),
+        ui.input_switch("gridstyle", "Grid", True),
         ui.output_data_grid("grid"),
         ui.panel_absolute(
             ui.output_text_verbatim("detail"),
@@ -62,7 +63,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.data_grid
     def grid():
-        return DataGrid(df(), row_selection_mode=input.selection_mode())
+        cls = DataGrid if input.gridstyle() else DataTable
+        return cls(df(), row_selection_mode=input.selection_mode())
 
     @reactive.Effect
     @reactive.event(input.grid_cell_edit)
