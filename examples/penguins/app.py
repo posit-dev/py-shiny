@@ -21,37 +21,33 @@ numeric_cols: List[str] = df.select_dtypes(include=["float64"]).columns.tolist()
 species: List[str] = df["Species"].unique().tolist()
 species.sort()
 
-app_ui = x.ui.page_fillable(
+app_ui = x.ui.page_sidebar(
     shinyswatch.theme.pulse(),
-    x.ui.layout_sidebar(
-        x.ui.sidebar(
-            # Artwork by @allison_horst
-            ui.tags.img(
-                src="palmerpenguins.png", width="80%", class_="mt-0 mb-2 mx-auto"
-            ),
-            ui.input_selectize(
-                "xvar",
-                "X variable",
-                numeric_cols,
-                selected="Bill Length (mm)",
-            ),
-            ui.input_selectize(
-                "yvar",
-                "Y variable",
-                numeric_cols,
-                selected="Bill Depth (mm)",
-            ),
-            ui.input_checkbox_group(
-                "species", "Filter by species", species, selected=species
-            ),
-            ui.hr(),
-            ui.input_switch("by_species", "Show species", value=True),
-            ui.input_switch("show_margins", "Show marginal plots", value=True),
+    ui.output_ui("value_boxes"),
+    x.ui.output_plot("scatter", fill=True),
+    sidebar=x.ui.sidebar(
+        # Artwork by @allison_horst
+        ui.tags.img(
+            src="palmerpenguins.png", width="80%", class_="mt-0 mb-2 mx-auto"
         ),
-        ui.output_ui("value_boxes"),
-        x.ui.output_plot("scatter", fill=True),
-        fill=True,
-        fillable=True,
+        ui.input_selectize(
+            "xvar",
+            "X variable",
+            numeric_cols,
+            selected="Bill Length (mm)",
+        ),
+        ui.input_selectize(
+            "yvar",
+            "Y variable",
+            numeric_cols,
+            selected="Bill Depth (mm)",
+        ),
+        ui.input_checkbox_group(
+            "species", "Filter by species", species, selected=species
+        ),
+        ui.hr(),
+        ui.input_switch("by_species", "Show species", value=True),
+        ui.input_switch("show_margins", "Show marginal plots", value=True),
     ),
 )
 
