@@ -47,6 +47,8 @@ interface DataGridOptions {
   style?: "table" | "grid";
   summary?: boolean | string;
   row_selection_mode?: SelectionMode;
+  width?: string;
+  height?: string;
 }
 
 interface PandasData {
@@ -54,20 +56,17 @@ interface PandasData {
   index: ReadonlyArray<string>;
   data: unknown[][];
   options: DataGridOptions;
-  width?: string;
-  height?: string;
 }
 
 interface ShinyDataGridProps {
   data: PandasData;
   bgcolor?: string;
-  width?: string;
-  height?: string;
 }
 
 const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
-  const { data, bgcolor, width, height } = props;
+  const { data, bgcolor } = props;
   const { columns, data: rowData } = data;
+  const { width, height } = data.options;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const theadRef = useRef<HTMLTableSectionElement>(null);
@@ -138,7 +137,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
   const canSelect = rowSelectionMode !== SelectionMode.None;
   const canMultiSelect =
     rowSelectionMode === SelectionMode.Multi ||
-    rowSelectionMode === SelectionMode.MultiSet;
+    rowSelectionMode === SelectionMode.MultiToggle;
 
   const rowSelection = useSelection<string, HTMLTableRowElement>(
     rowSelectionMode,
@@ -410,14 +409,7 @@ export class ShinyDataGridOutput extends HTMLElement {
   }
 
   renderValue(data: unknown) {
-    const {
-      columns,
-      index,
-      data: rows,
-      options,
-      width,
-      height,
-    } = data as PandasData;
+    const { columns, index, data: rows, options } = data as PandasData;
 
     if (!data) {
       return;
@@ -428,8 +420,6 @@ export class ShinyDataGridOutput extends HTMLElement {
         <ShinyDataGrid
           data={data as PandasData}
           bgcolor={getComputedBgColor(this)}
-          width={width ?? "100%"}
-          height={height ?? "500px"}
         ></ShinyDataGrid>
       </StrictMode>
     );

@@ -17,7 +17,7 @@ export enum SelectionMode {
   None = "none",
   Single = "single",
   Multi = "multi",
-  MultiSet = "multi-set",
+  MultiToggle = "multi-toggle",
 }
 
 export function useSelection<TKey, TElement extends HTMLElement>(
@@ -86,7 +86,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
           }
         }
       }
-    } else if (mode === SelectionMode.MultiSet) {
+    } else if (mode === SelectionMode.MultiToggle) {
       if (event.key === " " || event.key === "Enter") {
         setSelectedKeys(selectedKeys.toggle(key));
         event.preventDefault();
@@ -143,7 +143,7 @@ function performMouseDownAction<TKey, TElement>(
     return null;
   }
 
-  if (mode === SelectionMode.MultiSet) {
+  if (mode === SelectionMode.MultiToggle) {
     return { selection: selectedKeys.toggle(key), anchor: true };
   } else if (mode === SelectionMode.Single) {
     if (ctrlKey && !shiftKey) {

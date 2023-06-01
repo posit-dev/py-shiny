@@ -32,6 +32,8 @@
 }
 
 .shiny-data-grid {
+  max-width: 100%;
+
   > table {
     border-collapse: separate;
     border-spacing: 0;

@@ -3,7 +3,7 @@ import seaborn as sns
 from shinyswatch.theme import darkly
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
-from shiny.render._datagrid import DataGridOptions
+from shiny.render import DataGrid
 
 
 def app_ui(req):
@@ -19,8 +19,8 @@ def app_ui(req):
         ui.input_select(
             "selection_mode",
             "Selection mode",
-            {"none": "(None)", "single": "Single", "multi-set": "Multiple"},
-            selected="multi-set",
+            {"none": "(None)", "single": "Single", "multi-toggle": "Multiple"},
+            selected="multi-toggle",
         ),
         ui.output_data_grid("grid"),
         ui.panel_absolute(
@@ -60,13 +60,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         return df.set(sns.load_dataset(req(input.dataset())))
 
     @output
-    @render.data_grid(height="400px", width="fit-content")
+    @render.data_grid
     def grid():
-        return df(), DataGridOptions(
-            style="grid", row_selection_mode=input.selection_mode()
-        )
-        # Alternative API:
-        # return DataGrid(df(), style="grid", row_selection_mode="multi-set")
+        return DataGrid(df(), row_selection_mode=input.selection_mode())
 
     @reactive.Effect
     @reactive.event(input.grid_cell_edit)

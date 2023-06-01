@@ -25,11 +25,13 @@ from ._render import (  # noqa: F401
 from ._datagrid import (  # noqa: F401
     RenderDataGrid,  # pyright: ignore[reportUnusedImport]
     RenderDataGridAsync,  # pyright: ignore[reportUnusedImport]
+    DataGrid,
     data_grid,
 )
 
 
 __all__ = (
+    "DataGrid",
     "data_grid",
     "text",
     "plot",

@@ -3,17 +3,7 @@ from __future__ import annotations
 import json
 import typing
 from dataclasses import asdict, dataclass
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Literal,
-    Optional,
-    Tuple,
-    Union,
-    cast,
-    overload,
-)
+from typing import Any, Awaitable, Callable, Literal, Optional, Union, cast, overload
 
 from .. import _utils
 from .._typing_extensions import Protocol, runtime_checkable
@@ -28,15 +18,55 @@ from ..render import RenderFunction, RenderFunctionAsync
 # However, if we did that, we'd have to import pandas at load time, which adds
 # a nontrivial amount of overhead. So for now, we're just using `object`.
 @dataclass
-class DataGridOptions:
-    style: Union[Literal["table"], Literal["grid"]] = "table"
+class DataGrid:
+    """
+    Holds the data and options for a ``shiny.render.data_grid`` output, for a
+    spreadsheet-like view.
+
+    Parameters
+    ----------
+    data
+        A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
+        (e.g., a Polars data frame or Arrow table).
+    width
+        A width for the data grid to occupy, in CSS units. The default is `fit-content`,
+        which sets the grid's width according to its contents. Set this to `100%` to use
+        the maximum available horizontal space.
+    height
+        A _maximum_ amount of vertical space for the data grid to occupy, in CSS units.
+        If there are more rows than can fit in this space, the grid will scroll.
+    summary
+        If `True` (the default), shows a message like "Viewing rows 1 through 10 of 20"
+        below the grid when not all of the rows are being shown. If `False`, the message
+        is not displayed. You can also specify a string template to customize the
+        message, for example: `"Viendo filas {start} a {end} de {total}"`.
+    row_selection_mode
+        Use `"none"` to disable row selection, `"single"` to allow a single row to be
+        selected at a time, and `"multi-toggle"` to allow multiple rows to be selected
+        by clicking on them individually.
+
+    Returns
+    -------
+    :
+        An object suitable for being returned from a `@render.data_grid`-decorated
+        output function.
+
+    See Also
+    --------
+    ~shiny.ui.output_data_grid
+    ~shiny.render.data_grid
+    """
+
+    data: object
+    width: Union[str, float, None] = "fit-content"
+    height: Union[str, float, None] = "500px"
     summary: Union[bool, str] = True
     row_selection_mode: Union[
-        Literal["none"], Literal["single"], Literal["multi"], Literal["multi-set"]
+        Literal["none"], Literal["single"], Literal["multi-toggle"]
     ] = "none"
 
 
-DataGridResult = Union[None, object, Tuple[object, DataGridOptions]]
+DataGridResult = Union[None, object, DataGrid]
 
 RenderDataGridFunc = Callable[[], object]
 RenderDataGridFuncAsync = Callable[[], Awaitable[object]]
@@ -53,15 +83,8 @@ class RenderDataGrid(RenderFunction[DataGridResult, object]):
     def __init__(
         self,
         fn: RenderDataGridFunc,
-        *,
-        index: bool = False,
-        width: Optional[str] = None,
-        height: Optional[str] = None,
     ) -> None:
         super().__init__(fn)
-        self._index = index
-        self._width = width
-        self._height = height
         # The Render*Async subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
@@ -76,54 +99,61 @@ class RenderDataGrid(RenderFunction[DataGridResult, object]):
         if x is None:
             return None
 
-        options: DataGridOptions
-        if isinstance(x, Tuple):
-            options = cast(DataGridOptions, x[1])
-            x = cast(object, x[0])
-        else:
-            options = DataGridOptions()
+        if not isinstance(x, DataGrid):
+            x = DataGrid(
+                cast_to_pandas(
+                    x, "@render.data_grid doesn't know how to render objects of type"
+                )
+            )
 
         import pandas as pd
 
-        if not isinstance(x, pd.DataFrame):
-            if not isinstance(x, PandasCompatible):
-                raise TypeError(
-                    "@render.table doesn't know how to render objects of type "
-                    f"'{str(type(x))}'. Return either a pandas.DataFrame, or an object "
-                    "that has a .to_pandas() method."
-                )
-            x = x.to_pandas()
+        # TODO: This validation should really be in the DataGrid() constructor, but,
+        # right now we're using the implicit dataclass constructor. I should probably
+        # go back and make it an explicit constructor.
+        df = cast_to_pandas(
+            x.data,
+            "DataGrid constructor encountered unexpected `data` argument of type",
+        )
 
-        df = cast(pd.DataFrame, x)
+        # Make pyright happy
+        df = cast(pd.DataFrame, df)
 
         res: dict[str, Any] = json.loads(
             # {index: [index], columns: [columns], data: [values]}
             df.to_json(None, orient="split")  # pyright: ignore[reportUnknownMemberType]
         )
 
-        res["options"] = asdict(options)
-        res["width"] = self._width
-        res["height"] = self._height
+        res["options"] = asdict(x)
+        res["options"]["style"] = "grid"
+        del res["options"]["data"]
 
         return res
+
+
+def cast_to_pandas(x: object, error_message_begin: str) -> object:
+    import pandas as pd
+
+    if not isinstance(x, pd.DataFrame):
+        if not isinstance(x, PandasCompatible):
+            raise TypeError(
+                error_message_begin
+                + f" '{str(type(x))}'. Use either a pandas.DataFrame, or an object"
+                " that has a .to_pandas() method."
+            )
+        return x.to_pandas()
+    return x
 
 
 class RenderDataGridAsync(RenderDataGrid, RenderFunctionAsync[DataGridResult, object]):
     def __init__(
         self,
         fn: RenderDataGridFuncAsync,
-        *,
-        index: bool = False,
-        width: Optional[str] = None,
-        height: Optional[str] = None,
     ) -> None:
         if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(
             typing.cast(RenderDataGridFunc, fn),
-            index=index,
-            width=width,
-            height=height,
         )
 
     async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -138,22 +168,14 @@ def data_grid(fn: RenderDataGridFunc | RenderDataGridFuncAsync) -> RenderDataGri
 
 
 @overload
-def data_grid(
-    *,
-    index: bool = False,
-    width: Optional[str] = None,
-    height: Optional[str] = None,
-) -> Callable[[RenderDataGridFunc | RenderDataGridFuncAsync], RenderDataGrid]:
+def data_grid() -> (
+    Callable[[RenderDataGridFunc | RenderDataGridFuncAsync], RenderDataGrid]
+):
     ...
 
 
-# TODO: Use more specific types for render.data_grid
 def data_grid(
     fn: Optional[RenderDataGridFunc | RenderDataGridFuncAsync] = None,
-    *,
-    index: bool = False,
-    width: Optional[str] = None,
-    height: Optional[str] = None,
 ) -> (
     RenderDataGrid
     | Callable[[RenderDataGridFunc | RenderDataGridFuncAsync], RenderDataGrid]
@@ -192,19 +214,9 @@ def data_grid(
 
     def wrapper(fn: RenderDataGridFunc | RenderDataGridFuncAsync) -> RenderDataGrid:
         if _utils.is_async_callable(fn):
-            return RenderDataGridAsync(
-                fn,
-                index=index,
-                width=width,
-                height=height,
-            )
+            return RenderDataGridAsync(fn)
         else:
-            return RenderDataGrid(
-                fn,
-                index=index,
-                width=width,
-                height=height,
-            )
+            return RenderDataGrid(fn)
 
     if fn is None:
         return wrapper
