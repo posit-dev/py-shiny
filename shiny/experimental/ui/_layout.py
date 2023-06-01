@@ -6,7 +6,7 @@ from htmltools import TagAttrs, TagAttrValue, TagChild, css, div
 
 from ..._typing_extensions import Literal
 from ._css_unit import CssUnit, validate_css_unit
-from ._fill import as_fillable_container, bind_fill_role
+from ._fill import bind_fill_role
 from ._utils import consolidate_attrs, is_01_scalar
 
 
@@ -96,8 +96,14 @@ def layout_column_wrap(
     upgraded_children: list[TagChild] = []
     for child_value in children:
         upgraded_children.append(
-            as_fillable_container(
-                div(bind_fill_role(div(child_value), container=fillable, item=True)),
+            bind_fill_role(
+                div(
+                    {"class": "bslib-gap-spacing"},
+                    child_value,
+                ),
+                # TODO: barret to look into updating `as_fillable_container` to allow
+                # no argument (and return a TagAttrDict) to better match the R way
+                container=fillable,
             )
         )
     tag_style_css = {
