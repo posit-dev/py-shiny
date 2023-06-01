@@ -23,11 +23,10 @@ import React, {
   useState,
 } from "react";
 import { Root, createRoot } from "react-dom/client";
+import { findFirstItemInView } from "./dom-utils";
 import { SelectionMode, useSelection } from "./selection";
 import { sortArrowDown, sortArrowUp } from "./sort-arrows";
 import { useSummary } from "./table-summary";
-import { CellData } from "./types";
-import { findFirstItemInView } from "./dom-utils";
 
 // TODO: Right-align numeric columns, maybe change font
 // TODO: Row selection
@@ -53,7 +52,7 @@ interface DataGridOptions {
 interface PandasData {
   columns: ReadonlyArray<string>;
   index: ReadonlyArray<string>;
-  data: CellData;
+  data: unknown[][];
   options: DataGridOptions;
   width?: string;
   height?: string;
@@ -167,6 +166,10 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
     (fromKey, toKey) =>
       findKeysBetween(table.getSortedRowModel(), fromKey, toKey)
   );
+
+  useEffect(() => {
+    console.log("Selected rows: " + [...rowSelection.keys()].join(", "));
+  }, [[...rowSelection.keys()]]);
 
   const onContainerFocus = React.useCallback(
     (event: React.FocusEvent) => {
@@ -326,8 +329,6 @@ function findKeysBetween<TData>(
   return keys;
 }
 
-const roots = new WeakMap<HTMLElement, Root>();
-
 class ShinyDataGridBinding extends Shiny.OutputBinding {
   find(scope: HTMLElement | JQuery<HTMLElement>): JQuery<HTMLElement> {
     return $(scope).find("shiny-glide-data-grid-output");
@@ -376,23 +377,6 @@ function getStyle(el: Element, styleProp: string): string | undefined {
     ?.getPropertyValue(styleProp);
 }
 
-// class MyReactShinyBinding extends Shiny.ReactOutputBinding {
-//   createComponent(): ReactElement {
-//     function(props) {
-//       const data = useShinyValue();
-//     }
-//   }
-// }
-
-// function MyReactDataGrid(props) {
-//   const { data, error } = useShinyValue<PandasData>();
-//   if (error) {
-//     return <div>Bad</div>
-//   }
-//   // ...
-// }
-// Shiny.outputBindings.registerReact(MyReactDataGrid, ".shiny-glide-data-grid-output");
-
 const cssTemplate = document.createElement("template");
 cssTemplate.innerHTML = `<style>${css}</style>`;
 
@@ -400,12 +384,17 @@ export class ShinyDataGridOutput extends HTMLElement {
   reactRoot?: Root;
 
   connectedCallback() {
-    this.attachShadow({ mode: "open" });
+    // Currently not using shadow DOM since Bootstrap's table styling is pretty nice and
+    // I don't have time to duplicate all that right now.
+    // this.attachShadow({ mode: "open" });
+    // const target = this.shadowRoot!;
 
-    this.shadowRoot!.appendChild(cssTemplate.content.cloneNode(true));
+    const [target] = [this]; // brackets are to avoid linter
+
+    target.appendChild(cssTemplate.content.cloneNode(true));
 
     const myDiv = document.createElement("div");
-    this.shadowRoot!.appendChild(myDiv);
+    target.appendChild(myDiv);
 
     this.reactRoot = createRoot(myDiv);
 

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc -noEmit && eslint . && tsx build.ts",
-    "watch": "npx nodemon --exec 'npm run build' --ignore dist/ --ext '*'"
+    "watch": "npx nodemon --exec 'npm run build' --ext '*' --ignore dist/ --ignore esbuild-metadata.json"
   },
   "author": "",
   "license": "MIT",

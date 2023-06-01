@@ -43,4 +43,8 @@ export class ImmutableSet<T> {
   clear(): ImmutableSet<T> {
     return ImmutableSet.empty();
   }
+
+  [Symbol.iterator]() {
+    return this._set[Symbol.iterator]();
+  }
 }

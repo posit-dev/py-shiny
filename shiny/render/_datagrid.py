@@ -57,19 +57,11 @@ class RenderDataGrid(RenderFunction[DataGridResult, object]):
         index: bool = False,
         width: Optional[str] = None,
         height: Optional[str] = None,
-        row_selection: bool = False,
-        column_selection: bool = False,
-        cell_selection: bool = False,
-        range_selection: bool = False,
     ) -> None:
         super().__init__(fn)
         self._index = index
         self._width = width
         self._height = height
-        self._row_selection = row_selection
-        self._column_selection = column_selection
-        self._cell_selection = cell_selection
-        self._range_selection = range_selection
         # The Render*Async subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
@@ -124,10 +116,6 @@ class RenderDataGridAsync(RenderDataGrid, RenderFunctionAsync[DataGridResult, ob
         index: bool = False,
         width: Optional[str] = None,
         height: Optional[str] = None,
-        row_selection: bool = False,
-        column_selection: bool = False,
-        cell_selection: bool = False,
-        range_selection: bool = False,
     ) -> None:
         if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
@@ -136,10 +124,6 @@ class RenderDataGridAsync(RenderDataGrid, RenderFunctionAsync[DataGridResult, ob
             index=index,
             width=width,
             height=height,
-            row_selection=row_selection,
-            column_selection=column_selection,
-            cell_selection=cell_selection,
-            range_selection=range_selection,
         )
 
     async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -159,10 +143,6 @@ def data_grid(
     index: bool = False,
     width: Optional[str] = None,
     height: Optional[str] = None,
-    row_selection: bool = False,
-    column_selection: bool = False,
-    cell_selection: bool = False,
-    range_selection: bool = False,
 ) -> Callable[[RenderDataGridFunc | RenderDataGridFuncAsync], RenderDataGrid]:
     ...
 
@@ -174,10 +154,6 @@ def data_grid(
     index: bool = False,
     width: Optional[str] = None,
     height: Optional[str] = None,
-    row_selection: bool = False,
-    column_selection: bool = False,
-    cell_selection: bool = False,
-    range_selection: bool = False,
 ) -> (
     RenderDataGrid
     | Callable[[RenderDataGridFunc | RenderDataGridFuncAsync], RenderDataGrid]
@@ -221,10 +197,6 @@ def data_grid(
                 index=index,
                 width=width,
                 height=height,
-                row_selection=row_selection,
-                column_selection=column_selection,
-                cell_selection=cell_selection,
-                range_selection=range_selection,
             )
         else:
             return RenderDataGrid(
@@ -232,10 +204,6 @@ def data_grid(
                 index=index,
                 width=width,
                 height=height,
-                row_selection=row_selection,
-                column_selection=column_selection,
-                cell_selection=cell_selection,
-                range_selection=range_selection,
             )
 
     if fn is None:

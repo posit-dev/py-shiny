@@ -1,18 +1,55 @@
 import pandas as pd
 import seaborn as sns
+from shinyswatch.theme import darkly
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from shiny.render._datagrid import DataGridOptions
 
-app_ui = ui.page_fluid(
-    ui.input_select("dataset", "Dataset", sns.get_dataset_names()),
-    ui.output_data_grid("grid"),
-    ui.panel_absolute(
-        ui.output_text_verbatim("detail"),
-        right="10px",
-        bottom="10px",
-    ),
-)
+
+def app_ui(req):
+    dark = True if "dark" in req.query_params else None
+
+    return ui.page_fluid(
+        ui.head_content(
+            ui.tags.meta(name="viewport", content="width=device-width, initial-scale=1")
+        ),
+        darkly() if dark else None,
+        light_dark_switcher(dark),
+        ui.input_select("dataset", "Dataset", sns.get_dataset_names()),
+        ui.input_select(
+            "selection_mode",
+            "Selection mode",
+            {"none": "(None)", "single": "Single", "multi-set": "Multiple"},
+            selected="multi-set",
+        ),
+        ui.output_data_grid("grid"),
+        ui.panel_absolute(
+            ui.output_text_verbatim("detail"),
+            right="10px",
+            bottom="10px",
+        ),
+        class_="p-3",
+    )
+
+
+def light_dark_switcher(dark):
+    return (
+        ui.div(
+            ui.a(
+                {"class": "btn-primary" if not dark else "btn-outline-primary"},
+                "Light",
+                href="?" if dark else None,
+                class_="btn",
+            ),
+            ui.a(
+                {"class": "btn-primary" if dark else "btn-outline-primary"},
+                "Dark",
+                href="?dark=1" if not dark else None,
+                class_="btn",
+            ),
+            class_="float-end btn-group",
+        ),
+    )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -23,9 +60,11 @@ def server(input: Inputs, output: Outputs, session: Session):
         return df.set(sns.load_dataset(req(input.dataset())))
 
     @output
-    @render.data_grid(height="400px")
+    @render.data_grid(height="400px", width="fit-content")
     def grid():
-        return df(), DataGridOptions(style="grid", row_selection_mode="single")
+        return df(), DataGridOptions(
+            style="grid", row_selection_mode=input.selection_mode()
+        )
         # Alternative API:
         # return DataGrid(df(), style="grid", row_selection_mode="multi-set")
 

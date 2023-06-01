@@ -6,6 +6,7 @@ export interface SelectionSet<TKey, TElement extends HTMLElement> {
   has(key: TKey): boolean;
   set(key: TKey, selected: boolean): void;
   clear(): void;
+  keys(): ImmutableSet<TKey>;
   itemHandlers(): {
     onMouseDown: (event: React.MouseEvent<TElement, MouseEvent>) => void;
     onKeyDown: (event: React.KeyboardEvent<TElement>) => void;
@@ -112,6 +113,10 @@ export function useSelection<TKey, TElement extends HTMLElement>(
 
     clear() {
       setSelectedKeys(selectedKeys.clear());
+    },
+
+    keys() {
+      return selectedKeys;
     },
 
     itemHandlers() {
