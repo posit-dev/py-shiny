@@ -4,31 +4,35 @@ import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
-    ui.br(),
-    x.ui.layout_sidebar(
-        ui.output_text_verbatim("state_left"),
-        sidebar=x.ui.sidebar("Left sidebar content", id="sidebar_left"),
+    x.ui.card(
+        x.ui.layout_sidebar(
+            ui.output_text_verbatim("state_left"),
+            sidebar=x.ui.sidebar("Left sidebar content", id="sidebar_left"),
+        )
     ),
-    ui.br(),
-    x.ui.layout_sidebar(
-        ui.output_text_verbatim("state_right"),
-        sidebar=x.ui.sidebar(
-            "Right sidebar content", id="sidebar_right", position="right"
+    x.ui.card(
+        x.ui.layout_sidebar(
+            ui.output_text_verbatim("state_right"),
+            sidebar=x.ui.sidebar(
+                "Right sidebar content", id="sidebar_right", position="right"
+            ),
         ),
     ),
-    ui.br(),
-    x.ui.layout_sidebar(
-        ui.output_text_verbatim("state_closed"),
-        sidebar=x.ui.sidebar(
-            "Closed sidebar content", id="sidebar_closed", open="closed"
-        ),
+    x.ui.card(
+        x.ui.layout_sidebar(
+            ui.output_text_verbatim("state_closed"),
+            sidebar=x.ui.sidebar(
+                "Closed sidebar content", id="sidebar_closed", open="closed"
+            ),
+        )
     ),
-    ui.br(),
-    x.ui.layout_sidebar(
-        ui.output_text_verbatim("state_always"),
-        sidebar=x.ui.sidebar(
-            "Always sidebar content", id="sidebar_always", open="always"
-        ),
+    x.ui.card(
+        x.ui.layout_sidebar(
+            ui.output_text_verbatim("state_always"),
+            sidebar=x.ui.sidebar(
+                "Always sidebar content", id="sidebar_always", open="always"
+            ),
+        )
     ),
 )
 
