@@ -202,6 +202,8 @@ def card_body(
         Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
         `full_screen` (in this case, consider setting a `height` in
         :func:`~shiny.experimental.ui.card_body()`).
+    padding
+        TODO: document
     gap
         A CSS length unit defining the `gap` (i.e., spacing) between elements provided
         to `*args`. This argument is only applicable when `fillable = TRUE`.

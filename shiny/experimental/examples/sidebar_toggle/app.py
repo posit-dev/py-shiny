@@ -5,10 +5,10 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
     x.ui.layout_sidebar(
-        x.ui.sidebar("Sidebar content", id="sidebar"),
         ui.input_action_button("sidebar_toggle", label="Toggle sidebar"),
         ui.br(),
         ui.output_text_verbatim("state"),
+        sidebar=x.ui.sidebar("Sidebar content", id="sidebar"),
     )
 )
 
