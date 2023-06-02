@@ -13,6 +13,7 @@ def bootstrap_deps() -> list[HTMLDependency]:
         source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
         script={"src": "bootstrap.bundle.min.js"},
         stylesheet={"href": "bootstrap.min.css"},
+        meta={"name": "viewport", "content": "width=device-width, initial-scale=1"},
     )
     deps = [jquery_deps(), dep]
     return deps
