@@ -17,6 +17,8 @@ from ._bootstrap import (
     help_text,
 )
 from ._download_button import download_button, download_link
+from ._plot_output_opts import brush_opts, click_opts, dblclick_opts, hover_opts
+from ._include_helpers import include_css, include_js
 from ._input_action_button import input_action_button, input_action_link
 from ._input_check_radio import (
     input_checkbox,
@@ -79,8 +81,9 @@ from ._progress import Progress
 from htmltools import (
     TagList,
     Tag,
-    TagChildArg,
-    TagAttrArg,
+    TagChild,
+    TagAttrs,
+    TagAttrValue,
     tags,
     HTML,
     head_content,
@@ -118,6 +121,12 @@ __all__ = (
     "help_text",
     "download_button",
     "download_link",
+    "brush_opts",
+    "click_opts",
+    "dblclick_opts",
+    "hover_opts",
+    "include_css",
+    "include_js",
     "input_action_button",
     "input_action_link",
     "input_checkbox",
@@ -186,8 +195,9 @@ __all__ = (
     # Items below are from htmltools
     "TagList",
     "Tag",
-    "TagChildArg",
-    "TagAttrArg",
+    "TagChild",
+    "TagAttrs",
+    "TagAttrValue",
     "tags",
     "HTML",
     "head_content",

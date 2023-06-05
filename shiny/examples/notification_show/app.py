@@ -2,6 +2,7 @@ from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_action_button("show", "Show"),
+    " ",
     ui.input_action_button("remove", "Remove"),
 )
 

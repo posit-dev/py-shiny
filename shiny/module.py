@@ -1,14 +1,9 @@
 __all__ = ("current_namespace", "resolve_id", "ui", "server")
 
-import sys
 from typing import Callable, TypeVar
 
-if sys.version_info < (3, 10):
-    from typing_extensions import ParamSpec, Concatenate
-else:
-    from typing import ParamSpec, Concatenate
-
-from ._namespaces import current_namespace, resolve_id, namespace_context, Id
+from ._namespaces import Id, current_namespace, namespace_context, resolve_id
+from ._typing_extensions import Concatenate, ParamSpec
 from .session import Inputs, Outputs, Session, require_active_session, session_context
 
 P = ParamSpec("P")

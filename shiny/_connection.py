@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import asyncio
 from abc import ABC, abstractmethod
 from typing import Optional
 
 import starlette.websockets
-from starlette.websockets import WebSocketState
 from starlette.requests import HTTPConnection
+from starlette.websockets import WebSocketState
 
 
 class Connection(ABC):

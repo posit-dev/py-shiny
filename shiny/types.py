@@ -12,25 +12,16 @@ __all__ = (
     "SilentCancelOutputException",
 )
 
-import sys
-from typing import Union, Optional, Tuple, Dict, Any
+from typing import TYPE_CHECKING, Any, BinaryIO, Optional
 
-# Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
-# they should both come from the same typing module.
-# https://peps.python.org/pep-0655/#usage-in-python-3-11
-if sys.version_info >= (3, 11):
-    from typing import NotRequired, TypedDict
-else:
-    from typing_extensions import NotRequired, TypedDict
-
-if sys.version_info >= (3, 8):
-    from typing import Protocol
-else:
-    from typing_extensions import Protocol
-
-from htmltools import TagChildArg
+from htmltools import TagChild
 
 from ._docstring import add_example
+from ._typing_extensions import Literal, NotRequired, Protocol, TypedDict
+
+if TYPE_CHECKING:
+    from matplotlib.figure import Figure
+
 
 # Sentinel value - indicates a missing value in a function call.
 class MISSING_TYPE:
@@ -82,14 +73,16 @@ class ImgData(TypedDict):
 
     src: str
     """The ``src`` attribute of the ``<img>`` tag."""
-    width: NotRequired[Union[str, float]]
+    width: NotRequired[str | float]
     """The ``width`` attribute of the ``<img>`` tag."""
-    height: NotRequired[Union[str, float]]
+    height: NotRequired[str | float]
     """The ``height`` attribute of the ``<img>`` tag."""
     alt: NotRequired[str]
     """The ``alt`` attribute of the ``<img>`` tag."""
     style: NotRequired[str]
     """The ``style`` attribute of the ``<img>`` tag."""
+    coordmap: NotRequired[Any]
+    """TODO """
 
 
 @add_example()
@@ -98,7 +91,7 @@ class SafeException(Exception):
     Throw a safe exception.
 
     When ``shiny.App.SANITIZE_ERRORS`` is ``True`` (which is the case
-    in some production environments like RStudio Connect), exceptions are sanitized
+    in some production environments like Posit Connect), exceptions are sanitized
     to prevent leaking of sensitive information. This class provides a way to
     generate an error that is OK to be displayed to the user.
     """
@@ -156,8 +149,8 @@ class NavSetArg(Protocol):
     """
 
     def resolve(
-        self, selected: Optional[str], context: Dict[str, Any]
-    ) -> Tuple[TagChildArg, TagChildArg]:
+        self, selected: Optional[str], context: dict[str, Any]
+    ) -> tuple[TagChild, TagChild]:
         """
         Resolve information provided by the navigation container.
 
@@ -179,3 +172,126 @@ class NavSetArg(Protocol):
         returns a value is used to determine the container's ``selected`` value).
         """
         ...
+
+
+# =============================================================================
+# Types for plots and images
+# =============================================================================
+
+
+# Use this protocol to avoid needing to maintain working stubs for plotnint. If
+# good stubs ever become available for plotnine, use those instead.
+class PlotnineFigure(Protocol):
+    scales: list[Any]
+    coordinates: Any
+    facet: Any
+    layout: Any
+    mapping: dict[str, str]
+
+    def save(
+        self,
+        filename: BinaryIO,
+        format: str,
+        units: str,
+        dpi: float,
+        width: float,
+        height: float,
+        verbose: bool,
+        bbox_inches: object = None,
+    ):
+        ...
+
+    def draw(self, show: bool) -> Figure:
+        ...
+
+
+class CoordmapDims(TypedDict):
+    width: float
+    height: float
+
+
+class CoordmapPanelLog(TypedDict):
+    x: float | None
+    y: float | None
+
+
+class CoordmapPanelDomain(TypedDict):
+    left: float
+    right: float
+    bottom: float
+    top: float
+
+
+class CoordmapPanelRange(TypedDict):
+    left: float
+    right: float
+    bottom: float
+    top: float
+
+
+class CoordmapPanelMapping(TypedDict):
+    x: str | None
+    y: str | None
+    panelvar1: NotRequired[str]
+    panelvar2: NotRequired[str]
+
+
+class CoordmapPanelvarValues(TypedDict):
+    panelvar1: NotRequired[float]
+    panelvar2: NotRequired[float]
+
+
+class CoordmapPanel(TypedDict):
+    panel: int
+    row: NotRequired[int]
+    col: NotRequired[int]
+    panel_vars: NotRequired[CoordmapPanelvarValues]
+    log: CoordmapPanelLog
+    domain: CoordmapPanelDomain
+    mapping: CoordmapPanelMapping
+    range: CoordmapPanelRange
+
+
+class Coordmap(TypedDict):
+    panels: list[CoordmapPanel]
+    dims: CoordmapDims
+
+
+class CoordXY(TypedDict):
+    x: float
+    y: float
+
+
+# Data structure sent from client to server when a plot is clicked, double-clicked, or
+# hovered.
+class CoordInfo(TypedDict):
+    x: float
+    y: float
+    coords_css: CoordXY
+    coords_img: CoordXY
+    img_css_ratio: CoordXY
+    panelvar1: NotRequired[str]
+    panelvar2: NotRequired[str]
+    mapping: CoordmapPanelMapping
+    domain: CoordmapPanelDomain
+    range: CoordmapPanelRange
+    log: CoordmapPanelLog
+    # .nonce: float
+
+
+class BrushInfo(TypedDict):
+    xmin: float
+    xmax: float
+    ymin: float
+    ymax: float
+    coords_css: CoordXY
+    coords_img: CoordXY
+    img_css_ratio: CoordXY
+    panelvar1: NotRequired[str]
+    panelvar2: NotRequired[str]
+    mapping: CoordmapPanelMapping
+    domain: CoordmapPanelDomain
+    range: CoordmapPanelRange
+    log: CoordmapPanelLog
+    direction: Literal["x", "y", "xy"]
+    # .nonce: float

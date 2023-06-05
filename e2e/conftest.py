@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import datetime
 import logging
-import random
-import socket
 import subprocess
 import sys
 import threading
@@ -13,6 +11,8 @@ from types import TracebackType
 from typing import IO, Callable, Generator, List, Optional, TextIO, Type, Union
 
 import pytest
+
+import shiny._utils
 
 __all__ = (
     "ShinyAppProc",
@@ -24,18 +24,6 @@ __all__ = (
 )
 
 here = PurePath(__file__).parent
-
-
-def random_port():
-    while True:
-        port = random.randint(1024, 49151)
-        with socket.socket() as s:
-            try:
-                s.bind(("127.0.0.1", port))
-                return port
-            except Exception:
-                # Let's just assume that port was in use; try again
-                continue
 
 
 class OutputStream:
@@ -63,8 +51,6 @@ class OutputStream:
                     line = self._io.readline()
                 except ValueError:
                     # This is raised when the stream is closed
-                    break
-                if line is None:
                     break
                 if line != "":
                     with self._cond:
@@ -139,12 +125,19 @@ class ShinyAppProc:
         self.close()
 
     def wait_until_ready(self, timeoutSecs: float) -> None:
-        if self.stderr.wait_for(
-            lambda line: "Uvicorn running on" in line, timeoutSecs=timeoutSecs
-        ):
+        error_lines: List[str] = []
+
+        def stderr_uvicorn(line: str) -> bool:
+            error_lines.append(line)
+            return "Uvicorn running on" in line
+
+        if self.stderr.wait_for(stderr_uvicorn, timeoutSecs=timeoutSecs):
             return
         else:
-            raise RuntimeError("Shiny app exited without ever becoming ready")
+            raise RuntimeError(
+                "Shiny app exited without ever becoming ready. Waiting for 'Uvicorn running on' in stderr. Last 20 lines of stderr:\n"
+                + "\n".join(error_lines[-20:])
+            )
 
 
 def run_shiny_app(
@@ -157,7 +150,7 @@ def run_shiny_app(
     bufsize: int = 64 * 1024,
 ) -> ShinyAppProc:
     if port == 0:
-        port = random_port()
+        port = shiny._utils.random_port()
 
     child = subprocess.Popen(
         [sys.executable, "-m", "shiny", "run", "--port", str(port), str(app_file)],

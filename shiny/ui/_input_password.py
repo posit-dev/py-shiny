@@ -2,7 +2,7 @@ __all__ = ("input_password",)
 
 from typing import Optional
 
-from htmltools import tags, Tag, div, css, TagChildArg
+from htmltools import Tag, TagChild, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -12,7 +12,7 @@ from ._utils import shiny_input_label
 @add_example()
 def input_password(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     value: str = "",
     *,
     width: Optional[str] = None,
@@ -36,7 +36,8 @@ def input_password(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------

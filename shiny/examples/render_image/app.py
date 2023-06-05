@@ -10,8 +10,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     def image():
         from pathlib import Path
 
-        dir = Path(__file__).resolve().parent
-        img: ImgData = {"src": str(dir / "rstudio-logo.png"), "width": "150px"}
+        ex_dir = Path(__file__).resolve().parent.parent
+        img: ImgData = {
+            "src": str(ex_dir / "output_image" / "posit-logo.png"),
+            "width": "100px",
+        }
         return img
 
 

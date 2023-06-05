@@ -1,7 +1,8 @@
 from shiny import *
 
 app_ui = ui.page_fluid(
-    ui.input_checkbox("somevalue", "Some value", False), ui.output_ui("value")
+    ui.input_checkbox("somevalue", "Some value", False),
+    ui.output_ui("value"),
 )
 
 

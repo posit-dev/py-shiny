@@ -2,7 +2,7 @@ __all__ = ("download_button", "download_link")
 
 from typing import Optional
 
-from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
+from htmltools import Tag, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -12,10 +12,11 @@ from .._shinyenv import is_pyodide
 @add_example()
 def download_button(
     id: str,
-    label: TagChildArg,
-    icon: TagChildArg = None,
+    label: TagChild,
+    *,
+    icon: TagChild = None,
     width: Optional[str] = None,
-    **kwargs: TagAttrArg,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Create a download button
@@ -35,7 +36,8 @@ def download_button(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     --------
@@ -65,10 +67,11 @@ def download_button(
 @add_example()
 def download_link(
     id: str,
-    label: TagChildArg,
-    icon: TagChildArg = None,
+    label: TagChild,
+    *,
+    icon: TagChild = None,
     width: Optional[str] = None,
-    **kwargs: TagAttrArg,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Create a download button
@@ -88,7 +91,8 @@ def download_link(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     --------

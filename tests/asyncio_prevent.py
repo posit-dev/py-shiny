@@ -8,9 +8,9 @@ creation of, say, an asyncio.Lock during the course of shiny module startup will
 in race conditions if the lock is used during the app's operation."""
 
 if __name__ == "__main__":
-    import sys
     import asyncio
     import importlib
+    import sys
     from typing import Optional
 
     if "shiny" in sys.modules:

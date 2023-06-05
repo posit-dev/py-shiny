@@ -1,12 +1,16 @@
+from __future__ import annotations
+
 import copy
 import importlib
 import importlib.util
 import os
+import platform
+import re
 import shutil
 import sys
 import types
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Optional
 
 import click
 import uvicorn
@@ -64,9 +68,11 @@ any of the following will work:
     show_default=True,
 )
 @click.option(
-    "--debug", is_flag=True, default=False, help="Enable debug mode.", hidden=True
+    "--reload",
+    is_flag=True,
+    default=False,
+    help="Enable auto-reload, when these types of files change: .py .css .js .html",
 )
-@click.option("--reload", is_flag=True, default=False, help="Enable auto-reload.")
 @click.option(
     "--ws-max-size",
     type=int,
@@ -104,11 +110,10 @@ any of the following will work:
     show_default=True,
 )
 def run(
-    app: Union[str, shiny.App],
+    app: str | shiny.App,
     host: str,
     port: int,
     autoreload_port: int,
-    debug: bool,
     reload: bool,
     ws_max_size: int,
     log_level: str,
@@ -121,7 +126,6 @@ def run(
         host=host,
         port=port,
         autoreload_port=autoreload_port,
-        debug=debug,
         reload=reload,
         ws_max_size=ws_max_size,
         log_level=log_level,
@@ -132,11 +136,10 @@ def run(
 
 
 def run_app(
-    app: Union[str, shiny.App] = "app:app",
+    app: str | shiny.App = "app:app",
     host: str = "127.0.0.1",
     port: int = 8000,
     autoreload_port: int = 0,
-    debug: bool = False,
     reload: bool = False,
     ws_max_size: int = 16777216,
     log_level: Optional[str] = None,
@@ -165,8 +168,6 @@ def run_app(
     autoreload_port
         The port that should be used for an additional websocket that is used to support
         hot-reload. Set to 0 to use a random port.
-    debug
-        Enable debug mode.
     reload
         Enable auto-reload.
     ws_max_size
@@ -218,12 +219,7 @@ def run_app(
     if app_dir:
         app_dir = os.path.realpath(app_dir)
 
-    log_config: Dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
-
-    if reload and app_dir is not None:
-        reload_dirs = [app_dir]
-    else:
-        reload_dirs = []
+    log_config: dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
 
     if reload:
         if autoreload_port == 0:
@@ -237,6 +233,20 @@ def run_app(
         else:
             setup_hot_reload(log_config, autoreload_port, port, launch_browser)
 
+    reload_args: dict[str, bool | str | list[str]] = {}
+    if reload:
+        reload_dirs = []
+        if app_dir is not None:
+            reload_dirs = [app_dir]
+
+        reload_args = {
+            "reload": reload,
+            # Adding `reload_includes` param while `reload=False` produces an warning
+            # https://github.com/encode/uvicorn/blob/d43afed1cfa018a85c83094da8a2dd29f656d676/uvicorn/config.py#L298-L304
+            "reload_includes": ["*.py", "*.css", "*.js", "*.html"],
+            "reload_dirs": reload_dirs,
+        }
+
     if launch_browser and not reload:
         setup_launch_browser(log_config)
 
@@ -246,19 +256,17 @@ def run_app(
         app,  # pyright: ignore[reportGeneralTypeIssues]
         host=host,
         port=port,
-        debug=debug,
-        reload=reload,
-        reload_dirs=reload_dirs,
         ws_max_size=ws_max_size,
         log_level=log_level,
         log_config=log_config,
         app_dir=app_dir,
         factory=factory,
+        **reload_args,
     )
 
 
 def setup_hot_reload(
-    log_config: Dict[str, Any],
+    log_config: dict[str, Any],
     autoreload_port: int,
     app_port: int,
     launch_browser: bool,
@@ -276,7 +284,7 @@ def setup_hot_reload(
     _autoreload.start_server(autoreload_port, app_port, launch_browser)
 
 
-def setup_launch_browser(log_config: Dict[str, Any]):
+def setup_launch_browser(log_config: dict[str, Any]):
     log_config["handlers"]["shiny_launch_browser"] = {
         "class": "shiny._launchbrowser.LaunchBrowserHandler",
         "level": "INFO",
@@ -286,7 +294,7 @@ def setup_launch_browser(log_config: Dict[str, Any]):
     log_config["loggers"]["uvicorn.error"]["handlers"].append("shiny_launch_browser")
 
 
-def maybe_setup_rsw_proxying(log_config: Dict[str, Any]) -> None:
+def maybe_setup_rsw_proxying(log_config: dict[str, Any]) -> None:
     # Replace localhost URLs emitted to the log, with proxied URLs
     if _hostenv.is_workbench():
         if "filters" not in log_config:
@@ -301,7 +309,7 @@ def is_file(app: str) -> bool:
     return "/" in app or app.endswith(".py")
 
 
-def resolve_app(app: str, app_dir: Optional[str]) -> Tuple[str, Optional[str]]:
+def resolve_app(app: str, app_dir: Optional[str]) -> tuple[str, Optional[str]]:
     # The `app` parameter can be:
     #
     # - A module:attribute name
@@ -310,7 +318,13 @@ def resolve_app(app: str, app_dir: Optional[str]) -> Tuple[str, Optional[str]]:
     #   - directory (look for app:app inside of it)
     # - A module name (look for :app) inside of it
 
-    module, _, attr = app.partition(":")
+    if platform.system() == "Windows" and re.match("^[a-zA-Z]:[/\\\\]", app):
+        # On Windows, need special handling of ':' in some cases, like these:
+        #   shiny run c:/Users/username/Documents/myapp/app.py
+        #   shiny run c:\Users\username\Documents\myapp\app.py
+        module, attr = app, ""
+    else:
+        module, _, attr = app.partition(":")
     if not module:
         raise ImportError("The APP parameter cannot start with ':'.")
     if not attr:

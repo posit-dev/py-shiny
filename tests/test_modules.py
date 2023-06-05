@@ -4,9 +4,9 @@ import asyncio
 from typing import Dict, Union, cast
 
 import pytest
-
 from htmltools import Tag, TagList
-from shiny import *
+
+from shiny import App, Inputs, Outputs, Session, module, reactive, ui
 from shiny._connection import MockConnection
 from shiny._namespaces import resolve_id
 from shiny.session import get_current_session
@@ -41,7 +41,6 @@ def test_module_ui():
 
 @pytest.mark.asyncio
 async def test_session_scoping():
-
     sessions: Dict[str, Union[Session, None, str]] = {}
 
     @module.server

@@ -1,18 +1,22 @@
+# pyright: reportUnnecessaryComparison=false
+
+from __future__ import annotations
+
 __all__ = (
     "input_select",
     "input_selectize",
 )
 
-from typing import List, Mapping, Optional, Tuple, Union, cast
+from typing import Mapping, Optional, Union, cast
 
-from htmltools import Tag, TagChildArg, TagList, div, tags
+from htmltools import Tag, TagChild, TagList, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from ._html_dependencies import selectize_deps
 from ._utils import shiny_input_label
 
-_Choices = Mapping[str, TagChildArg]
+_Choices = Mapping[str, TagChild]
 _OptGrpChoices = Mapping[str, _Choices]
 
 # Canonical format for representing select options.
@@ -21,9 +25,9 @@ _SelectChoices = Union[_Choices, _OptGrpChoices]
 # Formats available to the user
 SelectChoicesArg = Union[
     # ["a", "b", "c"]
-    List[str],
+    "list[str]",
     # ("a", "b", "c")
-    Tuple[str, ...],
+    "tuple[str, ...]",
     # {"a": "Choice A", "b": tags.i("Choice B")}
     _Choices,
     # optgroup {"Group A": {"a1": "Choice A1", "a2": tags.i("Choice A2")}, "Group B": {}}
@@ -42,10 +46,10 @@ A list of strings, usually of length 1, with the value of the selected items. Wh
 @add_example()
 def input_selectize(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     choices: SelectChoicesArg,
     *,
-    selected: Optional[Union[str, List[str]]] = None,
+    selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
@@ -74,7 +78,8 @@ def input_selectize(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
@@ -102,10 +107,10 @@ def input_selectize(
 @add_example()
 def input_select(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     choices: SelectChoicesArg,
     *,
-    selected: Optional[Union[str, List[str]]] = None,
+    selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     selectize: bool = False,
     width: Optional[str] = None,
@@ -142,7 +147,8 @@ def input_select(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
@@ -160,7 +166,7 @@ def input_select(
     """
 
     choices_ = _normalize_choices(choices)
-    if selected is None:
+    if selected is None and not multiple:
         selected = _find_first_option(choices_)
 
     choices_tags = _render_choices(choices_, selected)
@@ -175,7 +181,6 @@ def input_select(
                 id=id,
                 class_=None if selectize else "form-select",
                 multiple=multiple,
-                width=width,
                 size=size,
             ),
             (
@@ -188,6 +193,7 @@ def input_select(
             ),
         ),
         class_="form-group shiny-input-container",
+        style=css(width=width),
     )
 
 
@@ -201,14 +207,14 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
 
 
 def _render_choices(
-    x: _SelectChoices, selected: Optional[Union[str, List[str]]] = None
+    x: _SelectChoices, selected: Optional[str | list[str]] = None
 ) -> TagList:
     result = TagList()
 
     if x is None:
         return result
 
-    for (k, v) in x.items():
+    for k, v in x.items():
         if isinstance(v, Mapping):
             result.append(
                 tags.optgroup(
@@ -241,7 +247,7 @@ def _find_first_option(x: _SelectChoices) -> Optional[str]:
     if x is None:
         return None
 
-    for (k, v) in x.items():
+    for k, v in x.items():
         if isinstance(v, dict):
             result = _find_first_option(cast(_SelectChoices, v))
             if result is not None:

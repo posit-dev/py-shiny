@@ -1,11 +1,12 @@
 """Tests for `shiny.utils` async-related functions."""
 
-import contextvars
-import pytest
 import asyncio
+import contextvars
 from typing import Iterator, List
 
-from shiny._utils import run_coro_sync, run_coro_hybrid
+import pytest
+
+from shiny._utils import run_coro_hybrid, run_coro_sync
 
 
 def range_sync(n: int) -> Iterator[int]:
@@ -176,7 +177,6 @@ async def test_coro_hybrid_throw():
 
 @pytest.mark.asyncio
 async def test_coro_hybrid_throw_later():
-
     state = 0
 
     async def test_task_throw_later():

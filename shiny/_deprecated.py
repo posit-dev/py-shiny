@@ -1,8 +1,7 @@
 import warnings
 from typing import Any
 
-from . import render
-from . import reactive
+from . import reactive, render
 
 __all__ = (
     "render_text",
@@ -11,6 +10,7 @@ __all__ = (
     "render_ui",
     "event",
 )
+
 
 # Create our own warning class instead of using built-in DeprecationWarning, because we
 # want to be able to control display of these messages without interfering with the
@@ -24,7 +24,7 @@ warnings.simplefilter("always", ShinyDeprecationWarning)
 
 
 def warn_deprecated(message: str):
-    warnings.warn(message, ShinyDeprecationWarning)
+    warnings.warn(message, ShinyDeprecationWarning, stacklevel=3)
 
 
 def render_text():

@@ -1,14 +1,16 @@
-from shiny import *
-from shiny.types import FileInfo
 import pandas as pd
 
+from shiny import *
+from shiny import experimental as x
+from shiny.types import FileInfo
+
 app_ui = ui.page_fluid(
-    ui.layout_sidebar(
-        ui.panel_sidebar(
+    x.ui.layout_sidebar(
+        x.ui.sidebar(
             ui.input_file("file1", "Choose CSV File", accept=[".csv"], multiple=False),
             ui.input_checkbox("header", "Header", True),
         ),
-        ui.panel_main(ui.output_ui("contents")),
+        ui.output_ui("contents"),
     )
 )
 

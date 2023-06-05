@@ -1,27 +1,24 @@
+from __future__ import annotations
+
 __all__ = ("input_file",)
 
-import sys
-from typing import List, Optional, Union
+from typing import Optional
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
-from htmltools import Tag, TagChildArg, css, div, span, tags
+from htmltools import Tag, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
+from .._typing_extensions import Literal
 from ._utils import shiny_input_label
 
 
 @add_example()
 def input_file(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     *,
     multiple: bool = False,
-    accept: Optional[Union[str, List[str]]] = None,
+    accept: Optional[str | list[str]] = None,
     width: Optional[str] = None,
     button_label: str = "Browse...",
     placeholder: str = "No file selected",
@@ -62,7 +59,8 @@ def input_file(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     -----

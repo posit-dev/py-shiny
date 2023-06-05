@@ -1,5 +1,6 @@
-from shiny import Inputs, Outputs, Session, App, render, ui
 import matplotlib.pyplot as plt
+
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_checkbox("render", "Render", value=True),

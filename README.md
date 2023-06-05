@@ -1,44 +1,59 @@
 Shiny for Python
 ================
 
-
 [![Release](https://img.shields.io/github/v/release/rstudio/py-shiny)](https://img.shields.io/github/v/release/rstudio/py-shiny)
 [![Build status](https://img.shields.io/github/workflow/status/rstudio/py-shiny/Run%20tests)](https://img.shields.io/github/workflow/status/rstudio/py-shiny/Run%20tests)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/deptry)](https://pypi.org/project/deptry/)
 [![License](https://img.shields.io/github/license/rstudio/py-shiny)](https://img.shields.io/github/license/rstudio/py-shiny)
 
+Shiny for Python is the best way to build fast, beautiful web applications in Python. You can build quickly with Shiny and create simple interactive visualizations and prototype applications in an afternoon. But unlike other frameworks targeted at data scientists, Shiny does not limit your app's growth. Shiny remains extensible enough to power large, mission-critical applications.
 
-## What is Shiny?
+To learn more about Shiny see the [Shiny for Python website](https://shiny.rstudio.com/py/). If you're new to the framework we recommend these resources:
 
-See the [Shiny for Python website](https://shiny.rstudio.com/py/).
+-   How [Shiny is different](https://posit.co/blog/why-shiny-for-python/) from Dash and Streamlit.
 
-## Installation
+-   How [reactive programming](https://shiny.rstudio.com/py/docs/reactive-programming.html) can help you build better applications.
 
-To install the latest release from PyPI:
+-   How to [use modules](https://shiny.rstudio.com/py/docs/workflow-modules.html) to efficiently develop large applications.
 
-```sh
+-   Hosting applications for free on [shinyapps.io](https://shiny.rstudio.com/py/docs/deploy.html#deploy-to-shinyapps.io-cloud-hosting), [Hugging Face](https://shiny.posit.co/blog/posts/shiny-on-hugging-face/), or [Shinylive](https://shiny.rstudio.com/py/docs/shinylive.html).
+
+## Join the conversation
+
+If you have questions about Shiny for Python, or want to help us decide what to work on next, [join us on Discord](https://discord.gg/yMGCamUMnS).
+
+## Getting started
+
+To get started with shiny follow the [installation instructions](https://shiny.rstudio.com/py/docs/install.html) or just install it from pip.
+
+``` sh
 pip install shiny
 ```
 
 To install the latest development version from this repository:
 
-```sh
+``` sh
 pip install https://github.com/rstudio/py-shiny/tarball/main
 ```
 
-More detailed installation instructions, including the use of `conda`, are [also available](https://shiny.rstudio.com/py/docs/install.html).
+You can create and run your first application with:
+
+```         
+shiny create .
+shiny run app.py --reload
+```
 
 ## Development
 
 If you want to do development on Shiny for Python:
 
-```sh
-pip install -r requirements-dev.txt
+``` sh
+pip install -e ".[dev,test]"
 ```
 
 Additionally, you can install pre-commit hooks which will automatically reformat and lint the code when you make a commit:
 
-```sh
+``` sh
 pre-commit install
 
 # To disable:

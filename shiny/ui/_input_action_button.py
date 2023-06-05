@@ -2,7 +2,7 @@ __all__ = ("input_action_button", "input_action_link")
 
 from typing import Optional
 
-from htmltools import tags, Tag, TagChildArg, TagAttrArg, css
+from htmltools import Tag, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -11,11 +11,11 @@ from .._namespaces import resolve_id
 @add_example()
 def input_action_button(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     *,
-    icon: TagChildArg = None,
+    icon: TagChild = None,
     width: Optional[str] = None,
-    **kwargs: TagAttrArg,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Creates an action button whose value is initially zero, and increments by one each
@@ -36,7 +36,8 @@ def input_action_button(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------
@@ -47,12 +48,13 @@ def input_action_button(
     See Also
     -------
     ~shiny.ui.input_action_link
-    ~shiny.event
+    ~shiny.reactive.event
     """
 
     return tags.button(
         {"class": "btn btn-default action-button", "style": css(width=width)},
         icon,
+        None if icon is None else " ",
         label,
         id=resolve_id(id),
         type="button",
@@ -63,10 +65,10 @@ def input_action_button(
 @add_example()
 def input_action_link(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     *,
-    icon: TagChildArg = None,
-    **kwargs: TagAttrArg,
+    icon: TagChild = None,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Creates a link whose value is initially zero, and increments by one each time it is
@@ -85,7 +87,8 @@ def input_action_link(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------
@@ -96,7 +99,7 @@ def input_action_link(
     See Also
     -------
     ~shiny.ui.input_action_button
-    ~shiny.event
+    ~shiny.reactive.event
     """
 
     return tags.a(

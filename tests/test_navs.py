@@ -3,12 +3,13 @@
 
 import random
 import textwrap
-from typing import Callable, Any
+from typing import Any, Callable
+
+from htmltools import TagList
 
 from shiny import ui
-from shiny.ui._navs import NavSet
 from shiny._utils import private_seed
-from htmltools import TagList
+from shiny.ui._navs import NavSet
 
 
 # Fix the randomness of these functions to make the tests deterministic
@@ -146,10 +147,7 @@ def test_nav_markup():
         """\
         <nav class="navbar navbar-expand-md navbar-light bg-light">
           <div class="container-fluid">
-            <a class="navbar-brand" href="#">Page title</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-collapse-1663" aria-controls="navbar-collapse-1663" aria-expanded="false" aria-label="Toggle navigation">
-              <span class="navbar-toggler-icon"></span>
-            </button>
+            <a class="navbar-brand" href="#">Page title</a><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-collapse-1663" aria-controls="navbar-collapse-1663" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
             <div id="navbar-collapse-1663" class="collapse navbar-collapse">
               <ul class="nav navbar-nav" data-tabsetid="7311">
                 <li class="nav-item dropdown">

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "input_slider",
     "SliderValueArg",
@@ -6,24 +8,16 @@ __all__ = (
 )
 
 import math
-import sys
 from datetime import date, datetime, timedelta
-from typing import Dict, Iterable, Optional, TypeVar, Union, cast
+from typing import Iterable, Optional, TypeVar, Union, cast
 
-from htmltools import HTML, Tag, TagAttrArg, TagChildArg, css, div, tags
+from htmltools import HTML, Tag, TagAttrValue, TagChild, css, div, tags
 
 from .._docstring import add_example
-from ._html_dependencies import ionrangeslider_deps
 from .._namespaces import resolve_id
+from .._typing_extensions import NotRequired, TypedDict
+from ._html_dependencies import ionrangeslider_deps
 from ._utils import shiny_input_label
-
-# Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
-# they should both come from the same typing module.
-# https://peps.python.org/pep-0655/#usage-in-python-3-11
-if sys.version_info >= (3, 11):
-    from typing import NotRequired, TypedDict
-else:
-    from typing_extensions import NotRequired, TypedDict
 
 # TODO: validate value(s) are within (min,max)?
 
@@ -48,7 +42,8 @@ class AnimationOptions(TypedDict):
 
     Returns
     -------
-    A TypedDict.
+    :
+        A TypedDict.
 
     See Also
     --------
@@ -57,21 +52,21 @@ class AnimationOptions(TypedDict):
 
     interval: NotRequired[int]
     loop: NotRequired[bool]
-    play_button: NotRequired[TagChildArg]
-    pause_button: NotRequired[TagChildArg]
+    play_button: NotRequired[TagChild]
+    pause_button: NotRequired[TagChild]
 
 
 @add_example()
 def input_slider(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     min: SliderValueArg,
     max: SliderValueArg,
-    value: Union[SliderValueArg, Iterable[SliderValueArg]],
+    value: SliderValueArg | Iterable[SliderValueArg],
     *,
     step: Optional[SliderStepArg] = None,
     ticks: bool = True,
-    animate: Union[bool, AnimationOptions] = False,
+    animate: bool | AnimationOptions = False,
     width: Optional[str] = None,
     sep: str = ",",
     pre: Optional[str] = None,
@@ -113,13 +108,13 @@ def input_slider(
     post
         A suffix string to put after the value.
     time_format
-        Only used if the slider values are :func:`~datetime.date` or
-        :func:`~datetime.datetime` objects. A time format string, to be passed to the
+        Only used if the slider values are :class:`~datetime.date` or
+        :class:`~datetime.datetime` objects. A time format string, to be passed to the
         Javascript strftime library. See https://github.com/samsonjs/strftime for more
         details. For Dates, the default is "%F" (like "2015-07-01"), and for Datetimes,
         the default is "%F %T" (like "2015-07-01 15:32:10").
     timezone
-        Only used if the values are :func:`~datetime.datetime` objects. A string
+        Only used if the values are :class:`~datetime.datetime` objects. A string
         specifying the time zone offset for the displayed times, in the format "+HHMM"
         or "-HHMM". If ``None`` (the default), times will be displayed in the browser's
         time zone. The value "+0000" will result in UTC time.
@@ -130,7 +125,8 @@ def input_slider(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------
@@ -172,10 +168,9 @@ def input_slider(
 
     id = resolve_id(id)
 
-    props: Dict[str, TagAttrArg] = {
-        "class_": "js-range-slider",
+    props: dict[str, TagAttrValue] = {
+        "class": "js-range-slider",
         "id": id,
-        "style": css(width=width),
         "data_skin": "shiny",
         # TODO: do we need to worry about scientific notation (i.e., formatNoSci()?)
         "data_min": str(min_num),
@@ -211,6 +206,7 @@ def input_slider(
         tags.input(**props),
         *ionrangeslider_deps(),
         class_="form-group shiny-input-container",
+        style=css(width=width),
     )
 
     if animate is False:
@@ -245,7 +241,7 @@ def _slider_type(x: SliderValueArg) -> str:
     return "number"
 
 
-def _as_numeric(x: Union[SliderStepArg, datetime, date]) -> float:
+def _as_numeric(x: SliderStepArg | datetime | date) -> float:
     if isinstance(x, timedelta):
         return x.total_seconds() * 1000
     if isinstance(x, datetime):
@@ -255,9 +251,7 @@ def _as_numeric(x: Union[SliderStepArg, datetime, date]) -> float:
     return x
 
 
-def _find_step_size(
-    min: Union[int, float], max: Union[int, float]
-) -> Union[int, float]:
+def _find_step_size(min: int | float, max: int | float) -> int | float:
     # TODO: this is a naive version of shiny::findStepSize() that might be susceptible to
     # rounding errors? https://github.com/rstudio/shiny/pull/1956
     range = max - min
@@ -285,9 +279,9 @@ pause_icon = """<svg viewBox="0 0 448 512" preserveAspectRatio="none" aria-hidde
 </svg>"""
 
 
-def _play_icon() -> Union[Tag, HTML]:
+def _play_icon() -> Tag | HTML:
     return HTML(play_icon)
 
 
-def _pause_icon() -> Union[Tag, HTML]:
+def _pause_icon() -> Tag | HTML:
     return HTML(pause_icon)

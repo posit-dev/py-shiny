@@ -16,11 +16,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         x = input.inCheckboxGroup()
 
-        if x is None:
-            x = []
-        elif isinstance(x, str):
-            x = [x]
-
         # Can also set the label and select items
         ui.update_checkbox_group(
             "inCheckboxGroup2",

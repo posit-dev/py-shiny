@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "row",
     "column",
@@ -12,57 +14,53 @@ __all__ = (
     "help_text",
 )
 
-import sys
-from typing import Optional, Union
-
-from shiny.types import MISSING, MISSING_TYPE
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
+from typing import Optional
 
 from htmltools import (
-    TagChildArg,
-    TagAttrArg,
-    TagList,
     Tag,
-    div,
-    tags,
-    h2,
+    TagAttrs,
+    TagAttrValue,
+    TagChild,
+    TagList,
     css,
+    div,
+    h2,
     span,
+    tags,
 )
 
 from .._docstring import add_example
+from .._typing_extensions import Literal
+from ..module import current_namespace
+from ..types import MISSING, MISSING_TYPE
 from ._html_dependencies import jqui_deps
 from ._utils import get_window_title
-from ..module import current_namespace
 
 
 # TODO: make a python version of the layout guide?
 @add_example()
-def row(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
+def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Responsive row-column based layout
 
     Layout UI components using Bootstrap's grid layout system. Use ``row()`` to group
     elements that should appear on the same line (if the browser has adequate width) and
     :func:`~shiny.ui.column` to define how much horizontal space within a 12-unit wide
-    grid each on of these elements should occupy. See the `layout guide
-    <https://shiny.rstudio.com/articles/layout-guide.html>`_ for more context and
+    grid each on of these elements should occupy. See the [layout
+    guide](https://shiny.rstudio.com/articles/layout-guide.html>) for more context and
     examples.
 
     Parameters
     ----------
     args
-        Any number of child elements
+        Any number of child elements.
     kwargs
-        Attributes to place on the row tag
+        Attributes to place on the row tag.
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     See Also
     -------
@@ -72,7 +70,7 @@ def row(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
 
 
 def column(
-    width: int, *args: TagChildArg, offset: int = 0, **kwargs: TagAttrArg
+    width: int, *args: TagChild | TagAttrs, offset: int = 0, **kwargs: TagAttrValue
 ) -> Tag:
     """
     Responsive row-column based layout
@@ -82,17 +80,18 @@ def column(
     Parameters
     ----------
     width
-        The width of the column (an integer between 1 and 12)
+        The width of the column (an integer between 1 and 12).
     args
-        UI elements to place within the column
+        UI elements to place within the column.
     offset
         The number of columns to offset this column from the end of the previous column.
     kwargs
-        Attributes to place on the column tag
+        Attributes to place on the column tag.
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     See Also
     -------
@@ -114,8 +113,8 @@ def column(
 @add_example()
 def layout_sidebar(
     # TODO: also accept a generic list (and wrap in panel in that case)?
-    sidebar: TagChildArg,
-    main: TagChildArg,
+    sidebar: TagChild,
+    main: TagChild,
     position: Literal["left", "right"] = "left",
 ) -> Tag:
     """
@@ -139,7 +138,8 @@ def layout_sidebar(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     -------
@@ -149,7 +149,7 @@ def layout_sidebar(
     return row(sidebar, main) if position == "left" else row(main, sidebar)
 
 
-def panel_well(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
+def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Create a well panel
 
@@ -165,7 +165,8 @@ def panel_well(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     See Also
     -------
@@ -175,7 +176,9 @@ def panel_well(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
     return div({"class": "well"}, *args, **kwargs)
 
 
-def panel_sidebar(*args: TagChildArg, width: int = 4, **kwargs: TagAttrArg) -> Tag:
+def panel_sidebar(
+    *args: TagChild | TagAttrs, width: int = 4, **kwargs: TagAttrValue
+) -> Tag:
     """
     Create a sidebar panel
 
@@ -193,7 +196,8 @@ def panel_sidebar(*args: TagChildArg, width: int = 4, **kwargs: TagAttrArg) -> T
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     See Also
     -------
@@ -207,7 +211,9 @@ def panel_sidebar(*args: TagChildArg, width: int = 4, **kwargs: TagAttrArg) -> T
     )
 
 
-def panel_main(*args: TagChildArg, width: int = 8, **kwargs: TagAttrArg) -> Tag:
+def panel_main(
+    *args: TagChild | TagAttrs, width: int = 8, **kwargs: TagAttrValue
+) -> Tag:
     """
     Create an main area panel
 
@@ -218,13 +224,14 @@ def panel_main(*args: TagChildArg, width: int = 8, **kwargs: TagAttrArg) -> Tag:
     args
         UI elements to include inside the main area.
     width
-        The width of the main area (an integer between 1 and 12)
+        The width of the main area (an integer between 1 and 12).
     kwargs
         Attributes to place on the main area tag.
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     See Also
     -------
@@ -248,8 +255,8 @@ def panel_main(*args: TagChildArg, width: int = 8, **kwargs: TagAttrArg) -> Tag:
 @add_example()
 def panel_conditional(
     condition: str,
-    *args: TagChildArg,
-    **kwargs: TagAttrArg,
+    *args: TagChild | TagAttrs,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Create a conditional panel
@@ -268,7 +275,8 @@ def panel_conditional(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     Note
     ----
@@ -303,7 +311,7 @@ def panel_conditional(
 
 @add_example()
 def panel_title(
-    title: Union[str, Tag, TagList], window_title: Union[str, MISSING_TYPE] = MISSING
+    title: str | Tag | TagList, window_title: str | MISSING_TYPE = MISSING
 ) -> TagList:
     """
     Create title(s) for the application.
@@ -317,7 +325,8 @@ def panel_title(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     Note
     ----
@@ -333,7 +342,7 @@ def panel_title(
     return TagList(get_window_title(title, window_title), title)
 
 
-def panel_fixed(*args: TagChildArg, **kwargs: TagAttrArg) -> TagList:
+def panel_fixed(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> TagList:
     """
     Create a panel of absolutely positioned content.
 
@@ -350,7 +359,8 @@ def panel_fixed(*args: TagChildArg, **kwargs: TagAttrArg) -> TagList:
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     See Also
     -------
@@ -361,7 +371,7 @@ def panel_fixed(*args: TagChildArg, **kwargs: TagAttrArg) -> TagList:
 
 @add_example()
 def panel_absolute(
-    *args: TagChildArg,
+    *args: TagChild | TagAttrs,
     top: Optional[str] = None,
     left: Optional[str] = None,
     right: Optional[str] = None,
@@ -371,7 +381,7 @@ def panel_absolute(
     draggable: bool = False,
     fixed: bool = False,
     cursor: Literal["auto", "move", "default", "inherit"] = "auto",
-    **kwargs: TagAttrArg,
+    **kwargs: TagAttrValue,
 ) -> TagList:
     """
     Create a panel of absolutely positioned content.
@@ -419,7 +429,8 @@ def panel_absolute(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Tip
     ----
@@ -456,7 +467,7 @@ def panel_absolute(
     return TagList(deps, divTag, tags.script('$(".draggable").draggable();'))
 
 
-def help_text(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
+def help_text(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Create a help text element
 
@@ -469,7 +480,8 @@ def help_text(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
     """
 
     return span({"class": "help-block"}, *args, **kwargs)

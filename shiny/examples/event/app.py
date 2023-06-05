@@ -1,4 +1,5 @@
 import random
+
 from shiny import *
 
 app_ui = ui.page_fluid(
@@ -34,7 +35,6 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-
     # Update a random number every second
     val = reactive.Value(random.randint(0, 1000))
 

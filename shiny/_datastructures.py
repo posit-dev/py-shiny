@@ -1,6 +1,7 @@
-from typing import TypeVar, Generic, Tuple
-from queue import PriorityQueue
+from __future__ import annotations
 
+from queue import PriorityQueue
+from typing import Generic, TypeVar
 
 T = TypeVar("T")
 
@@ -16,7 +17,7 @@ class PriorityQueueFIFO(Generic[T]):
     def __init__(self) -> None:
         # Using Tuple instead of tuple because in Python 3.8 and earlier, tuple isn't
         # generic
-        self._pq: PriorityQueue[Tuple[int, int, T]] = PriorityQueue()
+        self._pq: PriorityQueue[tuple[int, int, T]] = PriorityQueue()
         self._counter: int = 0
 
     def put(self, priority: int, item: T) -> None:
@@ -32,7 +33,7 @@ class PriorityQueueFIFO(Generic[T]):
         self._pq.put((-priority, self._counter, item))
 
     def get(self) -> T:
-        iteminfo: Tuple[int, int, T] = self._pq.get()
+        iteminfo: tuple[int, int, T] = self._pq.get()
         return iteminfo[2]
 
     def empty(self) -> bool:

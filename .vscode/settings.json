@@ -9,12 +9,20 @@
     "[python]": {
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+        },
     },
+    "isort.args":["--profile", "black"],
     "editor.rulers": [
         88
     ],
     "files.exclude": {
-        "**/__pycache__": true
+        "**/__pycache__": true,
+        "build/**": true
     },
     "autoDocstring.guessTypes": false,
+    "search.exclude": {
+        "build/**": true
+    },
 }

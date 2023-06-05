@@ -1,8 +1,9 @@
 from typing import Optional
 
 import ipyleaflet as L
-from shiny import Inputs, Outputs, Session, module, reactive, req, ui
 from shinywidgets import output_widget, reactive_read, register_widget
+
+from shiny import Inputs, Outputs, Session, module, reactive, req, ui
 
 # ============================================================
 # Module: location
@@ -15,7 +16,7 @@ def location_ui(
     *,
     lat: Optional[float] = None,
     long: Optional[float] = None,
-) -> ui.TagChildArg:
+) -> ui.TagChild:
     return ui.div(
         ui.input_numeric("lat", "Latitude", value=lat),
         ui.input_numeric("long", "Longitude", value=long),

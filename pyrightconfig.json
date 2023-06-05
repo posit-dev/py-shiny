@@ -1,8 +1,15 @@
 {
-  "ignore": ["shiny/examples", "examples", "build", "dist", "typings", "sandbox"],
+  "ignore": [
+    "shiny/examples",
+    "examples",
+    "build",
+    "dist",
+    "typings",
+    "sandbox"
+  ],
   "typeCheckingMode": "strict",
-  "reportImportCycles":  "none",
-  "reportUnusedFunction":  "none",
+  "reportImportCycles": "none",
+  "reportUnusedFunction": "none",
   "reportPrivateUsage": "none",
   "reportUnnecessaryIsInstance": "none",
 }

@@ -1,7 +1,8 @@
 # pyright: reportUnusedFunction=false
 
-from shiny import *
 import typing
+
+from shiny import *
 
 app_ui = ui.page_fluid(
     ui.input_numeric("n", "N", 20),
@@ -24,7 +25,6 @@ class ShinyInputs(Inputs):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-
     # Cast `input` to our ShinyInputs class. This just tells the static type checker
     # that we want it treated as a ShinyInputs object for type checking; it has no
     # run-time effect.
