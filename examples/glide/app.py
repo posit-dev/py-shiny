@@ -63,8 +63,10 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.data_grid
     def grid():
-        cls = DataGrid if input.gridstyle() else DataTable
-        return cls(df(), row_selection_mode=input.selection_mode())
+        if input.gridstyle():
+            return DataGrid(df(), row_selection_mode=input.selection_mode())
+        else:
+            return DataTable(df(), row_selection_mode=input.selection_mode())
 
     @reactive.Effect
     @reactive.event(input.grid_cell_edit)
