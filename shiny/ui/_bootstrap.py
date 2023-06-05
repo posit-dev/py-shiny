@@ -47,7 +47,7 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     elements that should appear on the same line (if the browser has adequate width) and
     :func:`~shiny.ui.column` to define how much horizontal space within a 12-unit wide
     grid each on of these elements should occupy. See the [layout
-    guide](https://shiny.rstudio.com/articles/layout-guide.html>) for more context and
+    guide](https://shiny.posit.co/articles/layout-guide.html>) for more context and
     examples.
 
     Parameters

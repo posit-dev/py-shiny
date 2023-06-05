@@ -48,7 +48,7 @@ pre-process input values from the client (after being deserialized) before passi
 to the ``input`` argument of an :func:`~shiny.App`'s ``server`` function.
 
 The ``type`` is based on the ``getType()`` JavaScript method on the relevant Shiny
-input binding. See `this article <https://shiny.rstudio.com/articles/js-custom-input.html>`_
+input binding. See `this article <https://shiny.posit.co/articles/js-custom-input.html>`_
 for more information on how to create custom input bindings.
 
 Methods
