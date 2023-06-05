@@ -2,7 +2,7 @@ Shiny for Python
 ================
 
 [![Release](https://img.shields.io/github/v/release/rstudio/py-shiny)](https://img.shields.io/github/v/release/rstudio/py-shiny)
-[![Build status](https://img.shields.io/github/workflow/status/rstudio/py-shiny/Run%20tests)](https://img.shields.io/github/workflow/status/rstudio/py-shiny/Run%20tests)
+[![Build status](https://img.shields.io/github/actions/workflow/status/rstudio/py-shiny/pytest.yaml?branch=main)](https://img.shields.io/github/actions/workflow/status/rstudio/py-shiny/pytest.yaml?branch=main)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/deptry)](https://pypi.org/project/deptry/)
 [![License](https://img.shields.io/github/license/rstudio/py-shiny)](https://img.shields.io/github/license/rstudio/py-shiny)
 
