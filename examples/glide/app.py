@@ -79,12 +79,12 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.text
     def detail():
-        if input.grid_row_selection() is not None:
+        if input.grid_selected_rows() is not None:
             # "split", "records", "index", "columns", "values", "table"
 
             return (
                 df()
-                .iloc[list(input.grid_row_selection())]
+                .iloc[list(input.grid_selected_rows())]
                 .to_json(None, orient="records", indent=2)
             )
 

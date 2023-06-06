@@ -24,7 +24,7 @@ import React, {
   useState,
 } from "react";
 import { Root, createRoot } from "react-dom/client";
-import { findFirstItemInView } from "./dom-utils";
+import { findFirstItemInView, getStyle } from "./dom-utils";
 import { SelectionMode, useSelection } from "./selection";
 import { SortArrow } from "./sort-arrows";
 import { useTabindexGroup } from "./tabindex-group";
@@ -53,22 +53,27 @@ interface DataGridOptions {
   height?: string;
 }
 
-interface PandasData {
+interface PandasData<TIndex> {
   columns: ReadonlyArray<string>;
-  index: ReadonlyArray<string>;
+  index: ReadonlyArray<TIndex>;
   data: unknown[][];
   options: DataGridOptions;
 }
 
-interface ShinyDataGridProps {
-  data: PandasData;
+interface ShinyDataGridProps<TIndex> {
+  id: string | null;
+  data: PandasData<TIndex>;
   bgcolor?: string;
 }
 
-const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
-  const { data, bgcolor } = props;
-  const { columns, data: rowData } = data;
+const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
+  const { id, data, bgcolor } = props;
+  const { columns, index, data: rowData } = data;
   const { width, height } = data.options;
+  const keyToIndex: Record<string, unknown> = {};
+  index.forEach((value) => {
+    keyToIndex[value + ""] = value;
+  });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const theadRef = useRef<HTMLTableSectionElement>(null);
@@ -169,7 +174,15 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
   );
 
   useEffect(() => {
-    console.log("Selected rows: " + [...rowSelection.keys()].join(", "));
+    if (id) {
+      Shiny.setInputValue(
+        `${id}_selected_rows`,
+        rowSelection
+          .keys()
+          .toList()
+          .map((key) => keyToIndex[key])
+      );
+    }
   }, [[...rowSelection.keys()]]);
 
   const tbodyTabItems = React.useCallback(
@@ -355,15 +368,6 @@ function getComputedBgColor(el: HTMLElement | null): string | null | undefined {
   return bgColor;
 }
 
-function getStyle(el: Element, styleProp: string): string | undefined {
-  // getComputedStyle can return null when we're inside a hidden iframe on
-  // Firefox; don't attempt to retrieve style props in this case.
-  // https://bugzilla.mozilla.org/show_bug.cgi?id=548397
-  return document?.defaultView
-    ?.getComputedStyle(el, null)
-    ?.getPropertyValue(styleProp);
-}
-
 const cssTemplate = document.createElement("template");
 cssTemplate.innerHTML = `<style>${css}</style>`;
 
@@ -397,16 +401,16 @@ export class ShinyDataGridOutput extends HTMLElement {
   }
 
   renderValue(data: unknown) {
-    const { columns, index, data: rows, options } = data as PandasData;
-
     if (!data) {
+      this.reactRoot!.render(null);
       return;
     }
 
     this.reactRoot!.render(
       <StrictMode>
         <ShinyDataGrid
-          data={data as PandasData}
+          id={this.id}
+          data={data as PandasData<unknown>}
           bgcolor={getComputedBgColor(this)}
         ></ShinyDataGrid>
       </StrictMode>

@@ -30,3 +30,12 @@ export function findFirstItemInView(
   }
   return null;
 }
+
+export function getStyle(el: Element, styleProp: string): string | undefined {
+  // getComputedStyle can return null when we're inside a hidden iframe on
+  // Firefox; don't attempt to retrieve style props in this case.
+  // https://bugzilla.mozilla.org/show_bug.cgi?id=548397
+  return document?.defaultView
+    ?.getComputedStyle(el, null)
+    ?.getPropertyValue(styleProp);
+}

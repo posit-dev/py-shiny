@@ -47,4 +47,8 @@ export class ImmutableSet<T> {
   [Symbol.iterator]() {
     return this._set[Symbol.iterator]();
   }
+
+  toList(): T[] {
+    return [...this._set.keys()];
+  }
 }
