@@ -1,6 +1,7 @@
 import css from "./styles.scss";
 
 import {
+  Column,
   ColumnDef,
   Row,
   RowModel,
@@ -25,7 +26,8 @@ import React, {
 import { Root, createRoot } from "react-dom/client";
 import { findFirstItemInView } from "./dom-utils";
 import { SelectionMode, useSelection } from "./selection";
-import { sortArrowDown, sortArrowUp } from "./sort-arrows";
+import { SortArrow } from "./sort-arrows";
+import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
 
 // TODO: Right-align numeric columns, maybe change font
@@ -170,31 +172,13 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
     console.log("Selected rows: " + [...rowSelection.keys()].join(", "));
   }, [[...rowSelection.keys()]]);
 
-  const onContainerFocus = React.useCallback(
-    (event: React.FocusEvent) => {
-      // When focus is within (or on, but we only really care about within) the
-      // container, remove it from the tab order. If we don't set the tab stop to -1,
-      // then the logic below (that, on container focus, moves focus to the first item)
-      // causes Shift-Tab from a focused item to break, as focus moves to the container
-      // and then (back) to the first item.
-      setTabIndex(-1);
-
-      if (event.target !== event.currentTarget) {
-        // Not interested in capturing, only care about focus on the container itself
-        return;
-      }
-      findFirstItemInView(
-        containerRef.current,
-        containerRef.current.querySelectorAll("[tabindex='-1']"),
-        { top: theadRef.current.clientHeight }
-      )?.focus();
-    },
-    [containerRef.current, theadRef.current]
+  const tbodyTabItems = React.useCallback(
+    () => tbodyRef.current.querySelectorAll("[tabindex='-1']"),
+    [tbodyRef.current]
   );
-
-  const onContainerBlur = React.useCallback((event: React.FocusEvent) => {
-    setTabIndex(0);
-  }, []);
+  const tbodyTabGroup = useTabindexGroup(containerRef.current, tbodyTabItems, {
+    top: theadRef.current?.clientHeight ?? 0,
+  });
 
   // Reset sorting and selection whenever dataset changes. (Should we do this?)
   useEffect(() => {
@@ -211,17 +195,18 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
       ? "scrolling"
       : "";
 
-  const [tabIndex, setTabIndex] = useState(0);
-
+  const makeHeaderKeyDown =
+    (column: Column<unknown[], unknown>) => (event: React.KeyboardEvent) => {
+      if (event.key === " " || event.key === "Enter") {
+        column.toggleSorting(undefined, event.shiftKey);
+      }
+    };
   return (
     <>
       <div
         className={`shiny-data-grid ${containerClass} ${scrollingClass}`}
         ref={containerRef}
-        onFocus={onContainerFocus}
-        onBlur={onContainerBlur}
         style={{ width, maxHeight: height, overflow: "auto" }}
-        tabIndex={tabIndex}
       >
         <table
           className={tableClass}
@@ -239,6 +224,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
                       colSpan={header.colSpan}
                       style={{ width: header.getSize() }}
                       scope="col"
+                      tabIndex={0}
+                      onClick={header.column.getToggleSortingHandler()}
+                      onKeyDown={makeHeaderKeyDown(header.column)}
                     >
                       {header.isPlaceholder ? null : (
                         <div
@@ -250,16 +238,12 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
                               ? "none"
                               : null,
                           }}
-                          onClick={header.column.getToggleSortingHandler()}
                         >
                           {flexRender(
                             header.column.columnDef.header,
                             header.getContext()
                           )}
-                          {{
-                            asc: sortArrowUp,
-                            desc: sortArrowDown,
-                          }[header.column.getIsSorted() as string] ?? null}
+                          <SortArrow direction={header.column.getIsSorted()} />
                         </div>
                       )}
                     </th>
@@ -268,7 +252,11 @@ const ShinyDataGrid: FC<ShinyDataGridProps> = (props) => {
               </tr>
             ))}
           </thead>
-          <tbody ref={tbodyRef}>
+          <tbody
+            ref={tbodyRef}
+            tabIndex={tbodyTabGroup.containerTabIndex}
+            {...tbodyTabGroup.containerHandlers}
+          >
             {paddingTop > 0 && <tr style={{ height: `${paddingTop}px` }}></tr>}
             {virtualRows.map((virtualRow) => {
               const row = table.getRowModel().rows[virtualRow.index];

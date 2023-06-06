@@ -44,6 +44,11 @@
       > tr > th {
         text-align: left;
         white-space: nowrap;
+
+        &:focus-visible {
+          outline: 5px auto Highlight;
+          outline: 5px auto -webkit-focus-ring-color;
+        }
       }
     }
   }
@@ -53,6 +58,16 @@
   > table {
     > thead > tr:last-child > th {
       border-bottom: var(--shiny-datagrid-table-header-bottom-border);
+    }
+
+    > tbody > tr {
+      &[aria-selected="true"] {
+        --shiny-datagrid-grid-gridlines-color: var(
+          --shiny-datagrid-grid-body-selected-bgcolor
+        );
+        background-color: var(--shiny-datagrid-grid-body-selected-bgcolor);
+        color: var(--shiny-datagrid-grid-body-selected-color);
+      }
     }
   }
 }
