@@ -49,7 +49,8 @@ to the ``input`` argument of an :func:`~shiny.App`'s ``server`` function.
 
 The ``type`` is based on the ``getType()`` JavaScript method on the relevant Shiny
 input binding. See `this article <https://shiny.posit.co/articles/js-custom-input.html>`_
-for more information on how to create custom input bindings.
+for more information on how to create custom input bindings. (The article is about
+Shiny for R, but the JavaScript and general principles are the same.)
 
 Methods
 --------

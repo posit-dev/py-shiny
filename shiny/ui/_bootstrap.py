@@ -49,6 +49,7 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     grid each on of these elements should occupy. See the [layout
     guide](https://shiny.posit.co/articles/layout-guide.html>) for more context and
     examples.
+    (The article is about Shiny for R, but the general principles are the same.)
 
     Parameters
     ----------
