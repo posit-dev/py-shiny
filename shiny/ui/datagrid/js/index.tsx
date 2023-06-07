@@ -175,13 +175,17 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
 
   useEffect(() => {
     if (id) {
-      Shiny.setInputValue(
-        `${id}_selected_rows`,
-        rowSelection
-          .keys()
-          .toList()
-          .map((key) => keyToIndex[key])
-      );
+      if (rowSelectionMode === SelectionMode.None) {
+        Shiny.setInputValue(`${id}_selected_rows`, null);
+      } else {
+        Shiny.setInputValue(
+          `${id}_selected_rows`,
+          rowSelection
+            .keys()
+            .toList()
+            .map((key) => keyToIndex[key])
+        );
+      }
     }
   }, [[...rowSelection.keys()]]);
 
