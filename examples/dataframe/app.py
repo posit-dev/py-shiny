@@ -22,7 +22,7 @@ def app_ui(req):
             selected="multi-toggle",
         ),
         ui.input_switch("gridstyle", "Grid", True),
-        ui.output_data_grid("grid"),
+        ui.output_data_frame("grid"),
         ui.panel_absolute(
             ui.output_text_verbatim("detail"),
             right="10px",
@@ -60,7 +60,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return df.set(sns.load_dataset(req(input.dataset())))
 
     @output
-    @render.data_grid
+    @render.data_frame
     def grid():
         if input.gridstyle():
             return render.DataGrid(

@@ -7,7 +7,7 @@ from typing import Any, Awaitable, Callable, Literal, Optional, Union, cast, ove
 
 from .. import _utils
 from .._typing_extensions import Protocol, runtime_checkable
-from ..render import RenderFunction, RenderFunctionAsync
+from . import RenderFunction, RenderFunctionAsync
 
 
 class AbstractTabularData(abc.ABC):
@@ -29,7 +29,7 @@ class DataGrid(AbstractTabularData):
         ] = "none",
     ):
         """
-        Holds the data and options for a ``shiny.render.data_grid`` output, for a
+        Holds the data and options for a ``shiny.render.data_frame`` output, for a
         spreadsheet-like view.
 
         Parameters
@@ -57,13 +57,13 @@ class DataGrid(AbstractTabularData):
         Returns
         -------
         :
-            An object suitable for being returned from a `@render.data_grid`-decorated
+            An object suitable for being returned from a `@render.data_frame`-decorated
             output function.
 
         See Also
         --------
-        ~shiny.ui.output_data_grid
-        ~shiny.render.data_grid
+        ~shiny.ui.output_data_frame
+        ~shiny.render.data_frame
         """
         import pandas as pd
 
@@ -110,7 +110,7 @@ class DataTable(AbstractTabularData):
         ] = "none",
     ):
         """
-        Holds the data and options for a ``shiny.render.data_grid`` output, for a
+        Holds the data and options for a ``shiny.render.data_frame`` output, for a
         spreadsheet-like view.
 
         Parameters
@@ -138,13 +138,13 @@ class DataTable(AbstractTabularData):
         Returns
         -------
         :
-            An object suitable for being returned from a `@render.data_grid`-decorated
+            An object suitable for being returned from a `@render.data_frame`-decorated
             output function.
 
         See Also
         --------
-        ~shiny.ui.output_data_grid
-        ~shiny.render.data_grid
+        ~shiny.ui.output_data_frame
+        ~shiny.render.data_frame
         """
         import pandas as pd
 
@@ -184,8 +184,8 @@ class DataTable(AbstractTabularData):
 # a nontrivial amount of overhead. So for now, we're just using `object`.
 DataGridResult = Union[None, object, DataGrid]
 
-RenderDataGridFunc = Callable[[], object]
-RenderDataGridFuncAsync = Callable[[], Awaitable[object]]
+RenderDataFrameFunc = Callable[[], object]
+RenderDataFrameFuncAsync = Callable[[], Awaitable[object]]
 
 
 @runtime_checkable
@@ -195,16 +195,16 @@ class PandasCompatible(Protocol):
         ...
 
 
-class RenderDataGrid(RenderFunction[DataGridResult, object]):
+class RenderDataFrame(RenderFunction[DataGridResult, object]):
     def __init__(
         self,
-        fn: RenderDataGridFunc,
+        fn: RenderDataFrameFunc,
     ) -> None:
         super().__init__(fn)
         # The Render*Async subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
-        self._fn: RenderDataGridFuncAsync = _utils.wrap_async(fn)
+        self._fn: RenderDataFrameFuncAsync = _utils.wrap_async(fn)
 
     def __call__(self) -> object:
         return _utils.run_coro_sync(self._run())
@@ -218,7 +218,7 @@ class RenderDataGrid(RenderFunction[DataGridResult, object]):
         if not isinstance(x, AbstractTabularData):
             x = DataGrid(
                 cast_to_pandas(
-                    x, "@render.data_grid doesn't know how to render objects of type"
+                    x, "@render.data_frame doesn't know how to render objects of type"
                 )
             )
 
@@ -239,15 +239,17 @@ def cast_to_pandas(x: object, error_message_begin: str) -> object:
     return x
 
 
-class RenderDataGridAsync(RenderDataGrid, RenderFunctionAsync[DataGridResult, object]):
+class RenderDataFrameAsync(
+    RenderDataFrame, RenderFunctionAsync[DataGridResult, object]
+):
     def __init__(
         self,
-        fn: RenderDataGridFuncAsync,
+        fn: RenderDataFrameFuncAsync,
     ) -> None:
         if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         super().__init__(
-            typing.cast(RenderDataGridFunc, fn),
+            typing.cast(RenderDataFrameFunc, fn),
         )
 
     async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -257,22 +259,22 @@ class RenderDataGridAsync(RenderDataGrid, RenderFunctionAsync[DataGridResult, ob
 
 
 @overload
-def data_grid(fn: RenderDataGridFunc | RenderDataGridFuncAsync) -> RenderDataGrid:
+def data_frame(fn: RenderDataFrameFunc | RenderDataFrameFuncAsync) -> RenderDataFrame:
     ...
 
 
 @overload
-def data_grid() -> (
-    Callable[[RenderDataGridFunc | RenderDataGridFuncAsync], RenderDataGrid]
+def data_frame() -> (
+    Callable[[RenderDataFrameFunc | RenderDataFrameFuncAsync], RenderDataFrame]
 ):
     ...
 
 
-def data_grid(
-    fn: Optional[RenderDataGridFunc | RenderDataGridFuncAsync] = None,
+def data_frame(
+    fn: Optional[RenderDataFrameFunc | RenderDataFrameFuncAsync] = None,
 ) -> (
-    RenderDataGrid
-    | Callable[[RenderDataGridFunc | RenderDataGridFuncAsync], RenderDataGrid]
+    RenderDataFrame
+    | Callable[[RenderDataFrameFunc | RenderDataFrameFuncAsync], RenderDataFrame]
 ):
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
@@ -303,14 +305,14 @@ def data_grid(
 
     See Also
     --------
-    ~shiny.ui.output_data_grid
+    ~shiny.ui.output_data_frame
     """
 
-    def wrapper(fn: RenderDataGridFunc | RenderDataGridFuncAsync) -> RenderDataGrid:
+    def wrapper(fn: RenderDataFrameFunc | RenderDataFrameFuncAsync) -> RenderDataFrame:
         if _utils.is_async_callable(fn):
-            return RenderDataGridAsync(fn)
+            return RenderDataFrameAsync(fn)
         else:
-            return RenderDataGrid(fn)
+            return RenderDataFrame(fn)
 
     if fn is None:
         return wrapper
