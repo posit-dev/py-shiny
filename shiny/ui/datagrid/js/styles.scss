@@ -16,6 +16,7 @@
   --shiny-datagrid-grid-gridlines-style: solid;
 
   --shiny-datagrid-table-header-bottom-border: 1px solid;
+  --shiny-datagrid-table-bottom-border: 1px solid;
 
   --shiny-datagrid-grid-body-hover-bgcolor: var(
     --shiny-datagrid-grid-header-bgcolor
@@ -33,6 +34,7 @@
 
 .shiny-data-grid {
   max-width: 100%;
+  border-bottom: var(--shiny-datagrid-table-bottom-border);
 
   > table {
     border-collapse: separate;
