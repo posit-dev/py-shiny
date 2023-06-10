@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+title: "Shiny for Python"
+message: >-
+  If you use this software, please cite it using the metadata from this file.
+type: software
+authors:
+  - name: "The Shiny development team"
+repository-code: "https://github.com/rstudio/py-shiny"
+url: "https://shiny.rstudio.com/py/"
+license: MIT
