@@ -23,7 +23,7 @@ def app_ui(req):
         ),
         ui.input_switch("gridstyle", "Grid", True),
         ui.output_data_frame("grid"),
-        ui.panel_absolute(
+        ui.panel_fixed(
             ui.output_text_verbatim("detail"),
             right="10px",
             bottom="10px",
@@ -82,7 +82,10 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.text
     def detail():
-        if input.grid_selected_rows() is not None:
+        if (
+            input.grid_selected_rows() is not None
+            and len(input.grid_selected_rows()) > 0
+        ):
             # "split", "records", "index", "columns", "values", "table"
 
             return (

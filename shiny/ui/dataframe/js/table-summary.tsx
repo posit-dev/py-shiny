@@ -35,8 +35,8 @@ export function useSummary(
       return null;
     }
 
-    const top = scrollContainer.scrollTop;
-    const bot = top + scrollContainer.clientHeight - thead.clientHeight;
+    const top = scrollContainer.scrollTop + thead.clientHeight;
+    const bot = scrollContainer.scrollTop + scrollContainer.clientHeight;
 
     const [firstIndex, lastIndex] = findRangeIndex(
       top,

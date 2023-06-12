@@ -12,7 +12,11 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { VirtualItem, useVirtualizer } from "@tanstack/react-virtual";
+import {
+  VirtualItem,
+  Virtualizer,
+  useVirtualizer,
+} from "@tanstack/react-virtual";
 import React, {
   FC,
   StrictMode,
@@ -83,6 +87,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
     count: rowData.length,
     getScrollElement: () => containerRef.current,
     estimateSize: () => 50,
+    paddingStart: theadRef.current?.clientHeight ?? 0,
   });
 
   // Reset scroll when dataset changes
@@ -119,8 +124,12 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const table = useReactTable(options);
 
   // paddingTop and paddingBottom are to force the <tbody> to add up to the correct
-  // virtual height
-  const paddingTop = virtualRows.length > 0 ? virtualRows?.[0]?.start || 0 : 0;
+  // virtual height.
+  // paddingTop must subtract out the thead height, since thead is inside the scroll
+  // container but not virtualized.
+  const paddingTop =
+    (virtualRows.length > 0 ? virtualRows?.[0]?.start || 0 : 0) -
+      theadRef.current?.clientHeight ?? 0;
   const paddingBottom =
     virtualRows.length > 0
       ? totalSize - (virtualRows?.[virtualRows.length - 1]?.end || 0)
@@ -218,6 +227,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
         column.toggleSorting(undefined, event.shiftKey);
       }
     };
+
+  const measureEl = useVirtualizerMeasureWorkaround(rowVirtualizer);
+
   return (
     <>
       <div
@@ -283,7 +295,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
                   data-index={virtualRow.index}
                   aria-rowindex={virtualRow.index + headerRowCount}
                   data-key={row.id}
-                  ref={rowVirtualizer.measureElement}
+                  ref={measureEl}
                   aria-selected={rowSelection.has(row.id)}
                   tabIndex={-1}
                   {...rowSelection.itemHandlers()}
@@ -331,6 +343,50 @@ function findKeysBetween<TData>(
     keys.push(rowModel.rows[i].id);
   }
   return keys;
+}
+
+/**
+ * Works around a problem where the ref={...} callback is called before the element to
+ * be measured is attached to the DOM, which will result in the virtualizer using its
+ * estimated size instead of the actual size. This hook will detect when elements that
+ * are not yet attached to the DOM are measured, and will retry measuring them in the
+ * useEffect.
+ * @returns A callback that can be used as a ref for an element that needs to be measured.
+ */
+function useVirtualizerMeasureWorkaround(
+  rowVirtualizer: Virtualizer<HTMLDivElement, Element>
+) {
+  // Tracks elements that need to be measured, but are not yet attached to the DOM
+  const measureTodoQueue = useRef<HTMLElement[]>([]);
+
+  // This is the callback that will be passed back to the caller, intended to be used as
+  // a ref for each virtual item's element.
+  const measureElementWithRetry = useCallback(
+    (el: Element) => {
+      if (!el) {
+        return;
+      }
+
+      if (el.isConnected) {
+        rowVirtualizer.measureElement(el);
+      } else {
+        measureTodoQueue.current.push(el as HTMLElement);
+      }
+    },
+    [rowVirtualizer]
+  );
+
+  // Once the DOM is updated, try to measure any elements that were not yet attached
+  useEffect(() => {
+    if (measureTodoQueue.current.length > 0) {
+      const todo = measureTodoQueue.current.splice(0);
+      // The next line can mutate measureTodoQueue.current, hence the need to splice out
+      // all the items to work on before actually calling measureElement on any of them.
+      todo.forEach(rowVirtualizer.measureElement);
+    }
+  });
+
+  return measureElementWithRetry;
 }
 
 class ShinyDataGridBinding extends Shiny.OutputBinding {
