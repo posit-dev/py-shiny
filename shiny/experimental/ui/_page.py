@@ -126,9 +126,10 @@ def page_navbar(
     sidebar
         A :func:`~shiny.ui.sidebar` component to display on every page.
     fillable
-        TODO: document
+        Whether or not the main content area should be considered a fillable
+        (i.e., flexbox) container.
     fillable_mobile
-        TODO: document
+        Whether or not ``fillable`` should apply on mobile devices.
     position
         Determines whether the navbar should be displayed at the top of the page with
         normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or
