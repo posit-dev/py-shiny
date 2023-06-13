@@ -32,6 +32,7 @@ def page_sidebar(
     fillable_mobile: bool = False,
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
+    **kwargs: TagAttrValue,
 ):
     """
     Create a page with a sidebar and a title.
@@ -56,6 +57,8 @@ def page_sidebar(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
+    kwargs
+        Additional attributes passed to :func:`~shiny.ui.layout_sidebar`.
 
     Returns
     """
@@ -71,6 +74,7 @@ def page_sidebar(
             fillable=fillable,
             border=False,
             border_radius=False,
+            **kwargs,
         ),
         get_window_title(title, window_title=window_title),
         padding=0,
