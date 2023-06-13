@@ -243,13 +243,31 @@ def layout_sidebar(
     --------
     * :func:`~shiny.experimental.ui.sidebar()`
     """
+    updated_args = list(args)
+    has_upgraded: bool = False
+    # Use `args` here so `updated_args` can be safely altered in place
+    for arg in args:
+        if isinstance(arg, Sidebar):
+            raise TypeError(
+                "Please use the `sidebar=` argument to supply a `sidebar()`"
+            )
+        # TODO-future: >= 2023-11-01); Once `panel_sidebar()` is removed, we can remove this loop
+        if isinstance(arg, DeprecatedPanelSidebar):
+            if has_upgraded:
+                raise TypeError(
+                    "Multiple `panel_sidebar()` calls detected. Please use the `sidebar=` argument and supply a `sidebar()`"
+                )
+            if sidebar is not None:
+                raise TypeError(
+                    "A `panel_sidebar()` was supplied along with a `sidebar=` value. Please use only `sidebar=` to supply a `sidebar()`."
+                )
+            sidebar = arg.sidebar
+            updated_args.remove(arg)
+            has_upgraded = True
+
     if not isinstance(sidebar, Sidebar):
         sidebar = _sidebar_func(sidebar)
     assert isinstance(sidebar, Sidebar)
-
-    for arg in args:
-        if isinstance(arg, Sidebar):
-            raise TypeError("Please use the `sidebar=` argument to supply a sidebar")
 
     # TODO-future; implement
     # if fg is None and bg is not None:
@@ -257,7 +275,7 @@ def layout_sidebar(
     # if bg is None and fg is not None:
     #     bg = get_color_contrast(fg)
 
-    attrs, children = consolidate_attrs(*args, **kwargs)
+    attrs, children = consolidate_attrs(*updated_args, **kwargs)
     # TODO-future: >= 2023-11-01); Once `panel_main()` is removed, we can remove this loop
     for child in children:
         if isinstance(child, DeprecatedPanelMain):
@@ -404,7 +422,7 @@ def panel_sidebar(
     *args: TagChild | TagAttrs,
     width: int = 4,
     **kwargs: TagAttrValue,
-) -> Sidebar:
+) -> DeprecatedPanelSidebar:
     """Deprecated. Please use `ui.sidebar()` instead of `ui.panel_sidebar()`."""
     # TODO-future: >= 2023-11-01; Add deprecation message below
     # Plan of action:
@@ -413,11 +431,29 @@ def panel_sidebar(
     # * In, say, 6 months, start emitting messages for code that uses the old API.
 
     # warn_deprecated("Please use `sidebar()` instead of `panel_sidebar()`. `panel_sidebar()` will go away in a future version of Shiny.")
-    return sidebar(
+    return DeprecatedPanelSidebar(
         *args,
-        width=f"{int(width / 12 * 100)}%",
+        width=width,
         **kwargs,
     )
+
+
+class DeprecatedPanelSidebar:
+    # Store `attrs` for `layout_sidebar()` to retrieve
+    sidebar: Sidebar
+
+    def __init__(
+        self, *args: TagChild | TagAttrs, width: int = 4, **kwargs: TagAttrValue
+    ) -> None:
+        self.sidebar = sidebar(
+            *args,
+            width=f"{int(width / 12 * 100)}%",
+            **kwargs,
+        )
+
+    # Hopefully this is never used. But wanted to try to be safe
+    def tagify(self) -> Tag:
+        return self.sidebar.tag.tagify()
 
 
 def panel_main(
