@@ -21,7 +21,7 @@ from ...ui._plot_output_opts import (
     format_opt_names,
     hover_opts,
 )
-from ._fill import bind_fill_role
+from ._fill import as_fill_item, as_fillable_container
 
 
 @add_example()
@@ -217,14 +217,15 @@ def output_image(
         args.update(**format_opt_names(brush, "brush"))
 
     container = func(
+        # NEW
+        as_fill_item() if fill else None,
+        # /NEW
         id=id_resolved,
         class_="shiny-image-output",
         style=style,
         **args,
     )
-    # NEW
-    return bind_fill_role(container, item=fill)
-    # /NEW
+    return container
 
 
 @add_example()
@@ -266,14 +267,12 @@ def output_ui(
     if not container:
         container = tags.span if inline else tags.div
     res = container(
+        # NEW
+        as_fill_item() if fill else None,
+        as_fillable_container() if fillable else None,
+        # /NEW
         {"class": "shiny-html-output"},
         id=resolve_id(id),
         **kwargs,
     )
-    return bind_fill_role(
-        res,
-        # NEW
-        item=bool(fill),
-        container=bool(fillable),
-        # /NEW
-    )
+    return res

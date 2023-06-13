@@ -20,7 +20,6 @@ app_ui = ui.page_fluid(
         full_screen=True,
         # showcase_layout=x.ui.showcase_left_center(),
     ),
-    ui.br(),
     x.ui.value_box(
         "KPI Title",
         ui.h1(ui.HTML("$1 <i>Billion</i> Dollars")),

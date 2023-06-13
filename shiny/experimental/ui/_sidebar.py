@@ -12,8 +12,9 @@ from ..._typing_extensions import Literal
 from ...session import Session, require_active_session
 
 # from ._color import get_color_contrast
-from ._css_unit import CssUnit, validate_css_unit
-from ._fill import bind_fill_role
+from ._card import CardItem
+from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
+from ._fill import as_fill_item, as_fillable_container
 from ._htmldeps import sidebar_dependency
 from ._utils import consolidate_attrs, trinary
 
@@ -185,18 +186,20 @@ def sidebar(
 
 # TODO-maindocs; @add_example()
 def layout_sidebar(
-    sidebar: Sidebar,
     *args: TagChild | TagAttrs,
-    fillable: bool = False,
+    sidebar: Optional[Sidebar | TagChild | TagAttrs] = None,
+    fillable: bool = True,
     fill: bool = True,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
     border: Optional[bool] = None,
     border_radius: Optional[bool] = None,
     border_color: Optional[str] = None,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
-) -> Tag:
+) -> CardItem:
     """
     Sidebar layout
 
@@ -224,6 +227,18 @@ def layout_sidebar(
         Whether or not to round the corners of the sidebar layout.
     border_color
         A border color.
+    gap
+        A CSS length unit defining the `gap` (i.e., spacing) between elements provided
+        to `*args`. This argument is only applicable when `fillable = TRUE`.
+    padding
+        Padding to use for the body. This can be a numeric vector
+        (which will be interpreted as pixels) or a character vector with valid CSS
+        lengths. The length can be between one and four. If one, then that value
+        will be used for all four sides. If two, then the first value will be used
+        for the top and bottom, while the second value will be used for left and
+        right. If three, then the first will be used for top, the second will be
+        left and right, and the third will be bottom. If four, then the values will
+        be interpreted as top, right, bottom, and left respectively.
     height
         Any valid CSS unit to use for the height.
 
@@ -236,6 +251,30 @@ def layout_sidebar(
     --------
     * :func:`~shiny.experimental.ui.sidebar()`
     """
+    updated_args = list(args)
+    has_upgraded: bool = False
+    # Use `args` here so `updated_args` can be safely altered in place
+    for arg in args:
+        if isinstance(arg, Sidebar):
+            raise TypeError(
+                "Please use the `sidebar=` argument to supply a `sidebar()`"
+            )
+        # TODO-future: >= 2023-11-01); Once `panel_sidebar()` is removed, we can remove this loop
+        if isinstance(arg, DeprecatedPanelSidebar):
+            if has_upgraded:
+                raise TypeError(
+                    "Multiple `panel_sidebar()` calls detected. Please use the `sidebar=` argument and supply a `sidebar()`"
+                )
+            if sidebar is not None:
+                raise TypeError(
+                    "A `panel_sidebar()` was supplied along with a `sidebar=` value. Please use only `sidebar=` to supply a `sidebar()`."
+                )
+            sidebar = arg.sidebar
+            updated_args.remove(arg)
+            has_upgraded = True
+
+    if not isinstance(sidebar, Sidebar):
+        sidebar = _sidebar_func(sidebar)
     assert isinstance(sidebar, Sidebar)
 
     # TODO-future; implement
@@ -244,7 +283,7 @@ def layout_sidebar(
     # if bg is None and fg is not None:
     #     bg = get_color_contrast(fg)
 
-    attrs, children = consolidate_attrs(*args, **kwargs)
+    attrs, children = consolidate_attrs(*updated_args, **kwargs)
     # TODO-future: >= 2023-11-01); Once `panel_main()` is removed, we can remove this loop
     for child in children:
         if isinstance(child, DeprecatedPanelMain):
@@ -252,17 +291,28 @@ def layout_sidebar(
             # child.children will be handled when tagified
 
     main = div(
-        {"role": "main", "class": "main", "style": css(background_color=bg, color=fg)},
+        as_fillable_container() if fillable else None,
+        {
+            "role": "main",
+            "class": f"main{' bslib-gap-spacing' if fillable else ''}",
+            ""
+            "style": css(
+                background_color=bg,
+                color=fg,
+                gap=validate_css_unit(gap),
+                padding=validate_css_padding(padding),
+            ),
+        },
         attrs,
         *children,
     )
-    main = bind_fill_role(main, container=fillable)
 
     max_height_mobile = sidebar.max_height_mobile or (
         "250px" if height is None else "50%"
     )
 
     res = div(
+        as_fill_item() if fill else None,
         {"class": "bslib-sidebar-layout"},
         {"class": "sidebar-right"} if sidebar.position == "right" else None,
         {"class": "sidebar-collapsed"} if sidebar.open == "closed" else None,
@@ -285,9 +335,7 @@ def layout_sidebar(
         ),
     )
 
-    res = bind_fill_role(res, item=fill)
-
-    return res
+    return CardItem(res)
 
 
 # TODO-maindocs; @add_example()
@@ -346,6 +394,9 @@ def sidebar_toggle(
     session.on_flush(callback, once=True)
 
 
+_sidebar_func = sidebar
+
+
 def _collapse_icon() -> Tag:
     return tags.svg(
         svgtags.path(
@@ -374,11 +425,12 @@ def _sidebar_init_js() -> Tag:
 ########################################################
 
 
+# TODO: use class to single out sidebar value (in layout_sidebar)
 def panel_sidebar(
     *args: TagChild | TagAttrs,
     width: int = 4,
     **kwargs: TagAttrValue,
-) -> Sidebar:
+) -> DeprecatedPanelSidebar:
     """Deprecated. Please use `ui.sidebar()` instead of `ui.panel_sidebar()`."""
     # TODO-future: >= 2023-11-01; Add deprecation message below
     # Plan of action:
@@ -387,11 +439,29 @@ def panel_sidebar(
     # * In, say, 6 months, start emitting messages for code that uses the old API.
 
     # warn_deprecated("Please use `sidebar()` instead of `panel_sidebar()`. `panel_sidebar()` will go away in a future version of Shiny.")
-    return sidebar(
+    return DeprecatedPanelSidebar(
         *args,
-        width=f"{int(width / 12 * 100)}%",
+        width=width,
         **kwargs,
     )
+
+
+class DeprecatedPanelSidebar:
+    # Store `attrs` for `layout_sidebar()` to retrieve
+    sidebar: Sidebar
+
+    def __init__(
+        self, *args: TagChild | TagAttrs, width: int = 4, **kwargs: TagAttrValue
+    ) -> None:
+        self.sidebar = sidebar(
+            *args,
+            width=f"{int(width / 12 * 100)}%",
+            **kwargs,
+        )
+
+    # Hopefully this is never used. But wanted to try to be safe
+    def tagify(self) -> Tag:
+        return self.sidebar.tag.tagify()
 
 
 def panel_main(

@@ -3,13 +3,14 @@ from __future__ import annotations
 import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
-app_ui = ui.page_fluid(
-    x.ui.layout_sidebar(
-        x.ui.sidebar("Sidebar content", id="sidebar"),
-        ui.input_action_button("sidebar_toggle", label="Toggle sidebar"),
-        ui.br(),
-        ui.output_text_verbatim("state"),
-    )
+app_ui = x.ui.page_sidebar(
+    ui.input_action_button(
+        "sidebar_toggle",
+        label="Toggle sidebar",
+        width="fit-content",
+    ),
+    ui.output_text_verbatim("state"),
+    sidebar=x.ui.sidebar("Sidebar content", id="sidebar"),
 )
 
 

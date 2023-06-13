@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Callable, Optional
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, tags
 
 from ._card import CardItem, card, card_body
 from ._css_unit import CssUnit, to_width_unit, validate_css_unit
@@ -93,22 +93,20 @@ def value_box(
     if showcase_layout is None:
         showcase_layout = showcase_left_center()
     if isinstance(title, (str, int, float)):
-        title = div(str(title), class_="h6 mb-1")
+        title = tags.p(str(title), class_="h6 mb-1")
     if isinstance(title, (str, int, float)):
-        value = div(str(value), class_="h2 mb-2")
+        value = tags.p(str(value), class_="h2 mb-2")
 
     contents = div(
+        as_fill_carrier(),
         title,
         value,
         *children,
         class_="value-box-area",
     )
-    contents = as_fill_carrier(contents)
 
     if showcase is not None:
         contents = showcase_layout(showcase, contents)
-
-    # Must use `class_` in `card()` as it must be applied after `bind_fill_role()`
 
     return card(
         contents,
@@ -193,12 +191,12 @@ def _showcase_layout(
             "--bslib-value-box-max-height-full-screen": max_height_full_screen_css_unit,
         }
         showcase_container = div(
+            as_fill_carrier(),
             showcase,
             {"class": "value-box-showcase overflow-hidden"},
             {"class": "showcase-top-right"} if top_right else None,
             style=css(**css_args),
         )
-        showcase_container = as_fill_carrier(showcase_container)
 
         if not top_right:
             contents.add_class("border-start")

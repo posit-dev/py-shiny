@@ -9,7 +9,7 @@ __all__ = (
 import copy
 from typing import Any, Optional, Sequence, cast
 
-from htmltools import MetadataNode, Tag, TagChild, TagList, div, tags
+from htmltools import MetadataNode, Tag, TagChild, TagList, css, div, tags
 
 from ..._namespaces import resolve_id
 from ..._typing_extensions import Literal
@@ -17,6 +17,7 @@ from ..._utils import private_random_int
 from ...types import NavSetArg
 from ...ui._html_dependencies import bootstrap_deps
 from ._card import CardItem, card, card_body, card_footer, card_header
+from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
 from ._fill import as_fill_carrier
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import tag_add_style
@@ -182,10 +183,16 @@ class NavSetCard(NavSet):
 
 
 def navset_card_body(content: Tag, sidebar: Optional[Sidebar] = None) -> CardItem:
-    content = _make_tabs_fillable(content, fillable=True)
+    content = _make_tabs_fillable(content, fillable=True, gap=0, padding=0)
     if sidebar:
-        content = layout_sidebar(sidebar, content, fillable=True, border=False)
-    return CardItem(content)
+        return layout_sidebar(
+            content,
+            sidebar=sidebar,
+            fillable=True,
+            border=False,
+        )
+    else:
+        return CardItem(content)
 
 
 def navset_tab_card(
@@ -305,6 +312,8 @@ class NavSetBar(NavSet):
     title: TagChild
     sidebar: Optional[Sidebar]
     fillable: bool | list[str]
+    gap: Optional[CssUnit]
+    padding: Optional[CssUnit | list[CssUnit]]
     position: Literal["static-top", "fixed-top", "fixed-bottom", "sticky-top"]
     bg: Optional[str]
     inverse: bool
@@ -320,6 +329,8 @@ class NavSetBar(NavSet):
         selected: Optional[str],
         sidebar: Optional[Sidebar] = None,
         fillable: bool | list[str] = False,
+        gap: Optional[CssUnit],
+        padding: Optional[CssUnit | list[CssUnit]],
         position: Literal[
             "static-top", "fixed-top", "fixed-bottom", "sticky-top"
         ] = "static-top",
@@ -342,6 +353,9 @@ class NavSetBar(NavSet):
         self.title = title
         self.sidebar = sidebar
         self.fillable = fillable
+        self.gap = gap
+        self.padding = padding
+
         self.position = position
         self.bg = bg
         self.inverse = inverse
@@ -382,7 +396,9 @@ class NavSetBar(NavSet):
         else:
             nav_final.add_class(f"bg-{'dark' if self.inverse else 'light'}")
 
-        content = _make_tabs_fillable(content, self.fillable, navbar=True)
+        content = _make_tabs_fillable(
+            content, self.fillable, gap=self.gap, padding=self.padding, navbar=True
+        )
 
         # 2023-05-11; Do not wrap `row()` around `self.header` and `self.footer`
         contents: list[TagChild] = [
@@ -391,35 +407,38 @@ class NavSetBar(NavSet):
 
         if self.sidebar is None:
             content_div = div(
-                *contents, class_="container-fluid" if self.fluid else "container"
+                # If fillable is truthy, the .container also needs to be fillable
+                as_fill_carrier() if self.fillable else None,
+                *contents,
+                class_="container-fluid" if self.fluid else "container",
             )
-            # If fillable is truthy, the .container also needs to be fillable
-            if self.fillable:
-                content_div = as_fill_carrier(content_div)
         else:
             content_div = div(
+                # Always have the sidebar layout fill its parent (in this case
+                # fillable controls whether the _main_ content portion is fillable)
+                as_fill_carrier(),
+                # In the fluid case, the sidebar layout should be flush (i.e.,
+                # the .container-fluid class adds padding that we don't want)
+                {"class": "container"} if not self.fluid else None,
                 layout_sidebar(
-                    self.sidebar,
                     contents,
+                    sidebar=self.sidebar,
                     fillable=self.fillable is not False,
                     border_radius=False,
                     border=not self.fluid,
                 ),
-                # In the fluid case, the sidebar layout should be flush (i.e.,
-                # the .container-fluid class adds padding that we don't want)
-                {"class": "container"} if not self.fluid else None,
             )
-
-            # Always have the sidebar layout fill its parent (in this case
-            # fillable controls whether the _main_ content portion is fillable)
-            content_div = as_fill_carrier(content_div)
 
         return TagList(nav_final, content_div)
 
 
 # Given a .tab-content container, mark each relevant .tab-pane as a fill container/item.
 def _make_tabs_fillable(
-    content: Tag, fillable: bool | list[str] = False, navbar: bool = False
+    content: Tag,
+    fillable: bool | list[str] = True,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+    navbar: bool = False,
 ) -> Tag:
     if not fillable:
         return content
@@ -440,8 +459,12 @@ def _make_tabs_fillable(
             child_attr = child.attrs.get("data-value")
             if child_attr is None or child_attr not in fillable:
                 continue
-        if navbar:
-            child = tag_add_style(child, "--bslib-navbar-margin=0;")
+        styles = css(
+            gap=validate_css_unit(gap),
+            padding=validate_css_padding(padding),
+            __bslib_navbar_margin="0;" if navbar else None,
+        )
+        child = tag_add_style(child, styles)
         child = as_fill_carrier(child)
 
     return content
@@ -453,7 +476,9 @@ def navset_bar(
     id: Optional[str] = None,
     selected: Optional[str] = None,
     sidebar: Optional[Sidebar] = None,
-    fillable: bool | list[str] = False,
+    fillable: bool | list[str] = True,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
     position: Literal[
         "static-top", "fixed-top", "fixed-bottom", "sticky-top"
     ] = "static-top",
@@ -534,6 +559,8 @@ def navset_bar(
         selected=selected,
         sidebar=sidebar,
         fillable=fillable,
+        gap=gap,
+        padding=padding,
         title=title,
         position=position,
         header=header,

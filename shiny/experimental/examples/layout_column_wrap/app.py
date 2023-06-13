@@ -8,9 +8,7 @@ y = x.ui.card("A simple card")
 app_ui = ui.page_fluid(
     # Always has 2 columns (on non-mobile)
     x.ui.layout_column_wrap(1 / 2, y, y, y),
-    ui.br(),
     ui.hr(),
-    ui.br(),
     # Has three columns when viewport is wider than 750px
     x.ui.layout_column_wrap("250px", y, y, y),
 )

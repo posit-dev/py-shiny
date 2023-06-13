@@ -1,15 +1,13 @@
 from shiny import *
 from shiny import experimental as x
 
-app_ui = ui.page_fluid(
-    x.ui.layout_sidebar(
-        x.ui.sidebar(
-            ui.tags.p("The first slider controls the second"),
-            ui.input_slider("control", "Controller:", min=0, max=20, value=10, step=1),
-            ui.input_slider("receive", "Receiver:", min=0, max=20, value=10, step=1),
-            open="always",
-        ),
-    )
+app_ui = x.ui.page_sidebar(
+    sidebar=x.ui.sidebar(
+        ui.tags.p("The first slider controls the second"),
+        ui.input_slider("control", "Controller:", min=0, max=20, value=10, step=1),
+        ui.input_slider("receive", "Receiver:", min=0, max=20, value=10, step=1),
+        open="always",
+    ),
 )
 
 

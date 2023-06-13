@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, overload
 
-from htmltools import Tag, TagChild, Tagifiable, css
+from htmltools import Tag, TagAttrs, TagChild, Tagifiable, css
+
+from shiny.types import MISSING, MISSING_TYPE
 
 from ..._typing_extensions import Literal, Protocol, runtime_checkable
 from ._css_unit import CssUnit, validate_css_unit
 from ._htmldeps import fill_dependency
 from ._tag import tag_add_style, tag_prepend_class, tag_remove_class
+from ._utils import consolidate_attrs
 
 """
 examples:
@@ -129,8 +132,20 @@ def bind_fill_role(
 #   selector(s) are supported, see [tagAppendAttributes()].
 
 
+@overload
 def as_fill_carrier(
-    tag: TagT,
+    tag: MISSING_TYPE = MISSING,
+    *,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
+    gap: Optional[CssUnit] = None,
+) -> TagAttrs:
+    ...
+
+
+@overload
+def as_fill_carrier(
+    tag: TagFillingLayoutT,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
@@ -138,7 +153,20 @@ def as_fill_carrier(
     # class_: Optional[str] = None,
     # style: Optional[str] = None,
     # css_selector: Optional[str],
-) -> TagT:
+) -> TagFillingLayoutT:
+    ...
+
+
+def as_fill_carrier(
+    tag: TagFillingLayoutT | MISSING_TYPE = MISSING,
+    *,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
+    gap: Optional[CssUnit] = None,
+    # class_: Optional[str] = None,
+    # style: Optional[str] = None,
+    # css_selector: Optional[str],
+) -> TagFillingLayoutT | TagAttrs:
     """
     Make a tag a fill carrier
 
@@ -167,24 +195,40 @@ def as_fill_carrier(
     * :func:`~shiny.experimental.ui.is_fill_item`
     * :func:`~shiny.experimental.ui.is_fillable_container`
     """
-    tag = _add_class_and_styles(
+    return _add_filling_attrs(
         tag,
-        # class_=class_,
-        # style=style,
+        item=True,
+        container=True,
         min_height=min_height,
         max_height=max_height,
         gap=gap,
     )
-    return bind_fill_role(
-        tag,
-        item=True,
-        container=True,
-        # css_selector=css_selector,
-    )
+
+
+@overload
+def as_fillable_container(
+    tag: MISSING_TYPE = MISSING,
+    *,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
+    gap: Optional[CssUnit] = None,
+) -> TagAttrs:
+    ...
+
+
+@overload
+def as_fillable_container(
+    tag: TagFillingLayoutT,
+    *,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
+    gap: Optional[CssUnit] = None,
+) -> TagFillingLayoutT:
+    ...
 
 
 def as_fillable_container(
-    tag: TagFillingLayoutT,
+    tag: TagFillingLayoutT | MISSING_TYPE = MISSING,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
@@ -192,7 +236,7 @@ def as_fillable_container(
     # class_: Optional[str] = None,
     # style: Optional[str] = None,
     # css_selector: Optional[str] = None,
-) -> TagFillingLayoutT:
+) -> TagFillingLayoutT | TagAttrs:
     """
     Coerce a tag to be a fillable container
 
@@ -223,39 +267,44 @@ def as_fillable_container(
     * :func:`~shiny.experimental.ui.is_fill_item`
     * :func:`~shiny.experimental.ui.is_fillable_container`
     """
-    if isinstance(tag, FillingLayout):
-        # tag.add_class(class_)
-        new_style = _style_units_to_str(
-            min_height=min_height, max_height=max_height, gap=gap
-        )
-        if new_style:
-            tag.add_style(new_style)
-        return tag.as_fillable_container()
-
-    tag = _add_class_and_styles(
+    return _add_filling_attrs(
         tag,
-        # class_=class_,
-        # style=style,
+        container=True,
         min_height=min_height,
         max_height=max_height,
         gap=gap,
     )
-    return bind_fill_role(
-        tag,
-        container=True,
-        # css_selector=css_selector,
-    )
+
+
+@overload
+def as_fill_item(
+    tag: MISSING_TYPE = MISSING,
+    *,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
+) -> TagAttrs:
+    ...
+
+
+@overload
+def as_fill_item(
+    tag: TagFillingLayoutT,
+    *,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
+) -> TagFillingLayoutT:
+    ...
 
 
 def as_fill_item(
-    tag: TagFillingLayoutT,
+    tag: TagFillingLayoutT | MISSING_TYPE = MISSING,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
     # class_: Optional[str] = None,
     # style: Optional[str] = None,
     # css_selector: Optional[str] = None,
-) -> TagFillingLayoutT:
+) -> TagFillingLayoutT | TagAttrs:
     """
     Coerce a tag to a fill item
 
@@ -285,24 +334,11 @@ def as_fill_item(
     * :func:`~shiny.experimental.ui.is_fill_item`
     * :func:`~shiny.experimental.ui.is_fillable_container`
     """
-    if isinstance(tag, FillingLayout):
-        # tag.add_class(class_)
-        new_style = _style_units_to_str(min_height=min_height, max_height=max_height)
-        if new_style:
-            tag.add_style(new_style)
-        return tag.as_fill_item()
-
-    tag = _add_class_and_styles(
-        tag,
-        # class_=class_,
-        # style=style,
-        min_height=min_height,
-        max_height=max_height,
-    )
-    return bind_fill_role(
+    return _add_filling_attrs(
         tag,
         item=True,
-        # css_selector=css_selector,
+        min_height=min_height,
+        max_height=max_height,
     )
 
 
@@ -452,7 +488,7 @@ def is_fill_item(x: TagChild | FillingLayout) -> bool:
 def _is_fill_layout(
     x: TagChild | FillingLayout,
     layout: Literal["fill", "fillable"],
-    recurse: bool = True,
+    # recurse: bool = True,
 ) -> bool:
     if not isinstance(x, (Tag, Tagifiable, FillingLayout)):
         return False
@@ -526,25 +562,6 @@ class FillingLayout(Protocol):
         ...
 
 
-def _add_class_and_styles(
-    tag: TagT,
-    # *,
-    # class_: Optional[str] = None,
-    # style: Optional[str] = None,
-    # css_selector: Optional[str] = None,
-    **kwargs: CssUnit | None,
-) -> TagT:
-    if len(kwargs) > 0:
-        tag = tag_add_style(
-            tag,
-            # style,
-            _style_units_to_str(**kwargs),
-        )
-    # if class_:
-    #     tag.add_class(class_)
-    return tag
-
-
 def _style_units_to_str(**kwargs: CssUnit | None) -> str | None:
     style_items: dict[str, CssUnit] = {}
     for k, v in kwargs.items():
@@ -552,3 +569,33 @@ def _style_units_to_str(**kwargs: CssUnit | None) -> str | None:
             style_items[k] = validate_css_unit(v)
 
     return css(**style_items)
+
+
+def _add_filling_attrs(
+    tag: TagFillingLayoutT | MISSING_TYPE,
+    item: Optional[bool] = None,
+    container: Optional[bool] = None,
+    **kwargs: CssUnit | None,
+) -> TagFillingLayoutT | TagAttrs:
+    new_style = _style_units_to_str(**kwargs)
+
+    if isinstance(tag, MISSING_TYPE):
+        attrs, _ = consolidate_attrs(
+            {"class": fill_item_class} if item else None,
+            {"class": fill_container_class} if container else None,
+            style=new_style,
+        )
+        return attrs
+
+    if isinstance(tag, FillingLayout):
+        if new_style:
+            tag.add_style(new_style)
+        if item:
+            tag.as_fill_item()
+        if container:
+            tag.as_fillable_container()
+        return tag
+
+    # Tag
+    tag = tag_add_style(tag, new_style)
+    return bind_fill_role(tag, item=item, container=container)

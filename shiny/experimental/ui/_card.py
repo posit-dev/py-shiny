@@ -21,8 +21,8 @@ from htmltools import (
 
 from ..._typing_extensions import Literal, Protocol
 from ...types import MISSING, MISSING_TYPE
-from ._css_unit import CssUnit, validate_css_unit
-from ._fill import as_fill_carrier, bind_fill_role
+from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
+from ._fill import as_fill_carrier, as_fill_item, as_fillable_container
 from ._htmldeps import card_dependency
 from ._utils import consolidate_attrs
 
@@ -43,6 +43,7 @@ def card(
     full_screen: bool = False,
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
     wrapper: WrapperCallable | None | MISSING_TYPE = MISSING,
@@ -64,7 +65,7 @@ def card(
     full_screen
         If `True`, an icon will appear when hovering over the card body. Clicking the
         icon expands the card to fit viewport size.
-    height,max_height
+    height,max_height,min_height
         Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
         `full_screen` (in this case, consider setting a `height` in
         :func:`~shiny.experimental.ui.card_body()`).
@@ -105,11 +106,14 @@ def card(
     children = _wrap_children_in_card(*children, wrapper=wrapper)
 
     tag = div(
+        as_fillable_container(),
+        as_fill_item() if fill else None,
         {
-            "class": "card bslib-card",
+            "class": "card bslib-card bslib-mb-spacer",
             "style": css(
                 height=validate_css_unit(height),
                 max_height=validate_css_unit(max_height),
+                min_height=validate_css_unit(min_height),
             ),
             "data-bslib-card-init": True,
         },
@@ -120,7 +124,7 @@ def card(
         _card_js_init(),
     )
 
-    return bind_fill_role(tag, container=True, item=fill)
+    return tag
 
 
 def _card_js_init() -> Tag:
@@ -175,6 +179,7 @@ def card_body(
     max_height: Optional[CssUnit] = None,
     max_height_full_screen: Optional[CssUnit] | MISSING_TYPE = MISSING,
     height: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
     gap: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
@@ -201,6 +206,15 @@ def card_body(
         Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
         `full_screen` (in this case, consider setting a `height` in
         :func:`~shiny.experimental.ui.card_body()`).
+    padding
+        Padding to use for the body. This can be a numeric vector
+        (which will be interpreted as pixels) or a character vector with valid CSS
+        lengths. The length can be between one and four. If one, then that value
+        will be used for all four sides. If two, then the first value will be used
+        for the top and bottom, while the second value will be used for left and
+        right. If three, then the first will be used for top, the second will be
+        left and right, and the third will be bottom. If four, then the values will
+        be interpreted as top, right, bottom, and left respectively.
     gap
         A CSS length unit defining the `gap` (i.e., spacing) between elements provided
         to `*args`. This argument is only applicable when `fillable = TRUE`.
@@ -240,22 +254,23 @@ def card_body(
         "margin-bottom": "auto",
         # .card-body already adds `flex: 1 1 auto` so make sure to override it
         "flex": "1 1 auto" if fill else "0 0 auto",
+        "padding": validate_css_padding(padding),
         "gap": validate_css_unit(gap),
         "height": validate_css_unit(height),
     }
     tag = tags.div(
-        *args,
+        as_fillable_container() if fillable else None,
+        as_fill_item() if fill else None,
         {
-            "class": "card-body",
+            "class": "card-body bslib-gap-spacing",
             "style": css(**div_style_args),
         },
+        *args,
         class_=class_,
         **kwargs,
     )
 
-    return CardItem(
-        bind_fill_role(tag, item=fill, container=fillable),
-    )
+    return CardItem(tag)
 
 
 # https://mypy.readthedocs.io/en/stable/protocols.html#callback-protocols
@@ -537,6 +552,7 @@ def card_image(
     }
 
     image = tags.img(
+        as_fill_item() if fill else None,
         {
             "src": src,
             "class": "img-fluid",
@@ -551,10 +567,12 @@ def card_image(
         **kwargs,
     )
 
-    image = bind_fill_role(image, item=fill)
-
     if href is not None:
-        image = as_fill_carrier(tags.a(image, href=href))
+        image = tags.a(
+            as_fill_carrier(),
+            image,
+            href=href,
+        )
 
     if container:
         return container(image)

@@ -6,7 +6,7 @@ from htmltools import TagAttrs, TagAttrValue, TagChild, css, div
 
 from ..._typing_extensions import Literal
 from ._css_unit import CssUnit, validate_css_unit
-from ._fill import as_fillable_container, bind_fill_role
+from ._fill import as_fill_item, as_fillable_container
 from ._utils import consolidate_attrs, is_01_scalar
 
 
@@ -96,9 +96,11 @@ def layout_column_wrap(
     upgraded_children: list[TagChild] = []
     for child_value in children:
         upgraded_children.append(
-            as_fillable_container(
-                div(bind_fill_role(div(child_value), container=fillable, item=True)),
-            )
+            div(
+                as_fillable_container() if fillable else None,
+                {"class": "bslib-gap-spacing"},
+                child_value,
+            ),
         )
     tag_style_css = {
         "grid-template-columns": colspec,
@@ -106,22 +108,21 @@ def layout_column_wrap(
         # Always provide the `height:auto` default so that the CSS variable
         # doesn't get inherited in a scenario like
         # layout_column_wrap(height=200, layout, layout_column_wrap(...))
-        "--bslib-column-wrap-height": validate_css_unit(
-            "auto" if height is None else height
-        ),
-        "--bslib-column-wrap-height-mobile": validate_css_unit(
+        "--bslib-grid-height": validate_css_unit("auto" if height is None else height),
+        "--bslib-grid-height-mobile": validate_css_unit(
             "auto" if height_mobile is None else height_mobile
         ),
         "gap": validate_css_unit(gap),
     }
 
     tag = div(
+        as_fill_item() if fill else None,
         {
-            "class": "bslib-column-wrap",
+            "class": "bslib-grid",
             "style": css(**tag_style_css),
         },
         attrs,
         *upgraded_children,
     )
 
-    return bind_fill_role(tag, item=fill)
+    return tag
