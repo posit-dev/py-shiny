@@ -17,6 +17,7 @@ app_ui = ui.page_fixed(
         x.ui.layout_sidebar(
             ui.h2("Sidebar Layout"),
             ui.output_ui("ui_content", tabindex=0),
+            height=300,
             id="main_inner",
             border=False,
             border_radius=False,
@@ -35,7 +36,6 @@ app_ui = ui.page_fixed(
             ),
         ),
         id="main_outer",
-        height=300,
         class_="p-0",
         sidebar=x.ui.sidebar(
             "Outer Sidebar",
