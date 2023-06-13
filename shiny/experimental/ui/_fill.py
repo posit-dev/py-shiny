@@ -18,8 +18,7 @@ examples:
     - [ ] is_fill_carrier
     - [ ] is_fillable_container
     - [ ] is_fill_item
-    - [ ] AsFillingLayout
-    - [ ] IsFillingLayout
+    - [ ] FillingLayout
 """
 
 
@@ -32,11 +31,10 @@ __all__ = (
     "is_fill_carrier",
     "is_fillable_container",
     "is_fill_item",
-    "AsFillingLayout",
-    "IsFillingLayout",
+    "FillingLayout",
 )
 
-TagAsFillingLayoutT = TypeVar("TagAsFillingLayoutT", bound="Tag | AsFillingLayout")
+TagFillingLayoutT = TypeVar("TagFillingLayoutT", bound="Tag | FillingLayout")
 TagT = TypeVar("TagT", bound="Tag")
 
 
@@ -147,7 +145,7 @@ def as_fill_carrier(
 
 @overload
 def as_fill_carrier(
-    tag: TagAsFillingLayoutT,
+    tag: TagFillingLayoutT,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
@@ -155,12 +153,12 @@ def as_fill_carrier(
     # class_: Optional[str] = None,
     # style: Optional[str] = None,
     # css_selector: Optional[str],
-) -> TagAsFillingLayoutT:
+) -> TagFillingLayoutT:
     ...
 
 
 def as_fill_carrier(
-    tag: TagAsFillingLayoutT | MISSING_TYPE = MISSING,
+    tag: TagFillingLayoutT | MISSING_TYPE = MISSING,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
@@ -168,7 +166,7 @@ def as_fill_carrier(
     # class_: Optional[str] = None,
     # style: Optional[str] = None,
     # css_selector: Optional[str],
-) -> TagAsFillingLayoutT | TagAttrs:
+) -> TagFillingLayoutT | TagAttrs:
     """
     Make a tag a fill carrier
 
@@ -220,17 +218,17 @@ def as_fillable_container(
 
 @overload
 def as_fillable_container(
-    tag: TagAsFillingLayoutT,
+    tag: TagFillingLayoutT,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
-) -> TagAsFillingLayoutT:
+) -> TagFillingLayoutT:
     ...
 
 
 def as_fillable_container(
-    tag: TagAsFillingLayoutT | MISSING_TYPE = MISSING,
+    tag: TagFillingLayoutT | MISSING_TYPE = MISSING,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
@@ -238,7 +236,7 @@ def as_fillable_container(
     # class_: Optional[str] = None,
     # style: Optional[str] = None,
     # css_selector: Optional[str] = None,
-) -> TagAsFillingLayoutT | TagAttrs:
+) -> TagFillingLayoutT | TagAttrs:
     """
     Coerce a tag to be a fillable container
 
@@ -290,23 +288,23 @@ def as_fill_item(
 
 @overload
 def as_fill_item(
-    tag: TagAsFillingLayoutT,
+    tag: TagFillingLayoutT,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
-) -> TagAsFillingLayoutT:
+) -> TagFillingLayoutT:
     ...
 
 
 def as_fill_item(
-    tag: TagAsFillingLayoutT | MISSING_TYPE = MISSING,
+    tag: TagFillingLayoutT | MISSING_TYPE = MISSING,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
     # class_: Optional[str] = None,
     # style: Optional[str] = None,
     # css_selector: Optional[str] = None,
-) -> TagAsFillingLayoutT | TagAttrs:
+) -> TagFillingLayoutT | TagAttrs:
     """
     Coerce a tag to a fill item
 
@@ -344,7 +342,7 @@ def as_fill_item(
     )
 
 
-def remove_all_fill(tag: TagAsFillingLayoutT) -> TagAsFillingLayoutT:
+def remove_all_fill(tag: TagFillingLayoutT) -> TagFillingLayoutT:
     """
     Remove any filling layouts from a tag
 
@@ -373,7 +371,7 @@ def remove_all_fill(tag: TagAsFillingLayoutT) -> TagAsFillingLayoutT:
     * :func:`~shiny.experimental.ui.is_fillable_container`
     """
 
-    if isinstance(tag, AsFillingLayout):
+    if isinstance(tag, FillingLayout):
         return tag.remove_all_fill()
 
     return bind_fill_role(
@@ -384,7 +382,7 @@ def remove_all_fill(tag: TagAsFillingLayoutT) -> TagAsFillingLayoutT:
     )
 
 
-def is_fill_carrier(x: Tag | IsFillingLayout) -> bool:
+def is_fill_carrier(x: Tag | FillingLayout) -> bool:
     """
     Test a tag for being a fill carrier
 
@@ -415,7 +413,7 @@ def is_fill_carrier(x: Tag | IsFillingLayout) -> bool:
     return is_fillable_container(x) and is_fill_item(x)
 
 
-def is_fillable_container(x: TagChild | IsFillingLayout) -> bool:
+def is_fillable_container(x: TagChild | FillingLayout) -> bool:
     """
     Test a tag for being a fillable container
 
@@ -452,7 +450,7 @@ def is_fillable_container(x: TagChild | IsFillingLayout) -> bool:
     return _is_fill_layout(x, layout="fillable")
 
 
-def is_fill_item(x: TagChild | IsFillingLayout) -> bool:
+def is_fill_item(x: TagChild | FillingLayout) -> bool:
     """
     Test a tag for being a fill item
 
@@ -488,63 +486,64 @@ def is_fill_item(x: TagChild | IsFillingLayout) -> bool:
 
 
 def _is_fill_layout(
-    x: TagChild | IsFillingLayout,
+    x: TagChild | FillingLayout,
     layout: Literal["fill", "fillable"],
     # recurse: bool = True,
 ) -> bool:
-    if not isinstance(x, (Tag, Tagifiable, IsFillingLayout)):
+    if not isinstance(x, (Tag, Tagifiable, FillingLayout)):
         return False
 
-    # x: Tag | IsFillingLayout | Tagifiable
+    # x: Tag | FillingLayout | Tagifiable
 
     if layout == "fill":
         if isinstance(x, Tag):
             return x.has_class(fill_item_class)
-        if isinstance(x, IsFillingLayout):
+        if isinstance(x, FillingLayout):
             return x.is_fill_item()
 
     elif layout == "fillable":
         if isinstance(x, Tag):
             return x.has_class(fill_container_class)
-        if isinstance(x, IsFillingLayout):
+        if isinstance(x, FillingLayout):
             return x.is_fillable_container()
 
-    # x: Tagifiable and not (Tag or IsFillingLayout)
+    # x: Tagifiable and not (Tag or FillingLayout)
     raise TypeError(
-        f"`_is_fill_layout(x=)` must be a `Tag` or implement the `IsFillingLayout` protocol methods TODO-barret expand on method names. Received object of type: `{type(x).__name__}`"
+        f"`_is_fill_layout(x=)` must be a `Tag` or implement the `FillingLayout` protocol methods TODO-barret expand on method names. Received object of type: `{type(x).__name__}`"
     )
-
-
-@runtime_checkable
-class IsFillingLayout(Protocol):
-    def is_fill_item(self) -> bool:
-        ...
-
-    def is_fillable_container(self) -> bool:
-        ...
 
 
 T = TypeVar("T")
 
 
 @runtime_checkable
-class AsFillingLayout(Protocol):
+class FillingLayout(Protocol):
     def add_class(
         self: T,
         class_: str,
-        *,
+        # *,
+        # # Currently Unused
+        # css_selector: Optional[str] = None,
         # Currently Unused
-        css_selector: Optional[str] = None,
+        **kwargs: object,
     ) -> T:
         ...
 
     def add_style(
         self: T,
         style: str,
-        *,
+        # *,
+        # # Currently Unused
+        # css_selector: Optional[str] = None,
         # Currently Unused
-        css_selector: Optional[str] = None,
+        **kwargs: object,
     ) -> T:
+        ...
+
+    def is_fill_item(self) -> bool:
+        ...
+
+    def is_fillable_container(self) -> bool:
         ...
 
     def as_fill_item(
@@ -573,11 +572,11 @@ def _style_units_to_str(**kwargs: CssUnit | None) -> str | None:
 
 
 def _add_filling_attrs(
-    tag: TagAsFillingLayoutT | MISSING_TYPE,
+    tag: TagFillingLayoutT | MISSING_TYPE,
     item: Optional[bool] = None,
     container: Optional[bool] = None,
     **kwargs: CssUnit | None,
-) -> TagAsFillingLayoutT | TagAttrs:
+) -> TagFillingLayoutT | TagAttrs:
     new_style = _style_units_to_str(**kwargs)
 
     if isinstance(tag, MISSING_TYPE):
@@ -588,7 +587,7 @@ def _add_filling_attrs(
         )
         return attrs
 
-    if isinstance(tag, AsFillingLayout):
+    if isinstance(tag, FillingLayout):
         if new_style:
             tag.add_style(new_style)
         if item:

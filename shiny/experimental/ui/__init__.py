@@ -15,8 +15,7 @@ from ._layout import layout_column_wrap
 from ._valuebox import value_box, showcase_left_center, showcase_top_right
 
 from ._fill import (
-    AsFillingLayout,
-    IsFillingLayout,
+    FillingLayout,
     # bind_fill_role,
     as_fill_carrier,
     as_fillable_container,
@@ -76,8 +75,7 @@ __all__ = (
     "showcase_left_center",
     "showcase_top_right",
     # Fill
-    "AsFillingLayout",
-    "IsFillingLayout",
+    "FillingLayout",
     # "bind_fill_role",
     "as_fill_carrier",
     "as_fillable_container",

@@ -157,4 +157,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.2] - 2022-07-27
 
-Initial release of Shiny for Python https://shiny.rstudio.com/py/
+Initial release of Shiny for Python https://shiny.posit.co/py/
