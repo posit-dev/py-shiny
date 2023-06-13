@@ -435,7 +435,7 @@ class NavSetBar(NavSet):
 # Given a .tab-content container, mark each relevant .tab-pane as a fill container/item.
 def _make_tabs_fillable(
     content: Tag,
-    fillable: bool | list[str] = False,
+    fillable: bool | list[str] = True,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
     navbar: bool = False,
@@ -476,7 +476,7 @@ def navset_bar(
     id: Optional[str] = None,
     selected: Optional[str] = None,
     sidebar: Optional[Sidebar] = None,
-    fillable: bool | list[str] = False,
+    fillable: bool | list[str] = True,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
     position: Literal[
