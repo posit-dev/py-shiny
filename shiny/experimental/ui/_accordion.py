@@ -21,7 +21,7 @@ __all__ = (
     "accordion_panel_open",
     "accordion_panel_remove",
     "accordion_panel_set",
-    "accordion_panel_update",
+    "update_accordion_panel",
 )
 
 
@@ -75,7 +75,7 @@ class AccordionPanel:
                 "aria-controls": self._id,
             },
             btn_attrs,
-            # Always include an .accordion-icon container to simplify accordion_panel_update() logic
+            # Always include an .accordion-icon container to simplify update_accordion_panel() logic
             tags.div({"class": "accordion-icon"}, self._icon),
             tags.div({"class": "accordion-title"}, self._title),
         )
@@ -166,7 +166,7 @@ def accordion(
     * :func:`~shiny.experimental.ui.accordion_panel_close`
     * :func:`~shiny.experimental.ui.accordion_panel_insert`
     * :func:`~shiny.experimental.ui.accordion_panel_remove`
-    * :func:`~shiny.experimental.ui.accordion_panel_update`
+    * :func:`~shiny.experimental.ui.update_accordion_panel`
     """
 
     # TODO-bookmarking: Restore input here
@@ -274,7 +274,7 @@ def accordion_panel(
     * :func:`~shiny.experimental.ui.accordion_panel_close`
     * :func:`~shiny.experimental.ui.accordion_panel_insert`
     * :func:`~shiny.experimental.ui.accordion_panel_remove`
-    * :func:`~shiny.experimental.ui.accordion_panel_update`
+    * :func:`~shiny.experimental.ui.update_accordion_panel`
     """
 
     if value is MISSING:
@@ -367,7 +367,7 @@ def accordion_panel_set(
     * :func:`~shiny.experimental.ui.accordion_panel_close`
     * :func:`~shiny.experimental.ui.accordion_panel_insert`
     * :func:`~shiny.experimental.ui.accordion_panel_remove`
-    * :func:`~shiny.experimental.ui.accordion_panel_update`
+    * :func:`~shiny.experimental.ui.update_accordion_panel`
     """
     _accordion_panel_action(id=id, method="set", values=values, session=session)
 
@@ -404,7 +404,7 @@ def accordion_panel_open(
     * :func:`~shiny.experimental.ui.accordion_panel_close`
     * :func:`~shiny.experimental.ui.accordion_panel_insert`
     * :func:`~shiny.experimental.ui.accordion_panel_remove`
-    * :func:`~shiny.experimental.ui.accordion_panel_update`
+    * :func:`~shiny.experimental.ui.update_accordion_panel`
     """
     _accordion_panel_action(id=id, method="open", values=values, session=session)
 
@@ -441,7 +441,7 @@ def accordion_panel_close(
     * :func:`~shiny.experimental.ui.accordion_panel_open`
     * :func:`~shiny.experimental.ui.accordion_panel_insert`
     * :func:`~shiny.experimental.ui.accordion_panel_remove`
-    * :func:`~shiny.experimental.ui.accordion_panel_update`
+    * :func:`~shiny.experimental.ui.update_accordion_panel`
     """
     _accordion_panel_action(id=id, method="close", values=values, session=session)
 
@@ -484,7 +484,7 @@ def accordion_panel_insert(
     * :func:`~shiny.experimental.ui.accordion_panel_open`
     * :func:`~shiny.experimental.ui.accordion_panel_close`
     * :func:`~shiny.experimental.ui.accordion_panel_remove`
-    * :func:`~shiny.experimental.ui.accordion_panel_update`
+    * :func:`~shiny.experimental.ui.update_accordion_panel`
     """
 
     if position not in ("after", "before"):
@@ -530,7 +530,7 @@ def accordion_panel_remove(
     * :func:`~shiny.experimental.ui.accordion_panel_open`
     * :func:`~shiny.experimental.ui.accordion_panel_close`
     * :func:`~shiny.experimental.ui.accordion_panel_insert`
-    * :func:`~shiny.experimental.ui.accordion_panel_update`
+    * :func:`~shiny.experimental.ui.update_accordion_panel`
     """
     if not isinstance(target, list):
         target = [target]
@@ -555,7 +555,7 @@ def _missing_none_x(x: T | None | MISSING_TYPE) -> T | Literal[""] | None:
 
 
 # TODO-maindocs; @add_example()
-def accordion_panel_update(
+def update_accordion_panel(
     id: str,
     target: str,
     *body: TagChild,

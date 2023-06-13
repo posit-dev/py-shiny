@@ -95,7 +95,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
         nonlocal has_updates
         if has_updates:
-            x.ui.accordion_panel_update(
+            x.ui.update_accordion_panel(
                 "acc",
                 "updated_section_a",
                 "Some narrative for section A",
@@ -109,7 +109,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
                 if "Section A" not in acc():
                     ui.notification_show("Opening Section A", duration=2)
                     x.ui.accordion_panel_open("acc", "Section A")
-            x.ui.accordion_panel_update(
+            x.ui.update_accordion_panel(
                 "acc",
                 "Section A",
                 "Updated body",

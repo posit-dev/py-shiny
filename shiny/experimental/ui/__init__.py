@@ -41,7 +41,7 @@ from ._accordion import (
     accordion_panel_close,
     accordion_panel_insert,
     accordion_panel_remove,
-    accordion_panel_update,
+    update_accordion_panel,
 )
 
 
@@ -98,5 +98,5 @@ __all__ = (
     "accordion_panel_close",
     "accordion_panel_insert",
     "accordion_panel_remove",
-    "accordion_panel_update",
+    "update_accordion_panel",
 )
