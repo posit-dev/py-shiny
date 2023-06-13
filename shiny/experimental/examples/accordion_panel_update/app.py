@@ -26,7 +26,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         txt = " (updated)" if input.update_panel() else ""
         for letter in "ABCDE":
-            x.ui.accordion_panel_update(
+            x.ui.update_accordion_panel(
                 "acc",
                 f"sec_{letter}",
                 f"Some{txt} narrative for section {letter}",
