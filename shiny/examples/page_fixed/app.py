@@ -6,8 +6,8 @@ from shiny import experimental as x
 
 app_ui = ui.page_fixed(
     x.ui.layout_sidebar(
-        x.ui.sidebar(ui.input_slider("n", "N", min=0, max=100, value=20)),
         ui.output_plot("plot"),
+        sidebar=x.ui.sidebar(ui.input_slider("n", "N", min=0, max=100, value=20)),
     ),
 )
 

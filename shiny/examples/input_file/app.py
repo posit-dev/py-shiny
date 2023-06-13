@@ -6,11 +6,11 @@ from shiny.types import FileInfo
 
 app_ui = ui.page_fluid(
     x.ui.layout_sidebar(
-        x.ui.sidebar(
+        ui.output_ui("contents"),
+        sidebar=x.ui.sidebar(
             ui.input_file("file1", "Choose CSV File", accept=[".csv"], multiple=False),
             ui.input_checkbox("header", "Header", True),
         ),
-        ui.output_ui("contents"),
     )
 )
 

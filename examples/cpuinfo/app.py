@@ -56,21 +56,6 @@ app_ui = ui.page_fluid(
     ),
     ui.h3("CPU Usage %", class_="mt-2"),
     x.ui.layout_sidebar(
-        x.ui.sidebar(
-            ui.input_select(
-                "cmap",
-                "Colormap",
-                {
-                    "inferno": "inferno",
-                    "viridis": "viridis",
-                    "copper": "copper",
-                    "prism": "prism (not recommended)",
-                },
-            ),
-            ui.p(ui.input_action_button("reset", "Clear history", class_="btn-sm")),
-            ui.input_switch("hold", "Freeze output", value=False),
-            class_="mb-3",
-        ),
         ui.div(
             {"class": "card mb-3"},
             ui.div(
@@ -97,6 +82,21 @@ app_ui = ui.page_fluid(
                 {"class": "card-footer"},
                 ui.input_numeric("table_rows", "Rows to display", 5),
             ),
+        ),
+        sidebar=x.ui.sidebar(
+            ui.input_select(
+                "cmap",
+                "Colormap",
+                {
+                    "inferno": "inferno",
+                    "viridis": "viridis",
+                    "copper": "copper",
+                    "prism": "prism (not recommended)",
+                },
+            ),
+            ui.p(ui.input_action_button("reset", "Clear history", class_="btn-sm")),
+            ui.input_switch("hold", "Freeze output", value=False),
+            class_="mb-3",
         ),
     ),
 )
