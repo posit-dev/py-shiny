@@ -407,13 +407,19 @@ class NavSetBar(NavSet):
 
         if self.sidebar is None:
             content_div = div(
-                *contents, class_="container-fluid" if self.fluid else "container"
+                # If fillable is truthy, the .container also needs to be fillable
+                as_fill_carrier() if self.fillable else None,
+                *contents,
+                class_="container-fluid" if self.fluid else "container",
             )
-            # If fillable is truthy, the .container also needs to be fillable
-            if self.fillable:
-                content_div = as_fill_carrier(content_div)
         else:
             content_div = div(
+                # Always have the sidebar layout fill its parent (in this case
+                # fillable controls whether the _main_ content portion is fillable)
+                as_fill_carrier(),
+                # In the fluid case, the sidebar layout should be flush (i.e.,
+                # the .container-fluid class adds padding that we don't want)
+                {"class": "container"} if not self.fluid else None,
                 layout_sidebar(
                     contents,
                     sidebar=self.sidebar,
@@ -421,14 +427,7 @@ class NavSetBar(NavSet):
                     border_radius=False,
                     border=not self.fluid,
                 ),
-                # In the fluid case, the sidebar layout should be flush (i.e.,
-                # the .container-fluid class adds padding that we don't want)
-                {"class": "container"} if not self.fluid else None,
             )
-
-            # Always have the sidebar layout fill its parent (in this case
-            # fillable controls whether the _main_ content portion is fillable)
-            content_div = as_fill_carrier(content_div)
 
         return TagList(nav_final, content_div)
 

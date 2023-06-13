@@ -240,12 +240,11 @@ def page_fillable(
 
     return page_bootstrap(
         tags.head(tags.style("html { height: 100%; }")),
-        as_fillable_container(
-            tags.body(
-                {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
-                attrs,
-                *children,
-            ),
+        tags.body(
+            as_fillable_container(),
+            {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
+            attrs,
+            *children,
         ),
         title=title,
         lang=lang,

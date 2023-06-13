@@ -22,7 +22,7 @@ from htmltools import (
 from ..._typing_extensions import Literal, Protocol
 from ...types import MISSING, MISSING_TYPE
 from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
-from ._fill import as_fill_carrier, bind_fill_role
+from ._fill import as_fill_carrier, as_fill_item, as_fillable_container
 from ._htmldeps import card_dependency
 from ._utils import consolidate_attrs
 
@@ -105,6 +105,8 @@ def card(
     children = _wrap_children_in_card(*children, wrapper=wrapper)
 
     tag = div(
+        as_fillable_container(),
+        as_fill_item() if fill else None,
         {
             "class": "card bslib-card bslib-mb-spacer",
             "style": css(
@@ -120,7 +122,7 @@ def card(
         _card_js_init(),
     )
 
-    return bind_fill_role(tag, container=True, item=fill)
+    return tag
 
 
 def _card_js_init() -> Tag:
@@ -248,18 +250,18 @@ def card_body(
         "height": validate_css_unit(height),
     }
     tag = tags.div(
-        *args,
+        as_fillable_container() if fillable else None,
+        as_fill_item() if fill else None,
         {
             "class": "card-body bslib-gap-spacing",
             "style": css(**div_style_args),
         },
+        *args,
         class_=class_,
         **kwargs,
     )
 
-    return CardItem(
-        bind_fill_role(tag, item=fill, container=fillable),
-    )
+    return CardItem(tag)
 
 
 # https://mypy.readthedocs.io/en/stable/protocols.html#callback-protocols
@@ -541,6 +543,7 @@ def card_image(
     }
 
     image = tags.img(
+        as_fill_item() if fill else None,
         {
             "src": src,
             "class": "img-fluid",
@@ -555,10 +558,12 @@ def card_image(
         **kwargs,
     )
 
-    image = bind_fill_role(image, item=fill)
-
     if href is not None:
-        image = as_fill_carrier(tags.a(image, href=href))
+        image = tags.a(
+            as_fill_carrier(),
+            image,
+            href=href,
+        )
 
     if container:
         return container(image)

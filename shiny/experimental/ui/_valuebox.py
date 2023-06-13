@@ -98,17 +98,15 @@ def value_box(
         value = div(str(value), class_="h2 mb-2")
 
     contents = div(
+        as_fill_carrier(),
         title,
         value,
         *children,
         class_="value-box-area",
     )
-    contents = as_fill_carrier(contents)
 
     if showcase is not None:
         contents = showcase_layout(showcase, contents)
-
-    # Must use `class_` in `card()` as it must be applied after `bind_fill_role()`
 
     return card(
         contents,
@@ -193,12 +191,12 @@ def _showcase_layout(
             "--bslib-value-box-max-height-full-screen": max_height_full_screen_css_unit,
         }
         showcase_container = div(
+            as_fill_carrier(),
             showcase,
             {"class": "value-box-showcase overflow-hidden"},
             {"class": "showcase-top-right"} if top_right else None,
             style=css(**css_args),
         )
-        showcase_container = as_fill_carrier(showcase_container)
 
         if not top_right:
             contents.add_class("border-start")

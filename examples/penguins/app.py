@@ -27,9 +27,7 @@ app_ui = x.ui.page_sidebar(
     x.ui.output_plot("scatter", fill=True),
     sidebar=x.ui.sidebar(
         # Artwork by @allison_horst
-        ui.tags.img(
-            src="palmerpenguins.png", width="80%", class_="mt-0 mb-2 mx-auto"
-        ),
+        ui.tags.img(src="palmerpenguins.png", width="80%", class_="mt-0 mb-2 mx-auto"),
         ui.input_selectize(
             "xvar",
             "X variable",
@@ -91,8 +89,10 @@ def server(input: Inputs, output: Outputs, session: Session):
                 title,
                 count,
                 {"class": "pt-1 pb-0"},
-                showcase=x.ui.as_fill_item(
-                    ui.tags.img({"style": "object-fit:contain;"}, src=showcase_img)
+                showcase=ui.tags.img(
+                    x.ui.as_fill_item(),
+                    {"style": "object-fit:contain;"},
+                    src=showcase_img,
                 ),
                 theme_color=None,
                 style=f"background-color: {bgcol};",

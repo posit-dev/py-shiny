@@ -10,6 +10,25 @@ from ..._typing_extensions import TypeGuard
 TagChildT = typing.TypeVar("TagChildT", bound=TagChild)
 
 
+# If no children are provided, it will not be able to infer the type of `TagChildT`.
+# Using `TagChild`
+@overload
+def consolidate_attrs(
+    *args: TagAttrs,
+    **kwargs: TagAttrValue,
+) -> tuple[TagAttrs, list[TagChild]]:
+    ...
+
+
+# Same as original definition
+@overload
+def consolidate_attrs(
+    *args: TagChildT | TagAttrs,
+    **kwargs: TagAttrValue,
+) -> tuple[TagAttrs, list[TagChildT]]:
+    ...
+
+
 def consolidate_attrs(
     *args: TagChildT | TagAttrs,
     **kwargs: TagAttrValue,

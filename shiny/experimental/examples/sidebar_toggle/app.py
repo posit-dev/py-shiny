@@ -4,7 +4,11 @@ import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = x.ui.page_sidebar(
-    ui.input_action_button("sidebar_toggle", label="Toggle sidebar", width="fit-content"),
+    ui.input_action_button(
+        "sidebar_toggle",
+        label="Toggle sidebar",
+        width="fit-content",
+    ),
     ui.output_text_verbatim("state"),
     sidebar=x.ui.sidebar("Sidebar content", id="sidebar"),
 )
