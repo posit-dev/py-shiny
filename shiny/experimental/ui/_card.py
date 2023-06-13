@@ -43,6 +43,7 @@ def card(
     full_screen: bool = False,
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
     wrapper: WrapperCallable | None | MISSING_TYPE = MISSING,
@@ -64,7 +65,7 @@ def card(
     full_screen
         If `True`, an icon will appear when hovering over the card body. Clicking the
         icon expands the card to fit viewport size.
-    height,max_height
+    height,max_height,min_height
         Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
         `full_screen` (in this case, consider setting a `height` in
         :func:`~shiny.experimental.ui.card_body()`).
@@ -112,6 +113,7 @@ def card(
             "style": css(
                 height=validate_css_unit(height),
                 max_height=validate_css_unit(max_height),
+                min_height=validate_css_unit(min_height),
             ),
             "data-bslib-card-init": True,
         },
