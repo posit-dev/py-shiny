@@ -245,8 +245,11 @@ def layout_sidebar(
     """
     if not isinstance(sidebar, Sidebar):
         sidebar = _sidebar_func(sidebar)
-
     assert isinstance(sidebar, Sidebar)
+
+    for arg in args:
+        if isinstance(arg, Sidebar):
+            raise TypeError("Please use the `sidebar=` argument to supply a sidebar")
 
     # TODO-future; implement
     # if fg is None and bg is not None:
