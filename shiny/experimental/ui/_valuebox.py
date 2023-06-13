@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Callable, Optional
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, tags
 
 from ._card import CardItem, card, card_body
 from ._css_unit import CssUnit, to_width_unit, validate_css_unit
@@ -93,9 +93,9 @@ def value_box(
     if showcase_layout is None:
         showcase_layout = showcase_left_center()
     if isinstance(title, (str, int, float)):
-        title = div(str(title), class_="h6 mb-1")
+        title = tags.p(str(title), class_="h6 mb-1")
     if isinstance(title, (str, int, float)):
-        value = div(str(value), class_="h2 mb-2")
+        value = tags.p(str(value), class_="h2 mb-2")
 
     contents = div(
         as_fill_carrier(),
