@@ -185,8 +185,14 @@ class NavSetCard(NavSet):
 def navset_card_body(content: Tag, sidebar: Optional[Sidebar] = None) -> CardItem:
     content = _make_tabs_fillable(content, fillable=True, gap=0, padding=0)
     if sidebar:
-        content = layout_sidebar(content, sidebar=sidebar, fillable=True, border=False)
-    return CardItem(content)
+        return layout_sidebar(
+            content,
+            sidebar=sidebar,
+            fillable=True,
+            border=False,
+        )
+    else:
+        return CardItem(content)
 
 
 def navset_tab_card(
