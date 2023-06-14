@@ -36,7 +36,6 @@ import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
 
 // TODO: Right-align numeric columns, maybe change font
-// TODO: Row selection
 // TODO: Explicit column widths
 // TODO: Filtering
 // TODO: Editing
@@ -393,26 +392,29 @@ function useVirtualizerMeasureWorkaround(
   return measureElementWithRetry;
 }
 
-class ShinyDataGridBinding extends Shiny.OutputBinding {
+class ShinyDataFrameOutputBinding extends Shiny.OutputBinding {
   find(scope: HTMLElement | JQuery<HTMLElement>): JQuery<HTMLElement> {
-    return $(scope).find("shiny-glide-data-grid-output");
+    return $(scope).find("shiny-data-frame");
   }
 
-  renderValue(el: ShinyDataGridOutput, data: unknown): void {
+  renderValue(el: ShinyDataFrameOutput, data: unknown): void {
     el.renderValue(data);
   }
 
-  renderError(el: ShinyDataGridOutput, err: ErrorsMessageValue): void {
+  renderError(el: ShinyDataFrameOutput, err: ErrorsMessageValue): void {
     el.classList.add("shiny-output-error");
     el.renderError(err);
   }
 
-  clearError(el: ShinyDataGridOutput): void {
+  clearError(el: ShinyDataFrameOutput): void {
     el.classList.remove("shiny-output-error");
     el.clearError();
   }
 }
-Shiny.outputBindings.register(new ShinyDataGridBinding(), "shinyDataGrid");
+Shiny.outputBindings.register(
+  new ShinyDataFrameOutputBinding(),
+  "shinyDataFrame"
+);
 
 function getComputedBgColor(el: HTMLElement | null): string | null | undefined {
   if (!el) {
@@ -445,7 +447,7 @@ function getComputedBgColor(el: HTMLElement | null): string | null | undefined {
 const cssTemplate = document.createElement("template");
 cssTemplate.innerHTML = `<style>${css}</style>`;
 
-export class ShinyDataGridOutput extends HTMLElement {
+export class ShinyDataFrameOutput extends HTMLElement {
   reactRoot?: Root;
   errorRoot: HTMLSpanElement;
 
@@ -511,4 +513,4 @@ export class ShinyDataGridOutput extends HTMLElement {
   }
 }
 
-customElements.define("shiny-glide-data-grid-output", ShinyDataGridOutput);
+customElements.define("shiny-data-frame", ShinyDataFrameOutput);

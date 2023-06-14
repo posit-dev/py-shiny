@@ -10,7 +10,7 @@ from ..._namespaces import resolve_id
 
 def data_frame_deps() -> HTMLDependency:
     return HTMLDependency(
-        name="shiny-glide-data-grid",
+        name="shiny-data-frame-output",
         version=__version__,
         source={
             "package": "shiny",
@@ -24,7 +24,7 @@ def data_frame_deps() -> HTMLDependency:
 
 def output_data_frame(id: str) -> Tag:
     return Tag(
-        "shiny-glide-data-grid-output",
+        "shiny-data-frame",
         data_frame_deps(),
         id=resolve_id(id),
     )
