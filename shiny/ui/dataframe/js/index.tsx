@@ -378,7 +378,7 @@ function useVirtualizerMeasureWorkaround(
   );
 
   // Once the DOM is updated, try to measure any elements that were not yet attached
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (measureTodoQueue.current.length > 0) {
       const todo = measureTodoQueue.current.splice(0);
       // The next line can mutate measureTodoQueue.current, hence the need to splice out
