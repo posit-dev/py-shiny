@@ -28,6 +28,7 @@ import React, {
   useState,
 } from "react";
 import { Root, createRoot } from "react-dom/client";
+import { ErrorsMessageValue } from "rstudio-shiny/srcts/types/src/shiny/shinyapp";
 import { findFirstItemInView, getStyle } from "./dom-utils";
 import { SelectionMode, useSelection } from "./selection";
 import { SortArrow } from "./sort-arrows";
@@ -397,6 +398,16 @@ class ShinyDataGridBinding extends Shiny.OutputBinding {
   renderValue(el: ShinyDataGridOutput, data: unknown): void {
     el.renderValue(data);
   }
+
+  renderError(el: ShinyDataGridOutput, err: ErrorsMessageValue): void {
+    el.classList.add("shiny-output-error");
+    el.renderError(err);
+  }
+
+  clearError(el: ShinyDataGridOutput): void {
+    el.classList.remove("shiny-output-error");
+    el.clearError();
+  }
 }
 Shiny.outputBindings.register(new ShinyDataGridBinding(), "shinyDataGrid");
 
@@ -433,6 +444,7 @@ cssTemplate.innerHTML = `<style>${css}</style>`;
 
 export class ShinyDataGridOutput extends HTMLElement {
   reactRoot?: Root;
+  errorRoot: HTMLSpanElement;
 
   connectedCallback() {
     // Currently not using shadow DOM since Bootstrap's table styling is pretty nice and
@@ -443,6 +455,12 @@ export class ShinyDataGridOutput extends HTMLElement {
     const [target] = [this]; // brackets are to avoid linter
 
     target.appendChild(cssTemplate.content.cloneNode(true));
+
+    // Need to put error messages in an inline element (<span>) instead of in the
+    // reactRoot div, because we want the error messages to appear on the same line as
+    // "Error:".
+    this.errorRoot = document.createElement("span");
+    target.appendChild(this.errorRoot);
 
     const myDiv = document.createElement("div");
     target.appendChild(myDiv);
@@ -461,6 +479,8 @@ export class ShinyDataGridOutput extends HTMLElement {
   }
 
   renderValue(data: unknown) {
+    this.clearError();
+
     if (!data) {
       this.reactRoot!.render(null);
       return;
@@ -475,6 +495,16 @@ export class ShinyDataGridOutput extends HTMLElement {
         ></ShinyDataGrid>
       </StrictMode>
     );
+  }
+
+  renderError(err: ErrorsMessageValue) {
+    this.reactRoot!.render(null);
+    this.errorRoot.innerText = err.message;
+  }
+
+  clearError() {
+    this.reactRoot!.render(null);
+    this.errorRoot.innerText = "";
   }
 }
 

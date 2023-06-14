@@ -3,11 +3,25 @@ from __future__ import annotations
 import abc
 import json
 import typing
-from typing import Any, Awaitable, Callable, Literal, Optional, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Literal,
+    Optional,
+    Union,
+    cast,
+    overload,
+)
 
 from .. import _utils
+from .._docstring import add_example
 from .._typing_extensions import Protocol, runtime_checkable
 from . import RenderFunction, RenderFunctionAsync
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 class AbstractTabularData(abc.ABC):
@@ -38,21 +52,26 @@ class DataGrid(AbstractTabularData):
             A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
             (e.g., a Polars data frame or Arrow table).
         width
-            A width for the data grid to occupy, in CSS units. The default is `fit-content`,
-            which sets the grid's width according to its contents. Set this to `100%` to use
-            the maximum available horizontal space.
+            A _maximum_ amount of vertical space for the data grid to occupy, in CSS
+            units (e.g. `"400px"`) or as a number, which will be interpreted as pixels.
+            The default is `fit-content`, which sets the grid's width according to its
+            contents. Set this to `100%` to use the maximum available horizontal space.
         height
-            A _maximum_ amount of vertical space for the data grid to occupy, in CSS units.
-            If there are more rows than can fit in this space, the grid will scroll.
+            A _maximum_ amount of vertical space for the data grid to occupy, in CSS
+            units (e.g. `"400px"`) or as a number, which will be interpreted as pixels.
+            If there are more rows than can fit in this space, the grid will scroll. Set
+            the height to `None` to allow the grid to grow to fit all of the rows (this
+            is not recommended for large data sets, as it may crash the browser).
         summary
-            If `True` (the default), shows a message like "Viewing rows 1 through 10 of 20"
-            below the grid when not all of the rows are being shown. If `False`, the message
-            is not displayed. You can also specify a string template to customize the
-            message, for example: `"Viendo filas {start} a {end} de {total}"`.
+            If `True` (the default), shows a message like "Viewing rows 1 through 10 of
+            20" below the grid when not all of the rows are being shown. If `False`, the
+            message is not displayed. You can also specify a string template to
+            customize the message, for example: `"Viendo filas {start} a {end} de
+            {total}"`.
         row_selection_mode
-            Use `"none"` to disable row selection, `"single"` to allow a single row to be
-            selected at a time, and `"multi-toggle"` to allow multiple rows to be selected
-            by clicking on them individually.
+            Use `"none"` to disable row selection, `"single"` to allow a single row to
+            be selected at a time, and `"multi-toggle"` to allow multiple rows to be
+            selected by clicking on them individually.
 
         Returns
         -------
@@ -62,8 +81,7 @@ class DataGrid(AbstractTabularData):
 
         See Also
         --------
-        ~shiny.ui.output_data_frame
-        ~shiny.render.data_frame
+        ~shiny.ui.output_data_frame ~shiny.render.data_frame
         """
         import pandas as pd
 
@@ -119,21 +137,27 @@ class DataTable(AbstractTabularData):
             A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
             (e.g., a Polars data frame or Arrow table).
         width
-            A width for the data grid to occupy, in CSS units. The default is `fit-content`,
-            which sets the grid's width according to its contents. Set this to `100%` to use
-            the maximum available horizontal space.
+            A _maximum_ amount of vertical space for the data table to occupy, in CSS
+            units (e.g. `"400px"`) or as a number, which will be interpreted as pixels.
+            The default is `fit-content`, which sets the table's width according to its
+            contents. Set this to `100%` to use the maximum available horizontal space.
         height
-            A _maximum_ amount of vertical space for the data grid to occupy, in CSS units.
-            If there are more rows than can fit in this space, the grid will scroll.
+            A _maximum_ amount of vertical space for the data table to occupy, in CSS
+            units (e.g. `"400px"`) or as a number, which will be interpreted as pixels.
+            If there are more rows than can fit in this space, the table body will
+            scroll. Set the height to `None` to allow the table to grow to fit all of
+            the rows (this is not recommended for large data sets, as it may crash the
+            browser).
         summary
-            If `True` (the default), shows a message like "Viewing rows 1 through 10 of 20"
-            below the grid when not all of the rows are being shown. If `False`, the message
-            is not displayed. You can also specify a string template to customize the
-            message, for example: `"Viendo filas {start} a {end} de {total}"`.
+            If `True` (the default), shows a message like "Viewing rows 1 through 10 of
+            20" below the table when not all of the rows are being shown. If `False`,
+            the message is not displayed. You can also specify a string template to
+            customize the message, for example: `"Viendo filas {start} a {end} de
+            {total}"`.
         row_selection_mode
-            Use `"none"` to disable row selection, `"single"` to allow a single row to be
-            selected at a time, and `"multi-toggle"` to allow multiple rows to be selected
-            by clicking on them individually.
+            Use `"none"` to disable row selection, `"single"` to allow a single row to
+            be selected at a time, and `"multi-toggle"` to allow multiple rows to be
+            selected by clicking on them individually.
 
         Returns
         -------
@@ -143,8 +167,7 @@ class DataTable(AbstractTabularData):
 
         See Also
         --------
-        ~shiny.ui.output_data_frame
-        ~shiny.render.data_frame
+        ~shiny.ui.output_data_frame ~shiny.render.data_frame
         """
         import pandas as pd
 
@@ -152,7 +175,7 @@ class DataTable(AbstractTabularData):
             pd.DataFrame,
             cast_to_pandas(
                 data,
-                "The DataGrid() constructor didn't expect a 'data' argument of type",
+                "The DataTable() constructor didn't expect a 'data' argument of type",
             ),
         )
 
@@ -178,14 +201,10 @@ class DataTable(AbstractTabularData):
         return res
 
 
-# It would be nice to specify DataGridResult to be something like:
-#   Union[pandas.DataFrame, <protocol with .to_pandas()>]
-# However, if we did that, we'd have to import pandas at load time, which adds
-# a nontrivial amount of overhead. So for now, we're just using `object`.
-DataGridResult = Union[None, object, DataGrid]
+DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
-RenderDataFrameFunc = Callable[[], object]
-RenderDataFrameFuncAsync = Callable[[], Awaitable[object]]
+RenderDataFrameFunc = Callable[[], DataFrameResult]
+RenderDataFrameFuncAsync = Callable[[], Awaitable[DataFrameResult]]
 
 
 @runtime_checkable
@@ -195,7 +214,7 @@ class PandasCompatible(Protocol):
         ...
 
 
-class RenderDataFrame(RenderFunction[DataGridResult, object]):
+class RenderDataFrame(RenderFunction[DataFrameResult, object]):
     def __init__(
         self,
         fn: RenderDataFrameFunc,
@@ -240,7 +259,7 @@ def cast_to_pandas(x: object, error_message_begin: str) -> object:
 
 
 class RenderDataFrameAsync(
-    RenderDataFrame, RenderFunctionAsync[DataGridResult, object]
+    RenderDataFrame, RenderFunctionAsync[DataFrameResult, object]
 ):
     def __init__(
         self,
@@ -270,6 +289,7 @@ def data_frame() -> (
     ...
 
 
+@add_example()
 def data_frame(
     fn: Optional[RenderDataFrameFunc | RenderDataFrameFuncAsync] = None,
 ) -> (
@@ -312,7 +332,7 @@ def data_frame(
         if _utils.is_async_callable(fn):
             return RenderDataFrameAsync(fn)
         else:
-            return RenderDataFrame(fn)
+            return RenderDataFrame(cast(RenderDataFrameFunc, fn))
 
     if fn is None:
         return wrapper
