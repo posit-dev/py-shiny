@@ -468,6 +468,7 @@ export class ShinyDataFrameOutput extends HTMLElement {
     target.appendChild(this.errorRoot);
 
     const myDiv = document.createElement("div");
+    myDiv.classList.add("html-fill-container", "html-fill-item");
     target.appendChild(myDiv);
 
     this.reactRoot = createRoot(myDiv);

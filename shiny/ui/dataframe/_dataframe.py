@@ -6,6 +6,7 @@ from htmltools import HTMLDependency, Tag
 
 from ... import __version__
 from ..._namespaces import resolve_id
+from ...experimental.ui import bind_fill_role
 
 
 def data_frame_deps() -> HTMLDependency:
@@ -23,8 +24,12 @@ def data_frame_deps() -> HTMLDependency:
 
 
 def output_data_frame(id: str) -> Tag:
-    return Tag(
-        "shiny-data-frame",
-        data_frame_deps(),
-        id=resolve_id(id),
+    return bind_fill_role(
+        Tag(
+            "shiny-data-frame",
+            data_frame_deps(),
+            id=resolve_id(id),
+        ),
+        item=True,
+        container=True,
     )
