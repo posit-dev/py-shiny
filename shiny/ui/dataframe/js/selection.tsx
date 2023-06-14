@@ -125,7 +125,20 @@ export function useSelection<TKey, TElement extends HTMLElement>(
   };
 }
 
-const isMac = /^Mac/.test(window.navigator.platform);
+declare global {
+  interface Navigator {
+    readonly userAgentData?: NavigatorUAData;
+  }
+  interface NavigatorUAData {
+    readonly brands?: { brand: string; version: string }[];
+    readonly mobile?: boolean;
+    readonly platform?: string;
+  }
+}
+
+const isMac = /^mac/i.test(
+  window.navigator.userAgentData?.platform ?? window.navigator.platform
+);
 
 function performMouseDownAction<TKey, TElement>(
   mode: SelectionMode,
