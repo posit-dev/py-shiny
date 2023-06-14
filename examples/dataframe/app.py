@@ -22,6 +22,7 @@ def app_ui(req):
             selected="multi-toggle",
         ),
         ui.input_switch("gridstyle", "Grid", True),
+        ui.input_switch("fullwidth", "Take full width", True),
         ui.output_data_frame("grid"),
         ui.panel_fixed(
             ui.output_text_verbatim("detail"),
@@ -62,13 +63,21 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.data_frame
     def grid():
+        height = 350
+        width = "100%" if input.fullwidth() else "fit-content"
         if input.gridstyle():
             return render.DataGrid(
-                df(), row_selection_mode=input.selection_mode(), height=350
+                df(),
+                row_selection_mode=input.selection_mode(),
+                height=height,
+                width=width,
             )
         else:
             return render.DataTable(
-                df(), row_selection_mode=input.selection_mode(), height=350
+                df(),
+                row_selection_mode=input.selection_mode(),
+                height=height,
+                width=width,
             )
 
     @reactive.Effect
