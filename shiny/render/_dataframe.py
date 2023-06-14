@@ -35,12 +35,10 @@ class DataGrid(AbstractTabularData):
         self,
         data: object,
         *,
-        width: Union[str, float, None] = "fit-content",
+        width: str | float | None = "fit-content",
         height: Union[str, float, None] = "500px",
         summary: Union[bool, str] = True,
-        row_selection_mode: Union[
-            Literal["none"], Literal["single"], Literal["multi-toggle"]
-        ] = "none",
+        row_selection_mode: Literal["none", "single", "multi-toggle"] = "none",
     ):
         """
         Holds the data and options for a ``shiny.render.data_frame`` output, for a
