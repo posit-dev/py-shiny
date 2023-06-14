@@ -1,17 +1,17 @@
-import { build } from "esbuild";
+import { BuildOptions, build } from "esbuild";
 import { sassPlugin } from "esbuild-sass-plugin";
 import * as fs from "node:fs";
 
 async function bundle() {
   try {
-    const options = {
+    const options: BuildOptions = {
       entryPoints: ["index.tsx"],
+      format: "esm",
       bundle: true,
       outdir: "dist",
       minify: true,
       sourcemap: true,
       plugins: [sassPlugin({ type: "css-text" })],
-      target: ["safari12"],
       metafile: true,
     };
 
