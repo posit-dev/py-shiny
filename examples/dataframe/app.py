@@ -97,11 +97,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         ):
             # "split", "records", "index", "columns", "values", "table"
 
-            return (
-                df()
-                .iloc[list(input.grid_selected_rows())]
-                .to_json(None, orient="records", indent=2)
-            )
+            return df().iloc[list(input.grid_selected_rows())]
 
 
 app = App(app_ui, server)

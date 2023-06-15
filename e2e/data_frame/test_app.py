@@ -3,7 +3,7 @@
 
 import re
 import time
-from typing import Callable
+from typing import Any, Callable
 
 import pytest
 from conftest import ShinyAppProc, create_example_fixture
@@ -137,3 +137,48 @@ def test_sort(
     first_cell_depth = grid_container.locator("tr:first-child td:nth-child(5)")
     depth_clarity.click(modifiers=["Shift"])
     expect(first_cell_depth).to_have_text("67.6")
+
+
+def test_multi_selection(
+    page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, snapshot: Any
+):
+    page.goto(data_frame_app.url)
+    first_cell = grid_container.locator("tbody tr:first-child td:first-child")
+
+    expect(first_cell).to_have_text("1")
+    first_cell.click()
+
+    expect(page.locator("#detail")).to_have_text(re.compile(r"\w"))
+    assert page.locator("#detail").inner_text() == snapshot
+
+    kb = page.keyboard
+    kb.press("ArrowDown")
+    kb.press("ArrowDown")
+    kb.press("Space")
+    kb.press("ArrowDown")
+    kb.press("Enter")
+    expect(page.locator("#detail")).to_have_text(re.compile(r"(\n.*){3}"))
+    assert page.locator("#detail").inner_text() == snapshot
+
+
+def test_single_selection(
+    page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, snapshot: Any
+):
+    page.goto(data_frame_app.url)
+    InputSelectize(page, "selection_mode").set("single")
+    first_cell = grid_container.locator("tbody tr:first-child td:first-child")
+
+    expect(first_cell).to_have_text("1")
+    first_cell.click()
+
+    expect(page.locator("#detail")).to_have_text(re.compile(r"\w"))
+    assert page.locator("#detail").inner_text() == snapshot
+
+    kb = page.keyboard
+    kb.press("ArrowDown")
+    kb.press("ArrowDown")
+    kb.press("Space")
+    kb.press("ArrowDown")
+    kb.press("Enter")
+    expect(page.locator("#detail")).to_have_text(re.compile(r"\n"))
+    assert page.locator("#detail").inner_text() == snapshot
