@@ -11,7 +11,7 @@ async function bundle() {
       outdir: "dist",
       minify: true,
       sourcemap: true,
-      plugins: [sassPlugin({ type: "css-text" })],
+      plugins: [sassPlugin({ type: "css-text", sourceMap: false })],
       metafile: true,
     };
 
