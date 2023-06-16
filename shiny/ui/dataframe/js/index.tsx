@@ -152,11 +152,11 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const tableClass = tableStyle === "table" ? "table table-sm" : null;
 
   const rowSelectionMode =
-    data.options["row_selection_mode"] ?? SelectionMode.Multi;
+    data.options["row_selection_mode"] ?? SelectionMode.MultiNative;
   const canSelect = rowSelectionMode !== SelectionMode.None;
   const canMultiSelect =
-    rowSelectionMode === SelectionMode.Multi ||
-    rowSelectionMode === SelectionMode.MultiToggle;
+    rowSelectionMode === SelectionMode.MultiNative ||
+    rowSelectionMode === SelectionMode.Multiple;
 
   const rowSelection = useSelection<string, HTMLTableRowElement>(
     rowSelectionMode,

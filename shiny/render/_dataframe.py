@@ -38,7 +38,7 @@ class DataGrid(AbstractTabularData):
         width: str | float | None = "fit-content",
         height: Union[str, float, None] = "500px",
         summary: Union[bool, str] = True,
-        row_selection_mode: Literal["none", "single", "multi-toggle"] = "none",
+        row_selection_mode: Literal["none", "single", "multiple"] = "none",
     ):
         """
         Holds the data and options for a ``shiny.render.data_frame`` output, for a
@@ -64,11 +64,11 @@ class DataGrid(AbstractTabularData):
             If `True` (the default), shows a message like "Viewing rows 1 through 10 of
             20" below the grid when not all of the rows are being shown. If `False`, the
             message is not displayed. You can also specify a string template to
-            customize the message, for example: `"Viendo filas {start} a {end} de
-            {total}"`.
+            customize the message, containing `{start}`, `{end}`, and `{total}` tokens.
+            For example: `"Viendo filas {start} a {end} de {total}"`.
         row_selection_mode
             Use `"none"` to disable row selection, `"single"` to allow a single row to
-            be selected at a time, and `"multi-toggle"` to allow multiple rows to be
+            be selected at a time, and `"multiple"` to allow multiple rows to be
             selected by clicking on them individually.
 
         Returns
@@ -122,7 +122,7 @@ class DataTable(AbstractTabularData):
         height: Union[str, float, None] = "500px",
         summary: Union[bool, str] = True,
         row_selection_mode: Union[
-            Literal["none"], Literal["single"], Literal["multi-toggle"]
+            Literal["none"], Literal["single"], Literal["multiple"]
         ] = "none",
     ):
         """
@@ -148,13 +148,13 @@ class DataTable(AbstractTabularData):
             browser).
         summary
             If `True` (the default), shows a message like "Viewing rows 1 through 10 of
-            20" below the table when not all of the rows are being shown. If `False`,
-            the message is not displayed. You can also specify a string template to
-            customize the message, for example: `"Viendo filas {start} a {end} de
-            {total}"`.
+            20" below the grid when not all of the rows are being shown. If `False`, the
+            message is not displayed. You can also specify a string template to
+            customize the message, containing `{start}`, `{end}`, and `{total}` tokens.
+            For example: `"Viendo filas {start} a {end} de {total}"`.
         row_selection_mode
             Use `"none"` to disable row selection, `"single"` to allow a single row to
-            be selected at a time, and `"multi-toggle"` to allow multiple rows to be
+            be selected at a time, and `"multiple"` to allow multiple rows to be
             selected by clicking on them individually.
 
         Returns

@@ -18,8 +18,8 @@ def app_ui(req):
         ui.input_select(
             "selection_mode",
             "Selection mode",
-            {"none": "(None)", "single": "Single", "multi-toggle": "Multiple"},
-            selected="multi-toggle",
+            {"none": "(None)", "single": "Single", "multiple": "Multiple"},
+            selected="multiple",
         ),
         ui.input_switch("gridstyle", "Grid", True),
         ui.input_switch("fullwidth", "Take full width", True),

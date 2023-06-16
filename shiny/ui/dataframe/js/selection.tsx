@@ -16,8 +16,8 @@ export interface SelectionSet<TKey, TElement extends HTMLElement> {
 export enum SelectionMode {
   None = "none",
   Single = "single",
-  Multi = "multi",
-  MultiToggle = "multi-toggle",
+  Multiple = "multiple",
+  MultiNative = "multi-native",
 }
 
 export function useSelection<TKey, TElement extends HTMLElement>(
@@ -86,7 +86,7 @@ export function useSelection<TKey, TElement extends HTMLElement>(
           }
         }
       }
-    } else if (mode === SelectionMode.MultiToggle) {
+    } else if (mode === SelectionMode.Multiple) {
       if (event.key === " " || event.key === "Enter") {
         setSelectedKeys(selectedKeys.toggle(key));
         event.preventDefault();
@@ -156,7 +156,7 @@ function performMouseDownAction<TKey, TElement>(
     return null;
   }
 
-  if (mode === SelectionMode.MultiToggle) {
+  if (mode === SelectionMode.Multiple) {
     return { selection: selectedKeys.toggle(key), anchor: true };
   } else if (mode === SelectionMode.Single) {
     if (ctrlKey && !shiftKey) {
@@ -171,7 +171,7 @@ function performMouseDownAction<TKey, TElement>(
       // Simple click sets selection, always
       return { selection: ImmutableSet.just(key), anchor: true };
     }
-  } else if (mode === SelectionMode.Multi) {
+  } else if (mode === SelectionMode.MultiNative) {
     if (shiftKey && ctrlKey) {
       // Ctrl-Shift-click: Add anchor row through current row to selection
       const toSelect = between(anchor, key);

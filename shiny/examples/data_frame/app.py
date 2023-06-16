@@ -53,7 +53,7 @@ def server(input, output, session):
     def summary_data():
         return render.DataGrid(
             summary_df.round(2),
-            row_selection_mode="multi-toggle",
+            row_selection_mode="multiple",
             height="100%",
         )
 
