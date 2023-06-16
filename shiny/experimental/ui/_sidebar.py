@@ -291,7 +291,6 @@ def layout_sidebar(
             # child.children will be handled when tagified
 
     main = div(
-        as_fillable_container() if fillable else None,
         {
             "role": "main",
             "class": f"main{' bslib-gap-spacing' if fillable else ''}",
@@ -306,13 +305,14 @@ def layout_sidebar(
         attrs,
         *children,
     )
+    if fillable:
+        main = as_fillable_container(main)
 
     max_height_mobile = sidebar.max_height_mobile or (
         "250px" if height is None else "50%"
     )
 
     res = div(
-        as_fill_item() if fill else None,
         {"class": "bslib-sidebar-layout"},
         {"class": "sidebar-right"} if sidebar.position == "right" else None,
         {"class": "sidebar-collapsed"} if sidebar.open == "closed" else None,
@@ -334,6 +334,8 @@ def layout_sidebar(
             __bslib_sidebar_max_height_mobile=validate_css_unit(max_height_mobile),
         ),
     )
+    if fill:
+        res = as_fill_item(res)
 
     return CardItem(res)
 

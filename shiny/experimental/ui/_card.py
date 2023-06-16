@@ -106,8 +106,6 @@ def card(
     children = _wrap_children_in_card(*children, wrapper=wrapper)
 
     tag = div(
-        as_fillable_container(),
-        as_fill_item() if fill else None,
         {
             "class": "card bslib-card bslib-mb-spacer",
             "style": css(
@@ -123,6 +121,9 @@ def card(
         card_dependency(),
         _card_js_init(),
     )
+    tag = as_fillable_container(tag)
+    if fill:
+        tag = as_fill_item(tag)
 
     return tag
 
@@ -259,8 +260,6 @@ def card_body(
         "height": validate_css_unit(height),
     }
     tag = tags.div(
-        as_fillable_container() if fillable else None,
-        as_fill_item() if fill else None,
         {
             "class": "card-body bslib-gap-spacing",
             "style": css(**div_style_args),
@@ -269,6 +268,11 @@ def card_body(
         class_=class_,
         **kwargs,
     )
+
+    if fillable:
+        tag = as_fillable_container(tag)
+    if fill:
+        tag = as_fill_item(tag)
 
     return CardItem(tag)
 
@@ -552,7 +556,6 @@ def card_image(
     }
 
     image = tags.img(
-        as_fill_item() if fill else None,
         {
             "src": src,
             "class": "img-fluid",
@@ -567,11 +570,15 @@ def card_image(
         **kwargs,
     )
 
+    if fill:
+        image = as_fill_item(image)
+
     if href is not None:
-        image = tags.a(
-            as_fill_carrier(),
-            image,
-            href=href,
+        image = as_fill_carrier(
+            tags.a(
+                image,
+                href=href,
+            )
         )
 
     if container:
