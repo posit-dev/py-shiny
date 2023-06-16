@@ -8,7 +8,6 @@ from typing import (
     Any,
     Awaitable,
     Callable,
-    Literal,
     Optional,
     Union,
     cast,
@@ -17,7 +16,7 @@ from typing import (
 
 from .. import _utils
 from .._docstring import add_example
-from .._typing_extensions import Protocol, runtime_checkable
+from .._typing_extensions import Literal, Protocol, runtime_checkable
 from . import RenderFunction, RenderFunctionAsync
 
 if TYPE_CHECKING:
