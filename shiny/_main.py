@@ -67,7 +67,12 @@ any of the following will work:
     help="Bind autoreload socket to this port. If 0, a random port will be used. Ignored if --reload is not used.",
     show_default=True,
 )
-@click.option("--reload", is_flag=True, default=False, help="Enable auto-reload.")
+@click.option(
+    "--reload",
+    is_flag=True,
+    default=False,
+    help="Enable auto-reload, when these types of files change: .py .css .js .html",
+)
 @click.option(
     "--ws-max-size",
     type=int,
@@ -216,11 +221,6 @@ def run_app(
 
     log_config: dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
 
-    if reload and app_dir is not None:
-        reload_dirs = [app_dir]
-    else:
-        reload_dirs = []
-
     if reload:
         if autoreload_port == 0:
             autoreload_port = _utils.random_port(host=host)
@@ -233,6 +233,20 @@ def run_app(
         else:
             setup_hot_reload(log_config, autoreload_port, port, launch_browser)
 
+    reload_args: dict[str, bool | str | list[str]] = {}
+    if reload:
+        reload_dirs = []
+        if app_dir is not None:
+            reload_dirs = [app_dir]
+
+        reload_args = {
+            "reload": reload,
+            # Adding `reload_includes` param while `reload=False` produces an warning
+            # https://github.com/encode/uvicorn/blob/d43afed1cfa018a85c83094da8a2dd29f656d676/uvicorn/config.py#L298-L304
+            "reload_includes": ["*.py", "*.css", "*.js", "*.html"],
+            "reload_dirs": reload_dirs,
+        }
+
     if launch_browser and not reload:
         setup_launch_browser(log_config)
 
@@ -242,13 +256,12 @@ def run_app(
         app,  # pyright: ignore[reportGeneralTypeIssues]
         host=host,
         port=port,
-        reload=reload,
-        reload_dirs=reload_dirs,
         ws_max_size=ws_max_size,
         log_level=log_level,
         log_config=log_config,
         app_dir=app_dir,
         factory=factory,
+        **reload_args,
     )
 
 

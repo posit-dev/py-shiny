@@ -7,10 +7,10 @@ from typing import Optional
 
 from htmltools import Tag, TagAttrValue, TagFunction, css, div, tags
 
-from shiny._docstring import add_example
-from shiny._namespaces import resolve_id
-from shiny.types import MISSING, MISSING_TYPE
-from shiny.ui._plot_output_opts import (
+from ..._docstring import add_example
+from ..._namespaces import resolve_id
+from ...types import MISSING, MISSING_TYPE
+from ...ui._plot_output_opts import (
     BrushOpts,
     ClickOpts,
     DblClickOpts,
@@ -21,8 +21,7 @@ from shiny.ui._plot_output_opts import (
     format_opt_names,
     hover_opts,
 )
-
-from ._fill import bind_fill_role
+from ._fill import as_fill_item, as_fillable_container
 
 
 @add_example()
@@ -223,9 +222,10 @@ def output_image(
         style=style,
         **args,
     )
-    # NEW
-    return bind_fill_role(container, item=fill)
-    # /NEW
+    if fill:
+        container = as_fill_item(container)
+
+    return container
 
 
 @add_example()
@@ -271,10 +271,10 @@ def output_ui(
         id=resolve_id(id),
         **kwargs,
     )
-    return bind_fill_role(
-        res,
-        # NEW
-        item=bool(fill),
-        container=bool(fillable),
-        # /NEW
-    )
+
+    if fillable:
+        res = as_fillable_container(res)
+    if fill:
+        res = as_fill_item(res)
+
+    return res

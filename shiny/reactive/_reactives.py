@@ -419,7 +419,7 @@ def Calc(
     ~shiny.reactive.Value
     ~shiny.reactive.Effect
     ~shiny.reactive.invalidate_later
-    ~shiny.event
+    ~shiny.reactive.event
     """
 
     def create_calc(fn: CalcFunction[T] | CalcFunctionAsync[T]) -> Calc_[T]:
@@ -694,7 +694,7 @@ def Effect(
     ~shiny.reactive.Value
     ~shiny.reactive.Effect
     ~shiny.reactive.invalidate_later
-    ~shiny.event
+    ~shiny.reactive.event
     """
 
     def create_effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_:

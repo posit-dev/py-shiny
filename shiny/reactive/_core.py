@@ -224,7 +224,7 @@ def isolate():
 
     See Also
     --------
-    ~shiny.event
+    ~shiny.reactive.event
     """
     with _reactive_environment.isolate():
         yield
