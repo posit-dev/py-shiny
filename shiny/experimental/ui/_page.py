@@ -25,8 +25,8 @@ from ._utils import consolidate_attrs
 
 
 def page_sidebar(
+    sidebar: Sidebar | TagChild | TagAttrs,
     *args: TagChild | TagAttrs,
-    sidebar: Optional[Sidebar | TagChild | TagAttrs] = None,
     title: Optional[str | Tag | TagList] = None,
     fillable: bool = True,
     fillable_mobile: bool = False,
@@ -69,8 +69,8 @@ def page_sidebar(
     return page_fillable(
         title,
         layout_sidebar(
+            sidebar,
             *args,
-            sidebar=sidebar,
             fillable=fillable,
             border=False,
             border_radius=False,
