@@ -21,6 +21,7 @@ from htmltools import (
     TagAttrs,
     TagAttrValue,
     TagChild,
+    Tagifiable,
     TagList,
     css,
     div,
@@ -29,8 +30,13 @@ from htmltools import (
     tags,
 )
 
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._typing_extensions import Literal
+from ..experimental.ui._sidebar import Sidebar as XSidebar
+from ..experimental.ui._sidebar import layout_sidebar as x_layout_sidebar
+from ..experimental.ui._sidebar import sidebar as x_sidebar
+from ..experimental.ui._utils import consolidate_attrs as x_consolidate_attrs
 from ..module import current_namespace
 from ..types import MISSING, MISSING_TYPE
 from ._html_dependencies import jqui_deps
@@ -117,7 +123,7 @@ def layout_sidebar(
     sidebar: TagChild,
     main: TagChild,
     position: Literal["left", "right"] = "left",
-) -> Tag:
+) -> Tagifiable:
     """
     Layout a sidebar and main area
 
@@ -147,7 +153,16 @@ def layout_sidebar(
     :func:`~shiny.ui.panel_sidebar`
     :func:`~shiny.ui.panel_main`
     """
-    return row(sidebar, main) if position == "left" else row(main, sidebar)
+
+    if not isinstance(sidebar, PanelSidebar):
+        sidebar = PanelSidebar(sidebar)
+    if not isinstance(main, PanelMain):
+        main = PanelMain(attrs={}, children=[main])
+
+    return x_layout_sidebar(
+        sidebar.get_sidebar(position=position),
+        main,
+    )
 
 
 def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
@@ -178,8 +193,10 @@ def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
 
 
 def panel_sidebar(
-    *args: TagChild | TagAttrs, width: int = 4, **kwargs: TagAttrValue
-) -> Tag:
+    *args: TagChild | TagAttrs,
+    width: int = 4,
+    **kwargs: TagAttrValue,
+) -> Tagifiable:
     """
     Create a sidebar panel
 
@@ -205,16 +222,38 @@ def panel_sidebar(
     :func:`~shiny.ui.panel_sidebar`
     :func:`~shiny.ui.panel_main`
     """
-    return div(
-        {"class": "col-sm-" + str(width)},
-        # A11y semantic landmark for sidebar
-        tags.form({"class": "well"}, *args, role="complementary", **kwargs),
-    )
+    return PanelSidebar(*args, width=width, **kwargs)
+
+
+class PanelSidebar:
+    # Store `attrs` for `layout_sidebar()` to retrieve
+    def __init__(
+        self, *args: TagChild | TagAttrs, width: int = 4, **kwargs: TagAttrValue
+    ) -> None:
+        self.args = args
+        self.kwargs = kwargs
+        self.width = width
+
+    def get_sidebar(self, position: Literal["left", "right"] = "left") -> XSidebar:
+        return x_sidebar(
+            *self.args,
+            width=f"{int(self.width / 12 * 100)}%",
+            position=position,
+            open="always",
+            **self.kwargs,
+        )
+
+    # Hopefully this is never used. But it makes it Tagifiable to allow us to not expose
+    # `XSidebar` and `PanelSidebar` classes
+    def tagify(self) -> Tag:
+        return self.get_sidebar().tag.tagify()
 
 
 def panel_main(
-    *args: TagChild | TagAttrs, width: int = 8, **kwargs: TagAttrValue
-) -> Tag:
+    *args: TagChild | TagAttrs,
+    width: int = 8,
+    **kwargs: TagAttrValue,
+) -> Tagifiable:
     """
     Create an main area panel
 
@@ -239,13 +278,29 @@ def panel_main(
     :func:`~shiny.ui.panel_sidebar`
     :func:`~shiny.ui.layout_sidebar`
     """
-    return div(
-        {"class": "col-sm-" + str(width)},
-        # A11y semantic landmark for main region
-        *args,
-        role="main",
-        **kwargs,
-    )
+    if width != 8:
+        warn_deprecated(
+            "panel_main(width=)` is being ignored. Given the sidebar width, the main panel will take up the remaining horizontal space."
+        )
+    attrs, children = x_consolidate_attrs(*args, **kwargs)
+    if len(attrs) > 0:
+        return PanelMain(attrs=attrs, children=children)
+
+    return TagList(*children)
+
+
+class PanelMain:
+    # Store `attrs` for `layout_sidebar()` to retrieve
+    attrs: TagAttrs
+    # Return `children` in `layout_sidebar()` via `.tagify()` method
+    children: list[TagChild]
+
+    def __init__(self, *, attrs: TagAttrs, children: list[TagChild]) -> None:
+        self.attrs = attrs
+        self.children = children
+
+    def tagify(self) -> TagList:
+        return TagList(self.children).tagify()
 
 
 # TODO: replace `flowLayout()`/`splitLayout()` with a flexbox wrapper?
