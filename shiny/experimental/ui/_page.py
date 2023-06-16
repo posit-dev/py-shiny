@@ -15,7 +15,7 @@ from htmltools import (
 
 from ..._typing_extensions import Literal
 from ...types import MISSING, MISSING_TYPE, NavSetArg
-from ...ui import page_bootstrap
+from ...ui._page import page_bootstrap
 from ...ui._utils import get_window_title
 from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
 from ._fill import as_fillable_container

@@ -3,9 +3,8 @@ Tools for creating user interfaces including: custom components, HTML components
 layout helpers, page-level containers, and more.
 """
 
+from ._bootstrap_row_column import row, column
 from ._bootstrap import (
-    row,
-    column,
     layout_sidebar,
     panel_well,
     panel_sidebar,
