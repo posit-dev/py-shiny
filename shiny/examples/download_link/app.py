@@ -10,8 +10,6 @@ app_ui = ui.page_fluid(
 )
 
 
-# For more examples of different types of download handlers, see:
-# https://github.com/rstudio/py-shiny/blob/68ffc27/examples/download/app.py#L90
 def server(input: Inputs, output: Outputs, session: Session):
     @session.download(
         filename=lambda: f"新型-{date.today().isoformat()}-{np.random.randint(100,999)}.csv"
