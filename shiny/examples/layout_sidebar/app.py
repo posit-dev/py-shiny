@@ -2,12 +2,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from shiny import *
-from shiny import experimental as x
 
 app_ui = ui.page_fluid(
-    x.ui.layout_sidebar(
-        ui.output_plot("plot"),
-        sidebar=x.ui.sidebar(ui.input_slider("n", "N", min=0, max=100, value=20)),
+    ui.layout_sidebar(
+        ui.panel_sidebar(ui.input_slider("n", "N", min=0, max=100, value=20)),
+        ui.panel_main(ui.output_plot("plot")),
     ),
 )
 
