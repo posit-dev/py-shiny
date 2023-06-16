@@ -25,6 +25,7 @@ jobs:
       - name: Check for uncommitted changes
         run: |
           if [[ `git status --porcelain` ]]; then
+            git status
             echo "Uncommitted changes found. Please commit any changes that result from 'npm run build'."
             exit 1
           else
