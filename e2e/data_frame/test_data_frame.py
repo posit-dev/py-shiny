@@ -180,5 +180,5 @@ def test_single_selection(
     kb.press("Space")
     kb.press("ArrowDown")
     kb.press("Enter")
-    expect(page.locator("#detail")).to_have_text(re.compile(r"\n"))
+    time.sleep(1)
     assert page.locator("#detail").inner_text() == snapshot
