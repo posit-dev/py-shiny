@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-from typing import Optional, TypeVar, overload
+from typing import Optional, TypeVar
 
-from htmltools import Tag, TagAttrs, TagChild, Tagifiable, css
-
-from shiny.types import MISSING, MISSING_TYPE
+from htmltools import Tag, TagChild, Tagifiable, css
 
 from ..._typing_extensions import Literal, Protocol, runtime_checkable
 from ._css_unit import CssUnit, validate_css_unit
 from ._htmldeps import fill_dependency
 from ._tag import tag_add_style, tag_prepend_class, tag_remove_class
-from ._utils import consolidate_attrs
 
 """
 examples:
@@ -40,6 +37,11 @@ TagT = TypeVar("TagT", bound="Tag")
 
 fill_item_class = "html-fill-item"
 fill_container_class = "html-fill-container"
+
+# We're currently not supporting the div(as_fillable_container()) API, in order to keep
+# the function easier to understand. If we do implement something like that, we should
+# use a different name, because the function is conceptually different, and it also is
+# behaviorally different (it doesn't include the HTML dependency.)
 
 # TODO-future-approach: bind_fill_role() should return None?
 # From @wch:
@@ -132,18 +134,6 @@ def bind_fill_role(
 #   selector(s) are supported, see [tagAppendAttributes()].
 
 
-@overload
-def as_fill_carrier(
-    tag: MISSING_TYPE = MISSING,
-    *,
-    min_height: Optional[CssUnit] = None,
-    max_height: Optional[CssUnit] = None,
-    gap: Optional[CssUnit] = None,
-) -> TagAttrs:
-    ...
-
-
-@overload
 def as_fill_carrier(
     tag: TagFillingLayoutT,
     *,
@@ -154,19 +144,6 @@ def as_fill_carrier(
     # style: Optional[str] = None,
     # css_selector: Optional[str],
 ) -> TagFillingLayoutT:
-    ...
-
-
-def as_fill_carrier(
-    tag: TagFillingLayoutT | MISSING_TYPE = MISSING,
-    *,
-    min_height: Optional[CssUnit] = None,
-    max_height: Optional[CssUnit] = None,
-    gap: Optional[CssUnit] = None,
-    # class_: Optional[str] = None,
-    # style: Optional[str] = None,
-    # css_selector: Optional[str],
-) -> TagFillingLayoutT | TagAttrs:
     """
     Make a tag a fill carrier
 
@@ -205,30 +182,8 @@ def as_fill_carrier(
     )
 
 
-@overload
-def as_fillable_container(
-    tag: MISSING_TYPE = MISSING,
-    *,
-    min_height: Optional[CssUnit] = None,
-    max_height: Optional[CssUnit] = None,
-    gap: Optional[CssUnit] = None,
-) -> TagAttrs:
-    ...
-
-
-@overload
 def as_fillable_container(
     tag: TagFillingLayoutT,
-    *,
-    min_height: Optional[CssUnit] = None,
-    max_height: Optional[CssUnit] = None,
-    gap: Optional[CssUnit] = None,
-) -> TagFillingLayoutT:
-    ...
-
-
-def as_fillable_container(
-    tag: TagFillingLayoutT | MISSING_TYPE = MISSING,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
@@ -236,7 +191,7 @@ def as_fillable_container(
     # class_: Optional[str] = None,
     # style: Optional[str] = None,
     # css_selector: Optional[str] = None,
-) -> TagFillingLayoutT | TagAttrs:
+) -> TagFillingLayoutT:
     """
     Coerce a tag to be a fillable container
 
@@ -276,35 +231,15 @@ def as_fillable_container(
     )
 
 
-@overload
-def as_fill_item(
-    tag: MISSING_TYPE = MISSING,
-    *,
-    min_height: Optional[CssUnit] = None,
-    max_height: Optional[CssUnit] = None,
-) -> TagAttrs:
-    ...
-
-
-@overload
 def as_fill_item(
     tag: TagFillingLayoutT,
-    *,
-    min_height: Optional[CssUnit] = None,
-    max_height: Optional[CssUnit] = None,
-) -> TagFillingLayoutT:
-    ...
-
-
-def as_fill_item(
-    tag: TagFillingLayoutT | MISSING_TYPE = MISSING,
     *,
     min_height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
     # class_: Optional[str] = None,
     # style: Optional[str] = None,
     # css_selector: Optional[str] = None,
-) -> TagFillingLayoutT | TagAttrs:
+) -> TagFillingLayoutT:
     """
     Coerce a tag to a fill item
 
@@ -572,20 +507,12 @@ def _style_units_to_str(**kwargs: CssUnit | None) -> str | None:
 
 
 def _add_filling_attrs(
-    tag: TagFillingLayoutT | MISSING_TYPE,
+    tag: TagFillingLayoutT,
     item: Optional[bool] = None,
     container: Optional[bool] = None,
     **kwargs: CssUnit | None,
-) -> TagFillingLayoutT | TagAttrs:
+) -> TagFillingLayoutT:
     new_style = _style_units_to_str(**kwargs)
-
-    if isinstance(tag, MISSING_TYPE):
-        attrs, _ = consolidate_attrs(
-            {"class": fill_item_class} if item else None,
-            {"class": fill_container_class} if container else None,
-            style=new_style,
-        )
-        return attrs
 
     if isinstance(tag, FillingLayout):
         if new_style:

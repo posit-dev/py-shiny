@@ -95,13 +95,11 @@ def layout_column_wrap(
     # Use a new dict so that we don't mutate the original `children` dict
     upgraded_children: list[TagChild] = []
     for child_value in children:
-        upgraded_children.append(
-            div(
-                as_fillable_container() if fillable else None,
-                {"class": "bslib-gap-spacing"},
-                child_value,
-            ),
-        )
+        child = div({"class": "bslib-gap-spacing"}, child_value)
+        if fillable:
+            child = as_fillable_container(child)
+        upgraded_children.append(child)
+
     tag_style_css = {
         "grid-template-columns": colspec,
         "grid-auto-rows": "1fr" if (heights_equal == "all") else None,
@@ -116,7 +114,6 @@ def layout_column_wrap(
     }
 
     tag = div(
-        as_fill_item() if fill else None,
         {
             "class": "bslib-grid",
             "style": css(**tag_style_css),
@@ -124,5 +121,7 @@ def layout_column_wrap(
         attrs,
         *upgraded_children,
     )
+    if fill:
+        tag = as_fill_item(tag)
 
     return tag

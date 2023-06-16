@@ -217,14 +217,14 @@ def output_image(
         args.update(**format_opt_names(brush, "brush"))
 
     container = func(
-        # NEW
-        as_fill_item() if fill else None,
-        # /NEW
         id=id_resolved,
         class_="shiny-image-output",
         style=style,
         **args,
     )
+    if fill:
+        container = as_fill_item(container)
+
     return container
 
 
@@ -267,12 +267,14 @@ def output_ui(
     if not container:
         container = tags.span if inline else tags.div
     res = container(
-        # NEW
-        as_fill_item() if fill else None,
-        as_fillable_container() if fillable else None,
-        # /NEW
         {"class": "shiny-html-output"},
         id=resolve_id(id),
         **kwargs,
     )
+
+    if fillable:
+        res = as_fillable_container(res)
+    if fill:
+        res = as_fill_item(res)
+
     return res
