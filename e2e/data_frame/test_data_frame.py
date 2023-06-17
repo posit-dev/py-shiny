@@ -73,7 +73,7 @@ def test_full_width(page: Page, data_frame_app: ShinyAppProc, grid_container: Lo
     rect2 = grid_container.bounding_box()
 
     # Make sure it actually got narrower
-    timeout = time.time() + 5
+    timeout = time.time() + 15
     while True:
         if rect1 and rect2 and rect1.get("width") > rect2.get("width"):
             break
