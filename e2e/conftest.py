@@ -5,10 +5,12 @@ import logging
 import subprocess
 import sys
 import threading
+import time
+from contextlib import contextmanager
 from pathlib import PurePath
 from time import sleep
 from types import TracebackType
-from typing import IO, Callable, Generator, List, Optional, TextIO, Type, Union
+from typing import IO, Any, Callable, Generator, List, Optional, TextIO, Type, Union
 
 import pytest
 
@@ -21,6 +23,7 @@ __all__ = (
     "create_example_fixture",
     "local_app",
     "run_shiny_app",
+    "expect_to_change",
 )
 
 here = PurePath(__file__).parent
@@ -206,3 +209,40 @@ def local_app(request: pytest.FixtureRequest) -> Generator[ShinyAppProc, None, N
             yield sa
     finally:
         logging.warning("Application output:\n" + str(sa.stderr))
+
+
+@contextmanager
+def expect_to_change(
+    func: Callable[[], Any], timeoutSecs: float = 10
+) -> Generator[None, None, None]:
+    """
+    Context manager that yields when the value returned by func() changes. Use this
+    around code that has a side-effect of changing some state asynchronously (such as
+    all browser actions), to prevent moving onto the next step of the test until this
+    one has actually taken effect.
+
+    Raises TimeoutError if the value does not change within timeoutSecs.
+
+    Parameters
+    ----------
+    func
+        A function that returns a value. The value returned by this function is
+        compared to the value returned by subsequent calls to this function.
+    timeoutSecs
+        How long to wait for the value to change before raising TimeoutError.
+
+    Example
+    -------
+
+        with expect_to_change(lambda: page.locator("#name").value()):
+            page.keyboard.send_keys("hello")
+
+    """
+    original_value = func()
+    yield
+    start = time.time()
+    while time.time() - start < timeoutSecs:
+        time.sleep(0.1)
+        if func() != original_value:
+            return
+    raise TimeoutError("Timeout while waiting for change")

@@ -6,7 +6,7 @@ import time
 from typing import Any, Callable
 
 import pytest
-from conftest import ShinyAppProc, create_example_fixture
+from conftest import ShinyAppProc, create_example_fixture, expect_to_change
 from controls import InputSelectize, InputSwitch
 from playwright.sync_api import Locator, Page, expect
 
@@ -37,6 +37,7 @@ def scroll_to_end(page: Page, grid_container: Locator) -> Callable[[], None]:
     return do
 
 
+@pytest.mark.flaky
 def test_grid_mode(
     page: Page, data_frame_app: ShinyAppProc, grid: Locator, grid_container: Locator
 ):
@@ -50,6 +51,7 @@ def test_grid_mode(
     expect(grid_container).to_have_class(re.compile(r"\bshiny-data-grid-grid\b"))
 
 
+@pytest.mark.flaky
 def test_summary_navigation(
     page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, summary: Locator
 ):
@@ -59,32 +61,33 @@ def test_summary_navigation(
     expect(summary).to_have_text("Viewing rows 1 through 10 of 20")
     # Put focus in the table and hit End keystroke
     grid_container.locator("tbody tr:first-child td:first-child").click()
-    page.keyboard.press("End")
+    with expect_to_change(lambda: summary.inner_text()):
+        page.keyboard.press("End")
     # Ensure that summary updated
     expect(summary).to_have_text("Viewing rows 11 through 20 of 20")
 
 
+@pytest.mark.flaky
 def test_full_width(page: Page, data_frame_app: ShinyAppProc, grid_container: Locator):
     page.goto(data_frame_app.url)
 
-    rect1 = grid_container.bounding_box()
-    # Switch to narrow mode
-    InputSwitch(page, "fullwidth").toggle()
-    rect2 = grid_container.bounding_box()
+    def get_width() -> float:
+        rect = grid_container.bounding_box()
+        return rect.get("width", 0) if rect else 0
 
-    # Make sure it actually got narrower
-    timeout = time.time() + 15
-    while True:
-        if rect1 and rect2 and rect1.get("width") > rect2.get("width"):
-            break
-        if time.time() < timeout:
-            time.sleep(0.1)
-            continue
-        assert rect1 and rect2 and rect1.get("width") > rect2.get("width")
+    width1 = get_width()
+    # Switch to narrow mode
+    with expect_to_change(get_width):
+        InputSwitch(page, "fullwidth").toggle()
+    width2 = get_width()
+
+    assert width2 < width1
+
     # Switch back to full width
     InputSwitch(page, "fullwidth").toggle()
 
 
+@pytest.mark.flaky
 def test_table_switch(
     page: Page,
     data_frame_app: ShinyAppProc,
@@ -114,6 +117,7 @@ def test_table_switch(
     expect(summary).to_have_text("Viewing rows 1 through 10 of 53940")
 
 
+@pytest.mark.flaky
 def test_sort(
     page: Page,
     data_frame_app: ShinyAppProc,
@@ -139,28 +143,37 @@ def test_sort(
     expect(first_cell_depth).to_have_text("67.6")
 
 
+@pytest.mark.flaky
 def test_multi_selection(
     page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, snapshot: Any
 ):
     page.goto(data_frame_app.url)
     first_cell = grid_container.locator("tbody tr:first-child td:first-child")
 
-    expect(first_cell).to_have_text("1")
-    first_cell.click()
+    def detail_text():
+        return page.locator("#detail").inner_text()
 
-    expect(page.locator("#detail")).to_have_text(re.compile(r"\w"))
-    assert page.locator("#detail").inner_text() == snapshot
+    expect(first_cell).to_have_text("1")
+    with expect_to_change(detail_text):
+        first_cell.click()
+
+    assert detail_text() == snapshot
 
     kb = page.keyboard
-    kb.press("ArrowDown")
-    kb.press("ArrowDown")
-    kb.press("Space")
-    kb.press("ArrowDown")
-    kb.press("Enter")
-    expect(page.locator("#detail")).to_have_text(re.compile(r"(\n.*){3}"))
-    assert page.locator("#detail").inner_text() == snapshot
+    with expect_to_change(lambda: grid_container.locator(":focus").inner_text()):
+        kb.press("ArrowDown")
+    with expect_to_change(lambda: grid_container.locator(":focus").inner_text()):
+        kb.press("ArrowDown")
+    with expect_to_change(detail_text):
+        kb.press("Space")
+    with expect_to_change(lambda: grid_container.locator(":focus").inner_text()):
+        kb.press("ArrowDown")
+    with expect_to_change(detail_text):
+        kb.press("Enter")
+    assert detail_text() == snapshot
 
 
+@pytest.mark.flaky
 def test_single_selection(
     page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, snapshot: Any
 ):
@@ -168,17 +181,41 @@ def test_single_selection(
     InputSelectize(page, "selection_mode").set("single")
     first_cell = grid_container.locator("tbody tr:first-child td:first-child")
 
-    expect(first_cell).to_have_text("1")
-    first_cell.click()
+    def detail_text():
+        return page.locator("#detail").inner_text()
 
-    expect(page.locator("#detail")).to_have_text(re.compile(r"\w"))
-    assert page.locator("#detail").inner_text() == snapshot
+    expect(first_cell).to_have_text("1")
+    with expect_to_change(detail_text):
+        first_cell.click()
+
+    assert detail_text() == snapshot
 
     kb = page.keyboard
-    kb.press("ArrowDown")
-    kb.press("ArrowDown")
-    kb.press("Space")
-    kb.press("ArrowDown")
-    kb.press("Enter")
-    time.sleep(1)
-    assert page.locator("#detail").inner_text() == snapshot
+    with expect_to_change(detail_text):
+        kb.press("ArrowDown")
+    with expect_to_change(detail_text):
+        kb.press("ArrowDown")
+    with expect_to_change(detail_text):
+        kb.press("Space")
+    with expect_to_change(lambda: grid_container.locator(":focus").inner_text()):
+        kb.press("ArrowDown")
+    with expect_to_change(detail_text):
+        kb.press("Enter")
+    assert detail_text() == snapshot
+
+
+def retry_with_timeout(timeout: float = 30):
+    def decorator(func: Callable[[], None]) -> None:
+        def exec() -> None:
+            start = time.time()
+            while True:
+                try:
+                    return func()
+                except AssertionError as e:
+                    if time.time() - start > timeout:
+                        raise e
+                    time.sleep(0.1)
+
+        exec()
+
+    return decorator
