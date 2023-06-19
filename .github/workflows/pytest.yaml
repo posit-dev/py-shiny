@@ -64,7 +64,7 @@ jobs:
 
       - name: Store Playwright version
         run: |
-          PLAYWRIGHT_VERSION=$(npm ls @playwright/test | grep @playwright | sed 's/.*@//')
+          PLAYWRIGHT_VERSION=$(playwright --version | sed 's/.* //')
           echo "Playwright Version: $PLAYWRIGHT_VERSION"
           echo "PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION" >> $GITHUB_ENV
       - name: Cache Playwright browsers for Playwright version
@@ -107,7 +107,7 @@ jobs:
 
       - name: Store Playwright version
         run: |
-          PLAYWRIGHT_VERSION=$(npm ls @playwright/test | grep @playwright | sed 's/.*@//')
+          PLAYWRIGHT_VERSION=$(playwright --version | sed 's/.* //')
           echo "Playwright Version: $PLAYWRIGHT_VERSION"
           echo "PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION" >> $GITHUB_ENV
       - name: Cache Playwright browsers for Playwright version
