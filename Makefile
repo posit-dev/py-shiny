@@ -81,11 +81,11 @@ test: ## run tests quickly with the default Python
 FILE:=e2e
 
 e2e: ## end-to-end tests with playwright
-	playwright install --with-deps
+	playwright install
 	pytest $(FILE) -m "not examples"
 
 e2e-examples: ## end-to-end tests on examples with playwright
-	playwright install --with-deps
+	playwright install
 	pytest $(FILE) -m "examples"
 
 coverage: ## check code coverage quickly with the default Python
