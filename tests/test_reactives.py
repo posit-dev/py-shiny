@@ -5,9 +5,8 @@ from typing import List
 
 import pytest
 
-from shiny import App, render, ui
+from shiny import App, render, req, ui
 from shiny._connection import MockConnection
-from shiny._validation import req
 from shiny.reactive import Calc, Effect, Value, event, flush, invalidate_later, isolate
 from shiny.reactive._core import ReactiveWarning
 from shiny.types import ActionButtonValue, SilentException

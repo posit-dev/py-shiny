@@ -1,0 +1,35 @@
+from __future__ import annotations
+
+__all__ = ("output_data_frame",)
+
+from htmltools import HTMLDependency, Tag
+
+from ... import __version__
+from ..._namespaces import resolve_id
+from ...experimental.ui._fill import bind_fill_role
+
+
+def data_frame_deps() -> HTMLDependency:
+    return HTMLDependency(
+        name="shiny-data-frame-output",
+        version=__version__,
+        source={
+            "package": "shiny",
+            "subdir": "ui/dataframe/js/dist",
+        },
+        script=[
+            {"src": "index.js", "type": "module"},
+        ],
+    )
+
+
+def output_data_frame(id: str) -> Tag:
+    return bind_fill_role(
+        Tag(
+            "shiny-data-frame",
+            data_frame_deps(),
+            id=resolve_id(id),
+        ),
+        item=True,
+        container=True,
+    )

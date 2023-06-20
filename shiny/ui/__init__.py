@@ -78,6 +78,8 @@ from ._output import (
 from ._page import page_navbar, page_fluid, page_fixed, page_bootstrap
 from ._progress import Progress
 
+from .dataframe._dataframe import output_data_frame
+
 from htmltools import (
     TagList,
     Tag,
@@ -181,6 +183,7 @@ __all__ = (
     "navset_bar",
     "notification_show",
     "notification_remove",
+    "output_data_frame",
     "output_plot",
     "output_image",
     "output_text",
