@@ -27,12 +27,14 @@ summary_df.rename(columns={"country_": "country"}, inplace=True)
 
 app_ui = x.ui.page_fillable(
     {"class": "p-3"},
+    ui.p(
+        ui.strong("Instructions:"),
+        " Select one or more countries in the table below to see more information.",
+    ),
     x.ui.layout_column_wrap(
         1,
         x.ui.card(
-            x.ui.card_body(
-                ui.output_data_frame("summary_data"),
-            ),
+            ui.output_data_frame("summary_data"),
         ),
         x.ui.layout_column_wrap(
             1 / 2,
@@ -54,6 +56,7 @@ def server(input, output, session):
         return render.DataGrid(
             summary_df.round(2),
             row_selection_mode="multiple",
+            width="100%",
             height="100%",
         )
 
