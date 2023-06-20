@@ -34,14 +34,16 @@ from htmltools import (
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._typing_extensions import Literal
-from ..experimental.ui._sidebar import Sidebar as XSidebar
-from ..experimental.ui._sidebar import layout_sidebar as x_layout_sidebar
-from ..experimental.ui._sidebar import sidebar as x_sidebar
-from ..experimental.ui._utils import consolidate_attrs as x_consolidate_attrs
 from ..module import current_namespace
 from ..types import MISSING, MISSING_TYPE
 from ._html_dependencies import jqui_deps
 from ._utils import get_window_title
+from ._x._sidebar import PanelMain as XPanelMain
+from ._x._sidebar import PanelSidebar as XPanelSidebar
+from ._x._sidebar import layout_sidebar as x_layout_sidebar
+from ._x._utils import consolidate_attrs as x_consolidate_attrs
+
+
 # TODO: make a python version of the layout guide?
 @add_example()
 def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
@@ -153,10 +155,11 @@ def layout_sidebar(
     :func:`~shiny.ui.panel_main`
     """
 
-    if not isinstance(sidebar, PanelSidebar):
-        sidebar = PanelSidebar(sidebar)
-    if not isinstance(main, PanelMain):
-        main = PanelMain(attrs={}, children=[main])
+    # Not requiring `XPanelSidebar`/`XPanelMain` to not expose the `_x` module if possible
+    if not isinstance(sidebar, XPanelSidebar):
+        sidebar = XPanelSidebar(sidebar)
+    if not isinstance(main, XPanelMain):
+        main = XPanelMain(attrs={}, children=[main])
 
     return x_layout_sidebar(
         sidebar.get_sidebar(position=position),
@@ -221,36 +224,12 @@ def panel_sidebar(
     :func:`~shiny.ui.panel_sidebar`
     :func:`~shiny.ui.panel_main`
     """
-    return PanelSidebar(*args, width=width, **kwargs)
-
-
-class PanelSidebar:
-    # Store `attrs` for `layout_sidebar()` to retrieve
-    def __init__(
-        self, *args: TagChild | TagAttrs, width: int = 4, **kwargs: TagAttrValue
-    ) -> None:
-        self.args = args
-        self.kwargs = kwargs
-        self.width = width
-
-    def get_sidebar(self, position: Literal["left", "right"] = "left") -> XSidebar:
-        return x_sidebar(
-            *self.args,
-            width=f"{int(self.width / 12 * 100)}%",
-            position=position,
-            open="always",
-            **self.kwargs,
-        )
-
-    # Hopefully this is never used. But it makes it Tagifiable to allow us to not expose
-    # `XSidebar` and `PanelSidebar` classes
-    def tagify(self) -> Tag:
-        return self.get_sidebar().tag.tagify()
+    return XPanelSidebar(*args, width=width, **kwargs)
 
 
 def panel_main(
     *args: TagChild | TagAttrs,
-    width: int = 8,
+    # width: int = 8,
     **kwargs: TagAttrValue,
 ) -> Tagifiable:
     """
@@ -277,29 +256,18 @@ def panel_main(
     :func:`~shiny.ui.panel_sidebar`
     :func:`~shiny.ui.layout_sidebar`
     """
-    if width != 8:
-        warn_deprecated(
-            "panel_main(width=)` is being ignored. Given the sidebar width, the main panel will take up the remaining horizontal space."
-        )
     attrs, children = x_consolidate_attrs(*args, **kwargs)
+    if "width" in attrs:
+        if attrs["width"] != 8:
+            warn_deprecated(
+                "panel_main(width=)` is being ignored. Given the sidebar width, the main panel will take up the remaining horizontal space."
+            )
+        del attrs["width"]
+
     if len(attrs) > 0:
-        return PanelMain(attrs=attrs, children=children)
+        return XPanelMain(attrs=attrs, children=children)
 
     return TagList(*children)
-
-
-class PanelMain:
-    # Store `attrs` for `layout_sidebar()` to retrieve
-    attrs: TagAttrs
-    # Return `children` in `layout_sidebar()` via `.tagify()` method
-    children: list[TagChild]
-
-    def __init__(self, *, attrs: TagAttrs, children: list[TagChild]) -> None:
-        self.attrs = attrs
-        self.children = children
-
-    def tagify(self) -> TagList:
-        return TagList(self.children).tagify()
 
 
 # TODO: replace `flowLayout()`/`splitLayout()` with a flexbox wrapper?
