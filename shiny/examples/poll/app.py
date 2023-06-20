@@ -6,7 +6,7 @@ from typing import Any, Awaitable
 
 import pandas as pd
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 SYMBOLS = ["AAA", "BBB", "CCC", "DDD", "EEE", "FFF"]
 

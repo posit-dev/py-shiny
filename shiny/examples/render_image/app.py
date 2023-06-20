@@ -1,4 +1,4 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, render, ui
 from shiny.types import ImgData
 
 app_ui = ui.page_fluid(ui.output_image("image"))

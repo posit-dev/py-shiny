@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from shiny import *
+from shiny import App, ui
 
 js_file = Path(__file__).parent / "js" / "app.js"
 

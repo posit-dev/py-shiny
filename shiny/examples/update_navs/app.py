@@ -1,5 +1,6 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session
 from shiny import experimental as x
+from shiny import reactive, ui
 
 app_ui = x.ui.page_sidebar(
     ui.navset_tab_card(

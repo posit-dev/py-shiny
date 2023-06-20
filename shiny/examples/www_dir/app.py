@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, ui
 
 app_ui = ui.page_fluid(
     ui.tags.link(href="css/styles.css", rel="stylesheet"),

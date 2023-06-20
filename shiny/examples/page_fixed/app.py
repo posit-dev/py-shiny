@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session
 from shiny import experimental as x
+from shiny import render, ui
 
 app_ui = ui.page_fixed(
     x.ui.layout_sidebar(

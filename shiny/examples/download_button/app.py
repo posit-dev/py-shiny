@@ -3,7 +3,7 @@ from datetime import date
 
 import numpy as np
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, ui
 
 app_ui = ui.page_fluid(
     ui.download_button("downloadData", "Download"),

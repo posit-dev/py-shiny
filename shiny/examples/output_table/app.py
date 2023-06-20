@@ -2,7 +2,7 @@ import pathlib
 
 import pandas as pd
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 dir = pathlib.Path(__file__).parent
 mtcars = pd.read_csv(dir / "mtcars.csv")
