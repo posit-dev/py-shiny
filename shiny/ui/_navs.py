@@ -25,7 +25,7 @@ from .._namespaces import resolve_id
 from .._typing_extensions import Literal
 from .._utils import private_random_int
 from ..types import NavSetArg
-from ._bootstrap_row_column import column, row
+from ._bootstrap import column, row
 from ._html_dependencies import bootstrap_deps
 
 
