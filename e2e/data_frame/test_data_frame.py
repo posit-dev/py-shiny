@@ -110,7 +110,7 @@ def test_table_switch(
     expect(summary).to_have_text("Viewing rows 1 through 10 of 20")
 
     scroll_to_end()
-    expect(summary).to_have_text("Viewing rows 12 through 20 of 20")
+    expect(summary).to_have_text("Viewing rows 11 through 20 of 20")
 
     # Switch datasets to much longer one
     select_dataset.set("diamonds")
