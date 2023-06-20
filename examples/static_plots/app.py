@@ -4,7 +4,7 @@ import pandas as pd
 import seaborn as sns
 from plotnine.data import mtcars
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 nav = ui.navset_pill_list(
     ui.nav_control(ui.p("Choose a package", class_="lead text-center")),
