@@ -14,6 +14,7 @@ __all__ = (
     "help_text",
 )
 
+
 from typing import Optional
 
 from htmltools import (
@@ -21,6 +22,7 @@ from htmltools import (
     TagAttrs,
     TagAttrValue,
     TagChild,
+    Tagifiable,
     TagList,
     css,
     div,
@@ -29,12 +31,17 @@ from htmltools import (
     tags,
 )
 
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._typing_extensions import Literal
 from ..module import current_namespace
 from ..types import MISSING, MISSING_TYPE
 from ._html_dependencies import jqui_deps
 from ._utils import get_window_title
+from ._x._sidebar import PanelMain as XPanelMain
+from ._x._sidebar import PanelSidebar as XPanelSidebar
+from ._x._sidebar import layout_sidebar as x_layout_sidebar
+from ._x._utils import consolidate_attrs as x_consolidate_attrs
 
 
 # TODO: make a python version of the layout guide?
@@ -117,7 +124,7 @@ def layout_sidebar(
     sidebar: TagChild,
     main: TagChild,
     position: Literal["left", "right"] = "left",
-) -> Tag:
+) -> Tagifiable:
     """
     Layout a sidebar and main area
 
@@ -147,7 +154,17 @@ def layout_sidebar(
     :func:`~shiny.ui.panel_sidebar`
     :func:`~shiny.ui.panel_main`
     """
-    return row(sidebar, main) if position == "left" else row(main, sidebar)
+
+    # Not requiring `XPanelSidebar`/`XPanelMain` to not expose the `_x` module if possible
+    if not isinstance(sidebar, XPanelSidebar):
+        sidebar = XPanelSidebar(sidebar)
+    if not isinstance(main, XPanelMain):
+        main = XPanelMain(attrs={}, children=[main])
+
+    return x_layout_sidebar(
+        sidebar.get_sidebar(position=position),
+        main,
+    )
 
 
 def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
@@ -178,8 +195,10 @@ def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
 
 
 def panel_sidebar(
-    *args: TagChild | TagAttrs, width: int = 4, **kwargs: TagAttrValue
-) -> Tag:
+    *args: TagChild | TagAttrs,
+    width: int = 4,
+    **kwargs: TagAttrValue,
+) -> Tagifiable:
     """
     Create a sidebar panel
 
@@ -205,16 +224,13 @@ def panel_sidebar(
     :func:`~shiny.ui.panel_sidebar`
     :func:`~shiny.ui.panel_main`
     """
-    return div(
-        {"class": "col-sm-" + str(width)},
-        # A11y semantic landmark for sidebar
-        tags.form({"class": "well"}, *args, role="complementary", **kwargs),
-    )
+    return XPanelSidebar(*args, width=width, **kwargs)
 
 
 def panel_main(
-    *args: TagChild | TagAttrs, width: int = 8, **kwargs: TagAttrValue
-) -> Tag:
+    *args: TagChild | TagAttrs,
+    **kwargs: TagAttrValue,
+) -> Tagifiable:
     """
     Create an main area panel
 
@@ -224,8 +240,6 @@ def panel_main(
     ----------
     args
         UI elements to include inside the main area.
-    width
-        The width of the main area (an integer between 1 and 12).
     kwargs
         Attributes to place on the main area tag.
 
@@ -239,13 +253,20 @@ def panel_main(
     :func:`~shiny.ui.panel_sidebar`
     :func:`~shiny.ui.layout_sidebar`
     """
-    return div(
-        {"class": "col-sm-" + str(width)},
-        # A11y semantic landmark for main region
-        *args,
-        role="main",
-        **kwargs,
-    )
+    attrs, children = x_consolidate_attrs(*args, **kwargs)
+    if "width" in attrs:
+        if attrs["width"] != 8:
+            warn_deprecated(
+                "panel_main(width=)` is being ignored. Given the sidebar width, the main panel will take up the remaining horizontal space."
+            )
+        del attrs["width"]
+
+    if len(attrs) > 0:
+        # While we could return an `XPanelMain()` for empty attrs,
+        # let's try to limit the exposure of the class object
+        return XPanelMain(attrs=attrs, children=children)
+
+    return TagList(*children)
 
 
 # TODO: replace `flowLayout()`/`splitLayout()` with a flexbox wrapper?

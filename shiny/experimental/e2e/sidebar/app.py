@@ -14,30 +14,7 @@ app_ui = ui.page_fixed(
         class_="my-2",
     ),
     x.ui.layout_sidebar(
-        x.ui.layout_sidebar(
-            ui.h2("Sidebar Layout"),
-            ui.output_ui("ui_content", tabindex=0),
-            height=300,
-            id="main_inner",
-            border=False,
-            border_radius=False,
-            sidebar=x.ui.sidebar(
-                "Inner Sidebar",
-                ui.input_select(
-                    "animal",
-                    "Animal",
-                    choices=animals,
-                    selected=animals[0],
-                ),
-                id="sidebar_inner",
-                # width=200,
-                bg=light_color,
-                open="desktop",
-            ),
-        ),
-        id="main_outer",
-        class_="p-0",
-        sidebar=x.ui.sidebar(
+        x.ui.sidebar(
             "Outer Sidebar",
             ui.input_select(
                 "adjective",
@@ -52,6 +29,29 @@ app_ui = ui.page_fixed(
             open="desktop",
             max_height_mobile="300px",
         ),
+        x.ui.layout_sidebar(
+            x.ui.sidebar(
+                "Inner Sidebar",
+                ui.input_select(
+                    "animal",
+                    "Animal",
+                    choices=animals,
+                    selected=animals[0],
+                ),
+                id="sidebar_inner",
+                # width=200,
+                bg=light_color,
+                open="desktop",
+            ),
+            ui.h2("Sidebar Layout"),
+            ui.output_ui("ui_content", tabindex=0),
+            height=300,
+            id="main_inner",
+            border=False,
+            border_radius=False,
+        ),
+        id="main_outer",
+        class_="p-0",
     ),
     title="bslib | Tests | Dynamic Sidebars",
 )

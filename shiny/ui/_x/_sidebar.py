@@ -7,12 +7,9 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, css, div
 from htmltools import svg as svgtags
 from htmltools import tags
 
-from ..._deprecated import warn_deprecated
 from ..._typing_extensions import Literal
-from ...session import Session, require_active_session
 
 # from ._color import get_color_contrast
-from ._card import CardItem
 from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
 from ._fill import as_fill_item, as_fillable_container
 from ._htmldeps import sidebar_dependency
@@ -46,7 +43,6 @@ class Sidebar:
     #     return self.tag.tagify()
 
 
-# TODO-maindocs; @add_example()
 def sidebar(
     *args: TagChild | TagAttrs,
     width: CssUnit = 250,
@@ -149,6 +145,7 @@ def sidebar(
         title = div(str(title), class_="sidebar-title")
 
     collapse_tag = None
+    # Code
     if open != "always":
         collapse_tag = tags.button(
             _collapse_icon(),
@@ -186,8 +183,8 @@ def sidebar(
 
 # TODO-maindocs; @add_example()
 def layout_sidebar(
-    sidebar: Sidebar | TagChild | TagAttrs,
-    *args: TagChild | TagAttrs,
+    sidebar: Sidebar,
+    content: PanelMain,
     fillable: bool = True,
     fill: bool = True,
     bg: Optional[str] = None,
@@ -199,7 +196,7 @@ def layout_sidebar(
     padding: Optional[CssUnit | list[CssUnit]] = None,
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
-) -> CardItem:
+) -> Tag:
     """
     Sidebar layout
 
@@ -251,43 +248,8 @@ def layout_sidebar(
     --------
     * :func:`~shiny.experimental.ui.sidebar()`
     """
-    updated_args = list(args)
-    has_upgraded: bool = False
-    # Use `args` here so `updated_args` can be safely altered in place
-    for arg in args:
-        if isinstance(arg, Sidebar):
-            raise TypeError(
-                "Please use the `sidebar=` argument to supply a `sidebar()`"
-            )
-        # TODO-future: >= 2023-11-01); Once `panel_sidebar()` is removed, we can remove this loop
-        if isinstance(arg, DeprecatedPanelSidebar):
-            if has_upgraded:
-                raise TypeError(
-                    "Multiple `panel_sidebar()` calls detected. Please use the `sidebar=` argument and supply a `sidebar()`"
-                )
-            if sidebar is not None:
-                raise TypeError(
-                    "A `panel_sidebar()` was supplied along with a `sidebar=` value. Please use only `sidebar=` to supply a `sidebar()`."
-                )
-            sidebar = arg.sidebar
-            updated_args.remove(arg)
-            has_upgraded = True
 
-    if not isinstance(sidebar, Sidebar):
-        sidebar = _sidebar_func(sidebar)
-
-    # TODO-future; implement
-    # if fg is None and bg is not None:
-    #     fg = get_color_contrast(bg)
-    # if bg is None and fg is not None:
-    #     bg = get_color_contrast(fg)
-
-    attrs, children = consolidate_attrs(*updated_args, **kwargs)
-    # TODO-future: >= 2023-11-01); Once `panel_main()` is removed, we can remove this loop
-    for child in children:
-        if isinstance(child, DeprecatedPanelMain):
-            attrs = consolidate_attrs(attrs, child.attrs)[0]
-            # child.children will be handled when tagified
+    attrs, _ = consolidate_attrs(**content.attrs, **kwargs)
 
     main = div(
         {
@@ -302,7 +264,7 @@ def layout_sidebar(
             ),
         },
         attrs,
-        *children,
+        content,
     )
     if fillable:
         main = as_fillable_container(main)
@@ -336,66 +298,10 @@ def layout_sidebar(
     if fill:
         res = as_fill_item(res)
 
-    return CardItem(res)
+    return res
 
 
-# TODO-maindocs; @add_example()
-def sidebar_toggle(
-    id: str,
-    open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
-    session: Session | None = None,
-) -> None:
-    """
-    Toggle a sidebar
-
-    Toggle a `sidebar()` state during an active Shiny user session.
-
-    Parameters
-    ----------
-    id
-        The `id` of the `sidebar()` to toggle.
-    open
-        The desired state of the sidebar, choosing from the following options:
-
-        * `None`: toggle sidebar open/closed
-        * `"open"` or `True`: The sidebar starts open.
-        * `"closed"` or `False`: The sidebar starts closed.
-
-        Note that `sidebar_toggle()` can only open or close the sidebar, so it does not
-        support the `"desktop"` and `"always"`
-    session
-        A Shiny session object (the default should almost always be used).
-
-    See Also
-    --------
-    * :func:`~shiny.experimental.ui.sidebar()`
-    * :func:`~shiny.experimental.ui.layout_sidebar()`
-    """
-    session = require_active_session(session)
-
-    method: Literal["toggle", "open", "close"]
-    if open is None or open == "toggle":
-        method = "toggle"
-    elif open is True or open == "open":
-        method = "open"
-    elif open is False or open == "closed":
-        method = "close"
-    else:
-        if open == "always" or open == "desktop":
-            raise ValueError(
-                f"`open = '{open}'` is not supported by `sidebar_toggle()`"
-            )
-        raise ValueError(
-            "open must be NULL (or 'toggle'), TRUE (or 'open'), or FALSE (or 'closed')"
-        )
-
-    def callback() -> None:
-        session.send_input_message(id, {"method": method})
-
-    session.on_flush(callback, once=True)
-
-
-_sidebar_func = sidebar
+# _sidebar_func = sidebar
 
 
 def _collapse_icon() -> Tag:
@@ -423,70 +329,34 @@ def _sidebar_init_js() -> Tag:
     )
 
 
-########################################################
+###################################################################
 
 
-# TODO: use class to single out sidebar value (in layout_sidebar)
-def panel_sidebar(
-    *args: TagChild | TagAttrs,
-    width: int = 4,
-    **kwargs: TagAttrValue,
-) -> DeprecatedPanelSidebar:
-    """Deprecated. Please use `ui.sidebar()` instead of `ui.panel_sidebar()`."""
-    # TODO-future: >= 2023-11-01; Add deprecation message below
-    # Plan of action:
-    # * No deprecation messages today (2023-05-18), and existing code _just works_.
-    # * Change all examples to use the new API.
-    # * In, say, 6 months, start emitting messages for code that uses the old API.
-
-    # warn_deprecated("Please use `sidebar()` instead of `panel_sidebar()`. `panel_sidebar()` will go away in a future version of Shiny.")
-    return DeprecatedPanelSidebar(
-        *args,
-        width=width,
-        **kwargs,
-    )
-
-
-class DeprecatedPanelSidebar:
+class PanelSidebar:
     # Store `attrs` for `layout_sidebar()` to retrieve
-    sidebar: Sidebar
-
     def __init__(
         self, *args: TagChild | TagAttrs, width: int = 4, **kwargs: TagAttrValue
     ) -> None:
-        self.sidebar = sidebar(
-            *args,
-            width=f"{int(width / 12 * 100)}%",
-            **kwargs,
+        self.args = args
+        self.kwargs = kwargs
+        self.width = width
+
+    def get_sidebar(self, position: Literal["left", "right"] = "left") -> Sidebar:
+        return sidebar(
+            *self.args,
+            width=f"{int(self.width / 12 * 100)}%",
+            position=position,
+            open="always",
+            **self.kwargs,
         )
 
-    # Hopefully this is never used. But wanted to try to be safe
+    # Hopefully this is never used. But it makes it Tagifiable to allow us to not expose
+    # `Sidebar` and `PanelSidebar` classes
     def tagify(self) -> Tag:
-        return self.sidebar.tag.tagify()
+        return self.get_sidebar().tag.tagify()
 
 
-def panel_main(
-    *args: TagChild | TagAttrs,
-    width: int = 8,
-    **kwargs: TagAttrValue,
-) -> TagList | DeprecatedPanelMain:
-    """Deprecated. Please supply `panel_main(*args)` directly to `layout_sidebar()`."""
-    # TODO-future: >= 2023-11-01; Add deprecation message below
-    # warn_deprecated(
-    #     "Please supply `panel_main(*args)` directly to `layout_sidebar()`."
-    # )
-    # warn if keys are being ignored
-    attrs, children = consolidate_attrs(*args, **kwargs)
-    if len(attrs) > 0:
-        return DeprecatedPanelMain(attrs=attrs, children=children)
-        warn_deprecated(
-            "`*args: TagAttrs` or `**kwargs: TagAttrValue` values supplied to `panel_main()` are being ignored. Please supply them directly to `layout_sidebar()`."
-        )
-
-    return TagList(*children)
-
-
-class DeprecatedPanelMain:
+class PanelMain:
     # Store `attrs` for `layout_sidebar()` to retrieve
     attrs: TagAttrs
     # Return `children` in `layout_sidebar()` via `.tagify()` method

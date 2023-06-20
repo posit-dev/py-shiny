@@ -186,8 +186,8 @@ def navset_card_body(content: Tag, sidebar: Optional[Sidebar] = None) -> CardIte
     content = _make_tabs_fillable(content, fillable=True, gap=0, padding=0)
     if sidebar:
         return layout_sidebar(
+            sidebar,
             content,
-            sidebar=sidebar,
             fillable=True,
             border=False,
         )
@@ -419,8 +419,8 @@ class NavSetBar(NavSet):
                 # the .container-fluid class adds padding that we don't want)
                 {"class": "container"} if not self.fluid else None,
                 layout_sidebar(
+                    self.sidebar,
                     contents,
-                    sidebar=self.sidebar,
                     fillable=self.fillable is not False,
                     border_radius=False,
                     border=not self.fluid,
