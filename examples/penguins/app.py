@@ -89,10 +89,11 @@ def server(input: Inputs, output: Outputs, session: Session):
                 title,
                 count,
                 {"class": "pt-1 pb-0"},
-                showcase=ui.tags.img(
-                    x.ui.as_fill_item(),
-                    {"style": "object-fit:contain;"},
-                    src=showcase_img,
+                showcase=x.ui.as_fill_item(
+                    ui.tags.img(
+                        {"style": "object-fit:contain;"},
+                        src=showcase_img,
+                    )
                 ),
                 theme_color=None,
                 style=f"background-color: {bgcol};",
