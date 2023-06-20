@@ -5,6 +5,7 @@ from typing import Union, overload
 __all__ = (
     "CssUnit",
     "validate_css_unit",
+    "validate_css_padding",
 )
 
 CssUnit = Union[
