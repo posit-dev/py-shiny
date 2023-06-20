@@ -86,7 +86,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const rowVirtualizer = useVirtualizer({
     count: rowData.length,
     getScrollElement: () => containerRef.current,
-    estimateSize: () => 50,
+    estimateSize: () => 31,
     paddingStart: theadRef.current?.clientHeight ?? 0,
     // In response to https://github.com/rstudio/py-shiny/pull/538/files#r1228352446
     // (the default scrollingDelay is 150)
