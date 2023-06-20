@@ -35,8 +35,8 @@ TagFillingLayoutT = TypeVar("TagFillingLayoutT", bound="Tag | FillingLayout")
 TagT = TypeVar("TagT", bound="Tag")
 
 
-fill_item_class = "html-fill-item"
-fill_container_class = "html-fill-container"
+FILL_ITEM_CLASS = "html-fill-item"
+FILL_CONTAINER_CLASS = "html-fill-container"
 
 # We're currently not supporting the div(as_fillable_container()) API, in order to keep
 # the function easier to understand. If we do implement something like that, we should
@@ -109,13 +109,13 @@ def bind_fill_role(
     tag = _add_role(
         tag,
         condition=item,
-        class_=fill_item_class,
+        class_=FILL_ITEM_CLASS,
         overwrite=overwrite,
     )
     tag = _add_role(
         tag,
         condition=container,
-        class_=fill_container_class,
+        class_=FILL_CONTAINER_CLASS,
         overwrite=overwrite,
     )
     return tag
@@ -380,7 +380,7 @@ def is_fillable_container(x: TagChild | FillingLayout) -> bool:
     """
     # TODO-future; Handle widgets
     # # won't actually work until (htmltools#334) gets fixed
-    # renders_to_tag_class(x, fill_container_class, ".html-widget")
+    # renders_to_tag_class(x, FILL_CONTAINER_CLASS, ".html-widget")
 
     return _is_fill_layout(x, layout="fillable")
 
@@ -415,7 +415,7 @@ def is_fill_item(x: TagChild | FillingLayout) -> bool:
     """
     # TODO-future; Handle widgets
     # # won't actually work until (htmltools#334) gets fixed
-    # renders_to_tag_class(x, fill_item_class, ".html-widget")
+    # renders_to_tag_class(x, FILL_ITEM_CLASS, ".html-widget")
 
     return _is_fill_layout(x, layout="fill")
 
@@ -432,13 +432,13 @@ def _is_fill_layout(
 
     if layout == "fill":
         if isinstance(x, Tag):
-            return x.has_class(fill_item_class)
+            return x.has_class(FILL_ITEM_CLASS)
         if isinstance(x, FillingLayout):
             return x.is_fill_item()
 
     elif layout == "fillable":
         if isinstance(x, Tag):
-            return x.has_class(fill_container_class)
+            return x.has_class(FILL_CONTAINER_CLASS)
         if isinstance(x, FillingLayout):
             return x.is_fillable_container()
 

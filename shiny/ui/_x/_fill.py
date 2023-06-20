@@ -15,14 +15,14 @@ __all__ = (
 TagT = TypeVar("TagT", bound="Tag")
 
 
-fill_item_class = "html-fill-item"
-fill_container_class = "html-fill-container"
+FILL_ITEM_CLASS = "html-fill-item"
+FILL_CONTAINER_CLASS = "html-fill-container"
 
 
 def as_fillable_container(
     tag: TagT,
 ) -> TagT:
-    tag_prepend_class(tag, fill_container_class)
+    tag_prepend_class(tag, FILL_CONTAINER_CLASS)
     tag.append(fill_dependency())
     return tag
 
@@ -30,6 +30,6 @@ def as_fillable_container(
 def as_fill_item(
     tag: TagT,
 ) -> TagT:
-    tag_prepend_class(tag, fill_item_class)
+    tag_prepend_class(tag, FILL_ITEM_CLASS)
     tag.append(fill_dependency())
     return tag
