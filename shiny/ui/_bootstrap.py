@@ -229,7 +229,6 @@ def panel_sidebar(
 
 def panel_main(
     *args: TagChild | TagAttrs,
-    # width: int = 8,
     **kwargs: TagAttrValue,
 ) -> Tagifiable:
     """
@@ -241,8 +240,6 @@ def panel_main(
     ----------
     args
         UI elements to include inside the main area.
-    width
-        The width of the main area (an integer between 1 and 12).
     kwargs
         Attributes to place on the main area tag.
 
@@ -265,6 +262,8 @@ def panel_main(
         del attrs["width"]
 
     if len(attrs) > 0:
+        # While we could return an `XPanelMain()` for empty attrs,
+        # let's try to limit the exposure of the class object
         return XPanelMain(attrs=attrs, children=children)
 
     return TagList(*children)
