@@ -6,8 +6,7 @@ from typing import List
 
 import pandas as pd
 import seaborn as sns
-
-# import shinyswatch
+import shinyswatch
 from colors import bg_palette, palette
 
 import shiny.experimental as x
@@ -22,38 +21,32 @@ numeric_cols: List[str] = df.select_dtypes(include=["float64"]).columns.tolist()
 species: List[str] = df["Species"].unique().tolist()
 species.sort()
 
-app_ui = ui.page_fluid(
-    # shinyswatch.theme.pulse(), # Uncomment when shinyswatch it updated
-    ui.layout_sidebar(
-        ui.panel_sidebar(
-            # Artwork by @allison_horst
-            ui.tags.img(
-                src="palmerpenguins.png", width="80%", class_="mt-0 mb-2 mx-auto"
-            ),
-            ui.input_selectize(
-                "xvar",
-                "X variable",
-                numeric_cols,
-                selected="Bill Length (mm)",
-            ),
-            ui.input_selectize(
-                "yvar",
-                "Y variable",
-                numeric_cols,
-                selected="Bill Depth (mm)",
-            ),
-            ui.input_checkbox_group(
-                "species", "Filter by species", species, selected=species
-            ),
-            ui.hr(),
-            ui.input_switch("by_species", "Show species", value=True),
-            ui.input_switch("show_margins", "Show marginal plots", value=True),
+app_ui = x.ui.page_sidebar(
+    x.ui.sidebar(
+        # Artwork by @allison_horst
+        ui.tags.img(src="palmerpenguins.png", width="80%", class_="mt-0 mb-2 mx-auto"),
+        ui.input_selectize(
+            "xvar",
+            "X variable",
+            numeric_cols,
+            selected="Bill Length (mm)",
         ),
-        ui.panel_main(
-            ui.output_ui("value_boxes"),
-            x.ui.output_plot("scatter", fill=True),
+        ui.input_selectize(
+            "yvar",
+            "Y variable",
+            numeric_cols,
+            selected="Bill Depth (mm)",
         ),
+        ui.input_checkbox_group(
+            "species", "Filter by species", species, selected=species
+        ),
+        ui.hr(),
+        ui.input_switch("by_species", "Show species", value=True),
+        ui.input_switch("show_margins", "Show marginal plots", value=True),
     ),
+    shinyswatch.theme.pulse(),
+    ui.output_ui("value_boxes"),
+    x.ui.output_plot("scatter", fill=True),
 )
 
 
@@ -104,7 +97,6 @@ def server(input: Inputs, output: Outputs, session: Session):
                 ),
                 theme_color=None,
                 style=f"background-color: {bgcol};",
-                height="90px",
                 full_screen=True,
             )
 
