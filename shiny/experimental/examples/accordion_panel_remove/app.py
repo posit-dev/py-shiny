@@ -28,19 +28,22 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    # Copy the list for user
+    user_choices = [choice for choice in choices]
+
     @reactive.Effect
     @reactive.event(input.remove_panel)
     def _():
-        if len(choices) == 0:
+        if len(user_choices) == 0:
             ui.notification_show("No more panels to remove!")
             return
 
         # Remove panel
-        x.ui.accordion_panel_remove("acc", f"Section { choices.pop() }")
+        x.ui.accordion_panel_remove("acc", f"Section { user_choices.pop() }")
 
         label = "No more panels to remove!"
-        if len(choices) > 0:
-            label = f"Remove Section {choices[-1]}"
+        if len(user_choices) > 0:
+            label = f"Remove Section {user_choices[-1]}"
         ui.update_action_button("remove_panel", label=label)
 
 

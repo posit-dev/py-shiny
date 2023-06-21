@@ -59,12 +59,18 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
     has_efg = False
     has_alternate = True
+    has_updates = False
 
     @reactive.Effect
     def _():
         req(input.alternate())
 
-        sections = ["Section A", "Section B", "Section C", "Section D"]
+        sections = [
+            "updated_section_a" if has_updates else "Section A",
+            "Section B",
+            "Section C",
+            "Section D",
+        ]
         if has_efg:
             sections.extend(["Section E", "Section F", "Section G"])
 
@@ -86,8 +92,6 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             x.ui.accordion_panel_insert("acc", make_panel("F"), "Section E")
             x.ui.accordion_panel_insert("acc", make_panel("G"), "Section F")
         has_efg = not has_efg
-
-    has_updates = False
 
     @reactive.Effect
     def _():
