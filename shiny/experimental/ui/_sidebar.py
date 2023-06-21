@@ -40,10 +40,12 @@ class Sidebar:
         self.color_fg = color_fg
         self.color_bg = color_bg
 
-    # # This does not contain the `collapse_tag`
-    # # The `Sidebar` class should use it's fields, not this method
-    # def tagify(self) -> Tag:
-    #     return self.tag.tagify()
+    # The `Sidebar` class should use it's fields, not this method
+    def tagify(self) -> Tag:
+        # Similar to `NavMenu.tagify()`
+        raise NotImplementedError(
+            "`Sidebar` objects must be handled by `layout_sidebar(sidebar)`."
+        )
 
 
 # TODO-maindocs; @add_example()
