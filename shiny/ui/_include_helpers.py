@@ -97,7 +97,7 @@ def include_js(
 
 @add_example()
 def include_css(
-    path: str, *, method: Literal["link", "link_files", "inline"] = "link"
+    path: Path | str, *, method: Literal["link", "link_files", "inline"] = "link"
 ) -> Tag:
     """
     Include a CSS file

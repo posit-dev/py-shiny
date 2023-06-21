@@ -1,6 +1,6 @@
 import random
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.markdown(

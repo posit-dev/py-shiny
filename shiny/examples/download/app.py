@@ -7,19 +7,18 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 
-from shiny import *
-from shiny.ui import div, p
+from shiny import App, Inputs, Outputs, Session, ui
 
 
 def make_example(id: str, label: str, title: str, desc: str, extra: Any = None):
     return ui.column(
         4,
-        div(
+        ui.div(
             {"class": "card mb-4"},
-            div(title, class_="card-header"),
-            div(
+            ui.div(title, class_="card-header"),
+            ui.div(
                 {"class": "card-body"},
-                p(desc, class_="card-text text-muted"),
+                ui.p(desc, class_="card-text text-muted"),
                 extra,
                 ui.download_button(id, label, class_="btn-primary"),
             ),

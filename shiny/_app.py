@@ -55,7 +55,7 @@ class App:
 
     .. code-block:: python
 
-        from shiny import *
+        from shiny import  App, Inputs, Outputs, Session, ui
 
         app_ui = ui.page_fluid("Hello Shiny!")
 
