@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, Outputs, Session, render, req, ui
 
 app_ui = ui.page_fluid(
     ui.input_checkbox_group(
