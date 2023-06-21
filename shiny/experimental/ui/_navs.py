@@ -114,7 +114,7 @@ class NavSet:
         nav, content = _render_navset(
             *self.args, ul_class=ul_class, id=id, selected=self.selected, context={}
         )
-        return self.layout(nav, content)
+        return self.layout(nav, content).tagify()
 
     # Types must match output of `_render_navset() -> Tuple[Tag, Tag]`
     def layout(self, nav: Tag, content: Tag) -> TagList | Tag:
