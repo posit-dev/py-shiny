@@ -22,8 +22,19 @@ from ._render import (  # noqa: F401
     ui,
 )
 
+from ._dataframe import (  # noqa: F401
+    RenderDataFrame,  # pyright: ignore[reportUnusedImport]
+    RenderDataFrameAsync,  # pyright: ignore[reportUnusedImport]
+    DataGrid,
+    DataTable,
+    data_frame,
+)
+
 
 __all__ = (
+    "DataGrid",
+    "DataTable",
+    "data_frame",
     "text",
     "plot",
     "image",

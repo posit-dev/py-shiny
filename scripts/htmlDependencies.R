@@ -4,9 +4,8 @@ versions <- list()
 
 # Use local lib path for installing packages so we don't pollute the user's library
 withr::local_temp_libpaths()
-
 pak::pkg_install(c("rstudio/bslib@main", "rstudio/shiny@main", "rstudio/htmltools@main"))
-# pak::pkg_install(c("cran::bslib", "cran::shiny"))
+# pak::pkg_install(c("cran::bslib", "cran::shiny", "cran::htmltools"))
 
 versions["shiny_html_deps"] <- as.character(packageVersion("shiny"))
 versions["bslib"] <- as.character(packageVersion("bslib"))
@@ -40,12 +39,17 @@ library(bslib)
 shiny_path <- fs::path(getwd(), "shiny")
 www <- fs::path(shiny_path, "www")
 www_shared <- fs::path(www, "shared")
+
 x_www <- fs::path(shiny_path, "experimental", "www")
-x_www_components <- fs::path(x_www, "bslib", "components")
+x_www_bslib_components <- fs::path(x_www, "bslib", "components")
+x_www_htmltools_fill <- fs::path(x_www, "htmltools", "fill")
+main_x_www <- fs::path(www_shared, "_x")
 
 # Copy over shiny's www/shared directory
-copy_from_pkg <- function(pkg_name, pkg_dir, local_dir) {
-  if (fs::dir_exists(local_dir)) fs::dir_delete(local_dir)
+copy_from_pkg <- function(pkg_name, pkg_dir, local_dir, version_dir = fs::path_dir(local_dir)) {
+  # `version_dir` is "equal to" or "contains" `local_dir`
+  stopifnot(fs::path_has_parent(local_dir, version_dir))
+  if (fs::dir_exists(version_dir)) fs::dir_delete(version_dir)
   fs::dir_create(local_dir)
 
   stopifnot(local_dir != ".")
@@ -64,7 +68,7 @@ copy_from_pkg <- function(pkg_name, pkg_dir, local_dir) {
   }
   # Save pkg version info
   write_json(
-    fs::path(local_dir, "_versions.json"),
+    fs::path(version_dir, "_version.json"),
     list(
       package = pkg_name,
       version = pkg_source_version(pkg_name)
@@ -74,13 +78,13 @@ copy_from_pkg <- function(pkg_name, pkg_dir, local_dir) {
 
 
 # Copy over bslib's components directory
-copy_from_pkg("bslib", "components", x_www_components)
+copy_from_pkg("bslib", "components", x_www_bslib_components)
 # Remove unused Sass files
 fs::file_delete(
-  fs::dir_ls(x_www_components, type = "file", regexp = "\\.scss$")
+  fs::dir_ls(x_www_bslib_components, type = "file", regexp = "\\.scss$")
 )
 # Remove unused tag require
-fs::file_delete(fs::path(x_www_components, "tag-require.js"))
+fs::file_delete(fs::path(x_www_bslib_components, "tag-require.js"))
 
 # Copy over htmltools's fill directory
 copy_from_pkg("htmltools", "fill", fs::path(x_www, "htmltools", "fill"))
@@ -89,7 +93,7 @@ copy_from_pkg("htmltools", "fill", fs::path(x_www, "htmltools", "fill"))
 
 
 # Copy over shiny's www/shared directory
-copy_from_pkg("shiny", "www/shared", www_shared)
+copy_from_pkg("shiny", "www/shared", www_shared, www_shared)
 
 # Don't need legacy (hopefully)
 fs::dir_delete(fs::path(www_shared, "legacy"))
@@ -158,4 +162,28 @@ cat(
   "\n",
   version_all,
   sep = ""
+)
+
+
+
+# ------------------------------------------------------------------------------
+# Copy x assets to shiny main_x assets
+
+if (fs::dir_exists(main_x_www)) fs::dir_delete(main_x_www)
+
+main_x_bslib_components <- fs::path(main_x_www, "bslib")
+main_x_htmltools_fill <- fs::path(main_x_www, "htmltools")
+fs::dir_create(c(main_x_bslib_components, main_x_htmltools_fill))
+
+# Copy bslib
+fs::dir_copy(x_www_bslib_components, main_x_bslib_components)
+# Copy htmltools
+fs::dir_copy(x_www_htmltools_fill, main_x_htmltools_fill)
+# Remove unused files
+fs::file_delete(
+  fs::dir_ls(
+    fs::path(main_x_bslib_components, "components"),
+    regexp="(_version|sidebar)",
+    invert = TRUE
+  )
 )

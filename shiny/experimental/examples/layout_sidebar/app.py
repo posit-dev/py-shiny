@@ -5,8 +5,8 @@ from shiny import App, ui
 
 app_ui = ui.page_fluid(
     x.ui.layout_sidebar(
+        "Sidebar content",
         "Main content",
-        sidebar="Sidebar content",
     ),
 )
 

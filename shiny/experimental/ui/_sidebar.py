@@ -186,8 +186,8 @@ def sidebar(
 
 # TODO-maindocs; @add_example()
 def layout_sidebar(
+    sidebar: Sidebar | TagChild | TagAttrs,
     *args: TagChild | TagAttrs,
-    sidebar: Optional[Sidebar | TagChild | TagAttrs] = None,
     fillable: bool = True,
     fill: bool = True,
     bg: Optional[str] = None,
@@ -275,7 +275,6 @@ def layout_sidebar(
 
     if not isinstance(sidebar, Sidebar):
         sidebar = _sidebar_func(sidebar)
-    assert isinstance(sidebar, Sidebar)
 
     # TODO-future; implement
     # if fg is None and bg is not None:

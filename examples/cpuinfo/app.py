@@ -13,9 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from shiny import App, Inputs, Outputs, Session
-from shiny import experimental as x
-from shiny import reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 # The agg matplotlib backend seems to be a little more efficient than the default when
 # running on macOS, and also gives more consistent results across operating systems
@@ -55,35 +53,8 @@ app_ui = ui.page_fluid(
         % f"{ncpu*4}em"
     ),
     ui.h3("CPU Usage %", class_="mt-2"),
-    x.ui.layout_sidebar(
-        ui.div(
-            {"class": "card mb-3"},
-            ui.div(
-                {"class": "card-body"},
-                ui.h5({"class": "card-title mt-0"}, "Graphs"),
-                ui.output_plot("plot", height=f"{ncpu * 40}px"),
-            ),
-            ui.div(
-                {"class": "card-footer"},
-                ui.input_numeric("sample_count", "Number of samples per graph", 50),
-            ),
-        ),
-        ui.div(
-            {"class": "card"},
-            ui.div(
-                {"class": "card-body"},
-                ui.h5({"class": "card-title m-0"}, "Heatmap"),
-            ),
-            ui.div(
-                {"class": "card-body overflow-auto pt-0"},
-                ui.output_table("table"),
-            ),
-            ui.div(
-                {"class": "card-footer"},
-                ui.input_numeric("table_rows", "Rows to display", 5),
-            ),
-        ),
-        sidebar=x.ui.sidebar(
+    ui.layout_sidebar(
+        ui.panel_sidebar(
             ui.input_select(
                 "cmap",
                 "Colormap",
@@ -97,6 +68,35 @@ app_ui = ui.page_fluid(
             ui.p(ui.input_action_button("reset", "Clear history", class_="btn-sm")),
             ui.input_switch("hold", "Freeze output", value=False),
             class_="mb-3",
+        ),
+        ui.panel_main(
+            ui.div(
+                {"class": "card mb-3"},
+                ui.div(
+                    {"class": "card-body"},
+                    ui.h5({"class": "card-title mt-0"}, "Graphs"),
+                    ui.output_plot("plot", height=f"{ncpu * 40}px"),
+                ),
+                ui.div(
+                    {"class": "card-footer"},
+                    ui.input_numeric("sample_count", "Number of samples per graph", 50),
+                ),
+            ),
+            ui.div(
+                {"class": "card"},
+                ui.div(
+                    {"class": "card-body"},
+                    ui.h5({"class": "card-title m-0"}, "Heatmap"),
+                ),
+                ui.div(
+                    {"class": "card-body overflow-auto pt-0"},
+                    ui.output_table("table"),
+                ),
+                ui.div(
+                    {"class": "card-footer"},
+                    ui.input_numeric("table_rows", "Rows to display", 5),
+                ),
+            ),
         ),
     ),
 )

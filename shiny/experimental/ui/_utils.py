@@ -47,7 +47,7 @@ def consolidate_attrs(
 
 
 def is_01_scalar(x: object) -> TypeGuard[float]:
-    return isinstance(x, float) and x >= 0.0 and x <= 1.0
+    return isinstance(x, (int, float)) and x >= 0.0 and x <= 1.0
 
 
 @overload

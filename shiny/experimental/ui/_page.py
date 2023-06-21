@@ -15,7 +15,7 @@ from htmltools import (
 
 from ..._typing_extensions import Literal
 from ...types import MISSING, MISSING_TYPE, NavSetArg
-from ...ui import page_bootstrap
+from ...ui._page import page_bootstrap
 from ...ui._utils import get_window_title
 from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
 from ._fill import as_fillable_container
@@ -25,8 +25,8 @@ from ._utils import consolidate_attrs
 
 
 def page_sidebar(
+    sidebar: Sidebar | TagChild | TagAttrs,
     *args: TagChild | TagAttrs,
-    sidebar: Optional[Sidebar | TagChild | TagAttrs] = None,
     title: Optional[str | Tag | TagList] = None,
     fillable: bool = True,
     fillable_mobile: bool = False,
@@ -69,8 +69,8 @@ def page_sidebar(
     return page_fillable(
         title,
         layout_sidebar(
+            sidebar,
             *args,
-            sidebar=sidebar,
             fillable=fillable,
             border=False,
             border_radius=False,

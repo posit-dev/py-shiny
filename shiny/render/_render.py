@@ -34,6 +34,8 @@ from typing import (
     Generic,
     Optional,
     TypeVar,
+    Union,
+    cast,
     overload,
 )
 
@@ -47,6 +49,7 @@ from htmltools import TagChild
 if TYPE_CHECKING:
     from ..session import Session
     from ..session._utils import RenderedDeps
+    import pandas as pd
 
 from .. import _utils
 from .._namespaces import ResolvedId
@@ -488,19 +491,18 @@ def image(
 # ======================================================================================
 # RenderTable
 # ======================================================================================
-# It would be nice to specify the return type of RenderPlotFunc to be something like:
-#   Union[pandas.DataFrame, <protocol with .to_pandas()>]
-# However, if we did that, we'd have to import pandas at load time, which adds
-# a nontrivial amount of overhead. So for now, we're just using `object`.
-RenderTableFunc = Callable[[], object]
-RenderTableFuncAsync = Callable[[], Awaitable[object]]
 
 
 @runtime_checkable
 class PandasCompatible(Protocol):
     # Signature doesn't matter, runtime_checkable won't look at it anyway
-    def to_pandas(self) -> object:
+    def to_pandas(self) -> "pd.DataFrame":
         ...
+
+
+TableResult = Union[None, "pd.DataFrame", PandasCompatible]
+RenderTableFunc = Callable[[], TableResult]
+RenderTableFuncAsync = Callable[[], Awaitable[TableResult]]
 
 
 class RenderTable(RenderFunction[object, "RenderedDeps | None"]):
@@ -537,7 +539,7 @@ class RenderTable(RenderFunction[object, "RenderedDeps | None"]):
 
         html: str
         if isinstance(x, pandas.io.formats.style.Styler):
-            html = x.to_html(**self._kwargs)
+            html = x.to_html(**self._kwargs)  # pyright: ignore[reportUnknownMemberType]
         else:
             if not isinstance(x, pandas.DataFrame):
                 if not isinstance(x, PandasCompatible):
@@ -548,9 +550,7 @@ class RenderTable(RenderFunction[object, "RenderedDeps | None"]):
                     )
                 x = x.to_pandas()
 
-            df = typing.cast(pandas.DataFrame, x)
-
-            html = df.to_html(  # pyright: ignore[reportUnknownMemberType]
+            html = x.to_html(  # pyright: ignore[reportUnknownMemberType]
                 index=self._index,
                 classes=self._classes,
                 border=self._border,
@@ -657,7 +657,11 @@ def table(
             )
         else:
             return RenderTable(
-                fn, index=index, classes=classes, border=border, **kwargs
+                cast(RenderTableFunc, fn),
+                index=index,
+                classes=classes,
+                border=border,
+                **kwargs,
             )
 
     if fn is None:

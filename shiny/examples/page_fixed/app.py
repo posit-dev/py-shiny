@@ -1,14 +1,16 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from shiny import App, Inputs, Outputs, Session
-from shiny import experimental as x
-from shiny import render, ui
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fixed(
-    x.ui.layout_sidebar(
-        ui.output_plot("plot"),
-        sidebar=x.ui.sidebar(ui.input_slider("n", "N", min=0, max=100, value=20)),
+    ui.layout_sidebar(
+        ui.panel_sidebar(
+            ui.input_slider("n", "N", min=0, max=100, value=20),
+        ),
+        ui.panel_main(
+            ui.output_plot("plot"),
+        ),
     ),
 )
 

@@ -13,6 +13,7 @@ def test_panel_main_and_panel_sidebar():
 
     try:
         x.ui.layout_sidebar(
+            None,
             x.ui.sidebar("Sidebar!"),  # type: ignore
         )
         raise AssertionError("Should have raised TypeError")
@@ -21,6 +22,7 @@ def test_panel_main_and_panel_sidebar():
 
     try:
         x.ui.layout_sidebar(
+            None,  # sidebar
             x.ui.panel_sidebar("Sidebar!"),
             x.ui.panel_sidebar("Sidebar!"),
         )
@@ -30,8 +32,8 @@ def test_panel_main_and_panel_sidebar():
 
     try:
         x.ui.layout_sidebar(
+            "Sidebar2!",
             x.ui.panel_sidebar("Sidebar!"),
-            sidebar="Sidebar2!",
         )
         raise AssertionError("Should have raised TypeError")
     except TypeError as e:
