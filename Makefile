@@ -112,7 +112,7 @@ install: dist
 	python3 -m pip install dist/shiny*.whl
 
 install-deps: ## install dependencies
-	pip install ".[dev,test]"
+	pip install -e ".[dev,test]"
 
 # ## If caching is ever used, we could run:
 # install-deps: ## install latest dependencies
