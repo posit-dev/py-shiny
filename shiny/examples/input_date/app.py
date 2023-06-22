@@ -1,6 +1,6 @@
 from datetime import date
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, ui
 
 app_ui = ui.page_fluid(
     ui.input_date("date1", "Date:", value="2016-02-29"),

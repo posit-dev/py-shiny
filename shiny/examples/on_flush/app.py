@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_action_button("flush", "Trigger flush"),

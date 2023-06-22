@@ -1,4 +1,4 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, render, ui
 from shiny.types import SilentException
 
 app_ui = ui.page_fluid(

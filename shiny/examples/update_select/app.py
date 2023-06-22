@@ -1,4 +1,4 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.tags.p("The checkbox group controls the select input"),

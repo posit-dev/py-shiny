@@ -1,8 +1,7 @@
 from typing import List
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, ui
 from shiny.types import NavSetArg
-from shiny.ui import h4
 
 
 def nav_controls(prefix: str) -> List[NavSetArg]:
@@ -50,15 +49,15 @@ app_ui = ui.page_navbar(
             }
             """
         ),
-        h4("navset_tab()"),
+        ui.h4("navset_tab()"),
         ui.navset_tab(*nav_controls("navset_tab()")),
-        h4("navset_pill()"),
+        ui.h4("navset_pill()"),
         ui.navset_pill(*nav_controls("navset_pill()")),
-        h4("navset_tab_card()"),
+        ui.h4("navset_tab_card()"),
         ui.navset_tab_card(*nav_controls("navset_tab_card()")),
-        h4("navset_pill_card()"),
+        ui.h4("navset_pill_card()"),
         ui.navset_pill_card(*nav_controls("navset_pill_card()")),
-        h4("navset_pill_list()"),
+        ui.h4("navset_pill_list()"),
         ui.navset_pill_list(*nav_controls("navset_pill_list()")),
     )
 )
