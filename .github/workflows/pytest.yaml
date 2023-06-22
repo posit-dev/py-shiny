@@ -85,7 +85,7 @@ jobs:
       - name: Install node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: "18"
           cache: npm
           cache-dependency-path: examples/brownian/shinymediapipe/package-lock.json
       - name: Install node.js package
@@ -111,7 +111,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,test]"
+          make install-deps
+          make install
       - name: "Build Package"
         run: |
           make dist
