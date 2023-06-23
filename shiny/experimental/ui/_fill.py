@@ -5,7 +5,7 @@ from typing import Optional, TypeVar
 from htmltools import Tag, TagChild, Tagifiable, css
 
 from ..._typing_extensions import Literal, Protocol, runtime_checkable
-from ._css_unit import CssUnit, validate_css_unit
+from ._css_unit import CssUnit, as_css_unit
 from ._htmldeps import fill_dependency
 from ._tag import tag_add_style, tag_prepend_class, tag_remove_class
 
@@ -97,8 +97,8 @@ def bind_fill_role(
         are rendered. Thus, one should be careful not to mark a tag as a fill container
         when it needs to rely on other `display` behavior.
     overwrite
-        whether or not to override previous calls to
-        `bind_fill_role()` (e.g., to remove the item/container role from a tag).
+        whether or not to override previous filling layout calls (e.g., to remove the
+        item/container role from a tag).
 
     Returns
     -------
@@ -150,8 +150,8 @@ def as_fill_carrier(
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
     why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body()`,
-    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    :func:`~shiny.experiemental.ui.card_body`,
+    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
     remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
     these functions are designed to do.
@@ -198,8 +198,8 @@ def as_fillable_container(
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
     why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body()`,
-    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    :func:`~shiny.experiemental.ui.card_body`,
+    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
     remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
     these functions are designed to do.
@@ -246,8 +246,8 @@ def as_fill_item(
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
     why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body()`,
-    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    :func:`~shiny.experiemental.ui.card_body`,
+    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
     remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
     these functions are designed to do.
@@ -284,8 +284,8 @@ def remove_all_fill(tag: TagFillingLayoutT) -> TagFillingLayoutT:
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
     why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body()`,
-    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    :func:`~shiny.experiemental.ui.card_body`,
+    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
     remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
     these functions are designed to do.
@@ -324,8 +324,8 @@ def is_fill_carrier(x: Tag | FillingLayout) -> bool:
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
     why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body()`,
-    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    :func:`~shiny.experiemental.ui.card_body`,
+    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
     remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
     these functions are designed to do.
@@ -355,8 +355,8 @@ def is_fillable_container(x: TagChild | FillingLayout) -> bool:
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
     why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body()`,
-    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    :func:`~shiny.experiemental.ui.card_body`,
+    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
     remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
     these functions are designed to do.
@@ -392,8 +392,8 @@ def is_fill_item(x: TagChild | FillingLayout) -> bool:
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
     why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body()`,
-    :func:`~shiny.experiemental.ui.layout_sidebar()`) possess both `fillable` and `fill`
+    :func:`~shiny.experiemental.ui.card_body`,
+    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
     remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
     these functions are designed to do.
@@ -453,6 +453,10 @@ T = TypeVar("T")
 
 @runtime_checkable
 class FillingLayout(Protocol):
+    """
+    Generic protocol for filling layouts objects
+    """
+
     def add_class(
         self: T,
         class_: str,
@@ -462,6 +466,21 @@ class FillingLayout(Protocol):
         # Currently Unused
         **kwargs: object,
     ) -> T:
+        """
+        Generic method to handle adding a CSS `class` to an object
+
+        Parameters
+        ----------
+        class_
+            A character vector of class names to add to the tag.
+        **kwargs
+            Possible future arguments
+
+        Returns
+        -------
+        :
+            The updated object.
+        """
         ...
 
     def add_style(
@@ -473,27 +492,82 @@ class FillingLayout(Protocol):
         # Currently Unused
         **kwargs: object,
     ) -> T:
+        """
+        Generic method to handle adding a CSS `style` to an object
+
+        Parameters
+        ----------
+        style
+            A character vector of CSS properties to add to the tag.
+        **kwargs
+            Possible future arguments
+
+        Returns
+        -------
+        :
+            The updated object.
+        """
         ...
 
     def is_fill_item(self) -> bool:
+        """
+        Generic method to handle testing if an object is a fill item
+
+        Returns
+        -------
+        :
+            Whether or not the object is a fill item
+        """
         ...
 
     def is_fillable_container(self) -> bool:
+        """
+        Generic method to handle testing if an object is a fillable container
+
+        Returns
+        -------
+        :
+            Whether or not the object is a fillable container
+        """
         ...
 
     def as_fill_item(
         self: T,
     ) -> T:
+        """
+        Generic method to handle coercing an object to a fill item
+
+        Returns
+        -------
+        :
+            The updated object.
+        """
         ...
 
     def as_fillable_container(
         self: T,
     ) -> T:
+        """
+        Generic method to handle coercing an object to a fillable container
+
+        Returns
+        -------
+        :
+            The updated object.
+        """
         ...
 
     def remove_all_fill(
         self: T,
     ) -> T:
+        """
+        Generic method to handle removing all fill properties from an object
+
+        Returns
+        -------
+        :
+            The updated object.
+        """
         ...
 
 
@@ -501,7 +575,7 @@ def _style_units_to_str(**kwargs: CssUnit | None) -> str | None:
     style_items: dict[str, CssUnit] = {}
     for k, v in kwargs.items():
         if v is not None:
-            style_items[k] = validate_css_unit(v)
+            style_items[k] = as_css_unit(v)
 
     return css(**style_items)
 

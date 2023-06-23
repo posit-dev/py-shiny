@@ -10,7 +10,7 @@ from htmltools import tags
 from ..._typing_extensions import Literal
 
 # from ._color import get_color_contrast
-from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
+from ._css_unit import CssUnit, as_css_padding, as_css_unit
 from ._fill import as_fill_item, as_fillable_container
 from ._htmldeps import sidebar_dependency
 from ._utils import consolidate_attrs, trinary
@@ -61,74 +61,6 @@ def sidebar(
     #     If only one of either is provided, an
     #     accessible contrasting color is provided for the opposite color, e.g. setting
     #     `bg` chooses an appropriate `fg` color.
-
-    """
-    Sidebar element
-
-    Create a collapsing sidebar layout by providing a `sidebar()` object to the
-    `sidebar=` argument of:
-
-    * :func:`~shiny.experimental.ui.layout_sidebar()`
-      * Creates a sidebar layout component which can be dropped inside any
-        :func:`~shiny.ui.page()` or `:func:`~shiny.experimental.ui.card()` context.
-    * :func:`~shiny.experimental.ui.page_navbar()`, :func:`~shiny.experimental.ui.navset_card_tab()`, and :func:`~shiny.experimental.ui.navset_card_pill()`
-      * Creates a multi page/tab UI with a singular `sidebar()` (which is
-        shown on every page/tab).
-
-    Parameters
-    ----------
-    *args
-        Contents to the sidebar. Or tag attributes that are supplied to the
-        resolved `Tag` object.
-    width
-        A valid CSS unit used for the width of the sidebar.
-    position
-        Where the sidebar should appear relative to the main content.
-    open
-        The initial state of the sidebar, choosing from the following options:
-
-        * `"desktop"`: The sidebar starts open on desktop screen, closed on mobile.
-            This is default sidebar behavior.
-        * `"open"` or `True`: The sidebar starts open.
-        * `"closed"` or `False`: The sidebar starts closed.
-        * `"always"` or `None`: The sidebar is always open and cannot be closed.
-
-        In `sidebar_toggle()`, `open` indicates the desired state of the sidebar,
-        where the default of `open = None` will cause the sidebar to be toggled
-        open if closed or vice versa. Note that `sidebar_toggle()` can only open or
-        close the sidebar, so it does not support the `"desktop"` and `"always"`
-        options.
-    id
-        A character string. Required if wanting to re-actively read (or update) the
-        `collapsible` state in a Shiny app.
-    title
-        A character title to be used as the sidebar title, which will be wrapped in a
-        `<div>` element with class `sidebar-title`. You can also provide a custom
-        :func:`~shiny.htmltools.tag()` for the title element, in which case you'll
-        likely want to give this element `class = "sidebar-title"`.
-    bg,fg
-        A background or foreground color.
-    class_
-        CSS classes for the sidebar container element, in addition to the fixed
-        `.sidebar` class.
-    max_height_mobile
-        The maximum height of the horizontal sidebar when viewed on mobile devices.
-        The default is `250px` unless the sidebar is included in a
-        :func:`~shiny.experimental.ui.layout_sidebar()` with a specified height, in
-        which case the default is to take up no more than 50% of the layout container.
-
-    Returns
-    -------
-    :
-        A `Sidebar` object.
-
-    See Also
-    --------
-    * :func:`~shiny.experimental.ui.layout_sidebar()`
-    * :func:`~shiny.experimental.ui.navset_navbar()`
-    * :func:`~shiny.experimental.ui.navset_card_tab()`
-    * :func:`~shiny.experimental.ui.navset_card_pill()`
-    """
     # TODO-future; validate `open`, bg, fg, class_, max_height_mobile
 
     if id is None and open != "always":
@@ -197,58 +129,6 @@ def layout_sidebar(
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    """
-    Sidebar layout
-
-    Create a sidebar layout component which can be dropped inside any
-    :func:`~shiny.ui.page()` or :func:`~shiny.experimental.ui.card()` context.
-
-    Parameters
-    ----------
-    sidebar
-        A `Sidebar` object created by :func:`~shiny.experimental.ui.sidebar()`.
-    *args
-        Contents to the main content area. Or tag attributes that are supplied to the
-        resolved `Tag` object.
-    fillable
-        Whether or not the main content area should be wrapped in a fillable container.
-        See :func:`~shiny.experimental.ui.as_fillable_container()` for details.
-    fill
-        Whether or not the sidebar layout should be wrapped in a fillable container. See
-        :func:`~shiny.experimental.ui.as_fill_item()` for details.
-    bg,fg
-        A background or foreground color.
-    border
-        Whether or not to show a border around the sidebar layout.
-    border_radius
-        Whether or not to round the corners of the sidebar layout.
-    border_color
-        A border color.
-    gap
-        A CSS length unit defining the `gap` (i.e., spacing) between elements provided
-        to `*args`. This argument is only applicable when `fillable = TRUE`.
-    padding
-        Padding to use for the body. This can be a numeric vector
-        (which will be interpreted as pixels) or a character vector with valid CSS
-        lengths. The length can be between one and four. If one, then that value
-        will be used for all four sides. If two, then the first value will be used
-        for the top and bottom, while the second value will be used for left and
-        right. If three, then the first will be used for top, the second will be
-        left and right, and the third will be bottom. If four, then the values will
-        be interpreted as top, right, bottom, and left respectively.
-    height
-        Any valid CSS unit to use for the height.
-
-    Returns
-    -------
-    :
-        A `Tag` object.
-
-    See Also
-    --------
-    * :func:`~shiny.experimental.ui.sidebar()`
-    """
-
     attrs, _ = consolidate_attrs(**content.attrs, **kwargs)
 
     main = div(
@@ -259,8 +139,8 @@ def layout_sidebar(
             "style": css(
                 background_color=bg,
                 color=fg,
-                gap=validate_css_unit(gap),
-                padding=validate_css_padding(padding),
+                gap=as_css_unit(gap),
+                padding=as_css_padding(padding),
             ),
         },
         attrs,
@@ -287,12 +167,12 @@ def layout_sidebar(
         data_bslib_sidebar_border=trinary(border),
         data_bslib_sidebar_border_radius=trinary(border_radius),
         style=css(
-            __bslib_sidebar_width=validate_css_unit(sidebar.width),
-            __bslib_sidebar_bg=validate_css_unit(sidebar.color_bg),
-            __bslib_sidebar_fg=validate_css_unit(sidebar.color_fg),
+            __bslib_sidebar_width=as_css_unit(sidebar.width),
+            __bslib_sidebar_bg=as_css_unit(sidebar.color_bg),
+            __bslib_sidebar_fg=as_css_unit(sidebar.color_fg),
             __bs_card_border_color=border_color,
-            height=validate_css_unit(height),
-            __bslib_sidebar_max_height_mobile=validate_css_unit(max_height_mobile),
+            height=as_css_unit(height),
+            __bslib_sidebar_max_height_mobile=as_css_unit(max_height_mobile),
         ),
     )
     if fill:

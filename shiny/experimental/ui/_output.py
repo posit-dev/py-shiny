@@ -92,7 +92,8 @@ def output_plot(
 
     See Also
     -------
-    ~shiny.render.plot ~shiny.ui.output_image
+    * :func:`~shiny.render.plot`
+    * :func:`~shiny.ui.output_image`
     """
 
     # NEW
