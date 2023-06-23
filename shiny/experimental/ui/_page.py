@@ -33,7 +33,7 @@ def page_sidebar(
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> Tag:
     """
     Create a page with a sidebar and a title.
 
@@ -233,7 +233,7 @@ def page_fillable(
     title: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> Tag:
     attrs, children = consolidate_attrs(*args, **kwargs)
 
     style = css(
