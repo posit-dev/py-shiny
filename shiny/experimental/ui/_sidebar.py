@@ -21,6 +21,60 @@ from ._utils import consolidate_attrs, trinary
 
 
 class Sidebar:
+    """
+    Sidebar object
+
+    Class returned from :func:`~shiny.experimental.ui.sidebar`. Please do not use this
+    class directly. Instead, supply the `sidebar()` object to
+    :func:`~shiny.experimental.ui.layout_sidebar`.
+
+    Attributes
+    ----------
+    tag
+        The `Tag` object that represents the sidebar.
+    collapse_tag
+        The `Tag` object that represents the collapse button.
+    position
+        Where the sidebar should appear relative to the main content.
+    open
+        The initial state of the sidebar.
+    width
+        A valid CSS unit used for the width of the sidebar.
+    max_height_mobile
+        The maximum height of the horizontal sidebar when viewed on mobile devices.
+        The default is `250px` unless the sidebar is included in a
+        :func:`~shiny.experimental.ui.layout_sidebar` with a specified height, in
+        which case the default is to take up no more than 50% of the layout container.
+    color_fg
+        A foreground color.
+    color_bg
+        A background color.
+
+    Parameters
+    ----------
+    tag
+        The `Tag` object that represents the sidebar.
+    collapse_tag
+        The `Tag` object that represents the collapse button.
+    position
+        Where the sidebar should appear relative to the main content.
+    open
+        The initial state of the sidebar.
+    width
+        A valid CSS unit used for the width of the sidebar.
+    max_height_mobile
+        The maximum height of the horizontal sidebar when viewed on mobile devices.
+        The default is `250px` unless the sidebar is included in a
+        :func:`~shiny.experimental.ui.layout_sidebar` with a specified height, in
+        which case the default is to take up no more than 50% of the layout container.
+    color_fg
+        A foreground color.
+    color_bg
+        A background color.
+
+
+    """
+
     def __init__(
         self,
         tag: Tag,
@@ -43,6 +97,9 @@ class Sidebar:
 
     # The `Sidebar` class should use it's fields, not this method
     def tagify(self) -> Tag:
+        """
+        Not implemented
+        """
         # Similar to `NavMenu.tagify()`
         raise NotImplementedError(
             "`Sidebar` objects must be handled by `layout_sidebar(sidebar)`."
