@@ -40,6 +40,7 @@ from ._page import page_fillable, page_navbar, page_sidebar
 from ._sidebar import (
     DeprecatedPanelMain,
     DeprecatedPanelSidebar,
+    Sidebar,
     layout_sidebar,
     panel_main,
     panel_sidebar,
@@ -56,6 +57,7 @@ __all__ = (
     # Sidebar
     "DeprecatedPanelMain",
     "DeprecatedPanelSidebar",
+    "Sidebar",
     "layout_sidebar",
     "panel_main",
     "panel_sidebar",
