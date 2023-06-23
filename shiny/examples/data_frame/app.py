@@ -4,7 +4,7 @@ from shinywidgets import output_widget, render_widget
 
 from shiny import App
 from shiny import experimental as x
-from shiny import reactive, render, req, ui
+from shiny import reactive, render, req, session, ui
 
 # Load the Gapminder dataset
 df = px.data.gapminder()
@@ -78,7 +78,14 @@ def server(input, output, session):
             color="country",
             title="Population Over Time",
         )
-        return go.FigureWidget(fig)
+        widget = go.FigureWidget(fig)
+
+        @synchronize_size("country_detail_pop")
+        def on_size_changed(width, height):
+            widget.layout.width = width
+            widget.layout.height = height
+
+        return widget
 
     @output
     @render_widget
@@ -91,7 +98,37 @@ def server(input, output, session):
             color="country",
             title="GDP per Capita Over Time",
         )
-        return go.FigureWidget(fig)
+        widget = go.FigureWidget(fig)
+
+        @synchronize_size("country_detail_percap")
+        def on_size_changed(width, height):
+            widget.layout.width = width
+            widget.layout.height = height
+
+        return widget
+
+
+# This is a hacky workaround to help Plotly plots automatically
+# resize to fit their container. In the future we'll have a
+# built-in solution for this.
+def synchronize_size(output_id):
+    def wrapper(func):
+        input = session.get_current_session().input
+
+        @reactive.Effect
+        def size_updater():
+            func(
+                input[f".clientdata_output_{output_id}_width"](),
+                input[f".clientdata_output_{output_id}_height"](),
+            )
+
+        # When the output that we're synchronizing to is invalidated,
+        # clean up the size_updater Effect.
+        reactive.get_current_context().on_invalidate(size_updater.destroy)
+
+        return size_updater
+
+    return wrapper
 
 
 app = App(app_ui, server)

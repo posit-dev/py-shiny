@@ -30,6 +30,48 @@ class AbstractTabularData(abc.ABC):
 
 
 class DataGrid(AbstractTabularData):
+    """
+    Holds the data and options for a ``shiny.render.data_frame`` output, for a
+    spreadsheet-like view.
+
+    Parameters
+    ----------
+    data
+        A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
+        (e.g., a Polars data frame or Arrow table).
+    width
+        A _maximum_ amount of vertical space for the data grid to occupy, in CSS units
+        (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
+        default is `fit-content`, which sets the grid's width according to its contents.
+        Set this to `100%` to use the maximum available horizontal space.
+    height
+        A _maximum_ amount of vertical space for the data grid to occupy, in CSS units
+        (e.g. `"400px"`) or as a number, which will be interpreted as pixels. If there
+        are more rows than can fit in this space, the grid will scroll. Set the height
+        to `None` to allow the grid to grow to fit all of the rows (this is not
+        recommended for large data sets, as it may crash the browser).
+    summary
+        If `True` (the default), shows a message like "Viewing rows 1 through 10 of 20"
+        below the grid when not all of the rows are being shown. If `False`, the message
+        is not displayed. You can also specify a string template to customize the
+        message, containing `{start}`, `{end}`, and `{total}` tokens. For example:
+        `"Viendo filas {start} a {end} de {total}"`.
+    row_selection_mode
+        Use `"none"` to disable row selection, `"single"` to allow a single row to be
+        selected at a time, and `"multiple"` to allow multiple rows to be selected by
+        clicking on them individually.
+
+    Returns
+    -------
+    :
+        An object suitable for being returned from a `@render.data_frame`-decorated
+        output function.
+
+    See Also
+    --------
+    ~shiny.ui.output_data_frame ~shiny.render.data_frame
+    """
+
     def __init__(
         self,
         data: object,
@@ -39,47 +81,6 @@ class DataGrid(AbstractTabularData):
         summary: Union[bool, str] = True,
         row_selection_mode: Literal["none", "single", "multiple"] = "none",
     ):
-        """
-        Holds the data and options for a ``shiny.render.data_frame`` output, for a
-        spreadsheet-like view.
-
-        Parameters
-        ----------
-        data
-            A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
-            (e.g., a Polars data frame or Arrow table).
-        width
-            A _maximum_ amount of vertical space for the data grid to occupy, in CSS
-            units (e.g. `"400px"`) or as a number, which will be interpreted as pixels.
-            The default is `fit-content`, which sets the grid's width according to its
-            contents. Set this to `100%` to use the maximum available horizontal space.
-        height
-            A _maximum_ amount of vertical space for the data grid to occupy, in CSS
-            units (e.g. `"400px"`) or as a number, which will be interpreted as pixels.
-            If there are more rows than can fit in this space, the grid will scroll. Set
-            the height to `None` to allow the grid to grow to fit all of the rows (this
-            is not recommended for large data sets, as it may crash the browser).
-        summary
-            If `True` (the default), shows a message like "Viewing rows 1 through 10 of
-            20" below the grid when not all of the rows are being shown. If `False`, the
-            message is not displayed. You can also specify a string template to
-            customize the message, containing `{start}`, `{end}`, and `{total}` tokens.
-            For example: `"Viendo filas {start} a {end} de {total}"`.
-        row_selection_mode
-            Use `"none"` to disable row selection, `"single"` to allow a single row to
-            be selected at a time, and `"multiple"` to allow multiple rows to be
-            selected by clicking on them individually.
-
-        Returns
-        -------
-        :
-            An object suitable for being returned from a `@render.data_frame`-decorated
-            output function.
-
-        See Also
-        --------
-        ~shiny.ui.output_data_frame ~shiny.render.data_frame
-        """
         import pandas as pd
 
         self.data: pd.DataFrame = cast(
@@ -113,6 +114,48 @@ class DataGrid(AbstractTabularData):
 
 
 class DataTable(AbstractTabularData):
+    """
+    Holds the data and options for a ``shiny.render.data_frame`` output, for a
+    spreadsheet-like view.
+
+    Parameters
+    ----------
+    data
+        A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
+        (e.g., a Polars data frame or Arrow table).
+    width
+        A _maximum_ amount of vertical space for the data table to occupy, in CSS units
+        (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
+        default is `fit-content`, which sets the table's width according to its
+        contents. Set this to `100%` to use the maximum available horizontal space.
+    height
+        A _maximum_ amount of vertical space for the data table to occupy, in CSS units
+        (e.g. `"400px"`) or as a number, which will be interpreted as pixels. If there
+        are more rows than can fit in this space, the table body will scroll. Set the
+        height to `None` to allow the table to grow to fit all of the rows (this is not
+        recommended for large data sets, as it may crash the browser).
+    summary
+        If `True` (the default), shows a message like "Viewing rows 1 through 10 of 20"
+        below the grid when not all of the rows are being shown. If `False`, the message
+        is not displayed. You can also specify a string template to customize the
+        message, containing `{start}`, `{end}`, and `{total}` tokens. For example:
+        `"Viendo filas {start} a {end} de {total}"`.
+    row_selection_mode
+        Use `"none"` to disable row selection, `"single"` to allow a single row to be
+        selected at a time, and `"multiple"` to allow multiple rows to be selected by
+        clicking on them individually.
+
+    Returns
+    -------
+    :
+        An object suitable for being returned from a `@render.data_frame`-decorated
+        output function.
+
+    See Also
+    --------
+    ~shiny.ui.output_data_frame ~shiny.render.data_frame
+    """
+
     def __init__(
         self,
         data: object,
@@ -124,48 +167,6 @@ class DataTable(AbstractTabularData):
             Literal["none"], Literal["single"], Literal["multiple"]
         ] = "none",
     ):
-        """
-        Holds the data and options for a ``shiny.render.data_frame`` output, for a
-        spreadsheet-like view.
-
-        Parameters
-        ----------
-        data
-            A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
-            (e.g., a Polars data frame or Arrow table).
-        width
-            A _maximum_ amount of vertical space for the data table to occupy, in CSS
-            units (e.g. `"400px"`) or as a number, which will be interpreted as pixels.
-            The default is `fit-content`, which sets the table's width according to its
-            contents. Set this to `100%` to use the maximum available horizontal space.
-        height
-            A _maximum_ amount of vertical space for the data table to occupy, in CSS
-            units (e.g. `"400px"`) or as a number, which will be interpreted as pixels.
-            If there are more rows than can fit in this space, the table body will
-            scroll. Set the height to `None` to allow the table to grow to fit all of
-            the rows (this is not recommended for large data sets, as it may crash the
-            browser).
-        summary
-            If `True` (the default), shows a message like "Viewing rows 1 through 10 of
-            20" below the grid when not all of the rows are being shown. If `False`, the
-            message is not displayed. You can also specify a string template to
-            customize the message, containing `{start}`, `{end}`, and `{total}` tokens.
-            For example: `"Viendo filas {start} a {end} de {total}"`.
-        row_selection_mode
-            Use `"none"` to disable row selection, `"single"` to allow a single row to
-            be selected at a time, and `"multiple"` to allow multiple rows to be
-            selected by clicking on them individually.
-
-        Returns
-        -------
-        :
-            An object suitable for being returned from a `@render.data_frame`-decorated
-            output function.
-
-        See Also
-        --------
-        ~shiny.ui.output_data_frame ~shiny.render.data_frame
-        """
         import pandas as pd
 
         self.data: pd.DataFrame = cast(
