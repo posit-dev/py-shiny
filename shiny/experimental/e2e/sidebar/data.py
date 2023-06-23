@@ -1,11 +1,9 @@
-import random
-
 dark_color, light_color = [
-    ("#1A2A6C", "#AED9E0"),
+    ("#1A2A6C", "#AED9E0"),  # Fix to `blue` as it is a e2e app, and not a demo
     ("#800020", "#F6DFD7"),
     ("#4B0082", "#E6E6FA"),
     ("#006D5B", "#A2D5C6"),
-][random.randint(0, 3)]
+][0]
 
 adjectives = [
     "charming",
