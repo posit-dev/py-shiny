@@ -4,20 +4,18 @@ from shiny import App, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_file("file", "File", accept=".csv"),
-    ui.input_checkbox("row_count", "Row count", False),
-    ui.input_checkbox("column_count", "Column count", False),
-    ui.input_checkbox("column_names", "Column names", False),
+    ui.input_checkbox_group(
+        "stats", "Summary Stats", choices=["Row Count", "Column Count", "Column Names"]
+    ),
     ui.output_table("summary"),
 )
 
 
 def server(input, output, session):
-    # Reading in the data into a reactive calcuation makes it easier to work with
     @reactive.Calc
     def parsed_file():
         file = input.file()
         if file is None:
-            # Returning an empty dataframe is a bit simpler than the conditional UI
             return pd.DataFrame()
         return pd.read_csv(file[0]["datapath"])
 
@@ -44,18 +42,7 @@ def server(input, output, session):
             }
         )
 
-        # return only selected columns based on input
-        inputs = [input.row_count(), input.column_count(), input.column_names()]
-
-        index_of_false = []
-        for index, element in enumerate(inputs):
-            if not element:
-                index_of_false.append(index)
-
-        if index_of_false is not None:
-            return info_df.drop(info_df.columns[index_of_false], axis=1)
-
-        return info_df
+        return info_df.loc[:, input.stats()]
 
 
 app = App(app_ui, server)
