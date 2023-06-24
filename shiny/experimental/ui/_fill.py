@@ -317,7 +317,7 @@ def remove_all_fill(tag: TagFillingLayoutT) -> TagFillingLayoutT:
     )
 
 
-def is_fill_carrier(x: Tag | FillingLayout) -> bool:
+def is_fill_carrier(tag: Tag | FillingLayout) -> bool:
     """
     Test a tag for being a fill carrier
 
@@ -345,10 +345,10 @@ def is_fill_carrier(x: Tag | FillingLayout) -> bool:
     * :func:`~shiny.experimental.ui.is_fill_item`
     * :func:`~shiny.experimental.ui.is_fillable_container`
     """
-    return is_fillable_container(x) and is_fill_item(x)
+    return is_fillable_container(tag) and is_fill_item(tag)
 
 
-def is_fillable_container(x: TagChild | FillingLayout) -> bool:
+def is_fillable_container(tag: TagChild | FillingLayout) -> bool:
     """
     Test a tag for being a fillable container
 
@@ -365,8 +365,6 @@ def is_fillable_container(x: TagChild | FillingLayout) -> bool:
     ----------
     tag
         a Tag object.
-    min_height,max_height,gap
-        Any valid CSS unit (e.g., `150`) to be applied to `tag`.
 
 
     See Also
@@ -382,10 +380,10 @@ def is_fillable_container(x: TagChild | FillingLayout) -> bool:
     # # won't actually work until (htmltools#334) gets fixed
     # renders_to_tag_class(x, FILL_CONTAINER_CLASS, ".html-widget")
 
-    return _is_fill_layout(x, layout="fillable")
+    return _is_fill_layout(tag, layout="fillable")
 
 
-def is_fill_item(x: TagChild | FillingLayout) -> bool:
+def is_fill_item(tag: TagChild | FillingLayout) -> bool:
     """
     Test a tag for being a fill item
 
@@ -417,34 +415,34 @@ def is_fill_item(x: TagChild | FillingLayout) -> bool:
     # # won't actually work until (htmltools#334) gets fixed
     # renders_to_tag_class(x, FILL_ITEM_CLASS, ".html-widget")
 
-    return _is_fill_layout(x, layout="fill")
+    return _is_fill_layout(tag, layout="fill")
 
 
 def _is_fill_layout(
-    x: TagChild | FillingLayout,
+    tag: TagChild | FillingLayout,
     layout: Literal["fill", "fillable"],
     # recurse: bool = True,
 ) -> bool:
-    if not isinstance(x, (Tag, Tagifiable, FillingLayout)):
+    if not isinstance(tag, (Tag, Tagifiable, FillingLayout)):
         return False
 
-    # x: Tag | FillingLayout | Tagifiable
+    # tag: Tag | FillingLayout | Tagifiable
 
     if layout == "fill":
-        if isinstance(x, Tag):
-            return x.has_class(FILL_ITEM_CLASS)
-        if isinstance(x, FillingLayout):
-            return x.is_fill_item()
+        if isinstance(tag, Tag):
+            return tag.has_class(FILL_ITEM_CLASS)
+        if isinstance(tag, FillingLayout):
+            return tag.is_fill_item()
 
     elif layout == "fillable":
-        if isinstance(x, Tag):
-            return x.has_class(FILL_CONTAINER_CLASS)
-        if isinstance(x, FillingLayout):
-            return x.is_fillable_container()
+        if isinstance(tag, Tag):
+            return tag.has_class(FILL_CONTAINER_CLASS)
+        if isinstance(tag, FillingLayout):
+            return tag.is_fillable_container()
 
-    # x: Tagifiable and not (Tag or FillingLayout)
+    # tag: Tagifiable and not (Tag or FillingLayout)
     raise TypeError(
-        f"`_is_fill_layout(x=)` must be a `Tag` or implement the `FillingLayout` protocol methods TODO-barret expand on method names. Received object of type: `{type(x).__name__}`"
+        f"`_is_fill_layout(tag=)` must be a `Tag` or implement the `FillingLayout` protocol methods TODO-barret expand on method names. Received object of type: `{type(tag).__name__}`"
     )
 
 

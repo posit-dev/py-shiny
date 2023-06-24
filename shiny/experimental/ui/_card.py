@@ -75,13 +75,13 @@ def card(
     class_
         Additional CSS classes for the returned Tag.
     wrapper
-        A function (which returns a UI element) to call on unnamed
-      arguments in `*args` which are not already card item(s) (like
-      :func:`~shiny.experimental.ui.card_header`,
-      :func:`~shiny.experimental.ui.card_body`, etc.). Note that non-card items are
-      grouped together into one `wrapper` call (e.g. given
-      `card("a", "b", card_body("c"), "d")`, `wrapper` would be called twice,
-      once with `"a"` and `"b"` and once with `"d"`).
+        A function (which returns a UI element) to call on unnamed arguments in `*args`
+        which are not already card item(s) (like
+        :func:`~shiny.experimental.ui.card_header`,
+        :func:`~shiny.experimental.ui.card_body`, etc.). Note that non-card items are
+        grouped together into one `wrapper` call (e.g. given `card("a", "b",
+        card_body("c"), "d")`, `wrapper` would be called twice, once with `"a"` and
+        `"b"` and once with `"d"`).
 
     Returns
     -------

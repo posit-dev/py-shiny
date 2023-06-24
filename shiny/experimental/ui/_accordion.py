@@ -195,7 +195,7 @@ def accordion(
     multiple
         Whether multiple :func:`~shiny.experimental.ui.accordion_panel` can be open at
         once.
-    class
+    class_
         Additional CSS classes to include on the accordion div.
     width
         Any valid CSS unit; for example, height="100%".
