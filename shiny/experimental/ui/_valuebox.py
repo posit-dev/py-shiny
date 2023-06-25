@@ -5,7 +5,7 @@ from typing import Callable, Optional
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, tags
 
 from ._card import CardItem, card, card_body
-from ._css_unit import CssUnit, to_width_unit, validate_css_unit
+from ._css_unit import CssUnit, as_css_unit, as_width_unit
 from ._fill import as_fill_carrier
 from ._layout import layout_column_wrap
 from ._utils import consolidate_attrs, is_01_scalar
@@ -181,9 +181,9 @@ def _showcase_layout(
     top_right: bool,
 ) -> Callable[[TagChild | TagAttrs, Tag], CardItem]:
     # Do not "magically" turn `0.3` into `"30%"` as it is not clear to the user when it happens
-    width_css_unit = to_width_unit(width)
-    max_height_css_unit = validate_css_unit(max_height)
-    max_height_full_screen_css_unit = validate_css_unit(max_height_full_screen)
+    width_css_unit = as_width_unit(width)
+    max_height_css_unit = as_css_unit(max_height)
+    max_height_full_screen_css_unit = as_css_unit(max_height_full_screen)
 
     def _layout(showcase: TagChild | TagAttrs, contents: Tag) -> CardItem:
         css_args = {

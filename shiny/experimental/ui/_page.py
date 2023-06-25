@@ -17,7 +17,7 @@ from ..._typing_extensions import Literal
 from ...types import MISSING, MISSING_TYPE, NavSetArg
 from ...ui._page import page_bootstrap
 from ...ui._utils import get_window_title
-from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
+from ._css_unit import CssUnit, as_css_padding, as_css_unit
 from ._fill import as_fillable_container
 from ._navs import navset_bar
 from ._sidebar import Sidebar, layout_sidebar
@@ -33,7 +33,7 @@ def page_sidebar(
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> Tag:
     """
     Create a page with a sidebar and a title.
 
@@ -61,6 +61,9 @@ def page_sidebar(
         Additional attributes passed to :func:`~shiny.ui.layout_sidebar`.
 
     Returns
+    -------
+    :
+        A UI element.
     """
 
     if isinstance(title, str):
@@ -165,10 +168,10 @@ def page_navbar(
 
     See Also
     -------
-    :func:`~shiny.ui.nav`
-    :func:`~shiny.ui.nav_menu`
-    :func:`~shiny.ui.navset_bar`
-    :func:`~shiny.ui.page_fluid`
+    * :func:`~shiny.ui.nav`
+    * :func:`~shiny.ui.nav_menu`
+    * :func:`~shiny.ui.navset_bar`
+    * :func:`~shiny.ui.page_fluid`
 
     Example
     -------
@@ -230,12 +233,12 @@ def page_fillable(
     title: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> Tag:
     attrs, children = consolidate_attrs(*args, **kwargs)
 
     style = css(
-        padding=validate_css_padding(padding),
-        gap=validate_css_unit(gap),
+        padding=as_css_padding(padding),
+        gap=as_css_unit(gap),
         __bslib_page_fill_mobile_height="100%" if fillable_mobile else "auto",
     )
 

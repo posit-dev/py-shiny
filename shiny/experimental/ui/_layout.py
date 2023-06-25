@@ -5,7 +5,7 @@ from typing import Optional
 from htmltools import TagAttrs, TagAttrValue, TagChild, css, div
 
 from ..._typing_extensions import Literal
-from ._css_unit import CssUnit, validate_css_unit
+from ._css_unit import CssUnit, as_css_unit
 from ._fill import as_fill_item, as_fillable_container
 from ._utils import consolidate_attrs, is_01_scalar
 
@@ -86,7 +86,7 @@ def layout_column_wrap(
                 )
             colspec = " ".join(["1fr" for _ in range(int(num_cols))])
         else:
-            width_css_unit = validate_css_unit(width)
+            width_css_unit = as_css_unit(width)
             if fixed_width:
                 colspec = f"repeat(auto-fit, minmax({width_css_unit}, 1fr))"
             else:
@@ -106,11 +106,11 @@ def layout_column_wrap(
         # Always provide the `height:auto` default so that the CSS variable
         # doesn't get inherited in a scenario like
         # layout_column_wrap(height=200, layout, layout_column_wrap(...))
-        "--bslib-grid-height": validate_css_unit("auto" if height is None else height),
-        "--bslib-grid-height-mobile": validate_css_unit(
+        "--bslib-grid-height": as_css_unit("auto" if height is None else height),
+        "--bslib-grid-height-mobile": as_css_unit(
             "auto" if height_mobile is None else height_mobile
         ),
-        "gap": validate_css_unit(gap),
+        "gap": as_css_unit(gap),
     }
 
     tag = div(

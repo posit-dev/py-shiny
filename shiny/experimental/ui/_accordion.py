@@ -5,11 +5,12 @@ from typing import Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
+from ... import Session
 from ..._typing_extensions import Literal
 from ..._utils import drop_none
-from ...session import Session, require_active_session
+from ...session import require_active_session
 from ...types import MISSING, MISSING_TYPE
-from ._css_unit import CssUnit, validate_css_unit
+from ._css_unit import CssUnit, as_css_unit
 from ._htmldeps import accordion_dependency
 from ._utils import consolidate_attrs
 
@@ -26,6 +27,39 @@ __all__ = (
 
 
 class AccordionPanel:
+    """
+    Internal class used to represent an accordion panel.
+
+    This class is used to represent an accordion panel. It is not intended to be
+    instantiated directly. Instead, use :func:`~shiny.experimental.ui.accordion_panel`.
+
+    Parameters
+    ----------
+    *args
+        Contents to the accordion panel body. Or tag attributes that are supplied to the
+        returned `Tag` object.
+    data_value
+        A character string that uniquely identifies this panel.
+    icon
+        A `Tag` which is positioned just before the `title`.
+    title
+        A title to appear in the :func:`~shiny.experimental.ui.accordion_panel`'s header.
+    id
+        A unique id for this panel.
+    **kwargs
+        Tag attributes to the `accordion-body` div Tag.
+
+    See Also
+    --------
+    * :func:`~shiny.experimental.ui.accordion`
+    * :func:`~shiny.experimental.ui.accordion_panel_set`
+    * :func:`~shiny.experimental.ui.accordion_panel_open`
+    * :func:`~shiny.experimental.ui.accordion_panel_close`
+    * :func:`~shiny.experimental.ui.accordion_panel_insert`
+    * :func:`~shiny.experimental.ui.accordion_panel_remove`
+    * :func:`~shiny.experimental.ui.update_accordion_panel`
+    """
+
     _args: tuple[TagChild | TagAttrs, ...]
     _kwargs: dict[str, TagAttrValue]
 
@@ -56,6 +90,14 @@ class AccordionPanel:
         self._is_open = True
 
     def resolve(self) -> Tag:
+        """
+        Resolve the `AccordionPanel` into a `Tag`.
+
+        Returns
+        -------
+        :
+            A `Tag` object representing the `AccordionPanel`.
+        """
         btn_attrs = {}
         if self._is_open:
             btn_attrs["aria-expanded"] = "true"
@@ -80,6 +122,8 @@ class AccordionPanel:
             tags.div({"class": "accordion-title"}, self._title),
         )
 
+        attrs, children = consolidate_attrs(*self._args, **self._kwargs)
+
         return tags.div(
             {
                 "class": "accordion-item",
@@ -97,11 +141,23 @@ class AccordionPanel:
                     "class": "accordion-collapse collapse",
                 },
                 {"class": "show"} if self._is_open else None,
-                tags.div({"class": "accordion-body"}, *self._args, **self._kwargs),
+                tags.div(
+                    {"class": "accordion-body"},
+                    attrs,
+                    children,
+                ),
             ),
         )
 
     def tagify(self) -> Tag:
+        """
+        Resolve the `AccordionPanel` into a `Tag`.
+
+        Returns
+        -------
+        :
+            A tagified `resolve()`d value.
+        """
         return self.resolve().tagify()
 
 
@@ -123,23 +179,23 @@ def accordion(
     ----------
     *args
         `~shiny.experimental.ui.AccordionPanel` objects returned from
-        :func:`~shiny.experimental.ui.accordion_panel()`. Or tag attributes that are
+        :func:`~shiny.experimental.ui.accordion_panel`. Or tag attributes that are
         supplied to the returned `Tag` object.
     id
         If provided, you can use `input.id()` in your server logic to determine which of
-        the :func:`~shiny.experimental.ui.accordion_panel()`s are currently active. The
-        value will correspond to the :func:`~shiny.experimental.ui.accordion_panel()`'s
+        the :func:`~shiny.experimental.ui.accordion_panel`s are currently active. The
+        value will correspond to the :func:`~shiny.experimental.ui.accordion_panel`'s
         `value` argument.
     open
-        A list of :func:`~shiny.experimental.ui.accordion_panel()` values to open (i.e.,
+        A list of :func:`~shiny.experimental.ui.accordion_panel` values to open (i.e.,
         show) by default. The default value of `None` will open the first
-        :func:`~shiny.experimental.ui.accordion_panel()`. Use a value of `True` to open
+        :func:`~shiny.experimental.ui.accordion_panel`. Use a value of `True` to open
         all (or `False` to open none) of the items. It's only possible to open more than
         one panel when `multiple=True`.
     multiple
-        Whether multiple :func:`~shiny.experimental.ui.accordion_panel()` can be open at
+        Whether multiple :func:`~shiny.experimental.ui.accordion_panel` can be open at
         once.
-    class
+    class_
         Additional CSS classes to include on the accordion div.
     width
         Any valid CSS unit; for example, height="100%".
@@ -216,9 +272,7 @@ def accordion(
         {
             "id": id,
             "class": "accordion",
-            "style": css(
-                width=validate_css_unit(width), height=validate_css_unit(height)
-            ),
+            "style": css(width=as_css_unit(width), height=as_css_unit(height)),
         },
         # just for ease of identifying autoclosing client-side
         {"class": "autoclose"} if not multiple else None,
@@ -244,7 +298,7 @@ def accordion_panel(
     Parameters
     ----------
     title
-        A title to appear in the `accordion_panel()`'s header.
+        A title to appear in the :func:`~shiny.experimental.ui.accordion_panel`'s header.
     *args
         Contents to the accordion panel body. Or tag attributes that are supplied to the
         returned `Tag` object.
@@ -340,17 +394,17 @@ def accordion_panel_set(
     """
     Dynamically set accordions panel state
 
-    Dynamically (i.e., programmatically) update/modify [`accordion()`]s in a Shiny app.
-    These functions require an `id` to be provided to the `accordion()` and must also be
+    Dynamically (i.e., programmatically) update/modify :func:~`shiny.experimental.ui.accordion`s in a Shiny app.
+    These functions require an `id` to be provided to the :func:~`shiny.experimental.ui.accordion` and must also be
     called within an active Shiny session.
 
     Parameters
     ----------
     id
-        A string that matches an existing `accordion()`'s `id`.
+        A string that matches an existing :func:`~shiny.experimental.ui.accordion`'s `id`.
     values
         either a string or list of strings (used to identify particular
-        `accordion_panel()`(s) by their `value`) or a `bool` to set the state of all
+        :func:`~shiny.experimental.ui.accordion_panel`(s) by their `value`) or a `bool` to set the state of all
         panels.
     session
         A shiny session object (the default should almost always be used).
@@ -379,15 +433,15 @@ def accordion_panel_open(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Open a set of `accordion_panel()`s.
+    Open a set of :func:`~shiny.experimental.ui.accordion_panel`s.
 
     Parameters
     ----------
     id
-        A string that matches an existing `accordion()`'s `id`.
+        A string that matches an existing :func:`~shiny.experimental.ui.accordion`'s `id`.
     values
         either a string or list of strings (used to identify particular
-        `accordion_panel()`(s) by their `value`) or a `bool` to set the state of all
+        :func:`~shiny.experimental.ui.accordion_panel`(s) by their `value`) or a `bool` to set the state of all
         panels.
     session
         A shiny session object (the default should almost always be used).
@@ -421,10 +475,10 @@ def accordion_panel_close(
     Parameters
     ----------
     id
-        A string that matches an existing `accordion()`'s `id`.
+        A string that matches an existing :func:`~shiny.experimental.ui.accordion`'s `id`.
     values
         either a string or list of strings (used to identify particular
-        `accordion_panel()`(s) by their `value`) or a `bool` to set the state of all
+        :func:`~shiny.experimental.ui.accordion_panel`(s) by their `value`) or a `bool` to set the state of all
         panels.
     session
         A shiny session object (the default should almost always be used).
@@ -455,14 +509,14 @@ def accordion_panel_insert(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Insert an `accordion_panel()`
+    Insert an :func:`~shiny.experimental.ui.accordion_panel`
 
     Parameters
     ----------
     id
-        A string that matches an existing `accordion()`'s `id`.
+        A string that matches an existing :func:`~shiny.experimental.ui.accordion`'s `id`.
     panel
-        An :func:`~shiny.experimental.ui.accordion_panel()` object to insert.
+        An :func:`~shiny.experimental.ui.accordion_panel` object to insert.
     target
         The `value` of an existing panel to insert next to.
     position
@@ -507,12 +561,12 @@ def accordion_panel_remove(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Remove an `accordion_panel()`
+    Remove an :func:`~shiny.experimental.ui.accordion_panel`
 
     Parameters
     ----------
     id
-        A string that matches an existing `accordion()`'s `id`.
+        A string that matches an existing :func:`~shiny.experimental.ui.accordion`'s `id`.
     target
         The `value` of an existing panel to remove.
     session
@@ -568,13 +622,13 @@ def update_accordion_panel(
     Dynamically update accordions panel contents
 
     Dynamically (i.e., programmatically) update/modify `accordion_panels()`s in a Shiny app.
-    These functions require an `id` to be provided to the `accordion()` and must also be
+    These functions require an `id` to be provided to the :func:`~shiny.experimental.ui.accordion` and must also be
     called within an active Shiny session.
 
     Parameters
     ----------
     id
-        A string that matches an existing `accordion()`'s `id`.
+        A string that matches an existing :func:`~shiny.experimental.ui.accordion`'s `id`.
     target
         The `value` of an existing panel to update.
     *body

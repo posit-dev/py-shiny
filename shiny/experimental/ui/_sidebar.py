@@ -7,19 +7,74 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, css, div
 from htmltools import svg as svgtags
 from htmltools import tags
 
+from ... import Session
 from ..._deprecated import warn_deprecated
 from ..._typing_extensions import Literal
-from ...session import Session, require_active_session
+from ...session import require_active_session
 
 # from ._color import get_color_contrast
 from ._card import CardItem
-from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
+from ._css_unit import CssUnit, as_css_padding, as_css_unit
 from ._fill import as_fill_item, as_fillable_container
 from ._htmldeps import sidebar_dependency
 from ._utils import consolidate_attrs, trinary
 
 
 class Sidebar:
+    """
+    Sidebar object
+
+    Class returned from :func:`~shiny.experimental.ui.sidebar`. Please do not use this
+    class directly. Instead, supply the `sidebar()` object to
+    :func:`~shiny.experimental.ui.layout_sidebar`.
+
+    Attributes
+    ----------
+    tag
+        The `Tag` object that represents the sidebar.
+    collapse_tag
+        The `Tag` object that represents the collapse button.
+    position
+        Where the sidebar should appear relative to the main content.
+    open
+        The initial state of the sidebar.
+    width
+        A valid CSS unit used for the width of the sidebar.
+    max_height_mobile
+        The maximum height of the horizontal sidebar when viewed on mobile devices.
+        The default is `250px` unless the sidebar is included in a
+        :func:`~shiny.experimental.ui.layout_sidebar` with a specified height, in
+        which case the default is to take up no more than 50% of the layout container.
+    color_fg
+        A foreground color.
+    color_bg
+        A background color.
+
+    Parameters
+    ----------
+    tag
+        The `Tag` object that represents the sidebar.
+    collapse_tag
+        The `Tag` object that represents the collapse button.
+    position
+        Where the sidebar should appear relative to the main content.
+    open
+        The initial state of the sidebar.
+    width
+        A valid CSS unit used for the width of the sidebar.
+    max_height_mobile
+        The maximum height of the horizontal sidebar when viewed on mobile devices.
+        The default is `250px` unless the sidebar is included in a
+        :func:`~shiny.experimental.ui.layout_sidebar` with a specified height, in
+        which case the default is to take up no more than 50% of the layout container.
+    color_fg
+        A foreground color.
+    color_bg
+        A background color.
+
+
+    """
+
     def __init__(
         self,
         tag: Tag,
@@ -42,6 +97,9 @@ class Sidebar:
 
     # The `Sidebar` class should use it's fields, not this method
     def tagify(self) -> Tag:
+        """
+        Not implemented
+        """
         # Similar to `NavMenu.tagify()`
         raise NotImplementedError(
             "`Sidebar` objects must be handled by `layout_sidebar(sidebar)`."
@@ -74,10 +132,10 @@ def sidebar(
     Create a collapsing sidebar layout by providing a `sidebar()` object to the
     `sidebar=` argument of:
 
-    * :func:`~shiny.experimental.ui.layout_sidebar()`
+    * :func:`~shiny.experimental.ui.layout_sidebar`
       * Creates a sidebar layout component which can be dropped inside any
-        :func:`~shiny.ui.page()` or `:func:`~shiny.experimental.ui.card()` context.
-    * :func:`~shiny.experimental.ui.page_navbar()`, :func:`~shiny.experimental.ui.navset_card_tab()`, and :func:`~shiny.experimental.ui.navset_card_pill()`
+        :func:`~shiny.ui.page` or :func:`~shiny.experimental.ui.card` context.
+    * :func:`~shiny.experimental.ui.page_navbar`, :func:`~shiny.experimental.ui.navset_card_tab`, and :func:`~shiny.experimental.ui.navset_card_pill`
       * Creates a multi page/tab UI with a singular `sidebar()` (which is
         shown on every page/tab).
 
@@ -99,18 +157,18 @@ def sidebar(
         * `"closed"` or `False`: The sidebar starts closed.
         * `"always"` or `None`: The sidebar is always open and cannot be closed.
 
-        In `sidebar_toggle()`, `open` indicates the desired state of the sidebar,
-        where the default of `open = None` will cause the sidebar to be toggled
-        open if closed or vice versa. Note that `sidebar_toggle()` can only open or
-        close the sidebar, so it does not support the `"desktop"` and `"always"`
-        options.
+        In :func:`~shiny.experimental.ui.sidebar_toggle`, `open` indicates the desired
+        state of the sidebar, where the default of `open = None` will cause the sidebar
+        to be toggled open if closed or vice versa. Note that
+        :func:`~shiny.experimental.ui.sidebar_toggle` can only open or close the
+        sidebar, so it does not support the `"desktop"` and `"always"` options.
     id
         A character string. Required if wanting to re-actively read (or update) the
         `collapsible` state in a Shiny app.
     title
         A character title to be used as the sidebar title, which will be wrapped in a
         `<div>` element with class `sidebar-title`. You can also provide a custom
-        :func:`~shiny.htmltools.tag()` for the title element, in which case you'll
+        :func:`~shiny.htmltools.tag` for the title element, in which case you'll
         likely want to give this element `class = "sidebar-title"`.
     bg,fg
         A background or foreground color.
@@ -120,7 +178,7 @@ def sidebar(
     max_height_mobile
         The maximum height of the horizontal sidebar when viewed on mobile devices.
         The default is `250px` unless the sidebar is included in a
-        :func:`~shiny.experimental.ui.layout_sidebar()` with a specified height, in
+        :func:`~shiny.experimental.ui.layout_sidebar` with a specified height, in
         which case the default is to take up no more than 50% of the layout container.
 
     Returns
@@ -130,10 +188,10 @@ def sidebar(
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.layout_sidebar()`
-    * :func:`~shiny.experimental.ui.navset_navbar()`
-    * :func:`~shiny.experimental.ui.navset_card_tab()`
-    * :func:`~shiny.experimental.ui.navset_card_pill()`
+    * :func:`~shiny.experimental.ui.layout_sidebar`
+    * :func:`~shiny.experimental.ui.navset_navbar`
+    * :func:`~shiny.experimental.ui.navset_card_tab`
+    * :func:`~shiny.experimental.ui.navset_card_pill`
     """
     # TODO-future; validate `open`, bg, fg, class_, max_height_mobile
 
@@ -206,21 +264,21 @@ def layout_sidebar(
     Sidebar layout
 
     Create a sidebar layout component which can be dropped inside any
-    :func:`~shiny.ui.page()` or :func:`~shiny.experimental.ui.card()` context.
+    :func:`~shiny.ui.page` or :func:`~shiny.experimental.ui.card` context.
 
     Parameters
     ----------
     sidebar
-        A `Sidebar` object created by :func:`~shiny.experimental.ui.sidebar()`.
+        A `Sidebar` object created by :func:`~shiny.experimental.ui.sidebar`.
     *args
         Contents to the main content area. Or tag attributes that are supplied to the
         resolved `Tag` object.
     fillable
         Whether or not the main content area should be wrapped in a fillable container.
-        See :func:`~shiny.experimental.ui.as_fillable_container()` for details.
+        See :func:`~shiny.experimental.ui.as_fillable_container` for details.
     fill
         Whether or not the sidebar layout should be wrapped in a fillable container. See
-        :func:`~shiny.experimental.ui.as_fill_item()` for details.
+        :func:`~shiny.experimental.ui.as_fill_item` for details.
     bg,fg
         A background or foreground color.
     border
@@ -251,7 +309,7 @@ def layout_sidebar(
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.sidebar()`
+    * :func:`~shiny.experimental.ui.sidebar`
     """
     updated_args = list(args)
     has_upgraded: bool = False
@@ -299,8 +357,8 @@ def layout_sidebar(
             "style": css(
                 background_color=bg,
                 color=fg,
-                gap=validate_css_unit(gap),
-                padding=validate_css_padding(padding),
+                gap=as_css_unit(gap),
+                padding=as_css_padding(padding),
             ),
         },
         attrs,
@@ -327,12 +385,12 @@ def layout_sidebar(
         data_bslib_sidebar_border=trinary(border),
         data_bslib_sidebar_border_radius=trinary(border_radius),
         style=css(
-            __bslib_sidebar_width=validate_css_unit(sidebar.width),
-            __bslib_sidebar_bg=validate_css_unit(sidebar.color_bg),
-            __bslib_sidebar_fg=validate_css_unit(sidebar.color_fg),
+            __bslib_sidebar_width=as_css_unit(sidebar.width),
+            __bslib_sidebar_bg=as_css_unit(sidebar.color_bg),
+            __bslib_sidebar_fg=as_css_unit(sidebar.color_fg),
             __bs_card_border_color=border_color,
-            height=validate_css_unit(height),
-            __bslib_sidebar_max_height_mobile=validate_css_unit(max_height_mobile),
+            height=as_css_unit(height),
+            __bslib_sidebar_max_height_mobile=as_css_unit(max_height_mobile),
         ),
     )
     if fill:
@@ -370,8 +428,8 @@ def sidebar_toggle(
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.sidebar()`
-    * :func:`~shiny.experimental.ui.layout_sidebar()`
+    * :func:`~shiny.experimental.ui.sidebar`
+    * :func:`~shiny.experimental.ui.layout_sidebar`
     """
     session = require_active_session(session)
 
@@ -434,7 +492,8 @@ def panel_sidebar(
     width: int = 4,
     **kwargs: TagAttrValue,
 ) -> DeprecatedPanelSidebar:
-    """Deprecated. Please use `ui.sidebar()` instead of `ui.panel_sidebar()`."""
+    """Deprecated. Please use :func:`~shiny.experimental.ui.sidebar` instead of
+    `ui.panel_sidebar()`."""
     # TODO-future: >= 2023-11-01; Add deprecation message below
     # Plan of action:
     # * No deprecation messages today (2023-05-18), and existing code _just works_.
@@ -450,6 +509,35 @@ def panel_sidebar(
 
 
 class DeprecatedPanelSidebar:
+    """
+    [Deprecated] Sidebar panel
+
+    Class returned from :func:`~shiny.experimental.ui.panel_sidebar`. Please do not
+    use this class and instead supply your content to
+    :func:`~shiny.experimental.ui.layout_sidebar` directly.
+
+    Parameters
+    ----------
+    *args
+        Contents to the sidebar. Or tag attributes that are supplied to the resolved
+        `Tag` object.
+    width
+        An integeger between 1 and 12, inclusive, that determines the width of the
+        sidebar. The default is 4.
+    **kwargs
+        Tag attributes that are supplied to the resolved `Tag` object.
+
+    Attributes
+    ----------
+    sidebar
+        A `~shiny.experimental.ui.Sidebar` object.
+
+    See Also
+    --------
+    * :func:`~shiny.experimental.ui.layout_sidebar`
+    * :func:`~shiny.experimental.ui.sidebar`
+    """
+
     # Store `attrs` for `layout_sidebar()` to retrieve
     sidebar: Sidebar
 
@@ -464,6 +552,9 @@ class DeprecatedPanelSidebar:
 
     # Hopefully this is never used. But wanted to try to be safe
     def tagify(self) -> Tag:
+        """
+        Tagify the `self.sidebar.tag` and return the result in a TagList
+        """
         return self.sidebar.tag.tagify()
 
 
@@ -489,6 +580,34 @@ def panel_main(
 
 
 class DeprecatedPanelMain:
+    """
+    [Deprecated] Main panel
+
+    Class returned from :func:`~shiny.experimental.ui.panel_main`. Please do not use
+    this class and instead supply your content to
+    :func:`~shiny.experimental.ui.layout_sidebar` directly.
+
+
+    Parameters
+    ----------
+    attrs
+        Attributes to apply to the parent tag of the children.
+    children
+        Children UI Elements to render inside the parent tag.
+
+    Attributes
+    ----------
+    attrs
+        Attributes to apply to the parent tag of the children.
+    children
+        Children UI Elements to render inside the parent tag.
+
+    See Also
+    --------
+    * :func:`~shiny.experimental.ui.layout_sidebar`
+    * :func:`~shiny.experimental.ui.sidebar`
+    """
+
     # Store `attrs` for `layout_sidebar()` to retrieve
     attrs: TagAttrs
     # Return `children` in `layout_sidebar()` via `.tagify()` method
@@ -499,4 +618,7 @@ class DeprecatedPanelMain:
         self.children = children
 
     def tagify(self) -> TagList:
+        """
+        Tagify the `children` and return the result in a TagList
+        """
         return TagList(self.children).tagify()
