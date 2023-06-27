@@ -5,17 +5,17 @@ from shiny import module, reactive, render, ui
 
 
 @module.ui
-def query_output_ui():
+def query_output_ui(qry="SELECT * from weather LIMIT 10"):
     out = ui.row(
         {"style": "border: 1px solid gray; border-radius: 5px; margin:10px"},
         ui.column(
             3,
             ui.input_text_area(
                 "sql_query",
-                "Prompt",
-                value="SELECT * FROM weather LIMIT 10",
+                "",
+                value=qry,
                 width="100%",
-                height="100%",
+                height="200px",
             ),
         ),
         ui.column(9, ui.output_data_frame("results")),

@@ -1,4 +1,3 @@
-import os
 import urllib.request
 from pathlib import Path
 
@@ -11,12 +10,20 @@ from shiny import App, reactive, ui
 folder = Path(__file__).parent
 db_file = folder / "weather.db"
 
-if not Path.exists(db_file):
-    csv_url = "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-12-20/weather_forecasts.csv"
-    local_file_path = folder / "weather.csv"
+
+def load_csv(con, csv_name, table_name):
+    csv_url = f"https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-12-20/{csv_name}.csv"
+    local_file_path = folder / f"{csv_name}.csv"
     urllib.request.urlretrieve(csv_url, local_file_path)
+    con.sql(
+        f"CREATE TABLE {table_name} AS SELECT * FROM read_csv_auto('{local_file_path}')"
+    )
+
+
+if not Path.exists(db_file):
     con = duckdb.connect(str(db_file), read_only=False)
-    con.sql(f"CREATE TABLE weather AS SELECT * FROM read_csv_auto('{local_file_path}')")
+    load_csv(con, "weather_forecasts", "weather")
+    load_csv(con, "cities", "cities")
     con.close()
 
 con = duckdb.connect(str(db_file), read_only=True)
@@ -37,14 +44,18 @@ app_ui = ui.page_fluid(
                 button_style,
                 ui.input_action_button("remove_query", "Remove Query"),
             ),
+            ui.row(
+                button_style,
+                ui.input_action_button("show_meta", "Show Metadata"),
+            ),
             ui.br(),
             ui.row(
-                ui.p(
+                ui.markdown(
                     """
                     This app lets you explore a dataset using SQL and duckdb.
-                    The data is stored in an on-disk duckdb database, and as a result
-                    the queries fast enough that you don't need a separate button
-                    to execute the queries.
+                    The data is stored in an on-disk [duckdb](https://duckdb.org/) database,
+                    which is fast enough to execute the queries interactively, without
+                    a "Submit" button.
                     """
                 ),
             ),
@@ -77,6 +88,19 @@ def server(input, output, session):
     @reactive.event(input.remove_query)
     def _():
         ui.remove_ui(selector=f"#module_container .row:first-child")
+
+    @reactive.Effect
+    @reactive.event(input.show_meta)
+    def _():
+        counter = mod_counter.get() + 1
+        mod_counter.set(counter)
+        id = "query_" + str(counter)
+        ui.insert_ui(
+            selector="#module_container",
+            where="afterBegin",
+            ui=query_output_ui(id, qry="SELECT * from information_schema.columns"),
+        )
+        query_output_server(id, con=con)
 
 
 app = App(app_ui, server)
