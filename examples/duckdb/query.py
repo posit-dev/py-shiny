@@ -1,6 +1,3 @@
-import duckdb
-import pandas as pd
-
 from shiny import module, reactive, render, ui
 
 
