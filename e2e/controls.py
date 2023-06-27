@@ -2337,3 +2337,88 @@ class OutputTable(_OutputBase):
             n,
             timeout=timeout,
         )
+
+
+### Experimental below
+
+
+class Accordion(
+    # _SetTextM,
+    # _ExpectTextInputValueM,
+    _WidthLocM,
+    _InputWithContainer,
+):
+    # *args: AccordionPanel | TagAttrs,
+    # id: Optional[str] = None,
+    # open: Optional[bool | str | list[str]] = None,
+    # multiple: bool = True,
+    # class_: Optional[str] = None,
+    # width: Optional[CssUnit] = None,
+    # height: Optional[CssUnit] = None,
+    # **kwargs: TagAttrValue,
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc="> div.accordion-item",
+            loc_container=f"div#{id}.accordion.shiny-bound-input",
+        )
+        self.loc_open = self.loc.locator(
+            # Return self
+            "xpath=.",
+            # Simple approach as position is not needed
+            has=page.locator(
+                "> div.accordion-collapse.show",
+            ),
+        )
+        # self.loc_open = self.loc.locator(
+        #     "> div.accordion-item > div.accordion-collapse.show"
+        # )
+
+    # def expect_min(
+    #     self,
+    #     value: AttrValue,
+    #     *,
+    #     timeout: Timeout = None,
+    # ) -> None:
+    #     expect_attr(self.loc, "min", value=value, timeout=timeout)
+
+    # def expect_max(
+    #     self,
+    #     value: AttrValue,
+    #     *,
+    #     timeout: Timeout = None,
+    # ) -> None:
+    #     expect_attr(self.loc, "max", value=value, timeout=timeout)
+
+    # def expect_step(
+    #     self,
+    #     value: AttrValue,
+    #     *,
+    #     timeout: Timeout = None,
+    # ) -> None:
+    #     expect_attr(self.loc, "step", value=value, timeout=timeout)
+
+    def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
+
+    def expect_width(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        expect_to_have_style(self.loc_container, "width", value, timeout=timeout)
+
+    def expect_open(
+        self,
+        value: list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        # playwright_expect(self.loc).to_have_attribute(value, timeout=timeout)
+        playwright_expect(self.loc_open).to_have_count(len(value), timeout=timeout)
+
+    def expect_panels(
+        self,
+        value: list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        # playwright_expect(self.loc).to_have_attribute(value, timeout=timeout)
+        playwright_expect(self.loc).to_have_count(len(value), timeout=timeout)
