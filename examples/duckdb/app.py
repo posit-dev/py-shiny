@@ -50,8 +50,7 @@ app_ui = ui.page_fluid(
                     """
                     This app lets you explore a dataset using SQL and duckdb.
                     The data is stored in an on-disk [duckdb](https://duckdb.org/) database,
-                    which is fast enough to execute the queries interactively, without
-                    a "Submit" button.
+                    which leads to extremely fast queries.
                     """
                 ),
             ),

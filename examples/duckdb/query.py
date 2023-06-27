@@ -14,7 +14,7 @@ def query_output_ui(remove_id, qry="SELECT * from weather LIMIT 10"):
         ui.column(
             3,
             ui.div(
-                {"style": "font-family: var(--bs-font-monospace)"},
+                {"style": "font-family: var(--bs-font-monospace); margin-top: 10px;"},
                 ui.input_text_area(
                     "sql_query",
                     "",
@@ -23,7 +23,17 @@ def query_output_ui(remove_id, qry="SELECT * from weather LIMIT 10"):
                     height="200px",
                 ),
             ),
-            ui.input_action_button("rmv", "Remove Query"),
+            ui.row(
+                {"style": "margin-bottom: 10px;"},
+                ui.column(
+                    6,
+                    ui.input_action_button("run", "Run Query", width="90%"),
+                ),
+                ui.column(
+                    6,
+                    ui.input_action_button("rmv", "Remove Query", width="90%"),
+                ),
+            ),
         ),
         ui.column(9, ui.output_data_frame("results")),
     )
@@ -35,18 +45,19 @@ def query_output_ui(remove_id, qry="SELECT * from weather LIMIT 10"):
 def query_output_server(
     input, output, session, con: duckdb.DuckDBPyConnection, remove_id
 ):
-    print(remove_id)
+    result = reactive.Value()
 
-    @reactive.Calc
-    def response_table():
+    @reactive.Effect
+    @reactive.event(input.run)
+    def _():
         qry = input.sql_query().replace("\n", " ")
-
-        return con.query(qry).to_df()
+        res = con.query(qry).to_df()
+        result.set(res)
 
     @output
     @render.data_frame
     def results():
-        return response_table()
+        return result.get()
 
     @reactive.Effect
     @reactive.event(input.rmv)
