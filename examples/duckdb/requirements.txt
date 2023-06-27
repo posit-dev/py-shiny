@@ -1,0 +1,3 @@
+duckdb
+shiny
+shinyswatch==0.2.3
