@@ -42,10 +42,6 @@ app_ui = ui.page_fluid(
             ),
             ui.row(
                 button_style,
-                ui.input_action_button("remove_query", "Remove Query"),
-            ),
-            ui.row(
-                button_style,
                 ui.input_action_button("show_meta", "Show Metadata"),
             ),
             ui.br(),
@@ -62,7 +58,10 @@ app_ui = ui.page_fluid(
         ),
         ui.column(
             10,
-            ui.tags.div(query_output_ui("initial_query"), id="module_container"),
+            ui.tags.div(
+                query_output_ui("initial_query", remove_id="initial_query"),
+                id="module_container",
+            ),
         ),
     ),
 )
@@ -71,7 +70,7 @@ app_ui = ui.page_fluid(
 def server(input, output, session):
     mod_counter = reactive.Value(0)
 
-    query_output_server("initial_query", con=con)
+    query_output_server("initial_query", con=con, remove_id="initial_query")
 
     @reactive.Effect
     @reactive.event(input.add_query)
@@ -80,14 +79,11 @@ def server(input, output, session):
         mod_counter.set(counter)
         id = "query_" + str(counter)
         ui.insert_ui(
-            selector="#module_container", where="afterBegin", ui=query_output_ui(id)
+            selector="#module_container",
+            where="afterBegin",
+            ui=query_output_ui(id, remove_id=id),
         )
-        query_output_server(id, con=con)
-
-    @reactive.Effect
-    @reactive.event(input.remove_query)
-    def _():
-        ui.remove_ui(selector=f"#module_container .row:first-child")
+        query_output_server(id, con=con, remove_id=id)
 
     @reactive.Effect
     @reactive.event(input.show_meta)
@@ -98,9 +94,16 @@ def server(input, output, session):
         ui.insert_ui(
             selector="#module_container",
             where="afterBegin",
-            ui=query_output_ui(id, qry="SELECT * from information_schema.columns"),
+            ui=query_output_ui(
+                id, qry="SELECT * from information_schema.columns", remove_id=id
+            ),
         )
-        query_output_server(id, con=con)
+        query_output_server(id, con=con, remove_id=id)
+
+    @reactive.Effect
+    @reactive.event(input.rmv)
+    def _():
+        ui.remove_ui(selector="div:has(> #txt)")
 
 
 app = App(app_ui, server)
