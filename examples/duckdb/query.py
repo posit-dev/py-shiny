@@ -45,19 +45,19 @@ def query_output_ui(remove_id, qry="SELECT * from weather LIMIT 10"):
 def query_output_server(
     input, output, session, con: duckdb.DuckDBPyConnection, remove_id
 ):
-    result = reactive.Value()
-
-    @reactive.Effect
-    @reactive.event(input.run)
-    def _():
-        qry = input.sql_query().replace("\n", " ")
-        res = con.query(qry).to_df()
-        result.set(res)
-
     @output
     @render.data_frame
     def results():
-        return result.get()
+        # In order to avoid the query re-running with each keystroke we
+        # wrap it in isolate and add a call to `input.run()` to trigger execution.
+        # This ensures that the query runs when the module is populated and also
+        # passes the error messages on to the user.
+        input.run()
+        with reactive.isolate():
+            qry = input.sql_query().replace("\n", " ")
+            result = con.query(qry).to_df()
+
+        return result
 
     @reactive.Effect
     @reactive.event(input.rmv)
