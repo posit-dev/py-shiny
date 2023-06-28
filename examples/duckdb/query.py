@@ -1,3 +1,5 @@
+import duckdb
+
 from shiny import module, reactive, render, ui
 
 
