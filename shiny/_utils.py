@@ -16,10 +16,7 @@ from typing import Any, Awaitable, Callable, Optional, TypeVar, cast
 
 from ._typing_extensions import ParamSpec, TypeGuard
 
-if sys.version_info >= (3, 8):
-    CancelledError = asyncio.CancelledError
-else:
-    CancelledError = asyncio.futures.CancelledError
+CancelledError = asyncio.CancelledError
 
 
 # ==============================================================================
