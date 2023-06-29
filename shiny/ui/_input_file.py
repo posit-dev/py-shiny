@@ -2,13 +2,12 @@ from __future__ import annotations
 
 __all__ = ("input_file",)
 
-from typing import Optional
+from typing import Literal, Optional
 
 from htmltools import Tag, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from .._typing_extensions import Literal
 from ._utils import shiny_input_label
 
 

@@ -12,12 +12,12 @@ __all__ = (
     "SilentCancelOutputException",
 )
 
-from typing import TYPE_CHECKING, Any, BinaryIO, Optional
+from typing import TYPE_CHECKING, Any, BinaryIO, Literal, Optional, Protocol
 
 from htmltools import TagChild
 
 from ._docstring import add_example
-from ._typing_extensions import Literal, NotRequired, Protocol, TypedDict
+from ._typing_extensions import NotRequired, TypedDict
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure

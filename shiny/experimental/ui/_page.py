@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Sequence
+from typing import Literal, Optional, Sequence
 
 from htmltools import (
     MetadataNode,
@@ -13,7 +13,6 @@ from htmltools import (
     tags,
 )
 
-from ..._typing_extensions import Literal
 from ...types import MISSING, MISSING_TYPE, NavSetArg
 from ...ui._page import page_bootstrap
 from ...ui._utils import get_window_title

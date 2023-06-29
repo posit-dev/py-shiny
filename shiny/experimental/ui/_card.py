@@ -4,7 +4,7 @@ import base64
 import io
 import mimetypes
 from pathlib import Path, PurePath
-from typing import Optional
+from typing import Literal, Optional, Protocol
 
 from htmltools import (
     HTML,
@@ -19,7 +19,6 @@ from htmltools import (
     tags,
 )
 
-from ..._typing_extensions import Literal, Protocol
 from ...types import MISSING, MISSING_TYPE
 from ._css_unit import CssUnit, as_css_padding, as_css_unit
 from ._fill import as_fill_carrier, as_fill_item, as_fillable_container

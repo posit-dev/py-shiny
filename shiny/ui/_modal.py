@@ -7,12 +7,11 @@ __all__ = (
     "modal_remove",
 )
 
-from typing import Optional
+from typing import Literal, Optional
 
 from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, div, tags
 
 from .._docstring import add_example
-from .._typing_extensions import Literal
 from ..session import Session, require_active_session
 from ..types import MISSING, MISSING_TYPE
 
