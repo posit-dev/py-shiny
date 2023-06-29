@@ -2371,33 +2371,6 @@ class Accordion(
                 "> div.accordion-collapse.show",
             ),
         )
-        # self.loc_open = self.loc.locator(
-        #     "> div.accordion-item > div.accordion-collapse.show"
-        # )
-
-    # def expect_min(
-    #     self,
-    #     value: AttrValue,
-    #     *,
-    #     timeout: Timeout = None,
-    # ) -> None:
-    #     expect_attr(self.loc, "min", value=value, timeout=timeout)
-
-    # def expect_max(
-    #     self,
-    #     value: AttrValue,
-    #     *,
-    #     timeout: Timeout = None,
-    # ) -> None:
-    #     expect_attr(self.loc, "max", value=value, timeout=timeout)
-
-    # def expect_step(
-    #     self,
-    #     value: AttrValue,
-    #     *,
-    #     timeout: Timeout = None,
-    # ) -> None:
-    #     expect_attr(self.loc, "step", value=value, timeout=timeout)
 
     def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
         expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
@@ -2411,7 +2384,6 @@ class Accordion(
         *,
         timeout: Timeout = None,
     ) -> None:
-        # playwright_expect(self.loc).to_have_attribute(value, timeout=timeout)
         playwright_expect(self.loc_open).to_have_count(len(value), timeout=timeout)
 
     def expect_panels(
@@ -2420,5 +2392,24 @@ class Accordion(
         *,
         timeout: Timeout = None,
     ) -> None:
-        # playwright_expect(self.loc).to_have_attribute(value, timeout=timeout)
         playwright_expect(self.loc).to_have_count(len(value), timeout=timeout)
+
+    def expect_all_panels_to_have_attribute(
+        self,
+        attribute: str,
+        value: list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        for index, element in enumerate(value):
+            playwright_expect(self.loc.nth(index)).to_have_attribute(
+                attribute, element, timeout=timeout
+            )
+
+    def expect_open_panels_to_contain_text(
+        self,
+        value: list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc_open).to_contain_text(value, timeout=timeout)
