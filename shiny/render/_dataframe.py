@@ -69,7 +69,9 @@ class DataGrid(AbstractTabularData):
 
     See Also
     --------
-    ~shiny.ui.output_data_frame ~shiny.render.data_frame
+    :func:`~shiny.ui.output_data_frame`
+    :func:`~shiny.render.data_frame`
+    :class:`~shiny.render.DataTable`
     """
 
     def __init__(
@@ -153,7 +155,9 @@ class DataTable(AbstractTabularData):
 
     See Also
     --------
-    ~shiny.ui.output_data_frame ~shiny.render.data_frame
+    :func:`~shiny.ui.output_data_frame`
+    :func:`~shiny.render.data_frame`
+    :class:`~shiny.render.DataGrid`
     """
 
     def __init__(
@@ -317,13 +321,15 @@ def data_frame(
     Tip
     ----
     This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_table` container (see :func:`~shiny.ui.output_table` for
-    example usage).
+    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of a
+    :func:`~shiny.ui.output_data_frame` container (see
+    :func:`~shiny.ui.output_data_frame` for example usage).
 
     See Also
     --------
-    ~shiny.ui.output_data_frame
+    :class:`~shiny.render.DataGrid`
+    :class:`~shiny.render.DataTable`
+    :func:`~shiny.ui.output_data_frame`
     """
 
     def wrapper(fn: RenderDataFrameFunc | RenderDataFrameFuncAsync) -> RenderDataFrame:
