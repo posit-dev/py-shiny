@@ -1,3 +1,4 @@
+import pandas
 import plotly.express as px
 import plotly.graph_objs as go
 from shinywidgets import output_widget, render_widget

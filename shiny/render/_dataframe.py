@@ -69,9 +69,9 @@ class DataGrid(AbstractTabularData):
 
     See Also
     --------
-    ~shiny.ui.output_data_frame
-    ~shiny.render.data_frame
-    ~shiny.render.DataTable
+    :func:`~shiny.ui.output_data_frame`
+    :func:`~shiny.render.data_frame`
+    :class:`~shiny.render.DataTable`
     """
 
     def __init__(
@@ -155,9 +155,9 @@ class DataTable(AbstractTabularData):
 
     See Also
     --------
-    ~shiny.ui.output_data_frame
-    ~shiny.render.data_frame
-    ~shiny.render.DataGrid
+    :func:`~shiny.ui.output_data_frame`
+    :func:`~shiny.render.data_frame`
+    :class:`~shiny.render.DataGrid`
     """
 
     def __init__(
@@ -327,9 +327,9 @@ def data_frame(
 
     See Also
     --------
-    ~shiny.render.DataGrid
-    ~shiny.render.DataTable
-    ~shiny.ui.output_data_frame
+    :class:`~shiny.render.DataGrid`
+    :class:`~shiny.render.DataTable`
+    :func:`~shiny.ui.output_data_frame`
     """
 
     def wrapper(fn: RenderDataFrameFunc | RenderDataFrameFuncAsync) -> RenderDataFrame:
