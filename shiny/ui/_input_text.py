@@ -53,10 +53,10 @@ def input_text(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A string containing the current text input. The default value is ``""`` unless
-        ``value`` is provided.
+    ::: {.callout-note title="Server value"}
+    A string containing the current text input. The default value is ``""`` unless
+    ``value`` is provided.
+    :::
 
     See Also
     -------
@@ -140,10 +140,10 @@ def input_text_area(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A string containing the current text input. The default value is ``""`` unless
-        ``value`` is provided.
+    ::: {.callout-note title="Server value"}
+    A string containing the current text input. The default value is ``""`` unless
+    ``value`` is provided.
+    :::
 
     See Also
     -------
