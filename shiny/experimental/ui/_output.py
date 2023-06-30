@@ -24,7 +24,7 @@ from ...ui._plot_output_opts import (
 from ._fill import as_fill_item, as_fillable_container
 
 
-@add_example()
+# @add_example()
 def output_plot(
     id: str,
     width: str = "100%",
@@ -118,7 +118,7 @@ def output_plot(
     return res
 
 
-@add_example()
+# @add_example()
 def output_image(
     id: str,
     width: str = "100%",
@@ -229,7 +229,7 @@ def output_image(
     return container
 
 
-@add_example()
+# @add_example()
 def output_ui(
     id: str,
     inline: bool = False,
