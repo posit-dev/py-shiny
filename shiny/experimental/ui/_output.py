@@ -7,7 +7,6 @@ from typing import Optional
 
 from htmltools import Tag, TagAttrValue, TagFunction, css, div, tags
 
-from ..._docstring import add_example
 from ..._namespaces import resolve_id
 from ...types import MISSING, MISSING_TYPE
 from ...ui._plot_output_opts import (
