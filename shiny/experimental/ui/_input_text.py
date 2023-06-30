@@ -30,8 +30,8 @@ def input_text_area(
 ) -> Tag:
     """
     Create a textarea input control for entry of unstructured text values. This is an
-    experimental version of shiny.ui.input_text_area that can automatically resize to
-    fit the input text.
+    experimental version of :func:`~shiny.ui.input_text_area` that can automatically
+    resize to fit the input text.
 
     Parameters
     ----------
@@ -60,13 +60,14 @@ def input_text_area(
         "vertical", and "horizontal". The default, ``None``, will use the client
         browser's default setting for resizing textareas.
     autoresize
-        If True, then the textarea will automatically resize to fit the input text.
+        If True, then the textarea will automatically resize the height to fit the input
+        text.
     autocomplete
         Whether to enable browser autocompletion of the text input (default is "off").
-        If None, then it will use the browser's default behavior. Other possible values
-        include "on", "name", "username", and "email". See
-        https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete for
-        more.
+        If `None`, then it will use the browser's default behavior. Other possible
+        values include "on", "name", "username", and "email". See [Mozila's autocomplete
+        documentation](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete)
+        for more.
     spellcheck
         Whether to enable browser spell checking of the text input (default is None). If
         None, then it will use the browser's default behavior.
@@ -86,7 +87,7 @@ def input_text_area(
 
     See Also
     -------
-    ~shiny.ui.input_text
+    :func:`~shiny.ui.input_text`
     """
 
     if resize and resize not in ["none", "both", "horizontal", "vertical"]:

@@ -103,8 +103,8 @@ def bind_fill_role(
     Returns
     -------
     :
-        The original tag object (`tag`) with additional attributes (and a
-        `~shiny.ui.HtmlDependency`).
+        The original :class:`~htmltools.Tag` object (`tag`) with additional attributes
+        (and an :class:`~htmltools.HtmlDependency`).
     """
     tag = _add_role(
         tag,
@@ -149,12 +149,12 @@ def as_fill_carrier(
 
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
-    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body`,
-    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
+    why most UI components (e.g., :func:`~shiny.experimental.ui.card`,
+    :func:`~shiny.experimental.ui.card_body`,
+    :func:`~shiny.experimental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
-    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
-    these functions are designed to do.
+    remove, and/or test fillable/fill properties on arbitrary :class:`~htmltools.Tag`,
+    which these functions are designed to do.
 
     Parameters
     ----------
@@ -162,6 +162,12 @@ def as_fill_carrier(
         a Tag object.
     min_height,max_height,gap
         Any valid CSS unit (e.g., `150`) to be applied to `tag`.
+
+    Returns
+    -------
+    :
+        The original :class:`~htmltools.Tag` object (`tag`) with additional attributes
+        (and an :class:`~htmltools.HtmlDependency`).
 
     See Also
     --------
@@ -197,12 +203,12 @@ def as_fillable_container(
 
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
-    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body`,
-    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
+    why most UI components (e.g., :func:`~shiny.experimental.ui.card`,
+    :func:`~shiny.experimental.ui.card_body`,
+    :func:`~shiny.experimental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
-    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
-    these functions are designed to do.
+    remove, and/or test fillable/fill properties on arbitrary :class:`~htmltools.Tag`,
+    which these functions are designed to do.
 
     Parameters
     ----------
@@ -211,6 +217,11 @@ def as_fillable_container(
     min_height,max_height,gap
         Any valid CSS unit (e.g., `150`) to be applied to `tag`.
 
+    Returns
+    -------
+    :
+        The original :class:`~htmltools.Tag` object (`tag`) with additional attributes
+        (and an :class:`~htmltools.HtmlDependency`).
 
     See Also
     --------
@@ -245,12 +256,12 @@ def as_fill_item(
 
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
-    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body`,
-    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
+    why most UI components (e.g., :func:`~shiny.experimental.ui.card`,
+    :func:`~shiny.experimental.ui.card_body`,
+    :func:`~shiny.experimental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
-    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
-    these functions are designed to do.
+    remove, and/or test fillable/fill properties on arbitrary :class:`~htmltools.Tag`,
+    which these functions are designed to do.
 
     Parameters
     ----------
@@ -259,6 +270,11 @@ def as_fill_item(
     min_height,max_height
         Any valid CSS unit (e.g., `150`) to be applied to `tag`.
 
+    Returns
+    -------
+    :
+        The original :class:`~htmltools.Tag` object (`tag`) with additional attributes
+        (and an :class:`~htmltools.HtmlDependency`).
 
     See Also
     --------
@@ -283,17 +299,23 @@ def remove_all_fill(tag: TagFillingLayoutT) -> TagFillingLayoutT:
 
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
-    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body`,
-    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
+    why most UI components (e.g., :func:`~shiny.experimental.ui.card`,
+    :func:`~shiny.experimental.ui.card_body`,
+    :func:`~shiny.experimental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
-    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
-    these functions are designed to do.
+    remove, and/or test fillable/fill properties on arbitrary :class:`~htmltools.Tag`,
+    which these functions are designed to do.
 
     Parameters
     ----------
     tag
         a Tag object.
+
+    Returns
+    -------
+    :
+        The original :class:`~htmltools.Tag` object with filling layout attributes
+        removed.
 
 
     See Also
@@ -323,18 +345,22 @@ def is_fill_carrier(tag: Tag | FillingLayout) -> bool:
 
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
-    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body`,
-    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
+    why most UI components (e.g., :func:`~shiny.experimental.ui.card`,
+    :func:`~shiny.experimental.ui.card_body`,
+    :func:`~shiny.experimental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
-    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
-    these functions are designed to do.
+    remove, and/or test fillable/fill properties on arbitrary :class:`~htmltools.Tag`,
+    which these functions are designed to do.
 
     Parameters
     ----------
     tag
         a Tag object.
 
+    Returns
+    -------
+    :
+        Whether or not `tag` is a fill carrier.
 
     See Also
     --------
@@ -354,17 +380,22 @@ def is_fillable_container(tag: TagChild | FillingLayout) -> bool:
 
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
-    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body`,
-    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
+    why most UI components (e.g., :func:`~shiny.experimental.ui.card`,
+    :func:`~shiny.experimental.ui.card_body`,
+    :func:`~shiny.experimental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
-    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
-    these functions are designed to do.
+    remove, and/or test fillable/fill properties on arbitrary :class:`~htmltools.Tag`,
+    which these functions are designed to do.
 
     Parameters
     ----------
     tag
         a Tag object.
+
+    Returns
+    -------
+    :
+        Whether or not `tag` is a fillable container.
 
 
     See Also
@@ -389,18 +420,22 @@ def is_fill_item(tag: TagChild | FillingLayout) -> bool:
 
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
-    why most UI components (e.g., :func:`~shiny.experiemental.ui.card`,
-    :func:`~shiny.experiemental.ui.card_body`,
-    :func:`~shiny.experiemental.ui.layout_sidebar`) possess both `fillable` and `fill`
+    why most UI components (e.g., :func:`~shiny.experimental.ui.card`,
+    :func:`~shiny.experimental.ui.card_body`,
+    :func:`~shiny.experimental.ui.layout_sidebar`) possess both `fillable` and `fill`
     arguments (to control their fill behavior). However, sometimes it's useful to add,
-    remove, and/or test fillable/fill properties on arbitrary `~htmltools.Tag`, which
-    these functions are designed to do.
+    remove, and/or test fillable/fill properties on arbitrary :class:`~htmltools.Tag`,
+    which these functions are designed to do.
 
     Parameters
     ----------
     tag
         a Tag object.
 
+    Returns
+    -------
+    :
+        Whether or not `tag` is a fill item.
 
     See Also
     --------

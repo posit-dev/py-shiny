@@ -170,7 +170,7 @@ def page_navbar(
     -------
     * :func:`~shiny.ui.nav`
     * :func:`~shiny.ui.nav_menu`
-    * :func:`~shiny.ui.navset_bar`
+    * :func:`~shiny.experimental.ui.navset_bar`
     * :func:`~shiny.ui.page_fluid`
 
     Example
@@ -225,6 +225,20 @@ def page_navbar(
     )
 
 
+#' @rdname page
+#' @param padding Padding to use for the body. This can be a numeric vector
+#'   (which will be interpreted as pixels) or a character vector with valid CSS
+#'   lengths. The length can be between one and four. If one, then that value
+#'   will be used for all four sides. If two, then the first value will be used
+#'   for the top and bottom, while the second value will be used for left and
+#'   right. If three, then the first will be used for top, the second will be
+#'   left and right, and the third will be bottom. If four, then the values will
+#'   be interpreted as top, right, bottom, and left respectively.
+#' @param fillable_mobile Whether or not the page should fill the viewport's
+#'   height on mobile devices (i.e., narrow windows).
+#' @param gap A [CSS length unit][htmltools::validateCssUnit()] defining the
+#'   `gap` (i.e., spacing) between elements provided to `...`.
+#' @export
 def page_fillable(
     *args: TagChild | TagAttrs,
     padding: Optional[CssUnit | list[CssUnit]] = None,
@@ -234,6 +248,40 @@ def page_fillable(
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
+    """
+    Creates a fillable page
+
+    Parameters
+    ----------
+    *args
+        UI elements.
+    padding
+        Padding to use for the body. See :func:`~shiny.experimental.ui.as_css_padding`
+        for more details.
+    fillable_mobile
+        Whether or not the page should fill the viewport's height on mobile devices
+        (i.e., narrow windows).
+    gap
+        A CSS length unit passed through :func:`~shiny.experimental.ui.as_css_unit`
+        defining the `gap` (i.e., spacing) between elements provided to `*args`.
+    title
+        The browser window title (defaults to the host URL of the page). Can also be set
+        as a side effect via :func:`~shiny.ui.panel_title`.
+    lang
+        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+        default, `None`, results in an empty string.
+
+    Returns
+    -------
+    :
+        A UI element.
+
+    See Also
+    -------
+    * :func:`~shiny.ui.page_fluid`
+    * :func:`~shiny.ui.page_fixed`
+    """
     attrs, children = consolidate_attrs(*args, **kwargs)
 
     style = css(

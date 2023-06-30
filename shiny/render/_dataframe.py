@@ -306,17 +306,15 @@ def data_frame(
     index
         Whether to print index (row) labels.
     selection
+        Whether to print column labels.
 
 
     Returns
     -------
     :
-        A decorator for a function that returns any of the following:
-
-        1. A pandas :class:`DataFrame` object.
-        2. A pandas :class:`Styler` object.
-        3. Any object that has a `.to_pandas()` method (e.g., a Polars data frame or
-           Arrow table).
+        A decorator for a function that returns either a pandas :class:`DataFrame`
+        object, pandas :class:`Styler` object, or any object that has a `.to_pandas()`
+        method (e.g., a Polars data frame or Arrow table).
 
     Tip
     ----
