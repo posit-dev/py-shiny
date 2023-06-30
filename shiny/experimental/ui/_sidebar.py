@@ -24,15 +24,15 @@ class Sidebar:
     Sidebar object
 
     Class returned from :func:`~shiny.experimental.ui.sidebar`. Please do not use this
-    class directly. Instead, supply the `sidebar()` object to
+    class directly. Instead, supply the :func:`~shiny.experimental.ui.sidebar` object to
     :func:`~shiny.experimental.ui.layout_sidebar`.
 
     Attributes
     ----------
     tag
-        The `Tag` object that represents the sidebar.
+        The :class:`~htmltools.Tag` object that represents the sidebar.
     collapse_tag
-        The `Tag` object that represents the collapse button.
+        The :class:`~htmltools.Tag` object that represents the collapse button.
     position
         Where the sidebar should appear relative to the main content.
     open
@@ -52,9 +52,9 @@ class Sidebar:
     Parameters
     ----------
     tag
-        The `Tag` object that represents the sidebar.
+        The :class:`~htmltools.Tag` object that represents the sidebar.
     collapse_tag
-        The `Tag` object that represents the collapse button.
+        The :class:`~htmltools.Tag` object that represents the collapse button.
     position
         Where the sidebar should appear relative to the main content.
     open
@@ -134,7 +134,7 @@ def sidebar(
     * :func:`~shiny.experimental.ui.layout_sidebar`
       * Creates a sidebar layout component which can be dropped inside any
         :func:`~shiny.ui.page` or :func:`~shiny.experimental.ui.card` context.
-    * :func:`~shiny.experimental.ui.page_navbar`, :func:`~shiny.experimental.ui.navset_card_tab`, and :func:`~shiny.experimental.ui.navset_card_pill`
+    * :func:`~shiny.experimental.ui.navset_bar`, :func:`~shiny.experimental.ui.navset_tab_card`, and :func:`~shiny.experimental.ui.navset_pill_card`
       * Creates a multi page/tab UI with a singular `sidebar()` (which is
         shown on every page/tab).
 
@@ -142,19 +142,16 @@ def sidebar(
     ----------
     *args
         Contents to the sidebar. Or tag attributes that are supplied to the
-        resolved `Tag` object.
+        resolved :class:`~htmltools.Tag` object.
     width
         A valid CSS unit used for the width of the sidebar.
     position
         Where the sidebar should appear relative to the main content.
     open
-        The initial state of the sidebar, choosing from the following options:
-
-        * `"desktop"`: The sidebar starts open on desktop screen, closed on mobile.
-            This is default sidebar behavior.
-        * `"open"` or `True`: The sidebar starts open.
-        * `"closed"` or `False`: The sidebar starts closed.
-        * `"always"` or `None`: The sidebar is always open and cannot be closed.
+        The initial state of the sidebar. It can be `"desktop"` (the sidebar starts open
+        on desktop screen, closed on mobile), `"open"` or `True` (the sidebar starts
+        open), `"closed"` or `False` (the sidebar starts closed), or `"always"` or
+        `None` (the sidebar is always open and cannot be closed).
 
         In :func:`~shiny.experimental.ui.sidebar_toggle`, `open` indicates the desired
         state of the sidebar, where the default of `open = None` will cause the sidebar
@@ -183,14 +180,14 @@ def sidebar(
     Returns
     -------
     :
-        A `Sidebar` object.
+        A :class:`~shiny.experimental.ui.Sidebar` object.
 
     See Also
     --------
     * :func:`~shiny.experimental.ui.layout_sidebar`
-    * :func:`~shiny.experimental.ui.navset_navbar`
-    * :func:`~shiny.experimental.ui.navset_card_tab`
-    * :func:`~shiny.experimental.ui.navset_card_pill`
+    * :func:`~shiny.experimental.ui.navset_bar`
+    * :func:`~shiny.experimental.ui.navset_tab_card`
+    * :func:`~shiny.experimental.ui.navset_pill_card`
     """
     # TODO-future; validate `open`, bg, fg, class_, max_height_mobile
 
@@ -268,10 +265,10 @@ def layout_sidebar(
     Parameters
     ----------
     sidebar
-        A `Sidebar` object created by :func:`~shiny.experimental.ui.sidebar`.
+        A :class:`~shiny.experimental.ui.Sidebar` object created by :func:`~shiny.experimental.ui.sidebar`.
     *args
         Contents to the main content area. Or tag attributes that are supplied to the
-        resolved `Tag` object.
+        resolved :class:`~htmltools.Tag` object.
     fillable
         Whether or not the main content area should be wrapped in a fillable container.
         See :func:`~shiny.experimental.ui.as_fillable_container` for details.
@@ -304,7 +301,7 @@ def layout_sidebar(
     Returns
     -------
     :
-        A `Tag` object.
+        A :class:`~htmltools.Tag` object.
 
     See Also
     --------
@@ -407,21 +404,17 @@ def sidebar_toggle(
     """
     Toggle a sidebar
 
-    Toggle a `sidebar()` state during an active Shiny user session.
+    Toggle a :func:`~shiny.experimental.ui.sidebar` state during an active Shiny user session.
 
     Parameters
     ----------
     id
-        The `id` of the `sidebar()` to toggle.
+        The `id` of the :func:`~shiny.experimental.ui.sidebar` to toggle.
     open
-        The desired state of the sidebar, choosing from the following options:
-
-        * `None`: toggle sidebar open/closed
-        * `"open"` or `True`: The sidebar starts open.
-        * `"closed"` or `False`: The sidebar starts closed.
-
-        Note that `sidebar_toggle()` can only open or close the sidebar, so it does not
-        support the `"desktop"` and `"always"`
+        The desired state of the sidebar, choosing from the following options: `None`
+        (toggle sidebar open and closed), `"open"` or `True` (open the sidebar),
+        `"closed"` or `False` (close the sidebar). Note that `sidebar_toggle()` can only
+        open or close the sidebar, so it does not support the `"desktop"` and `"always"`
     session
         A Shiny session object (the default should almost always be used).
 
@@ -519,17 +512,17 @@ class DeprecatedPanelSidebar:
     ----------
     *args
         Contents to the sidebar. Or tag attributes that are supplied to the resolved
-        `Tag` object.
+        :class:`~htmltools.Tag` object.
     width
         An integeger between 1 and 12, inclusive, that determines the width of the
         sidebar. The default is 4.
     **kwargs
-        Tag attributes that are supplied to the resolved `Tag` object.
+        Tag attributes that are supplied to the resolved :class:`~htmltools.Tag` object.
 
     Attributes
     ----------
     sidebar
-        A `~shiny.experimental.ui.Sidebar` object.
+        A output from :func:`~shiny.experimental.ui.sidebar`.
 
     See Also
     --------

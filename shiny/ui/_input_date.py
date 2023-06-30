@@ -100,9 +100,9 @@ def input_date(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A :class:`~datetime.date` object.
+    ::: {.callout-note title="Server value"}
+    A :class:`~datetime.date` object.
+    :::
 
     See Also
     -------
@@ -218,9 +218,9 @@ def input_date_range(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A tuple of :class:`~datetime.date` objects.
+    ::: {.callout-note title="Server value"}
+    A tuple of :class:`~datetime.date` objects.
+    :::
 
     See Also
     -------

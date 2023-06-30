@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
+* Documentation updates. (#591)
 * Removed Python 3.7 support. (#590)
 
 

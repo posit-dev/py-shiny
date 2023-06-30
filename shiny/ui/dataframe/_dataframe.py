@@ -24,6 +24,23 @@ def data_frame_deps() -> HTMLDependency:
 
 
 def output_data_frame(id: str) -> Tag:
+    """
+    Create a output container for a data frame.
+
+    Parameters
+    ----------
+    id
+        An input id.
+
+    Returns
+    -------
+    :
+        A UI element.
+
+    See Also
+    --------
+    :func:`~shiny.render.data_frame`
+    """
     return bind_fill_role(
         Tag(
             "shiny-data-frame",

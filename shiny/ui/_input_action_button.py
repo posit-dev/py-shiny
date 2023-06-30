@@ -41,9 +41,9 @@ def input_action_button(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        An integer representing the number of clicks.
+    ::: {.callout-note title="Server value"}
+    An integer representing the number of clicks.
+    :::
 
     See Also
     -------
@@ -92,9 +92,9 @@ def input_action_link(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        An integer representing the number of clicks.
+    ::: {.callout-note title="Server value"}
+    An integer representing the number of clicks.
+    :::
 
     See Also
     -------

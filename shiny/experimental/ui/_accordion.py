@@ -36,11 +36,11 @@ class AccordionPanel:
     ----------
     *args
         Contents to the accordion panel body. Or tag attributes that are supplied to the
-        returned `Tag` object.
+        returned :class:`~htmltools.Tag` object.
     data_value
         A character string that uniquely identifies this panel.
     icon
-        A `Tag` which is positioned just before the `title`.
+        A :class:`~htmltools.Tag` which is positioned just before the `title`.
     title
         A title to appear in the :func:`~shiny.experimental.ui.accordion_panel`'s header.
     id
@@ -90,12 +90,14 @@ class AccordionPanel:
 
     def resolve(self) -> Tag:
         """
-        Resolve the `AccordionPanel` into a `Tag`.
+        Resolve the :class:`~shiny.experimental.ui.AccordionPanel` into a
+        :class:`~htmltools.Tag`.
 
         Returns
         -------
         :
-            A `Tag` object representing the `AccordionPanel`.
+            A :class:`~htmltools.Tag` object representing the
+            :class:`~shiny.experimental.ui.AccordionPanel`.
         """
         btn_attrs = {}
         if self._is_open:
@@ -150,7 +152,8 @@ class AccordionPanel:
 
     def tagify(self) -> Tag:
         """
-        Resolve the `AccordionPanel` into a `Tag`.
+        Resolve the :class:`~shiny.experimental.ui.AccordionPanel` into a
+        :class:`~htmltools.Tag`.
 
         Returns
         -------
@@ -177,9 +180,9 @@ def accordion(
     Parameters
     ----------
     *args
-        `~shiny.experimental.ui.AccordionPanel` objects returned from
+        :class:`~shiny.experimental.ui.AccordionPanel` objects returned from
         :func:`~shiny.experimental.ui.accordion_panel`. Or tag attributes that are
-        supplied to the returned `Tag` object.
+        supplied to the returned :class:`~htmltools.Tag` object.
     id
         If provided, you can use `input.id()` in your server logic to determine which of
         the :func:`~shiny.experimental.ui.accordion_panel`s are currently active. The
@@ -300,12 +303,12 @@ def accordion_panel(
         A title to appear in the :func:`~shiny.experimental.ui.accordion_panel`'s header.
     *args
         Contents to the accordion panel body. Or tag attributes that are supplied to the
-        returned `Tag` object.
+        returned :class:`~htmltools.Tag` object.
     value
         A character string that uniquely identifies this panel. If `MISSING`, the
         `title` will be used.
     icon
-        A `Tag` which is positioned just before the `title`.
+        A :class:`~htmltools.Tag` which is positioned just before the `title`.
     **kwargs
         Tag attributes to the `accordion-body` div Tag.
 
@@ -393,8 +396,8 @@ def accordion_panel_set(
     """
     Dynamically set accordions panel state
 
-    Dynamically (i.e., programmatically) update/modify :func:~`shiny.experimental.ui.accordion`s in a Shiny app.
-    These functions require an `id` to be provided to the :func:~`shiny.experimental.ui.accordion` and must also be
+    Dynamically (i.e., programmatically) update/modify :func:`~shiny.experimental.ui.accordion`s in a Shiny app.
+    These functions require an `id` to be provided to the :func:`~shiny.experimental.ui.accordion` and must also be
     called within an active Shiny session.
 
     Parameters
@@ -469,7 +472,7 @@ def accordion_panel_close(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Close a set of [accordion_panel()]s.
+    Close a set of accordion panels in an :func:`~shiny.experimental.ui.accordion`.
 
     Parameters
     ----------
@@ -620,7 +623,7 @@ def update_accordion_panel(
     """
     Dynamically update accordions panel contents
 
-    Dynamically (i.e., programmatically) update/modify `accordion_panels()`s in a Shiny app.
+    Dynamically (i.e., programmatically) update/modify :func:`~shiny.experimental.ui.accordion` panels in a Shiny app.
     These functions require an `id` to be provided to the :func:`~shiny.experimental.ui.accordion` and must also be
     called within an active Shiny session.
 

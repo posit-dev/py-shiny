@@ -47,9 +47,9 @@ def input_numeric(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A numeric value.
+    ::: {.callout-note title="Server value"}
+    A numeric value.
+    :::
 
     See Also
     -------

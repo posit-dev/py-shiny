@@ -83,10 +83,10 @@ def input_selectize(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A list of strings, usually of length 1, with the value of the selected items. When
-        ``multiple=True`` and nothing is selected, this value will be ``None``.
+    ::: {.callout-note title="Server value"}
+    A list of strings, usually of length 1, with the value of the selected items. When
+    ``multiple=True`` and nothing is selected, this value will be ``None``.
+    :::
 
     See Also
     -------
@@ -152,10 +152,10 @@ def input_select(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A list of strings, usually of length 1, with the value of the selected items. When
-        ``multiple=True`` and nothing is selected, this value will be ``None``.
+    ::: {.callout-note title="Server value"}
+    A list of strings, usually of length 1, with the value of the selected items. When
+    ``multiple=True`` and nothing is selected, this value will be ``None``.
+    :::
 
     See Also
     -------
