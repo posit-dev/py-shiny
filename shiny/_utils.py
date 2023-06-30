@@ -10,7 +10,6 @@ import os
 import random
 import secrets
 import socketserver
-import sys
 import tempfile
 from typing import Any, Awaitable, Callable, Optional, TypeVar, cast
 
