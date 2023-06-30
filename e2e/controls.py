@@ -7,6 +7,7 @@ import re
 import sys
 import time
 import typing
+from typing import Literal, Protocol
 
 from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
@@ -14,12 +15,6 @@ from playwright.sync_api import expect as playwright_expect
 # Import `shiny`'s typing extentions.
 # Since this is a private file, tell pyright to ignore the import
 # (Imports split over many import statements due to auto formatting)
-from shiny._typing_extensions import (
-    Literal,  # pyright: ignore[reportPrivateImportUsage]
-)
-from shiny._typing_extensions import (
-    Protocol,  # pyright: ignore[reportPrivateImportUsage]
-)
 from shiny._typing_extensions import (
     TypeGuard,  # pyright: ignore[reportPrivateImportUsage]
 )

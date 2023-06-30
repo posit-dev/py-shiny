@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import Optional
+from typing import Literal, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, css, div
 from htmltools import svg as svgtags
@@ -9,7 +9,6 @@ from htmltools import tags
 
 from ... import Session
 from ..._deprecated import warn_deprecated
-from ..._typing_extensions import Literal
 from ...session import require_active_session
 
 # from ._color import get_color_contrast

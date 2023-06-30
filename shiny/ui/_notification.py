@@ -2,12 +2,11 @@ from __future__ import annotations
 
 __all__ = ("notification_show", "notification_remove")
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from htmltools import TagChild
 
 from .._docstring import add_example
-from .._typing_extensions import Literal
 from .._utils import rand_hex
 from ..session import Session, require_active_session
 

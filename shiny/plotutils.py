@@ -7,9 +7,9 @@ from __future__ import annotations
 __all__ = ("brushed_points", "near_points")
 
 
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, Literal, Optional, Union, cast
 
-from ._typing_extensions import Literal, TypedDict
+from ._typing_extensions import TypedDict
 from .types import BrushInfo, CoordInfo, CoordXY
 
 if TYPE_CHECKING:
