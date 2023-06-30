@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Optional, TypeVar
+from typing import Literal, Optional, Protocol, TypeVar, runtime_checkable
 
 from htmltools import Tag, TagChild, Tagifiable, css
 
-from ..._typing_extensions import Literal, Protocol, runtime_checkable
 from ._css_unit import CssUnit, as_css_unit
 from ._htmldeps import fill_dependency
 from ._tag import tag_add_style, tag_prepend_class, tag_remove_class

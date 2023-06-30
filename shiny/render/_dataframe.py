@@ -8,15 +8,17 @@ from typing import (
     Any,
     Awaitable,
     Callable,
+    Literal,
     Optional,
+    Protocol,
     Union,
     cast,
     overload,
+    runtime_checkable,
 )
 
 from .. import _utils
 from .._docstring import add_example
-from .._typing_extensions import Literal, Protocol, runtime_checkable
 from . import RenderFunction, RenderFunctionAsync
 
 if TYPE_CHECKING:

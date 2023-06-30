@@ -7,13 +7,12 @@ __all__ = (
     "page_bootstrap",
 )
 
-from typing import Optional, Sequence
+from typing import Literal, Optional, Sequence
 
 from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from .._typing_extensions import Literal
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._html_dependencies import bootstrap_deps
 from ._navs import navset_bar

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import random
-from typing import Optional, TypeVar
+from typing import Literal, Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
 from ... import Session
-from ..._typing_extensions import Literal
 from ..._utils import drop_none
 from ...session import require_active_session
 from ...types import MISSING, MISSING_TYPE

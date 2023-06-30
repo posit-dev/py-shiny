@@ -1,12 +1,11 @@
 __all__ = ("input_text_area",)
 
-from typing import Optional
+from typing import Literal, Optional
 
 from htmltools import Tag, TagChild, css, div, tags
 
 # from ..._docstring import add_example
 from ..._namespaces import resolve_id
-from ..._typing_extensions import Literal
 from ...ui._utils import shiny_input_label
 from ._htmldeps import autoresize_dependency
 

@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Callable, TypeVar
-
-from ._typing_extensions import Literal
+from typing import Any, Callable, Literal, TypeVar
 
 ex_dir: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "examples")
 

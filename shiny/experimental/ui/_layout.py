@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
-from ..._typing_extensions import Literal
 from ._css_unit import CssUnit, as_css_unit
 from ._fill import as_fill_item, as_fillable_container
 from ._utils import consolidate_attrs, is_01_scalar

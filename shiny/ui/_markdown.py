@@ -3,12 +3,11 @@ __all__ = ("markdown",)
 import importlib
 import textwrap
 import warnings
-from typing import Callable, Optional
+from typing import Callable, Literal, Optional
 
 from htmltools import HTML
 
 from .._docstring import add_example
-from .._typing_extensions import Literal
 
 
 @add_example()
