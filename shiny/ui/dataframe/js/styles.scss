@@ -6,7 +6,10 @@
 
 .shiny-data-grid {
   --shiny-datagrid-font-size: 0.9em;
-  --shiny-datagrid-padding: 0.3em 0.5em;
+  --shiny-datagrid-padding-x: 0.5em;
+  --shiny-datagrid-padding-y: 0.3em;
+  --shiny-datagrid-padding: var(--shiny-datagrid-padding-y)
+    var(--shiny-datagrid-padding-x);
 
   --shiny-datagrid-grid-header-bgcolor: var(--bs-light, #eee);
   --shiny-datagrid-grid-header-gridlines-color: var(--bs-border-color, #ccc);
@@ -53,6 +56,23 @@
         }
       }
     }
+
+    &.filtering > thead {
+      > tr:nth-last-child(2) > th {
+        border-bottom: none;
+      }
+
+      > tr.filters > th {
+        font-weight: unset;
+        padding-top: 0;
+        /* Slight boost to bottom padding */
+        padding-bottom: var(--shiny-datagrid-padding-x);
+
+        > input {
+          width: 100%;
+        }
+      }
+    }
   }
 }
 
@@ -90,7 +110,8 @@
   > table {
     font-size: var(--shiny-datagrid-font-size);
 
-    > thead > tr > th {
+    > thead > tr > th,
+    > thead > tr > td {
       background-color: var(--shiny-datagrid-grid-header-bgcolor);
       padding: var(--shiny-datagrid-padding);
     }

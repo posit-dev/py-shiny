@@ -58,6 +58,8 @@ class DataGrid(AbstractTabularData):
         is not displayed. You can also specify a string template to customize the
         message, containing `{start}`, `{end}`, and `{total}` tokens. For example:
         `"Viendo filas {start} a {end} de {total}"`.
+    filters
+        If `True`, shows a row of filter inputs below the headers, one for each column.
     row_selection_mode
         Use `"none"` to disable row selection, `"single"` to allow a single row to be
         selected at a time, and `"multiple"` to allow multiple rows to be selected by
@@ -83,6 +85,7 @@ class DataGrid(AbstractTabularData):
         width: str | float | None = "fit-content",
         height: Union[str, float, None] = "500px",
         summary: Union[bool, str] = True,
+        filters: bool = False,
         row_selection_mode: Literal["none", "single", "multiple"] = "none",
     ):
         import pandas as pd
@@ -98,6 +101,7 @@ class DataGrid(AbstractTabularData):
         self.width = width
         self.height = height
         self.summary = summary
+        self.filters = filters
         self.row_selection_mode = row_selection_mode
 
     def to_payload(self) -> object:
@@ -111,6 +115,7 @@ class DataGrid(AbstractTabularData):
             width=self.width,
             height=self.height,
             summary=self.summary,
+            filters=self.filters,
             row_selection_mode=self.row_selection_mode,
             style="grid",
         )
@@ -144,6 +149,8 @@ class DataTable(AbstractTabularData):
         is not displayed. You can also specify a string template to customize the
         message, containing `{start}`, `{end}`, and `{total}` tokens. For example:
         `"Viendo filas {start} a {end} de {total}"`.
+    filters
+        If `True`, shows a row of filter inputs below the headers, one for each column.
     row_selection_mode
         Use `"none"` to disable row selection, `"single"` to allow a single row to be
         selected at a time, and `"multiple"` to allow multiple rows to be selected by
@@ -169,6 +176,7 @@ class DataTable(AbstractTabularData):
         width: Union[str, float, None] = "fit-content",
         height: Union[str, float, None] = "500px",
         summary: Union[bool, str] = True,
+        filters: bool = False,
         row_selection_mode: Union[
             Literal["none"], Literal["single"], Literal["multiple"]
         ] = "none",
@@ -186,6 +194,7 @@ class DataTable(AbstractTabularData):
         self.width = width
         self.height = height
         self.summary = summary
+        self.filters = filters
         self.row_selection_mode = row_selection_mode
 
     def to_payload(self) -> object:
@@ -199,6 +208,7 @@ class DataTable(AbstractTabularData):
             width=self.width,
             height=self.height,
             summary=self.summary,
+            filters=self.filters,
             row_selection_mode=self.row_selection_mode,
             style="table",
         )
@@ -293,7 +303,7 @@ def data_frame() -> (
     ...
 
 
-@add_example()
+@add_example(viewerHeight=800)
 def data_frame(
     fn: Optional[RenderDataFrameFunc | RenderDataFrameFuncAsync] = None,
 ) -> (
@@ -301,14 +311,19 @@ def data_frame(
     | Callable[[RenderDataFrameFunc | RenderDataFrameFuncAsync], RenderDataFrame]
 ):
     """
-    Reactively render a Pandas data frame object (or similar) as a basic HTML table.
+    Reactively render a Pandas data frame object (or similar) as a fast-rendering HTML
+    table or grid, with sorting, filtering, and selection features. Currently, the
+    entire data frame's data is transferred to the browser, so this is not suitable for
+    very large data frames; in the future, we anticipate adding support for lazily
+    loading data from the server.
 
     Returns
     -------
     :
-        A decorator for a function that returns either a pandas :class:`DataFrame`
-        object, pandas :class:`Styler` object, or any object that has a `.to_pandas()`
-        method (e.g., a Polars data frame or Arrow table).
+        A decorator for a function that returns either a Pandas data frame, or any
+        object that has a `.to_pandas()` method (e.g., a Polars data frame or Arrow
+        table). Or for more control, return :class:`~shiny.render.DataGrid` (for a
+        grid-style look) or :class:`~shiny.render.DataTable` (for a table-style look).
 
     Tip
     ----
@@ -319,8 +334,7 @@ def data_frame(
 
     See Also
     --------
-    :class:`~shiny.render.DataGrid`
-    :class:`~shiny.render.DataTable`
+    :class:`~shiny.render.DataGrid` :class:`~shiny.render.DataTable`
     :func:`~shiny.ui.output_data_frame`
     """
 
