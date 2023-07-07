@@ -17,7 +17,7 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     acc.expect_open(["Section A"])
     acc_panel_A.expect_label("Section A")
     acc_panel_A.expect_body("Some narrative for section A")
-    acc_panel_A.expect_open()
+    acc_panel_A.expect_open(True)
 
     # click on alternate button
     InputActionButton(page, "alternate").click()

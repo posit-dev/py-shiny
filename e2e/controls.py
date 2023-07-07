@@ -2453,16 +2453,14 @@ class AccordionPanel(
 
         self.loc_body = self.loc.locator("> .accordion-collapse")
 
-        self.loc_open = self.loc.locator("> .accordion-collapse.show")
+    def expect_label(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
 
-    def expect_label(self, value: PatternOrStr) -> None:
-        playwright_expect(self.loc_label).to_have_text(value)
+    def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_body).to_have_text(value, timeout=timeout)
 
-    def expect_body(self, value: PatternOrStr) -> None:
-        playwright_expect(self.loc_body).to_have_text(value)
+    def expect_icon(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_icon).to_have_text(value, timeout=timeout)
 
-    def expect_icon(self, value: PatternOrStr) -> None:
-        playwright_expect(self.loc_icon).to_have_text(value)
-
-    def expect_open(self) -> None:
-        playwright_expect(self.loc_open).to_have_count(1)
+    def expect_open(self, is_open: bool, *, timeout: Timeout = None) -> None:
+        _expect_class_value(self.loc_body, "show", is_open, timeout=timeout)
