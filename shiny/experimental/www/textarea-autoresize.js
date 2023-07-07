@@ -9,8 +9,15 @@
 
   onDelegatedEvent("input", "textarea.textarea-autoresize", (e) => {
     const { target } = e;
-    // Automatically resize the textarea to fit its content.
-    target.style.height = "auto";
-    target.style.height = target.scrollHeight + "px";
+
+    // Removed lines!
+    // This may remove 1 too many lines. (Which will be added back in the next loop)
+    while (target.rows > 1 && target.scrollHeight === target.clientHeight) {
+      target.rows -= 1;
+    }
+    // Added lines!
+    while (target.scrollHeight > target.clientHeight) {
+      target.rows += 1;
+    }
   });
 })();
