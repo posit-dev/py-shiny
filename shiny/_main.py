@@ -10,7 +10,7 @@ import shutil
 import sys
 import types
 from pathlib import Path
-from typing import Any, NotRequired, Optional, TypedDict
+from typing import Any, Optional
 
 import click
 import uvicorn
@@ -19,6 +19,7 @@ import uvicorn.config
 import shiny
 
 from . import _autoreload, _hostenv, _static, _utils
+from ._typing_extensions import NotRequired, TypedDict
 
 
 @click.group("main")
