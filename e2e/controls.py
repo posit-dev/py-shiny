@@ -2097,6 +2097,7 @@ class _OutputTextValue(_OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """Note this function will trim value and output text value before comparing them"""
         self.expect.to_have_text(value, timeout=timeout)
 
 
@@ -2401,10 +2402,23 @@ class Accordion(
         *,
         timeout: Timeout = None,
     ) -> None:
-        for index, element in enumerate(value):
-            playwright_expect(self.loc.nth(index)).to_have_attribute(
-                attribute, element, timeout=timeout
-            )
+        # page: Page,
+        # loc_container: Locator,
+        # el_type: str,
+        # arr_name: str,
+        # arr: ListPatternOrStr,
+        # is_checked: bool | MISSING_TYPE = MISSING,
+        # timeout: Timeout = None,
+        # key: str = "value"
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
+            el_type="> div.accordion-item",
+            arr_name="value",
+            arr=value,
+            key=attribute,
+            timeout=timeout,
+        )
 
     def expect_open_panels_to_contain_text(
         self,
@@ -2413,3 +2427,47 @@ class Accordion(
         timeout: Timeout = None,
     ) -> None:
         playwright_expect(self.loc_open).to_contain_text(value, timeout=timeout)
+
+
+class AccordionPanel(
+    _WidthLocM,
+    _InputWithContainer,
+):
+    #    self,
+    #     *args: TagChild | TagAttrs,
+    #     data_value: str,
+    #     icon: TagChild | None,
+    #     title: TagChild | None,
+    #     id: str | None,
+    #     **kwargs: TagAttrValue,
+    def __init__(self, page: Page, id: str, data_value: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"> div.accordion-item[data-value='{data_value}']",
+            loc_container=f"div#{id}.accordion.shiny-bound-input",
+        )
+
+        self.loc_label = self.loc.locator(
+            "> .accordion-header > .accordion-button > .accordion-title"
+        )
+
+        self.loc_icon = self.loc.locator(
+            "> .accordion-header > .accordion-button > .accordion-icon"
+        )
+
+        self.loc_body = self.loc.locator("> .accordion-collapse")
+
+        self.loc_open = self.loc.locator("> .accordion-collapse.show")
+
+    def expect_label(self, value: PatternOrStr) -> None:
+        playwright_expect(self.loc_label).to_have_text(value)
+
+    def expect_body(self, value: PatternOrStr) -> None:
+        playwright_expect(self.loc_body).to_have_text(value)
+
+    def expect_icon(self, value: PatternOrStr) -> None:
+        playwright_expect(self.loc_icon).to_have_text(value)
+
+    def expect_open(self) -> None:
+        playwright_expect(self.loc_open).to_have_count(1)

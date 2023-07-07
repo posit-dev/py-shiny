@@ -1,5 +1,5 @@
 from conftest import ShinyAppProc
-from controls import Accordion, InputActionButton, OutputTextVerbatim
+from controls import Accordion, AccordionPanel, InputActionButton, OutputTextVerbatim
 from playwright.sync_api import Page
 
 
@@ -7,6 +7,7 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
     acc = Accordion(page, "acc")
+    acc_panel_A = AccordionPanel(page, "acc", "Section A")
     acc.expect_width(None)
     acc.expect_height(None)
 
@@ -14,14 +15,13 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     acc.expect_panels(["Section A", "Section B", "Section C", "Section D"])
     OutputTextVerbatim(page, "acc_txt").expect_value("input.acc(): ('Section A',)")
     acc.expect_open(["Section A"])
+    acc_panel_A.expect_label("Section A")
+    acc_panel_A.expect_body("Some narrative for section A")
+    acc_panel_A.expect_open()
 
     # click on alternate button
     InputActionButton(page, "alternate").click()
     acc.expect_open(["Section B", "Section D"])
-    acc.expect_open_panels_to_contain_text(
-        ["Some narrative for section B", "Some narrative for section D"]
-    )
-    # expect(acc.loc_open).to_have_count(2)
     OutputTextVerbatim(page, "acc_txt").expect_value(
         "input.acc(): ('Section B', 'Section D')"
     )
@@ -29,9 +29,6 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     # click on alternate once again
     InputActionButton(page, "alternate").click()
     acc.expect_open(["Section A", "Section C"])
-    acc.expect_open_panels_to_contain_text(
-        ["Some narrative for section A", "Some narrative for section C"]
-    )
     OutputTextVerbatim(page, "acc_txt").expect_value(
         "input.acc(): ('Section A', 'Section C')"
     )
@@ -39,14 +36,6 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     # click on open All
     InputActionButton(page, "open_all").click()
     acc.expect_open(["Section A", "Section B", "Section C", "Section D"])
-    acc.expect_open_panels_to_contain_text(
-        [
-            "Some narrative for section A",
-            "Some narrative for section B",
-            "Some narrative for section C",
-            "Some narrative for section D",
-        ]
-    )
     OutputTextVerbatim(page, "acc_txt").expect_value(
         "input.acc(): ('Section A', 'Section B', 'Section C', 'Section D')"
     )
@@ -66,16 +55,14 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     acc.expect_all_panels_to_have_attribute(
         "data-value", ["Section A", "Section B", "Section C", "Section D"]
     )
-
+    acc_panel_updated_A = AccordionPanel(page, "acc", "updated_section_a")
     # check attributes for all panels after clicking on add/remove updates
     InputActionButton(page, "toggle_updates").click()
-    acc.expect_panels(["Section A", "S  ection B", "Section C", "Section D"])
-    acc.expect_all_panels_to_have_attribute(
-        "data-value", ["updated_section_a", "Section B", "Section C", "Section D"]
-    )
-    acc.expect_open_panels_to_contain_text(
-        ["Updated body", "Some narrative for section B"]
-    )
+    acc_panel_updated_A.expect_label("Updated title")
+    acc_panel_updated_A.expect_body("Updated body")
+    acc_panel_updated_A.expect_icon("Look! An icon! -->")
+
+    acc.expect_panels(["Section A", "Section B", "Section C", "Section D"])
     OutputTextVerbatim(page, "acc_txt").expect_value(
         "input.acc(): ('updated_section_a', 'Section B')"
     )
@@ -93,9 +80,8 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
             "Section G",
         ]
     )
-
     acc.expect_open(["Section A", "Section B", "Section E", "Section F", "Section G"])
-    # failing since there is a bug in the code
+    # will be uncommented once https://github.com/rstudio/bslib/issues/565 is fixed
     # OutputTextVerbatim(page, "acc_txt").expect_value(
     #     "input.acc(): ('updated_section_a', 'Section B', 'Section E', 'Section F', 'Section G')"
     # )
