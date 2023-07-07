@@ -10,7 +10,7 @@ import shutil
 import sys
 import types
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, NotRequired, Optional, TypedDict
 
 import click
 import uvicorn
@@ -233,7 +233,7 @@ def run_app(
         else:
             setup_hot_reload(log_config, autoreload_port, port, launch_browser)
 
-    reload_args: dict[str, bool | str | list[str]] = {}
+    reload_args: ReloadArgs = {}
     if reload:
         reload_dirs = []
         if app_dir is not None:
@@ -446,3 +446,9 @@ def static_assets(command: str) -> None:
         _static.print_shinylive_local_info()
     else:
         raise click.UsageError(f"Unknown command: {command}")
+
+
+class ReloadArgs(TypedDict):
+    reload: NotRequired[bool]
+    reload_includes: NotRequired[list[str]]
+    reload_dirs: NotRequired[list[str]]
