@@ -1,12 +1,11 @@
 __all__ = ("input_text_area",)
 
-from typing import Optional
+from typing import Literal, Optional
 
 from htmltools import Tag, TagChild, css, div, tags
 
 # from ..._docstring import add_example
 from ..._namespaces import resolve_id
-from ..._typing_extensions import Literal
 from ...ui._utils import shiny_input_label
 from ._htmldeps import autoresize_dependency
 
@@ -30,8 +29,8 @@ def input_text_area(
 ) -> Tag:
     """
     Create a textarea input control for entry of unstructured text values. This is an
-    experimental version of shiny.ui.input_text_area that can automatically resize to
-    fit the input text.
+    experimental version of :func:`~shiny.ui.input_text_area` that can automatically
+    resize to fit the input text.
 
     Parameters
     ----------
@@ -60,13 +59,14 @@ def input_text_area(
         "vertical", and "horizontal". The default, ``None``, will use the client
         browser's default setting for resizing textareas.
     autoresize
-        If True, then the textarea will automatically resize to fit the input text.
+        If True, then the textarea will automatically resize the height to fit the input
+        text.
     autocomplete
         Whether to enable browser autocompletion of the text input (default is "off").
-        If None, then it will use the browser's default behavior. Other possible values
-        include "on", "name", "username", and "email". See
-        https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete for
-        more.
+        If `None`, then it will use the browser's default behavior. Other possible
+        values include "on", "name", "username", and "email". See [Mozila's autocomplete
+        documentation](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete)
+        for more.
     spellcheck
         Whether to enable browser spell checking of the text input (default is None). If
         None, then it will use the browser's default behavior.
@@ -78,14 +78,15 @@ def input_text_area(
 
     Notes
     ------
-    .. admonition:: Server value
 
-        A string containing the current text input. The default value is ``""`` unless
-        ``value`` is provided.
+    ::: {.callout-note title="Server value"}
+    A string containing the current text input. The default value is ``""`` unless
+    ``value`` is provided.
+    :::
 
     See Also
     -------
-    ~shiny.ui.input_text
+    :func:`~shiny.ui.input_text`
     """
 
     if resize and resize not in ["none", "both", "horizontal", "vertical"]:

@@ -15,7 +15,7 @@ __all__ = (
 )
 
 
-from typing import Optional
+from typing import Literal, Optional
 
 from htmltools import (
     Tag,
@@ -33,7 +33,6 @@ from htmltools import (
 
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
-from .._typing_extensions import Literal
 from ..module import current_namespace
 from ..types import MISSING, MISSING_TYPE
 from ._html_dependencies import jqui_deps

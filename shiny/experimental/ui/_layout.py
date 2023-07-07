@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
-from htmltools import TagAttrs, TagAttrValue, TagChild, css, div
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
-from ..._typing_extensions import Literal
 from ._css_unit import CssUnit, as_css_unit
 from ._fill import as_fill_item, as_fillable_container
 from ._utils import consolidate_attrs, is_01_scalar
@@ -22,7 +21,7 @@ def layout_column_wrap(
     gap: Optional[CssUnit] = None,
     class_: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> Tag:
     # For
     # more explanation and illustrative examples, see
     # [here](https://rstudio.github.io/bslib/articles/cards.html#multiple-cards)
@@ -35,19 +34,16 @@ def layout_column_wrap(
     Parameters
     ----------
     width
-        The desired width of each card, which can be any of the following:
-        * A (unit-less) number between 0 and 1.
-            * This should be specified as `1/num`, where `num` represents the number
-            of desired columns.
-        * A CSS length unit
-            * Either the minimum (when `fixed_width=False`) or fixed width
-            (`fixed_width=True`).
-        * `None`
-            * Allows power users to set the `grid-template-columns` CSS property
-            manually, either via a `style` attribute or a CSS stylesheet.
+        The desired width of each card. It can be a (unit-less) number between 0 and 1
+        and should be specified as `1/num`, where `num` represents the number of desired
+        columns. It can be a CSS length unit representing either the minimum (when
+        `fixed_width=False`) or fixed width (`fixed_width=True`). It can also be `None`,
+        which allows power users to set the `grid-template-columns` CSS property
+        manually, either via a `style` attribute or a CSS stylesheet.
     *args
-        Unnamed arguments should be UI elements (e.g., [card()]). Named arguments become
-        attributes on the containing [htmltools::tag] element.
+        Unnamed arguments should be UI elements (e.g.,
+        :func:`~shiny.experimental.ui.card`). Named arguments become attributes on the
+        containing :class:`~htmltools.Tag` element.
     fixed_width
         Whether or not to interpret the `width` as a minimum (`fixed_width=False`) or
         fixed (`fixed_width=True`) width when it is a CSS length unit.
@@ -57,7 +53,7 @@ def layout_column_wrap(
         height, but heights may vary between rows.
     fill
         Whether or not to allow the layout to grow/shrink to fit a fillable container
-        with an opinionated height (e.g., `page_fillable()`).
+        with an opinionated height (e.g., :func:`~shiny.experimental.ui.page_fillable`).
     fillable
         Whether or not each element is wrapped in a fillable container.
     height
@@ -72,7 +68,10 @@ def layout_column_wrap(
     **kwargs
         Additional attributes to apply to the containing element.
 
-
+    Returns
+    -------
+    :
+        A :class:`~htmltools.Tag` element.
     """
     attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
 

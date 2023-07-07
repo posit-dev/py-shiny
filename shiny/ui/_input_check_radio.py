@@ -53,9 +53,9 @@ def input_checkbox(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        ``True`` if checked, ``False`` otherwise.
+    ::: {.callout-note title="Server value"}
+    ``True`` if checked, ``False`` otherwise.
+    :::
 
     See Also
     -------
@@ -110,9 +110,9 @@ def input_switch(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        ``True`` if checked, ``False`` otherwise.
+    ::: {.callout-note title="Server value"}
+    ``True`` if checked, ``False`` otherwise.
+    :::
 
     See Also
     -------
@@ -188,9 +188,9 @@ def input_checkbox_group(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A tuple of string(s) with the selected value(s) (if any).
+    ::: {.callout-note title="Server value"}
+    A tuple of string(s) with the selected value(s) (if any).
+    :::
 
     See Also
     -------
@@ -257,9 +257,9 @@ def input_radio_buttons(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A string with the selected value.
+    ::: {.callout-note title="Server value"}
+    A string with the selected value.
+    :::
 
     See Also
     -------
