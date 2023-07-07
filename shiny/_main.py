@@ -21,7 +21,7 @@ import shiny
 from . import _autoreload, _hostenv, _static, _utils
 
 
-@click.group()  # pyright: ignore[reportUnknownMemberType]
+@click.group("main")
 def main() -> None:
     pass
 
@@ -253,7 +253,7 @@ def run_app(
     maybe_setup_rsw_proxying(log_config)
 
     uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
-        app,  # pyright: ignore[reportGeneralTypeIssues]
+        app,
         host=host,
         port=port,
         ws_max_size=ws_max_size,
