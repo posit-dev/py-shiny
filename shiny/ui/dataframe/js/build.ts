@@ -5,7 +5,7 @@ import * as fs from "node:fs";
 async function bundle() {
   try {
     const options: BuildOptions = {
-      entryPoints: ["index.tsx"],
+      entryPoints: { dataframe: "dataframe/index.tsx" },
       format: "esm",
       bundle: true,
       outdir: "dist",
