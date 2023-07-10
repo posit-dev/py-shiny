@@ -8,7 +8,7 @@ async function bundle() {
       entryPoints: { dataframe: "dataframe/index.tsx" },
       format: "esm",
       bundle: true,
-      outdir: "dist",
+      outdir: "../shiny/www/shared/dataframe",
       minify: true,
       sourcemap: true,
       plugins: [sassPlugin({ type: "css-text", sourceMap: false })],
