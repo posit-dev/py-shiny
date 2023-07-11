@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
     from matplotlib.gridspec import SubplotSpec
-    from matplotlib.transforms import Transform
 
 
 def get_coordmap(fig: Figure) -> Coordmap | None:
