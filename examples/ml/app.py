@@ -30,15 +30,13 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @output
-    @render.text
+    @render.ml.classification_label
     def label1():
-        return json.dumps(
-            {
-                "Tigers": 32,
-                "Lions": input.lion(),
-                "Bears": 15,
-            },
-        )
+        return {
+            "Tigers": 32,
+            "Lions": input.lion(),
+            "Bears": 15,
+        }
 
 
 app = App(app_ui, server)

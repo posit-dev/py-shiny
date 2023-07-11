@@ -42,14 +42,11 @@ export class ShinyClassificationLabel extends LitElement {
   `;
 
   // TODO: Accept value as object; this will require a render function that passes raw JSON.
-  // @property({ type: Object }) value: Record<string, number> = {};
-  @property({ type: String }) value: string = "{}";
+  @property({ type: Object }) value: Record<string, number> = {};
   @property({ type: Number }) sort: number = 1;
 
   render() {
-    const value: Record<string, number> = JSON.parse(this.value);
-
-    const entries = Object.entries(value);
+    const entries = Object.entries(this.value);
 
     if (this.sort) {
       entries.sort((a, b) => b[1] - a[1]);
