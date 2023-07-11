@@ -80,6 +80,8 @@ from ._progress import Progress
 
 from .dataframe import output_data_frame
 
+from . import ml
+
 from htmltools import (
     TagList,
     Tag,
@@ -195,6 +197,7 @@ __all__ = (
     "page_fixed",
     "page_bootstrap",
     "Progress",
+    "ml",
     # Items below are from htmltools
     "TagList",
     "Tag",

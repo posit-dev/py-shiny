@@ -10,7 +10,13 @@
     "target": "ES2020",
     "isolatedModules": true,
     "moduleResolution": "node",
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "plugins": [
+      {
+        "name": "@styled/typescript-styled-plugin"
+      }
+    ]
   },
   "include": ["**/*.tsx", "**/*.ts"]
 }

@@ -35,6 +35,7 @@ esbuild
   .context({
     entryPoints: {
       "dataframe/dataframe": "dataframe/index.tsx",
+      "ml/ml": "ml/index.ts",
     },
     format: "esm",
     bundle: true,

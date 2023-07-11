@@ -11,6 +11,7 @@
   "license": "MIT",
   "devDependencies": {
     "@preact/compat": "^17.1.2",
+    "@styled/typescript-styled-plugin": "^1.0.0",
     "@tanstack/react-virtual": "^3.0.0-beta.54",
     "@types/jquery": "^3.5.16",
     "@types/node": "^20.2.5",
@@ -23,6 +24,7 @@
     "esbuild-sass-plugin": "^2.9.0",
     "eslint": "^8.41.0",
     "eslint-plugin-react": "^7.32.2",
+    "lit": "^2.7.6",
     "postcss": "^8.4.24",
     "postcss-modules": "^6.0.0",
     "preact": "^10.15.1",
