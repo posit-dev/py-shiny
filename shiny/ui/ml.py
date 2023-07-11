@@ -19,6 +19,7 @@ def output_classification_label(
     value: Optional[dict[str, float]] = None,
     *,
     sort: Optional[bool] = None,
+    display_winner: Optional[bool] = None,
     _add_ws: bool = True,
     **kwargs: TagAttrValue,
 ) -> Tag:
@@ -28,6 +29,7 @@ def output_classification_label(
         id=id,
         value=attr_to_escaped_json(value) if value is not None else None,
         sort=bool_to_num(sort),
+        display_winner=bool_to_num(display_winner),
         _add_ws=_add_ws,
         **kwargs,
     )

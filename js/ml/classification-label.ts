@@ -16,7 +16,15 @@ export class ShinyClassificationLabel extends LitElement {
     }
 
     .item {
-      margin-top: 15px;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    .winner {
+      display: flex;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.75em;
     }
 
     .bar {
@@ -36,19 +44,34 @@ export class ShinyClassificationLabel extends LitElement {
     .dashed-line {
       flex: 1 1 0%;
       border-bottom: 1px dashed #888;
-      margin-left: 0.5rem;
-      margin-right: 0.5rem;
+      margin-left: 0.5em;
+      margin-right: 0.5em;
     }
   `;
 
   @property({ type: Object }) value: Record<string, number> = {};
   @property({ type: Number }) sort: number = 1;
+  @property({ type: Number, attribute: "display-winner" })
+  displayWinner: number = 0;
 
   render() {
     const entries = Object.entries(this.value);
 
     if (this.sort) {
       entries.sort((a, b) => b[1] - a[1]);
+    }
+
+    let winnerHTML = null;
+    if (this.displayWinner) {
+      // Entries might not be sorted
+      const currentWinner = { name: "", value: -Infinity };
+      entries.forEach(([k, v]) => {
+        if (v > currentWinner.value) {
+          currentWinner.name = k;
+          currentWinner.value = v;
+        }
+      });
+      winnerHTML = html`<div class="winner">${currentWinner.name}</div>`;
     }
 
     const valuesHtml = entries.map(([k, v]) => {
@@ -62,7 +85,7 @@ export class ShinyClassificationLabel extends LitElement {
       </div>`;
     });
 
-    return html` <div class="wrapper">${valuesHtml}</div> `;
+    return html`<div class="wrapper">${winnerHTML} ${valuesHtml}</div> `;
   }
 }
 
