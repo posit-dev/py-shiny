@@ -29,9 +29,7 @@ def try_render_matplotlib(
     alt: Optional[str],
     **kwargs: object,
 ) -> TryPlotResult:
-    fig = get_matplotlib_figure(  # pyright: ignore[reportUnknownVariableType]
-        x, allow_global
-    )
+    fig = get_matplotlib_figure(x, allow_global)
 
     if fig is None:
         return (False, None)
@@ -39,10 +37,8 @@ def try_render_matplotlib(
     try:
         import matplotlib.pyplot as plt
 
-        fig.set_size_inches(  # pyright: ignore[reportUnknownMemberType]
-            width / ppi, height / ppi
-        )
-        fig.set_dpi(ppi * pixelratio)  # pyright: ignore[reportUnknownMemberType]
+        fig.set_size_inches(width / ppi, height / ppi)
+        fig.set_dpi(ppi * pixelratio)
 
         plt.tight_layout()  # pyright: ignore[reportUnknownMemberType]
         coordmap = get_coordmap(fig)
@@ -90,17 +86,9 @@ def get_matplotlib_figure(
     # TODO: Might be good to detect non-empty plt.get_fignums() before we call the user
     #   function, which would mean we will false-positive here. Maybe we warn in that
     #   case, maybe we ignore gcf(), maybe both.
-    if (
-        x is None
-        and len(
-            plt.get_fignums()  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
-        )
-        > 0
-    ):
+    if x is None and len(plt.get_fignums()) > 0:
         if allow_global:
-            return (
-                plt.gcf()  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
-            )
+            return plt.gcf()
         else:
             # Must close the global figure so we don't stay in this state forever
             plt.close(plt.gcf())  # pyright: ignore[reportUnknownMemberType]
@@ -124,9 +112,7 @@ def get_matplotlib_figure(
     # should cover most, if not all, of these (it doesn't cover Animation, though).
     # https://matplotlib.org/stable/api/artist_api.html
     if isinstance(x, Artist):
-        return (
-            x.get_figure()  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-        )
+        return x.get_figure()
 
     # Some other custom figure-like classes such as seaborn.axisgrid.FacetGrid attach
     # their figure as an attribute
@@ -138,11 +124,9 @@ def get_matplotlib_figure(
     # If they all refer to the same figure, then it seems reasonable to use it
     # https://docs.xarray.dev/en/latest/user-guide/plotting.html#dimension-along-y-axis
     if isinstance(x, (list, tuple)):
-        figs = [  # pyright: ignore[reportUnknownVariableType]
-            get_matplotlib_figure(y, allow_global) for y in cast(List[Any], x)
-        ]
-        if len(set(figs)) == 1:  # pyright: ignore[reportUnknownArgumentType]
-            return figs[0]  # pyright: ignore[reportUnknownVariableType]
+        figs = [get_matplotlib_figure(y, allow_global) for y in cast(List[Any], x)]
+        if len(set(figs)) == 1:
+            return figs[0]
 
     return None
 
@@ -189,8 +173,7 @@ def try_render_plotnine(
     alt: Optional[str] = None,
     **kwargs: object,
 ) -> TryPlotResult:
-    # Must use `pyright: ignore` otherwise Black formats the comments into a single line
-    from plotnine.ggplot import ggplot  # pyright: ignore
+    from plotnine.ggplot import ggplot
 
     if not isinstance(x, ggplot):
         return (False, None)
