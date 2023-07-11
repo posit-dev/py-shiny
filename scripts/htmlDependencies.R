@@ -1,10 +1,18 @@
 #!/usr/bin/env Rscript
 
+message("Checking for node / npm")
+if (Sys.which("npm")[["npm"]] == "") {
+  stop("Please install node / npm before running script")
+}
+
 versions <- list()
 
 # Use local lib path for installing packages so we don't pollute the user's library
+message("Installing GitHub packages: bslib, shiny, htmltools")
 withr::local_temp_libpaths()
-pak::pkg_install(c("rstudio/bslib@main", "rstudio/shiny@main", "rstudio/htmltools@main"))
+ignore <- capture.output({
+  pak::pkg_install(c("rstudio/bslib@main", "rstudio/shiny@main", "rstudio/htmltools@main"))
+})
 # pak::pkg_install(c("cran::bslib", "cran::shiny", "cran::htmltools"))
 
 versions["shiny_html_deps"] <- as.character(packageVersion("shiny"))
@@ -33,8 +41,8 @@ bslib_version <- pkg_source_version("bslib")
 shiny_version <- pkg_source_version("shiny")
 htmltools_version <- pkg_source_version("htmltools")
 
-library(htmltools)
-library(bslib)
+library(htmltools, quietly = TRUE, warn.conflicts = FALSE)
+library(bslib, quietly = TRUE, warn.conflicts = FALSE)
 
 shiny_path <- fs::path(getwd(), "shiny")
 www <- fs::path(shiny_path, "www")
@@ -77,24 +85,36 @@ copy_from_pkg <- function(pkg_name, pkg_dir, local_dir, version_dir = fs::path_d
 }
 
 
+# ------------------------------------------------------------------------------
+message("Copy bslib components")
 # Copy over bslib's components directory
-copy_from_pkg("bslib", "components", x_www_bslib_components)
-# Remove unused Sass files
+copy_from_pkg("bslib", "components/dist", x_www_bslib_components)
+# Remove non-minified files
 fs::file_delete(
-  fs::dir_ls(x_www_bslib_components, type = "file", regexp = "\\.scss$")
+  fs::dir_ls(
+    x_www_bslib_components,
+    type = "file",
+    recurse = TRUE,
+    regexp = "\\.min\\.",
+    invert = TRUE
+  )
 )
-# Remove unused tag require
-fs::file_delete(fs::path(x_www_bslib_components, "tag-require.js"))
 
+
+# ------------------------------------------------------------------------------
+message("Copy htmltools - fill")
 # Copy over htmltools's fill directory
 copy_from_pkg("htmltools", "fill", fs::path(x_www, "htmltools", "fill"))
 
 
-
-
+# ------------------------------------------------------------------------------
+message("Copy shiny www/shared")
 # Copy over shiny's www/shared directory
 copy_from_pkg("shiny", "www/shared", www_shared, www_shared)
 
+
+# ------------------------------------------------------------------------------
+message("Cleanup shiny www/shared")
 # Don't need legacy (hopefully)
 fs::dir_delete(fs::path(www_shared, "legacy"))
 # Don't need dataTables (hopefully)
@@ -104,6 +124,10 @@ fs::dir_delete(fs::path(www_shared, "datatables"))
 fs::file_delete(
   fs::dir_ls(www_shared, type = "file", regexp = "jquery")
 )
+
+
+# ------------------------------------------------------------------------------
+message("Save bootstrap bundle")
 
 # Upgrade to Bootstrap 5 by default
 deps <- bs_theme_dependencies(bs_theme(version = 5))
@@ -123,6 +147,9 @@ write_json(
   )
 )
 
+
+# ------------------------------------------------------------------------------
+message("Cleanup bootstrap bundle")
 # This additional bs3compat HTMLDependency() only holds
 # the JS shim for tab panel logic, which we don't need
 # since we're generating BS5+ tab markup. Note, however,
@@ -130,13 +157,17 @@ write_json(
 # comes in via the bootstrap HTMLDependency()
 fs::dir_delete(fs::path(www_shared, "bs3compat"))
 
+
+# ------------------------------------------------------------------------------
+message("Save requirejs")
 requirejs_version <- "2.3.6"
 versions["requirejs"] <- requirejs_version
 requirejs <- fs::path(www_shared, "requirejs")
 fs::dir_create(requirejs)
 download.file(
   paste0("https://cdnjs.cloudflare.com/ajax/libs/require.js/", requirejs_version, "/require.min.js"),
-  fs::path(requirejs, "require.min.js")
+  fs::path(requirejs, "require.min.js"),
+  quiet = TRUE
 )
 
 shims <- fs::path(getwd(), "scripts", "define-shims.js")
@@ -149,6 +180,8 @@ cat(
 )
 
 
+# ------------------------------------------------------------------------------
+message("Save _versions.py")
 version_vars <- paste0(names(versions), " = ", "\"", versions, "\"\n", collapse = "")
 version_all <- paste0(
   collapse = "",
@@ -165,9 +198,8 @@ cat(
 )
 
 
-
 # ------------------------------------------------------------------------------
-# Copy x assets to shiny main_x assets
+message("Copy www/shared/_x assets")
 
 if (fs::dir_exists(main_x_www)) fs::dir_delete(main_x_www)
 
@@ -186,4 +218,14 @@ fs::file_delete(
     regexp="(_version|sidebar)",
     invert = TRUE
   )
+)
+
+
+# ------------------------------------------------------------------------------
+message("Create dataframe.js via npm")
+
+js_path <- fs::path_abs(fs::path(shiny_path, "..", "js"))
+ignore <- system(
+  paste0("cd ", js_path, " && npm install && npm run build"),
+  intern = TRUE
 )
