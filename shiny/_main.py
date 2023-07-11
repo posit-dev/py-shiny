@@ -48,6 +48,7 @@ any of the following will work:
 )
 @click.argument("app", default="app.py:app")
 @click.option(
+    "-h",
     "--host",
     type=str,
     default="127.0.0.1",
@@ -55,6 +56,7 @@ any of the following will work:
     show_default=True,
 )
 @click.option(
+    "-p",
     "--port",
     type=int,
     default=8000,
@@ -69,6 +71,7 @@ any of the following will work:
     show_default=True,
 )
 @click.option(
+    "-r",
     "--reload",
     is_flag=True,
     default=False,
@@ -89,6 +92,7 @@ any of the following will work:
     show_default=True,
 )
 @click.option(
+    "-d",
     "--app-dir",
     default=".",
     show_default=True,
@@ -104,6 +108,7 @@ any of the following will work:
     show_default=True,
 )
 @click.option(
+    "-b",
     "--launch-browser",
     is_flag=True,
     default=False,
