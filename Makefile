@@ -51,10 +51,13 @@ clean-test: ## remove test and coverage artifacts
 typings/uvicorn:
 	pyright --createstub uvicorn
 
-typings/matplotlib:
-	pyright --createstub matplotlib
+typings/matplotlib/__init__.pyi: ## grab type stubs from GitHub
+	mkdir -p typings
+	git clone --depth 1 https://github.com/microsoft/python-type-stubs typings/python-type-stubs
+	mv typings/python-type-stubs/stubs/matplotlib typings/
+	rm -rf typings/python-type-stubs
 
-pyright: typings/uvicorn typings/matplotlib ## type check with pyright
+pyright: typings/uvicorn typings/matplotlib/__init__.pyi ## type check with pyright
 	pyright
 
 lint: ## check style with flake8
