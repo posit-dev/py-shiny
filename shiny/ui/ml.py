@@ -22,7 +22,6 @@ def output_classification_label(
     _add_ws: bool = True,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    print(sort)
     return Tag(
         "shiny-classification-label",
         ml_dep(),
