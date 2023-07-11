@@ -102,8 +102,7 @@ ENV/
 
 typings/
 
-docs/source/generated/
-docs/source/reference/
+dist/
 
 .DS_Store
 .Rproj.user
