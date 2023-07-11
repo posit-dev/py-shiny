@@ -41,7 +41,6 @@ export class ShinyClassificationLabel extends LitElement {
     }
   `;
 
-  // TODO: Accept value as object; this will require a render function that passes raw JSON.
   @property({ type: Object }) value: Record<string, number> = {};
   @property({ type: Number }) sort: number = 1;
 
