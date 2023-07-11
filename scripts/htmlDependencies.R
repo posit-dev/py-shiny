@@ -127,10 +127,37 @@ fs::file_delete(
 
 
 # ------------------------------------------------------------------------------
-message("Save bootstrap bundle")
+message("Save ionRangeSlider dep")
 
 # Upgrade to Bootstrap 5 by default
-deps <- bs_theme_dependencies(bs_theme(version = 5))
+shiny_theme <- bslib::bs_theme(version = 5, preset = "shiny")
+# Save iorange slider dep
+# Get _dynamic_ ionrangeslider dep
+ion_dep <- shiny:::ionRangeSliderDependencyCSS(shiny_theme)
+if (inherits(ion_dep, "html_dependency")) {
+  ion_dep <- list(ion_dep)
+}
+# Save to temp folder
+temp_ion_dep_dir <- fs::path_temp("shiny-ion-range-slider")
+fs::dir_create(temp_ion_dep_dir)
+withr::with_options(
+  list(htmltools.dir.version = FALSE),
+  ignore <- lapply(ion_dep, htmltools::copyDependencyToDir, temp_ion_dep_dir)
+)
+print(dir(temp_ion_dep_dir, recursive = TRUE))
+# Overwrite css file
+ion_dep_dir <- fs::path(www_shared, "ionrangeslider")
+fs::file_move(
+  fs::path(temp_ion_dep_dir, "ionRangeSlider", "ionRangeSlider.css"),
+  fs::path(ion_dep_dir, "css", "ion.rangeSlider.css")
+)
+# Cleanup
+fs::dir_delete(temp_ion_dep_dir)
+
+
+message("Save bootstrap bundle")
+# Save htmldeps
+deps <- bslib::bs_theme_dependencies(shiny_theme)
 withr::with_options(
   list(htmltools.dir.version = FALSE),
   ignore <- lapply(deps, copyDependencyToDir, www_shared)

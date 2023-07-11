@@ -3,6 +3,7 @@ from __future__ import annotations
 from htmltools import HTML, HTMLDependency
 
 from .._versions import bootstrap as bootstrap_version
+from .._versions import shiny_html_deps
 from ..html_dependencies import jquery_deps
 
 
@@ -26,6 +27,11 @@ def ionrangeslider_deps() -> list[HTMLDependency]:
             version="2.3.1",
             source={"package": "shiny", "subdir": "www/shared/ionrangeslider/"},
             script={"src": "js/ion.rangeSlider.min.js"},
+        ),
+        HTMLDependency(
+            name="preset-shiny-ionrangeslider",
+            version=shiny_html_deps,
+            source={"package": "shiny", "subdir": "www/shared/ionrangeslider/"},
             stylesheet={"href": "css/ion.rangeSlider.css"},
         ),
         HTMLDependency(
