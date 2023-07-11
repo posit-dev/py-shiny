@@ -10,8 +10,12 @@ from ..._versions import htmltools as htmltools_version
 
 _x_www = PurePath(__file__).parent.parent / "www"
 _x_www_path = str(_x_www)
-_x_components_path = str(_x_www / "bslib" / "components")
 _x_fill_path = str(_x_www / "htmltools" / "fill")
+
+_x_components_path = _x_www / "bslib" / "components"
+_x_accordion_path = str(_x_components_path / "accordion")
+_x_card_path = str(_x_components_path / "card")
+_x_sidebar_path = str(_x_components_path / "sidebar")
 
 
 def card_dependency() -> HTMLDependency:
@@ -20,9 +24,10 @@ def card_dependency() -> HTMLDependency:
         version=bslib_version,
         source={
             "package": "shiny",
-            "subdir": _x_components_path,
+            "subdir": _x_card_path,
         },
         script={"src": "card.min.js"},
+        all_files=True,
     )
 
 
@@ -44,9 +49,10 @@ def sidebar_dependency() -> HTMLDependency:
         bslib_version,
         source={
             "package": "shiny",
-            "subdir": _x_components_path,
+            "subdir": _x_sidebar_path,
         },
         script={"src": "sidebar.min.js"},
+        all_files=True,
     )
 
 
@@ -56,9 +62,10 @@ def accordion_dependency() -> HTMLDependency:
         version=bslib_version,
         source={
             "package": "shiny",
-            "subdir": _x_components_path,
+            "subdir": _x_accordion_path,
         },
         script={"src": "accordion.min.js"},
+        all_files=True,
     )
 
 

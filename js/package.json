@@ -1,14 +1,12 @@
 {
   "name": "shiny-dataframe-binding",
-  "version": "1.0.0",
-  "description": "",
+  "private": true,
+  "license": "MIT",
   "main": "index.js",
   "scripts": {
     "build": "tsc -noEmit && eslint . && tsx build.ts",
     "watch": "npx nodemon --exec 'npm run build' --ext '*' --ignore dist/ --ignore esbuild-metadata.json"
   },
-  "author": "",
-  "license": "MIT",
   "devDependencies": {
     "@preact/compat": "^17.1.2",
     "@tanstack/react-virtual": "^3.0.0-beta.54",
