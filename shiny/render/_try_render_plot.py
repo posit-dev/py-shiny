@@ -198,7 +198,7 @@ def try_render_plotnine(
             )
             coordmap = get_coordmap_plotnine(
                 x,
-                res.figure,  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
+                res.figure,  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportGeneralTypeIssues]
             )
             res.figure.savefig(  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
                 **res.kwargs  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
