@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "page_navbar",
     "page_fluid",
@@ -5,18 +7,9 @@ __all__ = (
     "page_bootstrap",
 )
 
-import sys
-from typing import Any, Optional, Union
+from typing import Literal, Optional, Sequence
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
-# Tagifiable isn't used directly in this file, but it seems to necessary to import
-# it somewhere for Sphinx to work cleanly.
-from htmltools import Tagifiable  # pyright: ignore[reportUnusedImport] # noqa: F401
-from htmltools import Tag, TagChildArg, TagList, div, tags
+from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -27,22 +20,22 @@ from ._utils import get_window_title
 
 
 def page_navbar(
-    *args: NavSetArg,
-    title: Optional[Union[str, Tag, TagList]] = None,
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
+    title: Optional[str | Tag | TagList] = None,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     position: Literal["static-top", "fixed-top", "fixed-bottom"] = "static-top",
-    header: Optional[TagChildArg] = None,
-    footer: Optional[TagChildArg] = None,
+    header: Optional[TagChild] = None,
+    footer: Optional[TagChild] = None,
     bg: Optional[str] = None,
     inverse: bool = False,
     collapsible: bool = True,
     fluid: bool = True,
-    window_title: Union[str, MISSING_TYPE] = MISSING,
-    lang: Optional[str] = None
+    window_title: str | MISSING_TYPE = MISSING,
+    lang: Optional[str] = None,
 ) -> Tag:
     """
-    Create a navbar with a navs bar and a title.
+    Create a page with a navbar and a title.
 
     Parameters
     ----------
@@ -88,7 +81,8 @@ def page_navbar(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -116,7 +110,7 @@ def page_navbar(
                 bg=bg,
                 inverse=inverse,
                 collapsible=collapsible,
-                fluid=fluid
+                fluid=fluid,
             )
         ),
         lang=lang,
@@ -125,7 +119,10 @@ def page_navbar(
 
 @add_example()
 def page_fluid(
-    *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
+    *args: TagChild | TagAttrs,
+    title: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: str,
 ) -> Tag:
     """
     Create a fluid page.
@@ -136,18 +133,19 @@ def page_fluid(
     args
         UI elements.
     title
-        The browser window title (defaults to the host URL of the page). Can also be set as
-        a side effect via :func:`~shiny.ui.panel_title`.
+        The browser window title (defaults to the host URL of the page). Can also be set
+        as a side effect via :func:`~shiny.ui.panel_title`.
     lang
-        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This will
-        be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The default,
-        `None`, results in an empty string.
+        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+        default, `None`, results in an empty string.
     kwargs
         Attributes on the page level container.
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -163,7 +161,10 @@ def page_fluid(
 
 @add_example()
 def page_fixed(
-    *args: Any, title: Optional[str] = None, lang: Optional[str] = None, **kwargs: str
+    *args: TagChild | TagAttrs,
+    title: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: str,
 ) -> Tag:
     """
     Create a fixed page.
@@ -174,18 +175,19 @@ def page_fixed(
     args
         UI elements.
     title
-        The browser window title (defaults to the host URL of the page). Can also be set as
-        a side effect via :func:`~shiny.ui.panel_title`.
+        The browser window title (defaults to the host URL of the page). Can also be set
+        as a side effect via :func:`~shiny.ui.panel_title`.
     lang
-        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This will
-        be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The default,
-        `None`, results in an empty string.
-
+        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+        default, `None`, results in an empty string.
     kwargs
         Attributes on the page level container.
+
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
@@ -201,7 +203,7 @@ def page_fixed(
 
 # TODO: implement theme (just Bootswatch for now?)
 def page_bootstrap(
-    *args: Any, title: Optional[str] = None, lang: Optional[str] = None
+    *args: TagChild | TagAttrs, title: Optional[str] = None, lang: Optional[str] = None
 ) -> Tag:
     """
     Create a Bootstrap UI page container.
@@ -212,23 +214,22 @@ def page_bootstrap(
     args
         UI elements.
     title
-        The browser window title (defaults to the host URL of the page). Can also be set as
-        a side effect via :func:`~shiny.ui.panel_title`.
+        The browser window title (defaults to the host URL of the page). Can also be set
+        as a side effect via :func:`~shiny.ui.panel_title`.
     lang
-        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This will
-        be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The default,
-        `None`, results in an empty string.
+        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+        default, `None`, results in an empty string.
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     See Also
     -------
     :func:`~shiny.ui.page_fluid`
     :func:`~shiny.ui.page_navbar`
     """
-
-    page = TagList(*bootstrap_deps(), *args)
     head = tags.title(title) if title else None
-    return tags.html(tags.head(head), tags.body(page), lang=lang)
+    return tags.html(tags.head(head), tags.body(*bootstrap_deps(), *args), lang=lang)

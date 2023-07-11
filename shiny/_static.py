@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import os
 import re
 import shutil
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 
 def remove_shinylive_local(
@@ -34,12 +36,12 @@ def remove_shinylive_local(
 
 
 def get_default_shinylive_dir() -> Path:
-    import appdirs
+    import appdirs  # pyright: ignore[reportMissingTypeStubs]
 
-    return Path(appdirs.user_cache_dir("shiny")) / "shinylive"
+    return Path(appdirs.user_cache_dir("shiny")) / "shinylive"  # pyright: ignore
 
 
-def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> List[str]:
+def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> list[str]:
     if shinylive_dir is None:
         shinylive_dir = get_default_shinylive_dir()
 
@@ -51,7 +53,6 @@ def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> List[
 
 
 def print_shinylive_local_info() -> None:
-
     print(
         f"""    Local shinylive dir:
         {get_default_shinylive_dir()}

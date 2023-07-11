@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import functools
@@ -8,30 +10,13 @@ import os
 import random
 import secrets
 import socketserver
-import sys
 import tempfile
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, Awaitable, Callable, Optional, TypeVar, cast
 
-if sys.version_info >= (3, 10):
-    from typing import TypeGuard
-else:
-    from typing_extensions import TypeGuard
+from ._typing_extensions import ParamSpec, TypeGuard
 
-if sys.version_info >= (3, 8):
-    CancelledError = asyncio.CancelledError
-else:
-    CancelledError = asyncio.futures.CancelledError
+CancelledError = asyncio.CancelledError
+
 
 # ==============================================================================
 # Misc utility functions
@@ -45,7 +30,7 @@ def rand_hex(bytes: int) -> str:
     return format_str.format(secrets.randbits(bytes * 8))
 
 
-def drop_none(x: Dict[str, Any]) -> Dict[str, object]:
+def drop_none(x: dict[str, Any]) -> dict[str, object]:
     return {k: v for k, v in x.items() if v is not None}
 
 
@@ -54,10 +39,10 @@ def drop_none(x: Dict[str, Any]) -> Dict[str, object]:
 # won't work for converting "top-level" lists to tuples
 def lists_to_tuples(x: object) -> object:
     if isinstance(x, dict):
-        x = cast(Dict[str, object], x)
+        x = cast("dict[str, object]", x)
         return {k: lists_to_tuples(v) for k, v in x.items()}
     elif isinstance(x, list):
-        x = cast(List[object], x)
+        x = cast("list[object]", x)
         return tuple(lists_to_tuples(y) for y in x)
     else:
         # TODO: are there other mutable iterators that we want to make read only?
@@ -65,7 +50,7 @@ def lists_to_tuples(x: object) -> object:
 
 
 def guess_mime_type(
-    url: Union[str, "os.PathLike[str]"],
+    url: "str | os.PathLike[str]",
     default: str = "application/octet-stream",
     strict: bool = True,
 ) -> str:
@@ -73,12 +58,8 @@ def guess_mime_type(
     Guess the MIME type of a file. This is a wrapper for mimetypes.guess_type, but it
     only returns the type (and not encoding), and it allows a default value.
     """
-    # In Python<=3.7, mimetypes.guess_type only accepts strings.
-    #
     # Note that in the parameters above, "os.PathLike[str]" is in quotes to avoid
     # "TypeError: 'ABCMeta' object is not subscriptable", in Python<=3.8.
-    if sys.version_info < (3, 8):
-        url = os.fspath(url)
     return mimetypes.guess_type(url, strict)[0] or default
 
 
@@ -105,15 +86,95 @@ def random_port(
         Number of times to attempt before giving up.
     """
 
-    # fmt: off
-    # From https://github.com/rstudio/httpuv/blob/main/R/random_port.R
-    unsafe_ports = [1, 7, 9, 11, 13, 15, 17, 19, 20, 21, 22, 23, 25, 37, 42, 43, 53, 77, 79, 87, 95, 101, 102, 103, 104, 109, 110, 111, 113, 115, 117, 119, 123, 135, 139, 143, 179, 389, 427, 465, 512, 513, 514, 515, 526, 530, 531, 532, 540, 548, 556, 563, 587, 601, 636, 993, 995, 2049, 3659, 4045, 6000, 6665, 6666, 6667, 6668, 6669, 6697]
-    # fmt: on
+    # From https://chromium.googlesource.com/chromium/src.git/+/refs/heads/master/net/base/port_util.cc
+    unsafe_ports = [
+        1,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        20,
+        21,
+        22,
+        23,
+        25,
+        37,
+        42,
+        43,
+        53,
+        69,
+        77,
+        79,
+        87,
+        95,
+        101,
+        102,
+        103,
+        104,
+        109,
+        110,
+        111,
+        113,
+        115,
+        117,
+        119,
+        123,
+        135,
+        137,
+        139,
+        143,
+        161,
+        179,
+        389,
+        427,
+        465,
+        512,
+        513,
+        514,
+        515,
+        526,
+        530,
+        531,
+        532,
+        540,
+        548,
+        554,
+        556,
+        563,
+        587,
+        601,
+        636,
+        989,
+        990,
+        993,
+        995,
+        1719,
+        1720,
+        1723,
+        2049,
+        3659,
+        4045,
+        5060,
+        5061,
+        6000,
+        6566,
+        6665,
+        6666,
+        6667,
+        6668,
+        6669,
+        6697,
+        10080,
+    ]
+
     unusable = set([x for x in unsafe_ports if x >= min and x <= max])
     while n > 0:
         if (max - min + 1) <= len(unusable):
             break
-        port = round(random.random() * (max - min) + min)
+        port = random.randint(min, max)
         if port in unusable:
             continue
         try:
@@ -161,11 +222,12 @@ random.setstate(current_random_state)
 # ==============================================================================
 
 T = TypeVar("T")
+P = ParamSpec("P")
 
 
 def wrap_async(
-    fn: Union[Callable[[], Awaitable[T]], Callable[[], T]]
-) -> Callable[[], Awaitable[T]]:
+    fn: Callable[P, T] | Callable[P, Awaitable[T]]
+) -> Callable[P, Awaitable[T]]:
     """
     Given a synchronous function that returns T, return an async function that wraps the
     original function. If the input function is already async, then return it unchanged.
@@ -174,18 +236,18 @@ def wrap_async(
     if is_async_callable(fn):
         return fn
 
-    fn = cast(Callable[[], T], fn)
+    fn = cast(Callable[P, T], fn)
 
     @functools.wraps(fn)
-    async def fn_async() -> T:
-        return fn()
+    async def fn_async(*args: P.args, **kwargs: P.kwargs) -> T:
+        return fn(*args, **kwargs)
 
     return fn_async
 
 
 def is_async_callable(
-    obj: Union[Callable[..., T], Callable[..., Awaitable[T]]]
-) -> TypeGuard[Callable[..., Awaitable[T]]]:
+    obj: Callable[P, T] | Callable[P, Awaitable[T]]
+) -> TypeGuard[Callable[P, Awaitable[T]]]:
     """
     Returns True if `obj` is an `async def` function, or if it's an object with a
     `__call__` method which is an `async def` function. This function should generally
@@ -309,7 +371,7 @@ def run_coro_hybrid(coro: Awaitable[T]) -> "asyncio.Future[T]":
 # ==============================================================================
 class Callbacks:
     def __init__(self) -> None:
-        self._callbacks: dict[int, Tuple[Callable[[], None], bool]] = {}
+        self._callbacks: dict[int, tuple[Callable[[], None], bool]] = {}
         self._id: int = 0
 
     def register(
@@ -344,7 +406,7 @@ class Callbacks:
 
 class AsyncCallbacks:
     def __init__(self) -> None:
-        self._callbacks: dict[int, Tuple[Callable[[], Awaitable[None]], bool]] = {}
+        self._callbacks: dict[int, tuple[Callable[[], Awaitable[None]], bool]] = {}
         self._id: int = 0
 
     def register(
@@ -380,6 +442,7 @@ class AsyncCallbacks:
 # ==============================================================================
 # System-related functions
 # ==============================================================================
+
 
 # Return directory that a package lives in.
 def package_dir(package: str) -> str:

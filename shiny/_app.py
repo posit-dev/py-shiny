@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import copy
 import os
 import secrets
-from typing import Any, Callable, Dict, List, Optional, Union, cast
+from typing import Any, Callable, Optional, cast
 
 import starlette.applications
 import starlette.exceptions
@@ -53,7 +55,7 @@ class App:
 
     .. code-block:: python
 
-        from shiny import *
+        from shiny import  App, Inputs, Outputs, Session, ui
 
         app_ui = ui.page_fluid("Hello Shiny!")
 
@@ -73,7 +75,7 @@ class App:
     """
     Whether or not to show a generic message (``SANITIZE_ERRORS=True``) or the actual
     message (``SANITIZE_ERRORS=False``) in the app UI when an error occurs. This flag
-    may default to ``True`` in some production environments (e.g., RStudio Connect).
+    may default to ``True`` in some production environments (e.g., Posit Connect).
     """
 
     sanitize_error_msg: str = "An error has occurred. Check your logs or contact the app author for clarification."
@@ -81,15 +83,15 @@ class App:
     The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
     """
 
-    ui: Union[RenderedHTML, Callable[[Request], Union[Tag, TagList]]]
+    ui: RenderedHTML | Callable[[Request], Tag | TagList]
     server: Callable[[Inputs, Outputs, Session], None]
 
     def __init__(
         self,
-        ui: Union[Tag, TagList, Callable[[Request], Union[Tag, TagList]]],
+        ui: Tag | TagList | Callable[[Request], Tag | TagList],
         server: Optional[Callable[[Inputs, Outputs, Session], None]],
         *,
-        static_assets: Optional[Union[str, "os.PathLike[str]"]] = None,
+        static_assets: Optional["str" | "os.PathLike[str]"] = None,
         debug: bool = False,
     ) -> None:
         if server is None:
@@ -116,13 +118,13 @@ class App:
                     f"static_assets must be an absolute path: {static_assets}"
                 )
 
-        self._static_assets: Union[str, os.PathLike[str], None] = static_assets
+        self._static_assets: str | os.PathLike[str] | None = static_assets
 
-        self._sessions: Dict[str, Session] = {}
+        self._sessions: dict[str, Session] = {}
 
-        self._sessions_needing_flush: Dict[int, Session] = {}
+        self._sessions_needing_flush: dict[int, Session] = {}
 
-        self._registered_dependencies: Dict[str, HTMLDependency] = {}
+        self._registered_dependencies: dict[str, HTMLDependency] = {}
         self._dependency_handler = starlette.routing.Router()
 
         if self._static_assets is not None:
@@ -142,11 +144,11 @@ class App:
             if is_async_callable(cast(Callable[[Request], Any], ui)):
                 raise TypeError("App UI cannot be a coroutine function")
             # Dynamic UI: just store the function for later
-            self.ui = cast(Callable[[Request], Union[Tag, TagList]], ui)
+            self.ui = cast("Callable[[Request], Tag | TagList]", ui)
         else:
             # Static UI: render the UI now and save the results
             self.ui = self._render_page(
-                cast(Union[Tag, TagList], ui), lib_prefix=self.lib_prefix
+                cast("Tag | TagList", ui), lib_prefix=self.lib_prefix
             )
 
     def init_starlette_app(self):
@@ -194,7 +196,7 @@ class App:
         self._sessions[id] = session
         return session
 
-    def _remove_session(self, session: Union[Session, str]) -> None:
+    def _remove_session(self, session: Session | str) -> None:
         if isinstance(session, Session):
             session = session.id
 
@@ -321,33 +323,44 @@ class App:
     # ==========================================================================
     # HTML Dependency stuff
     # ==========================================================================
-    def _ensure_web_dependencies(self, deps: List[HTMLDependency]) -> None:
+    def _ensure_web_dependencies(self, deps: list[HTMLDependency]) -> None:
         for dep in deps:
             self._register_web_dependency(dep)
 
     def _register_web_dependency(self, dep: HTMLDependency) -> None:
-        if (
-            dep.name in self._registered_dependencies
-            and dep.version >= self._registered_dependencies[dep.name].version
-        ):
+        # If the dependency has been seen before, quit early.
+
+        # Even if the htmldependency version is higher or lower, the HTML being sent to
+        # the user is requesting THIS dependency. Therefore, it should be available to
+        # the user independent of any previous versions of the dependency being served.
+
+        # Note: htmltools does de-duplicate dependencies and finds the highest version
+        # to return. However, dynamic UI and callable UI do not run through the same
+        # filter over time. When using callable UI functions, UI dependencies are reset
+        # on refresh. So if a dependency makes it here, it is not necessarily the
+        # highest version served over time but is the highest version for this
+        # particular UI. Therefore, serve it must be served.
+        dep_name = html_dep_name(dep)
+        if dep_name in self._registered_dependencies:
             return
 
         # For HTMLDependencies that have sources on disk, mount the source dir.
         # (Some HTMLDependencies only carry head content, and have no source on disk.)
         if dep.source:
             paths = dep.source_path_map(lib_prefix=self.lib_prefix)
-            self._dependency_handler.routes.insert(
-                0,
-                starlette.routing.Mount(
-                    "/" + paths["href"],
-                    StaticFiles(directory=paths["source"]),
-                    name=dep.name + "-" + str(dep.version),
-                ),
-            )
+            if paths["source"] != "":
+                self._dependency_handler.routes.insert(
+                    0,
+                    starlette.routing.Mount(
+                        "/" + paths["href"],
+                        StaticFiles(directory=paths["source"]),
+                        name=dep_name,
+                    ),
+                )
 
-        self._registered_dependencies[dep.name] = dep
+        self._registered_dependencies[dep_name] = dep
 
-    def _render_page(self, ui: Union[Tag, TagList], lib_prefix: str) -> RenderedHTML:
+    def _render_page(self, ui: Tag | TagList, lib_prefix: str) -> RenderedHTML:
         ui_res = copy.copy(ui)
         # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
         # (see require_deps() for a comment about why we even include it)
@@ -357,8 +370,12 @@ class App:
         return rendered
 
 
-def is_uifunc(x: Union[Tag, TagList, Callable[[Request], Union[Tag, TagList]]]):
+def is_uifunc(x: Tag | TagList | Callable[[Request], Tag | TagList]):
     if isinstance(x, Tag) or isinstance(x, TagList) or not callable(x):
         return False
     else:
         return True
+
+
+def html_dep_name(dep: HTMLDependency) -> str:
+    return dep.name + "-" + str(dep.version)

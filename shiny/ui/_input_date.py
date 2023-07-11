@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 __all__ = ("input_date", "input_date_range")
 
 import json
 from datetime import date
-from typing import List, Optional, Union
+from typing import Optional
 
-from htmltools import Tag, TagAttrArg, TagChildArg, css, div, span, tags
+from htmltools import Tag, TagAttrValue, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -15,19 +17,19 @@ from ._utils import shiny_input_label
 @add_example()
 def input_date(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     *,
-    value: Optional[Union[date, str]] = None,
-    min: Optional[Union[date, str]] = None,
-    max: Optional[Union[date, str]] = None,
+    value: Optional[date | str] = None,
+    min: Optional[date | str] = None,
+    max: Optional[date | str] = None,
     format: str = "yyyy-mm-dd",
     startview: str = "month",
     weekstart: int = 0,
     language: str = "en",
     width: Optional[str] = None,
     autoclose: bool = True,
-    datesdisabled: Optional[List[str]] = None,
-    daysofweekdisabled: Optional[List[int]] = None,
+    datesdisabled: Optional[list[str]] = None,
+    daysofweekdisabled: Optional[list[int]] = None,
 ) -> Tag:
     """
     Creates a text input which, when clicked on, brings up a calendar that the user can
@@ -40,14 +42,14 @@ def input_date(
     label
         An input label.
     value
-        The starting date. Either a :func:`~datetime.date` object, or a string in
+        The starting date. Either a :class:`~datetime.date` object, or a string in
         `yyyy-mm-dd` format. If None (the default), will use the current date in the
         client's time zone.
     min
-        The minimum allowed date. Either a :func:`~datetime.date` object, or a string in
+        The minimum allowed date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format.
     max
-        The maximum allowed date. Either a :func:`~datetime.date` object, or a string in
+        The maximum allowed date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format.
     format
         The format of the date to display in the browser. Defaults to `"yyyy-mm-dd"`.
@@ -77,7 +79,8 @@ def input_date(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Note
     ----
@@ -97,9 +100,9 @@ def input_date(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A :func:`~datetime.date` object.
+    ::: {.callout-note title="Server value"}
+    A :class:`~datetime.date` object.
+    :::
 
     See Also
     -------
@@ -131,12 +134,12 @@ def input_date(
 @add_example()
 def input_date_range(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     *,
-    start: Optional[Union[date, str]] = None,
-    end: Optional[Union[date, str]] = None,
-    min: Optional[Union[date, str]] = None,
-    max: Optional[Union[date, str]] = None,
+    start: Optional[date | str] = None,
+    end: Optional[date | str] = None,
+    min: Optional[date | str] = None,
+    max: Optional[date | str] = None,
     format: str = "yyyy-mm-dd",
     startview: str = "month",
     weekstart: int = 0,
@@ -156,18 +159,18 @@ def input_date_range(
     label
         An input label.
     start
-        The initial start date. Either a :func:`~datetime.date` object, or a string in
+        The initial start date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format. If ``None`` (the default), will use the current date in the
         client's time zone.
     end
-        The initial end date. Either a :func:`~datetime.date` object, or a string in
+        The initial end date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format. If ``None`` (the default), will use the current date in the
         client's time zone.
     min
-        The minimum allowed date. Either a :func:`~datetime.date` object, or a string in
+        The minimum allowed date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format.
     max
-        The maximum allowed date. Either a :func:`~datetime.date` object, or a string in
+        The maximum allowed date. Either a :class:`~datetime.date` object, or a string in
         yyyy-mm-dd format.
     format
         The format of the date to display in the browser.
@@ -194,7 +197,8 @@ def input_date_range(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Note
     ----
@@ -214,9 +218,9 @@ def input_date_range(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A tuple of :func:`~datetime.date` objects.
+    ::: {.callout-note title="Server value"}
+    A tuple of :class:`~datetime.date` objects.
+    :::
 
     See Also
     -------
@@ -265,15 +269,15 @@ def input_date_range(
 
 def _date_input_tag(
     id: str,
-    value: Optional[Union[date, str]],
-    min: Optional[Union[date, str]],
-    max: Optional[Union[date, str]],
+    value: Optional[date | str],
+    min: Optional[date | str],
+    max: Optional[date | str],
     format: str,
     startview: str,
     weekstart: int,
     language: str,
     autoclose: bool,
-    **kwargs: TagAttrArg,
+    **kwargs: TagAttrValue,
 ):
     return tags.input(
         datepicker_deps(),
@@ -295,7 +299,7 @@ def _date_input_tag(
     )
 
 
-def _as_date_attr(x: Optional[Union[date, str]]) -> Optional[str]:
+def _as_date_attr(x: Optional[date | str]) -> Optional[str]:
     if x is None:
         return None
     if isinstance(x, date):

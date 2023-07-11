@@ -1,15 +1,9 @@
 __all__ = ("markdown",)
 
 import importlib
-import sys
 import textwrap
 import warnings
-from typing import Callable, Optional
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
+from typing import Callable, Literal, Optional
 
 from htmltools import HTML
 
@@ -37,6 +31,7 @@ def markdown(
 
     Returns
     -------
+    :
         An :func:`ui.HTML` string of the rendered markdown.
 
     Note
@@ -85,7 +80,8 @@ def default_md_renderer(
         except ModuleNotFoundError:
             warnings.warn(
                 "The 'autolinking' feature of GitHub flavored markdown requires the "
-                "linkify-it package. Install it with `pip install linkify-it`."
+                "linkify-it package. Install it with `pip install linkify-it`.",
+                stacklevel=2,
             )
         # Inspired by MyST-Parser's gfm-only option
         # https://github.com/executablebooks/MyST-Parser/blob/ce1245b25/myst_parser/main.py#L257-L269
@@ -99,7 +95,8 @@ def default_md_renderer(
         except ModuleNotFoundError:
             warnings.warn(
                 "The 'tasklists' feature of GitHub flavored markdown requires the "
-                "mdit_py_plugins package. Install it with `pip install mdit_py_plugins`."
+                "mdit_py_plugins package. Install it with `pip install mdit_py_plugins`.",
+                stacklevel=2,
             )
 
     def _render(text: str) -> str:

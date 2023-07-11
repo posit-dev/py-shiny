@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "modal_button",
     "modal",
@@ -5,25 +7,16 @@ __all__ = (
     "modal_remove",
 )
 
-import sys
-from typing import Optional, Union
+from typing import Literal, Optional
 
-from shiny.types import MISSING, MISSING_TYPE
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
-from htmltools import HTML, Tag, TagAttrArg, TagChildArg, div, tags
+from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, div, tags
 
 from .._docstring import add_example
 from ..session import Session, require_active_session
+from ..types import MISSING, MISSING_TYPE
 
 
-def modal_button(
-    label: TagChildArg, icon: TagChildArg = None, **kwargs: TagChildArg
-) -> Tag:
+def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue) -> Tag:
     """
     Creates a button that will dismiss a :func:`modal` (useful when customising the
     ``footer`` of :func:`modal`).
@@ -39,7 +32,8 @@ def modal_button(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     -------
@@ -58,19 +52,19 @@ def modal_button(
         type="button",
         data_dismiss="modal",
         data_bs_dismiss="modal",
-        **kwargs
+        **kwargs,
     )
 
 
 @add_example()
 def modal(
-    *args: TagChildArg,
+    *args: TagChild | TagAttrs,
     title: Optional[str] = None,
-    footer: Union[TagChildArg, MISSING_TYPE] = MISSING,
+    footer: TagChild | MISSING_TYPE = MISSING,
     size: Literal["m", "s", "l", "xl"] = "m",
     easy_close: bool = False,
     fade: bool = True,
-    **kwargs: TagAttrArg
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Creates the UI for a modal dialog, using Bootstrap's modal class. Modals are
@@ -100,7 +94,8 @@ def modal(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     -------
@@ -167,7 +162,7 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
         Typically a :func:`modal` instance.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     See Also
     -------
@@ -191,7 +186,7 @@ def modal_remove(session: Optional[Session] = None) -> None:
     ----------
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     See Also
     -------

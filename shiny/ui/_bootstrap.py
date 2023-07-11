@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     "row",
     "column",
@@ -12,47 +14,60 @@ __all__ = (
     "help_text",
 )
 
-import sys
-from typing import Optional, Union
 
-from shiny.types import MISSING, MISSING_TYPE
+from typing import Literal, Optional
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
+from htmltools import (
+    Tag,
+    TagAttrs,
+    TagAttrValue,
+    TagChild,
+    Tagifiable,
+    TagList,
+    css,
+    div,
+    h2,
+    span,
+    tags,
+)
 
-from htmltools import Tag, TagAttrArg, TagChildArg, TagList, css, div, h2, span, tags
-
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from ..module import current_namespace
+from ..types import MISSING, MISSING_TYPE
 from ._html_dependencies import jqui_deps
 from ._utils import get_window_title
+from ._x._sidebar import PanelMain as XPanelMain
+from ._x._sidebar import PanelSidebar as XPanelSidebar
+from ._x._sidebar import layout_sidebar as x_layout_sidebar
+from ._x._utils import consolidate_attrs as x_consolidate_attrs
 
 
 # TODO: make a python version of the layout guide?
 @add_example()
-def row(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
+def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Responsive row-column based layout
 
     Layout UI components using Bootstrap's grid layout system. Use ``row()`` to group
     elements that should appear on the same line (if the browser has adequate width) and
     :func:`~shiny.ui.column` to define how much horizontal space within a 12-unit wide
-    grid each on of these elements should occupy. See the `layout guide
-    <https://shiny.rstudio.com/articles/layout-guide.html>`_ for more context and
+    grid each on of these elements should occupy. See the [layout
+    guide](https://shiny.posit.co/articles/layout-guide.html>) for more context and
     examples.
+    (The article is about Shiny for R, but the general principles are the same.)
 
     Parameters
     ----------
     args
-        Any number of child elements
+        Any number of child elements.
     kwargs
-        Attributes to place on the row tag
+        Attributes to place on the row tag.
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     See Also
     -------
@@ -62,7 +77,7 @@ def row(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
 
 
 def column(
-    width: int, *args: TagChildArg, offset: int = 0, **kwargs: TagAttrArg
+    width: int, *args: TagChild | TagAttrs, offset: int = 0, **kwargs: TagAttrValue
 ) -> Tag:
     """
     Responsive row-column based layout
@@ -72,17 +87,18 @@ def column(
     Parameters
     ----------
     width
-        The width of the column (an integer between 1 and 12)
+        The width of the column (an integer between 1 and 12).
     args
-        UI elements to place within the column
+        UI elements to place within the column.
     offset
         The number of columns to offset this column from the end of the previous column.
     kwargs
-        Attributes to place on the column tag
+        Attributes to place on the column tag.
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     See Also
     -------
@@ -104,10 +120,10 @@ def column(
 @add_example()
 def layout_sidebar(
     # TODO: also accept a generic list (and wrap in panel in that case)?
-    sidebar: TagChildArg,
-    main: TagChildArg,
+    sidebar: TagChild,
+    main: TagChild,
     position: Literal["left", "right"] = "left",
-) -> Tag:
+) -> Tagifiable:
     """
     Layout a sidebar and main area
 
@@ -129,17 +145,28 @@ def layout_sidebar(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     See Also
     -------
     :func:`~shiny.ui.panel_sidebar`
     :func:`~shiny.ui.panel_main`
     """
-    return row(sidebar, main) if position == "left" else row(main, sidebar)
+
+    # Not requiring `XPanelSidebar`/`XPanelMain` to not expose the `_x` module if possible
+    if not isinstance(sidebar, XPanelSidebar):
+        sidebar = XPanelSidebar(sidebar)
+    if not isinstance(main, XPanelMain):
+        main = XPanelMain(attrs={}, children=[main])
+
+    return x_layout_sidebar(
+        sidebar.get_sidebar(position=position),
+        main,
+    )
 
 
-def panel_well(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
+def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Create a well panel
 
@@ -155,7 +182,8 @@ def panel_well(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     See Also
     -------
@@ -165,7 +193,11 @@ def panel_well(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
     return div({"class": "well"}, *args, **kwargs)
 
 
-def panel_sidebar(*args: TagChildArg, width: int = 4, **kwargs: TagAttrArg) -> Tag:
+def panel_sidebar(
+    *args: TagChild | TagAttrs,
+    width: int = 4,
+    **kwargs: TagAttrValue,
+) -> Tagifiable:
     """
     Create a sidebar panel
 
@@ -183,21 +215,21 @@ def panel_sidebar(*args: TagChildArg, width: int = 4, **kwargs: TagAttrArg) -> T
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     See Also
     -------
     :func:`~shiny.ui.panel_sidebar`
     :func:`~shiny.ui.panel_main`
     """
-    return div(
-        {"class": "col-sm-" + str(width)},
-        # A11y semantic landmark for sidebar
-        tags.form({"class": "well"}, *args, role="complementary", **kwargs),
-    )
+    return XPanelSidebar(*args, width=width, **kwargs)
 
 
-def panel_main(*args: TagChildArg, width: int = 8, **kwargs: TagAttrArg) -> Tag:
+def panel_main(
+    *args: TagChild | TagAttrs,
+    **kwargs: TagAttrValue,
+) -> Tagifiable:
     """
     Create an main area panel
 
@@ -207,27 +239,33 @@ def panel_main(*args: TagChildArg, width: int = 8, **kwargs: TagAttrArg) -> Tag:
     ----------
     args
         UI elements to include inside the main area.
-    width
-        The width of the main area (an integer between 1 and 12)
     kwargs
         Attributes to place on the main area tag.
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     See Also
     -------
     :func:`~shiny.ui.panel_sidebar`
     :func:`~shiny.ui.layout_sidebar`
     """
-    return div(
-        {"class": "col-sm-" + str(width)},
-        # A11y semantic landmark for main region
-        *args,
-        role="main",
-        **kwargs,
-    )
+    attrs, children = x_consolidate_attrs(*args, **kwargs)
+    if "width" in attrs:
+        if attrs["width"] != 8:
+            warn_deprecated(
+                "panel_main(width=)` is being ignored. Given the sidebar width, the main panel will take up the remaining horizontal space."
+            )
+        del attrs["width"]
+
+    if len(attrs) > 0:
+        # While we could return an `XPanelMain()` for empty attrs,
+        # let's try to limit the exposure of the class object
+        return XPanelMain(attrs=attrs, children=children)
+
+    return TagList(*children)
 
 
 # TODO: replace `flowLayout()`/`splitLayout()` with a flexbox wrapper?
@@ -238,8 +276,8 @@ def panel_main(*args: TagChildArg, width: int = 8, **kwargs: TagAttrArg) -> Tag:
 @add_example()
 def panel_conditional(
     condition: str,
-    *args: TagChildArg,
-    **kwargs: TagAttrArg,
+    *args: TagChild | TagAttrs,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Create a conditional panel
@@ -258,7 +296,8 @@ def panel_conditional(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     Note
     ----
@@ -293,7 +332,7 @@ def panel_conditional(
 
 @add_example()
 def panel_title(
-    title: Union[str, Tag, TagList], window_title: Union[str, MISSING_TYPE] = MISSING
+    title: str | Tag | TagList, window_title: str | MISSING_TYPE = MISSING
 ) -> TagList:
     """
     Create title(s) for the application.
@@ -307,7 +346,8 @@ def panel_title(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     Note
     ----
@@ -323,7 +363,7 @@ def panel_title(
     return TagList(get_window_title(title, window_title), title)
 
 
-def panel_fixed(*args: TagChildArg, **kwargs: TagAttrArg) -> TagList:
+def panel_fixed(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> TagList:
     """
     Create a panel of absolutely positioned content.
 
@@ -340,7 +380,8 @@ def panel_fixed(*args: TagChildArg, **kwargs: TagAttrArg) -> TagList:
 
     Returns
     -------
-    A UI element
+    :
+        A UI element.
 
     See Also
     -------
@@ -351,7 +392,7 @@ def panel_fixed(*args: TagChildArg, **kwargs: TagAttrArg) -> TagList:
 
 @add_example()
 def panel_absolute(
-    *args: TagChildArg,
+    *args: TagChild | TagAttrs,
     top: Optional[str] = None,
     left: Optional[str] = None,
     right: Optional[str] = None,
@@ -361,7 +402,7 @@ def panel_absolute(
     draggable: bool = False,
     fixed: bool = False,
     cursor: Literal["auto", "move", "default", "inherit"] = "auto",
-    **kwargs: TagAttrArg,
+    **kwargs: TagAttrValue,
 ) -> TagList:
     """
     Create a panel of absolutely positioned content.
@@ -409,7 +450,8 @@ def panel_absolute(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Tip
     ----
@@ -446,7 +488,7 @@ def panel_absolute(
     return TagList(deps, divTag, tags.script('$(".draggable").draggable();'))
 
 
-def help_text(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
+def help_text(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Create a help text element
 
@@ -459,7 +501,8 @@ def help_text(*args: TagChildArg, **kwargs: TagAttrArg) -> Tag:
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
     """
 
     return span({"class": "help-block"}, *args, **kwargs)

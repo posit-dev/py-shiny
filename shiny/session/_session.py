@@ -1,3 +1,7 @@
+# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
+# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
+from __future__ import annotations
+
 __all__ = ("Session", "Inputs", "Outputs")
 
 import contextlib
@@ -7,7 +11,6 @@ import functools
 import json
 import os
 import re
-import sys
 import traceback
 import typing
 import urllib.parse
@@ -19,26 +22,17 @@ from typing import (
     AsyncIterable,
     Awaitable,
     Callable,
-    Dict,
     Iterable,
-    List,
     Optional,
     TypeVar,
-    Union,
     cast,
     overload,
 )
 
+from htmltools import TagChild, TagList
 from starlette.requests import HTTPConnection, Request
 from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 from starlette.types import ASGIApp
-
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
-
-from htmltools import TagChildArg, TagList
 
 if TYPE_CHECKING:
     from .._app import App
@@ -48,6 +42,7 @@ from .._connection import Connection, ConnectionClosed
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from .._namespaces import Id, ResolvedId, Root
+from .._typing_extensions import TypedDict
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect, Effect_, Value, flush, isolate
@@ -91,16 +86,16 @@ class ClientMessage(TypedDict):
 
 
 class ClientMessageInit(ClientMessage):
-    data: Dict[str, object]
+    data: dict[str, object]
 
 
 class ClientMessageUpdate(ClientMessage):
-    data: Dict[str, object]
+    data: dict[str, object]
 
 
 # For messages where "method" is something other than "init" or "update".
 class ClientMessageOther(ClientMessage):
-    args: List[object]
+    args: list[object]
     tag: int
 
 
@@ -112,7 +107,7 @@ class ClientMessageOther(ClientMessage):
 #
 # (Not currently supported is Awaitable[str], could be added easily enough if needed.)
 DownloadHandler = Callable[
-    [], Union[str, Iterable[Union[bytes, str]], AsyncIterable[Union[bytes, str]]]
+    [], "str | Iterable[bytes | str] | AsyncIterable[bytes | str]"
 ]
 
 DynamicRouteHandler = Callable[[Request], ASGIApp]
@@ -120,16 +115,16 @@ DynamicRouteHandler = Callable[[Request], ASGIApp]
 
 @dataclasses.dataclass
 class DownloadInfo:
-    filename: Union[Callable[[], str], str, None]
-    content_type: Optional[Union[Callable[[], str], str]]
+    filename: Callable[[], str] | str | None
+    content_type: Optional[Callable[[], str] | str]
     handler: DownloadHandler
     encoding: str
 
 
 class OutBoundMessageQueues(TypedDict):
-    values: List[Dict[str, Any]]
-    input_messages: List[Dict[str, Any]]
-    errors: List[Dict[str, Any]]
+    values: list[dict[str, Any]]
+    input_messages: list[dict[str, Any]]
+    errors: list[dict[str, Any]]
 
 
 def empty_outbound_message_queues() -> OutBoundMessageQueues:
@@ -151,19 +146,19 @@ class Session(object, metaclass=SessionMeta):
     ns: ResolvedId = Root
 
     # These declarations are here only for pyright and stubgen to generate stub files.
-    app: "App"
+    app: App
     id: str
     http_conn: HTTPConnection
-    input: "Inputs"
-    output: "Outputs"
-    user: Union[str, None]
-    groups: Union[List[str], None]
+    input: Inputs
+    output: Outputs
+    user: str | None
+    groups: list[str] | None
 
     # ==========================================================================
     # Initialization
     # ==========================================================================
     def __init__(
-        self, app: "App", id: str, conn: Connection, debug: bool = False
+        self, app: App, id: str, conn: Connection, debug: bool = False
     ) -> None:
         self.app: App = app
         self.id: str = id
@@ -177,8 +172,8 @@ class Session(object, metaclass=SessionMeta):
         self.input: Inputs = Inputs(dict())
         self.output: Outputs = Outputs(self, self.ns, dict(), dict())
 
-        self.user: Union[str, None] = None
-        self.groups: Union[List[str], None] = None
+        self.user: str | None = None
+        self.groups: list[str] | None = None
         credentials_json: str = ""
         if "shiny-server-credentials" in self.http_conn.headers:
             credentials_json = self.http_conn.headers["shiny-server-credentials"]
@@ -198,14 +193,14 @@ class Session(object, metaclass=SessionMeta):
 
         self._outbound_message_queues = empty_outbound_message_queues()
 
-        self._message_handlers: Dict[
+        self._message_handlers: dict[
             str, Callable[..., Awaitable[object]]
         ] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.Callbacks()
         self._has_run_session_end_tasks: bool = False
-        self._downloads: Dict[str, DownloadInfo] = {}
-        self._dynamic_routes: Dict[str, DynamicRouteHandler] = {}
+        self._downloads: dict[str, DownloadInfo] = {}
+        self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
 
         self._register_session_end_callbacks()
 
@@ -265,7 +260,9 @@ class Session(object, metaclass=SessionMeta):
                             message, object_hook=_utils.lists_to_tuples
                         )
                     except json.JSONDecodeError:
-                        warnings.warn("ERROR: Invalid JSON message", SessionWarning)
+                        warnings.warn(
+                            "ERROR: Invalid JSON message", SessionWarning, stacklevel=2
+                        )
                         return
 
                     if "method" not in message_obj:
@@ -273,7 +270,6 @@ class Session(object, metaclass=SessionMeta):
                         return
 
                     async with lock():
-
                         if message_obj["method"] == "init":
                             verify_state(ConnectionState.Start)
 
@@ -325,8 +321,8 @@ class Session(object, metaclass=SessionMeta):
             finally:
                 self._run_session_end_tasks()
 
-    def _manage_inputs(self, data: Dict[str, object]) -> None:
-        for (key, val) in data.items():
+    def _manage_inputs(self, data: dict[str, object]) -> None:
+        for key, val in data.items():
             keys = key.split(":")
             if len(keys) > 2:
                 raise ValueError(
@@ -380,8 +376,8 @@ class Session(object, metaclass=SessionMeta):
         await self._send_message({"response": {"tag": message["tag"], "value": value}})
 
     # This is called during __init__.
-    def _create_message_handlers(self) -> Dict[str, Callable[..., Awaitable[object]]]:
-        async def uploadInit(file_infos: List[FileInfo]) -> Dict[str, object]:
+    def _create_message_handlers(self) -> dict[str, Callable[..., Awaitable[object]]]:
+        async def uploadInit(file_infos: list[FileInfo]) -> dict[str, object]:
             with session_context(self):
                 if self._debug:
                     print("Upload init: " + str(file_infos), flush=True)
@@ -404,6 +400,7 @@ class Session(object, metaclass=SessionMeta):
                 warnings.warn(
                     "Received uploadEnd message for non-existent upload operation.",
                     SessionWarning,
+                    stacklevel=2,
                 )
                 return None
             file_data = upload_op.finish()
@@ -463,6 +460,7 @@ class Session(object, metaclass=SessionMeta):
                                     "@session.download(filename=) to specify one "
                                     "manually",
                                     SessionWarning,
+                                    stacklevel=2,
                                 )
                                 filename = download_id
 
@@ -489,7 +487,6 @@ class Session(object, metaclass=SessionMeta):
                         wrapped_contents: AsyncIterable[bytes]
 
                         if isinstance(contents, AsyncIterable):
-
                             # Need to wrap the app-author-provided iterator in a
                             # callback that installs the appropriate context mgrs.
                             # We already use this context mgrs further up in the
@@ -519,6 +516,12 @@ class Session(object, metaclass=SessionMeta):
 
                             wrapped_contents = wrap_content_sync()
 
+                        # In streaming downloads, we send a 200 response, but if an
+                        # error occurs in the middle of it, the client needs to know.
+                        # With chunked encoding, the client will know if an error occurs
+                        # if it does not receive a terminating (empty) chunk.
+                        headers["Transfer-Encoding"] = "chunked"
+
                         return StreamingResponse(
                             wrapped_contents,
                             200,
@@ -541,7 +544,7 @@ class Session(object, metaclass=SessionMeta):
 
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
-    def send_input_message(self, id: str, message: Dict[str, object]) -> None:
+    def send_input_message(self, id: str, message: dict[str, object]) -> None:
         """
         Send an input message to the session.
 
@@ -558,12 +561,12 @@ class Session(object, metaclass=SessionMeta):
         message
             The message to send.
         """
-        msg: Dict[str, object] = {"id": id, "message": message}
+        msg: dict[str, object] = {"id": id, "message": message}
         self._outbound_message_queues["input_messages"].append(msg)
         self._request_flush()
 
     def _send_insert_ui(
-        self, selector: str, multiple: bool, where: str, content: "RenderedDeps"
+        self, selector: str, multiple: bool, where: str, content: RenderedDeps
     ) -> None:
         msg = {
             "selector": selector,
@@ -578,11 +581,11 @@ class Session(object, metaclass=SessionMeta):
         self._send_message_sync({"shiny-remove-ui": msg})
 
     def _send_progress(self, type: str, message: object) -> None:
-        msg: Dict[str, object] = {"progress": {"type": type, "message": message}}
+        msg: dict[str, object] = {"progress": {"type": type, "message": message}}
         self._send_message_sync(msg)
 
     @add_example()
-    async def send_custom_message(self, type: str, message: Dict[str, object]) -> None:
+    async def send_custom_message(self, type: str, message: dict[str, object]) -> None:
         """
         Send a message to the client.
 
@@ -602,7 +605,7 @@ class Session(object, metaclass=SessionMeta):
         """
         await self._send_message({"custom": {type: message}})
 
-    async def _send_message(self, message: Dict[str, object]) -> None:
+    async def _send_message(self, message: dict[str, object]) -> None:
         message_str: str = json.dumps(message) + "\n"
         if self._debug:
             print(
@@ -613,7 +616,7 @@ class Session(object, metaclass=SessionMeta):
             )
         await self._conn.send(json.dumps(message))
 
-    def _send_message_sync(self, message: Dict[str, object]) -> None:
+    def _send_message_sync(self, message: dict[str, object]) -> None:
         """
         Same as _send_message, except that if the message isn't too large and the socket
         isn't too backed up, then the message may be sent synchronously instead of
@@ -643,7 +646,8 @@ class Session(object, metaclass=SessionMeta):
 
         Returns
         -------
-        A function that can be used to cancel the registration.
+        :
+            A function that can be used to cancel the registration.
         """
         return self._flush_callbacks.register(fn, once)
 
@@ -663,7 +667,8 @@ class Session(object, metaclass=SessionMeta):
 
         Returns
         -------
-        A function that can be used to cancel the registration.
+        :
+            A function that can be used to cancel the registration.
         """
         return self._flushed_callbacks.register(fn, once)
 
@@ -677,15 +682,15 @@ class Session(object, metaclass=SessionMeta):
         try:
             omq = self._outbound_message_queues
 
-            values: Dict[str, object] = {}
+            values: dict[str, object] = {}
             for v in omq["values"]:
                 values.update(v)
 
-            errors: Dict[str, object] = {}
+            errors: dict[str, object] = {}
             for err in omq["errors"]:
                 errors.update(err)
 
-            message: Dict[str, object] = {
+            message: dict[str, object] = {
                 "values": values,
                 "inputMessages": omq["input_messages"],
                 "errors": errors,
@@ -714,7 +719,8 @@ class Session(object, metaclass=SessionMeta):
 
         Returns
         -------
-        A function that can be used to cancel the registration.
+        :
+            A function that can be used to cancel the registration.
         """
         return self._on_ended_callbacks.register(fn)
 
@@ -729,8 +735,8 @@ class Session(object, metaclass=SessionMeta):
     def download(
         self,
         id: Optional[str] = None,
-        filename: Optional[Union[str, Callable[[], str]]] = None,
-        media_type: Union[None, str, Callable[[], str]] = None,
+        filename: Optional[str | Callable[[], str]] = None,
+        media_type: None | str | Callable[[], str] = None,
         encoding: str = "utf-8",
     ) -> Callable[[DownloadHandler], None]:
         """
@@ -749,7 +755,8 @@ class Session(object, metaclass=SessionMeta):
 
         Returns
         -------
-        The decorated function.
+        :
+            The decorated function.
         """
 
         def wrapper(fn: DownloadHandler):
@@ -792,6 +799,7 @@ class Session(object, metaclass=SessionMeta):
 
         Returns
         -------
+        :
             The URL path for the route.
         """
 
@@ -799,10 +807,9 @@ class Session(object, metaclass=SessionMeta):
         nonce = _utils.rand_hex(8)
         return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(name)}?nonce={urllib.parse.quote(nonce)}"
 
-    def _process_ui(self, ui: TagChildArg) -> RenderedDeps:
-
+    def _process_ui(self, ui: TagChild) -> RenderedDeps:
         res = TagList(ui).render()
-        deps: List[Dict[str, Any]] = []
+        deps: list[dict[str, Any]] = []
         for dep in res["dependencies"]:
             self.app._register_web_dependency(dep)
             dep_dict = dep.as_dict(lib_prefix=self.app.lib_prefix)
@@ -810,18 +817,18 @@ class Session(object, metaclass=SessionMeta):
 
         return {"deps": deps, "html": res["html"]}
 
-    def make_scope(self, id: Id) -> "Session":
+    def make_scope(self, id: Id) -> Session:
         ns = self.ns(id)
         return SessionProxy(parent=self, ns=ns)  # type: ignore
 
-    def root_scope(self) -> "Session":
+    def root_scope(self) -> Session:
         return self
 
 
 class SessionProxy:
     ns: ResolvedId
-    input: "Inputs"
-    output: "Outputs"
+    input: Inputs
+    output: Outputs
 
     def __init__(self, parent: Session, ns: ResolvedId) -> None:
         self._parent = parent
@@ -846,7 +853,7 @@ class SessionProxy:
             res = res._parent
         return res
 
-    def send_input_message(self, id: str, message: Dict[str, object]) -> None:
+    def send_input_message(self, id: str, message: dict[str, object]) -> None:
         return self._parent.send_input_message(self.ns(id), message)
 
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
@@ -866,15 +873,21 @@ class SessionProxy:
 # Inputs
 # ======================================================================================
 
+
 # TODO: provide a real input typing example when we have an answer for that
 # https://github.com/rstudio/py-shiny/issues/70
 class Inputs:
     """
     A class representing Shiny input values.
+
+    This class provides access to a :class:`~shiny.session.Session`'s input values. The
+    input values are reactive :class:`~shiny.reactive.Values`, and can be accessed with
+    the ``[]`` operator, or with ``.``. For example, if there is an input named ``x``,
+    it can be accessed via ``input["x"]()`` or ``input.x()``.
     """
 
     def __init__(
-        self, values: Dict[str, Value[Any]], ns: Callable[[str], str] = Root
+        self, values: dict[str, Value[Any]], ns: Callable[[str], str] = Root
     ) -> None:
         self._map = values
         self._ns = ns
@@ -914,6 +927,13 @@ class Inputs:
     def __delattr__(self, key: str) -> None:
         self.__delitem__(key)
 
+    def __contains__(self, key: str) -> bool:
+        # This looks simple, but does a number of things. By accessing `self[key]`, it
+        # indirectly calls `__getitem__`, which applies a namespace to the key, and
+        # it populates the key if it doesn't exist yet. It then calls `is_set()`, which
+        # creates a reactive dependency, and returns whether the value is set.
+        return self[key].is_set()
+
 
 # ======================================================================================
 # Outputs
@@ -927,8 +947,8 @@ class Outputs:
         self,
         session: Session,
         ns: Callable[[str], str],
-        effects: Dict[str, Effect_],
-        suspend_when_hidden: Dict[str, bool],
+        effects: dict[str, Effect_],
+        suspend_when_hidden: dict[str, bool],
     ) -> None:
         self._session = session
         self._ns = ns
@@ -958,7 +978,7 @@ class Outputs:
         suspend_when_hidden: bool = True,
         priority: int = 0,
         name: Optional[str] = None,
-    ) -> Union[None, Callable[[RenderFunction[IT, OT]], None]]:
+    ) -> None | Callable[[RenderFunction[IT, OT]], None]:
         if name is not None:
             from .. import _deprecated
 
@@ -994,7 +1014,7 @@ class Outputs:
                     {"recalculating": {"name": output_name, "status": "recalculating"}}
                 )
 
-                message: Dict[str, Optional[OT]] = {}
+                message: dict[str, Optional[OT]] = {}
                 try:
                     if _utils.is_async_callable(fn):
                         message[output_name] = await fn()

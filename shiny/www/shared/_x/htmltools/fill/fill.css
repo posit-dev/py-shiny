@@ -1,0 +1,14 @@
+.html-fill-container {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  width: 100%;
+}
+.html-fill-container > .html-fill-item {
+  flex: 1 1 auto;
+  overflow: auto;
+  width: 100%;
+}
+.html-fill-container > .html-fill-item.html-fill-item-overflow-hidden {
+  overflow: hidden;
+}

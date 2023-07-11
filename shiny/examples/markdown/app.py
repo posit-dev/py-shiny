@@ -1,4 +1,4 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, ui
 
 ui_app = ui.page_fluid(
     ui.markdown(

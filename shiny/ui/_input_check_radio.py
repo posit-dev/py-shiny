@@ -1,27 +1,36 @@
+from __future__ import annotations
+
 __all__ = (
     "input_checkbox",
     "input_checkbox_group",
     "input_radio_buttons",
 )
 
-from typing import List, Mapping, Optional, Union
+from typing import Mapping, Optional, Union
 
-from htmltools import Tag, TagChildArg, css, div, span, tags
+from htmltools import Tag, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from ._utils import shiny_input_label
 
 # Canonical format for representing select options.
-_Choices = Mapping[str, TagChildArg]
+_Choices = Mapping[str, TagChild]
 
 # Formats available to the user
-ChoicesArg = Union[List[str], _Choices]
+ChoicesArg = Union[
+    # ["a", "b", "c"]
+    "list[str]",
+    # ("a", "b", "c")
+    "tuple[str, ...]",
+    # {"a": "Choice A", "b": tags.i("Choice B")}
+    _Choices,
+]
 
 
 @add_example()
 def input_checkbox(
-    id: str, label: TagChildArg, value: bool = False, *, width: Optional[str] = None
+    id: str, label: TagChild, value: bool = False, *, width: Optional[str] = None
 ) -> Tag:
     """
     Create a checkbox that can be used to specify logical values.
@@ -39,13 +48,14 @@ def input_checkbox(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
-    .. admonition:: Server value
-
-        ``True`` if checked, ``False`` otherwise.
+    ::: {.callout-note title="Server value"}
+    ``True`` if checked, ``False`` otherwise.
+    :::
 
     See Also
     -------
@@ -63,6 +73,7 @@ def input_checkbox(
                     type="checkbox",
                     checked="checked" if value else None,
                 ),
+                " ",
                 span(label),
             ),
             class_="checkbox",
@@ -72,8 +83,9 @@ def input_checkbox(
     )
 
 
+@add_example()
 def input_switch(
-    id: str, label: TagChildArg, value: bool = False, *, width: Optional[str] = None
+    id: str, label: TagChild, value: bool = False, *, width: Optional[str] = None
 ) -> Tag:
     """
     Create a switch that can be used to specify logical values. Similar to
@@ -93,13 +105,14 @@ def input_switch(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
-    .. admonition:: Server value
-
-        ``True`` if checked, ``False`` otherwise.
+    ::: {.callout-note title="Server value"}
+    ``True`` if checked, ``False`` otherwise.
+    :::
 
     See Also
     -------
@@ -114,7 +127,7 @@ def input_switch(
 
 def _input_checkbox(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     class_: str = "form-check",
     value: bool = False,
     *,
@@ -128,6 +141,7 @@ def _input_checkbox(
                 type="checkbox",
                 checked="checked" if value else None,
             ),
+            " ",
             tags.label(label, class_="form-check-label", for_=resolve_id(id)),
             class_=class_,
         ),
@@ -139,10 +153,10 @@ def _input_checkbox(
 @add_example()
 def input_checkbox_group(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     choices: ChoicesArg,
     *,
-    selected: Optional[Union[str, List[str]]] = None,
+    selected: Optional[str | list[str]] = None,
     inline: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
@@ -169,13 +183,14 @@ def input_checkbox_group(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A tuple of string(s) with the selected value(s) (if any).
+    ::: {.callout-note title="Server value"}
+    A tuple of string(s) with the selected value(s) (if any).
+    :::
 
     See Also
     -------
@@ -208,7 +223,7 @@ def input_checkbox_group(
 @add_example()
 def input_radio_buttons(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     choices: ChoicesArg,
     *,
     selected: Optional[str] = None,
@@ -234,15 +249,17 @@ def input_radio_buttons(
         If ``True``, the result is displayed inline
     width
         The CSS width, e.g. '400px', or '100%'
+
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A string with the selected value.
+    ::: {.callout-note title="Server value"}
+    A string with the selected value.
+    :::
 
     See Also
     -------
@@ -276,7 +293,7 @@ def _generate_options(
     id: str,
     type: str,
     choices: ChoicesArg,
-    selected: Optional[Union[str, List[str]]],
+    selected: Optional[str | list[str] | tuple[str, ...]],
     inline: bool,
 ) -> Tag:
     choicez = _normalize_choices(choices)
@@ -287,7 +304,9 @@ def _generate_options(
         else:
             selected = []
 
-    if not isinstance(selected, list):
+    if isinstance(selected, tuple):
+        selected = list(selected)
+    elif not isinstance(selected, list):
         selected = [selected]
 
     return div(
@@ -310,7 +329,7 @@ def _generate_option(
     id: str,
     type: str,
     value: str,
-    label: TagChildArg,
+    label: TagChild,
     checked: bool,
     inline: bool,
 ) -> Tag:
@@ -321,13 +340,22 @@ def _generate_option(
         checked="checked" if checked else None,
     )
     if inline:
-        return tags.label(input, span(label), class_=type + "-inline")
+        return tags.label(
+            input,
+            " ",
+            span(label),
+            class_=type + "-inline",
+            _add_ws=True,
+        )
     else:
-        return div(tags.label(input, span(label)), class_=type)
+        return div(
+            tags.label(input, " ", span(label)),
+            class_=type,
+        )
 
 
 def _normalize_choices(x: ChoicesArg) -> _Choices:
-    if isinstance(x, list):
+    if isinstance(x, (list, tuple)):
         return {k: k for k in x}
     else:
         return x

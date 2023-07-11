@@ -1,7 +1,8 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_action_button("minus", "-1"),
+    " ",
     ui.input_action_button("plus", "+1"),
     ui.br(),
     ui.output_text("value"),

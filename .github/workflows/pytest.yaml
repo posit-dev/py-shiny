@@ -14,43 +14,17 @@ jobs:
     strategy:
       matrix:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
-        python-version: [3.7, 3.8, 3.9, "3.10"]
+        python-version: ["3.11", "3.10", "3.9", "3.8"]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
       fail-fast: false
 
     steps:
       - uses: actions/checkout@v3
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - name: Setup py-shiny
+        id: install
+        uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      - name: Check out and install htmltools
-        run: |
-          cd ..
-          git clone https://github.com/rstudio/py-htmltools.git
-          cd py-htmltools
-          pip install wheel
-          make install
-
-      # - name: Check out and install fontawesome
-      #   run: |
-      #     cd ..
-      #     git clone https://github.com/rstudio/py-fontawesome.git
-      #     cd py-fontawesome
-      #     pip install -r requirements-dev.txt
-      #     make install
-
-      - name: Install dependencies
-        run: pip install -e ".[dev,docs,test]"
-
-      - name: Install
-        id: install
-        run: |
-          make install
 
       - name: Run unit tests
         if: steps.install.outcome == 'success' && (success() || failure())
@@ -72,17 +46,56 @@ jobs:
         run: |
           make check
 
-      - name: Build API docs
-        if: steps.install.outcome == 'success' && (success() || failure())
-        env:
-          SHINYLIVE_SRC: ""
-        run: |
-          cd docs && make html
+  e2e:
+    runs-on: ${{ matrix.os }}
+    if: github.event_name != 'release'
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.10", "3.9", "3.8"]
+        os: [ubuntu-latest]
+      fail-fast: false
 
-      - name: Run e2e tests
-        if: steps.install.outcome == 'success' && (success() || failure())
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run End-to-End tests
         run: |
           make e2e
+
+  examples:
+    runs-on: ${{ matrix.os }}
+    if: github.event_name != 'release'
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.10", "3.9", "3.8"]
+        os: [ubuntu-latest]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: npm
+          cache-dependency-path: examples/brownian/shinymediapipe/package-lock.json
+      - name: Install node.js package
+        working-directory: examples/brownian/shinymediapipe
+        run: |
+          npm ci
+
+      - name: Run example app tests
+        run: |
+          make e2e-examples
 
   deploy:
     name: "Deploy to PyPI"
@@ -91,14 +104,15 @@ jobs:
     needs: [build]
     steps:
       - uses: actions/checkout@v3
-      - name: "Set up Python 3.8"
+      - name: "Set up Python 3.10"
         uses: actions/setup-python@v4
         with:
-          python-version: "3.8"
+          python-version: "3.10"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,docs,test]"
+          make install-deps
+          make install
       - name: "Build Package"
         run: |
           make dist

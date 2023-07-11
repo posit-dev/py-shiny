@@ -1,14 +1,8 @@
 __all__ = ("insert_ui", "remove_ui")
 
-import sys
-from typing import Optional
+from typing import Literal, Optional
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
-from htmltools import TagChildArg
+from htmltools import TagChild
 
 from .._docstring import add_example
 from ..session import Session, require_active_session
@@ -16,7 +10,7 @@ from ..session import Session, require_active_session
 
 @add_example()
 def insert_ui(
-    ui: TagChildArg,
+    ui: TagChild,
     selector: str,
     where: Literal["beforeBegin", "afterBegin", "beforeEnd", "afterEnd"] = "beforeEnd",
     multiple: bool = False,
@@ -59,7 +53,7 @@ def insert_ui(
         run (default).
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -122,7 +116,7 @@ def remove_ui(
         run (default).
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     See Also
     -------

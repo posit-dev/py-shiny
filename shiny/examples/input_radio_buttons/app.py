@@ -1,13 +1,11 @@
-from htmltools import HTML
-
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_radio_buttons(
         "rb",
         "Choose one:",
         {
-            "html": HTML("<span style='color:red;'>Red Text</span>"),
+            "html": ui.HTML("<span style='color:red;'>Red Text</span>"),
             "text": "Normal text",
         },
     ),

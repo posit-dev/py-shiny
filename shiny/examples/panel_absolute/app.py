@@ -1,4 +1,4 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, ui
 
 app_ui = ui.page_fluid(
     ui.panel_title("A basic absolute panel example", "Demo"),

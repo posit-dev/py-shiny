@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 __all__ = ("Progress",)
 
 from types import TracebackType
-from typing import Optional, Type, Union
+from typing import Optional, Type
 from warnings import warn
 
 from .._docstring import add_example
@@ -24,14 +26,14 @@ class Progress:
         ``min``.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
     """
 
     _style = "notification"
 
     min: int
     max: int
-    value: Union[float, None]
+    value: float | None
 
     def __init__(
         self, min: int = 0, max: int = 1, session: Optional[Session] = None

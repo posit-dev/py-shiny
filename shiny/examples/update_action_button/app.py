@@ -1,16 +1,14 @@
-from htmltools import br
-
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, req, ui
 
 app_ui = ui.page_fluid(
     ui.input_action_button("update", "Update other buttons and link"),
-    br(),
+    ui.br(),
     ui.input_action_button("goButton", "Go"),
-    br(),
+    ui.br(),
     ui.input_action_button("goButton2", "Go 2", icon="🤩"),
-    br(),
+    ui.br(),
     ui.input_action_button("goButton3", "Go 3"),
-    br(),
+    ui.br(),
     ui.input_action_link("goLink", "Go Link"),
 )
 

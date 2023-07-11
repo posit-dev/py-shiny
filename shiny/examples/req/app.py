@@ -1,4 +1,4 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from shiny.types import SafeException
 
 app_ui = ui.page_fluid(

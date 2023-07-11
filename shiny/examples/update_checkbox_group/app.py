@@ -1,4 +1,4 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.tags.p("The first checkbox group controls the second"),
@@ -15,11 +15,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect
     def _():
         x = input.inCheckboxGroup()
-
-        if x is None:
-            x = []
-        elif isinstance(x, str):
-            x = [x]
 
         # Can also set the label and select items
         ui.update_checkbox_group(

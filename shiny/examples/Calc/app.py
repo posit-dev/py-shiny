@@ -1,10 +1,11 @@
 import random
 import time
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_action_button("first", "Invalidate first (slow) computation"),
+    " ",
     ui.input_action_button("second", "Invalidate second (fast) computation"),
     ui.br(),
     ui.output_ui("result"),

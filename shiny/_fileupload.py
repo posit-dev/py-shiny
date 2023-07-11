@@ -1,3 +1,7 @@
+# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
+# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
+from __future__ import annotations
+
 import copy
 import os
 import pathlib
@@ -33,7 +37,7 @@ from .types import FileInfo
 
 class FileUploadOperation:
     def __init__(
-        self, parent: "FileUploadManager", id: str, dir: str, file_infos: List[FileInfo]
+        self, parent: FileUploadManager, id: str, dir: str, file_infos: List[FileInfo]
     ) -> None:
         self._parent: FileUploadManager = parent
         self._id: str = id

@@ -1,4 +1,6 @@
-from typing import Dict, cast
+from __future__ import annotations
+
+from typing import cast
 
 import starlette.exceptions as exceptions
 import starlette.responses as responses
@@ -23,7 +25,7 @@ class ErrorMiddleware:
                 e.detail,
                 e.status_code,
                 headers=cast(
-                    Dict[str, str],
+                    "dict[str, str]",
                     e.headers,  # pyright: ignore[reportUnknownMemberType]
                 ),
                 media_type="text/plain",

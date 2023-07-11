@@ -1,14 +1,8 @@
 __all__ = ("input_text", "input_text_area")
 
-import sys
-from typing import Optional
+from typing import Literal, Optional
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
-from htmltools import Tag, TagChildArg, css, div, tags
+from htmltools import Tag, TagChild, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -18,7 +12,7 @@ from ._utils import shiny_input_label
 @add_example()
 def input_text(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     value: str = "",
     *,
     width: Optional[str] = None,
@@ -53,14 +47,15 @@ def input_text(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A string containing the current text input. The default value is ``""`` unless
-        ``value`` is provided.
+    ::: {.callout-note title="Server value"}
+    A string containing the current text input. The default value is ``""`` unless
+    ``value`` is provided.
+    :::
 
     See Also
     -------
@@ -86,7 +81,7 @@ def input_text(
 @add_example()
 def input_text_area(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     value: str = "",
     *,
     width: Optional[str] = None,
@@ -94,7 +89,7 @@ def input_text_area(
     cols: Optional[int] = None,
     rows: Optional[int] = None,
     placeholder: Optional[str] = None,
-    resize: Optional[str] = None,
+    resize: Optional[Literal["none", "both", "horizontal", "vertical"]] = None,
     autocomplete: Optional[str] = None,
     spellcheck: Optional[Literal["true", "false"]] = None,
 ) -> Tag:
@@ -139,14 +134,15 @@ def input_text_area(
 
     Returns
     -------
-    A UI element
+    :
+        A UI element
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A string containing the current text input. The default value is ``""`` unless
-        ``value`` is provided.
+    ::: {.callout-note title="Server value"}
+    A string containing the current text input. The default value is ``""`` unless
+    ``value`` is provided.
+    :::
 
     See Also
     -------

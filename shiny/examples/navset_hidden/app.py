@@ -1,4 +1,4 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.layout_sidebar(
@@ -13,7 +13,7 @@ app_ui = ui.page_fluid(
                 ui.nav(None, "Panel 2 content", value="panel2"),
                 ui.nav(None, "Panel 3 content", value="panel3"),
                 id="hidden_tabs",
-            )
+            ),
         ),
     )
 )

@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 import copy
 import importlib
 import importlib.util
+import inspect
 import os
+import platform
+import re
 import shutil
 import sys
 import types
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Optional
 
 import click
 import uvicorn
@@ -15,9 +20,10 @@ import uvicorn.config
 import shiny
 
 from . import _autoreload, _hostenv, _static, _utils
+from ._typing_extensions import NotRequired, TypedDict
 
 
-@click.group()  # pyright: ignore[reportUnknownMemberType]
+@click.group("main")
 def main() -> None:
     pass
 
@@ -43,6 +49,7 @@ any of the following will work:
 )
 @click.argument("app", default="app.py:app")
 @click.option(
+    "-h",
     "--host",
     type=str,
     default="127.0.0.1",
@@ -50,6 +57,7 @@ any of the following will work:
     show_default=True,
 )
 @click.option(
+    "-p",
     "--port",
     type=int,
     default=8000,
@@ -63,7 +71,21 @@ any of the following will work:
     help="Bind autoreload socket to this port. If 0, a random port will be used. Ignored if --reload is not used.",
     show_default=True,
 )
-@click.option("--reload", is_flag=True, default=False, help="Enable auto-reload.")
+@click.option(
+    "-r",
+    "--reload",
+    is_flag=True,
+    default=False,
+    help="Enable auto-reload, when these types of files change: .py .css .js .html",
+)
+@click.option(
+    "--reload-dir",
+    "reload_dirs",
+    multiple=True,
+    help="Indicate a directory `--reload` should (recursively) monitor for changes, in "
+    "addition to the app's parent directory. Can be used more than once.",
+    type=click.Path(exists=True),
+)
 @click.option(
     "--ws-max-size",
     type=int,
@@ -79,6 +101,7 @@ any of the following will work:
     show_default=True,
 )
 @click.option(
+    "-d",
     "--app-dir",
     default=".",
     show_default=True,
@@ -94,6 +117,7 @@ any of the following will work:
     show_default=True,
 )
 @click.option(
+    "-b",
     "--launch-browser",
     is_flag=True,
     default=False,
@@ -101,11 +125,12 @@ any of the following will work:
     show_default=True,
 )
 def run(
-    app: Union[str, shiny.App],
+    app: str | shiny.App,
     host: str,
     port: int,
     autoreload_port: int,
     reload: bool,
+    reload_dirs: tuple[str, ...],
     ws_max_size: int,
     log_level: str,
     app_dir: str,
@@ -118,6 +143,7 @@ def run(
         port=port,
         autoreload_port=autoreload_port,
         reload=reload,
+        reload_dirs=list(reload_dirs),
         ws_max_size=ws_max_size,
         log_level=log_level,
         app_dir=app_dir,
@@ -127,11 +153,12 @@ def run(
 
 
 def run_app(
-    app: Union[str, shiny.App] = "app:app",
+    app: str | shiny.App = "app:app",
     host: str = "127.0.0.1",
     port: int = 8000,
     autoreload_port: int = 0,
     reload: bool = False,
+    reload_dirs: Optional[list[str]] = None,
     ws_max_size: int = 16777216,
     log_level: Optional[str] = None,
     app_dir: Optional[str] = ".",
@@ -210,14 +237,20 @@ def run_app(
     if app_dir:
         app_dir = os.path.realpath(app_dir)
 
-    log_config: Dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
+    log_config: dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
 
-    if reload and app_dir is not None:
-        reload_dirs = [app_dir]
-    else:
+    if reload_dirs is None:
         reload_dirs = []
 
     if reload:
+        # Always watch the app_dir
+        if app_dir:
+            reload_dirs.append(app_dir)
+        # For developers of Shiny itself; autoreload the app when Shiny package changes
+        if os.getenv("SHINY_PKG_AUTORELOAD"):
+            shinypath = Path(inspect.getfile(shiny)).parent
+            reload_dirs.append(str(shinypath))
+
         if autoreload_port == 0:
             autoreload_port = _utils.random_port(host=host)
 
@@ -229,27 +262,40 @@ def run_app(
         else:
             setup_hot_reload(log_config, autoreload_port, port, launch_browser)
 
+    reload_args: ReloadArgs = {}
+    if reload:
+        reload_dirs = []
+        if app_dir is not None:
+            reload_dirs = [app_dir]
+
+        reload_args = {
+            "reload": reload,
+            # Adding `reload_includes` param while `reload=False` produces an warning
+            # https://github.com/encode/uvicorn/blob/d43afed1cfa018a85c83094da8a2dd29f656d676/uvicorn/config.py#L298-L304
+            "reload_includes": ["*.py", "*.css", "*.js", "*.htm", "*.html", "*.png"],
+            "reload_dirs": reload_dirs,
+        }
+
     if launch_browser and not reload:
         setup_launch_browser(log_config)
 
     maybe_setup_rsw_proxying(log_config)
 
     uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
-        app,  # pyright: ignore[reportGeneralTypeIssues]
+        app,
         host=host,
         port=port,
-        reload=reload,
-        reload_dirs=reload_dirs,
         ws_max_size=ws_max_size,
         log_level=log_level,
         log_config=log_config,
         app_dir=app_dir,
         factory=factory,
+        **reload_args,
     )
 
 
 def setup_hot_reload(
-    log_config: Dict[str, Any],
+    log_config: dict[str, Any],
     autoreload_port: int,
     app_port: int,
     launch_browser: bool,
@@ -267,7 +313,7 @@ def setup_hot_reload(
     _autoreload.start_server(autoreload_port, app_port, launch_browser)
 
 
-def setup_launch_browser(log_config: Dict[str, Any]):
+def setup_launch_browser(log_config: dict[str, Any]):
     log_config["handlers"]["shiny_launch_browser"] = {
         "class": "shiny._launchbrowser.LaunchBrowserHandler",
         "level": "INFO",
@@ -277,7 +323,7 @@ def setup_launch_browser(log_config: Dict[str, Any]):
     log_config["loggers"]["uvicorn.error"]["handlers"].append("shiny_launch_browser")
 
 
-def maybe_setup_rsw_proxying(log_config: Dict[str, Any]) -> None:
+def maybe_setup_rsw_proxying(log_config: dict[str, Any]) -> None:
     # Replace localhost URLs emitted to the log, with proxied URLs
     if _hostenv.is_workbench():
         if "filters" not in log_config:
@@ -292,7 +338,7 @@ def is_file(app: str) -> bool:
     return "/" in app or app.endswith(".py")
 
 
-def resolve_app(app: str, app_dir: Optional[str]) -> Tuple[str, Optional[str]]:
+def resolve_app(app: str, app_dir: Optional[str]) -> tuple[str, Optional[str]]:
     # The `app` parameter can be:
     #
     # - A module:attribute name
@@ -301,7 +347,13 @@ def resolve_app(app: str, app_dir: Optional[str]) -> Tuple[str, Optional[str]]:
     #   - directory (look for app:app inside of it)
     # - A module name (look for :app) inside of it
 
-    module, _, attr = app.partition(":")
+    if platform.system() == "Windows" and re.match("^[a-zA-Z]:[/\\\\]", app):
+        # On Windows, need special handling of ':' in some cases, like these:
+        #   shiny run c:/Users/username/Documents/myapp/app.py
+        #   shiny run c:\Users\username\Documents\myapp\app.py
+        module, attr = app, ""
+    else:
+        module, _, attr = app.partition(":")
     if not module:
         raise ImportError("The APP parameter cannot start with ':'.")
     if not attr:
@@ -423,3 +475,9 @@ def static_assets(command: str) -> None:
         _static.print_shinylive_local_info()
     else:
         raise click.UsageError(f"Unknown command: {command}")
+
+
+class ReloadArgs(TypedDict):
+    reload: NotRequired[bool]
+    reload_includes: NotRequired[list[str]]
+    reload_dirs: NotRequired[list[str]]

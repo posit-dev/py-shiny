@@ -1,14 +1,10 @@
+from __future__ import annotations
+
 __all__ = ("notification_show", "notification_remove")
 
-import sys
-from typing import Any, Dict, Optional, Union
+from typing import Any, Literal, Optional
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
-from htmltools import TagChildArg, TagList
+from htmltools import TagChild
 
 from .._docstring import add_example
 from .._utils import rand_hex
@@ -17,9 +13,10 @@ from ..session import Session, require_active_session
 
 @add_example()
 def notification_show(
-    ui: TagChildArg,
-    action: Optional[TagList] = None,
-    duration: Optional[Union[int, float]] = 5,
+    ui: TagChild,
+    *,
+    action: Optional[TagChild] = None,
+    duration: Optional[int | float] = 5,
     close_button: bool = True,
     id: Optional[str] = None,
     type: Literal["default", "message", "warning", "error"] = "default",
@@ -51,11 +48,12 @@ def notification_show(
         "message" (blue), "warning" (yellow), or "error" (red).
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Returns
     -------
-    The notification's ``id``.
+    :
+        The notification's ``id``.
 
     See Also
     -------
@@ -70,7 +68,7 @@ def notification_show(
 
     id = id if id else rand_hex(8)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "html": ui_["html"],
         "action": action_["html"],
         "deps": ui_["deps"] + action_["deps"],
@@ -87,7 +85,7 @@ def notification_show(
     return id
 
 
-def notification_remove(id: str, session: Optional[Session] = None) -> str:
+def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
     """
     Remove a notification.
 
@@ -97,11 +95,12 @@ def notification_remove(id: str, session: Optional[Session] = None) -> str:
         A notification ``id``.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Returns
     -------
-    The notification's ``id``.
+    :
+        The notification's ``id``.
 
     See Also
     -------

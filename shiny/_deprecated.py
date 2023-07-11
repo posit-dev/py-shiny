@@ -11,6 +11,7 @@ __all__ = (
     "event",
 )
 
+
 # Create our own warning class instead of using built-in DeprecationWarning, because we
 # want to be able to control display of these messages without interfering with the
 # user's control of DeprecationWarning.
@@ -23,7 +24,7 @@ warnings.simplefilter("always", ShinyDeprecationWarning)
 
 
 def warn_deprecated(message: str):
-    warnings.warn(message, ShinyDeprecationWarning)
+    warnings.warn(message, ShinyDeprecationWarning, stacklevel=3)
 
 
 def render_text():
