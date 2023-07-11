@@ -1,4 +1,4 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.input_slider("controller", "Controller", min=0, max=1, value=0, step=1),

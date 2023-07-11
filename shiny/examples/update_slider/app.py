@@ -1,13 +1,13 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, ui
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.layout_sidebar(
         ui.panel_sidebar(
             ui.tags.p("The first slider controls the second"),
             ui.input_slider("control", "Controller:", min=0, max=20, value=10, step=1),
             ui.input_slider("receive", "Receiver:", min=0, max=20, value=10, step=1),
         ),
-        ui.panel_main(),
+        ui.panel_main("Main app content"),
     )
 )
 

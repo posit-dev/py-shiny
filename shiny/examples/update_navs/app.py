@@ -1,6 +1,6 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, ui
 
-app_ui = ui.page_fluid(
+app_ui = ui.page_fixed(
     ui.layout_sidebar(
         ui.panel_sidebar(
             ui.input_slider("controller", "Controller", min=1, max=3, value=1)
@@ -11,7 +11,7 @@ app_ui = ui.page_fluid(
                 ui.nav("Panel 2", "Panel 2 content", value="panel2"),
                 ui.nav("Panel 3", "Panel 3 content", value="panel3"),
                 id="inTabset",
-            )
+            ),
         ),
     )
 )

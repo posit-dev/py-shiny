@@ -1,4 +1,4 @@
-.PHONY: help clean clean-test clean-pyc clean-build docs help lint test e2e test-all
+.PHONY: help clean clean-test clean-pyc clean-build help lint test e2e e2e-examples
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -14,7 +14,7 @@ define PRINT_HELP_PYSCRIPT
 import re, sys
 
 for line in sys.stdin:
-	match = re.match(r'^([a-zA-Z_-]+):.*?## (.*)$$', line)
+	match = re.match(r'^([a-zA-Z1-9_-]+):.*?## (.*)$$', line)
 	if match:
 		target, help = match.groups()
 		print("%-20s %s" % (target, help))
@@ -48,10 +48,13 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 	rm -rf typings/
 
-typings/uvicorn/__init__.pyi:
+typings/uvicorn:
 	pyright --createstub uvicorn
 
-pyright: typings/uvicorn/__init__.pyi ## type check with pyright
+typings/matplotlib:
+	pyright --createstub matplotlib
+
+pyright: typings/uvicorn typings/matplotlib ## type check with pyright
 	pyright
 
 lint: ## check style with flake8
@@ -64,7 +67,7 @@ format: ## format code with black and isort
 	echo "Sorting imports with isort."
 	isort .
 
-check: pyright lint ## check code quality with pyright, flake8, black and isort
+check: ## check code quality with black and isort
 	echo "Checking code with black."
 	black --check .
 	echo "Sorting imports with isort."
@@ -72,13 +75,18 @@ check: pyright lint ## check code quality with pyright, flake8, black and isort
 
 test: ## run tests quickly with the default Python
 	python3 tests/asyncio_prevent.py
-	pytest
+	pytest tests
 
-e2e: ## run e2e tests with playwright
-	tox
+# Default `FILE` to `e2e` if not specified
+FILE:=e2e
 
-test-all: ## run tests on every Python version with tox
-	tox
+e2e: ## end-to-end tests with playwright
+	playwright install --with-deps
+	pytest $(FILE) -m "not examples"
+
+e2e-examples: ## end-to-end tests on examples with playwright
+	playwright install --with-deps
+	pytest $(FILE) -m "examples"
 
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source shiny -m pytest
@@ -86,16 +94,6 @@ coverage: ## check code coverage quickly with the default Python
 	coverage html
 	$(BROWSER) htmlcov/index.html
 
-docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/shiny.rst
-	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ shiny
-	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
-	$(BROWSER) docs/build/html/index.html
-
-servedocs: docs ## compile the docs watching for changes
-	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
 release: dist ## package and upload a release
 	twine upload dist/*
@@ -106,6 +104,16 @@ dist: clean ## builds source and wheel package
 	ls -l dist
 
 ## install the package to the active Python's site-packages
-# Note that py-htmltools/ must be a sibling directory of py-shiny/.
+# Note that instead of --force-reinstall, we uninstall and then install, because
+# --force-reinstall also reinstalls all deps. And if we also used --no-deps, then the
+# deps wouldn't be installed the first time.
 install: dist
-	python3 -m pip install --force-reinstall dist/shiny*.whl --find-links ../py-htmltools/dist/
+	pip uninstall -y shiny
+	python3 -m pip install dist/shiny*.whl
+
+install-deps: ## install dependencies
+	pip install -e ".[dev,test]"
+
+# ## If caching is ever used, we could run:
+# install-deps: ## install latest dependencies
+# 	pip install --editable ".[dev,test]" --upgrade --upgrade-strategy eager

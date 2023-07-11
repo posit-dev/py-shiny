@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import html
 import http
@@ -6,13 +8,14 @@ import os
 import secrets
 import threading
 import webbrowser
-from typing import Optional, Tuple
+from typing import Callable, Optional
 
 from asgiref.typing import (
     ASGI3Application,
     ASGIReceiveCallable,
     ASGISendCallable,
     ASGISendEvent,
+    HTTPResponseStartEvent,
     Scope,
 )
 
@@ -111,40 +114,15 @@ class InjectAutoreloadMiddleware:
     ) -> None:
         if scope["type"] != "http" or scope["path"] != "/" or len(self.script) == 0:
             return await self.app(scope, receive, send)
-        intercept = True
-        body = b""
 
-        async def rewrite_send(event: ASGISendEvent) -> None:
-            nonlocal intercept
-            nonlocal body
+        def mangle_callback(body: bytes) -> tuple[bytes, bool]:
+            if b"</head>" in body:
+                return (body.replace(b"</head>", self.script, 1), True)
+            else:
+                return (body, False)
 
-            if intercept:
-                if event["type"] == "http.response.start":
-                    # Must remove Content-Length, if present; if we insert our
-                    # scripts, it won't be correct anymore
-                    event["headers"] = [
-                        (name, value)
-                        for (name, value) in event["headers"]
-                        if name.decode("ascii").lower() != "content-length"
-                    ]
-                elif event["type"] == "http.response.body":
-                    body += event["body"]
-                    if b"</head>" in body:
-                        event["body"] = body.replace(b"</head>", self.script, 1)
-                        body = b""  # Allow gc
-                        intercept = False
-                    elif "more_body" in event and event["more_body"]:
-                        # DO NOT send the response; wait for more data
-                        return
-                    else:
-                        # The entire response was seen, and we never encountered
-                        # any </head>. Just send everything we have
-                        event["body"] = body
-                        body = b""  # Allow gc
-
-            return await send(event)
-
-        await self.app(scope, receive, rewrite_send)
+        mangler = ResponseMangler(send, mangle_callback)
+        await self.app(scope, receive, mangler.send)
 
 
 # PARENT PROCESS ------------------------------------------------------------
@@ -224,10 +202,104 @@ async def _coro_main(
     # leads to confusion if all you get is an error.
     async def process_request(
         path: str, request_headers: websockets.datastructures.Headers
-    ) -> Optional[Tuple[http.HTTPStatus, websockets.datastructures.HeadersLike, bytes]]:
+    ) -> Optional[tuple[http.HTTPStatus, websockets.datastructures.HeadersLike, bytes]]:
         # If there's no Upgrade header, it's not a WebSocket request.
         if request_headers.get("Upgrade") is None:
             return (http.HTTPStatus.MOVED_PERMANENTLY, [("Location", app_url)], b"")
 
     async with serve(reload_server, "127.0.0.1", port, process_request=process_request):
         await asyncio.Future()  # wait forever
+
+
+class ResponseMangler:
+    """A class that assists with intercepting and rewriting response bodies being sent
+    over ASGI. This would be easy if not for 1) response bodies are potentially sent in
+    chunks, over multiple events; 2) the first response event we receive is the one that
+    contains the Content-Length, which can be affected when we do rewriting later on.
+    The ResponseMangler handles the buffering and content-length rewriting, leaving the
+    caller to only have to worry about the actual body-modifying logic.
+    """
+
+    def __init__(
+        self, send: ASGISendCallable, mangler: Callable[[bytes], tuple[bytes, bool]]
+    ) -> None:
+        # The underlying ASGI send function
+        self._send = send
+        # The caller-provided logic for rewriting the body. Takes a single `bytes`
+        # argument that is _all_ of the body bytes seen _so far_, and returns a tuple of
+        # (bytes, bool) where the bytes are the (possibly modified) body bytes and the
+        # bool is True if the mangler does not care to see any more data.
+        self._mangler = mangler
+
+        # If True, the mangler is done and any further data can simply be passed along
+        self._done: bool = False
+
+        # Holds the http.response.start event, which may need its Content-Length header
+        # rewritten before we send it
+        self._response_start: Optional[HTTPResponseStartEvent] = None
+        # All the response body bytes we have seen so far
+        self._body: bytes = b""
+
+    async def send(self, event: ASGISendEvent) -> None:
+        if self._done:
+            await self._send(event)
+            return
+
+        if event["type"] == "http.response.start":
+            self._response_start = event
+        elif event["type"] == "http.response.body":
+            # This check is mostly to make pyright happy
+            if self._response_start is None:
+                raise AssertionError(
+                    "http.response.body ASGI event sent before http.response.start"
+                )
+
+            # Add the newly received body data to what we've seen already
+            self._body += event["body"]
+            # Snapshot length before we mess with the body
+            old_len = len(self._body)
+            # Mangle away! If done is True, the mangler doesn't want to do any further
+            # mangling.
+            self._body, done = self._mangler(self._body)
+
+            new_len = len(self._body)
+            if new_len != old_len:
+                # The mangling check changed the length of the body. Add the difference
+                # to the content-length header (if content-length is even present)
+                _add_to_content_length(self._response_start, new_len - old_len)
+
+            more_body = event.get("more_body", False)
+
+            if done or not more_body:
+                # Either we've seen the whole body by now (`not more_body`) or the
+                # mangler has seen all the data it cares to (`done`). Either way, we can
+                # send all the data we have.
+                self._done = True
+                await self._send(self._response_start)
+                await self._send(
+                    {
+                        "type": "http.response.body",
+                        "body": self._body,
+                        "more_body": more_body,
+                    }
+                )
+                # Allow gc
+                self._response_start = None
+                self._body = b""
+            else:
+                # If we get here, then the mangler isn't done and we are expecting to
+                # see more data. Do nothing.
+                pass
+
+
+def _add_to_content_length(event: HTTPResponseStartEvent, offset: int) -> None:
+    """If event has a Content-Length header, add the specified number of bytes to it
+    (may be negative)"""
+    event["headers"] = [
+        (
+            (name, str(int(value) + offset).encode("latin-1"))
+            if name.decode("ascii").lower() == "content-length"
+            else (name, value)
+        )
+        for (name, value) in event["headers"]
+    ]

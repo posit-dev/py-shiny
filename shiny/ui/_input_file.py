@@ -1,14 +1,10 @@
+from __future__ import annotations
+
 __all__ = ("input_file",)
 
-import sys
-from typing import List, Optional, Union
+from typing import Literal, Optional
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
-from htmltools import Tag, TagChildArg, css, div, span, tags
+from htmltools import Tag, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -18,10 +14,10 @@ from ._utils import shiny_input_label
 @add_example()
 def input_file(
     id: str,
-    label: TagChildArg,
+    label: TagChild,
     *,
     multiple: bool = False,
-    accept: Optional[Union[str, List[str]]] = None,
+    accept: Optional[str | list[str]] = None,
     width: Optional[str] = None,
     button_label: str = "Browse...",
     placeholder: str = "No file selected",
@@ -41,12 +37,10 @@ def input_file(
     accept
         Unique file type specifier(s) which give the browser a hint as to the type of
         file the server expects. Many browsers use this to prevent the user from
-        selecting an invalid file. Examples of valid values include:
-
-          * A case insensitive extension like ``.csv`` or ``.rds``.
-          * A valid MIME type, like ``text/plain`` or ``application/pdf``
-          * One of ``audio/*``, ``video/*``, or ``image/*`` meaning any audio, video,
-            or image type, respectively.
+        selecting an invalid file. Examples of valid values include a case insensitive
+        extension (e.g. ``.csv`` or ``.rds``), a valid MIME type (e.g. ``text/plain`` or
+        ``application/pdf``) or one of ``audio/*``, ``video/*``, or ``image/*`` meaning
+        any audio, video, or image type, respectively.
     width
         The CSS width, e.g. '400px', or '100%'
     button_label
@@ -62,22 +56,23 @@ def input_file(
 
     Returns
     -------
-    A UI element.
+    :
+        A UI element.
 
     Notes
     -----
 
-    .. admonition:: Server value
+    ::: {.callout-note title="Server value"}
+    A list of dictionaries (one for each file upload) with the following keys:
 
-        A list of dictionaries (one for each file upload) with the following keys:
-
-        * name: The filename provided by the web browser. This is *not* the path to read
-          to get at the actual data that was uploaded (see 'datapath').
-        * size: The size of the uploaded data, in bytes.
-        * type: The MIME type reported by the browser (for example, 'text/plain'), or
-          empty string if the browser didn't know.
-        * datapath: The path to a temp file that contains the data that was uploaded.
-          This file may be deleted if the user performs another upload operation.
+    * name: The filename provided by the web browser. This is *not* the path to read
+        to get at the actual data that was uploaded (see 'datapath').
+    * size: The size of the uploaded data, in bytes.
+    * type: The MIME type reported by the browser (for example, 'text/plain'), or
+        empty string if the browser didn't know.
+    * datapath: The path to a temp file that contains the data that was uploaded.
+        This file may be deleted if the user performs another upload operation.
+    :::
 
     See Also
     --------

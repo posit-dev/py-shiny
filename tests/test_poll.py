@@ -9,10 +9,9 @@ from typing import Any, Callable, Dict, Optional, Type, cast
 
 import pytest
 
-from shiny import *
-from shiny import _utils
+from shiny import Session, _utils, session
 from shiny._namespaces import Root
-from shiny.reactive import *
+from shiny.reactive import Effect, Value, file_reader, flush, isolate, poll
 
 from .mocktime import MockTime
 
@@ -244,7 +243,6 @@ async def test_file_reader():
 @pytest.mark.asyncio
 async def test_file_reader_error():
     async with OnEndedSessionCallbacks():
-
         tmpfile1 = tempfile.NamedTemporaryFile(delete=False)
         mock_time = MockTime()
         with mock_time():

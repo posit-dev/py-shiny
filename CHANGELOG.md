@@ -5,6 +5,7 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## [UNRELEASED]
 
 ### New features
@@ -13,11 +14,117 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+### Other changes
+
+* Documentation updates. (#591)
+* Removed Python 3.7 support. (#590)
+
+
+## [0.4.0] - 2023-06-26
+
+### New features
+
+* Added new fast-scrolling data table and data grid outputs. (#538)
+
+* Added `include_js()` and `include_css()`, for easily including JS and CSS files in an application. (#127)
+
+* Added sidebar, card, value box, and accordion methods into `shiny.experimental.ui`. (#481)
+
+* Added `fill` and `fillable` methods into `shiny.experimental.ui`. If `fill` is `True`, then the UI component is allowed to expand into the parent container. If `fillable` is `True`, then the UI component will allow its content to expand. Both `fill` on the child component and `fillable` on the parent component must be `True` for the child component to expand. (#481)
+
+* Added sidebar methods into `shiny.experimental.ui`. `shiny.experimental.ui.layout_sidebar()` does not require `ui.panel_main()` and `ui.panel_sidebar()`. These two methods have been deprecated. `x.ui.page_navbar()`, `x.ui.navset_bar()`, `x.navset_tab_card()`, and `x.navset.pill_card()` added `sidebar=` support. (#481)
+
+* feat(sidebar): `ui.layout_sidebar()` internally uses `x.ui.layout_sidebar()`, enabling filling layout features. (#568)
+
+
+### Bug fixes
+
+* Fixed #496: Previously, when `shiny run --reload` was used, the app would only reload when a .py file changed. Now it will reload when .py, .css, .js, and .html files change. (#505)
+
+* Closed #535: Added a meta viewport tag, so that page layout will adapt to mobile device screens. (#540)
+
+## [0.3.3] - 2023-04-26
+
+### New features
+
+* Added `shiny.experimental` as a place to put experimental features. When using Shiny's experimental features, we recommend importing them by calling `import shiny.experimental as x`, so that all local function calls must start with `x` (e.g. `x.ui.card()`) to signify the method may be changed/removed without warning or future support. (#462)
+
+* Added `penguins` example. (#462)
+
+* The bootstrap HTMLDependency is now created using the dev version of `{bslib}` to get the latest features. (#462)
+
+* Added `shiny.experimental.ui.input_text_area()`, which supports auto-resizing height to fit the content when `autoresize=True`. (#463)
+
+### Other changes
+
+* `shiny.reactive.lock` is now exported. (#458)
+
+## [0.3.2] - 2023-04-19
+
+### Bug fixes
+
+* Fixed #456: plot interaction with datetimes raised errors on 32-bit platforms. (#457)
+
+### Other changes
+
+* When pyright creates type stubs for shiny, it now will include types imported in `_typing_extensions.py`.
+
+
+## [0.3.1] - 2023-04-18
+
+### Bug fixes
+
+* Fixed #443: Errors in streaming downloads previously resulted in a partially downloaded file; now Shiny responds with a `Transfer-Encoding: chunked` header, which allows the browser to detect the error and abort the download. (#447)
+
+### Other changes
+
+* `page_navbar` now accepts shinyswatch themes. (#455)
+
+
+## [0.3.0] - 2023-04-03
+
+### New features
+
+* Added support for URL based HTMLDependencies. `{htmltools}` (v0.1.5.9001) added support for URL based HTMLDependencies in rstudio/py-htmltools#53.  (#437)
+
+
+## [0.2.10] - 2023-03-11
+
+### New features
+
+* Added support for interacting with plots made with matplotlib, seaborn, and plotnine. (#392)
+
+* The `req()` function now returns its first argument (assuming none of its arguments are falsey). This lets you perform validation on expressions as you assign, return, or pass them, without needing to introduce a separate statement just to call `req()`.
+
+* Added `Input.__contains__` method, so that (for example) one could write an expression like `if "x" in inputs`. (#402)
+
+### Bug fixes
+
+* The `width` parameters for `input_select` and `input_slider` now work properly. (Thanks, @bartverweire!) (#386)
+
+* When `input_select` or `input_selectize` were not given an explicit `select` argument, they always chose the first item, which is correct when `multiple=False`, but not when `multiple=True`. Now when `multiple=True`, the first item is no longer automatically selected. (#396)
+
+### Other changes
+
+* Switched to new types from htmltools 0.1.5. (#416)
+
+
+## [0.2.9] - 2022-11-03
+
+### Bug fixes
+
+* Closed #240, #330: Fixed live examples with additional files. (#340)
+
+* Fixed `shiny run` handling on Windows of absolute paths with drive letter, as in `shiny run c:/myapp/app.py`. (#370)
+
+
+## [0.2.8] - 2022-10-20
+
+### Bug fixes
+
 * `panel_conditional` now works correctly inside of Shiny modules. (Thanks, @gcaligari!) (#336)
 
 * Fix compatibility with Uvicorn 0.19.0 (#357)
-
-### Other changes
 
 
 ## [0.2.7] - 2022-09-27
@@ -67,4 +174,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.2] - 2022-07-27
 
-Initial release of Shiny for Python https://shiny.rstudio.com/py/
+Initial release of Shiny for Python https://shiny.posit.co/py/

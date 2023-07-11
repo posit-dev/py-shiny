@@ -1,10 +1,9 @@
 import asyncio
 
-from shiny import *
-from shiny.ui import tags
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
-    tags.p(
+    ui.tags.p(
         """
       The first time you click the button, you should see a 1 appear below the button,
       as well as 2 messages in the python console (all reporting 1 click). After

@@ -10,7 +10,7 @@ def cpu_count(logical: bool = True):
 last_sample = np.random.uniform(0, 100, size=cpu_count(True))
 
 
-def cpu_percent(interval=None, percpu=False):
+def cpu_percent(percpu: bool = False):
     global last_sample
     delta = np.random.normal(scale=10, size=len(last_sample))
     last_sample = (last_sample + delta).clip(0, 100)

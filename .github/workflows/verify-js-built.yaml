@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  push:
+    branches: ["main", "rc-*"]
+  pull_request:
+
+jobs:
+  verify_js_built:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Extract node version from .nvmrc
+        id: nvm
+        run: echo "::set-output name=version::$(cat .nvmrc)"
+        working-directory: js
+
+      - name: Use Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "${{ steps.nvm.outputs.version }}"
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: js
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Build
+        run: npm run build
+        working-directory: js
+
+      - name: Check for uncommitted changes
+        run: |
+          if [[ `git status --porcelain` ]]; then
+            git diff
+            echo "Uncommitted changes found. Please commit any changes that result from 'npm run build'."
+            exit 1
+          else
+            echo "No uncommitted changes found."
+          fi
+        working-directory: js

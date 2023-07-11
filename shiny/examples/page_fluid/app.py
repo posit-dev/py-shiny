@@ -1,12 +1,16 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
     ui.layout_sidebar(
-        ui.panel_sidebar(ui.input_slider("n", "N", min=0, max=100, value=20)),
-        ui.panel_main(ui.output_plot("plot")),
+        ui.panel_sidebar(
+            ui.input_slider("n", "N", min=0, max=100, value=20),
+        ),
+        ui.panel_main(
+            ui.output_plot("plot"),
+        ),
     ),
 )
 

@@ -1,5 +1,7 @@
 """Reactive components"""
 
+from __future__ import annotations
+
 __all__ = ("Value", "Calc", "Calc_", "CalcAsync_", "Effect", "Effect_", "event")
 
 import functools
@@ -10,10 +12,8 @@ from typing import (
     Awaitable,
     Callable,
     Generic,
-    List,
     Optional,
     TypeVar,
-    Union,
     cast,
     overload,
 )
@@ -31,13 +31,24 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
+
 # ==============================================================================
 # Value
 # ==============================================================================
 @add_example()
 class Value(Generic[T]):
     """
-    Create a reactive value
+    Create a reactive value.
+
+    Reactive values are the source of reactivity in Shiny. Changes to reactive values
+    invalidate downstream reactive functions (:func:`~shiny.reactive.Calc`,
+    :func:`~shiny.reactive.Effect`, and `render` functions decorated with `@output`).
+    When these functions are invalidated, they get scheduled to re-execute.
+
+    Shiny input values are read-only reactive values. For example, `input.x` is a
+    reactive value object, and to get the current value, you can call `input.x()` or
+    `input.x.get()`. When you do that inside of a reactive function, the function takes
+    a dependency on the reactive value.
 
     Parameters
     ----------
@@ -48,7 +59,8 @@ class Value(Generic[T]):
 
     Returns
     -------
-    An instance of a reactive value.
+    :
+        An instance of a reactive value.
 
     Raises
     ------
@@ -58,15 +70,14 @@ class Value(Generic[T]):
     Note
     ----
     A reactive value may only be read from within a reactive function (e.g.,
-    :func:`Calc`, :func:`Effect`, :func:`shiny.render.text`, etc.) and, when doing so,
-    the function takes a reactive dependency on the value (i.e., when the value changes,
-    the calling reactive function will re-execute).
+    :func:`~shiny.reactive.Calc`, :func:`~shiny.reactive.Effect`,
+    :func:`shiny.render.text`, etc.) and, when doing so, the function takes a reactive
+    dependency on the value (i.e., when the value changes, the calling reactive function
+    will re-execute).
 
     See Also
     --------
-    ~shiny.Inputs
-    Calc
-    Effect
+    ~shiny.Inputs ~shiny.reactive.Calc ~shiny.reactive.Effect
     """
 
     # These overloads are necessary so that the following hold:
@@ -88,9 +99,9 @@ class Value(Generic[T]):
     # If `value` is MISSING, then `get()` will raise a SilentException, until a new
     # value is set. Calling `unset()` will set the value to MISSING.
     def __init__(
-        self, value: Union[T, MISSING_TYPE] = MISSING, *, read_only: bool = False
+        self, value: T | MISSING_TYPE = MISSING, *, read_only: bool = False
     ) -> None:
-        self._value: Union[T, MISSING_TYPE] = value
+        self._value: T | MISSING_TYPE = value
         self._read_only: bool = read_only
         self._value_dependents: Dependents = Dependents()
         self._is_set_dependents: Dependents = Dependents()
@@ -104,7 +115,8 @@ class Value(Generic[T]):
 
         Returns
         -------
-        The reactive value.
+        :
+            A value.
 
         Raises
         ------
@@ -132,7 +144,8 @@ class Value(Generic[T]):
 
         Returns
         -------
-        ``True`` if the value was set to a different value and ``False`` otherwise.
+        :
+            ``True`` if the value was set to a different value and ``False`` otherwise.
 
         Raises
         ------
@@ -164,7 +177,8 @@ class Value(Generic[T]):
 
         Returns
         -------
-        ``True`` if the value was set prior to this unsetting.
+        :
+            ``True`` if the value was set prior to this unsetting.
         """
         self.set(MISSING)  # type: ignore
 
@@ -174,7 +188,8 @@ class Value(Generic[T]):
 
         Returns
         -------
-        ``True`` if the value is set, ``False`` otherwise.
+        :
+            ``True`` if the value is set, ``False`` otherwise.
         """
 
         self._is_set_dependents.register()
@@ -205,14 +220,14 @@ class Calc_(Generic[T]):
     Warning
     -------
     Most users shouldn't use this class directly to initialize a reactive calculation
-    (instead, use the :func:`Calc` decorator).
+    (instead, use the :func:`~shiny.reactive.Calc` decorator).
     """
 
     def __init__(
         self,
         fn: CalcFunction[T],
         *,
-        session: Union[MISSING_TYPE, "Session", None] = MISSING,
+        session: "MISSING_TYPE | Session | None" = MISSING,
     ) -> None:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
@@ -310,14 +325,14 @@ class CalcAsync_(Calc_[T]):
     Warning
     -------
     Most users shouldn't use this class directly to initialize a reactive calculation
-    (instead, use the :func:`Calc` decorator).
+    (instead, use the :func:`~shiny.reactive.Calc` decorator).
     """
 
     def __init__(
         self,
         fn: CalcFunctionAsync[T],
         *,
-        session: Union[MISSING_TYPE, "Session", None] = MISSING,
+        session: "MISSING_TYPE | Session | None" = MISSING,
     ) -> None:
         if not _utils.is_async_callable(fn):
             raise TypeError(self.__class__.__name__ + " requires an async function")
@@ -360,17 +375,17 @@ def Calc(fn: CalcFunction[T]) -> Calc_[T]:
 # works out.
 @overload
 def Calc(
-    *, session: Union[MISSING_TYPE, "Session", None] = MISSING
+    *, session: "MISSING_TYPE | Session | None" = MISSING
 ) -> Callable[[CalcFunction[T]], Calc_[T]]:
     ...
 
 
 @add_example()
 def Calc(
-    fn: Optional[Union[CalcFunction[T], CalcFunctionAsync[T]]] = None,
+    fn: Optional[CalcFunction[T] | CalcFunctionAsync[T]] = None,
     *,
-    session: Union[MISSING_TYPE, "Session", None] = MISSING,
-) -> Union[Calc_[T], Callable[[CalcFunction[T]], Calc_[T]]]:
+    session: "MISSING_TYPE | Session | None" = MISSING,
+) -> Calc_[T] | Callable[[CalcFunction[T]], Calc_[T]]:
     """
     Mark a function as a reactive calculation.
 
@@ -386,11 +401,12 @@ def Calc(
     ----------
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Returns
     -------
-    A decorator that marks a function as a reactive calculation.
+    :
+        A decorator that marks a function as a reactive calculation.
 
     Tip
     ---
@@ -403,10 +419,10 @@ def Calc(
     ~shiny.reactive.Value
     ~shiny.reactive.Effect
     ~shiny.reactive.invalidate_later
-    ~shiny.event
+    ~shiny.reactive.event
     """
 
-    def create_calc(fn: Union[CalcFunction[T], CalcFunctionAsync[T]]) -> Calc_[T]:
+    def create_calc(fn: CalcFunction[T] | CalcFunctionAsync[T]) -> Calc_[T]:
         if _utils.is_async_callable(fn):
             return CalcAsync_(fn, session=session)
         else:
@@ -439,11 +455,11 @@ class Effect_:
 
     def __init__(
         self,
-        fn: Union[EffectFunction, EffectFunctionAsync],
+        fn: EffectFunction | EffectFunctionAsync,
         *,
         suspended: bool = False,
         priority: int = 0,
-        session: Union[MISSING_TYPE, "Session", None] = MISSING,
+        session: "MISSING_TYPE | Session | None" = MISSING,
     ) -> None:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
@@ -537,7 +553,9 @@ class Effect_:
             except Exception as e:
                 traceback.print_exc()
 
-                warnings.warn("Error in Effect: " + str(e), ReactiveWarning)
+                warnings.warn(
+                    "Error in Effect: " + str(e), ReactiveWarning, stacklevel=2
+                )
                 if self._session:
                     await self._session._unhandled_error(e)
 
@@ -613,7 +631,7 @@ class Effect_:
 
 
 @overload
-def Effect(fn: Union[EffectFunction, EffectFunctionAsync]) -> Effect_:
+def Effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_:
     ...
 
 
@@ -622,27 +640,28 @@ def Effect(
     *,
     suspended: bool = False,
     priority: int = 0,
-    session: Union[MISSING_TYPE, "Session", None] = MISSING,
-) -> Callable[[Union[EffectFunction, EffectFunctionAsync]], Effect_]:
+    session: "MISSING_TYPE | Session | None" = MISSING,
+) -> Callable[[EffectFunction | EffectFunctionAsync], Effect_]:
     ...
 
 
 @add_example()
 def Effect(
-    fn: Optional[Union[EffectFunction, EffectFunctionAsync]] = None,
+    fn: Optional[EffectFunction | EffectFunctionAsync] = None,
     *,
     suspended: bool = False,
     priority: int = 0,
-    session: Union[MISSING_TYPE, "Session", None] = MISSING,
-) -> Union[Effect_, Callable[[Union[EffectFunction, EffectFunctionAsync]], Effect_]]:
+    session: "MISSING_TYPE | Session | None" = MISSING,
+) -> Effect_ | Callable[[EffectFunction | EffectFunctionAsync], Effect_]:
     """
     Mark a function as a reactive side effect.
 
-    A reactive effect is like a reactive calculation (:func:`Calc`) in that it can read
-    reactive values and call reactive calculations, and will automatically re-execute
-    when those dependencies change. But unlike reactive calculations, it doesn't return
-    a result and can't be used as an input to other reactive expressions. Thus,
-    observers are only useful for their side effects (for example, performing I/O).
+    A reactive effect is like a reactive calculation (:func:`~shiny.reactive.Calc`) in
+    that it can read reactive values and call reactive calculations, and will
+    automatically re-execute when those dependencies change. But unlike reactive
+    calculations, it doesn't return a result and can't be used as an input to other
+    reactive expressions. Thus, observers are only useful for their side effects (for
+    example, performing I/O).
 
     Another contrast between reactive calculations and effects is their execution
     strategy. Reactive calculations use lazy evaluation; that is, when their
@@ -662,11 +681,12 @@ def Effect(
         Positive, negative, and zero values are allowed.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Returns
     -------
-    A decorator that marks a function as a reactive effect (:class:`Effect_`).
+    :
+        A decorator that marks a function as a reactive effect (:class:`Effect_`).
 
     See Also
     --------
@@ -674,10 +694,10 @@ def Effect(
     ~shiny.reactive.Value
     ~shiny.reactive.Effect
     ~shiny.reactive.invalidate_later
-    ~shiny.event
+    ~shiny.reactive.event
     """
 
-    def create_effect(fn: Union[EffectFunction, EffectFunctionAsync]) -> Effect_:
+    def create_effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_:
         fn = cast(EffectFunction, fn)
         return Effect_(fn, suspended=suspended, priority=priority, session=session)
 
@@ -692,7 +712,7 @@ def Effect(
 # ==============================================================================
 @add_example()
 def event(
-    *args: Union[Callable[[], object], Callable[[], Awaitable[object]]],
+    *args: Callable[[], object] | Callable[[], Awaitable[object]],
     ignore_none: bool = True,
     ignore_init: bool = False,
 ) -> Callable[[Callable[[], T]], Callable[[], T]]:
@@ -727,7 +747,8 @@ def event(
 
     Returns
     -------
-    A decorator that marks a function as an event handler.
+    :
+        A decorator that marks a function as an event handler.
 
     Tip
     ----
@@ -772,7 +793,7 @@ def event(
         initialized = False
 
         async def trigger() -> None:
-            vals: List[object] = []
+            vals: list[object] = []
             for arg in args:
                 if is_async_callable(arg):
                     v = await arg()

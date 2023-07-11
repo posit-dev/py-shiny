@@ -3,16 +3,7 @@ from __future__ import annotations
 import functools
 import os
 from operator import eq
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Optional,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, TypeVar, cast
 
 from .. import _utils, reactive
 from .._docstring import add_example
@@ -28,12 +19,12 @@ T = TypeVar("T")
 
 @add_example()
 def poll(
-    poll_func: Union[Callable[[], Any], Callable[[], Awaitable[Any]]],
+    poll_func: Callable[[], Any] | Callable[[], Awaitable[Any]],
     interval_secs: float = 1,
     *,
     equals: Callable[[Any, Any], bool] = eq,
     priority: int = 0,
-    session: Union[MISSING_TYPE, "Session", None] = MISSING,
+    session: MISSING_TYPE | Session | None = MISSING,
 ) -> Callable[[Callable[[], T]], Callable[[], T]]:
     """
     Create a reactive polling object.
@@ -68,10 +59,10 @@ def poll(
         changed. The return value should be something that can be compared inexpensively
         using `==`. Both regular functions and coroutine functions are allowed.
 
-        Note that the `poll_func` should NOT return a bool that indicates whether the data
-        source has changed. Rather, each `poll_func` return value will be checked for
-        equality with its preceding `poll_func` return value (using `==` semantics by
-        default), and if it differs, the data source will be considered changed.
+        Note that the `poll_func` should NOT return a bool that indicates whether the
+        data source has changed. Rather, each `poll_func` return value will be checked
+        for equality with its preceding `poll_func` return value (using `==` semantics
+        by default), and if it differs, the data source will be considered changed.
     interval_secs
         The number of seconds to wait after each `poll_func` invocation before polling
         again. Note: depending on what other tasks are executing, the actual wait time
@@ -86,13 +77,14 @@ def poll(
         for more details.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`. If there is no current session (i.e.
-       `poll` is being created outside of the server function), the lifetime of this
-       reactive poll object will not be tied to any specific session.
+        :func:`~shiny.session.get_current_session`. If there is no current session (i.e.
+        `poll` is being created outside of the server function), the lifetime of this
+        reactive poll object will not be tied to any specific session.
 
     Returns
     -------
-    A decorator that should be applied to a no-argument function that (expensively)
+    :
+        A decorator that should be applied to a no-argument function that (expensively)
     reads whatever data is desired. (This function may be a regular function or a
     coroutine function.) The result of the decorator is a reactive ~shiny.reactive.Calc
     that always returns up-to-date data, and invalidates callers when changes are
@@ -211,13 +203,14 @@ def poll(
 
 @add_example()
 def file_reader(
-    filepath: Union[
-        str, os.PathLike[str], Callable[[], str], Callable[[], os.PathLike[str]]
-    ],
+    filepath: str
+    | os.PathLike[str]
+    | Callable[[], str]
+    | Callable[[], os.PathLike[str]],
     interval_secs: float = 1,
     *,
     priority: int = 1,
-    session: Union[MISSING_TYPE, "Session", None] = MISSING,
+    session: MISSING_TYPE | Session | None = MISSING,
 ) -> Callable[[Callable[[], T]], Callable[[], T]]:
     """
     Create a reactive file reader.
@@ -251,9 +244,6 @@ def file_reader(
         The number of seconds to wait after each time the file metadata is checked.
         Note: depending on what other tasks are executing, the actual wait time may far
         exceed this value.
-    equals
-        The function that will be used to compare each `poll_func` return value with its
-        immediate predecessor.
     priority
         Reactive polling is implemented using an ~shiny.reactive.Effect to call
         `poll_func` on a timer; use the `priority` argument to control the order of this
@@ -261,13 +251,14 @@ def file_reader(
         for more details.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`. If there is no current session (i.e.
-       `poll` is being created outside of the server function), the lifetime of this
-       reactive poll object will not be tied to any specific session.
+        :func:`~shiny.session.get_current_session`. If there is no current session (i.e.
+        `poll` is being created outside of the server function), the lifetime of this
+        reactive poll object will not be tied to any specific session.
 
     Returns
     -------
-    A decorator that should be applied to a no-argument function that (expensively)
+    :
+        A decorator that should be applied to a no-argument function that (expensively)
     reads whatever data is desired. (This function may be a regular function or a
     coroutine function.) The result of the decorator is a reactive ~shiny.reactive.Calc
     that always returns up-to-date data, and invalidates callers when changes are

@@ -1,6 +1,15 @@
 """Low-level reactive components."""
 
-__all__ = ("isolate", "invalidate_later", "flush", "on_flushed", "get_current_context")
+from __future__ import annotations
+
+__all__ = (
+    "isolate",
+    "invalidate_later",
+    "flush",
+    "lock",
+    "on_flushed",
+    "get_current_context",
+)
 
 import asyncio
 import contextlib
@@ -9,7 +18,7 @@ import traceback
 import typing
 import warnings
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Awaitable, Callable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Awaitable, Callable, Optional, TypeVar
 
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
@@ -199,22 +208,23 @@ def isolate():
     Ordinarily, the simple act of reading a reactive value causes a relationship to be
     established between the caller and the reactive value, where a change to the
     reactive value will cause the caller to re-execute. (The same applies for the act of
-    getting a reactive expression's value.) `with isolate()` lets you read a
-    reactive value or expression without establishing this relationship.
+    getting a reactive expression's value.) `with isolate()` lets you read a reactive
+    value or expression without establishing this relationship.
 
-    ``with isolate()`` can also be useful for calling reactive expression at the console,
-    which can be useful for debugging. To do so, wrap the calls to the reactive
+    ``with isolate()`` can also be useful for calling reactive expression at the
+    console, which can be useful for debugging. To do so, wrap the calls to the reactive
     expression with ``with isolate()``.
 
     Returns
     -------
-    A context manager that executes the given expression in a scope where reactive
-    values can be read, but do not cause the reactive scope of the caller to be
-    re-evaluated when they change.
+    :
+        A context manager that executes the given expression in a scope where reactive
+        values can be read, but do not cause the reactive scope of the caller to be
+        re-evaluated when they change.
 
     See Also
     --------
-    ~shiny.event
+    ~shiny.reactive.event
     """
     with _reactive_environment.isolate():
         yield
@@ -226,7 +236,8 @@ def get_current_context() -> Context:
 
     Returns
     -------
-    A :class:`~Context`.
+    :
+        A :class:`~Context`.
 
     Raises
     ------
@@ -263,7 +274,8 @@ def on_flushed(
 
     Returns
     -------
-    A function that can be used to unregister the callback.
+    :
+        A function that can be used to unregister the callback.
 
     See Also
     --------
@@ -274,13 +286,19 @@ def on_flushed(
 
 
 def lock() -> asyncio.Lock:
-    """A lock that should be held whenever manipulating the reactive graph."""
+    """
+    A lock that should be held whenever manipulating the reactive graph.
+
+    For example, this makes it safe to set a :class:`~reactive.Value` and call
+    :func:`~reactive.flush()` from a different :class:`~asyncio.Task` than the one that
+    is running the Shiny :class:`~shiny.Session`.
+    """
     return _reactive_environment.lock
 
 
 @add_example()
 def invalidate_later(
-    delay: float, *, session: Union[MISSING_TYPE, "Session", None] = MISSING
+    delay: float, *, session: "MISSING_TYPE | Session | None" = MISSING
 ) -> None:
     """
     Scheduled Invalidation

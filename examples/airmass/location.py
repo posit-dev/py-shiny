@@ -16,7 +16,7 @@ def location_ui(
     *,
     lat: Optional[float] = None,
     long: Optional[float] = None,
-) -> ui.TagChildArg:
+) -> ui.TagChild:
     return ui.div(
         ui.input_numeric("lat", "Latitude", value=lat),
         ui.input_numeric("long", "Longitude", value=long),

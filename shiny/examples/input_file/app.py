@@ -1,6 +1,6 @@
 import pandas as pd
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, render, ui
 from shiny.types import FileInfo
 
 app_ui = ui.page_fluid(
@@ -8,9 +8,12 @@ app_ui = ui.page_fluid(
         ui.panel_sidebar(
             ui.input_file("file1", "Choose CSV File", accept=[".csv"], multiple=False),
             ui.input_checkbox("header", "Header", True),
+            width=5,
         ),
-        ui.panel_main(ui.output_ui("contents")),
-    )
+        ui.panel_main(
+            ui.output_ui("contents"),
+        ),
+    ),
 )
 
 

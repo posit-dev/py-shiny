@@ -1,7 +1,7 @@
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
-    ui.input_text("caption", "Caption:", "Data summary"),
+    ui.input_text_area("caption", "Caption:", "Data summary"),
     ui.output_text_verbatim("value"),
 )
 

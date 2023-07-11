@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import datetime
 import logging
-import random
-import socket
 import subprocess
 import sys
 import threading
+import time
+from contextlib import contextmanager
 from pathlib import PurePath
 from time import sleep
 from types import TracebackType
-from typing import IO, Callable, Generator, List, Optional, TextIO, Type, Union
+from typing import IO, Any, Callable, Generator, List, Optional, TextIO, Type, Union
 
 import pytest
+
+import shiny._utils
 
 __all__ = (
     "ShinyAppProc",
@@ -21,21 +23,10 @@ __all__ = (
     "create_example_fixture",
     "local_app",
     "run_shiny_app",
+    "expect_to_change",
 )
 
 here = PurePath(__file__).parent
-
-
-def random_port():
-    while True:
-        port = random.randint(1024, 49151)
-        with socket.socket() as s:
-            try:
-                s.bind(("127.0.0.1", port))
-                return port
-            except Exception:
-                # Let's just assume that port was in use; try again
-                continue
 
 
 class OutputStream:
@@ -63,8 +54,6 @@ class OutputStream:
                     line = self._io.readline()
                 except ValueError:
                     # This is raised when the stream is closed
-                    break
-                if line is None:
                     break
                 if line != "":
                     with self._cond:
@@ -139,12 +128,19 @@ class ShinyAppProc:
         self.close()
 
     def wait_until_ready(self, timeoutSecs: float) -> None:
-        if self.stderr.wait_for(
-            lambda line: "Uvicorn running on" in line, timeoutSecs=timeoutSecs
-        ):
+        error_lines: List[str] = []
+
+        def stderr_uvicorn(line: str) -> bool:
+            error_lines.append(line)
+            return "Uvicorn running on" in line
+
+        if self.stderr.wait_for(stderr_uvicorn, timeoutSecs=timeoutSecs):
             return
         else:
-            raise RuntimeError("Shiny app exited without ever becoming ready")
+            raise RuntimeError(
+                "Shiny app exited without ever becoming ready. Waiting for 'Uvicorn running on' in stderr. Last 20 lines of stderr:\n"
+                + "\n".join(error_lines[-20:])
+            )
 
 
 def run_shiny_app(
@@ -157,7 +153,7 @@ def run_shiny_app(
     bufsize: int = 64 * 1024,
 ) -> ShinyAppProc:
     if port == 0:
-        port = random_port()
+        port = shiny._utils.random_port()
 
     child = subprocess.Popen(
         [sys.executable, "-m", "shiny", "run", "--port", str(port), str(app_file)],
@@ -213,3 +209,40 @@ def local_app(request: pytest.FixtureRequest) -> Generator[ShinyAppProc, None, N
             yield sa
     finally:
         logging.warning("Application output:\n" + str(sa.stderr))
+
+
+@contextmanager
+def expect_to_change(
+    func: Callable[[], Any], timeoutSecs: float = 10
+) -> Generator[None, None, None]:
+    """
+    Context manager that yields when the value returned by func() changes. Use this
+    around code that has a side-effect of changing some state asynchronously (such as
+    all browser actions), to prevent moving onto the next step of the test until this
+    one has actually taken effect.
+
+    Raises TimeoutError if the value does not change within timeoutSecs.
+
+    Parameters
+    ----------
+    func
+        A function that returns a value. The value returned by this function is
+        compared to the value returned by subsequent calls to this function.
+    timeoutSecs
+        How long to wait for the value to change before raising TimeoutError.
+
+    Example
+    -------
+
+        with expect_to_change(lambda: page.locator("#name").value()):
+            page.keyboard.send_keys("hello")
+
+    """
+    original_value = func()
+    yield
+    start = time.time()
+    while time.time() - start < timeoutSecs:
+        time.sleep(0.1)
+        if func() != original_value:
+            return
+    raise TimeoutError("Timeout while waiting for change")

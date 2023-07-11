@@ -2,7 +2,7 @@
 
 import typing
 
-from shiny import *
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_numeric("n", "N", 20),
@@ -25,7 +25,6 @@ class ShinyInputs(Inputs):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-
     # Cast `input` to our ShinyInputs class. This just tells the static type checker
     # that we want it treated as a ShinyInputs object for type checking; it has no
     # run-time effect.
@@ -53,7 +52,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.text
     async def txt2():
-        return input.n2() * 2
+        return str(input.n2() * 2)
 
     # This is a corrected version of the function above. It returns a string, and is not
     # marked in red.
