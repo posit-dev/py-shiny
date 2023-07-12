@@ -8,6 +8,11 @@ import seaborn as sns
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny.plotutils import brushed_points
 
+path = Path(__file__).parent / "boulder_temp.csv"
+weather_df = pd.read_csv(path)
+weather_df["date"] = pd.to_datetime(weather_df["date"])
+weather_df["annotation"] = ""
+
 app_ui = ui.page_fluid(
     ui.panel_title("Plot annotation example"),
     ui.p(
@@ -37,17 +42,11 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.Calc
     def ts_data():
-        path = Path(__file__).parent / "boulder_temp.csv"
-        dataframe = pd.read_csv(path)
-        dataframe["date"] = pd.to_datetime(dataframe["date"])
-        dataframe["annotation"] = ""
-
         annotated = annotation_values.get()
         if annotated is None:
-            out = dataframe
+            return weather_df
         else:
-            out = annotated
-        return out
+            return annotated
 
     @reactive.Calc
     def selected_data():
