@@ -75,7 +75,7 @@ def task_ui():
 
 @module.server
 def task_server(input, output, session, remove_id, task_list, text):
-    finished = reactive.Value(True)
+    finished = reactive.Value(False)
 
     @output
     @render.ui
