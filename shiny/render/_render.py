@@ -51,9 +51,10 @@ if TYPE_CHECKING:
     from ..session._utils import RenderedDeps
     import pandas as pd
 
+from typing import Protocol, runtime_checkable
+
 from .. import _utils
 from .._namespaces import ResolvedId
-from .._typing_extensions import Protocol, runtime_checkable
 from ..types import ImgData
 from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_plotnine
 

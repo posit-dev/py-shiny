@@ -7,12 +7,11 @@ __all__ = (
 )
 
 import copy
-from typing import Any, Optional, Sequence, cast
+from typing import Any, Literal, Optional, Sequence, cast
 
 from htmltools import MetadataNode, Tag, TagChild, TagList, css, div, tags
 
 from ..._namespaces import resolve_id
-from ..._typing_extensions import Literal
 from ..._utils import private_random_int
 from ...types import NavSetArg
 from ...ui._html_dependencies import bootstrap_deps

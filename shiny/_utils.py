@@ -10,16 +10,12 @@ import os
 import random
 import secrets
 import socketserver
-import sys
 import tempfile
 from typing import Any, Awaitable, Callable, Optional, TypeVar, cast
 
 from ._typing_extensions import ParamSpec, TypeGuard
 
-if sys.version_info >= (3, 8):
-    CancelledError = asyncio.CancelledError
-else:
-    CancelledError = asyncio.futures.CancelledError
+CancelledError = asyncio.CancelledError
 
 
 # ==============================================================================
@@ -62,12 +58,8 @@ def guess_mime_type(
     Guess the MIME type of a file. This is a wrapper for mimetypes.guess_type, but it
     only returns the type (and not encoding), and it allows a default value.
     """
-    # In Python<=3.7, mimetypes.guess_type only accepts strings.
-    #
     # Note that in the parameters above, "os.PathLike[str]" is in quotes to avoid
     # "TypeError: 'ABCMeta' object is not subscriptable", in Python<=3.8.
-    if sys.version_info < (3, 8):
-        url = os.fspath(url)
     return mimetypes.guess_type(url, strict)[0] or default
 
 

@@ -1,11 +1,10 @@
 __all__ = ("insert_ui", "remove_ui")
 
-from typing import Optional
+from typing import Literal, Optional
 
 from htmltools import TagChild
 
 from .._docstring import add_example
-from .._typing_extensions import Literal
 from ..session import Session, require_active_session
 
 

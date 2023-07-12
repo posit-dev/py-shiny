@@ -21,7 +21,7 @@ __all__ = (
 import json
 import re
 from datetime import date
-from typing import Mapping, Optional
+from typing import Literal, Mapping, Optional
 
 from htmltools import TagChild
 from starlette.requests import Request
@@ -29,7 +29,7 @@ from starlette.responses import JSONResponse, Response
 
 from .._docstring import add_example, doc_format
 from .._namespaces import resolve_id
-from .._typing_extensions import Literal, NotRequired, TypedDict
+from .._typing_extensions import NotRequired, TypedDict
 from .._utils import drop_none
 from ..session import Session, require_active_session
 from ._input_check_radio import ChoicesArg, _generate_options

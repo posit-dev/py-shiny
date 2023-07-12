@@ -8,15 +8,17 @@ from typing import (
     Any,
     Awaitable,
     Callable,
+    Literal,
     Optional,
+    Protocol,
     Union,
     cast,
     overload,
+    runtime_checkable,
 )
 
 from .. import _utils
 from .._docstring import add_example
-from .._typing_extensions import Literal, Protocol, runtime_checkable
 from . import RenderFunction, RenderFunctionAsync
 
 if TYPE_CHECKING:
@@ -69,7 +71,9 @@ class DataGrid(AbstractTabularData):
 
     See Also
     --------
-    ~shiny.ui.output_data_frame ~shiny.render.data_frame
+    :func:`~shiny.ui.output_data_frame`
+    :func:`~shiny.render.data_frame`
+    :class:`~shiny.render.DataTable`
     """
 
     def __init__(
@@ -153,7 +157,9 @@ class DataTable(AbstractTabularData):
 
     See Also
     --------
-    ~shiny.ui.output_data_frame ~shiny.render.data_frame
+    :func:`~shiny.ui.output_data_frame`
+    :func:`~shiny.render.data_frame`
+    :class:`~shiny.render.DataGrid`
     """
 
     def __init__(
@@ -297,33 +303,25 @@ def data_frame(
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
 
-    Parameters
-    ----------
-    index
-        Whether to print index (row) labels.
-    selection
-
-
     Returns
     -------
     :
-        A decorator for a function that returns any of the following:
-
-        1. A pandas :class:`DataFrame` object.
-        2. A pandas :class:`Styler` object.
-        3. Any object that has a `.to_pandas()` method (e.g., a Polars data frame or
-           Arrow table).
+        A decorator for a function that returns either a pandas :class:`DataFrame`
+        object, pandas :class:`Styler` object, or any object that has a `.to_pandas()`
+        method (e.g., a Polars data frame or Arrow table).
 
     Tip
     ----
     This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_table` container (see :func:`~shiny.ui.output_table` for
-    example usage).
+    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of a
+    :func:`~shiny.ui.output_data_frame` container (see
+    :func:`~shiny.ui.output_data_frame` for example usage).
 
     See Also
     --------
-    ~shiny.ui.output_data_frame
+    :class:`~shiny.render.DataGrid`
+    :class:`~shiny.render.DataTable`
+    :func:`~shiny.ui.output_data_frame`
     """
 
     def wrapper(fn: RenderDataFrameFunc | RenderDataFrameFuncAsync) -> RenderDataFrame:

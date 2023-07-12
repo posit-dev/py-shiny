@@ -78,7 +78,7 @@ from ._output import (
 from ._page import page_navbar, page_fluid, page_fixed, page_bootstrap
 from ._progress import Progress
 
-from .dataframe._dataframe import output_data_frame
+from .dataframe import output_data_frame
 
 from htmltools import (
     TagList,

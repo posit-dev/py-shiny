@@ -43,17 +43,18 @@ def value_box(
     Parameters
     ----------
     title,value
-        A string, number, or :func:`~htmltools.tag` child to display as
+        A string, number, or :class:`~htmltools.Tag` child to display as
         the title or value of the value box. The `title` appears above the `value`.
     *args
-        Unnamed arguments may be any :func:`~htmltools.tag` children to display below
+        Unnamed arguments may be any :class:`~htmltools.Tag` children to display below
         `value`. Named arguments are passed to :func:`~shiny.experimental.ui.card` as
         element attributes.
     showcase
-        A :func:`~htmltools.tag` child to showcase (e.g., an icon, a
+        A :class:`~htmltools.Tag` child to showcase (e.g., an icon, a
         :func:`~shiny.ui.output_plot`, etc).
     showcase_layout
-        Either :func:`~showcase_left_center` or :func:`~showcase_top_right`.
+        Either :func:`~shiny.experimental.ui.showcase_left_center` or
+        :func:`~shiny.experimental.ui.showcase_top_right`.
     theme_color
         A theme color to use for the background color. Should match a name in the
         Bootstrap Sass variable `$theme-colors` (e.g., `"secondary"`, `"success"`,
@@ -61,7 +62,7 @@ def value_box(
     height,max_height
         Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
         `full_screen` (in this case, consider setting a `height` in
-        :func:`~shiny.experimental.ui.card_body()`).
+        :func:`~shiny.experimental.ui.card_body`).
     fill
         Whether to allow the value box to grow/shrink to fit a fillable container with
         an opinionated height (e.g., :func:`~shiny.experimental.ui.page_fillable`).
@@ -132,15 +133,12 @@ def showcase_left_center(
     Parameters
     ----------
     width
-        one of the following:
-        * A proportion (i.e., a number between 0 and 1) of available width to allocate
-          to the showcase.
-        * A vector of length 2 valid CSS unit defining the width of each column (for
-          `showcase_left_center()` the 1st unit defines the showcase width and for
-          `showcase_top_right` the 2nd unit defines the showcase width). Note that any
-          units supported by the CSS grid `grid-template-columns` property may be used
-          (e.g., `fr` units).
-
+        A proportion (i.e., a number between 0 and 1) of available width to allocate to
+        the showcase. Or, A vector of length 2 valid CSS unit defining the width of each
+        column (for `showcase_left_center()` the 1st unit defines the showcase width and
+        for `showcase_top_right` the 2nd unit defines the showcase width). Note that any
+        units supported by the CSS grid `grid-template-columns` property may be used
+        (e.g., `fr` units).
     max_height,max_height_full_screen
         A proportion (i.e., a number between 0 and 1) or any valid CSS unit defining the
         showcase max_height.
@@ -164,6 +162,30 @@ def showcase_top_right(
     max_height: CssUnit = "75px",
     max_height_full_screen: CssUnit = "67%",
 ) -> Callable[[TagChild | TagAttrs, Tag], CardItem]:
+    """
+    Top right showcase for a value box
+
+    Gives the showcase a width and in the top right corner.
+
+    Parameters
+    ----------
+    width
+        A proportion (i.e., a number between 0 and 1) of available width to allocate to
+        the showcase. Or, A vector of length 2 valid CSS unit defining the width of each
+        column (for `showcase_left_center()` the 1st unit defines the showcase width and
+        for `showcase_top_right` the 2nd unit defines the showcase width). Note that any
+        units supported by the CSS grid `grid-template-columns` property may be used
+        (e.g., `fr` units).
+    max_height,max_height_full_screen
+        A proportion (i.e., a number between 0 and 1) or any valid CSS unit defining the
+        showcase max_height.
+
+    Returns
+    -------
+    :
+        A function that takes a showcase and contents and returns a :func:`~shiny.experimental.ui.card_body`
+    """
+
     if is_01_scalar(width):
         width = 1 - width
     return _showcase_layout(

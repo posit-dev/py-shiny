@@ -16,13 +16,12 @@ __all__ = (
 
 import copy
 import re
-from typing import Any, Optional, Sequence, cast
+from typing import Any, Literal, Optional, Sequence, cast
 
 from htmltools import MetadataNode, Tag, TagChild, TagList, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from .._typing_extensions import Literal
 from .._utils import private_random_int
 from ..types import NavSetArg
 from ._bootstrap import column, row

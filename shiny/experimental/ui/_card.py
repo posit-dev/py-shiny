@@ -4,7 +4,7 @@ import base64
 import io
 import mimetypes
 from pathlib import Path, PurePath
-from typing import Optional
+from typing import Literal, Optional, Protocol
 
 from htmltools import (
     HTML,
@@ -19,7 +19,6 @@ from htmltools import (
     tags,
 )
 
-from ..._typing_extensions import Literal, Protocol
 from ...types import MISSING, MISSING_TYPE
 from ._css_unit import CssUnit, as_css_padding, as_css_unit
 from ._fill import as_fill_carrier, as_fill_item, as_fillable_container
@@ -59,9 +58,9 @@ def card(
     Parameters
     ----------
     *args
-        Unnamed arguments can be any valid child of an [htmltools tag][htmltools::tags]
-        (which includes card items such as :func:`~shiny.experimental.ui.card_body`.
-        Named arguments become HTML attributes on the returned Tag.
+        Unnamed arguments can be any valid child of an :class:`~htmltools.Tag` (which
+        includes card items such as :func:`~shiny.experimental.ui.card_body`. Named
+        arguments become HTML attributes on the returned Tag.
     full_screen
         If `True`, an icon will appear when hovering over the card body. Clicking the
         icon expands the card to fit viewport size.
@@ -158,8 +157,9 @@ def _full_screen_toggle_icon() -> HTML:
 
 class CardItem:
     """
-    A wrapper around a `Tag` object that represents a card item (e.g.,
-    :func:`~shiny.experimental.ui.card_body`, :func:`~shiny.experimental.ui.card_header`, etc.).
+    A wrapper around a :class:`~htmltools.Tag` object that represents a card item (e.g.,
+    :func:`~shiny.experimental.ui.card_body`,
+    :func:`~shiny.experimental.ui.card_header`, etc.).
 
     This class is used to allow for consecutive non-card items to be bundled into a
     single `card_body` within :func:`~shiny.experimental.ui.card`.
@@ -167,7 +167,7 @@ class CardItem:
     Parameters
     ----------
     item
-        A `Tag` object that represents a card item (e.g.,
+        A :class:`~htmltools.Tag` object that represents a card item (e.g.,
         :func:`~shiny.experimental.ui.card_body`, :func:`~shiny.experimental.ui.card_header`, etc.).
 
     See Also
@@ -234,7 +234,7 @@ def card_body(
     ----------
     *args
         Contents to the card's body. Or tag attributes that are supplied to the
-        resolved `Tag` object.
+        resolved :class:`~htmltools.Tag` object.
     fillable
         Whether or not the card item should be a fillable (i.e. flexbox) container.
     min_height,max_height,max_height_full_screen
@@ -418,9 +418,10 @@ class TagCallable(Protocol):  # Should this be exported from htmltools?
         ----------
         *args
             Contents to the tag method. Or tag attributes that are supplied to the
-            resolved `Tag` object.
+            resolved :class:`~htmltools.Tag` object.
         _add_ws
-            Whether or not to add whitespace to the returned `Tag` object.
+            Whether or not to add whitespace to the returned :class:`~htmltools.Tag`
+            object.
         **kwargs
             Additional HTML attributes for the returned Tag.
 
@@ -448,9 +449,9 @@ def card_title(
     ----------
     *args
         Contents to the card's title. Or tag attributes that are supplied to the
-        resolved `Tag` object.
+        resolved :class:`~htmltools.Tag` object.
     container
-        Method for the returned Tag object. Defaults to :func:`~shiny.ui.h5`.
+        Method for the returned Tag object. Defaults to :func:`shiny.ui.tags.h5`.
     **kwargs
         Additional HTML attributes for the returned Tag.
 
@@ -488,9 +489,9 @@ def card_header(
     ----------
     *args
         Contents to the header container. Or tag attributes that are supplied to the
-        resolved `Tag` object.
+        resolved :class:`~htmltools.Tag` object.
     container
-        Method for the returned Tag object. Defaults to :func:`~shiny.ui.div`.
+        Method for the returned Tag object. Defaults to :func:`~shiny.ui.tags.div`.
     **kwargs
         Additional HTML attributes for the returned Tag.
 
@@ -529,7 +530,7 @@ def card_footer(
     ----------
     *args
         Contents to the footer container. Or tag attributes that are supplied to the
-        resolved `Tag` object.
+        resolved :class:`~htmltools.Tag` object.
     **kwargs
         Additional HTML attributes for the returned Tag.
 
@@ -568,7 +569,8 @@ class ImgContainer(Protocol):
         Returns
         -------
         :
-            A tagifiable object, such as a :class:`~htmltools.Tag` or :class:`~shiny.experimental.ui.CardItem` object.
+            A tagifiable object, such as a :class:`~htmltools.Tag` or
+            :class:`~shiny.experimental.ui.CardItem` object.
         """
         ...
 
@@ -603,7 +605,8 @@ def card_image(
         `**kwargs:TagAttrValue` (e.g. `{"src": "HOSTED_PATH_TO_IMAGE"}` or
         `src="HOSTED_PATH_TO_IMAGE"`).
     *args
-        Dictionary of tag attributes that are supplied to the resolved `Tag` object.
+        Dictionary of tag attributes that are supplied to the resolved
+        :class:`~htmltools.Tag` object.
     href
         An optional URL to link to.
     border_radius
