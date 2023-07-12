@@ -51,7 +51,7 @@ def server(input, output, session):
         id = "task_" + str(counter)
         ui.insert_ui(
             selector="#tasks",
-            where="afterBegin",
+            where="beforeEnd",
             ui=task_ui(id),
         )
 
