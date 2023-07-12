@@ -5,20 +5,6 @@ from shiny import App, module, reactive, render, ui
 
 app_ui = ui.page_fixed(
     {"class": "my-5"},
-    tags.style(
-        """
-        .row {
-            border-bottom: 1px solid #eeeeee;
-            border-top: 1px solid #eeeeee;
-            margin-top: -1px;
-            padding: 20px 10px;
-            align-items: center;
-        }
-        .row p {
-        margin-bottom: 0px;
-        }
-        """
-    ),
     shinyswatch.theme.minty(),
     ui.panel_title("Shiny TodoMVC"),
     ui.layout_sidebar(
