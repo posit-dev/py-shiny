@@ -55,8 +55,7 @@ def server(input, output, session):
 
 @module.ui
 def task_ui():
-    out = ui.output_ui("button_row")
-    return out
+    return ui.output_ui("button_row")
 
 
 @module.server
