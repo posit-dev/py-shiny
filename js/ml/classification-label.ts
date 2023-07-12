@@ -1,6 +1,5 @@
 import { LitElement, css, html } from "lit";
 import { property } from "lit/decorators.js";
-import { makeOutputBinding } from "./make-output-binding";
 
 export class ShinyClassificationLabel extends LitElement {
   static styles = css`
@@ -88,8 +87,3 @@ export class ShinyClassificationLabel extends LitElement {
     return html`<div class="wrapper">${winnerHTML} ${valuesHtml}</div> `;
   }
 }
-
-// Register the custom element with the browser.
-customElements.define("shiny-classification-label", ShinyClassificationLabel);
-
-makeOutputBinding("shiny-classification-label");

@@ -30,7 +30,6 @@ from ._dataframe import (  # noqa: F401
     data_frame,
 )
 
-from . import ml
 
 __all__ = (
     "DataGrid",
@@ -41,5 +40,4 @@ __all__ = (
     "image",
     "table",
     "ui",
-    "ml",
 )

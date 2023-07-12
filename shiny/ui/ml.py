@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-__all__ = ("output_classification_label",)
+__all__ = ("classification_label",)
 
 import json
 
@@ -14,9 +14,8 @@ from .. import __version__
 # from .._namespaces import resolve_id
 
 
-def output_classification_label(
-    id: str,
-    value: Optional[dict[str, float]] = None,
+def classification_label(
+    value: dict[str, float],
     *,
     sort: Optional[bool] = None,
     display_winner: Optional[bool] = None,
@@ -26,8 +25,7 @@ def output_classification_label(
     return Tag(
         "shiny-classification-label",
         ml_dep(),
-        id=id,
-        value=attr_to_escaped_json(value) if value is not None else None,
+        value=attr_to_escaped_json(value),
         sort=bool_to_num(sort),
         display_winner=bool_to_num(display_winner),
         _add_ws=_add_ws,
