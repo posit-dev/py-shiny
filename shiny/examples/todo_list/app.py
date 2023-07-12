@@ -80,29 +80,19 @@ def task_server(input, output, session, remove_id, task_list, text):
     @output
     @render.ui
     def button_row():
+        button = None
         if finished():
-            button_text = "finish"
-            button_class = "btn-default"
-            text_style = ""
+            button = ui.input_action_button("clear", "Clear", class_="btn-warning")
         else:
-            button_text = "clear"
-            button_class = "btn-warning"
-            text_style = "text-decoration: line-through"
+            button = ui.input_action_button("finish", "Finish", class_="btn-default")
 
-        out = ui.row(
-            {"id": remove_id, "style": "margin: 10px, border: 1px solid #ddd"},
-            ui.column(
-                4,
-                ui.input_action_button(
-                    button_text, button_text.capitalize(), class_=button_class
-                ),
-            ),
-            ui.column(
-                8,
-                ui.p(text, style=text_style),
-            ),
+        return ui.row(
+            ui.column(4, button),
+            ui.column(8, text),
+            id=remove_id,
+            class_="mt-3 p-3 border align-items-center",
+            style=css(text_decoration="line-through" if finished() else None),
         )
-        return out
 
     @reactive.Effect
     @reactive.event(input.finish)
