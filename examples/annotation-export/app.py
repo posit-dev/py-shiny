@@ -56,11 +56,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect
     @reactive.event(input.annotate_button)
     def _():
-        selected = selected_data().copy()
+        selected = selected_data()
         selected["annotation_new"] = input.annotation()
         selected = selected.loc[:, ["date", "annotation_new"]]
 
-        df = ts_data().copy()
+        df = ts_data()
 
         df = df.merge(selected, on="date", how="left")
         df["annotation_new"] = df["annotation_new"].fillna("")
@@ -87,7 +87,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.ui
     def annotator():
         if input.time_series_brush() is not None:
-            selected = selected_data().copy()
+            selected = selected_data()
 
             min = str(selected["date"].min())
             max = str(selected["date"].max())
