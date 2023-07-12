@@ -1,5 +1,5 @@
 import shinyswatch
-from htmltools import tags
+from htmltools import css
 
 from shiny import App, module, reactive, render, ui
 
