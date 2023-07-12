@@ -83,7 +83,7 @@ def task_server(input, output, session, remove_id, task_list, text):
     @reactive.event(input.finish)
     def finish_task():
         task_list.set(task_list.get() + 1)
-        finished.set(False)
+        finished.set(True)
 
     @reactive.Effect
     @reactive.event(input.clear)
