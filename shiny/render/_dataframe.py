@@ -194,7 +194,7 @@ class DataTable(AbstractTabularData):
 DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
 
-# TODO-barret; Double check this is working. May need to port `__name__` and `__docs__` of `value_fn`
+# TODO-barret; Double check this is working. Will need to port `__name__` and `__docs__` of `value_fn`
 @add_example()
 @renderer_gen
 def data_frame(
@@ -233,6 +233,7 @@ def data_frame(
                 x, "@render.data_frame doesn't know how to render objects of type"
             )
         )
+    return x.to_payload()
 
 
 @runtime_checkable
