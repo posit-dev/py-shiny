@@ -14,7 +14,7 @@ from colors import bg_palette, palette
 import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
-# There is a matplotlib bug which causes pyright failures
+# There is a matplotlib bug which causes CI failures
 # see https://github.com/rstudio/py-shiny/issues/611#issuecomment-1632866419
 if matplotlib.__version__ == "3.7.2":
     warnings.filterwarnings(
