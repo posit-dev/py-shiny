@@ -19,7 +19,7 @@ app_ui = ui.page_fluid(
         class_="bg-success",
         full_screen=True,
         # showcase_layout=x.ui._valuebox.showcase_left_center(),
-        id="valuecard1",
+        id="valuebox1",
     ),
     x.ui.value_box(
         "KPI Title",
@@ -29,6 +29,7 @@ app_ui = ui.page_fluid(
         class_="bg-success",
         full_screen=True,
         showcase_layout=x.ui.showcase_top_right(width="70%"),
+        id="valuebox2",
     ),
 )
 

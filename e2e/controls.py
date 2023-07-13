@@ -2358,17 +2358,21 @@ class ValueBox(
             loc="> div > .value-box-grid",
         )
         value_box_grid = self.loc
-        self.loc = value_box_grid.locator("> div > .value-box-area:not(:first-child)")
+        self.loc = value_box_grid.locator(
+            "> div > .value-box-area > :not(:first-child)"
+        )
         self.loc_showcase = value_box_grid.locator("> div > .value-box-showcase")
-        self.loc_title = value_box_grid.locator("> div > .value-box-area:first-child")
+        self.loc_title = value_box_grid.locator(
+            "> div > .value-box-area > :first-child"
+        )
         self._loc_fullscreen = self.loc_container.locator("> .bslib-full-screen-enter")
         # self._loc_close_button = self.page.locator("#bslib-full-screen-overlay > a")
 
-        self._loc_close_button = self.page.locator(f"#bslib-full-screen-overlay + div#{id}.bslib-value-box").locator("..").locator("#bslib-full-screen-overlay > a")
-    # def __init__(self, page: Page) -> None:
-    #     self.page = page
-    #     self.loc_container = "div > .value-box-grid"
-    #     self.loc = f"{self.loc_container} > div > .value-box-area"
+        self._loc_close_button = (
+            self.page.locator(f"#bslib-full-screen-overlay + div#{id}.bslib-value-box")
+            .locator("..")
+            .locator("#bslib-full-screen-overlay > a")
+        )
 
     def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
         expect_to_have_style(
@@ -2381,46 +2385,36 @@ class ValueBox(
         *,
         timeout: Timeout = None,
     ) -> None:
-        playwright_expect(self.loc.locator("> p")).to_have_text(
-            text,
-            timeout=timeout,
-        )
-
-    def expect_footer_to_contain_text(
-        self,
-        text: PatternOrStr,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        playwright_expect(self.loc.locator("> span")).to_have_text(
+        playwright_expect(self.loc_title).to_have_text(
             text,
             timeout=timeout,
         )
 
     def expect_body_to_contain_text(
         self,
-        text: PatternOrStr,
+        text: PatternOrStr | list[PatternOrStr],
         *,
         timeout: Timeout = None,
     ) -> None:
-        playwright_expect(self.loc.locator("> h1")).to_have_text(
+        """Note: If testing against multiple elements, text should be an array"""
+        playwright_expect(self.loc).to_have_text(
             text,
             timeout=timeout,
         )
 
-    def expect_showcase_max_height(
-        self, value: PatternOrStr, *, timeout: Timeout = None
-    ) -> None:
-        expect_to_have_style(
-            self.loc_showcase, "--bslib-value-box-max-height", value, timeout=timeout
+    def open_full_screen(self, *, timeout: Timeout = None) -> None:
+        self.loc_title.hover(timeout=timeout)
+        self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
+        self._loc_fullscreen.click(timeout=timeout)
+
+    def close_full_screen(self, *, timeout: Timeout = None) -> None:
+        self._loc_close_button.click(timeout=timeout)
+
+    def expect_full_screen(self, open: bool, *, timeout: Timeout = None) -> None:
+        playwright_expect(self._loc_close_button).to_have_count(
+            int(open), timeout=timeout
         )
 
-    def expect_showcase_max_height_full_screen(
-        self, value: PatternOrStr, *, timeout: Timeout = None
-    ) -> None:
-        expect_to_have_style(
-            self.loc_showcase,
-            "--bslib-value-box-max-height-full-screen",
-            value,
-            timeout=timeout,
-        )
+    # hard to test since it can be customized by user
+    # def expect_showcase_layout(self, layout, *, timeout: Timeout = None) -> None:
+    #     raise NotImplementedError()
