@@ -2,6 +2,18 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
+__all__ = (
+    "renderer_gen",
+    "RenderFunctionMeta",
+    "RenderFunction",
+    "RenderFunctionAsync",
+    "text",
+    "plot",
+    "image",
+    "table",
+    "ui",
+)
+
 import base64
 import inspect
 import os
@@ -42,18 +54,6 @@ from .. import _utils
 from .._namespaces import ResolvedId
 from ..types import ImgData
 from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_plotnine
-
-__all__ = (
-    "renderer_gen",
-    "RenderFunction",
-    "RenderFunctionAsync",
-    "text",
-    "plot",
-    "image",
-    "table",
-    "ui",
-)
-
 
 # Input type for the user-spplied function that is passed to a render.xx
 IT = TypeVar("IT")
