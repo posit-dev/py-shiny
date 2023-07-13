@@ -2332,3 +2332,95 @@ class OutputTable(_OutputBase):
             n,
             timeout=timeout,
         )
+
+
+class ValueBox(
+    _WidthLocM,
+    _InputWithContainer,
+):
+    # title: TagChild,
+    # value: TagChild,
+    # *args: TagChild | TagAttrs,
+    # showcase: TagChild = None,
+    # showcase_layout: ((TagChild, Tag) -> CardItem) | None = None,
+    # full_screen: bool = False,
+    # theme_color: str | None = "primary",
+    # height: CssUnit | None = None,
+    # max_height: CssUnit | None = None,
+    # fill: bool = True,
+    # class_: str | None = None,
+    # **kwargs: TagAttrValue
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"div#{id}.bslib-value-box",
+            loc="> div > .value-box-grid",
+        )
+        value_box_grid = self.loc
+        self.loc = value_box_grid.locator("> div > .value-box-area:not(:first-child)")
+        self.loc_showcase = value_box_grid.locator("> div > .value-box-showcase")
+        self.loc_title = value_box_grid.locator("> div > .value-box-area:first-child")
+        self._loc_fullscreen = self.loc_container.locator("> .bslib-full-screen-enter")
+        # self._loc_close_button = self.page.locator("#bslib-full-screen-overlay > a")
+
+        self._loc_close_button = self.page.locator(f"#bslib-full-screen-overlay + div#{id}.bslib-value-box").locator("..").locator("#bslib-full-screen-overlay > a")
+    # def __init__(self, page: Page) -> None:
+    #     self.page = page
+    #     self.loc_container = "div > .value-box-grid"
+    #     self.loc = f"{self.loc_container} > div > .value-box-area"
+
+    def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        expect_to_have_style(
+            self.loc_container, "--bslib-grid-height", value, timeout=timeout
+        )
+
+    def expect_title_to_contain_text(
+        self,
+        text: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc.locator("> p")).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+    def expect_footer_to_contain_text(
+        self,
+        text: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc.locator("> span")).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+    def expect_body_to_contain_text(
+        self,
+        text: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc.locator("> h1")).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+    def expect_showcase_max_height(
+        self, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
+        expect_to_have_style(
+            self.loc_showcase, "--bslib-value-box-max-height", value, timeout=timeout
+        )
+
+    def expect_showcase_max_height_full_screen(
+        self, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
+        expect_to_have_style(
+            self.loc_showcase,
+            "--bslib-value-box-max-height-full-screen",
+            value,
+            timeout=timeout,
+        )
