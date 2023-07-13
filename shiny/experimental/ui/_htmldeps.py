@@ -27,6 +27,7 @@ def card_dependency() -> HTMLDependency:
             "subdir": _x_card_path,
         },
         script={"src": "card.min.js"},
+        stylesheet={"href": "card.css"},
         all_files=True,
     )
 
@@ -52,6 +53,7 @@ def sidebar_dependency() -> HTMLDependency:
             "subdir": _x_sidebar_path,
         },
         script={"src": "sidebar.min.js"},
+        stylesheet={"href": "sidebar.css"},
         all_files=True,
     )
 
@@ -65,6 +67,7 @@ def accordion_dependency() -> HTMLDependency:
             "subdir": _x_accordion_path,
         },
         script={"src": "accordion.min.js"},
+        stylesheet={"href": "accordion.css"},
         all_files=True,
     )
 
@@ -77,3 +80,12 @@ def autoresize_dependency():
         script={"src": "textarea-autoresize.js"},
         stylesheet={"href": "textarea-autoresize.css"},
     )
+
+
+# # TODO: styles for...
+# grid - layout_column_wrap
+# nav_spacer
+# page_fillable
+# page_navbar
+# page_sidebar
+# value_box

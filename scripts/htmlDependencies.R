@@ -95,7 +95,7 @@ fs::file_delete(
     x_www_bslib_components,
     type = "file",
     recurse = TRUE,
-    regexp = "\\.min\\.",
+    regexp = "\\.(min\\.|css)",
     invert = TRUE
   )
 )
@@ -144,7 +144,6 @@ withr::with_options(
   list(htmltools.dir.version = FALSE),
   ignore <- lapply(ion_dep, htmltools::copyDependencyToDir, temp_ion_dep_dir)
 )
-print(dir(temp_ion_dep_dir, recursive = TRUE))
 # Overwrite css file
 ion_dep_dir <- fs::path(www_shared, "ionrangeslider")
 fs::file_move(
