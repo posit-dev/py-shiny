@@ -22,13 +22,6 @@ from ._dataframe import (  # noqa: F401
 
 
 __all__ = (
-    # TODO-barret; Q: Remove `DataGrid` and `DataTable` methods from `__all__`
-    # # Is `DataGrid` and `DataTable` necessary? I don't believe they are _render_ methods.
-    # # They would be available via `from render import DataGrid`,
-    # # just wouldn't be available as  `render.DataGrid`
-    # "DataGrid",
-    # "DataTable",
-    # #
     "data_frame",
     "text",
     "plot",
