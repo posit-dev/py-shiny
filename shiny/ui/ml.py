@@ -19,6 +19,7 @@ def classification_label(
     *,
     sort: Optional[bool] = None,
     display_winner: Optional[bool] = None,
+    max_items: Optional[int] = None,
     _add_ws: bool = True,
     **kwargs: TagAttrValue,
 ) -> Tag:
@@ -28,6 +29,7 @@ def classification_label(
         value=attr_to_escaped_json(value),
         sort=bool_to_num(sort),
         display_winner=bool_to_num(display_winner),
+        max_items=max_items,
         _add_ws=_add_ws,
         **kwargs,
     )

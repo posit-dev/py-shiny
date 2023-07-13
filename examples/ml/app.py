@@ -8,7 +8,10 @@ app_ui = ui.page_fluid(
         ui.panel_main(
             ui.h3("Dynamic output, display_winner=True"),
             ui.output_ui("label1"),
-            ui.h3("Static output, display_winner=True", style="margin-top: 3rem;"),
+            ui.h3(
+                "Static output, display_winner=True, max_items=2",
+                style="margin-top: 3rem;",
+            ),
             ui.ml.classification_label(
                 {
                     "Tigers": 32,
@@ -16,6 +19,7 @@ app_ui = ui.page_fluid(
                     "Bears": 15,
                 },
                 display_winner=True,
+                max_items=2,
             ),
             ui.h3("Static output, sort=False"),
             ui.ml.classification_label(
@@ -24,6 +28,7 @@ app_ui = ui.page_fluid(
                     "Lions": 60,
                     "Bears": 15,
                 },
+                max_items=3,
                 sort=False,
             ),
         ),

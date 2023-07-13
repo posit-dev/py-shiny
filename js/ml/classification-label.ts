@@ -52,9 +52,15 @@ export class ShinyClassificationLabel extends LitElement {
   @property({ type: Number }) sort: number = 1;
   @property({ type: Number, attribute: "display-winner" })
   displayWinner: number = 0;
+  @property({ type: Number, attribute: "max-items" })
+  maxItems: number | null = null;
 
   render() {
-    const entries = Object.entries(this.value);
+    let entries = Object.entries(this.value);
+
+    if (this.maxItems !== null) {
+      entries = truncateEntries(entries, this.maxItems);
+    }
 
     if (this.sort) {
       entries.sort((a, b) => b[1] - a[1]);
@@ -62,7 +68,7 @@ export class ShinyClassificationLabel extends LitElement {
 
     let winnerHTML = null;
     if (this.displayWinner) {
-      // Entries might not be sorted
+      // Entries might not be sorted, so we need to loop through again.
       const currentWinner = { name: "", value: -Infinity };
       entries.forEach(([k, v]) => {
         if (v > currentWinner.value) {
@@ -86,4 +92,28 @@ export class ShinyClassificationLabel extends LitElement {
 
     return html`<div class="wrapper">${winnerHTML} ${valuesHtml}</div> `;
   }
+}
+
+customElements.define("shiny-classification-label", ShinyClassificationLabel);
+
+function truncateEntries(entries: [string, number][], maxItems: number | null) {
+  // Just the numeric values
+  const values = entries.map(([_, v]) => v);
+  values.sort().reverse();
+
+  const cutoffValue = values[maxItems - 1];
+
+  const newEntries = [];
+  for (const entry of entries) {
+    if (entry[1] >= cutoffValue) {
+      newEntries.push(entry);
+      // In case there are multiple items that match cutoffValue, we need to make sure
+      // we don't add more entries than were asked for.
+      if (newEntries.length === maxItems) {
+        break;
+      }
+    }
+  }
+
+  return newEntries;
 }
