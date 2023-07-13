@@ -2,24 +2,10 @@ from __future__ import annotations
 
 import abc
 import json
-import typing
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Literal,
-    Optional,
-    Protocol,
-    Union,
-    cast,
-    overload,
-    runtime_checkable,
-)
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, cast, runtime_checkable
 
-from .. import _utils
 from .._docstring import add_example
-from . import RenderFunction, RenderFunctionAsync
+from . import RenderFunctionMeta, renderer_gen
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -207,99 +193,14 @@ class DataTable(AbstractTabularData):
 
 DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
-RenderDataFrameFunc = Callable[[], DataFrameResult]
-RenderDataFrameFuncAsync = Callable[[], Awaitable[DataFrameResult]]
 
-
-@runtime_checkable
-class PandasCompatible(Protocol):
-    # Signature doesn't matter, runtime_checkable won't look at it anyway
-    def to_pandas(self) -> object:
-        ...
-
-
-class RenderDataFrame(RenderFunction[DataFrameResult, object]):
-    def __init__(
-        self,
-        fn: RenderDataFrameFunc,
-    ) -> None:
-        super().__init__(fn)
-        # The Render*Async subclass will pass in an async function, but it tells the
-        # static type checker that it's synchronous. wrap_async() is smart -- if is
-        # passed an async function, it will not change it.
-        self._fn: RenderDataFrameFuncAsync = _utils.wrap_async(fn)
-
-    def __call__(self) -> object:
-        return _utils.run_coro_sync(self._run())
-
-    async def _run(self) -> object:
-        x = await self._fn()
-
-        if x is None:
-            return None
-
-        if not isinstance(x, AbstractTabularData):
-            x = DataGrid(
-                cast_to_pandas(
-                    x, "@render.data_frame doesn't know how to render objects of type"
-                )
-            )
-
-        return x.to_payload()
-
-
-def cast_to_pandas(x: object, error_message_begin: str) -> object:
-    import pandas as pd
-
-    if not isinstance(x, pd.DataFrame):
-        if not isinstance(x, PandasCompatible):
-            raise TypeError(
-                error_message_begin
-                + f" '{str(type(x))}'. Use either a pandas.DataFrame, or an object"
-                " that has a .to_pandas() method."
-            )
-        return x.to_pandas()
-    return x
-
-
-class RenderDataFrameAsync(
-    RenderDataFrame, RenderFunctionAsync[DataFrameResult, object]
-):
-    def __init__(
-        self,
-        fn: RenderDataFrameFuncAsync,
-    ) -> None:
-        if not _utils.is_async_callable(fn):
-            raise TypeError(self.__class__.__name__ + " requires an async function")
-        super().__init__(
-            typing.cast(RenderDataFrameFunc, fn),
-        )
-
-    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
-        self,
-    ) -> object:
-        return await self._run()
-
-
-@overload
-def data_frame(fn: RenderDataFrameFunc | RenderDataFrameFuncAsync) -> RenderDataFrame:
-    ...
-
-
-@overload
-def data_frame() -> (
-    Callable[[RenderDataFrameFunc | RenderDataFrameFuncAsync], RenderDataFrame]
-):
-    ...
-
-
+# TODO-barret; Double check this is working. May need to port `__name__` and `__docs__` of `value_fn`
 @add_example()
+@renderer_gen
 def data_frame(
-    fn: Optional[RenderDataFrameFunc | RenderDataFrameFuncAsync] = None,
-) -> (
-    RenderDataFrame
-    | Callable[[RenderDataFrameFunc | RenderDataFrameFuncAsync], RenderDataFrame]
-):
+    meta: RenderFunctionMeta,
+    x: DataFrameResult,
+) -> object | None:
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
 
@@ -323,14 +224,33 @@ def data_frame(
     :class:`~shiny.render.DataTable`
     :func:`~shiny.ui.output_data_frame`
     """
+    if x is None:
+        return None
 
-    def wrapper(fn: RenderDataFrameFunc | RenderDataFrameFuncAsync) -> RenderDataFrame:
-        if _utils.is_async_callable(fn):
-            return RenderDataFrameAsync(fn)
-        else:
-            return RenderDataFrame(cast(RenderDataFrameFunc, fn))
+    if not isinstance(x, AbstractTabularData):
+        x = DataGrid(
+            cast_to_pandas(
+                x, "@render.data_frame doesn't know how to render objects of type"
+            )
+        )
 
-    if fn is None:
-        return wrapper
-    else:
-        return wrapper(fn)
+
+@runtime_checkable
+class PandasCompatible(Protocol):
+    # Signature doesn't matter, runtime_checkable won't look at it anyway
+    def to_pandas(self) -> object:
+        ...
+
+
+def cast_to_pandas(x: object, error_message_begin: str) -> object:
+    import pandas as pd
+
+    if not isinstance(x, pd.DataFrame):
+        if not isinstance(x, PandasCompatible):
+            raise TypeError(
+                error_message_begin
+                + f" '{str(type(x))}'. Use either a pandas.DataFrame, or an object"
+                " that has a .to_pandas() method."
+            )
+        return x.to_pandas()
+    return x

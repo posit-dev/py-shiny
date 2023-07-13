@@ -2,48 +2,33 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
-__all__ = (
-    "RenderFunction",
-    "RenderFunctionAsync",
-    "RenderText",
-    "RenderTextAsync",
-    "text",
-    "RenderPlot",
-    "RenderPlotAsync",
-    "plot",
-    "RenderImage",
-    "RenderImageAsync",
-    "image",
-    "RenderTable",
-    "RenderTableAsync",
-    "table",
-    "RenderUI",
-    "RenderUIAsync",
-    "ui",
-)
-
 import base64
+import inspect
 import os
 import sys
 import typing
+
+# import random
 from typing import (
     TYPE_CHECKING,
-    Any,
     Awaitable,
     Callable,
+    Concatenate,
     Generic,
     Optional,
+    ParamSpec,
+    Tuple,
     TypeVar,
     Union,
     cast,
     overload,
 )
 
-# These aren't used directly in this file, but they seem necessary for Sphinx to work
-# cleanly.
-from htmltools import Tag  # pyright: ignore[reportUnusedImport] # noqa: F401
-from htmltools import Tagifiable  # pyright: ignore[reportUnusedImport] # noqa: F401
-from htmltools import TagList  # pyright: ignore[reportUnusedImport] # noqa: F401
+# # These aren't used directly in this file, but they seem necessary for Sphinx to work
+# # cleanly.
+# from htmltools import Tag  # pyright: ignore[reportUnusedImport] # noqa: F401
+# from htmltools import Tagifiable  # pyright: ignore[reportUnusedImport] # noqa: F401
+# from htmltools import TagList  # pyright: ignore[reportUnusedImport] # noqa: F401
 from htmltools import TagChild
 
 if TYPE_CHECKING:
@@ -58,28 +43,38 @@ from .._namespaces import ResolvedId
 from ..types import ImgData
 from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_plotnine
 
+__all__ = (
+    "renderer_gen",
+    "RenderFunction",
+    "RenderFunctionAsync",
+    "text",
+    "plot",
+    "image",
+    "table",
+    "ui",
+)
+
+
 # Input type for the user-spplied function that is passed to a render.xx
 IT = TypeVar("IT")
 # Output type after the RenderFunction.__call__ method is called on the IT object.
 OT = TypeVar("OT")
+# Param specification for value function
+P = ParamSpec("P")
+# Generic type var
+T = TypeVar("T")
 
 
 # ======================================================================================
-# RenderFunction/RenderFunctionAsync base class
+# RenderFunctionMeta/RenderFunction/RenderFunctionAsync base class
 # ======================================================================================
 
 
-# A RenderFunction object is given a user-provided function which returns an IT. When
-# the .__call___ method is invoked, it calls the user-provided function (which returns
-# an IT), then converts the IT to an OT. Note that in many cases but not all, IT and OT
-# will be the same.
-class RenderFunction(Generic[IT, OT]):
-    def __init__(self, fn: Callable[[], IT]) -> None:
-        self.__name__ = fn.__name__
-        self.__doc__ = fn.__doc__
-
-    def __call__(self) -> OT:
-        raise NotImplementedError
+# TODO-barret; Remove `RenderFunctionMeta`. Just use `RenderFunction`
+# TODO-barret; Where `RenderFunctionMeta` is supplied to `meta`, instead, use a
+# TypedDict of information so users don't leverage `_` values
+class RenderFunctionMeta:
+    is_async: bool
 
     def set_metadata(self, session: Session, name: str) -> None:
         """When RenderFunctions are assigned to Output object slots, this method
@@ -89,64 +84,300 @@ class RenderFunction(Generic[IT, OT]):
         self._name: str = name
 
 
+# A RenderFunction object is given a user-provided function (`value_fn`) which returns
+# an `IT`. When the .__call___ method is invoked, it calls the user-provided function
+# (which returns an `IT`), then converts the `IT` to an `OT`. Note that in many cases
+# but not all, `IT` and `OT` will be the same.
+class RenderFunction(Generic[IT, OT], RenderFunctionMeta):
+    def __init__(self, render_fn: UserFuncAsync[IT]) -> None:
+        self.__name__ = render_fn.__name__  # TODO-barret; Set name of async function
+        self.__doc__ = render_fn.__doc__
+        self._fn = render_fn
+
+    def __call__(self) -> OT | None:
+        raise NotImplementedError
+
+
 # The reason for having a separate RenderFunctionAsync class is because the __call__
 # method is marked here as async; you can't have a single class where one method could
 # be either sync or async.
 class RenderFunctionAsync(RenderFunction[IT, OT]):
-    async def __call__(self) -> OT:  # pyright: ignore[reportIncompatibleMethodOverride]
+    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+    ) -> OT | None:
         raise NotImplementedError
+
+
+# ======================================================================================
+# RenderSync/RenderAsync base classes for Sync/async render functions
+# ======================================================================================
+
+# TODO-barret; Q: Why are there separate classes between RenderSync and RenderFunction (and RenderAsync / RenderFunctionAsync)
+# TODO-barret; Collapse RenderFunction / RenderSync & RenderFunctionAsync / RenderAsync?
+
+
+class RenderSync(Generic[IT, OT, P], RenderFunction[IT, OT]):
+    def __init__(
+        self,
+        # Use single arg to minimize overlap with P.kwargs
+        _render_args: _RenderArgsSync[IT, P, OT],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> None:
+        # Unpack args
+        _fn, _value_fn = _render_args
+
+        # super == RenderFunction
+        _awaitable_fn = _utils.wrap_async(_fn)
+        super().__init__(_awaitable_fn)
+        self.is_async = False
+
+        # The Render*Async subclass will pass in an async function, but it tells the
+        # static type checker that it's synchronous. wrap_async() is smart -- if is
+        # passed an async function, it will not change it.
+        # self._fn: UserFuncSync[IT] = _utils.wrap_async(_fn)
+
+        self._value_fn = _utils.wrap_async(_value_fn)
+        self._args = args
+        self._kwargs = kwargs
+
+    def __call__(self) -> OT | None:
+        return _utils.run_coro_sync(self._run())
+
+    async def _run(self) -> OT | None:
+        fn_val = await self._fn()
+        # TODO-barret; `self._value_fn()` must handle the `None` case
+        # TODO-barret; Make `OT` include `| None`
+
+        if fn_val is None:
+            return fn_val
+        ret = await self._value_fn(
+            # RenderFunctionMeta
+            self,
+            # IT
+            fn_val,
+            # P
+            *self._args,
+            **self._kwargs,
+        )
+        return ret
+
+
+class RenderAsync(Generic[IT, OT, P], RenderFunctionAsync[IT, OT]):
+    def __init__(
+        self,
+        # Use single arg to minimize overlap with P.kwargs
+        _render_args: _RenderArgsAsync[IT, P, OT],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> None:
+        # Unpack args
+        _fn, _value_fn = _render_args
+
+        if not _utils.is_async_callable(_fn):
+            raise TypeError(self.__class__.__name__ + " requires an async function")
+        # super == RenderFunctionAsync, RenderFunction
+        super().__init__(_fn)
+        self.is_async = True
+
+        self._value_fn = _utils.wrap_async(_value_fn)
+        self._args = args
+        self._kwargs = kwargs
+
+    async def __call__(self) -> OT | None:
+        return await self._run()
+
+    async def _run(self) -> OT | None:
+        fn_val = await self._fn()
+        # If User returned None, quit early and return `None` before being processed
+        if fn_val is None:
+            return fn_val
+        ret = await self._value_fn(
+            # RenderFunctionMeta
+            self,
+            # IT
+            fn_val,
+            # P
+            *self._args,
+            **self._kwargs,
+        )
+        return ret
+
+
+# ======================================================================================
+# Type definitions
+# ======================================================================================
+
+UserFuncSync = Callable[[], IT | None]
+UserFuncAsync = Callable[[], Awaitable[IT | None]]
+UserFunc = UserFuncSync[IT] | UserFuncAsync[IT]
+ValueFunc = (
+    Callable[Concatenate[RenderFunctionMeta, IT, P], OT | None]
+    | Callable[Concatenate[RenderFunctionMeta, IT, P], Awaitable[OT | None]]
+)
+# RenderDecoSync = Callable[[UserFuncSync[IT]], RenderSync[IT, OT, P]]
+# RenderDecoAsync = Callable[[UserFuncAsync[IT]], RenderAsync[IT, OT, P]]
+RenderDeco = Callable[
+    [UserFuncSync[IT] | UserFuncAsync[IT]],
+    RenderSync[IT, OT, P] | RenderAsync[IT, OT, P],
+]
+
+
+_RenderArgsSync = Tuple[UserFuncSync[IT], ValueFunc[IT, P, OT]]
+_RenderArgsAsync = Tuple[UserFuncAsync[IT], ValueFunc[IT, P, OT]]
+
+
+# ======================================================================================
+# Restrict the value function
+# ======================================================================================
+
+
+# assert: No variable length positional values;
+# * We need a way to distinguish between a plain function and args supplied to the next function. This is done by not allowing `*args`.
+# assert: All kwargs of value_fn should have a default value
+# * This makes calling the method with both `()` and without `()` possible / consistent.
+def assert_value_fn(value_fn: ValueFunc[IT, P, OT]):
+    params = inspect.Signature.from_callable(value_fn).parameters
+
+    for i, param in zip(range(len(params)), params.values()):
+        # # Not a good test as `param.annotation` has type `str`:
+        # if i == 0:
+        #   print(type(param.annotation))
+        #   assert isinstance(param.annotation, RenderFunctionMeta)
+
+        # Make sure there are no more than 2 positional args
+        if i >= 2 and param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
+            raise TypeError(
+                "`value_fn=` must not contain more than 2 positional parameters"
+            )
+        # Make sure there are no `*args`
+        if param.kind == inspect.Parameter.VAR_POSITIONAL:
+            raise TypeError(
+                f"No variadic parameters (e.g. `*args`) can be supplied to `value_fn=`. Received: `{param.name}`"
+            )
+        if (
+            param.kind == inspect.Parameter.KEYWORD_ONLY
+            and param.default is inspect.Parameter.empty
+        ):
+            raise TypeError(
+                f"In `value_fn=`, parameter `{param.name}` did not have a default value"
+            )
+
+
+def renderer_gen(
+    value_fn: ValueFunc[IT, P, OT],
+):
+    """\
+    Renderer generator
+
+    TODO-barret; Docs go here!
+    """
+    assert_value_fn(value_fn)
+
+    @overload
+    def render_deco(render_fn: UserFuncSync[IT]) -> RenderSync[IT, OT, P]:
+        ...
+
+    @overload
+    def render_deco(render_fn: UserFuncAsync[IT]) -> RenderAsync[IT, OT, P]:
+        ...
+
+    @overload
+    def render_deco(*args: P.args, **kwargs: P.kwargs) -> RenderDeco[IT, OT, P]:
+        ...
+
+    # # If we use `wraps()`, the overloads are lost.
+    # @functools.wraps(value_fn)
+
+    # Ignoring the type issue on the next line of code as the overloads for
+    # `render_deco` are not consistent with the function definition.
+    # Motivation:
+    # * https://peps.python.org/pep-0612/ does allow for prepending an arg
+    #   (`_render_fn`).
+    # * However, the overload is not happy when both a positional arg (`_render_fn`) is
+    #   dropped and the variadic args (`*args`) are kept.
+    # * The variadic args CAN NOT be dropped as PEP612 states that both components of
+    #   the `ParamSpec` must be used in the same function signature.
+    # * By making assertions on `P.args` to only allow for `*`, we _can_ make overloads
+    #   that use either the single positional arg (`_render_fn`) or
+    #   the `P.kwargs` (as `P.args` == `*`)
+    def render_deco(  # type: ignore[reportGeneralTypeIssues]
+        _render_fn: Optional[UserFuncSync[IT] | UserFuncAsync[IT]] = None,
+        *args: P.args,  # Equivalent to `*` after assertions in `assert_value_fn()`
+        **kwargs: P.kwargs,
+    ) -> (
+        Callable[[UserFuncSync[IT]], RenderSync[IT, OT, P]]
+        | Callable[[UserFuncAsync[IT]], RenderAsync[IT, OT, P]]
+        | RenderSync[IT, OT, P]
+        | RenderAsync[IT, OT, P]
+    ):
+        # `args` **must** be in `render_deco` definition.
+        # Make sure there no `args`!
+        assert len(args) == 0
+
+        def wrapper_sync(
+            wrapper_sync_fn: UserFuncSync[IT],
+        ) -> RenderSync[IT, OT, P]:
+            return RenderSync(
+                (wrapper_sync_fn, value_fn),
+                *args,
+                **kwargs,
+            )
+
+        def wrapper_async(
+            wrapper_async_fn: UserFuncAsync[IT],
+        ) -> RenderAsync[IT, OT, P]:
+            # Make sure there no `args`!
+            assert len(args) == 0
+
+            return RenderAsync(
+                (wrapper_async_fn, value_fn),
+                *args,
+                **kwargs,
+            )
+
+        @overload
+        def wrapper(
+            wrapper_fn: UserFuncSync[IT],
+        ) -> RenderSync[IT, OT, P]:
+            ...
+
+        @overload
+        def wrapper(
+            wrapper_fn: UserFuncAsync[IT],
+        ) -> RenderAsync[IT, OT, P]:
+            ...
+
+        def wrapper(
+            wrapper_fn: UserFuncSync[IT] | UserFuncAsync[IT],
+        ) -> RenderSync[IT, OT, P] | RenderAsync[IT, OT, P]:
+            if _utils.is_async_callable(wrapper_fn):
+                return wrapper_async(wrapper_fn)
+            else:
+                # Is not not `UserFuncAsync[IT]`. Cast `wrapper_fn`
+                wrapper_fn = cast(UserFuncSync[IT], wrapper_fn)
+                return wrapper_sync(wrapper_fn)
+
+        if _render_fn is None:
+            return wrapper
+
+        if _utils.is_async_callable(_render_fn):
+            return wrapper_async(_render_fn)
+        else:
+            _render_fn = cast(UserFuncSync[IT], _render_fn)
+            return wrapper_sync(_render_fn)
+
+    return render_deco
 
 
 # ======================================================================================
 # RenderText
 # ======================================================================================
-RenderTextFunc = Callable[[], "str | None"]
-RenderTextFuncAsync = Callable[[], Awaitable["str | None"]]
-
-
-class RenderText(RenderFunction["str | None", "str | None"]):
-    def __init__(self, fn: RenderTextFunc) -> None:
-        super().__init__(fn)
-        # The Render*Async subclass will pass in an async function, but it tells the
-        # static type checker that it's synchronous. wrap_async() is smart -- if is
-        # passed an async function, it will not change it.
-        self._fn: RenderTextFuncAsync = _utils.wrap_async(fn)
-
-    def __call__(self) -> str | None:
-        return _utils.run_coro_sync(self._run())
-
-    async def _run(self) -> str | None:
-        res = await self._fn()
-        if res is None:
-            return None
-        return str(res)
-
-
-class RenderTextAsync(RenderText, RenderFunctionAsync["str | None", "str | None"]):
-    def __init__(self, fn: RenderTextFuncAsync) -> None:
-        if not _utils.is_async_callable(fn):
-            raise TypeError(self.__class__.__name__ + " requires an async function")
-        super().__init__(typing.cast(RenderTextFunc, fn))
-
-    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
-        self,
-    ) -> str | None:
-        return await self._run()
-
-
-@overload
-def text(fn: RenderTextFunc | RenderTextFuncAsync) -> RenderText:
-    ...
-
-
-@overload
-def text() -> Callable[[RenderTextFunc | RenderTextFuncAsync], RenderText]:
-    ...
-
-
+@renderer_gen
 def text(
-    fn: Optional[RenderTextFunc | RenderTextFuncAsync] = None,
-) -> RenderText | Callable[[RenderTextFunc | RenderTextFuncAsync], RenderText]:
+    meta: RenderFunctionMeta,
+    value: str,
+) -> str:
     """
     Reactively render text.
 
@@ -166,18 +397,7 @@ def text(
     --------
     ~shiny.ui.output_text
     """
-
-    def wrapper(fn: RenderTextFunc | RenderTextFuncAsync) -> RenderText:
-        if _utils.is_async_callable(fn):
-            return RenderTextAsync(fn)
-        else:
-            fn = typing.cast(RenderTextFunc, fn)
-            return RenderText(fn)
-
-    if fn is None:
-        return wrapper
-    else:
-        return wrapper(fn)
+    return str(value)
 
 
 # ======================================================================================
@@ -187,138 +407,14 @@ def text(
 #   Union[matplotlib.figure.Figure, PIL.Image.Image]
 # However, if we did that, we'd have to import those modules at load time, which adds
 # a nontrivial amount of overhead. So for now, we're just using `object`.
-RenderPlotFunc = Callable[[], object]
-RenderPlotFuncAsync = Callable[[], Awaitable[object]]
-
-
-class RenderPlot(RenderFunction[object, "ImgData | None"]):
-    _ppi: float = 96
-    _is_userfn_async = False
-
-    def __init__(
-        self, fn: RenderPlotFunc, *, alt: Optional[str] = None, **kwargs: object
-    ) -> None:
-        super().__init__(fn)
-        self._alt: Optional[str] = alt
-        self._kwargs = kwargs
-        # The Render*Async subclass will pass in an async function, but it tells the
-        # static type checker that it's synchronous. wrap_async() is smart -- if is
-        # passed an async function, it will not change it.
-        self._fn: RenderPlotFuncAsync = _utils.wrap_async(fn)
-
-    def __call__(self) -> ImgData | None:
-        return _utils.run_coro_sync(self._run())
-
-    async def _run(self) -> ImgData | None:
-        inputs = self._session.root_scope().input
-
-        # Reactively read some information about the plot.
-        pixelratio: float = typing.cast(
-            float, inputs[ResolvedId(".clientdata_pixelratio")]()
-        )
-        width: float = typing.cast(
-            float, inputs[ResolvedId(f".clientdata_output_{self._name}_width")]()
-        )
-        height: float = typing.cast(
-            float, inputs[ResolvedId(f".clientdata_output_{self._name}_height")]()
-        )
-
-        x = await self._fn()
-
-        # Note that x might be None; it could be a matplotlib.pyplot
-
-        # Try each type of renderer in turn. The reason we do it this way is to avoid
-        # importing modules that aren't already loaded. That could slow things down, or
-        # worse, cause an error if the module isn't installed.
-        #
-        # Each try_render function should indicate whether it was able to make sense of
-        # the x value (or, in the case of matplotlib, possibly it decided to use the
-        # global pyplot figure) by returning a tuple that starts with True. The second
-        # tuple element may be None in this case, which means the try_render function
-        # explicitly wants the plot to be blanked.
-        #
-        # If a try_render function returns a tuple that starts with False, then the next
-        # try_render function should be tried. If none succeed, an error is raised.
-        ok: bool
-        result: ImgData | None
-
-        if "plotnine" in sys.modules:
-            ok, result = try_render_plotnine(
-                x, width, height, pixelratio, self._ppi, **self._kwargs
-            )
-            if ok:
-                return result
-
-        if "matplotlib" in sys.modules:
-            ok, result = try_render_matplotlib(
-                x,
-                width,
-                height,
-                pixelratio=pixelratio,
-                ppi=self._ppi,
-                allow_global=not self._is_userfn_async,
-                alt=self._alt,
-                **self._kwargs,
-            )
-            if ok:
-                return result
-
-        if "PIL" in sys.modules:
-            ok, result = try_render_pil(
-                x, width, height, pixelratio, self._ppi, **self._kwargs
-            )
-            if ok:
-                return result
-
-        # This check must happen last because matplotlib might be able to plot even if
-        # x is None
-        if x is None:
-            return None
-
-        raise Exception(
-            f"@render.plot doesn't know to render objects of type '{str(type(x))}'. "
-            + "Consider either requesting support for this type of plot object, and/or "
-            + " explictly saving the object to a (png) file and using @render.image."
-        )
-
-
-class RenderPlotAsync(RenderPlot, RenderFunctionAsync[object, "ImgData | None"]):
-    _is_userfn_async = True
-
-    def __init__(
-        self, fn: RenderPlotFuncAsync, alt: Optional[str] = None, **kwargs: Any
-    ) -> None:
-        if not _utils.is_async_callable(fn):
-            raise TypeError(self.__class__.__name__ + " requires an async function")
-        super().__init__(typing.cast(RenderPlotFunc, fn), alt=alt, **kwargs)
-
-    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
-        self,
-    ) -> ImgData | None:
-        return await self._run()
-
-
-@overload
-def plot(fn: RenderPlotFunc | RenderPlotFuncAsync) -> RenderPlot:
-    ...
-
-
-@overload
+@renderer_gen
 def plot(
+    meta: RenderFunctionMeta,
+    x: ImgData,
     *,
     alt: Optional[str] = None,
-    **kwargs: Any,
-) -> Callable[[RenderPlotFunc | RenderPlotFuncAsync], RenderPlot]:
-    ...
-
-
-# TODO: Use more specific types for render.plot
-def plot(
-    fn: Optional[RenderPlotFunc | RenderPlotFuncAsync] = None,
-    *,
-    alt: Optional[str] = None,
-    **kwargs: Any,
-) -> RenderPlot | Callable[[RenderPlotFunc | RenderPlotFuncAsync], RenderPlot]:
+    **kwargs: object,
+) -> ImgData | None:
     """
     Reactively render a plot object as an HTML image.
 
@@ -362,93 +458,104 @@ def plot(
     ~shiny.ui.output_plot
     ~shiny.render.image
     """
+    is_userfn_async = isinstance(meta, RenderFunctionAsync)
+    ppi: float = 96
 
-    def wrapper(fn: RenderPlotFunc | RenderPlotFuncAsync) -> RenderPlot:
-        if _utils.is_async_callable(fn):
-            return RenderPlotAsync(fn, alt=alt, **kwargs)
-        else:
-            return RenderPlot(fn, alt=alt, **kwargs)
+    # TODO-barret; Q: These variable calls are **after** `self._fn()`. Is this ok?
+    inputs = meta._session.root_scope().input
 
-    if fn is None:
-        return wrapper
-    else:
-        return wrapper(fn)
+    # Reactively read some information about the plot.
+    pixelratio: float = typing.cast(
+        float, inputs[ResolvedId(".clientdata_pixelratio")]()
+    )
+    width: float = typing.cast(
+        float, inputs[ResolvedId(f".clientdata_output_{meta._name}_width")]()
+    )
+    height: float = typing.cast(
+        float, inputs[ResolvedId(f".clientdata_output_{meta._name}_height")]()
+    )
+
+    # !! Normal position for `x = await self._fn()`
+
+    # Note that x might be None; it could be a matplotlib.pyplot
+
+    # Try each type of renderer in turn. The reason we do it this way is to avoid
+    # importing modules that aren't already loaded. That could slow things down, or
+    # worse, cause an error if the module isn't installed.
+    #
+    # Each try_render function should indicate whether it was able to make sense of
+    # the x value (or, in the case of matplotlib, possibly it decided to use the
+    # global pyplot figure) by returning a tuple that starts with True. The second
+    # tuple element may be None in this case, which means the try_render function
+    # explicitly wants the plot to be blanked.
+    #
+    # If a try_render function returns a tuple that starts with False, then the next
+    # try_render function should be tried. If none succeed, an error is raised.
+    ok: bool
+    result: ImgData | None
+
+    if "plotnine" in sys.modules:
+        ok, result = try_render_plotnine(
+            x,
+            width,
+            height,
+            pixelratio,
+            ppi,
+            alt,
+            **kwargs,
+        )
+        if ok:
+            return result
+
+    if "matplotlib" in sys.modules:
+        ok, result = try_render_matplotlib(
+            x,
+            width,
+            height,
+            pixelratio=pixelratio,
+            ppi=ppi,
+            allow_global=not is_userfn_async,
+            alt=alt,
+            **kwargs,
+        )
+        if ok:
+            return result
+
+    if "PIL" in sys.modules:
+        ok, result = try_render_pil(
+            x,
+            width,
+            height,
+            pixelratio,
+            ppi,
+            alt,
+            **kwargs,
+        )
+        if ok:
+            return result
+
+    # This check must happen last because
+    # matplotlib might be able to plot even if x is `None`
+    if x is None:  # type: ignore ; TODO-barret remove this check once `value` can be `None`
+        return None
+
+    raise Exception(
+        f"@render.plot doesn't know to render objects of type '{str(type(x))}'. "
+        + "Consider either requesting support for this type of plot object, and/or "
+        + " explictly saving the object to a (png) file and using @render.image."
+    )
 
 
 # ======================================================================================
 # RenderImage
 # ======================================================================================
-RenderImageFunc = Callable[[], "ImgData | None"]
-RenderImageFuncAsync = Callable[[], Awaitable["ImgData | None"]]
-
-
-class RenderImage(RenderFunction["ImgData | None", "ImgData | None"]):
-    def __init__(
-        self,
-        fn: RenderImageFunc,
-        *,
-        delete_file: bool = False,
-    ) -> None:
-        super().__init__(fn)
-        self._delete_file: bool = delete_file
-        # The Render*Async subclass will pass in an async function, but it tells the
-        # static type checker that it's synchronous. wrap_async() is smart -- if is
-        # passed an async function, it will not change it.
-        self._fn: RenderImageFuncAsync = _utils.wrap_async(fn)
-
-    def __call__(self) -> ImgData | None:
-        return _utils.run_coro_sync(self._run())
-
-    async def _run(self) -> ImgData | None:
-        res: ImgData | None = await self._fn()
-        if res is None:
-            return None
-
-        src: str = res.get("src")
-        try:
-            with open(src, "rb") as f:
-                data = base64.b64encode(f.read())
-                data_str = data.decode("utf-8")
-            content_type = _utils.guess_mime_type(src)
-            res["src"] = f"data:{content_type};base64,{data_str}"
-            return res
-        finally:
-            if self._delete_file:
-                os.remove(src)
-
-
-class RenderImageAsync(
-    RenderImage, RenderFunctionAsync["ImgData | None", "ImgData | None"]
-):
-    def __init__(self, fn: RenderImageFuncAsync, delete_file: bool = False) -> None:
-        if not _utils.is_async_callable(fn):
-            raise TypeError(self.__class__.__name__ + " requires an async function")
-        super().__init__(typing.cast(RenderImageFunc, fn), delete_file=delete_file)
-
-    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
-        self,
-    ) -> ImgData | None:
-        return await self._run()
-
-
-@overload
-def image(fn: RenderImageFunc | RenderImageFuncAsync) -> RenderImage:
-    ...
-
-
-@overload
+@renderer_gen
 def image(
+    meta: RenderFunctionMeta,
+    res: ImgData | None,
     *,
     delete_file: bool = False,
-) -> Callable[[RenderImageFunc | RenderImageFuncAsync], RenderImage]:
-    ...
-
-
-def image(
-    fn: Optional[RenderImageFunc | RenderImageFuncAsync] = None,
-    *,
-    delete_file: bool = False,
-) -> RenderImage | Callable[[RenderImageFunc | RenderImageFuncAsync], RenderImage]:
+) -> ImgData | None:
     """
     Reactively render a image file as an HTML image.
 
@@ -475,18 +582,20 @@ def image(
     ~shiny.types.ImgData
     ~shiny.render.plot
     """
+    if res is None:
+        return None
 
-    def wrapper(fn: RenderImageFunc | RenderImageFuncAsync) -> RenderImage:
-        if _utils.is_async_callable(fn):
-            return RenderImageAsync(fn, delete_file=delete_file)
-        else:
-            fn = typing.cast(RenderImageFunc, fn)
-            return RenderImage(fn, delete_file=delete_file)
-
-    if fn is None:
-        return wrapper
-    else:
-        return wrapper(fn)
+    src: str = res.get("src")
+    try:
+        with open(src, "rb") as f:
+            data = base64.b64encode(f.read())
+            data_str = data.decode("utf-8")
+        content_type = _utils.guess_mime_type(src)
+        res["src"] = f"data:{content_type};base64,{data_str}"
+        return res
+    finally:
+        if delete_file:
+            os.remove(src)
 
 
 # ======================================================================================
@@ -501,116 +610,19 @@ class PandasCompatible(Protocol):
         ...
 
 
-TableResult = Union[None, "pd.DataFrame", PandasCompatible]
-RenderTableFunc = Callable[[], TableResult]
-RenderTableFuncAsync = Callable[[], Awaitable[TableResult]]
+TableResult = Union["pd.DataFrame", PandasCompatible, None]
 
 
-class RenderTable(RenderFunction[object, "RenderedDeps | None"]):
-    def __init__(
-        self,
-        fn: RenderTableFunc,
-        *,
-        index: bool = False,
-        classes: str = "table shiny-table w-auto",
-        border: int = 0,
-        **kwargs: object,
-    ) -> None:
-        super().__init__(fn)
-        self._index = index
-        self._classes = classes
-        self._border = border
-        self._kwargs = kwargs
-        # The Render*Async subclass will pass in an async function, but it tells the
-        # static type checker that it's synchronous. wrap_async() is smart -- if is
-        # passed an async function, it will not change it.
-        self._fn: RenderTableFuncAsync = _utils.wrap_async(fn)
-
-    def __call__(self) -> RenderedDeps | None:
-        return _utils.run_coro_sync(self._run())
-
-    async def _run(self) -> RenderedDeps | None:
-        x = await self._fn()
-
-        if x is None:
-            return None
-
-        import pandas
-        import pandas.io.formats.style
-
-        html: str
-        if isinstance(x, pandas.io.formats.style.Styler):
-            html = x.to_html(**self._kwargs)  # pyright: ignore[reportUnknownMemberType]
-        else:
-            if not isinstance(x, pandas.DataFrame):
-                if not isinstance(x, PandasCompatible):
-                    raise TypeError(
-                        "@render.table doesn't know how to render objects of type "
-                        f"'{str(type(x))}'. Return either a pandas.DataFrame, or an object "
-                        "that has a .to_pandas() method."
-                    )
-                x = x.to_pandas()
-
-            html = x.to_html(  # pyright: ignore[reportUnknownMemberType]
-                index=self._index,
-                classes=self._classes,
-                border=self._border,
-                **self._kwargs,
-            )
-        return {"deps": [], "html": html}
-
-
-class RenderTableAsync(RenderTable, RenderFunctionAsync[object, "ImgData | None"]):
-    def __init__(
-        self,
-        fn: RenderTableFuncAsync,
-        *,
-        index: bool = False,
-        classes: str = "table shiny-table w-auto",
-        border: int = 0,
-        **kwargs: Any,
-    ) -> None:
-        if not _utils.is_async_callable(fn):
-            raise TypeError(self.__class__.__name__ + " requires an async function")
-        super().__init__(
-            typing.cast(RenderTableFunc, fn),
-            index=index,
-            classes=classes,
-            border=border,
-            **kwargs,
-        )
-
-    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
-        self,
-    ) -> RenderedDeps | None:
-        return await self._run()
-
-
-@overload
-def table(fn: RenderTableFunc | RenderTableFuncAsync) -> RenderTable:
-    ...
-
-
-@overload
+@renderer_gen
 def table(
+    meta: RenderFunctionMeta,
+    x: TableResult,
     *,
     index: bool = False,
     classes: str = "table shiny-table w-auto",
     border: int = 0,
-    **kwargs: Any,
-) -> Callable[[RenderTableFunc | RenderTableFuncAsync], RenderTable]:
-    ...
-
-
-# TODO: Use more specific types for render.table
-def table(
-    fn: Optional[RenderTableFunc | RenderTableFuncAsync] = None,
-    *,
-    index: bool = False,
-    classes: str = "table shiny-table w-auto",
-    border: int = 0,
-    **kwargs: Any,
-) -> RenderTable | Callable[[RenderTableFunc | RenderTableFuncAsync], RenderTable]:
+    **kwargs: object,
+) -> RenderedDeps | None:
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
 
@@ -650,78 +662,47 @@ def table(
     --------
     ~shiny.ui.output_table
     """
+    import pandas
+    import pandas.io.formats.style
 
-    def wrapper(fn: RenderTableFunc | RenderTableFuncAsync) -> RenderTable:
-        if _utils.is_async_callable(fn):
-            return RenderTableAsync(
-                fn, index=index, classes=classes, border=border, **kwargs
-            )
-        else:
-            return RenderTable(
-                cast(RenderTableFunc, fn),
+    html: str
+    if isinstance(x, pandas.io.formats.style.Styler):
+        html = cast(  # pyright: ignore[reportUnnecessaryCast]
+            str,
+            x.to_html(  # pyright: ignore[reportUnknownMemberType]
+                **kwargs  # pyright: ignore[reportGeneralTypeIssues]
+            ),
+        )
+    else:
+        if not isinstance(x, pandas.DataFrame):
+            if not isinstance(x, PandasCompatible):
+                raise TypeError(
+                    "@render.table doesn't know how to render objects of type "
+                    f"'{str(type(x))}'. Return either a pandas.DataFrame, or an object "
+                    "that has a .to_pandas() method."
+                )
+            x = x.to_pandas()
+
+        html = cast(  # pyright: ignore[reportUnnecessaryCast]
+            str,
+            x.to_html(  # pyright: ignore[reportUnknownMemberType]
                 index=index,
                 classes=classes,
                 border=border,
-                **kwargs,
-            )
-
-    if fn is None:
-        return wrapper
-    else:
-        return wrapper(fn)
+                **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+            ),
+        )
+    return {"deps": [], "html": html}
 
 
 # ======================================================================================
 # RenderUI
 # ======================================================================================
-RenderUIFunc = Callable[[], TagChild]
-RenderUIFuncAsync = Callable[[], Awaitable[TagChild]]
-
-
-class RenderUI(RenderFunction[TagChild, "RenderedDeps | None"]):
-    def __init__(self, fn: RenderUIFunc) -> None:
-        super().__init__(fn)
-        # The Render*Async subclass will pass in an async function, but it tells the
-        # static type checker that it's synchronous. wrap_async() is smart -- if is
-        # passed an async function, it will not change it.
-        self._fn: RenderUIFuncAsync = _utils.wrap_async(fn)
-
-    def __call__(self) -> RenderedDeps | None:
-        return _utils.run_coro_sync(self._run())
-
-    async def _run(self) -> RenderedDeps | None:
-        ui: TagChild = await self._fn()
-        if ui is None:
-            return None
-
-        return self._session._process_ui(ui)
-
-
-class RenderUIAsync(RenderUI, RenderFunctionAsync[TagChild, "RenderedDeps| None"]):
-    def __init__(self, fn: RenderUIFuncAsync) -> None:
-        if not _utils.is_async_callable(fn):
-            raise TypeError(self.__class__.__name__ + " requires an async function")
-        super().__init__(typing.cast(RenderUIFunc, fn))
-
-    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
-        self,
-    ) -> RenderedDeps | None:
-        return await self._run()
-
-
-@overload
-def ui(fn: RenderUIFunc | RenderUIFuncAsync) -> RenderUI:
-    ...
-
-
-@overload
-def ui() -> Callable[[RenderUIFunc | RenderUIFuncAsync], RenderUI]:
-    ...
-
-
+@renderer_gen
 def ui(
-    fn: Optional[RenderUIFunc | RenderUIFuncAsync] = None,
-) -> RenderUI | Callable[[RenderUIFunc | RenderUIFuncAsync], RenderUI]:
+    meta: RenderFunctionMeta,
+    ui: TagChild,
+) -> RenderedDeps | None:
     """
     Reactively render HTML content.
 
@@ -741,17 +722,7 @@ def ui(
     --------
     ~shiny.ui.output_ui
     """
+    if ui is None:
+        return None
 
-    def wrapper(
-        fn: Callable[[], TagChild] | Callable[[], Awaitable[TagChild]]
-    ) -> RenderUI:
-        if _utils.is_async_callable(fn):
-            return RenderUIAsync(fn)
-        else:
-            fn = typing.cast(RenderUIFunc, fn)
-            return RenderUI(fn)
-
-    if fn is None:
-        return wrapper
-    else:
-        return wrapper(fn)
+    return meta._session._process_ui(ui)

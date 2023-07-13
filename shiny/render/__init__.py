@@ -3,41 +3,37 @@ Tools for reactively rendering output for the user interface.
 """
 
 from ._render import (  # noqa: F401
-    RenderFunction,  # pyright: ignore[reportUnusedImport]
-    RenderFunctionAsync,  # pyright: ignore[reportUnusedImport]
-    RenderText,  # pyright: ignore[reportUnusedImport]
-    RenderTextAsync,  # pyright: ignore[reportUnusedImport]
+    RenderFunctionMeta as RenderFunctionMeta,
+    RenderFunction as RenderFunction,
+    RenderFunctionAsync as RenderFunctionAsync,
+    renderer_gen,
     text,
-    RenderPlot,  # pyright: ignore[reportUnusedImport]
-    RenderPlotAsync,  # pyright: ignore[reportUnusedImport]
     plot,
-    RenderImage,  # pyright: ignore[reportUnusedImport]
-    RenderImageAsync,  # pyright: ignore[reportUnusedImport]
     image,
-    RenderTable,  # pyright: ignore[reportUnusedImport]
-    RenderTableAsync,  # pyright: ignore[reportUnusedImport]
     table,
-    RenderUI,  # pyright: ignore[reportUnusedImport]
-    RenderUIAsync,  # pyright: ignore[reportUnusedImport]
     ui,
 )
 
 from ._dataframe import (  # noqa: F401
-    RenderDataFrame,  # pyright: ignore[reportUnusedImport]
-    RenderDataFrameAsync,  # pyright: ignore[reportUnusedImport]
-    DataGrid,
-    DataTable,
+    DataGrid as DataGrid,
+    DataTable as DataTable,
     data_frame,
 )
 
 
 __all__ = (
-    "DataGrid",
-    "DataTable",
+    # TODO-barret; Q: Remove `DataGrid` and `DataTable` methods from `__all__`
+    # # Is `DataGrid` and `DataTable` necessary? I don't believe they are _render_ methods.
+    # # They would be available via `from render import DataGrid`,
+    # # just wouldn't be available as  `render.DataGrid`
+    # "DataGrid",
+    # "DataTable",
+    # #
     "data_frame",
     "text",
     "plot",
     "image",
     "table",
     "ui",
+    "renderer_gen",
 )
