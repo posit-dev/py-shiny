@@ -153,6 +153,8 @@ fs::file_move(
 # Cleanup
 fs::dir_delete(temp_ion_dep_dir)
 
+# TODO - make a UI object and save its dependencies. Loop through the different UI elements of bslib and save them accordingly. Similar to shiny::input_slider? instead of reaching into the `:::`
+
 
 message("Save bootstrap bundle")
 # Save htmldeps
