@@ -25,11 +25,10 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
     from matplotlib.gridspec import SubplotSpec
-    from matplotlib.transforms import Transform
 
 
 def get_coordmap(fig: Figure) -> Coordmap | None:
-    dims_ar = cast("npt.NDArray[np.double]", fig.get_size_inches() * fig.get_dpi())
+    dims_ar = fig.get_size_inches() * fig.get_dpi()
     dims: CoordmapDims = {
         "width": dims_ar[0],
         "height": dims_ar[1],
@@ -54,10 +53,13 @@ def get_coordmap(fig: Figure) -> Coordmap | None:
 
 
 def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPanel:
-    spspec = cast("SubplotSpec", axes.get_subplotspec())
+    spspec = cast(
+        "SubplotSpec",
+        axes.get_subplotspec(),  # pyright: ignore[reportGeneralTypeIssues]
+    )
 
-    domain_xlim = cast("tuple[float, float]", axes.get_xlim())
-    domain_ylim = cast("tuple[float, float]", axes.get_ylim())
+    domain_xlim = axes.get_xlim()
+    domain_ylim = axes.get_ylim()
 
     # Data coordinates of plotting area
     domain: CoordmapPanelDomain = {
@@ -68,9 +70,7 @@ def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPan
     }
 
     # Pixel coordinates of plotting area
-    transdata = cast(
-        "Transform", axes.transData  # pyright: ignore[reportGeneralTypeIssues]
-    )
+    transdata = axes.transData
 
     range_ar = cast(
         "npt.NDArray[np.double]",
