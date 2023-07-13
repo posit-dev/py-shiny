@@ -15,11 +15,9 @@ def data_frame_deps() -> HTMLDependency:
         version=__version__,
         source={
             "package": "shiny",
-            "subdir": "ui/dataframe/js/dist",
+            "subdir": "www/shared/dataframe",
         },
-        script=[
-            {"src": "index.js", "type": "module"},
-        ],
+        script={"src": "dataframe.js", "type": "module"},
     )
 
 
