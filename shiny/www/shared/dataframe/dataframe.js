@@ -246,4 +246,4 @@ var dt=`
    * @license MIT
    *)
 */
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=dataframe.js.map
