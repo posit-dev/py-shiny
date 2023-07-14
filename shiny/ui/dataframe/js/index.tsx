@@ -4,6 +4,7 @@ import {
   Column,
   ColumnDef,
   Row,
+  RowData,
   RowModel,
   Table,
   TableOptions,
@@ -39,7 +40,13 @@ import { SelectionMode, useSelection } from "./selection";
 import { SortArrow } from "./sort-arrows";
 import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
+import { PandasData, TypeHint } from "./types";
 
+declare module "@tanstack/table-core" {
+  interface ColumnMeta<TData extends RowData, TValue> {
+    typeHint: TypeHint;
+  }
+}
 // TODO: Right-align numeric columns, maybe change font
 // TODO: Explicit column widths
 // TODO: Filtering
@@ -54,22 +61,6 @@ import { useSummary } from "./table-summary";
 // TODO: Drag to resize table/grid
 // TODO: Row numbers
 
-interface DataGridOptions {
-  style?: "table" | "grid";
-  summary?: boolean | string;
-  row_selection_mode?: SelectionMode;
-  filters?: boolean;
-  width?: string;
-  height?: string;
-}
-
-interface PandasData<TIndex> {
-  columns: ReadonlyArray<string>;
-  index: ReadonlyArray<TIndex>;
-  data: unknown[][];
-  options: DataGridOptions;
-}
-
 interface ShinyDataGridProps<TIndex> {
   id: string | null;
   data: PandasData<TIndex>;
@@ -78,7 +69,7 @@ interface ShinyDataGridProps<TIndex> {
 
 const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const { id, data, bgcolor } = props;
-  const { columns, index, data: rowData } = data;
+  const { columns, index, type_hints, data: rowData } = data;
   const { width, height, filters: withFilters } = data.options;
   const keyToIndex: Record<string, unknown> = {};
   index.forEach((value) => {
@@ -92,13 +83,19 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
     () =>
       columns.map((colname, i) => {
+        const typeHint = type_hints?.[i];
+
         return {
           accessorFn: (row, index) => {
             return row[i];
           },
           // TODO: delegate this decision to something in filter.tsx
-          filterFn: "includesString",
+          filterFn:
+            typeHint.type === "numeric" ? "inNumberRange" : "includesString",
           header: colname,
+          meta: {
+            typeHint: typeHint,
+          },
         };
       }),
     [columns]

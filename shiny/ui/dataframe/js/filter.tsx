@@ -7,7 +7,15 @@ import {
   getFacetedUniqueValues,
   getFilteredRowModel,
 } from "@tanstack/react-table";
-import React, { FC, useCallback } from "react";
+import React, {
+  FC,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { FilterNumeric } from "./filter-numeric";
 
 export function useFilter<TData>(enabled: boolean): FiltersOptions<TData> {
   if (enabled) {
@@ -35,12 +43,30 @@ export interface FilterProps
 export const Filter: FC<FilterProps> = (props) => {
   const { header, className } = props;
 
-  return (
-    <input
-      {...props}
-      className={`form-control form-control-sm ${className}`}
-      type="text"
-      onChange={(e) => header.column.setFilterValue(e.target.value)}
-    />
-  );
+  const typeHint = header.column.columnDef.meta?.typeHint;
+  if (typeHint.type === "string" || typeHint.type === "unknown") {
+    return (
+      <input
+        {...props}
+        className={`form-control form-control-sm ${className}`}
+        type="text"
+        onChange={(e) => header.column.setFilterValue(e.target.value)}
+      />
+    );
+  }
+
+  if (typeHint.type === "numeric") {
+    const [from, to] = (props.header.column.getFilterValue() as
+      | [number | undefined, number | undefined]
+      | undefined) ?? [undefined, undefined];
+    const [min, max] = header.column.getFacetedMinMaxValues();
+
+    return FilterNumeric({
+      from,
+      to,
+      min,
+      max,
+      onRangeChange: (from, to) => header.column.setFilterValue([from, to]),
+    });
+  }
 };
