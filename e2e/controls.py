@@ -2509,3 +2509,9 @@ class Card(_WidthLocM, _InputBase):
         playwright_expect(self._loc_close_button).to_have_count(
             int(open), timeout=timeout
         )
+
+    def expect_max_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        expect_to_have_style(self.loc, "max-height", value, timeout=timeout)
+
+    def expect_min_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        expect_to_have_style(self.loc, "min-height", value, timeout=timeout)

@@ -9,6 +9,8 @@ def test_card(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
     card = Card(page, "card1")
+    card.expect_max_height(None)
+    card.expect_min_height(None)
     card.expect_header_to_contain_text("This is the header")
     card.expect_footer_to_contain_text("This is the footer")
     card.expect_body_to_contain_text("This is the title\nThis is the body.", 0)
