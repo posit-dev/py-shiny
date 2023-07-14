@@ -26,10 +26,8 @@ from typing import (
     TYPE_CHECKING,
     Awaitable,
     Callable,
-    Concatenate,
     Generic,
     Optional,
-    ParamSpec,
     Protocol,
     Tuple,
     TypeVar,
@@ -53,7 +51,7 @@ if TYPE_CHECKING:
 
 from .. import _utils
 from .._namespaces import ResolvedId
-from .._typing_extensions import TypedDict
+from .._typing_extensions import Concatenate, ParamSpec, TypedDict
 from ..types import ImgData
 from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_plotnine
 
