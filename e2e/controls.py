@@ -2418,3 +2418,94 @@ class ValueBox(
     # hard to test since it can be customized by user
     # def expect_showcase_layout(self, layout, *, timeout: Timeout = None) -> None:
     #     raise NotImplementedError()
+
+
+class Card(_WidthLocM, _InputBase):
+    # *args: TagChild | TagAttrs | CardItem,
+    # full_screen: bool = False,
+    # height: CssUnit | None = None,
+    # max_height: CssUnit | None = None,
+    # min_height: CssUnit | None = None,
+    # fill: bool = True,
+    # class_: str | None = None,
+    # wrapper: WrapperCallable | MISSING_TYPE | None = MISSING,
+    # **kwargs: TagAttrValue
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"div#{id}.card",
+        )
+        self.loc_header = self.loc.locator("> div.card-header")
+        self.loc_footer = self.loc.locator("> div.card-footer")
+        self.loc_body = self.loc.locator("> div.card-body")
+        self._loc_fullscreen = self.loc.locator("> .bslib-full-screen-enter")
+        self._loc_close_button = (
+            self.page.locator(f"#bslib-full-screen-overlay + div#{id}")
+            .locator("..")
+            .locator("#bslib-full-screen-overlay > a")
+        )
+        # self.loc_body_title = self.loc.locator("> div.card-body > :first-child")
+
+    def expect_header_to_contain_text(
+        self,
+        text: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc_header).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+    def expect_footer_to_contain_text(
+        self,
+        text: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc_footer).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+    def expect_body_to_contain_text(
+        self,
+        text: PatternOrStr,
+        index: int = 0,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """Note: Function requires an index since multiple bodies can exist in loc"""
+        playwright_expect(self.loc_body.nth(index)).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+    def expect_body_title_to_contain_text(
+        self,
+        text: PatternOrStr,
+        index: int = 0,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """Note: Function requires an index since multiple bodies can exist in loc"""
+        playwright_expect(
+            self.loc_body.nth(index).locator("> :first-child")
+        ).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+    def open_full_screen(self, *, timeout: Timeout = None) -> None:
+        self.loc_header.hover(timeout=timeout)
+        self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
+        self._loc_fullscreen.click(timeout=timeout)
+
+    def close_full_screen(self, *, timeout: Timeout = None) -> None:
+        self._loc_close_button.click(timeout=timeout)
+
+    def expect_full_screen(self, open: bool, *, timeout: Timeout = None) -> None:
+        playwright_expect(self._loc_close_button).to_have_count(
+            int(open), timeout=timeout
+        )

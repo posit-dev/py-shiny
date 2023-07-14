@@ -15,6 +15,7 @@ app_ui = ui.page_fluid(
         ui.p("This is still the body."),
         x.ui.card_footer("This is the footer"),
         full_screen=True,
+        id="card1",
     ),
 )
 
