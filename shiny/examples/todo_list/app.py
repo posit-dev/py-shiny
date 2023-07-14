@@ -41,12 +41,18 @@ def server(input, output, session):
             ui=task_ui(id),
         )
 
-        # Since we want the action button inside the module to update
-        # the finished_tasks global counter, we need to pass the reactive values list
-        # down to the module function.
-        task_server(
-            id, remove_id=id, task_list=finished_tasks, text=input.todo_input_text()
-        )
+        finish = task_server(id, text=input.todo_input_text())
+
+        # Defining a nested reactive effect like this might feel a bit funny but it's the
+        # correct pattern in this case. We are reacting to the `finish`
+        # event within the `add` closure, so nesting the reactive effects
+        # means that we don't have to worry about conflicting with
+        # finish events from other task elements.
+        @reactive.Effect
+        @reactive.event(finish)
+        def iterate_counter():
+            finished_tasks.set(finished_tasks.get() + 1)
+
         ui.update_text("todo_input_text", value="")
 
 
@@ -59,7 +65,7 @@ def task_ui():
 
 
 @module.server
-def task_server(input, output, session, remove_id, task_list, text):
+def task_server(input, output, session, text):
     finished = reactive.Value(False)
 
     @output
@@ -74,7 +80,6 @@ def task_server(input, output, session, remove_id, task_list, text):
         return ui.row(
             ui.column(4, button),
             ui.column(8, text),
-            id=remove_id,
             class_="mt-3 p-3 border align-items-center",
             style=css(text_decoration="line-through" if finished() else None),
         )
@@ -82,13 +87,27 @@ def task_server(input, output, session, remove_id, task_list, text):
     @reactive.Effect
     @reactive.event(input.finish)
     def finish_task():
-        task_list.set(task_list.get() + 1)
         finished.set(True)
 
     @reactive.Effect
     @reactive.event(input.clear)
     def clear_task():
-        ui.remove_ui(selector=f"div#{remove_id}")
+        ui.remove_ui(selector=f"div#{session.ns('button_row')}")
+
+        # Since remove_ui only removes the HTML the reactive effects will be held
+        # in memory unless they're explicitly destroyed. This isn't a big
+        # deal because they're very small, but it's good to clean them up.
+        finish_task.destroy()
+        clear_task.destroy()
+
+    # Returning the input.finish button to the parent scope allows us
+    # to react to it in the parent context to keep track of the number of
+    # completed tasks.
+    #
+    # This is a good pattern because it makes the module more general.
+    # The same module can be used by different applications which may
+    # do different things when the task is completed.
+    return input.finish
 
 
 app = App(app_ui, server)
