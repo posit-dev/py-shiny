@@ -10,6 +10,8 @@ from conftest import ShinyAppProc, create_example_fixture, expect_to_change
 from controls import InputSelectize, InputSwitch
 from playwright.sync_api import Locator, Page, expect
 
+RERUNS = 3
+
 data_frame_app = create_example_fixture("dataframe")
 
 
@@ -37,7 +39,7 @@ def scroll_to_end(page: Page, grid_container: Locator) -> Callable[[], None]:
     return do
 
 
-@pytest.mark.flaky
+@pytest.mark.flaky(reruns=RERUNS)
 def test_grid_mode(
     page: Page, data_frame_app: ShinyAppProc, grid: Locator, grid_container: Locator
 ):
@@ -51,23 +53,23 @@ def test_grid_mode(
     expect(grid_container).to_have_class(re.compile(r"\bshiny-data-grid-grid\b"))
 
 
-@pytest.mark.flaky
+@pytest.mark.flaky(reruns=RERUNS)
 def test_summary_navigation(
     page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, summary: Locator
 ):
     page.goto(data_frame_app.url)
 
     # Check that summary responds to navigation
-    expect(summary).to_have_text("Viewing rows 1 through 10 of 20")
+    expect(summary).to_have_text("Viewing rows 1 through 9 of 20")
     # Put focus in the table and hit End keystroke
     grid_container.locator("tbody tr:first-child td:first-child").click()
     with expect_to_change(lambda: summary.inner_text()):
         page.keyboard.press("End")
     # Ensure that summary updated
-    expect(summary).to_have_text("Viewing rows 11 through 20 of 20")
+    expect(summary).to_have_text("Viewing rows 12 through 20 of 20")
 
 
-@pytest.mark.flaky
+@pytest.mark.flaky(reruns=RERUNS)
 def test_full_width(page: Page, data_frame_app: ShinyAppProc, grid_container: Locator):
     page.goto(data_frame_app.url)
 
@@ -87,7 +89,7 @@ def test_full_width(page: Page, data_frame_app: ShinyAppProc, grid_container: Lo
     InputSwitch(page, "fullwidth").toggle()
 
 
-@pytest.mark.flaky
+@pytest.mark.flaky(reruns=RERUNS)
 def test_table_switch(
     page: Page,
     data_frame_app: ShinyAppProc,
@@ -107,17 +109,17 @@ def test_table_switch(
     expect(grid_container).to_have_class(re.compile(r"\bshiny-data-grid-table\b"))
 
     # Switching modes resets scroll
-    expect(summary).to_have_text("Viewing rows 1 through 10 of 20")
+    expect(summary).to_have_text("Viewing rows 1 through 8 of 20")
 
     scroll_to_end()
-    expect(summary).to_have_text("Viewing rows 11 through 20 of 20")
+    expect(summary).to_have_text("Viewing rows 13 through 20 of 20")
 
     # Switch datasets to much longer one
     select_dataset.set("diamonds")
-    expect(summary).to_have_text("Viewing rows 1 through 10 of 53940")
+    expect(summary).to_have_text("Viewing rows 1 through 8 of 53940")
 
 
-@pytest.mark.flaky
+@pytest.mark.flaky(reruns=RERUNS)
 def test_sort(
     page: Page,
     data_frame_app: ShinyAppProc,
@@ -143,7 +145,7 @@ def test_sort(
     expect(first_cell_depth).to_have_text("67.6")
 
 
-@pytest.mark.flaky
+@pytest.mark.flaky(reruns=RERUNS)
 def test_multi_selection(
     page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, snapshot: Any
 ):
@@ -173,7 +175,7 @@ def test_multi_selection(
     assert detail_text() == snapshot
 
 
-@pytest.mark.flaky
+@pytest.mark.flaky(reruns=RERUNS)
 def test_single_selection(
     page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, snapshot: Any
 ):
