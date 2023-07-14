@@ -7,10 +7,12 @@ from shiny.render._render import RendererMeta, renderer_gen
 @renderer_gen
 def render_test_text(
     meta: RendererMeta,
-    value: str,
+    value: str | None,
     *,
     extra_txt: Optional[str] = None,
-) -> str:
+) -> str | None:
+    if value is None:
+        return None
     value = str(value)
     value += "; "
     value += "async" if meta["is_async"] else "sync"

@@ -67,6 +67,7 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 
+# Meta informatoin to give `value_fn()` some context
 class RendererMeta(TypedDict):
     is_async: bool
     session: Session
@@ -95,7 +96,7 @@ class RenderFunction(Generic[IT, OT]):
         # we can act as if `render_fn` is always async
         self._fn = _utils.wrap_async(render_fn)
 
-    def __call__(self) -> OT | None:
+    def __call__(self) -> OT:
         raise NotImplementedError
 
     def _set_metadata(self, session: Session, name: str) -> None:
@@ -139,16 +140,11 @@ class RenderFunctionSync(Generic[IT, OT, P], RenderFunction[IT, OT]):
         self._args = args
         self._kwargs = kwargs
 
-    def __call__(self) -> OT | None:
+    def __call__(self) -> OT:
         return _utils.run_coro_sync(self._run())
 
-    async def _run(self) -> OT | None:
+    async def _run(self) -> OT:
         fn_val = await self._fn()
-        # TODO-barret; `self._value_fn()` must handle the `None` case
-        # TODO-barret; Make `OT` include `| None`
-
-        if fn_val is None:
-            return fn_val
         ret = await self._value_fn(
             # RendererMeta
             self.meta,
@@ -195,14 +191,11 @@ class RenderFunctionAsync(Generic[IT, OT, P], RenderFunction[IT, OT]):
 
     async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
-    ) -> OT | None:
+    ) -> OT:
         return await self._run()
 
-    async def _run(self) -> OT | None:
+    async def _run(self) -> OT:
         fn_val = await self._fn()
-        # If User returned None, quit early and return `None` before being processed
-        if fn_val is None:
-            return fn_val
         ret = await self._value_fn(
             # RendererMeta
             self.meta,
@@ -219,12 +212,12 @@ class RenderFunctionAsync(Generic[IT, OT, P], RenderFunction[IT, OT]):
 # Type definitions
 # ======================================================================================
 
-UserFuncSync = Callable[[], IT | None]
-UserFuncAsync = Callable[[], Awaitable[IT | None]]
+UserFuncSync = Callable[[], IT]
+UserFuncAsync = Callable[[], Awaitable[IT]]
 UserFunc = UserFuncSync[IT] | UserFuncAsync[IT]
 ValueFunc = (
-    Callable[Concatenate[RendererMeta, IT, P], OT | None]
-    | Callable[Concatenate[RendererMeta, IT, P], Awaitable[OT | None]]
+    Callable[Concatenate[RendererMeta, IT, P], OT]
+    | Callable[Concatenate[RendererMeta, IT, P], Awaitable[OT]]
 )
 RenderDecoSync = Callable[[UserFuncSync[IT]], RenderFunctionSync[IT, OT, P]]
 RenderDecoAsync = Callable[[UserFuncAsync[IT]], RenderFunctionAsync[IT, OT, P]]
@@ -381,8 +374,8 @@ def renderer_gen(
 @renderer_gen
 def text(
     meta: RendererMeta,
-    value: str,
-) -> str:
+    value: str | None,
+) -> str | None:
     """
     Reactively render text.
 
@@ -402,6 +395,8 @@ def text(
     --------
     ~shiny.ui.output_text
     """
+    if value is None:
+        return None
     return str(value)
 
 
@@ -415,7 +410,7 @@ def text(
 @renderer_gen
 def plot(
     meta: RendererMeta,
-    x: ImgData,
+    x: ImgData | None,
     *,
     alt: Optional[str] = None,
     **kwargs: object,
@@ -544,7 +539,7 @@ def plot(
 
     # This check must happen last because
     # matplotlib might be able to plot even if x is `None`
-    if x is None:  # type: ignore ; TODO-barret remove this check once `value` can be `None`
+    if x is None:
         return None
 
     raise Exception(
@@ -624,7 +619,7 @@ TableResult = Union["pd.DataFrame", PandasCompatible, None]
 @renderer_gen
 def table(
     meta: RendererMeta,
-    x: TableResult,
+    x: TableResult | None,
     *,
     index: bool = False,
     classes: str = "table shiny-table w-auto",
@@ -670,6 +665,8 @@ def table(
     --------
     ~shiny.ui.output_table
     """
+    if x is None:
+        return None
     import pandas
     import pandas.io.formats.style
 

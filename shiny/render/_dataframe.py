@@ -199,7 +199,7 @@ DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 @renderer_gen
 def data_frame(
     meta: RendererMeta,
-    x: DataFrameResult,
+    x: DataFrameResult | None,
 ) -> object | None:
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
