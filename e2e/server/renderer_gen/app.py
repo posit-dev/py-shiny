@@ -1,3 +1,7 @@
+# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
+# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
+from __future__ import annotations
+
 from typing import Optional
 
 from shiny import App, Inputs, Outputs, Session, ui

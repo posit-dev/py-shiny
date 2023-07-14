@@ -212,16 +212,19 @@ class RenderFunctionAsync(Generic[IT, OT, P], RenderFunction[IT, OT]):
 
 UserFuncSync = Callable[[], IT]
 UserFuncAsync = Callable[[], Awaitable[IT]]
-UserFunc = UserFuncSync[IT] | UserFuncAsync[IT]
-ValueFunc = (
-    Callable[Concatenate[RendererMeta, IT, P], OT]
-    | Callable[Concatenate[RendererMeta, IT, P], Awaitable[OT]]
-)
+UserFunc = Union[
+    UserFuncSync[IT],
+    UserFuncAsync[IT],
+]
+ValueFunc = Union[
+    Callable[Concatenate[RendererMeta, IT, P], OT],
+    Callable[Concatenate[RendererMeta, IT, P], Awaitable[OT]],
+]
 RenderDecoSync = Callable[[UserFuncSync[IT]], RenderFunctionSync[IT, OT, P]]
 RenderDecoAsync = Callable[[UserFuncAsync[IT]], RenderFunctionAsync[IT, OT, P]]
 RenderDeco = Callable[
-    [UserFuncSync[IT] | UserFuncAsync[IT]],
-    RenderFunctionSync[IT, OT, P] | RenderFunctionAsync[IT, OT, P],
+    [Union[UserFuncSync[IT], UserFuncAsync[IT]]],
+    Union[RenderFunctionSync[IT, OT, P], RenderFunctionAsync[IT, OT, P]],
 ]
 
 
