@@ -130,7 +130,7 @@ class RenderFunctionSync(Generic[IT, OT, P], RenderFunction[IT, OT]):
     ) -> None:
         # `*args` must be in the `__init__` signature
         # Make sure there no `args`!
-        assert len(args) == 0
+        _assert_no_args(args)
 
         # Unpack args
         _fn, _value_fn = _render_args
@@ -174,7 +174,7 @@ class RenderFunctionAsync(Generic[IT, OT, P], RenderFunction[IT, OT]):
     ) -> None:
         # `*args` must be in the `__init__` signature
         # Make sure there no `args`!
-        assert len(args) == 0
+        _assert_no_args(args)
 
         # Unpack args
         _fn, _value_fn = _render_args
@@ -236,11 +236,16 @@ _RenderArgsAsync = Tuple[UserFuncAsync[IT], ValueFunc[IT, P, OT]]
 # ======================================================================================
 
 
+def _assert_no_args(args: tuple[object]) -> None:
+    if len(args) > 0:
+        raise RuntimeError("`args` should not be supplied")
+
+
 # assert: No variable length positional values;
 # * We need a way to distinguish between a plain function and args supplied to the next function. This is done by not allowing `*args`.
 # assert: All kwargs of value_fn should have a default value
 # * This makes calling the method with both `()` and without `()` possible / consistent.
-def _assert_value_fn(value_fn: ValueFunc[IT, P, OT]):
+def _assert_value_fn(value_fn: ValueFunc[IT, P, OT]) -> None:
     params = inspect.Signature.from_callable(value_fn).parameters
 
     for i, param in zip(range(len(params)), params.values()):
@@ -259,13 +264,17 @@ def _assert_value_fn(value_fn: ValueFunc[IT, P, OT]):
             raise TypeError(
                 f"No variadic parameters (e.g. `*args`) can be supplied to `value_fn=`. Received: `{param.name}`"
             )
-        if (
-            param.kind == inspect.Parameter.KEYWORD_ONLY
-            and param.default is inspect.Parameter.empty
-        ):
-            raise TypeError(
-                f"In `value_fn=`, parameter `{param.name}` did not have a default value"
-            )
+        if param.kind == inspect.Parameter.KEYWORD_ONLY:
+            # Do not allow for a kwarg to be named `_render_fn`
+            if param.name == "_render_fn":
+                raise ValueError(
+                    "In `value_fn=`, parameters can not be named `_render_fn`"
+                )
+            # Make sure kwargs have default values
+            if param.default is inspect.Parameter.empty:
+                raise TypeError(
+                    f"In `value_fn=`, parameter `{param.name}` did not have a default value"
+                )
 
 
 def renderer_gen(
@@ -280,16 +289,20 @@ def renderer_gen(
 
     @overload
     # RenderDecoSync[IT, OT, P]
-    def renderer_deco(_render_fn: UserFuncSync[IT]) -> RenderFunctionSync[IT, OT, P]:
+    def renderer_decorator(
+        _render_fn: UserFuncSync[IT],
+    ) -> RenderFunctionSync[IT, OT, P]:
         ...
 
     @overload
     # RenderDecoAsync[IT, OT, P]
-    def renderer_deco(_render_fn: UserFuncAsync[IT]) -> RenderFunctionAsync[IT, OT, P]:
+    def renderer_decorator(
+        _render_fn: UserFuncAsync[IT],
+    ) -> RenderFunctionAsync[IT, OT, P]:
         ...
 
     @overload
-    def renderer_deco(*args: P.args, **kwargs: P.kwargs) -> RenderDeco[IT, OT, P]:
+    def renderer_decorator(*args: P.args, **kwargs: P.kwargs) -> RenderDeco[IT, OT, P]:
         ...
 
     # # If we use `wraps()`, the overloads are lost.
@@ -307,7 +320,7 @@ def renderer_gen(
     # * By making assertions on `P.args` to only allow for `*`, we _can_ make overloads
     #   that use either the single positional arg (`_render_fn`) or
     #   the `P.kwargs` (as `P.args` == `*`)
-    def renderer_deco(  # type: ignore[reportGeneralTypeIssues]
+    def renderer_decorator(  # type: ignore[reportGeneralTypeIssues]
         _render_fn: Optional[UserFuncSync[IT] | UserFuncAsync[IT]] = None,
         *args: P.args,  # Equivalent to `*` after assertions in `_assert_value_fn()`
         **kwargs: P.kwargs,
@@ -317,9 +330,9 @@ def renderer_gen(
         | RenderFunctionSync[IT, OT, P]
         | RenderFunctionAsync[IT, OT, P]
     ):
-        # `args` **must** be in `renderer_deco` definition.
+        # `args` **must** be in `renderer_decorator` definition.
         # Make sure there no `args`!
-        assert len(args) == 0
+        _assert_no_args(args)
 
         def render_fn_sync(
             fn_sync: UserFuncSync[IT],
@@ -365,7 +378,14 @@ def renderer_gen(
             return as_render_fn
         return as_render_fn(_render_fn)
 
-    return renderer_deco
+    # Copy over name an docs
+    renderer_decorator.__doc__ = value_fn.__doc__
+    renderer_decorator.__name__ = value_fn.__name__
+    # # TODO-barret; Fix name of decorated function. Hovering over method name does not work
+    # ren_func = getattr(renderer_decorator, "__func__", renderer_decorator)
+    # ren_func.__name__ = value_fn.__name__
+
+    return renderer_decorator
 
 
 # ======================================================================================
