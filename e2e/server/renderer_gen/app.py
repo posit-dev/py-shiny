@@ -1,19 +1,19 @@
 from typing import Optional
 
 from shiny import App, Inputs, Outputs, Session, ui
-from shiny.render._render import RenderFunctionMeta, renderer_gen
+from shiny.render._render import RendererMeta, renderer_gen
 
 
 @renderer_gen
 def render_test_text(
-    meta: RenderFunctionMeta,
+    meta: RendererMeta,
     value: str,
     *,
     extra_txt: Optional[str] = None,
 ) -> str:
     value = str(value)
     value += "; "
-    value += "async" if meta.is_async else "sync"
+    value += "async" if meta["is_async"] else "sync"
     if extra_txt:
         value = value + "; " + str(extra_txt)
     return value

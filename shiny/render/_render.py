@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 __all__ = (
-    "renderer_gen",
-    "RenderFunctionMeta",
-    "RenderFunction",
-    "RenderFunctionAsync",
+    # "renderer_gen",
+    # "RendererMeta",
+    # "RenderFunction",
+    # "RenderFunctionSync",
+    # "RenderFunctionAsync",
     "text",
     "plot",
     "image",
@@ -29,11 +30,13 @@ from typing import (
     Generic,
     Optional,
     ParamSpec,
+    Protocol,
     Tuple,
     TypeVar,
     Union,
     cast,
     overload,
+    runtime_checkable,
 )
 
 # # These aren't used directly in this file, but they seem necessary for Sphinx to work
@@ -48,10 +51,9 @@ if TYPE_CHECKING:
     from ..session._utils import RenderedDeps
     import pandas as pd
 
-from typing import Protocol, runtime_checkable
-
 from .. import _utils
 from .._namespaces import ResolvedId
+from .._typing_extensions import TypedDict
 from ..types import ImgData
 from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_plotnine
 
@@ -65,58 +67,59 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 
-# ======================================================================================
-# RenderFunctionMeta/RenderFunction/RenderFunctionAsync base class
-# ======================================================================================
-
-
-# TODO-barret; Remove `RenderFunctionMeta`. Just use `RenderFunction`
-# TODO-barret; Where `RenderFunctionMeta` is supplied to `meta`, instead, use a
-# TypedDict of information so users don't leverage `_` values
-class RenderFunctionMeta:
+class RendererMeta(TypedDict):
     is_async: bool
+    session: Session
+    name: str
 
-    def set_metadata(self, session: Session, name: str) -> None:
-        """When RenderFunctions are assigned to Output object slots, this method
-        is used to pass along session and name information.
-        """
-        self._session: Session = session
-        self._name: str = name
+
+# ======================================================================================
+# RenderFunction / RenderFunctionSync / RenderFunctionAsync base class
+# ======================================================================================
 
 
 # A RenderFunction object is given a user-provided function (`value_fn`) which returns
 # an `IT`. When the .__call___ method is invoked, it calls the user-provided function
 # (which returns an `IT`), then converts the `IT` to an `OT`. Note that in many cases
 # but not all, `IT` and `OT` will be the same.
-class RenderFunction(Generic[IT, OT], RenderFunctionMeta):
-    def __init__(self, render_fn: UserFuncAsync[IT]) -> None:
+class RenderFunction(Generic[IT, OT]):
+    @property
+    def is_async(self) -> bool:
+        raise NotImplementedError()
+
+    def __init__(self, render_fn: UserFunc[IT]) -> None:
         self.__name__ = render_fn.__name__  # TODO-barret; Set name of async function
         self.__doc__ = render_fn.__doc__
-        self._fn = render_fn
+
+        # Given we use `_utils.run_coro_sync(self._run())` to call our method,
+        # we can act as if `render_fn` is always async
+        self._fn = _utils.wrap_async(render_fn)
 
     def __call__(self) -> OT | None:
         raise NotImplementedError
 
+    def _set_metadata(self, session: Session, name: str) -> None:
+        """When RenderFunctions are assigned to Output object slots, this method
+        is used to pass along session and name information.
+        """
+        self._session: Session = session
+        self._name: str = name
 
-# The reason for having a separate RenderFunctionAsync class is because the __call__
-# method is marked here as async; you can't have a single class where one method could
-# be either sync or async.
-class RenderFunctionAsync(RenderFunction[IT, OT]):
-    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
-        self,
-    ) -> OT | None:
-        raise NotImplementedError
-
-
-# ======================================================================================
-# RenderSync/RenderAsync base classes for Sync/async render functions
-# ======================================================================================
-
-# TODO-barret; Q: Why are there separate classes between RenderSync and RenderFunction (and RenderAsync / RenderFunctionAsync)
-# TODO-barret; Collapse RenderFunction / RenderSync & RenderFunctionAsync / RenderAsync?
+    @property
+    def meta(self) -> RendererMeta:
+        return RendererMeta(
+            is_async=self.is_async,
+            session=self._session,
+            name=self._name,
+        )
 
 
-class RenderSync(Generic[IT, OT, P], RenderFunction[IT, OT]):
+# Using a second class to help clarify that it is of a particular type
+class RenderFunctionSync(Generic[IT, OT, P], RenderFunction[IT, OT]):
+    @property
+    def is_async(self) -> bool:
+        return False
+
     def __init__(
         self,
         # Use single arg to minimize overlap with P.kwargs
@@ -124,18 +127,13 @@ class RenderSync(Generic[IT, OT, P], RenderFunction[IT, OT]):
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> None:
+        # `*args` must be in the `__init__` signature
+        # Make sure there no `args`!
+        assert len(args) == 0
+
         # Unpack args
         _fn, _value_fn = _render_args
-
-        # super == RenderFunction
-        _awaitable_fn = _utils.wrap_async(_fn)
-        super().__init__(_awaitable_fn)
-        self.is_async = False
-
-        # The Render*Async subclass will pass in an async function, but it tells the
-        # static type checker that it's synchronous. wrap_async() is smart -- if is
-        # passed an async function, it will not change it.
-        # self._fn: UserFuncSync[IT] = _utils.wrap_async(_fn)
+        super().__init__(_fn)
 
         self._value_fn = _utils.wrap_async(_value_fn)
         self._args = args
@@ -152,8 +150,8 @@ class RenderSync(Generic[IT, OT, P], RenderFunction[IT, OT]):
         if fn_val is None:
             return fn_val
         ret = await self._value_fn(
-            # RenderFunctionMeta
-            self,
+            # RendererMeta
+            self.meta,
             # IT
             fn_val,
             # P
@@ -163,7 +161,14 @@ class RenderSync(Generic[IT, OT, P], RenderFunction[IT, OT]):
         return ret
 
 
-class RenderAsync(Generic[IT, OT, P], RenderFunctionAsync[IT, OT]):
+# The reason for having a separate RenderFunctionAsync class is because the __call__
+# method is marked here as async; you can't have a single class where one method could
+# be either sync or async.
+class RenderFunctionAsync(Generic[IT, OT, P], RenderFunction[IT, OT]):
+    @property
+    def is_async(self) -> bool:
+        return True
+
     def __init__(
         self,
         # Use single arg to minimize overlap with P.kwargs
@@ -171,6 +176,10 @@ class RenderAsync(Generic[IT, OT, P], RenderFunctionAsync[IT, OT]):
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> None:
+        # `*args` must be in the `__init__` signature
+        # Make sure there no `args`!
+        assert len(args) == 0
+
         # Unpack args
         _fn, _value_fn = _render_args
 
@@ -178,13 +187,15 @@ class RenderAsync(Generic[IT, OT, P], RenderFunctionAsync[IT, OT]):
             raise TypeError(self.__class__.__name__ + " requires an async function")
         # super == RenderFunctionAsync, RenderFunction
         super().__init__(_fn)
-        self.is_async = True
 
+        self._fn = _fn
         self._value_fn = _utils.wrap_async(_value_fn)
         self._args = args
         self._kwargs = kwargs
 
-    async def __call__(self) -> OT | None:
+    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+    ) -> OT | None:
         return await self._run()
 
     async def _run(self) -> OT | None:
@@ -193,8 +204,8 @@ class RenderAsync(Generic[IT, OT, P], RenderFunctionAsync[IT, OT]):
         if fn_val is None:
             return fn_val
         ret = await self._value_fn(
-            # RenderFunctionMeta
-            self,
+            # RendererMeta
+            self.meta,
             # IT
             fn_val,
             # P
@@ -212,14 +223,14 @@ UserFuncSync = Callable[[], IT | None]
 UserFuncAsync = Callable[[], Awaitable[IT | None]]
 UserFunc = UserFuncSync[IT] | UserFuncAsync[IT]
 ValueFunc = (
-    Callable[Concatenate[RenderFunctionMeta, IT, P], OT | None]
-    | Callable[Concatenate[RenderFunctionMeta, IT, P], Awaitable[OT | None]]
+    Callable[Concatenate[RendererMeta, IT, P], OT | None]
+    | Callable[Concatenate[RendererMeta, IT, P], Awaitable[OT | None]]
 )
-# RenderDecoSync = Callable[[UserFuncSync[IT]], RenderSync[IT, OT, P]]
-# RenderDecoAsync = Callable[[UserFuncAsync[IT]], RenderAsync[IT, OT, P]]
+RenderDecoSync = Callable[[UserFuncSync[IT]], RenderFunctionSync[IT, OT, P]]
+RenderDecoAsync = Callable[[UserFuncAsync[IT]], RenderFunctionAsync[IT, OT, P]]
 RenderDeco = Callable[
     [UserFuncSync[IT] | UserFuncAsync[IT]],
-    RenderSync[IT, OT, P] | RenderAsync[IT, OT, P],
+    RenderFunctionSync[IT, OT, P] | RenderFunctionAsync[IT, OT, P],
 ]
 
 
@@ -236,14 +247,14 @@ _RenderArgsAsync = Tuple[UserFuncAsync[IT], ValueFunc[IT, P, OT]]
 # * We need a way to distinguish between a plain function and args supplied to the next function. This is done by not allowing `*args`.
 # assert: All kwargs of value_fn should have a default value
 # * This makes calling the method with both `()` and without `()` possible / consistent.
-def assert_value_fn(value_fn: ValueFunc[IT, P, OT]):
+def _assert_value_fn(value_fn: ValueFunc[IT, P, OT]):
     params = inspect.Signature.from_callable(value_fn).parameters
 
     for i, param in zip(range(len(params)), params.values()):
         # # Not a good test as `param.annotation` has type `str`:
         # if i == 0:
         #   print(type(param.annotation))
-        #   assert isinstance(param.annotation, RenderFunctionMeta)
+        #   assert isinstance(param.annotation, RendererMeta)
 
         # Make sure there are no more than 2 positional args
         if i >= 2 and param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
@@ -272,25 +283,27 @@ def renderer_gen(
 
     TODO-barret; Docs go here!
     """
-    assert_value_fn(value_fn)
+    _assert_value_fn(value_fn)
 
     @overload
-    def render_deco(render_fn: UserFuncSync[IT]) -> RenderSync[IT, OT, P]:
+    # RenderDecoSync[IT, OT, P]
+    def renderer_deco(_render_fn: UserFuncSync[IT]) -> RenderFunctionSync[IT, OT, P]:
         ...
 
     @overload
-    def render_deco(render_fn: UserFuncAsync[IT]) -> RenderAsync[IT, OT, P]:
+    # RenderDecoAsync[IT, OT, P]
+    def renderer_deco(_render_fn: UserFuncAsync[IT]) -> RenderFunctionAsync[IT, OT, P]:
         ...
 
     @overload
-    def render_deco(*args: P.args, **kwargs: P.kwargs) -> RenderDeco[IT, OT, P]:
+    def renderer_deco(*args: P.args, **kwargs: P.kwargs) -> RenderDeco[IT, OT, P]:
         ...
 
     # # If we use `wraps()`, the overloads are lost.
     # @functools.wraps(value_fn)
 
     # Ignoring the type issue on the next line of code as the overloads for
-    # `render_deco` are not consistent with the function definition.
+    # `renderer_deco` are not consistent with the function definition.
     # Motivation:
     # * https://peps.python.org/pep-0612/ does allow for prepending an arg
     #   (`_render_fn`).
@@ -301,73 +314,65 @@ def renderer_gen(
     # * By making assertions on `P.args` to only allow for `*`, we _can_ make overloads
     #   that use either the single positional arg (`_render_fn`) or
     #   the `P.kwargs` (as `P.args` == `*`)
-    def render_deco(  # type: ignore[reportGeneralTypeIssues]
+    def renderer_deco(  # type: ignore[reportGeneralTypeIssues]
         _render_fn: Optional[UserFuncSync[IT] | UserFuncAsync[IT]] = None,
-        *args: P.args,  # Equivalent to `*` after assertions in `assert_value_fn()`
+        *args: P.args,  # Equivalent to `*` after assertions in `_assert_value_fn()`
         **kwargs: P.kwargs,
     ) -> (
-        Callable[[UserFuncSync[IT]], RenderSync[IT, OT, P]]
-        | Callable[[UserFuncAsync[IT]], RenderAsync[IT, OT, P]]
-        | RenderSync[IT, OT, P]
-        | RenderAsync[IT, OT, P]
+        RenderDecoSync[IT, OT, P]
+        | RenderDecoAsync[IT, OT, P]
+        | RenderFunctionSync[IT, OT, P]
+        | RenderFunctionAsync[IT, OT, P]
     ):
-        # `args` **must** be in `render_deco` definition.
+        # `args` **must** be in `renderer_deco` definition.
         # Make sure there no `args`!
         assert len(args) == 0
 
-        def wrapper_sync(
-            wrapper_sync_fn: UserFuncSync[IT],
-        ) -> RenderSync[IT, OT, P]:
-            return RenderSync(
-                (wrapper_sync_fn, value_fn),
+        def render_fn_sync(
+            fn_sync: UserFuncSync[IT],
+        ) -> RenderFunctionSync[IT, OT, P]:
+            return RenderFunctionSync(
+                (fn_sync, value_fn),
                 *args,
                 **kwargs,
             )
 
-        def wrapper_async(
-            wrapper_async_fn: UserFuncAsync[IT],
-        ) -> RenderAsync[IT, OT, P]:
-            # Make sure there no `args`!
-            assert len(args) == 0
-
-            return RenderAsync(
-                (wrapper_async_fn, value_fn),
+        def render_fn_async(
+            fn_async: UserFuncAsync[IT],
+        ) -> RenderFunctionAsync[IT, OT, P]:
+            return RenderFunctionAsync(
+                (fn_async, value_fn),
                 *args,
                 **kwargs,
             )
 
         @overload
-        def wrapper(
-            wrapper_fn: UserFuncSync[IT],
-        ) -> RenderSync[IT, OT, P]:
+        def as_render_fn(
+            fn: UserFuncSync[IT],
+        ) -> RenderFunctionSync[IT, OT, P]:
             ...
 
         @overload
-        def wrapper(
-            wrapper_fn: UserFuncAsync[IT],
-        ) -> RenderAsync[IT, OT, P]:
+        def as_render_fn(
+            fn: UserFuncAsync[IT],
+        ) -> RenderFunctionAsync[IT, OT, P]:
             ...
 
-        def wrapper(
-            wrapper_fn: UserFuncSync[IT] | UserFuncAsync[IT],
-        ) -> RenderSync[IT, OT, P] | RenderAsync[IT, OT, P]:
-            if _utils.is_async_callable(wrapper_fn):
-                return wrapper_async(wrapper_fn)
+        def as_render_fn(
+            fn: UserFuncSync[IT] | UserFuncAsync[IT],
+        ) -> RenderFunctionSync[IT, OT, P] | RenderFunctionAsync[IT, OT, P]:
+            if _utils.is_async_callable(fn):
+                return render_fn_async(fn)
             else:
                 # Is not not `UserFuncAsync[IT]`. Cast `wrapper_fn`
-                wrapper_fn = cast(UserFuncSync[IT], wrapper_fn)
-                return wrapper_sync(wrapper_fn)
+                fn = cast(UserFuncSync[IT], fn)
+                return render_fn_sync(fn)
 
         if _render_fn is None:
-            return wrapper
+            return as_render_fn
+        return as_render_fn(_render_fn)
 
-        if _utils.is_async_callable(_render_fn):
-            return wrapper_async(_render_fn)
-        else:
-            _render_fn = cast(UserFuncSync[IT], _render_fn)
-            return wrapper_sync(_render_fn)
-
-    return render_deco
+    return renderer_deco
 
 
 # ======================================================================================
@@ -375,7 +380,7 @@ def renderer_gen(
 # ======================================================================================
 @renderer_gen
 def text(
-    meta: RenderFunctionMeta,
+    meta: RendererMeta,
     value: str,
 ) -> str:
     """
@@ -409,7 +414,7 @@ def text(
 # a nontrivial amount of overhead. So for now, we're just using `object`.
 @renderer_gen
 def plot(
-    meta: RenderFunctionMeta,
+    meta: RendererMeta,
     x: ImgData,
     *,
     alt: Optional[str] = None,
@@ -458,21 +463,24 @@ def plot(
     ~shiny.ui.output_plot
     ~shiny.render.image
     """
-    is_userfn_async = isinstance(meta, RenderFunctionAsync)
+    is_userfn_async = meta["is_async"]
+    name = meta["name"]
+    session = meta["session"]
+
     ppi: float = 96
 
     # TODO-barret; Q: These variable calls are **after** `self._fn()`. Is this ok?
-    inputs = meta._session.root_scope().input
+    inputs = session.root_scope().input
 
     # Reactively read some information about the plot.
     pixelratio: float = typing.cast(
         float, inputs[ResolvedId(".clientdata_pixelratio")]()
     )
     width: float = typing.cast(
-        float, inputs[ResolvedId(f".clientdata_output_{meta._name}_width")]()
+        float, inputs[ResolvedId(f".clientdata_output_{name}_width")]()
     )
     height: float = typing.cast(
-        float, inputs[ResolvedId(f".clientdata_output_{meta._name}_height")]()
+        float, inputs[ResolvedId(f".clientdata_output_{name}_height")]()
     )
 
     # !! Normal position for `x = await self._fn()`
@@ -551,7 +559,7 @@ def plot(
 # ======================================================================================
 @renderer_gen
 def image(
-    meta: RenderFunctionMeta,
+    meta: RendererMeta,
     res: ImgData | None,
     *,
     delete_file: bool = False,
@@ -615,7 +623,7 @@ TableResult = Union["pd.DataFrame", PandasCompatible, None]
 
 @renderer_gen
 def table(
-    meta: RenderFunctionMeta,
+    meta: RendererMeta,
     x: TableResult,
     *,
     index: bool = False,
@@ -700,7 +708,7 @@ def table(
 # ======================================================================================
 @renderer_gen
 def ui(
-    meta: RenderFunctionMeta,
+    meta: RendererMeta,
     ui: TagChild,
 ) -> RenderedDeps | None:
     """
@@ -725,4 +733,4 @@ def ui(
     if ui is None:
         return None
 
-    return meta._session._process_ui(ui)
+    return meta["session"]._process_ui(ui)

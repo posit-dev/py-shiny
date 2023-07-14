@@ -1,10 +1,10 @@
-from shiny.render._render import RenderFunctionMeta, renderer_gen
+from shiny.render._render import RendererMeta, renderer_gen
 
 
 def test_renderer_gen_assertions():
     @renderer_gen
     def test_fn1(
-        meta: RenderFunctionMeta,
+        meta: RendererMeta,
         x: str,
     ):
         ...
@@ -13,7 +13,7 @@ def test_renderer_gen_assertions():
 
         @renderer_gen
         def test_fn2(
-            meta: RenderFunctionMeta,
+            meta: RendererMeta,
             x: str,
             y: str,
         ):
@@ -27,7 +27,7 @@ def test_renderer_gen_assertions():
 
         @renderer_gen
         def test_fn3(
-            meta: RenderFunctionMeta,
+            meta: RendererMeta,
             x: str,
             *args: str,
         ):
@@ -42,7 +42,7 @@ def test_renderer_gen_assertions():
 
         @renderer_gen
         def test_fn4(
-            meta: RenderFunctionMeta,
+            meta: RendererMeta,
             x: str,
             *,
             y: str,
@@ -57,7 +57,7 @@ def test_renderer_gen_assertions():
     # Test that kwargs can be allowed
     @renderer_gen
     def test_fn5(
-        meta: RenderFunctionMeta,
+        meta: RendererMeta,
         x: str,
         *,
         y: str = "42",

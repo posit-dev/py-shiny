@@ -5,7 +5,7 @@ import json
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, cast, runtime_checkable
 
 from .._docstring import add_example
-from . import RenderFunctionMeta, renderer_gen
+from . import RendererMeta, renderer_gen
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -198,7 +198,7 @@ DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 @add_example()
 @renderer_gen
 def data_frame(
-    meta: RenderFunctionMeta,
+    meta: RendererMeta,
     x: DataFrameResult,
 ) -> object | None:
     """

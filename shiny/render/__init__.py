@@ -3,10 +3,12 @@ Tools for reactively rendering output for the user interface.
 """
 
 from ._render import (  # noqa: F401
-    RenderFunctionMeta as RenderFunctionMeta,
+    # Import these values, but do not give autocomplete hints for `shiny.render.FOO`
+    RendererMeta as RendererMeta,
     RenderFunction as RenderFunction,
+    RenderFunctionSync as RenderFunctionSync,
     RenderFunctionAsync as RenderFunctionAsync,
-    renderer_gen,
+    renderer_gen as renderer_gen,
     text,
     plot,
     image,

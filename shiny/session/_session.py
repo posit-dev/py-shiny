@@ -998,7 +998,7 @@ class Outputs:
                 )
 
             # fn is a RenderFunction object. Give it a bit of metadata.
-            fn.set_metadata(self._session, output_name)
+            fn._set_metadata(self._session, output_name)
 
             if output_name in self._effects:
                 self._effects[output_name].destroy()
