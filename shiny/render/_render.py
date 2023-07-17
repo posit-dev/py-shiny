@@ -2,6 +2,13 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
+# TODO-barret; Rename `renderer_gen` to `renderer`?
+# TODO-barret; change the name of the returned function from renderer_gen function in the overload. If anything, use `_`.
+# TODO-barret; See if @overload will work on the returned already-overloaded function
+#  * From initial attempts, it does not work. :-(
+#  * TODO-barret; Make a helper method to return all types (and function?) that could be used to make the overload signatures manually
+
+
 __all__ = (
     # "renderer_gen",
     # "RendererMeta",
@@ -87,7 +94,7 @@ class RenderFunction(Generic[IT, OT]):
         raise NotImplementedError()
 
     def __init__(self, render_fn: UserFunc[IT]) -> None:
-        self.__name__ = render_fn.__name__  # TODO-barret; Set name of async function
+        self.__name__ = render_fn.__name__
         self.__doc__ = render_fn.__doc__
 
         # Given we use `_utils.run_coro_sync(self._run())` to call our method,
@@ -419,6 +426,18 @@ def text(
     if value is None:
         return None
     return str(value)
+
+
+# @renderer_gen
+# async def async_text(meta: RendererMeta, value: str | None) -> str | None:
+#     """
+#     My docs go here!
+#     """
+#     return str(value)
+
+
+# text
+# async_text
 
 
 # ======================================================================================
