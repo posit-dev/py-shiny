@@ -39,19 +39,11 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    annotation_values = reactive.Value(None)
-
-    @reactive.Calc
-    def ts_data():
-        annotated = annotation_values.get()
-        if annotated is None:
-            return weather_df
-        else:
-            return annotated
+    annotated_data = reactive.Value(weather_df)
 
     @reactive.Calc
     def selected_data():
-        out = brushed_points(ts_data(), input.time_series_brush(), xvar="date")
+        out = brushed_points(annotated_data(), input.time_series_brush(), xvar="date")
         return out
 
     @reactive.Effect
@@ -61,14 +53,14 @@ def server(input: Inputs, output: Outputs, session: Session):
         selected["annotation_new"] = input.annotation()
         selected = selected.loc[:, ["date", "annotation_new"]]
 
-        df = ts_data()
+        df = annotated_data().copy()
 
         df = df.merge(selected, on="date", how="left")
         df["annotation_new"] = df["annotation_new"].fillna("")
         updated_rows = df["annotation_new"] != ""
         df.loc[updated_rows, "annotation"] = df.loc[updated_rows, "annotation_new"]
         df = df.loc[:, ["date", "temp_c", "annotation"]]
-        annotation_values.set(df)
+        annotated_data.set(df)
 
     @output
     @render.plot
@@ -78,7 +70,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
         ax.set_title("Temperature readings, Boulder Colorado")
         out = sns.scatterplot(
-            data=ts_data(), x="date", y="temp_c", hue="annotation", ax=ax
+            data=annotated_data(), x="date", y="temp_c", hue="annotation", ax=ax
         )
 
         out.tick_params(axis="x", rotation=30)
@@ -115,14 +107,14 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.data_frame
     def annotations():
-        df = ts_data().copy()
+        df = annotated_data().copy()
         df["date"] = df["date"].dt.strftime("%Y-%m-%d")
         df = df.loc[df["annotation"] != ""]
         return df
 
     @session.download(filename="data.csv")
     def download():
-        yield ts_data().to_csv()
+        yield annotated_data().to_csv()
 
 
 app = App(app_ui, server)
