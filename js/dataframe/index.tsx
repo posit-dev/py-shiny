@@ -3,25 +3,15 @@ import css from "./styles.scss";
 import {
   Column,
   ColumnDef,
-  Row,
   RowData,
   RowModel,
-  Table,
   TableOptions,
   flexRender,
   getCoreRowModel,
-  getFacetedMinMaxValues,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  VirtualItem,
-  Virtualizer,
-  useVirtualizer,
-} from "@tanstack/react-virtual";
+import { Virtualizer, useVirtualizer } from "@tanstack/react-virtual";
 import React, {
   FC,
   StrictMode,
@@ -30,7 +20,6 @@ import React, {
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 import { Root, createRoot } from "react-dom/client";
 import { ErrorsMessageValue } from "rstudio-shiny/srcts/types/src/shiny/shinyapp";

@@ -49,7 +49,7 @@ function generateLabel(from?: number, to?: number) {
   } else if (typeof to === "undefined") {
     return `≥ ${from}`;
   } else {
-    return `[${from}, ${to}]`;
+    return `≥${from}, ≤${to}`;
   }
 }
 

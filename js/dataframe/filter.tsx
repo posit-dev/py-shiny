@@ -44,16 +44,6 @@ export const Filter: FC<FilterProps> = (props) => {
   const { header, className } = props;
 
   const typeHint = header.column.columnDef.meta?.typeHint;
-  if (typeHint.type === "string" || typeHint.type === "unknown") {
-    return (
-      <input
-        {...props}
-        className={`form-control form-control-sm ${className}`}
-        type="text"
-        onChange={(e) => header.column.setFilterValue(e.target.value)}
-      />
-    );
-  }
 
   if (typeHint.type === "numeric") {
     const [from, to] = (props.header.column.getFilterValue() as
@@ -69,4 +59,13 @@ export const Filter: FC<FilterProps> = (props) => {
       onRangeChange: (from, to) => header.column.setFilterValue([from, to]),
     });
   }
+
+  return (
+    <input
+      {...props}
+      className={`form-control form-control-sm ${className}`}
+      type="text"
+      onChange={(e) => header.column.setFilterValue(e.target.value)}
+    />
+  );
 };
