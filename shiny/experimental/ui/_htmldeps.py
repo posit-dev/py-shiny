@@ -14,42 +14,21 @@ _x_htmltools_path = _x_www / "htmltools"
 _x_components_path = _x_www / "bslib" / "components"
 
 
-def _helper_dep(
-    helper_pkg: str,
-    name: str,
-    *,
-    version: str,
-    subdir: PurePath,
-    script: bool = False,
-    stylesheet: bool = False,
-    all_files: bool = True,
-) -> HTMLDependency:
-    return HTMLDependency(
-        name=f"{helper_pkg}-{name}",
-        version=version,
-        source={
-            "package": "shiny",
-            "subdir": str(subdir),
-        },
-        script={"src": f"{name}.min.js"} if script else None,
-        stylesheet={"href": f"{name}.css"} if stylesheet else None,
-        all_files=all_files,
-    )
-
-
 def _htmltools_dep(
     name: str,
     script: bool = False,
     stylesheet: bool = False,
     all_files: bool = True,
 ) -> HTMLDependency:
-    return _helper_dep(
-        "htmltools",
-        name,
+    return HTMLDependency(
+        name=f"htmltools-{name}",
         version=htmltools_version,
-        subdir=_x_htmltools_path / name,
-        script=script,
-        stylesheet=stylesheet,
+        source={
+            "package": "shiny",
+            "subdir": str(_x_htmltools_path / "fill"),
+        },
+        script={"src": f"{name}.min.js"} if script else None,
+        stylesheet={"href": f"{name}.css"} if stylesheet else None,
         all_files=all_files,
     )
 
@@ -60,13 +39,15 @@ def _bslib_component_dep(
     stylesheet: bool = False,
     all_files: bool = True,
 ) -> HTMLDependency:
-    return _helper_dep(
-        "bslib",
-        name,
+    return HTMLDependency(
+        name=f"bslib-{name}",
         version=bslib_version,
-        subdir=_x_components_path / name,
-        script=script,
-        stylesheet=stylesheet,
+        source={
+            "package": "shiny",
+            "subdir": str(_x_components_path / name),
+        },
+        script={"src": f"{name}.min.js"} if script else None,
+        stylesheet={"href": f"{name}.css"} if stylesheet else None,
         all_files=all_files,
     )
 
