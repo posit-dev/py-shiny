@@ -1374,10 +1374,14 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
 
     def expect_tick_labels(
         self,
-        value: ListPatternOrStr,
+        value: ListPatternOrStr | None,
         *,
         timeout: Timeout = None,
     ) -> None:
+        if value is None:
+            playwright_expect(self.loc_irs_ticks).to_have_count(0)
+            return
+
         playwright_expect(self.loc_irs_ticks).to_have_text(value, timeout=timeout)
 
     def expect_animate(self, exists: bool, *, timeout: Timeout = None) -> None:
