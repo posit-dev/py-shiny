@@ -1553,10 +1553,10 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
             )
 
     def _grid_bb(self, *, timeout: Timeout = None) -> FloatRect:
-        grid = self.loc_container.locator(".irs-grid")
+        grid = self.loc_irs.locator("> .irs > .irs-line")
         grid_bb = grid.bounding_box(timeout=timeout)
         if grid_bb is None:
-            raise RuntimeError("Couldn't find bounding box for .irs-grid")
+            raise RuntimeError("Couldn't find bounding box for .irs-line")
         return grid_bb
 
     def _handle_center(
