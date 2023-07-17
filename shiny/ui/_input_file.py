@@ -82,37 +82,52 @@ def input_file(
     if isinstance(accept, str):
         accept = [accept]
 
+    dom_id = resolve_id(id)
+    button_label_id = f"{dom_id}_label"
+
     btn_file = span(
+        {"class": "btn btn-default btn-file", "id": button_label_id},
         button_label,
         tags.input(
-            id=resolve_id(id),
-            name=id,
-            type="file",
-            multiple="multiple" if multiple else None,
-            accept=",".join(accept) if accept else None,
-            capture=capture,
-            # Don't use "display: none;" style, which causes keyboard accessibility issue; instead use the following workaround: https://css-tricks.com/places-its-tempting-to-use-display-none-but-dont/
-            style="position: absolute !important; top: -99999px !important; left: -99999px !important;",
+            {
+                "id": dom_id,
+                "name": id,
+                "type": "file",
+                "multiple": True if multiple else None,
+                "accept": ",".join(accept) if accept else None,
+                "capture": capture,
+                # Don't use "display: none;" style, which causes keyboard accessibility issue; instead use the following workaround: https://css-tricks.com/places-its-tempting-to-use-display-none-but-dont/
+                "style": "position: absolute !important; top: -99999px !important; left: -99999px !important;",
+            }
         ),
-        class_="btn btn-default btn-file",
     )
+
     return div(
+        {
+            "class_": "form-group shiny-input-container",
+            "style": css(width=width),
+        },
         shiny_input_label(id, label),
+        # btn_file,
         div(
-            tags.label(btn_file, class_="input-group-btn input-group-prepend"),
+            {"class": "input-group"},
+            btn_file,
             tags.input(
-                type="text",
-                class_="form-control",
-                placeholder=placeholder,
-                readonly="readonly",
+                {
+                    "type": "text",
+                    "class": "form-control",
+                    "placeholder": placeholder,
+                    "readonly": "readonly",
+                    "aria-label": button_label,
+                    "aria-describedby": button_label_id,
+                }
             ),
-            class_="input-group",
         ),
         div(
+            {
+                "id": id + "_progress",
+                "class": "progress active shiny-file-input-progress",
+            },
             div(class_="progress-bar"),
-            id=id + "_progress",
-            class_="progress active shiny-file-input-progress",
         ),
-        class_="form-group shiny-input-container",
-        style=css(width=width),
     )
