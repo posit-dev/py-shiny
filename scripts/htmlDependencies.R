@@ -243,7 +243,7 @@ fs::dir_copy(x_www_htmltools_fill, main_x_htmltools_fill)
 fs::file_delete(
   fs::dir_ls(
     fs::path(main_x_bslib_components, "components"),
-    regexp="(_version|sidebar)",
+    regexp="(_version|sidebar|nav_spacer)",
     invert = TRUE
   )
 )

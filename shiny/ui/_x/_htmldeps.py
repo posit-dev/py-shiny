@@ -40,7 +40,7 @@ def sidebar_dependency() -> HTMLDependency:
 
 def nav_spacer_dependency() -> HTMLDependency:
     return HTMLDependency(
-        "bslib-nav-space",
+        "bslib-nav-spacer",
         bslib_version,
         source={
             "package": "shiny",
