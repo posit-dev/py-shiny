@@ -3,33 +3,25 @@ import css from "./styles.scss";
 import {
   Column,
   ColumnDef,
-  Row,
   RowModel,
-  Table,
   TableOptions,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  VirtualItem,
-  Virtualizer,
-  useVirtualizer,
-} from "@tanstack/react-virtual";
+import { Virtualizer, useVirtualizer } from "@tanstack/react-virtual";
 import React, {
-  FC,
   StrictMode,
   useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 import { Root, createRoot } from "react-dom/client";
 import { ErrorsMessageValue } from "rstudio-shiny/srcts/types/src/shiny/shinyapp";
-import { findFirstItemInView, getStyle } from "./dom-utils";
+import { getStyle } from "./dom-utils";
 import { SelectionMode, useSelection } from "./selection";
 import { SortArrow } from "./sort-arrows";
 import { useTabindexGroup } from "./tabindex-group";
@@ -70,7 +62,7 @@ interface ShinyDataGridProps<TIndex> {
   bgcolor?: string;
 }
 
-const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
+function ShinyDataGrid(props: ShinyDataGridProps<unknown>): React.JSX.Element {
   const { id, data, bgcolor } = props;
   const { columns, index, data: rowData } = data;
   const { width, height } = data.options;
@@ -153,7 +145,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
 
   const rowSelectionMode =
     data.options["row_selection_mode"] ?? SelectionMode.MultiNative;
-  const canSelect = rowSelectionMode !== SelectionMode.None;
   const canMultiSelect =
     rowSelectionMode === SelectionMode.MultiNative ||
     rowSelectionMode === SelectionMode.Multiple;
@@ -325,7 +316,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
       {summary}
     </>
   );
-};
+}
 
 function findKeysBetween<TData>(
   rowModel: RowModel<TData>,

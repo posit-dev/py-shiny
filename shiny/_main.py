@@ -207,21 +207,21 @@ def run_app(
     Examples
     --------
 
-    .. code-block:: python
+    ```{python}
+    from shiny import run_app
 
-        from shiny import run_app
+    # Run ``app`` inside ``./app.py``
+    run_app()
 
-        # Run ``app`` inside ``./app.py``
-        run_app()
+    # Run ``app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
+    run_app("myapp")
 
-        # Run ``app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
-        run_app("myapp")
+    # Run ``my_app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
+    run_app("myapp:my_app")
 
-        # Run ``my_app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
-        run_app("myapp:my_app")
-
-        # Run ``my_app`` inside ``../myapp.py`` (or ``../myapp/app.py``)
-        run_app("myapp:my_app", app_dir="..")
+    # Run ``my_app`` inside ``../myapp.py`` (or ``../myapp/app.py``)
+    run_app("myapp:my_app", app_dir="..")
+    ```
     """
 
     # If port is 0, randomize

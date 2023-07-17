@@ -1,5 +1,5 @@
 import { SortDirection } from "@tanstack/react-table";
-import React, { FC } from "react";
+import React from "react";
 
 const sortCommonProps = {
   className: "sort-arrow",
@@ -39,7 +39,9 @@ interface SortArrowProps {
   direction: SortDirection | false;
 }
 
-export const SortArrow: FC<SortArrowProps> = ({ direction }) => {
+export function SortArrow({
+  direction,
+}: SortArrowProps): React.JSX.Element | null {
   if (!direction) {
     return null;
   }
@@ -50,7 +52,7 @@ export const SortArrow: FC<SortArrowProps> = ({ direction }) => {
     return sortArrowDown;
   }
   throw new Error(`Unexpected sort direction: '${direction}'`);
-};
+}
 
 //const sortArrowUp = <span className="sort-arrow sort-arrow-up"> ▲</span>;
 //const sortArrowDown = <span className="sort-arrow sort-arrow-down"> ▼</span>;
