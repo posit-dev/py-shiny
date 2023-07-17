@@ -17,8 +17,8 @@ app_ui = ui.page_fluid(
     ui.panel_title("Plot annotation example"),
     ui.p(
         """
-        Select points to annotate,
-        the plot is drawn with seaborn and all interaction is handled by Shiny.
+        Select points to annotate them.
+        The plot is rendered with seaborn and all interaction is handled by Shiny.
         """,
         {"style": "font-size: larger"},
     ),
@@ -101,11 +101,11 @@ def server(input: Inputs, output: Outputs, session: Session):
                     {"style": "padding-top: 20px;"},
                     ui.column(
                         4,
-                        ui.p(f"{min} to {max}"),
+                        ui.p(f"{min} to", ui.br(), f"{max}"),
                     ),
                     ui.column(
                         4,
-                        ui.input_text("annotation", "", placeholder="Enter Annotation"),
+                        ui.input_text("annotation", "", placeholder="Enter annotation"),
                     ),
                     ui.column(4, ui.input_action_button("annotate_button", "Submit")),
                 )
