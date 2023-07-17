@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, Callable, Dict
 if TYPE_CHECKING:
     from .session import Session
 
-
 from .types import ActionButtonValue
 
 InputHandlerType = Callable[[Any, str, "Session"], Any]
@@ -74,21 +73,23 @@ recommend the format of "packageName.widgetName").
 
 Example
 -------
-.. code-block:: python
-
-    from shiny.input_handler import input_handlers
-    @input_handlers.add("mypackage.intify")
-    def _(value, name, session):
-        return int(value)
+```{python}
+#| eval: false
+from shiny.input_handler import input_handlers
+@input_handlers.add("mypackage.intify")
+def _(value, name, session):
+    return int(value)
+```
 
 On the Javascript side, the associated input binding must have a corresponding
 ``getType`` method:
 
-.. code-block:: javascript
-
-    getType: function(el) {
-      return "mypackage.intify";
-    }
+```{python}
+#| eval: false
+getType: function(el) {
+    return "mypackage.intify";
+}
+```
 """
 
 
