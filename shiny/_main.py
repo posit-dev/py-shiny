@@ -208,6 +208,7 @@ def run_app(
     --------
 
     ```{python}
+    #|eval: false
     from shiny import run_app
 
     # Run ``app`` inside ``./app.py``
