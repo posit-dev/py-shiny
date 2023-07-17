@@ -54,6 +54,7 @@ export class ShinyClassificationLabel extends LitElement {
   displayWinner: number = 0;
   @property({ type: Number, attribute: "max-items" })
   maxItems: number | null = null;
+  @property({ type: String, attribute: "suffix" }) suffix: string = "%";
 
   render() {
     let entries = Object.entries(this.value);
@@ -81,7 +82,7 @@ export class ShinyClassificationLabel extends LitElement {
 
     const valuesHtml = entries.map(([k, v]) => {
       return html`<div class="item">
-        <div class="bar" style="width: ${v}%;"></div>
+        <div class="bar" style="width: ${v}${this.suffix};"></div>
         <div class="label">
           <div>${k}</div>
           <div class="dashed-line"></div>

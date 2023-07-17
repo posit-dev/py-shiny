@@ -6,23 +6,49 @@ __all__ = ("classification_label",)
 
 import json
 
-from htmltools import HTML, HTMLDependency, Tag, TagAttrValue, html_escape
+from htmltools import HTML, HTMLDependency, Tag, html_escape
 
 from .. import __version__
 
 # from .._docstring import add_example
-# from .._namespaces import resolve_id
 
 
 def classification_label(
     value: dict[str, float],
     *,
-    sort: Optional[bool] = None,
+    sort: bool = True,
     display_winner: Optional[bool] = None,
     max_items: Optional[int] = None,
-    _add_ws: bool = True,
-    **kwargs: TagAttrValue,
+    suffix: str = "%",
 ) -> Tag:
+    """
+    Create a classification label with confidence scores.
+
+    This is meant to be used to display classification results from a model. The
+    component itself is static, so to display dynamic values, it would typically be used
+    with a :func:`~shiny.ui.ouput_ui` and :func:`~shiny.render.ui`.
+
+    Parameters
+    ----------
+    value
+        A dictionary with class names as keys and and confidence scores as values.
+    sort
+        Should the values be sorted? Defaults to ``True``.
+    display_winner:
+        If ``True`` (the default), then the name of the winner will be displayed above
+        the values, in larger text.
+    max_items:
+        The maximum number of items to display. Defaults to ``None``, which means all
+        items will be displayed.
+    suffix:
+        A string to place after each value. Defaults to ``"%"``.
+    _add_ws:
+
+    Returns
+    -------
+    :
+        A UI element.
+    """
     return Tag(
         "shiny-classification-label",
         ml_dep(),
@@ -30,8 +56,7 @@ def classification_label(
         sort=bool_to_num(sort),
         display_winner=bool_to_num(display_winner),
         max_items=max_items,
-        _add_ws=_add_ws,
-        **kwargs,
+        suffix=suffix,
     )
 
 
