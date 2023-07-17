@@ -25,7 +25,7 @@ from .._namespaces import resolve_id
 from .._utils import private_random_int
 from ..types import NavSetArg
 from ._bootstrap import column, row
-from ._html_dependencies import bootstrap_deps
+from ._html_dependencies import bootstrap_deps, nav_spacer_deps
 
 
 # -----------------------------------------------------------------------------
@@ -191,7 +191,7 @@ def nav_spacer() -> Nav:
     See :func:`~shiny.ui.nav`
     """
 
-    return Nav(tags.li(class_="bslib-nav-spacer"))
+    return Nav(tags.li(nav_spacer_deps(), class_="bslib-nav-spacer"))
 
 
 class NavMenu:

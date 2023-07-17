@@ -18,6 +18,7 @@ from ...ui._page import page_bootstrap
 from ...ui._utils import get_window_title
 from ._css_unit import CssUnit, as_css_padding, as_css_unit
 from ._fill import as_fillable_container
+from ._htmldeps import page_fillable_dependency, page_sidebar_dependency
 from ._navs import navset_bar
 from ._sidebar import Sidebar, layout_sidebar
 from ._utils import consolidate_attrs
@@ -68,17 +69,20 @@ def page_sidebar(
     if isinstance(title, str):
         title = tags.h1(title, class_="bslib-page-title")
 
+    attrs, children = consolidate_attrs(*args, **kwargs)
+
     return page_fillable(
         title,
         layout_sidebar(
             sidebar,
-            *args,
+            *children,
+            attrs,
             fillable=fillable,
             border=False,
             border_radius=False,
-            **kwargs,
         ),
         get_window_title(title, window_title=window_title),
+        page_sidebar_dependency(),
         padding=0,
         gap=0,
         lang=lang,
@@ -284,6 +288,7 @@ def page_fillable(
                 *children,
             )
         ),
+        page_fillable_dependency(),
         title=title,
         lang=lang,
     )

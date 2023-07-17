@@ -10,66 +10,117 @@ from ..._versions import htmltools as htmltools_version
 
 _x_www = PurePath(__file__).parent.parent / "www"
 _x_www_path = str(_x_www)
-_x_fill_path = str(_x_www / "htmltools" / "fill")
-
+_x_htmltools_path = _x_www / "htmltools"
 _x_components_path = _x_www / "bslib" / "components"
-_x_accordion_path = str(_x_components_path / "accordion")
-_x_card_path = str(_x_components_path / "card")
-_x_sidebar_path = str(_x_components_path / "sidebar")
 
 
-def card_dependency() -> HTMLDependency:
+def _helper_dep(
+    helper_pkg: str,
+    name: str,
+    *,
+    version: str,
+    subdir: PurePath,
+    script: bool = False,
+    stylesheet: bool = False,
+    all_files: bool = True,
+) -> HTMLDependency:
     return HTMLDependency(
-        name="bslib-card",
-        version=bslib_version,
+        name=f"{helper_pkg}-{name}",
+        version=version,
         source={
             "package": "shiny",
-            "subdir": _x_card_path,
+            "subdir": str(subdir),
         },
-        script={"src": "card.min.js"},
-        stylesheet={"href": "card.css"},
-        all_files=True,
+        script={"src": f"{name}.min.js"} if script else None,
+        stylesheet={"href": f"{name}.css"} if stylesheet else None,
+        all_files=all_files,
     )
+
+
+def _htmltools_dep(
+    name: str,
+    script: bool = False,
+    stylesheet: bool = False,
+    all_files: bool = True,
+) -> HTMLDependency:
+    return _helper_dep(
+        "htmltools",
+        name,
+        version=htmltools_version,
+        subdir=_x_htmltools_path / name,
+        script=script,
+        stylesheet=stylesheet,
+        all_files=all_files,
+    )
+
+
+def _bslib_component_dep(
+    name: str,
+    script: bool = False,
+    stylesheet: bool = False,
+    all_files: bool = True,
+) -> HTMLDependency:
+    return _helper_dep(
+        "bslib",
+        name,
+        version=bslib_version,
+        subdir=_x_components_path / name,
+        script=script,
+        stylesheet=stylesheet,
+        all_files=all_files,
+    )
+
+
+# -- htmltools ---------------------
 
 
 def fill_dependency() -> HTMLDependency:
-    return HTMLDependency(
-        "htmltools-fill",
-        htmltools_version,
-        source={
-            "package": "shiny",
-            "subdir": _x_fill_path,
-        },
-        stylesheet={"href": "fill.css"},
-    )
+    return _htmltools_dep("fill", stylesheet=True)
 
 
-def sidebar_dependency() -> HTMLDependency:
-    return HTMLDependency(
-        "bslib-sidebar",
-        bslib_version,
-        source={
-            "package": "shiny",
-            "subdir": _x_sidebar_path,
-        },
-        script={"src": "sidebar.min.js"},
-        stylesheet={"href": "sidebar.css"},
-        all_files=True,
-    )
+# -- bslib -------------------------
 
 
 def accordion_dependency() -> HTMLDependency:
-    return HTMLDependency(
-        "bslib-accordion",
-        version=bslib_version,
-        source={
-            "package": "shiny",
-            "subdir": _x_accordion_path,
-        },
-        script={"src": "accordion.min.js"},
-        stylesheet={"href": "accordion.css"},
-        all_files=True,
-    )
+    return _bslib_component_dep("accordion", script=True, stylesheet=True)
+
+
+def card_dependency() -> HTMLDependency:
+    return _bslib_component_dep("card", script=True, stylesheet=True)
+
+
+def grid_dependency() -> HTMLDependency:
+    return _bslib_component_dep("grid", stylesheet=True)
+
+
+# Coped to `ui._x._htmldeps.py`
+# def nav_spacer_dependency() -> HTMLDependency:
+#     return _bslib_component_dep("nav_spacer", stylesheet=True)
+
+
+def page_fillable_dependency() -> HTMLDependency:
+    return _bslib_component_dep("page_fillable", stylesheet=True)
+
+
+# TODO-barret; Confirm with carson;
+# # Not used!
+# def page_navbar_dependency() -> HTMLDependency:
+#     return _bslib_component_dep("page_navbar", stylesheet=True)
+
+
+def page_sidebar_dependency() -> HTMLDependency:
+    return _bslib_component_dep("page_sidebar", stylesheet=True)
+
+
+def sidebar_dependency() -> HTMLDependency:
+    return _bslib_component_dep("sidebar", script=True, stylesheet=True)
+
+
+def value_box_dependency() -> HTMLDependency:
+    return _bslib_component_dep("value_box", stylesheet=True)
+
+
+# -- Experimental ------------------
 
 
 def autoresize_dependency():
@@ -80,12 +131,3 @@ def autoresize_dependency():
         script={"src": "textarea-autoresize.js"},
         stylesheet={"href": "textarea-autoresize.css"},
     )
-
-
-# # TODO: styles for...
-# grid - layout_column_wrap
-# nav_spacer
-# page_fillable
-# page_navbar
-# page_sidebar
-# value_box
