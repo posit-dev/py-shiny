@@ -24,7 +24,7 @@ def get_apps(path: str) -> typing.List[str]:
 
 example_apps: typing.List[str] = [
     *get_apps("../../examples"),
-    *get_apps("../../shiny/examples"),
+    *get_apps("../../shiny/api-examples"),
 ]
 
 app_idle_wait = {"duration": 300, "timeout": 5 * 1000}

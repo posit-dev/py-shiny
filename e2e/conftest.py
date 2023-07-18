@@ -189,14 +189,14 @@ def create_app_fixture(app: Union[PurePath, str], scope: str = "module"):
 
 
 def create_example_fixture(example_name: str, scope: str = "module"):
-    """Used to create app fixtures from apps in py-shiny/examples"""
+    """Used to create app fixtures from apps in py-shiny/api-examples"""
     return create_app_fixture(here / "../examples" / example_name / "app.py", scope)
 
 
 def create_doc_example_fixture(example_name: str, scope: str = "module"):
-    """Used to create app fixtures from apps in py-shiny/shiny/examples"""
+    """Used to create app fixtures from apps in py-shiny/shiny/api-examples"""
     return create_app_fixture(
-        here / "../shiny/examples" / example_name / "app.py", scope
+        here / "../shiny/api-examples" / example_name / "app.py", scope
     )
 
 
