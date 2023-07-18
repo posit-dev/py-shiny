@@ -2334,8 +2334,68 @@ class OutputTable(_OutputBase):
         )
 
 
+class _InputBodyP(_InputBaseP, Protocol):
+    loc: Locator
+
+
+class _BodyTextM:
+    def expect_body_to_contain_text(
+        self: _InputBodyP,
+        text: PatternOrStr | list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """Note: If testing against multiple elements, text should be an array"""
+        playwright_expect(self.loc).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+
+class _InputFooterP(_InputBaseP, Protocol):
+    loc_footer: Locator
+
+
+class _FooterM:
+    def expect_footer_to_contain_text(
+        self: _InputFooterP,
+        text: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc_footer).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+
+class _OutputFullScreenP(_OutputBaseP, Protocol):
+    loc_title: Locator
+    _loc_fullscreen: Locator
+    _loc_close_button: Locator
+
+
+class _FullScreenM:
+    def open_full_screen(self: _OutputFullScreenP, *, timeout: Timeout = None) -> None:
+        self.loc_title.hover(timeout=timeout)
+        self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
+        self._loc_fullscreen.click(timeout=timeout)
+
+    def close_full_screen(self: _OutputFullScreenP, *, timeout: Timeout = None) -> None:
+        self._loc_close_button.click(timeout=timeout)
+
+    def expect_full_screen(
+        self: _OutputFullScreenP, open: bool, *, timeout: Timeout = None
+    ) -> None:
+        playwright_expect(self._loc_close_button).to_have_count(
+            int(open), timeout=timeout
+        )
+
+
 class ValueBox(
     _WidthLocM,
+    _BodyTextM,
+    _FullScreenM,
     _InputWithContainer,
 ):
     # title: TagChild,
@@ -2390,72 +2450,12 @@ class ValueBox(
             timeout=timeout,
         )
 
-    def expect_body_to_contain_text(
-        self,
-        text: PatternOrStr | list[PatternOrStr],
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        """Note: If testing against multiple elements, text should be an array"""
-        playwright_expect(self.loc).to_have_text(
-            text,
-            timeout=timeout,
-        )
-
-    def open_full_screen(self, *, timeout: Timeout = None) -> None:
-        self.loc_title.hover(timeout=timeout)
-        self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
-        self._loc_fullscreen.click(timeout=timeout)
-
-    def close_full_screen(self, *, timeout: Timeout = None) -> None:
-        self._loc_close_button.click(timeout=timeout)
-
-    def expect_full_screen(self, open: bool, *, timeout: Timeout = None) -> None:
-        playwright_expect(self._loc_close_button).to_have_count(
-            int(open), timeout=timeout
-        )
-
     # hard to test since it can be customized by user
     # def expect_showcase_layout(self, layout, *, timeout: Timeout = None) -> None:
     #     raise NotImplementedError()
 
 
-class _InputBodyP(_InputBaseP, Protocol):
-    loc: Locator
-
-
-class _BodyTextM:
-    def expect_body_to_contain_text(
-        self: _InputBodyP,
-        text: PatternOrStr | list[PatternOrStr],
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        """Note: If testing against multiple elements, text should be an array"""
-        playwright_expect(self.loc).to_have_text(
-            text,
-            timeout=timeout,
-        )
-
-
-class _InputFooterP(_InputBaseP, Protocol):
-    loc_footer: Locator
-
-
-class _FooterM:
-    def expect_footer_to_contain_text(
-        self: _InputFooterP,
-        text: PatternOrStr,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        playwright_expect(self.loc_footer).to_have_text(
-            text,
-            timeout=timeout,
-        )
-
-
-class Card(_WidthLocM, _FooterM, _BodyTextM, _InputWithContainer):
+class Card(_WidthLocM, _FooterM, _BodyTextM, _FullScreenM, _InputWithContainer):
     # *args: TagChild | TagAttrs | CardItem,
     # full_screen: bool = False,
     # height: CssUnit | None = None,
@@ -2472,7 +2472,7 @@ class Card(_WidthLocM, _FooterM, _BodyTextM, _InputWithContainer):
             loc_container=f"div#{id}.card",
             loc="> div.card-body",
         )
-        self.loc_header = self.loc_container.locator("> div.card-header")
+        self.loc_title = self.loc_container.locator("> div.card-header")
         self.loc_footer = self.loc_container.locator("> div.card-footer")
         self._loc_fullscreen = self.loc_container.locator("> .bslib-full-screen-enter")
         self._loc_close_button = (
@@ -2487,7 +2487,7 @@ class Card(_WidthLocM, _FooterM, _BodyTextM, _InputWithContainer):
         *,
         timeout: Timeout = None,
     ) -> None:
-        playwright_expect(self.loc_header).to_have_text(
+        playwright_expect(self.loc_title).to_have_text(
             text,
             timeout=timeout,
         )
@@ -2516,19 +2516,6 @@ class Card(_WidthLocM, _FooterM, _BodyTextM, _InputWithContainer):
         playwright_expect(self.loc.nth(index).locator("> :first-child")).to_have_text(
             text,
             timeout=timeout,
-        )
-
-    def open_full_screen(self, *, timeout: Timeout = None) -> None:
-        self.loc_header.hover(timeout=timeout)
-        self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
-        self._loc_fullscreen.click(timeout=timeout)
-
-    def close_full_screen(self, *, timeout: Timeout = None) -> None:
-        self._loc_close_button.click(timeout=timeout)
-
-    def expect_full_screen(self, open: bool, *, timeout: Timeout = None) -> None:
-        playwright_expect(self._loc_close_button).to_have_count(
-            int(open), timeout=timeout
         )
 
     def expect_max_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
