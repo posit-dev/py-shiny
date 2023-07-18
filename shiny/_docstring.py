@@ -4,7 +4,7 @@ import json
 import os
 from typing import Any, Callable, Literal, TypeVar
 
-ex_dir: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "examples")
+ex_dir: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "api-examples")
 
 FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
