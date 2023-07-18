@@ -4,6 +4,8 @@
 # the file level. If anyone knows how to make this code typesafe, we can get rid of this
 # file.
 
+from __future__ import annotations
+
 import typing
 from typing import Any
 
