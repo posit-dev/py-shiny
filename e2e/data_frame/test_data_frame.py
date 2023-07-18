@@ -207,7 +207,7 @@ def test_single_selection(
     assert detail_text() == snapshot
 
 
-def test_filter(
+def test_filter_grid(
     page: Page,
     data_frame_app: ShinyAppProc,
     grid: Locator,
@@ -215,7 +215,33 @@ def test_filter(
     snapshot: Any,
 ):
     page.goto(data_frame_app.url)
+    _filter_test_impl(page, data_frame_app, grid, summary, snapshot)
 
+
+def test_filter_table(
+    page: Page,
+    data_frame_app: ShinyAppProc,
+    grid: Locator,
+    grid_container: Locator,
+    summary: Locator,
+    snapshot: Any,
+):
+    page.goto(data_frame_app.url)
+
+    InputSwitch(page, "gridstyle").toggle()
+    expect(grid_container).not_to_have_class(re.compile(r"\bshiny-data-grid-grid\b"))
+    expect(grid_container).to_have_class(re.compile(r"\bshiny-data-grid-table\b"))
+
+    _filter_test_impl(page, data_frame_app, grid, summary, snapshot)
+
+
+def _filter_test_impl(
+    page: Page,
+    data_frame_app: ShinyAppProc,
+    grid: Locator,
+    summary: Locator,
+    snapshot: Any,
+):
     filters = grid.locator("tr.filters")
 
     filter_subidir_min = filters.locator("> th:nth-child(1) > div > input:nth-child(1)")
@@ -253,12 +279,12 @@ def test_filter(
     expect(summary).to_have_text(re.compile(" of 10$"))
 
     # When filtering results in all rows being shown, the summary should not be visible
-    filter_subidir_max.fill("13")
+    filter_subidir_max.fill("11")
     expect(summary).not_to_be_attached()
 
     # Test only max
     filter_subidir_min.fill("")
-    expect(summary).to_have_text(re.compile(" of 13"))
+    expect(summary).to_have_text(re.compile(" of 11"))
 
     filter_subidir_min.clear()
     filter_subidir_max.clear()
