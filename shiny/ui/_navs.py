@@ -897,9 +897,7 @@ def navset_bar(
     inverse
         Either ``True`` for a light text color or ``False`` for a dark text color.
     collapsible
-        ``True`` to automatically collapse the navigation elements into a menu when the
-        width of the browser is less than 940 pixels (useful for viewing on smaller
-        touchscreen device)
+        ``True`` to automatically collapse the navigation elements into an expandable menu on mobile devices or narrow window widths.
     fluid
         ``True`` to use fluid layout; ``False`` to use fixed layout.
 
