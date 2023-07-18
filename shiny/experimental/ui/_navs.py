@@ -160,7 +160,7 @@ class NavSetCard(NavSet):
             content_val = navset_card_body(content, sidebar=self.sidebar)
 
         if self.placement == "below":
-            # TODO-barret; have carson double check this change
+            # TODO-carson; have carson double check this change
             return card(
                 card_header(self.header) if self.header else None,
                 content_val,
@@ -170,7 +170,7 @@ class NavSetCard(NavSet):
                 card_footer(nav),
             )
         else:
-            # TODO-barret; have carson double check this change
+            # TODO-carson; have carson double check this change
             return card(
                 card_header(nav),
                 card_body(self.header, fill=False, fillable=False)

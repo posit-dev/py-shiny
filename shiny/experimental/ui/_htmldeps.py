@@ -83,7 +83,6 @@ def page_fillable_dependency() -> HTMLDependency:
     return _bslib_component_dep("page_fillable", stylesheet=True)
 
 
-# TODO-barret; Confirm with carson;
 # # Not used!
 # def page_navbar_dependency() -> HTMLDependency:
 #     return _bslib_component_dep("page_navbar", stylesheet=True)
