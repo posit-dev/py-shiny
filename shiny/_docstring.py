@@ -32,7 +32,7 @@ def add_example(
     Add an example to the docstring of a function, method, or class.
 
     This decorator must, at the moment, be used on a function, method, or class whose
-    ``__name__`` matches the name of directory under ``shiny/examples/``, and must
+    ``__name__`` matches the name of directory under ``shiny/api-examples/``, and must
     also contain a ``app.py`` file in that directory.
 
     Parameters
