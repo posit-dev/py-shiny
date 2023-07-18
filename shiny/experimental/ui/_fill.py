@@ -476,7 +476,7 @@ def _is_fill_layout(
 
     # tag: Tagifiable and not (Tag or FillingLayout)
     raise TypeError(
-        f"`_is_fill_layout(tag=)` must be a `Tag` or implement the `FillingLayout` protocol methods TODO-barret expand on method names. Received object of type: `{type(tag).__name__}`"
+        f"`_is_fill_layout(tag=)` must be a `Tag` or implement the `FillingLayout` protocol methods. Received object of type: `{type(tag).__name__}`"
     )
 
 

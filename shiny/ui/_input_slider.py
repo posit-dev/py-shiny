@@ -65,7 +65,7 @@ def input_slider(
     value: SliderValueArg | Iterable[SliderValueArg],
     *,
     step: Optional[SliderStepArg] = None,
-    ticks: bool = True,
+    ticks: bool = False,
     animate: bool | AnimationOptions = False,
     width: Optional[str] = None,
     sep: str = ",",

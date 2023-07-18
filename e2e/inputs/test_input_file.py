@@ -40,4 +40,4 @@ def test_input_file_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     file1.expect_complete()
 
-    # TODO-barret; Test UI output to not be empty
+    # TODO-karan; Test UI output to not be empty

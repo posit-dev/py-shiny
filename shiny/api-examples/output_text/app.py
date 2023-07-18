@@ -1,14 +1,22 @@
 from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
-    ui.input_text("txt", "Enter the text to display below:"),
+    ui.input_text("txt", "Enter the text to display below:", "delete me"),
     ui.row(
-        ui.column(6, ui.output_text("text")),
-        ui.column(6, ui.output_text_verbatim("verb", placeholder=True)),
+        ui.column(6, ui.code("ui.output_text()"), ui.output_text("text")),
+        ui.column(
+            6,
+            ui.code("ui.output_text_verbatim(placeholder=True)"),
+            ui.output_text_verbatim("verb", placeholder=True),
+        ),
     ),
     ui.row(
         ui.column(6),
-        ui.column(6, ui.output_text_verbatim("verb_no_placeholder", placeholder=False)),
+        ui.column(
+            6,
+            ui.code("ui.output_text_verbatim(placeholder=False)"),
+            ui.output_text_verbatim("verb_no_placeholder", placeholder=False),
+        ),
     ),
 )
 

@@ -13,6 +13,8 @@ def test_output_text_kitchen(page: Page, app: ShinyAppProc) -> None:
     verb = OutputTextVerbatim(page, "verb")
     verb_no_placeholder = OutputTextVerbatim(page, "verb_no_placeholder")
 
+    txt.set("")  # Reset text
+
     text.expect_value("")
     text.expect_inline(False)
 

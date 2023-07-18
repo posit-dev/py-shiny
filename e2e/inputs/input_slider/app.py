@@ -51,6 +51,7 @@ app_ui = ui.page_fluid(
         pre="$",
         sep=",",
         animate=True,
+        ticks=True,
     ),
     slider_row(
         "Looping Animation",
