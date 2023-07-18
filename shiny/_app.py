@@ -53,16 +53,17 @@ class App:
     Example
     -------
 
-    .. code-block:: python
+    ```{python}
+    #| eval: false
+    from shiny import  App, Inputs, Outputs, Session, ui
 
-        from shiny import  App, Inputs, Outputs, Session, ui
+    app_ui = ui.page_fluid("Hello Shiny!")
 
-        app_ui = ui.page_fluid("Hello Shiny!")
+    def server(input: Inputs, output: Outputs, session: Session):
+        pass
 
-        def server(input: Inputs, output: Outputs, session: Session):
-            pass
-
-        app = App(app_ui, server)
+    app = App(app_ui, server)
+    ```
     """
 
     lib_prefix: str = "lib/"
