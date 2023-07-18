@@ -115,6 +115,7 @@ def test_table_switch(
 
     # Switch datasets to much longer one
     select_dataset.set("diamonds")
+    select_dataset.expect.to_have_value("diamonds")
     expect(summary).to_have_text("Viewing rows 1 through 8 of 53940")
 
 
@@ -127,6 +128,7 @@ def test_sort(
     page.goto(data_frame_app.url)
     select_dataset = InputSelectize(page, "dataset")
     select_dataset.set("diamonds")
+    select_dataset.expect.to_have_value("diamonds")
 
     # Test sorting
     header_clarity = grid_container.locator("tr:first-child th:nth-child(4)")
@@ -288,6 +290,8 @@ def test_filter(
     # Ensure changing dataset resets filters
     select_dataset = InputSelectize(page, "dataset")
     select_dataset.set("attention")
+    select_dataset.expect.to_have_value("attention")
     expect(page.get_by_text("Unnamed: 0")).to_be_attached()
     select_dataset.set("anagrams")
+    select_dataset.expect.to_have_value("anagrams")
     expect(summary).to_have_text(re.compile(" of 20"))
