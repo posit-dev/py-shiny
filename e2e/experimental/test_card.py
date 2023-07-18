@@ -11,14 +11,18 @@ def test_card(page: Page, app: ShinyAppProc) -> None:
     card = Card(page, "card1")
     card.expect_max_height(None)
     card.expect_min_height(None)
+    card.expect_height(None)
     card.expect_header_to_contain_text("This is the header")
     card.expect_footer_to_contain_text("This is the footer")
-    card.expect_body_to_contain_text("This is the title\nThis is the body.", 0)
-    card.expect_body_to_contain_text("This is still the body.", 2)
-    card.expect_body_title_to_contain_text("This is the title", 0)
+    card.expect_body_to_contain_text(
+        [
+            "\nThis is the title\nThis is the body.\n",
+            "\n\n",
+            "\nThis is still the body.\n",
+        ]
+    )
     card.expect_full_screen(False)
     card.open_full_screen()
     card.expect_full_screen(True)
     card.close_full_screen()
     card.expect_full_screen(False)
-

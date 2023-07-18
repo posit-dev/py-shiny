@@ -2419,8 +2419,40 @@ class ValueBox(
     # def expect_showcase_layout(self, layout, *, timeout: Timeout = None) -> None:
     #     raise NotImplementedError()
 
+class _InputBodyP(_InputBaseP, Protocol):
+    loc: Locator
 
-class Card(_WidthLocM, _InputBase):
+class _BodyTextM:
+    def expect_body_to_contain_text(
+        self: _InputBodyP,
+        text: PatternOrStr | list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """Note: If testing against multiple elements, text should be an array"""
+        playwright_expect(self.loc).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+class _InputFooterP(_InputBaseP, Protocol):
+    loc_footer: Locator
+
+
+class _FooterM:
+    def expect_footer_to_contain_text(
+        self: _InputFooterP,
+        text: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc_footer).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+
+class Card(_WidthLocM, _FooterM, _BodyTextM, _InputWithContainer):
     # *args: TagChild | TagAttrs | CardItem,
     # full_screen: bool = False,
     # height: CssUnit | None = None,
@@ -2434,18 +2466,17 @@ class Card(_WidthLocM, _InputBase):
         super().__init__(
             page,
             id=id,
-            loc=f"div#{id}.card",
+            loc_container=f"div#{id}.card",
+            loc="> div.card-body",
         )
-        self.loc_header = self.loc.locator("> div.card-header")
-        self.loc_footer = self.loc.locator("> div.card-footer")
-        self.loc_body = self.loc.locator("> div.card-body")
-        self._loc_fullscreen = self.loc.locator("> .bslib-full-screen-enter")
+        self.loc_header = self.loc_container.locator("> div.card-header")
+        self.loc_footer = self.loc_container.locator("> div.card-footer")
+        self._loc_fullscreen = self.loc_container.locator("> .bslib-full-screen-enter")
         self._loc_close_button = (
             self.page.locator(f"#bslib-full-screen-overlay + div#{id}")
             .locator("..")
             .locator("#bslib-full-screen-overlay > a")
         )
-        # self.loc_body_title = self.loc.locator("> div.card-body > :first-child")
 
     def expect_header_to_contain_text(
         self,
@@ -2458,29 +2489,18 @@ class Card(_WidthLocM, _InputBase):
             timeout=timeout,
         )
 
-    def expect_footer_to_contain_text(
-        self,
-        text: PatternOrStr,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        playwright_expect(self.loc_footer).to_have_text(
-            text,
-            timeout=timeout,
-        )
-
-    def expect_body_to_contain_text(
-        self,
-        text: PatternOrStr,
-        index: int = 0,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        """Note: Function requires an index since multiple bodies can exist in loc"""
-        playwright_expect(self.loc_body.nth(index)).to_have_text(
-            text,
-            timeout=timeout,
-        )
+    # def expect_body_to_contain_text(
+    #     self,
+    #     text: PatternOrStr,
+    #     index: int = 0,
+    #     *,
+    #     timeout: Timeout = None,
+    # ) -> None:
+    #     """Note: Function requires an index since multiple bodies can exist in loc"""
+    #     playwright_expect(self.loc.nth(index)).to_have_text(
+    #         text,
+    #         timeout=timeout,
+    #     )
 
     def expect_body_title_to_contain_text(
         self,
@@ -2491,7 +2511,7 @@ class Card(_WidthLocM, _InputBase):
     ) -> None:
         """Note: Function requires an index since multiple bodies can exist in loc"""
         playwright_expect(
-            self.loc_body.nth(index).locator("> :first-child")
+            self.loc.nth(index).locator("> :first-child")
         ).to_have_text(
             text,
             timeout=timeout,
@@ -2511,7 +2531,10 @@ class Card(_WidthLocM, _InputBase):
         )
 
     def expect_max_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
-        expect_to_have_style(self.loc, "max-height", value, timeout=timeout)
+        expect_to_have_style(self.loc_container, "max-height", value, timeout=timeout)
 
     def expect_min_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
-        expect_to_have_style(self.loc, "min-height", value, timeout=timeout)
+        expect_to_have_style(self.loc_container, "min-height", value, timeout=timeout)
+
+    def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
