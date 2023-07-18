@@ -2419,8 +2419,10 @@ class ValueBox(
     # def expect_showcase_layout(self, layout, *, timeout: Timeout = None) -> None:
     #     raise NotImplementedError()
 
+
 class _InputBodyP(_InputBaseP, Protocol):
     loc: Locator
+
 
 class _BodyTextM:
     def expect_body_to_contain_text(
@@ -2434,6 +2436,7 @@ class _BodyTextM:
             text,
             timeout=timeout,
         )
+
 
 class _InputFooterP(_InputBaseP, Protocol):
     loc_footer: Locator
@@ -2510,9 +2513,7 @@ class Card(_WidthLocM, _FooterM, _BodyTextM, _InputWithContainer):
         timeout: Timeout = None,
     ) -> None:
         """Note: Function requires an index since multiple bodies can exist in loc"""
-        playwright_expect(
-            self.loc.nth(index).locator("> :first-child")
-        ).to_have_text(
+        playwright_expect(self.loc.nth(index).locator("> :first-child")).to_have_text(
             text,
             timeout=timeout,
         )
