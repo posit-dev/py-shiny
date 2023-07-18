@@ -40,13 +40,11 @@ export interface FilterProps
   header: Header<unknown[], unknown>;
 }
 
-export const Filter: FC<FilterProps> = (props) => {
-  const { header, className } = props;
-
+export const Filter: FC<FilterProps> = ({ header, className, ...props }) => {
   const typeHint = header.column.columnDef.meta?.typeHint;
 
   if (typeHint.type === "numeric") {
-    const [from, to] = (props.header.column.getFilterValue() as
+    const [from, to] = (header.column.getFilterValue() as
       | [number | undefined, number | undefined]
       | undefined) ?? [undefined, undefined];
 

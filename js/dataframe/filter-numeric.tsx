@@ -72,7 +72,7 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
         className="form-control form-control-sm"
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
-        placeholder={editing ? `Min (${props.range[0]})` : null}
+        placeholder={createPlaceholder(editing, "Min", props.range[0])}
         value={min}
         onChange={(e) =>
           props.onValueChange([coerceToNum(e.target.value), max])
@@ -82,7 +82,7 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
         className="form-control form-control-sm"
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
-        placeholder={editing ? `Max (${props.range[1]})` : null}
+        placeholder={createPlaceholder(editing, "Max", props.range[1])}
         value={max}
         onChange={(e) =>
           props.onValueChange([min, coerceToNum(e.target.value)])
@@ -91,6 +91,20 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
     </div>
   );
 };
+
+function createPlaceholder(
+  editing: boolean,
+  label: string,
+  value: number | undefined
+) {
+  if (!editing) {
+    return null;
+  } else if (typeof value === "undefined") {
+    return label;
+  } else {
+    return `${label} (${value})`;
+  }
+}
 
 function coerceToNum(value: string): number | undefined {
   if (value === "") {

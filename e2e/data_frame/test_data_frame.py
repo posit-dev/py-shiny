@@ -203,3 +203,91 @@ def test_single_selection(
     with expect_to_change(detail_text):
         kb.press("Enter")
     assert detail_text() == snapshot
+
+
+def test_filter(
+    page: Page,
+    data_frame_app: ShinyAppProc,
+    grid: Locator,
+    summary: Locator,
+    snapshot: Any,
+):
+    page.goto(data_frame_app.url)
+
+    filters = grid.locator("tr.filters")
+
+    filter_subidir_min = filters.locator("> th:nth-child(1) > div > input:nth-child(1)")
+    filter_subidir_max = filters.locator("> th:nth-child(1) > div > input:nth-child(2)")
+    filter_attnr = filters.locator("> th:nth-child(2) > input")
+    filter_num1_min = filters.locator("> th:nth-child(3) > div > input:nth-child(1)")
+    filter_num1_max = filters.locator("> th:nth-child(3) > div > input:nth-child(2)")
+
+    expect(filter_subidir_min).to_be_visible()
+    expect(filter_subidir_max).to_be_visible()
+    expect(filter_attnr).to_be_visible()
+    expect(filter_num1_min).to_be_visible()
+    expect(filter_num1_max).to_be_visible()
+
+    expect(summary).to_be_visible()
+    expect(summary).to_have_text(re.compile(" of 20$"))
+
+    # Placeholder text only appears when filter is focused
+    expect(page.get_by_placeholder("Min (1)", exact=True)).not_to_be_attached()
+    expect(page.get_by_placeholder("Max (20)", exact=True)).not_to_be_attached()
+    filter_subidir_min.focus()
+    expect(page.get_by_placeholder("Min (1)", exact=True)).to_be_attached()
+    expect(page.get_by_placeholder("Max (20)", exact=True)).to_be_attached()
+    filter_subidir_min.blur()
+    expect(page.get_by_placeholder("Min (1)", exact=True)).not_to_be_attached()
+    expect(page.get_by_placeholder("Max (20)", exact=True)).not_to_be_attached()
+
+    # Make sure that filtering input results in correct number of rows
+
+    # Test only min
+    filter_subidir_min.fill("5")
+    expect(summary).to_have_text(re.compile(" of 16$"))
+    # Test min and max
+    filter_subidir_max.fill("14")
+    expect(summary).to_have_text(re.compile(" of 10$"))
+
+    # When filtering results in all rows being shown, the summary should not be visible
+    filter_subidir_max.fill("13")
+    expect(summary).not_to_be_attached()
+
+    # Test only max
+    filter_subidir_min.fill("")
+    expect(summary).to_have_text(re.compile(" of 13"))
+
+    filter_subidir_min.clear()
+    filter_subidir_max.clear()
+
+    # Try substring search
+    filter_attnr.fill("oc")
+    expect(summary).to_have_text(re.compile(" of 10"))
+    filter_num1_min.focus()
+    # Ensure other columns' filter placeholders show faceted results
+    expect(page.get_by_placeholder("Min (5)", exact=True)).to_be_attached()
+    expect(page.get_by_placeholder("Max (8)", exact=True)).to_be_attached()
+
+    # Filter down to zero matching rows
+    filter_attnr.fill("q")
+    # Summary should be gone
+    expect(summary).not_to_be_attached()
+    filter_num1_min.focus()
+    # Placeholders should not have values
+    expect(page.get_by_placeholder("Min", exact=True)).to_be_attached()
+    expect(page.get_by_placeholder("Max", exact=True)).to_be_attached()
+
+    filter_attnr.clear()
+
+    # Apply multiple filters, make sure we get the correct results
+    filter_subidir_max.fill("8")
+    filter_num1_min.fill("4")
+    expect(grid.locator("tbody tr")).to_have_count(5)
+
+    # Ensure changing dataset resets filters
+    select_dataset = InputSelectize(page, "dataset")
+    select_dataset.set("attention")
+    expect(page.get_by_text("Unnamed: 0")).to_be_attached()
+    select_dataset.set("anagrams")
+    expect(summary).to_have_text(re.compile(" of 20"))
