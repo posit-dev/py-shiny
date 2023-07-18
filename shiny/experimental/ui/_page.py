@@ -106,7 +106,7 @@ def page_navbar(
     header: Optional[TagChild] = None,
     footer: Optional[TagChild] = None,
     bg: Optional[str] = None,
-    inverse: bool = False,
+    inverse: bool = True,
     collapsible: bool = True,
     fluid: bool = True,
     window_title: str | MISSING_TYPE = MISSING,
