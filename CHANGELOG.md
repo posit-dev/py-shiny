@@ -11,8 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### New features
 
 * `shiny run` now takes a `--reload-dir <DIR>` argument that indicates a directory `--reload` should (recursively) monitor for changes, in addition to the app's parent directory. Can be used more than once. (#353)
-* The default theme has been updated to use Bootstrap 5 with custom Shiny style
-  enhancements. (#624)
+* The default theme has been updated to use Bootstrap 5 with custom Shiny style enhancements. (#624)
 
 
 ### Bug fixes
