@@ -175,6 +175,16 @@ write_json(
   )
 )
 
+message("Reduce font files")
+font_txt <- unlist(strsplit(readLines("shiny/www/shared/bootstrap/font.css"), ";"))
+woff_files <- list.files("shiny/www/shared/bootstrap/fonts", pattern = "\\.woff", full.names = TRUE)
+ignored <- lapply(woff_files, function(woff_file) {
+  file_name <- basename(woff_file)
+  if (!any(grepl(file_name, font_txt, fixed = TRUE))) {
+    unlink(woff_file)
+  }
+})
+
 
 # ------------------------------------------------------------------------------
 message("Cleanup bootstrap bundle")
