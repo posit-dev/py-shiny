@@ -321,3 +321,11 @@ def _filter_test_impl(
     select_dataset.set("anagrams")
     select_dataset.expect.to_have_value("anagrams")
     expect(summary).to_have_text(re.compile(" of 20"))
+
+
+def test_filter_disable(page: Page, data_frame_app: ShinyAppProc):
+    page.goto(data_frame_app.url)
+
+    expect(page.locator("tr.filters")).to_be_attached()
+    InputSwitch(page, "filters").toggle()
+    expect(page.locator("tr.filters")).not_to_be_attached()
