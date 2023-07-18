@@ -17,28 +17,16 @@ export const FilterNumeric: FC<FilterNumericProps> = (props) => {
   const [editing, setEditing] = useState(false);
   const { min, max, from, to, onRangeChange } = props;
 
-  if (!editing) {
-    return (
-      <input
-        className={`form-control form-control-sm`}
-        readOnly={true}
-        type="text"
-        value={generateLabel(from, to)}
-        onFocus={(e) => {
-          setEditing(true);
-        }}
-      />
-    );
-  } else {
-    return (
-      <FilterNumericImpl
-        range={[min, max]}
-        value={[from, to]}
-        onValueChange={(x) => onRangeChange(...x)}
-        onBlur={() => setEditing(false)}
-      />
-    );
-  }
+  return (
+    <FilterNumericImpl
+      range={[min, max]}
+      value={[from, to]}
+      editing={editing}
+      onValueChange={(x) => onRangeChange(...x)}
+      onFocus={() => setEditing(true)}
+      onBlur={() => setEditing(false)}
+    />
+  );
 };
 
 function generateLabel(from?: number, to?: number) {
@@ -56,18 +44,15 @@ function generateLabel(from?: number, to?: number) {
 interface FilterNumericImplProps {
   range: [number, number];
   value: [number | undefined, number | undefined];
+  editing: boolean;
   onValueChange: (range: [number | undefined, number | undefined]) => void;
+  onFocus: () => void;
   onBlur: () => void;
 }
 
 const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
-  const ref = useRef<HTMLInputElement>();
-  useEffect(() => {
-    ref.current.focus();
-    ref.current.select();
-  }, []);
-
   const [min, max] = props.value;
+  const { editing, onFocus } = props;
 
   return (
     <div
@@ -77,27 +62,27 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
         }
         return props.onBlur();
       }}
+      onFocus={() => onFocus()}
       style={{
         display: "flex",
         gap: "0.5rem",
       }}
     >
       <input
-        className={`form-control form-control-sm`}
+        className="form-control form-control-sm"
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
-        placeholder={`Min (${props.range[0]})`}
+        placeholder={editing ? `Min (${props.range[0]})` : null}
         value={min}
         onChange={(e) =>
           props.onValueChange([coerceToNum(e.target.value), max])
         }
-        ref={ref}
       />
       <input
-        className={`form-control form-control-sm`}
+        className="form-control form-control-sm"
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
-        placeholder={`Max (${props.range[1]})`}
+        placeholder={editing ? `Max (${props.range[1]})` : null}
         value={max}
         onChange={(e) =>
           props.onValueChange([min, coerceToNum(e.target.value)])
