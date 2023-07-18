@@ -49,7 +49,11 @@ export const Filter: FC<FilterProps> = (props) => {
     const [from, to] = (props.header.column.getFilterValue() as
       | [number | undefined, number | undefined]
       | undefined) ?? [undefined, undefined];
-    const [min, max] = header.column.getFacetedMinMaxValues();
+
+    const [min, max] = header.column.getFacetedMinMaxValues() ?? [
+      undefined,
+      undefined,
+    ];
 
     return FilterNumeric({
       from,
