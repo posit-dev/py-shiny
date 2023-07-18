@@ -1,11 +1,9 @@
 # TODO-future: Add filter of X varaible to reduce the data? (Here we would show "Gentoo" has count 0, rather than remove if no data exists)
 # TODO-future: Add brushing to zoom into the plot. The counts should represent the data in the zoomed area. (Single click would zoom out)
 
-import warnings
 from pathlib import Path
 from typing import List
 
-import matplotlib
 import pandas as pd
 import seaborn as sns
 
@@ -14,13 +12,6 @@ from colors import bg_palette, palette
 
 import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
-
-# There is a matplotlib bug which causes CI failures
-# see https://github.com/rstudio/py-shiny/issues/611#issuecomment-1632866419
-if matplotlib.__version__ == "3.7.2":
-    warnings.filterwarnings(
-        "ignore", category=UserWarning, message="The figure layout has changed to tight"
-    )
 
 sns.set_theme()
 

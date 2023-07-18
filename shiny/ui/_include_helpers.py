@@ -63,16 +63,17 @@ def include_js(
     document, you can wrap it in ``head_content`` (in this case, just make sure you're
     aware that the DOM probably won't be ready when the script is executed).
 
-    .. code-block:: python
+    ```{python}
+    #| eval: false
+    ui.page_fluid(
+        ui.head_content(ui.include_js("custom.js")),
+    )
 
-        ui.fluidPage(
-            head_content(ui.include_js("custom.js")),
-        )
-
-        # Alternately you can inline Javscript by changing the method.
-        ui.fluidPage(
-            head_content(ui.include_js("custom.js", method = "inline")),
-        )
+    # Alternately you can inline Javscript by changing the method.
+    ui.page_fluid(
+        ui.head_content(ui.include_js("custom.js", method = "inline")),
+    )
+    ```
 
     See Also
     --------
@@ -133,19 +134,21 @@ def include_css(
     may result in a Flash of Unstyled Content (FOUC). To instead place the CSS in the
     :func:`~ui.tags.head` of the document, you can wrap it in ``head_content``:
 
-    .. code-block:: python
+    ```{python}
+    #| eval: false
+    from htmltools import head_content
+    from shiny import ui
 
-        from htmltools import head_content from shiny import ui
+    ui.page_fluid(
+        ui.head_content(ui.include_css("custom.css")),
 
-        ui.fluidPage(
-            head_content(ui.include_css("custom.css")),
-
-            # You can also inline css by passing a dictionary with a `style` element.
-            ui.div(
-                {"style": "font-weight: bold;"},
-                ui.p("Some text!"),
-            )
+        # You can also inline css by passing a dictionary with a `style` element.
+        ui.div(
+            {"style": "font-weight: bold;"},
+            ui.p("Some text!"),
         )
+    )
+    ```
 
     See Also
     --------
