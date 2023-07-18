@@ -24,7 +24,7 @@ def get_apps(path: str) -> typing.List[str]:
 
 example_apps: typing.List[str] = [
     *get_apps("../../examples"),
-    *get_apps("../../shiny/examples"),
+    *get_apps("../../shiny/api-examples"),
 ]
 
 app_idle_wait = {"duration": 300, "timeout": 5 * 1000}
@@ -36,6 +36,8 @@ app_allow_shiny_errors: typing.Dict[str, typing.Union[bool, typing.List[str]]] =
     "SafeException": True,
     "global_pyplot": True,
     "static_plots": ["PlotnineWarning", "RuntimeWarning"],
+    # https://github.com/rstudio/py-shiny/issues/611#issuecomment-1632866419
+    "penguins": ["UserWarning", "plt.tight_layout"],
 }
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
     "brownian": ["Failed to acquire camera feed:"],

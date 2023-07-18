@@ -207,21 +207,22 @@ def run_app(
     Examples
     --------
 
-    .. code-block:: python
+    ```{python}
+    #|eval: false
+    from shiny import run_app
 
-        from shiny import run_app
+    # Run ``app`` inside ``./app.py``
+    run_app()
 
-        # Run ``app`` inside ``./app.py``
-        run_app()
+    # Run ``app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
+    run_app("myapp")
 
-        # Run ``app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
-        run_app("myapp")
+    # Run ``my_app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
+    run_app("myapp:my_app")
 
-        # Run ``my_app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
-        run_app("myapp:my_app")
-
-        # Run ``my_app`` inside ``../myapp.py`` (or ``../myapp/app.py``)
-        run_app("myapp:my_app", app_dir="..")
+    # Run ``my_app`` inside ``../myapp.py`` (or ``../myapp/app.py``)
+    run_app("myapp:my_app", app_dir="..")
+    ```
     """
 
     # If port is 0, randomize
@@ -360,18 +361,20 @@ def resolve_app(app: str, app_dir: Optional[str]) -> tuple[str, Optional[str]]:
         attr = "app"
 
     if is_file(module):
+        # Before checking module path, resolve it relative to app_dir if provided
+        module_path = module if app_dir is None else os.path.join(app_dir, module)
         # TODO: We should probably be using some kind of loader
         # TODO: I don't like that we exit here, if we ever export this it would be bad;
         #       but also printing a massive stack trace for a `shiny run badpath` is way
         #       unfriendly. We should probably throw a custom error that the shiny run
         #       entrypoint knows not to print the stack trace for.
-        if not os.path.exists(module):
-            sys.stderr.write(f"Error: {module} not found\n")
+        if not os.path.exists(module_path):
+            sys.stderr.write(f"Error: {module_path} not found\n")
             sys.exit(1)
-        if not os.path.isfile(module):
-            sys.stderr.write(f"Error: {module} is not a file\n")
+        if not os.path.isfile(module_path):
+            sys.stderr.write(f"Error: {module_path} is not a file\n")
             sys.exit(1)
-        dirname, filename = os.path.split(module)
+        dirname, filename = os.path.split(module_path)
         module = filename[:-3] if filename.endswith(".py") else filename
         app_dir = dirname
 
@@ -419,7 +422,7 @@ def create(appdir: str) -> None:
         app_dir.mkdir()
 
     shutil.copyfile(
-        Path(__file__).parent / "examples" / "template" / "app.py", app_path
+        Path(__file__).parent / "api-examples" / "template" / "app.py", app_path
     )
 
     print(f"Created Shiny app at {app_dir / 'app.py'}")
