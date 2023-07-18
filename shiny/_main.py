@@ -422,7 +422,7 @@ def create(appdir: str) -> None:
         app_dir.mkdir()
 
     shutil.copyfile(
-        Path(__file__).parent / "examples" / "template" / "app.py", app_path
+        Path(__file__).parent / "api-examples" / "template" / "app.py", app_path
     )
 
     print(f"Created Shiny app at {app_dir / 'app.py'}")
