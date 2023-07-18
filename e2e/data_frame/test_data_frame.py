@@ -2,7 +2,6 @@
 
 
 import re
-import time
 from typing import Any, Callable
 
 import pytest
@@ -204,20 +203,3 @@ def test_single_selection(
     with expect_to_change(detail_text):
         kb.press("Enter")
     assert detail_text() == snapshot
-
-
-def retry_with_timeout(timeout: float = 30):
-    def decorator(func: Callable[[], None]) -> None:
-        def exec() -> None:
-            start = time.time()
-            while True:
-                try:
-                    return func()
-                except AssertionError as e:
-                    if time.time() - start > timeout:
-                        raise e
-                    time.sleep(0.1)
-
-        exec()
-
-    return decorator

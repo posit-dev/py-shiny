@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import functools
 import logging
 import subprocess
 import sys
@@ -24,6 +25,7 @@ __all__ = (
     "local_app",
     "run_shiny_app",
     "expect_to_change",
+    "retry_with_timeout",
 )
 
 here = PurePath(__file__).parent
@@ -238,11 +240,57 @@ def expect_to_change(
             page.keyboard.send_keys("hello")
 
     """
+
     original_value = func()
     yield
-    start = time.time()
-    while time.time() - start < timeoutSecs:
-        time.sleep(0.1)
-        if func() != original_value:
-            return
-    raise TimeoutError("Timeout while waiting for change")
+
+    @retry_with_timeout(timeoutSecs)
+    def wait_for_change():
+        if func() == original_value:
+            raise AssertionError("Value did not change")
+
+    wait_for_change()
+
+
+def retry_with_timeout(timeout: float = 30):
+    """
+    Decorator that retries a function until 1) it succeeds, 2) fails with a
+    non-assertion error, or 3) repeatedly fails with an AssertionError for longer than
+    the timeout. If the timeout elapses, the last AssertionError is raised.
+
+    Parameters
+    ----------
+    timeout
+        How long to wait for the function to succeed before raising the last
+        AssertionError.
+
+    Returns
+    -------
+    A decorator that can be applied to a function.
+
+    Example
+    -------
+
+        @retry_with_timeout(30)
+        def try_to_find_element():
+            if not page.locator("#name").exists():
+                raise AssertionError("Element not found")
+
+        try_to_find_element()
+    """
+
+    def decorator(func: Callable[[], None]) -> Callable[[], None]:
+        @functools.wraps(func)
+        def wrapper() -> None:
+            start = time.time()
+            while True:
+                try:
+                    return func()
+                except AssertionError as e:
+                    if time.time() - start > timeout:
+                        raise e
+                    time.sleep(0.1)
+
+        return wrapper
+
+    return decorator

@@ -8,7 +8,6 @@ import typing
 from typing import Any
 
 if typing.TYPE_CHECKING:
-    import numpy as np
     import pandas as pd
 
 # pyright: reportMissingTypeArgument=false
