@@ -118,6 +118,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.plot
     def xarray():
+        # `pooch` module required to download `open_dataset`
         import xarray as xr
 
         airtemps = xr.tutorial.open_dataset("air_temperature")
