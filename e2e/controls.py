@@ -2343,8 +2343,6 @@ class OutputTable(_OutputBase):
 
 
 class Accordion(
-    # _SetTextM,
-    # _ExpectTextInputValueM,
     _WidthLocM,
     _InputWithContainer,
 ):
