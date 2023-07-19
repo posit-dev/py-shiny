@@ -2334,13 +2334,13 @@ class OutputTable(_OutputBase):
         )
 
 
-class _InputBodyP(_InputBaseP, Protocol):
+class _CardBodyP(_InputBaseP, Protocol):
     loc: Locator
 
 
-class _BodyTextM:
+class _CardBodyM:
     def expect_body_to_contain_text(
-        self: _InputBodyP,
+        self: _CardBodyP,
         text: PatternOrStr | list[PatternOrStr],
         *,
         timeout: Timeout = None,
@@ -2352,13 +2352,13 @@ class _BodyTextM:
         )
 
 
-class _InputFooterP(_InputBaseP, Protocol):
+class _CardFooterLayoutP(_InputBaseP, Protocol):
     loc_footer: Locator
 
 
-class _FooterM:
+class _CardFooterM:
     def expect_footer_to_contain_text(
-        self: _InputFooterP,
+        self: _CardFooterLayoutP,
         text: PatternOrStr,
         *,
         timeout: Timeout = None,
@@ -2369,23 +2369,27 @@ class _FooterM:
         )
 
 
-class _OutputFullScreenP(_OutputBaseP, Protocol):
+class _CardFullScreenLayoutP(_OutputBaseP, Protocol):
     loc_title: Locator
     _loc_fullscreen: Locator
     _loc_close_button: Locator
 
 
-class _FullScreenM:
-    def open_full_screen(self: _OutputFullScreenP, *, timeout: Timeout = None) -> None:
+class _CardFullScreenM:
+    def open_full_screen(
+        self: _CardFullScreenLayoutP, *, timeout: Timeout = None
+    ) -> None:
         self.loc_title.hover(timeout=timeout)
         self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
         self._loc_fullscreen.click(timeout=timeout)
 
-    def close_full_screen(self: _OutputFullScreenP, *, timeout: Timeout = None) -> None:
+    def close_full_screen(
+        self: _CardFullScreenLayoutP, *, timeout: Timeout = None
+    ) -> None:
         self._loc_close_button.click(timeout=timeout)
 
     def expect_full_screen(
-        self: _OutputFullScreenP, open: bool, *, timeout: Timeout = None
+        self: _CardFullScreenLayoutP, open: bool, *, timeout: Timeout = None
     ) -> None:
         playwright_expect(self._loc_close_button).to_have_count(
             int(open), timeout=timeout
@@ -2394,8 +2398,8 @@ class _FullScreenM:
 
 class ValueBox(
     _WidthLocM,
-    _BodyTextM,
-    _FullScreenM,
+    _CardBodyM,
+    _CardFullScreenM,
     _InputWithContainer,
 ):
     # title: TagChild,
@@ -2455,7 +2459,7 @@ class ValueBox(
     #     raise NotImplementedError()
 
 
-class Card(_WidthLocM, _FooterM, _BodyTextM, _FullScreenM, _InputWithContainer):
+class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithContainer):
     # *args: TagChild | TagAttrs | CardItem,
     # full_screen: bool = False,
     # height: CssUnit | None = None,
@@ -2491,19 +2495,6 @@ class Card(_WidthLocM, _FooterM, _BodyTextM, _FullScreenM, _InputWithContainer):
             text,
             timeout=timeout,
         )
-
-    # def expect_body_to_contain_text(
-    #     self,
-    #     text: PatternOrStr,
-    #     index: int = 0,
-    #     *,
-    #     timeout: Timeout = None,
-    # ) -> None:
-    #     """Note: Function requires an index since multiple bodies can exist in loc"""
-    #     playwright_expect(self.loc.nth(index)).to_have_text(
-    #         text,
-    #         timeout=timeout,
-    #     )
 
     def expect_body_title_to_contain_text(
         self,
