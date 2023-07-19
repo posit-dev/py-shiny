@@ -46,7 +46,6 @@ app = App(
         sidebar=my_sidebar,
         title="page_navbar()",
         bg="#0062cc",
-        inverse=True,
         header=ui.markdown(
             "Testing app for `bslib::nav_spacer()` and `bslib::nav_item()` [#319](https://github.com/rstudio/bslib/pull/319)."
         ),
