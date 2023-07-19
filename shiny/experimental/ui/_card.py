@@ -112,6 +112,7 @@ def card(
                 min_height=as_css_unit(min_height),
             ),
             "data-bslib-card-init": True,
+            "data-full-screen": "false" if full_screen else None,
         },
         *children,
         attrs,
