@@ -16,7 +16,7 @@ def test_input_checkbox_kitchen(page: Page, app: ShinyAppProc) -> None:
     somevalue.expect_checked(False)
     somevalue.expect_width(None)
 
-    # TODO-barret test output value
+    # TODO-karan test output value
 
     somevalue.set(True)
 
@@ -28,4 +28,4 @@ def test_input_checkbox_kitchen(page: Page, app: ShinyAppProc) -> None:
     somevalue.toggle()
     somevalue.expect_checked(True)
 
-    # TODO-barret test output value
+    # TODO-karan test output value

@@ -1374,10 +1374,14 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
 
     def expect_tick_labels(
         self,
-        value: ListPatternOrStr,
+        value: ListPatternOrStr | None,
         *,
         timeout: Timeout = None,
     ) -> None:
+        if value is None:
+            playwright_expect(self.loc_irs_ticks).to_have_count(0)
+            return
+
         playwright_expect(self.loc_irs_ticks).to_have_text(value, timeout=timeout)
 
     def expect_animate(self, exists: bool, *, timeout: Timeout = None) -> None:
@@ -1553,10 +1557,10 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
             )
 
     def _grid_bb(self, *, timeout: Timeout = None) -> FloatRect:
-        grid = self.loc_container.locator(".irs-grid")
+        grid = self.loc_irs.locator("> .irs > .irs-line")
         grid_bb = grid.bounding_box(timeout=timeout)
         if grid_bb is None:
-            raise RuntimeError("Couldn't find bounding box for .irs-grid")
+            raise RuntimeError("Couldn't find bounding box for .irs-line")
         return grid_bb
 
     def _handle_center(
