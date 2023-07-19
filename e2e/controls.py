@@ -2392,30 +2392,6 @@ class Accordion(
     ) -> None:
         playwright_expect(self.loc).to_have_count(len(value), timeout=timeout)
 
-    def expect_all_panels_to_have_attribute(
-        self,
-        attribute: str,
-        value: list[PatternOrStr],
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        # page: Page,
-        # loc_container: Locator,
-        # el_type: str,
-        # arr_name: str,
-        # arr: ListPatternOrStr,
-        # is_checked: bool | MISSING_TYPE = MISSING,
-        # timeout: Timeout = None,
-        # key: str = "value"
-        _MultipleDomItems.expect_locator_values_in_list(
-            page=self.page,
-            loc_container=self.loc_container,
-            el_type="> div.accordion-item",
-            arr_name="value",
-            arr=value,
-            key=attribute,
-            timeout=timeout,
-        )
 
     def expect_open_panels_to_contain_text(
         self,
