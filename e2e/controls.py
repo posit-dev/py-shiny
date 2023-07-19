@@ -2336,3 +2336,43 @@ class OutputTable(_OutputBase):
             n,
             timeout=timeout,
         )
+
+
+class Sidebar(
+    _WidthLocM,
+    _InputWithContainer,
+):
+    # *args: TagChild | TagAttrs,
+    # width: CssUnit = 250,
+    # position: Literal["left", "right"] = "left",
+    # open: Literal["desktop", "open", "closed", "always"] = "desktop",
+    # id: Optional[str] = None,
+    # title: TagChild | str = None,
+    # bg: Optional[str] = None,
+    # fg: Optional[str] = None,
+    # class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
+    # max_height_mobile: Optional[str | float] = None,
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"> div#{id}",
+            loc_container="div.bslib-sidebar-layout",
+        )
+
+        self.loc_toggle = self.loc.locator("..").locator("button.collapse-toggle")
+        self.loc_toggle_true = self.loc.locator("..").locator(
+            "button.collapse-toggle[aria-expanded='true']"
+        )
+        self.loc_toggle_false = self.loc.locator("..").locator(
+            "button.collapse-toggle[aria-expanded='false']"
+        )
+
+    def expect_toggle_button(self, open: bool, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_toggle).to_have_count(int(open), timeout=timeout)
+
+    def expect_toggle_to_be_true(self, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_toggle_true).to_have_count(1, timeout=timeout)
+
+    def expect_toggle_to_be_false(self, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_toggle_false).to_have_count(1, timeout=timeout)
