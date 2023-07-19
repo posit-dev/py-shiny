@@ -7,8 +7,9 @@ from shiny import reactive, render, ui
 app_ui = ui.page_fixed(
     ui.h1("Toggle Sidebars"),
     ui.div(
-        ui.input_action_button("open_all", "Show all", class_="me-1"),
-        ui.input_action_button("close_all", "Close all", class_="me-2"),
+        ui.input_action_button("open_all", "Show all", class_="me-1 mb-1"),
+        ui.input_action_button("close_all", "Close all", class_="mb-1"),
+        ui.tags.br(),
         ui.input_action_button("toggle_outer", "Toggle outer", class_="me-1"),
         ui.input_action_button("toggle_inner", "Toggle inner"),
         class_="my-2",
