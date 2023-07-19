@@ -1,15 +1,18 @@
 from conftest import ShinyAppProc, x_create_doc_example_fixture
 from controls import InputTextArea, OutputTextVerbatim
-from playwright.sync_api import Page
+from playwright.sync_api import Locator, Page
 
 app = x_create_doc_example_fixture("input_text_area")
 
-initial_height = "36px"
 resize_number = 6
 
 
-def resized_height(value: int) -> str:
-    return str(36 + (24 * value)) + "px"
+def get_box_height(locator: Locator) -> float:
+    bounding_box = locator.bounding_box()
+    if bounding_box is not None:
+        return bounding_box["height"]
+    else:
+        return 0
 
 
 def test_autoresize(page: Page, app: ShinyAppProc) -> None:
@@ -20,10 +23,11 @@ def test_autoresize(page: Page, app: ShinyAppProc) -> None:
     input_area.expect_height(None)
     input_area.expect_width(None)
     input_area.set("test value")
-    input_area.expect_height(initial_height)
+    # use bounding box approach since height is dynamic
+    initial_height = get_box_height(input_area.loc)
     output_txt_verbatim.expect_value("test value")
     for _ in range(resize_number):
         input_area.loc.press("Enter")
     input_area.loc.type("end value")
     output_txt_verbatim.expect_value("test value\n\n\n\n\n\nend value")
-    input_area.expect_height(resized_height(resize_number))
+    assert get_box_height(input_area.loc) > initial_height
