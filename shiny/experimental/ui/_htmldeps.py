@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from pathlib import PurePath
+from typing import Literal
 
 from htmltools import HTMLDependency
 
 from ... import __version__ as shiny_version
+from ..._typing_extensions import NotRequired, TypedDict
 from ..._versions import bslib as bslib_version
 from ..._versions import htmltools as htmltools_version
 
@@ -33,12 +35,24 @@ def _htmltools_dep(
     )
 
 
+class _ScriptItemDict(TypedDict):
+    src: str
+    type: NotRequired[Literal["module"]]
+
+
 def _bslib_component_dep(
     name: str,
     script: bool = False,
     stylesheet: bool = False,
     all_files: bool = True,
+    script_is_module: bool = False,
 ) -> HTMLDependency:
+    script_val: _ScriptItemDict | None = None
+    if script:
+        script_val = {"src": f"{name}.min.js"}
+        if script_is_module:
+            script_val["type"] = "module"
+
     return HTMLDependency(
         name=f"bslib-{name}",
         version=bslib_version,
@@ -46,7 +60,7 @@ def _bslib_component_dep(
             "package": "shiny",
             "subdir": str(_x_components_path / name),
         },
-        script={"src": f"{name}.min.js"} if script else None,
+        script=script_val,  # type: ignore # https://github.com/rstudio/py-htmltools/issues/59
         stylesheet={"href": f"{name}.css"} if stylesheet else None,
         all_files=all_files,
     )
@@ -98,6 +112,10 @@ def sidebar_dependency() -> HTMLDependency:
 
 def value_box_dependency() -> HTMLDependency:
     return _bslib_component_dep("value_box", stylesheet=True)
+
+
+def web_component_dependency() -> HTMLDependency:
+    return _bslib_component_dep("webComponents", script=True, script_is_module=True)
 
 
 # -- Experimental ------------------
