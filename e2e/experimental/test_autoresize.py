@@ -16,13 +16,14 @@ def test_autoresize(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
     input_area = InputTextArea(page, "caption")
+    output_txt_verbatim = OutputTextVerbatim(page, "value")
     input_area.expect_height(None)
     input_area.expect_width(None)
     input_area.set("test value")
     input_area.expect_height(initial_height)
-    OutputTextVerbatim(page, "value").expect_value("test value")
+    output_txt_verbatim.expect_value("test value")
     for _ in range(resize_number):
         input_area.loc.press("Enter")
     input_area.loc.type("end value")
-    OutputTextVerbatim(page, "value").expect_value("test value\n\n\n\n\n\nend value")
+    output_txt_verbatim.expect_value("test value\n\n\n\n\n\nend value")
     input_area.expect_height(resized_height(resize_number))
