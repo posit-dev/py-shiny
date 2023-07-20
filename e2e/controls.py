@@ -2342,7 +2342,7 @@ class _CardBodyP(_InputBaseP, Protocol):
 
 
 class _CardBodyM:
-    def expect_body_to_contain_text(
+    def expect_body(
         self: _CardBodyP,
         text: PatternOrStr | list[PatternOrStr],
         *,
