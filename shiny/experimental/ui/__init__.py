@@ -47,6 +47,7 @@ from ._sidebar import (
     sidebar,
     sidebar_toggle,
 )
+from ._tooltip import tooltip, tooltip_toggle, update_tooltip
 from ._valuebox import showcase_left_center, showcase_top_right, value_box
 
 __all__ = (
@@ -84,6 +85,10 @@ __all__ = (
     "card_footer",
     # Layout
     "layout_column_wrap",
+    # Tooltip
+    "tooltip",
+    "tooltip_toggle",
+    "update_tooltip",
     # ValueBox
     "value_box",
     "showcase_left_center",
