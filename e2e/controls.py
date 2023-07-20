@@ -2341,6 +2341,7 @@ class OutputTable(_OutputBase):
 class _CardBodyP(_InputBaseP, Protocol):
     loc_body: Locator
 
+
 class _CardBodyM:
     def expect_body(
         self: _CardBodyP,
