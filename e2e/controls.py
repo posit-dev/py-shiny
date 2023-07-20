@@ -2488,7 +2488,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
             .locator("#bslib-full-screen-overlay > a")
         )
 
-    def expect_header_to_contain_text(
+    def expect_header(
         self,
         text: PatternOrStr,
         *,
@@ -2499,7 +2499,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
             timeout=timeout,
         )
 
-    def expect_body_title_to_contain_text(
+    def expect_body(
         self,
         text: PatternOrStr,
         index: int = 0,
