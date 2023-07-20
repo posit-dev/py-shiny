@@ -10,6 +10,7 @@ def test_autoresize(page: Page, app: ShinyAppProc) -> None:
 
     left_sidebar = Sidebar(page, "sidebar_left")
     output_txt_left = OutputTextVerbatim(page, "state_left")
+    left_sidebar.expect_sidebar("Left sidebar content")
     output_txt_left.expect_value("input.sidebar_left(): True")
     left_sidebar.expect_toggle_button(True)
     left_sidebar.expect_toggle_to_be_true()
@@ -19,6 +20,7 @@ def test_autoresize(page: Page, app: ShinyAppProc) -> None:
 
     right_sidebar = Sidebar(page, "sidebar_right")
     output_txt_right = OutputTextVerbatim(page, "state_right")
+    right_sidebar.expect_sidebar("Right sidebar content")
     output_txt_right.expect_value("input.sidebar_right(): True")
     right_sidebar.expect_toggle_button(True)
     right_sidebar.expect_toggle_to_be_true()
@@ -32,12 +34,12 @@ def test_autoresize(page: Page, app: ShinyAppProc) -> None:
     closed_sidebar.expect_toggle_button(True)
     closed_sidebar.expect_toggle_to_be_false()
     closed_sidebar.loc_toggle.click()
+    closed_sidebar.expect_sidebar("Closed sidebar content")
     closed_sidebar.expect_toggle_to_be_true()
     output_txt_closed.expect_value("input.sidebar_closed(): True")
 
     always_sidebar = Sidebar(page, "sidebar_always")
     output_txt_always = OutputTextVerbatim(page, "state_always")
+    always_sidebar.expect_sidebar("Always sidebar content")
     output_txt_always.expect_value("input.sidebar_always(): False")
     always_sidebar.expect_toggle_button(False)
-
-

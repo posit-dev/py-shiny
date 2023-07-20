@@ -2368,6 +2368,9 @@ class Sidebar(
             "button.collapse-toggle[aria-expanded='false']"
         )
 
+    def expect_sidebar(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc).to_have_text(value, timeout=timeout)
+
     def expect_toggle_button(self, open: bool, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc_toggle).to_have_count(int(open), timeout=timeout)
 
