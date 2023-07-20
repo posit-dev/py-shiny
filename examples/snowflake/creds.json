@@ -1,0 +1,9 @@
+{
+  "account": "oucigty-de90610",
+  "user": "ADEJUMORIDWAN",
+  "password": "Taxonom1!?",
+  "warehouse": "COMPUTE_WH",
+  "database": "SNOWFLAKE_SAMPLE_DATA",
+  "schema": "TPCDS_SF10TCL",
+  "role": "ACCOUNTADMIN"
+}
