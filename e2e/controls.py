@@ -2361,21 +2361,16 @@ class Sidebar(
         )
 
         self.loc_toggle = self.loc.locator("..").locator("button.collapse-toggle")
-        self.loc_toggle_true = self.loc.locator("..").locator(
-            "button.collapse-toggle[aria-expanded='true']"
-        )
-        self.loc_toggle_false = self.loc.locator("..").locator(
-            "button.collapse-toggle[aria-expanded='false']"
-        )
 
-    def expect_sidebar(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+    def expect_title(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc).to_have_text(value, timeout=timeout)
 
-    def expect_toggle_button(self, open: bool, *, timeout: Timeout = None) -> None:
+    def expect_toggle(self, open: bool, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc_toggle).to_have_count(int(open), timeout=timeout)
 
-    def expect_toggle_to_be_true(self, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc_toggle_true).to_have_count(1, timeout=timeout)
-
-    def expect_toggle_to_be_false(self, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc_toggle_false).to_have_count(1, timeout=timeout)
+    def expect_toggle_expanded(self, open: bool, *, timeout: Timeout = None) -> None:
+        playwright_expect(
+            self.loc.locator("..").locator(
+                f"button.collapse-toggle[aria-expanded='{str(open).lower()}']"
+            )
+        ).to_have_count(int(open), timeout=timeout)
