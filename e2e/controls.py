@@ -2446,7 +2446,7 @@ class ValueBox(
             self.loc_container, "--bslib-grid-height", value, timeout=timeout
         )
 
-    def expect_title_to_contain_text(
+    def expect_title(
         self,
         text: PatternOrStr,
         *,
