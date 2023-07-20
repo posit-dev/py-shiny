@@ -2382,7 +2382,15 @@ class Accordion(
         *,
         timeout: Timeout = None,
     ) -> None:
-        playwright_expect(self.loc_open).to_have_count(len(value), timeout=timeout)
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
+            el_type="> div.accordion-item:has(> div.accordion-collapse.show)",
+            arr_name="value",
+            arr=value,
+            key="data-value",
+            timeout=timeout,
+        )
 
     def expect_panels(
         self,
@@ -2390,8 +2398,15 @@ class Accordion(
         *,
         timeout: Timeout = None,
     ) -> None:
-        playwright_expect(self.loc).to_have_count(len(value), timeout=timeout)
-
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
+            el_type="> div.accordion-item",
+            arr_name="value",
+            arr=value,
+            key="data-value",
+            timeout=timeout,
+        )
 
     def expect_open_panels_to_contain_text(
         self,

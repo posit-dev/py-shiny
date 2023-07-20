@@ -49,23 +49,19 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     acc.expect_open(["Section B"])
     output_txt_verbatim.expect_value("input.acc(): ('Section B',)")
 
-    # check attributes for all panels before clicking on add/remove updates
-    acc.expect_all_panels_to_have_attribute(
-        "data-value", ["Section A", "Section B", "Section C", "Section D"]
-    )
     acc_panel_updated_A = AccordionPanel(page, "acc", "updated_section_a")
     toggle_updates_button.click()
     acc_panel_updated_A.expect_label("Updated title")
     acc_panel_updated_A.expect_body("Updated body")
     acc_panel_updated_A.expect_icon("Look! An icon! -->")
 
-    acc.expect_panels(["Section A", "Section B", "Section C", "Section D"])
+    acc.expect_panels(["updated_section_a", "Section B", "Section C", "Section D"])
     output_txt_verbatim.expect_value("input.acc(): ('updated_section_a', 'Section B')")
 
     toggle_efg_button.click()
     acc.expect_panels(
         [
-            "Section A",
+            "updated_section_a",
             "Section B",
             "Section C",
             "Section D",
@@ -74,7 +70,9 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
             "Section G",
         ]
     )
-    acc.expect_open(["Section A", "Section B", "Section E", "Section F", "Section G"])
+    acc.expect_open(
+        ["updated_section_a", "Section B", "Section E", "Section F", "Section G"]
+    )
     # will be uncommented once https://github.com/rstudio/bslib/issues/565 is fixed
     # output_txt_verbatim.expect_value(
     #     "input.acc(): ('updated_section_a', 'Section B', 'Section E', 'Section F', 'Section G')"
