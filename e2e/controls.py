@@ -2359,18 +2359,19 @@ class Sidebar(
             loc=f"> div#{id}",
             loc_container="div.bslib-sidebar-layout",
         )
-
-        self.loc_toggle = self.loc.locator("..").locator("button.collapse-toggle")
+        # change self.loc > self.loc_container
+        self.loc_handle = self.loc.locator("..").locator("button.collapse-toggle")
 
     def expect_title(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc).to_have_text(value, timeout=timeout)
 
-    def expect_toggle(self, open: bool, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc_toggle).to_have_count(int(open), timeout=timeout)
+    def expect_handle(self, exists: bool, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_handle).to_have_count(int(exists), timeout=timeout)
 
-    def expect_toggle_expanded(self, open: bool, *, timeout: Timeout = None) -> None:
+    # use to have attribute instead of to have count
+    def expect_open(self, open: bool, *, timeout: Timeout = None) -> None:
         playwright_expect(
             self.loc.locator("..").locator(
                 f"button.collapse-toggle[aria-expanded='{str(open).lower()}']"
             )
-        ).to_have_count(int(open), timeout=timeout)
+        ).to_have_count(1, timeout=timeout)
