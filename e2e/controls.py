@@ -2339,7 +2339,6 @@ class OutputTable(_OutputBase):
 
 
 class _CardBodyP(_InputBaseP, Protocol):
-    loc: Locator
 
 
 class _CardBodyM:
