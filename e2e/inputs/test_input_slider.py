@@ -15,9 +15,7 @@ def test_input_slider_kitchen(page: Page, slider_app: ShinyAppProc) -> None:
 
     expect(obs.loc_label).to_have_text("Number of bins:")
 
-    obs.expect_tick_labels(
-        ["10", "19", "28", "37", "46", "55", "64", "73", "82", "91", "100"]
-    )
+    obs.expect_tick_labels(None)
     obs.expect_value("30")
 
     obs.expect_animate(False)
@@ -27,7 +25,7 @@ def test_input_slider_kitchen(page: Page, slider_app: ShinyAppProc) -> None:
     obs.expect_max("100")
     # obs.expect_from()
     obs.expect_step("1")
-    obs.expect_ticks("true")
+    obs.expect_ticks("false")
     obs.expect_sep(",")
     obs.expect_pre(None)
     obs.expect_post(None)

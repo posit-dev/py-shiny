@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Literal, TypeVar
 
-from ._typing_extensions import Literal
-
-ex_dir: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "examples")
+ex_dir: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "api-examples")
 
 FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
@@ -34,7 +32,7 @@ def add_example(
     Add an example to the docstring of a function, method, or class.
 
     This decorator must, at the moment, be used on a function, method, or class whose
-    ``__name__`` matches the name of directory under ``shiny/examples/``, and must
+    ``__name__`` matches the name of directory under ``shiny/api-examples/``, and must
     also contain a ``app.py`` file in that directory.
 
     Parameters

@@ -1,12 +1,11 @@
 __all__ = ("input_text", "input_text_area")
 
-from typing import Optional
+from typing import Literal, Optional
 
 from htmltools import Tag, TagChild, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from .._typing_extensions import Literal
 from ._utils import shiny_input_label
 
 
@@ -53,10 +52,10 @@ def input_text(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A string containing the current text input. The default value is ``""`` unless
-        ``value`` is provided.
+    ::: {.callout-note title="Server value"}
+    A string containing the current text input. The default value is ``""`` unless
+    ``value`` is provided.
+    :::
 
     See Also
     -------
@@ -140,10 +139,10 @@ def input_text_area(
 
     Notes
     ------
-    .. admonition:: Server value
-
-        A string containing the current text input. The default value is ``""`` unless
-        ``value`` is provided.
+    ::: {.callout-note title="Server value"}
+    A string containing the current text input. The default value is ``""`` unless
+    ``value`` is provided.
+    :::
 
     See Also
     -------

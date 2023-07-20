@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Sequence
+from typing import Literal, Optional, Sequence
 
 from htmltools import (
     MetadataNode,
@@ -13,12 +13,12 @@ from htmltools import (
     tags,
 )
 
-from ..._typing_extensions import Literal
 from ...types import MISSING, MISSING_TYPE, NavSetArg
 from ...ui._page import page_bootstrap
 from ...ui._utils import get_window_title
-from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
+from ._css_unit import CssUnit, as_css_padding, as_css_unit
 from ._fill import as_fillable_container
+from ._htmldeps import page_fillable_dependency, page_sidebar_dependency
 from ._navs import navset_bar
 from ._sidebar import Sidebar, layout_sidebar
 from ._utils import consolidate_attrs
@@ -33,7 +33,7 @@ def page_sidebar(
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> Tag:
     """
     Create a page with a sidebar and a title.
 
@@ -61,22 +61,28 @@ def page_sidebar(
         Additional attributes passed to :func:`~shiny.ui.layout_sidebar`.
 
     Returns
+    -------
+    :
+        A UI element.
     """
 
     if isinstance(title, str):
         title = tags.h1(title, class_="bslib-page-title")
 
+    attrs, children = consolidate_attrs(*args, **kwargs)
+
     return page_fillable(
         title,
         layout_sidebar(
             sidebar,
-            *args,
+            *children,
+            attrs,
             fillable=fillable,
             border=False,
             border_radius=False,
-            **kwargs,
         ),
         get_window_title(title, window_title=window_title),
+        page_sidebar_dependency(),
         padding=0,
         gap=0,
         lang=lang,
@@ -100,7 +106,7 @@ def page_navbar(
     header: Optional[TagChild] = None,
     footer: Optional[TagChild] = None,
     bg: Optional[str] = None,
-    inverse: bool = False,
+    inverse: bool = True,
     collapsible: bool = True,
     fluid: bool = True,
     window_title: str | MISSING_TYPE = MISSING,
@@ -145,9 +151,7 @@ def page_navbar(
     inverse
         Either ``True`` for a light text color or ``False`` for a dark text color.
     collapsible
-        ``True`` to automatically collapse the navigation elements into a menu when the
-        width of the browser is less than 940 pixels (useful for viewing on smaller
-        touchscreen device)
+        ``True`` to automatically collapse the elements into an expandable menu on mobile devices or narrow window widths.
     fluid
         ``True`` to use fluid layout; ``False`` to use fixed layout.
     window_title
@@ -165,10 +169,10 @@ def page_navbar(
 
     See Also
     -------
-    :func:`~shiny.ui.nav`
-    :func:`~shiny.ui.nav_menu`
-    :func:`~shiny.ui.navset_bar`
-    :func:`~shiny.ui.page_fluid`
+    * :func:`~shiny.ui.nav`
+    * :func:`~shiny.ui.nav_menu`
+    * :func:`~shiny.experimental.ui.navset_bar`
+    * :func:`~shiny.ui.page_fluid`
 
     Example
     -------
@@ -230,12 +234,46 @@ def page_fillable(
     title: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> Tag:
+    """
+    Creates a fillable page
+
+    Parameters
+    ----------
+    *args
+        UI elements.
+    padding
+        Padding to use for the body. See :func:`~shiny.experimental.ui.as_css_padding`
+        for more details.
+    fillable_mobile
+        Whether or not the page should fill the viewport's height on mobile devices
+        (i.e., narrow windows).
+    gap
+        A CSS length unit passed through :func:`~shiny.experimental.ui.as_css_unit`
+        defining the `gap` (i.e., spacing) between elements provided to `*args`.
+    title
+        The browser window title (defaults to the host URL of the page). Can also be set
+        as a side effect via :func:`~shiny.ui.panel_title`.
+    lang
+        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+        default, `None`, results in an empty string.
+
+    Returns
+    -------
+    :
+        A UI element.
+
+    See Also
+    -------
+    * :func:`~shiny.ui.page_fluid`
+    * :func:`~shiny.ui.page_fixed`
+    """
     attrs, children = consolidate_attrs(*args, **kwargs)
 
     style = css(
-        padding=validate_css_padding(padding),
-        gap=validate_css_unit(gap),
+        padding=as_css_padding(padding),
+        gap=as_css_unit(gap),
         __bslib_page_fill_mobile_height="100%" if fillable_mobile else "auto",
     )
 
@@ -248,6 +286,7 @@ def page_fillable(
                 *children,
             )
         ),
+        page_fillable_dependency(),
         title=title,
         lang=lang,
     )

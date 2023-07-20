@@ -7,6 +7,7 @@ import re
 import sys
 import time
 import typing
+from typing import Literal, Protocol
 
 from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
@@ -14,12 +15,6 @@ from playwright.sync_api import expect as playwright_expect
 # Import `shiny`'s typing extentions.
 # Since this is a private file, tell pyright to ignore the import
 # (Imports split over many import statements due to auto formatting)
-from shiny._typing_extensions import (
-    Literal,  # pyright: ignore[reportPrivateImportUsage]
-)
-from shiny._typing_extensions import (
-    Protocol,  # pyright: ignore[reportPrivateImportUsage]
-)
 from shiny._typing_extensions import (
     TypeGuard,  # pyright: ignore[reportPrivateImportUsage]
 )
@@ -1379,10 +1374,14 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
 
     def expect_tick_labels(
         self,
-        value: ListPatternOrStr,
+        value: ListPatternOrStr | None,
         *,
         timeout: Timeout = None,
     ) -> None:
+        if value is None:
+            playwright_expect(self.loc_irs_ticks).to_have_count(0)
+            return
+
         playwright_expect(self.loc_irs_ticks).to_have_text(value, timeout=timeout)
 
     def expect_animate(self, exists: bool, *, timeout: Timeout = None) -> None:
@@ -1558,10 +1557,10 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
             )
 
     def _grid_bb(self, *, timeout: Timeout = None) -> FloatRect:
-        grid = self.loc_container.locator(".irs-grid")
+        grid = self.loc_irs.locator("> .irs > .irs-line")
         grid_bb = grid.bounding_box(timeout=timeout)
         if grid_bb is None:
-            raise RuntimeError("Couldn't find bounding box for .irs-grid")
+            raise RuntimeError("Couldn't find bounding box for .irs-line")
         return grid_bb
 
     def _handle_center(

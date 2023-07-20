@@ -7,17 +7,16 @@ __all__ = (
 )
 
 import copy
-from typing import Any, Optional, Sequence, cast
+from typing import Any, Literal, Optional, Sequence, cast
 
 from htmltools import MetadataNode, Tag, TagChild, TagList, css, div, tags
 
 from ..._namespaces import resolve_id
-from ..._typing_extensions import Literal
 from ..._utils import private_random_int
 from ...types import NavSetArg
 from ...ui._html_dependencies import bootstrap_deps
 from ._card import CardItem, card, card_body, card_footer, card_header
-from ._css_unit import CssUnit, validate_css_padding, validate_css_unit
+from ._css_unit import CssUnit, as_css_padding, as_css_unit
 from ._fill import as_fill_carrier
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import tag_add_style
@@ -161,7 +160,7 @@ class NavSetCard(NavSet):
             content_val = navset_card_body(content, sidebar=self.sidebar)
 
         if self.placement == "below":
-            # TODO-barret; have carson double check this change
+            # TODO-carson; have carson double check this change
             return card(
                 card_header(self.header) if self.header else None,
                 content_val,
@@ -171,7 +170,7 @@ class NavSetCard(NavSet):
                 card_footer(nav),
             )
         else:
-            # TODO-barret; have carson double check this change
+            # TODO-carson; have carson double check this change
             return card(
                 card_header(nav),
                 card_body(self.header, fill=False, fillable=False)
@@ -223,15 +222,15 @@ def navset_tab_card(
 
     See Also
     -------
-    ~shiny.ui.nav
-    ~shiny.ui.nav_menu
-    ~shiny.ui.nav_control
-    ~shiny.ui.nav_spacer
-    ~shiny.ui.navset_bar
-    ~shiny.ui.navset_tab
-    ~shiny.ui.navset_pill
-    ~shiny.ui.navset_pill_card
-    ~shiny.ui.navset_hidden
+    * ~shiny.ui.nav
+    * ~shiny.ui.nav_menu
+    * ~shiny.ui.nav_control
+    * ~shiny.ui.nav_spacer
+    * ~shiny.experimental.ui.navset_bar
+    * ~shiny.ui.navset_tab
+    * ~shiny.ui.navset_pill
+    * ~shiny.experimental.ui.navset_pill_card
+    * ~shiny.ui.navset_hidden
 
     Example
     -------
@@ -281,15 +280,15 @@ def navset_pill_card(
 
     See Also
     -------
-    ~shiny.ui.nav
-    ~shiny.ui.nav_menu
-    ~shiny.ui.nav_control
-    ~shiny.ui.nav_spacer
-    ~shiny.ui.navset_bar
-    ~shiny.ui.navset_tab
-    ~shiny.ui.navset_pill
-    ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_hidden
+    * ~shiny.ui.nav
+    * ~shiny.ui.nav_menu
+    * ~shiny.ui.nav_control
+    * ~shiny.ui.nav_spacer
+    * ~shiny.experimental.ui.navset_bar
+    * ~shiny.ui.navset_tab
+    * ~shiny.ui.navset_pill
+    * ~shiny.experimental.ui.navset_tab_card
+    * ~shiny.ui.navset_hidden
 
     Example
     -------
@@ -461,8 +460,8 @@ def _make_tabs_fillable(
             if child_attr is None or child_attr not in fillable:
                 continue
         styles = css(
-            gap=validate_css_unit(gap),
-            padding=validate_css_padding(padding),
+            gap=as_css_unit(gap),
+            padding=as_css_padding(padding),
             __bslib_navbar_margin="0;" if navbar else None,
         )
         child = tag_add_style(child, styles)
@@ -496,7 +495,7 @@ def navset_bar(
 
     Parameters
     ----------
-    args
+    *args
         A collection of nav items (e.g., :func:`shiny.ui.nav`).
     title
         Title to display in the navbar.
@@ -521,24 +520,22 @@ def navset_bar(
     inverse
         Either ``True`` for a light text color or ``False`` for a dark text color.
     collapsible
-        ``True`` to automatically collapse the navigation elements into a menu when the
-        width of the browser is less than 940 pixels (useful for viewing on smaller
-        touchscreen device)
+        ``True`` to automatically collapse the navigation elements into an expandable menu on mobile devices or narrow window widths.
     fluid
         ``True`` to use fluid layout; ``False`` to use fixed layout.
 
     See Also
     -------
-    ~shiny.ui.page_navbar
-    ~shiny.ui.nav
-    ~shiny.ui.nav_menu
-    ~shiny.ui.nav_control
-    ~shiny.ui.nav_spacer
-    ~shiny.ui.navset_tab
-    ~shiny.ui.navset_pill
-    ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
-    ~shiny.ui.navset_hidden
+    * ~shiny.ui.page_navbar
+    * ~shiny.ui.nav
+    * ~shiny.ui.nav_menu
+    * ~shiny.ui.nav_control
+    * ~shiny.ui.nav_spacer
+    * ~shiny.ui.navset_tab
+    * ~shiny.ui.navset_pill
+    * ~shiny.experimental.ui.navset_tab_card
+    * ~shiny.experimental.ui.navset_pill_card
+    * ~shiny.ui.navset_hidden
 
     Example
     -------

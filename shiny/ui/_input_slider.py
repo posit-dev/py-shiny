@@ -65,7 +65,7 @@ def input_slider(
     value: SliderValueArg | Iterable[SliderValueArg],
     *,
     step: Optional[SliderStepArg] = None,
-    ticks: bool = True,
+    ticks: bool = False,
     animate: bool | AnimationOptions = False,
     width: Optional[str] = None,
     sep: str = ",",
@@ -130,10 +130,10 @@ def input_slider(
 
     Notes
     ------
-    .. admonition:: Server value
-
-       A number, date, or date-time (depending on the class of value), or in the case of
-       slider range, a list of two numbers/dates/date-times.
+    ::: {.callout-note title="Server value"}
+    A number, date, or date-time (depending on the class of value), or in the case of
+    slider range, a list of two numbers/dates/date-times.
+    :::
 
     See Also
     -------

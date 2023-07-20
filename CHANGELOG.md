@@ -10,6 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* `shiny run` now takes a `--reload-dir <DIR>` argument that indicates a directory `--reload` should (recursively) monitor for changes, in addition to the app's parent directory. Can be used more than once. (#353)
+* The default theme has been updated to use Bootstrap 5 with custom Shiny style enhancements. (#624)
+* Added experimental UI `tooltip()`, `update_tooltip()`, and `toggle_tooltip()` for easy creation (and server-side updating) of [Bootstrap tooltips](https://getbootstrap.com/docs/5.2/components/tooltips/) (a way to display additional information when focusing (or hovering over) a UI element). (#629)
+
+
+### Bug fixes
+
+### Other changes
+
+* Documentation updates. (#591)
+* Removed Python 3.7 support. (#590)
+
+
+## [0.4.0] - 2023-06-26
+
+### New features
+
+* Added new fast-scrolling data table and data grid outputs. (#538)
+
 * Added `include_js()` and `include_css()`, for easily including JS and CSS files in an application. (#127)
 
 * Added sidebar, card, value box, and accordion methods into `shiny.experimental.ui`. (#481)
@@ -18,15 +37,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added sidebar methods into `shiny.experimental.ui`. `shiny.experimental.ui.layout_sidebar()` does not require `ui.panel_main()` and `ui.panel_sidebar()`. These two methods have been deprecated. `x.ui.page_navbar()`, `x.ui.navset_bar()`, `x.navset_tab_card()`, and `x.navset.pill_card()` added `sidebar=` support. (#481)
 
-* feat(sidebar): `ui.layout_sidebar()` internally uses `x.ui.layout_sidebar()`, enabling filling layout features. #568
+* feat(sidebar): `ui.layout_sidebar()` internally uses `x.ui.layout_sidebar()`, enabling filling layout features. (#568)
 
 
 ### Bug fixes
 
 * Fixed #496: Previously, when `shiny run --reload` was used, the app would only reload when a .py file changed. Now it will reload when .py, .css, .js, and .html files change. (#505)
 
-### Other changes
-
+* Closed #535: Added a meta viewport tag, so that page layout will adapt to mobile device screens. (#540)
 
 ## [0.3.3] - 2023-04-26
 

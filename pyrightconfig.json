@@ -1,6 +1,6 @@
 {
   "ignore": [
-    "shiny/examples",
+    "shiny/api-examples",
     "examples",
     "build",
     "dist",

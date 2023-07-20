@@ -8,12 +8,12 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Literal
 
 # TODO: maybe these include_*() functions should actually live in htmltools?
 from htmltools import HTMLDependency, Tag, TagAttrValue, tags
 
 from .._docstring import add_example
-from .._typing_extensions import Literal
 
 # TODO: it's bummer that, when method="link_files" and path is in the same directory
 # as the app, the app's source will be included. Should we just not copy .py/.r files?
@@ -34,22 +34,19 @@ def include_js(
     path
         A path to a JS file.
     method
-        One of the following:
-          * ``"link"``: Link to the JS file via a :func:`~ui.tags.script` tag. This
-            method is generally preferrable to ``"inline"`` since it allows the browser
-            to cache the file.
-          * ``"link_files"``: Same as ``"link"``, but also allow for the JS file to
-            request other files within ``path``'s immediate parent directory (e.g.,
-            ``import()` another file, if it is loaded with `type="module"`). Note that this isn't the default
-            behavior because you should **be careful not to include files in the same
-            directory as ``path`` that contain sensitive information**. A good general
-            rule of thumb to follow is to have ``path`` be located in a subdirectory of
-            the app directory. For example, if the app's source is located at
-            ``/app/app.py``, then ``path`` should be somewhere like
-            ``/app/js/custom.js`` (and all the other relevant accompanying 'safe' files
-            should be located under ``/app/js/``).
-          * ``"inline"``: Inline the JS file contents within a :func:`~ui.tags.script`
-            tag.
+        One of the following: ``"link"``, ``"link_files"``, or ``"inline"``. ``"link"``
+        is the link to the CSS file via a :func:`~ui.tags.link` tag. This method is
+        generally preferrable to ``"inline"`` since it allows the browser to cache the
+        file. ``"link_files"`` is the same as ``"link"``, but also allow for the CSS
+        file to request other files within ``path``'s immediate parent directory (e.g.,
+        ``@import()`` another file). Note that this isn't the default behavior because
+        you should **be careful not to include files in the same directory as ``path``
+        that contain sensitive information**. A good general rule of thumb to follow is
+        to have ``path`` be located in a subdirectory of the app directory. For example,
+        if the app's source is located at ``/app/app.py``, then ``path`` should be
+        somewhere like ``/app/css/custom.css`` (and all the other relevant accompanying
+        'safe' files should be located under ``/app/css/``). And finally, ``"inline"``
+        is the inline the CSS file contents within a :func:`~ui.tags.style` tag.
     **kwargs
         Attributes which are passed on to `~ui.tags.script`
 
@@ -66,16 +63,17 @@ def include_js(
     document, you can wrap it in ``head_content`` (in this case, just make sure you're
     aware that the DOM probably won't be ready when the script is executed).
 
-    .. code-block:: python
+    ```{python}
+    #| eval: false
+    ui.page_fluid(
+        ui.head_content(ui.include_js("custom.js")),
+    )
 
-        ui.fluidPage(
-            head_content(ui.include_js("custom.js")),
-        )
-
-        # Alternately you can inline Javscript by changing the method.
-        ui.fluidPage(
-            head_content(ui.include_js("custom.js", method = "inline")),
-        )
+    # Alternately you can inline Javscript by changing the method.
+    ui.page_fluid(
+        ui.head_content(ui.include_js("custom.js", method = "inline")),
+    )
+    ```
 
     See Also
     --------
@@ -107,22 +105,19 @@ def include_css(
     path
         A path to a CSS file.
     method
-        One of the following:
-          * ``"link"``: Link to the CSS file via a :func:`~ui.tags.link` tag. This
-            method is generally preferrable to ``"inline"`` since it allows the browser
-            to cache the file.
-          * ``"link_files"``: Same as ``"link"``, but also allow for the CSS file to
-            request other files within ``path``'s immediate parent directory (e.g.,
-            ``@import()`` another file). Note that this isn't the default behavior
-            because you should **be careful not to include files in the same directory
-            as ``path`` that contain sensitive information**. A good general rule of
-            thumb to follow is to have ``path`` be located in a subdirectory of the app
-            directory. For example, if the app's source is located at ``/app/app.py``,
-            then ``path`` should be somewhere like ``/app/css/custom.css`` (and all the
-            other relevant accompanying 'safe' files should be located under
-            ``/app/css/``).
-          * ``"inline"``: Inline the CSS file contents within a :func:`~ui.tags.style`
-            tag.
+        One of the following: ``"link"``, ``"link_files"``, or ``"inline"``. ``"link"``
+        is the link to the CSS file via a :func:`~ui.tags.link` tag. This method is
+        generally preferrable to ``"inline"`` since it allows the browser to cache the
+        file. ``"link_files"`` is the same as ``"link"``, but also allow for the CSS
+        file to request other files within ``path``'s immediate parent directory (e.g.,
+        ``@import()`` another file). Note that this isn't the default behavior because
+        you should **be careful not to include files in the same directory as ``path``
+        that contain sensitive information**. A good general rule of thumb to follow is
+        to have ``path`` be located in a subdirectory of the app directory. For example,
+        if the app's source is located at ``/app/app.py``, then ``path`` should be
+        somewhere like ``/app/css/custom.css`` (and all the other relevant accompanying
+        'safe' files should be located under ``/app/css/``). And finally, ``"inline"``
+        is the inline the CSS file contents within a :func:`~ui.tags.style` tag.
 
 
     Returns
@@ -139,19 +134,21 @@ def include_css(
     may result in a Flash of Unstyled Content (FOUC). To instead place the CSS in the
     :func:`~ui.tags.head` of the document, you can wrap it in ``head_content``:
 
-    .. code-block:: python
+    ```{python}
+    #| eval: false
+    from htmltools import head_content
+    from shiny import ui
 
-        from htmltools import head_content from shiny import ui
+    ui.page_fluid(
+        ui.head_content(ui.include_css("custom.css")),
 
-        ui.fluidPage(
-            head_content(ui.include_css("custom.css")),
-
-            # You can also inline css by passing a dictionary with a `style` element.
-            ui.div(
-                {"style": "font-weight: bold;"},
-                ui.p("Some text!"),
-            )
+        # You can also inline css by passing a dictionary with a `style` element.
+        ui.div(
+            {"style": "font-weight: bold;"},
+            ui.p("Some text!"),
         )
+    )
+    ```
 
     See Also
     --------

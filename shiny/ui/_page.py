@@ -7,13 +7,12 @@ __all__ = (
     "page_bootstrap",
 )
 
-from typing import Optional, Sequence
+from typing import Literal, Optional, Sequence
 
 from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from .._typing_extensions import Literal
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._html_dependencies import bootstrap_deps
 from ._navs import navset_bar
@@ -67,9 +66,7 @@ def page_navbar(
     inverse
         Either ``True`` for a light text color or ``False`` for a dark text color.
     collapsible
-        ``True`` to automatically collapse the navigation elements into a menu when the
-        width of the browser is less than 940 pixels (useful for viewing on smaller
-        touchscreen device)
+        ``True`` to automatically collapse the navigation elements into an expandable menu on mobile devices or narrow window widths.
     fluid
         ``True`` to use fluid layout; ``False`` to use fixed layout.
     window_title
@@ -134,12 +131,12 @@ def page_fluid(
     args
         UI elements.
     title
-        The browser window title (defaults to the host URL of the page). Can also be set as
-        a side effect via :func:`~shiny.ui.panel_title`.
+        The browser window title (defaults to the host URL of the page). Can also be set
+        as a side effect via :func:`~shiny.ui.panel_title`.
     lang
-        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This will
-        be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The default,
-        `None`, results in an empty string.
+        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+        default, `None`, results in an empty string.
     kwargs
         Attributes on the page level container.
 
@@ -176,15 +173,15 @@ def page_fixed(
     args
         UI elements.
     title
-        The browser window title (defaults to the host URL of the page). Can also be set as
-        a side effect via :func:`~shiny.ui.panel_title`.
+        The browser window title (defaults to the host URL of the page). Can also be set
+        as a side effect via :func:`~shiny.ui.panel_title`.
     lang
-        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This will
-        be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The default,
-        `None`, results in an empty string.
-
+        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+        default, `None`, results in an empty string.
     kwargs
         Attributes on the page level container.
+
     Returns
     -------
     :
@@ -215,12 +212,12 @@ def page_bootstrap(
     args
         UI elements.
     title
-        The browser window title (defaults to the host URL of the page). Can also be set as
-        a side effect via :func:`~shiny.ui.panel_title`.
+        The browser window title (defaults to the host URL of the page). Can also be set
+        as a side effect via :func:`~shiny.ui.panel_title`.
     lang
-        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This will
-        be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The default,
-        `None`, results in an empty string.
+        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+        default, `None`, results in an empty string.
 
     Returns
     -------
