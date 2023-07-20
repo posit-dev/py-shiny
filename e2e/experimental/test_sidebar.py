@@ -32,11 +32,10 @@ def test_autoresize(page: Page, app: ShinyAppProc) -> None:
     output_txt_closed = OutputTextVerbatim(page, "state_closed")
     output_txt_closed.expect_value("input.sidebar_closed(): False")
     closed_sidebar.expect_handle(True)
-    # why is it not working
     closed_sidebar.expect_open(False)
     closed_sidebar.loc_handle.click()
     closed_sidebar.expect_title("Closed sidebar content")
-    # closed_sidebar.expect_toggle_expanded(True)
+    closed_sidebar.expect_open(True)
     output_txt_closed.expect_value("input.sidebar_closed(): True")
 
     always_sidebar = Sidebar(page, "sidebar_always")
