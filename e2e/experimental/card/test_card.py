@@ -1,20 +1,20 @@
-from conftest import ShinyAppProc, x_create_doc_example_fixture
+from conftest import ShinyAppProc
 from controls import Card
 from playwright.sync_api import Page
 
-app = x_create_doc_example_fixture("card")
+# app = x_create_doc_example_fixture("card")
 
 
-def test_card(page: Page, app: ShinyAppProc) -> None:
-    page.goto(app.url)
+def test_card(page: Page, local_app: ShinyAppProc) -> None:
+    page.goto(local_app.url)
 
     card = Card(page, "card1")
     card.expect_max_height(None)
     card.expect_min_height(None)
     card.expect_height(None)
-    card.expect_header_to_contain_text("This is the header")
-    card.expect_footer_to_contain_text("This is the footer")
-    card.expect_body_to_contain_text(
+    card.expect_header("This is the header")
+    card.expect_footer("This is the footer")
+    card.expect_body(
         [
             "\nThis is the title\nThis is the body.\n",
             "\n\n",

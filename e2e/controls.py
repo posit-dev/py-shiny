@@ -2339,7 +2339,7 @@ class OutputTable(_OutputBase):
 
 
 class _CardBodyP(_InputBaseP, Protocol):
-
+    loc_body: Locator
 
 class _CardBodyM:
     def expect_body(
@@ -2360,7 +2360,7 @@ class _CardFooterLayoutP(_InputBaseP, Protocol):
 
 
 class _CardFooterM:
-    def expect_footer_to_contain_text(
+    def expect_footer(
         self: _CardFooterLayoutP,
         text: PatternOrStr,
         *,
@@ -2432,6 +2432,7 @@ class ValueBox(
         self.loc_title = value_box_grid.locator(
             "> div > .value-box-area > :first-child"
         )
+        self.loc_body = self.loc
         self._loc_fullscreen = self.loc_container.locator("> .bslib-full-screen-enter")
         # self._loc_close_button = self.page.locator("#bslib-full-screen-overlay > a")
 
@@ -2487,6 +2488,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
             .locator("..")
             .locator("#bslib-full-screen-overlay > a")
         )
+        self.loc_body = self.loc
 
     def expect_header(
         self,
@@ -2499,18 +2501,18 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
             timeout=timeout,
         )
 
-    def expect_body(
-        self,
-        text: PatternOrStr,
-        index: int = 0,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        """Note: Function requires an index since multiple bodies can exist in loc"""
-        playwright_expect(self.loc.nth(index).locator("> :first-child")).to_have_text(
-            text,
-            timeout=timeout,
-        )
+    # def expect_body(
+    #     self,
+    #     text: PatternOrStr,
+    #     index: int = 0,
+    #     *,
+    #     timeout: Timeout = None,
+    # ) -> None:
+    #     """Note: Function requires an index since multiple bodies can exist in loc"""
+    #     playwright_expect(self.loc.nth(index).locator("> :first-child")).to_have_text(
+    #         text,
+    #         timeout=timeout,
+    #     )
 
     def expect_max_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
         expect_to_have_style(self.loc_container, "max-height", value, timeout=timeout)
