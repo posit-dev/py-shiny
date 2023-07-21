@@ -35,6 +35,11 @@ jobs:
           cd docs
           make deps
 
+      - name: Run quartodoc
+        run: |
+          cd docs
+          make quartodoc
+
       - name: Build site
         run: |
           cd docs
