@@ -938,7 +938,7 @@ class _MultipleDomItems:
         *,
         page: Page,
         loc_container: Locator,
-        el_type: str,
+        el_type: Locator | str,
         arr_name: str,
         arr: ListPatternOrStr,
         is_checked: bool | MISSING_TYPE = MISSING,
@@ -949,13 +949,20 @@ class _MultipleDomItems:
 
         # Make sure the locator has len(uniq_arr) input elements
         _MultipleDomItems.assert_arr_is_unique(arr, f"`{arr_name}` must be unique")
-        is_checked_str = _MultipleDomItems.checked_css_str(is_checked)
 
-        item_selector = f"{el_type}{is_checked_str}"
+        if isinstance(el_type, Locator):
+            if not isinstance(is_checked, MISSING_TYPE):
+                raise RuntimeError(
+                    "`is_checked` cannot be specified if `el_type` is a Locator"
+                )
+            loc_item = el_type
+        else:
+            is_checked_str = _MultipleDomItems.checked_css_str(is_checked)
+            loc_item = page.locator(f"{el_type}{is_checked_str}")
 
         # If there are no items, then we should not have any elements
         if len(arr) == 0:
-            playwright_expect(loc_container.locator(item_selector)).to_have_count(
+            playwright_expect(loc_container.locator(el_type)).to_have_count(
                 0, timeout=timeout
             )
             return
@@ -964,7 +971,7 @@ class _MultipleDomItems:
         # Find all items in set
         for item, i in zip(arr, range(len(arr))):
             # Get all elements of type
-            has_locator = page.locator(item_selector)
+            has_locator = loc_item
             # Get the `n`th matching element
             has_locator = has_locator.nth(i)
             # Make sure that element has the correct attribute value
@@ -982,7 +989,7 @@ class _MultipleDomItems:
         # Make sure other items are not in set
         # If we know all elements are contained in the container,
         # and all elements all unique, then it should have a count of `len(arr)`
-        loc_inputs = loc_container.locator(item_selector)
+        loc_inputs = loc_container.locator(loc_item)
         try:
             playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
         except AssertionError as e:
@@ -992,14 +999,14 @@ class _MultipleDomItems:
             playwright_expect(loc_container_orig).to_have_count(1, timeout=timeout)
 
             # Expecting the container to contain {len(arr)} items
-            playwright_expect(loc_container_orig.locator(item_selector)).to_have_count(
+            playwright_expect(loc_container_orig.locator(loc_item)).to_have_count(
                 len(arr), timeout=timeout
             )
 
             for item, i in zip(arr, range(len(arr))):
                 # Expecting item `{i}` to be `{item}`
                 playwright_expect(
-                    loc_container_orig.locator(item_selector).nth(i)
+                    loc_container_orig.locator(loc_item).nth(i)
                 ).to_have_attribute(key, item, timeout=timeout)
 
             # Could not find the reason why. Raising the original error.
@@ -2614,7 +2621,11 @@ class Accordion(
         _MultipleDomItems.expect_locator_values_in_list(
             page=self.page,
             loc_container=self.loc_container,
-            el_type="> div.accordion-item:has(> div.accordion-collapse.show)",
+            el_type=self.page.locator(
+                "> div.accordion-item",
+                has=self.page.locator("> div.accordion-collapse.show"),
+            ),
+            # el_type="> div.accordion-item:has(> div.accordion-collapse.show)",
             arr_name="value",
             arr=value,
             key="data-value",
