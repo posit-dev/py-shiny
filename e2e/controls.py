@@ -2434,9 +2434,12 @@ class ValueBox(
             "> div > .value-box-area > :first-child"
         )
         self.loc_body = self.loc
-        self._loc_fullscreen = self.loc_container.locator("> .bslib-full-screen-enter")
-        # self._loc_close_button = self.page.locator("#bslib-full-screen-overlay > a")
+        self._loc_fullscreen = self.loc_container.locator(
+            "> bslib-tooltip > .bslib-full-screen-enter"
+        )
 
+        # an easier approach is using `#bslib-full-screen-overlay:has(+ div#{id}.card) > a`
+        # but playwright doesn't allow that
         self._loc_close_button = (
             self.page.locator(f"#bslib-full-screen-overlay + div#{id}.bslib-value-box")
             .locator("..")
@@ -2483,7 +2486,11 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
         )
         self.loc_title = self.loc_container.locator("> div.card-header")
         self.loc_footer = self.loc_container.locator("> div.card-footer")
-        self._loc_fullscreen = self.loc_container.locator("> .bslib-full-screen-enter")
+        self._loc_fullscreen = self.loc_container.locator(
+            "> bslib-tooltip > .bslib-full-screen-enter"
+        )
+        # an easier approach is using `#bslib-full-screen-overlay:has(+ div#{id}.card) > a`
+        # but playwright doesn't allow that
         self._loc_close_button = (
             self.page.locator(f"#bslib-full-screen-overlay + div#{id}")
             .locator("..")
