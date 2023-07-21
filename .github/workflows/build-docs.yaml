@@ -37,4 +37,5 @@ jobs:
 
       - name: Build site
         run: |
+          cd docs
           make site
