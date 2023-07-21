@@ -2,8 +2,6 @@ from conftest import ShinyAppProc
 from controls import Card
 from playwright.sync_api import Page
 
-# app = x_create_doc_example_fixture("card")
-
 
 def test_card(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
