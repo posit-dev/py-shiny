@@ -2371,3 +2371,197 @@ class Sidebar(
         playwright_expect(self.loc_handle).to_have_attribute(
             "aria-expanded", str(open).lower(), timeout=timeout
         )
+
+
+class _CardBodyP(_InputBaseP, Protocol):
+    loc_body: Locator
+
+
+class _CardBodyM:
+    def expect_body(
+        self: _CardBodyP,
+        text: PatternOrStr | list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """Note: If testing against multiple elements, text should be an array"""
+        playwright_expect(self.loc).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+
+class _CardFooterLayoutP(_InputBaseP, Protocol):
+    loc_footer: Locator
+
+
+class _CardFooterM:
+    def expect_footer(
+        self: _CardFooterLayoutP,
+        text: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc_footer).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+
+class _CardFullScreenLayoutP(_OutputBaseP, Protocol):
+    loc_title: Locator
+    _loc_fullscreen: Locator
+    _loc_close_button: Locator
+
+
+class _CardFullScreenM:
+    def open_full_screen(
+        self: _CardFullScreenLayoutP, *, timeout: Timeout = None
+    ) -> None:
+        self.loc_title.hover(timeout=timeout)
+        self._loc_fullscreen.wait_for(state="visible", timeout=timeout)
+        self._loc_fullscreen.click(timeout=timeout)
+
+    def close_full_screen(
+        self: _CardFullScreenLayoutP, *, timeout: Timeout = None
+    ) -> None:
+        self._loc_close_button.click(timeout=timeout)
+
+    def expect_full_screen(
+        self: _CardFullScreenLayoutP, open: bool, *, timeout: Timeout = None
+    ) -> None:
+        playwright_expect(self._loc_close_button).to_have_count(
+            int(open), timeout=timeout
+        )
+
+
+class ValueBox(
+    _WidthLocM,
+    _CardBodyM,
+    _CardFullScreenM,
+    _InputWithContainer,
+):
+    # title: TagChild,
+    # value: TagChild,
+    # *args: TagChild | TagAttrs,
+    # showcase: TagChild = None,
+    # showcase_layout: ((TagChild, Tag) -> CardItem) | None = None,
+    # full_screen: bool = False,
+    # theme_color: str | None = "primary",
+    # height: CssUnit | None = None,
+    # max_height: CssUnit | None = None,
+    # fill: bool = True,
+    # class_: str | None = None,
+    # **kwargs: TagAttrValue
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"div#{id}.bslib-value-box",
+            loc="> div > .value-box-grid",
+        )
+        value_box_grid = self.loc
+        self.loc = value_box_grid.locator(
+            "> div > .value-box-area > :not(:first-child)"
+        )
+        self.loc_showcase = value_box_grid.locator("> div > .value-box-showcase")
+        self.loc_title = value_box_grid.locator(
+            "> div > .value-box-area > :first-child"
+        )
+        self.loc_body = self.loc
+        self._loc_fullscreen = self.loc_container.locator(
+            "> bslib-tooltip > .bslib-full-screen-enter"
+        )
+
+        # an easier approach is using `#bslib-full-screen-overlay:has(+ div#{id}.card) > a`
+        # but playwright doesn't allow that
+        self._loc_close_button = (
+            self.page.locator(f"#bslib-full-screen-overlay + div#{id}.bslib-value-box")
+            .locator("..")
+            .locator("#bslib-full-screen-overlay > a")
+        )
+
+    def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        expect_to_have_style(
+            self.loc_container, "--bslib-grid-height", value, timeout=timeout
+        )
+
+    def expect_title(
+        self,
+        text: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc_title).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+    # hard to test since it can be customized by user
+    # def expect_showcase_layout(self, layout, *, timeout: Timeout = None) -> None:
+    #     raise NotImplementedError()
+
+
+class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithContainer):
+    # *args: TagChild | TagAttrs | CardItem,
+    # full_screen: bool = False,
+    # height: CssUnit | None = None,
+    # max_height: CssUnit | None = None,
+    # min_height: CssUnit | None = None,
+    # fill: bool = True,
+    # class_: str | None = None,
+    # wrapper: WrapperCallable | MISSING_TYPE | None = MISSING,
+    # **kwargs: TagAttrValue
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"div#{id}.card",
+            loc="> div.card-body",
+        )
+        self.loc_title = self.loc_container.locator("> div.card-header")
+        self.loc_footer = self.loc_container.locator("> div.card-footer")
+        self._loc_fullscreen = self.loc_container.locator(
+            "> bslib-tooltip > .bslib-full-screen-enter"
+        )
+        # an easier approach is using `#bslib-full-screen-overlay:has(+ div#{id}.card) > a`
+        # but playwright doesn't allow that
+        self._loc_close_button = (
+            self.page.locator(f"#bslib-full-screen-overlay + div#{id}")
+            .locator("..")
+            .locator("#bslib-full-screen-overlay > a")
+        )
+        self.loc_body = self.loc
+
+    def expect_header(
+        self,
+        text: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc_title).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+    # def expect_body(
+    #     self,
+    #     text: PatternOrStr,
+    #     index: int = 0,
+    #     *,
+    #     timeout: Timeout = None,
+    # ) -> None:
+    #     """Note: Function requires an index since multiple bodies can exist in loc"""
+    #     playwright_expect(self.loc.nth(index).locator("> :first-child")).to_have_text(
+    #         text,
+    #         timeout=timeout,
+    #     )
+
+    def expect_max_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        expect_to_have_style(self.loc_container, "max-height", value, timeout=timeout)
+
+    def expect_min_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        expect_to_have_style(self.loc_container, "min-height", value, timeout=timeout)
+
+    def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
