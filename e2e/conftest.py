@@ -200,6 +200,13 @@ def create_doc_example_fixture(example_name: str, scope: str = "module"):
     )
 
 
+def x_create_doc_example_fixture(example_name: str, scope: str = "module"):
+    """Used to create app fixtures from apps in py-shiny/shiny/examples"""
+    return create_app_fixture(
+        here / "../shiny/experimental/api-examples" / example_name / "app.py", scope
+    )
+
+
 @pytest.fixture(scope="module")
 def local_app(request: pytest.FixtureRequest) -> Generator[ShinyAppProc, None, None]:
     sa = run_shiny_app(PurePath(request.path).parent / "app.py", wait_for_start=False)
