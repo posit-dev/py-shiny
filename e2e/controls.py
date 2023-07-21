@@ -2637,13 +2637,11 @@ class Accordion(
             timeout=timeout,
         )
 
-    def expect_open_panels_to_contain_text(
+    def accordion_panel(
         self,
-        value: list[PatternOrStr],
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        playwright_expect(self.loc_open).to_contain_text(value, timeout=timeout)
+        data_value: str,
+    ) -> AccordionPanel:
+        return AccordionPanel(self.page, self.id, data_value)
 
 
 class AccordionPanel(

@@ -1,5 +1,5 @@
 from conftest import ShinyAppProc
-from controls import Accordion, AccordionPanel, InputActionButton, OutputTextVerbatim
+from controls import Accordion, InputActionButton, OutputTextVerbatim
 from playwright.sync_api import Page
 
 
@@ -7,7 +7,7 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
     acc = Accordion(page, "acc")
-    acc_panel_A = AccordionPanel(page, "acc", "Section A")
+    acc_panel_A = acc.accordion_panel("Section A")
     output_txt_verbatim = OutputTextVerbatim(page, "acc_txt")
     alternate_button = InputActionButton(page, "alternate")
     open_all_button = InputActionButton(page, "open_all")
@@ -42,14 +42,13 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
 
     close_all_button.click()
     acc.expect_open([])
-    acc.expect_open_panels_to_contain_text([])
     output_txt_verbatim.expect_value("input.acc(): None")
 
     toggle_b_button.click()
     acc.expect_open(["Section B"])
     output_txt_verbatim.expect_value("input.acc(): ('Section B',)")
 
-    acc_panel_updated_A = AccordionPanel(page, "acc", "updated_section_a")
+    acc_panel_updated_A = acc.accordion_panel("updated_section_a")
     toggle_updates_button.click()
     acc_panel_updated_A.expect_label("Updated title")
     acc_panel_updated_A.expect_body("Updated body")
