@@ -39,15 +39,9 @@ $(PYBIN): $(VENV)
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
-deps: py-deps quarto-exts ## Install build dependencies
-
-py-deps: $(PYBIN)  ## Install Python packages
+deps: $(PYBIN)  ## Install build dependencies
 	$(PYBIN)/pip install pip --upgrade
 	$(PYBIN)/pip install -e ..[doc]
-
-quarto-exts:  ## Install Quarto extensions
-	quarto add --no-prompt quarto-ext/shinylive
-	quarto add --no-prompt machow/quartodoc
 
 quartodoc:  ## Build API docs
 	. $(PYBIN)/activate \

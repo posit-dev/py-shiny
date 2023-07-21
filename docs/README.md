@@ -9,7 +9,7 @@ To build the docs, first install the Python dependencies and Quarto extensions:
 
 ```bash
 # Install build dependencies
-make deps
+make py-deps
 ```
 
 After those dependencies are installed, build the .qmd files for Shiny, using quartodoc. This will go in the `api/` directory:
