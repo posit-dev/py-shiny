@@ -938,7 +938,7 @@ class _MultipleDomItems:
         *,
         page: Page,
         loc_container: Locator,
-        el_type: str,
+        el_type: Locator | str,
         arr_name: str,
         arr: ListPatternOrStr,
         is_checked: bool | MISSING_TYPE = MISSING,
@@ -949,13 +949,20 @@ class _MultipleDomItems:
 
         # Make sure the locator has len(uniq_arr) input elements
         _MultipleDomItems.assert_arr_is_unique(arr, f"`{arr_name}` must be unique")
-        is_checked_str = _MultipleDomItems.checked_css_str(is_checked)
 
-        item_selector = f"{el_type}{is_checked_str}"
+        if isinstance(el_type, Locator):
+            if not isinstance(is_checked, MISSING_TYPE):
+                raise RuntimeError(
+                    "`is_checked` cannot be specified if `el_type` is a Locator"
+                )
+            loc_item = el_type
+        else:
+            is_checked_str = _MultipleDomItems.checked_css_str(is_checked)
+            loc_item = page.locator(f"{el_type}{is_checked_str}")
 
         # If there are no items, then we should not have any elements
         if len(arr) == 0:
-            playwright_expect(loc_container.locator(item_selector)).to_have_count(
+            playwright_expect(loc_container.locator(el_type)).to_have_count(
                 0, timeout=timeout
             )
             return
@@ -964,7 +971,7 @@ class _MultipleDomItems:
         # Find all items in set
         for item, i in zip(arr, range(len(arr))):
             # Get all elements of type
-            has_locator = page.locator(item_selector)
+            has_locator = loc_item
             # Get the `n`th matching element
             has_locator = has_locator.nth(i)
             # Make sure that element has the correct attribute value
@@ -982,7 +989,7 @@ class _MultipleDomItems:
         # Make sure other items are not in set
         # If we know all elements are contained in the container,
         # and all elements all unique, then it should have a count of `len(arr)`
-        loc_inputs = loc_container.locator(item_selector)
+        loc_inputs = loc_container.locator(loc_item)
         try:
             playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
         except AssertionError as e:
@@ -992,14 +999,14 @@ class _MultipleDomItems:
             playwright_expect(loc_container_orig).to_have_count(1, timeout=timeout)
 
             # Expecting the container to contain {len(arr)} items
-            playwright_expect(loc_container_orig.locator(item_selector)).to_have_count(
+            playwright_expect(loc_container_orig.locator(loc_item)).to_have_count(
                 len(arr), timeout=timeout
             )
 
             for item, i in zip(arr, range(len(arr))):
                 # Expecting item `{i}` to be `{item}`
                 playwright_expect(
-                    loc_container_orig.locator(item_selector).nth(i)
+                    loc_container_orig.locator(loc_item).nth(i)
                 ).to_have_attribute(key, item, timeout=timeout)
 
             # Could not find the reason why. Raising the original error.
@@ -2096,6 +2103,7 @@ class _OutputTextValue(_OutputBase):
         *,
         timeout: Timeout = None,
     ) -> None:
+        """Note this function will trim value and output text value before comparing them"""
         self.expect.to_have_text(value, timeout=timeout)
 
 
@@ -2565,3 +2573,125 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
 
     def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
         expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
+
+
+### Experimental below
+
+
+class Accordion(
+    _WidthLocM,
+    _InputWithContainer,
+):
+    # *args: AccordionPanel | TagAttrs,
+    # id: Optional[str] = None,
+    # open: Optional[bool | str | list[str]] = None,
+    # multiple: bool = True,
+    # class_: Optional[str] = None,
+    # width: Optional[CssUnit] = None,
+    # height: Optional[CssUnit] = None,
+    # **kwargs: TagAttrValue,
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc="> div.accordion-item",
+            loc_container=f"div#{id}.accordion.shiny-bound-input",
+        )
+        self.loc_open = self.loc.locator(
+            # Return self
+            "xpath=.",
+            # Simple approach as position is not needed
+            has=page.locator(
+                "> div.accordion-collapse.show",
+            ),
+        )
+
+    def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
+
+    def expect_width(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        expect_to_have_style(self.loc_container, "width", value, timeout=timeout)
+
+    def expect_open(
+        self,
+        value: list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
+            el_type=self.page.locator(
+                "> div.accordion-item",
+                has=self.page.locator("> div.accordion-collapse.show"),
+            ),
+            # el_type="> div.accordion-item:has(> div.accordion-collapse.show)",
+            arr_name="value",
+            arr=value,
+            key="data-value",
+            timeout=timeout,
+        )
+
+    def expect_panels(
+        self,
+        value: list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
+            el_type="> div.accordion-item",
+            arr_name="value",
+            arr=value,
+            key="data-value",
+            timeout=timeout,
+        )
+
+    def accordion_panel(
+        self,
+        data_value: str,
+    ) -> AccordionPanel:
+        return AccordionPanel(self.page, self.id, data_value)
+
+
+class AccordionPanel(
+    _WidthLocM,
+    _InputWithContainer,
+):
+    #    self,
+    #     *args: TagChild | TagAttrs,
+    #     data_value: str,
+    #     icon: TagChild | None,
+    #     title: TagChild | None,
+    #     id: str | None,
+    #     **kwargs: TagAttrValue,
+    def __init__(self, page: Page, id: str, data_value: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"> div.accordion-item[data-value='{data_value}']",
+            loc_container=f"div#{id}.accordion.shiny-bound-input",
+        )
+
+        self.loc_label = self.loc.locator(
+            "> .accordion-header > .accordion-button > .accordion-title"
+        )
+
+        self.loc_icon = self.loc.locator(
+            "> .accordion-header > .accordion-button > .accordion-icon"
+        )
+
+        self.loc_body = self.loc.locator("> .accordion-collapse")
+
+    def expect_label(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
+
+    def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_body).to_have_text(value, timeout=timeout)
+
+    def expect_icon(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_icon).to_have_text(value, timeout=timeout)
+
+    def expect_open(self, is_open: bool, *, timeout: Timeout = None) -> None:
+        _expect_class_value(self.loc_body, "show", is_open, timeout=timeout)
