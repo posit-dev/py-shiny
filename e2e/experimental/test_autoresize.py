@@ -29,5 +29,6 @@ def test_autoresize(page: Page, app: ShinyAppProc) -> None:
     for _ in range(resize_number):
         input_area.loc.press("Enter")
     input_area.loc.type("end value")
-    output_txt_verbatim.expect_value("test value\n\n\n\n\n\nend value")
+    return_txt="\n" * resize_number
+    output_txt_verbatim.expect_value(f"test value{return_txt}end value")
     assert get_box_height(input_area.loc) > initial_height
