@@ -2338,6 +2338,41 @@ class OutputTable(_OutputBase):
         )
 
 
+class Sidebar(
+    _WidthLocM,
+    _InputWithContainer,
+):
+    # *args: TagChild | TagAttrs,
+    # width: CssUnit = 250,
+    # position: Literal["left", "right"] = "left",
+    # open: Literal["desktop", "open", "closed", "always"] = "desktop",
+    # id: Optional[str] = None,
+    # title: TagChild | str = None,
+    # bg: Optional[str] = None,
+    # fg: Optional[str] = None,
+    # class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
+    # max_height_mobile: Optional[str | float] = None,
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"> div#{id}",
+            loc_container="div.bslib-sidebar-layout",
+        )
+        self.loc_handle = self.loc_container.locator("button.collapse-toggle")
+
+    def expect_title(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc).to_have_text(value, timeout=timeout)
+
+    def expect_handle(self, exists: bool, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_handle).to_have_count(int(exists), timeout=timeout)
+
+    def expect_open(self, open: bool, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_handle).to_have_attribute(
+            "aria-expanded", str(open).lower(), timeout=timeout
+        )
+
+
 class _CardBodyP(_InputBaseP, Protocol):
     loc_body: Locator
 
