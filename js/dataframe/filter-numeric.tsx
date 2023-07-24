@@ -3,8 +3,7 @@ import React, { FC, useEffect, useRef, useState } from "react";
 export interface FilterNumericProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
   // The absolute min/max possible values
-  min: number;
-  max: number;
+  range: () => [number | undefined, number | undefined];
 
   // The currently selected min/max values
   from: number | undefined;
@@ -15,11 +14,11 @@ export interface FilterNumericProps
 
 export const FilterNumeric: FC<FilterNumericProps> = (props) => {
   const [editing, setEditing] = useState(false);
-  const { min, max, from, to, onRangeChange } = props;
+  const { range, from, to, onRangeChange } = props;
 
   return (
     <FilterNumericImpl
-      range={[min, max]}
+      range={range}
       value={[from, to]}
       editing={editing}
       onValueChange={(x) => onRangeChange(...x)}
@@ -42,7 +41,7 @@ function generateLabel(from?: number, to?: number) {
 }
 
 interface FilterNumericImplProps {
-  range: [number, number];
+  range: () => [number | undefined, number | undefined];
   value: [number | undefined, number | undefined];
   editing: boolean;
   onValueChange: (range: [number | undefined, number | undefined]) => void;
@@ -53,6 +52,9 @@ interface FilterNumericImplProps {
 const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
   const [min, max] = props.value;
   const { editing, onFocus } = props;
+
+  const minInputRef = useRef<HTMLInputElement>(null);
+  const maxInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div
@@ -69,24 +71,40 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
       }}
     >
       <input
-        className="form-control form-control-sm"
+        ref={minInputRef}
+        className={`form-control form-control-sm ${
+          minInputRef.current?.checkValidity() ? "" : "is-invalid"
+        }`}
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
-        placeholder={createPlaceholder(editing, "Min", props.range[0])}
+        placeholder={createPlaceholder(editing, "Min", props.range()[0])}
         value={min}
-        onChange={(e) =>
-          props.onValueChange([coerceToNum(e.target.value), max])
-        }
+        onChange={(e) => {
+          const value = coerceToNum(e.target.value);
+          minInputRef.current.classList.toggle(
+            "is-invalid",
+            !e.target.checkValidity()
+          );
+          props.onValueChange([value, max]);
+        }}
       />
       <input
-        className="form-control form-control-sm"
+        ref={maxInputRef}
+        className={`form-control form-control-sm ${
+          maxInputRef.current?.checkValidity() ? "" : "is-invalid"
+        }`}
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
-        placeholder={createPlaceholder(editing, "Max", props.range[1])}
+        placeholder={createPlaceholder(editing, "Max", props.range()[1])}
         value={max}
-        onChange={(e) =>
-          props.onValueChange([min, coerceToNum(e.target.value)])
-        }
+        onChange={(e) => {
+          const value = coerceToNum(e.target.value);
+          maxInputRef.current.classList.toggle(
+            "is-invalid",
+            !e.target.checkValidity()
+          );
+          props.onValueChange([min, value]);
+        }}
       />
     </div>
   );

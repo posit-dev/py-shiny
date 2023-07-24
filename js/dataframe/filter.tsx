@@ -48,16 +48,14 @@ export const Filter: FC<FilterProps> = ({ header, className, ...props }) => {
       | [number | undefined, number | undefined]
       | undefined) ?? [undefined, undefined];
 
-    const [min, max] = header.column.getFacetedMinMaxValues() ?? [
-      undefined,
-      undefined,
-    ];
+    const range = () => {
+      return header.column.getFacetedMinMaxValues() ?? [undefined, undefined];
+    };
 
     return FilterNumeric({
       from,
       to,
-      min,
-      max,
+      range,
       onRangeChange: (from, to) => header.column.setFilterValue([from, to]),
     });
   }
