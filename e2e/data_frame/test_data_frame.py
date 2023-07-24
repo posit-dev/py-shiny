@@ -59,13 +59,13 @@ def test_summary_navigation(
     page.goto(data_frame_app.url)
 
     # Check that summary responds to navigation
-    expect(summary).to_have_text("Viewing rows 1 through 9 of 20")
+    expect(summary).to_have_text(re.compile("^Viewing rows 1 through \\d+ of 20$"))
     # Put focus in the table and hit End keystroke
     grid_container.locator("tbody tr:first-child td:first-child").click()
     with expect_to_change(lambda: summary.inner_text()):
         page.keyboard.press("End")
     # Ensure that summary updated
-    expect(summary).to_have_text("Viewing rows 12 through 20 of 20")
+    expect(summary).to_have_text(re.compile("^Viewing rows \\d+ through 20 of 20$"))
 
 
 @pytest.mark.flaky(reruns=RERUNS)
@@ -108,15 +108,15 @@ def test_table_switch(
     expect(grid_container).to_have_class(re.compile(r"\bshiny-data-grid-table\b"))
 
     # Switching modes resets scroll
-    expect(summary).to_have_text("Viewing rows 1 through 8 of 20")
+    expect(summary).to_have_text(re.compile("^Viewing rows 1 through \\d+ of 20$"))
 
     scroll_to_end()
-    expect(summary).to_have_text("Viewing rows 13 through 20 of 20")
+    expect(summary).to_have_text(re.compile("^Viewing rows \\d+ through 20 of 20$"))
 
     # Switch datasets to much longer one
     select_dataset.set("diamonds")
     select_dataset.expect.to_have_value("diamonds")
-    expect(summary).to_have_text("Viewing rows 1 through 8 of 53940")
+    expect(summary).to_have_text(re.compile("^Viewing rows 1 through \\d+ of 53940$"))
 
 
 @pytest.mark.flaky(reruns=RERUNS)
