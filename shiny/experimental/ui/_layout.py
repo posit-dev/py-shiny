@@ -6,6 +6,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
 from ._css_unit import CssUnit, as_css_unit
 from ._fill import as_fill_item, as_fillable_container
+from ._htmldeps import grid_dependency
 from ._utils import consolidate_attrs, is_01_scalar
 
 
@@ -119,6 +120,7 @@ def layout_column_wrap(
         },
         attrs,
         *upgraded_children,
+        grid_dependency(),
     )
     if fill:
         tag = as_fill_item(tag)

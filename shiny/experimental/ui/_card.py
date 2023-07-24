@@ -23,6 +23,7 @@ from ...types import MISSING, MISSING_TYPE
 from ._css_unit import CssUnit, as_css_padding, as_css_unit
 from ._fill import as_fill_carrier, as_fill_item, as_fillable_container
 from ._htmldeps import card_dependency
+from ._tooltip import tooltip
 from ._utils import consolidate_attrs
 
 __all__ = (
@@ -112,6 +113,7 @@ def card(
                 min_height=as_css_unit(min_height),
             ),
             "data-bslib-card-init": True,
+            "data-full-screen": "false" if full_screen else None,
         },
         *children,
         attrs,
@@ -134,14 +136,12 @@ def _card_js_init() -> Tag:
 
 
 def _full_screen_toggle() -> Tag:
-    return tags.span(
-        {
-            "class": "bslib-full-screen-enter badge rounded-pill bg-dark",
-            "data-bs-toggle": "tooltip",
-            "data-bs-placement": "bottom",
-            "title": "Expand",
-        },
-        _full_screen_toggle_icon(),
+    return tooltip(
+        tags.span(
+            {"class": "bslib-full-screen-enter badge rounded-pill bg-dark"},
+            _full_screen_toggle_icon(),
+        ),
+        "Expand",
     )
 
 
