@@ -18,7 +18,6 @@ from __future__ import annotations
 # * `_value_fn` -> `_handler`
 # * `value: IT` -> `fn: RenderFn[IT]`
 
-# TODO-barret; Require that `render_fn` is called
 
 __all__ = (
     "text",
@@ -78,11 +77,63 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 
-# Meta informatoin to give `hander()` some context
+# ======================================================================================
+# Type definitions
+# ======================================================================================
+
+
+RenderFnSync = Callable[[], IT]
+# RenderFn == RenderFnAsync as UserFuncSync is wrapped into an async fn
+RenderFnAsync = Callable[[], Awaitable[IT]]
+RenderFn = RenderFnAsync[IT]
+HandlerFn = Callable[Concatenate["RenderMeta", RenderFn[IT], P], Awaitable[OT]]
+
+
+_RenderArgsSync = Tuple[RenderFnSync[IT], HandlerFn[IT, P, OT]]
+_RenderArgsAsync = Tuple[RenderFnAsync[IT], HandlerFn[IT, P, OT]]
+_RenderArgs = Union[_RenderArgsSync[IT, P, OT], _RenderArgsAsync[IT, P, OT]]
+
+RenderDecoSync = Callable[[RenderFnSync[IT]], "RendererSync[OT]"]
+RenderDecoAsync = Callable[[RenderFnAsync[IT]], "RendererAsync[OT]"]
+RenderDeco = Callable[
+    [Union[RenderFnSync[IT], RenderFnAsync[IT]]],
+    Union["RendererSync[OT]", "RendererAsync[OT]"],
+]
+
+
+# ======================================================================================
+# Helper classes
+# ======================================================================================
+
+
+# Meta information to give `hander()` some context
 class RenderMeta(TypedDict):
     is_async: bool
     session: Session
     name: str
+
+
+class _CallCounter(Generic[IT]):
+    def assert_call_count(self, total_calls: int = 1):
+        if self._call_count != total_calls:
+            raise RuntimeError(
+                f"The total number of calls (`{self._call_count}`) to '{self._render_fn_name}' in the '{self._handler_fn_name}' handler did not equal `{total_calls}`."
+            )
+
+    def __init__(
+        self,
+        *,
+        render_fn: RenderFn[IT],
+        handler_fn: HandlerFn[IT, P, OT],
+    ):
+        self._call_count: int = 0
+        self._render_fn = render_fn
+        self._render_fn_name = render_fn.__name__
+        self._handler_fn_name = handler_fn.__name__
+
+    async def __call__(self) -> IT:
+        self._call_count += 1
+        return await self._render_fn()
 
 
 # ======================================================================================
@@ -156,8 +207,58 @@ class Renderer(Generic[OT]):
         self._name: str = name
 
 
+# Include
+class RendererRun(Renderer[OT]):
+    def __init__(
+        self,
+        # Use single arg to minimize overlap with P.kwargs
+        _render_args: _RenderArgs[IT, P, OT],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> None:
+        # `*args` must be in the `__init__` signature
+        # Make sure there no `args`!
+        _assert_no_args(args)
+
+        # Unpack args
+        render_fn, handler_fn = _render_args
+        if not _utils.is_async_callable(handler_fn):
+            raise TypeError(
+                self.__class__.__name__ + " requires an async handler function"
+            )
+        super().__init__(
+            name=render_fn.__name__,
+            doc=render_fn.__doc__,
+        )
+
+        # Given we use `_utils.run_coro_sync(self._run())` to call our method,
+        # we can act as if `render_fn` and `handler_fn` are always async
+        self._render_fn = _utils.wrap_async(render_fn)
+        self._handler_fn = _utils.wrap_async(handler_fn)
+
+        self._args = args
+        self._kwargs = kwargs
+
+    async def _run(self) -> OT:
+        render_fn_w_counter = _CallCounter(
+            render_fn=self._render_fn,
+            handler_fn=self._handler_fn,
+        )
+        ret = await self._handler_fn(
+            # RendererMeta
+            self.meta,
+            # Callable[[], Awaitable[IT]]
+            render_fn_w_counter,
+            # P
+            *self._args,
+            **self._kwargs,
+        )
+        render_fn_w_counter.assert_call_count(1)
+        return ret
+
+
 # Using a second class to help clarify that it is of a particular type
-class RendererSync(Generic[IT, OT, P], Renderer[OT]):
+class RendererSync(RendererRun[OT]):
     @property
     def is_async(self) -> bool:
         return False
@@ -169,53 +270,26 @@ class RendererSync(Generic[IT, OT, P], Renderer[OT]):
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> None:
-        # `*args` must be in the `__init__` signature
-        # Make sure there no `args`!
-        _assert_no_args(args)
-
-        # Unpack args
-        render_fn, handler_fn = _render_args
+        render_fn = _render_args[0]
         if _utils.is_async_callable(render_fn):
             raise TypeError(
-                self.__class__.__name__ + " requires a sync render function"
+                self.__class__.__name__ + " requires a synchronous render function"
             )
-        if not _utils.is_async_callable(handler_fn):
-            raise TypeError(
-                self.__class__.__name__ + " requires an async handler function"
-            )
+        # super == RendererRun
         super().__init__(
-            name=render_fn.__name__,
-            doc=render_fn.__doc__,
+            _render_args,
+            *args,
+            **kwargs,
         )
-
-        # Given we use `_utils.run_coro_sync(self._run())` to call our method,
-        # we can act as if `render_fn` and `handler_fn` are always async
-        self._render_fn = _utils.wrap_async(render_fn)
-        self._handler_fn = _utils.wrap_async(handler_fn)
-
-        self._args = args
-        self._kwargs = kwargs
 
     def __call__(self) -> OT:
         return _utils.run_coro_sync(self._run())
-
-    async def _run(self) -> OT:
-        ret = await self._handler_fn(
-            # RendererMeta
-            self.meta,
-            # Callable[[], Awaitable[IT]]
-            self._render_fn,
-            # P
-            *self._args,
-            **self._kwargs,
-        )
-        return ret
 
 
 # The reason for having a separate RendererAsync class is because the __call__
 # method is marked here as async; you can't have a single class where one method could
 # be either sync or async.
-class RendererAsync(Generic[IT, OT, P], Renderer[OT]):
+class RendererAsync(RendererRun[OT]):
     @property
     def is_async(self) -> bool:
         return True
@@ -227,78 +301,22 @@ class RendererAsync(Generic[IT, OT, P], Renderer[OT]):
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> None:
-        # `*args` must be in the `__init__` signature
-        # Make sure there no `args`!
-        _assert_no_args(args)
-
-        # Unpack args
-        render_fn, handler_fn = _render_args
-
+        render_fn = _render_args[0]
         if not _utils.is_async_callable(render_fn):
             raise TypeError(
-                self.__class__.__name__ + " requires an async render function"
+                self.__class__.__name__ + " requires an asynchronous render function"
             )
-        if not _utils.is_async_callable(handler_fn):
-            raise TypeError(
-                self.__class__.__name__ + " requires an async handler function"
-            )
-        # super == RendererAsync, Renderer
+        # super == RendererRun
         super().__init__(
-            name=render_fn.__name__,
-            doc=render_fn.__doc__,
+            _render_args,
+            *args,
+            **kwargs,
         )
-
-        # Given we use `_utils.run_coro_sync(self._run())` to call our method,
-        # we can act as if `render_fn` and `handler_fn` are always async
-        self._render_fn = _utils.wrap_async(render_fn)
-        self._handler_fn = _utils.wrap_async(handler_fn)
-        self._args = args
-        self._kwargs = kwargs
 
     async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
     ) -> OT:
         return await self._run()
-
-    async def _run(self) -> OT:
-        ret = await self._handler_fn(
-            # RendererMeta
-            self.meta,
-            # Callable[[], Awaitable[IT]]
-            self._render_fn,
-            # P
-            *self._args,
-            **self._kwargs,
-        )
-        return ret
-
-
-# ======================================================================================
-# Type definitions
-# ======================================================================================
-
-
-UserFuncSync = Callable[[], IT]
-UserFuncAsync = Callable[[], Awaitable[IT]]
-UserFunc = Union[
-    UserFuncSync[IT],
-    UserFuncAsync[IT],
-]
-
-# RenderFn == UserFuncAsync as UserFuncSync is wrapped into an async fn
-RenderFn = Callable[[], Awaitable[IT]]
-HandlerFn = Callable[Concatenate[RenderMeta, RenderFn[IT], P], Awaitable[OT]]
-
-RenderDecoSync = Callable[[UserFuncSync[IT]], RendererSync[IT, OT, P]]
-RenderDecoAsync = Callable[[UserFuncAsync[IT]], RendererAsync[IT, OT, P]]
-RenderDeco = Callable[
-    [Union[UserFuncSync[IT], UserFuncAsync[IT]]],
-    Union[RendererSync[IT, OT, P], RendererAsync[IT, OT, P]],
-]
-
-
-_RenderArgsSync = Tuple[UserFuncSync[IT], HandlerFn[IT, P, OT]]
-_RenderArgsAsync = Tuple[UserFuncAsync[IT], HandlerFn[IT, P, OT]]
 
 
 # ======================================================================================
@@ -335,16 +353,25 @@ def _assert_handler_fn(handler_fn: HandlerFn[IT, P, OT]) -> None:
                 f"No variadic parameters (e.g. `*args`) can be supplied to `handler_fn=`. Received: `{param.name}`"
             )
         if param.kind == inspect.Parameter.KEYWORD_ONLY:
-            # Do not allow for a kwarg to be named `_render_fn`
+            # Do not allow for a kwarg to be named `_render_fn` or `_render_args`
             if param.name == "_render_fn":
                 raise ValueError(
                     "In `handler_fn=`, parameters can not be named `_render_fn`"
+                )
+            if param.name == "_render_args":
+                raise ValueError(
+                    "In `handler_fn=`, parameters can not be named `_render_args`"
                 )
             # Make sure kwargs have default values
             if param.default is inspect.Parameter.empty:
                 raise TypeError(
                     f"In `handler_fn=`, parameter `{param.name}` did not have a default value"
                 )
+
+
+# ======================================================================================
+# Renderer decorator
+# ======================================================================================
 
 
 def renderer(
@@ -358,21 +385,21 @@ def renderer(
     _assert_handler_fn(handler_fn)
 
     @overload
-    def renderer_decorator(*args: P.args, **kwargs: P.kwargs) -> RenderDeco[IT, OT, P]:
+    def renderer_decorator(*args: P.args, **kwargs: P.kwargs) -> RenderDeco[IT, OT]:
         ...
 
     @overload
     # RenderDecoSync[IT, OT, P]
     def renderer_decorator(
-        _render_fn: UserFuncSync[IT],
-    ) -> RendererSync[IT, OT, P]:
+        _render_fn: RenderFnSync[IT],
+    ) -> RendererSync[OT]:
         ...
 
     @overload
     # RenderDecoAsync[IT, OT, P]
     def renderer_decorator(
-        _render_fn: UserFuncAsync[IT],
-    ) -> RendererAsync[IT, OT, P]:
+        _render_fn: RenderFnAsync[IT],
+    ) -> RendererAsync[OT]:
         ...
 
     # # If we use `wraps()`, the overloads are lost.
@@ -381,32 +408,32 @@ def renderer(
     # Ignoring the type issue on the next line of code as the overloads for
     # `renderer_deco` are not consistent with the function definition.
     # Motivation:
-    # * https://peps.python.org/pep-0612/ does allow for prepending an arg
-    #   (`_render_fn`).
-    # * However, the overload is not happy when both a positional arg (`_render_fn`) is
-    #   dropped and the variadic args (`*args`) are kept.
+    # * https://peps.python.org/pep-0612/ does allow for prepending an arg (e.g.
+    #   `_render_fn`).
+    # * However, the overload is not happy when both a positional arg (e.g.
+    #   `_render_fn`) is dropped and the variadic args (`*args`) are kept.
     # * The variadic args CAN NOT be dropped as PEP612 states that both components of
     #   the `ParamSpec` must be used in the same function signature.
     # * By making assertions on `P.args` to only allow for `*`, we _can_ make overloads
-    #   that use either the single positional arg (`_render_fn`) or
-    #   the `P.kwargs` (as `P.args` == `*`)
+    #   that use either the single positional arg (e.g. `_render_fn`) or the `P.kwargs`
+    #   (as `P.args` == `*`)
     def renderer_decorator(  # type: ignore[reportGeneralTypeIssues]
-        _render_fn: Optional[UserFuncSync[IT] | UserFuncAsync[IT]] = None,
+        _render_fn: Optional[RenderFnSync[IT] | RenderFnAsync[IT]] = None,
         *args: P.args,  # Equivalent to `*` after assertions in `_assert_handler_fn()`
         **kwargs: P.kwargs,
     ) -> (
-        RenderDecoSync[IT, OT, P]
-        | RenderDecoAsync[IT, OT, P]
-        | RendererSync[IT, OT, P]
-        | RendererAsync[IT, OT, P]
+        RenderDecoSync[IT, OT]
+        | RenderDecoAsync[IT, OT]
+        | RendererSync[OT]
+        | RendererAsync[OT]
     ):
         # `args` **must** be in `renderer_decorator` definition.
         # Make sure there no `args`!
         _assert_no_args(args)
 
         def render_fn_sync(
-            fn_sync: UserFuncSync[IT],
-        ) -> RendererSync[IT, OT, P]:
+            fn_sync: RenderFnSync[IT],
+        ) -> RendererSync[OT]:
             return RendererSync(
                 (fn_sync, handler_fn),
                 *args,
@@ -414,8 +441,8 @@ def renderer(
             )
 
         def render_fn_async(
-            fn_async: UserFuncAsync[IT],
-        ) -> RendererAsync[IT, OT, P]:
+            fn_async: RenderFnAsync[IT],
+        ) -> RendererAsync[OT]:
             return RendererAsync(
                 (fn_async, handler_fn),
                 *args,
@@ -424,24 +451,24 @@ def renderer(
 
         @overload
         def as_render_fn(
-            fn: UserFuncSync[IT],
-        ) -> RendererSync[IT, OT, P]:
+            fn: RenderFnSync[IT],
+        ) -> RendererSync[OT]:
             ...
 
         @overload
         def as_render_fn(
-            fn: UserFuncAsync[IT],
-        ) -> RendererAsync[IT, OT, P]:
+            fn: RenderFnAsync[IT],
+        ) -> RendererAsync[OT]:
             ...
 
         def as_render_fn(
-            fn: UserFuncSync[IT] | UserFuncAsync[IT],
-        ) -> RendererSync[IT, OT, P] | RendererAsync[IT, OT, P]:
+            fn: RenderFnSync[IT] | RenderFnAsync[IT],
+        ) -> RendererSync[OT] | RendererAsync[OT]:
             if _utils.is_async_callable(fn):
                 return render_fn_async(fn)
             else:
-                # Is not not `UserFuncAsync[IT]`. Cast `wrapper_fn`
-                fn = cast(UserFuncSync[IT], fn)
+                # Is not not `RenderFnAsync[IT]`. Cast `wrapper_fn`
+                fn = cast(RenderFnSync[IT], fn)
                 return render_fn_sync(fn)
 
         if _render_fn is None:
@@ -494,11 +521,13 @@ async def text(
 
 
 # @renderer
-# async def async_text(meta: RendererMeta, value: str | None) -> str | None:
+# async def async_text(
+#     meta: RenderMeta, fn: RenderFn[str | None], *, extra_arg: str = "42"
+# ) -> str | None:
 #     """
 #     My docs go here!
 #     """
-#     return str(value)
+#     return str(await fn())
 
 
 # text

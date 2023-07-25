@@ -955,7 +955,7 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    def __call__(self, renderer: Renderer[Any]) -> None:
+    def __call__(self, renderer_fn: Renderer[Any]) -> None:
         ...
 
     @overload
@@ -971,7 +971,7 @@ class Outputs:
 
     def __call__(
         self,
-        renderer: Optional[Renderer[OT]] = None,
+        renderer_fn: Optional[Renderer[OT]] = None,
         *,
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
@@ -986,18 +986,18 @@ class Outputs:
             )
             id = name
 
-        def set_renderer(renderer: Renderer[OT]) -> None:
+        def set_renderer(renderer_fn: Renderer[OT]) -> None:
             # Get the (possibly namespaced) output id
-            output_name = self._ns(id or renderer.__name__)
+            output_name = self._ns(id or renderer_fn.__name__)
 
-            if not isinstance(renderer, Renderer):
+            if not isinstance(renderer_fn, Renderer):
                 raise TypeError(
                     "`@output` must be applied to a `@render.xx` function.\n"
                     + "In other words, `@output` must be above `@render.xx`."
                 )
 
-            # renderer is a Renderer object. Give it a bit of metadata.
-            renderer._set_metadata(self._session, output_name)
+            # renderer_fn is a Renderer object. Give it a bit of metadata.
+            renderer_fn._set_metadata(self._session, output_name)
 
             if output_name in self._effects:
                 self._effects[output_name].destroy()
@@ -1015,10 +1015,10 @@ class Outputs:
 
                 message: dict[str, Optional[OT]] = {}
                 try:
-                    if _utils.is_async_callable(renderer):
-                        message[output_name] = await renderer()
+                    if _utils.is_async_callable(renderer_fn):
+                        message[output_name] = await renderer_fn()
                     else:
-                        message[output_name] = renderer()
+                        message[output_name] = renderer_fn()
                 except SilentCancelOutputException:
                     return
                 except SilentException:
@@ -1059,10 +1059,10 @@ class Outputs:
 
             return None
 
-        if renderer is None:
+        if renderer_fn is None:
             return set_renderer
         else:
-            return set_renderer(renderer)
+            return set_renderer(renderer_fn)
 
     def _manage_hidden(self) -> None:
         "Suspends execution of hidden outputs and resumes execution of visible outputs."
