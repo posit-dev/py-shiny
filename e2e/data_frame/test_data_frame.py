@@ -1,7 +1,7 @@
 # pyright: reportUnknownMemberType=false
 
-
 import re
+import time
 from typing import Any, Callable
 
 import pytest
@@ -310,7 +310,14 @@ def _filter_test_impl(
 
     # Apply multiple filters, make sure we get the correct results
     filter_subidir_max.fill("8")
-    filter_num1_min.fill("4")
+    # We had a bug before where typing in a decimal point would cause
+    # the cursor to jump to the front. Make sure that doesn't happen.
+    filter_num1_min.focus()
+    page.keyboard.press("3")
+    time.sleep(0.2)
+    page.keyboard.press(".")
+    time.sleep(0.2)
+    page.keyboard.press("9")
     expect(grid.locator("tbody tr")).to_have_count(5)
 
     # Ensure changing dataset resets filters
