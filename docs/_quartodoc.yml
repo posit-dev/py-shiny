@@ -1,0 +1,320 @@
+quartodoc:
+  style: pkgdown
+  dir: api
+  out_index: index.qmd
+  package: shiny
+  rewrite_all_pages: false
+  sidebar: api/_sidebar.yml
+  renderer:
+    style: _renderer.py
+    show_signature_annotations: false
+  sections:
+    - title: Page containers
+      desc: Create a user interface page container.
+      contents:
+        - ui.page_navbar
+        - ui.page_fluid
+        - ui.page_fixed
+        - ui.page_bootstrap
+    - title: UI Layout
+      desc: Control the layout of multiple UI components.
+      contents:
+        - ui.layout_sidebar
+        - ui.panel_sidebar
+        - ui.panel_main
+        - ui.column
+        - ui.row
+    - title: UI Inputs
+      desc: Create UI that prompts the user for input values or interaction.
+      contents:
+        - ui.input_select
+        - ui.input_selectize
+        - ui.input_slider
+        - ui.input_date
+        - ui.input_date_range
+        - ui.input_checkbox
+        - ui.input_checkbox_group
+        - ui.input_switch
+        - ui.input_radio_buttons
+        - ui.input_numeric
+        - ui.input_text
+        - ui.input_text_area
+        - ui.input_password
+        - ui.input_action_button
+        - ui.input_action_link
+    - title: Update inputs
+      desc: Programmatically update input values.
+      contents:
+        - name: ui.update_select
+          dynamic: true
+        - name: ui.update_selectize
+          dynamic: true
+        - name: ui.update_slider
+          dynamic: true
+        - ui.update_date
+        - name: ui.update_date_range
+          dynamic: true
+        - name: ui.update_checkbox
+          dynamic: true
+        - name: ui.update_checkbox_group
+          dynamic: true
+        - name: ui.update_switch
+          dynamic: true
+        - name: ui.update_radio_buttons
+          dynamic: true
+        - name: ui.update_numeric
+          dynamic: true
+        - ui.update_text
+        - name: ui.update_text_area
+          dynamic: "shiny.ui.update_text"
+        - name: ui.update_navs
+          dynamic: true
+    - title: Navigation (tab) panels
+      desc: Create segments of UI content.
+      contents:
+        - ui.nav
+        - ui.nav_control
+        - ui.nav_spacer
+        - ui.nav_menu
+        - ui.navset_tab
+        - ui.navset_tab_card
+        - ui.navset_pill
+        - ui.navset_pill_card
+        - ui.navset_pill_list
+        - ui.navset_hidden
+    - title: UI panels
+      desc: Visually group together a section of UI components.
+      contents:
+        - ui.panel_absolute
+        - ui.panel_fixed
+        - ui.panel_conditional
+        - ui.panel_title
+        - ui.panel_well
+    - title: Uploads & downloads
+      desc: Allow users to upload and download files.
+      contents:
+        - ui.input_file
+        - ui.download_button
+    - title: Custom UI
+      desc: Lower-level UI functions for creating custom HTML/CSS/JS
+      contents:
+        - ui.HTML       # uses justattributes.rst template
+        - ui.TagList    # uses class.rst template
+        - name: ui.tags       # uses tags.rst template
+          children: embedded
+        - ui.markdown
+        - ui.include_css
+        - ui.include_js
+        - ui.insert_ui
+        - ui.remove_ui
+    - title: Rendering outputs
+      desc: "UI (output_*()) and server (render)ing functions for generating content server-side."
+      contents:
+        - ui.output_plot
+        - ui.output_image
+        - ui.output_table
+        - ui.output_data_frame
+        - ui.output_text
+        - ui.output_text_verbatim
+        - ui.output_ui
+        - render.plot
+        - render.image
+        - render.table
+        - render.text
+        - render.ui
+        - render.data_frame
+        - render.DataGrid
+        - render.DataTable
+    - title: Reactive programming
+      desc: ""
+      contents:
+        - reactive.Calc
+        - reactive.Effect
+        - reactive.Value
+        - reactive.event
+        - reactive.isolate
+        - reactive.invalidate_later
+        - reactive.flush
+        - reactive.poll
+        - reactive.file_reader
+        - reactive.lock
+        - req
+    - title: Create and run applications
+      desc: ""
+      contents:
+        - run_app
+        # uses class.rst template
+        - App
+        - Inputs
+        - Outputs
+        - Session
+    - title: Display messages
+      desc: ""
+      contents:
+        - ui.help_text
+        - ui.notification_show
+        - ui.notification_remove
+        - ui.modal
+        - ui.modal_show
+        - ui.modal_remove
+        - ui.modal_button
+        - ui.Progress          # uses class.rst
+    - title: Modules
+      desc: ""
+      contents:
+        # uses class.rst template
+        - module.ui
+        - module.server
+    - title: Developer facing tools
+      desc: ""
+      contents:
+        - session.get_current_session
+        - session.require_active_session
+        - session.session_context
+        - reactive.get_current_context
+        - name: input_handler.input_handlers
+          dynamic: true
+    - title: Types
+      desc: ""
+      contents:
+        - kind: page
+          path: MiscTypes.html
+          flatten: true
+          summary:
+            name: "Miscellaneous types"
+            desc: ""
+          contents:
+            - types.MISSING_TYPE
+            - types.MISSING
+            - types.FileInfo
+            - types.ImgData
+            - types.NavSetArg
+            - ui._input_slider.SliderValueArg
+            - ui._input_slider.SliderStepArg
+        - kind: page
+          path: TagTypes.html
+          summary:
+            name: "Tag types"
+            desc: ""
+          flatten: true
+          package: null
+          contents:
+            - htmltools.Tag
+            - htmltools.TagAttrs
+            - htmltools.TagAttrValue
+            - htmltools.TagChild
+            - htmltools.TagList
+        - kind: page
+          path: ExceptionTypes.html
+          summary:
+            name: "Exception types"
+            desc: ""
+          flatten: true
+          contents:
+            - types.SilentException
+            - types.SilentCancelOutputException
+            - types.SafeException
+    - title: Experimental
+      desc: "These methods are under consideration and are considered unstable. However, if there is a method you are excited about, please let us know!"
+      contents:
+        - kind: page
+          path: ExSidebar
+          summary:
+            name: "Sidebar"
+            desc: "Sidebar layouts allow users to easily access filters, settings, and other inputs alongside interactive features they control."
+          flatten: true
+          contents:
+            - experimental.ui.page_sidebar
+            - experimental.ui.sidebar
+            - experimental.ui.layout_sidebar
+            - experimental.ui.page_navbar
+            - experimental.ui.navset_bar
+            - experimental.ui.navset_tab_card
+            - experimental.ui.navset_pill_card
+            - experimental.ui.sidebar_toggle
+            - experimental.ui.panel_main
+            - experimental.ui.panel_sidebar
+            - experimental.ui.Sidebar
+            - experimental.ui.DeprecatedPanelMain
+            - experimental.ui.DeprecatedPanelSidebar
+        - kind: page
+          path: ExCard
+          summary:
+            name: "Card"
+            desc: "Cards are a common organizing unit for modern user interfaces (UI). At their core, they’re just rectangular containers with borders and padding. However, when utilized properly to group related information, they help users better digest, engage, and navigate through content."
+          flatten: true
+          contents:
+            - experimental.ui.card
+            - experimental.ui.card_header
+            - experimental.ui.card_title
+            - experimental.ui.card_body
+            - experimental.ui.card_image
+            - experimental.ui.card_footer
+            - experimental.ui.CardItem
+            - experimental.ui.ImgContainer
+            - experimental.ui.TagCallable
+            - experimental.ui.WrapperCallable
+        - kind: page
+          path: ExAccordionPanels
+          summary:
+            name: "Accordion panels"
+            desc: "Methods related to creating and updating vertically collapsing accordion panels."
+          flatten: true
+          contents:
+            - experimental.ui.accordion
+            - experimental.ui.accordion_panel
+            - experimental.ui.accordion_panel_set
+            - experimental.ui.accordion_panel_open
+            - experimental.ui.accordion_panel_close
+            - experimental.ui.accordion_panel_insert
+            - experimental.ui.accordion_panel_remove
+            - experimental.ui.update_accordion_panel
+            - experimental.ui.AccordionPanel
+        - kind: page
+          path: ExValueBoxes
+          summary:
+            name: "Value boxes"
+            desc: "Prominently display a value and label in a box that can be expanded to show more information."
+          flatten: true
+          contents:
+            - experimental.ui.value_box
+            - experimental.ui.showcase_left_center
+            - experimental.ui.showcase_top_right
+        - kind: page
+          path: ExFillingLayout
+          summary:
+            name: "Filling layouts"
+            desc: "Methods to create containers that are allowed to shrink or expand available space."
+          flatten: true
+          contents:
+            - experimental.ui.page_fillable
+            - experimental.ui.layout_column_wrap
+            - experimental.ui.as_fill_carrier
+            - experimental.ui.as_fillable_container
+            - experimental.ui.as_fill_item
+            - experimental.ui.remove_all_fill
+            - experimental.ui.is_fill_carrier
+            - experimental.ui.is_fillable_container
+            - experimental.ui.is_fill_item
+            - experimental.ui.FillingLayout
+            - experimental.ui.output_image
+            - experimental.ui.output_plot
+            - experimental.ui.output_ui
+        - kind: page
+          path: ExUiInputs
+          summary:
+            name: "UI Inputs"
+            desc: "Additional or upgraded UI inputs."
+          flatten: true
+          contents:
+            - experimental.ui.input_text_area
+        - kind: page
+          path: ExCss
+          summary:
+            name: "Css"
+            desc: "Helper methods related to CSS."
+          flatten: true
+          contents:
+            - experimental.ui.as_css_unit
+            - experimental.ui.as_css_padding
+            - experimental.ui.CssUnit
