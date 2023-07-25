@@ -2,19 +2,25 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
-# TODO-barret; Rename `renderer_gen` to `renderer`?
-# TODO-barret; change the name of the returned function from renderer_gen function in the overload. If anything, use `_`.
+# TODO-barret; change the name of the returned function from renderer function in the overload. If anything, use `_`.
 # TODO-barret; See if @overload will work on the returned already-overloaded function
 #  * From initial attempts, it does not work. :-(
 #  * TODO-barret; Make a helper method to return all types (and function?) that could be used to make the overload signatures manually
+# TODO-barret; Changelog that RenderFunction no longer exists.
+# TODO-barret; Should `Renderer` be exported?
 
+# W/ Rich:
+# The function is called a "render handler" as it handles the "render function" and returns a rendered result.
+
+# result of `@renderer` is "renderer function"
+
+# Names:
+# * `_value_fn` -> `_handler`
+# * `value: IT` -> `fn: RenderFn[IT]`
+
+# TODO-barret; Require that `render_fn` is called
 
 __all__ = (
-    # "renderer_gen",
-    # "RendererMeta",
-    # "RenderFunction",
-    # "RenderFunctionSync",
-    # "RenderFunctionAsync",
     "text",
     "plot",
     "image",
@@ -64,64 +70,94 @@ from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_
 
 # Input type for the user-spplied function that is passed to a render.xx
 IT = TypeVar("IT")
-# Output type after the RenderFunction.__call__ method is called on the IT object.
+# Output type after the Renderer.__call__ method is called on the IT object.
 OT = TypeVar("OT")
-# Param specification for value function
+# Param specification for render_fn function
 P = ParamSpec("P")
 # Generic type var
 T = TypeVar("T")
 
 
-# Meta informatoin to give `value_fn()` some context
-class RendererMeta(TypedDict):
+# Meta informatoin to give `hander()` some context
+class RenderMeta(TypedDict):
     is_async: bool
     session: Session
     name: str
 
 
 # ======================================================================================
-# RenderFunction / RenderFunctionSync / RenderFunctionAsync base class
+# Renderer / RendererSync / RendererAsync base class
 # ======================================================================================
 
 
-# A RenderFunction object is given a user-provided function (`value_fn`) which returns
-# an `IT`. When the .__call___ method is invoked, it calls the user-provided function
-# (which returns an `IT`), then converts the `IT` to an `OT`. Note that in many cases
-# but not all, `IT` and `OT` will be the same.
-class RenderFunction(Generic[IT, OT]):
-    @property
-    def is_async(self) -> bool:
-        raise NotImplementedError()
+# A Renderer object is given a user-provided function (`handler_fn`) which returns an
+# `OT`.
+class Renderer(Generic[OT]):
+    """
+    Output Renderer
 
-    def __init__(self, render_fn: UserFunc[IT]) -> None:
-        self.__name__ = render_fn.__name__
-        self.__doc__ = render_fn.__doc__
+    Base class to build :class:`~shiny.render.RendererSync` and :class:`~shiny.render.RendererAsync`.
 
-        # Given we use `_utils.run_coro_sync(self._run())` to call our method,
-        # we can act as if `render_fn` is always async
-        self._fn = _utils.wrap_async(render_fn)
+
+    When the `.__call__` method is invoked, the handler function (which defined by
+    package authors) is called. The handler function is given `meta` information, the
+    (app-supplied) render function, and any keyword arguments supplied to the decorator.
+
+    The render function should return type `IT` and has parameter specification of type
+    `P`. The handler function should return type `OT`. Note that in many cases but not
+    all, `IT` and `OT` will be the same. `None` values must always be defined in `IT` and `OT`.
+
+
+    Properties
+    ----------
+    is_async
+        If `TRUE`, the app-supplied render function is asynchronous
+    meta
+        A named dictionary of values: `is_async`, `session` (the :class:`~shiny.Session`
+        object), and `name` (the name of the output being rendered)
+
+    """
 
     def __call__(self) -> OT:
         raise NotImplementedError
 
-    def _set_metadata(self, session: Session, name: str) -> None:
-        """When RenderFunctions are assigned to Output object slots, this method
-        is used to pass along session and name information.
+    def __init__(self, *, name: str, doc: str | None) -> None:
+        """\
+        Renderer init method
+
+        Arguments
+        ---------
+        name
+            Name of original output function. Ex: `my_txt`
+        doc
+            Documentation of the output function. Ex: `"My text output will be displayed verbatim".
         """
-        self._session: Session = session
-        self._name: str = name
+        self.__name__ = name
+        self.__doc__ = doc
 
     @property
-    def meta(self) -> RendererMeta:
-        return RendererMeta(
+    def is_async(self) -> bool:
+        raise NotImplementedError()
+
+    @property
+    def meta(self) -> RenderMeta:
+        return RenderMeta(
             is_async=self.is_async,
             session=self._session,
             name=self._name,
         )
 
+    def _set_metadata(self, session: Session, name: str) -> None:
+        """\
+        When `Renderer`s are assigned to Output object slots, this method is used to
+        pass along Session and name information.
+        """
+        self._session: Session = session
+        self._name: str = name
+
 
 # Using a second class to help clarify that it is of a particular type
-class RenderFunctionSync(Generic[IT, OT, P], RenderFunction[IT, OT]):
+class RendererSync(Generic[IT, OT, P], Renderer[OT]):
     @property
     def is_async(self) -> bool:
         return False
@@ -138,10 +174,25 @@ class RenderFunctionSync(Generic[IT, OT, P], RenderFunction[IT, OT]):
         _assert_no_args(args)
 
         # Unpack args
-        _fn, _value_fn = _render_args
-        super().__init__(_fn)
+        render_fn, handler_fn = _render_args
+        if _utils.is_async_callable(render_fn):
+            raise TypeError(
+                self.__class__.__name__ + " requires a sync render function"
+            )
+        if not _utils.is_async_callable(handler_fn):
+            raise TypeError(
+                self.__class__.__name__ + " requires an async handler function"
+            )
+        super().__init__(
+            name=render_fn.__name__,
+            doc=render_fn.__doc__,
+        )
 
-        self._value_fn = _utils.wrap_async(_value_fn)
+        # Given we use `_utils.run_coro_sync(self._run())` to call our method,
+        # we can act as if `render_fn` and `handler_fn` are always async
+        self._render_fn = _utils.wrap_async(render_fn)
+        self._handler_fn = _utils.wrap_async(handler_fn)
+
         self._args = args
         self._kwargs = kwargs
 
@@ -149,12 +200,11 @@ class RenderFunctionSync(Generic[IT, OT, P], RenderFunction[IT, OT]):
         return _utils.run_coro_sync(self._run())
 
     async def _run(self) -> OT:
-        fn_val = await self._fn()
-        ret = await self._value_fn(
+        ret = await self._handler_fn(
             # RendererMeta
             self.meta,
-            # IT
-            fn_val,
+            # Callable[[], Awaitable[IT]]
+            self._render_fn,
             # P
             *self._args,
             **self._kwargs,
@@ -162,10 +212,10 @@ class RenderFunctionSync(Generic[IT, OT, P], RenderFunction[IT, OT]):
         return ret
 
 
-# The reason for having a separate RenderFunctionAsync class is because the __call__
+# The reason for having a separate RendererAsync class is because the __call__
 # method is marked here as async; you can't have a single class where one method could
 # be either sync or async.
-class RenderFunctionAsync(Generic[IT, OT, P], RenderFunction[IT, OT]):
+class RendererAsync(Generic[IT, OT, P], Renderer[OT]):
     @property
     def is_async(self) -> bool:
         return True
@@ -182,15 +232,26 @@ class RenderFunctionAsync(Generic[IT, OT, P], RenderFunction[IT, OT]):
         _assert_no_args(args)
 
         # Unpack args
-        _fn, _value_fn = _render_args
+        render_fn, handler_fn = _render_args
 
-        if not _utils.is_async_callable(_fn):
-            raise TypeError(self.__class__.__name__ + " requires an async function")
-        # super == RenderFunctionAsync, RenderFunction
-        super().__init__(_fn)
+        if not _utils.is_async_callable(render_fn):
+            raise TypeError(
+                self.__class__.__name__ + " requires an async render function"
+            )
+        if not _utils.is_async_callable(handler_fn):
+            raise TypeError(
+                self.__class__.__name__ + " requires an async handler function"
+            )
+        # super == RendererAsync, Renderer
+        super().__init__(
+            name=render_fn.__name__,
+            doc=render_fn.__doc__,
+        )
 
-        self._fn = _fn
-        self._value_fn = _utils.wrap_async(_value_fn)
+        # Given we use `_utils.run_coro_sync(self._run())` to call our method,
+        # we can act as if `render_fn` and `handler_fn` are always async
+        self._render_fn = _utils.wrap_async(render_fn)
+        self._handler_fn = _utils.wrap_async(handler_fn)
         self._args = args
         self._kwargs = kwargs
 
@@ -200,12 +261,11 @@ class RenderFunctionAsync(Generic[IT, OT, P], RenderFunction[IT, OT]):
         return await self._run()
 
     async def _run(self) -> OT:
-        fn_val = await self._fn()
-        ret = await self._value_fn(
+        ret = await self._handler_fn(
             # RendererMeta
             self.meta,
-            # IT
-            fn_val,
+            # Callable[[], Awaitable[IT]]
+            self._render_fn,
             # P
             *self._args,
             **self._kwargs,
@@ -217,26 +277,28 @@ class RenderFunctionAsync(Generic[IT, OT, P], RenderFunction[IT, OT]):
 # Type definitions
 # ======================================================================================
 
+
 UserFuncSync = Callable[[], IT]
 UserFuncAsync = Callable[[], Awaitable[IT]]
 UserFunc = Union[
     UserFuncSync[IT],
     UserFuncAsync[IT],
 ]
-ValueFunc = Union[
-    Callable[Concatenate[RendererMeta, IT, P], OT],
-    Callable[Concatenate[RendererMeta, IT, P], Awaitable[OT]],
-]
-RenderDecoSync = Callable[[UserFuncSync[IT]], RenderFunctionSync[IT, OT, P]]
-RenderDecoAsync = Callable[[UserFuncAsync[IT]], RenderFunctionAsync[IT, OT, P]]
+
+# RenderFn == UserFuncAsync as UserFuncSync is wrapped into an async fn
+RenderFn = Callable[[], Awaitable[IT]]
+HandlerFn = Callable[Concatenate[RenderMeta, RenderFn[IT], P], Awaitable[OT]]
+
+RenderDecoSync = Callable[[UserFuncSync[IT]], RendererSync[IT, OT, P]]
+RenderDecoAsync = Callable[[UserFuncAsync[IT]], RendererAsync[IT, OT, P]]
 RenderDeco = Callable[
     [Union[UserFuncSync[IT], UserFuncAsync[IT]]],
-    Union[RenderFunctionSync[IT, OT, P], RenderFunctionAsync[IT, OT, P]],
+    Union[RendererSync[IT, OT, P], RendererAsync[IT, OT, P]],
 ]
 
 
-_RenderArgsSync = Tuple[UserFuncSync[IT], ValueFunc[IT, P, OT]]
-_RenderArgsAsync = Tuple[UserFuncAsync[IT], ValueFunc[IT, P, OT]]
+_RenderArgsSync = Tuple[UserFuncSync[IT], HandlerFn[IT, P, OT]]
+_RenderArgsAsync = Tuple[UserFuncAsync[IT], HandlerFn[IT, P, OT]]
 
 
 # ======================================================================================
@@ -251,10 +313,10 @@ def _assert_no_args(args: tuple[object]) -> None:
 
 # assert: No variable length positional values;
 # * We need a way to distinguish between a plain function and args supplied to the next function. This is done by not allowing `*args`.
-# assert: All kwargs of value_fn should have a default value
+# assert: All kwargs of handler_fn should have a default value
 # * This makes calling the method with both `()` and without `()` possible / consistent.
-def _assert_value_fn(value_fn: ValueFunc[IT, P, OT]) -> None:
-    params = inspect.Signature.from_callable(value_fn).parameters
+def _assert_handler_fn(handler_fn: HandlerFn[IT, P, OT]) -> None:
+    params = inspect.Signature.from_callable(handler_fn).parameters
 
     for i, param in zip(range(len(params)), params.values()):
         # # Not a good test as `param.annotation` has type `str`:
@@ -265,56 +327,56 @@ def _assert_value_fn(value_fn: ValueFunc[IT, P, OT]) -> None:
         # Make sure there are no more than 2 positional args
         if i >= 2 and param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
             raise TypeError(
-                "`value_fn=` must not contain more than 2 positional parameters"
+                "`handler_fn=` must not contain more than 2 positional parameters"
             )
         # Make sure there are no `*args`
         if param.kind == inspect.Parameter.VAR_POSITIONAL:
             raise TypeError(
-                f"No variadic parameters (e.g. `*args`) can be supplied to `value_fn=`. Received: `{param.name}`"
+                f"No variadic parameters (e.g. `*args`) can be supplied to `handler_fn=`. Received: `{param.name}`"
             )
         if param.kind == inspect.Parameter.KEYWORD_ONLY:
             # Do not allow for a kwarg to be named `_render_fn`
             if param.name == "_render_fn":
                 raise ValueError(
-                    "In `value_fn=`, parameters can not be named `_render_fn`"
+                    "In `handler_fn=`, parameters can not be named `_render_fn`"
                 )
             # Make sure kwargs have default values
             if param.default is inspect.Parameter.empty:
                 raise TypeError(
-                    f"In `value_fn=`, parameter `{param.name}` did not have a default value"
+                    f"In `handler_fn=`, parameter `{param.name}` did not have a default value"
                 )
 
 
-def renderer_gen(
-    value_fn: ValueFunc[IT, P, OT],
+def renderer(
+    handler_fn: HandlerFn[IT, P, OT],
 ):
     """\
     Renderer generator
 
     TODO-barret; Docs go here!
     """
-    _assert_value_fn(value_fn)
+    _assert_handler_fn(handler_fn)
+
+    @overload
+    def renderer_decorator(*args: P.args, **kwargs: P.kwargs) -> RenderDeco[IT, OT, P]:
+        ...
 
     @overload
     # RenderDecoSync[IT, OT, P]
     def renderer_decorator(
         _render_fn: UserFuncSync[IT],
-    ) -> RenderFunctionSync[IT, OT, P]:
+    ) -> RendererSync[IT, OT, P]:
         ...
 
     @overload
     # RenderDecoAsync[IT, OT, P]
     def renderer_decorator(
         _render_fn: UserFuncAsync[IT],
-    ) -> RenderFunctionAsync[IT, OT, P]:
-        ...
-
-    @overload
-    def renderer_decorator(*args: P.args, **kwargs: P.kwargs) -> RenderDeco[IT, OT, P]:
+    ) -> RendererAsync[IT, OT, P]:
         ...
 
     # # If we use `wraps()`, the overloads are lost.
-    # @functools.wraps(value_fn)
+    # @functools.wraps(handler_fn)
 
     # Ignoring the type issue on the next line of code as the overloads for
     # `renderer_deco` are not consistent with the function definition.
@@ -330,13 +392,13 @@ def renderer_gen(
     #   the `P.kwargs` (as `P.args` == `*`)
     def renderer_decorator(  # type: ignore[reportGeneralTypeIssues]
         _render_fn: Optional[UserFuncSync[IT] | UserFuncAsync[IT]] = None,
-        *args: P.args,  # Equivalent to `*` after assertions in `_assert_value_fn()`
+        *args: P.args,  # Equivalent to `*` after assertions in `_assert_handler_fn()`
         **kwargs: P.kwargs,
     ) -> (
         RenderDecoSync[IT, OT, P]
         | RenderDecoAsync[IT, OT, P]
-        | RenderFunctionSync[IT, OT, P]
-        | RenderFunctionAsync[IT, OT, P]
+        | RendererSync[IT, OT, P]
+        | RendererAsync[IT, OT, P]
     ):
         # `args` **must** be in `renderer_decorator` definition.
         # Make sure there no `args`!
@@ -344,18 +406,18 @@ def renderer_gen(
 
         def render_fn_sync(
             fn_sync: UserFuncSync[IT],
-        ) -> RenderFunctionSync[IT, OT, P]:
-            return RenderFunctionSync(
-                (fn_sync, value_fn),
+        ) -> RendererSync[IT, OT, P]:
+            return RendererSync(
+                (fn_sync, handler_fn),
                 *args,
                 **kwargs,
             )
 
         def render_fn_async(
             fn_async: UserFuncAsync[IT],
-        ) -> RenderFunctionAsync[IT, OT, P]:
-            return RenderFunctionAsync(
-                (fn_async, value_fn),
+        ) -> RendererAsync[IT, OT, P]:
+            return RendererAsync(
+                (fn_async, handler_fn),
                 *args,
                 **kwargs,
             )
@@ -363,18 +425,18 @@ def renderer_gen(
         @overload
         def as_render_fn(
             fn: UserFuncSync[IT],
-        ) -> RenderFunctionSync[IT, OT, P]:
+        ) -> RendererSync[IT, OT, P]:
             ...
 
         @overload
         def as_render_fn(
             fn: UserFuncAsync[IT],
-        ) -> RenderFunctionAsync[IT, OT, P]:
+        ) -> RendererAsync[IT, OT, P]:
             ...
 
         def as_render_fn(
             fn: UserFuncSync[IT] | UserFuncAsync[IT],
-        ) -> RenderFunctionSync[IT, OT, P] | RenderFunctionAsync[IT, OT, P]:
+        ) -> RendererSync[IT, OT, P] | RendererAsync[IT, OT, P]:
             if _utils.is_async_callable(fn):
                 return render_fn_async(fn)
             else:
@@ -387,11 +449,11 @@ def renderer_gen(
         return as_render_fn(_render_fn)
 
     # Copy over name an docs
-    renderer_decorator.__doc__ = value_fn.__doc__
-    renderer_decorator.__name__ = value_fn.__name__
+    renderer_decorator.__doc__ = handler_fn.__doc__
+    renderer_decorator.__name__ = handler_fn.__name__
     # # TODO-barret; Fix name of decorated function. Hovering over method name does not work
     # ren_func = getattr(renderer_decorator, "__func__", renderer_decorator)
-    # ren_func.__name__ = value_fn.__name__
+    # ren_func.__name__ = handler_fn.__name__
 
     return renderer_decorator
 
@@ -399,10 +461,12 @@ def renderer_gen(
 # ======================================================================================
 # RenderText
 # ======================================================================================
-@renderer_gen
-def text(
-    meta: RendererMeta,
-    value: str | None,
+
+
+@renderer
+async def text(
+    meta: RenderMeta,
+    fn: RenderFn[str | None],
 ) -> str | None:
     """
     Reactively render text.
@@ -423,12 +487,13 @@ def text(
     --------
     ~shiny.ui.output_text
     """
+    value = await fn()
     if value is None:
         return None
     return str(value)
 
 
-# @renderer_gen
+# @renderer
 # async def async_text(meta: RendererMeta, value: str | None) -> str | None:
 #     """
 #     My docs go here!
@@ -447,10 +512,10 @@ def text(
 #   Union[matplotlib.figure.Figure, PIL.Image.Image]
 # However, if we did that, we'd have to import those modules at load time, which adds
 # a nontrivial amount of overhead. So for now, we're just using `object`.
-@renderer_gen
-def plot(
-    meta: RendererMeta,
-    x: ImgData | None,
+@renderer
+async def plot(
+    meta: RenderMeta,
+    fn: RenderFn[ImgData | None],
     *,
     alt: Optional[str] = None,
     **kwargs: object,
@@ -504,7 +569,7 @@ def plot(
 
     ppi: float = 96
 
-    # TODO-barret; Q: These variable calls are **after** `self._fn()`. Is this ok?
+    # TODO-barret; Q: These variable calls are **after** `self._render_fn()`. Is this ok?
     inputs = session.root_scope().input
 
     # Reactively read some information about the plot.
@@ -518,7 +583,7 @@ def plot(
         float, inputs[ResolvedId(f".clientdata_output_{name}_height")]()
     )
 
-    # !! Normal position for `x = await self._fn()`
+    x = await fn()
 
     # Note that x might be None; it could be a matplotlib.pyplot
 
@@ -592,10 +657,10 @@ def plot(
 # ======================================================================================
 # RenderImage
 # ======================================================================================
-@renderer_gen
-def image(
-    meta: RendererMeta,
-    res: ImgData | None,
+@renderer
+async def image(
+    meta: RenderMeta,
+    fn: RenderFn[ImgData | None],
     *,
     delete_file: bool = False,
 ) -> ImgData | None:
@@ -625,6 +690,7 @@ def image(
     ~shiny.types.ImgData
     ~shiny.render.plot
     """
+    res = await fn()
     if res is None:
         return None
 
@@ -656,10 +722,10 @@ class PandasCompatible(Protocol):
 TableResult = Union["pd.DataFrame", PandasCompatible, None]
 
 
-@renderer_gen
-def table(
-    meta: RendererMeta,
-    x: TableResult | None,
+@renderer
+async def table(
+    meta: RenderMeta,
+    fn: RenderFn[TableResult | None],
     *,
     index: bool = False,
     classes: str = "table shiny-table w-auto",
@@ -705,8 +771,11 @@ def table(
     --------
     ~shiny.ui.output_table
     """
+    x = await fn()
+
     if x is None:
         return None
+
     import pandas
     import pandas.io.formats.style
 
@@ -743,10 +812,10 @@ def table(
 # ======================================================================================
 # RenderUI
 # ======================================================================================
-@renderer_gen
-def ui(
-    meta: RendererMeta,
-    ui: TagChild,
+@renderer
+async def ui(
+    meta: RenderMeta,
+    fn: RenderFn[TagChild],
 ) -> RenderedDeps | None:
     """
     Reactively render HTML content.
@@ -767,6 +836,7 @@ def ui(
     --------
     ~shiny.ui.output_ui
     """
+    ui = await fn()
     if ui is None:
         return None
 

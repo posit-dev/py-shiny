@@ -1,56 +1,32 @@
-from shiny.render._render import RendererMeta, renderer_gen
+from shiny.render._render import RenderFn, RenderMeta, renderer
 
 
 def test_renderer_gen_name_and_docs_are_copied():
-    @renderer_gen
-    def fn_sync(meta: RendererMeta, x: str) -> str:
-        "Sync test docs go here"
-        return "42"
+    @renderer
+    async def my_handler(meta: RenderMeta, fn: RenderFn[str]) -> str:
+        "Test docs go here"
+        return str(await fn())
 
-    assert fn_sync.__doc__ == "Sync test docs go here"
-    assert fn_sync.__name__ == "fn_sync"
-
-    @renderer_gen
-    async def fn_async(meta: RendererMeta, x: str) -> str:
-        "Async test docs go here"
-        return "42"
-
-    assert fn_async.__doc__ == "Async test docs go here"
-    assert fn_async.__name__ == "fn_async"
+    assert my_handler.__doc__ == "Test docs go here"
+    assert my_handler.__name__ == "my_handler"
 
 
 def test_renderer_gen_works():
     # No args works
-    @renderer_gen
-    def test_renderer_sync(
-        meta: RendererMeta,
-        x: str,
-    ):
-        ...
-
-    @renderer_gen
-    async def test_renderer_async(
-        meta: RendererMeta,
-        x: str,
+    @renderer
+    async def test_renderer(
+        meta: RenderMeta,
+        fn: RenderFn[str],
     ):
         ...
 
 
 def test_renderer_gen_kwargs_are_allowed():
     # Test that kwargs can be allowed
-    @renderer_gen
-    def test_renderer_sync(
-        meta: RendererMeta,
-        x: str,
-        *,
-        y: str = "42",
-    ):
-        ...
-
-    @renderer_gen
-    async def test_renderer_async(
-        meta: RendererMeta,
-        x: str,
+    @renderer
+    async def test_renderer(
+        meta: RenderMeta,
+        fn: RenderFn[str],
         *,
         y: str = "42",
     ):
@@ -59,20 +35,10 @@ def test_renderer_gen_kwargs_are_allowed():
 
 def test_renderer_gen_with_pass_through_kwargs():
     # No args works
-    @renderer_gen
-    def test_renderer_sync(
-        meta: RendererMeta,
-        x: str,
-        *,
-        y: str = "42",
-        **kwargs: float,
-    ):
-        ...
-
-    @renderer_gen
-    async def test_renderer_async(
-        meta: RendererMeta,
-        x: str,
+    @renderer
+    async def test_renderer(
+        meta: RenderMeta,
+        fn: RenderFn[str],
         *,
         y: str = "42",
         **kwargs: float,
@@ -83,10 +49,10 @@ def test_renderer_gen_with_pass_through_kwargs():
 def test_renderer_gen_limits_positional_arg_count():
     try:
 
-        @renderer_gen
-        def test_renderer(
-            meta: RendererMeta,
-            x: str,
+        @renderer
+        async def test_renderer(
+            meta: RenderMeta,
+            fn: RenderFn[str],
             y: str,
         ):
             ...
@@ -99,10 +65,10 @@ def test_renderer_gen_limits_positional_arg_count():
 def test_renderer_gen_does_not_allow_args():
     try:
 
-        @renderer_gen
-        def test_renderer(
-            meta: RendererMeta,
-            x: str,
+        @renderer
+        async def test_renderer(
+            meta: RenderMeta,
+            fn: RenderFn[str],
             *args: str,
         ):
             ...
@@ -116,10 +82,10 @@ def test_renderer_gen_does_not_allow_args():
 def test_renderer_gen_kwargs_have_defaults():
     try:
 
-        @renderer_gen
-        def test_renderer(
-            meta: RendererMeta,
-            x: str,
+        @renderer
+        async def test_renderer(
+            meta: RenderMeta,
+            fn: RenderFn[str],
             *,
             y: str,
         ):
@@ -134,10 +100,10 @@ def test_renderer_gen_kwargs_have_defaults():
 def test_renderer_gen_kwargs_can_not_be_name_render_fn():
     try:
 
-        @renderer_gen
-        def test_renderer(
-            meta: RendererMeta,
-            x: str,
+        @renderer
+        async def test_renderer(
+            meta: RenderMeta,
+            fn: RenderFn[str],
             *,
             _render_fn: str,
         ):
@@ -150,10 +116,10 @@ def test_renderer_gen_kwargs_can_not_be_name_render_fn():
 
 
 def test_renderer_gen_result_does_not_allow_args():
-    @renderer_gen
-    def test_renderer(
-        meta: RendererMeta,
-        x: str,
+    @renderer
+    async def test_renderer(
+        meta: RenderMeta,
+        fn: RenderFn[str],
     ):
         ...
 

@@ -5,18 +5,17 @@ from __future__ import annotations
 from typing import Optional
 
 from shiny import App, Inputs, Outputs, Session, ui
-from shiny.render._render import RendererMeta, renderer_gen
+from shiny.render._render import RenderFn, RenderMeta, renderer
 
 
-@renderer_gen
-def render_test_text(
-    meta: RendererMeta,
-    value: str | None,
+@renderer
+async def render_test_text(
+    meta: RenderMeta,
+    fn: RenderFn[str | None],
     *,
     extra_txt: Optional[str] = None,
 ) -> str | None:
-    if value is None:
-        return None
+    value = await fn()
     value = str(value)
     value += "; "
     value += "async" if meta["is_async"] else "sync"

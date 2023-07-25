@@ -5,7 +5,7 @@ import json
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, cast, runtime_checkable
 
 from .._docstring import add_example
-from . import RendererMeta, renderer_gen
+from . import RenderFn, RenderMeta, renderer
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -196,10 +196,10 @@ DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
 # TODO-barret; Port `__name__` and `__docs__` of `value_fn`
 @add_example()
-@renderer_gen
-def data_frame(
-    meta: RendererMeta,
-    x: DataFrameResult | None,
+@renderer
+async def data_frame(
+    meta: RenderMeta,
+    fn: RenderFn[DataFrameResult | None],
 ) -> object | None:
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
@@ -224,6 +224,7 @@ def data_frame(
     :class:`~shiny.render.DataTable`
     :func:`~shiny.ui.output_data_frame`
     """
+    x = await fn()
     if x is None:
         return None
 
