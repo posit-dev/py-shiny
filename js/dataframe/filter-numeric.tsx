@@ -78,7 +78,8 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
         placeholder={createPlaceholder(editing, "Min", props.range()[0])}
-        value={min}
+        defaultValue={min}
+        step="any"
         onChange={(e) => {
           const value = coerceToNum(e.target.value);
           minInputRef.current.classList.toggle(
@@ -96,7 +97,8 @@ const FilterNumericImpl: React.FC<FilterNumericImplProps> = (props) => {
         style={{ flex: "1 1 0", width: "0" }}
         type="number"
         placeholder={createPlaceholder(editing, "Max", props.range()[1])}
-        value={max}
+        defaultValue={max}
+        step="any"
         onChange={(e) => {
           const value = coerceToNum(e.target.value);
           maxInputRef.current.classList.toggle(
