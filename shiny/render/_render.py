@@ -28,6 +28,7 @@ __all__ = (
 )
 
 import base64
+import functools
 import inspect
 import os
 import sys
@@ -384,26 +385,40 @@ def renderer(
     """
     _assert_handler_fn(handler_fn)
 
-    @overload
-    def renderer_decorator(*args: P.args, **kwargs: P.kwargs) -> RenderDeco[IT, OT]:
-        ...
+    # @overload
+    # def renderer_decorator(*args: P.args, **kwargs: P.kwargs) -> RenderDeco[IT, OT]:
+    #     ...
 
-    @overload
-    # RenderDecoSync[IT, OT, P]
-    def renderer_decorator(
-        _render_fn: RenderFnSync[IT],
-    ) -> RendererSync[OT]:
-        ...
+    # @overload
+    # # RenderDecoSync[IT, OT, P]
+    # def renderer_decorator(
+    #     _render_fn: RenderFnSync[IT],
+    # ) -> RendererSync[OT]:
+    #     ...
 
-    @overload
-    # RenderDecoAsync[IT, OT, P]
-    def renderer_decorator(
-        _render_fn: RenderFnAsync[IT],
-    ) -> RendererAsync[OT]:
-        ...
+    # @overload
+    # # RenderDecoAsync[IT, OT, P]
+    # def renderer_decorator(
+    #     _render_fn: RenderFnAsync[IT],
+    # ) -> RendererAsync[OT]:
+    #     ...
 
-    # # If we use `wraps()`, the overloads are lost.
-    # @functools.wraps(handler_fn)
+    class Barret(Protocol):
+        def __init__(self) -> None:
+            super().__init__()
+            self.__class__.__name__ = "Bearit"
+
+        @overload
+        def __call__(self, *args: P.args, **kwargs: P.kwargs) -> RenderDeco[IT, OT]:
+            ...
+
+        @overload
+        def __call__(self, _render_fn: RenderFnSync[IT]) -> RendererSync[OT]:
+            ...
+
+        @overload
+        def __call__(self, _render_fn: RenderFnAsync[IT]) -> RendererAsync[OT]:
+            ...
 
     # Ignoring the type issue on the next line of code as the overloads for
     # `renderer_deco` are not consistent with the function definition.
@@ -417,19 +432,40 @@ def renderer(
     # * By making assertions on `P.args` to only allow for `*`, we _can_ make overloads
     #   that use either the single positional arg (e.g. `_render_fn`) or the `P.kwargs`
     #   (as `P.args` == `*`)
+    # # If we use `wraps()`, the overloads are lost.
+    @functools.wraps(handler_fn)
     def renderer_decorator(  # type: ignore[reportGeneralTypeIssues]
         _render_fn: Optional[RenderFnSync[IT] | RenderFnAsync[IT]] = None,
         *args: P.args,  # Equivalent to `*` after assertions in `_assert_handler_fn()`
         **kwargs: P.kwargs,
-    ) -> (
-        RenderDecoSync[IT, OT]
-        | RenderDecoAsync[IT, OT]
-        | RendererSync[OT]
-        | RendererAsync[OT]
     ):
+        #  -> (
+        #     RenderDecoSync[IT, OT]
+        #     | RenderDecoAsync[IT, OT]
+        #     | RendererSync[OT]
+        #     | RendererAsync[OT]
+        # ):
         # `args` **must** be in `renderer_decorator` definition.
         # Make sure there no `args`!
         _assert_no_args(args)
+
+        # def barret():
+        #     return
+
+        # barret.__name__ = "bearit"
+        # barret
+
+        # class Barret:
+        #     def __init__(self) -> None:
+        #         self.__name__ = "Bearit"
+        #         self.__class__.__name__ = "BearitClass"
+        #         pass
+
+        #     def __call__(self) -> None:
+        #         return
+
+        # b = Barret()
+        # b
 
         def render_fn_sync(
             fn_sync: RenderFnSync[IT],
@@ -475,12 +511,41 @@ def renderer(
             return as_render_fn
         return as_render_fn(_render_fn)
 
-    # Copy over name an docs
-    renderer_decorator.__doc__ = handler_fn.__doc__
-    renderer_decorator.__name__ = handler_fn.__name__
+    # r_overloads = typing.get_overloads(renderer_decorator)
+    # print(list(r_overloads))
+    # for r_overload in r_overloads:
+    #     print(r_overload.__builtins__)
+    #     # print(r_overload.__name__, r_overload.__doc__)
+    #     # r_overload.__name__ = handler_fn.__name__
+    #     # r_overload.__doc__ = handler_fn.__doc__
+    #     # print(r_overload.__name__, r_overload.__doc__)
+    # # import pdb
+
+    # pdb.set_trace()
+
+    # import inspect
+
+    # curframe = inspect.currentframe()
+    # if curframe:
+    #     curframe.f_locals["bearit"] = renderer_decorator
+    #     print(curframe, curframe.f_locals)
+    #     return curframe.f_locals["bearit"]
+
+    # # Copy over name an docs
+    # renderer_decorator.__doc__ = handler_fn.__doc__
+    # renderer_decorator.__name__ = handler_fn.__name__
+    # # lie and give it a pretty qualifying name
+    # renderer_decorator.__qualname__ = f"renderer.<locals>.{handler_fn.__name__}"
+
     # # TODO-barret; Fix name of decorated function. Hovering over method name does not work
     # ren_func = getattr(renderer_decorator, "__func__", renderer_decorator)
     # ren_func.__name__ = handler_fn.__name__
+
+    # ret = cast(Barret, renderer_decorator)
+    # ret.__name__ = handler_fn.__name__
+    # ret.__doc__ = handler_fn.__doc__
+
+    # return ret
 
     return renderer_decorator
 
@@ -520,18 +585,36 @@ async def text(
     return str(value)
 
 
-# @renderer
-# async def async_text(
-#     meta: RenderMeta, fn: RenderFn[str | None], *, extra_arg: str = "42"
-# ) -> str | None:
-#     """
-#     My docs go here!
-#     """
-#     return str(await fn())
+@renderer
+async def async_text(
+    meta: RenderMeta, fn: RenderFn[str | None], *, extra_arg: str = "42"
+) -> str | None:
+    """
+    My docs go here!
+    """
+    return str(await fn())
 
 
-# text
-# async_text
+async_text
+text
+
+
+# def barret_wrapper():
+#     def barret():
+#         return None
+
+#     barret.__name__ = "bearit"
+#     return barret
+
+
+# b = barret_wrapper()
+# print(b)
+# print(text)
+# print(text.__name__)
+# print(text.__qualname__)
+# print(text.__annotations__)
+# print(dir(text))
+# print(text.__builtins__)
 
 
 # ======================================================================================
