@@ -2,8 +2,8 @@ from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
     ui.h2("Keyboard Settings"),
-    ui.input_switch("auto_capitalization", "Auto-Capitalization",  True),
-    ui.input_switch("auto_correction", "Auto-Correction",  True),
+    ui.input_switch("auto_capitalization", "Auto-Capitalization", True),
+    ui.input_switch("auto_correction", "Auto-Correction", True),
     ui.input_switch("check_spelling", "Check Spelling", True),
     ui.input_switch("smart_punctuation", "Smart Punctuation"),
     ui.output_text_verbatim("preview"),
