@@ -66,9 +66,9 @@ class Renderer(MdRenderer):
         converted = convert_rst_link_to_md(rendered)
 
         if isinstance(el, dc.Alias) and "experimental" in el.target_path:
-            p_example_dir = SHINY_PATH / "experimental" / "examples" / el.name
+            p_example_dir = SHINY_PATH / "experimental" / "api-examples" / el.name
         else:
-            p_example_dir = SHINY_PATH / "examples" / el.name
+            p_example_dir = SHINY_PATH / "api-examples" / el.name
 
         if (p_example_dir / "app.py").exists():
             example = ""
