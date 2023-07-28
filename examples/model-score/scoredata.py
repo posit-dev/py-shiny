@@ -1,7 +1,6 @@
+import asyncio
 import datetime
 import sqlite3
-import threading
-import time
 from pathlib import Path
 
 import numpy as np
@@ -15,7 +14,7 @@ auc_scores.set_index("second", inplace=True)
 SQLITE_DB_URI = f"file:{here / 'data' / 'auc_scores.sqlite'}"
 
 
-def thread_main(barrier: threading.Barrier):
+async def async_main():
     with sqlite3.connect(SQLITE_DB_URI, uri=True, timeout=30) as con:
         con.execute("PRAGMA journal_mode=WAL")
         con.execute("drop table if exists auc_scores")
@@ -36,25 +35,14 @@ def thread_main(barrier: threading.Barrier):
         initial_scores = initial_scores.join(timestamps, how="left")
         initial_scores.to_sql("auc_scores", con, index=False, if_exists="append")
 
-        barrier.wait()
-
         while True:
             new_data = auc_scores.loc[position].copy()
             # del new_data["second"]
             new_data["timestamp"] = datetime.datetime.now()
             new_data.to_sql("auc_scores", con, index=False, if_exists="append")
             position = (position % (60 * 60)) + 1
-            time.sleep(1)
+            await asyncio.sleep(1)
 
 
 def begin():
-    barrier = threading.Barrier(2)
-    threading.Thread(target=thread_main, args=[barrier], daemon=True).start()
-    barrier.wait()
-
-
-if __name__ == "__main__":
-    begin()
-    time.sleep(10)
-    con2 = sqlite3.connect(SQLITE_DB_URI, uri=True)
-    print(pd.read_sql("select * from auc_scores", con2))
+    asyncio.create_task(async_main())
