@@ -1,9 +1,9 @@
-from shiny.render._render import RenderFn, RenderMeta, renderer
+from shiny.render._render import RenderFnAsync, RenderMeta, renderer
 
 
 def test_renderer_name_and_docs_are_copied():
     @renderer
-    async def my_handler(meta: RenderMeta, fn: RenderFn[str]) -> str:
+    async def my_handler(meta: RenderMeta, fn: RenderFnAsync[str]) -> str:
         "Test docs go here"
         return str(await fn())
 
@@ -16,7 +16,7 @@ def test_renderer_works():
     @renderer
     async def test_renderer(
         meta: RenderMeta,
-        fn: RenderFn[str],
+        fn: RenderFnAsync[str],
     ):
         ...
 
@@ -26,7 +26,7 @@ def test_renderer_kwargs_are_allowed():
     @renderer
     async def test_renderer(
         meta: RenderMeta,
-        fn: RenderFn[str],
+        fn: RenderFnAsync[str],
         *,
         y: str = "42",
     ):
@@ -38,7 +38,7 @@ def test_renderer_with_pass_through_kwargs():
     @renderer
     async def test_renderer(
         meta: RenderMeta,
-        fn: RenderFn[str],
+        fn: RenderFnAsync[str],
         *,
         y: str = "42",
         **kwargs: float,
@@ -52,7 +52,7 @@ def test_renderer_limits_positional_arg_count():
         @renderer
         async def test_renderer(
             meta: RenderMeta,
-            fn: RenderFn[str],
+            fn: RenderFnAsync[str],
             y: str,
         ):
             ...
@@ -68,7 +68,7 @@ def test_renderer_does_not_allow_args():
         @renderer
         async def test_renderer(
             meta: RenderMeta,
-            fn: RenderFn[str],
+            fn: RenderFnAsync[str],
             *args: str,
         ):
             ...
@@ -85,7 +85,7 @@ def test_renderer_kwargs_have_defaults():
         @renderer
         async def test_renderer(
             meta: RenderMeta,
-            fn: RenderFn[str],
+            fn: RenderFnAsync[str],
             *,
             y: str,
         ):
@@ -103,7 +103,7 @@ def test_renderer_kwargs_can_not_be_name_render_fn():
         @renderer
         async def test_renderer(
             meta: RenderMeta,
-            fn: RenderFn[str],
+            fn: RenderFnAsync[str],
             *,
             _render_fn: str,
         ):
@@ -119,7 +119,7 @@ def test_renderer_result_does_not_allow_args():
     @renderer
     async def test_renderer(
         meta: RenderMeta,
-        fn: RenderFn[str],
+        fn: RenderFnAsync[str],
     ):
         ...
 
@@ -152,7 +152,7 @@ def test_renderer_makes_calls_render_fn_once():
     @renderer
     async def test_renderer_no_calls(
         meta: RenderMeta,
-        fn: RenderFn[str],
+        fn: RenderFnAsync[str],
     ):
         # Does not call `fn`
         return "Not 42"
@@ -160,7 +160,7 @@ def test_renderer_makes_calls_render_fn_once():
     @renderer
     async def test_renderer_multiple_calls(
         meta: RenderMeta,
-        fn: RenderFn[str],
+        fn: RenderFnAsync[str],
     ):
         # Calls `fn` > 1 times
         return f"{await fn()} - {await fn()}"

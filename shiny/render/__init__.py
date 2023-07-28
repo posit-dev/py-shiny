@@ -5,7 +5,7 @@ Tools for reactively rendering output for the user interface.
 from ._render import (  # noqa: F401
     # Import these values, but do not give autocomplete hints for `shiny.render.FOO`
     RenderMeta as RenderMeta,
-    RenderFn as RenderFn,
+    RenderFnAsync as RenderFnAsync,
     # Renderer as Renderer,
     # RendererSync as RendererSync,
     # RendererAsync as RendererAsync,

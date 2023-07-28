@@ -87,11 +87,20 @@ T = TypeVar("T")
 # ======================================================================================
 
 
+# class RenderFnSync(Generic[IT]):
+#     def __call__(self) -> IT:
+#         ...
+
+
+# class RenderFnAsync(Generic[IT]):
+#     async def __call__(self) -> IT:
+#         ...
+
+
 RenderFnSync = Callable[[], IT]
-# RenderFn == RenderFnAsync as UserFuncSync is wrapped into an async fn
 RenderFnAsync = Callable[[], Awaitable[IT]]
-RenderFn = RenderFnAsync[IT]
-HandlerFn = Callable[Concatenate["RenderMeta", RenderFn[IT], P], Awaitable[OT]]
+RenderFn = RenderFnSync[IT] | RenderFnAsync[IT]
+HandlerFn = Callable[Concatenate["RenderMeta", RenderFnAsync[IT], P], Awaitable[OT]]
 
 
 _RenderArgsSync = Tuple[RenderFnSync[IT], HandlerFn[IT, P, OT]]
@@ -128,7 +137,7 @@ class _CallCounter(Generic[IT]):
     def __init__(
         self,
         *,
-        render_fn: RenderFn[IT],
+        render_fn: RenderFnAsync[IT],
         handler_fn: HandlerFn[IT, P, OT],
     ):
         self._call_count: int = 0
@@ -392,23 +401,56 @@ def renderer_components(
 
 
 class RendererTypes(Generic[IT, OT]):
-    arg_render_fn_sync: RenderFnSync[IT]
-    arg_render_fn_async: RenderFnAsync[IT]
-    return_renderer_sync: typing.Type[RendererSync[OT]]
-    return_renderer_async: typing.Type[RendererAsync[OT]]
-    return_renderer_decorator: RenderDeco[IT, OT]
+    # arg_render_fn: typing.Type[RenderFnSync[IT] | RenderFnAsync[IT]]
+    arg_render_fn: typing.Type[RenderFn[IT]]
+    # arg_render_fn: typing.Type[RenderFnSync[IT] | RenderFnAsync[IT]]
 
-    def __init__(self):
-        self.arg_render_fn_async = RenderFnAsync[IT]
-        self.arg_render_fn_sync = RenderFnSync[IT]
-        self.return_renderer_sync = RendererSync[OT]
-        self.return_renderer_async = RendererAsync[OT]
-        self.return_renderer_decorator = RenderDeco[IT, OT]
+    # arg_render_fn_sync: typing.Type[RenderFnSync[IT]]
+    # arg_render_fn_async: typing.Type[RenderFnAsync[IT]]
+    # return_renderer: typing.Type[RendererSync[OT] | RendererAsync[OT]]
+    return_renderer: typing.Type[Renderer[OT]]
+    # return_renderer_sync: typing.Type[RendererSync[OT]]
+    # return_renderer_async: typing.Type[RendererAsync[OT]]
+    # return_renderer_decorator: RenderDeco[IT, OT]
+
+    # def __init__(self):
+    #     self.arg_render_fn_async = RenderFnAsync[IT]
+    #     self.arg_render_fn_sync = RenderFnSync[IT]
+    #     self.return_renderer_sync = RendererSync[OT]
+    #     self.return_renderer_async = RendererAsync[OT]
+    #     self.return_renderer_decorator = RenderDeco[IT, OT]
 
 
 class RendererComponents(Generic[IT, OT, P]):
-    function: RenderDeco[IT, OT] | Callable[P, RenderDeco[IT, OT]]
-    types: RendererTypes[IT, OT]
+    # # function: RenderDeco[IT, OT] | Callable[P, RenderDeco[IT, OT]]
+    # renderer: Callable[
+    #     Concatenate[
+    #         Optional[RenderFn[IT]],
+    #         P,
+    #     ],
+    #     # RendererSync[OT] | RendererAsync[OT],
+    #     Renderer[OT],
+    # ]
+    # type_fn: RenderFn[IT]
+    # type_renderer: typing.Type[Renderer[OT]]
+
+    # types: RendererTypes[IT, OT]
+    def __init__(
+        self,
+        renderer: Callable[
+            Concatenate[
+                Optional[RenderFn[IT]],
+                P,
+            ],
+            # RendererSync[OT] | RendererAsync[OT],
+            Renderer[OT],
+        ],
+    ) -> None:
+        super().__init__()
+        self.type_fn = RenderFn[IT]
+        self.type_renderer = Renderer[OT]
+
+        self.renderer = renderer
 
 
 class RendererDecorator(Generic[IT, OT]):
@@ -436,13 +478,8 @@ class RendererDecoAsync(Generic[OT]):
 
 def renderer(
     handler_fn: HandlerFn[IT, P, OT],
-) -> Union[
-    Callable[
-        Concatenate[RenderFnSync[IT] | RenderFnAsync[IT], P], RendererDecorator[IT, OT]
-    ],
-    RendererDecorator[IT, OT],
-]:
-    # ):
+    # ) -> Union[Callable[P, RendererDecorator[IT, OT]], RendererDecorator[IT, OT]]:
+):
     """\
     Renderer components generator
 
@@ -564,7 +601,7 @@ def renderer(
             if _utils.is_async_callable(fn):
                 return render_fn_async(fn)
             else:
-                # Is not not `RenderFnAsync[IT]`. Cast `wrapper_fn`
+                # `fn` is not Async, cast as Sync
                 fn = cast(RenderFnSync[IT], fn)
                 return render_fn_sync(fn)
 
@@ -647,16 +684,17 @@ def renderer(
     # renderer_decorator["renderer_types"]["arg_render_fn_sync"]
     # _.__name__ =
 
-    return _
-
-    ret_c = RendererComponents[IT, OT, P]()
-    ret_c.function = renderer_decorator  # type: ignore
-    ret_c.types = RendererTypes[IT, OT]()
-    ret_c.types.arg_render_fn_sync = RenderFnSync[IT]
-    ret_c.types.arg_render_fn_async = RenderFnAsync[IT]
-    ret_c.types.return_renderer_sync = RendererSync[OT]
-    ret_c.types.return_renderer_async = RendererAsync[OT]
-    ret_c.types.return_renderer_decorator = RenderDeco[IT, OT]
+    # return _
+    renderer_decorator = _
+    ret_c = RendererComponents[IT, OT, P](renderer_decorator)
+    # ret_c.types = RendererTypes[IT, OT]()
+    # ret_c.renderer = renderer_decorator
+    # ret_c.types.arg_render_fn = RenderFnSync[IT] | RenderFnAsync[IT]
+    # ret_c.types.arg_render_fn_sync = RenderFnSync[IT]
+    # ret_c.types.arg_render_fn_async = RenderFnAsync[IT]
+    # ret_c.types.return_renderer_sync = RendererSync[OT]
+    # ret_c.types.return_renderer_async = RendererAsync[OT]
+    # ret_c.types.return_renderer_decorator = RenderDeco[IT, OT]
     return ret_c
 
     return {
@@ -754,10 +792,29 @@ def barret_wraps2(wrapper: Callable[..., typing.Any]):
 
 
 @renderer
-async def text(
+async def text2(
     meta: RenderMeta,
-    fn: RenderFn[str | None],
+    fn: RenderFnAsync[str | None],
 ) -> str | None:
+    value = await fn()
+    if value is None:
+        return None
+    return str(value)
+
+
+@overload
+def text() -> text2.type_renderer:
+    ...
+
+
+@overload
+def text(_fn: text2.type_fn) -> text2.type_renderer:
+    ...
+
+
+def text(
+    _fn: Optional[text2.type_fn] = None,
+) -> text2.type_renderer:
     """
     Reactively render text.
 
@@ -777,16 +834,13 @@ async def text(
     --------
     ~shiny.ui.output_text
     """
-    value = await fn()
-    if value is None:
-        return None
-    return str(value)
+    return text2.renderer(_fn)
 
 
 @renderer
 async def barret2(
     meta: RenderMeta,
-    fn: RenderFn[str],
+    fn: RenderFnAsync[str],
     *,
     extra_arg: str = "42",
 ) -> str | None:
@@ -796,50 +850,35 @@ async def barret2(
     return str(await fn())
 
 
-# def renderer_types(renderer_decorator: RenderDeco[IT, OT]):
-#     return renderer_decorator["types"]
+@overload
+def barret2_fn(
+    *,
+    extra_arg: str = "42",
+) -> barret2.type_renderer:
+    ...
 
 
-barret2(e)
+@overload
+def barret2_fn(
+    _fn: barret2.type_fn,
+) -> barret2.type_renderer:
+    ...
+
+
+def barret2_fn(
+    _fn: Optional[barret2.type_fn] = None,
+    *,
+    extra_arg: str = "42",
+) -> barret2.type_renderer:
+    return barret2.renderer(
+        _fn,
+        extra_arg=extra_arg,
+    )
+
+
+barret2_fn
 text
-
-
-# def createClass(classname: str, attributes: dict[str, str | int]):
-#     def init_fn(self: object, arg1: str, arg2: int) -> None:
-#         setattr(self, "args", (arg1, arg2))
-
-#     return type(
-#         classname,
-#         (object,),
-#         {
-#             "__init__": init_fn,
-#             "args": attributes,
-#         },
-#     )
-
-
-# CarVal = createClass("Car", {"name": "", "age": 0})
-
-# mycar = CarVal("Audi R8", 3)
-# mycar.args
-
-
-# def barret_wrapper():
-#     def barret():
-#         return None
-
-#     barret.__name__ = "bearit"
-#     return barret
-
-
-# b = barret_wrapper()
-# print(b)
-# print(text)
-# print(text.__name__)
-# print(text.__qualname__)
-# print(text.__annotations__)
-# print(dir(text))
-# print(text.__builtins__)
+barret2_fn()
 
 
 # ======================================================================================
@@ -852,7 +891,7 @@ text
 @renderer
 async def plot(
     meta: RenderMeta,
-    fn: RenderFn[ImgData | None],
+    fn: RenderFnAsync[ImgData | None],
     *,
     alt: Optional[str] = None,
     **kwargs: object,
@@ -997,7 +1036,7 @@ async def plot(
 @renderer
 async def image(
     meta: RenderMeta,
-    fn: RenderFn[ImgData | None],
+    fn: RenderFnAsync[ImgData | None],
     *,
     delete_file: bool = False,
 ) -> ImgData | None:
@@ -1062,7 +1101,7 @@ TableResult = Union["pd.DataFrame", PandasCompatible, None]
 @renderer
 async def table(
     meta: RenderMeta,
-    fn: RenderFn[TableResult | None],
+    fn: RenderFnAsync[TableResult | None],
     *,
     index: bool = False,
     classes: str = "table shiny-table w-auto",
@@ -1152,7 +1191,7 @@ async def table(
 @renderer
 async def ui(
     meta: RenderMeta,
-    fn: RenderFn[TagChild],
+    fn: RenderFnAsync[TagChild],
 ) -> RenderedDeps | None:
     """
     Reactively render HTML content.

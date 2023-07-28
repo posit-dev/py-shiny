@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import Optional
 
 from shiny import App, Inputs, Outputs, Session, ui
-from shiny.render._render import RenderFn, RenderMeta, renderer
+from shiny.render._render import RenderFnAsync, RenderMeta, renderer
 
 
 @renderer
 async def render_test_text(
     meta: RenderMeta,
-    fn: RenderFn[str | None],
+    fn: RenderFnAsync[str | None],
     *,
     extra_txt: Optional[str] = None,
 ) -> str | None:

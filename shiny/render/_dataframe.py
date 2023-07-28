@@ -5,7 +5,7 @@ import json
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, cast, runtime_checkable
 
 from .._docstring import add_example
-from . import RenderFn, RenderMeta, renderer
+from . import RenderFnAsync, RenderMeta, renderer
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -199,7 +199,7 @@ DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 @renderer
 async def data_frame(
     meta: RenderMeta,
-    fn: RenderFn[DataFrameResult | None],
+    fn: RenderFnAsync[DataFrameResult | None],
 ) -> object | None:
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
