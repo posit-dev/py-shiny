@@ -776,7 +776,7 @@ def update_slider(
 
     # Get any non-None value to see if the `data-type` may need to change
     val = value[0] if isinstance(value, tuple) else value
-    present_val = next((x for x in [val, min, max]), None)
+    present_val = next((x for x in [val, min, max] if x is not None), None)
 
     data_type = None if present_val is None else _slider_type(present_val)
     if time_format is None and data_type and data_type[0:4] == "date":
@@ -785,10 +785,16 @@ def update_slider(
     min_num = None if min is None else _as_numeric(min)
     max_num = None if max is None else _as_numeric(max)
     step_num = None if step is None else _as_numeric(step)
+    if isinstance(value, tuple):
+        value_num = [_as_numeric(x) for x in value]
+    elif value is not None:
+        value_num = _as_numeric(value)
+    else:
+        value_num = None
 
     msg = {
         "label": label,
-        "value": value,
+        "value": value_num,
         "min": min_num,
         "max": max_num,
         "step": step_num,
