@@ -1,0 +1,29 @@
+name: Issue Management
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage_or_add_to_project:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check if the issue creator is a maintainer
+        id: check_maintainer
+        run: |
+            echo "::set-output name=is_maintainer::$(curl -s -H 'Authorization: token ${{ secrets.GITHUB_TOKEN }}' \
+            https://api.github.com/repos/${{ github.repository }}/collaborators/${{ github.event.issue.user.login }}/permission \
+            | jq -r '.permission' | grep -q 'admin' && echo 'true' || echo 'false')"
+
+      - name: Apply "needs triage" label to issues created by non-maintainers
+        if: steps.check_maintainer.outputs.is_maintainer == 'false'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ["needs-triage"]
+            })
