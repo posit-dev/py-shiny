@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 import plotly.express as px
@@ -43,9 +44,23 @@ def df():
         params=[150],
     )
     # Treat timestamp as a continuous variable
-    tbl["timestamp"] = pd.to_datetime(tbl["timestamp"]).dt.strftime("%H:%M:%S")
+    tbl["timestamp"] = pd.to_datetime(tbl["timestamp"], utc=True)
+    tbl["time"] = tbl["timestamp"].dt.strftime("%H:%M:%S")
     # Reverse order of rows
     tbl = tbl.iloc[::-1]
+
+    return tbl
+
+
+def read_time_period(from_time, to_time):
+    tbl = pd.read_sql(
+        "select * from auc_scores where timestamp between ? and ? order by timestamp, model",
+        con,
+        params=[from_time, to_time],
+    )
+    # Treat timestamp as a continuous variable
+    tbl["timestamp"] = pd.to_datetime(tbl["timestamp"], utc=True)
+    tbl["time"] = tbl["timestamp"].dt.strftime("%H:%M:%S")
 
     return tbl
 
@@ -60,37 +75,79 @@ model_colors = {
 model_names = list(model_colors.keys())
 
 
-app_ui = x.ui.page_sidebar(
-    x.ui.sidebar(
-        ui.input_selectize(
-            "refresh",
-            "Refresh interval",
-            {
-                0: "Realtime",
-                5: "5 seconds",
-                30: "30 seconds",
-                60 * 5: "5 minutes",
-                60 * 15: "15 minutes",
-            },
+def app_ui(req):
+    end_time = datetime.now(timezone.utc)
+    start_time = end_time - timedelta(minutes=1)
+
+    return x.ui.page_sidebar(
+        x.ui.sidebar(
+            ui.input_checkbox_group(
+                "models", "Models", model_names, selected=model_names
+            ),
+            ui.input_radio_buttons(
+                "timeframe",
+                "Timeframe",
+                ["Latest", "Specific timeframe"],
+                selected="Latest",
+            ),
+            ui.panel_conditional(
+                "input.timeframe === 'Latest'",
+                ui.input_selectize(
+                    "refresh",
+                    "Refresh interval",
+                    {
+                        0: "Realtime",
+                        5: "5 seconds",
+                        30: "30 seconds",
+                        60 * 5: "5 minutes",
+                        60 * 15: "15 minutes",
+                    },
+                ),
+            ),
+            ui.panel_conditional(
+                "input.timeframe !== 'Latest'",
+                ui.input_slider(
+                    "timerange",
+                    "Time range",
+                    min=start_time,
+                    max=end_time,
+                    value=[start_time, end_time],
+                    step=timedelta(seconds=1),
+                    time_format="%H:%M:%S",
+                ),
+            ),
         ),
-        ui.input_checkbox_group("models", "Models", model_names, selected=model_names),
-    ),
-    ui.div(
-        ui.h1("Model monitoring dashboard"),
-        ui.p(
-            x.ui.output_ui("value_boxes"),
+        ui.div(
+            ui.h1("Model monitoring dashboard"),
+            ui.p(
+                x.ui.output_ui("value_boxes"),
+            ),
+            x.ui.card(output_widget("plot_timeseries")),
+            x.ui.card(output_widget("plot_dist")),
+            style="max-width: 800px;",
         ),
-        x.ui.card(output_widget("plot_timeseries")),
-        x.ui.card(output_widget("plot_dist")),
-        style="max-width: 800px;",
-    ),
-    fillable=False,
-)
+        fillable=False,
+    )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.Effect
+    def update_time_range():
+        reactive.invalidate_later(5)
+        min_time, max_time = pd.to_datetime(
+            con.execute(
+                "select min(timestamp), max(timestamp) from auc_scores"
+            ).fetchone(),
+            utc=True,
+        )
+        ui.update_slider(
+            "timerange",
+            min=min_time.replace(tzinfo=timezone.utc),
+            max=max_time.replace(tzinfo=timezone.utc),
+        )
+
     @reactive.Calc
-    def throttled_df():
+    def recent_df():
         refresh = int(input.refresh())
         if refresh == 0:
             return df()
@@ -100,10 +157,20 @@ def server(input: Inputs, output: Outputs, session: Session):
                 return df()
 
     @reactive.Calc
+    def timeframe_df():
+        start, end = input.timerange()
+        return read_time_period(start, end)
+
+    @reactive.Calc
     def filtered_df():
-        data = throttled_df()
+        data = recent_df() if input.timeframe() == "Latest" else timeframe_df()
+
         # Filter the rows so we only include the desired models
         return data[data["model"].isin(input.models())]
+
+    @reactive.Calc
+    def filtered_model_names():
+        return filtered_df()["model"].unique()
 
     @output
     @render.ui
@@ -134,11 +201,11 @@ def server(input: Inputs, output: Outputs, session: Session):
         )
 
     @output
-    @render_plotly_streaming(recreate_when=input.models)
+    @render_plotly_streaming(recreate_key=filtered_model_names)
     def plot_timeseries():
         fig = px.line(
             filtered_df(),
-            x="timestamp",
+            x="time",
             y="score",
             labels=dict(score="auc"),
             color="model",
@@ -162,7 +229,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return fig
 
     @output
-    @render_plotly_streaming(recreate_when=input.models)
+    @render_plotly_streaming(recreate_key=filtered_model_names)
     def plot_dist():
         fig = px.histogram(
             filtered_df(),
@@ -188,6 +255,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         # From https://plotly.com/python/facet-plots/#customizing-subplot-figure-titles
         fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
 
+        fig.update_yaxes(matches=None)
         fig.update_xaxes(range=[0, 1], fixedrange=True)
         fig.layout.height = 500
 

@@ -19,7 +19,7 @@ async def async_main():
         con.execute("PRAGMA journal_mode=WAL")
         con.execute("drop table if exists auc_scores")
 
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
         position = now.minute * 60 + now.second + 1
 
         # Simulate 100 seconds of historical data
@@ -38,7 +38,7 @@ async def async_main():
         while True:
             new_data = auc_scores.loc[position].copy()
             # del new_data["second"]
-            new_data["timestamp"] = datetime.datetime.now()
+            new_data["timestamp"] = datetime.datetime.utcnow()
             new_data.to_sql("auc_scores", con, index=False, if_exists="append")
             position = (position % (60 * 60)) + 1
             await asyncio.sleep(1)
