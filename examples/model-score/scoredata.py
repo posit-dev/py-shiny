@@ -35,6 +35,8 @@ async def async_main():
         initial_scores = initial_scores.join(timestamps, how="left")
         initial_scores.to_sql("auc_scores", con, index=False, if_exists="append")
 
+        con.execute("create index idx_auc_scores_timestamp on auc_scores(timestamp)")
+
         while True:
             new_data = auc_scores.loc[position].copy()
             # del new_data["second"]

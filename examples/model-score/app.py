@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
@@ -9,9 +11,6 @@ from shinywidgets import output_widget
 
 import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
-
-# TODO: Make an option to switch between dynamic and static
-# TODO: Talk to Julia and Isabel for suggestions
 
 THRESHOLD_MID = 0.85
 THRESHOLD_MID_COLOR = "rgb(0, 137, 26)"
@@ -25,26 +24,33 @@ con = sqlite3.connect(scoredata.SQLITE_DB_URI, uri=True)
 
 
 def last_modified(con):
+    """
+    Fast-executing call to get the timestamp of the most recent row in the database.
+    We will poll against this in absence of a way to receive a push notification when
+    our SQLite database changes.
+    """
     return con.execute("select max(timestamp) from auc_scores").fetchone()[0]
-
-
-# @reactive.poll calls a cheap query (`last_modified()`) every 1 second to check if the
-# expensive query (`df()`) should be run and downstream calculations should be updated.
-#
-# By declaring this function at the top-level of the script instead of in the server
-# function, all sessions are sharing the same reactive poll, so the expensive query is
-# only run once no matter how many users are connected.
 
 
 @reactive.poll(lambda: last_modified(con))
 def df():
+    """
+    @reactive.poll calls a cheap query (`last_modified()`) every 1 second to check if
+    the expensive query (`df()`) should be run and downstream calculations should be
+    updated.
+
+    By declaring this reactive object at the top-level of the script instead of in the
+    server function, all sessions are sharing the same object, so the expensive query is
+    only run once no matter how many users are connected.
+    """
     tbl = pd.read_sql(
         "select * from auc_scores order by timestamp desc, model desc limit ?",
         con,
         params=[150],
     )
-    # Treat timestamp as a continuous variable
+    # Convert timestamp to datetime object, which SQLite doesn't support natively
     tbl["timestamp"] = pd.to_datetime(tbl["timestamp"], utc=True)
+    # Create a short label for readability
     tbl["time"] = tbl["timestamp"].dt.strftime("%H:%M:%S")
     # Reverse order of rows
     tbl = tbl.iloc[::-1]
@@ -70,7 +76,6 @@ model_colors = {
     "model_2": "#beaed4",
     "model_3": "#fdc086",
     "model_4": "#ffff99",
-    "model_5": "#386cb0",
 }
 model_names = list(model_colors.keys())
 
@@ -131,38 +136,41 @@ def app_ui(req):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
-    def update_time_range():
-        reactive.invalidate_later(5)
-        min_time, max_time = pd.to_datetime(
-            con.execute(
-                "select min(timestamp), max(timestamp) from auc_scores"
-            ).fetchone(),
-            utc=True,
-        )
-        ui.update_slider(
-            "timerange",
-            min=min_time.replace(tzinfo=timezone.utc),
-            max=max_time.replace(tzinfo=timezone.utc),
-        )
-
     @reactive.Calc
     def recent_df():
+        """
+        Returns the most recent rows from the database, at the refresh interval
+        requested by the user. If the refresh interview is 0, go at maximum speed.
+        """
         refresh = int(input.refresh())
         if refresh == 0:
             return df()
         else:
+            # This approach works well if you know that input.refresh() is likely to be
+            # a longer interval than the underlying changing data source (df()). If not,
+            # then this can cause downstream reactives to be invalidated when they
+            # didn't need to be.
             reactive.invalidate_later(refresh)
             with reactive.isolate():
                 return df()
 
     @reactive.Calc
     def timeframe_df():
+        """
+        Returns rows from the database within the specified time range. Notice that we
+        implement the business logic as a separate function (read_time_period), so it's
+        easier to reason about and test.
+        """
         start, end = input.timerange()
         return read_time_period(start, end)
 
     @reactive.Calc
     def filtered_df():
+        """
+        Return the data frame that should be displayed in the app, based on the user's
+        input. This will be either the latest rows, or a specific time range. Also
+        filter out rows for models that the user has deselected.
+        """
         data = recent_df() if input.timeframe() == "Latest" else timeframe_df()
 
         # Filter the rows so we only include the desired models
@@ -186,6 +194,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         return x.ui.layout_column_wrap(
             "135px",
             *[
+                # For each model, return a value_box with the score, colored based on
+                # how high the score is.
                 x.ui.value_box(
                     model,
                     ui.h2(score),
@@ -203,6 +213,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render_plotly_streaming(recreate_key=filtered_model_names)
     def plot_timeseries():
+        """
+        Returns a Plotly Figure visualization. Streams new data to the Plotly widget in
+        the browser whenever filtered_df() updates, and completely recreates the figure
+        when filtered_model_names() changes (see recreate_key=... above).
+        """
         fig = px.line(
             filtered_df(),
             x="time",
@@ -210,6 +225,11 @@ def server(input: Inputs, output: Outputs, session: Session):
             labels=dict(score="auc"),
             color="model",
             color_discrete_map=model_colors,
+            # The default for render_mode is "auto", which switches between
+            # type="scatter" and type="scattergl" depending on the number of data
+            # points. Switching that value breaks streaming updates, as the type
+            # property is read-only. Setting it to "webgl" keeps the type consistent.
+            render_mode="webgl",
         )
 
         fig.add_hline(
@@ -260,6 +280,26 @@ def server(input: Inputs, output: Outputs, session: Session):
         fig.layout.height = 500
 
         return fig
+
+    @reactive.Effect
+    def update_time_range():
+        """
+        Every 5 seconds, update the custom time range slider's min and max values to
+        reflect the current min and max values in the database.
+        """
+
+        reactive.invalidate_later(5)
+        min_time, max_time = pd.to_datetime(
+            con.execute(
+                "select min(timestamp), max(timestamp) from auc_scores"
+            ).fetchone(),
+            utc=True,
+        )
+        ui.update_slider(
+            "timerange",
+            min=min_time.replace(tzinfo=timezone.utc),
+            max=max_time.replace(tzinfo=timezone.utc),
+        )
 
 
 app = App(app_ui, server)
