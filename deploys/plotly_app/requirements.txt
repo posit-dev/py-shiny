@@ -1,0 +1,9 @@
+ipywidgets==7.7.3
+matplotlib
+numpy
+pandas
+plotly
+rsconnect-python
+shiny
+shinywidgets
+toml
