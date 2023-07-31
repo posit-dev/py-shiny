@@ -1,30 +1,42 @@
-from shiny.render._render import RenderFnAsync, RenderMeta, renderer
+from typing import Any, overload
+
+from shiny.render._render import (
+    Renderer,
+    RenderFnAsync,
+    RenderMeta,
+    renderer_components,
+)
 
 
-def test_renderer_name_and_docs_are_copied():
-    @renderer
-    async def my_handler(meta: RenderMeta, fn: RenderFnAsync[str]) -> str:
-        "Test docs go here"
-        return str(await fn())
-
-    assert my_handler.__doc__ == "Test docs go here"
-    assert my_handler.__name__ == "my_handler"
-
-
-def test_renderer_works():
+def test_renderer_components_works():
     # No args works
-    @renderer
-    async def test_renderer(
+    @renderer_components
+    async def test_components(
         meta: RenderMeta,
         fn: RenderFnAsync[str],
     ):
         ...
 
+    @overload
+    def test_renderer() -> test_components.type_decorator:
+        ...
 
-def test_renderer_kwargs_are_allowed():
+    @overload
+    def test_renderer(
+        _fn: test_components.type_renderer_fn,
+    ) -> test_components.type_renderer:
+        ...
+
+    def test_renderer(
+        _fn: test_components.type_impl_fn = None,
+    ) -> test_components.type_impl:
+        return test_components.impl(_fn)
+
+
+def test_renderer_components_kwargs_are_allowed():
     # Test that kwargs can be allowed
-    @renderer
-    async def test_renderer(
+    @renderer_components
+    async def test_components(
         meta: RenderMeta,
         fn: RenderFnAsync[str],
         *,
@@ -32,11 +44,28 @@ def test_renderer_kwargs_are_allowed():
     ):
         ...
 
+    @overload
+    def test_renderer(*, y: str = "42") -> test_components.type_decorator:
+        ...
 
-def test_renderer_with_pass_through_kwargs():
+    @overload
+    def test_renderer(
+        _fn: test_components.type_renderer_fn,
+    ) -> test_components.type_renderer:
+        ...
+
+    def test_renderer(
+        _fn: test_components.type_impl_fn = None,
+        *,
+        y: str = "42",
+    ) -> test_components.type_impl:
+        return test_components.impl(_fn, y=y)
+
+
+def test_renderer_components_with_pass_through_kwargs():
     # No args works
-    @renderer
-    async def test_renderer(
+    @renderer_components
+    async def test_components(
         meta: RenderMeta,
         fn: RenderFnAsync[str],
         *,
@@ -45,12 +74,32 @@ def test_renderer_with_pass_through_kwargs():
     ):
         ...
 
+    @overload
+    def test_renderer(
+        *, y: str = "42", **kwargs: Any
+    ) -> test_components.type_decorator:
+        ...
 
-def test_renderer_limits_positional_arg_count():
+    @overload
+    def test_renderer(
+        _fn: test_components.type_renderer_fn,
+    ) -> test_components.type_renderer:
+        ...
+
+    def test_renderer(
+        _fn: test_components.type_impl_fn = None,
+        *,
+        y: str = "42",
+        **kwargs: Any,
+    ) -> test_components.type_impl:
+        return test_components.impl(_fn, y=y, **kwargs)
+
+
+def test_renderer_components_limits_positional_arg_count():
     try:
 
-        @renderer
-        async def test_renderer(
+        @renderer_components
+        async def test_components(
             meta: RenderMeta,
             fn: RenderFnAsync[str],
             y: str,
@@ -62,11 +111,11 @@ def test_renderer_limits_positional_arg_count():
         assert "more than 2 positional" in str(e)
 
 
-def test_renderer_does_not_allow_args():
+def test_renderer_components_does_not_allow_args():
     try:
 
-        @renderer
-        async def test_renderer(
+        @renderer_components
+        async def test_components(
             meta: RenderMeta,
             fn: RenderFnAsync[str],
             *args: str,
@@ -79,11 +128,11 @@ def test_renderer_does_not_allow_args():
         assert "No variadic parameters" in str(e)
 
 
-def test_renderer_kwargs_have_defaults():
+def test_renderer_components_kwargs_have_defaults():
     try:
 
-        @renderer
-        async def test_renderer(
+        @renderer_components
+        async def test_components(
             meta: RenderMeta,
             fn: RenderFnAsync[str],
             *,
@@ -97,11 +146,11 @@ def test_renderer_kwargs_have_defaults():
         assert "did not have a default value" in str(e)
 
 
-def test_renderer_kwargs_can_not_be_name_render_fn():
+def test_renderer_components_kwargs_can_not_be_name_render_fn():
     try:
 
-        @renderer
-        async def test_renderer(
+        @renderer_components
+        async def test_components(
             meta: RenderMeta,
             fn: RenderFnAsync[str],
             *,
@@ -115,9 +164,9 @@ def test_renderer_kwargs_can_not_be_name_render_fn():
         assert "parameters can not be named `_render_fn`" in str(e)
 
 
-def test_renderer_result_does_not_allow_args():
-    @renderer
-    async def test_renderer(
+def test_renderer_components_result_does_not_allow_args():
+    @renderer_components
+    async def test_components(
         meta: RenderMeta,
         fn: RenderFnAsync[str],
     ):
@@ -131,34 +180,34 @@ def test_renderer_result_does_not_allow_args():
         return " ".join(args)
 
     try:
-        test_renderer(  # type: ignore
+        test_components(  # type: ignore
             "X",
             "Y",
-        )(render_fn_sync)
+        ).impl(render_fn_sync)
         raise RuntimeError()
     except RuntimeError as e:
         assert "`args` should not be supplied" in str(e)
 
     try:
-        test_renderer(  # type: ignore
+        test_components(  # type: ignore
             "X",
             "Y",
-        )(render_fn_async)
+        ).impl(render_fn_async)
     except RuntimeError as e:
         assert "`args` should not be supplied" in str(e)
 
 
-def test_renderer_makes_calls_render_fn_once():
-    @renderer
-    async def test_renderer_no_calls(
+def test_renderer_components_makes_calls_render_fn_once():
+    @renderer_components
+    async def test_renderer_components_no_calls(
         meta: RenderMeta,
         fn: RenderFnAsync[str],
     ):
         # Does not call `fn`
         return "Not 42"
 
-    @renderer
-    async def test_renderer_multiple_calls(
+    @renderer_components
+    async def test_renderer_components_multiple_calls(
         meta: RenderMeta,
         fn: RenderFnAsync[str],
     ):
@@ -169,26 +218,28 @@ def test_renderer_makes_calls_render_fn_once():
     def render_fn():
         return "42"
 
-    # try:
-    renderer_fn_none = test_renderer_no_calls(render_fn)
+    renderer_fn_none = test_renderer_components_no_calls.impl(render_fn)
     renderer_fn_none._set_metadata(None, "test_out")  # type: ignore
-
+    if not isinstance(renderer_fn_none, Renderer):
+        raise RuntimeError()
     try:
         renderer_fn_none()
         raise RuntimeError()
     except RuntimeError as e:
         assert (
             str(e)
-            == "The total number of calls (`0`) to 'render_fn' in the 'test_renderer_no_calls' handler did not equal `1`."
+            == "The total number of calls (`0`) to 'render_fn' in the 'test_renderer_components_no_calls' handler did not equal `1`."
         )
 
-    renderer_fn_multiple = test_renderer_multiple_calls(render_fn)
+    renderer_fn_multiple = test_renderer_components_multiple_calls.impl(render_fn)
     renderer_fn_multiple._set_metadata(None, "test_out")  # type: ignore
+    if not isinstance(renderer_fn_multiple, Renderer):
+        raise RuntimeError()
     try:
         renderer_fn_multiple()
         raise RuntimeError()
     except RuntimeError as e:
         assert (
             str(e)
-            == "The total number of calls (`2`) to 'render_fn' in the 'test_renderer_multiple_calls' handler did not equal `1`."
+            == "The total number of calls (`2`) to 'render_fn' in the 'test_renderer_components_multiple_calls' handler did not equal `1`."
         )

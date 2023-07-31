@@ -6,10 +6,7 @@ from ._render import (  # noqa: F401
     # Import these values, but do not give autocomplete hints for `shiny.render.FOO`
     RenderMeta as RenderMeta,
     RenderFnAsync as RenderFnAsync,
-    # Renderer as Renderer,
-    # RendererSync as RendererSync,
-    # RendererAsync as RendererAsync,
-    renderer as renderer,
+    renderer_components as renderer_components,
     text,
     plot,
     image,

@@ -2,10 +2,19 @@ from __future__ import annotations
 
 import abc
 import json
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, cast, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Protocol,
+    Union,
+    cast,
+    overload,
+    runtime_checkable,
+)
 
 from .._docstring import add_example
-from . import RenderFnAsync, RenderMeta, renderer
+from . import RenderFnAsync, RenderMeta, renderer_components
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -195,12 +204,36 @@ DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
 
 # TODO-barret; Port `__name__` and `__docs__` of `value_fn`
-@add_example()
-@renderer
-async def data_frame(
+@renderer_components
+async def _data_frame(
     meta: RenderMeta,
     fn: RenderFnAsync[DataFrameResult | None],
 ) -> object | None:
+    x = await fn()
+    if x is None:
+        return None
+
+    if not isinstance(x, AbstractTabularData):
+        x = DataGrid(
+            cast_to_pandas(
+                x, "@render.data_frame doesn't know how to render objects of type"
+            )
+        )
+    return x.to_payload()
+
+
+@overload
+def data_frame(_fn: None = None) -> _data_frame.type_decorator:
+    ...
+
+
+@overload
+def data_frame(_fn: _data_frame.type_renderer_fn) -> _data_frame.type_renderer:
+    ...
+
+
+@add_example()
+def data_frame(_fn: _data_frame.type_impl_fn = None) -> _data_frame.type_impl:
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
 
@@ -224,17 +257,7 @@ async def data_frame(
     :class:`~shiny.render.DataTable`
     :func:`~shiny.ui.output_data_frame`
     """
-    x = await fn()
-    if x is None:
-        return None
-
-    if not isinstance(x, AbstractTabularData):
-        x = DataGrid(
-            cast_to_pandas(
-                x, "@render.data_frame doesn't know how to render objects of type"
-            )
-        )
-    return x.to_payload()
+    return _data_frame.impl(_fn)
 
 
 @runtime_checkable

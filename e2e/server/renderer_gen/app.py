@@ -2,14 +2,14 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, overload
 
 from shiny import App, Inputs, Outputs, Session, ui
-from shiny.render._render import RenderFnAsync, RenderMeta, renderer
+from shiny.render._render import RenderFnAsync, RenderMeta, renderer_components
 
 
-@renderer
-async def render_test_text(
+@renderer_components
+async def _render_test_text_components(
     meta: RenderMeta,
     fn: RenderFnAsync[str | None],
     *,
@@ -22,6 +22,28 @@ async def render_test_text(
     if extra_txt:
         value = value + "; " + str(extra_txt)
     return value
+
+
+@overload
+def render_test_text(
+    *, extra_txt: Optional[str] = None
+) -> _render_test_text_components.type_decorator:
+    ...
+
+
+@overload
+def render_test_text(
+    _fn: _render_test_text_components.type_renderer_fn,
+) -> _render_test_text_components.type_renderer:
+    ...
+
+
+def render_test_text(
+    _fn: _render_test_text_components.type_impl_fn = None,
+    *,
+    extra_txt: Optional[str] = None,
+) -> _render_test_text_components.type_impl:
+    return _render_test_text_components.impl(_fn, extra_txt=extra_txt)
 
 
 app_ui = ui.page_fluid(
