@@ -1,6 +1,6 @@
 import datetime
 
-from shiny import App, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 start_time = datetime.datetime(2023, 7, 1, 0, 0, 0, 0, tzinfo=datetime.timezone.utc)
 end_time = start_time + datetime.timedelta(hours=1)
@@ -19,7 +19,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.text
     def txt():
