@@ -775,7 +775,7 @@ def update_slider(
     session = require_active_session(session)
 
     # Get any non-None value to see if the `data-type` may need to change
-    val = value[0] if isinstance(value, tuple) else value
+    val = value[0] if isinstance(value, (tuple, list)) else value
     present_val = next((x for x in [val, min, max] if x is not None), None)
 
     data_type = None if present_val is None else _slider_type(present_val)
