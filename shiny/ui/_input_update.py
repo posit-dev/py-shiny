@@ -785,7 +785,7 @@ def update_slider(
     min_num = None if min is None else _as_numeric(min)
     max_num = None if max is None else _as_numeric(max)
     step_num = None if step is None else _as_numeric(step)
-    if isinstance(value, tuple):
+    if isinstance(value, (tuple, list)):
         value_num = [_as_numeric(x) for x in value]
     elif value is not None:
         value_num = _as_numeric(value)
