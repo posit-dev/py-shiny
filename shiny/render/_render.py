@@ -127,6 +127,7 @@ class RenderMeta(TypedDict):
     name: str
 
 
+# TODO-barret remove; wch √
 class _CallCounter(Generic[IT]):
     def assert_call_count(self, total_calls: int = 1):
         if self._call_count != total_calls:
@@ -400,41 +401,7 @@ def renderer_components(
     return renderer_components(handler_fn)
 
 
-class RendererTypes(Generic[IT, OT]):
-    # arg_render_fn: typing.Type[RenderFnSync[IT] | RenderFnAsync[IT]]
-    arg_render_fn: typing.Type[RenderFn[IT]]
-    # arg_render_fn: typing.Type[RenderFnSync[IT] | RenderFnAsync[IT]]
-
-    # arg_render_fn_sync: typing.Type[RenderFnSync[IT]]
-    # arg_render_fn_async: typing.Type[RenderFnAsync[IT]]
-    # return_renderer: typing.Type[RendererSync[OT] | RendererAsync[OT]]
-    return_renderer: typing.Type[Renderer[OT]]
-    # return_renderer_sync: typing.Type[RendererSync[OT]]
-    # return_renderer_async: typing.Type[RendererAsync[OT]]
-    # return_renderer_decorator: RenderDeco[IT, OT]
-
-    # def __init__(self):
-    #     self.arg_render_fn_async = RenderFnAsync[IT]
-    #     self.arg_render_fn_sync = RenderFnSync[IT]
-    #     self.return_renderer_sync = RendererSync[OT]
-    #     self.return_renderer_async = RendererAsync[OT]
-    #     self.return_renderer_decorator = RenderDeco[IT, OT]
-
-
 class RendererComponents(Generic[IT, OT, P]):
-    # # function: RenderDeco[IT, OT] | Callable[P, RenderDeco[IT, OT]]
-    # renderer: Callable[
-    #     Concatenate[
-    #         Optional[RenderFn[IT]],
-    #         P,
-    #     ],
-    #     # RendererSync[OT] | RendererAsync[OT],
-    #     Renderer[OT],
-    # ]
-    # type_fn: RenderFn[IT]
-    # type_renderer: typing.Type[Renderer[OT]]
-
-    # types: RendererTypes[IT, OT]
     def __init__(
         self,
         renderer: Callable[
@@ -453,33 +420,161 @@ class RendererComponents(Generic[IT, OT, P]):
         self.renderer = renderer
 
 
-class RendererDecorator(Generic[IT, OT]):
-    # @overload
-    # def __call__(self, _render_fn: RenderFnSync[IT]) -> RendererSync[OT]:
-    #     ...
+# class RendererDecorator(Generic[IT, OT]):
+#     # @overload
+#     # def __call__(self, _render_fn: RenderFnSync[IT]) -> RendererSync[OT]:
+#     #     ...
+
+#     # @overload
+#     # def __call__(self, _render_fn: RenderFnAsync[IT]) -> RendererAsync[OT]:
+#     #     ...
+
+#     def __call__(
+#         self, _render_fn: RenderFnSync[IT] | RenderFnAsync[IT]
+#     ) -> RendererSync[OT] | RendererAsync[OT]:
+#         ...
+
+
+def coyp_doc(doc: str | None):
+    def inner(obj: T) -> T:
+        obj.__doc__ = doc or ""
+        return obj
+
+    return inner
+
+
+class RendererDecorator(Generic[IT, OT, P]):
+    """
+    Renderer Decorator class docs go here!
+    """
+
+    @property
+    def type_renderer_fn(self):
+        return RenderFn[IT]
+
+    @property
+    def type_renderer(self):
+        return Renderer[OT]
+
+    @property
+    def type_decorator(self):
+        # return RenderDeco[IT, OT]
+        return Callable[[RenderFn[IT]], Renderer[OT]]
+
+    @property
+    def type_impl_fn(self):
+        return Optional[RenderFn[IT]]
+
+    @property
+    def type_impl(self):
+        return Renderer[OT] | Callable[[RenderFn[IT]], Renderer[OT]]
+        #    RenderDeco[IT, OT]
+
+    # @property
+    # def types(self):
+    #     return {
+    #         "return_renderer_decorator": RenderDeco[IT, OT],
+    #         "arg_render_fn_sync": RenderFnSync[IT],
+    #         "return_renderer_sync": RendererSync[OT],
+    #         "arg_render_fn_async": RenderFnAsync[IT],
+    #         "return_renderer_async": RendererAsync[OT],
+    #     }
+
+    def __init__(
+        self,
+        fn: Callable[
+            Concatenate[
+                Optional[RenderFn[IT]],
+                P,
+            ],
+            # RendererSync[OT] | RendererAsync[OT],
+            Renderer[OT] | RenderDeco[IT, OT],
+        ],
+        # doc: str | None = None,
+    ) -> None:
+        # self.__name__ = handler_fn.__name__
+        # self.__func__.__doc__ = handler_fn.__doc__
+        self._fn = fn
+        # self.__doc__ = doc
+        import functools
+
+        functools.update_wrapper(self, fn, updated=())
+
+    # @property
+    # def __doc__(self):
+    #     return "C doc"
+
+    # @functools.wraps(handler_fn)
+    @overload
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> RenderDeco[IT, OT]:
+        ...
 
     # @overload
     # def __call__(self, _render_fn: RenderFnAsync[IT]) -> RendererAsync[OT]:
     #     ...
 
-    def __call__(
-        self, _render_fn: RenderFnSync[IT] | RenderFnAsync[IT]
-    ) -> RendererSync[OT] | RendererAsync[OT]:
+    # @overload
+    # def __call__(self, _render_fn: RenderFnSync[IT]) -> RendererSync[OT]:
+    #     ...
+
+    @overload
+    def __call__(self, _fn: RenderFn[IT]) -> Renderer[OT]:
         ...
 
+    def __call__(  # type: ignore[reportGeneralTypeIssues]
+        self,
+        _render_fn: Optional[RenderFnSync[IT] | RenderFnAsync[IT]] = None,
+        *args: P.args,  # Equivalent to `*` after assertions in `_assert_handler_fn()`
+        **kwargs: P.kwargs,
+    ):
+        return self._fn(_render_fn, *args, **kwargs)
 
-class RendererDecoSync(Generic[OT]):
-    ...
+    @property
+    def impl(self):
+        return self._fn
 
+    @property
+    def fn(
+        self,
+        # ) -> Callable[
+        #     Concatenate[
+        #         Optional[RenderFn[IT]],
+        #         P,
+        #     ],
+        #     # RendererSync[OT] | RendererAsync[OT],
+        #     Renderer[OT],
+        # ]:
+    ):
+        @overload
+        def bear(
+            *args: P.args, **kwargs: P.kwargs
+        ) -> Callable[[RenderFn[IT]], Renderer[OT]]:
+            ...
 
-class RendererDecoAsync(Generic[OT]):
-    ...
+        @overload
+        def bear(_fn: RenderFn[IT]) -> Renderer[OT]:
+            ...
+
+        def bear(_fn: RenderFn[IT], *args: P.args, **kwargs: P.kwargs) -> Renderer[OT]:
+            return self._fn(_fn, *args, **kwargs)
+
+        bear.__doc__ = self._fn.__doc__
+
+        return bear
+
+    # def fn(  # type: ignore[reportGeneralTypeIssues]
+    #     self,
+    #     _render_fn: Optional[RenderFnSync[IT] | RenderFnAsync[IT]] = None,
+    #     *args: P.args,  # Equivalent to `*` after assertions in `_assert_handler_fn()`
+    #     **kwargs: P.kwargs,
+    # ):
+    #     return self._fn(_render_fn, *args, **kwargs)
 
 
 def renderer(
     handler_fn: HandlerFn[IT, P, OT],
     # ) -> Union[Callable[P, RendererDecorator[IT, OT]], RendererDecorator[IT, OT]]:
-):
+) -> RendererDecorator[IT, OT, P]:
     """\
     Renderer components generator
 
@@ -546,24 +641,6 @@ def renderer(
         # `args` **must** be in `renderer_decorator` definition.
         # Make sure there no `args`!
         _assert_no_args(args)
-
-        # def barret():
-        #     return
-
-        # barret.__name__ = "bearit"
-        # barret
-
-        # class Barret:
-        #     def __init__(self) -> None:
-        #         self.__name__ = "Bearit"
-        #         self.__class__.__name__ = "BearitClass"
-        #         pass
-
-        #     def __call__(self) -> None:
-        #         return
-
-        # b = Barret()
-        # b
 
         def render_fn_sync(
             fn_sync: RenderFnSync[IT],
@@ -684,106 +761,16 @@ def renderer(
     # renderer_decorator["renderer_types"]["arg_render_fn_sync"]
     # _.__name__ =
 
-    # return _
     renderer_decorator = _
-    ret_c = RendererComponents[IT, OT, P](renderer_decorator)
-    # ret_c.types = RendererTypes[IT, OT]()
-    # ret_c.renderer = renderer_decorator
-    # ret_c.types.arg_render_fn = RenderFnSync[IT] | RenderFnAsync[IT]
-    # ret_c.types.arg_render_fn_sync = RenderFnSync[IT]
-    # ret_c.types.arg_render_fn_async = RenderFnAsync[IT]
-    # ret_c.types.return_renderer_sync = RendererSync[OT]
-    # ret_c.types.return_renderer_async = RendererAsync[OT]
-    # ret_c.types.return_renderer_decorator = RenderDeco[IT, OT]
-    return ret_c
-
-    return {
-        "function": renderer_decorator,
-        "types": {
-            "arg_render_fn_sync": RenderFnSync[IT],
-            "arg_render_fn_async": RenderFnAsync[IT],
-            "return_renderer_sync": RendererSync[OT],
-            "return_renderer_async": RendererAsync[OT],
-            "return_renderer_decorator": RenderDeco[IT, OT],
-        },
-    }
-
-    # b = "barret"
-    # my_fn = type("B", (), {"barret": 42})
-    # return my_fn
-    # my_fn
-
-    class RendererDecorator:
-        @property
-        def types(self):
-            return {
-                "return_renderer_decorator": RenderDeco[IT, OT],
-                "arg_render_fn_sync": RenderFnSync[IT],
-                "return_renderer_sync": RendererSync[OT],
-                "arg_render_fn_async": RenderFnAsync[IT],
-                "return_renderer_async": RendererAsync[OT],
-            }
-
-        def __init__(self) -> None:
-            # self.__name__ = handler_fn.__name__
-            # self.__func__.__doc__ = handler_fn.__doc__
-            ...
-
-        # @functools.wraps(handler_fn)
-        @overload
-        def __call__(self, _render_fn: RenderFnSync[IT]) -> RendererSync[OT]:
-            ...
-
-        def __call__(
-            self,
-            _render_fn: Optional[RenderFnSync[IT] | RenderFnAsync[IT]] = None,
-            *args: P.args,  # Equivalent to `*` after assertions in `_assert_handler_fn()`
-            **kwargs: P.kwargs,
-        ):
-            return renderer_decorator(_render_fn, *args, **kwargs)
-
-    ret = RendererDecorator()
-    # ret.__class__.__doc__ = handler_fn.__doc__
-    # ret.__doc__ = handler_fn.__doc__
-
+    # return renderer_decorator
+    # return RendererComponents[IT, OT, P](renderer_decorator)
+    ret = RendererDecorator[IT, OT, P](
+        renderer_decorator,
+        #    doc=handler_fn.__doc__
+    )
+    ret.__doc__ = handler_fn.__doc__
+    ret.__class__.__doc__ = handler_fn.__doc__
     return ret
-    return renderer_decorator
-
-
-P2 = ParamSpec("P2")
-T2 = TypeVar("T2")
-
-
-def barret_wraps2(wrapper: Callable[..., typing.Any]):
-    """An implementation of functools.wraps."""
-
-    def decorator(func: Callable[P2, T2]) -> Callable[P2, T2]:
-        # func.__doc__ = wrapper.__doc__
-        print(
-            func.__name__,
-            wrapper.__name__,
-            func.__qualname__,
-            wrapper.__qualname__,
-            func.__qualname__.replace(
-                "renderer_decorator",
-                wrapper.__name__,
-            ),
-            func.__code__.co_firstlineno,
-            wrapper.__code__.co_firstlineno,
-        )
-        func.__name__ = wrapper.__name__
-        func.__doc__ = wrapper.__doc__
-        func.__module__ = wrapper.__module__
-
-        # # Do not adjust qualname as it is used in the registry for the overloads
-        # # https://github.com/python/cpython/blob/36208b5/Lib/typing.py#L2607
-        # func.__qualname__ = func.__qualname__.replace(
-        #     "renderer_decorator",
-        #     wrapper.__name__,
-        # )
-        return func
-
-    return decorator
 
 
 # ======================================================================================
@@ -792,29 +779,39 @@ def barret_wraps2(wrapper: Callable[..., typing.Any]):
 
 
 @renderer
-async def text2(
+async def text_handler(
     meta: RenderMeta,
     fn: RenderFnAsync[str | None],
+    *,
+    extra_arg: str = "42",
 ) -> str | None:
+    """
+    # Barret
+    """
     value = await fn()
     if value is None:
         return None
     return str(value)
 
 
+text_handler
+
+
 @overload
-def text() -> text2.type_renderer:
+def text(*, extra_arg: str = "42") -> text_handler.type_decorator:
     ...
 
 
 @overload
-def text(_fn: text2.type_fn) -> text2.type_renderer:
+def text(_fn: text_handler.type_renderer_fn) -> text_handler.type_renderer:
     ...
 
 
 def text(
-    _fn: Optional[text2.type_fn] = None,
-) -> text2.type_renderer:
+    _fn: text_handler.type_impl_fn = None,
+    *,
+    extra_arg: str = "42",
+) -> text_handler.type_impl:
     """
     Reactively render text.
 
@@ -834,9 +831,14 @@ def text(
     --------
     ~shiny.ui.output_text
     """
-    return text2.renderer(_fn)
+    return text_handler.impl(_fn, extra_arg=extra_arg)
 
 
+# TODO-barret; Have `type_imple_fn` be a class to hide all of the grossness of the signature
+text
+
+
+# TODO-barret: Plan of action: If we can get barret2 doc string to be ported, then we use the class with no manual overrides. If we can NOT get the docs string, use manual override approach only
 @renderer
 async def barret2(
     meta: RenderMeta,
@@ -846,31 +848,45 @@ async def barret2(
 ) -> str | None:
     """
     My docs go here!
+
+    Parameters
+    ----------
+    extra_arg
+        My extra arg docs go here!
     """
     return str(await fn())
 
 
+barret2()
+# @output
+# @barret2
+# def my_name():
+#     ...
+barret2fn = barret2.fn
+barret2
+
+
 @overload
 def barret2_fn(
     *,
     extra_arg: str = "42",
-) -> barret2.type_renderer:
+) -> barret2.type_decorator:
     ...
 
 
 @overload
 def barret2_fn(
-    _fn: barret2.type_fn,
+    _fn: barret2.type_renderer_fn,
 ) -> barret2.type_renderer:
     ...
 
 
 def barret2_fn(
-    _fn: Optional[barret2.type_fn] = None,
+    _fn: Optional[barret2.type_renderer_fn] = None,
     *,
     extra_arg: str = "42",
-) -> barret2.type_renderer:
-    return barret2.renderer(
+) -> barret2.type_impl:
+    return barret2.impl(
         _fn,
         extra_arg=extra_arg,
     )
