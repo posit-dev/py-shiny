@@ -211,7 +211,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         )
 
     @output
-    @render_plotly_streaming(recreate_key=filtered_model_names)
+    @render_plotly_streaming(recreate_key=filtered_model_names, update="data")
     def plot_timeseries():
         """
         Returns a Plotly Figure visualization. Streams new data to the Plotly widget in
@@ -249,7 +249,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return fig
 
     @output
-    @render_plotly_streaming(recreate_key=filtered_model_names)
+    @render_plotly_streaming(recreate_key=filtered_model_names, update="data")
     def plot_dist():
         fig = px.histogram(
             filtered_df(),
