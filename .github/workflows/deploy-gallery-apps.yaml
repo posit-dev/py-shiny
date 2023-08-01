@@ -32,7 +32,7 @@ jobs:
           # Loop through the contents of the examples folder
           for app_path in examples/*; do
             if [ -d "$app_path" ]; then
-              rsconnect deploy shiny $app_path -A gallery -T $TOKEN -S $SECRET
+              rsconnect deploy shiny $app_path -A gallery -T $TOKEN -S $SECRET -N
             fi
           done
         env:
