@@ -43,7 +43,10 @@ def render_test_text(
     *,
     extra_txt: Optional[str] = None,
 ) -> _render_test_text_components.type_impl:
-    return _render_test_text_components.impl(_fn, extra_txt=extra_txt)
+    return _render_test_text_components.impl(
+        _fn,
+        _render_test_text_components.params(extra_txt=extra_txt),
+    )
 
 
 app_ui = ui.page_fluid(

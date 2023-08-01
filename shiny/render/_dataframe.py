@@ -223,7 +223,7 @@ async def _data_frame(
 
 
 @overload
-def data_frame(_fn: None = None) -> _data_frame.type_decorator:
+def data_frame() -> _data_frame.type_decorator:
     ...
 
 
