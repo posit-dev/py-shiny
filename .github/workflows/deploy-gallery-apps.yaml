@@ -36,8 +36,9 @@ jobs:
           }
 
           # Loop through the contents of the examples folder
-          for app_path in examples/*; do
+          for app_path in $GITHUB_WORKSPACE/examples/*; do
             if [ -d "$app_path" ]; then
+              echo "App Path: $app_path"
               app_name=$(basename "$app_path")
               deploy_shiny_app "$app_name"
             fi
