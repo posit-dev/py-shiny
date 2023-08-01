@@ -10,6 +10,7 @@ from htmltools import (
     TagChild,
     TagList,
     css,
+    head_content,
     tags,
 )
 
@@ -278,7 +279,7 @@ def page_fillable(
     )
 
     return page_bootstrap(
-        tags.head(tags.style("html { height: 100%; }")),
+        head_content(tags.style("html { height: 100%; }")),
         as_fillable_container(
             tags.body(
                 {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
