@@ -29,18 +29,12 @@ jobs:
 
       - name: Deploy Shiny Apps
         run: |
-          # Function to deploy the Shiny application
-          deploy_shiny_app() {
-            local app_name=$1
-            rsconnect deploy shiny "$app_name" -T $TOKEN -S $SECRET
-          }
-
           # Loop through the contents of the examples folder
           for app_path in $GITHUB_WORKSPACE/examples/*; do
             echo "App Path: $app_path"
             if [ -d "$app_path" ]; then
               app_name=$(basename "$app_path")
-              deploy_shiny_app "$app_name"
+              rsconnect deploy shiny "$app_name" -T $TOKEN -S $SECRET
             fi
           done
         env:
