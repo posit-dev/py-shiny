@@ -1,0 +1,47 @@
+name: Deploy Shiny Apps
+
+on:
+  push:
+    branches:
+      - auto-deploy-gallery
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install rsconnect
+        run: pip install rsconnect-python
+
+      - name: Deploy Shiny Apps
+        run: |
+          # Function to deploy the Shiny application
+          deploy_shiny_app() {
+            local app_name=$1
+            rsconnect deploy shiny "$app_name" -T $TOKEN -S $SECRET
+          }
+
+          # Loop through the contents of the examples folder
+          for app_path in examples/*; do
+            if [ -d "$app_path" ]; then
+              app_name=$(basename "$app_path")
+              deploy_shiny_app "$app_name"
+            fi
+          done
+        env:
+          TOKEN: ${{secrets.SHINYAPPS_DEPLOY_TOKEN}}
+          SECRET: ${{secrets.SHINYAPPS_DEPLOY_SECRET}}
