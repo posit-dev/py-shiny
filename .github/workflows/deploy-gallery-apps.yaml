@@ -32,7 +32,7 @@ jobs:
           # Loop through the contents of the examples folder
           for app_path in $GITHUB_WORKSPACE/examples/*; do
             echo "App Path: $app_path"
-            echo pwd
+            echo "Current Working Directory: $(pwd)"
             if [ -d "$app_path" ]; then
               app_name=$(basename "$app_path")
               rsconnect deploy shiny "$app_name" -T $TOKEN -S $SECRET
