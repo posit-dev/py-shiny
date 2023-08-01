@@ -30,7 +30,7 @@ jobs:
       - name: Deploy Shiny Apps
         run: |
           # Loop through the contents of the examples folder
-          for app_path in $GITHUB_WORKSPACE/examples/*; do
+          for app_path in examples/*; do
             echo "App Path: $app_path"
             echo "Current Working Directory: $(pwd)"
             if [ -d "$app_path" ]; then
