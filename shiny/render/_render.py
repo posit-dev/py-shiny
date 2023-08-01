@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 # TODO-barret; Revert base classes and use the original classes?
-#   TODO-barret; Changelog - that RenderFunction no longer exists.
+#   TODO-barret; Changelog - that RenderFunction no longer exists or deprecated
 
-# TODO-barret; Test for `"`@reactive.event()` must be applied before `@render.xx` .\n"``
-# TODO-barret; Test for `"`@output` must be applied to a `@render.xx` function.\n"`
 
 __all__ = (
     "text",
@@ -145,26 +143,32 @@ class Renderer(Generic[OT]):
     """
     Output Renderer
 
-    Base class to build :class:`~shiny.render.RendererSync` and :class:`~shiny.render.RendererAsync`.
+    Base class to build up :class:`~shiny.render.RendererSync` and
+    :class:`~shiny.render.RendererAsync`.
 
-
-    When the `.__call__` method is invoked, the handler function (which defined by
+    When the `.__call__` method is invoked, the handler function (typically defined by
     package authors) is called. The handler function is given `meta` information, the
-    (app-supplied) render function, and any keyword arguments supplied to the decorator.
+    (app-supplied) render function, and any keyword arguments supplied to the render
+    decorator.
 
-    The render function should return type `IT` and has parameter specification of type
-    `P`. The handler function should return type `OT`. Note that in many cases but not
-    all, `IT` and `OT` will be the same. `None` values must always be defined in `IT` and `OT`.
+    The (app-supplied) render function should return type `IT`. The handler function
+    (defined by package authors) defines the parameter specification of type `P` and
+    should asynchronously return an object of type `OT`. Note that in many cases but not
+    all, `IT` and `OT` will be the same. `None` values must always be defined in `IT`
+    and `OT`.
 
 
-    Properties
-    ----------
-    meta
-        A named dictionary of values: `is_async`, `session` (the :class:`~shiny.Session`
-        object), and `name` (the name of the output being rendered)
+    See Also
+    --------
+    * :class:`~shiny.render.RendererRun`
+    * :class:`~shiny.render.RendererSync`
+    * :class:`~shiny.render.RendererAsync`
     """
 
     def __call__(self, *_) -> OT:
+        """
+        Executes the renderer as a function. Must be implemented by subclasses.
+        """
         raise NotImplementedError
 
     def __init__(self, *, name: str, doc: str | None) -> None:
@@ -176,10 +180,43 @@ class Renderer(Generic[OT]):
         name
             Name of original output function. Ex: `my_txt`
         doc
-            Documentation of the output function. Ex: `"My text output will be displayed verbatim".
+            Documentation of the output function. Ex: `"My text output will be displayed
+            verbatim".
         """
         self.__name__ = name
         self.__doc__ = doc
+
+    def _set_metadata(self, session: Session, name: str) -> None:
+        """\
+        When `Renderer`s are assigned to Output object slots, this method is used to
+        pass along Session and name information.
+        """
+        self._session: Session = session
+        self._name: str = name
+
+
+class RendererRun(Renderer[OT]):
+    """
+    Convenience class to define a `_run` method
+
+    This class is used to define a `_run` method that is called by the `.__call__`
+    method in subclasses.
+
+    Properties
+    ----------
+    _is_async
+        If `TRUE`, the app-supplied render function is asynchronous. Must be implemented
+        in subclasses.
+    meta
+        A named dictionary of values: `is_async`, `session` (the :class:`~shiny.Session`
+        object), and `name` (the name of the output being rendered)
+
+    See Also
+    --------
+    * :class:`~shiny.render.Renderer`
+    * :class:`~shiny.render.RendererSync`
+    * :class:`~shiny.render.RendererAsync`
+    """
 
     @property
     def _is_async(self) -> bool:
@@ -193,16 +230,6 @@ class Renderer(Generic[OT]):
             name=self._name,
         )
 
-    def _set_metadata(self, session: Session, name: str) -> None:
-        """\
-        When `Renderer`s are assigned to Output object slots, this method is used to
-        pass along Session and name information.
-        """
-        self._session: Session = session
-        self._name: str = name
-
-
-class RendererRun(Renderer[OT]):
     def __init__(
         self,
         render_fn: RenderFn[IT],
@@ -225,6 +252,14 @@ class RendererRun(Renderer[OT]):
         self._params = params
 
     async def _run(self) -> OT:
+        """
+        Executes the (async) handler function
+
+        The handler function will receive the following arguments: `meta` of type :class:`~shiny.render.RenderMeta`, an app-defined render function of type :class:`~shiny.render.RenderFnAsync`, and `*args` and `**kwargs` of type `P`.
+
+        Note: The app-defined render function will always be upgraded to be an async function.
+        Note: `*args` will always be empty as it is an expansion of :class:`~shiny.render.RendererParams` which does not allow positional arguments.
+        """
         ret = await self._handler_fn(
             # RendererMeta
             self.meta,
@@ -239,6 +274,24 @@ class RendererRun(Renderer[OT]):
 
 # Using a second class to help clarify that it is of a particular type
 class RendererSync(RendererRun[OT]):
+    """
+    Output Renderer (Synchronous)
+
+    This class is used to define a synchronous renderer. The `.__call__` method is
+    implemented to call the `._run` method synchronously.
+
+    Properties
+    ----------
+    _is_async
+        Returns `FALSE` as this is a synchronous renderer.
+
+    See Also
+    --------
+    * :class:`~shiny.render.Renderer`
+    * :class:`~shiny.render.RendererRun`
+    * :class:`~shiny.render.RendererAsync`
+    """
+
     @property
     def _is_async(self) -> bool:
         return False
@@ -293,6 +346,37 @@ class RendererAsync(RendererRun[OT]):
         self, *_
     ) -> OT:
         return await self._run()
+
+
+# ======================================================================================
+# Deprecated classes
+# ======================================================================================
+
+
+# A RenderFunction object is given a user-provided function which returns an IT. When
+# the .__call___ method is invoked, it calls the user-provided function (which returns
+# an IT), then converts the IT to an OT. Note that in many cases but not all, IT and OT
+# will be the same.
+class RenderFunction(Generic[IT, OT], Renderer[OT]):
+    """
+    Deprecated. Please use :func:`~shiny.render.renderer_components` instead.
+    """
+
+    def __init__(self, fn: Callable[[], IT]) -> None:
+        self.__name__ = fn.__name__
+        self.__doc__ = fn.__doc__
+
+
+# The reason for having a separate RenderFunctionAsync class is because the __call__
+# method is marked here as async; you can't have a single class where one method could
+# be either sync or async.
+class RenderFunctionAsync(Generic[IT, OT], RendererAsync[OT]):
+    """
+    Deprecated. Please use :func:`~shiny.render.renderer_components` instead.
+    """
+
+    async def __call__(self) -> OT:  # pyright: ignore[reportIncompatibleMethodOverride]
+        raise NotImplementedError
 
 
 # ======================================================================================
@@ -364,7 +448,26 @@ RenderImplFn = Callable[
 
 class RendererComponents(Generic[IT, OT, P]):
     """
-    Renderer Components class docs go here!
+    Renderer Component class
+
+    Properties
+    ----------
+    type_decorator
+        The return type for the renderer decorator wrapper function. This should be used when the app-defined render function is `None` and extra parameters are being supplied.
+    type_renderer_fn
+        The (non-`None`) type for the renderer function's first argument that accepts an app-defined render function. This type should be paired with the return type: `type_renderer`.
+    type_renderer
+        The type for the return value of the renderer decorator function. This should be used when the app-defined render function is not `None`.
+    type_impl_fn
+        The type for the implementation function's first argument. This value handles both app-defined render functions and `None` and returns values appropriate for both cases. `type_impl_fn` should be paired with `type_impl`.
+    type_impl
+        The type for the return value of the implementation function. This value handles both app-defined render functions and `None` and returns values appropriate for both cases.
+
+    See Also
+    --------
+    * :func:`~shiny.render.renderer_components`
+    * :class:`~shiny.render.RendererParams`
+    * :class:`~shiny.render.Renderer`
     """
 
     @property
