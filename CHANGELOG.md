@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Using `update_slider` to update a slider's value to a `datetime` object or other non-numeric value would result in an error. (#649)
+
 ### Other changes
 
 * Documentation updates. (#591)
