@@ -107,3 +107,5 @@ docs/source/reference/
 
 .DS_Store
 .Rproj.user
+
+/.luarc.json

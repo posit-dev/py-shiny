@@ -160,7 +160,7 @@ class NavSetCard(NavSet):
             content_val = navset_card_body(content, sidebar=self.sidebar)
 
         if self.placement == "below":
-            # TODO-barret; have carson double check this change
+            # TODO-carson; have carson double check this change
             return card(
                 card_header(self.header) if self.header else None,
                 content_val,
@@ -170,7 +170,7 @@ class NavSetCard(NavSet):
                 card_footer(nav),
             )
         else:
-            # TODO-barret; have carson double check this change
+            # TODO-carson; have carson double check this change
             return card(
                 card_header(nav),
                 card_body(self.header, fill=False, fillable=False)
@@ -520,9 +520,7 @@ def navset_bar(
     inverse
         Either ``True`` for a light text color or ``False`` for a dark text color.
     collapsible
-        ``True`` to automatically collapse the navigation elements into a menu when the
-        width of the browser is less than 940 pixels (useful for viewing on smaller
-        touchscreen device)
+        ``True`` to automatically collapse the navigation elements into an expandable menu on mobile devices or narrow window widths.
     fluid
         ``True`` to use fluid layout; ``False`` to use fixed layout.
 

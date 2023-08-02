@@ -17,7 +17,7 @@ def test_slider_regular(page: Page, local_app: ShinyAppProc) -> None:
     s0.expect_min("0")
     s0.expect_max("1000")
     s0.expect_step("1")
-    s0.expect_ticks("true")
+    s0.expect_ticks("false")
     s0.expect_sep(",")
     s0.expect_pre(None)
     s0.expect_post(None)
@@ -27,7 +27,7 @@ def test_slider_regular(page: Page, local_app: ShinyAppProc) -> None:
     s0.expect_animate(exists=False)
     OutputTextVerbatim(page, "txt0").expect_value("500")
 
-    new_val = "36"
+    new_val = "20"
     s0.set(new_val)
     s0.expect_value(new_val)
     OutputTextVerbatim(page, "txt0").expect_value(new_val)
@@ -42,7 +42,7 @@ def test_slider_range(page: Page, local_app: ShinyAppProc) -> None:
     s1.expect_min("1")
     s1.expect_max("1000")
     s1.expect_step("1")
-    s1.expect_ticks("true")
+    s1.expect_ticks("false")
     s1.expect_sep(",")
     s1.expect_pre(None)
     s1.expect_post(None)
@@ -52,7 +52,7 @@ def test_slider_range(page: Page, local_app: ShinyAppProc) -> None:
     s1.expect_animate(exists=False)
     OutputTextVerbatim(page, "txt1").expect_value("(200, 500)")
 
-    new_val = ("605", "885")
+    new_val = ("605", "840")
     s1.set(new_val, max_err_values=1000)
     try:
         s1.expect_value((MISSING, MISSING))  # type: ignore
@@ -97,7 +97,7 @@ def test_slider_loop(page: Page, local_app: ShinyAppProc) -> None:
     s3.expect_min("1")
     s3.expect_max("2000")
     s3.expect_step("10")
-    s3.expect_ticks("true")
+    s3.expect_ticks("false")
     s3.expect_sep(",")
     s3.expect_pre(None)
     s3.expect_post(None)
@@ -131,7 +131,7 @@ def test_slider_play(page: Page, local_app: ShinyAppProc) -> None:
     s4.expect_min("0")
     s4.expect_max("5")
     s4.expect_step("1")
-    s4.expect_ticks("true")
+    s4.expect_ticks("false")
     s4.expect_sep(",")
     s4.expect_pre(None)
     s4.expect_post(None)

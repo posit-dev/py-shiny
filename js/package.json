@@ -1,0 +1,38 @@
+{
+  "name": "shiny-dataframe-binding",
+  "private": true,
+  "license": "MIT",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -noEmit && eslint . && tsx build.ts",
+    "watch": "npx nodemon --exec 'npm run build' --ext '*' --ignore dist/ --ignore esbuild-metadata.json",
+    "build-fast": "tsx build.ts",
+    "watch-fast": "npx nodemon --exec 'npm run build-fast' --ext '*' --ignore dist/ --ignore esbuild-metadata.json"
+  },
+  "devDependencies": {
+    "@preact/compat": "^17.1.2",
+    "@tanstack/react-virtual": "^3.0.0-beta.54",
+    "@types/jquery": "^3.5.16",
+    "@types/node": "^20.2.5",
+    "@types/react": "^18.0.33",
+    "@types/react-dom": "^18.0.11",
+    "@types/rstudio-shiny": "git+https://git@github.com/rstudio/shiny.git#v1.7.4",
+    "@typescript-eslint/eslint-plugin": "^5.59.7",
+    "@typescript-eslint/parser": "^5.59.7",
+    "esbuild": "^0.18.11",
+    "esbuild-sass-plugin": "^2.9.0",
+    "eslint-plugin-react": "^7.25.3",
+    "postcss": "^8.4.24",
+    "postcss-modules": "^6.0.0",
+    "preact": "^10.15.1",
+    "prettier": "^2.8.8",
+    "prettier-plugin-organize-imports": "^3.2.2",
+    "react": "npm:@preact/compat@^17.1.2",
+    "react-dom": "npm:@preact/compat@^17.1.2",
+    "tsx": "^3.12.7",
+    "typescript": "^5.0.3"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "^8.9.3"
+  }
+}

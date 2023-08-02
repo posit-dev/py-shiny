@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import importlib
 import importlib.util
+import inspect
 import os
 import platform
 import re
@@ -19,9 +20,10 @@ import uvicorn.config
 import shiny
 
 from . import _autoreload, _hostenv, _static, _utils
+from ._typing_extensions import NotRequired, TypedDict
 
 
-@click.group()  # pyright: ignore[reportUnknownMemberType]
+@click.group("main")
 def main() -> None:
     pass
 
@@ -47,6 +49,7 @@ any of the following will work:
 )
 @click.argument("app", default="app.py:app")
 @click.option(
+    "-h",
     "--host",
     type=str,
     default="127.0.0.1",
@@ -54,6 +57,7 @@ any of the following will work:
     show_default=True,
 )
 @click.option(
+    "-p",
     "--port",
     type=int,
     default=8000,
@@ -68,10 +72,19 @@ any of the following will work:
     show_default=True,
 )
 @click.option(
+    "-r",
     "--reload",
     is_flag=True,
     default=False,
     help="Enable auto-reload, when these types of files change: .py .css .js .html",
+)
+@click.option(
+    "--reload-dir",
+    "reload_dirs",
+    multiple=True,
+    help="Indicate a directory `--reload` should (recursively) monitor for changes, in "
+    "addition to the app's parent directory. Can be used more than once.",
+    type=click.Path(exists=True),
 )
 @click.option(
     "--ws-max-size",
@@ -88,6 +101,7 @@ any of the following will work:
     show_default=True,
 )
 @click.option(
+    "-d",
     "--app-dir",
     default=".",
     show_default=True,
@@ -103,6 +117,7 @@ any of the following will work:
     show_default=True,
 )
 @click.option(
+    "-b",
     "--launch-browser",
     is_flag=True,
     default=False,
@@ -115,6 +130,7 @@ def run(
     port: int,
     autoreload_port: int,
     reload: bool,
+    reload_dirs: tuple[str, ...],
     ws_max_size: int,
     log_level: str,
     app_dir: str,
@@ -127,6 +143,7 @@ def run(
         port=port,
         autoreload_port=autoreload_port,
         reload=reload,
+        reload_dirs=list(reload_dirs),
         ws_max_size=ws_max_size,
         log_level=log_level,
         app_dir=app_dir,
@@ -141,6 +158,7 @@ def run_app(
     port: int = 8000,
     autoreload_port: int = 0,
     reload: bool = False,
+    reload_dirs: Optional[list[str]] = None,
     ws_max_size: int = 16777216,
     log_level: Optional[str] = None,
     app_dir: Optional[str] = ".",
@@ -189,21 +207,22 @@ def run_app(
     Examples
     --------
 
-    .. code-block:: python
+    ```{python}
+    #|eval: false
+    from shiny import run_app
 
-        from shiny import run_app
+    # Run ``app`` inside ``./app.py``
+    run_app()
 
-        # Run ``app`` inside ``./app.py``
-        run_app()
+    # Run ``app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
+    run_app("myapp")
 
-        # Run ``app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
-        run_app("myapp")
+    # Run ``my_app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
+    run_app("myapp:my_app")
 
-        # Run ``my_app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
-        run_app("myapp:my_app")
-
-        # Run ``my_app`` inside ``../myapp.py`` (or ``../myapp/app.py``)
-        run_app("myapp:my_app", app_dir="..")
+    # Run ``my_app`` inside ``../myapp.py`` (or ``../myapp/app.py``)
+    run_app("myapp:my_app", app_dir="..")
+    ```
     """
 
     # If port is 0, randomize
@@ -221,7 +240,18 @@ def run_app(
 
     log_config: dict[str, Any] = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
 
+    if reload_dirs is None:
+        reload_dirs = []
+
     if reload:
+        # Always watch the app_dir
+        if app_dir:
+            reload_dirs.append(app_dir)
+        # For developers of Shiny itself; autoreload the app when Shiny package changes
+        if os.getenv("SHINY_PKG_AUTORELOAD"):
+            shinypath = Path(inspect.getfile(shiny)).parent
+            reload_dirs.append(str(shinypath))
+
         if autoreload_port == 0:
             autoreload_port = _utils.random_port(host=host)
 
@@ -233,7 +263,7 @@ def run_app(
         else:
             setup_hot_reload(log_config, autoreload_port, port, launch_browser)
 
-    reload_args: dict[str, bool | str | list[str]] = {}
+    reload_args: ReloadArgs = {}
     if reload:
         reload_dirs = []
         if app_dir is not None:
@@ -243,7 +273,7 @@ def run_app(
             "reload": reload,
             # Adding `reload_includes` param while `reload=False` produces an warning
             # https://github.com/encode/uvicorn/blob/d43afed1cfa018a85c83094da8a2dd29f656d676/uvicorn/config.py#L298-L304
-            "reload_includes": ["*.py", "*.css", "*.js", "*.html"],
+            "reload_includes": ["*.py", "*.css", "*.js", "*.htm", "*.html", "*.png"],
             "reload_dirs": reload_dirs,
         }
 
@@ -253,7 +283,7 @@ def run_app(
     maybe_setup_rsw_proxying(log_config)
 
     uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
-        app,  # pyright: ignore[reportGeneralTypeIssues]
+        app,
         host=host,
         port=port,
         ws_max_size=ws_max_size,
@@ -331,18 +361,20 @@ def resolve_app(app: str, app_dir: Optional[str]) -> tuple[str, Optional[str]]:
         attr = "app"
 
     if is_file(module):
+        # Before checking module path, resolve it relative to app_dir if provided
+        module_path = module if app_dir is None else os.path.join(app_dir, module)
         # TODO: We should probably be using some kind of loader
         # TODO: I don't like that we exit here, if we ever export this it would be bad;
         #       but also printing a massive stack trace for a `shiny run badpath` is way
         #       unfriendly. We should probably throw a custom error that the shiny run
         #       entrypoint knows not to print the stack trace for.
-        if not os.path.exists(module):
-            sys.stderr.write(f"Error: {module} not found\n")
+        if not os.path.exists(module_path):
+            sys.stderr.write(f"Error: {module_path} not found\n")
             sys.exit(1)
-        if not os.path.isfile(module):
-            sys.stderr.write(f"Error: {module} is not a file\n")
+        if not os.path.isfile(module_path):
+            sys.stderr.write(f"Error: {module_path} is not a file\n")
             sys.exit(1)
-        dirname, filename = os.path.split(module)
+        dirname, filename = os.path.split(module_path)
         module = filename[:-3] if filename.endswith(".py") else filename
         app_dir = dirname
 
@@ -390,7 +422,7 @@ def create(appdir: str) -> None:
         app_dir.mkdir()
 
     shutil.copyfile(
-        Path(__file__).parent / "examples" / "template" / "app.py", app_path
+        Path(__file__).parent / "api-examples" / "template" / "app.py", app_path
     )
 
     print(f"Created Shiny app at {app_dir / 'app.py'}")
@@ -446,3 +478,9 @@ def static_assets(command: str) -> None:
         _static.print_shinylive_local_info()
     else:
         raise click.UsageError(f"Unknown command: {command}")
+
+
+class ReloadArgs(TypedDict):
+    reload: NotRequired[bool]
+    reload_includes: NotRequired[list[str]]
+    reload_dirs: NotRequired[list[str]]
