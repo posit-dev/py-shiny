@@ -18,6 +18,7 @@ import inspect
 import os
 import sys
 import typing
+from abc import ABC, abstractmethod
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -146,39 +147,55 @@ RenderFn = RenderFnSync[IT] | RenderFnAsync[IT]
 HandlerFn = Callable[Concatenate[RenderMeta, RenderFnAsync[IT], P], Awaitable[OT]]
 
 
-class Renderer(Generic[OT]):
+class Renderer(Generic[OT], ABC):
     """
     Output Renderer
 
-    Base class to build up :class:`~shiny.render.RendererSync` and
+    Base class for classes :class:`~shiny.render.RendererSync` and
     :class:`~shiny.render.RendererAsync`.
 
-    When the `.__call__` method is invoked, the handler function (typically defined by
-    package authors) is called. The handler function is given `meta` information, the
-    (app-supplied) render function, and any keyword arguments supplied to the render
-    decorator.
+    When the `.__call__` method is invoked, the handler function (`handler_fn`)
+    (typically defined by package authors) is asynchronously called. The handler
+    function is given `meta` information, the (app-supplied) render function, and any
+    keyword arguments supplied to the render decorator. For consistency, the first two
+    parameters have been (arbitrarily) implemented as `_meta` and `_fn`.
 
-    The (app-supplied) render function should return type `IT`. The handler function
-    (defined by package authors) defines the parameter specification of type `P` and
-    should asynchronously return an object of type `OT`. Note that in many cases but not
-    all, `IT` and `OT` will be the same. `None` values must always be defined in `IT`
-    and `OT`.
+    The (app-supplied) render function (`render_fn`) returns type `IT`. The handler
+    function (defined by package authors) defines the parameter specification of type
+    `P` and asynchronously returns an object of type `OT`. Note that in many cases but
+    not all, `IT` and `OT` will be the same. `None` values should always be defined in
+    `IT` and `OT`.
 
+
+    Methods
+    -------
+    _is_async
+        If `TRUE`, the app-supplied render function is asynchronous. Must be implemented
+        in subclasses.
+    _meta
+        A named tuple of values: `is_async`, `session` (the :class:`~shiny.Session`
+        object), and `name` (the name of the output being rendered)
 
     See Also
     --------
-    * :class:`~shiny.render.RendererRun`
     * :class:`~shiny.render.RendererSync`
     * :class:`~shiny.render.RendererAsync`
     """
 
+    @abstractmethod
     def __call__(self) -> OT:
         """
         Executes the renderer as a function. Must be implemented by subclasses.
         """
-        raise NotImplementedError
+        ...
 
-    def __init__(self, *, name: str) -> None:
+    def __init__(
+        self,
+        *,
+        render_fn: RenderFn[IT],
+        handler_fn: HandlerFn[IT, P, OT],
+        params: RendererParams[P],
+    ) -> None:
         """
         Renderer init method
 
@@ -190,7 +207,21 @@ class Renderer(Generic[OT]):
             Documentation of the output function. Ex: `"My text output will be displayed
             verbatim".
         """
-        self.__name__ = name
+        # Copy over function name as it is consistent with how Session and Output
+        # retrieve function names
+        self.__name__ = render_fn.__name__
+
+        if not _utils.is_async_callable(handler_fn):
+            raise TypeError(
+                self.__class__.__name__ + " requires an async handler function"
+            )
+
+        # `render_fn` is not required to be async. For consistency, we wrapped in an
+        # async function so that when it's passed in to `handler_fn`, `render_fn` is
+        # **always** an async function.
+        self._render_fn = _utils.wrap_async(render_fn)
+        self._handler_fn = handler_fn
+        self._params = params
 
     def _set_metadata(self, session: Session, name: str) -> None:
         """
@@ -200,33 +231,6 @@ class Renderer(Generic[OT]):
         self._session: Session = session
         self._name: str = name
 
-
-class RendererRun(Renderer[OT]):
-    """
-    Convenience class to define a `_run` method
-
-    This class is used to define a `_run` method that is called by the `.__call__`
-    method in subclasses.
-
-    Methods
-    -------
-    _is_async
-        If `TRUE`, the app-supplied render function is asynchronous. Must be implemented
-        in subclasses.
-    _meta
-        A named dictionary of values: `is_async`, `session` (the :class:`~shiny.Session`
-        object), and `name` (the name of the output being rendered)
-
-    See Also
-    --------
-    * :class:`~shiny.render.Renderer`
-    * :class:`~shiny.render.RendererSync`
-    * :class:`~shiny.render.RendererAsync`
-    """
-
-    def _is_async(self) -> bool:
-        raise NotImplementedError()
-
     def _meta(self) -> RenderMeta:
         return RenderMeta(
             is_async=self._is_async(),
@@ -234,26 +238,9 @@ class RendererRun(Renderer[OT]):
             name=self._name,
         )
 
-    def __init__(
-        self,
-        render_fn: RenderFn[IT],
-        handler_fn: HandlerFn[IT, P, OT],
-        params: RendererParams[P],
-    ) -> None:
-        if not _utils.is_async_callable(handler_fn):
-            raise TypeError(
-                self.__class__.__name__ + " requires an async handler function"
-            )
-        super().__init__(
-            name=render_fn.__name__,
-        )
-
-        # `render_fn` is not required to be async. For consistency, we wrapped in an
-        # async function so that when it's passed in to `handler_fn`, `render_fn` is
-        # **always** an async function.
-        self._render_fn = _utils.wrap_async(render_fn)
-        self._handler_fn = handler_fn
-        self._params = params
+    @abstractmethod
+    def _is_async(self) -> bool:
+        ...
 
     async def _run(self) -> OT:
         """
@@ -283,7 +270,7 @@ class RendererRun(Renderer[OT]):
 
 
 # Using a second class to help clarify that it is of a particular type
-class RendererSync(RendererRun[OT]):
+class RendererSync(Renderer[OT]):
     """
     Output Renderer (Synchronous)
 
@@ -298,7 +285,6 @@ class RendererSync(RendererRun[OT]):
     See Also
     --------
     * :class:`~shiny.render.Renderer`
-    * :class:`~shiny.render.RendererRun`
     * :class:`~shiny.render.RendererAsync`
     """
 
@@ -315,11 +301,11 @@ class RendererSync(RendererRun[OT]):
             raise TypeError(
                 self.__class__.__name__ + " requires a synchronous render function"
             )
-        # super == RendererRun
+        # super == Renderer
         super().__init__(
-            render_fn,
-            handler_fn,
-            params,
+            render_fn=render_fn,
+            handler_fn=handler_fn,
+            params=params,
         )
 
     def __call__(self) -> OT:
@@ -329,7 +315,7 @@ class RendererSync(RendererRun[OT]):
 # The reason for having a separate RendererAsync class is because the __call__
 # method is marked here as async; you can't have a single class where one method could
 # be either sync or async.
-class RendererAsync(RendererRun[OT]):
+class RendererAsync(Renderer[OT]):
     # TODO-barret; docs
     def _is_async(self) -> bool:
         return True
@@ -344,11 +330,11 @@ class RendererAsync(RendererRun[OT]):
             raise TypeError(
                 self.__class__.__name__ + " requires an asynchronous render function"
             )
-        # super == RendererRun
+        # super == Renderer
         super().__init__(
-            render_fn,
-            handler_fn,
-            params,
+            render_fn=render_fn,
+            handler_fn=handler_fn,
+            params=params,
         )
 
     async def __call__(self) -> OT:  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -360,10 +346,10 @@ class RendererAsync(RendererRun[OT]):
 # ======================================================================================
 
 
-# A RenderFunction object is given a user-provided function which returns an IT. When
-# the .__call___ method is invoked, it calls the user-provided function (which returns
-# an IT), then converts the IT to an OT. Note that in many cases but not all, IT and OT
-# will be the same.
+# A RenderFunction object is given a app-supplied function which returns an `IT`. When
+# the .__call__ method is invoked, it calls the app-supplied function (which returns an
+# `IT`), then converts the `IT` to an `OT`. Note that in many cases but not all, `IT`
+# and `OT` will be the same.
 class RenderFunction(Generic[IT, OT], Renderer[OT]):
     """
     Deprecated. Please use :func:`~shiny.render.renderer_components` instead.
@@ -372,6 +358,7 @@ class RenderFunction(Generic[IT, OT], Renderer[OT]):
     def __init__(self, fn: Callable[[], IT]) -> None:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
+        # TODO-barret; call super and make a __call__ method
 
 
 # The reason for having a separate RenderFunctionAsync class is because the __call__
@@ -442,7 +429,11 @@ def _assert_handler_fn(handler_fn: HandlerFn[IT, P, OT]) -> None:
 # ======================================================================================
 
 
+# Signature of a renderer decorator function
 RendererDeco = Callable[[RenderFn[IT]], Renderer[OT]]
+# Signature of a decorator that can be called with and without parenthesis
+# With parens returns a `Renderer[OT]`
+# Without parens returns a `RendererDeco[IT, OT]`
 RenderImplFn = Callable[
     [
         Optional[RenderFn[IT]],
