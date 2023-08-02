@@ -120,11 +120,14 @@ class RendererParams(Generic[P]):
             Keyword arguments for the corresponding renderer function.
         """
 
-        # `*args` must be defined with `**kwargs`
         # Make sure there no `args` when running!
+        # This check is related to `_assert_handler_fn` not accepting any `args`
         if len(args) > 0:
             raise RuntimeError("`args` should not be supplied")
 
+        # `*args` must be defined with `**kwargs` (as per PEP612)
+        # (even when expanded later when calling the handler function)
+        # So we store them, even if we know they are empty
         self.args = args
         self.kwargs = kwargs
 
