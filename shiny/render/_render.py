@@ -228,8 +228,7 @@ class RendererRun(Renderer[OT]):
     def _is_async(self) -> bool:
         raise NotImplementedError()
 
-    @property
-    def meta(self) -> RenderMeta:
+    def _meta(self) -> RenderMeta:
         return RenderMeta(
             is_async=self._is_async,
             session=self._session,
@@ -273,7 +272,7 @@ class RendererRun(Renderer[OT]):
         """
         ret = await self._handler_fn(
             # RenderMeta
-            self.meta,
+            self._meta(),
             # Callable[[], Awaitable[IT]]
             self._render_fn,
             # P
