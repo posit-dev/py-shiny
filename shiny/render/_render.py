@@ -248,8 +248,9 @@ class RendererRun(Renderer[OT]):
             name=render_fn.__name__,
         )
 
-        # Given we use `_utils.run_coro_sync(self._run())` to call our method,
-        # we can act as if `render_fn` and `handler_fn` are always async
+        # `render_fn` is not required to be async. For consistency, we wrapped in an
+        # async function so that when it's passed in to `handler_fn`, `render_fn` is
+        # **always** an async function.
         self._render_fn = _utils.wrap_async(render_fn)
         self._handler_fn = handler_fn
         self._params = params
