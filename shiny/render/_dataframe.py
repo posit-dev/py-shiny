@@ -20,6 +20,7 @@ from typing import (
 from .. import _utils
 from .._docstring import add_example
 from . import RenderFunction, RenderFunctionAsync
+from ._dataframe_unsafe import serialize_numpy_dtypes
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -58,6 +59,8 @@ class DataGrid(AbstractTabularData):
         is not displayed. You can also specify a string template to customize the
         message, containing `{start}`, `{end}`, and `{total}` tokens. For example:
         `"Viendo filas {start} a {end} de {total}"`.
+    filters
+        If `True`, shows a row of filter inputs below the headers, one for each column.
     row_selection_mode
         Use `"none"` to disable row selection, `"single"` to allow a single row to be
         selected at a time, and `"multiple"` to allow multiple rows to be selected by
@@ -83,6 +86,7 @@ class DataGrid(AbstractTabularData):
         width: str | float | None = "fit-content",
         height: Union[str, float, None] = "500px",
         summary: Union[bool, str] = True,
+        filters: bool = False,
         row_selection_mode: Literal["none", "single", "multiple"] = "none",
     ):
         import pandas as pd
@@ -98,19 +102,16 @@ class DataGrid(AbstractTabularData):
         self.width = width
         self.height = height
         self.summary = summary
+        self.filters = filters
         self.row_selection_mode = row_selection_mode
 
     def to_payload(self) -> object:
-        res: dict[str, Any] = json.loads(
-            # {index: [index], columns: [columns], data: [values]}
-            self.data.to_json(  # pyright: ignore[reportUnknownMemberType]
-                None, orient="split"
-            )
-        )
+        res = serialize_pandas_df(self.data)
         res["options"] = dict(
             width=self.width,
             height=self.height,
             summary=self.summary,
+            filters=self.filters,
             row_selection_mode=self.row_selection_mode,
             style="grid",
         )
@@ -144,6 +145,8 @@ class DataTable(AbstractTabularData):
         is not displayed. You can also specify a string template to customize the
         message, containing `{start}`, `{end}`, and `{total}` tokens. For example:
         `"Viendo filas {start} a {end} de {total}"`.
+    filters
+        If `True`, shows a row of filter inputs below the headers, one for each column.
     row_selection_mode
         Use `"none"` to disable row selection, `"single"` to allow a single row to be
         selected at a time, and `"multiple"` to allow multiple rows to be selected by
@@ -169,6 +172,7 @@ class DataTable(AbstractTabularData):
         width: Union[str, float, None] = "fit-content",
         height: Union[str, float, None] = "500px",
         summary: Union[bool, str] = True,
+        filters: bool = False,
         row_selection_mode: Union[
             Literal["none"], Literal["single"], Literal["multiple"]
         ] = "none",
@@ -186,23 +190,31 @@ class DataTable(AbstractTabularData):
         self.width = width
         self.height = height
         self.summary = summary
+        self.filters = filters
         self.row_selection_mode = row_selection_mode
 
     def to_payload(self) -> object:
-        res: dict[str, Any] = json.loads(
-            # {index: [index], columns: [columns], data: [values]}
-            self.data.to_json(  # pyright: ignore[reportUnknownMemberType]
-                None, orient="split"
-            )
-        )
+        res = serialize_pandas_df(self.data)
         res["options"] = dict(
             width=self.width,
             height=self.height,
             summary=self.summary,
+            filters=self.filters,
             row_selection_mode=self.row_selection_mode,
             style="table",
         )
         return res
+
+
+def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
+    res = json.loads(
+        # {index: [index], columns: [columns], data: [values]}
+        df.to_json(None, orient="split")  # pyright: ignore[reportUnknownMemberType]
+    )
+
+    res["type_hints"] = serialize_numpy_dtypes(df)
+
+    return res
 
 
 DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
@@ -303,25 +315,33 @@ def data_frame(
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
 
+    Parameters
+    ----------
+    index
+        Whether to print index (row) labels.
+    selection
+
+
     Returns
     -------
     :
-        A decorator for a function that returns either a pandas :class:`DataFrame`
-        object, pandas :class:`Styler` object, or any object that has a `.to_pandas()`
-        method (e.g., a Polars data frame or Arrow table).
+        A decorator for a function that returns any of the following:
+
+        1. A pandas :class:`DataFrame` object.
+        2. A pandas :class:`Styler` object.
+        3. Any object that has a `.to_pandas()` method (e.g., a Polars data frame or
+           Arrow table).
 
     Tip
     ----
     This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of a
-    :func:`~shiny.ui.output_data_frame` container (see
-    :func:`~shiny.ui.output_data_frame` for example usage).
+    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
+    a :func:`~shiny.ui.output_table` container (see :func:`~shiny.ui.output_table` for
+    example usage).
 
     See Also
     --------
-    :class:`~shiny.render.DataGrid`
-    :class:`~shiny.render.DataTable`
-    :func:`~shiny.ui.output_data_frame`
+    ~shiny.ui.output_data_frame
     """
 
     def wrapper(fn: RenderDataFrameFunc | RenderDataFrameFuncAsync) -> RenderDataFrame:

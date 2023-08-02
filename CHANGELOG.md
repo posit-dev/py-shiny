@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [UNRELEASED]
+## [0.5.0] - 2023-08-01
 
 ### New features
 
@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Bug fixes
+
+* Using `update_slider` to update a slider's value to a `datetime` object or other non-numeric value would result in an error. (#649)
 
 ### Other changes
 
