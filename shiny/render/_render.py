@@ -141,7 +141,7 @@ class RendererParams(Generic[P]):
 # It can be either synchronous or asynchronous
 RenderFnSync = Callable[[], IT]
 RenderFnAsync = Callable[[], Awaitable[IT]]
-RenderFn = RenderFnSync[IT] | RenderFnAsync[IT]
+RenderFn = Union[RenderFnSync[IT], RenderFnAsync[IT]]
 
 # `HandlerFn` is a package author function that transforms an object of type `IT` into type `OT`.
 HandlerFn = Callable[Concatenate[RenderMeta, RenderFnAsync[IT], P], Awaitable[OT]]
@@ -439,8 +439,7 @@ RenderImplFn = Callable[
         Optional[RenderFn[IT]],
         RendererParams[P],
     ],
-    # RendererSync[OT] | RendererAsync[OT] | RendererDeco[IT, OT],
-    Renderer[OT] | RendererDeco[IT, OT],
+    Union[Renderer[OT], RendererDeco[IT, OT]],
 ]
 
 
@@ -486,7 +485,7 @@ class RendererComponents(Generic[IT, OT, P]):
 
     @property
     def type_impl(self):
-        return Renderer[OT] | RendererDeco[IT, OT]
+        return Union[Renderer[OT], RendererDeco[IT, OT]]
 
     def params(
         self,
