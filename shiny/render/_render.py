@@ -135,9 +135,14 @@ class RendererParams(Generic[P]):
 # ======================================================================================
 # Renderer / RendererSync / RendererAsync base class
 # ======================================================================================
+
+# A `RenderFn` function is an app-supplied function which returns an IT.
+# It can be either synchronous or asynchronous
 RenderFnSync = Callable[[], IT]
 RenderFnAsync = Callable[[], Awaitable[IT]]
 RenderFn = RenderFnSync[IT] | RenderFnAsync[IT]
+
+# `HandlerFn` is a package author function that transforms an object of type `IT` into type `OT`.
 HandlerFn = Callable[Concatenate[RenderMeta, RenderFnAsync[IT], P], Awaitable[OT]]
 
 
