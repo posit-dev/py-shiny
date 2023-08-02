@@ -21,6 +21,7 @@ def app_ui(req):
             {"none": "(None)", "single": "Single", "multiple": "Multiple"},
             selected="multiple",
         ),
+        ui.input_switch("filters", "Filters", True),
         ui.input_switch("gridstyle", "Grid", True),
         ui.input_switch("fullwidth", "Take full width", True),
         ui.output_data_frame("grid"),
@@ -68,16 +69,18 @@ def server(input: Inputs, output: Outputs, session: Session):
         if input.gridstyle():
             return render.DataGrid(
                 df(),
-                row_selection_mode=input.selection_mode(),
-                height=height,
                 width=width,
+                height=height,
+                filters=input.filters(),
+                row_selection_mode=input.selection_mode(),
             )
         else:
             return render.DataTable(
                 df(),
-                row_selection_mode=input.selection_mode(),
-                height=height,
                 width=width,
+                height=height,
+                filters=input.filters(),
+                row_selection_mode=input.selection_mode(),
             )
 
     @reactive.Effect

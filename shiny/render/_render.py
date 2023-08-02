@@ -987,6 +987,11 @@ def table(
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
 
+    Consider using ~shiny.render.data_frame instead of this renderer, as it provides
+    high performance virtual scrolling, built-in filtering and sorting, and a better
+    default appearance. This renderer may still be helpful if you use pandas styling
+    features that are not currently supported by ~shiny.render.data_frame.
+
     Parameters
     ----------
     index
@@ -1021,7 +1026,7 @@ def table(
 
     See Also
     --------
-    ~shiny.ui.output_table
+    ~shiny.ui.output_table for the corresponding UI component to this render function.
     """
     return _table.impl(
         _fn,

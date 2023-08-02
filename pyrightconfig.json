@@ -5,7 +5,8 @@
     "build",
     "dist",
     "typings",
-    "sandbox"
+    "sandbox",
+    "docs"
   ],
   "typeCheckingMode": "strict",
   "reportImportCycles": "none",
