@@ -146,8 +146,6 @@ RenderFn = RenderFnSync[IT] | RenderFnAsync[IT]
 HandlerFn = Callable[Concatenate[RenderMeta, RenderFnAsync[IT], P], Awaitable[OT]]
 
 
-# A Renderer object is given a user-provided function (`handler_fn`) which returns an
-# `OT`.
 class Renderer(Generic[OT]):
     """
     Output Renderer
