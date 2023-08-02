@@ -206,10 +206,10 @@ DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 # TODO-barret; Port `__name__` and `__docs__` of `value_fn`
 @renderer_components
 async def _data_frame(
-    meta: RenderMeta,
-    fn: RenderFnAsync[DataFrameResult | None],
+    _meta: RenderMeta,
+    _fn: RenderFnAsync[DataFrameResult | None],
 ) -> object | None:
-    x = await fn()
+    x = await _fn()
     if x is None:
         return None
 

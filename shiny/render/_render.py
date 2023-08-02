@@ -2,8 +2,7 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
-# TODO-barret; Revert base classes and use the original classes?
-#   TODO-barret; Changelog - that RenderFunction no longer exists or deprecated
+# TODO-barret; Changelog entry
 
 
 __all__ = (
@@ -25,6 +24,7 @@ from typing import (
     Awaitable,
     Callable,
     Generic,
+    NamedTuple,
     Optional,
     Protocol,
     TypeVar,
@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from .. import _utils
+from .._docstring import add_example
 from .._namespaces import ResolvedId
 from .._typing_extensions import Concatenate, ParamSpec, TypedDict
 from ..types import ImgData
@@ -61,7 +62,7 @@ P = ParamSpec("P")
 
 
 # Meta information to give `hander()` some context
-class RenderMeta(TypedDict):
+class RenderMeta(NamedTuple):
     """
     Renderer meta information
 
@@ -101,10 +102,10 @@ class RendererParams(Generic[P]):
     # Motivation for using this class:
     # * https://peps.python.org/pep-0612/ does allow for prepending an arg (e.g.
     #   `render_fn`).
-    # * However, the overload is not happy when both a positional arg (e.g.
-    #   `render_fn`) is dropped and the variadic args (`*args`) are kept.
-    # * The variadic args (`*args`) CAN NOT be dropped as PEP612 states that both
-    #   components of the `ParamSpec` must be used in the same function signature.
+    # * However, the overload is not happy when both a positional arg (e.g. `render_fn`)
+    #   is dropped and the variadic positional args (`*args`) are kept.
+    # * The variadic positional args (`*args`) CAN NOT be dropped as PEP612 states that
+    #   both components of the `ParamSpec` must be used in the same function signature.
     # * By making assertions on `P.args` to only allow for `*`, we _can_ make overloads
     #   that use either the single positional arg (e.g. `render_fn`) or the `P.kwargs`
     #   (as `P.args` == `*`)
@@ -255,13 +256,19 @@ class RendererRun(Renderer[OT]):
         """
         Executes the (async) handler function
 
-        The handler function will receive the following arguments: `meta` of type :class:`~shiny.render.RenderMeta`, an app-defined render function of type :class:`~shiny.render.RenderFnAsync`, and `*args` and `**kwargs` of type `P`.
+        The handler function will receive the following arguments: meta information of
+        type :class:`~shiny.render.RenderMeta`, an app-defined render function of type
+        :class:`~shiny.render.RenderFnAsync`, and `*args` and `**kwargs` of type `P`.
 
-        Note: The app-defined render function will always be upgraded to be an async function.
-        Note: `*args` will always be empty as it is an expansion of :class:`~shiny.render.RendererParams` which does not allow positional arguments.
+        Notes:
+        * The app-defined render function will always be upgraded to be an async
+          function.
+        * `*args` will always be empty as it is an expansion of
+          :class:`~shiny.render.RendererParams` which does not allow positional
+          arguments.
         """
         ret = await self._handler_fn(
-            # RendererMeta
+            # RenderMeta
             self.meta,
             # Callable[[], Awaitable[IT]]
             self._render_fn,
@@ -418,7 +425,7 @@ def _assert_handler_fn(handler_fn: HandlerFn[IT, P, OT]) -> None:
         # Make sure there are no `*args`
         if param.kind == inspect.Parameter.VAR_POSITIONAL:
             raise TypeError(
-                f"No variadic parameters (e.g. `*args`) can be supplied to `handler_fn=`. Received: `{param.name}`. Please only use `*`."
+                f"No variadic positional parameters (e.g. `*args`) can be supplied to `handler_fn=`. Received: `{param.name}`. Please only use `*`."
             )
         # Make sure kwargs have default values
         if (
@@ -517,14 +524,65 @@ class RendererComponents(Generic[IT, OT, P]):
         self._fn = fn
 
 
+@add_example()
 def renderer_components(
     handler_fn: HandlerFn[IT, P, OT],
 ) -> RendererComponents[IT, OT, P]:
     """\
-    Renderer components decorator
+    # Renderer components decorator
 
-    TODO-barret; Docs go here!
-    When defining overloads, if you use `**kwargs: object`, you may get a type error about incompatible signatures. To fix this, you can use `**kwargs: Any` instead or add `_fn: None = None` as a first parameter.
+    This decorator method is a convenience method to generate the appropriate types and
+    internal implementation for an overloaded renderer method. This method will provide
+    you with all the necessary types to define two different overloads: one for when the
+    decorator is called without parenthesis and another for when it is called with
+    parenthesis where app authors can pass in parameters to the renderer.
+
+    ## Handler function
+
+    The renderer's asynchronous handler function (`handler_fn`) is the key building
+    block for `renderer_components`.
+
+    The handler function is supplied meta renderer information, the (app-supplied)
+    render function, and any keyword arguments supplied to the renderer decorator:
+    * The first parameter to the handler function has the class
+      :class:`~shiny.render.RenderMeta` and is typically called (e.g. `_meta`). This information
+      gives context the to the handler while trying to resolve the app-supplied render
+      function (e.g. `_fn`).
+    * The second parameter is the app-defined render function (e.g. `_fn`). It's return
+      type (`IT`) determines what types can be returned by the app-supplied render
+      function. For example, if `_fn` has the type `RenderFnAsync[str | None]`, both the
+      `str` and `None` types are allowed to be returned from the app-supplied render
+      function.
+    * The remaining parameters are the keyword arguments (e.g. `alt:Optional[str] =
+      None` or `**kwargs: Any`) that app authors may supply to the renderer (when the
+      renderer decorator is called with parenthesis). Variadic positional parameters
+      (e.g. `*args`) are not allowed. All keyword arguments should have a type and
+      default value (except for `**kwargs: Any`).
+
+    The handler's return type (`OT`) determines the output type of the renderer. Note
+    that in many cases (but not all!) `IT` and `OT` will be the same. The `None` type
+    should typically be defined in both `IT` and `OT`. If `IT` allows for `None` values,
+    it (typically) signals that nothing should be rendered. If `OT` allows for `None`
+    and returns a `None` value, shiny will not render the output.
+
+
+    Notes
+    -----
+
+    When defining the renderer decorator overloads, if you use `**kwargs: object`, you may get a type error about incompatible signatures. To fix this, you can use `**kwargs: Any` instead or add `_fn: None = None` as a first parameter.
+
+    Parameters
+    ----------
+    handler_fn
+        Asynchronous function used to determine the app-supplied value type (`IT`), the rendered type (`OT`), and the parameters app authors can supply to the renderer.
+
+    Returns
+    -------
+    :
+        A :class:`~shiny.render.RendererComponents` object that can be used to define
+        two overloads for your renderer function. One overload is for when the renderer
+        is called without parenthesis and the other is for when the renderer is called
+        with parenthesis.
     """
     _assert_handler_fn(handler_fn)
 
@@ -559,10 +617,10 @@ def renderer_components(
 
 @renderer_components
 async def _text(
-    meta: RenderMeta,
-    fn: RenderFnAsync[str | None],
+    _meta: RenderMeta,
+    _fn: RenderFnAsync[str | None],
 ) -> str | None:
-    value = await fn()
+    value = await _fn()
     if value is None:
         return None
     return str(value)
@@ -612,15 +670,15 @@ def text(
 # a nontrivial amount of overhead. So for now, we're just using `object`.
 @renderer_components
 async def _plot(
-    meta: RenderMeta,
-    fn: RenderFnAsync[ImgData | None],
+    _meta: RenderMeta,
+    _fn: RenderFnAsync[ImgData | None],
     *,
     alt: Optional[str] = None,
     **kwargs: object,
 ) -> ImgData | None:
-    is_userfn_async = meta["is_async"]
-    name = meta["name"]
-    session = meta["session"]
+    is_userfn_async = _meta.is_async
+    name = _meta.name
+    session = _meta.session
 
     ppi: float = 96
 
@@ -637,7 +695,7 @@ async def _plot(
         float, inputs[ResolvedId(f".clientdata_output_{name}_height")]()
     )
 
-    x = await fn()
+    x = await _fn()
 
     # Note that x might be None; it could be a matplotlib.pyplot
 
@@ -779,12 +837,12 @@ def plot(
 # ======================================================================================
 @renderer_components
 async def _image(
-    meta: RenderMeta,
-    fn: RenderFnAsync[ImgData | None],
+    _meta: RenderMeta,
+    _fn: RenderFnAsync[ImgData | None],
     *,
     delete_file: bool = False,
 ) -> ImgData | None:
-    res = await fn()
+    res = await _fn()
     if res is None:
         return None
 
@@ -865,15 +923,15 @@ TableResult = Union["pd.DataFrame", PandasCompatible, None]
 
 @renderer_components
 async def _table(
-    meta: RenderMeta,
-    fn: RenderFnAsync[TableResult | None],
+    _meta: RenderMeta,
+    _fn: RenderFnAsync[TableResult | None],
     *,
     index: bool = False,
     classes: str = "table shiny-table w-auto",
     border: int = 0,
     **kwargs: object,
 ) -> RenderedDeps | None:
-    x = await fn()
+    x = await _fn()
 
     if x is None:
         return None
@@ -990,14 +1048,14 @@ def table(
 # ======================================================================================
 @renderer_components
 async def _ui(
-    meta: RenderMeta,
-    fn: RenderFnAsync[TagChild],
+    _meta: RenderMeta,
+    _fn: RenderFnAsync[TagChild],
 ) -> RenderedDeps | None:
-    ui = await fn()
+    ui = await _fn()
     if ui is None:
         return None
 
-    return meta["session"]._process_ui(ui)
+    return _meta.session._process_ui(ui)
 
 
 @overload

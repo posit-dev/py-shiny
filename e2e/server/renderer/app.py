@@ -10,15 +10,15 @@ from shiny.render._render import RenderFnAsync, RenderMeta, renderer_components
 
 @renderer_components
 async def _render_test_text_components(
-    meta: RenderMeta,
-    fn: RenderFnAsync[str | None],
+    _meta: RenderMeta,
+    _fn: RenderFnAsync[str | None],
     *,
     extra_txt: Optional[str] = None,
 ) -> str | None:
-    value = await fn()
+    value = await _fn()
     value = str(value)
     value += "; "
-    value += "async" if meta["is_async"] else "sync"
+    value += "async" if _meta.is_async else "sync"
     if extra_txt:
         value = value + "; " + str(extra_txt)
     return value

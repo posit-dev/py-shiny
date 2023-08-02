@@ -7,8 +7,8 @@ def test_renderer_components_works():
     # No args works
     @renderer_components
     async def test_components(
-        meta: RenderMeta,
-        fn: RenderFnAsync[str],
+        _meta: RenderMeta,
+        _fn: RenderFnAsync[str],
     ):
         ...
 
@@ -32,8 +32,8 @@ def test_renderer_components_kwargs_are_allowed():
     # Test that kwargs can be allowed
     @renderer_components
     async def test_components(
-        meta: RenderMeta,
-        fn: RenderFnAsync[str],
+        _meta: RenderMeta,
+        _fn: RenderFnAsync[str],
         *,
         y: str = "42",
     ):
@@ -64,8 +64,8 @@ def test_renderer_components_with_pass_through_kwargs():
     # No args works
     @renderer_components
     async def test_components(
-        meta: RenderMeta,
-        fn: RenderFnAsync[str],
+        _meta: RenderMeta,
+        _fn: RenderFnAsync[str],
         *,
         y: str = "42",
         **kwargs: float,
@@ -101,7 +101,7 @@ def test_renderer_components_pos_args():
 
         @renderer_components  # type: ignore
         async def test_components(
-            meta: RenderMeta,
+            _meta: RenderMeta,
         ):
             ...
 
@@ -115,8 +115,8 @@ def test_renderer_components_limits_positional_arg_count():
 
         @renderer_components
         async def test_components(
-            meta: RenderMeta,
-            fn: RenderFnAsync[str],
+            _meta: RenderMeta,
+            _fn: RenderFnAsync[str],
             y: str,
         ):
             ...
@@ -131,8 +131,8 @@ def test_renderer_components_does_not_allow_args():
 
         @renderer_components
         async def test_components(
-            meta: RenderMeta,
-            fn: RenderFnAsync[str],
+            _meta: RenderMeta,
+            _fn: RenderFnAsync[str],
             *args: str,
         ):
             ...
@@ -140,7 +140,7 @@ def test_renderer_components_does_not_allow_args():
         raise RuntimeError()
 
     except TypeError as e:
-        assert "No variadic parameters" in str(e)
+        assert "No variadic positional parameters" in str(e)
 
 
 def test_renderer_components_kwargs_have_defaults():
@@ -148,8 +148,8 @@ def test_renderer_components_kwargs_have_defaults():
 
         @renderer_components
         async def test_components(
-            meta: RenderMeta,
-            fn: RenderFnAsync[str],
+            _meta: RenderMeta,
+            _fn: RenderFnAsync[str],
             *,
             y: str,
         ):
@@ -164,8 +164,8 @@ def test_renderer_components_kwargs_have_defaults():
 def test_renderer_components_result_does_not_allow_args():
     @renderer_components
     async def test_components(
-        meta: RenderMeta,
-        fn: RenderFnAsync[str],
+        _meta: RenderMeta,
+        _fn: RenderFnAsync[str],
     ):
         ...
 
