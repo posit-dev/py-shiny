@@ -172,7 +172,7 @@ class Renderer(Generic[OT]):
     * :class:`~shiny.render.RendererAsync`
     """
 
-    def __call__(self, *_) -> OT:
+    def __call__(self) -> OT:
         """
         Executes the renderer as a function. Must be implemented by subclasses.
         """
@@ -323,7 +323,7 @@ class RendererSync(RendererRun[OT]):
             params,
         )
 
-    def __call__(self, *_) -> OT:
+    def __call__(self) -> OT:
         return _utils.run_coro_sync(self._run())
 
 
@@ -352,9 +352,7 @@ class RendererAsync(RendererRun[OT]):
             params,
         )
 
-    async def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
-        self, *_
-    ) -> OT:
+    async def __call__(self) -> OT:  # pyright: ignore[reportIncompatibleMethodOverride]
         return await self._run()
 
 
