@@ -179,7 +179,7 @@ class Renderer(Generic[OT]):
         raise NotImplementedError
 
     def __init__(self, *, name: str) -> None:
-        """\
+        """
         Renderer init method
 
         Arguments
@@ -193,7 +193,7 @@ class Renderer(Generic[OT]):
         self.__name__ = name
 
     def _set_metadata(self, session: Session, name: str) -> None:
-        """\
+        """
         When `Renderer`s are assigned to Output object slots, this method is used to
         pass along Session and name information.
         """
@@ -527,8 +527,8 @@ class RendererComponents(Generic[IT, OT, P]):
 def renderer_components(
     handler_fn: HandlerFn[IT, P, OT],
 ) -> RendererComponents[IT, OT, P]:
-    """\
-    # Renderer components decorator
+    """
+    Renderer components decorator
 
     This decorator method is a convenience method to generate the appropriate types and
     internal implementation for an overloaded renderer method. This method will provide
