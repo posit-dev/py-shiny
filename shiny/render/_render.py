@@ -208,12 +208,12 @@ class RendererRun(Renderer[OT]):
     This class is used to define a `_run` method that is called by the `.__call__`
     method in subclasses.
 
-    Properties
-    ----------
+    Methods
+    -------
     _is_async
         If `TRUE`, the app-supplied render function is asynchronous. Must be implemented
         in subclasses.
-    meta
+    _meta
         A named dictionary of values: `is_async`, `session` (the :class:`~shiny.Session`
         object), and `name` (the name of the output being rendered)
 
@@ -224,13 +224,12 @@ class RendererRun(Renderer[OT]):
     * :class:`~shiny.render.RendererAsync`
     """
 
-    @property
     def _is_async(self) -> bool:
         raise NotImplementedError()
 
     def _meta(self) -> RenderMeta:
         return RenderMeta(
-            is_async=self._is_async,
+            is_async=self._is_async(),
             session=self._session,
             name=self._name,
         )
@@ -290,8 +289,8 @@ class RendererSync(RendererRun[OT]):
     This class is used to define a synchronous renderer. The `.__call__` method is
     implemented to call the `._run` method synchronously.
 
-    Properties
-    ----------
+    Methods
+    -------
     _is_async
         Returns `FALSE` as this is a synchronous renderer.
 
@@ -302,7 +301,6 @@ class RendererSync(RendererRun[OT]):
     * :class:`~shiny.render.RendererAsync`
     """
 
-    @property
     def _is_async(self) -> bool:
         return False
 
@@ -331,7 +329,7 @@ class RendererSync(RendererRun[OT]):
 # method is marked here as async; you can't have a single class where one method could
 # be either sync or async.
 class RendererAsync(RendererRun[OT]):
-    @property
+    # TODO-barret; docs
     def _is_async(self) -> bool:
         return True
 
