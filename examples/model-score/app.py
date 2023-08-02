@@ -71,13 +71,11 @@ def read_time_period(from_time, to_time):
     return tbl
 
 
+model_names = ["model_1", "model_2", "model_3", "model_4"]
 model_colors = {
-    "model_1": "#7fc97f",
-    "model_2": "#beaed4",
-    "model_3": "#fdc086",
-    "model_4": "#ffff99",
+    name: color
+    for name, color in zip(model_names, px.colors.qualitative.D3[0 : len(model_names)])
 }
-model_names = list(model_colors.keys())
 
 
 def app_ui(req):
@@ -103,6 +101,7 @@ def app_ui(req):
                     {
                         0: "Realtime",
                         5: "5 seconds",
+                        15: "15 seconds",
                         30: "30 seconds",
                         60 * 5: "5 minutes",
                         60 * 15: "15 minutes",
@@ -230,21 +229,24 @@ def server(input: Inputs, output: Outputs, session: Session):
             # points. Switching that value breaks streaming updates, as the type
             # property is read-only. Setting it to "webgl" keeps the type consistent.
             render_mode="webgl",
+            template="simple_white",
         )
 
         fig.add_hline(
             THRESHOLD_LOW,
             line_dash="dash",
             line=dict(color=THRESHOLD_LOW_COLOR, width=2),
+            opacity=0.3,
         )
         fig.add_hline(
             THRESHOLD_MID,
             line_dash="dash",
             line=dict(color=THRESHOLD_MID_COLOR, width=2),
+            opacity=0.3,
         )
 
         fig.update_yaxes(range=[0, 1], fixedrange=True)
-        fig.update_xaxes(fixedrange=True, tickangle=60, dtick="M5")
+        fig.update_xaxes(fixedrange=True, tickangle=60)
 
         return fig
 
@@ -259,17 +261,20 @@ def server(input: Inputs, output: Outputs, session: Session):
             labels=dict(score="auc"),
             color="model",
             color_discrete_map=model_colors,
+            template="simple_white",
         )
 
         fig.add_vline(
             THRESHOLD_LOW,
             line_dash="dash",
             line=dict(color=THRESHOLD_LOW_COLOR, width=2),
+            opacity=0.3,
         )
         fig.add_vline(
             THRESHOLD_MID,
             line_dash="dash",
             line=dict(color=THRESHOLD_MID_COLOR, width=2),
+            opacity=0.3,
         )
 
         # From https://plotly.com/python/facet-plots/#customizing-subplot-figure-titles
@@ -288,7 +293,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         reflect the current min and max values in the database.
         """
 
-        reactive.invalidate_later(5)
+        reactive.invalidate_later(15)
         min_time, max_time = pd.to_datetime(
             con.execute(
                 "select min(timestamp), max(timestamp) from auc_scores"
