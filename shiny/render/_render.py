@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 from .. import _utils
 from .._docstring import add_example
 from .._namespaces import ResolvedId
-from .._typing_extensions import Concatenate, ParamSpec, TypedDict
+from .._typing_extensions import Concatenate, ParamSpec
 from ..types import ImgData
 from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_plotnine
 
@@ -178,7 +178,7 @@ class Renderer(Generic[OT]):
         """
         raise NotImplementedError
 
-    def __init__(self, *, name: str, doc: str | None) -> None:
+    def __init__(self, *, name: str) -> None:
         """\
         Renderer init method
 
@@ -191,7 +191,6 @@ class Renderer(Generic[OT]):
             verbatim".
         """
         self.__name__ = name
-        self.__doc__ = doc
 
     def _set_metadata(self, session: Session, name: str) -> None:
         """\
@@ -249,7 +248,6 @@ class RendererRun(Renderer[OT]):
             )
         super().__init__(
             name=render_fn.__name__,
-            doc=render_fn.__doc__,
         )
 
         # Given we use `_utils.run_coro_sync(self._run())` to call our method,
