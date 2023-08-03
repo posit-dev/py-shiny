@@ -284,11 +284,6 @@ class RendererSync(Renderer[OT]):
     This class is used to define a synchronous renderer. The `.__call__` method is
     implemented to call the `._run` method synchronously.
 
-    Methods
-    -------
-    _is_async
-        Returns `FALSE` as this is a synchronous renderer.
-
     See Also
     --------
     * :class:`~shiny.render.Renderer`
@@ -296,6 +291,14 @@ class RendererSync(Renderer[OT]):
     """
 
     def _is_async(self) -> bool:
+        """
+        Meta information about the renderer being asynchronous or not.
+
+        Returns
+        -------
+        :
+            Returns `FALSE` as this is a synchronous renderer.
+        """
         return False
 
     def __init__(
@@ -323,8 +326,27 @@ class RendererSync(Renderer[OT]):
 # method is marked here as async; you can't have a single class where one method could
 # be either sync or async.
 class RendererAsync(Renderer[OT]):
-    # TODO-barret; docs
+    """
+    Output Renderer (Asynchronous)
+
+    This class is used to define an asynchronous renderer. The `.__call__` method is
+    implemented to call the `._run` method asynchronously.
+
+    See Also
+    --------
+    * :class:`~shiny.render.Renderer`
+    * :class:`~shiny.render.RendererSync`
+    """
+
     def _is_async(self) -> bool:
+        """
+        Meta information about the renderer being asynchronous or not.
+
+        Returns
+        -------
+        :
+            Returns `TRUE` as this is an asynchronous renderer.
+        """
         return True
 
     def __init__(
@@ -418,7 +440,8 @@ class RenderFunctionAsync(Generic[IT, OT], RendererAsync[OT], ABC):
 
 
 # assert: No variable length positional values;
-# * We need a way to distinguish between a plain function and args supplied to the next function. This is done by not allowing `*args`.
+# * We need a way to distinguish between a plain function and args supplied to the next
+#   function. This is done by not allowing `*args`.
 # assert: All kwargs of handler_fn should have a default value
 # * This makes calling the method with both `()` and without `()` possible / consistent.
 def _assert_handler_fn(handler_fn: HandlerFn[IT, P, OT]) -> None:
@@ -430,7 +453,9 @@ def _assert_handler_fn(handler_fn: HandlerFn[IT, P, OT]) -> None:
         )
 
     for i, param in zip(range(len(params)), params.values()):
-        # # Not a good test as `param.annotation` has type `str`:
+        # # Not a good test as `param.annotation` has type `str` and the type could
+        # # have been renamed. We need to do an `isinstance` check but do not have
+        # # access to the objects
         # if i == 0:
         #     assert param.annotation == "RenderMeta"
         # if i == 1:
@@ -489,15 +514,24 @@ class RendererComponents(Generic[IT, OT, P]):
     Properties
     ----------
     type_decorator
-        The return type for the renderer decorator wrapper function. This should be used when the app-defined render function is `None` and extra parameters are being supplied.
+        The return type for the renderer decorator wrapper function. This should be used
+        when the app-defined render function is `None` and extra parameters are being
+        supplied.
     type_renderer_fn
-        The (non-`None`) type for the renderer function's first argument that accepts an app-defined render function. This type should be paired with the return type: `type_renderer`.
+        The (non-`None`) type for the renderer function's first argument that accepts an
+        app-defined render function. This type should be paired with the return type:
+        `type_renderer`.
     type_renderer
-        The type for the return value of the renderer decorator function. This should be used when the app-defined render function is not `None`.
+        The type for the return value of the renderer decorator function. This should be
+        used when the app-defined render function is not `None`.
     type_impl_fn
-        The type for the implementation function's first argument. This value handles both app-defined render functions and `None` and returns values appropriate for both cases. `type_impl_fn` should be paired with `type_impl`.
+        The type for the implementation function's first argument. This value handles
+        both app-defined render functions and `None` and returns values appropriate for
+        both cases. `type_impl_fn` should be paired with `type_impl`.
     type_impl
-        The type for the return value of the implementation function. This value handles both app-defined render functions and `None` and returns values appropriate for both cases.
+        The type for the return value of the implementation function. This value handles
+        both app-defined render functions and `None` and returns values appropriate for
+        both cases.
 
     See Also
     --------
@@ -574,9 +608,9 @@ def renderer_components(
     The handler function is supplied meta renderer information, the (app-supplied)
     render function, and any keyword arguments supplied to the renderer decorator:
     * The first parameter to the handler function has the class
-      :class:`~shiny.render.RenderMeta` and is typically called (e.g. `_meta`). This information
-      gives context the to the handler while trying to resolve the app-supplied render
-      function (e.g. `_fn`).
+      :class:`~shiny.render.RenderMeta` and is typically called (e.g. `_meta`). This
+      information gives context the to the handler while trying to resolve the
+      app-supplied render function (e.g. `_fn`).
     * The second parameter is the app-defined render function (e.g. `_fn`). It's return
       type (`IT`) determines what types can be returned by the app-supplied render
       function. For example, if `_fn` has the type `RenderFnAsync[str | None]`, both the
@@ -598,12 +632,17 @@ def renderer_components(
     Notes
     -----
 
-    When defining the renderer decorator overloads, if you use `**kwargs: object`, you may get a type error about incompatible signatures. To fix this, you can use `**kwargs: Any` instead or add `_fn: None = None` as a first parameter.
+    When defining the renderer decorator overloads, if you have extra parameters of
+    `**kwargs: object`, you may get a type error about incompatible signatures. To fix
+    this, you can use `**kwargs: Any` instead or add `_fn: None = None` as the first
+    parameter in the overload containing the `**kwargs: object`.
 
     Parameters
     ----------
     handler_fn
-        Asynchronous function used to determine the app-supplied value type (`IT`), the rendered type (`OT`), and the parameters app authors can supply to the renderer.
+        Asynchronous function used to determine the app-supplied value type (`IT`), the
+        rendered type (`OT`), and the parameters (`P`) app authors can supply to the
+        renderer.
 
     Returns
     -------
@@ -633,10 +672,7 @@ def renderer_components(
         val = as_render_fn(render_fn)
         return val
 
-    ret = RendererComponents(renderer_decorator)
-    # Copy over docs. Even if they do not show up in pylance
-    # ret.__doc__ = handler_fn.__doc__
-    return ret
+    return RendererComponents(renderer_decorator)
 
 
 # ======================================================================================
