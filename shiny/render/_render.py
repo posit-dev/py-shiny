@@ -2,8 +2,6 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
-# TODO-barret; Changelog entry
-
 
 __all__ = (
     "text",
