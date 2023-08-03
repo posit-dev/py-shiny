@@ -132,6 +132,13 @@ class RendererParams(Generic[P]):
         self.args = args
         self.kwargs = kwargs
 
+    @staticmethod
+    def empty_params() -> RendererParams[P]:
+        def inner(*args: P.args, **kwargs: P.kwargs) -> RendererParams[P]:
+            return RendererParams[P](*args, **kwargs)
+
+        return inner()
+
 
 # ======================================================================================
 # Renderer / RendererSync / RendererAsync base class
@@ -350,27 +357,59 @@ class RendererAsync(Renderer[OT]):
 # the .__call__ method is invoked, it calls the app-supplied function (which returns an
 # `IT`), then converts the `IT` to an `OT`. Note that in many cases but not all, `IT`
 # and `OT` will be the same.
-class RenderFunction(Generic[IT, OT], Renderer[OT]):
+class RenderFunction(Generic[IT, OT], RendererSync[OT], ABC):
     """
     Deprecated. Please use :func:`~shiny.render.renderer_components` instead.
     """
 
-    def __init__(self, fn: Callable[[], IT]) -> None:
-        self.__name__ = fn.__name__
-        self.__doc__ = fn.__doc__
-        # TODO-barret; call super and make a __call__ method
+    @abstractmethod
+    def __call__(self) -> OT:
+        ...
+
+    @abstractmethod
+    async def run(self) -> OT:
+        ...
+
+    def __init__(self, fn: RenderFnSync[IT]) -> None:
+        async def handler_fn(_meta: RenderMeta, _fn: RenderFnAsync[IT]) -> OT:
+            ret = await self.run()
+            return ret
+
+        super().__init__(
+            render_fn=fn,
+            handler_fn=handler_fn,
+            params=RendererParams.empty_params(),
+        )
+        self._fn = fn
 
 
 # The reason for having a separate RenderFunctionAsync class is because the __call__
 # method is marked here as async; you can't have a single class where one method could
 # be either sync or async.
-class RenderFunctionAsync(Generic[IT, OT], RendererAsync[OT]):
+class RenderFunctionAsync(Generic[IT, OT], RendererAsync[OT], ABC):
     """
     Deprecated. Please use :func:`~shiny.render.renderer_components` instead.
     """
 
+    @abstractmethod
     async def __call__(self) -> OT:  # pyright: ignore[reportIncompatibleMethodOverride]
-        raise NotImplementedError
+        ...
+
+    @abstractmethod
+    async def run(self) -> OT:
+        ...
+
+    def __init__(self, fn: RenderFnAsync[IT]) -> None:
+        async def handler_fn(_meta: RenderMeta, _fn: RenderFnAsync[IT]) -> OT:
+            ret = await self.run()
+            return ret
+
+        super().__init__(
+            render_fn=fn,
+            handler_fn=handler_fn,
+            params=RendererParams.empty_params(),
+        )
+        self._fn = fn
 
 
 # ======================================================================================
