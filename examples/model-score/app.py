@@ -29,7 +29,7 @@ def last_modified(con):
     We will poll against this in absence of a way to receive a push notification when
     our SQLite database changes.
     """
-    return con.execute("select max(timestamp) from auc_scores").fetchone()[0]
+    return con.execute("select max(timestamp) from accuracy_scores").fetchone()[0]
 
 
 @reactive.poll(lambda: last_modified(con))
@@ -44,7 +44,7 @@ def df():
     only run once no matter how many users are connected.
     """
     tbl = pd.read_sql(
-        "select * from auc_scores order by timestamp desc, model desc limit ?",
+        "select * from accuracy_scores order by timestamp desc, model desc limit ?",
         con,
         params=[150],
     )
@@ -60,7 +60,7 @@ def df():
 
 def read_time_period(from_time, to_time):
     tbl = pd.read_sql(
-        "select * from auc_scores where timestamp between ? and ? order by timestamp, model",
+        "select * from accuracy_scores where timestamp between ? and ? order by timestamp, model",
         con,
         params=[from_time, to_time],
     )
@@ -221,7 +221,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             filtered_df(),
             x="time",
             y="score",
-            labels=dict(score="auc"),
+            labels=dict(score="accuracy"),
             color="model",
             color_discrete_map=model_colors,
             # The default for render_mode is "auto", which switches between
@@ -258,7 +258,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             facet_row="model",
             nbins=20,
             x="score",
-            labels=dict(score="auc"),
+            labels=dict(score="accuracy"),
             color="model",
             color_discrete_map=model_colors,
             template="simple_white",
@@ -296,7 +296,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         reactive.invalidate_later(15)
         min_time, max_time = pd.to_datetime(
             con.execute(
-                "select min(timestamp), max(timestamp) from auc_scores"
+                "select min(timestamp), max(timestamp) from accuracy_scores"
             ).fetchone(),
             utc=True,
         )
