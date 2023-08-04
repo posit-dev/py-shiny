@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import Optional, overload
 
 from shiny import App, Inputs, Outputs, Session, ui
-from shiny.render._render import RenderFnAsync, RenderMeta, renderer_components
+from shiny.render._render import TransformerMetadata, ValueFnAsync, output_transformer
 
 
-@renderer_components
+@output_transformer
 async def _render_test_text_components(
-    _meta: RenderMeta,
-    _fn: RenderFnAsync[str | None],
+    _meta: TransformerMetadata,
+    _fn: ValueFnAsync[str | None],
     *,
     extra_txt: Optional[str] = None,
 ) -> str | None:
@@ -27,22 +27,22 @@ async def _render_test_text_components(
 @overload
 def render_test_text(
     *, extra_txt: Optional[str] = None
-) -> _render_test_text_components.type_decorator:
+) -> _render_test_text_components.OutputRendererDecorator:
     ...
 
 
 @overload
 def render_test_text(
-    _fn: _render_test_text_components.type_renderer_fn,
-) -> _render_test_text_components.type_renderer:
+    _fn: _render_test_text_components.ValueFn,
+) -> _render_test_text_components.OutputRenderer:
     ...
 
 
 def render_test_text(
-    _fn: _render_test_text_components.type_impl_fn = None,
+    _fn: _render_test_text_components.ValueFnOrNone = None,
     *,
     extra_txt: Optional[str] = None,
-) -> _render_test_text_components.type_impl:
+) -> _render_test_text_components.OutputRendererOrDecorator:
     return _render_test_text_components.impl(
         _fn,
         _render_test_text_components.params(extra_txt=extra_txt),

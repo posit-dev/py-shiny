@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal, overload
 
 from shiny import App, Inputs, Outputs, Session, ui
-from shiny.render import RenderFnAsync, RenderMeta, renderer_components
+from shiny.render import TransformerMetadata, ValueFnAsync, output_transformer
 
 #######
 # Package authors can create their own renderer methods by leveraging
@@ -17,12 +17,12 @@ from shiny.render import RenderFnAsync, RenderMeta, renderer_components
 
 
 # Create renderer components from the async handler function: `capitalize_components()`
-@renderer_components
+@output_transformer
 async def capitalize_components(
     # Contains information about the render call: `name`, `session`, `is_async`
-    _meta: RenderMeta,
+    _meta: TransformerMetadata,
     # An async form of the app-supplied render function
-    _fn: RenderFnAsync[str | None],
+    _fn: ValueFnAsync[str | None],
     *,
     # Extra parameters that app authors can supply (e.g. `render_capitalize(to="upper")`)
     to: Literal["upper", "lower"] = "upper",
@@ -53,7 +53,7 @@ async def capitalize_components(
 def render_capitalize(
     *,
     to: Literal["upper", "lower"] = "upper",
-) -> capitalize_components.type_decorator:
+) -> capitalize_components.OutputRendererDecorator:
     ...
 
 
@@ -70,8 +70,8 @@ def render_capitalize(
 # Note: Return type is `type_renderer`
 @overload
 def render_capitalize(
-    _fn: capitalize_components.type_renderer_fn,
-) -> capitalize_components.type_renderer:
+    _fn: capitalize_components.ValueFn,
+) -> capitalize_components.OutputRenderer:
     ...
 
 
@@ -79,10 +79,10 @@ def render_capitalize(
 # Note: `_fn` type is `type_impl_fn`
 # Note: Return type is `type_impl`
 def render_capitalize(
-    _fn: capitalize_components.type_impl_fn = None,
+    _fn: capitalize_components.ValueFnOrNone = None,
     *,
     to: Literal["upper", "lower"] = "upper",
-) -> capitalize_components.type_impl:
+) -> capitalize_components.OutputRendererOrDecorator:
     return capitalize_components.impl(
         _fn,
         capitalize_components.params(to=to),

@@ -2,7 +2,6 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
-
 __all__ = (
     "text",
     "plot",
@@ -51,7 +50,7 @@ from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_
 IT = TypeVar("IT")
 # Output type after the Renderer.__call__ method is called on the IT object.
 OT = TypeVar("OT")
-# Param specification for render_fn function
+# Param specification for value_fn function
 P = ParamSpec("P")
 
 
@@ -61,11 +60,11 @@ P = ParamSpec("P")
 
 
 # Meta information to give `hander()` some context
-class RenderMeta(NamedTuple):
+class TransformerMetadata(NamedTuple):
     """
-    Renderer meta information
+    Transformer metadata
 
-    This class is used to hold meta information for a renderer handler function.
+    This class is used to hold meta information for a transformer function.
 
     Properties
     ----------
@@ -82,11 +81,11 @@ class RenderMeta(NamedTuple):
     name: str
 
 
-class RendererParams(Generic[P]):
+class TransformerParams(Generic[P]):
     """
-    Parameters for a renderer function
+    Parameters for a transformer function
 
-    This class is used to hold the parameters for a renderer function. It is used to
+    This class is used to hold the parameters for a transformer function. It is used to
     enforce that the parameters are used in the correct order.
 
     Properties
@@ -95,18 +94,18 @@ class RendererParams(Generic[P]):
         No positional arguments should be supplied. Only keyword arguments should be
         supplied.
     **kwargs
-        Keyword arguments for the corresponding renderer function.
+        Keyword arguments for the corresponding transformer function.
     """
 
     # Motivation for using this class:
     # * https://peps.python.org/pep-0612/ does allow for prepending an arg (e.g.
-    #   `render_fn`).
-    # * However, the overload is not happy when both a positional arg (e.g. `render_fn`)
+    #   `value_fn`).
+    # * However, the overload is not happy when both a positional arg (e.g. `value_fn`)
     #   is dropped and the variadic positional args (`*args`) are kept.
     # * The variadic positional args (`*args`) CAN NOT be dropped as PEP612 states that
     #   both components of the `ParamSpec` must be used in the same function signature.
     # * By making assertions on `P.args` to only allow for `*`, we _can_ make overloads
-    #   that use either the single positional arg (e.g. `render_fn`) or the `P.kwargs`
+    #   that use either the single positional arg (e.g. `value_fn`) or the `P.kwargs`
     #   (as `P.args` == `*`)
     def __init__(self, *args: P.args, **kwargs: P.kwargs) -> None:
         """
@@ -120,7 +119,7 @@ class RendererParams(Generic[P]):
         """
 
         # Make sure there no `args` when running!
-        # This check is related to `_assert_handler_fn` not accepting any `args`
+        # This check is related to `_assert_transform_fn` not accepting any `args`
         if len(args) > 0:
             raise RuntimeError("`args` should not be supplied")
 
@@ -131,9 +130,9 @@ class RendererParams(Generic[P]):
         self.kwargs = kwargs
 
     @staticmethod
-    def empty_params() -> RendererParams[P]:
-        def inner(*args: P.args, **kwargs: P.kwargs) -> RendererParams[P]:
-            return RendererParams[P](*args, **kwargs)
+    def empty_params() -> TransformerParams[P]:
+        def inner(*args: P.args, **kwargs: P.kwargs) -> TransformerParams[P]:
+            return TransformerParams[P](*args, **kwargs)
 
         return inner()
 
@@ -142,30 +141,32 @@ class RendererParams(Generic[P]):
 # Renderer / RendererSync / RendererAsync base class
 # ======================================================================================
 
-# A `RenderFn` function is an app-supplied function which returns an IT.
+# A `ValueFn` function is an app-supplied function which returns an IT.
 # It can be either synchronous or asynchronous
-RenderFnSync = Callable[[], IT]
-RenderFnAsync = Callable[[], Awaitable[IT]]
-RenderFn = Union[RenderFnSync[IT], RenderFnAsync[IT]]
+ValueFnSync = Callable[[], IT]
+ValueFnAsync = Callable[[], Awaitable[IT]]
+ValueFn = Union[ValueFnSync[IT], ValueFnAsync[IT]]
 
-# `HandlerFn` is a package author function that transforms an object of type `IT` into type `OT`.
-HandlerFn = Callable[Concatenate[RenderMeta, RenderFnAsync[IT], P], Awaitable[OT]]
+# `TransformFn` is a package author function that transforms an object of type `IT` into type `OT`.
+TransformFn = Callable[
+    Concatenate[TransformerMetadata, ValueFnAsync[IT], P], Awaitable[OT]
+]
 
 
-class Renderer(Generic[OT], ABC):
+class OutputRenderer(Generic[OT], ABC):
     """
     Output Renderer
 
     Base class for classes :class:`~shiny.render.RendererSync` and
     :class:`~shiny.render.RendererAsync`.
 
-    When the `.__call__` method is invoked, the handler function (`handler_fn`)
+    When the `.__call__` method is invoked, the handler function (`transform_fn`)
     (typically defined by package authors) is asynchronously called. The handler
     function is given `meta` information, the (app-supplied) render function, and any
     keyword arguments supplied to the render decorator. For consistency, the first two
     parameters have been (arbitrarily) implemented as `_meta` and `_fn`.
 
-    The (app-supplied) render function (`render_fn`) returns type `IT`. The handler
+    The (app-supplied) value function (`value_fn`) returns type `IT`. The handler
     function (defined by package authors) defines the parameter specification of type
     `P` and asynchronously returns an object of type `OT`. Note that in many cases but
     not all, `IT` and `OT` will be the same. `None` values should always be defined in
@@ -197,15 +198,16 @@ class Renderer(Generic[OT], ABC):
     def __init__(
         self,
         *,
-        render_fn: RenderFn[IT],
-        handler_fn: HandlerFn[IT, P, OT],
-        params: RendererParams[P],
+        value_fn: ValueFn[IT],
+        transform_fn: TransformFn[IT, P, OT],
+        params: TransformerParams[P],
     ) -> None:
         """
         Renderer init method
 
-        Arguments
-        ---------
+        TODO: Barret
+        Parameters
+        ----------
         name
             Name of original output function. Ex: `my_txt`
         doc
@@ -214,18 +216,18 @@ class Renderer(Generic[OT], ABC):
         """
         # Copy over function name as it is consistent with how Session and Output
         # retrieve function names
-        self.__name__ = render_fn.__name__
+        self.__name__ = value_fn.__name__
 
-        if not _utils.is_async_callable(handler_fn):
+        if not _utils.is_async_callable(transform_fn):
             raise TypeError(
                 self.__class__.__name__ + " requires an async handler function"
             )
 
-        # `render_fn` is not required to be async. For consistency, we wrapped in an
-        # async function so that when it's passed in to `handler_fn`, `render_fn` is
+        # `value_fn` is not required to be async. For consistency, we wrapped in an
+        # async function so that when it's passed in to `transform_fn`, `value_fn` is
         # **always** an async function.
-        self._render_fn = _utils.wrap_async(render_fn)
-        self._handler_fn = handler_fn
+        self._value_fn = _utils.wrap_async(value_fn)
+        self._transformer = transform_fn
         self._params = params
 
     def _set_metadata(self, session: Session, name: str) -> None:
@@ -236,8 +238,8 @@ class Renderer(Generic[OT], ABC):
         self._session: Session = session
         self._name: str = name
 
-    def _meta(self) -> RenderMeta:
-        return RenderMeta(
+    def _meta(self) -> TransformerMetadata:
+        return TransformerMetadata(
             is_async=self._is_async(),
             session=self._session,
             name=self._name,
@@ -262,11 +264,11 @@ class Renderer(Generic[OT], ABC):
           :class:`~shiny.render.RendererParams` which does not allow positional
           arguments.
         """
-        ret = await self._handler_fn(
+        ret = await self._transformer(
             # RenderMeta
             self._meta(),
             # Callable[[], Awaitable[IT]]
-            self._render_fn,
+            self._value_fn,
             # P
             *self._params.args,
             **self._params.kwargs,
@@ -275,7 +277,7 @@ class Renderer(Generic[OT], ABC):
 
 
 # Using a second class to help clarify that it is of a particular type
-class RendererSync(Renderer[OT]):
+class OutputRendererSync(OutputRenderer[OT]):
     """
     Output Renderer (Synchronous)
 
@@ -301,18 +303,18 @@ class RendererSync(Renderer[OT]):
 
     def __init__(
         self,
-        render_fn: RenderFnSync[IT],
-        handler_fn: HandlerFn[IT, P, OT],
-        params: RendererParams[P],
+        value_fn: ValueFnSync[IT],
+        transform_fn: TransformFn[IT, P, OT],
+        params: TransformerParams[P],
     ) -> None:
-        if _utils.is_async_callable(render_fn):
+        if _utils.is_async_callable(value_fn):
             raise TypeError(
                 self.__class__.__name__ + " requires a synchronous render function"
             )
         # super == Renderer
         super().__init__(
-            render_fn=render_fn,
-            handler_fn=handler_fn,
+            value_fn=value_fn,
+            transform_fn=transform_fn,
             params=params,
         )
 
@@ -323,7 +325,7 @@ class RendererSync(Renderer[OT]):
 # The reason for having a separate RendererAsync class is because the __call__
 # method is marked here as async; you can't have a single class where one method could
 # be either sync or async.
-class RendererAsync(Renderer[OT]):
+class OutputRendererAsync(OutputRenderer[OT]):
     """
     Output Renderer (Asynchronous)
 
@@ -349,18 +351,18 @@ class RendererAsync(Renderer[OT]):
 
     def __init__(
         self,
-        render_fn: RenderFnAsync[IT],
-        handler_fn: HandlerFn[IT, P, OT],
-        params: RendererParams[P],
+        value_fn: ValueFnAsync[IT],
+        transform_fn: TransformFn[IT, P, OT],
+        params: TransformerParams[P],
     ) -> None:
-        if not _utils.is_async_callable(render_fn):
+        if not _utils.is_async_callable(value_fn):
             raise TypeError(
                 self.__class__.__name__ + " requires an asynchronous render function"
             )
         # super == Renderer
         super().__init__(
-            render_fn=render_fn,
-            handler_fn=handler_fn,
+            value_fn=value_fn,
+            transform_fn=transform_fn,
             params=params,
         )
 
@@ -377,7 +379,7 @@ class RendererAsync(Renderer[OT]):
 # the .__call__ method is invoked, it calls the app-supplied function (which returns an
 # `IT`), then converts the `IT` to an `OT`. Note that in many cases but not all, `IT`
 # and `OT` will be the same.
-class RenderFunction(Generic[IT, OT], RendererSync[OT], ABC):
+class RenderFunction(Generic[IT, OT], OutputRendererSync[OT], ABC):
     """
     Deprecated. Please use :func:`~shiny.render.renderer_components` instead.
     """
@@ -390,15 +392,15 @@ class RenderFunction(Generic[IT, OT], RendererSync[OT], ABC):
     async def run(self) -> OT:
         ...
 
-    def __init__(self, fn: RenderFnSync[IT]) -> None:
-        async def handler_fn(_meta: RenderMeta, _fn: RenderFnAsync[IT]) -> OT:
+    def __init__(self, fn: ValueFnSync[IT]) -> None:
+        async def transformer(_meta: TransformerMetadata, _fn: ValueFnAsync[IT]) -> OT:
             ret = await self.run()
             return ret
 
         super().__init__(
-            render_fn=fn,
-            handler_fn=handler_fn,
-            params=RendererParams.empty_params(),
+            value_fn=fn,
+            transform_fn=transformer,
+            params=TransformerParams.empty_params(),
         )
         self._fn = fn
 
@@ -406,7 +408,7 @@ class RenderFunction(Generic[IT, OT], RendererSync[OT], ABC):
 # The reason for having a separate RenderFunctionAsync class is because the __call__
 # method is marked here as async; you can't have a single class where one method could
 # be either sync or async.
-class RenderFunctionAsync(Generic[IT, OT], RendererAsync[OT], ABC):
+class RenderFunctionAsync(Generic[IT, OT], OutputRendererAsync[OT], ABC):
     """
     Deprecated. Please use :func:`~shiny.render.renderer_components` instead.
     """
@@ -419,15 +421,15 @@ class RenderFunctionAsync(Generic[IT, OT], RendererAsync[OT], ABC):
     async def run(self) -> OT:
         ...
 
-    def __init__(self, fn: RenderFnAsync[IT]) -> None:
-        async def handler_fn(_meta: RenderMeta, _fn: RenderFnAsync[IT]) -> OT:
+    def __init__(self, fn: ValueFnAsync[IT]) -> None:
+        async def transformer(_meta: TransformerMetadata, _fn: ValueFnAsync[IT]) -> OT:
             ret = await self.run()
             return ret
 
         super().__init__(
-            render_fn=fn,
-            handler_fn=handler_fn,
-            params=RendererParams.empty_params(),
+            value_fn=fn,
+            transform_fn=transformer,
+            params=TransformerParams.empty_params(),
         )
         self._fn = fn
 
@@ -440,14 +442,15 @@ class RenderFunctionAsync(Generic[IT, OT], RendererAsync[OT], ABC):
 # assert: No variable length positional values;
 # * We need a way to distinguish between a plain function and args supplied to the next
 #   function. This is done by not allowing `*args`.
-# assert: All kwargs of handler_fn should have a default value
+# assert: All kwargs of transformer should have a default value
 # * This makes calling the method with both `()` and without `()` possible / consistent.
-def _assert_handler_fn(handler_fn: HandlerFn[IT, P, OT]) -> None:
-    params = inspect.Signature.from_callable(handler_fn).parameters
+def _assert_transformer(transform_fn: TransformFn[IT, P, OT]) -> None:
+    params = inspect.Signature.from_callable(transform_fn).parameters
 
     if len(params) < 2:
         raise TypeError(
-            "`handler_fn=` must have 2 positional parameters which have type `RenderMeta` and `RenderFnAsync` respectively"
+            "`transformer=` must have 2 positional parameters which have type "
+            "`RenderMeta` and `RenderFnAsync` respectively"
         )
 
     for i, param in zip(range(len(params)), params.values()):
@@ -463,18 +466,20 @@ def _assert_handler_fn(handler_fn: HandlerFn[IT, P, OT]) -> None:
             or param.kind == inspect.Parameter.POSITIONAL_ONLY
         ):
             raise TypeError(
-                "`handler_fn=` must have 2 positional parameters which have type `RenderMeta` and `RenderFnAsync` respectively"
+                "`transformer=` must have 2 positional parameters which have type "
+                "`RenderMeta` and `RenderFnAsync` respectively"
             )
 
         # Make sure there are no more than 2 positional args
         if i >= 2 and param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
             raise TypeError(
-                "`handler_fn=` must not contain more than 2 positional parameters"
+                "`transformer=` must not contain more than 2 positional parameters"
             )
         # Make sure there are no `*args`
         if param.kind == inspect.Parameter.VAR_POSITIONAL:
             raise TypeError(
-                f"No variadic positional parameters (e.g. `*args`) can be supplied to `handler_fn=`. Received: `{param.name}`. Please only use `*`."
+                "No variadic positional parameters (e.g. `*args`) can be supplied to "
+                f"`transformer=`. Received: `{param.name}`. Please only use `*`."
             )
         # Make sure kwargs have default values
         if (
@@ -482,7 +487,7 @@ def _assert_handler_fn(handler_fn: HandlerFn[IT, P, OT]) -> None:
             and param.default is inspect.Parameter.empty
         ):
             raise TypeError(
-                f"In `handler_fn=`, parameter `{param.name}` did not have a default value"
+                f"In `transformer=`, parameter `{param.name}` did not have a default value"
             )
 
 
@@ -492,22 +497,26 @@ def _assert_handler_fn(handler_fn: HandlerFn[IT, P, OT]) -> None:
 
 
 # Signature of a renderer decorator function
-RendererDeco = Callable[[RenderFn[IT]], Renderer[OT]]
-# Signature of a decorator that can be called with and without parenthesis
+OutputRendererDecorator = Callable[[ValueFn[IT]], OutputRenderer[OT]]
+# Signature of a decorator that can be called with and without parentheses
 # With parens returns a `Renderer[OT]`
 # Without parens returns a `RendererDeco[IT, OT]`
-RenderImplFn = Callable[
+OutputRendererImplFn = Callable[
     [
-        Optional[RenderFn[IT]],
-        RendererParams[P],
+        Optional[ValueFn[IT]],
+        TransformerParams[P],
     ],
-    Union[Renderer[OT], RendererDeco[IT, OT]],
+    Union[OutputRenderer[OT], OutputRendererDecorator[IT, OT]],
 ]
 
 
-class RendererComponents(Generic[IT, OT, P]):
+class OutputTransformer(Generic[IT, OT, P]):
     """
-    Renderer Component class
+    Output Transformer class
+
+    A Transfomer takes the value returned from the user's render function, passes it
+    through the component author's transformer function, and returns the result. TODO:
+    clean up
 
     Properties
     ----------
@@ -538,57 +547,46 @@ class RendererComponents(Generic[IT, OT, P]):
     * :class:`~shiny.render.Renderer`
     """
 
-    @property
-    def type_decorator(self):
-        return RendererDeco[IT, OT]
-
-    @property
-    def type_renderer_fn(self):
-        return RenderFn[IT]
-
-    @property
-    def type_renderer(self):
-        return Renderer[OT]
-
-    @property
-    def type_impl_fn(self):
-        return Optional[RenderFn[IT]]
-
-    @property
-    def type_impl(self):
-        return Union[Renderer[OT], RendererDeco[IT, OT]]
-
     def params(
         self,
         *args: P.args,
         **kwargs: P.kwargs,
-    ) -> RendererParams[P]:
-        return RendererParams(*args, **kwargs)
+    ) -> TransformerParams[P]:
+        return TransformerParams(*args, **kwargs)
 
+    # TODO: convert to __call__
     def impl(
         self,
-        render_fn: RenderFn[IT] | None,
-        params: RendererParams[P] | None = None,
-    ) -> Renderer[OT] | RendererDeco[IT, OT]:
+        value_fn: ValueFn[IT] | None,
+        params: TransformerParams[P] | None = None,
+    ) -> OutputRenderer[OT] | OutputRendererDecorator[IT, OT]:
         if params is None:
             params = self.params()
-        if not isinstance(params, RendererParams):
+        if not isinstance(params, TransformerParams):
             raise TypeError(
                 f"Expected `params` to be of type `RendererParams` but received `{type(params)}`. Please use `.params()` to create a `RendererParams` object."
             )
-        return self._fn(render_fn, params)
+        return self._fn(value_fn, params)
 
     def __init__(
         self,
-        fn: RenderImplFn[IT, P, OT],
+        fn: OutputRendererImplFn[IT, P, OT],
     ) -> None:
         self._fn = fn
+        self.ValueFn = ValueFn[IT]
+        self.OutputRenderer = OutputRenderer[OT]
+        self.OutputRendererDecorator = OutputRendererDecorator[IT, OT]
+        # TODO: Remove the following types
+        self.ValueFnOrNone = Union[ValueFn[IT], None]
+        self.OutputRendererOrDecorator = Union[
+            OutputRenderer[OT], OutputRendererDecorator[IT, OT]
+        ]
 
 
 @add_example()
-def renderer_components(
-    handler_fn: HandlerFn[IT, P, OT],
-) -> RendererComponents[IT, OT, P]:
+def output_transformer(
+    transform_fn: TransformFn[IT, P, OT],
+) -> OutputTransformer[IT, OT, P]:
     """
     Renderer components decorator
 
@@ -600,7 +598,7 @@ def renderer_components(
 
     ## Handler function
 
-    The renderer's asynchronous handler function (`handler_fn`) is the key building
+    The renderer's asynchronous handler function (`transform_fn`) is the key building
     block for `renderer_components`.
 
     The handler function is supplied meta renderer information, the (app-supplied)
@@ -637,7 +635,7 @@ def renderer_components(
 
     Parameters
     ----------
-    handler_fn
+    transform_fn
         Asynchronous function used to determine the app-supplied value type (`IT`), the
         rendered type (`OT`), and the parameters (`P`) app authors can supply to the
         renderer.
@@ -650,27 +648,27 @@ def renderer_components(
         is called without parenthesis and the other is for when the renderer is called
         with parenthesis.
     """
-    _assert_handler_fn(handler_fn)
+    _assert_transformer(transform_fn)
 
     def renderer_decorator(
-        render_fn: RenderFnSync[IT] | RenderFnAsync[IT] | None,
-        params: RendererParams[P],
-    ) -> Renderer[OT] | RendererDeco[IT, OT]:
-        def as_render_fn(
-            fn: RenderFnSync[IT] | RenderFnAsync[IT],
-        ) -> Renderer[OT]:
+        value_fn: ValueFnSync[IT] | ValueFnAsync[IT] | None,
+        params: TransformerParams[P],
+    ) -> OutputRenderer[OT] | OutputRendererDecorator[IT, OT]:
+        def as_value_fn(
+            fn: ValueFnSync[IT] | ValueFnAsync[IT],
+        ) -> OutputRenderer[OT]:
             if _utils.is_async_callable(fn):
-                return RendererAsync(fn, handler_fn, params)
+                return OutputRendererAsync(fn, transform_fn, params)
             else:
-                fn = cast(RenderFnSync[IT], fn)
-                return RendererSync(fn, handler_fn, params)
+                fn = cast(ValueFnSync[IT], fn)
+                return OutputRendererSync(fn, transform_fn, params)
 
-        if render_fn is None:
-            return as_render_fn
-        val = as_render_fn(render_fn)
+        if value_fn is None:
+            return as_value_fn
+        val = as_value_fn(value_fn)
         return val
 
-    return RendererComponents(renderer_decorator)
+    return OutputTransformer(renderer_decorator)
 
 
 # ======================================================================================
@@ -678,30 +676,30 @@ def renderer_components(
 # ======================================================================================
 
 
-@renderer_components
-async def _text(
-    _meta: RenderMeta,
-    _fn: RenderFnAsync[str | None],
+@output_transformer
+async def TextTransformer(
+    _meta: TransformerMetadata,
+    _afn: ValueFnAsync[str | None],
 ) -> str | None:
-    value = await _fn()
+    value = await _afn()
     if value is None:
         return None
     return str(value)
 
 
 @overload
-def text() -> _text.type_decorator:
+def text() -> TextTransformer.OutputRendererDecorator:
     ...
 
 
 @overload
-def text(_fn: _text.type_renderer_fn) -> _text.type_renderer:
+def text(_fn: TextTransformer.ValueFn) -> TextTransformer.OutputRenderer:
     ...
 
 
 def text(
-    _fn: _text.type_impl_fn = None,
-) -> _text.type_impl:
+    _fn: TextTransformer.ValueFn | None = None,
+) -> TextTransformer.OutputRenderer | TextTransformer.OutputRendererDecorator:
     """
     Reactively render text.
 
@@ -721,7 +719,7 @@ def text(
     --------
     ~shiny.ui.output_text
     """
-    return _text.impl(_fn)
+    return TextTransformer.impl(_fn)
 
 
 # ======================================================================================
@@ -731,10 +729,10 @@ def text(
 #   Union[matplotlib.figure.Figure, PIL.Image.Image]
 # However, if we did that, we'd have to import those modules at load time, which adds
 # a nontrivial amount of overhead. So for now, we're just using `object`.
-@renderer_components
-async def _plot(
-    _meta: RenderMeta,
-    _fn: RenderFnAsync[ImgData | None],
+@output_transformer
+async def PlotTransformer(
+    _meta: TransformerMetadata,
+    _afn: ValueFnAsync[ImgData | None],
     *,
     alt: Optional[str] = None,
     **kwargs: object,
@@ -758,7 +756,7 @@ async def _plot(
         float, inputs[ResolvedId(f".clientdata_output_{name}_height")]()
     )
 
-    x = await _fn()
+    x = await _afn()
 
     # Note that x might be None; it could be a matplotlib.pyplot
 
@@ -834,21 +832,21 @@ def plot(
     *,
     alt: Optional[str] = None,
     **kwargs: Any,
-) -> _plot.type_decorator:
+) -> PlotTransformer.OutputRendererDecorator:
     ...
 
 
 @overload
-def plot(_fn: _plot.type_renderer_fn) -> _plot.type_renderer:
+def plot(_fn: PlotTransformer.ValueFn) -> PlotTransformer.OutputRenderer:
     ...
 
 
 def plot(
-    _fn: _plot.type_impl_fn = None,
+    _fn: PlotTransformer.ValueFn | None = None,
     *,
     alt: Optional[str] = None,
     **kwargs: Any,
-) -> _plot.type_impl:
+) -> PlotTransformer.OutputRenderer | PlotTransformer.OutputRendererDecorator:
     """
     Reactively render a plot object as an HTML image.
 
@@ -892,16 +890,16 @@ def plot(
     ~shiny.ui.output_plot
     ~shiny.render.image
     """
-    return _plot.impl(_fn, _plot.params(alt=alt, **kwargs))
+    return PlotTransformer.impl(_fn, PlotTransformer.params(alt=alt, **kwargs))
 
 
 # ======================================================================================
 # RenderImage
 # ======================================================================================
-@renderer_components
+@output_transformer
 async def _image(
-    _meta: RenderMeta,
-    _fn: RenderFnAsync[ImgData | None],
+    _meta: TransformerMetadata,
+    _fn: ValueFnAsync[ImgData | None],
     *,
     delete_file: bool = False,
 ) -> ImgData | None:
@@ -926,20 +924,23 @@ async def _image(
 def image(
     *,
     delete_file: bool = False,
-) -> _image.type_decorator:
+) -> OutputRendererDecorator[ImgData | None, ImgData | None]:
     ...
 
 
 @overload
-def image(_fn: _image.type_renderer_fn) -> _image.type_renderer:
+def image(_fn: ValueFn[ImgData | None]) -> OutputRenderer[ImgData | None]:
     ...
 
 
 def image(
-    _fn: _image.type_impl_fn = None,
+    _fn: Optional[ValueFn[ImgData | None]] = None,
     *,
     delete_file: bool = False,
-) -> _image.type_impl:
+) -> Union[
+    OutputRenderer[ImgData | None],
+    OutputRendererDecorator[ImgData | None, ImgData | None],
+]:
     """
     Reactively render a image file as an HTML image.
 
@@ -984,10 +985,10 @@ class PandasCompatible(Protocol):
 TableResult = Union["pd.DataFrame", PandasCompatible, None]
 
 
-@renderer_components
+@output_transformer
 async def _table(
-    _meta: RenderMeta,
-    _fn: RenderFnAsync[TableResult | None],
+    _meta: TransformerMetadata,
+    _fn: ValueFnAsync[TableResult | None],
     *,
     index: bool = False,
     classes: str = "table shiny-table w-auto",
@@ -1039,23 +1040,23 @@ def table(
     classes: str = "table shiny-table w-auto",
     border: int = 0,
     **kwargs: Any,
-) -> _table.type_decorator:
+) -> _table.OutputRendererDecorator:
     ...
 
 
 @overload
-def table(_fn: _table.type_renderer_fn) -> _table.type_renderer:
+def table(_fn: _table.ValueFn) -> _table.OutputRenderer:
     ...
 
 
 def table(
-    _fn: _table.type_impl_fn = None,
+    _fn: _table.ValueFnOrNone = None,
     *,
     index: bool = False,
     classes: str = "table shiny-table w-auto",
     border: int = 0,
     **kwargs: object,
-) -> _table.type_impl:
+) -> _table.OutputRendererOrDecorator:
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
 
@@ -1114,10 +1115,10 @@ def table(
 # ======================================================================================
 # RenderUI
 # ======================================================================================
-@renderer_components
+@output_transformer
 async def _ui(
-    _meta: RenderMeta,
-    _fn: RenderFnAsync[TagChild],
+    _meta: TransformerMetadata,
+    _fn: ValueFnAsync[TagChild],
 ) -> RenderedDeps | None:
     ui = await _fn()
     if ui is None:
@@ -1127,18 +1128,18 @@ async def _ui(
 
 
 @overload
-def ui() -> _ui.type_decorator:
+def ui() -> _ui.OutputRendererDecorator:
     ...
 
 
 @overload
-def ui(_fn: _ui.type_renderer_fn) -> _ui.type_renderer:
+def ui(_fn: _ui.ValueFn) -> _ui.OutputRenderer:
     ...
 
 
 def ui(
-    _fn: _ui.type_impl_fn = None,
-) -> _ui.type_impl:
+    _fn: _ui.ValueFnOrNone = None,
+) -> _ui.OutputRendererOrDecorator:
     """
     Reactively render HTML content.
 
