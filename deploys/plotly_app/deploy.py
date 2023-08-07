@@ -1,6 +1,5 @@
 import json
 import os
-import re
 import subprocess
 
 import requests
@@ -9,7 +8,6 @@ from dotenv import load_dotenv
 # load environment variables from .env file
 load_dotenv()
 
-# prefix DEPLOY_ for all env vars
 server_url = os.environ.get("DEPLOY_CONNECT_SERVER_URL")
 api_key = os.environ.get("DEPLOY_CONNECT_SERVER_API_KEY")
 account_name = os.environ.get("DEPLOY_SHINYAPPS_ACCOUNT_NAME")
@@ -18,7 +16,6 @@ token = os.environ.get("DEPLOY_SHINYAPPS_TOKEN")
 secret = os.environ.get("DEPLOY_SHINYAPPS_SECRET")
 
 
-# TODO make a patch request to make visibility to all for the deployed app
 def deploy_to_connect(app_name: str, app_file_path: str) -> str:
     try:
         if not api_key:
