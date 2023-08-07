@@ -9,13 +9,13 @@ from shiny.render._render import TransformerMetadata, ValueFnAsync, output_trans
 
 
 @output_transformer
-async def _render_test_text_components(
+async def TestTextTransformer(
     _meta: TransformerMetadata,
-    _fn: ValueFnAsync[str | None],
+    _afn: ValueFnAsync[str | None],
     *,
     extra_txt: Optional[str] = None,
 ) -> str | None:
-    value = await _fn()
+    value = await _afn()
     value = str(value)
     value += "; "
     value += "async" if _meta.is_async else "sync"
@@ -27,25 +27,25 @@ async def _render_test_text_components(
 @overload
 def render_test_text(
     *, extra_txt: Optional[str] = None
-) -> _render_test_text_components.OutputRendererDecorator:
+) -> TestTextTransformer.OutputRendererDecorator:
     ...
 
 
 @overload
 def render_test_text(
-    _fn: _render_test_text_components.ValueFn,
-) -> _render_test_text_components.OutputRenderer:
+    _fn: TestTextTransformer.ValueFn,
+) -> TestTextTransformer.OutputRenderer:
     ...
 
 
 def render_test_text(
-    _fn: _render_test_text_components.ValueFnOrNone = None,
+    _fn: TestTextTransformer.ValueFn | None = None,
     *,
     extra_txt: Optional[str] = None,
-) -> _render_test_text_components.OutputRendererOrDecorator:
-    return _render_test_text_components.impl(
+) -> TestTextTransformer.OutputRenderer | TestTextTransformer.OutputRendererDecorator:
+    return TestTextTransformer(
         _fn,
-        _render_test_text_components.params(extra_txt=extra_txt),
+        TestTextTransformer.params(extra_txt=extra_txt),
     )
 
 

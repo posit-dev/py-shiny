@@ -18,17 +18,17 @@ from shiny.render import TransformerMetadata, ValueFnAsync, output_transformer
 
 # Create renderer components from the async handler function: `capitalize_components()`
 @output_transformer
-async def capitalize_components(
+async def CapitalizeTransformer(
     # Contains information about the render call: `name`, `session`, `is_async`
     _meta: TransformerMetadata,
     # An async form of the app-supplied render function
-    _fn: ValueFnAsync[str | None],
+    _afn: ValueFnAsync[str | None],
     *,
     # Extra parameters that app authors can supply (e.g. `render_capitalize(to="upper")`)
     to: Literal["upper", "lower"] = "upper",
 ) -> str | None:
     # Get the value
-    value = await _fn()
+    value = await _afn()
     # Quit early if value is `None`
     if value is None:
         return None
@@ -53,7 +53,7 @@ async def capitalize_components(
 def render_capitalize(
     *,
     to: Literal["upper", "lower"] = "upper",
-) -> capitalize_components.OutputRendererDecorator:
+) -> CapitalizeTransformer.OutputRendererDecorator:
     ...
 
 
@@ -70,8 +70,8 @@ def render_capitalize(
 # Note: Return type is `type_renderer`
 @overload
 def render_capitalize(
-    _fn: capitalize_components.ValueFn,
-) -> capitalize_components.OutputRenderer:
+    _fn: CapitalizeTransformer.ValueFn,
+) -> CapitalizeTransformer.OutputRenderer:
     ...
 
 
@@ -79,13 +79,15 @@ def render_capitalize(
 # Note: `_fn` type is `type_impl_fn`
 # Note: Return type is `type_impl`
 def render_capitalize(
-    _fn: capitalize_components.ValueFnOrNone = None,
+    _fn: CapitalizeTransformer.ValueFn | None = None,
     *,
     to: Literal["upper", "lower"] = "upper",
-) -> capitalize_components.OutputRendererOrDecorator:
-    return capitalize_components.impl(
+) -> (
+    CapitalizeTransformer.OutputRenderer | CapitalizeTransformer.OutputRendererDecorator
+):
+    return CapitalizeTransformer(
         _fn,
-        capitalize_components.params(to=to),
+        CapitalizeTransformer.params(to=to),
     )
 
 

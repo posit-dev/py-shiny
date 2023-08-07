@@ -205,7 +205,7 @@ class OutputRenderer(Generic[OT], ABC):
         """
         Renderer init method
 
-        TODO: Barret
+        TODO-barret: docs
         Parameters
         ----------
         name
@@ -515,8 +515,7 @@ class OutputTransformer(Generic[IT, OT, P]):
     Output Transformer class
 
     A Transfomer takes the value returned from the user's render function, passes it
-    through the component author's transformer function, and returns the result. TODO:
-    clean up
+    through the component author's transformer function, and returns the result. TODO-barret: cleanup docs
 
     Properties
     ----------
@@ -554,8 +553,7 @@ class OutputTransformer(Generic[IT, OT, P]):
     ) -> TransformerParams[P]:
         return TransformerParams(*args, **kwargs)
 
-    # TODO: convert to __call__
-    def impl(
+    def __call__(
         self,
         value_fn: ValueFn[IT] | None,
         params: TransformerParams[P] | None = None,
@@ -576,11 +574,6 @@ class OutputTransformer(Generic[IT, OT, P]):
         self.ValueFn = ValueFn[IT]
         self.OutputRenderer = OutputRenderer[OT]
         self.OutputRendererDecorator = OutputRendererDecorator[IT, OT]
-        # TODO: Remove the following types
-        self.ValueFnOrNone = Union[ValueFn[IT], None]
-        self.OutputRendererOrDecorator = Union[
-            OutputRenderer[OT], OutputRendererDecorator[IT, OT]
-        ]
 
 
 @add_example()
@@ -719,7 +712,7 @@ def text(
     --------
     ~shiny.ui.output_text
     """
-    return TextTransformer.impl(_fn)
+    return TextTransformer(_fn)
 
 
 # ======================================================================================
@@ -890,20 +883,20 @@ def plot(
     ~shiny.ui.output_plot
     ~shiny.render.image
     """
-    return PlotTransformer.impl(_fn, PlotTransformer.params(alt=alt, **kwargs))
+    return PlotTransformer(_fn, PlotTransformer.params(alt=alt, **kwargs))
 
 
 # ======================================================================================
 # RenderImage
 # ======================================================================================
 @output_transformer
-async def _image(
+async def ImageTransformer(
     _meta: TransformerMetadata,
-    _fn: ValueFnAsync[ImgData | None],
+    _afn: ValueFnAsync[ImgData | None],
     *,
     delete_file: bool = False,
 ) -> ImgData | None:
-    res = await _fn()
+    res = await _afn()
     if res is None:
         return None
 
@@ -967,7 +960,7 @@ def image(
     ~shiny.types.ImgData
     ~shiny.render.plot
     """
-    return _image.impl(_fn, _image.params(delete_file=delete_file))
+    return ImageTransformer(_fn, ImageTransformer.params(delete_file=delete_file))
 
 
 # ======================================================================================
@@ -986,16 +979,16 @@ TableResult = Union["pd.DataFrame", PandasCompatible, None]
 
 
 @output_transformer
-async def _table(
+async def TableTransformer(
     _meta: TransformerMetadata,
-    _fn: ValueFnAsync[TableResult | None],
+    _afn: ValueFnAsync[TableResult | None],
     *,
     index: bool = False,
     classes: str = "table shiny-table w-auto",
     border: int = 0,
     **kwargs: object,
 ) -> RenderedDeps | None:
-    x = await _fn()
+    x = await _afn()
 
     if x is None:
         return None
@@ -1040,23 +1033,23 @@ def table(
     classes: str = "table shiny-table w-auto",
     border: int = 0,
     **kwargs: Any,
-) -> _table.OutputRendererDecorator:
+) -> TableTransformer.OutputRendererDecorator:
     ...
 
 
 @overload
-def table(_fn: _table.ValueFn) -> _table.OutputRenderer:
+def table(_fn: TableTransformer.ValueFn) -> TableTransformer.OutputRenderer:
     ...
 
 
 def table(
-    _fn: _table.ValueFnOrNone = None,
+    _fn: TableTransformer.ValueFn | None = None,
     *,
     index: bool = False,
     classes: str = "table shiny-table w-auto",
     border: int = 0,
     **kwargs: object,
-) -> _table.OutputRendererOrDecorator:
+) -> TableTransformer.OutputRenderer | TableTransformer.OutputRendererDecorator:
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
 
@@ -1101,9 +1094,9 @@ def table(
     --------
     ~shiny.ui.output_table for the corresponding UI component to this render function.
     """
-    return _table.impl(
+    return TableTransformer(
         _fn,
-        _table.params(
+        TableTransformer.params(
             index=index,
             classes=classes,
             border=border,
@@ -1116,11 +1109,11 @@ def table(
 # RenderUI
 # ======================================================================================
 @output_transformer
-async def _ui(
+async def UiTransformer(
     _meta: TransformerMetadata,
-    _fn: ValueFnAsync[TagChild],
+    _afn: ValueFnAsync[TagChild],
 ) -> RenderedDeps | None:
-    ui = await _fn()
+    ui = await _afn()
     if ui is None:
         return None
 
@@ -1128,18 +1121,18 @@ async def _ui(
 
 
 @overload
-def ui() -> _ui.OutputRendererDecorator:
+def ui() -> UiTransformer.OutputRendererDecorator:
     ...
 
 
 @overload
-def ui(_fn: _ui.ValueFn) -> _ui.OutputRenderer:
+def ui(_fn: UiTransformer.ValueFn) -> UiTransformer.OutputRenderer:
     ...
 
 
 def ui(
-    _fn: _ui.ValueFnOrNone = None,
-) -> _ui.OutputRendererOrDecorator:
+    _fn: UiTransformer.ValueFn | None = None,
+) -> UiTransformer.OutputRenderer | UiTransformer.OutputRendererDecorator:
     """
     Reactively render HTML content.
 
@@ -1159,4 +1152,4 @@ def ui(
     --------
     ~shiny.ui.output_ui
     """
-    return _ui.impl(_fn)
+    return UiTransformer(_fn)

@@ -217,11 +217,11 @@ DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
 # TODO-barret; Port `__name__` and `__docs__` of `value_fn`
 @output_transformer
-async def _data_frame(
+async def DataFrameTransformer(
     _meta: TransformerMetadata,
-    _fn: ValueFnAsync[DataFrameResult | None],
+    _afn: ValueFnAsync[DataFrameResult | None],
 ) -> object | None:
-    x = await _fn()
+    x = await _afn()
     if x is None:
         return None
 
@@ -235,19 +235,21 @@ async def _data_frame(
 
 
 @overload
-def data_frame() -> _data_frame.OutputRendererDecorator:
+def data_frame() -> DataFrameTransformer.OutputRendererDecorator:
     ...
 
 
 @overload
-def data_frame(_fn: _data_frame.ValueFn) -> _data_frame.OutputRenderer:
+def data_frame(
+    _fn: DataFrameTransformer.ValueFn,
+) -> DataFrameTransformer.OutputRenderer:
     ...
 
 
 @add_example()
 def data_frame(
-    _fn: _data_frame.ValueFnOrNone = None,
-) -> _data_frame.OutputRendererOrDecorator:
+    _fn: DataFrameTransformer.ValueFn | None = None,
+) -> DataFrameTransformer.OutputRenderer | DataFrameTransformer.OutputRendererDecorator:
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
 
@@ -279,7 +281,7 @@ def data_frame(
     --------
     ~shiny.ui.output_data_frame
     """
-    return _data_frame.impl(_fn)
+    return DataFrameTransformer(_fn)
 
 
 @runtime_checkable

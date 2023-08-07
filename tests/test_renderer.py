@@ -10,66 +10,66 @@ from shiny.render._render import TransformerMetadata, ValueFnAsync, output_trans
 def test_output_transformer_works():
     # No args works
     @output_transformer
-    async def test_components(
+    async def TestTransformer(
         _meta: TransformerMetadata,
-        _fn: ValueFnAsync[str],
+        _afn: ValueFnAsync[str],
     ):
         ...
 
     @overload
-    def test_renderer() -> test_components.OutputRendererDecorator:
+    def test_renderer() -> TestTransformer.OutputRendererDecorator:
         ...
 
     @overload
     def test_renderer(
-        _fn: test_components.ValueFn,
-    ) -> test_components.OutputRenderer:
+        _fn: TestTransformer.ValueFn,
+    ) -> TestTransformer.OutputRenderer:
         ...
 
     def test_renderer(
-        _fn: test_components.ValueFnOrNone = None,
-    ) -> test_components.OutputRendererOrDecorator:
-        return test_components.impl(_fn)
+        _fn: TestTransformer.ValueFn | None = None,
+    ) -> TestTransformer.OutputRenderer | TestTransformer.OutputRendererDecorator:
+        return TestTransformer(_fn)
 
 
 def test_output_transformer_kwargs_are_allowed():
     # Test that kwargs can be allowed
     @output_transformer
-    async def test_components(
+    async def TestTransformer(
         _meta: TransformerMetadata,
-        _fn: ValueFnAsync[str],
+        _afn: ValueFnAsync[str],
         *,
         y: str = "42",
     ):
         ...
 
     @overload
-    def test_renderer(*, y: str = "42") -> test_components.OutputRendererDecorator:
+    def test_renderer(*, y: str = "42") -> TestTransformer.OutputRendererDecorator:
         ...
 
     @overload
     def test_renderer(
-        _fn: test_components.ValueFn,
-    ) -> test_components.OutputRenderer:
+        _fn: TestTransformer.ValueFn,
+    ) -> TestTransformer.OutputRenderer:
         ...
 
     def test_renderer(
-        _fn: test_components.ValueFnOrNone = None,
+        _fn: TestTransformer.ValueFn | None = None,
         *,
         y: str = "42",
-    ) -> test_components.OutputRendererOrDecorator:
-        return test_components.impl(
+    ) -> TestTransformer.OutputRenderer | TestTransformer.OutputRendererDecorator:
+        return TestTransformer(
             _fn,
-            test_components.params(y=y),
+            TestTransformer.params(y=y),
         )
 
 
 def test_output_transformer_with_pass_through_kwargs():
     # No args works
     @output_transformer
-    async def test_components(
+    async def TestTransformer(
         _meta: TransformerMetadata,
-        _fn: ValueFnAsync[str],
+        _afn: ValueFnAsync[str],
         *,
         y: str = "42",
         **kwargs: float,
@@ -79,24 +79,24 @@ def test_output_transformer_with_pass_through_kwargs():
     @overload
     def test_renderer(
         *, y: str = "42", **kwargs: Any
-    ) -> test_components.OutputRendererDecorator:
+    ) -> TestTransformer.OutputRendererDecorator:
         ...
 
     @overload
     def test_renderer(
-        _fn: test_components.ValueFn,
-    ) -> test_components.OutputRenderer:
+        _fn: TestTransformer.ValueFn,
+    ) -> TestTransformer.OutputRenderer:
         ...
 
     def test_renderer(
-        _fn: test_components.ValueFnOrNone = None,
+        _fn: TestTransformer.ValueFn | None = None,
         *,
         y: str = "42",
         **kwargs: Any,
-    ) -> test_components.OutputRendererOrDecorator:
-        return test_components.impl(
+    ) -> TestTransformer.OutputRenderer | TestTransformer.OutputRendererDecorator:
+        return TestTransformer(
             _fn,
-            test_components.params(y=y, **kwargs),
+            TestTransformer.params(y=y, **kwargs),
         )
 
 
@@ -104,7 +104,7 @@ def test_output_transformer_pos_args():
     try:
 
         @output_transformer  # type: ignore
-        async def test_components(
+        async def TestTransformer(
             _meta: TransformerMetadata,
         ):
             ...
@@ -118,9 +118,9 @@ def test_output_transformer_limits_positional_arg_count():
     try:
 
         @output_transformer
-        async def test_components(
+        async def TestTransformer(
             _meta: TransformerMetadata,
-            _fn: ValueFnAsync[str],
+            _afn: ValueFnAsync[str],
             y: str,
         ):
             ...
@@ -134,9 +134,9 @@ def test_output_transformer_does_not_allow_args():
     try:
 
         @output_transformer
-        async def test_components(
+        async def TestTransformer(
             _meta: TransformerMetadata,
-            _fn: ValueFnAsync[str],
+            _afn: ValueFnAsync[str],
             *args: str,
         ):
             ...
@@ -151,9 +151,9 @@ def test_output_transformer_kwargs_have_defaults():
     try:
 
         @output_transformer
-        async def test_components(
+        async def TestTransformer(
             _meta: TransformerMetadata,
-            _fn: ValueFnAsync[str],
+            _afn: ValueFnAsync[str],
             *,
             y: str,
         ):
@@ -167,9 +167,9 @@ def test_output_transformer_kwargs_have_defaults():
 
 def test_output_transformer_result_does_not_allow_args():
     @output_transformer
-    async def test_components(
+    async def TestTransformer(
         _meta: TransformerMetadata,
-        _fn: ValueFnAsync[str],
+        _afn: ValueFnAsync[str],
     ):
         ...
 
@@ -178,7 +178,7 @@ def test_output_transformer_result_does_not_allow_args():
         return " ".join(args)
 
     try:
-        test_components.impl(
+        TestTransformer(
             render_fn_sync,
             "X",  # type: ignore
         )
@@ -192,11 +192,11 @@ async def test_renderer_handler_fn_can_be_async():
     @output_transformer
     async def async_handler(
         _meta: TransformerMetadata,
-        _fn: ValueFnAsync[str],
+        _afn: ValueFnAsync[str],
     ) -> str:
         # Actually sleep to test that the handler is truely async
         await asyncio.sleep(0.1)
-        ret = await _fn()
+        ret = await _afn()
         return ret
 
     @overload
@@ -212,7 +212,7 @@ async def test_renderer_handler_fn_can_be_async():
     def async_renderer(
         _fn: async_handler.ValueFn | None = None,
     ) -> async_handler.OutputRenderer | async_handler.OutputRendererDecorator:
-        return async_handler.impl(_fn)
+        return async_handler(_fn)
 
     test_val = "Test: Hello World!"
 
