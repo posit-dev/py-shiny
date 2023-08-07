@@ -47,7 +47,7 @@ from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect, Effect_, Value, flush, isolate
 from ..reactive._core import lock, on_flushed
-from ..render._render import Renderer
+from ..render._render import OutputRenderer
 from ..types import SafeException, SilentCancelOutputException, SilentException
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
@@ -955,7 +955,7 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    def __call__(self, renderer_fn: Renderer[Any]) -> None:
+    def __call__(self, renderer_fn: OutputRenderer[Any]) -> None:
         ...
 
     @overload
@@ -966,18 +966,18 @@ class Outputs:
         suspend_when_hidden: bool = True,
         priority: int = 0,
         name: Optional[str] = None,
-    ) -> Callable[[Renderer[Any]], None]:
+    ) -> Callable[[OutputRenderer[Any]], None]:
         ...
 
     def __call__(
         self,
-        renderer_fn: Optional[Renderer[OT]] = None,
+        renderer_fn: Optional[OutputRenderer[OT]] = None,
         *,
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
         name: Optional[str] = None,
-    ) -> None | Callable[[Renderer[OT]], None]:
+    ) -> None | Callable[[OutputRenderer[OT]], None]:
         if name is not None:
             from .. import _deprecated
 
@@ -986,11 +986,11 @@ class Outputs:
             )
             id = name
 
-        def set_renderer(renderer_fn: Renderer[OT]) -> None:
+        def set_renderer(renderer_fn: OutputRenderer[OT]) -> None:
             # Get the (possibly namespaced) output id
             output_name = self._ns(id or renderer_fn.__name__)
 
-            if not isinstance(renderer_fn, Renderer):
+            if not isinstance(renderer_fn, OutputRenderer):
                 raise TypeError(
                     "`@output` must be applied to a `@render.xx` function.\n"
                     + "In other words, `@output` must be above `@render.xx`."

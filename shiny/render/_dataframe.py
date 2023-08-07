@@ -14,7 +14,7 @@ from typing import (
 )
 
 from .._docstring import add_example
-from . import RenderFnAsync, RenderMeta, renderer_components
+from . import TransformerMetadata, ValueFnAsync, output_transformer
 from ._dataframe_unsafe import serialize_numpy_dtypes
 
 if TYPE_CHECKING:
@@ -216,10 +216,10 @@ DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
 
 # TODO-barret; Port `__name__` and `__docs__` of `value_fn`
-@renderer_components
+@output_transformer
 async def _data_frame(
-    _meta: RenderMeta,
-    _fn: RenderFnAsync[DataFrameResult | None],
+    _meta: TransformerMetadata,
+    _fn: ValueFnAsync[DataFrameResult | None],
 ) -> object | None:
     x = await _fn()
     if x is None:
@@ -235,17 +235,19 @@ async def _data_frame(
 
 
 @overload
-def data_frame() -> _data_frame.type_decorator:
+def data_frame() -> _data_frame.OutputRendererDecorator:
     ...
 
 
 @overload
-def data_frame(_fn: _data_frame.type_renderer_fn) -> _data_frame.type_renderer:
+def data_frame(_fn: _data_frame.ValueFn) -> _data_frame.OutputRenderer:
     ...
 
 
 @add_example()
-def data_frame(_fn: _data_frame.type_impl_fn = None) -> _data_frame.type_impl:
+def data_frame(
+    _fn: _data_frame.ValueFnOrNone = None,
+) -> _data_frame.OutputRendererOrDecorator:
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
 

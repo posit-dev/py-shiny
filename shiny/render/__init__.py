@@ -17,11 +17,11 @@ from ._render import (  # noqa: F401
     # These values need ` as FOO` as the variable is not used in `__all__` and causes an
     # reportUnusedImport error from pylance.
     # Using the same name is allowed.
-    RenderMeta as RenderMeta,
-    RenderFnAsync as RenderFnAsync,
-    RendererParams as RendererParams,
-    RendererComponents as RendererComponents,
-    renderer_components as renderer_components,
+    TransformerMetadata as TransformerMetadata,
+    ValueFnAsync as ValueFnAsync,
+    TransformerParams as TransformerParams,
+    OutputTransformer as OutputTransformer,
+    output_transformer as output_transformer,
     # Deprecated / legacy classes
     RenderFunction as RenderFunction,
     RenderFunctionAsync as RenderFunctionAsync,

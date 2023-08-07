@@ -4,72 +4,72 @@ from typing import Any, overload
 import pytest
 
 from shiny._utils import is_async_callable
-from shiny.render._render import RenderFnAsync, RenderMeta, renderer_components
+from shiny.render._render import TransformerMetadata, ValueFnAsync, output_transformer
 
 
-def test_renderer_components_works():
+def test_output_transformer_works():
     # No args works
-    @renderer_components
+    @output_transformer
     async def test_components(
-        _meta: RenderMeta,
-        _fn: RenderFnAsync[str],
+        _meta: TransformerMetadata,
+        _fn: ValueFnAsync[str],
     ):
         ...
 
     @overload
-    def test_renderer() -> test_components.type_decorator:
+    def test_renderer() -> test_components.OutputRendererDecorator:
         ...
 
     @overload
     def test_renderer(
-        _fn: test_components.type_renderer_fn,
-    ) -> test_components.type_renderer:
+        _fn: test_components.ValueFn,
+    ) -> test_components.OutputRenderer:
         ...
 
     def test_renderer(
-        _fn: test_components.type_impl_fn = None,
-    ) -> test_components.type_impl:
+        _fn: test_components.ValueFnOrNone = None,
+    ) -> test_components.OutputRendererOrDecorator:
         return test_components.impl(_fn)
 
 
-def test_renderer_components_kwargs_are_allowed():
+def test_output_transformer_kwargs_are_allowed():
     # Test that kwargs can be allowed
-    @renderer_components
+    @output_transformer
     async def test_components(
-        _meta: RenderMeta,
-        _fn: RenderFnAsync[str],
+        _meta: TransformerMetadata,
+        _fn: ValueFnAsync[str],
         *,
         y: str = "42",
     ):
         ...
 
     @overload
-    def test_renderer(*, y: str = "42") -> test_components.type_decorator:
+    def test_renderer(*, y: str = "42") -> test_components.OutputRendererDecorator:
         ...
 
     @overload
     def test_renderer(
-        _fn: test_components.type_renderer_fn,
-    ) -> test_components.type_renderer:
+        _fn: test_components.ValueFn,
+    ) -> test_components.OutputRenderer:
         ...
 
     def test_renderer(
-        _fn: test_components.type_impl_fn = None,
+        _fn: test_components.ValueFnOrNone = None,
         *,
         y: str = "42",
-    ) -> test_components.type_impl:
+    ) -> test_components.OutputRendererOrDecorator:
         return test_components.impl(
             _fn,
             test_components.params(y=y),
         )
 
 
-def test_renderer_components_with_pass_through_kwargs():
+def test_output_transformer_with_pass_through_kwargs():
     # No args works
-    @renderer_components
+    @output_transformer
     async def test_components(
-        _meta: RenderMeta,
-        _fn: RenderFnAsync[str],
+        _meta: TransformerMetadata,
+        _fn: ValueFnAsync[str],
         *,
         y: str = "42",
         **kwargs: float,
@@ -79,33 +79,33 @@ def test_renderer_components_with_pass_through_kwargs():
     @overload
     def test_renderer(
         *, y: str = "42", **kwargs: Any
-    ) -> test_components.type_decorator:
+    ) -> test_components.OutputRendererDecorator:
         ...
 
     @overload
     def test_renderer(
-        _fn: test_components.type_renderer_fn,
-    ) -> test_components.type_renderer:
+        _fn: test_components.ValueFn,
+    ) -> test_components.OutputRenderer:
         ...
 
     def test_renderer(
-        _fn: test_components.type_impl_fn = None,
+        _fn: test_components.ValueFnOrNone = None,
         *,
         y: str = "42",
         **kwargs: Any,
-    ) -> test_components.type_impl:
+    ) -> test_components.OutputRendererOrDecorator:
         return test_components.impl(
             _fn,
             test_components.params(y=y, **kwargs),
         )
 
 
-def test_renderer_components_pos_args():
+def test_output_transformer_pos_args():
     try:
 
-        @renderer_components  # type: ignore
+        @output_transformer  # type: ignore
         async def test_components(
-            _meta: RenderMeta,
+            _meta: TransformerMetadata,
         ):
             ...
 
@@ -114,13 +114,13 @@ def test_renderer_components_pos_args():
         assert "must have 2 positional parameters" in str(e)
 
 
-def test_renderer_components_limits_positional_arg_count():
+def test_output_transformer_limits_positional_arg_count():
     try:
 
-        @renderer_components
+        @output_transformer
         async def test_components(
-            _meta: RenderMeta,
-            _fn: RenderFnAsync[str],
+            _meta: TransformerMetadata,
+            _fn: ValueFnAsync[str],
             y: str,
         ):
             ...
@@ -130,13 +130,13 @@ def test_renderer_components_limits_positional_arg_count():
         assert "more than 2 positional" in str(e)
 
 
-def test_renderer_components_does_not_allow_args():
+def test_output_transformer_does_not_allow_args():
     try:
 
-        @renderer_components
+        @output_transformer
         async def test_components(
-            _meta: RenderMeta,
-            _fn: RenderFnAsync[str],
+            _meta: TransformerMetadata,
+            _fn: ValueFnAsync[str],
             *args: str,
         ):
             ...
@@ -147,13 +147,13 @@ def test_renderer_components_does_not_allow_args():
         assert "No variadic positional parameters" in str(e)
 
 
-def test_renderer_components_kwargs_have_defaults():
+def test_output_transformer_kwargs_have_defaults():
     try:
 
-        @renderer_components
+        @output_transformer
         async def test_components(
-            _meta: RenderMeta,
-            _fn: RenderFnAsync[str],
+            _meta: TransformerMetadata,
+            _fn: ValueFnAsync[str],
             *,
             y: str,
         ):
@@ -165,11 +165,11 @@ def test_renderer_components_kwargs_have_defaults():
         assert "did not have a default value" in str(e)
 
 
-def test_renderer_components_result_does_not_allow_args():
-    @renderer_components
+def test_output_transformer_result_does_not_allow_args():
+    @output_transformer
     async def test_components(
-        _meta: RenderMeta,
-        _fn: RenderFnAsync[str],
+        _meta: TransformerMetadata,
+        _fn: ValueFnAsync[str],
     ):
         ...
 
@@ -189,10 +189,10 @@ def test_renderer_components_result_does_not_allow_args():
 
 @pytest.mark.asyncio
 async def test_renderer_handler_fn_can_be_async():
-    @renderer_components
+    @output_transformer
     async def async_handler(
-        _meta: RenderMeta,
-        _fn: RenderFnAsync[str],
+        _meta: TransformerMetadata,
+        _fn: ValueFnAsync[str],
     ) -> str:
         # Actually sleep to test that the handler is truely async
         await asyncio.sleep(0.1)
@@ -200,18 +200,18 @@ async def test_renderer_handler_fn_can_be_async():
         return ret
 
     @overload
-    def async_renderer() -> async_handler.type_decorator:
+    def async_renderer() -> async_handler.OutputRendererDecorator:
         ...
 
     @overload
     def async_renderer(
-        _fn: async_handler.type_renderer_fn,
-    ) -> async_handler.type_renderer:
+        _fn: async_handler.ValueFn,
+    ) -> async_handler.OutputRenderer:
         ...
 
     def async_renderer(
-        _fn: async_handler.type_impl_fn = None,
-    ) -> async_handler.type_impl:
+        _fn: async_handler.ValueFn | None = None,
+    ) -> async_handler.OutputRenderer | async_handler.OutputRendererDecorator:
         return async_handler.impl(_fn)
 
     test_val = "Test: Hello World!"
