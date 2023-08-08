@@ -57,7 +57,7 @@ def render_capitalize(
     ...
 
 
-# Second, create an overload where users are not using parenthesis to the method.
+# Second, create an overload where users are not using parentheses to the method.
 # While it doesn't look necessary, it is needed for the type checker.
 # Example of usage:
 # ```
@@ -98,7 +98,7 @@ def render_capitalize(
 app_ui = ui.page_fluid(
     ui.h1("Capitalization renderer"),
     ui.input_text("caption", "Caption:", "Data summary"),
-    "No parenthesis:",
+    "No parentheses:",
     ui.output_text_verbatim("no_parens"),
     "To upper:",
     ui.output_text_verbatim("to_upper"),

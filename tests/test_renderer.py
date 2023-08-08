@@ -180,7 +180,7 @@ def test_output_transformer_result_does_not_allow_args():
     try:
         TestTransformer(
             render_fn_sync,
-            "X",  # type: ignore
+            "X",  # pyright: ignore[reportGeneralTypeIssues]
         )
         raise RuntimeError()
     except TypeError as e:
