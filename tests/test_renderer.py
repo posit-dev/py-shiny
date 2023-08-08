@@ -191,65 +191,146 @@ def test_output_transformer_result_does_not_allow_args():
         assert "Expected `params` to be of type `RendererParams`" in str(e)
 
 
-# # "Currently, `ValueFnAsync` can not be truely async and "
-# # "support sync render methods"
-# @pytest.mark.asyncio
-# async def test_renderer_handler_fn_can_be_async():
-#     @output_transformer
-#     async def AsyncTransformer(
-#         _meta: TransformerMetadata,
-#         _afn: ValueFnAsync[str],
-#     ) -> str:
-#         # Actually sleep to test that the handler is truely async
-#         await asyncio.sleep(0.1)
-#         ret = await _afn()
-#         return ret
+# "Currently, `ValueFnAsync` can not be truely async and "
+# "support sync render methods"
+@pytest.mark.asyncio
+async def test_renderer_handler_fn_can_be_async():
+    @output_transformer
+    async def AsyncTransformer(
+        _meta: TransformerMetadata,
+        _afn: ValueFnAsync[str],
+    ) -> str:
+        # Actually sleep to test that the handler is truely async
+        await asyncio.sleep(0.1)
+        ret = await _afn()
+        return ret
 
-#     @overload
-#     def async_renderer() -> AsyncTransformer.OutputRendererDecorator:
-#         ...
+    # ## Setup overloads =============================================
 
-#     @overload
-#     def async_renderer(
-#         _fn: AsyncTransformer.ValueFn,
-#     ) -> AsyncTransformer.OutputRenderer:
-#         ...
+    @overload
+    def async_renderer() -> AsyncTransformer.OutputRendererDecorator:
+        ...
 
-#     def async_renderer(
-#         _fn: AsyncTransformer.ValueFn | None = None,
-#     ) -> AsyncTransformer.OutputRenderer | AsyncTransformer.OutputRendererDecorator:
-#         return AsyncTransformer(_fn)
+    @overload
+    def async_renderer(
+        _fn: AsyncTransformer.ValueFn,
+    ) -> AsyncTransformer.OutputRenderer:
+        ...
 
-#     test_val = "Test: Hello World!"
+    def async_renderer(
+        _fn: AsyncTransformer.ValueFn | None = None,
+    ) -> AsyncTransformer.OutputRenderer | AsyncTransformer.OutputRendererDecorator:
+        return AsyncTransformer(_fn)
 
-#     def app_render_fn() -> str:
-#         return test_val
+    test_val = "Test: Hello World!"
 
-#     renderer_sync = async_renderer(app_render_fn)
-#     renderer_sync._set_metadata(
-#         None,  # pyright: ignore[reportGeneralTypeIssues]
-#         "renderer_sync",
-#     )
-#     if is_async_callable(renderer_sync):
-#         raise RuntimeError("Expected `renderer_sync` to be a sync function")
+    def app_render_fn() -> str:
+        return test_val
 
-#     # !! This line is currently not possible !!
-#     ret = renderer_sync()
-#     assert ret == test_val
+    # ## Test Sync: X =============================================
 
-#     async_test_val = "Async: Hello World!"
+    renderer_sync = async_renderer(app_render_fn)
+    renderer_sync._set_metadata(
+        None,  # pyright: ignore[reportGeneralTypeIssues]
+        "renderer_sync",
+    )
+    if is_async_callable(renderer_sync):
+        raise RuntimeError("Expected `renderer_sync` to be a sync function")
 
-#     async def async_app_render_fn() -> str:
-#         await asyncio.sleep(0.1)
-#         return async_test_val
+    # !! This line is currently not possible !!
+    try:
+        ret = renderer_sync()
+        raise Exception("Expected an exception to occur while calling `renderer_sync`")
+        assert ret == test_val
+    except RuntimeError as e:
+        assert "async function yielded control" in str(e)
 
-#     renderer_async = async_renderer(async_app_render_fn)
-#     renderer_async._set_metadata(
-#         None,  # pyright: ignore[reportGeneralTypeIssues]
-#         "renderer_async",
-#     )
-#     if not is_async_callable(renderer_async):
-#         raise RuntimeError("Expected `renderer_async` to be a coro function")
+    # ## Test Async: √ =============================================
 
-#     ret = await renderer_async()
-#     assert ret == test_val
+    async_test_val = "Async: Hello World!"
+
+    async def async_app_render_fn() -> str:
+        await asyncio.sleep(0.1)
+        return async_test_val
+
+    renderer_async = async_renderer(async_app_render_fn)
+    renderer_async._set_metadata(
+        None,  # pyright: ignore[reportGeneralTypeIssues]
+        "renderer_async",
+    )
+    if not is_async_callable(renderer_async):
+        raise RuntimeError("Expected `renderer_async` to be a coro function")
+
+    ret = await renderer_async()
+    assert ret == async_test_val
+
+
+# "Currently, `ValueFnAsync` can not be truely async and "
+# "support sync render methods"
+@pytest.mark.asyncio
+async def test_renderer_handler_fn_can_be_yield_while_async():
+    @output_transformer
+    async def YieldTransformer(
+        _meta: TransformerMetadata,
+        _afn: ValueFnAsync[str],
+    ) -> str:
+        # Only yield if the handler is async
+        if _meta.is_async:
+            # Actually sleep to test that the handler is truely async
+            await asyncio.sleep(0.1)
+        ret = await _afn()
+        return ret
+
+    # ## Setup overloads =============================================
+
+    @overload
+    def yield_renderer() -> YieldTransformer.OutputRendererDecorator:
+        ...
+
+    @overload
+    def yield_renderer(
+        _fn: YieldTransformer.ValueFn,
+    ) -> YieldTransformer.OutputRenderer:
+        ...
+
+    def yield_renderer(
+        _fn: YieldTransformer.ValueFn | None = None,
+    ) -> YieldTransformer.OutputRenderer | YieldTransformer.OutputRendererDecorator:
+        return YieldTransformer(_fn)
+
+    test_val = "Test: Hello World!"
+
+    def app_render_fn() -> str:
+        return test_val
+
+    # ## Test Sync: √ =============================================
+
+    renderer_sync = yield_renderer(app_render_fn)
+    renderer_sync._set_metadata(
+        None,  # pyright: ignore[reportGeneralTypeIssues]
+        "renderer_sync",
+    )
+    if is_async_callable(renderer_sync):
+        raise RuntimeError("Expected `renderer_sync` to be a sync function")
+
+    ret = renderer_sync()
+    assert ret == test_val
+
+    # ## Test Async: √ =============================================
+
+    async_test_val = "Async: Hello World!"
+
+    async def async_app_render_fn() -> str:
+        await asyncio.sleep(0.1)
+        return async_test_val
+
+    renderer_async = yield_renderer(async_app_render_fn)
+    renderer_async._set_metadata(
+        None,  # pyright: ignore[reportGeneralTypeIssues]
+        "renderer_async",
+    )
+    if not is_async_callable(renderer_async):
+        raise RuntimeError("Expected `renderer_async` to be a coro function")
+
+    ret = await renderer_async()
+    assert ret == async_test_val
