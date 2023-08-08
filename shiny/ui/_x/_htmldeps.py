@@ -34,6 +34,7 @@ def sidebar_dependency() -> HTMLDependency:
             "subdir": _x_sidebar_path,
         },
         script={"src": "sidebar.min.js"},
+        stylesheet={"href": "sidebar.css"},
         all_files=True,
     )
 
