@@ -14,8 +14,8 @@ from typing import (
 )
 
 from .._docstring import add_example
-from . import TransformerMetadata, ValueFnAsync, output_transformer
 from ._dataframe_unsafe import serialize_numpy_dtypes
+from .transformer import TransformerMetadata, ValueFnAsync, output_transformer
 
 if TYPE_CHECKING:
     import pandas as pd
