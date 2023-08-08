@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Fixed #666: Added missing sidebar stylesheet dependency. (#667)
+
 ### Other changes
 
 
