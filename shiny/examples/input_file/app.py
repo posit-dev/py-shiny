@@ -42,6 +42,8 @@ def server(input: Inputs, output: Outputs, session: Session):
             }
         )
 
+        # input.stats() is a list of strings; subset the columns based on the selected
+        # checkboxes
         return info_df.loc[:, input.stats()]
 
 
