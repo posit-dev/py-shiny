@@ -5,7 +5,10 @@ from shiny import App, reactive, render, ui
 app_ui = ui.page_fluid(
     ui.input_file("file1", "Upload a CSV file", accept=".csv"),
     ui.input_checkbox_group(
-        "stats", "Summary Stats", choices=["Row Count", "Column Count", "Column Names"]
+        "stats",
+        "Summary Stats",
+        choices=["Row Count", "Column Count", "Column Names"],
+        selected=["Row Count", "Column Count", "Column Names"],
     ),
     ui.output_table("summary"),
 )

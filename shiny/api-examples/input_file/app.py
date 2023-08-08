@@ -1,20 +1,24 @@
 import pandas as pd
 
-from shiny import App, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny.types import FileInfo
 
 app_ui = ui.page_fluid(
-    ui.input_file("file", "File", accept=".csv"),
+    ui.input_file("file1", "Choose CSV File", accept=[".csv"], multiple=False),
     ui.input_checkbox_group(
-        "stats", "Summary Stats", choices=["Row Count", "Column Count", "Column Names"]
+        "stats",
+        "Summary Stats",
+        choices=["Row Count", "Column Count", "Column Names"],
+        selected=["Row Count", "Column Count", "Column Names"],
     ),
     ui.output_table("summary"),
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Calc
     def parsed_file():
-        file = input.file()
+        file: list[FileInfo] = input.file1()
         if file is None:
             return pd.DataFrame()
         return pd.read_csv(file[0]["datapath"])
@@ -42,6 +46,8 @@ def server(input, output, session):
             }
         )
 
+        # input.stats() is a list of strings; subset the columns based on the selected
+        # checkboxes
         return info_df.loc[:, input.stats()]
 
 
