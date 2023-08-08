@@ -11,7 +11,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Calc
     def parsed_file():
         file = input.file()
