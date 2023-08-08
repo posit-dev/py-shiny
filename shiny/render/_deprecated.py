@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Generic
 
-from transformer._transformer import (
+from .transformer._transformer import (
     IT,
     OT,
     OutputRendererAsync,

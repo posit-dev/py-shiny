@@ -22,7 +22,7 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ..render._render import OutputRenderer
+from ..render.transformer import OutputRenderer
 from ..types import MISSING, MISSING_TYPE, ActionButtonValue, SilentException
 from ._core import Context, Dependents, ReactiveWarning, isolate
 

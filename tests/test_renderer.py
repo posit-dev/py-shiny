@@ -4,7 +4,11 @@ from typing import Any, overload
 import pytest
 
 from shiny._utils import is_async_callable
-from shiny.render._render import TransformerMetadata, ValueFnAsync, output_transformer
+from shiny.render.transformer import (
+    TransformerMetadata,
+    ValueFnAsync,
+    output_transformer,
+)
 
 
 def test_output_transformer_works():
