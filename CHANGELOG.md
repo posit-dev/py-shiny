@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+Fixes #646: Wrap bare value box value in `<p />` tags. (#668)
+
 ### Other changes
 
 
