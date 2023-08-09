@@ -131,7 +131,7 @@ def page_navbar(
         Choose a particular nav item to select by default value (should match it's
         ``value``).
     sidebar
-        A :func:`~shiny.ui.sidebar` component to display on every page.
+        A :func:`~shiny.experimental.ui.sidebar` component to display on every page.
     fillable
         Whether or not the main content area should be considered a fillable
         (i.e., flexbox) container.
