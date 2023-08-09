@@ -12,6 +12,7 @@ from .transformer._transformer import (
     OutputRendererSync,
     TransformerMetadata,
     TransformerParams,
+    ValueFn,
     ValueFnAsync,
     ValueFnSync,
 )
@@ -39,7 +40,7 @@ class RenderFunction(Generic[IT, OT], OutputRendererSync[OT], ABC):
         ...
 
     def __init__(self, fn: ValueFnSync[IT]) -> None:
-        async def transformer(_meta: TransformerMetadata, _fn: ValueFnAsync[IT]) -> OT:
+        async def transformer(_meta: TransformerMetadata, _fn: ValueFn[IT]) -> OT:
             ret = await self.run()
             return ret
 
@@ -68,7 +69,7 @@ class RenderFunctionAsync(Generic[IT, OT], OutputRendererAsync[OT], ABC):
         ...
 
     def __init__(self, fn: ValueFnAsync[IT]) -> None:
-        async def transformer(_meta: TransformerMetadata, _fn: ValueFnAsync[IT]) -> OT:
+        async def transformer(_meta: TransformerMetadata, _fn: ValueFn[IT]) -> OT:
             ret = await self.run()
             return ret
 

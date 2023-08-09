@@ -35,7 +35,13 @@ from .. import _utils
 from .._namespaces import ResolvedId
 from ..types import ImgData
 from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_plotnine
-from .transformer import TransformerMetadata, ValueFnAsync, output_transformer
+from .transformer import (
+    TransformerMetadata,
+    ValueFn,
+    is_async_callable,
+    output_transformer,
+    resolve_value_fn,
+)
 
 # ======================================================================================
 # RenderText
@@ -45,9 +51,9 @@ from .transformer import TransformerMetadata, ValueFnAsync, output_transformer
 @output_transformer
 async def TextTransformer(
     _meta: TransformerMetadata,
-    _afn: ValueFnAsync[str | None],
+    _fn: ValueFn[str | None],
 ) -> str | None:
-    value = await _afn()
+    value = await resolve_value_fn(_fn)
     if value is None:
         return None
     return str(value)
@@ -98,12 +104,12 @@ def text(
 @output_transformer
 async def PlotTransformer(
     _meta: TransformerMetadata,
-    _afn: ValueFnAsync[ImgData | None],
+    _fn: ValueFn[ImgData | None],
     *,
     alt: Optional[str] = None,
     **kwargs: object,
 ) -> ImgData | None:
-    is_userfn_async = _meta.is_async
+    is_userfn_async = is_async_callable(_fn)
     name = _meta.name
     session = _meta.session
 
@@ -122,7 +128,8 @@ async def PlotTransformer(
         float, inputs[ResolvedId(f".clientdata_output_{name}_height")]()
     )
 
-    x = await _afn()
+    # Call the user function to get the plot object.
+    x = await resolve_value_fn(_fn)
 
     # Note that x might be None; it could be a matplotlib.pyplot
 
@@ -265,11 +272,11 @@ def plot(
 @output_transformer
 async def ImageTransformer(
     _meta: TransformerMetadata,
-    _afn: ValueFnAsync[ImgData | None],
+    _fn: ValueFn[ImgData | None],
     *,
     delete_file: bool = False,
 ) -> ImgData | None:
-    res = await _afn()
+    res = await resolve_value_fn(_fn)
     if res is None:
         return None
 
@@ -351,14 +358,14 @@ TableResult = Union["pd.DataFrame", PandasCompatible, None]
 @output_transformer
 async def TableTransformer(
     _meta: TransformerMetadata,
-    _afn: ValueFnAsync[TableResult | None],
+    _fn: ValueFn[TableResult | None],
     *,
     index: bool = False,
     classes: str = "table shiny-table w-auto",
     border: int = 0,
     **kwargs: object,
 ) -> RenderedDeps | None:
-    x = await _afn()
+    x = await resolve_value_fn(_fn)
 
     if x is None:
         return None
@@ -481,9 +488,9 @@ def table(
 @output_transformer
 async def UiTransformer(
     _meta: TransformerMetadata,
-    _afn: ValueFnAsync[TagChild],
+    _fn: ValueFn[TagChild],
 ) -> RenderedDeps | None:
-    ui = await _afn()
+    ui = await resolve_value_fn(_fn)
     if ui is None:
         return None
 

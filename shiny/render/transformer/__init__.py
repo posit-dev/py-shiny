@@ -4,8 +4,9 @@ from ._transformer import (
     OutputRenderer,
     OutputTransformer,
     ValueFn,
-    ValueFnAsync,
     output_transformer,
+    is_async_callable,
+    resolve_value_fn,
 )
 
 __all__ = (
@@ -14,6 +15,7 @@ __all__ = (
     "OutputRenderer",
     "OutputTransformer",
     "ValueFn",
-    "ValueFnAsync",
     "output_transformer",
+    "is_async_callable",
+    "resolve_value_fn",
 )

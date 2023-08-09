@@ -5,20 +5,26 @@ from __future__ import annotations
 from typing import Optional, overload
 
 from shiny import App, Inputs, Outputs, Session, ui
-from shiny.render._render import TransformerMetadata, ValueFnAsync, output_transformer
+from shiny.render._render import (
+    TransformerMetadata,
+    ValueFn,
+    is_async_callable,
+    output_transformer,
+    resolve_value_fn,
+)
 
 
 @output_transformer
 async def TestTextTransformer(
     _meta: TransformerMetadata,
-    _afn: ValueFnAsync[str | None],
+    _fn: ValueFn[str | None],
     *,
     extra_txt: Optional[str] = None,
 ) -> str | None:
-    value = await _afn()
+    value = await resolve_value_fn(_fn)
     value = str(value)
     value += "; "
-    value += "async" if _meta.is_async else "sync"
+    value += "async" if is_async_callable(_fn) else "sync"
     if extra_txt:
         value = value + "; " + str(extra_txt)
     return value

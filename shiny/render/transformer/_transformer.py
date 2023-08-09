@@ -1,5 +1,3 @@
-# Needed for types imported only during TYPE_CHECKING with Python 3.7 - 3.9
-# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
 __all__ = (
@@ -158,9 +156,7 @@ synchronous or asynchronous.
 
 # `TransformFn` is a package author function that transforms an object of type `IT` into
 # type `OT`.
-TransformFn = Callable[
-    Concatenate[TransformerMetadata, ValueFnAsync[IT], P], Awaitable[OT]
-]
+TransformFn = Callable[Concatenate[TransformerMetadata, ValueFn[IT], P], Awaitable[OT]]
 """
 Package author function that transforms an object of type `IT` into type `OT`. It should
 be defined as an asynchronous function but should only asynchronously yield when the
@@ -255,8 +251,7 @@ class OutputRenderer(Generic[OT], ABC):
             )
 
         self._is_async = is_async_callable(value_fn)
-        # TODO-barret; Do not wrap!!
-        self._value_fn = _utils.wrap_async(value_fn)
+        self._value_fn = value_fn
         self._transformer = transform_fn
         self._params = params
 
@@ -446,9 +441,9 @@ the value) and returns an :class:`~shiny.render.transformer.OutputRenderer`.
 """
 
 # Signature of a decorator that can be called with and without parentheses
-# With parens returns a `Renderer[OT]`
-# Without parens returns a `RendererDeco[IT, OT]`
-OutputRendererImplFn = Callable[
+# With parens returns a `OutputRenderer[OT]`
+# Without parens returns a `OutputRendererDeco[IT, OT]`
+OutputTransformerFn = Callable[
     [
         Optional[ValueFn[IT]],
         TransformerParams[P],
@@ -521,7 +516,7 @@ class OutputTransformer(Generic[IT, OT, P]):
 
     def __init__(
         self,
-        fn: OutputRendererImplFn[IT, P, OT],
+        fn: OutputTransformerFn[IT, P, OT],
     ) -> None:
         self._fn = fn
         self.ValueFn = ValueFn[IT]
@@ -607,11 +602,11 @@ def output_transformer(
     _assert_transformer(transform_fn)
 
     def renderer_decorator(
-        value_fn: ValueFnSync[IT] | ValueFnAsync[IT] | None,
+        value_fn: ValueFn[IT] | None,
         params: TransformerParams[P],
     ) -> OutputRenderer[OT] | OutputRendererDecorator[IT, OT]:
         def as_value_fn(
-            fn: ValueFnSync[IT] | ValueFnAsync[IT],
+            fn: ValueFn[IT],
         ) -> OutputRenderer[OT]:
             if is_async_callable(fn):
                 return OutputRendererAsync(fn, transform_fn, params)
@@ -626,3 +621,52 @@ def output_transformer(
         return val
 
     return OutputTransformer(renderer_decorator)
+
+
+async def resolve_value_fn(value_fn: ValueFn[IT]) -> IT:
+    """
+    Resolve the value function
+
+    This function is used to resolve the value function (`value_fn`) to an object of
+    type `IT`. If the value function is asynchronous, it will be awaited. If the value
+    function is synchronous, it will be called.
+
+    While always using an async method within an output transform function is not
+    appropriate, this method may be used, avoiding the boilerplate of "if is async, then
+    await value_fn() else cast as synchronous and return value_fn()".
+
+    Replace this:
+    ```python
+    if is_async_callable(_fn):
+        x = await _fn()
+    else:
+        x = _fn()
+    ```
+
+    With this:
+    ```python
+    x = await resolve_value_fn(_fn)
+    ```
+
+    This substitution is safe as the implementation does not actually asynchronously
+    yield to another process if the `value_fn` is synchronous. The `__call__` method of
+    the :class:`~shiny.render.transformer.OutputRendererSync` is built to execute
+    asynchronously defined methods that execute synchronously.
+
+    Parameters
+    ----------
+    value_fn
+        App-supplied output value function which returns type `IT`. This function can be
+        synchronous or asynchronous.
+
+    Returns
+    -------
+    :
+        The resolved value from `value_fn`.
+    """
+    if is_async_callable(value_fn):
+        return await value_fn()
+    else:
+        # To avoid duplicate work just for a typeguard, we cast the function
+        value_fn = cast(ValueFnSync[IT], value_fn)
+        return value_fn()

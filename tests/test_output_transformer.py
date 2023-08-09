@@ -6,8 +6,9 @@ import pytest
 from shiny._utils import is_async_callable
 from shiny.render.transformer import (
     TransformerMetadata,
-    ValueFnAsync,
+    ValueFn,
     output_transformer,
+    resolve_value_fn,
 )
 
 
@@ -16,7 +17,7 @@ def test_output_transformer_works():
     @output_transformer
     async def TestTransformer(
         _meta: TransformerMetadata,
-        _afn: ValueFnAsync[str],
+        _fn: ValueFn[str],
     ):
         ...
 
@@ -41,7 +42,7 @@ def test_output_transformer_kwargs_are_allowed():
     @output_transformer
     async def TestTransformer(
         _meta: TransformerMetadata,
-        _afn: ValueFnAsync[str],
+        _fn: ValueFn[str],
         *,
         y: str = "42",
     ):
@@ -73,7 +74,7 @@ def test_output_transformer_with_pass_through_kwargs():
     @output_transformer
     async def TestTransformer(
         _meta: TransformerMetadata,
-        _afn: ValueFnAsync[str],
+        _fn: ValueFn[str],
         *,
         y: str = "42",
         **kwargs: float,
@@ -124,7 +125,7 @@ def test_output_transformer_limits_positional_arg_count():
         @output_transformer
         async def TestTransformer(
             _meta: TransformerMetadata,
-            _afn: ValueFnAsync[str],
+            _fn: ValueFn[str],
             y: str,
         ):
             ...
@@ -140,7 +141,7 @@ def test_output_transformer_does_not_allow_args():
         @output_transformer
         async def TestTransformer(
             _meta: TransformerMetadata,
-            _afn: ValueFnAsync[str],
+            _fn: ValueFn[str],
             *args: str,
         ):
             ...
@@ -157,7 +158,7 @@ def test_output_transformer_kwargs_have_defaults():
         @output_transformer
         async def TestTransformer(
             _meta: TransformerMetadata,
-            _afn: ValueFnAsync[str],
+            _fn: ValueFn[str],
             *,
             y: str,
         ):
@@ -173,7 +174,7 @@ def test_output_transformer_result_does_not_allow_args():
     @output_transformer
     async def TestTransformer(
         _meta: TransformerMetadata,
-        _afn: ValueFnAsync[str],
+        _fn: ValueFn[str],
     ):
         ...
 
@@ -188,21 +189,20 @@ def test_output_transformer_result_does_not_allow_args():
         )
         raise RuntimeError()
     except TypeError as e:
-        assert "Expected `params` to be of type `RendererParams`" in str(e)
+        assert "Expected `params` to be of type `TransformerParams`" in str(e)
 
 
-# "Currently, `ValueFnAsync` can not be truely async and "
-# "support sync render methods"
+# "Currently, `ValueFn` can not be truely async and "support sync render methods"
 @pytest.mark.asyncio
 async def test_renderer_handler_fn_can_be_async():
     @output_transformer
     async def AsyncTransformer(
         _meta: TransformerMetadata,
-        _afn: ValueFnAsync[str],
+        _fn: ValueFn[str],
     ) -> str:
         # Actually sleep to test that the handler is truely async
         await asyncio.sleep(0.1)
-        ret = await _afn()
+        ret = await resolve_value_fn(_fn)
         return ret
 
     # ## Setup overloads =============================================
@@ -265,20 +265,19 @@ async def test_renderer_handler_fn_can_be_async():
     assert ret == async_test_val
 
 
-# "Currently, `ValueFnAsync` can not be truely async and "
-# "support sync render methods"
+# "Currently, `ValueFnA` can not be truely async and "support sync render methods".
+# Test that conditionally calling async works.
 @pytest.mark.asyncio
 async def test_renderer_handler_fn_can_be_yield_while_async():
     @output_transformer
     async def YieldTransformer(
         _meta: TransformerMetadata,
-        _afn: ValueFnAsync[str],
+        _fn: ValueFn[str],
     ) -> str:
-        # Only yield if the handler is async
-        if _meta.is_async:
+        if is_async_callable(_fn):
             # Actually sleep to test that the handler is truely async
             await asyncio.sleep(0.1)
-        ret = await _afn()
+        ret = await resolve_value_fn(_fn)
         return ret
 
     # ## Setup overloads =============================================

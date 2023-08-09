@@ -15,7 +15,12 @@ from typing import (
 
 from .._docstring import add_example
 from ._dataframe_unsafe import serialize_numpy_dtypes
-from .transformer import TransformerMetadata, ValueFnAsync, output_transformer
+from .transformer import (
+    TransformerMetadata,
+    ValueFn,
+    output_transformer,
+    resolve_value_fn,
+)
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -215,13 +220,12 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
 DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
 
-# TODO-barret; Port `__name__` and `__docs__` of `value_fn`
 @output_transformer
 async def DataFrameTransformer(
     _meta: TransformerMetadata,
-    _afn: ValueFnAsync[DataFrameResult | None],
+    _fn: ValueFn[DataFrameResult | None],
 ) -> object | None:
-    x = await _afn()
+    x = await resolve_value_fn(_fn)
     if x is None:
         return None
 
