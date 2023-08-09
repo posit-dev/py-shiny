@@ -182,7 +182,7 @@ class OutputRenderer(Generic[OT], ABC):
     syntax.
 
     The transform function (`transform_fn`) is given `meta` information
-    (:class:`~shiny.render.tranformer.TranformerMetadata`), the (app-supplied) value
+    (:class:`~shiny.render.transformer.TranformerMetadata`), the (app-supplied) value
     function (`ValueFn[IT]`), and any keyword arguments supplied to the render decorator
     (`P`). For consistency, the first two parameters have been (arbitrarily) implemented
     as `_meta` and `_fn`.
@@ -283,7 +283,7 @@ class OutputRenderer(Generic[OT], ABC):
         `**kwargs` of type `P`.
 
         Note: `*args` will always be empty as it is an expansion of
-        :class:`~shiny.render.tranformer.TransformerParams` which does not allow positional arguments.
+        :class:`~shiny.render.transformer.TransformerParams` which does not allow positional arguments.
         `*args` is required to use with `**kwargs` when using
         `typing.ParamSpec`.
         """
@@ -309,8 +309,8 @@ class OutputRendererSync(OutputRenderer[OT]):
 
     See Also
     --------
-    * :class:`~shiny.render.tranformer.OutputRenderer`
-    * :class:`~shiny.render.tranformer.OutputRendererAsync`
+    * :class:`~shiny.render.transformer.OutputRenderer`
+    * :class:`~shiny.render.transformer.OutputRendererAsync`
     """
 
     def __init__(
@@ -346,8 +346,8 @@ class OutputRendererAsync(OutputRenderer[OT]):
 
     See Also
     --------
-    * :class:`~shiny.render.tranformer.OutputRenderer`
-    * :class:`~shiny.render.tranformer.OutputRendererSync`
+    * :class:`~shiny.render.transformer.OutputRenderer`
+    * :class:`~shiny.render.transformer.OutputRendererSync`
     """
 
     def __init__(
@@ -488,8 +488,8 @@ class OutputTransformer(Generic[IT, OT, P]):
     See Also
     --------
     * :func:`~shiny.render.transformer.output_transformer`
-    * :class:`~shiny.render.tranformer.TransformerParams`
-    * :class:`~shiny.render.tranformer.OutputRenderer`
+    * :class:`~shiny.render.transformer.TransformerParams`
+    * :class:`~shiny.render.transformer.OutputRenderer`
     """
 
     def params(
@@ -537,7 +537,8 @@ def output_transformer(
     decorator is called without parentheses and another for when it is called with
     parentheses where app authors can pass in parameters to the renderer.
 
-    ## Transform function
+    Transform function
+    ------------------
 
     The output renderer's transform function (`transform_fn`) is the key building block
     for `output_transformer`. It is a package author function that calls the app-defined
@@ -546,8 +547,9 @@ def output_transformer(
 
     The transform function is supplied meta output information, the (app-supplied) value
     function, and any keyword arguments supplied to the output tranformer decorator:
+
     * The first parameter to the handler function has the class
-      :class:`~shiny.render.tranformer.TransformerMetadata` and is typically called
+      :class:`~shiny.render.transformer.TransformerMetadata` and is typically called
       `_meta`. This information gives context the to the handler while trying to
       resolve the app-supplied value function (typically called `_fn`).
     * The second parameter is the app-defined output value function (e.g. `_fn`). It's
@@ -594,7 +596,7 @@ def output_transformer(
     Returns
     -------
     :
-        A :class:`~shiny.render.tranformer.OutputTransformer` object that can be used to
+        An :class:`~shiny.render.transformer.OutputTransformer` object that can be used to
         define two overloads for your renderer function. One overload is for when the
         renderer is called without parentheses and the other is for when the renderer is
         called with parentheses.

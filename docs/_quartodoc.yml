@@ -125,6 +125,22 @@ quartodoc:
         - render.data_frame
         - render.DataGrid
         - render.DataTable
+        - kind: page
+          path: OutputRender
+          flatten: true
+          summary:
+            name: "Create output render methods"
+            desc: ""
+          contents:
+            - render.transformer.output_transformer
+            - render.transformer.OutputTransformer
+            - render.transformer.TransformerMetadata
+            - render.transformer.TransformerParams
+            - render.transformer.OutputRenderer
+            - render.transformer.is_async_callable
+            - render.transformer.resolve_value_fn
+            - render.transformer.ValueFn
+            - render.transformer.TransformFn
     - title: Reactive programming
       desc: ""
       contents:
