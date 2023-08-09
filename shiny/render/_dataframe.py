@@ -257,12 +257,6 @@ def data_frame(
     """
     Reactively render a Pandas data frame object (or similar) as a basic HTML table.
 
-    Parameters
-    ----------
-    index
-        Whether to print index (row) labels.
-    selection
-
 
     Returns
     -------

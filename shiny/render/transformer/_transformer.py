@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# TODO-barret; missing first paragraph from some classes: Example: TransformerMetadata. No init method for TransformerParams
+
 __all__ = (
     "TransformerMetadata",
     "TransformerParams",
@@ -58,7 +60,7 @@ class TransformerMetadata(NamedTuple):
 
     This class is used to hold meta information for a transformer function.
 
-    Properties
+    Attributes
     ----------
     session
         The :class:`~shiny.Session` object of the current output value function.
@@ -87,19 +89,11 @@ class TransformerParams(Generic[P]):
     This class is used to isolate the transformer function parameters away from
     internal implementation parameters used by Shiny.
 
-    Properties
-    ----------
-    *args
-        No positional arguments should be supplied. Only keyword arguments should be
-        supplied. (`*args` is required when using :class:`~typing.ParamSpec` even if
-        transformer is only leveraging `**kwargs`.)
-    **kwargs
-        Keyword arguments for the corresponding transformer function.
     """
 
     def __init__(self, *args: P.args, **kwargs: P.kwargs) -> None:
         """
-        Properties
+        Parameters
         ----------
         *args
             No positional arguments should be supplied. Only keyword arguments should be
@@ -188,20 +182,20 @@ class OutputRenderer(Generic[OT], ABC):
     as `_meta` and `_fn`.
 
     Typing
-    -----
-    `IT`
-        The type returned by the app-supplied output value function (`value_fn`). This
-        value should contain a `None` value to conform to the convention of app authors
-        being able to return `None` to display nothing in the rendered output. Note that
-        in many cases but not all, `IT` and `OT` will be the same.
-    `OT`
-        The type of the object returned by the transform function (`transform_fn`). This
-        value should contain a `None` value to conform to display nothing in the
-        rendered output.
-    `P`
-        The parameter specification defined by the transform function (`transform_fn`).
-        It should **not** contain any `*args`. All keyword arguments should have a type
-        and default value.
+    ------
+    * `IT`
+        * The type returned by the app-supplied output value function (`value_fn`). This
+          value should contain a `None` value to conform to the convention of app authors
+          being able to return `None` to display nothing in the rendered output. Note that
+          in many cases but not all, `IT` and `OT` will be the same.
+    * `OT`
+        * The type of the object returned by the transform function (`transform_fn`). This
+          value should contain a `None` value to conform to display nothing in the
+          rendered output.
+    * `P`
+        * The parameter specification defined by the transform function (`transform_fn`).
+          It should **not** contain any `*args`. All keyword arguments should have a type
+          and default value.
 
 
     See Also
@@ -470,7 +464,7 @@ class OutputTransformer(Generic[IT, OT, P]):
     output value function and any app-supplied paramters and passes them through the
     component author's transformer function, and returns the transformed result.
 
-    Properties
+    Attributes
     ----------
     ValueFn
         The function type for the app-supplied output value function. This function may
