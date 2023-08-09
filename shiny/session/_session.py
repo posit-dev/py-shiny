@@ -880,10 +880,10 @@ class Inputs:
     """
     A class representing Shiny input values.
 
-    This class provides access to a :class:`~shiny.session.Session`'s input values. The
-    input values are reactive :class:`~shiny.reactive.Values`, and can be accessed with
+    This class provides access to a :class:`~shiny.Session`'s input values. The
+    input values are reactive :class:`~shiny.reactive.Value`s, and can be accessed with
     the ``[]`` operator, or with ``.``. For example, if there is an input named ``x``,
-    it can be accessed via ``input["x"]()`` or ``input.x()``.
+    it can be accessed via `input["x"]()` or ``input.x()``.
     """
 
     def __init__(
