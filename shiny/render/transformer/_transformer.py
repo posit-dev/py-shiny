@@ -7,8 +7,15 @@ __all__ = (
     "TransformerParams",
     "OutputRenderer",
     "OutputTransformer",
-    "ValueFnAsync",
+    "ValueFn",
+    # "ValueFnSync",
+    # "ValueFnAsync",
+    # "TransformFn",
     "output_transformer",
+    "is_async_callable",
+    # "IT",
+    # "OT",
+    # "P",
 )
 
 import inspect
@@ -31,6 +38,7 @@ if TYPE_CHECKING:
 from ... import _utils
 from ..._docstring import add_example
 from ..._typing_extensions import Concatenate, ParamSpec
+from ..._utils import is_async_callable
 
 # Input type for the user-spplied function that is passed to a render.xx
 IT = TypeVar("IT")
@@ -54,69 +62,72 @@ class TransformerMetadata(NamedTuple):
 
     Properties
     ----------
-    is_async
-        If `TRUE`, the app-supplied render function is asynchronous.
     session
-        The :class:`~shiny.Session` object of the current render function.
+        The :class:`~shiny.Session` object of the current output value function.
     name
         The name of the output being rendered.
     """
 
-    is_async: bool
     session: Session
     name: str
 
 
+# Motivation for using this class:
+# * https://peps.python.org/pep-0612/ does allow for prepending an arg (e.g.
+#   `value_fn`).
+# * However, the overload is not happy when both a positional arg (e.g. `value_fn`) is
+#   dropped and the variadic positional args (`*args`) are kept.
+# * The variadic positional args (`*args`) CAN NOT be dropped as PEP612 states that both
+#   components of the `ParamSpec` must be used in the same function signature.
+# * By making assertions on `P.args` to only allow for `*`, we _can_ make overloads that
+#   use either the single positional arg (e.g. `value_fn`) or the `P.kwargs` (as
+#   `P.args` == `*`)
 class TransformerParams(Generic[P]):
     """
     Parameters for a transformer function
 
-    This class is used to hold the parameters for a transformer function. It is used to
-    enforce that the parameters are used in the correct order.
+    This class is used to isolate the transformer function parameters away from
+    internal implementation parameters used by Shiny.
 
     Properties
     ----------
     *args
         No positional arguments should be supplied. Only keyword arguments should be
-        supplied.
+        supplied. (`*args` is required when using :class:`~typing.ParamSpec` even if
+        transformer is only leveraging `**kwargs`.)
     **kwargs
         Keyword arguments for the corresponding transformer function.
     """
 
-    # Motivation for using this class:
-    # * https://peps.python.org/pep-0612/ does allow for prepending an arg (e.g.
-    #   `value_fn`).
-    # * However, the overload is not happy when both a positional arg (e.g. `value_fn`)
-    #   is dropped and the variadic positional args (`*args`) are kept.
-    # * The variadic positional args (`*args`) CAN NOT be dropped as PEP612 states that
-    #   both components of the `ParamSpec` must be used in the same function signature.
-    # * By making assertions on `P.args` to only allow for `*`, we _can_ make overloads
-    #   that use either the single positional arg (e.g. `value_fn`) or the `P.kwargs`
-    #   (as `P.args` == `*`)
     def __init__(self, *args: P.args, **kwargs: P.kwargs) -> None:
         """
         Properties
         ----------
         *args
             No positional arguments should be supplied. Only keyword arguments should be
-            supplied.
+            supplied. (`*args` is required when using :class:`~typing.ParamSpec` even if
+            transformer is only leveraging `**kwargs`.)
         **kwargs
             Keyword arguments for the corresponding renderer function.
         """
 
-        # Make sure there no `args` when running!
+        # Make sure there no `args` at run time!
         # This check is related to `_assert_transform_fn` not accepting any `args`
         if len(args) > 0:
             raise RuntimeError("`args` should not be supplied")
 
         # `*args` must be defined with `**kwargs` (as per PEP612)
-        # (even when expanded later when calling the handler function)
-        # So we store them, even if we know they are empty
+        # (even when expanded later when calling the transform function)
+        # We need to store (and later retrieve) them, even if we know they are empty
         self.args = args
         self.kwargs = kwargs
 
     @staticmethod
     def empty_params() -> TransformerParams[P]:
+        """
+        Return `TransformerParams` definition with no parameters.
+        """
+
         def inner(*args: P.args, **kwargs: P.kwargs) -> TransformerParams[P]:
             return TransformerParams[P](*args, **kwargs)
 
@@ -130,54 +141,83 @@ class TransformerParams(Generic[P]):
 # A `ValueFn` function is an app-supplied function which returns an IT.
 # It can be either synchronous or asynchronous
 ValueFnSync = Callable[[], IT]
+"""
+App-supplied output value function which returns type `IT`. This function is
+synchronous.
+"""
 ValueFnAsync = Callable[[], Awaitable[IT]]
+"""
+App-supplied output value function which returns type `IT`. This function is
+asynchronous.
+"""
 ValueFn = Union[ValueFnSync[IT], ValueFnAsync[IT]]
+"""
+App-supplied output value function which returns type `IT`. This function can be
+synchronous or asynchronous.
+"""
 
-# `TransformFn` is a package author function that transforms an object of type `IT` into type `OT`.
+# `TransformFn` is a package author function that transforms an object of type `IT` into
+# type `OT`.
 TransformFn = Callable[
     Concatenate[TransformerMetadata, ValueFnAsync[IT], P], Awaitable[OT]
 ]
+"""
+Package author function that transforms an object of type `IT` into type `OT`. It should
+be defined as an asynchronous function but should only asynchronously yield when the
+second parameter (of type `ValueFn[IT]`) is awaitable. If the second function argument
+is not awaitable (a _synchronous_ function), then the execution of the transform
+function should also be synchronous.
+"""
 
 
 class OutputRenderer(Generic[OT], ABC):
     """
     Output Renderer
 
-    Base class for classes :class:`~shiny.render.RendererSync` and
-    :class:`~shiny.render.RendererAsync`.
+    Transforms the output (of type `IT`) of an app-supplied output value function
+    (`value_fn`) into type (`OT`). This transformed value is then sent to be an
+    :class:`~shiny.Outputs` output value.
 
-    When the `.__call__` method is invoked, the handler function (`transform_fn`)
-    (typically defined by package authors) is asynchronously called. The handler
-    function is given `meta` information, the (app-supplied) render function, and any
-    keyword arguments supplied to the render decorator. For consistency, the first two
-    parameters have been (arbitrarily) implemented as `_meta` and `_fn`.
+    When the `.__call__` method is invoked, the transform function (`transform_fn`)
+    (typically defined by package authors) is invoked. The wrapping classes
+    (:class:`~shiny.render.transformer.OutputRendererSync` and
+    :class:`~shiny.render.transformer.OutputRendererAsync`) will enforce whether the
+    transform function is synchronous or asynchronous independent of the awaitable
+    syntax.
 
-    The (app-supplied) value function (`value_fn`) returns type `IT`. The handler
-    function (defined by package authors) defines the parameter specification of type
-    `P` and asynchronously returns an object of type `OT`. Note that in many cases but
-    not all, `IT` and `OT` will be the same. `None` values should always be defined in
-    `IT` and `OT`.
+    The transform function (`transform_fn`) is given `meta` information
+    (:class:`~shiny.render.tranformer.TranformerMetadata`), the (app-supplied) value
+    function (`ValueFn[IT]`), and any keyword arguments supplied to the render decorator
+    (`P`). For consistency, the first two parameters have been (arbitrarily) implemented
+    as `_meta` and `_fn`.
 
+    Typing
+    -----
+    `IT`
+        The type returned by the app-supplied output value function (`value_fn`). This
+        value should contain a `None` value to conform to the convention of app authors
+        being able to return `None` to display nothing in the rendered output. Note that
+        in many cases but not all, `IT` and `OT` will be the same.
+    `OT`
+        The type of the object returned by the transform function (`transform_fn`). This
+        value should contain a `None` value to conform to display nothing in the
+        rendered output.
+    `P`
+        The parameter specification defined by the transform function (`transform_fn`).
+        It should **not** contain any `*args`. All keyword arguments should have a type
+        and default value.
 
-    Methods
-    -------
-    _is_async
-        If `TRUE`, the app-supplied render function is asynchronous. Must be implemented
-        in subclasses.
-    _meta
-        A named tuple of values: `is_async`, `session` (the :class:`~shiny.Session`
-        object), and `name` (the name of the output being rendered)
 
     See Also
     --------
-    * :class:`~shiny.render.RendererSync`
-    * :class:`~shiny.render.RendererAsync`
+    * :class:`~shiny.render.transformer.OutputRendererSync`
+    * :class:`~shiny.render.transformer.OutputRendererAsync`
     """
 
     @abstractmethod
     def __call__(self) -> OT:
         """
-        Executes the renderer as a function. Must be implemented by subclasses.
+        Executes the output renderer as a function. Must be implemented by subclasses.
         """
         ...
 
@@ -189,29 +229,33 @@ class OutputRenderer(Generic[OT], ABC):
         params: TransformerParams[P],
     ) -> None:
         """
-        Renderer init method
-
-        TODO-barret: docs
         Parameters
         ----------
-        name
-            Name of original output function. Ex: `my_txt`
-        doc
-            Documentation of the output function. Ex: `"My text output will be displayed
-            verbatim".
+        value_fn
+            App-provided output value function. It should return an object of type `IT`.
+        transform_fn
+            Package author function that transforms an object of type `IT` into type
+            `OT`. The `params` will used as variadic keyword arguments. This method
+            should only use `await` syntax when the value function (`ValueFn[IT]`) is
+            awaitable. If the value function is not awaitable (a _synchronous_
+            function), then the function should execute synchronously.
+        params
+            App-provided parameters for the transform function (`transform_fn`).
+
         """
+
         # Copy over function name as it is consistent with how Session and Output
         # retrieve function names
         self.__name__ = value_fn.__name__
 
-        if not _utils.is_async_callable(transform_fn):
+        if not is_async_callable(transform_fn):
             raise TypeError(
-                self.__class__.__name__ + " requires an async handler function"
+                self.__class__.__name__
+                + " requires an async tranformer function (`transform_fn`)"
             )
 
-        # `value_fn` is not required to be async. For consistency, we wrapped in an
-        # async function so that when it's passed in to `transform_fn`, `value_fn` is
-        # **always** an async function.
+        self._is_async = is_async_callable(value_fn)
+        # TODO-barret; Do not wrap!!
         self._value_fn = _utils.wrap_async(value_fn)
         self._transformer = transform_fn
         self._params = params
@@ -225,35 +269,33 @@ class OutputRenderer(Generic[OT], ABC):
         self._name: str = name
 
     def _meta(self) -> TransformerMetadata:
+        """
+        Returns a named tuple of values: `session` (the :class:`~shiny.Session` object),
+        and `name` (the name of the output being rendered)
+        """
         return TransformerMetadata(
-            is_async=self._is_async(),
             session=self._session,
             name=self._name,
         )
 
-    @abstractmethod
-    def _is_async(self) -> bool:
-        ...
-
     async def _run(self) -> OT:
         """
-        Executes the (async) handler function
+        Executes the (async) tranform function
 
-        The handler function will receive the following arguments: meta information of
-        type :class:`~shiny.render.RenderMeta`, an app-defined render function of type
-        :class:`~shiny.render.RenderFnAsync`, and `*args` and `**kwargs` of type `P`.
+        The transform function will receive the following arguments: meta information of
+        type :class:`~shiny.render.transformer.TransformerMetadata`, an app-defined
+        render function of type :class:`~shiny.render.RenderFnAsync`, and `*args` and
+        `**kwargs` of type `P`.
 
-        Notes:
-        * The app-defined render function will always be upgraded to be an async
-          function.
-        * `*args` will always be empty as it is an expansion of
-          :class:`~shiny.render.RendererParams` which does not allow positional
-          arguments.
+        Note: `*args` will always be empty as it is an expansion of
+        :class:`~shiny.render.tranformer.TransformerParams` which does not allow positional arguments.
+        `*args` is required to use with `**kwargs` when using
+        `typing.ParamSpec`.
         """
         ret = await self._transformer(
-            # RenderMeta
+            # TransformerMetadata
             self._meta(),
-            # Callable[[], Awaitable[IT]]
+            # Callable[[], Awaitable[IT]] | Callable[[], IT]
             self._value_fn,
             # P
             *self._params.args,
@@ -272,20 +314,9 @@ class OutputRendererSync(OutputRenderer[OT]):
 
     See Also
     --------
-    * :class:`~shiny.render.Renderer`
-    * :class:`~shiny.render.RendererAsync`
+    * :class:`~shiny.render.tranformer.OutputRenderer`
+    * :class:`~shiny.render.tranformer.OutputRendererAsync`
     """
-
-    def _is_async(self) -> bool:
-        """
-        Meta information about the renderer being asynchronous or not.
-
-        Returns
-        -------
-        :
-            Returns `FALSE` as this is a synchronous renderer.
-        """
-        return False
 
     def __init__(
         self,
@@ -293,7 +324,7 @@ class OutputRendererSync(OutputRenderer[OT]):
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
     ) -> None:
-        if _utils.is_async_callable(value_fn):
+        if is_async_callable(value_fn):
             raise TypeError(
                 self.__class__.__name__ + " requires a synchronous render function"
             )
@@ -320,20 +351,9 @@ class OutputRendererAsync(OutputRenderer[OT]):
 
     See Also
     --------
-    * :class:`~shiny.render.Renderer`
-    * :class:`~shiny.render.RendererSync`
+    * :class:`~shiny.render.tranformer.OutputRenderer`
+    * :class:`~shiny.render.tranformer.OutputRendererSync`
     """
-
-    def _is_async(self) -> bool:
-        """
-        Meta information about the renderer being asynchronous or not.
-
-        Returns
-        -------
-        :
-            Returns `TRUE` as this is an asynchronous renderer.
-        """
-        return True
 
     def __init__(
         self,
@@ -341,7 +361,7 @@ class OutputRendererAsync(OutputRenderer[OT]):
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
     ) -> None:
-        if not _utils.is_async_callable(value_fn):
+        if not is_async_callable(value_fn):
             raise TypeError(
                 self.__class__.__name__ + " requires an asynchronous render function"
             )
@@ -357,14 +377,14 @@ class OutputRendererAsync(OutputRenderer[OT]):
 
 
 # ======================================================================================
-# Restrict the value function
+# Restrict the transformer function
 # ======================================================================================
 
 
 # assert: No variable length positional values;
 # * We need a way to distinguish between a plain function and args supplied to the next
 #   function. This is done by not allowing `*args`.
-# assert: All kwargs of transformer should have a default value
+# assert: All `**kwargs` of transformer should have a default value
 # * This makes calling the method with both `()` and without `()` possible / consistent.
 def _assert_transformer(transform_fn: TransformFn[IT, P, OT]) -> None:
     params = inspect.Signature.from_callable(transform_fn).parameters
@@ -372,7 +392,7 @@ def _assert_transformer(transform_fn: TransformFn[IT, P, OT]) -> None:
     if len(params) < 2:
         raise TypeError(
             "`transformer=` must have 2 positional parameters which have type "
-            "`RenderMeta` and `RenderFnAsync` respectively"
+            "`TransformerMetadata` and `RenderFnAsync` respectively"
         )
 
     for i, param in zip(range(len(params)), params.values()):
@@ -380,7 +400,7 @@ def _assert_transformer(transform_fn: TransformFn[IT, P, OT]) -> None:
         # # have been renamed. We need to do an `isinstance` check but do not have
         # # access to the objects
         # if i == 0:
-        #     assert param.annotation == "RenderMeta"
+        #     assert param.annotation == "TransformerMetadata"
         # if i == 1:
         #     assert (param.annotation or "").startswith("RenderFnAsync")
         if i < 2 and not (
@@ -389,7 +409,7 @@ def _assert_transformer(transform_fn: TransformFn[IT, P, OT]) -> None:
         ):
             raise TypeError(
                 "`transformer=` must have 2 positional parameters which have type "
-                "`RenderMeta` and `RenderFnAsync` respectively"
+                "`TransformerMetadata` and `RenderFnAsync` respectively"
             )
 
         # Make sure there are no more than 2 positional args
@@ -414,12 +434,17 @@ def _assert_transformer(transform_fn: TransformFn[IT, P, OT]) -> None:
 
 
 # ======================================================================================
-# Renderer decorator
+# OutputTransformer
 # ======================================================================================
 
 
 # Signature of a renderer decorator function
 OutputRendererDecorator = Callable[[ValueFn[IT]], OutputRenderer[OT]]
+"""
+Decorator function that takes the output value function (then calls it and transforms
+the value) and returns an :class:`~shiny.render.transformer.OutputRenderer`.
+"""
+
 # Signature of a decorator that can be called with and without parentheses
 # With parens returns a `Renderer[OT]`
 # Without parens returns a `RendererDeco[IT, OT]`
@@ -430,42 +455,46 @@ OutputRendererImplFn = Callable[
     ],
     Union[OutputRenderer[OT], OutputRendererDecorator[IT, OT]],
 ]
+"""
+Generic overload definition for a decorator that can be called with and without
+parentheses. If called with parentheses, it returns an decorator which returns an
+:class:`~shiny.render.transformer.OutputRenderer`. If called without parentheses, it
+returns an :class:`~shiny.render.transformer.OutputRenderer`.
+"""
 
 
 class OutputTransformer(Generic[IT, OT, P]):
     """
     Output Transformer class
 
-    A Transfomer takes the value returned from the user's render function, passes it
-    through the component author's transformer function, and returns the result. TODO-barret: cleanup docs
+    This class creates helper types and methods for defining an overloaded renderer
+    decorator. By manually defining the overloads locally, the function signatures are
+    as clean as possible (and therefore easier to read and understand).
+
+    When called, an `OutputTransfomer` takes the value returned from the app-supplied
+    output value function and any app-supplied paramters and passes them through the
+    component author's transformer function, and returns the transformed result.
 
     Properties
     ----------
-    type_decorator
-        The return type for the renderer decorator wrapper function. This should be used
-        when the app-defined render function is `None` and extra parameters are being
-        supplied.
-    type_renderer_fn
-        The (non-`None`) type for the renderer function's first argument that accepts an
-        app-defined render function. This type should be paired with the return type:
-        `type_renderer`.
-    type_renderer
-        The type for the return value of the renderer decorator function. This should be
-        used when the app-defined render function is not `None`.
-    type_impl_fn
-        The type for the implementation function's first argument. This value handles
-        both app-defined render functions and `None` and returns values appropriate for
-        both cases. `type_impl_fn` should be paired with `type_impl`.
-    type_impl
-        The type for the return value of the implementation function. This value handles
-        both app-defined render functions and `None` and returns values appropriate for
-        both cases.
+    ValueFn
+        The function type for the app-supplied output value function. This function may
+        be both synchronous or asynchronous.
+    OutputRenderer
+        The return type for the overload that accepts the app-supplied output value
+        function and returns an object of
+        :class:`~shiny.render.transformer.OutputRenderer`.
+    OutputRendererDecorator
+        The return type for the overload that accepts app-supplied parameters for the
+        transform function. The return value is a decorator that accepts the
+        app-supplied output value function and returns an object of
+        :class:`~shiny.render.transformer.OutputRenderer`.
 
     See Also
     --------
-    * :func:`~shiny.render.renderer_components`
-    * :class:`~shiny.render.RendererParams`
-    * :class:`~shiny.render.Renderer`
+    * :func:`~shiny.render.transformer.output_transformer`
+    * :class:`~shiny.render.tranformer.TransformerParams`
+    * :class:`~shiny.render.tranformer.OutputRenderer`
     """
 
     def params(
@@ -484,7 +513,9 @@ class OutputTransformer(Generic[IT, OT, P]):
             params = self.params()
         if not isinstance(params, TransformerParams):
             raise TypeError(
-                f"Expected `params` to be of type `RendererParams` but received `{type(params)}`. Please use `.params()` to create a `RendererParams` object."
+                "Expected `params` to be of type `TransformerParams` but received "
+                f"`{type(params)}`. Please use `.params()` to create a "
+                "`TransformerParams` object."
             )
         return self._fn(value_fn, params)
 
@@ -503,7 +534,7 @@ def output_transformer(
     transform_fn: TransformFn[IT, P, OT],
 ) -> OutputTransformer[IT, OT, P]:
     """
-    Renderer components decorator
+    Output transformer decorator
 
     This decorator method is a convenience method to generate the appropriate types and
     internal implementation for an overloaded renderer method. This method will provide
@@ -511,57 +542,67 @@ def output_transformer(
     decorator is called without parentheses and another for when it is called with
     parentheses where app authors can pass in parameters to the renderer.
 
-    ## Handler function
+    ## Transform function
 
-    The renderer's asynchronous handler function (`transform_fn`) is the key building
-    block for `renderer_components`.
+    The output renderer's transform function (`transform_fn`) is the key building block
+    for `output_transformer`. It is a package author function that calls the app-defined
+    output value function (`value_fn`) transforms the result of type `IT` into type
+    `OT`.
 
-    The handler function is supplied meta renderer information, the (app-supplied)
-    render function, and any keyword arguments supplied to the renderer decorator:
+    The transform function is supplied meta output information, the (app-supplied) value
+    function, and any keyword arguments supplied to the output tranformer decorator:
     * The first parameter to the handler function has the class
-      :class:`~shiny.render.RenderMeta` and is typically called (e.g. `_meta`). This
-      information gives context the to the handler while trying to resolve the
-      app-supplied render function (e.g. `_fn`).
-    * The second parameter is the app-defined render function (e.g. `_fn`). It's return
-      type (`IT`) determines what types can be returned by the app-supplied render
-      function. For example, if `_fn` has the type `RenderFnAsync[str | None]`, both the
-      `str` and `None` types are allowed to be returned from the app-supplied render
-      function.
+      :class:`~shiny.render.tranformer.TransformerMetadata` and is typically called
+      `_meta`. This information gives context the to the handler while trying to
+      resolve the app-supplied value function (typically called `_fn`).
+    * The second parameter is the app-defined output value function (e.g. `_fn`). It's
+      return type (`IT`) determines what types can be returned by the app-supplied
+      output value function. For example, if `_fn` has the type `ValueFn[str | None]`,
+      both the `str` and `None` types are allowed to be returned from the app-supplied
+      output value function.
     * The remaining parameters are the keyword arguments (e.g. `alt:Optional[str] =
-      None` or `**kwargs: Any`) that app authors may supply to the renderer (when the
+      None` or `**kwargs: object`) that app authors may supply to the renderer (when the
       renderer decorator is called with parentheses). Variadic positional parameters
       (e.g. `*args`) are not allowed. All keyword arguments should have a type and
-      default value (except for `**kwargs: Any`).
+      default value. No default value is needed for keyword arguments that are passed
+      through (e.g. `**kwargs: Any`).
 
-    The handler's return type (`OT`) determines the output type of the renderer. Note
-    that in many cases (but not all!) `IT` and `OT` will be the same. The `None` type
-    should typically be defined in both `IT` and `OT`. If `IT` allows for `None` values,
-    it (typically) signals that nothing should be rendered. If `OT` allows for `None`
-    and returns a `None` value, shiny will not render the output.
-
+    The tranform function's return type (`OT`) determines the output type of the
+    :class:`~shiny.render.transformer.OutputRenderer`. Note that in many cases (but not
+    all!) `IT` and `OT` will be the same. The `None` type should typically be defined in
+    both `IT` and `OT`. If `IT` allows for `None` values, it (typically) signals that
+    nothing should be rendered. If `OT` allows for `None` and returns a `None` value,
+    shiny will not render the output.
 
     Notes
     -----
 
-    When defining the renderer decorator overloads, if you have extra parameters of
-    `**kwargs: object`, you may get a type error about incompatible signatures. To fix
-    this, you can use `**kwargs: Any` instead or add `_fn: None = None` as the first
-    parameter in the overload containing the `**kwargs: object`.
+    * When defining the renderer decorator overloads, if you have extra parameters of
+      `**kwargs: object`, you may get a type error about incompatible signatures. To fix
+      this, you can use `**kwargs: Any` instead or add `_fn: None = None` as the first
+      parameter in the overload containing the `**kwargs: object`.
+
+    * The `transform_fn` should be defined as an asynchronous function but should only
+      asynchronously yield (i.e. use `await` syntax) when the value function (the second
+      parameter of type `ValueFn[IT]`) is awaitable. If the value function is not
+      awaitable (i.e. it is a _synchronous_ function), then the execution of the
+      transform function should also be synchronous.
+
 
     Parameters
     ----------
     transform_fn
-        Asynchronous function used to determine the app-supplied value type (`IT`), the
-        rendered type (`OT`), and the parameters (`P`) app authors can supply to the
-        renderer.
+        Asynchronous function used to determine the app-supplied output value function
+        return type (`IT`), the transformed type (`OT`), and the keyword arguments (`P`)
+        app authors can supply to the renderer decorator.
 
     Returns
     -------
     :
-        A :class:`~shiny.render.RendererComponents` object that can be used to define
-        two overloads for your renderer function. One overload is for when the renderer
-        is called without parentheses and the other is for when the renderer is called
-        with parentheses.
+        A :class:`~shiny.render.tranformer.OutputTransformer` object that can be used to
+        define two overloads for your renderer function. One overload is for when the
+        renderer is called without parentheses and the other is for when the renderer is
+        called with parentheses.
     """
     _assert_transformer(transform_fn)
 
@@ -572,9 +613,10 @@ def output_transformer(
         def as_value_fn(
             fn: ValueFnSync[IT] | ValueFnAsync[IT],
         ) -> OutputRenderer[OT]:
-            if _utils.is_async_callable(fn):
+            if is_async_callable(fn):
                 return OutputRendererAsync(fn, transform_fn, params)
             else:
+                # To avoid duplicate work just for a typeguard, we cast the function
                 fn = cast(ValueFnSync[IT], fn)
                 return OutputRendererSync(fn, transform_fn, params)
 
