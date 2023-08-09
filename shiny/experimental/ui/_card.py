@@ -86,7 +86,7 @@ def card(
     Returns
     -------
     :
-        An :func:`~htmltools.div` tag.
+        An :func:`~shiny.ui.tags.div` tag.
 
     See Also
     --------
@@ -314,12 +314,12 @@ def card_body(
 # https://mypy.readthedocs.io/en/stable/protocols.html#callback-protocols
 class WrapperCallable(Protocol):
     """
-    A callable that wraps children into a :func:`~shiny.experimental.ui.CardItem`.
+    A callable that wraps children into a :class:`~shiny.experimental.ui.CardItem`.
     """
 
     def __call__(self, *args: TagChild) -> CardItem:
         """
-        Wraps children into a :func:`~shiny.experimental.ui.CardItem`.
+        Wraps children into a :class:`~shiny.experimental.ui.CardItem`.
 
         Parameters
         ----------
@@ -554,7 +554,7 @@ def card_footer(
 
 class ImgContainer(Protocol):
     """
-    A callable that wraps the return value of `card_image()`. To isolate your object in a card, return a :func:`~shiny.experimental.ui.CardItem`.
+    A callable that wraps the return value of `card_image()`. To isolate your object in a card, return a :class:`~shiny.experimental.ui.CardItem`.
     """
 
     def __call__(self, *args: Tag) -> Tagifiable:
@@ -628,7 +628,7 @@ def card_image(
         If :func:`~shiny.experimental.ui.card_body` is used, each image will be in separate cards. If
         the `container` method does not return a :class:`~shiny.experimental.ui.CardItem`, it
         allows for consecutive non-`CardItem` objects to be bundled into a single
-        :func:`~.shiny.experimental.card_body` within :func:`~shiny.experimental.ui.card`.
+        :func:`~shiny.experimental.ui.card_body` within :func:`~shiny.experimental.ui.card`.
     **kwargs
         Additional HTML attributes for the resolved Tag.
     """

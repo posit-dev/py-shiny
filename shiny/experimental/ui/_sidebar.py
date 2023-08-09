@@ -132,8 +132,7 @@ def sidebar(
     `sidebar=` argument of:
 
     * :func:`~shiny.experimental.ui.layout_sidebar`
-      * Creates a sidebar layout component which can be dropped inside any
-        :func:`~shiny.ui.page` or :func:`~shiny.experimental.ui.card` context.
+      * Creates a sidebar layout component which can be dropped inside any Shiny UI page method (e.g. :func:`~shiny.experimental.ui.page_fillable`) or :func:`~shiny.experimental.ui.card` context.
     * :func:`~shiny.experimental.ui.navset_bar`, :func:`~shiny.experimental.ui.navset_tab_card`, and :func:`~shiny.experimental.ui.navset_pill_card`
       * Creates a multi page/tab UI with a singular `sidebar()` (which is
         shown on every page/tab).
@@ -164,7 +163,7 @@ def sidebar(
     title
         A character title to be used as the sidebar title, which will be wrapped in a
         `<div>` element with class `sidebar-title`. You can also provide a custom
-        :func:`~shiny.htmltools.tag` for the title element, in which case you'll
+        :class:`~htmltools.Tag` for the title element, in which case you'll
         likely want to give this element `class = "sidebar-title"`.
     bg,fg
         A background or foreground color.
@@ -259,8 +258,9 @@ def layout_sidebar(
     """
     Sidebar layout
 
-    Create a sidebar layout component which can be dropped inside any
-    :func:`~shiny.ui.page` or :func:`~shiny.experimental.ui.card` context.
+    Create a sidebar layout component which can be dropped inside any Shiny UI page
+    method (e.g. :func:`~shiny.experimental.ui.page_fillable`) or
+    :func:`~shiny.experimental.ui.card` context.
 
     Parameters
     ----------

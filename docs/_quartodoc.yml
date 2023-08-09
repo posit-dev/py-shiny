@@ -297,6 +297,16 @@ quartodoc:
             - experimental.ui.showcase_left_center
             - experimental.ui.showcase_top_right
         - kind: page
+          path: ExTooltip
+          summary:
+            name: "Tooltips"
+            desc: "Display additional information when focusing (or hovering over) a UI element."
+          flatten: true
+          contents:
+            - experimental.ui.tooltip
+            - experimental.ui.tooltip_toggle
+            - experimental.ui.update_tooltip
+        - kind: page
           path: ExFillingLayout
           summary:
             name: "Filling layouts"

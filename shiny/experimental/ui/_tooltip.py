@@ -54,7 +54,8 @@ def tooltip(
     If `trigger` yields multiple HTML elements (e.g., a :class:`~htmltools.TagList` or
     complex [`shinywidgets`](https://github.com/rstudio/py-shinywidgets) object), the
     last HTML element is used as the trigger. If the `trigger` should contain all of
-    those elements, wrap the object in a :func:`~htmltools.div` or :func:`~htmltools.span`.
+    those elements, wrap the object in a :func:`~shiny.ui.tags.div` or
+    :func:`~shiny.ui.tags.span`.
 
     See Also
     --------
