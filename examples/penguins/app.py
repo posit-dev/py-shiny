@@ -6,7 +6,6 @@ from typing import List
 
 import pandas as pd
 import seaborn as sns
-import shinyswatch
 from colors import bg_palette, palette
 
 import shiny.experimental as x
@@ -44,7 +43,6 @@ app_ui = x.ui.page_sidebar(
         ui.input_switch("by_species", "Show species", value=True),
         ui.input_switch("show_margins", "Show marginal plots", value=True),
     ),
-    shinyswatch.theme.pulse(),
     ui.output_ui("value_boxes"),
     x.ui.output_plot("scatter", fill=True),
 )

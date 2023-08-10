@@ -41,7 +41,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         print("@calc() event:   ", str(btn()))
 
-    @output
     @render.ui
     @reactive.event(input.btn)
     def btn_value():

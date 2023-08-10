@@ -7,6 +7,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, tags
 from ._card import CardItem, card, card_body
 from ._css_unit import CssUnit, as_css_unit, as_width_unit
 from ._fill import as_fill_carrier
+from ._htmldeps import value_box_dependency
 from ._layout import layout_column_wrap
 from ._utils import consolidate_attrs, is_01_scalar
 
@@ -112,6 +113,7 @@ def value_box(
     return card(
         contents,
         attrs,
+        value_box_dependency(),
         full_screen=full_screen,
         height=height,
         max_height=max_height,
@@ -228,6 +230,8 @@ def _showcase_layout(
         if top_right:
             items = reversed(items)
             width_fs = reversed(width_fs)
+
+        width_fs = " ".join(width_fs)
 
         layout_css_args = {
             "--bslib-value-box-widths": width_css_unit,

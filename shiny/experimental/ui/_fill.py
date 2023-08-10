@@ -31,6 +31,11 @@ __all__ = (
 )
 
 TagFillingLayoutT = TypeVar("TagFillingLayoutT", bound="Tag | FillingLayout")
+"""
+A :class:`~htmltools.Tag` object or an object that implements the
+:class:`~shiny.experimental.ui.FillingLayout` protocol.
+"""
+
 TagT = TypeVar("TagT", bound="Tag")
 
 
@@ -103,7 +108,7 @@ def bind_fill_role(
     -------
     :
         The original :class:`~htmltools.Tag` object (`tag`) with additional attributes
-        (and an :class:`~htmltools.HtmlDependency`).
+        (and an :class:`~htmltools.HTMLDependency`).
     """
     tag = _add_role(
         tag,
@@ -166,7 +171,7 @@ def as_fill_carrier(
     -------
     :
         The original :class:`~htmltools.Tag` object (`tag`) with additional attributes
-        (and an :class:`~htmltools.HtmlDependency`).
+        (and an :class:`~htmltools.HTMLDependency`).
 
     See Also
     --------
@@ -220,7 +225,7 @@ def as_fillable_container(
     -------
     :
         The original :class:`~htmltools.Tag` object (`tag`) with additional attributes
-        (and an :class:`~htmltools.HtmlDependency`).
+        (and an :class:`~htmltools.HTMLDependency`).
 
     See Also
     --------
@@ -273,7 +278,7 @@ def as_fill_item(
     -------
     :
         The original :class:`~htmltools.Tag` object (`tag`) with additional attributes
-        (and an :class:`~htmltools.HtmlDependency`).
+        (and an :class:`~htmltools.HTMLDependency`).
 
     See Also
     --------
@@ -476,7 +481,7 @@ def _is_fill_layout(
 
     # tag: Tagifiable and not (Tag or FillingLayout)
     raise TypeError(
-        f"`_is_fill_layout(tag=)` must be a `Tag` or implement the `FillingLayout` protocol methods TODO-barret expand on method names. Received object of type: `{type(tag).__name__}`"
+        f"`_is_fill_layout(tag=)` must be a `Tag` or implement the `FillingLayout` protocol methods. Received object of type: `{type(tag).__name__}`"
     )
 
 
