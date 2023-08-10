@@ -2445,7 +2445,6 @@ class _CardFullScreenM:
 
 class ValueBox(
     _WidthLocM,
-    _CardBodyM,
     _CardFullScreenM,
     _InputWithContainer,
 ):
@@ -2469,14 +2468,14 @@ class ValueBox(
             loc="> div > .value-box-grid",
         )
         value_box_grid = self.loc
-        self.loc = value_box_grid.locator(
-            "> div > .value-box-area > :not(:first-child)"
-        )
         self.loc_showcase = value_box_grid.locator("> div > .value-box-showcase")
         self.loc_title = value_box_grid.locator(
-            "> div > .value-box-area > :first-child"
+            "> div > .value-box-area > :nth-child(1)"
         )
-        self.loc_body = self.loc
+        self.loc = value_box_grid.locator("> div > .value-box-area > :nth-child(2)")
+        self.loc_body = value_box_grid.locator(
+            "> div > .value-box-area > :not(:nth-child(1), :nth-child(2))"
+        )
         self._loc_fullscreen = self.loc_container.locator(
             "> bslib-tooltip > .bslib-full-screen-enter"
         )
@@ -2501,6 +2500,29 @@ class ValueBox(
         timeout: Timeout = None,
     ) -> None:
         playwright_expect(self.loc_title).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+    def expect_value(
+        self,
+        text: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+    def expect_body(
+        self,
+        text: PatternOrStr | list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """Note: If testing against multiple elements, text should be an array"""
+        playwright_expect(self.loc_body).to_have_text(
             text,
             timeout=timeout,
         )
