@@ -13,6 +13,7 @@ from htmltools import Tag, TagChild, css, div, span, tags
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from ._utils import shiny_input_label
+from ._x._htmldeps import bslibshiny_dependency
 
 # Canonical format for representing select options.
 _Choices = Mapping[str, TagChild]
@@ -145,6 +146,7 @@ def _input_checkbox(
             tags.label(label, class_="form-check-label", for_=resolve_id(id)),
             class_=class_,
         ),
+        bslibshiny_dependency(),
         class_="form-group shiny-input-container",
         style=css(width=width),
     )
