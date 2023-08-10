@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Optional, overload
 
 from shiny import App, Inputs, Outputs, Session, ui
-from shiny.render._render import (
+from shiny.render.transformer import (
     TransformerMetadata,
     ValueFn,
     is_async_callable,
