@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### New features
 
 * Added `shiny.render.renderer_components` decorator to help create new output renderers. (#621)
+* Added `shiny.experimental.ui.toggle_switch()`. (TODO-barret)
 
 ### Bug fixes
 

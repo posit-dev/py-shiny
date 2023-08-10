@@ -32,6 +32,7 @@ from ._fill import (  # bind_fill_role,
     is_fillable_container,
     remove_all_fill,
 )
+from ._input_switch import toggle_switch
 from ._input_text import input_text_area
 from ._layout import layout_column_wrap
 from ._navs import navset_bar, navset_pill_card, navset_tab_card
@@ -107,6 +108,8 @@ __all__ = (
     "output_image",
     "output_plot",
     "output_ui",
+    # input_switch
+    "toggle_switch",
     # input_text_area
     "input_text_area",
     # Accordion
