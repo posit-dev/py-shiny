@@ -9,6 +9,7 @@ app_ui = ui.page_fluid(
         ui.tags.h5("A plot should appear immediately below this text."),
     ),
     ui.output_plot("mpl"),
+    ui.tags.hr(),
     ui.panel_conditional(
         "input.render",
         ui.tags.h5("An error message should appear immediately below this text."),
