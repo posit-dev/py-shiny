@@ -117,6 +117,8 @@ def sidebar(
     fg: Optional[str] = None,
     class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
     max_height_mobile: Optional[str | float] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+    height: Optional[CssUnit] = None,
 ) -> Sidebar:
     # See [this article](https://rstudio.github.io/bslib/articles/sidebars.html)
     #   to learn more.
@@ -175,6 +177,18 @@ def sidebar(
         The default is `250px` unless the sidebar is included in a
         :func:`~shiny.experimental.ui.layout_sidebar` with a specified height, in
         which case the default is to take up no more than 50% of the layout container.
+    gap
+        A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
+        provided to `*args`.
+    padding
+        Padding within the sidebar itself. This can be a numeric vector (which will be
+        interpreted as pixels) or a character vector with valid CSS lengths. `padding`
+        may be one to four values. If one, then that value will be used for all four
+        sides. If two, then the first value will be used for the top and bottom, while
+        the second value will be used for left and right. If three, then the first will
+        be used for top, the second will be left and right, and the third will be
+        bottom. If four, then the values will be interpreted as top, right, bottom, and
+        left respectively.
 
     Returns
     -------
@@ -217,7 +231,13 @@ def sidebar(
     tag = div(
         div(
             title,
-            {"class": "sidebar-content"},
+            {
+                "class": "sidebar-content bslib-gap-spacing",
+                "style": css(
+                    gap=as_css_unit(gap),
+                    padding=as_css_padding(padding),
+                ),
+            },
             *args,
         ),
         {"class": "bslib-sidebar-input"} if id is not None else None,
@@ -284,17 +304,17 @@ def layout_sidebar(
     border_color
         A border color.
     gap
-        A CSS length unit defining the `gap` (i.e., spacing) between elements provided
-        to `*args`. This argument is only applicable when `fillable = TRUE`.
+        A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
+        provided to `*args`. This value will only be used if `fillable` is `True`.
     padding
-        Padding to use for the body. This can be a numeric vector
-        (which will be interpreted as pixels) or a character vector with valid CSS
-        lengths. The length can be between one and four. If one, then that value
-        will be used for all four sides. If two, then the first value will be used
-        for the top and bottom, while the second value will be used for left and
-        right. If three, then the first will be used for top, the second will be
-        left and right, and the third will be bottom. If four, then the values will
-        be interpreted as top, right, bottom, and left respectively.
+        Padding within the sidebar itself. This can be a numeric vector (which will be
+        interpreted as pixels) or a character vector with valid CSS lengths. `padding`
+        may be one to four values. If one, then that value will be used for all four
+        sides. If two, then the first value will be used for the top and bottom, while
+        the second value will be used for left and right. If three, then the first will
+        be used for top, the second will be left and right, and the third will be
+        bottom. If four, then the values will be interpreted as top, right, bottom, and
+        left respectively.
     height
         Any valid CSS unit to use for the height.
 
@@ -368,7 +388,7 @@ def layout_sidebar(
     )
 
     res = div(
-        {"class": "bslib-sidebar-layout"},
+        {"class": "bslib-sidebar-layout bslib-mb-spacing"},
         {"class": "sidebar-right"} if sidebar.position == "right" else None,
         {"class": "sidebar-collapsed"} if sidebar.open == "closed" else None,
         main,
