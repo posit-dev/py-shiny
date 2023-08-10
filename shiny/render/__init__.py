@@ -2,29 +2,25 @@
 Tools for reactively rendering output for the user interface.
 """
 
-from ._render import (  # noqa: F401
+
+from . import (  # noqa: F401
+    transformer,  # pyright: ignore[reportUnusedImport]
+)
+
+from ._deprecated import (  # noqa: F401
     RenderFunction,  # pyright: ignore[reportUnusedImport]
     RenderFunctionAsync,  # pyright: ignore[reportUnusedImport]
-    RenderText,  # pyright: ignore[reportUnusedImport]
-    RenderTextAsync,  # pyright: ignore[reportUnusedImport]
+)
+
+from ._render import (
     text,
-    RenderPlot,  # pyright: ignore[reportUnusedImport]
-    RenderPlotAsync,  # pyright: ignore[reportUnusedImport]
     plot,
-    RenderImage,  # pyright: ignore[reportUnusedImport]
-    RenderImageAsync,  # pyright: ignore[reportUnusedImport]
     image,
-    RenderTable,  # pyright: ignore[reportUnusedImport]
-    RenderTableAsync,  # pyright: ignore[reportUnusedImport]
     table,
-    RenderUI,  # pyright: ignore[reportUnusedImport]
-    RenderUIAsync,  # pyright: ignore[reportUnusedImport]
     ui,
 )
 
-from ._dataframe import (  # noqa: F401
-    RenderDataFrame,  # pyright: ignore[reportUnusedImport]
-    RenderDataFrameAsync,  # pyright: ignore[reportUnusedImport]
+from ._dataframe import (
     DataGrid,
     DataTable,
     data_frame,
@@ -32,12 +28,13 @@ from ._dataframe import (  # noqa: F401
 
 
 __all__ = (
-    "DataGrid",
-    "DataTable",
+    # TODO-future: Document which variables are exposed via different import approaches
     "data_frame",
     "text",
     "plot",
     "image",
     "table",
     "ui",
+    "DataGrid",
+    "DataTable",
 )

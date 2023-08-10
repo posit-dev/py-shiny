@@ -245,13 +245,23 @@ def wrap_async(
     return fn_async
 
 
+# This function should generally be used in this code base instead of
+# `iscoroutinefunction()`.
 def is_async_callable(
     obj: Callable[P, T] | Callable[P, Awaitable[T]]
 ) -> TypeGuard[Callable[P, Awaitable[T]]]:
     """
-    Returns True if `obj` is an `async def` function, or if it's an object with a
-    `__call__` method which is an `async def` function. This function should generally
-    be used in this code base instead of iscoroutinefunction().
+    Determine if an object is an async function.
+
+    This is a more general version of `inspect.iscoroutinefunction()`, which only works
+    on functions. This function works on any object that has a `__call__` method, such
+    as a class instance.
+
+    Returns
+    -------
+    :
+        Returns True if `obj` is an `async def` function, or if it's an object with a
+        `__call__` method which is an `async def` function.
     """
     if inspect.iscoroutinefunction(obj):
         return True
@@ -260,6 +270,12 @@ def is_async_callable(
             return True
 
     return False
+
+
+# def not_is_async_callable(
+#     obj: Callable[P, T] | Callable[P, Awaitable[T]]
+# ) -> TypeGuard[Callable[P, T]]:
+#     return not is_async_callable(obj)
 
 
 # See https://stackoverflow.com/a/59780868/412655 for an excellent explanation
