@@ -89,7 +89,7 @@ def render_capitalize(
 
 # Lastly, implement the renderer.
 # Note: `_fn` type is the transformer's `ValueFn` or `None`
-# Note: Return type is the transformer's `OutputRenderer | OutputRendererDecorator`
+# Note: Return type is the transformer's `OutputRenderer` or `OutputRendererDecorator`
 def render_capitalize(
     _fn: CapitalizeTransformer.ValueFn | None = None,
     *,
@@ -127,14 +127,14 @@ def server(input: Inputs, output: Outputs, session: Session):
         return input.caption()
 
     @output
-    # With parentheses (same as `@render_capitalize()`)
+    # With parentheses. Equivalent to `@render_capitalize()`
     @render_capitalize(to="upper")
     def to_upper():
         return input.caption()
 
     @output
     @render_capitalize(to="lower")
-    # Works with async functions too!
+    # Works with async output value functions
     async def to_lower():
         return input.caption()
 

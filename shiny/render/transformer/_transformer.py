@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-# TODO-barret; missing first paragraph from some classes: Example: TransformerMetadata. No init method for TransformerParams
+# TODO-future: docs; missing first paragraph from some classes: Example: TransformerMetadata.
+# No init method for TransformerParams. This is because the `DocClass` object does not
+# display methods that start with `_`. THerefore no `__init__` or `__call__` methods are
+# displayed. Even if they have docs.
 
 __all__ = (
     "TransformerMetadata",
@@ -33,7 +36,7 @@ from typing import (
 )
 
 if TYPE_CHECKING:
-    from ...session import Session
+    from ... import Session
 
 from ... import _utils
 from ..._docstring import add_example
@@ -325,6 +328,9 @@ class OutputRendererSync(OutputRenderer[OT]):
         )
 
     def __call__(self) -> OT:
+        """
+        Synchronously executes the output renderer as a function.
+        """
         return _utils.run_coro_sync(self._run())
 
 
@@ -362,6 +368,9 @@ class OutputRendererAsync(OutputRenderer[OT]):
         )
 
     async def __call__(self) -> OT:  # pyright: ignore[reportIncompatibleMethodOverride]
+        """
+        Asynchronously executes the output renderer as a function.
+        """
         return await self._run()
 
 
@@ -628,8 +637,7 @@ async def resolve_value_fn(value_fn: ValueFn[IT]) -> IT:
     function is synchronous, it will be called.
 
     While always using an async method within an output transform function is not
-    appropriate, this method may be used, avoiding the boilerplate of "if is async, then
-    await value_fn() else cast as synchronous and return value_fn()".
+    appropriate, this method may be safely used to avoid boilerplate.
 
     Replace this:
     ```python
@@ -644,10 +652,10 @@ async def resolve_value_fn(value_fn: ValueFn[IT]) -> IT:
     x = await resolve_value_fn(_fn)
     ```
 
-    This substitution is safe as the implementation does not actually asynchronously
-    yield to another process if the `value_fn` is synchronous. The `__call__` method of
-    the :class:`~shiny.render.transformer.OutputRendererSync` is built to execute
-    asynchronously defined methods that execute synchronously.
+    This code substitution is safe as the implementation does not _actually_
+    asynchronously yield to another process if the `value_fn` is synchronous. The
+    `__call__` method of the :class:`~shiny.render.transformer.OutputRendererSync` is
+    built to execute asynchronously defined methods that execute synchronously.
 
     Parameters
     ----------
