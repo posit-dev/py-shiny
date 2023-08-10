@@ -194,7 +194,7 @@ def test_output_transformer_result_does_not_allow_args():
         assert "Expected `params` to be of type `TransformerParams`" in str(e)
 
 
-# "Currently, `ValueFn` can not be truely async and "support sync render methods"
+# "Currently, `ValueFn` can not be truly async and "support sync render methods"
 @pytest.mark.asyncio
 async def test_renderer_handler_fn_can_be_async():
     @output_transformer
@@ -202,7 +202,7 @@ async def test_renderer_handler_fn_can_be_async():
         _meta: TransformerMetadata,
         _fn: ValueFn[str],
     ) -> str:
-        # Actually sleep to test that the handler is truely async
+        # Actually sleep to test that the handler is truly async
         await asyncio.sleep(0.1)
         ret = await resolve_value_fn(_fn)
         return ret
@@ -267,7 +267,7 @@ async def test_renderer_handler_fn_can_be_async():
     assert ret == async_test_val
 
 
-# "Currently, `ValueFnA` can not be truely async and "support sync render methods".
+# "Currently, `ValueFnA` can not be truly async and "support sync render methods".
 # Test that conditionally calling async works.
 @pytest.mark.asyncio
 async def test_renderer_handler_fn_can_be_yield_while_async():
@@ -277,7 +277,7 @@ async def test_renderer_handler_fn_can_be_yield_while_async():
         _fn: ValueFn[str],
     ) -> str:
         if is_async_callable(_fn):
-            # Actually sleep to test that the handler is truely async
+            # Actually sleep to test that the handler is truly async
             await asyncio.sleep(0.1)
         ret = await resolve_value_fn(_fn)
         return ret
