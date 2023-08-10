@@ -125,6 +125,24 @@ quartodoc:
         - render.data_frame
         - render.DataGrid
         - render.DataTable
+        - kind: page
+          path: OutputRender
+          flatten: true
+          summary:
+            name: "Create rendering outputs"
+            desc: ""
+          contents:
+            - render.transformer.output_transformer
+            - render.transformer.OutputTransformer
+            - render.transformer.TransformerMetadata
+            - render.transformer.TransformerParams
+            - render.transformer.OutputRenderer
+            - render.transformer.OutputRendererSync
+            - render.transformer.OutputRendererAsync
+            - render.transformer.is_async_callable
+            - render.transformer.resolve_value_fn
+            - render.transformer.ValueFn
+            - render.transformer.TransformFn
     - title: Reactive programming
       desc: ""
       contents:
@@ -178,7 +196,7 @@ quartodoc:
       desc: ""
       contents:
         - kind: page
-          path: MiscTypes.html
+          path: MiscTypes
           flatten: true
           summary:
             name: "Miscellaneous types"
@@ -192,7 +210,7 @@ quartodoc:
             - ui._input_slider.SliderValueArg
             - ui._input_slider.SliderStepArg
         - kind: page
-          path: TagTypes.html
+          path: TagTypes
           summary:
             name: "Tag types"
             desc: ""
@@ -205,7 +223,7 @@ quartodoc:
             - htmltools.TagChild
             - htmltools.TagList
         - kind: page
-          path: ExceptionTypes.html
+          path: ExceptionTypes
           summary:
             name: "Exception types"
             desc: ""
