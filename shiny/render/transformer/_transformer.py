@@ -247,7 +247,6 @@ class OutputRenderer(Generic[OT], ABC):
                 + " requires an async tranformer function (`transform_fn`)"
             )
 
-        self._is_async = is_async_callable(value_fn)
         self._value_fn = value_fn
         self._transformer = transform_fn
         self._params = params
@@ -644,7 +643,7 @@ async def resolve_value_fn(value_fn: ValueFn[IT]) -> IT:
     if is_async_callable(_fn):
         x = await _fn()
     else:
-        x = _fn()
+        x = cast(ValueFnSync[IT], _fn)()
     ```
 
     With this:
