@@ -203,7 +203,7 @@ async def test_renderer_handler_fn_can_be_async():
         _fn: ValueFn[str],
     ) -> str:
         # Actually sleep to test that the handler is truly async
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0)
         ret = await resolve_value_fn(_fn)
         return ret
 
@@ -252,7 +252,7 @@ async def test_renderer_handler_fn_can_be_async():
     async_test_val = "Async: Hello World!"
 
     async def async_app_render_fn() -> str:
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0)
         return async_test_val
 
     renderer_async = async_renderer(async_app_render_fn)
@@ -278,7 +278,7 @@ async def test_renderer_handler_fn_can_be_yield_while_async():
     ) -> str:
         if is_async_callable(_fn):
             # Actually sleep to test that the handler is truly async
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0)
         ret = await resolve_value_fn(_fn)
         return ret
 
@@ -322,7 +322,7 @@ async def test_renderer_handler_fn_can_be_yield_while_async():
     async_test_val = "Async: Hello World!"
 
     async def async_app_render_fn() -> str:
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0)
         return async_test_val
 
     renderer_async = yield_renderer(async_app_render_fn)
