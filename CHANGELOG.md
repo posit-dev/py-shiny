@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Experimental breaking changes
+
+* `shiny.experimental.ui.sidebar_toggle()` has been renamed to `shiny.experimental.ui.toggle_sidebar()`. (TODO-barret)
+
+
 ### New features
 
 * Added `shiny.render.renderer_components` decorator to help create new output renderers. (#621)

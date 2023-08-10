@@ -249,7 +249,7 @@ quartodoc:
             - experimental.ui.navset_bar
             - experimental.ui.navset_tab_card
             - experimental.ui.navset_pill_card
-            - experimental.ui.sidebar_toggle
+            - experimental.ui.toggle_sidebar
             - experimental.ui.panel_main
             - experimental.ui.panel_sidebar
             - experimental.ui.Sidebar

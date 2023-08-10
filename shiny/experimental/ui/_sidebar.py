@@ -117,8 +117,8 @@ def sidebar(
     fg: Optional[str] = None,
     class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
     max_height_mobile: Optional[str | float] = None,
+    gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
-    height: Optional[CssUnit] = None,
 ) -> Sidebar:
     # See [this article](https://rstudio.github.io/bslib/articles/sidebars.html)
     #   to learn more.
@@ -154,10 +154,10 @@ def sidebar(
         open), `"closed"` or `False` (the sidebar starts closed), or `"always"` or
         `None` (the sidebar is always open and cannot be closed).
 
-        In :func:`~shiny.experimental.ui.sidebar_toggle`, `open` indicates the desired
+        In :func:`~shiny.experimental.ui.toggle_sidebar`, `open` indicates the desired
         state of the sidebar, where the default of `open = None` will cause the sidebar
         to be toggled open if closed or vice versa. Note that
-        :func:`~shiny.experimental.ui.sidebar_toggle` can only open or close the
+        :func:`~shiny.experimental.ui.toggle_sidebar` can only open or close the
         sidebar, so it does not support the `"desktop"` and `"always"` options.
     id
         A character string. Required if wanting to re-actively read (or update) the
@@ -416,7 +416,7 @@ def layout_sidebar(
 
 
 # TODO-maindocs; @add_example()
-def sidebar_toggle(
+def toggle_sidebar(
     id: str,
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
     session: Session | None = None,
@@ -433,7 +433,7 @@ def sidebar_toggle(
     open
         The desired state of the sidebar, choosing from the following options: `None`
         (toggle sidebar open and closed), `"open"` or `True` (open the sidebar),
-        `"closed"` or `False` (close the sidebar). Note that `sidebar_toggle()` can only
+        `"closed"` or `False` (close the sidebar). Note that `toggle_sidebar()` can only
         open or close the sidebar, so it does not support the `"desktop"` and `"always"`
     session
         A Shiny session object (the default should almost always be used).
@@ -455,7 +455,7 @@ def sidebar_toggle(
     else:
         if open == "always" or open == "desktop":
             raise ValueError(
-                f"`open = '{open}'` is not supported by `sidebar_toggle()`"
+                f"`open = '{open}'` is not supported by `toggle_sidebar()`"
             )
         raise ValueError(
             "open must be NULL (or 'toggle'), TRUE (or 'open'), or FALSE (or 'closed')"

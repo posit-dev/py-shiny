@@ -45,7 +45,7 @@ from ._sidebar import (
     panel_main,
     panel_sidebar,
     sidebar,
-    sidebar_toggle,
+    toggle_sidebar,
 )
 from ._tooltip import tooltip, tooltip_toggle, update_tooltip
 from ._valuebox import showcase_left_center, showcase_top_right, value_box
@@ -63,7 +63,7 @@ __all__ = (
     "panel_main",
     "panel_sidebar",
     "sidebar",
-    "sidebar_toggle",
+    "toggle_sidebar",
     # Page
     "page_sidebar",
     "page_fillable",

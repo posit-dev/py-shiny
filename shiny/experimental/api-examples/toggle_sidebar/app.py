@@ -6,7 +6,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 app_ui = x.ui.page_sidebar(
     x.ui.sidebar("Sidebar content", id="sidebar"),
     ui.input_action_button(
-        "sidebar_toggle",
+        "toggle_sidebar",
         label="Toggle sidebar",
         width="fit-content",
     ),
@@ -16,9 +16,9 @@ app_ui = x.ui.page_sidebar(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect
-    @reactive.event(input.sidebar_toggle)
+    @reactive.event(input.toggle_sidebar)
     def _():
-        x.ui.sidebar_toggle("sidebar")
+        x.ui.toggle_sidebar("sidebar")
 
     @output
     @render.text
