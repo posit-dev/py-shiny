@@ -1,0 +1,6 @@
+_site/
+api/
+_inv/
+_sidebar.yml
+/.quarto/
+objects.json

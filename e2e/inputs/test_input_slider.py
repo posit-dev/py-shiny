@@ -42,7 +42,7 @@ def test_input_slider_kitchen(page: Page, slider_app: ShinyAppProc) -> None:
 
     # # Duplicate logic of next test. Only difference is `max_err_values=15`
     # try:
-    #     obs.set("not-a-number", timeout=200)
+    #     obs.set("not-a-number", timeout=800)
     # except ValueError as e:
     #     values_found = '"10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", ...'
     #     assert values_found in str(
@@ -50,7 +50,7 @@ def test_input_slider_kitchen(page: Page, slider_app: ShinyAppProc) -> None:
     #     ), "Error message should contain the list of first 15 valid values"
 
     try:
-        obs.set("not-a-number", timeout=200, max_err_values=4)
+        obs.set("not-a-number", timeout=800, max_err_values=4)
     except ValueError as e:
         values_found = '"10", "11", "12", "13", ...'
         assert values_found in str(

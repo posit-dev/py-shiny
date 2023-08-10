@@ -1,0 +1,24 @@
+name: Issue Management
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage_or_add_to_project:
+    runs-on: ubuntu-latest
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Check if the issue creator is a maintainer
+        id: check_maintainer
+        run: |
+            IS_ADMIN=`gh api /repos/rstudio/py-shiny/collaborators/${{ github.event.issue.user.login }}/permission --jq='.user.permissions.admin'`
+            echo "is_maintainer=$IS_ADMIN" >> "$GITHUB_OUTPUT"
+
+      - name: Apply "needs triage" label to issues created by non-maintainers
+        if: steps.check_maintainer.outputs.is_maintainer == 'false'
+        run: |
+          gh issue edit ${{ github.event.issue.number }} --add-label "needs-triage" --repo ${{ github.repository }}

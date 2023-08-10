@@ -10,6 +10,7 @@ from htmltools import (
     TagChild,
     TagList,
     css,
+    head_content,
     tags,
 )
 
@@ -130,7 +131,7 @@ def page_navbar(
         Choose a particular nav item to select by default value (should match it's
         ``value``).
     sidebar
-        A :func:`~shiny.ui.sidebar` component to display on every page.
+        A :func:`~shiny.experimental.ui.sidebar` component to display on every page.
     fillable
         Whether or not the main content area should be considered a fillable
         (i.e., flexbox) container.
@@ -278,7 +279,7 @@ def page_fillable(
     )
 
     return page_bootstrap(
-        tags.head(tags.style("html { height: 100%; }")),
+        head_content(tags.style("html { height: 100%; }")),
         as_fillable_container(
             tags.body(
                 {"class": "bslib-page-fill bslib-gap-spacing", "style": style},

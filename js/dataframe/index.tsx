@@ -3,20 +3,15 @@ import css from "./styles.scss";
 import {
   Column,
   ColumnDef,
-  Row,
+  RowData,
   RowModel,
-  Table,
   TableOptions,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  VirtualItem,
-  Virtualizer,
-  useVirtualizer,
-} from "@tanstack/react-virtual";
+import { Virtualizer, useVirtualizer } from "@tanstack/react-virtual";
 import React, {
   FC,
   StrictMode,
@@ -25,16 +20,22 @@ import React, {
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 import { Root, createRoot } from "react-dom/client";
 import { ErrorsMessageValue } from "rstudio-shiny/srcts/types/src/shiny/shinyapp";
 import { findFirstItemInView, getStyle } from "./dom-utils";
+import { Filter, useFilter } from "./filter";
 import { SelectionMode, useSelection } from "./selection";
 import { SortArrow } from "./sort-arrows";
 import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
+import { PandasData, TypeHint } from "./types";
 
+declare module "@tanstack/table-core" {
+  interface ColumnMeta<TData extends RowData, TValue> {
+    typeHint: TypeHint;
+  }
+}
 // TODO: Right-align numeric columns, maybe change font
 // TODO: Explicit column widths
 // TODO: Filtering
@@ -49,21 +50,6 @@ import { useSummary } from "./table-summary";
 // TODO: Drag to resize table/grid
 // TODO: Row numbers
 
-interface DataGridOptions {
-  style?: "table" | "grid";
-  summary?: boolean | string;
-  row_selection_mode?: SelectionMode;
-  width?: string;
-  height?: string;
-}
-
-interface PandasData<TIndex> {
-  columns: ReadonlyArray<string>;
-  index: ReadonlyArray<TIndex>;
-  data: unknown[][];
-  options: DataGridOptions;
-}
-
 interface ShinyDataGridProps<TIndex> {
   id: string | null;
   data: PandasData<TIndex>;
@@ -72,8 +58,8 @@ interface ShinyDataGridProps<TIndex> {
 
 const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const { id, data, bgcolor } = props;
-  const { columns, index, data: rowData } = data;
-  const { width, height } = data.options;
+  const { columns, index, type_hints, data: rowData } = data;
+  const { width, height, filters: withFilters } = data.options;
   const keyToIndex: Record<string, unknown> = {};
   index.forEach((value) => {
     keyToIndex[value + ""] = value;
@@ -83,8 +69,44 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const theadRef = useRef<HTMLTableSectionElement>(null);
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
+  const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
+    () =>
+      columns.map((colname, i) => {
+        const typeHint = type_hints?.[i];
+
+        return {
+          accessorFn: (row, index) => {
+            return row[i];
+          },
+          // TODO: delegate this decision to something in filter.tsx
+          filterFn:
+            typeHint.type === "numeric" ? "inNumberRange" : "includesString",
+          header: colname,
+          meta: {
+            typeHint: typeHint,
+          },
+        };
+      }),
+    [columns]
+  );
+
+  // Not sure if it's even necessary to clone
+  const dataClone = useMemo(() => [...rowData], [rowData]);
+
+  const filterOpts = useFilter<unknown[]>(withFilters);
+
+  const options: TableOptions<unknown[]> = {
+    data: dataClone,
+    columns: coldefs,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    ...filterOpts,
+    //debugAll: true,
+  };
+  const table = useReactTable(options);
+
   const rowVirtualizer = useVirtualizer({
-    count: rowData.length,
+    count: table.getFilteredRowModel().rows.length,
     getScrollElement: () => containerRef.current,
     estimateSize: () => 31,
     paddingStart: theadRef.current?.clientHeight ?? 0,
@@ -100,31 +122,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
 
   const totalSize = rowVirtualizer.getTotalSize();
   const virtualRows = rowVirtualizer.getVirtualItems();
-
-  const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
-    () =>
-      columns.map((colname, i) => {
-        return {
-          accessorFn: (row, index) => {
-            return row[i];
-          },
-          header: colname,
-        };
-      }),
-    [columns]
-  );
-
-  // Not sure if it's even necessary to clone
-  const dataClone = useMemo(() => [...rowData], [rowData]);
-
-  const options: TableOptions<unknown[]> = {
-    data: dataClone,
-    columns: coldefs,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    //debugAll: true,
-  };
-  const table = useReactTable(options);
 
   // paddingTop and paddingBottom are to force the <tbody> to add up to the correct
   // virtual height.
@@ -143,7 +140,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
     containerRef?.current,
     virtualRows,
     theadRef.current,
-    rowData.length
+    rowVirtualizer.options.count
   );
 
   const tableStyle = data.options["style"] ?? "grid";
@@ -241,7 +238,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
         style={{ width, maxHeight: height, overflow: "auto" }}
       >
         <table
-          className={tableClass}
+          className={tableClass + (withFilters ? " filtering" : "")}
           aria-rowcount={rowData.length}
           aria-multiselectable={canMultiSelect}
           style={{ width: width === null || width === "auto" ? null : "100%" }}
@@ -283,6 +280,17 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
                 })}
               </tr>
             ))}
+            {withFilters && (
+              <tr className="filters">
+                {table.getFlatHeaders().map((header) => {
+                  return (
+                    <th key={`filter-${header.id}`}>
+                      <Filter header={header} />
+                    </th>
+                  );
+                })}
+              </tr>
+            )}
           </thead>
           <tbody
             ref={tbodyRef}
@@ -293,27 +301,29 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
             {virtualRows.map((virtualRow) => {
               const row = table.getRowModel().rows[virtualRow.index];
               return (
-                <tr
-                  key={virtualRow.key}
-                  data-index={virtualRow.index}
-                  aria-rowindex={virtualRow.index + headerRowCount}
-                  data-key={row.id}
-                  ref={measureEl}
-                  aria-selected={rowSelection.has(row.id)}
-                  tabIndex={-1}
-                  {...rowSelection.itemHandlers()}
-                >
-                  {row.getVisibleCells().map((cell) => {
-                    return (
-                      <td key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
+                row && (
+                  <tr
+                    key={virtualRow.key}
+                    data-index={virtualRow.index}
+                    aria-rowindex={virtualRow.index + headerRowCount}
+                    data-key={row.id}
+                    ref={measureEl}
+                    aria-selected={rowSelection.has(row.id)}
+                    tabIndex={-1}
+                    {...rowSelection.itemHandlers()}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      return (
+                        <td key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                )
               );
             })}
             {paddingBottom > 0 && (

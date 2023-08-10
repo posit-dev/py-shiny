@@ -23,6 +23,7 @@ from ...types import MISSING, MISSING_TYPE
 from ._css_unit import CssUnit, as_css_padding, as_css_unit
 from ._fill import as_fill_carrier, as_fill_item, as_fillable_container
 from ._htmldeps import card_dependency
+from ._tooltip import tooltip
 from ._utils import consolidate_attrs
 
 __all__ = (
@@ -85,7 +86,7 @@ def card(
     Returns
     -------
     :
-        An :func:`~htmltools.div` tag.
+        An :func:`~shiny.ui.tags.div` tag.
 
     See Also
     --------
@@ -112,6 +113,7 @@ def card(
                 min_height=as_css_unit(min_height),
             ),
             "data-bslib-card-init": True,
+            "data-full-screen": "false" if full_screen else None,
         },
         *children,
         attrs,
@@ -134,14 +136,12 @@ def _card_js_init() -> Tag:
 
 
 def _full_screen_toggle() -> Tag:
-    return tags.span(
-        {
-            "class": "bslib-full-screen-enter badge rounded-pill bg-dark",
-            "data-bs-toggle": "tooltip",
-            "data-bs-placement": "bottom",
-            "title": "Expand",
-        },
-        _full_screen_toggle_icon(),
+    return tooltip(
+        tags.span(
+            {"class": "bslib-full-screen-enter badge rounded-pill bg-dark"},
+            _full_screen_toggle_icon(),
+        ),
+        "Expand",
     )
 
 
@@ -314,12 +314,12 @@ def card_body(
 # https://mypy.readthedocs.io/en/stable/protocols.html#callback-protocols
 class WrapperCallable(Protocol):
     """
-    A callable that wraps children into a :func:`~shiny.experimental.ui.CardItem`.
+    A callable that wraps children into a :class:`~shiny.experimental.ui.CardItem`.
     """
 
     def __call__(self, *args: TagChild) -> CardItem:
         """
-        Wraps children into a :func:`~shiny.experimental.ui.CardItem`.
+        Wraps children into a :class:`~shiny.experimental.ui.CardItem`.
 
         Parameters
         ----------
@@ -554,7 +554,7 @@ def card_footer(
 
 class ImgContainer(Protocol):
     """
-    A callable that wraps the return value of `card_image()`. To isolate your object in a card, return a :func:`~shiny.experimental.ui.CardItem`.
+    A callable that wraps the return value of `card_image()`. To isolate your object in a card, return a :class:`~shiny.experimental.ui.CardItem`.
     """
 
     def __call__(self, *args: Tag) -> Tagifiable:
@@ -628,7 +628,7 @@ def card_image(
         If :func:`~shiny.experimental.ui.card_body` is used, each image will be in separate cards. If
         the `container` method does not return a :class:`~shiny.experimental.ui.CardItem`, it
         allows for consecutive non-`CardItem` objects to be bundled into a single
-        :func:`~.shiny.experimental.card_body` within :func:`~shiny.experimental.ui.card`.
+        :func:`~shiny.experimental.ui.card_body` within :func:`~shiny.experimental.ui.card`.
     **kwargs
         Additional HTML attributes for the resolved Tag.
     """
