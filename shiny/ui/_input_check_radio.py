@@ -73,6 +73,7 @@ def input_checkbox(
                     id=resolve_id(id),
                     type="checkbox",
                     checked="checked" if value else None,
+                    class_="shiny-input-checkbox",
                 ),
                 " ",
                 span(label),
