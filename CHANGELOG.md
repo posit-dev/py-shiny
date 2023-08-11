@@ -14,7 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-Fixes #646: Wrap bare value box value in `<p />` tags. (#668)
+Fixed #646: Wrap bare value box value in `<p />` tags. (#668)
+
+Fixed #676: `render.data_frame` sometimes reports selected rows with `None` as the index value. (#677)
 
 ### Other changes
 
