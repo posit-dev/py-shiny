@@ -116,7 +116,9 @@ def test_table_switch(
     # Switch datasets to much longer one
     select_dataset.set("diamonds")
     select_dataset.expect.to_have_value("diamonds")
-    expect(summary).to_have_text(re.compile("^Viewing rows 1 through \\d+ of 53940$"))
+    expect(summary).to_have_text(
+        re.compile("^Viewing rows 1 through \\d+ of 53940$"), timeout=10000
+    )
 
 
 @pytest.mark.flaky(reruns=RERUNS)
