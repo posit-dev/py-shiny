@@ -18,7 +18,7 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Calc
     def parsed_file():
-        file: list[FileInfo] = input.file1()
+        file: list[FileInfo] | None = input.file1()
         if file is None:
             return pd.DataFrame()
         return pd.read_csv(file[0]["datapath"])
