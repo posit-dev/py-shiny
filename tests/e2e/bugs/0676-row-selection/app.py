@@ -39,7 +39,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             and len(input.grid_selected_rows()) > 0
         ):
             # "split", "records", "index", "columns", "values", "table"
-            return df.loc[list(input.grid_selected_rows())]
+            return df.iloc[list(input.grid_selected_rows())]
 
 
 app = App(app_ui, server, debug=True)

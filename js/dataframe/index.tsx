@@ -60,16 +60,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const { id, data, bgcolor } = props;
   const { columns, index, type_hints, data: rowData } = data;
   const { width, height, filters: withFilters } = data.options;
-  // The terminology here is a bit confusing. The "key" is the `data-key` attribute on
-  // the table>tbody>tr, which is populated by Tanstack table API's row id, which is
-  // always [0, 1, 2, ...]. The "index" refers to the Pandas index coming from the
-  // Python side, which may or may not be [0, 1, 2, ...]--it could be strings,
-  // discontiguous numbers, or whatever. So the keyToIndex map lets you convert a
-  // Tanstack row to the Pandas index.
-  const keyToIndex: Record<string, unknown> = {};
-  index.forEach((value, i) => {
-    keyToIndex[i + ""] = value;
-  });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const theadRef = useRef<HTMLTableSectionElement>(null);
@@ -198,7 +188,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
           rowSelection
             .keys()
             .toList()
-            .map((key) => keyToIndex[key])
+            .map((key) => parseInt(key))
         );
       }
     }
