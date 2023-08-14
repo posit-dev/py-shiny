@@ -1,10 +1,9 @@
 import pandas as pd
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
-from shiny.types import FileInfo
+from shiny import App, reactive, render, ui
 
 app_ui = ui.page_fluid(
-    ui.input_file("file1", "Choose CSV File", accept=[".csv"], multiple=False),
+    ui.input_file("file1", "Upload a CSV file", accept=".csv"),
     ui.input_checkbox_group(
         "stats",
         "Summary Stats",
