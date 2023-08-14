@@ -21,7 +21,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         file: list[FileInfo] | None = input.file1()
         if file is None:
             return pd.DataFrame()
-        return pd.read_csv(file[0]["datapath"])
+        return pd.read_csv(  # pyright: ignore[reportUnknownMemberType]
+            file[0]["datapath"]
+        )
 
     @output
     @render.table
