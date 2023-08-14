@@ -1,9 +1,10 @@
 import pandas as pd
 
-from shiny import App, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny.types import FileInfo
 
 app_ui = ui.page_fluid(
-    ui.input_file("file1", "Upload a CSV file", accept=".csv"),
+    ui.input_file("file1", "Choose CSV File", accept=[".csv"], multiple=False),
     ui.input_checkbox_group(
         "stats",
         "Summary Stats",
@@ -17,7 +18,7 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Calc
     def parsed_file():
-        file: list[FileInfo] = input.file1()
+        file: list[FileInfo] | None = input.file1()
         if file is None:
             return pd.DataFrame()
         return pd.read_csv(file[0]["datapath"])
