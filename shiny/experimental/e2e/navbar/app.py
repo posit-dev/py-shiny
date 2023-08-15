@@ -56,9 +56,9 @@ app = App(
                 *nav_items("navset_tab_card()"),
                 sidebar=my_sidebar,
             ),
-            ui.h4("navset_pill_card()"),
-            x.ui.navset_pill_card(
-                *nav_items("navset_pill_card()"),
+            ui.h4("navset_card_pill()"),
+            x.ui.navset_card_pill(
+                *nav_items("navset_card_pill()"),
                 sidebar=my_sidebar,
             ),
             # Do not include `navset_bar()` in example. Ok for testing only

@@ -55,8 +55,8 @@ app_ui = ui.page_navbar(
         ui.navset_pill(*nav_controls("navset_pill()")),
         ui.h4("navset_tab_card()"),
         ui.navset_tab_card(*nav_controls("navset_tab_card()")),
-        ui.h4("navset_pill_card()"),
-        ui.navset_pill_card(*nav_controls("navset_pill_card()")),
+        ui.h4("navset_card_pill()"),
+        ui.navset_card_pill(*nav_controls("navset_card_pill()")),
         ui.h4("navset_pill_list()"),
         ui.navset_pill_list(*nav_controls("navset_pill_list()")),
     )

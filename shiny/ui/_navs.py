@@ -8,10 +8,12 @@ __all__ = (
     "navset_tab",
     "navset_tab_card",
     "navset_pill",
-    "navset_pill_card",
+    "navset_card_pill",
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
+    # Deprecated - 2023-08-15
+    "navset_pill_card",
 )
 
 import copy
@@ -20,6 +22,7 @@ from typing import Any, Literal, Optional, Sequence, cast
 
 from htmltools import MetadataNode, Tag, TagChild, TagList, div, tags
 
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from .._utils import private_random_int
@@ -120,7 +123,7 @@ def nav(
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
     ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
     """
     if value is None:
@@ -161,7 +164,7 @@ def nav_control(*args: TagChild) -> Nav:
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
     ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
     Example
     -------
@@ -183,7 +186,7 @@ def nav_spacer() -> Nav:
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
     ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
 
     Example
@@ -316,7 +319,7 @@ def nav_menu(
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
     ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
     Example
     -------
@@ -410,7 +413,7 @@ def navset_tab(
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_pill
     ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
 
     Example
@@ -462,7 +465,7 @@ def navset_pill(
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
 
     Example
@@ -515,7 +518,7 @@ def navset_hidden(
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_tab_card
     ~shiny.ui.navset_pill
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_pill_list
     ~shiny.ui.navset_bar
     """
@@ -594,7 +597,7 @@ def navset_tab_card(
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
 
     Example
@@ -613,7 +616,7 @@ def navset_tab_card(
     )
 
 
-def navset_pill_card(
+def navset_card_pill(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -743,7 +746,7 @@ def navset_pill_list(
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_tab_card
     ~shiny.ui.navset_pill
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_hidden
@@ -911,7 +914,7 @@ def navset_bar(
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
     ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
 
     Example
@@ -996,4 +999,32 @@ def card(*args: TagChild, header: TagChild = None, footer: TagChild = None) -> T
         footer,
         bootstrap_deps(),
         class_="card",
+    )
+
+
+##############################################
+# Deprecated
+##############################################
+# Deprecated 2023-08-15
+def navset_pill_card(
+    *args: NavSetArg,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+    placement: Literal["above", "below"] = "above",
+) -> NavSetCard:
+    """Deprecated. Please use `navset_card_pill()` instead of `navset_pill_card()`."""
+    warn_deprecated(
+        "`navset_pill_card()` is deprecated. "
+        "This method will be remove in a future version, "
+        "please use :func:`~shiny.ui.navset_card_pill` instead."
+    )
+    return navset_card_pill(
+        *args,
+        id=id,
+        selected=selected,
+        header=header,
+        footer=footer,
+        placement=placement,
     )

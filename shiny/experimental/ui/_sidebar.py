@@ -133,7 +133,7 @@ def sidebar(
 
     * :func:`~shiny.experimental.ui.layout_sidebar`
       * Creates a sidebar layout component which can be dropped inside any Shiny UI page method (e.g. :func:`~shiny.experimental.ui.page_fillable`) or :func:`~shiny.experimental.ui.card` context.
-    * :func:`~shiny.experimental.ui.navset_bar`, :func:`~shiny.experimental.ui.navset_tab_card`, and :func:`~shiny.experimental.ui.navset_pill_card`
+    * :func:`~shiny.experimental.ui.navset_bar`, :func:`~shiny.experimental.ui.navset_tab_card`, and :func:`~shiny.experimental.ui.navset_card_pill`
       * Creates a multi page/tab UI with a singular `sidebar()` (which is
         shown on every page/tab).
 
@@ -186,7 +186,7 @@ def sidebar(
     * :func:`~shiny.experimental.ui.layout_sidebar`
     * :func:`~shiny.experimental.ui.navset_bar`
     * :func:`~shiny.experimental.ui.navset_tab_card`
-    * :func:`~shiny.experimental.ui.navset_pill_card`
+    * :func:`~shiny.experimental.ui.navset_card_pill`
     """
     # TODO-future; validate `open`, bg, fg, class_, max_height_mobile
 

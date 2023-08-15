@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+# Breaking changes
+
+* `shiny.ui.navset_pill_card` has been renamed to `shiny.ui.navset_pill_card_panel` (TODO-barret).
+
 ### New features
 
 * Added `shiny.render.renderer_components` decorator to help create new output renderers. (#621)

@@ -97,7 +97,7 @@ def test_nav_markup():
     )
 
     x = with_private_seed(
-        ui.navset_pill_card,
+        ui.navset_card_pill,
         a,
         ui.nav_menu("Menu", c),
         b,

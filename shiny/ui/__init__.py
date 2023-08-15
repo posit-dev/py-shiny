@@ -61,10 +61,12 @@ from ._navs import (
     navset_tab,
     navset_tab_card,
     navset_pill,
-    navset_pill_card,
+    navset_card_pill,
     navset_pill_list,
     navset_hidden,
     navset_bar,
+    # Deprecated
+    navset_pill_card,
 )
 from ._notification import notification_show, notification_remove
 from ._output import (
@@ -177,6 +179,7 @@ __all__ = (
     "navset_tab",
     "navset_tab_card",
     "navset_pill",
+    "navset_card_pill",
     "navset_pill_card",
     "navset_pill_list",
     "navset_hidden",
