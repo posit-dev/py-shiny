@@ -58,7 +58,7 @@ interface ShinyDataGridProps<TIndex> {
 
 const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const { id, data, bgcolor } = props;
-  const { columns, index, type_hints, data: rowData } = data;
+  const { columns, type_hints, data: rowData } = data;
   const { width, height, filters: withFilters } = data.options;
 
   const containerRef = useRef<HTMLDivElement>(null);

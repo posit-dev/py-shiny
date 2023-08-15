@@ -207,6 +207,10 @@ class DataTable(AbstractTabularData):
 
 
 def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
+    # Currently, we don't make use of the index; drop it so we don't error trying to
+    # serialize it or something
+    df = df.reset_index(drop=True)
+
     res = json.loads(
         # {index: [index], columns: [columns], data: [values]}
         df.to_json(None, orient="split")  # pyright: ignore[reportUnknownMemberType]
