@@ -55,4 +55,16 @@ async def update_db(position):
 
 def begin():
     position = init_db()
-    asyncio.create_task(update_db(position))
+
+    # After initializing the database, we need to start a non-blocking task to update it
+    # every second or so. If an event loop is already running, we can use an asyncio
+    # task. (This is the case when running via `shiny run` and shinylive.) Otherwise, we
+    # need to launch a background thread and run an asyncio event loop there. (This is
+    # the case when running via shinyapps.io or Posit Connect.)
+
+    if asyncio.get_event_loop().is_running():
+        asyncio.create_task(update_db(position))
+    else:
+        from threading import Thread
+
+        Thread(target=lambda: asyncio.run(update_db(position)), daemon=True).start()
