@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Fixed #646: Wrap bare value box value in `<p />` tags. (#668)
 
-Fixed #676: `render.data_frame` sometimes reports selected rows with `None` as the index value. (#677)
+Fixed #676: `render.data_frame` was reporting selected rows using 0-based row numbers, but the examples and documentation were unclear about whether these values were row numbers or pandas index values (which default to row numbers, but could easily be something else). Now the examples and documentation are consistent with the behavior. (#677)
 
 ### Other changes
 
