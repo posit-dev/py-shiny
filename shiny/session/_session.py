@@ -47,11 +47,10 @@ from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect, Effect_, Value, flush, isolate
 from ..reactive._core import lock, on_flushed
-from ..render import RenderFunction
+from ..render.transformer import OutputRenderer
 from ..types import SafeException, SilentCancelOutputException, SilentException
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
-IT = TypeVar("IT")
 OT = TypeVar("OT")
 
 
@@ -880,10 +879,10 @@ class Inputs:
     """
     A class representing Shiny input values.
 
-    This class provides access to a :class:`~shiny.session.Session`'s input values. The
-    input values are reactive :class:`~shiny.reactive.Values`, and can be accessed with
+    This class provides access to a :class:`~shiny.Session`'s input values. The
+    input values are reactive :class:`~shiny.reactive.Value`s, and can be accessed with
     the ``[]`` operator, or with ``.``. For example, if there is an input named ``x``,
-    it can be accessed via ``input["x"]()`` or ``input.x()``.
+    it can be accessed via `input["x"]()` or ``input.x()``.
     """
 
     def __init__(
@@ -956,7 +955,7 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    def __call__(self, fn: RenderFunction[Any, Any]) -> None:
+    def __call__(self, renderer_fn: OutputRenderer[Any]) -> None:
         ...
 
     @overload
@@ -967,18 +966,18 @@ class Outputs:
         suspend_when_hidden: bool = True,
         priority: int = 0,
         name: Optional[str] = None,
-    ) -> Callable[[RenderFunction[Any, Any]], None]:
+    ) -> Callable[[OutputRenderer[Any]], None]:
         ...
 
     def __call__(
         self,
-        fn: Optional[RenderFunction[IT, OT]] = None,
+        renderer_fn: Optional[OutputRenderer[OT]] = None,
         *,
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
         name: Optional[str] = None,
-    ) -> None | Callable[[RenderFunction[IT, OT]], None]:
+    ) -> None | Callable[[OutputRenderer[OT]], None]:
         if name is not None:
             from .. import _deprecated
 
@@ -987,18 +986,18 @@ class Outputs:
             )
             id = name
 
-        def set_fn(fn: RenderFunction[IT, OT]) -> None:
+        def set_renderer(renderer_fn: OutputRenderer[OT]) -> None:
             # Get the (possibly namespaced) output id
-            output_name = self._ns(id or fn.__name__)
+            output_name = self._ns(id or renderer_fn.__name__)
 
-            if not isinstance(fn, RenderFunction):
+            if not isinstance(renderer_fn, OutputRenderer):
                 raise TypeError(
                     "`@output` must be applied to a `@render.xx` function.\n"
                     + "In other words, `@output` must be above `@render.xx`."
                 )
 
-            # fn is a RenderFunction object. Give it a bit of metadata.
-            fn.set_metadata(self._session, output_name)
+            # renderer_fn is a Renderer object. Give it a bit of metadata.
+            renderer_fn._set_metadata(self._session, output_name)
 
             if output_name in self._effects:
                 self._effects[output_name].destroy()
@@ -1016,10 +1015,10 @@ class Outputs:
 
                 message: dict[str, Optional[OT]] = {}
                 try:
-                    if _utils.is_async_callable(fn):
-                        message[output_name] = await fn()
+                    if _utils.is_async_callable(renderer_fn):
+                        message[output_name] = await renderer_fn()
                     else:
-                        message[output_name] = fn()
+                        message[output_name] = renderer_fn()
                 except SilentCancelOutputException:
                     return
                 except SilentException:
@@ -1060,10 +1059,10 @@ class Outputs:
 
             return None
 
-        if fn is None:
-            return set_fn
+        if renderer_fn is None:
+            return set_renderer
         else:
-            return set_fn(fn)
+            return set_renderer(renderer_fn)
 
     def _manage_hidden(self) -> None:
         "Suspends execution of hidden outputs and resumes execution of visible outputs."

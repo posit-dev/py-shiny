@@ -22,7 +22,7 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ..render import RenderFunction
+from ..render.transformer import OutputRenderer
 from ..types import MISSING, MISSING_TYPE, ActionButtonValue, SilentException
 from ._core import Context, Dependents, ReactiveWarning, isolate
 
@@ -782,7 +782,7 @@ def event(
                 + "In other words, `@reactive.Calc` must be above `@reactive.event()`."
             )
 
-        if isinstance(user_fn, RenderFunction):
+        if isinstance(user_fn, OutputRenderer):
             # At some point in the future, we may allow this condition, if we find an
             # use case. For now we'll disallow it, for simplicity.
             raise TypeError(
