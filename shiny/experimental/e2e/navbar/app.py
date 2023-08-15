@@ -51,9 +51,9 @@ app = App(
         ),
         footer=ui.div(
             {"style": "width:80%; margin: 0 auto"},
-            ui.h4("navset_tab_card()"),
-            x.ui.navset_tab_card(
-                *nav_items("navset_tab_card()"),
+            ui.h4("navset_card_tab()"),
+            x.ui.navset_card_tab(
+                *nav_items("navset_card_tab()"),
                 sidebar=my_sidebar,
             ),
             ui.h4("navset_card_pill()"),

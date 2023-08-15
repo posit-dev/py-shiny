@@ -59,14 +59,15 @@ from ._navs import (
     nav_control,
     nav_spacer,
     navset_tab,
-    navset_tab_card,
     navset_pill,
     navset_card_pill,
+    navset_card_tab,
     navset_pill_list,
     navset_hidden,
     navset_bar,
     # Deprecated
     navset_pill_card,
+    navset_tab_card,
 )
 from ._notification import notification_show, notification_remove
 from ._output import (
@@ -178,8 +179,9 @@ __all__ = (
     "nav_spacer",
     "navset_tab",
     "navset_tab_card",
-    "navset_pill",
+    "navset_card_tab",
     "navset_card_pill",
+    "navset_pill",
     "navset_pill_card",
     "navset_pill_list",
     "navset_hidden",
