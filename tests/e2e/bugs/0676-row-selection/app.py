@@ -17,6 +17,7 @@ app_ui = ui.page_fluid(
     ui.p("Select rows in the grid, make sure the selected rows appear below."),
     ui.output_data_frame("grid"),
     ui.output_table("detail"),
+    ui.output_text_verbatim("debug"),
     class_="p-3",
 )
 
@@ -40,6 +41,11 @@ def server(input: Inputs, output: Outputs, session: Session):
         ):
             # "split", "records", "index", "columns", "values", "table"
             return df.iloc[list(input.grid_selected_rows())]
+
+    @output
+    @render.text
+    def debug():
+        return input.grid_selected_rows()
 
 
 app = App(app_ui, server, debug=True)

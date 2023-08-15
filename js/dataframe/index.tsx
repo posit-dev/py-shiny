@@ -189,6 +189,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
             .keys()
             .toList()
             .map((key) => parseInt(key))
+            .sort()
         );
       }
     }

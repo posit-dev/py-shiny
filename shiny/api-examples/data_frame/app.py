@@ -66,7 +66,7 @@ def server(input, output, session):
         # input.summary_data_selected_rows() is a tuple, so we must convert it to list,
         # as that's what Pandas requires for indexing.
         selected_idx = list(req(input.summary_data_selected_rows()))
-        countries = summary_df["country"][selected_idx]
+        countries = summary_df.iloc[selected_idx]["country"]
         # Filter data for selected countries
         return df[df["country"].isin(countries)]
 
