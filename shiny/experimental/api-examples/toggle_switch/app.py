@@ -7,7 +7,7 @@ app_ui = ui.page_fluid(
     ui.input_switch("switch_value", label="Switch"),
     ui.input_action_button(
         "toggle_btn",
-        label="Toggle switch",
+        label="Toggle the switch",
         width="fit-content",
     ),
     ui.output_text_verbatim("state"),

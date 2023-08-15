@@ -307,8 +307,18 @@ quartodoc:
           flatten: true
           contents:
             - experimental.ui.tooltip
-            - experimental.ui.tooltip_toggle
+            - experimental.ui.toggle_tooltip
             - experimental.ui.update_tooltip
+        - kind: page
+          path: ExPopover
+          summary:
+            name: "Popovers"
+            desc: "Display additional information when clicking on a UI element (typically a button)."
+          flatten: true
+          contents:
+            - experimental.ui.popover
+            - experimental.ui.toggle_popover
+            - experimental.ui.update_popover
         - kind: page
           path: ExFillingLayout
           summary:
