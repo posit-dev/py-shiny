@@ -11,11 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Experimental breaking changes
 
 * `shiny.experimental.ui.sidebar_toggle()` has been renamed to `shiny.experimental.ui.toggle_sidebar()`. (TODO-barret)
+* `shiny.experimental.ui.tooltip_toggle()` has been renamed to `shiny.experimental.ui.toggle_tooltip()`. (TODO-barret)
+* `shiny.experimental.ui.tooltip_update()` has been renamed to `shiny.experimental.ui.update_tooltip()`. (TODO-barret)
 
 
 ### New features
 
 * Added `shiny.render.renderer_components` decorator to help create new output renderers. (#621)
+* Added `shiny.experimental.ui.popover()`, `update_popover()`, and `toggle_popover()` for easy creation (and server-side updating) of [Bootstrap popovers](https://getbootstrap.com/docs/5.2/components/popovers/). Popovers are similar to tooltips, but are more persistent, and should primarily be used with button-like UI elements (e.g. `input_action_button()` or icons). (#TODO-barret)
 * Added `shiny.experimental.ui.toggle_switch()`. (TODO-barret)
 * Added CSS classes to UI input methods. (TODO-barret)
 
