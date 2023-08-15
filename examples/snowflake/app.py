@@ -1,12 +1,11 @@
 import json
 
 import plotly.express as px
-import shinyswatch
 import snowflake.snowpark.functions as F
 from shinywidgets import output_widget, render_widget
 from snowflake.snowpark.session import Session
 
-from shiny import App, reactive, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 # create a snowpark session
 with open("creds.json") as f:
@@ -39,7 +38,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Calc
     def sub_sales_data():
         index_category = sales_data["I_COLOR"].isin([input.color()])
