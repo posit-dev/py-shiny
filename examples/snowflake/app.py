@@ -5,7 +5,7 @@ import snowflake.snowpark.functions as F
 from shinywidgets import output_widget, render_widget
 from snowflake.snowpark.session import Session
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, ui
 
 # create a snowpark session
 with open("creds.json") as f:
