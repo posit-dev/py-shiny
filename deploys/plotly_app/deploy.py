@@ -5,11 +5,8 @@ import typing
 
 import requests
 
-# import webbrowser
-
 __all__ = ("deploy",)
 
-# TODO: remove
 server_url = os.environ.get("DEPLOY_CONNECT_SERVER_URL")
 api_key = os.environ.get("DEPLOY_CONNECT_SERVER_API_KEY")
 account_name = os.environ.get("DEPLOY_SHINYAPPS_ACCOUNT_NAME")
@@ -36,7 +33,7 @@ def deploy_to_connect(app_name: str, app_file_path: str) -> str:
     if not api_key:
         raise RuntimeError("No api key found. Cannot deploy.")
     # Deploy to connect server
-    connect_server_deploy = f"rsconnect deploy shiny {app_file_path} --server {server_url} --api-key {api_key} --title {app_name}"
+    connect_server_deploy = f"rsconnect deploy shiny {app_file_path} --server {server_url} --api-key {api_key} --title {app_name} --verbose"
     subprocess.run(connect_server_deploy, check=True, shell=True)
 
     # look up content url in connect server once app is deployed
