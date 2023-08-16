@@ -10,9 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added `shiny.render.renderer_components` decorator to help create new output renderers. (#621)
+
 ### Bug fixes
 
+Fixes #646: Wrap bare value box value in `<p />` tags. (#668)
+
 ### Other changes
+
+
+## [0.5.1] - 2023-08-08
+
+### Bug fixes
+
+* Fixed #666: Added missing sidebar stylesheet dependency. (#667)
 
 
 ## [0.5.0] - 2023-08-01

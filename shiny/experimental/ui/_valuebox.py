@@ -96,7 +96,7 @@ def value_box(
         showcase_layout = showcase_left_center()
     if isinstance(title, (str, int, float)):
         title = tags.p(str(title), class_="h6 mb-1")
-    if isinstance(title, (str, int, float)):
+    if isinstance(value, (str, int, float)):
         value = tags.p(str(value), class_="h2 mb-2")
 
     contents = div(
