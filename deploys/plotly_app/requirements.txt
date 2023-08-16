@@ -3,7 +3,8 @@ matplotlib
 numpy
 pandas
 plotly
+pytest-dotenv
 rsconnect-python
 shiny
 shinywidgets
-python-dotenv
+
