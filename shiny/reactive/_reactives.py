@@ -546,7 +546,16 @@ class Effect_:
         with session_context(self._session):
             try:
                 with ctx():
-                    await self._fn()
+                    res = await self._fn()
+
+                    if res is not None:
+                        warnings.warn(
+                            "reactive.Effect function returned a value, but should return None; "
+                            "reactive.Effects should only be used for side effects. "
+                            "Did you mean to use reactive.Calc instead?",
+                            ReactiveWarning,
+                            stacklevel=2,
+                        )
             except SilentException:
                 # It's OK for SilentException to cause an Effect to stop running
                 pass
