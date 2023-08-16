@@ -40,7 +40,7 @@ def deploy_to_connect(app_name: str, app_file_path: str) -> str:
     subprocess.run(connect_server_deploy, check=True, shell=True)
 
     # look up content url in connect server once app is deployed
-    connect_server_lookup_command = f"rsconnect content search --server {server_url} --ap-key {api_key} --title-contains {app_name}"
+    connect_server_lookup_command = f"rsconnect content search --server {server_url} --api-key {api_key} --title-contains {app_name}"
     output = subprocess.run(
         connect_server_lookup_command,
         check=True,
