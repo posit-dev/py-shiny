@@ -77,8 +77,8 @@ check: ## check code quality with black and isort
 	isort --check-only --diff .
 
 test: ## run tests quickly with the default Python
-	python3 tests/asyncio_prevent.py
-	pytest tests
+	python3 tests/pytest/asyncio_prevent.py
+	pytest
 
 # Default `FILE` to `e2e` if not specified
 FILE:=e2e
