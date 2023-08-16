@@ -1018,7 +1018,7 @@ def navset_pill_card(
     """Deprecated. Please use `navset_card_pill()` instead of `navset_pill_card()`."""
     warn_deprecated(
         "`navset_pill_card()` is deprecated. "
-        "This method will be remove in a future version, "
+        "This method will be removed in a future version, "
         "please use :func:`~shiny.ui.navset_card_pill` instead."
     )
     return navset_card_pill(
@@ -1042,7 +1042,7 @@ def navset_tab_card(
     """Deprecated. Please use `navset_card_tab()` instead of `navset_tab_card()`."""
     warn_deprecated(
         "`navset_tab_card()` is deprecated. "
-        "This method will be remove in a future version, "
+        "This method will be removed in a future version, "
         "please use :func:`~shiny.ui.navset_card_tab` instead."
     )
     return navset_card_tab(
