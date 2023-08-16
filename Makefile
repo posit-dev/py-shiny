@@ -78,7 +78,7 @@ check: ## check code quality with black and isort
 
 test: ## run tests quickly with the default Python
 	python3 tests/asyncio_prevent.py
-	pytest tests
+	pytest tests --cov=./ --cov-report=xml
 
 # Default `FILE` to `e2e` if not specified
 FILE:=e2e
@@ -92,9 +92,7 @@ e2e-examples: ## end-to-end tests on examples with playwright
 	pytest $(FILE) -m "examples"
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source shiny -m pytest
-	coverage report -m
-	coverage html
+	pytest --cov=shiny --cov-report=html
 	$(BROWSER) htmlcov/index.html
 
 
