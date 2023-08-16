@@ -6,11 +6,12 @@ import pytest
 from conftest import run_shiny_app
 from playwright.sync_api import ConsoleMessage, Page
 
-here = PurePath(__file__).parent
+here_tests_e2e_examples = PurePath(__file__).parent
+here_root = here_tests_e2e_examples.parent.parent.parent
 
 
 def get_apps(path: str) -> typing.List[str]:
-    full_path = here / path
+    full_path = here_root / path
     app_paths: typing.List[str] = []
     for folder in os.listdir(full_path):
         folder_path = os.path.join(full_path, folder)
@@ -23,8 +24,8 @@ def get_apps(path: str) -> typing.List[str]:
 
 
 example_apps: typing.List[str] = [
-    *get_apps("../../examples"),
-    *get_apps("../../shiny/api-examples"),
+    *get_apps("examples"),
+    *get_apps("shiny/api-examples"),
 ]
 
 app_idle_wait = {"duration": 300, "timeout": 5 * 1000}
@@ -107,7 +108,7 @@ def wait_for_idle_app(
 @pytest.mark.parametrize("ex_app_path", example_apps)
 @pytest.mark.flaky(reruns=3, reruns_delay=1)
 def test_examples(page: Page, ex_app_path: str) -> None:
-    app = run_shiny_app(here / ex_app_path, wait_for_start=True)
+    app = run_shiny_app(here_root / ex_app_path, wait_for_start=True)
 
     console_errors: typing.List[str] = []
 
