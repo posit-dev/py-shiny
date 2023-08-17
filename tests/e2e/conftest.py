@@ -29,6 +29,7 @@ __all__ = (
 )
 
 here = PurePath(__file__).parent
+here_root = here.parent.parent
 
 
 class OutputStream:
@@ -192,20 +193,20 @@ def create_app_fixture(app: Union[PurePath, str], scope: str = "module"):
 
 def create_example_fixture(example_name: str, scope: str = "module"):
     """Used to create app fixtures from apps in py-shiny/examples"""
-    return create_app_fixture(here / "../examples" / example_name / "app.py", scope)
+    return create_app_fixture(here_root / "examples" / example_name / "app.py", scope)
 
 
 def create_doc_example_fixture(example_name: str, scope: str = "module"):
     """Used to create app fixtures from apps in py-shiny/shiny/api-examples"""
     return create_app_fixture(
-        here / "../shiny/api-examples" / example_name / "app.py", scope
+        here_root / "shiny/api-examples" / example_name / "app.py", scope
     )
 
 
 def x_create_doc_example_fixture(example_name: str, scope: str = "module"):
     """Used to create app fixtures from apps in py-shiny/shiny/examples"""
     return create_app_fixture(
-        here / "../shiny/experimental/api-examples" / example_name / "app.py", scope
+        here_root / "shiny/experimental/api-examples" / example_name / "app.py", scope
     )
 
 
