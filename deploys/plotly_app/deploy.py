@@ -35,7 +35,11 @@ def deploy_to_connect(app_name: str, app_file_path: str) -> str:
         raise RuntimeError("No api key found. Cannot deploy.")
     # Deploy to connect server
     connect_server_deploy = f"rsconnect deploy shiny {app_file_path} --server {server_url} --api-key {api_key} --title {app_name} --verbose"
-    subprocess.run(connect_server_deploy, check=True, shell=True)
+    subprocess.run(
+        connect_server_deploy,
+        check=True,
+        shell=True,
+    )
 
     # look up content url in connect server once app is deployed
     connect_server_lookup_command = f"rsconnect content search --server {server_url} --api-key {api_key} --title-contains {app_name}"
@@ -74,6 +78,7 @@ def deploy_to_shinyapps(app_name: str, app_file_path: str) -> str:
         shinyapps_deploy,
         shell=True,
         check=True,
+        text=True,
     )
     return f"https://{name}.shinyapps.io/{app_name}/"
 
