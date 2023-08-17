@@ -77,9 +77,9 @@ quartodoc:
         - ui.nav_spacer
         - ui.nav_menu
         - ui.navset_tab
-        - ui.navset_tab_card
+        - ui.navset_card_tab
         - ui.navset_pill
-        - ui.navset_pill_card
+        - ui.navset_card_pill
         - ui.navset_pill_list
         - ui.navset_hidden
     - title: UI panels
@@ -247,8 +247,8 @@ quartodoc:
             - experimental.ui.layout_sidebar
             - experimental.ui.page_navbar
             - experimental.ui.navset_bar
-            - experimental.ui.navset_tab_card
-            - experimental.ui.navset_pill_card
+            - experimental.ui.navset_card_tab
+            - experimental.ui.navset_card_pill
             - experimental.ui.sidebar_toggle
             - experimental.ui.panel_main
             - experimental.ui.panel_sidebar
