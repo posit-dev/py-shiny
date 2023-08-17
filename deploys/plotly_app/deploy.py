@@ -7,9 +7,10 @@ import requests
 
 __all__ = ("deploy",)
 
+# connect
 server_url = os.environ.get("DEPLOY_CONNECT_SERVER_URL")
 api_key = os.environ.get("DEPLOY_CONNECT_SERVER_API_KEY")
-account_name = os.environ.get("DEPLOY_SHINYAPPS_ACCOUNT_NAME")
+# shinyapps.io
 name = os.environ.get("DEPLOY_SHINYAPPS_NAME")
 token = os.environ.get("DEPLOY_SHINYAPPS_TOKEN")
 secret = os.environ.get("DEPLOY_SHINYAPPS_SECRET")
@@ -69,8 +70,12 @@ quiet_deploy_to_connect = deploy_to_connect
 def deploy_to_shinyapps(app_name: str, app_file_path: str) -> str:
     # Deploy to shinyapps.io
     shinyapps_deploy = f"rsconnect deploy shiny {app_file_path} --account {name} --token {token} --secret {secret} --title {app_name} --verbose"
-    subprocess.run(shinyapps_deploy, shell=True, check=True)
-    return f"https://{account_name}.shinyapps.io/{app_name}/"
+    subprocess.run(
+        shinyapps_deploy,
+        shell=True,
+        check=True,
+    )
+    return f"https://{name}.shinyapps.io/{app_name}/"
 
 
 quiet_deploy_to_shinyapps = deploy_to_shinyapps
