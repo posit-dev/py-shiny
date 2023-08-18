@@ -101,7 +101,7 @@ jobs:
     name: ${{ matrix.name }}
     concurrency: deploy
     runs-on: ${{ matrix.os }}
-    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.ref_name, 'deploy')) }}
+    # if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.ref_name, 'deploy')) }}
     strategy:
       matrix:
         name: ["Deploy ${{ github.ref_name }}"]
@@ -110,6 +110,10 @@ jobs:
       fail-fast: false
 
     steps:
+      - shell: bash
+        run: |
+          echo "${{ github.ref_name }}"
+          echo "${{ github.event_name }}"
       - uses: actions/checkout@v3
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
