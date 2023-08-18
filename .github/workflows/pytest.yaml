@@ -98,13 +98,11 @@ jobs:
           make e2e-examples
 
   deploy:
-    name: ${{ matrix.name }}
     concurrency: deploy
     runs-on: ${{ matrix.os }}
     # if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.ref_name, 'deploy')) }}
     strategy:
       matrix:
-        name: ["Deploy ${{ github.ref_name }}"]
         python-version: ["3.10"]
         os: [ubuntu-latest]
       fail-fast: false
@@ -112,7 +110,7 @@ jobs:
     steps:
       - shell: bash
         run: |
-          echo "${{ github.ref_name }}"
+          echo "$GITHUB_HEAD_REF"
           echo "${{ github.event_name }}"
       - uses: actions/checkout@v3
       - name: Setup py-shiny
