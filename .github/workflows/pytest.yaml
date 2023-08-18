@@ -98,10 +98,10 @@ jobs:
           make e2e-examples
 
   deploy:
-    name: "${{ matrix.name }}"
+    name: ${{ matrix.name }}
     concurrency: deploy
     runs-on: ${{ matrix.os }}
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.ref_name, 'deploy'))
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.ref_name, 'deploy')) }}
     strategy:
       matrix:
         name: ["Deploy ${{ github.ref_name }}"]
