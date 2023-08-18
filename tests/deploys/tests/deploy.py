@@ -1,6 +1,5 @@
 import json
 import os
-import shutil
 import subprocess
 import typing
 
@@ -32,28 +31,35 @@ def exception_swallower(
     return wrapper
 
 
-@exception_swallower
-def deploy_to_connect(app_name: str, app_file_path: str) -> str:
-    if not api_key:
-        raise RuntimeError("No api key found. Cannot deploy.")
-    # Deploy to connect server
-    connect_server_deploy = f"rsconnect deploy shiny {app_file_path} --server {server_url} --api-key {api_key} --title {app_name} --verbose"
-    subprocess.run(
-        connect_server_deploy,
-        check=True,
-        shell=True,
-    )
-
-    # look up content url in connect server once app is deployed
-    connect_server_lookup_command = f"rsconnect content search --server {server_url} --api-key {api_key} --title-contains {app_name}"
+def run_command(cmd: str) -> typing.Union[str, None]:
     output = subprocess.run(
-        connect_server_lookup_command,
+        cmd,
         check=True,
         capture_output=True,
         text=True,
         shell=True,
     )
+    return output
 
+
+def deploy_to_connect(app_name: str, app_file_path: str) -> str:
+    if not api_key:
+        raise RuntimeError("No api key found. Cannot deploy.")
+
+    # check if connect app is already deployed to avoid duplicates
+    connect_server_lookup_command = f"rsconnect content search --server {server_url} --api-key {api_key} --title-contains {app_name}"
+    app_details = run_command(connect_server_lookup_command)
+    connect_server_deploy = f"rsconnect deploy shiny {app_file_path} --server {server_url} --api-key {api_key} --title {app_name} --verbose"
+    # only if the app exists do we replace existing app with new version
+    if json.loads(app_details.stdout):
+        app_id = json.loads(app_details.stdout)[0]["guid"]
+        connect_server_deploy += f" --app-id {app_id}"
+
+    # Deploy to connect server
+    run_command(connect_server_deploy)
+
+    # look up content url in connect server once app is deployed
+    output = run_command(connect_server_lookup_command)
     url = json.loads(output.stdout)[0]["content_url"]
     app_id = json.loads(output.stdout)[0]["guid"]
     # change visibility of app to public
@@ -77,11 +83,7 @@ quiet_deploy_to_connect = deploy_to_connect
 def deploy_to_shinyapps(app_name: str, app_file_path: str) -> str:
     # Deploy to shinyapps.io
     shinyapps_deploy = f"rsconnect deploy shiny {app_file_path} --account {name} --token {token} --secret {secret} --title {app_name} --verbose"
-    subprocess.run(
-        shinyapps_deploy,
-        shell=True,
-        check=True,
-    )
+    run_command(shinyapps_deploy)
     return f"https://{name}.shinyapps.io/{app_name}/"
 
 
