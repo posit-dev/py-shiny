@@ -83,6 +83,8 @@ test: ## run tests quickly with the default Python
 # Default `FILE` to `e2e` if not specified
 FILE:=tests/e2e
 
+DEPLOYS_FILE:=tests/deploys
+
 e2e: ## end-to-end tests with playwright
 	playwright install --with-deps
 	pytest $(FILE) -m "not examples and not integrationtest"
@@ -93,7 +95,7 @@ e2e-examples: ## end-to-end tests on examples with playwright
 
 e2e-deploys: ## end-to-end tests on deploys with playwright
 	playwright install --with-deps
-	pytest $(FILE) -m "integrationtest"
+	pytest $(DEPLOYS_FILE) -s -m "integrationtest"
 
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source shiny -m pytest

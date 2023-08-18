@@ -5,19 +5,22 @@ from deploy import deploy
 from playwright.sync_api import Page, expect
 
 COUNTRY = "Afghanistan"
+APP_DIR = "plotly_app"
+APP_NAME = "example_deploy_app09"
 # reqd since the app on connect takes a while to load
 PAGE_TIMEOUT = 120 * 1000
 EXPECT_TIMEOUT = 30 * 1000
 
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
-app_file_path = current_dir
+app_file_path = os.path.join(os.path.dirname(current_dir), "apps", APP_DIR)
 
 
 @pytest.mark.integrationtest
 @pytest.mark.only_browser("chromium")
-@pytest.mark.parametrize("location", ["connect", "shinyapps"])
+@pytest.mark.parametrize("location", ["shinyapps", "connect"])
 def test_deploys(page: Page, location: str) -> None:
-    page_url = deploy(location, "example_deploy_app1", app_file_path)
+    page_url = deploy(location, APP_NAME, app_file_path)
     page.goto(page_url, timeout=PAGE_TIMEOUT)
     expect(page.get_by_text(COUNTRY)).to_have_count(1, timeout=EXPECT_TIMEOUT)
     page.get_by_role("cell", name=COUNTRY).click(timeout=EXPECT_TIMEOUT)

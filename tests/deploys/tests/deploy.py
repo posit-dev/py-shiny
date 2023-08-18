@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import typing
 
@@ -16,8 +17,10 @@ token = os.environ.get("DEPLOY_SHINYAPPS_TOKEN")
 secret = os.environ.get("DEPLOY_SHINYAPPS_SECRET")
 
 
-def exception_swallower(function: typing.Callable) -> typing.Callable:
-    def wrapper(app_name: str, app_file_path: str):
+def exception_swallower(
+    function: typing.Callable[[str, str], str]
+) -> typing.Callable[[str, str], str]:
+    def wrapper(app_name: str, app_file_path: str) -> str:
         runtime_e: typing.Union[Exception, None] = None
         try:
             return function(app_name, app_file_path)
@@ -69,7 +72,7 @@ def deploy_to_connect(app_name: str, app_file_path: str) -> str:
 quiet_deploy_to_connect = deploy_to_connect
 
 
-# TODO Supress web browser from opening after deploying - https://github.com/rstudio/rsconnect-python/issues/462
+# TODO-future: Supress web browser from opening after deploying - https://github.com/rstudio/rsconnect-python/issues/462
 @exception_swallower
 def deploy_to_shinyapps(app_name: str, app_file_path: str) -> str:
     # Deploy to shinyapps.io
@@ -78,7 +81,6 @@ def deploy_to_shinyapps(app_name: str, app_file_path: str) -> str:
         shinyapps_deploy,
         shell=True,
         check=True,
-        text=True,
     )
     return f"https://{name}.shinyapps.io/{app_name}/"
 
@@ -94,6 +96,10 @@ def deploy(location: str, app_name: str, app_file_path: str) -> str:
     deployment_function = deployment_functions.get(location)
     if deployment_function:
         url = deployment_function(app_name, app_file_path)
+        try:
+            shutil.rmtree(f"{app_file_path}/rsconnect-python")
+        except OSError as e:
+            print(f"Error: {e}")
     else:
         raise ValueError("Unknown deploy location. Cannot deploy.")
     return url
