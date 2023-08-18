@@ -41,6 +41,7 @@ def run_command(cmd: str) -> typing.Union[str, None]:
     )
     return output
 
+
 @exception_swallower
 def deploy_to_connect(app_name: str, app_file_path: str) -> str:
     if not api_key:
