@@ -96,11 +96,6 @@ def deploy(location: str, app_name: str, app_file_path: str) -> str:
     deployment_function = deployment_functions.get(location)
     if deployment_function:
         url = deployment_function(app_name, app_file_path)
-        # remove config files to clear deploy cache
-        try:
-            shutil.rmtree(f"{app_file_path}/rsconnect-python")
-        except OSError as e:
-            print(f"Error: {e}")
     else:
         raise ValueError("Unknown deploy location. Cannot deploy.")
     return url
