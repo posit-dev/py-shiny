@@ -66,7 +66,7 @@ jobs:
         run: |
           make e2e
 
-  examples:
+  e2e-examples:
     runs-on: ${{ matrix.os }}
     if: github.event_name != 'release'
     strategy:
@@ -97,8 +97,8 @@ jobs:
         run: |
           make e2e-examples
 
-  deploy:
-    concurrency: deploy
+  e2e-deploys:
+    concurrency: e2e-deploys
     runs-on: ${{ matrix.os }}
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'deploy')) }}
     strategy:
