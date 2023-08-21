@@ -197,7 +197,7 @@ class Session(object, metaclass=SessionMeta):
             str, Callable[..., Awaitable[object]]
         ] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
-        self._on_ended_callbacks = _utils.Callbacks()
+        self._on_ended_callbacks = _utils.AsyncCallbacks()
         self._has_run_session_end_tasks: bool = False
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
@@ -214,13 +214,13 @@ class Session(object, metaclass=SessionMeta):
         # Clear file upload directories, if present
         self.on_ended(self._file_upload_manager.rm_upload_dir)
 
-    def _run_session_end_tasks(self) -> None:
+    async def _run_session_end_tasks(self) -> None:
         if self._has_run_session_end_tasks:
             return
         self._has_run_session_end_tasks = True
 
         try:
-            self._on_ended_callbacks.invoke()
+            await self._on_ended_callbacks.invoke()
         finally:
             self.app._remove_session(self)
 
@@ -229,7 +229,7 @@ class Session(object, metaclass=SessionMeta):
         Close the session.
         """
         await self._conn.close(code, None)
-        self._run_session_end_tasks()
+        await self._run_session_end_tasks()
 
     async def _run(self) -> None:
         conn_state: ConnectionState = ConnectionState.Start
@@ -319,7 +319,7 @@ class Session(object, metaclass=SessionMeta):
                 finally:
                     await self.close()
             finally:
-                self._run_session_end_tasks()
+                await self._run_session_end_tasks()
 
     def _manage_inputs(self, data: dict[str, object]) -> None:
         for key, val in data.items():
@@ -714,7 +714,10 @@ class Session(object, metaclass=SessionMeta):
     # On session ended
     # ==========================================================================
     @add_example()
-    def on_ended(self, fn: Callable[[], None]) -> Callable[[], None]:
+    def on_ended(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+    ) -> Callable[[], None]:
         """
         Registers a function to be called after the client has disconnected.
 
@@ -728,7 +731,7 @@ class Session(object, metaclass=SessionMeta):
         :
             A function that can be used to cancel the registration.
         """
-        return self._on_ended_callbacks.register(fn)
+        return self._on_ended_callbacks.register(wrap_async(fn))
 
     # ==========================================================================
     # Misc
