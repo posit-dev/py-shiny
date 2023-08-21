@@ -8,15 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### API changes
+
+* Renamed `shiny.ui.navset_pill_card` to `shiny.ui.navset_card_pill`. `shiny.ui.navset_pill_card` will throw a deprecated warning (#492).
+* Renamed `shiny.ui.navset_tab_card` to `shiny.ui.navset_card_tab`. `shiny.ui.navset_tab_card` will throw a deprecated warning (#492).
+* Renamed `shiny.experimental.ui.navset_pill_card` to `shiny.experimental.ui.navset_card_pill` (#492).
+* Renamed `shiny.experimental.ui.navset_tab_card` to `shiny.experimental.ui.navset_card_tab` (#492).
+
 ### New features
 
 * Added `shiny.render.renderer_components` decorator to help create new output renderers. (#621)
 
 ### Bug fixes
 
-Fixed #646: Wrap bare value box value in `<p />` tags. (#668)
-
-Fixed #676: The `render.data_frame` selection feature was underdocumented and buggy (sometimes returning `None` as a row identifier if the pandas data frame's index had gaps in it). With this release, the selection is consistently a tuple of the 0-based row numbers of the selected rows--or `None` if no rows are selected. (#677)
+* Fixed #646: Wrap bare value box value in `<p />` tags. (#668)
+* Fixed #676: The `render.data_frame` selection feature was underdocumented and buggy (sometimes returning `None` as a row identifier if the pandas data frame's index had gaps in it). With this release, the selection is consistently a tuple of the 0-based row numbers of the selected rows--or `None` if no rows are selected. (#677)
 
 ### Other changes
 

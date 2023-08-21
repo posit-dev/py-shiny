@@ -2,8 +2,8 @@ from __future__ import annotations
 
 __all__ = (
     "navset_bar",
-    "navset_tab_card",
-    "navset_pill_card",
+    "navset_card_tab",
+    "navset_card_pill",
 )
 
 import copy
@@ -194,7 +194,7 @@ def navset_card_body(content: Tag, sidebar: Optional[Sidebar] = None) -> CardIte
         return CardItem(content)
 
 
-def navset_tab_card(
+def navset_card_tab(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -229,7 +229,7 @@ def navset_tab_card(
     * ~shiny.experimental.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
-    * ~shiny.experimental.ui.navset_pill_card
+    * ~shiny.experimental.ui.navset_card_pill
     * ~shiny.ui.navset_hidden
 
     Example
@@ -249,7 +249,7 @@ def navset_tab_card(
     )
 
 
-def navset_pill_card(
+def navset_card_pill(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -287,7 +287,7 @@ def navset_pill_card(
     * ~shiny.experimental.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
-    * ~shiny.experimental.ui.navset_tab_card
+    * ~shiny.experimental.ui.navset_card_tab
     * ~shiny.ui.navset_hidden
 
     Example
@@ -533,8 +533,8 @@ def navset_bar(
     * ~shiny.ui.nav_spacer
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
-    * ~shiny.experimental.ui.navset_tab_card
-    * ~shiny.experimental.ui.navset_pill_card
+    * ~shiny.experimental.ui.navset_card_tab
+    * ~shiny.experimental.ui.navset_card_pill
     * ~shiny.ui.navset_hidden
 
     Example
