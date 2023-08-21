@@ -43,6 +43,7 @@ from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from .._namespaces import Id, ResolvedId, Root
 from .._typing_extensions import TypedDict
+from .._utils import wrap_async
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect, Effect_, Value, flush, isolate
@@ -203,8 +204,8 @@ class Session(object, metaclass=SessionMeta):
 
         self._register_session_end_callbacks()
 
-        self._flush_callbacks = _utils.Callbacks()
-        self._flushed_callbacks = _utils.Callbacks()
+        self._flush_callbacks = _utils.AsyncCallbacks()
+        self._flushed_callbacks = _utils.AsyncCallbacks()
 
     def _register_session_end_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions
@@ -632,7 +633,11 @@ class Session(object, metaclass=SessionMeta):
     # Flush
     # ==========================================================================
     @add_example()
-    def on_flush(self, fn: Callable[[], None], once: bool = True) -> Callable[[], None]:
+    def on_flush(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+        once: bool = True,
+    ) -> Callable[[], None]:
         """
         Register a function to call before the next reactive flush.
 
@@ -648,11 +653,13 @@ class Session(object, metaclass=SessionMeta):
         :
             A function that can be used to cancel the registration.
         """
-        return self._flush_callbacks.register(fn, once)
+        return self._flush_callbacks.register(wrap_async(fn), once)
 
     @add_example()
     def on_flushed(
-        self, fn: Callable[[], None], once: bool = True
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+        once: bool = True,
     ) -> Callable[[], None]:
         """
         Register a function to call after the next reactive flush.
@@ -669,14 +676,14 @@ class Session(object, metaclass=SessionMeta):
         :
             A function that can be used to cancel the registration.
         """
-        return self._flushed_callbacks.register(fn, once)
+        return self._flushed_callbacks.register(wrap_async(fn), once)
 
     def _request_flush(self) -> None:
         self.app._request_flush(self)
 
     async def _flush(self) -> None:
         with session_context(self):
-            self._flush_callbacks.invoke()
+            await self._flush_callbacks.invoke()
 
         try:
             omq = self._outbound_message_queues
@@ -701,7 +708,7 @@ class Session(object, metaclass=SessionMeta):
                 self._outbound_message_queues = empty_outbound_message_queues()
         finally:
             with session_context(self):
-                self._flushed_callbacks.invoke()
+                await self._flushed_callbacks.invoke()
 
     # ==========================================================================
     # On session ended
