@@ -49,7 +49,7 @@ def output_plot(
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     width
         The CSS width, e.g. '400px', or '100%'.
     height
@@ -127,7 +127,7 @@ def output_image(
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     width
         The CSS width, e.g. '400px', or '100%'.
     height
@@ -223,7 +223,7 @@ def output_text(
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     inline
         If ``True``, the result is displayed inline
     container
@@ -260,7 +260,7 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     placeholder
         If the output is empty or ``None``, should an empty rectangle be displayed to
         serve as a placeholder? (does not affect behavior when the output is nonempty)
@@ -292,7 +292,7 @@ def output_table(id: str, **kwargs: TagAttrValue) -> Tag:
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     **kwargs
         Additional attributes to add to the container.
 
@@ -320,7 +320,7 @@ def output_ui(
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     inline
         If ``True``, the result is displayed inline
     container

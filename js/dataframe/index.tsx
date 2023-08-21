@@ -58,12 +58,8 @@ interface ShinyDataGridProps<TIndex> {
 
 const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const { id, data, bgcolor } = props;
-  const { columns, index, type_hints, data: rowData } = data;
+  const { columns, type_hints, data: rowData } = data;
   const { width, height, filters: withFilters } = data.options;
-  const keyToIndex: Record<string, unknown> = {};
-  index.forEach((value) => {
-    keyToIndex[value + ""] = value;
-  });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const theadRef = useRef<HTMLTableSectionElement>(null);
@@ -192,7 +188,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
           rowSelection
             .keys()
             .toList()
-            .map((key) => keyToIndex[key])
+            .map((key) => parseInt(key))
+            .sort()
         );
       }
     }
