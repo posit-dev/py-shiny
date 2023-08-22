@@ -22,8 +22,8 @@ def init_db():
         now = datetime.datetime.utcnow()
         position = now.minute * 60 + now.second + 1
 
-        # Simulate 100 seconds of historical data
-        offset_secs = -np.arange(100) - 1
+        # Simulate an hour of historical data
+        offset_secs = -np.arange(60 * 60) - 1
         abs_secs = (position + offset_secs) % (60 * 60) + 1
         initial_scores = accuracy_scores.loc[abs_secs]
         timestamps = pd.DataFrame(
@@ -50,7 +50,23 @@ async def update_db(position):
             new_data["timestamp"] = datetime.datetime.utcnow()
             new_data.to_sql("accuracy_scores", con, index=False, if_exists="append")
             position = (position % (60 * 60)) + 1
+
+            # Every minute, delete old data
+            if position % 60 == 0:
+                cleanup_db(con)
+
             await asyncio.sleep(1)
+
+
+def cleanup_db(con):
+    try:
+        con.execute("PRAGMA wal_checkpoint;")
+    except sqlite3.OperationalError:
+        print("wal_checkpoint failed")
+    con.execute(
+        "DELETE FROM accuracy_scores WHERE timestamp < ?;",
+        (datetime.datetime.utcnow() - datetime.timedelta(hours=1),),
+    )
 
 
 def begin():
