@@ -23,12 +23,13 @@ def data_frame_deps() -> HTMLDependency:
 
 def output_data_frame(id: str) -> Tag:
     """
-    Create a output container for a data frame.
+    Create an output container for an interactive table or grid. Features fast
+    virtualized scrolling, sorting, filtering, and row selection (single or multiple).
 
     Parameters
     ----------
     id
-        An input id.
+        An output id.
 
     Returns
     -------

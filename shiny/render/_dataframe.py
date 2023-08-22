@@ -207,6 +207,10 @@ class DataTable(AbstractTabularData):
 
 
 def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
+    # Currently, we don't make use of the index; drop it so we don't error trying to
+    # serialize it or something
+    df = df.reset_index(drop=True)
+
     res = json.loads(
         # {index: [index], columns: [columns], data: [values]}
         df.to_json(None, orient="split")  # pyright: ignore[reportUnknownMemberType]
@@ -255,29 +259,44 @@ def data_frame(
     _fn: DataFrameTransformer.ValueFn | None = None,
 ) -> DataFrameTransformer.OutputRenderer | DataFrameTransformer.OutputRendererDecorator:
     """
-    Reactively render a Pandas data frame object (or similar) as a basic HTML table.
-
+    Reactively render a Pandas data frame object (or similar) as an interactive table or
+    grid. Features fast virtualized scrolling, sorting, filtering, and row selection
+    (single or multiple).
 
     Returns
     -------
     :
         A decorator for a function that returns any of the following:
 
-        1. A pandas :class:`DataFrame` object.
-        2. A pandas :class:`Styler` object.
+        1. A :class:`~shiny.render.DataGrid` or :class:`~shiny.render.DataTable` object,
+           which can be used to customize the appearance and behavior of the data frame
+           output.
+        2. A pandas :class:`DataFrame` object. (Equivalent to
+           `shiny.render.DataGrid(df)`.)
         3. Any object that has a `.to_pandas()` method (e.g., a Polars data frame or
-           Arrow table).
+           Arrow table). (Equivalent to `shiny.render.DataGrid(df.to_pandas())`.)
+
+    Row selection
+    -------------
+    When using the row selection feature, you can access the selected rows by using the
+    `input.<id>_selected_rows()` function, where `<id>` is the `id` of the
+    :func:`~shiny.ui.output_data_frame`. The value returned will be `None` if no rows
+    are selected, or a tuple of integers representing the indices of the selected rows.
+    To filter a pandas data frame down to the selected rows, use
+    `df.iloc[list(input.<id>_selected_rows())]`.
 
     Tip
     ----
     This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_table` container (see :func:`~shiny.ui.output_table` for
+    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of a
+    :func:`~shiny.ui.output_table` container (see :func:`~shiny.ui.output_table` for
     example usage).
 
     See Also
     --------
-    ~shiny.ui.output_data_frame
+    * :func:`~shiny.ui.output_data_frame`
+    * :class:`~shiny.render.DataGrid` and :class:`~shiny.render.DataTable` are the
+      objects you can return from the rendering function to specify options.
     """
     return DataFrameTransformer(_fn)
 

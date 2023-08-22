@@ -35,7 +35,7 @@ from ._fill import (  # bind_fill_role,
 from ._input_switch import toggle_switch
 from ._input_text import input_text_area
 from ._layout import layout_column_wrap
-from ._navs import navset_bar, navset_pill_card, navset_tab_card
+from ._navs import navset_bar, navset_card_pill, navset_card_tab
 from ._output import output_image, output_plot, output_ui
 from ._page import page_fillable, page_navbar, page_sidebar
 from ._sidebar import (
@@ -72,8 +72,8 @@ __all__ = (
     "page_navbar",
     # Navs
     "navset_bar",
-    "navset_tab_card",
-    "navset_pill_card",
+    "navset_card_tab",
+    "navset_card_pill",
     # Card
     "CardItem",
     "ImgContainer",

@@ -47,7 +47,7 @@ def output_plot(
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     width
         The CSS width, e.g. '400px', or '100%'.
     height
@@ -138,7 +138,7 @@ def output_image(
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     width
         The CSS width, e.g. '400px', or '100%'.
     height
@@ -245,7 +245,7 @@ def output_ui(
     Parameters
     ----------
     id
-        An input id.
+        An output id.
     inline
         If ``True``, the result is displayed inline
     container

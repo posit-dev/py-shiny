@@ -22,9 +22,10 @@ app_ui = ui.page_fluid(
         id="valuebox1",
     ),
     x.ui.value_box(
-        "KPI Title",
-        ui.h1(ui.HTML("$1 <i>Billion</i> Dollars")),
-        ui.span(arrow_up, " 30% VS PREVIOUS 30 DAYS"),
+        "title",
+        "value",
+        ui.p("content"),
+        ui.p("more body"),
         showcase=piggy_bank,
         class_="bg-success",
         full_screen=True,

@@ -116,7 +116,9 @@ def test_table_switch(
     # Switch datasets to much longer one
     select_dataset.set("diamonds")
     select_dataset.expect.to_have_value("diamonds")
-    expect(summary).to_have_text(re.compile("^Viewing rows 1 through \\d+ of 53940$"))
+    expect(summary).to_have_text(
+        re.compile("^Viewing rows 1 through \\d+ of 53940$"), timeout=10000
+    )
 
 
 @pytest.mark.flaky(reruns=RERUNS)
@@ -130,9 +132,19 @@ def test_sort(
     select_dataset.set("diamonds")
     select_dataset.expect.to_have_value("diamonds")
 
-    # Test sorting
+    # Table cell locators
     header_clarity = grid_container.locator("tr:first-child th:nth-child(4)")
     first_cell_clarity = grid_container.locator("tr:first-child td:nth-child(4)")
+
+    # Test that the table contents have updated
+    # This may timeout unless a larger timeout is given
+    expect(header_clarity).not_to_have_text(
+        "num2",
+        timeout=15 * 1000,  # Larger timeout for CI
+    )
+    expect(first_cell_clarity).not_to_have_text("4")
+
+    # Test sorting
     expect(first_cell_clarity).to_have_text("SI2")
     header_clarity.click()
     expect(first_cell_clarity).to_have_text("I1")

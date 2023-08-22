@@ -104,7 +104,10 @@ def brushed_points(
     use_y = "y" in brush["direction"]
 
     # Filter out x and y values
-    keep_rows: pd.Series[bool] = pd.Series(True, index=new_df.index)
+    keep_rows: pd.Series[bool] = pd.Series(
+        True,
+        index=new_df.index,  # pyright: ignore[reportUnknownMemberType]
+    )
     if use_x:
         if xvar is None and "x" in brush["mapping"]:
             xvar = brush["mapping"]["x"]

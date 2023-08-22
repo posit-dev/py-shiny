@@ -8,21 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
-### Experimental breaking changes
-
-* `shiny.experimental.ui.sidebar_toggle()` has been renamed to `shiny.experimental.ui.toggle_sidebar()` (#680).
-* `shiny.experimental.ui.tooltip_toggle()` has been renamed to `shiny.experimental.ui.toggle_tooltip()` (#680).
-* `shiny.experimental.ui.tooltip_update()` has been renamed to `shiny.experimental.ui.update_tooltip()` (#680).
-
-
 ### New features
 
 * Added `shiny.render.renderer_components` decorator to help create new output renderers (#621).
 * Added `shiny.experimental.ui.popover()`, `update_popover()`, and `toggle_popover()` for easy creation (and server-side updating) of [Bootstrap popovers](https://getbootstrap.com/docs/5.2/components/popovers/). Popovers are similar to tooltips, but are more persistent, and should primarily be used with button-like UI elements (e.g. `input_action_button()` or icons) (#680).
 * Added `shiny.experimental.ui.toggle_switch()` (#680).
 * Added CSS classes to UI input methods (#680) .
+* `Session` objects can now accept an asynchronous (or synchronous) function for `.on_flush(fn=)`, `.on_flushed(fn=)`, and `.on_ended(fn=)` (#686).
+
+### API changes
+
+* Renamed `shiny.ui.navset_pill_card` to `shiny.ui.navset_card_pill`. `shiny.ui.navset_pill_card` will throw a deprecated warning (#492).
+* Renamed `shiny.ui.navset_tab_card` to `shiny.ui.navset_card_tab`. `shiny.ui.navset_tab_card` will throw a deprecated warning (#492).
+
+#### Experimental API changes
+
+* Renamed `shiny.experimental.ui.navset_pill_card` to `shiny.experimental.ui.navset_card_pill` (#492).
+* Renamed `shiny.experimental.ui.navset_tab_card` to `shiny.experimental.ui.navset_card_tab` (#492).
+* Renamed `shiny.experimental.ui.sidebar_toggle()` to `shiny.experimental.ui.toggle_sidebar()` (#680).
+* Renamed `shiny.experimental.ui.tooltip_toggle()` to `shiny.experimental.ui.toggle_tooltip()` (#680).
+* Renamed `shiny.experimental.ui.tooltip_update()` to `shiny.experimental.ui.update_tooltip()` (#680).
+
 
 ### Bug fixes
+
+* Fixed #646: Wrap bare value box value in `<p />` tags. (#668)
+* Fixed #676: The `render.data_frame` selection feature was underdocumented and buggy (sometimes returning `None` as a row identifier if the pandas data frame's index had gaps in it). With this release, the selection is consistently a tuple of the 0-based row numbers of the selected rows--or `None` if no rows are selected. (#677)
 
 ### Other changes
 
