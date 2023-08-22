@@ -29,12 +29,7 @@ def toggle_switch(
     msg = drop_none({"id": id, "value": value})
     session = require_active_session(session)
 
-    def callback():
-        # Question: Any suggestions on how to get around the async/await requirement?
-        # `session.send_custom_message("bslib.toggle-input-binary", msg)`
-        # Answer (2023-08-15): Using a sync version of `send_custom_message` as this is being
-        # used in place of `session.send_input_message` due to code changes not being
-        # done in rstudio/shiny
-        session._send_message_sync({"custom": {"bslib.toggle-input-binary": msg}})
+    async def callback():
+        await session.send_custom_message("bslib.toggle-input-binary", msg)
 
     session.on_flush(callback, once=True)
