@@ -57,6 +57,30 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    def on_ended_sync(txt: str):
+        def _():
+            print(txt)
+
+        return _
+
+    def on_ended_async(txt: str):
+        async def _():
+            await asyncio.sleep(0)
+            print(txt)
+
+        return _
+
+    cancel_on_ended_sync = session.on_ended(
+        on_ended_sync("session ended - sync - cancel")
+    )
+    cancel_on_ended_async = session.on_ended(
+        on_ended_async("session ended - async - cancel")
+    )
+    session.on_ended(on_ended_sync("session ended - sync - test1"))
+    session.on_ended(on_ended_async("session ended - async - test2"))
+    session.on_ended(on_ended_async("session ended - async - test3"))
+    session.on_ended(on_ended_sync("session ended - sync - test4"))
+
     all_vals: reactive.Value[tuple[str, ...]] = reactive.Value(())
     flush_vals: reactive.Value[tuple[str, ...]] = reactive.Value(())
     flushed_vals: reactive.Value[tuple[str, ...]] = reactive.Value(())
@@ -138,6 +162,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         cancel_b_flush()
         cancel_c_flushed()
+        cancel_on_ended_sync()
+        cancel_on_ended_async()
 
     @output
     @render.text
