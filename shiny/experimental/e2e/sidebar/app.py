@@ -67,24 +67,24 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     @reactive.Effect
     @reactive.event(input.open_all)
     def _():
-        x.ui.sidebar_toggle("sidebar_inner", open=True)
-        x.ui.sidebar_toggle("sidebar_outer", open=True)
+        x.ui.toggle_sidebar("sidebar_inner", open=True)
+        x.ui.toggle_sidebar("sidebar_outer", open=True)
 
     @reactive.Effect
     @reactive.event(input.close_all)
     def _():
-        x.ui.sidebar_toggle("sidebar_inner", open=False)
-        x.ui.sidebar_toggle("sidebar_outer", open=False)
+        x.ui.toggle_sidebar("sidebar_inner", open=False)
+        x.ui.toggle_sidebar("sidebar_outer", open=False)
 
     @reactive.Effect
     @reactive.event(input.toggle_inner)
     def _():
-        x.ui.sidebar_toggle("sidebar_inner")
+        x.ui.toggle_sidebar("sidebar_inner")
 
     @reactive.Effect
     @reactive.event(input.toggle_outer)
     def _():
-        x.ui.sidebar_toggle("sidebar_outer")
+        x.ui.toggle_sidebar("sidebar_outer")
 
 
 app = App(app_ui, server)

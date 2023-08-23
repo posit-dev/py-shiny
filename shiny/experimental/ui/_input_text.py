@@ -114,6 +114,6 @@ def input_text_area(
         shiny_input_label(id, label),
         area,
         autoresize_dependency() if autoresize else None,
-        class_="form-group shiny-input-container",
+        class_="shiny-input-textarea form-group shiny-input-container",
         style=css(width=width),
     )

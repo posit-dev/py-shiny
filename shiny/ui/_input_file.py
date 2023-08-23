@@ -93,6 +93,7 @@ def input_file(
             capture=capture,
             # Don't use "display: none;" style, which causes keyboard accessibility issue; instead use the following workaround: https://css-tricks.com/places-its-tempting-to-use-display-none-but-dont/
             style="position: absolute !important; top: -99999px !important; left: -99999px !important;",
+            class_="shiny-input-file",
         ),
         class_="btn btn-default btn-file",
     )

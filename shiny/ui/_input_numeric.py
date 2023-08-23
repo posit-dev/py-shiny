@@ -61,7 +61,7 @@ def input_numeric(
         tags.input(
             id=resolve_id(id),
             type="number",
-            class_="form-control",
+            class_="shiny-input-number form-control",
             value=value,
             min=min,
             max=max,

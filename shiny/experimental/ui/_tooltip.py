@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Literal, Optional
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, div
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, tags
 
 from ... import Session
 from ..._utils import drop_none
@@ -77,7 +77,7 @@ def tooltip(
         attrs,
         # Use display:none instead of <template> since shiny.js
         # doesn't bind to the contents of the latter
-        div(*children, {"style": "display:none;"}),
+        tags.template(*children, {"style": "display:none;"}),
         trigger,
     )
 
@@ -91,7 +91,7 @@ def _session_on_flush_send_msg(
     session.on_flush(lambda: session.send_input_message(id, msg), once=True)
 
 
-def tooltip_toggle(
+def toggle_tooltip(
     id: str, show: Optional[bool] = None, session: Optional[Session] = None
 ) -> None:
     """

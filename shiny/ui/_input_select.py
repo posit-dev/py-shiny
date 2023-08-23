@@ -178,8 +178,9 @@ def input_select(
         div(
             tags.select(
                 *choices_tags,
-                id=id,
+                {"class": "shiny-input-select"},
                 class_=None if selectize else "form-select",
+                id=id,
                 multiple=multiple,
                 size=size,
             ),

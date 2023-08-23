@@ -67,7 +67,7 @@ def input_text(
         tags.input(
             id=resolve_id(id),
             type="text",
-            class_="form-control",
+            class_="shiny-input-text form-control",
             value=value,
             placeholder=placeholder,
             autocomplete=autocomplete,
@@ -167,6 +167,6 @@ def input_text_area(
     return div(
         shiny_input_label(id, label),
         area,
-        class_="form-group shiny-input-container",
+        class_="shiny-input-textarea form-group shiny-input-container",
         style=css(width=width),
     )

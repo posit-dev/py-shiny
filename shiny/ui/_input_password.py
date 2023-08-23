@@ -55,7 +55,7 @@ def input_password(
             id=resolve_id(id),
             type="password",
             value=value,
-            class_="form-control",
+            class_="shiny-input-password form-control",
             placeholder=placeholder,
         ),
         class_="form-group shiny-input-container",
