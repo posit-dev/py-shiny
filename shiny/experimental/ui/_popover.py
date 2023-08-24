@@ -7,6 +7,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, div, tags
 
 from ... import Session
 from ..._utils import drop_none
+from ...module import resolve_id
 from ...session import require_active_session
 from ._tooltip import _normalize_show_value, _session_on_flush_send_msg
 from ._utils import consolidate_attrs
@@ -115,7 +116,7 @@ def popover(
             div(title, style="display:contents;"),
         ),
         trigger,
-        id=id,
+        id=resolve_id(id) if id else None,
         placement=placement,
         bsOptions=json.dumps(drop_none(options or {})),
         **attrs,

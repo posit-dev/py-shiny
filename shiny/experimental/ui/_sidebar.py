@@ -9,6 +9,7 @@ from htmltools import tags
 
 from ... import Session
 from ..._deprecated import warn_deprecated
+from ...module import resolve_id
 from ...session import require_active_session
 
 # from ._color import get_color_contrast
@@ -207,6 +208,9 @@ def sidebar(
     if id is None and open != "always":
         # but always provide id when collapsible for accessibility reasons
         id = f"bslib-sidebar-{random.randint(1000, 10000)}"
+    else:
+        if id:
+            id = resolve_id(id)
 
     # TODO-future; implement
     # if fg is None and bg is not None:
