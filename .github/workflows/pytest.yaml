@@ -98,6 +98,7 @@ jobs:
           make e2e-examples
 
   e2e-deploys:
+    # Only allow one `e2e-deploys` job to run at a time. (Independent of branch / PR)
     concurrency: e2e-deploys
     runs-on: ${{ matrix.os }}
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'deploy')) }}
