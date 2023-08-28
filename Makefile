@@ -85,7 +85,10 @@ FILE:=tests/e2e
 
 DEPLOYS_FILE:=tests/deploys
 
-e2e: ## end-to-end tests with playwright
+playwright-install:
+	playwright install --with-deps
+
+e2e: playwright-install ## end-to-end tests with playwright
 	playwright install --with-deps
 	pytest $(FILE) -m "not examples and not integrationtest"
 
