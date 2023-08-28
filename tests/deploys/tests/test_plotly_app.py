@@ -23,6 +23,7 @@ app_file_path = os.path.join(os.path.dirname(current_dir), "apps", APP_DIR)
 def test_deploys(page: Page, location: str) -> None:
     page_url = deploy(location, APP_NAME, app_file_path)
     page.goto(page_url, timeout=PAGE_TIMEOUT)
+
     expect(page.get_by_text(COUNTRY)).to_have_count(1, timeout=EXPECT_TIMEOUT)
     page.get_by_role("cell", name=COUNTRY).click(timeout=EXPECT_TIMEOUT)
     expect(page.locator("#country_detail_pop")).to_contain_text(
