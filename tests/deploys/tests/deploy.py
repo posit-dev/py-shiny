@@ -80,7 +80,6 @@ quiet_deploy_to_connect = exception_swallower(deploy_to_connect)
 
 
 # TODO-future: Supress web browser from opening after deploying - https://github.com/rstudio/rsconnect-python/issues/462
-@exception_swallower
 def deploy_to_shinyapps(app_name: str, app_file_path: str) -> str:
     # Deploy to shinyapps.io
     shinyapps_deploy = f"rsconnect deploy shiny {app_file_path} --account {name} --token {token} --secret {secret} --title {app_name} --verbose"
