@@ -87,7 +87,7 @@ def deploy_to_shinyapps(app_name: str, app_file_path: str) -> str:
     return f"https://{name}.shinyapps.io/{app_name}/"
 
 
-quiet_deploy_to_shinyapps = deploy_to_shinyapps
+quiet_deploy_to_shinyapps = exception_swallower(deploy_to_shinyapps)
 
 
 def deploy(location: str, app_name: str, app_file_path: str) -> str:
