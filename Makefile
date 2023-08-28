@@ -91,8 +91,7 @@ playwright-install:
 e2e: playwright-install ## end-to-end tests with playwright
 	pytest $(FILE) -m "not examples and not integrationtest"
 
-e2e-examples: ## end-to-end tests on examples with playwright
-	playwright install --with-deps
+e2e-examples: playwright-install ## end-to-end tests on examples with playwright
 	pytest $(FILE) -m "examples"
 
 e2e-deploys: ## end-to-end tests on deploys with playwright
