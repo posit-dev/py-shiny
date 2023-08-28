@@ -7,7 +7,7 @@
     "typings",
     "sandbox",
     "docs",
-    "tests/deploys"
+    "tests/deploys/apps"
   ],
   "typeCheckingMode": "strict",
   "reportImportCycles": "none",
