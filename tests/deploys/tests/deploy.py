@@ -76,7 +76,7 @@ def deploy_to_connect(app_name: str, app_file_path: str) -> str:
     return url
 
 
-quiet_deploy_to_connect = deploy_to_connect
+quiet_deploy_to_connect = exception_swallower(deploy_to_connect)
 
 
 # TODO-future: Supress web browser from opening after deploying - https://github.com/rstudio/rsconnect-python/issues/462
