@@ -11,7 +11,7 @@ def test_randomness():
     current_state = random.getstate()
     try:
         # Make sure the public stream of randomness is independent of the private stream
-        # https://github.com/rstudio/py-shiny/issues/140
+        # https://github.com/posit-dev/py-shiny/issues/140
         pub = random.randint(0, 100000000)
         with private_seed():
             priv = random.randint(0, 100000000)

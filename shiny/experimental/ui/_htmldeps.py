@@ -60,7 +60,7 @@ def _bslib_component_dep(
             "package": "shiny",
             "subdir": str(_x_components_path / name),
         },
-        script=script_val,  # type: ignore # https://github.com/rstudio/py-htmltools/issues/59
+        script=script_val,  # type: ignore # https://github.com/posit-dev/py-htmltools/issues/59
         stylesheet={"href": f"{name}.css"} if stylesheet else None,
         all_files=all_files,
     )

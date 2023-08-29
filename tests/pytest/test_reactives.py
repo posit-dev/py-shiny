@@ -621,7 +621,7 @@ async def test_calc_error_rethrow():
 # ======================================================================
 # Invalidating dependents
 # ======================================================================
-# For https://github.com/rstudio/py-shiny/issues/26
+# For https://github.com/posit-dev/py-shiny/issues/26
 @pytest.mark.asyncio
 async def test_dependent_invalidation():
     trigger = Value(0)
