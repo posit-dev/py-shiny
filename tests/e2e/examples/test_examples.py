@@ -36,9 +36,30 @@ app_hard_wait: typing.Dict[str, int] = {
 app_allow_shiny_errors: typing.Dict[str, typing.Union[bool, typing.List[str]]] = {
     "SafeException": True,
     "global_pyplot": True,
-    "static_plots": ["PlotnineWarning", "RuntimeWarning"],
+    "static_plots": [
+        "PlotnineWarning",
+        "RuntimeWarning",
+        "FutureWarning: is_categorical_dtype",
+        "is_categorical_dtype",
+        "FutureWarning: use_inf_as_na",
+        "pd.option_context('mode.use_inf_as_na",
+        "FutureWarning: The default of observed=False",
+    ],
+    "annotation-export": [
+        "FutureWarning: is_categorical_dtype",
+        "is_categorical_dtype",
+        "FutureWarning: use_inf_as_na",
+        "pd.option_context('mode.use_inf_as_na",
+    ],
     # https://github.com/rstudio/py-shiny/issues/611#issuecomment-1632866419
-    "penguins": ["UserWarning", "plt.tight_layout"],
+    "penguins": [
+        "UserWarning",
+        "plt.tight_layout",
+        "FutureWarning: is_categorical_dtype",
+        "is_categorical_dtype",
+        "FutureWarning: use_inf_as_na",
+        "pd.option_context('mode.use_inf_as_na",
+    ],
 }
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
     "brownian": ["Failed to acquire camera feed:"],
@@ -157,6 +178,8 @@ def test_examples(page: Page, ex_app_path: str) -> None:
                     )
                 ]
                 app_allowable_errors = False
+            if len(error_lines) > 0:
+                print(error_lines)
             assert len(error_lines) == 0
 
         # Check for JavaScript errors
