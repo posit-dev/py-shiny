@@ -82,11 +82,12 @@ def input_file(
     if isinstance(accept, str):
         accept = [accept]
 
+    resolved_id = resolve_id(id)
     btn_file = span(
         button_label,
         tags.input(
-            id=resolve_id(id),
-            name=id,
+            id=resolved_id,
+            name=resolved_id,
             type="file",
             multiple="multiple" if multiple else None,
             accept=",".join(accept) if accept else None,
@@ -98,7 +99,7 @@ def input_file(
         class_="btn btn-default btn-file",
     )
     return div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         div(
             tags.label(btn_file, class_="input-group-btn input-group-prepend"),
             tags.input(
@@ -111,7 +112,7 @@ def input_file(
         ),
         div(
             div(class_="progress-bar"),
-            id=id + "_progress",
+            id=resolved_id + "_progress",
             class_="progress active shiny-file-input-progress",
         ),
         class_="form-group shiny-input-container",

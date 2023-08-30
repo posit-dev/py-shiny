@@ -62,10 +62,11 @@ def input_text(
     ~shiny.ui.input_text_area
     """
 
+    resolved_id = resolve_id(id)
     return div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         tags.input(
-            id=resolve_id(id),
+            id=resolved_id,
             type="text",
             class_="shiny-input-text form-control",
             value=value,
@@ -152,9 +153,10 @@ def input_text_area(
     if resize and resize not in ["none", "both", "horizontal", "vertical"]:
         raise ValueError("Invalid resize value: " + str(resize))
 
+    resolved_id = resolve_id(id)
     area = tags.textarea(
         value,
-        id=resolve_id(id),
+        id=resolved_id,
         class_="form-control",
         style=css(width=None if width else "100%", height=height, resize=resize),
         placeholder=placeholder,
@@ -165,7 +167,7 @@ def input_text_area(
     )
 
     return div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         area,
         class_="shiny-input-textarea form-group shiny-input-container",
         style=css(width=width),
