@@ -138,6 +138,39 @@ class SessionMeta(type):
         return isinstance(__instance, SessionProxy)
 
 
+class OutputInfo:
+    _input: Inputs
+    _id: Id
+
+    def __init__(self, input: Inputs, id: Id):
+        self._input = input
+        self._id = id
+
+    # TODO: Consider what to do if the outputs are not present right now. Should we
+    # allow a default value? Cause by default, it will throw a silent error.
+
+    def width(self):
+        return self._input[f".clientdata_output_{self._id}_width"]()
+
+    def height(self):
+        return self._input[f".clientdata_output_{self._id}_height"]()
+
+    def hidden(self):
+        return self._input[f".clientdata_output_{self._id}_hidden"]()
+
+    def color_fg(self):
+        return self._input[f".clientdata_output_{self._id}_fg"]()
+
+    def color_bg(self):
+        return self._input[f".clientdata_output_{self._id}_bg"]()
+
+    def color_accent(self):
+        return self._input[f".clientdata_output_{self._id}_accent"]()
+
+    def font(self):
+        return self._input[f".clientdata_output_{self._id}_font"]()
+
+
 class ClientData:
     _input: Inputs
 
@@ -150,29 +183,26 @@ class ClientData:
     # as part of session initialization, not even being aware that those can change
     # reactively.
 
-    @property
     def url_protocol(self):
-        return self._input[".clientdata_url_protocol"]
+        return self._input[".clientdata_url_protocol"]()
 
-    @property
     def url_hostname(self):
-        return self._input[".clientdata_url_hostname"]
+        return self._input[".clientdata_url_hostname"]()
 
-    @property
     def url_port(self):
-        return self._input[".clientdata_url_port"]
+        return self._input[".clientdata_url_port"]()
 
-    @property
     def url_pathname(self):
-        return self._input[".clientdata_url_pathname"]
+        return self._input[".clientdata_url_pathname"]()
 
-    @property
     def url_search(self):
-        return self._input[".clientdata_url_search"]
+        return self._input[".clientdata_url_search"]()
 
-    @property
     def url_hash(self):
-        return self._input[".clientdata_url_hash"]
+        return self._input[".clientdata_url_hash"]()
+
+    def pixel_ratio(self):
+        return self._input[".clientdata_pixelratio"]()
 
 
 class Session(object, metaclass=SessionMeta):
