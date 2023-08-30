@@ -23,6 +23,7 @@ from typing import (
     Awaitable,
     Callable,
     Iterable,
+    Literal,
     Optional,
     TypeVar,
     cast,
@@ -583,6 +584,17 @@ class Session(object, metaclass=SessionMeta):
     def _send_progress(self, type: str, message: object) -> None:
         msg: dict[str, object] = {"progress": {"type": type, "message": message}}
         self._send_message_sync(msg)
+
+    def update_query_string(
+        self, query_string: str | dict[str, Any], *, mode: Literal["replace", "push"]
+    ):
+        if not isinstance(query_string, str):
+            query_string = urllib.parse.urlencode(query_string)
+            if query_string != "":
+                query_string = "?" + query_string
+        self._send_message_sync(
+            {"updateQueryString": {"queryString": query_string, "mode": mode}}
+        )
 
     @add_example()
     async def send_custom_message(self, type: str, message: dict[str, object]) -> None:
