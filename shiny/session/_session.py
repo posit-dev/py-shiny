@@ -138,6 +138,43 @@ class SessionMeta(type):
         return isinstance(__instance, SessionProxy)
 
 
+class ClientData:
+    _input: Inputs
+
+    def __init__(self, input: Inputs):
+        self._input = input
+
+    # TODO: Consider allowing these properties to be read even if there is no reactive
+    # context (i.e. implicit isolate() rather than throw a "context not found" error). I
+    # think it's reasonable to think people would want to interrogate the path and URL
+    # as part of session initialization, not even being aware that those can change
+    # reactively.
+
+    @property
+    def url_protocol(self):
+        return self._input[".clientdata_url_protocol"]
+
+    @property
+    def url_hostname(self):
+        return self._input[".clientdata_url_hostname"]
+
+    @property
+    def url_port(self):
+        return self._input[".clientdata_url_port"]
+
+    @property
+    def url_pathname(self):
+        return self._input[".clientdata_url_pathname"]
+
+    @property
+    def url_search(self):
+        return self._input[".clientdata_url_search"]
+
+    @property
+    def url_hash(self):
+        return self._input[".clientdata_url_hash"]
+
+
 class Session(object, metaclass=SessionMeta):
     """
     A class representing a user session.
@@ -171,6 +208,7 @@ class Session(object, metaclass=SessionMeta):
 
         self.input: Inputs = Inputs(dict())
         self.output: Outputs = Outputs(self, self.ns, dict(), dict())
+        self.client_data = ClientData(self.input)
 
         self.user: str | None = None
         self.groups: list[str] | None = None
