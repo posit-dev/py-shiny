@@ -1,6 +1,7 @@
 import datetime
 import os
 import pathlib
+import sys
 import typing
 from typing import Any, Callable
 
@@ -329,10 +330,47 @@ app_ui = ui.page_fluid(
     ui.input_action_button("update_global", "Update Global"),
     ui.input_action_button("update_mod1", "Update Module 1"),
     ui.input_action_button("update_mod2", "Update Module 2"),
+    ui.tags.head(
+        ui.tags.style(
+            """
+        .popover.popover {
+            --bs-popover-max-width: 500px;
+        }
+        """
+        )
+    ),
     x.ui.popover(
         ui.input_action_button("ignore", "Explanation of test"),
-        # TODO-barret; Add paragraph explaining how we should add any input or output or update method that uses an `id`. This is important for modules.
-        "TODO-barret",
+        ui.markdown(
+            """
+            E2E test app added has a main session and two module sessions that have inputs and outputs. It makes sure that one module does not update the other module or the main session.
+
+            If a component does not use `resolve_id()`, the global session will be updated and the module will be unchanged.
+
+            ### Approach
+            * Reset all sessions
+            * Verify all sessions have been reset
+            * Update the second module x3 times
+            * Verify that main session and first module have not updated
+            * Verify the second module has been updated
+
+            ### Future addtions
+            * What qualifies:
+                * If the input/output/update method uses `resolve_id()` or `id` (outside of `session.send_custom_input(id=)`)
+                * It can be placed into a module. (e.g. not `ui.page_navbar()`)
+            * Inputs
+                * Add the input into the `input_keys` (or `x_input_keys`) tuple
+                * Add the input into the module ui definition
+                * The input `id=` should be the same as the function name. Ex: `ui.input_action_button("input_action_button", "Title")`
+                * Update `expect_mod_state()` to support the new input
+                * Update `expect_default_mod_state()` to reflect the reset state of the new input
+            * Outputs
+                * Add the output into the module ui definition
+                * If it needs to be on the screen to be updated (rare), add it near the top of the definition
+                * Update `expect_outputs()` to support the new output
+            """
+        ),
+        id="explanation",
     ),
     x.ui.layout_column_wrap(
         1 / 3,
@@ -349,6 +387,21 @@ def server(input: Inputs, output: Outputs, session: Session):
     mod_x_server(session.ns)  # Root
     mod_x_server("mod1")
     mod_x_server("mod2")
+
+    # Check if in interactive mode
+    # https://stackoverflow.com/a/64523765/591574
+    if hasattr(sys, "ps1"):
+        # Open the explanation popover
+        x.ui.toggle_popover("explanation", show=True)
+
+        # On button clicks, hide the explanation popover
+        @reactive.Effect(suspended=True)
+        def _():
+            input.reset()
+            input.update_global()
+            input.update_mod1()
+            input.update_mod2()
+            x.ui.toggle_popover("explanation", show=False)
 
     # Master function to update a module's features
     def update_session(
