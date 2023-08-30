@@ -113,7 +113,7 @@ class Dependents:
         # Invalidate all dependents. This gets all the dependents as list, then iterates
         # over the list. It's done this way instead of iterating over keys because it's
         # possible that a dependent is removed from the dict while iterating over it.
-        # https://github.com/rstudio/py-shiny/issues/26
+        # https://github.com/posit-dev/py-shiny/issues/26
         ids = sorted(self._dependents.keys())
         for dep_ctx in [self._dependents[id] for id in ids]:
             dep_ctx.invalidate()

@@ -34,7 +34,7 @@ def consolidate_attrs(
     tag = div(*args, **kwargs)
 
     # `TagAttrs` currently isn't compatible with `htmltools._core.TagAttrDict`
-    # https://github.com/rstudio/py-htmltools/pull/55
+    # https://github.com/posit-dev/py-htmltools/pull/55
     # Convert to a plain dict to avoid getting custom methods from TagAttrDict
     # Cast to `TagAttrs` so that `Tag` functions will accept the dictionary.
     attrs = typing.cast(TagAttrs, dict(tag.attrs))
