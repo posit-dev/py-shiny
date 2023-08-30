@@ -12,7 +12,19 @@ from conftest import ShinyAppProc
 from controls import (
     InputActionButton,
     InputActionLink,
+    InputCheckbox,
+    InputCheckboxGroup,
+    InputDate,
+    InputDateRange,
     InputFile,
+    InputNumeric,
+    InputRadioButtons,
+    InputSelect,
+    InputSelectize,
+    InputSlider,
+    InputSwitch,
+    InputText,
+    InputTextArea,
     OutputImage,
     OutputTable,
     OutputText,
@@ -168,6 +180,31 @@ def expect_outputs(page: Page, module_id: str, letter: str, count: int):
     )
 
 
+def expect_labels(page: Page, module_id: str):
+    def resolve_id(id: str):
+        if module_id:
+            return f"{module_id}-{id}"
+        return id
+
+    InputNumeric(page, resolve_id("input_numeric")).expect_label("Numeric")
+    InputText(page, resolve_id("input_text")).expect_label("Text")
+    InputTextArea(page, resolve_id("input_text_area")).expect_label("Text area")
+    InputSelect(page, resolve_id("input_select")).expect_label("Select")
+    InputSelectize(page, resolve_id("input_selectize")).expect_label("Selectize")
+    InputCheckbox(page, resolve_id("input_checkbox")).expect_label("Checkbox")
+    InputSwitch(page, resolve_id("input_switch")).expect_label("Switch")
+    InputCheckboxGroup(page, resolve_id("input_checkbox_group")).expect_label(
+        "Checkbox group"
+    )
+    InputRadioButtons(page, resolve_id("input_radio_buttons")).expect_label(
+        "Radio buttons"
+    )
+    InputFile(page, resolve_id("input_file")).expect_label("File")
+    InputSlider(page, resolve_id("input_slider")).expect_label("Slider")
+    InputDate(page, resolve_id("input_date")).expect_label("Date")
+    InputDateRange(page, resolve_id("input_date_range")).expect_label("Date range")
+
+
 def expect_default_outputs(page: Page, module_id: str):
     expect_outputs(page, module_id, "a", 0)
 
@@ -175,10 +212,13 @@ def expect_default_outputs(page: Page, module_id: str):
 def test_module_support(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
+    # Verify reset state
     for mod_id in ("", "mod1", "mod2"):
         expect_default_mod_state(page, mod_id)
         expect_default_outputs(page, mod_id)
+        expect_labels(page, mod_id)
 
+    # Click x3 `update_mod2`
     update_mod2 = InputActionButton(page, "update_mod2")
     for i in range(3):
         update_mod2.click()
