@@ -118,7 +118,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.plot
     def xarray():
-        # `pooch` module required to download `open_dataset`
         import xarray as xr
 
         airtemps = xr.tutorial.open_dataset("air_temperature")
@@ -130,9 +129,10 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.plot
     def geopandas():
+        import geodatasets
         import geopandas
 
-        nybb_path = geopandas.datasets.get_path("nybb")
+        nybb_path = geodatasets.get_path("nybb")
         boros = geopandas.read_file(nybb_path)
         boros.set_index("BoroCode", inplace=True)
         boros.sort_index(inplace=True)
@@ -141,12 +141,19 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.plot
     def missingno():
+        import matplotlib.pyplot as plt
         import missingno as msno
 
         collisions = pd.read_csv(
             "https://raw.githubusercontent.com/ResidentMario/missingno-data/master/nyc_collision_factors.csv"
         )
-        return msno.matrix(collisions.sample(250))
+        ret = msno.matrix(
+            collisions.sample(250),
+            fontsize=8,
+            label_rotation=45,
+        )
+        plt.subplots_adjust(top=0.6)
+        return ret
 
 
 app = App(app_ui, server)

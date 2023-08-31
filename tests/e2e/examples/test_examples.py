@@ -1,6 +1,8 @@
 import os
+import sys
 import typing
 from pathlib import PurePath
+from typing import Literal
 
 import pytest
 from conftest import run_shiny_app
@@ -8,6 +10,9 @@ from playwright.sync_api import ConsoleMessage, Page
 
 here_tests_e2e_examples = PurePath(__file__).parent
 here_root = here_tests_e2e_examples.parent.parent.parent
+
+is_interactive = hasattr(sys, "ps1")
+reruns = 1 if is_interactive else 3
 
 
 def get_apps(path: str) -> typing.List[str]:
@@ -33,13 +38,30 @@ app_hard_wait: typing.Dict[str, int] = {
     "brownian": 250,
     "ui-func": 250,
 }
-app_allow_shiny_errors: typing.Dict[str, typing.Union[bool, typing.List[str]]] = {
+app_allow_shiny_errors: typing.Dict[
+    str, typing.Union[Literal[True], typing.List[str]]
+] = {
     "SafeException": True,
     "global_pyplot": True,
-    "static_plots": ["PlotnineWarning", "RuntimeWarning"],
-    # https://github.com/posit-dev/py-shiny/issues/611#issuecomment-1632866419
-    "penguins": ["UserWarning", "plt.tight_layout"],
+    "static_plots": [
+        # acceptable warning
+        "PlotnineWarning: Smoothing requires 2 or more points",
+        "RuntimeWarning: divide by zero encountered",
+        "UserWarning: This figure includes Axes that are not compatible with tight_layout",
+    ],
 }
+app_allow_external_errors: typing.List[str] = [
+    # plotnine: https://github.com/has2k1/plotnine/issues/713
+    # mizani: https://github.com/has2k1/mizani/issues/34
+    # seaborn: https://github.com/mwaskom/seaborn/issues/3457
+    "FutureWarning: is_categorical_dtype is deprecated",
+    "if pd.api.types.is_categorical_dtype(vector",  # continutation of line above
+    # plotnine: https://github.com/has2k1/plotnine/issues/713#issuecomment-1701363058
+    "FutureWarning: The default of observed=False is deprecated",
+    # seaborn: https://github.com/mwaskom/seaborn/pull/3355
+    "FutureWarning: use_inf_as_na option is deprecated",
+    "pd.option_context('mode.use_inf_as_na",  # continutation of line above
+]
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
     "brownian": ["Failed to acquire camera feed:"],
 }
@@ -106,7 +128,7 @@ def wait_for_idle_app(
 # Run this test for each example app
 @pytest.mark.examples
 @pytest.mark.parametrize("ex_app_path", example_apps)
-@pytest.mark.flaky(reruns=3, reruns_delay=1)
+@pytest.mark.flaky(reruns=reruns, reruns_delay=1)
 def test_examples(page: Page, ex_app_path: str) -> None:
     app = run_shiny_app(here_root / ex_app_path, wait_for_start=True)
 
@@ -138,25 +160,39 @@ def test_examples(page: Page, ex_app_path: str) -> None:
 
         # Check for py-shiny errors
         error_lines = str(app.stderr).splitlines()
+
+        # Remove any errors that are allowed
+        error_lines = [
+            line
+            for line in error_lines
+            if not any([error_txt in line for error_txt in app_allow_external_errors])
+        ]
+
+        # Remove any app specific errors that are allowed
         if app_name in app_allow_shiny_errors:
             app_allowable_errors = app_allow_shiny_errors[app_name]
         else:
-            app_allowable_errors = False
+            app_allowable_errors = []
 
         # If all errors are not allowed, check for unexpected errors
-        if not (app_allowable_errors is True):
-            # Remove ^INFO lines
-            error_lines = [line for line in error_lines if not line.startswith("INFO:")]
+        if isinstance(app_allowable_errors, list):
+            app_allowable_errors = (
+                # Remove ^INFO lines
+                ["INFO:"]
+                # Remove any known errors caused by external packages
+                + app_allow_external_errors
+                # Remove any known errors allowed by the app
+                + app_allowable_errors
+            )
+
             # If there is an array of allowable errors, remove them from errors. Ex: `PlotnineWarning`
-            if isinstance(app_allowable_errors, list):
-                error_lines = [
-                    line
-                    for line in error_lines
-                    if not any(
-                        [error_txt in line for error_txt in app_allowable_errors]
-                    )
-                ]
-                app_allowable_errors = False
+            error_lines = [
+                line
+                for line in error_lines
+                if not any([error_txt in line for error_txt in app_allowable_errors])
+            ]
+            if len(error_lines) > 0:
+                print("\n".join(error_lines))
             assert len(error_lines) == 0
 
         # Check for JavaScript errors
