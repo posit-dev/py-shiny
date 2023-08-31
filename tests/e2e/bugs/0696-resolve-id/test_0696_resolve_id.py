@@ -228,7 +228,6 @@ def test_module_support(page: Page, local_app: ShinyAppProc) -> None:
         with page.expect_download() as download_button_info:
             page.locator("#mod2-download_button").click()
             download = download_button_info.value
-            print(download)
             # wait for download to complete
             download_path = download.path()
             assert download.suggested_filename == "download_button-mod2.csv"
@@ -239,7 +238,6 @@ def test_module_support(page: Page, local_app: ShinyAppProc) -> None:
         with page.expect_download() as download_link_info:
             page.locator("#mod2-download_link").click()
             download = download_link_info.value
-            print(download)
             # wait for download to complete
             download_path = download.path()
             assert download.suggested_filename == "download_link-mod2.csv"
