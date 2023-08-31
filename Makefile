@@ -91,9 +91,8 @@ e2e-examples: ## end-to-end tests on examples with playwright
 	playwright install --with-deps
 	pytest $(FILE) -m "examples"
 
-coverage: ## check code coverage quickly with the default Python
-	coverage run --source shiny -m pytest
-	coverage report -m
+coverage: ## check combined code coverage (must run e2e last)
+	pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/e2e/ -m "not examples"
 	coverage html
 	$(BROWSER) htmlcov/index.html
 
