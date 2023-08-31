@@ -118,7 +118,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.plot
     def xarray():
-        # `pooch` module required to download `open_dataset`
         import xarray as xr
 
         airtemps = xr.tutorial.open_dataset("air_temperature")
@@ -130,9 +129,10 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.plot
     def geopandas():
+        import geodatasets
         import geopandas
 
-        nybb_path = geopandas.datasets.get_path("nybb")
+        nybb_path = geodatasets.get_path("nybb")
         boros = geopandas.read_file(nybb_path)
         boros.set_index("BoroCode", inplace=True)
         boros.sort_index(inplace=True)
