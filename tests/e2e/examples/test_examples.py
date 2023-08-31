@@ -44,36 +44,18 @@ app_allow_shiny_errors: typing.Dict[
     "SafeException": True,
     "global_pyplot": True,
     "static_plots": [
-        # acceptable warnings!
+        # acceptable warning
         "PlotnineWarning: Smoothing requires 2 or more points",
-        # acceptable warnings!
         "RuntimeWarning: divide by zero encountered",
         "UserWarning: This figure includes Axes that are not compatible with tight_layout",
-        # # https://github.com/has2k1/plotnine/issues/713
-        # # https://github.com/mwaskom/seaborn/issues/3457
-        # "FutureWarning: is_categorical_dtype",
-        # "is_categorical_dtype",
-        # "FutureWarning: use_inf_as_na",
-        # "pd.option_context('mode.use_inf_as_na",
-        # "FutureWarning: The default of observed=False",
     ],
-    # "annotation-export": [
-    #     "FutureWarning: is_categorical_dtype",
-    #     "is_categorical_dtype",
-    #     "FutureWarning: use_inf_as_na",
-    #     "pd.option_context('mode.use_inf_as_na",
-    # ],
-    # # https://github.com/posit-dev/py-shiny/issues/611#issuecomment-1632866419
-    # "penguins": [
-    #     "UserWarning:",
-    # ],
 }
 app_allow_external_errors: typing.List[str] = [
     # plotnine: https://github.com/has2k1/plotnine/issues/713
     # mizani: https://github.com/has2k1/mizani/issues/34
     # seaborn: https://github.com/mwaskom/seaborn/issues/3457
     "FutureWarning: is_categorical_dtype is deprecated",
-    "if pd.api.types.is_categorical_dtype(vector",
+    "if pd.api.types.is_categorical_dtype(vector",  # continutation of line above
     # plotnine: https://github.com/has2k1/plotnine/issues/713#issuecomment-1701363058
     "FutureWarning: The default of observed=False is deprecated",
     # seaborn: https://github.com/mwaskom/seaborn/pull/3355
