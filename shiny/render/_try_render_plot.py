@@ -39,7 +39,15 @@ def try_render_matplotlib(
         fig.set_size_inches(width / ppi, height / ppi)
         fig.set_dpi(ppi * pixelratio)
 
-        plt_tight_layout()
+        # Suppress the message `UserWarning: The figure layout has changed to tight`
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                action="ignore",
+                category=UserWarning,
+                message="The figure layout has changed to tight",
+            )
+            plt.tight_layout()  # pyright: ignore[reportUnknownMemberType]
+
         coordmap = get_coordmap(fig)
 
         with io.BytesIO() as buf:
@@ -71,14 +79,6 @@ def try_render_matplotlib(
         import matplotlib.pyplot
 
         matplotlib.pyplot.close(fig)  # pyright: ignore[reportUnknownMemberType]
-
-
-# Function to suppress the message `UserWarning: The figure layout has changed to tight`
-def plt_tight_layout() -> None:
-    import matplotlib.pyplot as plt
-
-    warnings.simplefilter("ignore", UserWarning)
-    plt.tight_layout()  # pyright: ignore[reportUnknownMemberType]
 
 
 def get_matplotlib_figure(
