@@ -73,9 +73,9 @@ app_allow_external_errors: typing.List[str] = [
     # mizani: https://github.com/has2k1/mizani/issues/34
     # seaborn: https://github.com/mwaskom/seaborn/issues/3457
     "FutureWarning: is_categorical_dtype is deprecated",
+    "if pd.api.types.is_categorical_dtype(vector",
     # plotnine: https://github.com/has2k1/plotnine/issues/713#issuecomment-1701363058
     "FutureWarning: The default of observed=False is deprecated",
-    # "if pd.api.types.is_categorical_dtype(vector"
     # seaborn: https://github.com/mwaskom/seaborn/pull/3355
     "FutureWarning: use_inf_as_na option is deprecated",
     "pd.option_context('mode.use_inf_as_na",  # continutation of line above
