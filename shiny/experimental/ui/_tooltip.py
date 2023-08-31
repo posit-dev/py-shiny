@@ -6,8 +6,8 @@ from typing import Literal, Optional
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, tags
 
 from ... import Session
+from ..._namespaces import resolve_id_or_none
 from ..._utils import drop_none
-from ...module import resolve_id
 from ...session import require_active_session
 
 # from ._color import get_color_contrast
@@ -71,7 +71,7 @@ def tooltip(
     res = web_component(
         "bslib-tooltip",
         {
-            "id": resolve_id(id) if id else None,
+            "id": resolve_id_or_none(id),
             "placement": placement,
             "options": json.dumps(options) if options else None,
         },

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
-from typing import Pattern, Union
+from typing import Pattern, Union, overload
 
 
 class ResolvedId(str):
@@ -45,6 +45,36 @@ def resolve_id(id: Id) -> ResolvedId:
     """
     curr_ns = _current_namespace.get()
     return curr_ns(id)
+
+
+@overload
+def resolve_id_or_none(id: None) -> None:
+    ...
+
+
+@overload
+def resolve_id_or_none(id: Id) -> ResolvedId:
+    ...
+
+
+# Do not export this method from `shiny`. Let developers handle it themselves.
+def resolve_id_or_none(id: Id | None) -> ResolvedId | None:
+    """
+    Resolve an ID, possibly with a module namespace. With `None` support.
+
+    This method should only be used if `None` values are allowed. If not, use `resolve_id(id=)`.
+
+    Parameters
+    ----------
+    Args
+        id: An ID or `None`.
+
+    Returns
+        If `id=None`, then `None`. Otherwise, an ID (if in a module, this will contain a namespace prefix).
+    """
+    if id is None:
+        return None
+    return resolve_id(id)
 
 
 # \w is a large set for unicode patterns, that's fine; we mostly want to avoid some
