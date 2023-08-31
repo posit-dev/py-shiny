@@ -141,12 +141,19 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.plot
     def missingno():
+        import matplotlib.pyplot as plt
         import missingno as msno
 
         collisions = pd.read_csv(
             "https://raw.githubusercontent.com/ResidentMario/missingno-data/master/nyc_collision_factors.csv"
         )
-        return msno.matrix(collisions.sample(250))
+        ret = msno.matrix(
+            collisions.sample(250),
+            fontsize=8,
+            label_rotation=45,
+        )
+        plt.subplots_adjust(top=0.6)
+        return ret
 
 
 app = App(app_ui, server)
