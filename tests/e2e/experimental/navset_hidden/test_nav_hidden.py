@@ -1,9 +1,6 @@
 # import pytest
 from conftest import ShinyAppProc
-from controls import (
-    NavSetHidden,
-    InputRadioButtons
-)
+from controls import InputRadioButtons, NavSetHidden
 from playwright.sync_api import Page
 
 
