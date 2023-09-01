@@ -9,6 +9,7 @@ from htmltools import tags
 
 from ... import Session
 from ..._deprecated import warn_deprecated
+from ..._namespaces import resolve_id_or_none
 from ...session import require_active_session
 
 # from ._color import get_color_contrast
@@ -206,7 +207,8 @@ def sidebar(
 
     if id is None and open != "always":
         # but always provide id when collapsible for accessibility reasons
-        id = f"bslib-sidebar-{random.randint(1000, 10000)}"
+        id = f"bslib_sidebar_{random.randint(1000, 10000)}"
+    resolved_id = resolve_id_or_none(id)
 
     # TODO-future; implement
     # if fg is None and bg is not None:
@@ -225,7 +227,7 @@ def sidebar(
             type="button",
             title="Toggle sidebar",
             aria_expanded=trinary(open in ["open", "desktop"]),
-            aria_controls=id,
+            aria_controls=resolved_id,
         )
 
     tag = div(
@@ -240,9 +242,9 @@ def sidebar(
             },
             *args,
         ),
-        {"class": "bslib-sidebar-input"} if id is not None else None,
+        {"class": "bslib-sidebar-input"} if resolved_id is not None else None,
         {"class": "sidebar"},
-        id=id,
+        id=resolved_id,
         role="complementary",
         class_=class_,
     )

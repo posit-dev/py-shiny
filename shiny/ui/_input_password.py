@@ -49,10 +49,11 @@ def input_password(
     -------
     ~shiny.ui.update_text
     """
+    resolved_id = resolve_id(id)
     return div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         tags.input(
-            id=resolve_id(id),
+            id=resolved_id,
             type="password",
             value=value,
             class_="shiny-input-password form-control",

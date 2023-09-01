@@ -25,7 +25,7 @@ from htmltools import MetadataNode, Tag, TagChild, TagList, div, tags
 
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
-from .._namespaces import resolve_id
+from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
 from ..types import NavSetArg
 from ._bootstrap import column, row
@@ -425,7 +425,7 @@ def navset_tab(
     return NavSet(
         *args,
         ul_class="nav nav-tabs",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         header=header,
         footer=footer,
@@ -477,7 +477,7 @@ def navset_pill(
     return NavSet(
         *args,
         ul_class="nav nav-pills",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         header=header,
         footer=footer,
@@ -527,7 +527,7 @@ def navset_hidden(
     return NavSet(
         *args,
         ul_class="nav nav-hidden",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         header=header,
         footer=footer,
@@ -609,7 +609,7 @@ def navset_card_tab(
     return NavSetCard(
         *args,
         ul_class="nav nav-tabs card-header-tabs",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         header=header,
         footer=footer,
@@ -665,7 +665,7 @@ def navset_card_pill(
     return NavSetCard(
         *args,
         ul_class="nav nav-pills card-header-pills",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         header=header,
         footer=footer,
@@ -760,7 +760,7 @@ def navset_pill_list(
     return NavSetPillList(
         *args,
         ul_class="nav nav-pills nav-stacked",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         header=header,
         footer=footer,
@@ -934,7 +934,7 @@ def navset_bar(
     return NavSetBar(
         *new_args,
         ul_class="nav navbar-nav",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         title=title,
         position=position,

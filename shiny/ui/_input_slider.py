@@ -201,8 +201,9 @@ def input_slider(
     # ionRangeSlider wants attr = 'true'/'false'
     props = {k: str(v).lower() if isinstance(v, bool) else v for k, v in props.items()}
 
+    resolved_id = resolve_id(id)
     slider_tag = div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         tags.input(**props),
         *ionrangeslider_deps(),
         class_="form-group shiny-input-container",
@@ -221,7 +222,7 @@ def input_slider(
             tags.span(animate.get("pause_button", _pause_icon()), class_="pause"),
             href="#",
             class_="slider-animate-button link-secondary",
-            data_target_id=id,
+            data_target_id=resolved_id,
             data_interval=animate.get("interval", 500),
             data_loop=animate.get("loop", True),
         ),

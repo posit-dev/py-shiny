@@ -4,6 +4,7 @@ from typing import Optional
 
 from ... import Session
 from ..._utils import drop_none
+from ...module import resolve_id
 from ...session import require_active_session
 
 
@@ -26,7 +27,7 @@ def toggle_switch(
     if value is not None and not isinstance(value, bool):
         raise TypeError("`value` must be `None` or a single boolean value.")
 
-    msg = drop_none({"id": id, "value": value})
+    msg = drop_none({"id": resolve_id(id), "value": value})
     session = require_active_session(session)
 
     async def callback():
