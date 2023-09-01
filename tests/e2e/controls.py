@@ -775,6 +775,9 @@ class InputActionButton(
             loc=f"button#{id}.action-button.shiny-bound-input",
         )
 
+    def get_overlay_attribute(self) -> str | None:
+        return self.loc.get_attribute("aria-describedby")
+
 
 class InputActionLink(_InputActionBase):
     # label: TagChild,
@@ -2380,6 +2383,13 @@ class Sidebar(
             "aria-expanded", str(open).lower(), timeout=timeout
         )
 
+    def set(self, open: bool, *, timeout: Timeout = None) -> None:
+        if open ^ (bool(self.loc_handle.get_attribute("aria-expanded"))):
+            self.toggle(timeout=timeout)
+
+    def toggle(self, *, timeout: Timeout = None) -> None:
+        self.loc_handle.click(timeout=timeout)
+
 
 class _CardBodyP(_InputBaseP, Protocol):
     loc_body: Locator
@@ -2597,7 +2607,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
         expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
 
 
-### Experimental below
+# Experimental below
 
 
 class Accordion(
@@ -2670,6 +2680,27 @@ class Accordion(
             timeout=timeout,
         )
 
+    def set(
+        self,
+        selected: str | list[str],
+        open: bool,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        if isinstance(selected, str):
+            selected = [selected]
+        for element in self.loc.element_handles():
+            elem_value = element.get_attribute("data-value")
+            if elem_value is None:
+                raise ValueError(
+                    "Accordion panel does not have a `data-value` attribute"
+                )
+            if elem_value in selected:
+                self.accordion_panel(elem_value).set(open, timeout=timeout)
+            # self.accordion_panel(elem_value).set(
+            #     elem_value in selected, timeout=timeout
+            # )
+
     def accordion_panel(
         self,
         data_value: str,
@@ -2705,6 +2736,8 @@ class AccordionPanel(
         )
 
         self.loc_body = self.loc.locator("> .accordion-collapse")
+        self.loc_header = self.loc.locator("> .accordion-header")
+        self.loc_body_visible = self.loc.locator("> .accordion-collapse.show")
 
     def expect_label(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
@@ -2717,3 +2750,217 @@ class AccordionPanel(
 
     def expect_open(self, is_open: bool, *, timeout: Timeout = None) -> None:
         _expect_class_value(self.loc_body, "show", is_open, timeout=timeout)
+
+    # user sends value of Open: true | false
+    def set(self, open: bool, *, timeout: Timeout = None) -> None:
+        if self.loc_body_visible.count() != int(open):
+            self.toggle(timeout=timeout)
+
+    def toggle(self, *, timeout: Timeout = None) -> None:
+        self.loc_header.click(timeout=timeout)
+
+
+class Popover(_InputWithContainer):
+    # trigger: TagChild,
+    # *args: TagChild | TagAttrs,
+    # title: Optional[TagChild] = None,
+    # id: Optional[str] = None,
+    # placement: Literal["auto", "top", "right", "bottom", "left"] = "auto",
+    # options: Optional[dict[str, Any]] = None,
+    # **kwargs: TagAttrValue,
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page, id=id, loc_container=f"div#{id}.popover", loc="> div.popover-body"
+        )
+
+    # def set(state):
+
+    # def toggle(): - click on the loc_container since tooltip does not have its own id
+
+    def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc).to_have_text(value, timeout=timeout)
+
+    def expect_active(self, *, timeout: Timeout = None) -> None:
+        _expect_class_value(self.loc_container, "show", True, timeout=timeout)
+
+
+class Tooltip(_InputWithContainer):
+    # trigger: TagChild,
+    # *args: TagChild | TagAttrs,
+    # id: Optional[str] = None,
+    # placement: Literal["auto", "top", "right", "bottom", "left"] = "auto",
+    # options: Optional[dict[str, object]] = None,
+    # **kwargs: TagAttrValue,
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"div#{id}.tooltip.bs-tooltip-auto",
+            loc="> div.tooltip-inner",
+        )
+
+    def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc).to_have_text(value, timeout=timeout)
+
+    def expect_active(self, *, timeout: Timeout = None) -> None:
+        _expect_class_value(self.loc_container, "show", True, timeout=timeout)
+
+
+class _NavItemP(_OutputBaseP, Protocol):
+    loc: Locator
+    loc_container: Locator
+    page: Page
+    id: str
+
+
+class _NavItemM:
+    def click(self: _NavItemP, *, timeout: Timeout = None) -> None:
+        self.loc.click(timeout=timeout)
+
+    def expect_active(self, *, timeout: Timeout = None) -> None:
+        _expect_class_value(self.loc, "active", True, timeout=timeout)
+
+    def nav_item(
+        self,
+        value: str,
+    ) -> NavItem:
+        return NavItem(self.page, self.id, value)
+
+    def set(self, value: str, *, timeout: Timeout = None) -> None:
+        self.nav_item(value).click(timeout=timeout)
+
+    def expect_value(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        # data attribute of active tab and compare with value
+        playwright_expect(
+            self.loc_container.locator('a[role="tab"].active')
+        ).to_have_attribute("data-value", value, timeout=timeout)
+
+    # TODO: Make it a single locator expectation
+    def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        datatab_id = self.loc_container.get_attribute("data-tabsetid", timeout=timeout)
+        playwright_expect(
+            self.page.locator(
+                f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active.show"
+            )
+        ).to_have_text(value, timeout=timeout)
+
+    def expect_nav_content(
+        self, item_value: str, content_value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
+        self.nav_item(item_value).expect_content(content_value)
+
+    def expect_nav_items(
+        self: _NavP,
+        value: list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
+            el_type="a[role='tab']",
+            arr_name="value",
+            arr=value,
+            key="data-value",
+            timeout=timeout,
+        )
+
+
+class NavsetTab(_InputWithContainer, _NavItemM):
+    # *args: NavSetArg,
+    # id: Optional[str] = None,
+    # selected: Optional[str] = None,
+    # header: TagChild = None,
+    # footer: TagChild = None,
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-tabs.shiny-tab-input",
+            loc="a[role='tab']",
+        )
+
+
+class NavItem(_InputWithContainer, _NavItemM):
+    # *args: NavSetArg,
+    # id: Optional[str] = None,
+    # selected: Optional[str] = None,
+    # header: TagChild = None,
+    # footer: TagChild = None,
+    def __init__(self, page: Page, id: str, data_value: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"a[role='tab'][data-value='{data_value}']",
+            loc_container=f"ul#{id}",
+        )
+
+
+class NavSetCardTab(_InputWithContainer, _NavItemM):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.card-header-tabs.shiny-tab-input",
+            loc="> li.nav-item",
+        )
+
+
+class NavSetPill(_InputWithContainer, _NavItemM):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-pills.shiny-tab-input",
+            loc="> li.nav-item",
+        )
+
+
+class NavSetPillList(_InputWithContainer, _NavItemM):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-stacked.shiny-tab-input",
+            loc="> li.nav-item",
+        )
+
+
+class NavSetCardPill(_InputWithContainer, _NavItemM):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-pills.card-header-pills.shiny-tab-input",
+            loc="> li.nav-item",
+        )
+
+
+class NavSetHidden(_InputWithContainer, _NavItemM):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-hidden.shiny-tab-input",
+            loc="> li.nav-item",
+        )
+
+
+class NavSetBar(_InputWithContainer, _NavItemM):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"div#{id}.navbar-nav.shiny-tab-input",
+            loc="> li.nav-item",
+        )
+
+
+class NavsetHidden(_InputWithContainer, _NavItemM):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-tabs.shiny-tab-input",
+            loc="> li.nav-item",
+        )
