@@ -254,8 +254,6 @@ quartodoc:
             - experimental.ui.panel_main
             - experimental.ui.panel_sidebar
             - experimental.ui.Sidebar
-            - experimental.ui.DeprecatedPanelMain
-            - experimental.ui.DeprecatedPanelSidebar
         - kind: page
           path: ExCard
           summary:
