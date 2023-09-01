@@ -2384,7 +2384,7 @@ class Sidebar(
         )
 
     def set(self, open: bool, *, timeout: Timeout = None) -> None:
-        if open ^ (bool(self.loc_handle.get_attribute("aria-expanded"))):
+        if open ^ (self.loc_handle.get_attribute("aria-expanded") == "true"):
             self.toggle(timeout=timeout)
 
     def toggle(self, *, timeout: Timeout = None) -> None:
