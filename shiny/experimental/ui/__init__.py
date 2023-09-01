@@ -35,16 +35,16 @@ from ._fill import (  # bind_fill_role,
 from ._input_switch import toggle_switch
 from ._input_text import input_text_area
 from ._layout import layout_column_wrap
-from ._navs import navset_bar, navset_card_pill, navset_card_tab
+from ._navs import (
+    navset_bar,
+    navset_card_pill,
+    navset_card_tab,
+)
 from ._output import output_image, output_plot, output_ui
 from ._page import page_fillable, page_navbar, page_sidebar
 from ._sidebar import (
-    DeprecatedPanelMain,
-    DeprecatedPanelSidebar,
     Sidebar,
     layout_sidebar,
-    panel_main,
-    panel_sidebar,
     sidebar,
     toggle_sidebar,
 )
@@ -52,18 +52,25 @@ from ._tooltip import tooltip, toggle_tooltip, update_tooltip
 from ._popover import popover, toggle_popover, update_popover
 from ._valuebox import showcase_left_center, showcase_top_right, value_box
 
+from ._deprecated import (
+    navset_pill_card,
+    navset_tab_card,
+    tooltip_update,
+    sidebar_toggle,
+    panel_sidebar,
+    panel_main,
+    DeprecatedPanelSidebar,
+    DeprecatedPanelMain,
+)
+
 __all__ = (
     # Css
     "CssUnit",
     "as_css_unit",
     "as_css_padding",
     # Sidebar
-    "DeprecatedPanelMain",
-    "DeprecatedPanelSidebar",
     "Sidebar",
     "layout_sidebar",
-    "panel_main",
-    "panel_sidebar",
     "sidebar",
     "toggle_sidebar",
     # Page
@@ -127,4 +134,16 @@ __all__ = (
     "accordion_panel_insert",
     "accordion_panel_remove",
     "update_accordion_panel",
+    # Deprecated
+    # # Navs
+    "navset_pill_card",
+    "navset_tab_card",
+    # # Tooltip
+    "tooltip_update",
+    # # Sidebar
+    "sidebar_toggle",
+    "panel_sidebar",
+    "panel_main",
+    "DeprecatedPanelSidebar",
+    "DeprecatedPanelMain",
 )

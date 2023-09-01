@@ -8,7 +8,6 @@ from htmltools import svg as svgtags
 from htmltools import tags
 
 from ... import Session
-from ..._deprecated import warn_deprecated
 from ..._namespaces import resolve_id_or_none
 from ...session import require_active_session
 
@@ -497,31 +496,10 @@ def _sidebar_init_js() -> Tag:
     )
 
 
-########################################################
+######################
 
 
-# TODO: use class to single out sidebar value (in layout_sidebar)
-def panel_sidebar(
-    *args: TagChild | TagAttrs,
-    width: int = 4,
-    **kwargs: TagAttrValue,
-) -> DeprecatedPanelSidebar:
-    """Deprecated. Please use :func:`~shiny.experimental.ui.sidebar` instead of
-    `ui.panel_sidebar()`."""
-    # TODO-future: >= 2023-11-01; Add deprecation message below
-    # Plan of action:
-    # * No deprecation messages today (2023-05-18), and existing code _just works_.
-    # * Change all examples to use the new API.
-    # * In, say, 6 months, start emitting messages for code that uses the old API.
-
-    # warn_deprecated("Please use `sidebar()` instead of `panel_sidebar()`. `panel_sidebar()` will go away in a future version of Shiny.")
-    return DeprecatedPanelSidebar(
-        *args,
-        width=width,
-        **kwargs,
-    )
-
-
+# Deprecated 2023-06-13
 class DeprecatedPanelSidebar:
     """
     [Deprecated] Sidebar panel
@@ -570,27 +548,6 @@ class DeprecatedPanelSidebar:
         Tagify the `self.sidebar.tag` and return the result in a TagList
         """
         return self.sidebar.tag.tagify()
-
-
-def panel_main(
-    *args: TagChild | TagAttrs,
-    width: int = 8,
-    **kwargs: TagAttrValue,
-) -> TagList | DeprecatedPanelMain:
-    """Deprecated. Please supply `panel_main(*args)` directly to `layout_sidebar()`."""
-    # TODO-future: >= 2023-11-01; Add deprecation message below
-    # warn_deprecated(
-    #     "Please supply `panel_main(*args)` directly to `layout_sidebar()`."
-    # )
-    # warn if keys are being ignored
-    attrs, children = consolidate_attrs(*args, **kwargs)
-    if len(attrs) > 0:
-        return DeprecatedPanelMain(attrs=attrs, children=children)
-        warn_deprecated(
-            "`*args: TagAttrs` or `**kwargs: TagAttrValue` values supplied to `panel_main()` are being ignored. Please supply them directly to `layout_sidebar()`."
-        )
-
-    return TagList(*children)
 
 
 class DeprecatedPanelMain:

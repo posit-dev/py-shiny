@@ -18,16 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### API changes
 
-* Renamed `shiny.ui.navset_pill_card` to `shiny.ui.navset_card_pill`. `shiny.ui.navset_pill_card` will throw a deprecated warning (#492).
-* Renamed `shiny.ui.navset_tab_card` to `shiny.ui.navset_card_tab`. `shiny.ui.navset_tab_card` will throw a deprecated warning (#492).
+| From | To | Link |
+| ---- | -- | ---- |
+| `ui.navset_pill_card()` | `ui.navset_card_pill()` | #492 |
+| `ui.navset_tab_card()` | `ui.navset_card_tab()` | #492 |
+| `experimental.ui.navset_pill_card` | `experimental.ui.navset_card_pill` | #492 |
+| `experimental.ui.navset_tab_card` | `experimental.ui.navset_card_tab` | #492 |
+| `experimental.ui.sidebar_toggle()` | `experimental.ui.toggle_sidebar()` | #680 |
+| `experimental.ui.tooltip_toggle()` | `experimental.ui.toggle_tooltip()` | #680 |
+| `experimental.ui.tooltip_update()` | `experimental.ui.update_tooltip()` | #680 |
 
-#### Experimental API changes
-
-* Renamed `shiny.experimental.ui.navset_pill_card` to `shiny.experimental.ui.navset_card_pill` (#492).
-* Renamed `shiny.experimental.ui.navset_tab_card` to `shiny.experimental.ui.navset_card_tab` (#492).
-* Renamed `shiny.experimental.ui.sidebar_toggle()` to `shiny.experimental.ui.toggle_sidebar()` (#680).
-* Renamed `shiny.experimental.ui.tooltip_toggle()` to `shiny.experimental.ui.toggle_tooltip()` (#680).
-* Renamed `shiny.experimental.ui.tooltip_update()` to `shiny.experimental.ui.update_tooltip()` (#680).
+All originally named methods will display a deprecation warning when executed.
 
 
 ### Bug fixes
