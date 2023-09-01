@@ -6,12 +6,15 @@ __all__ = (
     "nav_control",
     "nav_spacer",
     "navset_tab",
-    "navset_tab_card",
+    "navset_card_tab",
     "navset_pill",
-    "navset_pill_card",
+    "navset_card_pill",
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
+    # Deprecated - 2023-08-15
+    "navset_pill_card",
+    "navset_tab_card",
 )
 
 import copy
@@ -20,8 +23,9 @@ from typing import Any, Literal, Optional, Sequence, cast
 
 from htmltools import MetadataNode, Tag, TagChild, TagList, div, tags
 
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
-from .._namespaces import resolve_id
+from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
 from ..types import NavSetArg
 from ._bootstrap import column, row
@@ -119,8 +123,8 @@ def nav(
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
-    ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_tab
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
     """
     if value is None:
@@ -160,8 +164,8 @@ def nav_control(*args: TagChild) -> Nav:
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
-    ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_tab
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
     Example
     -------
@@ -182,8 +186,8 @@ def nav_spacer() -> Nav:
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
-    ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_tab
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
 
     Example
@@ -315,8 +319,8 @@ def nav_menu(
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
-    ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_tab
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
     Example
     -------
@@ -409,8 +413,8 @@ def navset_tab(
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_pill
-    ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_tab
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
 
     Example
@@ -421,7 +425,7 @@ def navset_tab(
     return NavSet(
         *args,
         ul_class="nav nav-tabs",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         header=header,
         footer=footer,
@@ -461,8 +465,8 @@ def navset_pill(
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
-    ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_tab
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
 
     Example
@@ -473,7 +477,7 @@ def navset_pill(
     return NavSet(
         *args,
         ul_class="nav nav-pills",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         header=header,
         footer=footer,
@@ -513,9 +517,9 @@ def navset_hidden(
     ~shiny.ui.nav_control
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_tab
-    ~shiny.ui.navset_tab_card
+    ~shiny.ui.navset_card_tab
     ~shiny.ui.navset_pill
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_pill_list
     ~shiny.ui.navset_bar
     """
@@ -523,7 +527,7 @@ def navset_hidden(
     return NavSet(
         *args,
         ul_class="nav nav-hidden",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         header=header,
         footer=footer,
@@ -560,7 +564,7 @@ class NavSetCard(NavSet):
             return card(self.header, content, self.footer, header=nav)
 
 
-def navset_tab_card(
+def navset_card_tab(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -594,7 +598,7 @@ def navset_tab_card(
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
 
     Example
@@ -605,7 +609,7 @@ def navset_tab_card(
     return NavSetCard(
         *args,
         ul_class="nav nav-tabs card-header-tabs",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         header=header,
         footer=footer,
@@ -613,7 +617,7 @@ def navset_tab_card(
     )
 
 
-def navset_pill_card(
+def navset_card_pill(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -650,7 +654,7 @@ def navset_pill_card(
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
-    ~shiny.ui.navset_tab_card
+    ~shiny.ui.navset_card_tab
     ~shiny.ui.navset_hidden
 
     Example
@@ -661,7 +665,7 @@ def navset_pill_card(
     return NavSetCard(
         *args,
         ul_class="nav nav-pills card-header-pills",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         header=header,
         footer=footer,
@@ -741,9 +745,9 @@ def navset_pill_list(
     ~shiny.ui.nav_control
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_tab
-    ~shiny.ui.navset_tab_card
+    ~shiny.ui.navset_card_tab
     ~shiny.ui.navset_pill
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
     ~shiny.ui.navset_bar
     ~shiny.ui.navset_hidden
@@ -756,7 +760,7 @@ def navset_pill_list(
     return NavSetPillList(
         *args,
         ul_class="nav nav-pills nav-stacked",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         header=header,
         footer=footer,
@@ -910,8 +914,8 @@ def navset_bar(
     ~shiny.ui.nav_spacer
     ~shiny.ui.navset_tab
     ~shiny.ui.navset_pill
-    ~shiny.ui.navset_tab_card
-    ~shiny.ui.navset_pill_card
+    ~shiny.ui.navset_card_tab
+    ~shiny.ui.navset_card_pill
     ~shiny.ui.navset_hidden
 
     Example
@@ -930,7 +934,7 @@ def navset_bar(
     return NavSetBar(
         *new_args,
         ul_class="nav navbar-nav",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         title=title,
         position=position,
@@ -996,4 +1000,55 @@ def card(*args: TagChild, header: TagChild = None, footer: TagChild = None) -> T
         footer,
         bootstrap_deps(),
         class_="card",
+    )
+
+
+##############################################
+# Deprecated
+##############################################
+# Deprecated 2023-08-15
+def navset_pill_card(
+    *args: NavSetArg,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+    placement: Literal["above", "below"] = "above",
+) -> NavSetCard:
+    """Deprecated. Please use `navset_card_pill()` instead of `navset_pill_card()`."""
+    warn_deprecated(
+        "`navset_pill_card()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`~shiny.ui.navset_card_pill` instead."
+    )
+    return navset_card_pill(
+        *args,
+        id=id,
+        selected=selected,
+        header=header,
+        footer=footer,
+        placement=placement,
+    )
+
+
+# Deprecated 2023-08-15
+def navset_tab_card(
+    *args: NavSetArg,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+) -> NavSetCard:
+    """Deprecated. Please use `navset_card_tab()` instead of `navset_tab_card()`."""
+    warn_deprecated(
+        "`navset_tab_card()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`~shiny.ui.navset_card_tab` instead."
+    )
+    return navset_card_tab(
+        *args,
+        id=id,
+        selected=selected,
+        header=header,
+        footer=footer,
     )

@@ -10,6 +10,7 @@ from ..._versions import htmltools as htmltools_version
 _x_www = PurePath(__file__).parent.parent.parent / "www" / "shared" / "_x"
 _x_sidebar_path = str(_x_www / "bslib" / "components" / "sidebar")
 _x_nav_spacer_path = str(_x_www / "bslib" / "components" / "nav_spacer")
+_x_bslibshiny_path = str(_x_www / "bslib" / "components" / "bslibShiny")
 _x_fill_path = str(_x_www / "htmltools" / "fill")
 
 
@@ -35,6 +36,19 @@ def sidebar_dependency() -> HTMLDependency:
         },
         script={"src": "sidebar.min.js"},
         stylesheet={"href": "sidebar.css"},
+        all_files=True,
+    )
+
+
+def bslibshiny_dependency() -> HTMLDependency:
+    return HTMLDependency(
+        "bslib-shiny",
+        bslib_version,
+        source={
+            "package": "shiny",
+            "subdir": _x_bslibshiny_path,
+        },
+        script={"src": "bslibShiny.min.js"},
         all_files=True,
     )
 

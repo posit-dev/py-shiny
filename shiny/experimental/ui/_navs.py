@@ -2,8 +2,8 @@ from __future__ import annotations
 
 __all__ = (
     "navset_bar",
-    "navset_tab_card",
-    "navset_pill_card",
+    "navset_card_tab",
+    "navset_card_pill",
 )
 
 import copy
@@ -11,7 +11,7 @@ from typing import Any, Literal, Optional, Sequence, cast
 
 from htmltools import MetadataNode, Tag, TagChild, TagList, css, div, tags
 
-from ..._namespaces import resolve_id
+from ..._namespaces import resolve_id_or_none
 from ..._utils import private_random_int
 from ...types import NavSetArg
 from ...ui._html_dependencies import bootstrap_deps
@@ -194,7 +194,7 @@ def navset_card_body(content: Tag, sidebar: Optional[Sidebar] = None) -> CardIte
         return CardItem(content)
 
 
-def navset_tab_card(
+def navset_card_tab(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -229,7 +229,7 @@ def navset_tab_card(
     * ~shiny.experimental.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
-    * ~shiny.experimental.ui.navset_pill_card
+    * ~shiny.experimental.ui.navset_card_pill
     * ~shiny.ui.navset_hidden
 
     Example
@@ -240,7 +240,7 @@ def navset_tab_card(
     return NavSetCard(
         *args,
         ul_class="nav nav-tabs card-header-tabs",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         sidebar=sidebar,
         header=header,
@@ -249,7 +249,7 @@ def navset_tab_card(
     )
 
 
-def navset_pill_card(
+def navset_card_pill(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -287,7 +287,7 @@ def navset_pill_card(
     * ~shiny.experimental.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
-    * ~shiny.experimental.ui.navset_tab_card
+    * ~shiny.experimental.ui.navset_card_tab
     * ~shiny.ui.navset_hidden
 
     Example
@@ -298,7 +298,7 @@ def navset_pill_card(
     return NavSetCard(
         *args,
         ul_class="nav nav-pills card-header-pills",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         sidebar=sidebar,
         header=header,
@@ -533,8 +533,8 @@ def navset_bar(
     * ~shiny.ui.nav_spacer
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
-    * ~shiny.experimental.ui.navset_tab_card
-    * ~shiny.experimental.ui.navset_pill_card
+    * ~shiny.experimental.ui.navset_card_tab
+    * ~shiny.experimental.ui.navset_card_pill
     * ~shiny.ui.navset_hidden
 
     Example
@@ -553,7 +553,7 @@ def navset_bar(
     return NavSetBar(
         *new_args,
         ul_class="nav navbar-nav",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         sidebar=sidebar,
         fillable=fillable,

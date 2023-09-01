@@ -31,6 +31,7 @@ from .._docstring import add_example, doc_format
 from .._namespaces import resolve_id
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import drop_none
+from ..module import session_context
 from ..session import Session, require_active_session
 from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
@@ -298,8 +299,12 @@ def _update_choice_input(
     session = require_active_session(session)
     options = None
     if choices is not None:
+        # https://github.com/posit-dev/py-shiny/issues/708#issuecomment-1696352934
+        with session_context(session):
+            resolved_id = resolve_id(id)
+
         opts = _generate_options(
-            id=resolve_id(id),
+            id=resolved_id,
             type=type,
             choices=choices,
             selected=selected,

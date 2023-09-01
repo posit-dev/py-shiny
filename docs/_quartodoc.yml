@@ -77,9 +77,9 @@ quartodoc:
         - ui.nav_spacer
         - ui.nav_menu
         - ui.navset_tab
-        - ui.navset_tab_card
+        - ui.navset_card_tab
         - ui.navset_pill
-        - ui.navset_pill_card
+        - ui.navset_card_pill
         - ui.navset_pill_list
         - ui.navset_hidden
     - title: UI panels
@@ -247,14 +247,13 @@ quartodoc:
             - experimental.ui.layout_sidebar
             - experimental.ui.page_navbar
             - experimental.ui.navset_bar
-            - experimental.ui.navset_tab_card
-            - experimental.ui.navset_pill_card
-            - experimental.ui.sidebar_toggle
+            - experimental.ui.navset_card_tab
+            - experimental.ui.navset_card_pill
+            - experimental.ui.toggle_sidebar
+            - experimental.ui.toggle_switch
             - experimental.ui.panel_main
             - experimental.ui.panel_sidebar
             - experimental.ui.Sidebar
-            - experimental.ui.DeprecatedPanelMain
-            - experimental.ui.DeprecatedPanelSidebar
         - kind: page
           path: ExCard
           summary:
@@ -306,8 +305,18 @@ quartodoc:
           flatten: true
           contents:
             - experimental.ui.tooltip
-            - experimental.ui.tooltip_toggle
+            - experimental.ui.toggle_tooltip
             - experimental.ui.update_tooltip
+        - kind: page
+          path: ExPopover
+          summary:
+            name: "Popovers"
+            desc: "Display additional information when clicking on a UI element (typically a button)."
+          flatten: true
+          contents:
+            - experimental.ui.popover
+            - experimental.ui.toggle_popover
+            - experimental.ui.update_popover
         - kind: page
           path: ExFillingLayout
           summary:

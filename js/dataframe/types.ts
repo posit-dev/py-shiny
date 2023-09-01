@@ -20,7 +20,7 @@ export interface DataGridOptions {
 
 export interface PandasData<TIndex> {
   columns: ReadonlyArray<string>;
-  index: ReadonlyArray<TIndex>;
+  // index: ReadonlyArray<TIndex>;
   data: unknown[][];
   type_hints?: ReadonlyArray<TypeHint>;
   options: DataGridOptions;

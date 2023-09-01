@@ -98,12 +98,10 @@ e2e-deploys: ## end-to-end tests on deploys with playwright
 	playwright install --with-deps
 	pytest $(DEPLOYS_FILE) -s -m "integrationtest"
 
-coverage: ## check code coverage quickly with the default Python
-	coverage run --source shiny -m pytest
-	coverage report -m
+coverage: ## check combined code coverage (must run e2e last)
+	pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/e2e/ -m "not examples and not integrationtest"
 	coverage html
 	$(BROWSER) htmlcov/index.html
-
 
 release: dist ## package and upload a release
 	twine upload dist/*

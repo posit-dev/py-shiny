@@ -32,9 +32,10 @@ from ._fill import (  # bind_fill_role,
     is_fillable_container,
     remove_all_fill,
 )
+from ._input_switch import toggle_switch
 from ._input_text import input_text_area
 from ._layout import layout_column_wrap
-from ._navs import navset_bar, navset_pill_card, navset_tab_card
+from ._navs import navset_bar, navset_card_pill, navset_card_tab
 from ._output import output_image, output_plot, output_ui
 from ._page import page_fillable, page_navbar, page_sidebar
 from ._sidebar import (
@@ -45,9 +46,10 @@ from ._sidebar import (
     panel_main,
     panel_sidebar,
     sidebar,
-    sidebar_toggle,
+    toggle_sidebar,
 )
-from ._tooltip import tooltip, tooltip_toggle, update_tooltip
+from ._tooltip import tooltip, toggle_tooltip, update_tooltip
+from ._popover import popover, toggle_popover, update_popover
 from ._valuebox import showcase_left_center, showcase_top_right, value_box
 
 __all__ = (
@@ -63,15 +65,15 @@ __all__ = (
     "panel_main",
     "panel_sidebar",
     "sidebar",
-    "sidebar_toggle",
+    "toggle_sidebar",
     # Page
     "page_sidebar",
     "page_fillable",
     "page_navbar",
     # Navs
     "navset_bar",
-    "navset_tab_card",
-    "navset_pill_card",
+    "navset_card_tab",
+    "navset_card_pill",
     # Card
     "CardItem",
     "ImgContainer",
@@ -85,9 +87,13 @@ __all__ = (
     "card_footer",
     # Layout
     "layout_column_wrap",
+    # Popover
+    "popover",
+    "toggle_popover",
+    "update_popover",
     # Tooltip
     "tooltip",
-    "tooltip_toggle",
+    "toggle_tooltip",
     "update_tooltip",
     # ValueBox
     "value_box",
@@ -107,6 +113,8 @@ __all__ = (
     "output_image",
     "output_plot",
     "output_ui",
+    # input_switch
+    "toggle_switch",
     # input_text_area
     "input_text_area",
     # Accordion

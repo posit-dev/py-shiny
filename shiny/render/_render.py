@@ -102,7 +102,7 @@ def text(
 @output_transformer
 async def PlotTransformer(
     _meta: TransformerMetadata,
-    _fn: ValueFn[ImgData | None],
+    _fn: ValueFn[object],
     *,
     alt: Optional[str] = None,
     **kwargs: object,

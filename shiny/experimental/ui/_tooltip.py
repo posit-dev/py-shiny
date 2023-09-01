@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 from typing import Literal, Optional
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, div
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, tags
 
 from ... import Session
+from ..._namespaces import resolve_id_or_none
 from ..._utils import drop_none
 from ...session import require_active_session
 
@@ -52,7 +53,7 @@ def tooltip(
     -------
 
     If `trigger` yields multiple HTML elements (e.g., a :class:`~htmltools.TagList` or
-    complex [`shinywidgets`](https://github.com/rstudio/py-shinywidgets) object), the
+    complex [`shinywidgets`](https://github.com/posit-dev/py-shinywidgets) object), the
     last HTML element is used as the trigger. If the `trigger` should contain all of
     those elements, wrap the object in a :func:`~shiny.ui.tags.div` or
     :func:`~shiny.ui.tags.span`.
@@ -70,14 +71,14 @@ def tooltip(
     res = web_component(
         "bslib-tooltip",
         {
-            "id": id,
+            "id": resolve_id_or_none(id),
             "placement": placement,
             "options": json.dumps(options) if options else None,
         },
         attrs,
         # Use display:none instead of <template> since shiny.js
         # doesn't bind to the contents of the latter
-        div(*children, {"style": "display:none;"}),
+        tags.template(*children, {"style": "display:none;"}),
         trigger,
     )
 
@@ -91,7 +92,7 @@ def _session_on_flush_send_msg(
     session.on_flush(lambda: session.send_input_message(id, msg), once=True)
 
 
-def tooltip_toggle(
+def toggle_tooltip(
     id: str, show: Optional[bool] = None, session: Optional[Session] = None
 ) -> None:
     """

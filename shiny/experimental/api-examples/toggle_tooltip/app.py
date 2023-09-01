@@ -23,19 +23,19 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         req(input.btn_show())
 
-        x.ui.tooltip_toggle("tooltip_id", show=True)
+        x.ui.toggle_tooltip("tooltip_id", show=True)
 
     @reactive.Effect
     def _():
         req(input.btn_close())
 
-        x.ui.tooltip_toggle("tooltip_id", show=False)
+        x.ui.toggle_tooltip("tooltip_id", show=False)
 
     @reactive.Effect
     def _():
         req(input.btn_toggle())
 
-        x.ui.tooltip_toggle("tooltip_id")
+        x.ui.toggle_tooltip("tooltip_id")
 
     @reactive.Effect
     def _():

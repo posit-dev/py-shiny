@@ -106,7 +106,7 @@ def card(
 
     tag = div(
         {
-            "class": "card bslib-card bslib-mb-spacer",
+            "class": "card bslib-card bslib-mb-spacing",
             "style": css(
                 height=as_css_unit(height),
                 max_height=as_css_unit(max_height),

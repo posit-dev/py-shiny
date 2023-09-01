@@ -9,6 +9,7 @@ from htmltools import tags
 
 from ... import Session
 from ..._deprecated import warn_deprecated
+from ..._namespaces import resolve_id_or_none
 from ...session import require_active_session
 
 # from ._color import get_color_contrast
@@ -117,6 +118,8 @@ def sidebar(
     fg: Optional[str] = None,
     class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
     max_height_mobile: Optional[str | float] = None,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
 ) -> Sidebar:
     # See [this article](https://rstudio.github.io/bslib/articles/sidebars.html)
     #   to learn more.
@@ -133,7 +136,7 @@ def sidebar(
 
     * :func:`~shiny.experimental.ui.layout_sidebar`
       * Creates a sidebar layout component which can be dropped inside any Shiny UI page method (e.g. :func:`~shiny.experimental.ui.page_fillable`) or :func:`~shiny.experimental.ui.card` context.
-    * :func:`~shiny.experimental.ui.navset_bar`, :func:`~shiny.experimental.ui.navset_tab_card`, and :func:`~shiny.experimental.ui.navset_pill_card`
+    * :func:`~shiny.experimental.ui.navset_bar`, :func:`~shiny.experimental.ui.navset_card_tab`, and :func:`~shiny.experimental.ui.navset_card_pill`
       * Creates a multi page/tab UI with a singular `sidebar()` (which is
         shown on every page/tab).
 
@@ -152,10 +155,10 @@ def sidebar(
         open), `"closed"` or `False` (the sidebar starts closed), or `"always"` or
         `None` (the sidebar is always open and cannot be closed).
 
-        In :func:`~shiny.experimental.ui.sidebar_toggle`, `open` indicates the desired
+        In :func:`~shiny.experimental.ui.toggle_sidebar`, `open` indicates the desired
         state of the sidebar, where the default of `open = None` will cause the sidebar
         to be toggled open if closed or vice versa. Note that
-        :func:`~shiny.experimental.ui.sidebar_toggle` can only open or close the
+        :func:`~shiny.experimental.ui.toggle_sidebar` can only open or close the
         sidebar, so it does not support the `"desktop"` and `"always"` options.
     id
         A character string. Required if wanting to re-actively read (or update) the
@@ -175,6 +178,18 @@ def sidebar(
         The default is `250px` unless the sidebar is included in a
         :func:`~shiny.experimental.ui.layout_sidebar` with a specified height, in
         which case the default is to take up no more than 50% of the layout container.
+    gap
+        A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
+        provided to `*args`.
+    padding
+        Padding within the sidebar itself. This can be a numeric vector (which will be
+        interpreted as pixels) or a character vector with valid CSS lengths. `padding`
+        may be one to four values. If one, then that value will be used for all four
+        sides. If two, then the first value will be used for the top and bottom, while
+        the second value will be used for left and right. If three, then the first will
+        be used for top, the second will be left and right, and the third will be
+        bottom. If four, then the values will be interpreted as top, right, bottom, and
+        left respectively.
 
     Returns
     -------
@@ -185,14 +200,15 @@ def sidebar(
     --------
     * :func:`~shiny.experimental.ui.layout_sidebar`
     * :func:`~shiny.experimental.ui.navset_bar`
-    * :func:`~shiny.experimental.ui.navset_tab_card`
-    * :func:`~shiny.experimental.ui.navset_pill_card`
+    * :func:`~shiny.experimental.ui.navset_card_tab`
+    * :func:`~shiny.experimental.ui.navset_card_pill`
     """
     # TODO-future; validate `open`, bg, fg, class_, max_height_mobile
 
     if id is None and open != "always":
         # but always provide id when collapsible for accessibility reasons
-        id = f"bslib-sidebar-{random.randint(1000, 10000)}"
+        id = f"bslib_sidebar_{random.randint(1000, 10000)}"
+    resolved_id = resolve_id_or_none(id)
 
     # TODO-future; implement
     # if fg is None and bg is not None:
@@ -211,18 +227,24 @@ def sidebar(
             type="button",
             title="Toggle sidebar",
             aria_expanded=trinary(open in ["open", "desktop"]),
-            aria_controls=id,
+            aria_controls=resolved_id,
         )
 
     tag = div(
         div(
             title,
-            {"class": "sidebar-content"},
+            {
+                "class": "sidebar-content bslib-gap-spacing",
+                "style": css(
+                    gap=as_css_unit(gap),
+                    padding=as_css_padding(padding),
+                ),
+            },
             *args,
         ),
-        {"class": "bslib-sidebar-input"} if id is not None else None,
+        {"class": "bslib-sidebar-input"} if resolved_id is not None else None,
         {"class": "sidebar"},
-        id=id,
+        id=resolved_id,
         role="complementary",
         class_=class_,
     )
@@ -284,17 +306,17 @@ def layout_sidebar(
     border_color
         A border color.
     gap
-        A CSS length unit defining the `gap` (i.e., spacing) between elements provided
-        to `*args`. This argument is only applicable when `fillable = TRUE`.
+        A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
+        provided to `*args`. This value will only be used if `fillable` is `True`.
     padding
-        Padding to use for the body. This can be a numeric vector
-        (which will be interpreted as pixels) or a character vector with valid CSS
-        lengths. The length can be between one and four. If one, then that value
-        will be used for all four sides. If two, then the first value will be used
-        for the top and bottom, while the second value will be used for left and
-        right. If three, then the first will be used for top, the second will be
-        left and right, and the third will be bottom. If four, then the values will
-        be interpreted as top, right, bottom, and left respectively.
+        Padding within the sidebar itself. This can be a numeric vector (which will be
+        interpreted as pixels) or a character vector with valid CSS lengths. `padding`
+        may be one to four values. If one, then that value will be used for all four
+        sides. If two, then the first value will be used for the top and bottom, while
+        the second value will be used for left and right. If three, then the first will
+        be used for top, the second will be left and right, and the third will be
+        bottom. If four, then the values will be interpreted as top, right, bottom, and
+        left respectively.
     height
         Any valid CSS unit to use for the height.
 
@@ -368,7 +390,7 @@ def layout_sidebar(
     )
 
     res = div(
-        {"class": "bslib-sidebar-layout"},
+        {"class": "bslib-sidebar-layout bslib-mb-spacing"},
         {"class": "sidebar-right"} if sidebar.position == "right" else None,
         {"class": "sidebar-collapsed"} if sidebar.open == "closed" else None,
         main,
@@ -396,7 +418,7 @@ def layout_sidebar(
 
 
 # TODO-maindocs; @add_example()
-def sidebar_toggle(
+def toggle_sidebar(
     id: str,
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
     session: Session | None = None,
@@ -413,7 +435,7 @@ def sidebar_toggle(
     open
         The desired state of the sidebar, choosing from the following options: `None`
         (toggle sidebar open and closed), `"open"` or `True` (open the sidebar),
-        `"closed"` or `False` (close the sidebar). Note that `sidebar_toggle()` can only
+        `"closed"` or `False` (close the sidebar). Note that `toggle_sidebar()` can only
         open or close the sidebar, so it does not support the `"desktop"` and `"always"`
     session
         A Shiny session object (the default should almost always be used).
@@ -435,7 +457,7 @@ def sidebar_toggle(
     else:
         if open == "always" or open == "desktop":
             raise ValueError(
-                f"`open = '{open}'` is not supported by `sidebar_toggle()`"
+                f"`open = '{open}'` is not supported by `toggle_sidebar()`"
             )
         raise ValueError(
             "open must be NULL (or 'toggle'), TRUE (or 'open'), or FALSE (or 'closed')"

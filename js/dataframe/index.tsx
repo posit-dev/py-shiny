@@ -58,12 +58,8 @@ interface ShinyDataGridProps<TIndex> {
 
 const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const { id, data, bgcolor } = props;
-  const { columns, index, type_hints, data: rowData } = data;
+  const { columns, type_hints, data: rowData } = data;
   const { width, height, filters: withFilters } = data.options;
-  const keyToIndex: Record<string, unknown> = {};
-  index.forEach((value) => {
-    keyToIndex[value + ""] = value;
-  });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const theadRef = useRef<HTMLTableSectionElement>(null);
@@ -110,7 +106,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
     getScrollElement: () => containerRef.current,
     estimateSize: () => 31,
     paddingStart: theadRef.current?.clientHeight ?? 0,
-    // In response to https://github.com/rstudio/py-shiny/pull/538/files#r1228352446
+    // In response to https://github.com/posit-dev/py-shiny/pull/538/files#r1228352446
     // (the default scrollingDelay is 150)
     scrollingDelay: 10,
   });
@@ -192,7 +188,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
           rowSelection
             .keys()
             .toList()
-            .map((key) => keyToIndex[key])
+            .map((key) => parseInt(key))
+            .sort()
         );
       }
     }

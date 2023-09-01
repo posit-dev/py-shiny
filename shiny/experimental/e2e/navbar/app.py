@@ -51,14 +51,14 @@ app = App(
         ),
         footer=ui.div(
             {"style": "width:80%; margin: 0 auto"},
-            ui.h4("navset_tab_card()"),
-            x.ui.navset_tab_card(
-                *nav_items("navset_tab_card()"),
+            ui.h4("navset_card_tab()"),
+            x.ui.navset_card_tab(
+                *nav_items("navset_card_tab()"),
                 sidebar=my_sidebar,
             ),
-            ui.h4("navset_pill_card()"),
-            x.ui.navset_pill_card(
-                *nav_items("navset_pill_card()"),
+            ui.h4("navset_card_pill()"),
+            x.ui.navset_card_pill(
+                *nav_items("navset_card_pill()"),
                 sidebar=my_sidebar,
             ),
             # Do not include `navset_bar()` in example. Ok for testing only

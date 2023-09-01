@@ -10,11 +10,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added `shiny.render.renderer_components` decorator to help create new output renderers. (#621)
+* Added `shiny.render.renderer_components` decorator to help create new output renderers (#621).
+* Added `shiny.experimental.ui.popover()`, `update_popover()`, and `toggle_popover()` for easy creation (and server-side updating) of [Bootstrap popovers](https://getbootstrap.com/docs/5.2/components/popovers/). Popovers are similar to tooltips, but are more persistent, and should primarily be used with button-like UI elements (e.g. `input_action_button()` or icons) (#680).
+* Added `shiny.experimental.ui.toggle_switch()` (#680).
+* Added CSS classes to UI input methods (#680) .
+* `Session` objects can now accept an asynchronous (or synchronous) function for `.on_flush(fn=)`, `.on_flushed(fn=)`, and `.on_ended(fn=)` (#686).
+
+### API changes
+
+* Renamed `shiny.ui.navset_pill_card` to `shiny.ui.navset_card_pill`. `shiny.ui.navset_pill_card` will throw a deprecated warning (#492).
+* Renamed `shiny.ui.navset_tab_card` to `shiny.ui.navset_card_tab`. `shiny.ui.navset_tab_card` will throw a deprecated warning (#492).
+
+#### Experimental API changes
+
+* Renamed `shiny.experimental.ui.navset_pill_card` to `shiny.experimental.ui.navset_card_pill` (#492).
+* Renamed `shiny.experimental.ui.navset_tab_card` to `shiny.experimental.ui.navset_card_tab` (#492).
+* Renamed `shiny.experimental.ui.sidebar_toggle()` to `shiny.experimental.ui.toggle_sidebar()` (#680).
+* Renamed `shiny.experimental.ui.tooltip_toggle()` to `shiny.experimental.ui.toggle_tooltip()` (#680).
+* Renamed `shiny.experimental.ui.tooltip_update()` to `shiny.experimental.ui.update_tooltip()` (#680).
+
 
 ### Bug fixes
 
-Fixes #646: Wrap bare value box value in `<p />` tags. (#668)
+* Fixed #646: Wrap bare value box value in `<p />` tags. (#668)
+* Fixed #676: The `render.data_frame` selection feature was underdocumented and buggy (sometimes returning `None` as a row identifier if the pandas data frame's index had gaps in it). With this release, the selection is consistently a tuple of the 0-based row numbers of the selected rows--or `None` if no rows are selected. (#677)
+* Added tests to verify that ui input methods, ui labels, ui update (value) methods, and ui output methods work within modules (#696).
+* Adjusted the `@render.plot` input type to be `object` to allow for any object (if any) to be returned (#712).
 
 ### Other changes
 
@@ -168,35 +189,35 @@ Fixes #646: Wrap bare value box value in `<p />` tags. (#668)
 
 ### New features
 
-* Closed [#312](https://github.com/rstudio/py-shiny/issues/312): Matplotlib plots in a `@render.plot` can now use the global figure, instead of returning a `figure` object. ([#314](https://github.com/rstudio/py-shiny/pull/314))
+* Closed [#312](https://github.com/posit-dev/py-shiny/issues/312): Matplotlib plots in a `@render.plot` can now use the global figure, instead of returning a `figure` object. ([#314](https://github.com/posit-dev/py-shiny/pull/314))
 
-* Disabled `shiny static` command, in favor of `shinylive export` from the shinylive package. ([#326](https://github.com/rstudio/py-shiny/pull/326))
+* Disabled `shiny static` command, in favor of `shinylive export` from the shinylive package. ([#326](https://github.com/posit-dev/py-shiny/pull/326))
 
 
 ## [0.2.5] - 2022-08-12
 
 ### New features
 
-* Closed [#269](https://github.com/rstudio/py-shiny/issues/269): The UI for a `shiny.App` object can now be provided as a function. ([#299](https://github.com/rstudio/py-shiny/pull/299))
-* When a Shinylive deployment is made with `shiny static`, it the deployment code is now delegated to Shinylive. ([#310](https://github.com/rstudio/py-shiny/pull/310))
+* Closed [#269](https://github.com/posit-dev/py-shiny/issues/269): The UI for a `shiny.App` object can now be provided as a function. ([#299](https://github.com/posit-dev/py-shiny/pull/299))
+* When a Shinylive deployment is made with `shiny static`, it the deployment code is now delegated to Shinylive. ([#310](https://github.com/posit-dev/py-shiny/pull/310))
 
 ### Bug fixes
 
-* Fixed [#279](https://github.com/rstudio/py-shiny/issues/279): When a Shiny application is mounted to a Starlette route, reactivity did not work. ([#294](https://github.com/rstudio/py-shiny/pull/294))
-* Fixed [#290](https://github.com/rstudio/py-shiny/issues/290): `@render.plot` now works as intended inside `@module.server`. ([#292](https://github.com/rstudio/py-shiny/pull/292))
-* Fixed [#289](https://github.com/rstudio/py-shiny/issues/289): `input_selectize()` now resolves the input id before using for other id-like attributes ([#291](https://github.com/rstudio/py-shiny/pull/291))
+* Fixed [#279](https://github.com/posit-dev/py-shiny/issues/279): When a Shiny application is mounted to a Starlette route, reactivity did not work. ([#294](https://github.com/posit-dev/py-shiny/pull/294))
+* Fixed [#290](https://github.com/posit-dev/py-shiny/issues/290): `@render.plot` now works as intended inside `@module.server`. ([#292](https://github.com/posit-dev/py-shiny/pull/292))
+* Fixed [#289](https://github.com/posit-dev/py-shiny/issues/289): `input_selectize()` now resolves the input id before using for other id-like attributes ([#291](https://github.com/posit-dev/py-shiny/pull/291))
 
 ## [0.2.4] - 2022-08-01
 
 ### Bug fixes
 
-* Fixed [#287](https://github.com/rstudio/py-shiny/issues/287): Running `shiny static` on Windows failed with `PermissionError`. ([#288](https://github.com/rstudio/py-shiny/pull/288))
+* Fixed [#287](https://github.com/posit-dev/py-shiny/issues/287): Running `shiny static` on Windows failed with `PermissionError`. ([#288](https://github.com/posit-dev/py-shiny/pull/288))
 
 ## [0.2.3] - 2022-07-28
 
 ### Bug fixes
 
-* Fixed [#281](https://github.com/rstudio/py-shiny/issues/281): Directory creation for Shinylive assets could fail if the parent directory did not exist. ([#283](https://github.com/rstudio/py-shiny/pull/283))
+* Fixed [#281](https://github.com/posit-dev/py-shiny/issues/281): Directory creation for Shinylive assets could fail if the parent directory did not exist. ([#283](https://github.com/posit-dev/py-shiny/pull/283))
 
 ## [0.2.2] - 2022-07-27
 

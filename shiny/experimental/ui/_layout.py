@@ -115,7 +115,7 @@ def layout_column_wrap(
 
     tag = div(
         {
-            "class": "bslib-grid",
+            "class": "bslib-grid bslib-mb-spacing",
             "style": css(**tag_style_css),
         },
         attrs,

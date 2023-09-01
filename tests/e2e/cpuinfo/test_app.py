@@ -1,7 +1,5 @@
 # pyright: reportUnknownMemberType=false
 
-# TODO-karan; Convert test into loop that tests all examples to make sure they load
-
 import re
 
 from conftest import ShinyAppProc, create_example_fixture
