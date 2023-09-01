@@ -31,7 +31,7 @@ def exception_swallower(
     return wrapper
 
 
-def run_command(cmd: str) -> typing.Union[str, None]:
+def run_command(cmd: str) -> str:
     output = subprocess.run(
         cmd,
         check=True,
@@ -39,7 +39,7 @@ def run_command(cmd: str) -> typing.Union[str, None]:
         text=True,
         shell=True,
     )
-    return output
+    return output.stdout
 
 
 @exception_swallower
@@ -52,8 +52,8 @@ def deploy_to_connect(app_name: str, app_file_path: str) -> str:
     app_details = run_command(connect_server_lookup_command)
     connect_server_deploy = f"rsconnect deploy shiny {app_file_path} --server {server_url} --api-key {api_key} --title {app_name} --verbose"
     # only if the app exists do we replace existing app with new version
-    if json.loads(app_details.stdout):
-        app_id = json.loads(app_details.stdout)[0]["guid"]
+    if json.loads(app_details):
+        app_id = json.loads(app_details)[0]["guid"]
         connect_server_deploy += f" --app-id {app_id}"
 
     # Deploy to connect server
@@ -61,8 +61,8 @@ def deploy_to_connect(app_name: str, app_file_path: str) -> str:
 
     # look up content url in connect server once app is deployed
     output = run_command(connect_server_lookup_command)
-    url = json.loads(output.stdout)[0]["content_url"]
-    app_id = json.loads(output.stdout)[0]["guid"]
+    url = json.loads(output)[0]["content_url"]
+    app_id = json.loads(output)[0]["guid"]
     # change visibility of app to public
     connect_app_url = f"{server_url}/__api__/v1/content/{app_id}"
     payload = '{"access_type":"all"}'

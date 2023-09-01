@@ -18,7 +18,8 @@ app_file_path = os.path.join(os.path.dirname(current_dir), "apps", APP_DIR)
 
 @pytest.mark.integrationtest
 @pytest.mark.only_browser("chromium")
-@pytest.mark.parametrize("location", ["shinyapps", "connect"])
+@pytest.mark.parametrize("location", ["connect"])
+# TODO - Karan: Add shinyapps.io support once it is stable
 def test_deploys(page: Page, location: str) -> None:
     page_url = deploy(location, APP_NAME, app_file_path)
     page.goto(page_url, timeout=PAGE_TIMEOUT)
