@@ -207,7 +207,7 @@ def sidebar(
 
     if id is None and open != "always":
         # but always provide id when collapsible for accessibility reasons
-        id = f"bslib-sidebar-{random.randint(1000, 10000)}"
+        id = f"bslib_sidebar_{random.randint(1000, 10000)}"
     resolved_id = resolve_id_or_none(id)
 
     # TODO-future; implement
