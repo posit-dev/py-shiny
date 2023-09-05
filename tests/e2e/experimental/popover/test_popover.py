@@ -3,12 +3,17 @@ from controls import InputActionButton, Popover
 from playwright.sync_api import Page
 
 
+def get_popover_id(page: Page) -> str | None:
+    return page.locator(
+        "div > bslib-popover > button[data-bs-toggle='popover']"
+    ).get_attribute("aria-describedby")
+
+
 def test_popover(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
     input_action_button = InputActionButton(page, "btn_w_popover")
     input_action_button.click()
-    popover_id = input_action_button.get_overlay_attribute()
-    popover = Popover(page, str(popover_id))
+    popover = Popover(page, str(get_popover_id(page=page)))
     popover.expect_active()
     popover.expect_body("A message")

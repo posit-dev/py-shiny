@@ -6,8 +6,8 @@ from shiny.types import NavSetArg
 
 def nav_controls(prefix: str) -> List[NavSetArg]:
     return [
-        ui.nav("a", prefix + ": tab a content"),
-        ui.nav("b", prefix + ": tab b content"),
+        ui.nav("A", prefix + ": tab a content", value="a"),
+        ui.nav("b", prefix + ": tab b content", value="b"),
         ui.nav_control(
             ui.a(
                 "Shiny",
@@ -18,7 +18,7 @@ def nav_controls(prefix: str) -> List[NavSetArg]:
         ui.nav_spacer(),
         ui.nav_menu(
             "Other links",
-            ui.nav("c", prefix + ": tab c content"),
+            ui.nav("C", prefix + ": tab c content", value="c"),
             "----",
             "Plain text",
             "----",

@@ -7,7 +7,7 @@ import re
 import sys
 import time
 import typing
-from typing import Literal, Protocol
+from typing import Callable, Literal, Protocol
 
 from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
@@ -774,9 +774,6 @@ class InputActionButton(
             id=id,
             loc=f"button#{id}.action-button.shiny-bound-input",
         )
-
-    def get_overlay_attribute(self) -> str | None:
-        return self.loc.get_attribute("aria-describedby")
 
 
 class InputActionLink(_InputActionBase):
@@ -2760,7 +2757,22 @@ class AccordionPanel(
         self.loc_header.click(timeout=timeout)
 
 
-class Popover(_InputWithContainer):
+class _OverlayP(_InputBaseP, Protocol):
+    loc_container: Locator
+    loc: Locator
+
+
+class _OverlayM:
+    def expect_body(
+        self: _OverlayP, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
+        playwright_expect(self.loc).to_have_text(value, timeout=timeout)
+
+    def expect_active(self: _OverlayP, *, timeout: Timeout = None) -> None:
+        _expect_class_value(self.loc_container, "show", True, timeout=timeout)
+
+
+class Popover(_OverlayM, _InputWithContainer):
     # trigger: TagChild,
     # *args: TagChild | TagAttrs,
     # title: Optional[TagChild] = None,
@@ -2770,21 +2782,14 @@ class Popover(_InputWithContainer):
     # **kwargs: TagAttrValue,
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
-            page, id=id, loc_container=f"div#{id}.popover", loc="> div.popover-body"
+            page,
+            id=id,
+            loc_container=f"div#{id}.popover",
+            loc="> div.popover-body",
         )
 
-    # def set(state):
 
-    # def toggle(): - click on the loc_container since tooltip does not have its own id
-
-    def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc).to_have_text(value, timeout=timeout)
-
-    def expect_active(self, *, timeout: Timeout = None) -> None:
-        _expect_class_value(self.loc_container, "show", True, timeout=timeout)
-
-
-class Tooltip(_InputWithContainer):
+class Tooltip(_OverlayM, _InputWithContainer):
     # trigger: TagChild,
     # *args: TagChild | TagAttrs,
     # id: Optional[str] = None,
@@ -2799,32 +2804,13 @@ class Tooltip(_InputWithContainer):
             loc="> div.tooltip-inner",
         )
 
-    def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc).to_have_text(value, timeout=timeout)
 
-    def expect_active(self, *, timeout: Timeout = None) -> None:
-        _expect_class_value(self.loc_container, "show", True, timeout=timeout)
-
-
-class _NavItemP(_OutputBaseP, Protocol):
-    loc: Locator
-    loc_container: Locator
-    page: Page
-    id: str
-
-
-class _NavItemM:
-    def click(self: _NavItemP, *, timeout: Timeout = None) -> None:
-        self.loc.click(timeout=timeout)
-
-    def expect_active(self, *, timeout: Timeout = None) -> None:
-        _expect_class_value(self.loc, "active", True, timeout=timeout)
-
+class _LayoutNavItemBase(_InputWithContainer):
     def nav_item(
         self,
         value: str,
-    ) -> NavItem:
-        return NavItem(self.page, self.id, value)
+    ) -> LayoutNavItem:
+        return LayoutNavItem(self.page, self.id, value)
 
     def set(self, value: str, *, timeout: Timeout = None) -> None:
         self.nav_item(value).click(timeout=timeout)
@@ -2836,21 +2822,19 @@ class _NavItemM:
         ).to_have_attribute("data-value", value, timeout=timeout)
 
     # TODO: Make it a single locator expectation
+    # get active content instead of assertion
+    @property
+    def loc_active_content(self) -> Locator:
+        datatab_id = self.loc_container.get_attribute("data-tabsetid")
+        return self.page.locator(
+            f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
+        )
+
     def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        datatab_id = self.loc_container.get_attribute("data-tabsetid", timeout=timeout)
-        playwright_expect(
-            self.page.locator(
-                f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active.show"
-            )
-        ).to_have_text(value, timeout=timeout)
+        playwright_expect(self.loc_active_content).to_have_text(value, timeout=timeout)
 
-    def expect_nav_content(
-        self, item_value: str, content_value: PatternOrStr, *, timeout: Timeout = None
-    ) -> None:
-        self.nav_item(item_value).expect_content(content_value)
-
-    def expect_nav_items(
-        self: _NavP,
+    def expect_nav_values(
+        self,
         value: list[PatternOrStr],
         *,
         timeout: Timeout = None,
@@ -2865,8 +2849,16 @@ class _NavItemM:
             timeout=timeout,
         )
 
+    def expect_nav_titles(
+        self,
+        value: list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        self.expect.to_have_text(value, timeout=timeout)
 
-class NavsetTab(_InputWithContainer, _NavItemM):
+
+class LayoutNavsetTab(_LayoutNavItemBase):
     # *args: NavSetArg,
     # id: Optional[str] = None,
     # selected: Optional[str] = None,
@@ -2881,7 +2873,7 @@ class NavsetTab(_InputWithContainer, _NavItemM):
         )
 
 
-class NavItem(_InputWithContainer, _NavItemM):
+class LayoutNavItem(_InputWithContainer):
     # *args: NavSetArg,
     # id: Optional[str] = None,
     # selected: Optional[str] = None,
@@ -2895,8 +2887,24 @@ class NavItem(_InputWithContainer, _NavItemM):
             loc_container=f"ul#{id}",
         )
 
+        self._data_value: str = data_value
 
-class NavSetCardTab(_InputWithContainer, _NavItemM):
+    def click(self, *, timeout: Timeout = None) -> None:
+        self.loc.click(timeout=timeout)
+
+    def expect_active(self, active: bool, *, timeout: Timeout = None) -> None:
+        _expect_class_value(self.loc, "active", active, timeout=timeout)
+
+    def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        datatab_id = self.loc_container.get_attribute("data-tabsetid", timeout=timeout)
+        playwright_expect(
+            self.page.locator(
+                f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane[data-value='{self._data_value}']"
+            )
+        ).to_have_text(value, timeout=timeout)
+
+
+class LayoutNavSetCardTab(_LayoutNavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -2906,7 +2914,7 @@ class NavSetCardTab(_InputWithContainer, _NavItemM):
         )
 
 
-class NavSetPill(_InputWithContainer, _NavItemM):
+class LayoutNavSetPill(_LayoutNavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -2916,7 +2924,7 @@ class NavSetPill(_InputWithContainer, _NavItemM):
         )
 
 
-class NavSetPillList(_InputWithContainer, _NavItemM):
+class LayoutNavSetPillList(_LayoutNavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -2926,7 +2934,7 @@ class NavSetPillList(_InputWithContainer, _NavItemM):
         )
 
 
-class NavSetCardPill(_InputWithContainer, _NavItemM):
+class LayoutNavSetCardPill(_LayoutNavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -2936,7 +2944,7 @@ class NavSetCardPill(_InputWithContainer, _NavItemM):
         )
 
 
-class NavSetHidden(_InputWithContainer, _NavItemM):
+class LayoutNavSetHidden(_LayoutNavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
@@ -2946,17 +2954,17 @@ class NavSetHidden(_InputWithContainer, _NavItemM):
         )
 
 
-class NavSetBar(_InputWithContainer, _NavItemM):
+class LayoutNavSetBar(_LayoutNavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
             id=id,
-            loc_container=f"div#{id}.navbar-nav.shiny-tab-input",
+            loc_container=f"ul#{id}.navbar-nav.shiny-tab-input",
             loc="> li.nav-item",
         )
 
 
-class NavsetHidden(_InputWithContainer, _NavItemM):
+class LayoutNavsetHidden(_LayoutNavItemBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
