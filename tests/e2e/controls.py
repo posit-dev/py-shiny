@@ -7,7 +7,7 @@ import re
 import sys
 import time
 import typing
-from typing import Callable, Literal, Protocol
+from typing import Literal, Protocol
 
 from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
