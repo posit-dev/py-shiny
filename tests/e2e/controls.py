@@ -2757,22 +2757,44 @@ class AccordionPanel(
         self.loc_header.click(timeout=timeout)
 
 
-class _OverlayP(_InputBaseP, Protocol):
-    loc_container: Locator
-    loc: Locator
-
-
-class _OverlayM:
-    def expect_body(
-        self: _OverlayP, value: PatternOrStr, *, timeout: Timeout = None
+class _OverlayBase(_InputBase):
+    def __init__(
+        self,
+        page: Page,
+        *,
+        id: str,
+        loc: InitLocator,
+        overlay_name: str,
+        overlay_selector: str,
     ) -> None:
-        playwright_expect(self.loc).to_have_text(value, timeout=timeout)
+        super().__init__(page, id=id, loc=loc)
+        self._overlay_name = overlay_name
+        self._overlay_selector = overlay_selector
 
-    def expect_active(self: _OverlayP, *, timeout: Timeout = None) -> None:
-        _expect_class_value(self.loc_container, "show", True, timeout=timeout)
+    def _get_overlay_id(self) -> str | None:
+        loc_el = self.loc.locator(
+            f" > :last-child[data-bs-toggle='{self._overlay_name}']"
+        )
+        return loc_el.get_attribute("aria-describedby")
+
+    def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during expectation check."""
+        overlay_id = self._get_overlay_id()
+        loc_overlay_body = self.page.locator(f"#{overlay_id}")
+        playwright_expect(loc_overlay_body).to_have_text(value, timeout=timeout)
+
+    def expect_active(self, *, timeout: Timeout = None) -> None:
+        return expect_attr(
+            loc=self.loc.locator(
+                f" > :last-child[data-bs-toggle='{self._overlay_name}']"
+            ),
+            timeout=timeout,
+            name="aria-describedby",
+            value=re.compile(r".*"),
+        )
 
 
-class Popover(_OverlayM, _InputWithContainer):
+class Popover(_OverlayBase):
     # trigger: TagChild,
     # *args: TagChild | TagAttrs,
     # title: Optional[TagChild] = None,
@@ -2784,12 +2806,13 @@ class Popover(_OverlayM, _InputWithContainer):
         super().__init__(
             page,
             id=id,
-            loc_container=f"div#{id}.popover",
-            loc="> div.popover-body",
+            loc=f"bslib-popover#{id}",
+            overlay_name="popover",
+            overlay_selector=".popover > div.popover-body",
         )
 
 
-class Tooltip(_OverlayM, _InputWithContainer):
+class Tooltip(_OverlayBase):
     # trigger: TagChild,
     # *args: TagChild | TagAttrs,
     # id: Optional[str] = None,
@@ -2800,8 +2823,9 @@ class Tooltip(_OverlayM, _InputWithContainer):
         super().__init__(
             page,
             id=id,
-            loc_container=f"div#{id}.tooltip.bs-tooltip-auto",
-            loc="> div.tooltip-inner",
+            loc=f"bslib-tooltip#{id}",
+            overlay_name="tooltip",
+            overlay_selector=".tooltip > div.tooltip-body",
         )
 
 
