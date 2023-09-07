@@ -6,6 +6,7 @@ from typing import Literal, Optional
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, tags
 
 from ... import Session
+from ..._namespaces import resolve_id_or_none
 from ..._utils import drop_none
 from ...session import require_active_session
 
@@ -52,7 +53,7 @@ def tooltip(
     -------
 
     If `trigger` yields multiple HTML elements (e.g., a :class:`~htmltools.TagList` or
-    complex [`shinywidgets`](https://github.com/rstudio/py-shinywidgets) object), the
+    complex [`shinywidgets`](https://github.com/posit-dev/py-shinywidgets) object), the
     last HTML element is used as the trigger. If the `trigger` should contain all of
     those elements, wrap the object in a :func:`~shiny.ui.tags.div` or
     :func:`~shiny.ui.tags.span`.
@@ -70,7 +71,7 @@ def tooltip(
     res = web_component(
         "bslib-tooltip",
         {
-            "id": id,
+            "id": resolve_id_or_none(id),
             "placement": placement,
             "options": json.dumps(options) if options else None,
         },

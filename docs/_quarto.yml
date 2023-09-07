@@ -9,7 +9,7 @@ format:
 website:
   title: "Shiny for Python (dev version)"
   description: "A Python package for writing interactive web applications."
-  repo-url: https://github.com/rstudio/py-shiny
+  repo-url: https://github.com/posit-dev/py-shiny
   repo-actions: [issue]
   page-navigation: true
   navbar:
@@ -21,7 +21,7 @@ website:
         file: api/index.qmd
     right:
       - icon: github
-        href: https://github.com/rstudio/py-shiny
+        href: https://github.com/posit-dev/py-shiny
         aria-label: Shiny for Python on GitHub
 
 metadata-files:

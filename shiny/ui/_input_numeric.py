@@ -56,10 +56,11 @@ def input_numeric(
     ~shiny.ui.update_numeric
     """
 
+    resolved_id = resolve_id(id)
     return div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         tags.input(
-            id=resolve_id(id),
+            id=resolved_id,
             type="number",
             class_="shiny-input-number form-control",
             value=value,

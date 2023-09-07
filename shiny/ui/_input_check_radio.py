@@ -202,9 +202,10 @@ def input_checkbox_group(
     ~shiny.ui.input_radio_buttons
     """
 
-    input_label = shiny_input_label(id, label)
+    resolved_id = resolve_id(id)
+    input_label = shiny_input_label(resolved_id, label)
     options = _generate_options(
-        id=resolve_id(id),
+        id=resolved_id,
         type="checkbox",
         choices=choices,
         selected=selected,
@@ -213,7 +214,7 @@ def input_checkbox_group(
     return div(
         input_label,
         options,
-        id=resolve_id(id),
+        id=resolved_id,
         style=css(width=width),
         class_="form-group shiny-input-checkboxgroup shiny-input-container"
         + (" shiny-input-container-inline" if inline else ""),
@@ -271,9 +272,10 @@ def input_radio_buttons(
     ~shiny.ui.input_checkbox
     """
 
-    input_label = shiny_input_label(id, label)
+    resolved_id = resolve_id(id)
+    input_label = shiny_input_label(resolved_id, label)
     options = _generate_options(
-        id=resolve_id(id),
+        id=resolved_id,
         type="radio",
         choices=choices,
         selected=selected,
@@ -282,7 +284,7 @@ def input_radio_buttons(
     return div(
         input_label,
         options,
-        id=resolve_id(id),
+        id=resolved_id,
         style=css(width=width),
         class_="form-group shiny-input-radiogroup shiny-input-container"
         + (" shiny-input-container-inline" if inline else ""),

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import warnings
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, cast
 
 from ..types import ImgData, PlotnineFigure
@@ -33,12 +34,20 @@ def try_render_matplotlib(
         return (False, None)
 
     try:
-        import matplotlib.pyplot as plt
+        import matplotlib.pyplot as plt  # pyright: ignore[reportUnusedImport] # noqa: F401
 
         fig.set_size_inches(width / ppi, height / ppi)
         fig.set_dpi(ppi * pixelratio)
 
-        plt.tight_layout()  # pyright: ignore[reportUnknownMemberType]
+        # Suppress the message `UserWarning: The figure layout has changed to tight`
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                action="ignore",
+                category=UserWarning,
+                message="The figure layout has changed to tight",
+            )
+            plt.tight_layout()  # pyright: ignore[reportUnknownMemberType]
+
         coordmap = get_coordmap(fig)
 
         with io.BytesIO() as buf:

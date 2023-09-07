@@ -98,9 +98,10 @@ def input_text_area(
         if rows is None:
             rows = 1
 
+    resolved_id = resolve_id(id)
     area = tags.textarea(
         value,
-        id=resolve_id(id),
+        id=resolved_id,
         class_=" ".join(classes),
         style=css(width=None if width else "100%", height=height, resize=resize),
         placeholder=placeholder,
@@ -111,7 +112,7 @@ def input_text_area(
     )
 
     return div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         area,
         autoresize_dependency() if autoresize else None,
         class_="shiny-input-textarea form-group shiny-input-container",

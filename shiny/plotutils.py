@@ -349,7 +349,7 @@ def to_float(x: DataFrameColumn) -> pd.Series[float]:
     """
     if ptypes.is_numeric_dtype(x):  # pyright: ignore[reportUnknownMemberType]
         return cast("pd.Series[float]", x)
-    elif ptypes.is_categorical_dtype(x):  # pyright: ignore[reportUnknownMemberType]
+    elif isinstance(x, ptypes.CategoricalDtype):
         return cast("pd.Series[float]", x.cat.codes + 1)  # pyright: ignore
     elif ptypes.is_string_dtype(x):  # pyright: ignore[reportUnknownMemberType]
         return cast(

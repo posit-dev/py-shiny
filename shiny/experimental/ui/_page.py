@@ -40,10 +40,10 @@ def page_sidebar(
 
     Parameters
     ----------
-    args
-        UI elements.
     sidebar
         Content to display in the sidebar.
+    args
+        UI elements.
     title
         A title to display at the top of the page.
     fillable
@@ -118,7 +118,6 @@ def page_navbar(
 
     Parameters
     ----------
-
     args
         UI elements.
     title

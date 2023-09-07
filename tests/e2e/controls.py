@@ -325,7 +325,7 @@ class _InputWithLabel(_InputWithContainer):
         id: str,
         loc: InitLocator,
         loc_container: InitLocator = "div.shiny-input-container",
-        loc_label: InitLocator = "label",
+        loc_label: InitLocator | None = None,
     ) -> None:
         super().__init__(
             page,
@@ -334,6 +334,8 @@ class _InputWithLabel(_InputWithContainer):
             loc=loc,
         )
 
+        if loc_label is None:
+            loc_label = f"label#{id}-label"
         if isinstance(loc_label, str):
             loc_label = self.loc_container.locator(loc_label)
         self.loc_label = loc_label
@@ -592,7 +594,6 @@ class _InputSelectBase(
             page,
             id=id,
             loc=f"select#{id}.shiny-bound-input{select_class}",
-            loc_label=f"label[for='{id}']",
         )
         self.loc_selected = self.loc.locator("option:checked")
         self.loc_choices = self.loc.locator("option")
@@ -718,7 +719,7 @@ class InputSelect(_InputSelectBase):
         super().__init__(
             page,
             id=id,
-            select_class="",
+            select_class=".form-select",
         )
 
     # selectize: bool = False,
@@ -737,7 +738,7 @@ class InputSelectize(_InputSelectBase):
         super().__init__(
             page,
             id=id,
-            select_class=".form-select",
+            select_class="",
         )
 
 
@@ -804,11 +805,14 @@ class _InputCheckboxBase(
     # label: TagChild
     # value: bool = False
     # width: Optional[str] = None
-    def __init__(self, page: Page, id: str, loc: InitLocator) -> None:
+    def __init__(
+        self, page: Page, id: str, loc: InitLocator, loc_label: str | None
+    ) -> None:
         super().__init__(
             page,
             id=id,
             loc=loc,
+            loc_label=loc_label,
         )
 
     def set(self, value: bool, *, timeout: Timeout = None, **kwargs: object) -> None:
@@ -834,6 +838,7 @@ class InputCheckbox(_InputCheckboxBase):
             page,
             id=id,
             loc=f"div.checkbox > label > input#{id}[type=checkbox].shiny-bound-input",
+            loc_label="label > span",
         )
 
 
@@ -847,6 +852,7 @@ class InputSwitch(_InputCheckboxBase):
             page,
             id=id,
             loc=f"div.form-switch > input#{id}[type=checkbox].shiny-bound-input",
+            loc_label=f"label[for={id}]",
         )
 
 
@@ -1062,7 +1068,6 @@ class InputCheckboxGroup(
             # This happens to be the container
             loc="xpath=.",
             loc_container=f"div#{id}.shiny-input-checkboxgroup.shiny-bound-input",
-            loc_label=f"label#{id}-label",
         )
 
         # # Regular example
@@ -1182,7 +1187,6 @@ class InputRadioButtons(
             # This happens to be the container
             loc="xpath=.",
             loc_container=f"div#{id}.shiny-input-radiogroup.shiny-bound-input",
-            loc_label=f"label#{id}-label",
         )
 
         # # Regular example
@@ -1275,7 +1279,6 @@ class InputFile(
             page,
             id=id,
             loc=f"input[type=file]#{id}",
-            loc_label=f"label[id={id}-label]",
         )
         self.loc_button = self.loc_container.locator("label span.btn")
         self.loc_file_display = self.loc_container.locator("input[type=text]")
@@ -1371,7 +1374,6 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
             page,
             id=id,
             loc=f"input#{id}",
-            loc_label=f"label#{id}-label",
         )
         self.loc_irs = self.loc_container.locator("> .irs.irs--shiny")
         self.loc_irs_ticks = self.loc_irs.locator("> .irs-grid > .irs-grid-text")
@@ -1877,7 +1879,6 @@ class InputDate(_DateBase):
             page,
             id=id,
             loc="input[type=text].form-control",
-            loc_label=f"label#{id}-label",
             loc_container=f"div#{id}.shiny-input-container",
         )
 
@@ -1909,7 +1910,6 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
             page,
             id=id,
             loc="input[type=text].form-control",
-            loc_label=f"label#{id}-label",
             loc_container=f"div#{id}.shiny-input-container",
         )
         self.loc_separator = self.loc_container.locator(".input-daterange > span")

@@ -11,7 +11,7 @@ from typing import Any, Literal, Optional, Sequence, cast
 
 from htmltools import MetadataNode, Tag, TagChild, TagList, css, div, tags
 
-from ..._namespaces import resolve_id
+from ..._namespaces import resolve_id_or_none
 from ..._utils import private_random_int
 from ...types import NavSetArg
 from ...ui._html_dependencies import bootstrap_deps
@@ -240,7 +240,7 @@ def navset_card_tab(
     return NavSetCard(
         *args,
         ul_class="nav nav-tabs card-header-tabs",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         sidebar=sidebar,
         header=header,
@@ -298,7 +298,7 @@ def navset_card_pill(
     return NavSetCard(
         *args,
         ul_class="nav nav-pills card-header-pills",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         sidebar=sidebar,
         header=header,
@@ -553,7 +553,7 @@ def navset_bar(
     return NavSetBar(
         *new_args,
         ul_class="nav navbar-nav",
-        id=resolve_id(id) if id else None,
+        id=resolve_id_or_none(id),
         selected=selected,
         sidebar=sidebar,
         fillable=fillable,

@@ -83,20 +83,24 @@ test: ## run tests quickly with the default Python
 # Default `FILE` to `e2e` if not specified
 FILE:=tests/e2e
 
-e2e: ## end-to-end tests with playwright
-	playwright install --with-deps
-	pytest $(FILE) -m "not examples"
+DEPLOYS_FILE:=tests/deploys
 
-e2e-examples: ## end-to-end tests on examples with playwright
+playwright-install:
 	playwright install --with-deps
+
+e2e: playwright-install ## end-to-end tests with playwright
+	pytest $(FILE) -m "not examples and not integrationtest"
+
+e2e-examples: playwright-install ## end-to-end tests on examples with playwright
 	pytest $(FILE) -m "examples"
 
-coverage: ## check code coverage quickly with the default Python
-	coverage run --source shiny -m pytest
-	coverage report -m
+e2e-deploys: playwright-install ## end-to-end tests on deploys with playwright
+	pytest $(DEPLOYS_FILE) -s -m "integrationtest"
+
+coverage: ## check combined code coverage (must run e2e last)
+	pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/e2e/ -m "not examples and not integrationtest"
 	coverage html
 	$(BROWSER) htmlcov/index.html
-
 
 release: dist ## package and upload a release
 	twine upload dist/*

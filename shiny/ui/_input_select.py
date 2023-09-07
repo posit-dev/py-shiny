@@ -171,22 +171,22 @@ def input_select(
 
     choices_tags = _render_choices(choices_, selected)
 
-    id = resolve_id(id)
+    resolved_id = resolve_id(id)
 
     return div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         div(
             tags.select(
                 *choices_tags,
                 {"class": "shiny-input-select"},
                 class_=None if selectize else "form-select",
-                id=id,
+                id=resolved_id,
                 multiple=multiple,
                 size=size,
             ),
             (
                 TagList(
-                    tags.script("{}", type="application/json", data_for=id),
+                    tags.script("{}", type="application/json", data_for=resolved_id),
                     selectize_deps(),
                 )
                 if selectize
