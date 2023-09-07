@@ -6,7 +6,8 @@
     "dist",
     "typings",
     "sandbox",
-    "docs"
+    "docs",
+    "tests/deploys/apps"
   ],
   "typeCheckingMode": "strict",
   "reportImportCycles": "none",
