@@ -42,7 +42,6 @@ def run_command(cmd: str) -> str:
     return output.stdout
 
 
-@exception_swallower
 def deploy_to_connect(app_name: str, app_file_path: str) -> str:
     if not api_key:
         raise RuntimeError("No api key found. Cannot deploy.")

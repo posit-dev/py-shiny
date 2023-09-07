@@ -94,8 +94,7 @@ e2e: playwright-install ## end-to-end tests with playwright
 e2e-examples: playwright-install ## end-to-end tests on examples with playwright
 	pytest $(FILE) -m "examples"
 
-e2e-deploys: ## end-to-end tests on deploys with playwright
-	playwright install --with-deps
+e2e-deploys: playwright-install ## end-to-end tests on deploys with playwright
 	pytest $(DEPLOYS_FILE) -s -m "integrationtest"
 
 coverage: ## check combined code coverage (must run e2e last)
