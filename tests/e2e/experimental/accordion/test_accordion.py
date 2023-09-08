@@ -61,8 +61,12 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     acc_panel_updated_A.expect_body("Updated body")
     acc_panel_updated_A.expect_icon("Look! An icon! -->")
 
-    # does not update output_txt to updated_section_a
     acc.expect_panels(["updated_section_a", "Section B", "Section C", "Section D"])
+    # workaround - toggle it twice Section A
+    acc_panel_updated_A.toggle()
+    # add timeout to wait for css animation
+    page.wait_for_timeout(500)
+    acc_panel_updated_A.toggle()
     output_txt_verbatim.expect_value(
         "input.acc(): ('updated_section_a', 'Section C', 'Section D')"
     )
@@ -80,7 +84,14 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
         ]
     )
     acc.expect_open(
-        ["updated_section_a", "Section B", "Section E", "Section F", "Section G"]
+        [
+            "updated_section_a",
+            "Section C",
+            "Section D",
+            "Section E",
+            "Section F",
+            "Section G",
+        ]
     )
     # will be uncommented once https://github.com/rstudio/bslib/issues/565 is fixed
     # output_txt_verbatim.expect_value(
