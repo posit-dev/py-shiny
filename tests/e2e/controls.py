@@ -2776,7 +2776,7 @@ class _OverlayBase(_InputBase):
         )
 
     @property
-    def get_overlay_body_loc(self) -> Locator:
+    def loc_overlay_body(self) -> Locator:
         """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch"""
         loc_el = self.loc.locator(
             f" > :last-child[data-bs-toggle='{self._overlay_name}']"
@@ -2785,7 +2785,7 @@ class _OverlayBase(_InputBase):
         return self.page.locator(f"#{overlay_id}{self._overlay_selector}")
 
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.get_overlay_body_loc).to_have_text(
+        playwright_expect(self.loc_overlay_body).to_have_text(
             value, timeout=timeout
         )
 
@@ -2799,7 +2799,7 @@ class _OverlayBase(_InputBase):
             value=re.compile(r".*"),
         )
 
-
+# TODO-karan: Check for placement
 class Popover(_OverlayBase):
     # trigger: TagChild,
     # *args: TagChild | TagAttrs,
@@ -2818,13 +2818,13 @@ class Popover(_OverlayBase):
         )
 
     def set(self, open: bool) -> None:
-        if open ^ self.get_overlay_body_loc.count() > 0:
+        if open ^ self.loc_overlay_body.count() > 0:
             self.toggle()
 
     def toggle(self, timeout: Timeout = None) -> None:
         self.loc_trigger.click(timeout=timeout)
 
-
+# TODO-karan: Check for placement
 class Tooltip(_OverlayBase):
     # trigger: TagChild,
     # *args: TagChild | TagAttrs,
@@ -2842,7 +2842,7 @@ class Tooltip(_OverlayBase):
         )
 
     def set(self, open: bool) -> None:
-        if open ^ self.get_overlay_body_loc.count() > 0:
+        if open ^ self.loc_overlay_body.count() > 0:
             self.toggle()
 
     def toggle(self, timeout: Timeout = None) -> None:
