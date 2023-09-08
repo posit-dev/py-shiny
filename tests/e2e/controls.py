@@ -2680,7 +2680,6 @@ class Accordion(
     def set(
         self,
         selected: str | list[str],
-        open: bool,
         *,
         timeout: Timeout = None,
     ) -> None:
