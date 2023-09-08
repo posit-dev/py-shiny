@@ -2691,8 +2691,7 @@ class Accordion(
                 raise ValueError(
                     "Accordion panel does not have a `data-value` attribute"
                 )
-            if elem_value in selected:
-                self.accordion_panel(elem_value).set(open, timeout=timeout)
+            self.accordion_panel(elem_value).set(elem_value in selected, timeout=timeout)
             # self.accordion_panel(elem_value).set(
             #     elem_value in selected, timeout=timeout
             # )
