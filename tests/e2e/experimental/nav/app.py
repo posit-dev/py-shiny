@@ -7,7 +7,7 @@ from shiny.types import NavSetArg
 def nav_controls(prefix: str) -> List[NavSetArg]:
     return [
         ui.nav("A", prefix + ": tab a content", value="a"),
-        ui.nav("b", prefix + ": tab b content", value="b"),
+        ui.nav("B", prefix + ": tab b content", value="b"),
         ui.nav_control(
             ui.a(
                 "Shiny",

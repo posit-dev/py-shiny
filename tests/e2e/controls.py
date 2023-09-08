@@ -2691,7 +2691,9 @@ class Accordion(
                 raise ValueError(
                     "Accordion panel does not have a `data-value` attribute"
                 )
-            self.accordion_panel(elem_value).set(elem_value in selected, timeout=timeout)
+            self.accordion_panel(elem_value).set(
+                elem_value in selected, timeout=timeout
+            )
 
     def accordion_panel(
         self,
@@ -2765,17 +2767,23 @@ class _OverlayBase(_InputBase):
         super().__init__(page, id=id, loc=loc)
         self._overlay_name = overlay_name
         self._overlay_selector = overlay_selector
+        self.loc_trigger = self.loc.locator(
+            f" > :last-child[data-bs-toggle='{self._overlay_name}']"
+        )
 
-    def _get_overlay_body_loc -> Locator | None:
+    @property
+    def get_overlay_body_loc(self) -> Locator:
+        """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch"""
         loc_el = self.loc.locator(
             f" > :last-child[data-bs-toggle='{self._overlay_name}']"
         )
         overlay_id = loc_el.get_attribute("aria-describedby")
-        return self.page.locator(f"#{overlay_id} > {self._overlay_selector}")
+        return self.page.locator(f"#{overlay_id}{self._overlay_selector}")
 
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during expectation check."""
-        playwright_expect(self._get_overlay_body_loc()).to_have_text(value, timeout=timeout)
+        playwright_expect(self.get_overlay_body_loc).to_have_text(
+            value, timeout=timeout
+        )
 
     def expect_active(self, *, timeout: Timeout = None) -> None:
         return expect_attr(
@@ -2805,6 +2813,13 @@ class Popover(_OverlayBase):
             overlay_selector=".popover > div.popover-body",
         )
 
+    def set(self, open: bool) -> None:
+        if open ^ self.get_overlay_body_loc.count() > 0:
+            self.toggle()
+
+    def toggle(self, timeout: Timeout = None) -> None:
+        self.loc_trigger.click(timeout=timeout)
+
 
 class Tooltip(_OverlayBase):
     # trigger: TagChild,
@@ -2819,8 +2834,15 @@ class Tooltip(_OverlayBase):
             id=id,
             loc=f"bslib-tooltip#{id}",
             overlay_name="tooltip",
-            overlay_selector=".tooltip > div.tooltip-body",
+            overlay_selector=".tooltip > div.tooltip-inner",
         )
+
+    def set(self, open: bool) -> None:
+        if open ^ self.get_overlay_body_loc.count() > 0:
+            self.toggle()
+
+    def toggle(self, timeout: Timeout = None) -> None:
+        self.loc_trigger.hover(timeout=timeout)
 
 
 class _LayoutNavItemBase(_InputWithContainer):

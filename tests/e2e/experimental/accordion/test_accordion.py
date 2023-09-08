@@ -13,10 +13,7 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     acc_panel_A.expect_open(True)
     acc_panel_A.set(False)
     acc_panel_A.expect_open(False)
-    acc.set(["Section C", "Section B"], True)
-    output_txt_verbatim.expect_value("input.acc(): ('Section B', 'Section C')")
-    acc_panel_A.set(True)
-    acc.set(["Section C", "Section B"], False)
+
     alternate_button = InputActionButton(page, "alternate")
     open_all_button = InputActionButton(page, "open_all")
     close_all_button = InputActionButton(page, "close_all")
@@ -26,7 +23,11 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     acc.expect_width(None)
     acc.expect_height(None)
 
-    # initial state - by default only A is open
+    close_all_button.click()
+    acc.expect_open([])
+    output_txt_verbatim.expect_value("input.acc(): None")
+    acc.set(["Section A"])
+
     acc.expect_panels(["Section A", "Section B", "Section C", "Section D"])
     output_txt_verbatim.expect_value("input.acc(): ('Section A',)")
     acc.expect_open(["Section A"])
@@ -48,13 +49,11 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
         "input.acc(): ('Section A', 'Section B', 'Section C', 'Section D')"
     )
 
-    close_all_button.click()
-    acc.expect_open([])
-    output_txt_verbatim.expect_value("input.acc(): None")
-
     toggle_b_button.click()
-    acc.expect_open(["Section B"])
-    output_txt_verbatim.expect_value("input.acc(): ('Section B',)")
+    acc.expect_open(["Section A", "Section C", "Section D"])
+    output_txt_verbatim.expect_value(
+        "input.acc(): ('Section A', 'Section C', 'Section D')"
+    )
 
     acc_panel_updated_A = acc.accordion_panel("updated_section_a")
     toggle_updates_button.click()
@@ -62,8 +61,11 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     acc_panel_updated_A.expect_body("Updated body")
     acc_panel_updated_A.expect_icon("Look! An icon! -->")
 
+    # does not update output_txt to updated_section_a
     acc.expect_panels(["updated_section_a", "Section B", "Section C", "Section D"])
-    output_txt_verbatim.expect_value("input.acc(): ('updated_section_a', 'Section B')")
+    output_txt_verbatim.expect_value(
+        "input.acc(): ('updated_section_a', 'Section C', 'Section D')"
+    )
 
     toggle_efg_button.click()
     acc.expect_panels(
