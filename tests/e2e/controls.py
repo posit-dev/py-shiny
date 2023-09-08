@@ -2692,9 +2692,6 @@ class Accordion(
                     "Accordion panel does not have a `data-value` attribute"
                 )
             self.accordion_panel(elem_value).set(elem_value in selected, timeout=timeout)
-            # self.accordion_panel(elem_value).set(
-            #     elem_value in selected, timeout=timeout
-            # )
 
     def accordion_panel(
         self,
