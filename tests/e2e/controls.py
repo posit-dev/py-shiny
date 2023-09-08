@@ -2766,11 +2766,12 @@ class _OverlayBase(_InputBase):
         self._overlay_name = overlay_name
         self._overlay_selector = overlay_selector
 
-    def _get_overlay_id(self) -> str | None:
+    def _get_overlay_body_loc -> Locator | None:
         loc_el = self.loc.locator(
             f" > :last-child[data-bs-toggle='{self._overlay_name}']"
         )
-        return loc_el.get_attribute("aria-describedby")
+        overlay_id = loc_el.get_attribute("aria-describedby")
+        return self.page.locator(f"#{overlay_id} > {self._overlay_selector}")
 
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during expectation check."""
