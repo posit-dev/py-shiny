@@ -2785,9 +2785,7 @@ class _OverlayBase(_InputBase):
         return self.page.locator(f"#{overlay_id}{self._overlay_selector}")
 
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc_overlay_body).to_have_text(
-            value, timeout=timeout
-        )
+        playwright_expect(self.loc_overlay_body).to_have_text(value, timeout=timeout)
 
     def expect_active(self, *, timeout: Timeout = None) -> None:
         return expect_attr(
@@ -2798,6 +2796,7 @@ class _OverlayBase(_InputBase):
             name="aria-describedby",
             value=re.compile(r".*"),
         )
+
 
 # TODO-karan: Check for placement
 class Popover(_OverlayBase):
@@ -2823,6 +2822,7 @@ class Popover(_OverlayBase):
 
     def toggle(self, timeout: Timeout = None) -> None:
         self.loc_trigger.click(timeout=timeout)
+
 
 # TODO-karan: Check for placement
 class Tooltip(_OverlayBase):
