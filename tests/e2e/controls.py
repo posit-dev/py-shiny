@@ -2775,9 +2775,7 @@ class _OverlayBase(_InputBase):
 
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during expectation check."""
-        overlay_id = self._get_overlay_id()
-        loc_overlay_body = self.page.locator(f"#{overlay_id}")
-        playwright_expect(loc_overlay_body).to_have_text(value, timeout=timeout)
+        playwright_expect(self._get_overlay_body_loc()).to_have_text(value, timeout=timeout)
 
     def expect_active(self, *, timeout: Timeout = None) -> None:
         return expect_attr(
