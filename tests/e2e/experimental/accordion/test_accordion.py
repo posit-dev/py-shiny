@@ -9,6 +9,7 @@ def test_accordion(page: Page, local_app: ShinyAppProc) -> None:
     acc = Accordion(page, "acc")
     acc_panel_A = acc.accordion_panel("Section A")
     output_txt_verbatim = OutputTextVerbatim(page, "acc_txt")
+    output_txt_verbatim.expect_value("input.acc(): ('Section A',)")
     acc_panel_A.set(True)
     acc_panel_A.expect_open(True)
     acc_panel_A.set(False)
