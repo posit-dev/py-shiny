@@ -816,9 +816,13 @@ class _InputCheckboxBase(
         )
 
     def set(self, value: bool, *, timeout: Timeout = None, **kwargs: object) -> None:
+        self.loc.wait_for(state="visible", timeout=timeout)
+        self.loc.scroll_into_view_if_needed(timeout=timeout)
         self.loc.set_checked(value, timeout=timeout, **kwargs)
 
     def toggle(self, *, timeout: Timeout = None, **kwargs: object) -> None:
+        self.loc.wait_for(state="visible", timeout=timeout)
+        self.loc.scroll_into_view_if_needed(timeout=timeout)
         self.loc.click(timeout=timeout, **kwargs)
 
     def expect_checked(self, value: bool, *, timeout: Timeout = None) -> None:
@@ -2381,10 +2385,14 @@ class Sidebar(
         )
 
     def set(self, open: bool, *, timeout: Timeout = None) -> None:
+        self.loc_handle.wait_for(state="visible", timeout=timeout)
+        self.loc_handle.scroll_into_view_if_needed(timeout=timeout)
         if open ^ (self.loc_handle.get_attribute("aria-expanded") == "true"):
             self.toggle(timeout=timeout)
 
     def toggle(self, *, timeout: Timeout = None) -> None:
+        self.loc_handle.wait_for(state="visible", timeout=timeout)
+        self.loc_handle.scroll_into_view_if_needed(timeout=timeout)
         self.loc_handle.click(timeout=timeout)
 
 
@@ -2747,7 +2755,6 @@ class AccordionPanel(
 
     # user sends value of Open: true | false
     def set(self, open: bool, *, timeout: Timeout = None) -> None:
-        # TODO-karan: Add it for every action (i.e. set, toggle) method
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
         expect_not_to_have_class(self.loc_body, "collapsing", timeout=timeout)
@@ -2755,6 +2762,8 @@ class AccordionPanel(
             self.toggle(timeout=timeout)
 
     def toggle(self, *, timeout: Timeout = None) -> None:
+        self.loc.wait_for(state="visible", timeout=timeout)
+        self.loc.scroll_into_view_if_needed(timeout=timeout)
         self.loc_header.click(timeout=timeout)
 
 
@@ -2775,30 +2784,41 @@ class _OverlayBase(_InputBase):
             f" > :last-child[data-bs-toggle='{self._overlay_name}']"
         )
 
-    @property
-    def loc_overlay_body(self) -> Locator:
+    def _get_overlay_id(self) -> str | None:
         """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch"""
         loc_el = self.loc.locator(
             f" > :last-child[data-bs-toggle='{self._overlay_name}']"
         )
-        overlay_id = loc_el.get_attribute("aria-describedby")
-        return self.page.locator(f"#{overlay_id}{self._overlay_selector}")
+        return loc_el.get_attribute("aria-describedby")
+
+    @property
+    def loc_overlay_body(self) -> Locator:
+        return self.page.locator(f"#{self._get_overlay_id()}{self._overlay_selector}")
+
+    @property
+    def loc_overlay_container(self) -> Locator:
+        return self.page.locator(f"#{self._get_overlay_id()}")
 
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc_overlay_body).to_have_text(value, timeout=timeout)
 
     def expect_active(self, *, timeout: Timeout = None) -> None:
         return expect_attr(
-            loc=self.loc.locator(
-                f" > :last-child[data-bs-toggle='{self._overlay_name}']"
-            ),
+            loc=self.loc_trigger,
             timeout=timeout,
             name="aria-describedby",
             value=re.compile(r".*"),
         )
 
+    def expect_placement(self, value: str, *, timeout: Timeout = None) -> None:
+        return expect_attr(
+            loc=self.loc_overlay_container,
+            timeout=timeout,
+            name="data-popper-placement",
+            value=value,
+        )
 
-# TODO-karan: Check for placement
+
 class Popover(_OverlayBase):
     # trigger: TagChild,
     # *args: TagChild | TagAttrs,
@@ -2816,15 +2836,18 @@ class Popover(_OverlayBase):
             overlay_selector=".popover > div.popover-body",
         )
 
-    def set(self, open: bool) -> None:
+    def set(self, open: bool, timeout: Timeout = None) -> None:
+        self.loc_trigger.wait_for(state="visible", timeout=timeout)
+        self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
         if open ^ self.loc_overlay_body.count() > 0:
             self.toggle()
 
     def toggle(self, timeout: Timeout = None) -> None:
+        self.loc_trigger.wait_for(state="visible", timeout=timeout)
+        self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
         self.loc_trigger.click(timeout=timeout)
 
 
-# TODO-karan: Check for placement
 class Tooltip(_OverlayBase):
     # trigger: TagChild,
     # *args: TagChild | TagAttrs,
@@ -2841,11 +2864,15 @@ class Tooltip(_OverlayBase):
             overlay_selector=".tooltip > div.tooltip-inner",
         )
 
-    def set(self, open: bool) -> None:
+    def set(self, open: bool, timeout: Timeout = None) -> None:
+        self.loc_trigger.wait_for(state="visible", timeout=timeout)
+        self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
         if open ^ self.loc_overlay_body.count() > 0:
             self.toggle()
 
     def toggle(self, timeout: Timeout = None) -> None:
+        self.loc_trigger.wait_for(state="visible", timeout=timeout)
+        self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
         self.loc_trigger.hover(timeout=timeout)
 
 
@@ -3016,3 +3043,48 @@ class LayoutNavsetHidden(_LayoutNavItemBase):
             loc_container=f"ul#{id}.nav-tabs.shiny-tab-input",
             loc="> li.nav-item",
         )
+
+
+class OutputDataFrame(_InputWithContainer):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"#{id}.html-fill-item",
+            loc="> div > div.shiny-data-grid-grid",
+        )
+        self.loc_columns = self.loc.locator("> table > thead")
+        self.loc_rows = self.loc.locator("> table > tbody")
+
+    def expect_row(self, row_number: int, value: str, *, timeout: Timeout = None):
+        playwright_expect(
+            self.loc_rows.locator(f"> tr:nth-child({row_number})")
+        ).to_have_text(value, timeout=timeout)
+
+
+class DownloadLink(_InputBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"#{id}.shiny-download-link",
+        )
+
+    def set(self, *, timeout: Timeout = None) -> None:
+        self.loc.wait_for(state="visible", timeout=timeout)
+        self.loc.scroll_into_view_if_needed(timeout=timeout)
+        self.loc.click(timeout=timeout)
+
+
+class DownloadButton(_InputBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"#{id}.btn.shiny-download-link",
+        )
+
+    def set(self, *, timeout: Timeout = None) -> None:
+        self.loc.wait_for(state="visible", timeout=timeout)
+        self.loc.scroll_into_view_if_needed(timeout=timeout)
+        self.loc.click(timeout=timeout)

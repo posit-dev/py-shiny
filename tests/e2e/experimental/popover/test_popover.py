@@ -10,3 +10,4 @@ def test_popover(page: Page, local_app: ShinyAppProc) -> None:
     popover.set(True)
     popover.expect_active()
     popover.expect_body("A message")
+    popover.expect_placement("bottom")
