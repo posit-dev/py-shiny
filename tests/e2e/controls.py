@@ -2789,9 +2789,7 @@ class _OverlayBase(_InputBase):
 
     def expect_active(self, *, timeout: Timeout = None) -> None:
         return expect_attr(
-            loc=self.loc.locator(
-                f" > :last-child[data-bs-toggle='{self._overlay_name}']"
-            ),
+            loc=self.loc_trigger,
             timeout=timeout,
             name="aria-describedby",
             value=re.compile(r".*"),
