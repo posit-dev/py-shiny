@@ -1,18 +1,12 @@
-from conftest import ShinyAppProc, create_doc_example_fixture
-from controls import InputFile
+from conftest import ShinyAppProc
+from controls import InputFile, OutputTable
 from playwright.sync_api import FilePayload, Page, expect
 
-app = create_doc_example_fixture("input_file")
 
-
-def test_input_file_kitchen(page: Page, app: ShinyAppProc) -> None:
-    page.goto(app.url)
-
-    # page.set_default_timeout(1000)
+def test_input_file_kitchen(page: Page, local_app: ShinyAppProc) -> None:
+    page.goto(local_app.url)
 
     file1 = InputFile(page, "file1")
-    # file1.expect.to_have_value("Data summary")
-    # expect(file1.loc).to_have_value("Data summary")
 
     expect(file1.loc_label).to_have_text("Choose CSV File")
     expect(file1.loc_button).to_have_text("Browse...")
@@ -35,9 +29,15 @@ def test_input_file_kitchen(page: Page, app: ShinyAppProc) -> None:
     }
 
     file1.set(file_info)
-
     expect(file1.loc_file_display).to_have_value(file_info.get("name"))
 
     file1.expect_complete()
 
-    # TODO-karan; Test UI output to not be empty
+    output_table = OutputTable(page, "summary")
+
+    output_table.expect_column_labels(["Row Count", "Column Count", "Column Names"])
+    output_table.expect_n_row(1)
+
+    file2 = InputFile(page, "file2")
+    file2.set([file_info, file_info])
+    expect(file2.loc_file_display).to_have_value("2 files")

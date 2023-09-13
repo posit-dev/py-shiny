@@ -1299,6 +1299,8 @@ class InputFile(
         timeout: Timeout = None,
         expect_complete_timeout: Timeout = 30 * 1000,
     ) -> None:
+        self.loc.wait_for(state="visible", timeout=timeout)
+        self.loc.scroll_into_view_if_needed(timeout=timeout)
         self.loc.set_input_files(file_path, timeout=timeout)
         if expect_complete_timeout is not None:
             self.expect_complete(timeout=expect_complete_timeout)
@@ -2266,6 +2268,9 @@ class OutputUi(_OutputInlineContainerM, _OutputBase):
         else:
             self.expect.not_to_be_empty(timeout=timeout)
 
+    def expect_text(self, text: str, *, timeout: Timeout = None) -> None:
+        self.expect.to_have_text(text, timeout=timeout)
+
 
 # When making selectors, use `xpath` so that direct decendents can be checked
 class OutputTable(_OutputBase):
@@ -2693,6 +2698,8 @@ class Accordion(
     ) -> None:
         if isinstance(selected, str):
             selected = [selected]
+        self.loc.wait_for(state="visible", timeout=timeout)
+        self.loc.scroll_into_view_if_needed(timeout=timeout)
         for element in self.loc.element_handles():
             elem_value = element.get_attribute("data-value")
             if elem_value is None:
@@ -2755,8 +2762,6 @@ class AccordionPanel(
 
     # user sends value of Open: true | false
     def set(self, open: bool, *, timeout: Timeout = None) -> None:
-        self.loc.wait_for(state="visible", timeout=timeout)
-        self.loc.scroll_into_view_if_needed(timeout=timeout)
         expect_not_to_have_class(self.loc_body, "collapsing", timeout=timeout)
         if self.loc_body_visible.count() != int(open):
             self.toggle(timeout=timeout)
@@ -2784,11 +2789,13 @@ class _OverlayBase(_InputBase):
             f" > :last-child[data-bs-toggle='{self._overlay_name}']"
         )
 
-    def _get_overlay_id(self) -> str | None:
+    def _get_overlay_id(self, *, timeout: Timeout = None) -> str | None:
         """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch"""
         loc_el = self.loc.locator(
             f" > :last-child[data-bs-toggle='{self._overlay_name}']"
         )
+        loc_el.wait_for(state="visible", timeout=timeout)
+        loc_el.scroll_into_view_if_needed(timeout=timeout)
         return loc_el.get_attribute("aria-describedby")
 
     @property
@@ -2837,8 +2844,6 @@ class Popover(_OverlayBase):
         )
 
     def set(self, open: bool, timeout: Timeout = None) -> None:
-        self.loc_trigger.wait_for(state="visible", timeout=timeout)
-        self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
         if open ^ self.loc_overlay_body.count() > 0:
             self.toggle()
 
@@ -3056,35 +3061,104 @@ class OutputDataFrame(_InputWithContainer):
         self.loc_columns = self.loc.locator("> table > thead")
         self.loc_rows = self.loc.locator("> table > tbody")
 
-    def expect_row(self, row_number: int, value: str, *, timeout: Timeout = None):
+    def expect_row_count(self, row_number: int, *, timeout: Timeout = None):
+        playwright_expect(self.loc_rows.locator("> tr")).to_have_count(
+            row_number, timeout=timeout
+        )
+
+    def expect_cell(
+        self,
+        text: PatternOrStr,
+        row: int,
+        col: int,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        assert_type(row, int)
+        assert_type(col, int)
         playwright_expect(
-            self.loc_rows.locator(f"> tr:nth-child({row_number})")
-        ).to_have_text(value, timeout=timeout)
+            self.loc.locator(
+                f"xpath=./table/tbody/tr[{row}]/td[{col}] | ./table/tbody/tr[{row}]/th[{col}]"
+            )
+        ).to_have_text(text, timeout=timeout)
+
+    def expect_column_labels(
+        self,
+        labels: ListPatternOrStr | None,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        if isinstance(labels, list) and len(labels) == 0:
+            labels = None
+
+        if labels is None:
+            playwright_expect(
+                self.loc.locator("xpath=./table/thead/tr/th")
+            ).to_have_count(0, timeout=timeout)
+        else:
+            playwright_expect(
+                self.loc.locator("xpath=./table/thead/tr/th")
+            ).to_have_text(labels, timeout=timeout)
+
+    def expect_column_text(
+        self,
+        col: int,
+        # Can't use `None` as we don't know how many rows exist
+        text: ListPatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        assert_type(col, int)
+        playwright_expect(
+            self.loc.locator(f"xpath=./table/tbody/tr/td[{col}]")
+        ).to_have_text(
+            text,
+            timeout=timeout,
+        )
+
+    def expect_n_col(
+        self,
+        n: int,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(
+            # self.loc.locator("xpath=./table/thead/tr[1]/(td|th)")
+            self.loc.locator("xpath=./table/thead/tr[1]/td | ./table/thead/tr[1]/th")
+        ).to_have_count(
+            n,
+            timeout=timeout,
+        )
+
+    def expect_n_row(
+        self,
+        n: int,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        playwright_expect(self.loc.locator("xpath=./table/tbody/tr")).to_have_count(
+            n,
+            timeout=timeout,
+        )
 
 
-class DownloadLink(_InputBase):
+# TODO: Use mixin for dowloadlink and download button
+class DownloadLink(_InputActionBase):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
             id=id,
-            loc=f"#{id}.shiny-download-link",
+            loc=f"#{id}.shiny-download-link:not(.btn)",
         )
 
-    def set(self, *, timeout: Timeout = None) -> None:
-        self.loc.wait_for(state="visible", timeout=timeout)
-        self.loc.scroll_into_view_if_needed(timeout=timeout)
-        self.loc.click(timeout=timeout)
 
-
-class DownloadButton(_InputBase):
+class DownloadButton(
+    _WidthLocM,
+    _InputActionBase,
+):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
             page,
             id=id,
             loc=f"#{id}.btn.shiny-download-link",
         )
-
-    def set(self, *, timeout: Timeout = None) -> None:
-        self.loc.wait_for(state="visible", timeout=timeout)
-        self.loc.scroll_into_view_if_needed(timeout=timeout)
-        self.loc.click(timeout=timeout)

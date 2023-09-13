@@ -6,10 +6,9 @@ import os
 from pathlib import Path
 
 from conftest import ShinyAppProc
-
-# TODO-karan; Create OutputDataFrame class
-# TODO-karan: Create classes for DownloadLink, DownloadButton
 from controls import (
+    DownloadButton,
+    DownloadLink,
     InputActionButton,
     InputActionLink,
     InputCheckbox,
@@ -25,6 +24,7 @@ from controls import (
     InputSwitch,
     InputText,
     InputTextArea,
+    OutputDataFrame,
     OutputImage,
     OutputTable,
     OutputText,
@@ -149,10 +149,8 @@ def expect_outputs(page: Page, module_id: str, letter: str, count: int):
             return f"{module_id}-{id}"
         return id
 
-    # TODO-karan; Test with OutputDataFrame class
-    playwright_expect(
-        page.locator("#" + resolve_id("out_data_frame")).locator("table tbody tr")
-    ).to_have_count(count + 1)
+    dataframe = OutputDataFrame(page, resolve_id("out_data_frame"))
+    dataframe.expect_row_count(count + 1)
 
     OutputText(page, resolve_id("out_text")).expect_value(
         f"Output text content. `input.radio_buttons()`: `{letter}`"
@@ -224,9 +222,9 @@ def test_module_support(page: Page, local_app: ShinyAppProc) -> None:
         update_mod2.click()
         InputActionButton(page, "mod2-input_action_button").click()
         InputActionLink(page, "mod2-input_action_link").click()
-        # TODO-karan; click Download button using DownloadButton class
         with page.expect_download() as download_button_info:
-            page.locator("#mod2-download_button").click()
+            download_button = DownloadButton(page, "mod2-download_button")
+            download_button.click()
             download = download_button_info.value
             # wait for download to complete
             download_path = download.path()
@@ -234,9 +232,9 @@ def test_module_support(page: Page, local_app: ShinyAppProc) -> None:
             assert download_path is not None
             with open(download_path, "r") as f:
                 assert f.read() == f"session,type,count\nmod2,button,{i + 1}\n"
-        # TODO-karan; click Download link using DownloadLink class
         with page.expect_download() as download_link_info:
-            page.locator("#mod2-download_link").click()
+            download_link = DownloadLink(page, "mod2-download_link")
+            download_link.click()
             download = download_link_info.value
             # wait for download to complete
             download_path = download.path()
