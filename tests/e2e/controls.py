@@ -2390,8 +2390,6 @@ class Sidebar(
         )
 
     def set(self, open: bool, *, timeout: Timeout = None) -> None:
-        self.loc_handle.wait_for(state="visible", timeout=timeout)
-        self.loc_handle.scroll_into_view_if_needed(timeout=timeout)
         if open ^ (self.loc_handle.get_attribute("aria-expanded") == "true"):
             self.toggle(timeout=timeout)
 
@@ -2698,8 +2696,9 @@ class Accordion(
     ) -> None:
         if isinstance(selected, str):
             selected = [selected]
-        self.loc.wait_for(state="visible", timeout=timeout)
-        self.loc.scroll_into_view_if_needed(timeout=timeout)
+        # self.loc resolves to 4 elements, thus violating the strict mode requirement
+        # self.loc.wait_for(state="visible", timeout=timeout)
+        # self.loc.scroll_into_view_if_needed(timeout=timeout)
         for element in self.loc.element_handles():
             elem_value = element.get_attribute("data-value")
             if elem_value is None:
@@ -2870,8 +2869,6 @@ class Tooltip(_OverlayBase):
         )
 
     def set(self, open: bool, timeout: Timeout = None) -> None:
-        self.loc_trigger.wait_for(state="visible", timeout=timeout)
-        self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
         if open ^ self.loc_overlay_body.count() > 0:
             self.toggle()
 
