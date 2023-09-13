@@ -38,8 +38,8 @@ letters = [letter for letter in "abcdefghijklmnopqrstuvwxyz"][: len(penguin_imgs
 input_keys = (
     "input_action_button",
     "input_action_link",
-    # "download_button",
-    # "download_link",
+    "download_button",
+    "download_link",
     "input_file",
     "input_checkbox",
     "input_checkbox_group",
@@ -68,7 +68,6 @@ x_input_keys = (
     "tooltip",
 )
 
-# TODO-karan; Make check to determine if all of shiny.ui is accounted for. Prevent new UI methods from being added without making sure they have module support or could be black listed from the check
 
 
 session_dict: dict[str, Session] = {}
