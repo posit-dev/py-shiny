@@ -32,7 +32,6 @@ from controls import (
     OutputUi,
 )
 from playwright.sync_api import Page
-from playwright.sync_api import expect as playwright_expect
 
 from shiny._utils import guess_mime_type
 
