@@ -37,14 +37,7 @@ class Component(NamedTuple):
 
 blacklist = set(["awesome_component"])
 
-temp_list = list(x_input_keys)
-
-# append x_ for each input_keys to make it consistent
-for i, key in enumerate(temp_list):
-    temp_list[i] = "x_" + key
-
-# Convert back to tuple
-x_input_keys = tuple(temp_list)
+x_input_keys = ("x_" + key for key in x_input_keys)
 
 component = Component(
     x_sidebar=True,
