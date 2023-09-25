@@ -2380,6 +2380,13 @@ class Sidebar(
             "aria-expanded", str(open).lower(), timeout=timeout
         )
 
+    def set(self, open: bool, *, timeout: Timeout = None) -> None:
+        if open ^ (self.loc_handle.get_attribute("aria-expanded") == "true"):
+            self.toggle(timeout=timeout)
+
+    def toggle(self, *, timeout: Timeout = None) -> None:
+        self.loc_handle.click(timeout=timeout)
+
 
 class _CardBodyP(_InputBaseP, Protocol):
     loc_body: Locator
@@ -2597,7 +2604,7 @@ class Card(_WidthLocM, _CardFooterM, _CardBodyM, _CardFullScreenM, _InputWithCon
         expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
 
 
-### Experimental below
+# Experimental below
 
 
 class Accordion(
@@ -2670,6 +2677,24 @@ class Accordion(
             timeout=timeout,
         )
 
+    def set(
+        self,
+        selected: str | list[str],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        if isinstance(selected, str):
+            selected = [selected]
+        for element in self.loc.element_handles():
+            elem_value = element.get_attribute("data-value")
+            if elem_value is None:
+                raise ValueError(
+                    "Accordion panel does not have a `data-value` attribute"
+                )
+            self.accordion_panel(elem_value).set(
+                elem_value in selected, timeout=timeout
+            )
+
     def accordion_panel(
         self,
         data_value: str,
@@ -2705,6 +2730,8 @@ class AccordionPanel(
         )
 
         self.loc_body = self.loc.locator("> .accordion-collapse")
+        self.loc_header = self.loc.locator("> .accordion-header")
+        self.loc_body_visible = self.loc.locator("> .accordion-collapse.show")
 
     def expect_label(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc_label).to_have_text(value, timeout=timeout)
@@ -2717,3 +2744,281 @@ class AccordionPanel(
 
     def expect_open(self, is_open: bool, *, timeout: Timeout = None) -> None:
         _expect_class_value(self.loc_body, "show", is_open, timeout=timeout)
+
+    # user sends value of Open: true | false
+    def set(self, open: bool, *, timeout: Timeout = None) -> None:
+        # TODO-karan: Add it for every action (i.e. set, toggle) method
+        self.loc.wait_for(state="visible", timeout=timeout)
+        self.loc.scroll_into_view_if_needed(timeout=timeout)
+        expect_not_to_have_class(self.loc_body, "collapsing", timeout=timeout)
+        if self.loc_body_visible.count() != int(open):
+            self.toggle(timeout=timeout)
+
+    def toggle(self, *, timeout: Timeout = None) -> None:
+        self.loc_header.click(timeout=timeout)
+
+
+class _OverlayBase(_InputBase):
+    def __init__(
+        self,
+        page: Page,
+        *,
+        id: str,
+        loc: InitLocator,
+        overlay_name: str,
+        overlay_selector: str,
+    ) -> None:
+        super().__init__(page, id=id, loc=loc)
+        self._overlay_name = overlay_name
+        self._overlay_selector = overlay_selector
+        self.loc_trigger = self.loc.locator(
+            f" > :last-child[data-bs-toggle='{self._overlay_name}']"
+        )
+
+    @property
+    def loc_overlay_body(self) -> Locator:
+        """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch"""
+        loc_el = self.loc.locator(
+            f" > :last-child[data-bs-toggle='{self._overlay_name}']"
+        )
+        overlay_id = loc_el.get_attribute("aria-describedby")
+        return self.page.locator(f"#{overlay_id}{self._overlay_selector}")
+
+    def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_overlay_body).to_have_text(value, timeout=timeout)
+
+    def expect_active(self, *, timeout: Timeout = None) -> None:
+        return expect_attr(
+            loc=self.loc_trigger,
+            timeout=timeout,
+            name="aria-describedby",
+            value=re.compile(r".*"),
+        )
+
+
+# TODO-karan: Check for placement
+class Popover(_OverlayBase):
+    # trigger: TagChild,
+    # *args: TagChild | TagAttrs,
+    # title: Optional[TagChild] = None,
+    # id: Optional[str] = None,
+    # placement: Literal["auto", "top", "right", "bottom", "left"] = "auto",
+    # options: Optional[dict[str, Any]] = None,
+    # **kwargs: TagAttrValue,
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"bslib-popover#{id}",
+            overlay_name="popover",
+            overlay_selector=".popover > div.popover-body",
+        )
+
+    # TODO-karan: Add placement expectation method
+    # TODO-karan: Add title expectation method
+    def set(self, open: bool) -> None:
+        if open ^ self.loc_overlay_body.count() > 0:
+            self.toggle()
+
+    def toggle(self, timeout: Timeout = None) -> None:
+        self.loc_trigger.click(timeout=timeout)
+
+
+class Tooltip(_OverlayBase):
+    # trigger: TagChild,
+    # *args: TagChild | TagAttrs,
+    # id: Optional[str] = None,
+    # placement: Literal["auto", "top", "right", "bottom", "left"] = "auto",
+    # options: Optional[dict[str, object]] = None,
+    # **kwargs: TagAttrValue,
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"bslib-tooltip#{id}",
+            overlay_name="tooltip",
+            overlay_selector=".tooltip > div.tooltip-inner",
+        )
+
+    # TODO-karan: Add placement expectation method
+
+    def set(self, open: bool) -> None:
+        if open ^ (self.loc_overlay_body.count() > 0):
+            self.toggle()
+
+    def toggle(self, timeout: Timeout = None) -> None:
+        self.loc_trigger.hover(timeout=timeout)
+
+
+class _LayoutNavItemBase(_InputWithContainer):
+    def nav_item(
+        self,
+        value: str,
+    ) -> LayoutNavItem:
+        return LayoutNavItem(self.page, self.id, value)
+
+    def set(self, value: str, *, timeout: Timeout = None) -> None:
+        self.nav_item(value).click(timeout=timeout)
+
+    def expect_value(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        # data attribute of active tab and compare with value
+        playwright_expect(
+            self.loc_container.locator('a[role="tab"].active')
+        ).to_have_attribute("data-value", value, timeout=timeout)
+
+    # TODO-future: Make it a single locator expectation
+    # get active content instead of assertion
+    @property
+    def loc_active_content(self) -> Locator:
+        datatab_id = self.loc_container.get_attribute("data-tabsetid")
+        return self.page.locator(
+            f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
+        )
+
+    def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_active_content).to_have_text(value, timeout=timeout)
+
+    def expect_nav_values(
+        self,
+        value: list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        _MultipleDomItems.expect_locator_values_in_list(
+            page=self.page,
+            loc_container=self.loc_container,
+            el_type="a[role='tab']",
+            arr_name="value",
+            arr=value,
+            key="data-value",
+            timeout=timeout,
+        )
+
+    def expect_nav_titles(
+        self,
+        value: list[PatternOrStr],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        self.expect.to_have_text(value, timeout=timeout)
+
+
+class LayoutNavItem(_InputWithContainer):
+    # *args: NavSetArg,
+    # id: Optional[str] = None,
+    # selected: Optional[str] = None,
+    # header: TagChild = None,
+    # footer: TagChild = None,
+    def __init__(self, page: Page, id: str, data_value: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"a[role='tab'][data-value='{data_value}']",
+            loc_container=f"ul#{id}",
+        )
+
+        self._data_value: str = data_value
+
+    # TODO-future: Make it a single locator expectation
+    # get active content instead of assertion
+    @property
+    def loc_content(self) -> Locator:
+        """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch"""
+        datatab_id = self.loc_container.get_attribute("data-tabsetid")
+        return self.page.locator(
+            f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane[data-value='{self._data_value}']"
+        )
+
+    def click(self, *, timeout: Timeout = None) -> None:
+        self.loc.click(timeout=timeout)
+
+    def expect_active(self, active: bool, *, timeout: Timeout = None) -> None:
+        _expect_class_value(self.loc, "active", active, timeout=timeout)
+
+    def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        playwright_expect(self.loc_content).to_have_text(value, timeout=timeout)
+
+
+class LayoutNavsetTab(_LayoutNavItemBase):
+    # *args: NavSetArg,
+    # id: Optional[str] = None,
+    # selected: Optional[str] = None,
+    # header: TagChild = None,
+    # footer: TagChild = None,
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-tabs.shiny-tab-input",
+            loc="a[role='tab']",
+        )
+
+
+class LayoutNavSetCardTab(_LayoutNavItemBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.card-header-tabs.shiny-tab-input",
+            loc="> li.nav-item",
+        )
+
+
+class LayoutNavSetPill(_LayoutNavItemBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-pills.shiny-tab-input",
+            loc="> li.nav-item",
+        )
+
+
+class LayoutNavSetPillList(_LayoutNavItemBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-stacked.shiny-tab-input",
+            loc="> li.nav-item",
+        )
+
+
+class LayoutNavSetCardPill(_LayoutNavItemBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-pills.card-header-pills.shiny-tab-input",
+            loc="> li.nav-item",
+        )
+
+
+class LayoutNavSetHidden(_LayoutNavItemBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-hidden.shiny-tab-input",
+            loc="> li.nav-item",
+        )
+
+
+class LayoutNavSetBar(_LayoutNavItemBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.navbar-nav.shiny-tab-input",
+            loc="> li.nav-item",
+        )
+
+
+class LayoutNavsetHidden(_LayoutNavItemBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-tabs.shiny-tab-input",
+            loc="> li.nav-item",
+        )
