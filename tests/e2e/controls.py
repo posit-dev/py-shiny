@@ -2813,7 +2813,8 @@ class Popover(_OverlayBase):
             overlay_name="popover",
             overlay_selector=".popover > div.popover-body",
         )
-
+    # TODO-karan: Add placement expectation method
+    # TODO-karan: Add title expectation method
     def set(self, open: bool) -> None:
         if open ^ self.loc_overlay_body.count() > 0:
             self.toggle()
@@ -2822,7 +2823,6 @@ class Popover(_OverlayBase):
         self.loc_trigger.click(timeout=timeout)
 
 
-# TODO-karan: Check for placement
 class Tooltip(_OverlayBase):
     # trigger: TagChild,
     # *args: TagChild | TagAttrs,
@@ -2838,9 +2838,10 @@ class Tooltip(_OverlayBase):
             overlay_name="tooltip",
             overlay_selector=".tooltip > div.tooltip-inner",
         )
+    # TODO-karan: Add placement expectation method
 
     def set(self, open: bool) -> None:
-        if open ^ self.loc_overlay_body.count() > 0:
+        if open ^ (self.loc_overlay_body.count() > 0):
             self.toggle()
 
     def toggle(self, timeout: Timeout = None) -> None:
@@ -2863,7 +2864,7 @@ class _LayoutNavItemBase(_InputWithContainer):
             self.loc_container.locator('a[role="tab"].active')
         ).to_have_attribute("data-value", value, timeout=timeout)
 
-    # TODO: Make it a single locator expectation
+    # TODO-future: Make it a single locator expectation
     # get active content instead of assertion
     @property
     def loc_active_content(self) -> Locator:
@@ -2900,21 +2901,6 @@ class _LayoutNavItemBase(_InputWithContainer):
         self.expect.to_have_text(value, timeout=timeout)
 
 
-class LayoutNavsetTab(_LayoutNavItemBase):
-    # *args: NavSetArg,
-    # id: Optional[str] = None,
-    # selected: Optional[str] = None,
-    # header: TagChild = None,
-    # footer: TagChild = None,
-    def __init__(self, page: Page, id: str) -> None:
-        super().__init__(
-            page,
-            id=id,
-            loc_container=f"ul#{id}.nav-tabs.shiny-tab-input",
-            loc="a[role='tab']",
-        )
-
-
 class LayoutNavItem(_InputWithContainer):
     # *args: NavSetArg,
     # id: Optional[str] = None,
@@ -2944,6 +2930,21 @@ class LayoutNavItem(_InputWithContainer):
                 f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane[data-value='{self._data_value}']"
             )
         ).to_have_text(value, timeout=timeout)
+
+
+class LayoutNavsetTab(_LayoutNavItemBase):
+    # *args: NavSetArg,
+    # id: Optional[str] = None,
+    # selected: Optional[str] = None,
+    # header: TagChild = None,
+    # footer: TagChild = None,
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-tabs.shiny-tab-input",
+            loc="a[role='tab']",
+        )
 
 
 class LayoutNavSetCardTab(_LayoutNavItemBase):
