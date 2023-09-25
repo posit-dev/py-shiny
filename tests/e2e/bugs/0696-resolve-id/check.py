@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # Make check to determine if all of shiny.ui is accounted for. Prevent new UI methods from being added without making sure they have module support or could be black listed from the check
 # this is a proof of concept of how it can be done.. if the number of items not listed anywhere is > 0 then we fail the test
 import datetime
