@@ -2813,6 +2813,7 @@ class Popover(_OverlayBase):
             overlay_name="popover",
             overlay_selector=".popover > div.popover-body",
         )
+
     # TODO-karan: Add placement expectation method
     # TODO-karan: Add title expectation method
     def set(self, open: bool) -> None:
@@ -2838,6 +2839,7 @@ class Tooltip(_OverlayBase):
             overlay_name="tooltip",
             overlay_selector=".tooltip > div.tooltip-inner",
         )
+
     # TODO-karan: Add placement expectation method
 
     def set(self, open: bool) -> None:
@@ -2917,6 +2919,16 @@ class LayoutNavItem(_InputWithContainer):
 
         self._data_value: str = data_value
 
+    # TODO-future: Make it a single locator expectation
+    # get active content instead of assertion
+    @property
+    def loc_content(self) -> Locator:
+        """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch"""
+        datatab_id = self.loc_container.get_attribute("data-tabsetid")
+        return self.page.locator(
+            f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane[data-value='{self._data_value}']"
+        )
+
     def click(self, *, timeout: Timeout = None) -> None:
         self.loc.click(timeout=timeout)
 
@@ -2924,12 +2936,7 @@ class LayoutNavItem(_InputWithContainer):
         _expect_class_value(self.loc, "active", active, timeout=timeout)
 
     def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        datatab_id = self.loc_container.get_attribute("data-tabsetid", timeout=timeout)
-        playwright_expect(
-            self.page.locator(
-                f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane[data-value='{self._data_value}']"
-            )
-        ).to_have_text(value, timeout=timeout)
+        playwright_expect(self.loc_content).to_have_text(value, timeout=timeout)
 
 
 class LayoutNavsetTab(_LayoutNavItemBase):
