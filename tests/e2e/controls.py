@@ -2791,14 +2791,24 @@ class _OverlayBase(_InputBase):
             f" > :last-child[data-bs-toggle='{self._overlay_name}']"
         )
 
-    @property
-    def loc_overlay_body(self) -> Locator:
+    def _get_overlay_id(self, *, timeout: Timeout = None) -> str | None:
         """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch"""
         loc_el = self.loc.locator(
             f" > :last-child[data-bs-toggle='{self._overlay_name}']"
         )
-        overlay_id = loc_el.get_attribute("aria-describedby")
-        return self.page.locator(f"#{overlay_id}{self._overlay_selector}")
+        loc_el.wait_for(state="visible", timeout=timeout)
+        loc_el.scroll_into_view_if_needed(timeout=timeout)
+        return loc_el.get_attribute("aria-describedby")
+
+    @property
+    def loc_overlay_body(self) -> Locator:
+        # Can not leverage `self.loc_overlay_container` as `self._overlay_selector` must
+        # be concatenated directly to the result of `self._get_overlay_id()`
+        return self.page.locator(f"#{self._get_overlay_id()}{self._overlay_selector}")
+
+    @property
+    def loc_overlay_container(self) -> Locator:
+        return self.page.locator(f"#{self._get_overlay_id()}")
 
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc_overlay_body).to_have_text(value, timeout=timeout)
