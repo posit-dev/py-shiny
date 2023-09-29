@@ -89,7 +89,16 @@ def text(
     --------
     ~shiny.ui.output_text
     """
-    return TextTransformer(_fn)
+    text_transformer_fn = TextTransformer(_fn)
+
+    def _output_ui_() -> str:
+        from .. import ui
+
+        return ui.output_text_verbatim(_fn.__name__, placeholder=True)._repr_html_()
+
+    text_transformer_fn._repr_html_ = _output_ui_
+
+    return text_transformer_fn
 
 
 # ======================================================================================

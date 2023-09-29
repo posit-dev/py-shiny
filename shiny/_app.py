@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import os
 import secrets
+from pathlib import Path
 from typing import Any, Callable, Optional, cast
 
 import starlette.applications
@@ -89,7 +90,7 @@ class App:
 
     def __init__(
         self,
-        ui: Tag | TagList | Callable[[Request], Tag | TagList],
+        ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
         server: Optional[Callable[[Inputs, Outputs, Session], None]],
         *,
         static_assets: Optional["str" | "os.PathLike[str]"] = None,
@@ -146,6 +147,12 @@ class App:
                 raise TypeError("App UI cannot be a coroutine function")
             # Dynamic UI: just store the function for later
             self.ui = cast("Callable[[Request], Tag | TagList]", ui)
+        elif isinstance(ui, Path):
+            if not ui.is_absolute():
+                raise ValueError("Path to UI must be absolute")
+            with open(ui, "r") as f:
+                page_html = f.read()
+            self.ui = {"html": page_html, "dependencies": []}
         else:
             # Static UI: render the UI now and save the results
             self.ui = self._render_page(
@@ -371,8 +378,13 @@ class App:
         return rendered
 
 
-def is_uifunc(x: Tag | TagList | Callable[[Request], Tag | TagList]):
-    if isinstance(x, Tag) or isinstance(x, TagList) or not callable(x):
+def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]):
+    if (
+        isinstance(x, Path)
+        or isinstance(x, Tag)
+        or isinstance(x, TagList)
+        or not callable(x)
+    ):
         return False
     else:
         return True

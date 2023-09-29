@@ -480,6 +480,17 @@ def static_assets(command: str) -> None:
         raise click.UsageError(f"Unknown command: {command}")
 
 
+@main.command(help="""Convert an ipynb to py file.""")
+@click.argument("file", type=str)
+def convert(file: str) -> None:
+    shiny.quarto.convert_ipynb_to_py(file)
+
+
+@main.command(help="""Get Shiny's HTML dependencies as JSON.""")
+def get_shiny_deps() -> None:
+    print(shiny.quarto.get_shiny_deps())
+
+
 class ReloadArgs(TypedDict):
     reload: NotRequired[bool]
     reload_includes: NotRequired[list[str]]

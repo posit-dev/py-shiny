@@ -219,6 +219,8 @@ class OutputRenderer(Generic[OT], ABC):
         *,
         value_fn: ValueFn[IT],
         transform_fn: TransformFn[IT, P, OT],
+        # TODO: Type should be Tag | TagChild | TagList ...
+        output_fn: Optional[Callable[[], object]] = None,
         params: TransformerParams[P],
     ) -> None:
         """
@@ -314,6 +316,8 @@ class OutputRendererSync(OutputRenderer[OT]):
         value_fn: ValueFnSync[IT],
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
+        # TODO: Type should be Tag | TagChild | TagList ...
+        output_fn: Optional[Callable[[], object]] = None,
     ) -> None:
         if is_async_callable(value_fn):
             raise TypeError(
@@ -323,6 +327,7 @@ class OutputRendererSync(OutputRenderer[OT]):
         super().__init__(
             value_fn=value_fn,
             transform_fn=transform_fn,
+            output_fn=output_fn,
             params=params,
         )
 
