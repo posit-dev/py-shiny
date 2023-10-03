@@ -2858,8 +2858,6 @@ class Popover(_OverlayBase):
     def set(self, open: bool, timeout: Timeout = None) -> None:
         if open ^ self.loc_overlay_body.count() > 0:
             self.toggle()
-        if not open:
-            self.loc_overlay_body.click()
 
     def toggle(self, timeout: Timeout = None) -> None:
         self.loc_trigger.wait_for(state="visible", timeout=timeout)
@@ -2886,6 +2884,8 @@ class Tooltip(_OverlayBase):
     def set(self, open: bool, timeout: Timeout = None) -> None:
         if open ^ self.loc_overlay_body.count() > 0:
             self.toggle(timeout=timeout)
+        if not open:
+            self.loc_overlay_body.click()
 
     def toggle(self, timeout: Timeout = None) -> None:
         self.loc_trigger.wait_for(state="visible", timeout=timeout)

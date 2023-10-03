@@ -8,7 +8,7 @@ from typing import NamedTuple
 from app import input_keys, x_input_keys
 
 
-class Component(NamedTuple):
+class ModState(NamedTuple):
     x_sidebar: bool
     x_accordion: tuple[str, ...]
     x_popover: bool
@@ -41,7 +41,7 @@ blacklist = set(["awesome_component"])
 
 x_input_keys = ("x_" + key for key in x_input_keys)
 
-component = Component(
+component = ModState(
     x_sidebar=True,
     x_accordion=("a",),
     x_popover=False,
