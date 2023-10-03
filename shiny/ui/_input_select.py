@@ -7,9 +7,10 @@ __all__ = (
     "input_selectize",
 )
 
+from json import dumps
 from typing import Mapping, Optional, Union, cast
 
-from htmltools import Tag, TagChild, TagList, css, div, tags
+from htmltools import HTML, Tag, TagChild, TagList, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -52,6 +53,7 @@ def input_selectize(
     selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
+    options: Optional[dict[str, str | float | HTML]] = None,
 ) -> Tag:
     """
     Create a select list that can be used to choose a single or multiple items from a
@@ -75,6 +77,8 @@ def input_selectize(
         Is selection of multiple items allowed?
     width
         The CSS width, e.g. '400px', or '100%'
+    options
+        A dictionary of options. See the documentation of selectize.js for possible options.
 
     Returns
     -------
@@ -93,7 +97,7 @@ def input_selectize(
     ~shiny.ui.input_select ~shiny.ui.input_radio_buttons ~shiny.ui.input_checkbox_group
     """
 
-    return input_select(
+    x = input_select(
         id,
         label,
         choices,
@@ -101,7 +105,10 @@ def input_selectize(
         multiple=multiple,
         selectize=True,
         width=width,
+        options=options,
     )
+
+    return x
 
 
 @add_example()
@@ -115,6 +122,7 @@ def input_select(
     selectize: bool = False,
     width: Optional[str] = None,
     size: Optional[str] = None,
+    options: Optional[dict[str, str | float | HTML]] = None,
 ) -> Tag:
     """
     Create a select list that can be used to choose a single or multiple items from a
@@ -164,11 +172,17 @@ def input_select(
     ~shiny.ui.input_radio_buttons
     ~shiny.ui.input_checkbox_group
     """
+    if options is not None and selectize is False:
+        raise Exception("Options can only be set when selectize is `True`.")
 
     choices_ = _normalize_choices(choices)
     if selected is None and not multiple:
         selected = _find_first_option(choices_)
 
+    if options is None:
+        options = {}
+
+    js_keys = [key for key, value in options.items() if isinstance(value, HTML)]
     choices_tags = _render_choices(choices_, selected)
 
     resolved_id = resolve_id(id)
@@ -186,7 +200,12 @@ def input_select(
             ),
             (
                 TagList(
-                    tags.script("{}", type="application/json", data_for=resolved_id),
+                    tags.script(
+                        dumps(options),
+                        type="application/json",
+                        data_for=id,
+                        data_eval=dumps(js_keys),
+                    ),
                     selectize_deps(),
                 )
                 if selectize
