@@ -2813,20 +2813,13 @@ class _OverlayBase(_InputBase):
         playwright_expect(self.loc_overlay_body).to_have_text(value, timeout=timeout)
 
     def expect_active(self, active: bool, *, timeout: Timeout = None) -> None:
-        if active:
-            return expect_attr(
-                loc=self.loc_trigger,
-                timeout=timeout,
-                name="aria-describedby",
-                value=re.compile(r".*"),
-            )
-        else:
-            return expect_attr(
-                loc=self.loc_trigger,
-                timeout=timeout,
-                name="aria-describedby",
-                value=None,
-            )
+        value = re.compile(r".*") if active else None
+        return expect_attr(
+            loc=self.loc_trigger,
+            timeout=timeout,
+            name="aria-describedby",
+            value=value,
+        )
 
     def expect_placement(self, value: str, *, timeout: Timeout = None) -> None:
         return expect_attr(
