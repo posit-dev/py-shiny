@@ -2696,10 +2696,9 @@ class Accordion(
     ) -> None:
         if isinstance(selected, str):
             selected = [selected]
-        # self.loc resolves to multiple elements, thus violating the strict mode requirement
-        # self.loc.wait_for(state="visible", timeout=timeout)
-        # self.loc.scroll_into_view_if_needed(timeout=timeout)
         for element in self.loc.element_handles():
+            element.wait_for_element_state(state="visible", timeout=timeout)
+            element.scroll_into_view_if_needed(timeout=timeout)
             elem_value = element.get_attribute("data-value")
             if elem_value is None:
                 raise ValueError(
