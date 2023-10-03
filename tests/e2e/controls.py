@@ -3069,7 +3069,7 @@ class OutputDataFrame(_InputWithContainer):
         self.loc_columns = self.loc.locator("> table > thead")
         self.loc_rows = self.loc.locator("> table > tbody")
 
-    def expect_row_count(self, row_number: int, *, timeout: Timeout = None):
+    def expect_n_row(self, row_number: int, *, timeout: Timeout = None):
         playwright_expect(self.loc_rows.locator("> tr")).to_have_count(
             row_number, timeout=timeout
         )
@@ -3134,17 +3134,6 @@ class OutputDataFrame(_InputWithContainer):
             # self.loc.locator("xpath=./table/thead/tr[1]/(td|th)")
             self.loc.locator("xpath=./table/thead/tr[1]/td | ./table/thead/tr[1]/th")
         ).to_have_count(
-            n,
-            timeout=timeout,
-        )
-
-    def expect_n_row(
-        self,
-        n: int,
-        *,
-        timeout: Timeout = None,
-    ) -> None:
-        playwright_expect(self.loc.locator("xpath=./table/tbody/tr")).to_have_count(
             n,
             timeout=timeout,
         )

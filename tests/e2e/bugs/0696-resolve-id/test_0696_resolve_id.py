@@ -48,7 +48,7 @@ def expect_outputs(page: Page, module_id: str, letter: str, count: int):
 
     dataframe = OutputDataFrame(page, resolve_id("out_data_frame"))
     # using expect_row_count instead of expect_n_row because the latter returns all the rows on the page
-    dataframe.expect_row_count(count + 1)
+    dataframe.expect_n_row(count + 1)
 
     OutputText(page, resolve_id("out_text")).expect_value(
         f"Output text content. `input.radio_buttons()`: `{letter}`"
