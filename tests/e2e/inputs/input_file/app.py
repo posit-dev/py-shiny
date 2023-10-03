@@ -1,3 +1,5 @@
+import typing
+
 import pandas as pd
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
@@ -19,7 +21,7 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Calc
     def parsed_file():
-        file: list[FileInfo] | None = input.file1()
+        file: typing.Union[list[FileInfo], None] = input.file1()
         if file is None:
             return pd.DataFrame()
         return pd.read_csv(  # pyright: ignore[reportUnknownMemberType]
