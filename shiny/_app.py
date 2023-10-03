@@ -11,7 +11,14 @@ import starlette.exceptions
 import starlette.middleware
 import starlette.routing
 import starlette.websockets
-from htmltools import HTMLDependency, HTMLDocument, RenderedHTML, Tag, TagList
+from htmltools import (
+    HTMLDependency,
+    HTMLDocument,
+    HTMLTextDocument,
+    RenderedHTML,
+    Tag,
+    TagList,
+)
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -150,9 +157,9 @@ class App:
         elif isinstance(ui, Path):
             if not ui.is_absolute():
                 raise ValueError("Path to UI must be absolute")
-            with open(ui, "r") as f:
-                page_html = f.read()
-            self.ui = {"html": page_html, "dependencies": []}
+
+            self.ui = self._render_page_from_file(ui, lib_prefix=self.lib_prefix)
+
         else:
             # Static UI: render the UI now and save the results
             self.ui = self._render_page(
@@ -375,6 +382,22 @@ class App:
         ui_res.insert(0, [require_deps(), jquery_deps(), shiny_deps()])
         rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
         self._ensure_web_dependencies(rendered["dependencies"])
+        return rendered
+
+    def _render_page_from_file(self, file: Path, lib_prefix: str) -> RenderedHTML:
+        with open(file, "r") as f:
+            page_html = f.read()
+
+        doc = HTMLTextDocument(
+            page_html,
+            deps=[require_deps(), jquery_deps(), shiny_deps()],
+            deps_replace_pattern='<meta name="shiny-dependency-placeholder" content="">',
+        )
+
+        rendered = doc.render(lib_prefix=lib_prefix)
+        self._ensure_web_dependencies(rendered["dependencies"])
+
+        # TODO: scan for inlined <script> deps, inject them as well.
         return rendered
 
 
