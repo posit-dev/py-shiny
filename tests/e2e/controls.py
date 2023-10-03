@@ -2761,7 +2761,6 @@ class AccordionPanel(
 
     # user sends value of Open: true | false
     def set(self, open: bool, *, timeout: Timeout = None) -> None:
-        # TODO-karan: Add it for every action (i.e. set, toggle) method
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
         expect_not_to_have_class(self.loc_body, "collapsing", timeout=timeout)
