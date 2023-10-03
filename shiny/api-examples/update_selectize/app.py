@@ -1,12 +1,7 @@
-from htmltools import HTML
-
 from shiny import App, Inputs, Outputs, Session, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.input_selectize("x", "Server side selectize", choices=[], multiple=True),
-    ui.input_selectize(
-        "y", "Server side selectize with options", choices=[], multiple=True
-    ),
 )
 
 
@@ -18,23 +13,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             choices=[f"Foo {i}" for i in range(10000)],
             selected=["Foo 0", "Foo 1"],
             server=True,
-        )
-
-    @reactive.Effect
-    def _():
-        ui.update_selectize(
-            "y",
-            choices=[f"Foo {i}" for i in range(10000)],
-            selected=["Foo 1"],
-            server=True,
-            options=(
-                {
-                    "maxOptions": 3,
-                    "render": HTML(
-                        '{option: function(item, escape) {return "<div><strong>Select " + item.label + "</strong></div>";}}'
-                    ),
-                }
-            ),
         )
 
 
