@@ -23,7 +23,7 @@ import re
 from datetime import date
 from typing import Literal, Mapping, Optional
 
-from htmltools import TagChild
+from htmltools import HTML, TagChild, TagList, tags
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
