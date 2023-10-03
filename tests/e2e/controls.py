@@ -2696,7 +2696,7 @@ class Accordion(
     ) -> None:
         if isinstance(selected, str):
             selected = [selected]
-        # self.loc resolves to 4 elements, thus violating the strict mode requirement
+        # self.loc resolves to multiple elements, thus violating the strict mode requirement
         # self.loc.wait_for(state="visible", timeout=timeout)
         # self.loc.scroll_into_view_if_needed(timeout=timeout)
         for element in self.loc.element_handles():
@@ -2813,13 +2813,21 @@ class _OverlayBase(_InputBase):
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc_overlay_body).to_have_text(value, timeout=timeout)
 
-    def expect_active(self, *, timeout: Timeout = None) -> None:
-        return expect_attr(
-            loc=self.loc_trigger,
-            timeout=timeout,
-            name="aria-describedby",
-            value=re.compile(r".*"),
-        )
+    def expect_active(self, active: bool, *, timeout: Timeout = None) -> None:
+        if active:
+            return expect_attr(
+                loc=self.loc_trigger,
+                timeout=timeout,
+                name="aria-describedby",
+                value=re.compile(r".*"),
+            )
+        else:
+            return expect_attr(
+                loc=self.loc_trigger,
+                timeout=timeout,
+                name="aria-describedby",
+                value=None,
+            )
 
     def expect_placement(self, value: str, *, timeout: Timeout = None) -> None:
         return expect_attr(
@@ -2850,6 +2858,8 @@ class Popover(_OverlayBase):
     def set(self, open: bool, timeout: Timeout = None) -> None:
         if open ^ self.loc_overlay_body.count() > 0:
             self.toggle()
+        if not open:
+            self.loc_overlay_body.click()
 
     def toggle(self, timeout: Timeout = None) -> None:
         self.loc_trigger.wait_for(state="visible", timeout=timeout)
@@ -2875,7 +2885,7 @@ class Tooltip(_OverlayBase):
 
     def set(self, open: bool, timeout: Timeout = None) -> None:
         if open ^ self.loc_overlay_body.count() > 0:
-            self.toggle()
+            self.toggle(timeout=timeout)
 
     def toggle(self, timeout: Timeout = None) -> None:
         self.loc_trigger.wait_for(state="visible", timeout=timeout)
