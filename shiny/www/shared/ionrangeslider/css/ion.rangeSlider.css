@@ -290,3 +290,69 @@
 .irs--shiny .irs-grid-pol.small {
   background-color: transparent;
 }
+
+
+/* shiny preset styles */
+
+
+/*-- scss:defaults --*/
+.irs.irs--shiny {
+  margin-top: 3px;
+}
+
+.irs.irs--shiny .irs-min,
+.irs.irs--shiny .irs-max,
+.irs.irs--shiny .irs-from,
+.irs.irs--shiny .irs-to,
+.irs.irs--shiny .irs-single {
+  padding: 3px 6px;
+  top: -3px;
+}
+
+.irs.irs--shiny .irs-handle {
+  top: 23px;
+}
+
+.irs.irs--shiny .irs-bar {
+  top: 31px;
+  height: 3px;
+  border: none;
+}
+
+.irs.irs--shiny .irs-line {
+  border-radius: 8px;
+}
+
+.irs.irs--shiny .irs-grid-pol {
+  height: 6px;
+}
+
+.irs.irs--shiny .irs-grid-text {
+  bottom: 8px;
+}
+
+.irs.irs--shiny .irs-handle:focus-visible,
+.irs.irs--shiny .irs-handle:active {
+  color: #005688;
+  background-color: #005688;
+  border-color: #005688;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(0, 123, 194, 0.25);
+}
+
+.irs.irs--shiny ~ .slider-animate-container {
+  text-align: left;
+}
+
+.irs.irs--shiny ~ .slider-animate-container .slider-animate-button {
+  opacity: 1;
+}
+
+.irs.irs--shiny.irs-with-grid ~ .slider-animate-container {
+  margin-top: -5px;
+}
+
+.irs.irs--shiny:not(.irs-with-grid) ~ .slider-animate-container {
+  margin-top: 5px;
+}
+
