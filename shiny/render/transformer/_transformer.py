@@ -33,6 +33,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 
 if TYPE_CHECKING:
@@ -554,84 +555,107 @@ class OutputTransformer(Generic[IT, OT, P]):
         self.OutputRendererDecorator = OutputRendererDecorator[IT, OT]
 
 
+@overload
+def output_transformer(
+    *,
+    default_output: Callable[[str], TagChild] | None = None,
+) -> Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]:
+    ...
+
+
+@overload
+def output_transformer(
+    transform_fn: TransformFn[IT, P, OT],
+) -> OutputTransformer[IT, OT, P]:
+    ...
+
+
 @add_example()
-def output_transformer(default_output: Callable[[str], TagChild] | None = None):
+def output_transformer(
+    transform_fn: TransformFn[IT, P, OT] | None = None,
+    *,
+    default_output: Callable[[str], TagChild] | None = None,
+) -> (
+    OutputTransformer[IT, OT, P]
+    | Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]
+):
+    """
+    Output transformer decorator
+
+    This decorator method is a convenience method to generate the appropriate types and
+    internal implementation for an overloaded renderer method. This method will provide
+    you with all the necessary types to define two different overloads: one for when the
+    decorator is called without parentheses and another for when it is called with
+    parentheses where app authors can pass in parameters to the renderer.
+
+    Transform function
+    ------------------
+
+    The output renderer's transform function (`transform_fn`) is the key building block
+    for `output_transformer`. It is a package author function that calls the app-defined
+    output value function (`value_fn`) transforms the result of type `IT` into type
+    `OT`.
+
+    The transform function is supplied meta output information, the (app-supplied) value
+    function, and any keyword arguments supplied to the output tranformer decorator:
+
+    * The first parameter to the handler function has the class
+    :class:`~shiny.render.transformer.TransformerMetadata` and is typically called
+    `_meta`. This information gives context the to the handler while trying to
+    resolve the app-supplied value function (typically called `_fn`).
+    * The second parameter is the app-defined output value function (e.g. `_fn`). It's
+    return type (`IT`) determines what types can be returned by the app-supplied
+    output value function. For example, if `_fn` has the type `ValueFn[str | None]`,
+    both the `str` and `None` types are allowed to be returned from the app-supplied
+    output value function.
+    * The remaining parameters are the keyword arguments (e.g. `alt:Optional[str] =
+    None` or `**kwargs: object`) that app authors may supply to the renderer (when the
+    renderer decorator is called with parentheses). Variadic positional parameters
+    (e.g. `*args`) are not allowed. All keyword arguments should have a type and
+    default value. No default value is needed for keyword arguments that are passed
+    through (e.g. `**kwargs: Any`).
+
+    The tranform function's return type (`OT`) determines the output type of the
+    :class:`~shiny.render.transformer.OutputRenderer`. Note that in many cases (but not
+    all!) `IT` and `OT` will be the same. The `None` type should typically be defined in
+    both `IT` and `OT`. If `IT` allows for `None` values, it (typically) signals that
+    nothing should be rendered. If `OT` allows for `None` and returns a `None` value,
+    shiny will not render the output.
+
+    Notes
+    -----
+
+    * When defining the renderer decorator overloads, if you have extra parameters of
+    `**kwargs: object`, you may get a type error about incompatible signatures. To fix
+    this, you can use `**kwargs: Any` instead or add `_fn: None = None` as the first
+    parameter in the overload containing the `**kwargs: object`.
+
+    * The `transform_fn` should be defined as an asynchronous function but should only
+    asynchronously yield (i.e. use `await` syntax) when the value function (the second
+    parameter of type `ValueFn[IT]`) is awaitable. If the value function is not
+    awaitable (i.e. it is a _synchronous_ function), then the execution of the
+    transform function should also be synchronous.
+
+
+    Parameters
+    ----------
+    transform_fn
+        Asynchronous function used to determine the app-supplied output value function
+        return type (`IT`), the transformed type (`OT`), and the keyword arguments (`P`)
+        app authors can supply to the renderer decorator.
+
+    Returns
+    -------
+    :
+        An :class:`~shiny.render.transformer.OutputTransformer` object that can be used to
+        define two overloads for your renderer function. One overload is for when the
+        renderer is called without parentheses and the other is for when the renderer is
+        called with parentheses.
+    """
+
     def output_transformer_impl(
         transform_fn: TransformFn[IT, P, OT],
     ) -> OutputTransformer[IT, OT, P]:
-        """
-        Output transformer decorator
-
-        This decorator method is a convenience method to generate the appropriate types and
-        internal implementation for an overloaded renderer method. This method will provide
-        you with all the necessary types to define two different overloads: one for when the
-        decorator is called without parentheses and another for when it is called with
-        parentheses where app authors can pass in parameters to the renderer.
-
-        Transform function
-        ------------------
-
-        The output renderer's transform function (`transform_fn`) is the key building block
-        for `output_transformer`. It is a package author function that calls the app-defined
-        output value function (`value_fn`) transforms the result of type `IT` into type
-        `OT`.
-
-        The transform function is supplied meta output information, the (app-supplied) value
-        function, and any keyword arguments supplied to the output tranformer decorator:
-
-        * The first parameter to the handler function has the class
-        :class:`~shiny.render.transformer.TransformerMetadata` and is typically called
-        `_meta`. This information gives context the to the handler while trying to
-        resolve the app-supplied value function (typically called `_fn`).
-        * The second parameter is the app-defined output value function (e.g. `_fn`). It's
-        return type (`IT`) determines what types can be returned by the app-supplied
-        output value function. For example, if `_fn` has the type `ValueFn[str | None]`,
-        both the `str` and `None` types are allowed to be returned from the app-supplied
-        output value function.
-        * The remaining parameters are the keyword arguments (e.g. `alt:Optional[str] =
-        None` or `**kwargs: object`) that app authors may supply to the renderer (when the
-        renderer decorator is called with parentheses). Variadic positional parameters
-        (e.g. `*args`) are not allowed. All keyword arguments should have a type and
-        default value. No default value is needed for keyword arguments that are passed
-        through (e.g. `**kwargs: Any`).
-
-        The tranform function's return type (`OT`) determines the output type of the
-        :class:`~shiny.render.transformer.OutputRenderer`. Note that in many cases (but not
-        all!) `IT` and `OT` will be the same. The `None` type should typically be defined in
-        both `IT` and `OT`. If `IT` allows for `None` values, it (typically) signals that
-        nothing should be rendered. If `OT` allows for `None` and returns a `None` value,
-        shiny will not render the output.
-
-        Notes
-        -----
-
-        * When defining the renderer decorator overloads, if you have extra parameters of
-        `**kwargs: object`, you may get a type error about incompatible signatures. To fix
-        this, you can use `**kwargs: Any` instead or add `_fn: None = None` as the first
-        parameter in the overload containing the `**kwargs: object`.
-
-        * The `transform_fn` should be defined as an asynchronous function but should only
-        asynchronously yield (i.e. use `await` syntax) when the value function (the second
-        parameter of type `ValueFn[IT]`) is awaitable. If the value function is not
-        awaitable (i.e. it is a _synchronous_ function), then the execution of the
-        transform function should also be synchronous.
-
-
-        Parameters
-        ----------
-        transform_fn
-            Asynchronous function used to determine the app-supplied output value function
-            return type (`IT`), the transformed type (`OT`), and the keyword arguments (`P`)
-            app authors can supply to the renderer decorator.
-
-        Returns
-        -------
-        :
-            An :class:`~shiny.render.transformer.OutputTransformer` object that can be used to
-            define two overloads for your renderer function. One overload is for when the
-            renderer is called without parentheses and the other is for when the renderer is
-            called with parentheses.
-        """
         _assert_transformer(transform_fn)
 
         def renderer_decorator(
@@ -655,7 +679,10 @@ def output_transformer(default_output: Callable[[str], TagChild] | None = None):
 
         return OutputTransformer(renderer_decorator)
 
-    return output_transformer_impl
+    if transform_fn is not None:
+        return output_transformer_impl(transform_fn)
+    else:
+        return output_transformer_impl
 
 
 async def resolve_value_fn(value_fn: ValueFn[IT]) -> IT:

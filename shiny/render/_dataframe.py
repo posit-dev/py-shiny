@@ -225,7 +225,7 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
 DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
 
-@output_transformer(ui.output_data_frame)
+@output_transformer(default_output=ui.output_data_frame)
 async def DataFrameTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[DataFrameResult | None],
