@@ -20,7 +20,7 @@ from shiny.render.transformer import (
 
 
 # Create renderer components from the async handler function: `capitalize_components()`
-@output_transformer
+@output_transformer()
 async def CapitalizeTransformer(
     # Contains information about the render call: `name` and `session`
     _meta: TransformerMetadata,
