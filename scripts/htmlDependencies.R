@@ -134,6 +134,21 @@ shiny_theme <- bslib::bs_theme(version = 5, preset = "shiny")
 # Save iorange slider dep
 # Get _dynamic_ ionrangeslider dep
 ion_dep <- shiny:::ionRangeSliderDependencyCSS(shiny_theme)
+ion_dep_css <- fs::path(ion_dep$src$file, ion_dep$stylesheet)
+# Preset="shiny" additional ionRangeSlider rules
+ion_preset_rules <- system.file("builtin", "bs5", "shiny", "ionrangeslider", "_rules.scss", package = "bslib")
+ion_preset_compiled <-
+  sass::sass_partial(
+    readLines(ion_preset_rules),
+    shiny_theme,
+    write_attachments = FALSE,
+    cache = FALSE
+  )
+# Append preset styles to the base ionRangeSlider CSS
+cat(
+  c("\n\n/* shiny preset styles */\n\n", ion_preset_compiled),
+  file = ion_dep_css, sep = "\n", append = TRUE
+)
 if (inherits(ion_dep, "html_dependency")) {
   ion_dep <- list(ion_dep)
 }
