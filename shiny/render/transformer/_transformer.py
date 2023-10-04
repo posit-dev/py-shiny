@@ -240,7 +240,6 @@ class OutputRenderer(Generic[OT], ABC):
             Optional function that takes an `output_id` string and returns a Shiny UI
             object that can be used to display the output. This allows render functions
             to respond to `_repr_html_` method calls in environments like Jupyter.
-
         """
 
         # Copy over function name as it is consistent with how Session and Output
@@ -643,6 +642,10 @@ def output_transformer(
         Asynchronous function used to determine the app-supplied output value function
         return type (`IT`), the transformed type (`OT`), and the keyword arguments (`P`)
         app authors can supply to the renderer decorator.
+    default_output
+        Optional function that takes an `output_id` string and returns a Shiny UI object
+        that can be used to display the output. This allows render functions to respond
+        to `_repr_html_` method calls in environments like Jupyter.
 
     Returns
     -------
