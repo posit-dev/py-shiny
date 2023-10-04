@@ -5,10 +5,9 @@ from typing import Any, Literal, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, div, tags
 
-from ... import Session
 from ..._namespaces import resolve_id_or_none
 from ..._utils import drop_none
-from ...session import require_active_session
+from ...session import Session, require_active_session
 from ._tooltip import _normalize_show_value, _session_on_flush_send_msg
 from ._utils import consolidate_attrs
 from ._web_component import web_component

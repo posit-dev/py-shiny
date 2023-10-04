@@ -36,12 +36,11 @@ from typing import (
 )
 
 if TYPE_CHECKING:
-    from ... import Session
+    from ...session import Session
 
-from ... import _utils
 from ..._docstring import add_example
 from ..._typing_extensions import Concatenate, ParamSpec
-from ..._utils import is_async_callable
+from ..._utils import is_async_callable, run_coro_sync
 
 # Input type for the user-spplied function that is passed to a render.xx
 IT = TypeVar("IT")
@@ -330,7 +329,7 @@ class OutputRendererSync(OutputRenderer[OT]):
         """
         Synchronously executes the output renderer as a function.
         """
-        return _utils.run_coro_sync(self._run())
+        return run_coro_sync(self._run())
 
 
 # The reason for having a separate RendererAsync class is because the __call__

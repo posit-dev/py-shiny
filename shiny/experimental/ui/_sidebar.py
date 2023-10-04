@@ -7,10 +7,9 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, css, div
 from htmltools import svg as svgtags
 from htmltools import tags
 
-from ... import Session
 from ..._deprecated import warn_deprecated
 from ..._namespaces import resolve_id_or_none
-from ...session import require_active_session
+from ...session import Session, require_active_session
 
 # from ._color import get_color_contrast
 from ._card import CardItem

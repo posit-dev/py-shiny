@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Optional
 
-from ... import Session
 from ..._utils import drop_none
 from ...module import resolve_id
-from ...session import require_active_session
+from ...session import Session, require_active_session
 
 
 def toggle_switch(
