@@ -287,6 +287,12 @@ class OutputRenderer(Generic[OT], ABC):
             self._session.output.remove(self.__name__)
             self._auto_registered = False
 
+        from ...session import get_current_session
+
+        s = get_current_session()
+        if s is not None:
+            s.output(self)
+
     def _set_metadata(self, session: Session, name: str) -> None:
         """
         When `Renderer`s are assigned to Output object slots, this method is used to
