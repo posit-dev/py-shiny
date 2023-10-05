@@ -8,12 +8,9 @@ __all__ = (
     "get_shiny_deps",
 )
 
-from typing import TYPE_CHECKING, Literal, cast
+from typing import Literal, cast
 
 from .._typing_extensions import NotRequired, TypedDict
-from ..html_dependencies import jquery_deps, shiny_deps
-
-# from htmltools import HTMLDependency
 
 
 class NbCellCodeOutputStream(TypedDict):
@@ -141,65 +138,15 @@ class QuartoHtmlDependency(TypedDict):
     serviceworkers: NotRequired[list[QuartoHtmlDepServiceworkerItem]]
 
 
-if TYPE_CHECKING:
-    from htmltools._core import ScriptItem, StylesheetItem
+def placeholder_dep() -> QuartoHtmlDependency:
+    return {
+        "name": "shiny-dependency-placeholder",
+        "version": "9.9.9",
+        "meta": {"shiny-dependency-placeholder": ""},
+    }
 
 
 def get_shiny_deps() -> str:
     import json
 
-    deps = [
-        jquery_deps().as_dict(lib_prefix=None, include_version=False),
-        shiny_deps().as_dict(lib_prefix=None, include_version=False),
-    ]
-
-    # Convert from htmltools format to quarto format
-    for dep in deps:
-        if "script" in dep:
-            dep["scripts"] = [htmltools_to_quarto_script(s) for s in dep.pop("script")]
-        if "stylesheet" in dep:
-            dep["stylesheets"] = [
-                htmltools_to_quarto_stylesheet(s) for s in dep.pop("stylesheet")
-            ]
-
-        del dep["meta"]
-
-    return json.dumps(deps, indent=2)
-
-
-_shared_dir = (Path(__file__) / ".." / "..").resolve() / "www" / "shared"
-
-
-def htmltools_to_quarto_script(dep: ScriptItem) -> QuartoHtmlDepItem:
-    if dep["src"].startswith("shiny"):
-        src = str(remove_first_dir(Path(dep["src"])))
-    else:
-        src = str(Path(dep["src"]))
-    # NOTE: htmltools always prepends a directory after .as_dict() is called, so we'll
-    # remove the first directory part.
-    # src = str(remove_first_dir(Path(dep["src"])))
-
-    return {
-        "name": src,
-        "path": str(_shared_dir / src),
-    }
-
-
-def htmltools_to_quarto_stylesheet(dep: StylesheetItem) -> QuartoHtmlDepItem:
-    src = str(remove_first_dir(Path(dep["href"])))
-    return {
-        "name": src,
-        "path": str(_shared_dir / src),
-    }
-
-
-def remove_first_dir(p: Path) -> Path:
-    """Remove the first directory from a Path"""
-    parts = p.parts
-
-    # If there's only one part (just a filename), return it as is
-    if len(parts) == 1:
-        return p
-
-    # Otherwise, skip the first directory and reconstruct the path
-    return Path(parts[1]).joinpath(*parts[2:])
+    return json.dumps([placeholder_dep()], indent=2)
