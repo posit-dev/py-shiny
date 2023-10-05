@@ -20,11 +20,13 @@ class QuartoShinyCodeCell(TypedDict):
 class QuartoShinyCodeCells(TypedDict):
     schema_version: int
     cells: list[QuartoShinyCodeCell]
+    html_file: str
 
 
 def convert_code_cells_to_app_py(file: str | Path) -> None:
     """Parse an code cell JSON file and output an app.py file."""
     import json
+    from textwrap import indent
 
     file = Path(file)
 
@@ -42,13 +44,11 @@ def convert_code_cells_to_app_py(file: str | Path) -> None:
         if "python" not in cell["classes"]:
             continue
 
-        if cell["text"].startswith("#| skip: true"):
+        if "# skip" in cell["text"]:
             continue
 
         code_cell_texts.append(
-            "    "
-            + "    ".join(cell["text"])
-            + "\n\n    # ============================\n"
+            indent(cell["text"], "    ") + "\n\n    # ============================\n"
         )
 
     app_content = f"""
@@ -59,7 +59,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 { "".join(code_cell_texts) }
 
 app = App(
-    Path(__file__).parent / "{ file.with_suffix(".html").name }",
+    Path(__file__).parent / "{ data["html_file"] }",
     server,
     static_assets=Path(__file__).parent,
 )
