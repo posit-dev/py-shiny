@@ -257,6 +257,12 @@ class OutputRenderer(Generic[OT], ABC):
         self._params = params
         self.default_output = default_output
 
+        from ...session import get_current_session
+
+        s = get_current_session()
+        if s is not None:
+            s.output(self)
+
     def _set_metadata(self, session: Session, name: str) -> None:
         """
         When `Renderer`s are assigned to Output object slots, this method is used to
