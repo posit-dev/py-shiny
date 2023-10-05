@@ -3,14 +3,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-__all__ = (
-    "convert_code_cells_to_app_py",
-    "get_shiny_deps",
-)
+__all__ = ("convert_code_cells_to_app_py", "get_shiny_deps", "output_shim")
 
 from typing import Literal, cast
 
-from .._typing_extensions import NotRequired, TypedDict
+from ._typing_extensions import NotRequired, TypedDict
 
 QuartoShinyCodeCellClass = Literal["python", "r", "cell-code", "hidden"]
 
@@ -110,3 +107,7 @@ def get_shiny_deps() -> str:
     import json
 
     return json.dumps([placeholder_dep()], indent=2)
+
+
+def output_shim(x: object) -> object:
+    return x
