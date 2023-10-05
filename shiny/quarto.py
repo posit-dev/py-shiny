@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-__all__ = ("convert_code_cells_to_app_py", "get_shiny_deps", "output_shim")
+__all__ = ("convert_code_cells_to_app_py", "get_shiny_deps")
 
 from typing import Literal, cast
 
@@ -65,8 +65,6 @@ app = App(
 )
     """
 
-    # print(app_content)
-
     with open("app.py", "w") as f:
         f.write(app_content)
 
@@ -107,7 +105,3 @@ def get_shiny_deps() -> str:
     import json
 
     return json.dumps([placeholder_dep()], indent=2)
-
-
-def output_shim(x: object) -> object:
-    return x
