@@ -483,7 +483,7 @@ def static_assets(command: str) -> None:
 @main.command(help="""Convert an ipynb to py file.""")
 @click.argument("file", type=str)
 def convert(file: str) -> None:
-    shiny.quarto.convert_ipynb_to_py(file)
+    shiny.quarto.convert_code_cells_to_app_py(file)
 
 
 @main.command(help="""Get Shiny's HTML dependencies as JSON.""")

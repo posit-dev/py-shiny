@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 __all__ = (
-    "convert_ipynb_to_py",
+    "convert_code_cells_to_app_py",
     "get_shiny_deps",
 )
 
@@ -12,85 +12,45 @@ from typing import Literal, cast
 
 from .._typing_extensions import NotRequired, TypedDict
 
-
-class NbCellCodeOutputStream(TypedDict):
-    output_type: Literal["stream"]
-    name: Literal["stdout", "stderr"]
-    text: list[str]
+QuartoShinyCodeCellClass = Literal["python", "r", "cell-code", "hidden"]
 
 
-class NbCellCodeOutputDisplayData(TypedDict):
-    output_type: Literal["display_data"]
-    metadata: dict[str, object]
-    data: dict[str, object]
+class QuartoShinyCodeCell(TypedDict):
+    text: str
+    classes: list[QuartoShinyCodeCellClass]
 
 
-class NbCellCodeOutputExecuteResult(TypedDict):
-    output_type: Literal["execute_result"]
-    execution_count: int
-    metadata: dict[str, object]
-    data: dict[str, object]
+class QuartoShinyCodeCells(TypedDict):
+    schema_version: int
+    cells: list[QuartoShinyCodeCell]
 
 
-NbCellCodeOutput = (
-    NbCellCodeOutputStream | NbCellCodeOutputDisplayData | NbCellCodeOutputExecuteResult
-)
-
-
-class NbCellCode(TypedDict):
-    cell_type: Literal["code"]
-    execution_count: int | None
-    id: str
-    metadata: dict[str, object]
-    source: str | list[str]
-    outputs: list[NbCellCodeOutput]
-
-
-class NbCellMarkdown(TypedDict):
-    cell_type: Literal["markdown"]
-    metadata: dict[str, object]
-    source: str | list[str]
-
-
-class NbCellRaw(TypedDict):
-    cell_type: Literal["raw"]
-    metadata: dict[str, object]
-    source: str | list[str]
-
-
-NbCell = NbCellCode | NbCellMarkdown | NbCellRaw
-
-
-class Ipynb(TypedDict):
-    cells: list[NbCell]
-    metadata: dict[str, object]
-    nbformat: int
-    nbformat_minor: int
-
-
-def convert_ipynb_to_py(file: str | Path) -> None:
-    """Parse an ipynb file."""
+def convert_code_cells_to_app_py(file: str | Path) -> None:
+    """Parse an code cell JSON file and output an app.py file."""
     import json
 
     file = Path(file)
 
     with open(file, "r") as f:
-        nb = cast(Ipynb, json.load(f))
+        data = cast(QuartoShinyCodeCells, json.load(f))
 
-    cells = nb["cells"]
+    if data["schema_version"] != 1:
+        raise ValueError("Only schema_version 1 is supported.")
 
-    code_cell_sources: list[str] = []
+    cells = data["cells"]
+
+    code_cell_texts: list[str] = []
 
     for cell in cells:
-        if cell["cell_type"] != "code":
+        if "python" not in cell["classes"]:
             continue
 
-        if "skip" in cell["metadata"] and cell["metadata"]["skip"] is True:
+        if cell["text"].startswith("#| skip: true"):
             continue
 
-        code_cell_sources.append(
+        code_cell_texts.append(
             "    "
-            + "    ".join(cell["source"])
+            + "    ".join(cell["text"])
             + "\n\n    # ============================\n"
         )
 
@@ -99,7 +59,7 @@ from pathlib import Path
 from shiny import App, Inputs, Outputs, Session, ui
 
 def server(input: Inputs, output: Outputs, session: Session) -> None:
-{ "".join(code_cell_sources) }
+{ "".join(code_cell_texts) }
 
 app = App(
     Path(__file__).parent / "{ file.with_suffix(".html").name }",
