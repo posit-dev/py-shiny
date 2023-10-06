@@ -7,6 +7,17 @@ from typing import NamedTuple
 
 from app import input_keys, x_input_keys
 
+# TODO-karan: Verify inputs work within modules
+# From https://github.com/posit-dev/py-shiny/pull/731#discussion_r1336102593:
+# I like this idea and where it's going...
+#
+# - [ ] Move `test_0696_resolve_id.py`'s custom expectation method into a new file (`mod_state.py`?) that can be imported into here and the original file.
+# - [x] Change class name to `ModState`
+# - [ ] Have expectation methods receive a `ModState` object.
+# - [ ] Double check if a value is missing when creating a NamedTuple, an error is thrown.
+# - [ ] Have a `default_mod_state` object (which currently equals `component` above).
+# - [ ] Is it possible to import `mod_state` into the app to retrieve the `input_keys` and `x_input_keys`?
+
 
 class ModState(NamedTuple):
     x_sidebar: bool
@@ -73,6 +84,7 @@ component = ModState(
 not_in_production = set(component._fields) - set(input_keys)
 not_in_experimental = not_in_production - set(x_input_keys)
 not_listed = not_in_experimental - blacklist
+# TODO-karan: Turn into assertions
 print(f" Items not in production are {not_in_production}")
 print(f" Items not in experimental are {not_in_experimental}")
 print(f"Number of items not listed anywhere are {len(not_listed)}")
