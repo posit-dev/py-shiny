@@ -14,6 +14,7 @@ app_ui = ui.page_fluid(
         ui.input_action_button("btn_w_tooltip", "A button w/ a tooltip", class_="mt-3"),
         "A message",
         id="tooltip_id",
+        placement="right",
     ),
 )
 

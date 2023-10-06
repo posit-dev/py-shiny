@@ -14,6 +14,7 @@ app_ui = ui.page_fluid(
         ui.input_action_button("btn_w_popover", "A button w/ a popover", class_="mt-3"),
         "A message",
         id="popover_id",
+        placement="bottom",
     ),
 )
 
