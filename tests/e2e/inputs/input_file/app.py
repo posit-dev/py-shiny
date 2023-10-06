@@ -2,7 +2,7 @@ import typing
 
 import pandas as pd
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from shiny.types import FileInfo
 
 app_ui = ui.page_fluid(
@@ -14,7 +14,8 @@ app_ui = ui.page_fluid(
         selected=["Row Count", "Column Count", "Column Names"],
     ),
     ui.output_table("summary"),
-    ui.input_file("file2", "Choose CSV File", accept=[".csv"], multiple=True),
+    ui.input_file("file2", "Multiple files", multiple=True),
+    ui.output_text_verbatim("file2_info", placeholder=True),
 )
 
 
@@ -54,6 +55,19 @@ def server(input: Inputs, output: Outputs, session: Session):
         # input.stats() is a list of strings; subset the columns based on the selected
         # checkboxes
         return info_df.loc[:, input.stats()]
+
+    @output
+    @render.text
+    def file2_info():
+        file2: typing.Union[list[FileInfo], None] = input.file2()
+        req(file2)
+
+        ret = [
+            f"File name: {file['name']}\nFile type: {file['type']}\nFile size: {file['size']} bytes"
+            for file in typing.cast(list[FileInfo], file2)
+        ]
+
+        return "\n---\n".join(ret)
 
 
 app = App(app_ui, server)
