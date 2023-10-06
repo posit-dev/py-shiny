@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from conftest import ShinyAppProc
 from controls import InputFile, OutputTable, OutputTextVerbatim
 from playwright.sync_api import FilePayload, Page, expect
