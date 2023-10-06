@@ -1,19 +1,20 @@
 from __future__ import annotations
 
-# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
-from IPython.core.interactiveshell import InteractiveShell
-from IPython.display import display, HTML
-from typing import Any, cast
 import asyncio
 import uuid
+from typing import Any, cast
 
-from shiny.session import _utils as session_utils
-import shiny.reactive
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
+from IPython.core.interactiveshell import InteractiveShell
+from IPython.display import HTML, display
+
 import shiny._namespaces
+import shiny.reactive
+from shiny.session import _utils as session_utils
 
-from .shiny_shim import create_kernel_session, JupyterKernelConnection
 from ._mimerender import initialize as initialize_mime_render
 from .log import logger
+from .shiny_shim import JupyterKernelConnection, create_kernel_session
 
 with shiny.reactive.isolate():
     isolate_context = shiny.reactive.get_current_context()
@@ -97,4 +98,4 @@ class OutputReceiver:
         # Set suspend_when_hidden=False because it's much harder for us to keep track of
         # what's shown and what's hidden in Jupyter notebooks.
         self._output(suspend_when_hidden=False)(render_func)
-        display(render_func)
+        display(render_func.default_ui(render_func.__name__))

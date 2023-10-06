@@ -1,14 +1,20 @@
 # from jupyter_server.base.handlers import JupyterHandler
-from jupyter_server.serverapp import ServerApp
-import tornado
-from pathlib import Path
 import os
+import tempfile
+from pathlib import Path
+
+import tornado
+from jupyter_server.serverapp import ServerApp
 
 shiny_path = Path(__file__).parent.parent.parent
 print(shiny_path / "www" / "shared")
 
+tmpdir = tempfile.TemporaryDirectory(prefix="shiny-dependencies-")
 
 os.environ["SHINY_JUPYTERLAB_SERVER_EXTENSION"] = "1"
+# Subprocesses will dump their dependencies here. Seems really messy but I'm not sure
+# what else to do. Maybe they should just put symlinks here?? (On non-Windows?)
+os.environ["SHINY_JUPYTERLAB_SERVER_EXTENSION_ROOT"] = tmpdir.name
 
 
 def _load_jupyter_server_extension(nb_server_app: ServerApp):
@@ -21,7 +27,12 @@ def _load_jupyter_server_extension(nb_server_app: ServerApp):
                 r"/shiny/shared/(.*)",
                 tornado.web.StaticFileHandler,
                 {"path": shiny_path / "www" / "shared"},
-            )
+            ),
+            (
+                r"/shiny/dependencies/(.*)",
+                tornado.web.StaticFileHandler,
+                {"path": tmpdir.name},
+            ),
         ],
     )
 

@@ -131,7 +131,12 @@ class HtmltoolsRenderer extends Widget implements IRenderMime.IRenderer {
 
   async renderModel(model: IRenderMime.IMimeModel): Promise<void> {
     const shinyBind = document.createElement('shiny-bind');
-    shinyBind.innerHTML = JSON.parse(model.data[MIME_TYPE] as any)?.html;
+    const content = JSON.parse(model.data[MIME_TYPE] as any) || {};
+    const renderFunc =
+      window.Shiny.renderContentAsync || window.Shiny.renderContent;
+
+    await renderFunc(shinyBind, content, 'replace');
+
     this.node.replaceChildren(shinyBind);
   }
 

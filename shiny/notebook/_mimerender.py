@@ -1,4 +1,5 @@
 # pyright: reportUnknownMemberType=false
+from __future__ import annotations
 
 """
 We don't use the normal IPython _repr_html_ rendering because we need to do two things
@@ -9,6 +10,7 @@ formatted.
 """
 
 import json
+import os
 from typing import Any, cast
 
 from htmltools import HTML, HTMLDependency, Tag, TagList
@@ -39,7 +41,7 @@ def register_mimerenderer(
 
 def render_with_shinybind(tag_data: Any | None) -> str:
     if tag_data is None:
-        return json.dumps(dict(html=None))
+        return json.dumps(dict(deps=[], html=None))
 
     if isinstance(tag_data, Tag) or isinstance(tag_data, TagList):
         rendered = tag_data.render()
@@ -48,7 +50,9 @@ def render_with_shinybind(tag_data: Any | None) -> str:
         # graph but doesn't have its own .render method
         rendered = TagList(tag_data).render()
 
-    return json.dumps(dict(html=rendered["html"]))
+    deps = process_dependencies(rendered["dependencies"])
+
+    return json.dumps(dict(deps=deps, html=rendered["html"]))
 
 
 def render_repr_html(tag_data: Any | None):
@@ -70,3 +74,20 @@ class HtmlToolsFormatter(BaseFormatter):
     format_type = HTMLTOOLS_MIME_TYPE
 
     print_method = "_repr_htmltools_"
+
+
+def process_dependencies(deps: list[HTMLDependency]) -> list[dict[str, Any]]:
+    dest = os.environ.get("SHINY_JUPYTERLAB_SERVER_EXTENSION_ROOT", None)
+    if dest is None or dest == "" or not os.path.isdir(dest):
+        raise RuntimeError(
+            "$SHINY_JUPYTERLAB_SERVER_EXTENSION_ROOT is not set. "
+            "Perhaps the Shiny JupyterLab server extension is not installed/enabled?"
+        )
+
+    def process_dep(dep: HTMLDependency) -> dict[str, Any]:
+        lib_prefix = "/shiny/dependencies/"
+
+        dep.copy_to(dest, include_version=True)
+        return dep.as_dict(lib_prefix=lib_prefix, include_version=True)
+
+    return [process_dep(dep) for dep in deps if dep.name != "shiny"]
