@@ -480,10 +480,20 @@ def static_assets(command: str) -> None:
         raise click.UsageError(f"Unknown command: {command}")
 
 
-@main.command(help="""Convert an ipynb to py file.""")
-@click.argument("file", type=str)
-def convert(file: str) -> None:
-    shiny.quarto.convert_code_cells_to_app_py(file)
+@main.command(help="""Convert a JSON file with code cells to a py file.""")
+@click.argument(
+    "json_file",
+    type=str,
+)
+@click.argument(
+    "py_file",
+    type=str,
+    default=None,
+)
+def cells_to_app(json_file: str, py_file: str | None) -> None:
+    if py_file is None:
+        py_file = str(Path(json_file).parent / "app.py")
+    shiny.quarto.convert_code_cells_to_app_py(json_file, py_file)
 
 
 @main.command(help="""Get Shiny's HTML dependencies as JSON.""")

@@ -23,14 +23,15 @@ class QuartoShinyCodeCells(TypedDict):
     html_file: str
 
 
-def convert_code_cells_to_app_py(file: str | Path) -> None:
+def convert_code_cells_to_app_py(json_file: str | Path, app_file: str | Path) -> None:
     """Parse an code cell JSON file and output an app.py file."""
     import json
     from textwrap import indent
 
-    file = Path(file)
+    json_file = Path(json_file)
+    app_file = Path(app_file)
 
-    with open(file, "r") as f:
+    with open(json_file, "r") as f:
         data = cast(QuartoShinyCodeCells, json.load(f))
 
     if data["schema_version"] != 1:
@@ -65,7 +66,7 @@ app = App(
 )
     """
 
-    with open("app.py", "w") as f:
+    with open(app_file, "w") as f:
         f.write(app_content)
 
 
