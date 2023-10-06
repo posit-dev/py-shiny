@@ -33,47 +33,47 @@ def load_ipython_extension(ipython: InteractiveShell):
     # Permanently set this session context. Weird, I know.
     shiny.session._utils._default_session = sess
     shiny._namespaces._default_namespace = sess.ns
+    # Oh goodness. This is a hack to get any registered output to be display()'ed with
+    # its default output.
+    sess.output = OutputReceiver(sess.output)  # type: ignore
 
     ipython.push(
         {
             "input": sess.input,
-            "output": OutputReceiver(sess.output),
+            "output": sess.output,
             "session": sess,
         }
     )
 
-    from ipykernel.comm import Comm
+    from comm import create_comm, get_comm_manager
 
-    def on_client_connected(comm: Comm, msg: Any):
-        logger.info("Shiny client connected")
+    # def on_client_connected(comm: Comm, msg: Any):
+    #     logger.info("Shiny client connected")
 
-        # Let the client know that the connection is ready
-        comm.send({})
-        logger.info("Setting JupyterKernelConnection")
+    #     # Let the client know that the connection is ready
+    #     comm.send({})
+    #     logger.info("Setting JupyterKernelConnection")
 
-        async def proceed():
-            await set_comm(JupyterKernelConnection(comm))
-            await sess._run()
+    #     async def proceed():
+    #         await set_comm(JupyterKernelConnection(comm))
+    #         await sess._run()
 
-        asyncio.create_task(proceed())
+    #     asyncio.create_task(proceed())
 
-    ipython.kernel.comm_manager.register_target(  # pyright: ignore[reportGeneralTypeIssues]
-        "shiny", on_client_connected
-    )
+    # ipython.kernel.comm_manager.register_target(  # pyright: ignore[reportGeneralTypeIssues]
+    #     "shiny", on_client_connected
+    # )
+    comm = create_comm(target_name="shiny-kernel", data={})
+    get_comm_manager().register_comm(comm)
+    comm.send("{}")
 
-    display(
-        HTML(
-            """
-            <link rel="stylesheet" href="/shiny/shared/shiny.min.css" />
-            <script src="/shiny/shared/jquery/jquery-3.6.0.js"></script>
-            <script src="/shiny/shared/shiny.js"></script>
-            <link href="/shiny/shared/bootstrap/bootstrap.min.css" rel="stylesheet"/>
-            <script src="/shiny/shared/bootstrap/bootstrap.bundle.min.js"></script>
-            <script src="/shiny/shared/ionrangeslider/js/ion.rangeSlider.min.js"></script>
-            <link href="/shiny/shared/ionrangeslider/css/ion.rangeSlider.css" rel="stylesheet"/>
-            """
-        )
-    )
+    async def proceed():
+        await set_comm(JupyterKernelConnection(comm))
+        await sess._run()
+
+    asyncio.create_task(proceed())
+
+    print("Shiny is running")
 
 
 def unload_ipython_extension(ipython: InteractiveShell):
@@ -94,5 +94,7 @@ class OutputReceiver:
         self._output = output
 
     def __call__(self, render_func: Any):
-        self._output(render_func)
+        # Set suspend_when_hidden=False because it's much harder for us to keep track of
+        # what's shown and what's hidden in Jupyter notebooks.
+        self._output(suspend_when_hidden=False)(render_func)
         display(render_func)

@@ -4,13 +4,14 @@ import {
 } from '@jupyterlab/application';
 import { PageConfig } from '@jupyterlab/coreutils';
 import { INotebookTracker } from '@jupyterlab/notebook';
-import { DocumentWidget } from '@jupyterlab/docregistry';
 import { IRenderMime, IRenderMimeRegistry } from '@jupyterlab/rendermime';
 
 import { Widget } from '@lumino/widgets';
 import { Message } from '@lumino/messaging';
 
 import { registerElement } from './shiny-bind-element';
+import { SuperclientWebSocket as SuperclientSocket } from './superclient';
+import { KernelSocket } from './commchannel';
 
 // This has the side-effect of registering the custom element
 registerElement();
@@ -43,6 +44,27 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     notebookTracker.widgetAdded.connect((sender, widget) => {
       console.log('Notebook widget added: ', widget);
+      widget.context?.sessionContext?.kernelChanged.connect(() => {
+        console.log(
+          'Kernel is now: ',
+          widget.context?.sessionContext?.session?.kernel?.id
+        );
+        widget.context?.sessionContext?.session?.kernel?.registerCommTarget(
+          'shiny-kernel',
+          (comm, msg) => {
+            console.log('shiny-kernel comm channel established');
+            // TODO: Might need to force the inputs to be sent to the comm right now
+            const ks = new KernelSocket(comm);
+            connect(window.Shiny.superclient, ks);
+            ks.send(
+              JSON.stringify({
+                method: 'init',
+                data: window.Shiny.shinyapp.$inputValues
+              })
+            );
+          }
+        );
+      });
     });
 
     renderMimeRegistry.addFactory(
@@ -59,80 +81,44 @@ const plugin: JupyterFrontEndPlugin<void> = {
     );
 
     window.Shiny = window.Shiny || {};
+    window.Shiny.superclient = new SuperclientSocket();
     window.Shiny.createSocket = () => {
-      let kernel = null;
-      const notebookWidget = app.shell.currentWidget;
-      if (notebookWidget instanceof DocumentWidget) {
-        kernel = notebookWidget.context?.sessionContext?.session?.kernel;
-      }
-
-      // I don't know how to get the ConsolePanel type, so duck type. (I tried adding
-      // @jupyterlab/console to the dependencies, but then jlnp no longer worked.)
-      const consoleWidget = app.shell.currentWidget;
-      kernel = (consoleWidget as any)?.sessionContext?.session?.kernel;
-
-      if (!kernel) {
-        throw new Error(
-          'Shiny could not establish a connection to the kernel. Please open a notebook first!'
-        );
-      }
-
-      let comm = kernel.createComm('shiny');
-      return new CommToWS(comm);
+      setTimeout(() => {
+        window.Shiny.superclient.setToOpen();
+      }, 0);
+      return window.Shiny.superclient;
     };
+
+    injectShinyDependencies();
   }
 };
 
-// CommToWS is a wrapper around a Jupyter Comm that implements the WebSocket interface
-class CommToWS {
-  comm: any;
-  onmessage: any;
-  onopen: any;
-  onclose: any;
-  onerror: any;
-  readyState: number = WebSocket.CONNECTING;
-  allowReconnect: boolean = false;
+function injectShinyDependencies() {
+  document.head.append(
+    tag('link', { rel: 'stylesheet', href: '/shiny/shared/shiny.min.css' }),
+    tag('script', { src: '/shiny/shared/jquery/jquery-3.6.0.js' }),
+    tag('script', { src: '/shiny/shared/shiny.js' }),
+    tag('link', {
+      href: '/shiny/shared/bootstrap/bootstrap.min.css',
+      rel: 'stylesheet'
+    }),
+    tag('script', { src: '/shiny/shared/bootstrap/bootstrap.bundle.min.js' }),
+    tag('script', {
+      src: '/shiny/shared/ionrangeslider/js/ion.rangeSlider.min.js'
+    }),
+    tag('link', {
+      href: '/shiny/shared/ionrangeslider/css/ion.rangeSlider.css',
+      rel: 'stylesheet'
+    })
+  );
+}
 
-  constructor(comm: any) {
-    this.comm = comm;
-    this.comm.onMsg = this._onmessage.bind(this);
-    this.comm.onClose = this._onclose.bind(this);
-
-    this.comm.open({});
-  }
-
-  _onmessage(msg: any) {
-    if (this.readyState === WebSocket.CONNECTING) {
-      console.log('_onopen');
-      this.readyState = WebSocket.OPEN;
-      if (this.onopen) {
-        this.onopen();
-      }
-    }
-
-    console.log('_onmessage: ', msg);
-    if (this.onmessage) {
-      // TODO: Remove extra serialization
-      this.onmessage({ data: JSON.stringify(msg.content.data) });
-    }
-  }
-  _onclose(msg: any) {
-    console.log('_onclose: ', msg);
-    this.readyState = WebSocket.CLOSED;
-    if (this.onclose) {
-      // TODO: I'm sure this msg unpacking is wrong
-      this.onclose(msg.content.data);
-    }
-  }
-  send(msg: any) {
-    console.log('Shiny client is sending: ', msg);
-    // TODO: Remove extra deserialization
-    this.comm.send(JSON.parse(msg));
-  }
-  close() {
-    this.readyState = WebSocket.CLOSING;
-    this.comm.close();
-  }
+function tag(tagname: string, attrs: Record<string, string>) {
+  const el = document.createElement(tagname);
+  Object.entries(attrs).forEach(([k, v]) => {
+    el.setAttribute(k, v);
+  });
+  return el;
 }
 
 export default plugin;
@@ -150,4 +136,25 @@ class HtmltoolsRenderer extends Widget implements IRenderMime.IRenderer {
   }
 
   onAfterAttach(msg: Message): void {}
+}
+
+export function connect(superclient: SuperclientSocket, socket: KernelSocket) {
+  socket.onmessage = (event: MessageEvent) => {
+    superclient.dispatchEvent(
+      new MessageEvent('message', { data: event.data })
+    );
+  };
+
+  function onSend(event: MessageEvent) {
+    socket.send(event.data);
+  }
+  superclient.addEventListener('send', onSend);
+
+  socket.onclose = function onclose(event: CloseEvent) {
+    console.log(
+      "Socket closed. Code: '" + event.code + "'. Reason: " + event.reason
+    );
+    socket.onmessage = null;
+    superclient.removeEventListener('send', onSend);
+  };
 }

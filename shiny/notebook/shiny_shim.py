@@ -1,7 +1,6 @@
 # pyright: reportUnknownMemberType=false
 import asyncio
 import json
-import logging
 from typing import Any, Awaitable, Callable, Optional, Tuple
 
 import comm  # pyright: ignore[reportMissingTypeStubs]
@@ -105,7 +104,7 @@ class JupyterKernelConnection(Connection):
         return await self._queue.get()
 
     async def close(self, code: int, reason: Optional[str]) -> None:
-        print("Shiny's Connection.close was called")
+        logger.debug("Shiny's Connection.close was called")
         self._comm.close({"code": code, "reason": reason})
 
     def get_http_conn(self) -> HTTPConnection:
