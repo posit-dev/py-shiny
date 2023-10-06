@@ -24,7 +24,7 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Calc
     def parsed_file():
-        file: typing.Union[list[FileInfo], None] = input.file1()
+        file: typing.Union[typing.List["FileInfo"], None] = input.file1()
         if file is None:
             return pd.DataFrame()
         return pd.read_csv(  # pyright: ignore[reportUnknownMemberType]
@@ -61,12 +61,16 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.text
     def file2_info():
-        file2: typing.Union[list[FileInfo], None] = input.file2()
+        file2: typing.Union[typing.List["FileInfo"], None] = input.file2()
+        if not file2:
+            req(file2)
+            return
+
         req(file2)
 
         ret = [
             f"File name: {file['name']}\nFile type: {file['type']}\nFile size: {file['size']} bytes"
-            for file in typing.cast(list[FileInfo], file2)
+            for file in file2
         ]
 
         return "\n---\n".join(ret)
