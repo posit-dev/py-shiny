@@ -1,5 +1,13 @@
-/*
-    See the JupyterLab Developer Guide for useful CSS Patterns:
-
-    https://jupyterlab.readthedocs.io/en/stable/developer/css.html
-*/
+.shinynotebook-draggable-popover:popover-open {
+  position: fixed;
+  top: var(--shinynotebook-popover-top);
+  left: var(--shinynotebook-popover-left);
+  /*
+  width: var(--shinynotebook-popover-width);
+  height: var(--shinynotebook-popover-height);
+  */
+  width: fit-content;
+  height: fit-content;
+  margin: unset;
+  box-sizing: border-box;
+}

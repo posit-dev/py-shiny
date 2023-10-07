@@ -82,7 +82,7 @@ class IndirectConnection(Connection):
 class JupyterKernelConnection(Connection):
     def __init__(self, comm: comm.BaseComm):
         self._comm = comm
-        self._queue: asyncio.Queue[str] = asyncio.Queue()
+        self._queue: asyncio.Queue[str | None] = asyncio.Queue()
         self._http_conn = HTTPConnection(scope={"type": "websocket", "headers": {}})
 
         comm.on_msg(self._on_msg)
@@ -94,14 +94,17 @@ class JupyterKernelConnection(Connection):
 
     def _on_close(self, msg: Any) -> None:
         # TODO: Handle this by getting self.receive() to raise ConnectionClosed
-        ...
+        self._queue.put_nowait(None)
 
     async def send(self, message: str) -> None:
         # TODO: Don't do this extra serialization/deserialization
         self._comm.send(json.loads(message))
 
     async def receive(self) -> str:
-        return await self._queue.get()
+        res = await self._queue.get()
+        if res is None:
+            raise ConnectionClosed()
+        return res
 
     async def close(self, code: int, reason: Optional[str]) -> None:
         logger.debug("Shiny's Connection.close was called")

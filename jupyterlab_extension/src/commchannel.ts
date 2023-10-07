@@ -22,6 +22,19 @@ export function createNotebookComm(notebookWidget: DocumentWidget) {
   return new KernelSocket(comm);
 }
 
+export function createConsoleComm(consoleWidget: any) {
+  // I don't know how to get the ConsolePanel type, so duck type. (I tried adding
+  // @jupyterlab/console to the dependencies, but then jlnp no longer worked.)
+  const kernel = (consoleWidget as any)?.sessionContext?.session?.kernel;
+
+  if (!kernel) {
+    return null;
+  }
+
+  let comm = kernel.createComm('shiny');
+  return new KernelSocket(comm);
+}
+
 // CommToWS is a wrapper around a Jupyter Comm that implements the WebSocket interface
 export class KernelSocket {
   comm: any;

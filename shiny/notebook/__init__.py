@@ -6,14 +6,13 @@ from typing import Any, cast
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 from IPython.core.interactiveshell import InteractiveShell
-from IPython.display import HTML, display
+from IPython.display import display
 
 import shiny._namespaces
 import shiny.reactive
 from shiny.session import _utils as session_utils
 
 from ._mimerender import initialize as initialize_mime_render
-from .log import logger
 from .shiny_shim import JupyterKernelConnection, create_kernel_session
 
 with shiny.reactive.isolate():

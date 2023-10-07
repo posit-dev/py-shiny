@@ -12,6 +12,7 @@ import { Message } from '@lumino/messaging';
 import { registerElement } from './shiny-bind-element';
 import { SuperclientWebSocket as SuperclientSocket } from './superclient';
 import { KernelSocket } from './commchannel';
+import { tag } from './tag';
 
 // This has the side-effect of registering the custom element
 registerElement();
@@ -113,14 +114,6 @@ function injectShinyDependencies() {
   );
 }
 
-function tag(tagname: string, attrs: Record<string, string>) {
-  const el = document.createElement(tagname);
-  Object.entries(attrs).forEach(([k, v]) => {
-    el.setAttribute(k, v);
-  });
-  return el;
-}
-
 export default plugin;
 
 class HtmltoolsRenderer extends Widget implements IRenderMime.IRenderer {
@@ -130,7 +123,7 @@ class HtmltoolsRenderer extends Widget implements IRenderMime.IRenderer {
   }
 
   async renderModel(model: IRenderMime.IMimeModel): Promise<void> {
-    const shinyBind = document.createElement('shiny-bind');
+    const shinyBind = tag('shiny-bind');
     const content = JSON.parse(model.data[MIME_TYPE] as any) || {};
     const renderFunc =
       window.Shiny.renderContentAsync || window.Shiny.renderContent;
@@ -151,7 +144,15 @@ export function connect(superclient: SuperclientSocket, socket: KernelSocket) {
   };
 
   function onSend(event: MessageEvent) {
-    socket.send(event.data);
+    try {
+      socket.send(event.data);
+    } catch (e) {
+      console.error('Failed to send: ', e);
+      // TODO: Should we really dispose without any more information? But I didn't
+      // see any open/closed state property in the docs, and onClose clearly isn't
+      // getting called.
+      dispose();
+    }
   }
   superclient.addEventListener('send', onSend);
 
@@ -159,7 +160,11 @@ export function connect(superclient: SuperclientSocket, socket: KernelSocket) {
     console.log(
       "Socket closed. Code: '" + event.code + "'. Reason: " + event.reason
     );
+    dispose();
+  };
+
+  function dispose() {
     socket.onmessage = null;
     superclient.removeEventListener('send', onSend);
-  };
+  }
 }
