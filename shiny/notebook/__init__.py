@@ -73,6 +73,8 @@ def load_ipython_extension(ipython: InteractiveShell):
 
     asyncio.create_task(proceed())
 
+    ipython.ast_node_interactivity = "all"
+    print('Setting InteractiveShell.ast_node_interactivity="all"')
     print("Shiny is running")
 
 
