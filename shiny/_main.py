@@ -188,6 +188,9 @@ def run_app(
         hot-reload. Set to 0 to use a random port.
     reload
         Enable auto-reload.
+    reload_dirs
+        List of directories (in addition to the app directory) to watch for changes that
+        will trigger app reloading.
     ws_max_size
         WebSocket max size message in bytes.
     log_level
@@ -274,6 +277,7 @@ def run_app(
             # Adding `reload_includes` param while `reload=False` produces an warning
             # https://github.com/encode/uvicorn/blob/d43afed1cfa018a85c83094da8a2dd29f656d676/uvicorn/config.py#L298-L304
             "reload_includes": ["*.py", "*.css", "*.js", "*.htm", "*.html", "*.png"],
+            "reload_excludes": [".*", "*.py[cod]", "__pycache__", "env", "venv"],
             "reload_dirs": reload_dirs,
         }
 
@@ -504,4 +508,5 @@ def get_shiny_deps() -> None:
 class ReloadArgs(TypedDict):
     reload: NotRequired[bool]
     reload_includes: NotRequired[list[str]]
+    reload_excludes: NotRequired[list[str]]
     reload_dirs: NotRequired[list[str]]
