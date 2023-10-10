@@ -7,7 +7,6 @@ from pathlib import Path, PurePath
 from typing import Literal, Optional, Protocol
 
 from htmltools import (
-    HTML,
     Tag,
     TagAttrs,
     TagAttrValue,
@@ -15,7 +14,6 @@ from htmltools import (
     TagFunction,
     Tagifiable,
     css,
-    div,
     tags,
 )
 
@@ -33,14 +31,12 @@ from ...ui.fill import as_fill_carrier, as_fill_item
 __all__ = (
     # Worried about `wrapper`
     "card",
+    # Do not want to expose card_body yet
     "card_body",
-    #
+    # Questioning:
     "card_title",
-    "card_body",
     "card_image",
 )
-
-TagCallable = TagFunction
 
 
 # TODO-maindocs; @add_example()

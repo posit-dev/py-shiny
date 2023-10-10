@@ -14,11 +14,12 @@ from htmltools import MetadataNode, Tag, TagChild, TagList, css, div, tags
 from ..._namespaces import resolve_id_or_none
 from ..._utils import private_random_int
 from ...types import NavSetArg
+from ...ui._card import CardItem, card, card_footer, card_header
 from ...ui._html_dependencies import bootstrap_deps
 from ...ui._tag import tag_add_style
 from ...ui.css_unit import CssUnit, as_css_padding, as_css_unit
 from ...ui.fill import as_fill_carrier
-from ._card import CardItem, card, card_body, card_footer, card_header
+from ._card import card_body
 from ._sidebar import Sidebar, layout_sidebar
 
 
