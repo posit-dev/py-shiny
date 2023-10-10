@@ -49,13 +49,10 @@ def convert_code_cells_to_app_py(json_file: str | Path, app_file: str | Path) ->
             continue
 
         if "server-global" in cell["context"]:
-            global_code_cell_texts.append(
-                cell["text"] + "\n\n# ============================\n"
-            )
+            global_code_cell_texts.append(cell["text"] + "\n\n# " + "=" * 72 + "\n\n")
         elif "server-session" in cell["context"]:
             session_code_cell_texts.append(
-                indent(cell["text"], "    ")
-                + "\n\n    # ============================\n"
+                indent(cell["text"], "    ") + "\n\n    # " + "=" * 72 + "\n\n"
             )
 
     app_content = f"""
