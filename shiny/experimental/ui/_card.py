@@ -12,6 +12,7 @@ from htmltools import (
     TagAttrs,
     TagAttrValue,
     TagChild,
+    TagFunction,
     Tagifiable,
     TagList,
     css,
@@ -20,11 +21,11 @@ from htmltools import (
 )
 
 from ...types import MISSING, MISSING_TYPE
-from ._css_unit import CssUnit, as_css_padding, as_css_unit
-from ._fill import as_fill_carrier, as_fill_item, as_fillable_container
-from ._htmldeps import card_dependency
-from ._tooltip import tooltip
-from ._utils import consolidate_attrs
+from ...ui._tooltip import tooltip
+from ...ui._x._htmldeps import card_dependency
+from ...ui._x._utils import consolidate_attrs
+from ...ui.css_unit import CssUnit, as_css_padding, as_css_unit
+from ...ui.fill import as_fill_carrier, as_fill_item, as_fillable_container
 
 __all__ = (
     "CardItem",
@@ -35,6 +36,8 @@ __all__ = (
     "card_footer",
     "card_image",
 )
+
+TagCallable = TagFunction
 
 
 # TODO-maindocs; @add_example()
@@ -60,8 +63,7 @@ def card(
     ----------
     *args
         Unnamed arguments can be any valid child of an :class:`~htmltools.Tag` (which
-        includes card items such as :func:`~shiny.experimental.ui.card_body`. Named
-        arguments become HTML attributes on the returned Tag.
+        includes card items such as :func:`~shiny.experimental.ui.card_body`.
     full_screen
         If `True`, an icon will appear when hovering over the card body. Clicking the
         icon expands the card to fit viewport size.
@@ -82,6 +84,8 @@ def card(
         grouped together into one `wrapper` call (e.g. given `card("a", "b",
         card_body("c"), "d")`, `wrapper` would be called twice, once with `"a"` and
         `"b"` and once with `"d"`).
+    **kwargs
+        HTML attributes on the returned Tag.
 
     Returns
     -------
@@ -392,51 +396,10 @@ def _wrap_children_in_card(
     return tag_children
 
 
-# https://mypy.readthedocs.io/en/stable/protocols.html#callback-protocols
-class TagCallable(Protocol):  # Should this be exported from htmltools?
-    """
-    Callable definition for a defined :class:`~htmltools.Tag` method.
-
-    This is used to define the `container` argument in :func:`~shiny.experimental.ui.card_title`,
-    :func:`~shiny.experimental.ui.card_header`, and :func:`~shiny.experimental.ui.card_footer`.
-
-    See Also
-    --------
-    * :class:`~htmltools.Tag`
-    """
-
-    def __call__(
-        self,
-        *args: TagChild | TagAttrs,
-        _add_ws: bool = True,
-        **kwargs: TagAttrValue,
-    ) -> Tagifiable:
-        """
-        A tag method.
-
-        Parameters
-        ----------
-        *args
-            Contents to the tag method. Or tag attributes that are supplied to the
-            resolved :class:`~htmltools.Tag` object.
-        _add_ws
-            Whether or not to add whitespace to the returned :class:`~htmltools.Tag`
-            object.
-        **kwargs
-            Additional HTML attributes for the returned Tag.
-
-        Returns
-        -------
-        :
-            A :class:`~htmltools.Tag` object.
-        """
-        ...
-
-
 # TODO-maindocs; @add_example()
 def card_title(
     *args: TagChild | TagAttrs,
-    container: TagCallable = tags.h5,
+    container: TagFunction = tags.h5,
     **kwargs: TagAttrValue,
 ) -> Tagifiable:
     """
@@ -474,7 +437,7 @@ def card_title(
 # TODO-maindocs; @add_example()
 def card_header(
     *args: TagChild | TagAttrs,
-    container: TagCallable = tags.div,
+    container: TagFunction = tags.div,
     **kwargs: TagAttrValue,
 ) -> CardItem:
     """
