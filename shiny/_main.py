@@ -30,6 +30,8 @@ def main() -> None:
 
 stop_shortcut = "Ctrl+C"
 
+RELOAD_INCLUDES_DEFAULT = ("*.py", "*.css", "*.js", "*.htm", "*.html", "*.png")
+
 
 @main.command(
     help=f"""Run a Shiny app (press {stop_shortcut} to stop).
@@ -76,7 +78,7 @@ any of the following will work:
     "--reload",
     is_flag=True,
     default=False,
-    help="Enable auto-reload, when these types of files change: .py .css .js .html",
+    help="Enable auto-reload. See --reload-includes for types of files that are monitored for changes.",
 )
 @click.option(
     "--reload-dir",
@@ -85,6 +87,13 @@ any of the following will work:
     help="Indicate a directory `--reload` should (recursively) monitor for changes, in "
     "addition to the app's parent directory. Can be used more than once.",
     type=click.Path(exists=True),
+)
+@click.option(
+    "--reload-includes",
+    "reload_includes",
+    default=",".join(RELOAD_INCLUDES_DEFAULT),
+    help="File glob(s) to indicate which files should be monitored for changes. Defaults"
+    f' to "{",".join(RELOAD_INCLUDES_DEFAULT)}".',
 )
 @click.option(
     "--ws-max-size",
@@ -131,12 +140,14 @@ def run(
     autoreload_port: int,
     reload: bool,
     reload_dirs: tuple[str, ...],
+    reload_includes: str,
     ws_max_size: int,
     log_level: str,
     app_dir: str,
     factory: bool,
     launch_browser: bool,
 ) -> None:
+    reload_includes_list = reload_includes.split(",")
     return run_app(
         app,
         host=host,
@@ -144,6 +155,7 @@ def run(
         autoreload_port=autoreload_port,
         reload=reload,
         reload_dirs=list(reload_dirs),
+        reload_includes=reload_includes_list,
         ws_max_size=ws_max_size,
         log_level=log_level,
         app_dir=app_dir,
@@ -159,6 +171,7 @@ def run_app(
     autoreload_port: int = 0,
     reload: bool = False,
     reload_dirs: Optional[list[str]] = None,
+    reload_includes: list[str] | tuple[str, ...] = RELOAD_INCLUDES_DEFAULT,
     ws_max_size: int = 16777216,
     log_level: Optional[str] = None,
     app_dir: Optional[str] = ".",
@@ -191,6 +204,9 @@ def run_app(
     reload_dirs
         List of directories (in addition to the app directory) to watch for changes that
         will trigger app reloading.
+    reload_includes
+        List or tuple of file globs to indicate which files should be monitored for
+        changes.
     ws_max_size
         WebSocket max size message in bytes.
     log_level
@@ -276,7 +292,7 @@ def run_app(
             "reload": reload,
             # Adding `reload_includes` param while `reload=False` produces an warning
             # https://github.com/encode/uvicorn/blob/d43afed1cfa018a85c83094da8a2dd29f656d676/uvicorn/config.py#L298-L304
-            "reload_includes": ["*.py", "*.css", "*.js", "*.htm", "*.html", "*.png"],
+            "reload_includes": list(reload_includes),
             "reload_excludes": [".*", "*.py[cod]", "__pycache__", "env", "venv"],
             "reload_dirs": reload_dirs,
         }
