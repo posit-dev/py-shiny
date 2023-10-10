@@ -4,11 +4,11 @@ from typing import Literal, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
-from ...ui._tag import consolidate_attrs
-from ...ui._x._htmldeps import grid_dependency
-from ...ui.css_unit import CssUnit, as_css_unit
-from ...ui.fill import as_fill_item, as_fillable_container
-from ._utils import is_01_scalar
+from ._tag import consolidate_attrs
+from ._x._htmldeps import grid_dependency
+from ._x._utils import is_01_scalar
+from .css_unit import CssUnit, as_css_unit
+from .fill import as_fill_item, as_fillable_container
 
 
 def layout_column_wrap(
@@ -44,7 +44,7 @@ def layout_column_wrap(
         manually, either via a `style` attribute or a CSS stylesheet.
     *args
         Unnamed arguments should be UI elements (e.g.,
-        :func:`~shiny.experimental.ui.card`). Named arguments become attributes on the
+        :func:`~shiny.ui.card`). Named arguments become attributes on the
         containing :class:`~htmltools.Tag` element.
     fixed_width
         Whether or not to interpret the `width` as a minimum (`fixed_width=False`) or
@@ -55,7 +55,7 @@ def layout_column_wrap(
         height, but heights may vary between rows.
     fill
         Whether or not to allow the layout to grow/shrink to fit a fillable container
-        with an opinionated height (e.g., :func:`~shiny.experimental.ui.page_fillable`).
+        with an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
     fillable
         Whether or not each element is wrapped in a fillable container.
     height
