@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
-from ... import Session
-from ..._utils import drop_none
-from ...module import resolve_id
-from ...session import require_active_session
-
-
+from .. import Session
+from .._utils import drop_none
+from ..module import resolve_id
+from ..session import require_active_session
+from ._utils import _session_on_flush_send_msg
 def toggle_switch(
     id: str, value: Optional[bool] = None, session: Optional[Session] = None
 ):
