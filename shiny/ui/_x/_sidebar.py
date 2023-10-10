@@ -11,8 +11,8 @@ from ...ui._x._htmldeps import sidebar_dependency
 
 # from ._color import get_color_contrast
 from ...ui.css_unit import CssUnit, as_css_padding, as_css_unit
+from .._tag import consolidate_attrs, trinary
 from ..fill import as_fill_item, as_fillable_container
-from ._utils import consolidate_attrs, trinary
 
 
 class Sidebar:

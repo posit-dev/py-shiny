@@ -36,11 +36,11 @@ from .._docstring import add_example
 from ..module import current_namespace
 from ..types import MISSING, MISSING_TYPE
 from ._html_dependencies import jqui_deps
+from ._tag import consolidate_attrs as x_consolidate_attrs
 from ._utils import get_window_title
 from ._x._sidebar import PanelMain as XPanelMain
 from ._x._sidebar import PanelSidebar as XPanelSidebar
 from ._x._sidebar import layout_sidebar as x_layout_sidebar
-from ._x._utils import consolidate_attrs as x_consolidate_attrs
 
 
 # TODO: make a python version of the layout guide?

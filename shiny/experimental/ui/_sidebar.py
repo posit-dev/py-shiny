@@ -10,8 +10,8 @@ from htmltools import tags
 from ... import Session
 from ..._namespaces import resolve_id_or_none
 from ...session import require_active_session
+from ...ui._tag import consolidate_attrs, trinary
 from ...ui._x._htmldeps import sidebar_dependency
-from ...ui._x._utils import consolidate_attrs, trinary
 from ...ui.css_unit import CssUnit, as_css_padding, as_css_unit
 from ...ui.fill import as_fill_item, as_fillable_container
 from ._card import CardItem

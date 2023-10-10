@@ -4,8 +4,8 @@ from typing import Literal, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
+from ...ui._tag import consolidate_attrs
 from ...ui._x._htmldeps import grid_dependency
-from ...ui._x._utils import consolidate_attrs
 from ...ui.css_unit import CssUnit, as_css_unit
 from ...ui.fill import as_fill_item, as_fillable_container
 from ._utils import is_01_scalar

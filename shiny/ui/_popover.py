@@ -7,8 +7,8 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, div, tags
 
 from .._namespaces import resolve_id_or_none
 from .._utils import drop_none
+from ._tag import consolidate_attrs
 from ._web_component import web_component
-from ._x._utils import consolidate_attrs
 
 
 def popover(

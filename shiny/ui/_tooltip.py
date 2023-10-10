@@ -6,8 +6,8 @@ from typing import Literal, Optional
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, tags
 
 from .._namespaces import resolve_id_or_none
+from ._tag import consolidate_attrs
 from ._web_component import web_component
-from ._x._utils import consolidate_attrs
 
 
 def tooltip(
