@@ -3,16 +3,11 @@ from __future__ import annotations
 import json
 from typing import Literal, Optional
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, tags
 
-from ... import Session
-from ..._namespaces import resolve_id_or_none
-from ..._utils import drop_none
-from ...session import require_active_session
-
-# from ._color import get_color_contrast
-from ._utils import consolidate_attrs
+from .._namespaces import resolve_id_or_none
 from ._web_component import web_component
+from ._x._utils import consolidate_attrs
 
 
 def tooltip(
@@ -83,61 +78,3 @@ def tooltip(
     )
 
     return res
-
-
-def _session_on_flush_send_msg(
-    id: str, session: Session | None, msg: dict[str, object]
-) -> None:
-    session = require_active_session(session)
-    session.on_flush(lambda: session.send_input_message(id, msg), once=True)
-
-
-def toggle_tooltip(
-    id: str, show: Optional[bool] = None, session: Optional[Session] = None
-) -> None:
-    """
-    Programmatically show/hide a tooltip
-
-    Parameters
-    ----------
-    id
-        A character string that matches an existing tooltip id.
-    show
-        Whether to show (`True`) or hide (`False`) the tooltip. The default (`None`)
-        will show if currently hidden and hide if currently shown. Note that a tooltip
-        will not be shown if the trigger is not visible (e.g., it's hidden behind a
-        tab).
-    session
-        A Shiny session object (the default should almost always be used).
-    """
-    _session_on_flush_send_msg(
-        id,
-        session,
-        {
-            "method": "toggle",
-            "value": _normalize_show_value(show),
-        },
-    )
-
-
-# @describeIn tooltip Update the contents of a tooltip.
-# @export
-def update_tooltip(id: str, *args: TagChild, session: Optional[Session] = None) -> None:
-    _session_on_flush_send_msg(
-        id,
-        session,
-        drop_none(
-            {
-                "method": "update",
-                "title": require_active_session(session)._process_ui(TagList(*args))
-                if len(args) > 0
-                else None,
-            }
-        ),
-    )
-
-
-def _normalize_show_value(show: bool | None) -> Literal["toggle", "show", "hide"]:
-    if show is None:
-        return "toggle"
-    return "show" if show else "hide"

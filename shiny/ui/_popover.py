@@ -3,21 +3,12 @@ from __future__ import annotations
 import json
 from typing import Any, Literal, Optional
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, div, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, div, tags
 
-from ... import Session
-from ..._namespaces import resolve_id_or_none
-from ..._utils import drop_none
-from ...session import require_active_session
-from ._tooltip import _normalize_show_value, _session_on_flush_send_msg
-from ._utils import consolidate_attrs
+from .._namespaces import resolve_id_or_none
+from .._utils import drop_none
 from ._web_component import web_component
-
-__all__ = (
-    "popover",
-    "toggle_popover",
-    "update_popover",
-)
+from ._x._utils import consolidate_attrs
 
 
 def popover(
@@ -57,7 +48,7 @@ def popover(
         The placement of the popover relative to its trigger.
     options
         A list of additional
-        `options <https://getbootstrap.com/docs/5.3/components/popovers/#options>`_.
+        `options <https://getbootstrap.com/docs/5.2/components/popovers/#options>`_.
 
 
     Closing popovers
@@ -68,10 +59,10 @@ def popover(
 
     See Also
     --------
-    * <https://getbootstrap.com/docs/5.3/components/popovers/>
-    * :func:`~shiny.experimental.ui.toggle_popover`
-    * :func:`~shiny.experimental.ui.update_popover`
-    * :func:`~shiny.experimental.ui.tooltip`
+    * <https://getbootstrap.com/docs/5.2/components/popovers/>
+    * :func:`~shiny.ui.toggle_popover`
+    * :func:`~shiny.ui.update_popover`
+    * :func:`~shiny.ui.tooltip`
     """
 
     # Theming/Styling
@@ -123,82 +114,3 @@ def popover(
     )
 
     return res
-
-
-def toggle_popover(
-    id: str,
-    show: Optional[bool] = None,
-    session: Optional[Session] = None,
-) -> None:
-    """
-    Programmatically show/hide a popover.
-
-    Parameters
-    ----------
-    id
-        The id of the popover DOM element to update.
-    show
-        Whether to show (`True`) or hide (`False`) the popover. The default
-        (`None`) will show if currently hidden and hide if currently shown.
-        Note that a popover will not be shown if the trigger is not visible
-        (e.g., it is hidden behind a tab).
-    session
-        A Shiny session object (the default should almost always be used).
-
-    See Also
-    --------
-    * :func:`~shiny.experimental.ui.popover`
-    * :func:`~shiny.experimental.ui.update_popover`
-    """
-    session = require_active_session(session)
-
-    _session_on_flush_send_msg(
-        id,
-        session,
-        {
-            "method": "toggle",
-            "value": _normalize_show_value(show),
-        },
-    )
-
-
-def update_popover(
-    id: str,
-    *args: TagChild,
-    title: Optional[TagChild] = None,
-    session: Optional[Session] = None,
-) -> None:
-    """
-    Update the contents or title of a popover.
-
-    Parameters
-    ----------
-    id
-        The id of the popover DOM element to update.
-    args
-        The new contents of the popover.
-    title
-        The new title of the popover.
-    session
-        A Shiny session object (the default should almost always be used).
-
-    See Also
-    --------
-    * :func:`~shiny.experimental.ui.popover`
-    * :func:`~shiny.experimental.ui.toggle_popover`
-    """
-    session = require_active_session(session)
-
-    _session_on_flush_send_msg(
-        id,
-        session,
-        drop_none(
-            {
-                "method": "update",
-                "content": session._process_ui(TagList(*args))
-                if len(args) > 0
-                else None,
-                "header": session._process_ui(title) if title is not None else None,
-            },
-        ),
-    )
