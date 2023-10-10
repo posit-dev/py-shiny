@@ -30,6 +30,7 @@ class RenderedDeps(TypedDict):
 _current_session: ContextVar[Optional[Session]] = ContextVar(
     "current_session", default=None
 )
+_default_session: Optional[Session] = None
 
 
 def get_current_session() -> Optional[Session]:
@@ -51,7 +52,7 @@ def get_current_session() -> Optional[Session]:
     -------
     ~require_active_session
     """
-    return _current_session.get()
+    return _current_session.get() or _default_session
 
 
 @contextmanager

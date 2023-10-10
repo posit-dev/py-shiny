@@ -28,7 +28,7 @@ Id = Union[str, ResolvedId]
 
 
 def current_namespace() -> ResolvedId:
-    return _current_namespace.get()
+    return _current_namespace.get() or _default_namespace
 
 
 def resolve_id(id: Id) -> ResolvedId:
@@ -43,7 +43,7 @@ def resolve_id(id: Id) -> ResolvedId:
     Returns
         An ID (if in a module, this will contain a namespace prefix).
     """
-    curr_ns = _current_namespace.get()
+    curr_ns = current_namespace()
     return curr_ns(id)
 
 
@@ -90,15 +90,16 @@ def validate_id(id: str):
         )
 
 
-_current_namespace: ContextVar[ResolvedId] = ContextVar(
-    "current_namespace", default=Root
+_current_namespace: ContextVar[ResolvedId | None] = ContextVar(
+    "current_namespace", default=None
 )
+_default_namespace: ResolvedId = Root
 
 
 @contextmanager
 def namespace_context(id: Id | None):
     namespace = resolve_id(id) if id else Root
-    token: Token[ResolvedId] = _current_namespace.set(namespace)
+    token: Token[ResolvedId | None] = _current_namespace.set(namespace)
     try:
         yield
     finally:
