@@ -74,7 +74,11 @@ def load_ipython_extension(ipython: InteractiveShell):
     asyncio.create_task(proceed())
 
     ipython.ast_node_interactivity = "all"
+    ipython.run_cell("from shiny import ui, render, reactive")
+    ipython.run_cell("from shiny.notebook.magic import inputs")
     print('Setting InteractiveShell.ast_node_interactivity="all"')
+    print("from shiny import ui, render, reactive")
+    print("from shiny.notebook.magic import inputs")
     print("Shiny is running")
 
 
