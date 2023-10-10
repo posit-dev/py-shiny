@@ -10,10 +10,12 @@ from typing import Literal, cast
 from ._typing_extensions import NotRequired, TypedDict
 
 QuartoShinyCodeCellClass = Literal["python", "r", "cell-code", "hidden"]
+QuartoShinyCodeCellContext = Literal["ui", "server-session", "server-global"]
 
 
 class QuartoShinyCodeCell(TypedDict):
     text: str
+    context: list[QuartoShinyCodeCellContext]
     classes: list[QuartoShinyCodeCellClass]
 
 
@@ -39,25 +41,32 @@ def convert_code_cells_to_app_py(json_file: str | Path, app_file: str | Path) ->
 
     cells = data["cells"]
 
-    code_cell_texts: list[str] = []
+    session_code_cell_texts: list[str] = []
+    global_code_cell_texts: list[str] = []
 
     for cell in cells:
         if "python" not in cell["classes"]:
             continue
 
-        if "# skip" in cell["text"]:
-            continue
-
-        code_cell_texts.append(
-            indent(cell["text"], "    ") + "\n\n    # ============================\n"
-        )
+        if "server-global" in cell["context"]:
+            global_code_cell_texts.append(
+                cell["text"] + "\n\n# ============================\n"
+            )
+        elif "server-session" in cell["context"]:
+            session_code_cell_texts.append(
+                indent(cell["text"], "    ")
+                + "\n\n    # ============================\n"
+            )
 
     app_content = f"""
 from pathlib import Path
 from shiny import App, Inputs, Outputs, Session, ui
 
+{ "".join(global_code_cell_texts) }
+
+
 def server(input: Inputs, output: Outputs, session: Session) -> None:
-{ "".join(code_cell_texts) }
+{ "".join(session_code_cell_texts) }
 
 app = App(
     Path(__file__).parent / "{ data["html_file"] }",
