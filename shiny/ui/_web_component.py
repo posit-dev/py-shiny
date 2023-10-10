@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild
 
-from ._htmldeps import web_component_dependency
+from ._x._htmldeps import web_component_dependency
 
 
 def web_component(
