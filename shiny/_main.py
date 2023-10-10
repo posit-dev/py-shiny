@@ -508,11 +508,8 @@ def static_assets(command: str) -> None:
 @click.argument(
     "py_file",
     type=str,
-    default=None,
 )
-def cells_to_app(json_file: str, py_file: str | None) -> None:
-    if py_file is None:
-        py_file = str(Path(json_file).parent / "app.py")
+def cells_to_app(json_file: str, py_file: str) -> None:
     shiny.quarto.convert_code_cells_to_app_py(json_file, py_file)
 
 
