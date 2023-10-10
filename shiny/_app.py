@@ -397,7 +397,6 @@ class App:
         rendered = doc.render(lib_prefix=lib_prefix)
         self._ensure_web_dependencies(rendered["dependencies"])
 
-        # TODO: scan for inlined <script> deps, inject them as well.
         return rendered
 
 
