@@ -306,17 +306,6 @@ class OutputRenderer(Generic[OT], ABC):
         )
         return ret
 
-    def _repr_htmltools_(self) -> str | None:
-        import json
-
-        import htmltools
-
-        if self.default_output is None:
-            return None
-        res = htmltools.TagList(self.default_output(self.__name__)).render()
-        # TODO: Include deps too
-        return json.dumps(dict(html=res["html"]))
-
     def _repr_html_(self) -> str | None:
         import htmltools
 

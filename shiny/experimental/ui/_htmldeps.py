@@ -10,7 +10,7 @@ from ..._typing_extensions import NotRequired, TypedDict
 from ..._versions import bslib as bslib_version
 from ..._versions import htmltools as htmltools_version
 
-_x_www = PurePath(__file__).parent.parent / "www"
+_x_www = PurePath("experimental") / "www"
 _x_www_path = str(_x_www)
 _x_htmltools_path = _x_www / "htmltools"
 _x_components_path = _x_www / "bslib" / "components"
@@ -70,7 +70,7 @@ def _bslib_component_dep(
 
 
 def fill_dependency() -> HTMLDependency:
-    return _htmltools_dep("fill", stylesheet=True)
+    return _htmltools_dep("fill", stylesheet=True, all_files=False)
 
 
 # -- bslib -------------------------
