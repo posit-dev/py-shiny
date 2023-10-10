@@ -7,10 +7,11 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, css, div
 from htmltools import svg as svgtags
 from htmltools import tags
 
+from ...ui._x._htmldeps import sidebar_dependency
+
 # from ._color import get_color_contrast
-from ._css_unit import CssUnit, as_css_padding, as_css_unit
-from ._fill import as_fill_item, as_fillable_container
-from ._htmldeps import sidebar_dependency
+from ...ui.css_unit import CssUnit, as_css_padding, as_css_unit
+from ..fill import as_fill_item, as_fillable_container
 from ._utils import consolidate_attrs, trinary
 
 

@@ -15,11 +15,11 @@ from ..._namespaces import resolve_id_or_none
 from ..._utils import private_random_int
 from ...types import NavSetArg
 from ...ui._html_dependencies import bootstrap_deps
+from ...ui._tag import tag_add_style
+from ...ui.css_unit import CssUnit, as_css_padding, as_css_unit
+from ...ui.fill import as_fill_carrier
 from ._card import CardItem, card, card_body, card_footer, card_header
-from ._css_unit import CssUnit, as_css_padding, as_css_unit
-from ._fill import as_fill_carrier
 from ._sidebar import Sidebar, layout_sidebar
-from ._tag import tag_add_style
 
 
 # -----------------------------------------------------------------------------
@@ -81,7 +81,7 @@ class Nav:
 
 
 class NavSet:
-    args: tuple[NavSetArg | MetadataNode]
+    args: tuple[NavSetArg | MetadataNode, ...]
     ul_class: str
     id: Optional[str]
     selected: Optional[str]

@@ -4,10 +4,11 @@ from typing import Literal, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
-from ._css_unit import CssUnit, as_css_unit
-from ._fill import as_fill_item, as_fillable_container
-from ._htmldeps import grid_dependency
-from ._utils import consolidate_attrs, is_01_scalar
+from ...ui._x._htmldeps import grid_dependency
+from ...ui._x._utils import consolidate_attrs
+from ...ui.css_unit import CssUnit, as_css_unit
+from ...ui.fill import as_fill_item, as_fillable_container
+from ._utils import is_01_scalar
 
 
 def layout_column_wrap(

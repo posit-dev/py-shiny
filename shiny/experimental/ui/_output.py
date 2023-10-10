@@ -20,7 +20,7 @@ from ...ui._plot_output_opts import (
     format_opt_names,
     hover_opts,
 )
-from ._fill import as_fill_item, as_fillable_container
+from ...ui.fill import as_fill_item, as_fillable_container
 
 
 # @add_example()

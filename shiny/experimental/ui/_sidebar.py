@@ -10,13 +10,11 @@ from htmltools import tags
 from ... import Session
 from ..._namespaces import resolve_id_or_none
 from ...session import require_active_session
-
-# from ._color import get_color_contrast
+from ...ui._x._htmldeps import sidebar_dependency
+from ...ui._x._utils import consolidate_attrs, trinary
+from ...ui.css_unit import CssUnit, as_css_padding, as_css_unit
+from ...ui.fill import as_fill_item, as_fillable_container
 from ._card import CardItem
-from ._css_unit import CssUnit, as_css_padding, as_css_unit
-from ._fill import as_fill_item, as_fillable_container
-from ._htmldeps import sidebar_dependency
-from ._utils import consolidate_attrs, trinary
 
 
 class Sidebar:

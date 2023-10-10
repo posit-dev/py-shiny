@@ -6,7 +6,7 @@ from htmltools import HTMLDependency, Tag
 
 from ... import __version__
 from ..._namespaces import resolve_id
-from ...experimental.ui._fill import bind_fill_role
+from ..fill import as_fill_carrier
 
 
 def data_frame_deps() -> HTMLDependency:
@@ -40,12 +40,10 @@ def output_data_frame(id: str) -> Tag:
     --------
     :func:`~shiny.render.data_frame`
     """
-    return bind_fill_role(
+    return as_fill_carrier(
         Tag(
             "shiny-data-frame",
             data_frame_deps(),
             id=resolve_id(id),
         ),
-        item=True,
-        container=True,
     )

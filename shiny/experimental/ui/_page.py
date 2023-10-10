@@ -17,12 +17,12 @@ from htmltools import (
 from ...types import MISSING, MISSING_TYPE, NavSetArg
 from ...ui._page import page_bootstrap
 from ...ui._utils import get_window_title
-from ._css_unit import CssUnit, as_css_padding, as_css_unit
-from ._fill import as_fillable_container
-from ._htmldeps import page_fillable_dependency, page_sidebar_dependency
+from ...ui._x._htmldeps import page_fillable_dependency, page_sidebar_dependency
+from ...ui._x._utils import consolidate_attrs
+from ...ui.css_unit import CssUnit, as_css_padding, as_css_unit
+from ...ui.fill import as_fillable_container
 from ._navs import navset_bar
 from ._sidebar import Sidebar, layout_sidebar
-from ._utils import consolidate_attrs
 
 
 def page_sidebar(
