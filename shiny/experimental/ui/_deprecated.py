@@ -1,8 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Optional, TypeVar, overload
+from typing import Any, Literal, Optional, Sequence, TypeVar, overload
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagList
+from htmltools import (
+    MetadataNode,
+    Tag,
+    TagAttrs,
+    TagAttrValue,
+    TagChild,
+    TagFunction,
+    TagList,
+)
 
 from ..._deprecated import warn_deprecated
 from ...session import Session
@@ -30,6 +38,12 @@ from ...ui._card import WrapperCallable as MainWrapperCallable
 from ...ui._card import card_footer as main_card_footer
 from ...ui._card import card_header as main_card_header
 from ...ui._layout import layout_column_wrap as main_layout_column_wrap
+from ...ui._navs import NavSetArg
+from ...ui._navs import NavSetBar as MainNavSetBar
+from ...ui._navs import NavSetCard as MainNavSetCard
+from ...ui._navs import navset_bar as main_navset_bar
+from ...ui._navs import navset_card_pill as main_navset_card_pill
+from ...ui._navs import navset_card_tab as main_navset_card_tab
 from ...ui._tag import consolidate_attrs
 from ...ui.css_unit._css_unit import CssUnit as MainCssUnit
 from ...ui.css_unit._css_unit import as_css_padding as main_as_css_padding
@@ -42,7 +56,6 @@ from ...ui.fill import is_fill_carrier as main_is_fill_carrier
 from ...ui.fill import is_fill_item as main_is_fill_item
 from ...ui.fill import is_fillable_container as main_is_fillable_container
 from ...ui.fill import remove_all_fill as main_remove_all_fill
-from ._navs import NavSetArg, NavSetCard, navset_card_pill, navset_card_tab
 from ._sidebar import (
     DeprecatedPanelMain,
     DeprecatedPanelSidebar,
@@ -105,6 +118,10 @@ __all__ = (
     "CardItem",
     "card_header",
     "card_footer",
+    # Navs
+    "navset_bar",
+    "navset_card_tab",
+    "navset_card_pill",
 )
 
 ######################
@@ -184,14 +201,14 @@ def navset_pill_card(
     header: TagChild = None,
     footer: TagChild = None,
     placement: Literal["above", "below"] = "above",
-) -> NavSetCard:
+) -> MainNavSetCard:
     """Deprecated. Please use `navset_card_pill()` instead of `navset_pill_card()`."""
     warn_deprecated(
         "`navset_pill_card()` is deprecated. "
         "This method will be removed in a future version, "
         "please use :func:`shiny.experimental.ui.navset_card_pill` instead."
     )
-    return navset_card_pill(
+    return main_navset_card_pill(
         *args,
         id=id,
         selected=selected,
@@ -210,14 +227,14 @@ def navset_tab_card(
     sidebar: Optional[Sidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
-) -> NavSetCard:
+) -> MainNavSetCard:
     """Deprecated. Please use `navset_card_tab()` instead of `navset_tab_card()`."""
     warn_deprecated(
         "`navset_tab_card()` is deprecated. "
         "This method will be removed in a future version, "
         "please use :func:`shiny.experimental.ui.navset_card_tab` instead."
     )
-    return navset_card_tab(
+    return main_navset_card_tab(
         *args,
         id=id,
         selected=selected,
@@ -923,4 +940,104 @@ def layout_column_wrap(
         gap=gap,
         class_=class_,
         **kwargs,
+    )
+
+
+# ######################
+# # Navs
+# ######################
+
+
+def navset_bar(
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
+    title: TagChild,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    sidebar: Optional[Sidebar] = None,
+    fillable: bool | list[str] = True,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+    position: Literal[
+        "static-top", "fixed-top", "fixed-bottom", "sticky-top"
+    ] = "static-top",
+    header: TagChild = None,
+    footer: TagChild = None,
+    bg: Optional[str] = None,
+    # TODO-bslib: default to 'auto', like we have in R (parse color via webcolors?)
+    inverse: bool = False,
+    collapsible: bool = True,
+    fluid: bool = True,
+) -> MainNavSetBar:
+    """Deprecated. Please use `shiny.ui.navset_bar()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.navset_bar()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.navset_bar` instead."
+    )
+    return main_navset_bar(
+        *args,
+        title=title,
+        id=id,
+        selected=selected,
+        sidebar=sidebar,
+        fillable=fillable,
+        gap=gap,
+        padding=padding,
+        position=position,
+        header=header,
+        footer=footer,
+        bg=bg,
+        inverse=inverse,
+        collapsible=collapsible,
+        fluid=fluid,
+    )
+
+
+def navset_card_tab(
+    *args: NavSetArg,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    sidebar: Optional[Sidebar] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+) -> MainNavSetCard:
+    """Deprecated. Please use `shiny.ui.navset_card_tab()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.navset_card_tab()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.navset_card_tab` instead."
+    )
+    return main_navset_card_tab(
+        *args,
+        id=id,
+        selected=selected,
+        sidebar=sidebar,
+        header=header,
+        footer=footer,
+    )
+
+
+def navset_card_pill(
+    *args: NavSetArg,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    sidebar: Optional[Sidebar] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+    placement: Literal["above", "below"] = "above",
+) -> MainNavSetCard:
+    """Deprecated. Please use `shiny.ui.navset_card_pill()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.navset_card_pill()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.navset_card_pill` instead."
+    )
+    return main_navset_card_pill(
+        *args,
+        id=id,
+        selected=selected,
+        sidebar=sidebar,
+        header=header,
+        footer=footer,
+        placement=placement,
     )

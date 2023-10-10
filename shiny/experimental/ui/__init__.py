@@ -65,6 +65,10 @@ from ._deprecated import (
     card_header,
     # Layout
     layout_column_wrap,
+    # Navs
+    navset_bar,
+    navset_card_pill,
+    navset_card_tab,
 )
 
 
@@ -79,11 +83,6 @@ from ._accordion import (
     accordion_panel_remove,
     accordion_panel_set,
     update_accordion_panel,
-)
-from ._navs import (
-    navset_bar,
-    navset_card_pill,
-    navset_card_tab,
 )
 from ._output import output_image, output_plot, output_ui
 from ._page import page_fillable, page_navbar, page_sidebar
@@ -105,10 +104,6 @@ __all__ = (
     "page_sidebar",
     "page_fillable",
     "page_navbar",
-    # Navs
-    "navset_bar",
-    "navset_card_tab",
-    "navset_card_pill",
     # Card
     "ImgContainer",
     "TagCallable",
@@ -190,4 +185,8 @@ __all__ = (
     "card_footer",
     # # Layout
     "layout_column_wrap",
+    # # Navs
+    "navset_bar",
+    "navset_card_tab",
+    "navset_card_pill",
 )
