@@ -256,12 +256,22 @@ class OutputRenderer(Generic[OT], ABC):
         self._transformer = transform_fn
         self._params = params
         self.default_output = default_output
+        self._auto_registered = False
 
         from ...session import get_current_session
 
         s = get_current_session()
         if s is not None:
             s.output(self)
+            # We mark the fact that we're auto-registered so that, if an explicit
+            # registration now occurs, we can undo this auto-registration.
+            self._auto_registered = True
+
+    def on_register(self) -> None:
+        if self._auto_registered:
+            # We're being explicitly registered now. Undo the auto-registration.
+            self._session.output.remove(self.__name__)
+            self._auto_registered = False
 
     def _set_metadata(self, session: Session, name: str) -> None:
         """
