@@ -85,3 +85,14 @@ def jqui_deps() -> HTMLDependency:
         script={"src": "jquery-ui.min.js"},
         stylesheet={"href": "jquery-ui.min.css"},
     )
+
+
+def autoresize_dependency() -> HTMLDependency:
+    return HTMLDependency(
+        "shiny-textarea-autoresize",
+        # Version it was added
+        "0.6.0",
+        source={"package": "shiny", "subdir": "www/shared/shiny/text-area/"},
+        script={"src": "textarea-autoresize.js"},
+        stylesheet={"href": "textarea-autoresize.css"},
+    )
