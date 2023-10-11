@@ -6,6 +6,7 @@ from htmltools import MetadataNode, Tag, TagAttrs, TagAttrValue, TagChild, TagFu
 
 from ..._deprecated import warn_deprecated
 from ...session import Session
+from ...types import MISSING, MISSING_TYPE
 from ...ui import input_text_area as main_input_text_area
 from ...ui import popover as main_popover
 from ...ui import tags
@@ -36,6 +37,13 @@ from ...ui._navs import NavSetCard as MainNavSetCard
 from ...ui._navs import navset_bar as main_navset_bar
 from ...ui._navs import navset_card_pill as main_navset_card_pill
 from ...ui._navs import navset_card_tab as main_navset_card_tab
+from ...ui._output import output_image as main_output_image
+from ...ui._output import output_plot as main_output_plot
+from ...ui._output import output_ui as main_output_ui
+from ...ui._plot_output_opts import BrushOpts as MainBrushOpts
+from ...ui._plot_output_opts import ClickOpts as MainClickOpts
+from ...ui._plot_output_opts import DblClickOpts as MainDblClickOpts
+from ...ui._plot_output_opts import HoverOpts as MainHoverOpts
 from ...ui._sidebar import DeprecatedPanelMain, DeprecatedPanelSidebar
 from ...ui._sidebar import Sidebar as MainSidebar
 from ...ui._sidebar import layout_sidebar as main_layout_sidebar
@@ -54,9 +62,6 @@ from ...ui.fill import is_fill_carrier as main_is_fill_carrier
 from ...ui.fill import is_fill_item as main_is_fill_item
 from ...ui.fill import is_fillable_container as main_is_fillable_container
 from ...ui.fill import remove_all_fill as main_remove_all_fill
-
-# from ...types import MISSING, MISSING_TYPE
-
 
 __all__ = (
     # Input Switch
@@ -1160,4 +1165,97 @@ def navset_card_pill(
         header=header,
         footer=footer,
         placement=placement,
+    )
+
+
+# ######################
+# # Outputs
+# ######################
+def output_plot(
+    id: str,
+    width: str = "100%",
+    height: str = "400px",
+    *,
+    inline: bool = False,
+    click: bool | MainClickOpts = False,
+    dblclick: bool | MainDblClickOpts = False,
+    hover: bool | MainHoverOpts = False,
+    brush: bool | MainBrushOpts = False,
+    fill: bool | MISSING_TYPE = MISSING,
+) -> Tag:
+    """Deprecated. Please use `shiny.ui.output_plot()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.output_plot()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.output_plot` instead."
+    )
+    return main_output_plot(
+        id=id,
+        width=width,
+        height=height,
+        inline=inline,
+        click=click,
+        dblclick=dblclick,
+        hover=hover,
+        brush=brush,
+        fill=fill,
+    )
+
+
+# @add_example()
+def output_image(
+    id: str,
+    width: str = "100%",
+    height: str = "400px",
+    *,
+    inline: bool = False,
+    click: bool | MainClickOpts = False,
+    dblclick: bool | MainDblClickOpts = False,
+    hover: bool | MainHoverOpts = False,
+    brush: bool | MainBrushOpts = False,
+    # NEW
+    fill: bool = False,
+    # /NEW
+) -> Tag:
+    """Deprecated. Please use `shiny.ui.output_image()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.output_image()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.output_image` instead."
+    )
+    return main_output_image(
+        id=id,
+        width=width,
+        height=height,
+        inline=inline,
+        click=click,
+        dblclick=dblclick,
+        hover=hover,
+        brush=brush,
+        fill=fill,
+    )
+
+
+# @add_example()
+def output_ui(
+    id: str,
+    inline: bool = False,
+    container: Optional[TagFunction] = None,
+    fill: bool = False,
+    fillable: bool = False,
+    **kwargs: TagAttrValue,
+) -> Tag:
+    """Deprecated. Please use `shiny.ui.output_ui()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.output_ui()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.output_ui` instead."
+    )
+    return main_output_ui(
+        id=id,
+        inline=inline,
+        container=container,
+        fill=fill,
+        fillable=fillable,
+        **kwargs,
     )

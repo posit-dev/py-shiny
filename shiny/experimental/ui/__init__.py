@@ -73,6 +73,10 @@ from ._deprecated import (
     navset_bar,
     navset_card_pill,
     navset_card_tab,
+    # Outputs
+    output_image,
+    output_plot,
+    output_ui,
 )
 
 
@@ -88,21 +92,10 @@ from ._accordion import (
     accordion_panel_set,
     update_accordion_panel,
 )
-from ._output import output_image, output_plot, output_ui
 from ._page import page_fillable, page_navbar, page_sidebar
 
 
 __all__ = (
-    # Sidebar
-    "Sidebar",
-    "sidebar",
-    "layout_sidebar",
-    "toggle_sidebar",
-    "sidebar_toggle",
-    "panel_sidebar",
-    "panel_main",
-    "DeprecatedPanelSidebar",
-    "DeprecatedPanelMain",
     # Page
     "page_sidebar",
     "page_fillable",
@@ -118,10 +111,6 @@ __all__ = (
     "value_box",
     "showcase_left_center",
     "showcase_top_right",
-    # Output
-    "output_image",
-    "output_plot",
-    "output_ui",
     # Accordion
     "AccordionPanel",
     "accordion",
@@ -133,6 +122,16 @@ __all__ = (
     "accordion_panel_remove",
     "update_accordion_panel",
     # Deprecated
+    # # Sidebar
+    "Sidebar",
+    "sidebar",
+    "layout_sidebar",
+    "toggle_sidebar",
+    "sidebar_toggle",
+    "panel_sidebar",
+    "panel_main",
+    "DeprecatedPanelSidebar",
+    "DeprecatedPanelMain",
     # # Input Switch
     "toggle_switch",
     # # Input Text Area
@@ -192,4 +191,8 @@ __all__ = (
     "navset_bar",
     "navset_card_tab",
     "navset_card_pill",
+    # # Output
+    "output_image",
+    "output_plot",
+    "output_ui",
 )
