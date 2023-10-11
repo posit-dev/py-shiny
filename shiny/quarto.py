@@ -10,7 +10,7 @@ from typing import Literal, cast
 from ._typing_extensions import NotRequired, TypedDict
 
 QuartoShinyCodeCellClass = Literal["python", "r", "cell-code", "hidden"]
-QuartoShinyCodeCellContext = Literal["ui", "server-session", "server-global"]
+QuartoShinyCodeCellContext = Literal["ui", "server", "server-setup"]
 
 
 class QuartoShinyCodeCell(TypedDict):
@@ -48,9 +48,9 @@ def convert_code_cells_to_app_py(json_file: str | Path, app_file: str | Path) ->
         if "python" not in cell["classes"]:
             continue
 
-        if "server-global" in cell["context"]:
+        if "server-setup" in cell["context"]:
             global_code_cell_texts.append(cell["text"] + "\n\n# " + "=" * 72 + "\n\n")
-        elif "server-session" in cell["context"]:
+        elif "server" in cell["context"]:
             session_code_cell_texts.append(
                 indent(cell["text"], "    ") + "\n\n    # " + "=" * 72 + "\n\n"
             )
