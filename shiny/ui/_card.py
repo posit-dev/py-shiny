@@ -80,7 +80,7 @@ def card(
         `full_screen`.
     fill
         Whether or not to allow the card to grow/shrink to fit a fillable container with
-        an opinionated height (e.g., :func:`~shiny.experimental.ui.page_fillable`).
+        an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
     class_
         Additional CSS classes for the returned Tag.
     **kwargs
@@ -94,9 +94,9 @@ def card(
     See Also
     --------
     * :func:`~shiny.ui.card_header` for creating a header within the card.
-    * :func:`~shiny.experimental.ui.card_footer` for creating a footer within the card.
+    * :func:`~shiny.ui.card_footer` for creating a footer within the card.
     """
-    # * :func:`~shiny.experimental.ui.layout_column_wrap` for laying out multiple cards
+    # * :func:`~shiny.ui.layout_column_wrap` for laying out multiple cards
     #   (or multiple columns inside a card).
     return _card_impl(
         *args,
@@ -179,12 +179,12 @@ def _full_screen_toggle_icon() -> HTML:
 # https://mypy.readthedocs.io/en/stable/protocols.html#callback-protocols
 class WrapperCallable(Protocol):
     """
-    A callable that wraps children into a :class:`~shiny.experimental.ui.CardItem`.
+    A callable that wraps children into a :class:`~shiny.ui.CardItem`.
     """
 
     def __call__(self, *args: TagChild) -> CardItem:
         """
-        Wraps children into a :class:`~shiny.experimental.ui.CardItem`.
+        Wraps children into a :class:`~shiny.ui.CardItem`.
 
         Parameters
         ----------
@@ -194,7 +194,7 @@ class WrapperCallable(Protocol):
         Returns
         -------
         :
-            A :class:`~shiny.experimental.ui.CardItem` object.
+            A :class:`~shiny.ui.CardItem` object.
         """
         ...
 
@@ -271,12 +271,12 @@ def card_body(
     class_: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> CardItem:
-    # For a general overview of the :func:`~shiny.experimental.ui.card` API, see [this article](https://rstudio.github.io/bslib/articles/cards.html).
+    # For a general overview of the :func:`~shiny.ui.card` API, see [this article](https://rstudio.github.io/bslib/articles/cards.html).
     """
     Card body container
 
-    A general container for the "main content" of a :func:`~shiny.experimental.ui.card`. This component is designed
-    to be provided as direct children to :func:`~shiny.experimental.ui.card`.
+    A general container for the "main content" of a :func:`~shiny.ui.card`. This component is designed
+    to be provided as direct children to :func:`~shiny.ui.card`.
 
     Parameters
     ----------
@@ -291,7 +291,7 @@ def card_body(
     height
         Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
         `full_screen` (in this case, consider setting a `height` in
-        :func:`~shiny.experimental.ui.card_body`).
+        :func:`~shiny.ui.card_body`).
     padding
         Padding to use for the body. This can be a numeric vector
         (which will be interpreted as pixels) or a character vector with valid CSS
@@ -314,17 +314,16 @@ def card_body(
     Returns
     -------
     :
-        A :class:`~shiny.experimental.ui.CardItem` object.
+        A :class:`~shiny.ui.CardItem` object.
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.layout_column_wrap` for laying out multiple cards
+    * :func:`~shiny.ui.layout_column_wrap` for laying out multiple cards
         (or multiple columns inside a card).
-    * :func:`~shiny.experimental.ui.card` for creating a card component.
-    * :func:`~shiny.experimental.ui.card_header` for creating a header within the card.
-    * :func:`~shiny.experimental.ui.card_title` for creating a title within the card body.
-    * :func:`~shiny.experimental.ui.card_footer` for creating a footer within the card.
-    * :func:`~shiny.experimental.ui.card_image` for adding an image to the card.
+    * :func:`~shiny.ui.card` for creating a card component.
+    * :func:`~shiny.ui.card_header` for creating a header within the card.
+    * :func:`~shiny.ui.card_title` for creating a title within the card body.
+    * :func:`~shiny.ui.card_footer` for creating a footer within the card.
     """
     if isinstance(max_height_full_screen, MISSING_TYPE):
         max_height_full_screen = max_height
@@ -367,24 +366,24 @@ def card_body(
 class CardItem:
     """
     A wrapper around a :class:`~htmltools.Tag` object that represent the content of a
-    card item (e.g., :func:`~shiny.experimental.ui.card_header` or
-    :func:`~shiny.experimental.card_footer`).
+    card item (e.g., :func:`~shiny.ui.card_header` or
+    :func:`~shiny.card_footer`).
 
     This class is used to allow for consecutive non-card items to be bundled into a
-    single `card_body` within :func:`~shiny.experimental.ui.card`.
+    single `card_body` within :func:`~shiny.ui.card`.
 
     Parameters
     ----------
     item
         A :class:`~htmltools.Tag` object that represent the content of a card item
-        (e.g., :func:`~shiny.experimental.ui.card_header` or
-        :func:`~shiny.experimental.card_footer`).
+        (e.g., :func:`~shiny.ui.card_header` or
+        :func:`~shiny.card_footer`).
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.card` for creating a card component.
-    * :func:`~shiny.experimental.ui.card_header` for creating a header within the card.
-    * :func:`~shiny.experimental.ui.card_footer` for creating a footer within the card.
+    * :func:`~shiny.ui.card` for creating a card component.
+    * :func:`~shiny.ui.card_header` for creating a header within the card.
+    * :func:`~shiny.ui.card_footer` for creating a footer within the card.
     """
 
     def __init__(
@@ -425,8 +424,8 @@ def card_header(
     """
     Card header container
 
-    A general container for the "header" of a :func:`~shiny.experimental.ui.card`. This component is designed
-    to be provided as a direct child to :func:`~shiny.experimental.ui.card`.
+    A general container for the "header" of a :func:`~shiny.ui.card`. This component is designed
+    to be provided as a direct child to :func:`~shiny.ui.card`.
 
     The header has a different background color and border than the rest of the card.
 
@@ -443,12 +442,12 @@ def card_header(
     Returns
     -------
     :
-        A :class:`~shiny.experimental.ui.CardItem` object.
+        A :class:`~shiny.ui.CardItem` object.
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.card` for creating a card component.
-    * :func:`~shiny.experimental.ui.card_footer` for creating a footer within the card.
+    * :func:`~shiny.ui.card` for creating a card component.
+    * :func:`~shiny.ui.card_footer` for creating a footer within the card.
     """
     return CardItem(
         container({"class": "card-header"}, *args, **kwargs),
@@ -463,8 +462,8 @@ def card_footer(
     """
     Card footer container
 
-    A general container for the "footer" of a :func:`~shiny.experimental.ui.card`. This component is designed
-    to be provided as a direct child to :func:`~shiny.experimental.ui.card`.
+    A general container for the "footer" of a :func:`~shiny.ui.card`. This component is designed
+    to be provided as a direct child to :func:`~shiny.ui.card`.
 
     The footer has a different background color and border than the rest of the card.
 
@@ -479,12 +478,12 @@ def card_footer(
     Returns
     -------
     :
-        A :class:`~shiny.experimental.ui.CardItem` object.
+        A :class:`~shiny.ui.CardItem` object.
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.card` for creating a card component.
-    * :func:`~shiny.experimental.ui.card_footer` for creating a footer within the card.
+    * :func:`~shiny.ui.card` for creating a card component.
+    * :func:`~shiny.ui.card_footer` for creating a footer within the card.
     """
     return CardItem(
         tags.div({"class": "card-footer"}, *args, **kwargs),

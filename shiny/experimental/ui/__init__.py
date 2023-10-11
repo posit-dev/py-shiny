@@ -77,6 +77,10 @@ from ._deprecated import (
     output_image,
     output_plot,
     output_ui,
+    # Page
+    page_fillable,
+    page_navbar,
+    page_sidebar,
 )
 
 
@@ -92,14 +96,9 @@ from ._accordion import (
     accordion_panel_set,
     update_accordion_panel,
 )
-from ._page import page_fillable, page_navbar, page_sidebar
 
 
 __all__ = (
-    # Page
-    "page_sidebar",
-    "page_fillable",
-    "page_navbar",
     # Card
     "ImgContainer",
     "TagCallable",
@@ -195,4 +194,8 @@ __all__ = (
     "output_image",
     "output_plot",
     "output_ui",
+    # # Page
+    "page_sidebar",
+    "page_fillable",
+    "page_navbar",
 )

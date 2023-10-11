@@ -2,7 +2,15 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional, Sequence, TypeVar, overload
 
-from htmltools import MetadataNode, Tag, TagAttrs, TagAttrValue, TagChild, TagFunction
+from htmltools import (
+    MetadataNode,
+    Tag,
+    TagAttrs,
+    TagAttrValue,
+    TagChild,
+    TagFunction,
+    TagList,
+)
 
 from ..._deprecated import warn_deprecated
 from ...session import Session
@@ -40,6 +48,9 @@ from ...ui._navs import navset_card_tab as main_navset_card_tab
 from ...ui._output import output_image as main_output_image
 from ...ui._output import output_plot as main_output_plot
 from ...ui._output import output_ui as main_output_ui
+from ...ui._page import page_fillable as main_page_fillable
+from ...ui._page import page_navbar as main_page_navbar
+from ...ui._page import page_sidebar as main_page_sidebar
 from ...ui._plot_output_opts import BrushOpts as MainBrushOpts
 from ...ui._plot_output_opts import ClickOpts as MainClickOpts
 from ...ui._plot_output_opts import DblClickOpts as MainDblClickOpts
@@ -1257,5 +1268,112 @@ def output_ui(
         container=container,
         fill=fill,
         fillable=fillable,
+        **kwargs,
+    )
+
+
+# ######################
+# # Page
+# ######################
+def page_sidebar(
+    sidebar: MainSidebar | TagChild | TagAttrs,
+    *args: TagChild | TagAttrs,
+    title: Optional[str | Tag | TagList] = None,
+    fillable: bool = True,
+    fillable_mobile: bool = False,
+    window_title: str | MISSING_TYPE = MISSING,
+    lang: Optional[str] = None,
+    **kwargs: TagAttrValue,
+) -> Tag:
+    """Deprecated. Please use `shiny.ui.page_sidebar()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.page_sidebar()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.page_sidebar` instead."
+    )
+    return main_page_sidebar(
+        sidebar,
+        *args,
+        title=title,
+        fillable=fillable,
+        fillable_mobile=fillable_mobile,
+        window_title=window_title,
+        lang=lang,
+        **kwargs,
+    )
+
+
+def page_navbar(
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
+    title: Optional[str | Tag | TagList] = None,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    sidebar: Optional[Sidebar] = None,
+    # Only page_navbar gets enhancedtreatement for `fillable`
+    # If an `*args`'s `data-value` attr string is in `fillable`, then the component is fillable
+    fillable: bool | list[str] = True,
+    fillable_mobile: bool = False,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+    position: Literal["static-top", "fixed-top", "fixed-bottom"] = "static-top",
+    header: Optional[TagChild] = None,
+    footer: Optional[TagChild] = None,
+    bg: Optional[str] = None,
+    inverse: bool = True,
+    collapsible: bool = True,
+    fluid: bool = True,
+    window_title: str | MISSING_TYPE = MISSING,
+    lang: Optional[str] = None,
+) -> Tag:
+    """Deprecated. Please use `shiny.ui.page_navbar()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.page_navbar()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.page_navbar` instead."
+    )
+    return main_page_navbar(
+        *args,
+        title=title,
+        id=id,
+        selected=selected,
+        sidebar=sidebar,
+        fillable=fillable,
+        fillable_mobile=fillable_mobile,
+        gap=gap,
+        padding=padding,
+        position=position,
+        header=header,
+        footer=footer,
+        bg=bg,
+        inverse=inverse,
+        collapsible=collapsible,
+        fluid=fluid,
+        window_title=window_title,
+        lang=lang,
+    )
+
+
+def page_fillable(
+    *args: TagChild | TagAttrs,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+    gap: Optional[CssUnit] = None,
+    fillable_mobile: bool = False,
+    title: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: TagAttrValue,
+) -> Tag:
+    """Deprecated. Please use `shiny.ui.page_fillable()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.page_fillable()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.page_fillable` instead."
+    )
+    return main_page_fillable(
+        *args,
+        padding=padding,
+        gap=gap,
+        fillable_mobile=fillable_mobile,
+        title=title,
+        lang=lang,
         **kwargs,
     )

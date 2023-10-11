@@ -954,8 +954,8 @@ def update_popover(
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.popover`
-    * :func:`~shiny.experimental.ui.toggle_popover`
+    * :func:`~shiny.ui.popover`
+    * :func:`~shiny.ui.toggle_popover`
     """
     session = require_active_session(session)
 
