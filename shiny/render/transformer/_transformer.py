@@ -609,20 +609,20 @@ def output_transformer(
     function, and any keyword arguments supplied to the output tranformer decorator:
 
     * The first parameter to the handler function has the class
-    :class:`~shiny.render.transformer.TransformerMetadata` and is typically called
-    `_meta`. This information gives context the to the handler while trying to
-    resolve the app-supplied value function (typically called `_fn`).
+      :class:`~shiny.render.transformer.TransformerMetadata` and is typically called
+      `_meta`. This information gives context the to the handler while trying to
+      resolve the app-supplied value function (typically called `_fn`).
     * The second parameter is the app-defined output value function (e.g. `_fn`). It's
-    return type (`IT`) determines what types can be returned by the app-supplied
-    output value function. For example, if `_fn` has the type `ValueFn[str | None]`,
-    both the `str` and `None` types are allowed to be returned from the app-supplied
-    output value function.
+      return type (`IT`) determines what types can be returned by the app-supplied
+      output value function. For example, if `_fn` has the type `ValueFn[str | None]`,
+      both the `str` and `None` types are allowed to be returned from the app-supplied
+      output value function.
     * The remaining parameters are the keyword arguments (e.g. `alt:Optional[str] =
-    None` or `**kwargs: object`) that app authors may supply to the renderer (when the
-    renderer decorator is called with parentheses). Variadic positional parameters
-    (e.g. `*args`) are not allowed. All keyword arguments should have a type and
-    default value. No default value is needed for keyword arguments that are passed
-    through (e.g. `**kwargs: Any`).
+      None` or `**kwargs: object`) that app authors may supply to the renderer (when the
+      renderer decorator is called with parentheses). Variadic positional parameters
+      (e.g. `*args`) are not allowed. All keyword arguments should have a type and
+      default value. No default value is needed for keyword arguments that are passed
+      through (e.g. `**kwargs: Any`).
 
     The tranform function's return type (`OT`) determines the output type of the
     :class:`~shiny.render.transformer.OutputRenderer`. Note that in many cases (but not
@@ -635,15 +635,15 @@ def output_transformer(
     -----
 
     * When defining the renderer decorator overloads, if you have extra parameters of
-    `**kwargs: object`, you may get a type error about incompatible signatures. To fix
-    this, you can use `**kwargs: Any` instead or add `_fn: None = None` as the first
-    parameter in the overload containing the `**kwargs: object`.
+      `**kwargs: object`, you may get a type error about incompatible signatures. To fix
+      this, you can use `**kwargs: Any` instead or add `_fn: None = None` as the first
+      parameter in the overload containing the `**kwargs: object`.
 
     * The `transform_fn` should be defined as an asynchronous function but should only
-    asynchronously yield (i.e. use `await` syntax) when the value function (the second
-    parameter of type `ValueFn[IT]`) is awaitable. If the value function is not
-    awaitable (i.e. it is a _synchronous_ function), then the execution of the
-    transform function should also be synchronous.
+      asynchronously yield (i.e. use `await` syntax) when the value function (the second
+      parameter of type `ValueFn[IT]`) is awaitable. If the value function is not
+      awaitable (i.e. it is a _synchronous_ function), then the execution of the
+      transform function should also be synchronous.
 
 
     Parameters
