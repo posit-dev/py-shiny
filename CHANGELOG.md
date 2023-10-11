@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
+* `input_action_button()` now defaults to having whitespace around it. (#758)
+
 
 ## [0.5.1] - 2023-08-08
 
