@@ -38,7 +38,7 @@ from typing import (
 
 if TYPE_CHECKING:
     from ...session import Session
-    from htmltools import TagChild
+    from htmltools import MetadataNode, Tag, TagList
 
 from ..._docstring import add_example
 from ..._typing_extensions import Concatenate, ParamSpec
@@ -221,7 +221,7 @@ class OutputRenderer(Generic[OT], ABC):
         value_fn: ValueFn[IT],
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
-        default_output: Callable[[str], TagChild] | None = None,
+        default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
     ) -> None:
         """
         Parameters
@@ -236,7 +236,7 @@ class OutputRenderer(Generic[OT], ABC):
             function), then the function should execute synchronously.
         params
             App-provided parameters for the transform function (`transform_fn`).
-        default_output
+        default_ui
             Optional function that takes an `output_id` string and returns a Shiny UI
             object that can be used to display the output. This allows render functions
             to respond to `_repr_html_` method calls in environments like Jupyter.
@@ -255,7 +255,7 @@ class OutputRenderer(Generic[OT], ABC):
         self._value_fn = value_fn
         self._transformer = transform_fn
         self._params = params
-        self.default_output = default_output
+        self.default_ui = default_ui
         self._auto_registered = False
 
         from ...session import get_current_session
@@ -319,9 +319,14 @@ class OutputRenderer(Generic[OT], ABC):
     def _repr_html_(self) -> str | None:
         import htmltools
 
-        if self.default_output is None:
+        if self.default_ui is None:
             return None
-        return htmltools.TagList(self.default_output(self.__name__))._repr_html_()
+        return htmltools.TagList(self.default_ui(self.__name__))._repr_html_()
+
+    def tagify(self) -> TagList | Tag | MetadataNode | str:
+        if self.default_ui is None:
+            raise TypeError("No default UI exists for this type of render function")
+        return self.default_ui(self.__name__)
 
 
 # Using a second class to help clarify that it is of a particular type
@@ -343,7 +348,7 @@ class OutputRendererSync(OutputRenderer[OT]):
         value_fn: ValueFnSync[IT],
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
-        default_output: Callable[[str], TagChild] | None = None,
+        default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
     ) -> None:
         if is_async_callable(value_fn):
             raise TypeError(
@@ -354,7 +359,7 @@ class OutputRendererSync(OutputRenderer[OT]):
             value_fn=value_fn,
             transform_fn=transform_fn,
             params=params,
-            default_output=default_output,
+            default_ui=default_ui,
         )
 
     def __call__(self) -> OT:
@@ -385,7 +390,7 @@ class OutputRendererAsync(OutputRenderer[OT]):
         value_fn: ValueFnAsync[IT],
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
-        default_output: Callable[[str], TagChild] | None = None,
+        default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
     ) -> None:
         if not is_async_callable(value_fn):
             raise TypeError(
@@ -396,7 +401,7 @@ class OutputRendererAsync(OutputRenderer[OT]):
             value_fn=value_fn,
             transform_fn=transform_fn,
             params=params,
-            default_output=default_output,
+            default_ui=default_ui,
         )
 
     async def __call__(self) -> OT:  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -562,7 +567,7 @@ class OutputTransformer(Generic[IT, OT, P]):
 @overload
 def output_transformer(
     *,
-    default_output: Callable[[str], TagChild] | None = None,
+    default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
 ) -> Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]:
     ...
 
@@ -578,7 +583,7 @@ def output_transformer(
 def output_transformer(
     transform_fn: TransformFn[IT, P, OT] | None = None,
     *,
-    default_output: Callable[[str], TagChild] | None = None,
+    default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
 ) -> (
     OutputTransformer[IT, OT, P]
     | Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]
@@ -647,7 +652,7 @@ def output_transformer(
         Asynchronous function used to determine the app-supplied output value function
         return type (`IT`), the transformed type (`OT`), and the keyword arguments (`P`)
         app authors can supply to the renderer decorator.
-    default_output
+    default_ui
         Optional function that takes an `output_id` string and returns a Shiny UI object
         that can be used to display the output. This allows render functions to respond
         to `_repr_html_` method calls in environments like Jupyter.
@@ -674,11 +679,11 @@ def output_transformer(
                 fn: ValueFn[IT],
             ) -> OutputRenderer[OT]:
                 if is_async_callable(fn):
-                    return OutputRendererAsync(fn, transform_fn, params, default_output)
+                    return OutputRendererAsync(fn, transform_fn, params, default_ui)
                 else:
                     # To avoid duplicate work just for a typeguard, we cast the function
                     fn = cast(ValueFnSync[IT], fn)
-                    return OutputRendererSync(fn, transform_fn, params, default_output)
+                    return OutputRendererSync(fn, transform_fn, params, default_ui)
 
             if value_fn is None:
                 return as_value_fn

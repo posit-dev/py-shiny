@@ -47,7 +47,7 @@ from .transformer import (
 # ======================================================================================
 
 
-@output_transformer(default_output=_ui.output_text_verbatim)
+@output_transformer(default_ui=_ui.output_text_verbatim)
 async def TextTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[str | None],
@@ -100,7 +100,7 @@ def text(
 #   Union[matplotlib.figure.Figure, PIL.Image.Image]
 # However, if we did that, we'd have to import those modules at load time, which adds
 # a nontrivial amount of overhead. So for now, we're just using `object`.
-@output_transformer(default_output=_ui.output_plot)
+@output_transformer(default_ui=_ui.output_plot)
 async def PlotTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[object],
@@ -268,7 +268,7 @@ def plot(
 # ======================================================================================
 # RenderImage
 # ======================================================================================
-@output_transformer(default_output=_ui.output_image)
+@output_transformer(default_ui=_ui.output_image)
 async def ImageTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[ImgData | None],
@@ -354,7 +354,7 @@ class PandasCompatible(Protocol):
 TableResult = Union["pd.DataFrame", PandasCompatible, None]
 
 
-@output_transformer(default_output=_ui.output_table)
+@output_transformer(default_ui=_ui.output_table)
 async def TableTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[TableResult | None],
@@ -484,7 +484,7 @@ def table(
 # ======================================================================================
 # RenderUI
 # ======================================================================================
-@output_transformer(default_output=_ui.output_ui)
+@output_transformer(default_ui=_ui.output_ui)
 async def UiTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[TagChild],
