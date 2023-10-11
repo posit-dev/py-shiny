@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import os
 import secrets
+from pathlib import Path
 from typing import Any, Callable, Optional, cast
 
 import starlette.applications
@@ -10,7 +11,14 @@ import starlette.exceptions
 import starlette.middleware
 import starlette.routing
 import starlette.websockets
-from htmltools import HTMLDependency, HTMLDocument, RenderedHTML, Tag, TagList
+from htmltools import (
+    HTMLDependency,
+    HTMLDocument,
+    HTMLTextDocument,
+    RenderedHTML,
+    Tag,
+    TagList,
+)
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -89,7 +97,7 @@ class App:
 
     def __init__(
         self,
-        ui: Tag | TagList | Callable[[Request], Tag | TagList],
+        ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
         server: Optional[Callable[[Inputs, Outputs, Session], None]],
         *,
         static_assets: Optional["str" | "os.PathLike[str]"] = None,
@@ -146,6 +154,12 @@ class App:
                 raise TypeError("App UI cannot be a coroutine function")
             # Dynamic UI: just store the function for later
             self.ui = cast("Callable[[Request], Tag | TagList]", ui)
+        elif isinstance(ui, Path):
+            if not ui.is_absolute():
+                raise ValueError("Path to UI must be absolute")
+
+            self.ui = self._render_page_from_file(ui, lib_prefix=self.lib_prefix)
+
         else:
             # Static UI: render the UI now and save the results
             self.ui = self._render_page(
@@ -370,9 +384,29 @@ class App:
         self._ensure_web_dependencies(rendered["dependencies"])
         return rendered
 
+    def _render_page_from_file(self, file: Path, lib_prefix: str) -> RenderedHTML:
+        with open(file, "r") as f:
+            page_html = f.read()
 
-def is_uifunc(x: Tag | TagList | Callable[[Request], Tag | TagList]):
-    if isinstance(x, Tag) or isinstance(x, TagList) or not callable(x):
+        doc = HTMLTextDocument(
+            page_html,
+            deps=[require_deps(), jquery_deps(), shiny_deps()],
+            deps_replace_pattern='<meta name="shiny-dependency-placeholder" content="">',
+        )
+
+        rendered = doc.render(lib_prefix=lib_prefix)
+        self._ensure_web_dependencies(rendered["dependencies"])
+
+        return rendered
+
+
+def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]):
+    if (
+        isinstance(x, Path)
+        or isinstance(x, Tag)
+        or isinstance(x, TagList)
+        or not callable(x)
+    ):
         return False
     else:
         return True
