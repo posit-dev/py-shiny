@@ -4,7 +4,6 @@ app_ui = ui.page_fluid(ui.output_ui("dynamic_ui"))
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.ui
     def dynamic_ui():
         @render.text
