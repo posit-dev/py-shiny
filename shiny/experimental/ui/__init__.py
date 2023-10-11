@@ -18,6 +18,10 @@ from ._deprecated import (
     navset_pill_card,
     navset_tab_card,
     # Sidebar
+    Sidebar,
+    sidebar,
+    layout_sidebar,
+    toggle_sidebar,
     sidebar_toggle,
     panel_sidebar,
     panel_main,
@@ -86,20 +90,19 @@ from ._accordion import (
 )
 from ._output import output_image, output_plot, output_ui
 from ._page import page_fillable, page_navbar, page_sidebar
-from ._sidebar import (
-    Sidebar,
-    layout_sidebar,
-    sidebar,
-    toggle_sidebar,
-)
 
 
 __all__ = (
     # Sidebar
     "Sidebar",
-    "layout_sidebar",
     "sidebar",
+    "layout_sidebar",
     "toggle_sidebar",
+    "sidebar_toggle",
+    "panel_sidebar",
+    "panel_main",
+    "DeprecatedPanelSidebar",
+    "DeprecatedPanelMain",
     # Page
     "page_sidebar",
     "page_fillable",

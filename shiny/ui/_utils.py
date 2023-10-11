@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, overload
+from typing import Optional, TypeGuard, overload
 
 from htmltools import (
     HTMLDependency,
@@ -75,3 +75,7 @@ def _session_on_flush_send_msg(
 ) -> None:
     session = require_active_session(session)
     session.on_flush(lambda: session.send_input_message(id, msg), once=True)
+
+
+def is_01_scalar(x: object) -> TypeGuard[float]:
+    return isinstance(x, (int, float)) and x >= 0.0 and x <= 1.0

@@ -10,7 +10,7 @@ from htmltools import Tag, TagAttrValue, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from ._html_dependencies import datepicker_deps
+from ._html_deps import datepicker_deps
 from ._utils import shiny_input_label
 
 

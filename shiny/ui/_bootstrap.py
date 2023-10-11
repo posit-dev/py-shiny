@@ -3,10 +3,7 @@ from __future__ import annotations
 __all__ = (
     "row",
     "column",
-    "layout_sidebar",
     "panel_well",
-    "panel_sidebar",
-    "panel_main",
     "panel_conditional",
     "panel_title",
     "panel_fixed",
@@ -22,7 +19,6 @@ from htmltools import (
     TagAttrs,
     TagAttrValue,
     TagChild,
-    Tagifiable,
     TagList,
     css,
     div,
@@ -31,16 +27,11 @@ from htmltools import (
     tags,
 )
 
-from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from ..module import current_namespace
 from ..types import MISSING, MISSING_TYPE
-from ._html_dependencies import jqui_deps
-from ._tag import consolidate_attrs as x_consolidate_attrs
+from ._html_deps import jqui_deps
 from ._utils import get_window_title
-from ._x._sidebar import PanelMain as XPanelMain
-from ._x._sidebar import PanelSidebar as XPanelSidebar
-from ._x._sidebar import layout_sidebar as x_layout_sidebar
 
 
 # TODO: make a python version of the layout guide?
@@ -117,55 +108,6 @@ def column(
     return div({"class": cls}, *args, **kwargs)
 
 
-@add_example()
-def layout_sidebar(
-    # TODO: also accept a generic list (and wrap in panel in that case)?
-    sidebar: TagChild,
-    main: TagChild,
-    position: Literal["left", "right"] = "left",
-) -> Tagifiable:
-    """
-    Layout a sidebar and main area
-
-    Create a layout with a sidebar (:func:`~shiny.ui.panel_sidebar`) and main area
-    (:func:`~shiny.ui.panel_main`). The sidebar is displayed with a distinct background
-    color and typically contains input controls. By default, the main area occupies 2/3
-    of the horizontal width and typically contains outputs.
-
-    Parameters
-    ----------
-    sidebar
-        A UI element to place in the sidebar (typically a
-        :func:`~shiny.ui.panel_sidebar`)
-    main
-        A UI element to place in the main area (typically a
-        :func:`~shiny.ui.panel_main`)
-    position
-        The position of the sidebar (left or right)
-
-    Returns
-    -------
-    :
-        A UI element
-
-    See Also
-    -------
-    :func:`~shiny.ui.panel_sidebar`
-    :func:`~shiny.ui.panel_main`
-    """
-
-    # Not requiring `XPanelSidebar`/`XPanelMain` to not expose the `_x` module if possible
-    if not isinstance(sidebar, XPanelSidebar):
-        sidebar = XPanelSidebar(sidebar)
-    if not isinstance(main, XPanelMain):
-        main = XPanelMain(attrs={}, children=[main])
-
-    return x_layout_sidebar(
-        sidebar.get_sidebar(position=position),
-        main,
-    )
-
-
 def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Create a well panel
@@ -191,81 +133,6 @@ def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     :func:`~shiny.ui.panel_main`
     """
     return div({"class": "well"}, *args, **kwargs)
-
-
-def panel_sidebar(
-    *args: TagChild | TagAttrs,
-    width: int = 4,
-    **kwargs: TagAttrValue,
-) -> Tagifiable:
-    """
-    Create a sidebar panel
-
-    See :func:`~shiny.ui.layout_sidebar` for more information and an example.
-
-    Parameters
-    ----------
-
-    args
-        UI elements to include inside the sidebar.
-    width
-        The width of the sidebar (an integer between 1 and 12)
-    kwargs
-        Attributes to place on the sidebar tag.
-
-    Returns
-    -------
-    :
-        A UI element.
-
-    See Also
-    -------
-    :func:`~shiny.ui.panel_sidebar`
-    :func:`~shiny.ui.panel_main`
-    """
-    return XPanelSidebar(*args, width=width, **kwargs)
-
-
-def panel_main(
-    *args: TagChild | TagAttrs,
-    **kwargs: TagAttrValue,
-) -> Tagifiable:
-    """
-    Create an main area panel
-
-    See :func:`~shiny.ui.layout_sidebar` for more information and an example.
-
-    Parameters
-    ----------
-    args
-        UI elements to include inside the main area.
-    kwargs
-        Attributes to place on the main area tag.
-
-    Returns
-    -------
-    :
-        A UI element.
-
-    See Also
-    -------
-    :func:`~shiny.ui.panel_sidebar`
-    :func:`~shiny.ui.layout_sidebar`
-    """
-    attrs, children = x_consolidate_attrs(*args, **kwargs)
-    if "width" in attrs:
-        if attrs["width"] != 8:
-            warn_deprecated(
-                "panel_main(width=)` is being ignored. Given the sidebar width, the main panel will take up the remaining horizontal space."
-            )
-        del attrs["width"]
-
-    if len(attrs) > 0:
-        # While we could return an `XPanelMain()` for empty attrs,
-        # let's try to limit the exposure of the class object
-        return XPanelMain(attrs=attrs, children=children)
-
-    return TagList(*children)
 
 
 # TODO: replace `flowLayout()`/`splitLayout()` with a flexbox wrapper?

@@ -15,14 +15,14 @@ from htmltools import (
 )
 
 from ...types import MISSING, MISSING_TYPE, NavSetArg
+from ...ui._html_deps_external import page_fillable_dependency, page_sidebar_dependency
+from ...ui._navs import navset_bar
 from ...ui._page import page_bootstrap
+from ...ui._sidebar import Sidebar, layout_sidebar
 from ...ui._tag import consolidate_attrs
 from ...ui._utils import get_window_title
-from ...ui._x._htmldeps import page_fillable_dependency, page_sidebar_dependency
 from ...ui.css_unit import CssUnit, as_css_padding, as_css_unit
 from ...ui.fill import as_fillable_container
-from ._navs import navset_bar
-from ._sidebar import Sidebar, layout_sidebar
 
 
 def page_sidebar(

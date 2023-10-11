@@ -5,9 +5,9 @@ from typing import Literal
 
 from htmltools import HTMLDependency
 
-from ..._typing_extensions import NotRequired, TypedDict
-from ..._versions import bslib as bslib_version
-from ..._versions import htmltools as htmltools_version
+from .._typing_extensions import NotRequired, TypedDict
+from .._versions import bslib as bslib_version
+from .._versions import htmltools as htmltools_version
 
 _x_www = PurePath(__file__).parent.parent.parent / "www" / "shared" / "_x"
 

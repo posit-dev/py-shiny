@@ -6,7 +6,7 @@ from htmltools import Tag, TagChild, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from ._html_dependencies import autoresize_dependency
+from ._html_deps import autoresize_dependency
 from ._utils import shiny_input_label
 
 

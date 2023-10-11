@@ -4,8 +4,8 @@ from typing import TypeVar
 
 from htmltools import Tag
 
+from .._html_deps_external import fill_dependency
 from .._tag import tag_prepend_class, tag_remove_class
-from .._x._htmldeps import fill_dependency
 
 # TODO-barret; export publically
 # TODO-barret; double check documentation; remove experimental from links. update fill location

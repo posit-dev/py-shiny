@@ -5,7 +5,7 @@ from htmltools import HTML, HTMLDependency
 from .._versions import bootstrap as bootstrap_version
 from .._versions import shiny_html_deps
 from ..html_dependencies import jquery_deps
-from ._x._htmldeps import nav_spacer_dependency
+from ._html_deps_external import nav_spacer_dependency
 
 
 def nav_spacer_deps() -> list[HTMLDependency]:

@@ -2,15 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional, Sequence, TypeVar, overload
 
-from htmltools import (
-    MetadataNode,
-    Tag,
-    TagAttrs,
-    TagAttrValue,
-    TagChild,
-    TagFunction,
-    TagList,
-)
+from htmltools import MetadataNode, Tag, TagAttrs, TagAttrValue, TagChild, TagFunction
 
 from ..._deprecated import warn_deprecated
 from ...session import Session
@@ -44,7 +36,13 @@ from ...ui._navs import NavSetCard as MainNavSetCard
 from ...ui._navs import navset_bar as main_navset_bar
 from ...ui._navs import navset_card_pill as main_navset_card_pill
 from ...ui._navs import navset_card_tab as main_navset_card_tab
-from ...ui._tag import consolidate_attrs
+from ...ui._sidebar import DeprecatedPanelMain, DeprecatedPanelSidebar
+from ...ui._sidebar import Sidebar as MainSidebar
+from ...ui._sidebar import layout_sidebar as main_layout_sidebar
+from ...ui._sidebar import panel_main as main_panel_main
+from ...ui._sidebar import panel_sidebar as main_panel_sidebar
+from ...ui._sidebar import sidebar as main_sidebar
+from ...ui._sidebar import toggle_sidebar as main_toggle_sidebar
 from ...ui.css_unit._css_unit import CssUnit as MainCssUnit
 from ...ui.css_unit._css_unit import as_css_padding as main_as_css_padding
 from ...ui.css_unit._css_unit import as_css_unit as main_as_css_unit
@@ -56,12 +54,6 @@ from ...ui.fill import is_fill_carrier as main_is_fill_carrier
 from ...ui.fill import is_fill_item as main_is_fill_item
 from ...ui.fill import is_fillable_container as main_is_fillable_container
 from ...ui.fill import remove_all_fill as main_remove_all_fill
-from ._sidebar import (
-    DeprecatedPanelMain,
-    DeprecatedPanelSidebar,
-    Sidebar,
-    toggle_sidebar,
-)
 
 # from ...types import MISSING, MISSING_TYPE
 
@@ -81,6 +73,10 @@ __all__ = (
     "toggle_tooltip",
     "update_tooltip",
     # Sidebar
+    "Sidebar",
+    "sidebar",
+    "layout_sidebar",
+    "toggle_sidebar",
     "sidebar_toggle",
     "panel_sidebar",
     "panel_main",
@@ -197,14 +193,14 @@ def navset_pill_card(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    sidebar: Optional[Sidebar] = None,
+    sidebar: Optional[MainSidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
     placement: Literal["above", "below"] = "above",
 ) -> MainNavSetCard:
     """Deprecated. Please use `navset_card_pill()` instead of `navset_pill_card()`."""
     warn_deprecated(
-        "`navset_pill_card()` is deprecated. "
+        "`shiny.experimental.ui.navset_pill_card()` is deprecated. "
         "This method will be removed in a future version, "
         "please use :func:`shiny.experimental.ui.navset_card_pill` instead."
     )
@@ -224,13 +220,13 @@ def navset_tab_card(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    sidebar: Optional[Sidebar] = None,
+    sidebar: Optional[MainSidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
 ) -> MainNavSetCard:
     """Deprecated. Please use `navset_card_tab()` instead of `navset_tab_card()`."""
     warn_deprecated(
-        "`navset_tab_card()` is deprecated. "
+        "`shiny.experimental.ui.navset_tab_card()` is deprecated. "
         "This method will be removed in a future version, "
         "please use :func:`shiny.experimental.ui.navset_card_tab` instead."
     )
@@ -346,19 +342,148 @@ def toggle_tooltip(
 ######################
 
 
+class Sidebar(MainSidebar):
+    """Deprecated. Please use `shiny.ui.Sidebar` instead."""
+
+    def __init__(
+        self,
+        tag: Tag,
+        collapse_tag: Optional[Tag],
+        position: Literal["left", "right"],
+        open: Literal["desktop", "open", "closed", "always"],
+        width: CssUnit,
+        max_height_mobile: Optional[str | float],
+        color_fg: Optional[str],
+        color_bg: Optional[str],
+    ):
+        warn_deprecated(
+            "`shiny.experimental.ui.Sidebar` is deprecated. "
+            "This class will be removed in a future version, "
+            "please use :class:`shiny.ui.Sidebar` instead."
+        )
+        super().__init__(
+            tag,
+            collapse_tag,
+            position,
+            open,
+            width,
+            max_height_mobile,
+            color_fg,
+            color_bg,
+        )
+
+
+def sidebar(
+    *args: TagChild | TagAttrs,
+    width: CssUnit = 250,
+    position: Literal["left", "right"] = "left",
+    open: Literal["desktop", "open", "closed", "always"] = "desktop",
+    id: Optional[str] = None,
+    title: TagChild | str = None,
+    bg: Optional[str] = None,
+    fg: Optional[str] = None,
+    class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
+    max_height_mobile: Optional[str | float] = None,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+) -> MainSidebar:
+    """Deprecated. Please use `shiny.ui.sidebar()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.sidebar()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.sidebar` instead."
+    )
+    return main_sidebar(
+        *args,
+        width=width,
+        position=position,
+        open=open,
+        id=id,
+        title=title,
+        bg=bg,
+        fg=fg,
+        class_=class_,
+        max_height_mobile=max_height_mobile,
+        gap=gap,
+        padding=padding,
+    )
+
+
+def layout_sidebar(
+    sidebar: Sidebar | TagChild | TagAttrs,
+    *args: TagChild | TagAttrs,
+    fillable: bool = True,
+    fill: bool = True,
+    bg: Optional[str] = None,
+    fg: Optional[str] = None,
+    border: Optional[bool] = None,
+    border_radius: Optional[bool] = None,
+    border_color: Optional[str] = None,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+    height: Optional[CssUnit] = None,
+    **kwargs: TagAttrValue,
+) -> MainCardItem:
+    """Deprecated. Please use `shiny.ui.layout_sidebar()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.layout_sidebar()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.layout_sidebar` instead."
+    )
+    return main_layout_sidebar(
+        sidebar,
+        *args,
+        fillable=fillable,
+        fill=fill,
+        bg=bg,
+        fg=fg,
+        border=border,
+        border_radius=border_radius,
+        border_color=border_color,
+        gap=gap,
+        padding=padding,
+        height=height,
+        **kwargs,
+    )
+
+
+def toggle_sidebar(
+    id: str,
+    open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
+    session: Session | None = None,
+) -> None:
+    """Deprecated. Please use `shiny.ui.toggle_sidebar()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.toggle_sidebar()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.toggle_sidebar` instead."
+    )
+    return main_toggle_sidebar(
+        id,
+        open=open,
+        session=session,
+    )
+
+
+# ----------------------------
+
+
+# ----------------------------
+
+
 # Deprecated 2023-08-23
 def sidebar_toggle(
     id: str,
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
     session: Session | None = None,
 ) -> None:
-    """Deprecated. Please use `toggle_sidebar()` instead of `sidebar_toggle()`."""
+    """Deprecated. Please use `shiny.ui.toggle_sidebar()` instead of `sidebar_toggle()`."""
     warn_deprecated(
-        "`sidebar_toggle()` is deprecated. "
+        "`shiny.experimental.ui.sidebar_toggle()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use :func:`shiny.experimental.ui.toggle_sidebar` instead."
+        "please use :func:`shiny.ui.toggle_sidebar` instead."
     )
-    toggle_sidebar(
+    main_toggle_sidebar(
         id=id,
         open=open,
         session=session,
@@ -372,16 +497,14 @@ def panel_sidebar(
     width: int = 4,
     **kwargs: TagAttrValue,
 ) -> DeprecatedPanelSidebar:
-    """Deprecated. Please use :func:`shiny.experimental.ui.sidebar` instead of
-    `ui.panel_sidebar()`."""
-    # TODO-future: >= 2023-11-01; Add deprecation message below
-    # Plan of action:
-    # * No deprecation messages today (2023-05-18), and existing code _just works_.
-    # * Change all examples to use the new API.
-    # * In, say, 6 months, start emitting messages for code that uses the old API.
-
-    # warn_deprecated("Please use `sidebar()` instead of `panel_sidebar()`. `panel_sidebar()` will go away in a future version of Shiny.")
-    return DeprecatedPanelSidebar(
+    """Deprecated. Please use :func:`shiny.ui.sidebar` instead of
+    `shiny.experimental.ui.panel_sidebar()`."""
+    warn_deprecated(
+        "`shiny.experimental.ui.panel_sidebar()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.sidebar` with :func:`shiny.ui.layout_sidebar` instead."
+    )
+    return main_panel_sidebar(
         *args,
         width=width,
         **kwargs,
@@ -394,21 +517,19 @@ def panel_main(
     *args: TagChild | TagAttrs,
     width: int = 8,
     **kwargs: TagAttrValue,
-) -> TagList | DeprecatedPanelMain:
-    """Deprecated. Please supply `panel_main(*args)` directly to `layout_sidebar()`."""
-    # TODO-future: >= 2023-11-01; Add deprecation message below
-    # warn_deprecated(
-    #     "Please supply `panel_main(*args)` directly to `layout_sidebar()`."
-    # )
-    # warn if keys are being ignored
-    attrs, children = consolidate_attrs(*args, **kwargs)
-    if len(attrs) > 0:
-        return DeprecatedPanelMain(attrs=attrs, children=children)
-        warn_deprecated(
-            "`*args: TagAttrs` or `**kwargs: TagAttrValue` values supplied to `panel_main()` are being ignored. Please supply them directly to `layout_sidebar()`."
-        )
-
-    return TagList(*children)
+) -> DeprecatedPanelMain:
+    """Deprecated. Please use :func:`shiny.ui.layout_sidebar` instead of
+    `shiny.experimental.ui.panel_main()`."""
+    warn_deprecated(
+        "`shiny.experimental.ui.panel_main()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`shiny.ui.sidebar` with :func:`shiny.ui.layout_sidebar` instead."
+    )
+    return main_panel_main(
+        *args,
+        width=width,
+        **kwargs,
+    )
 
 
 ######################
@@ -877,7 +998,6 @@ class CardItem(MainCardItem):
         super().__init__(item)
 
 
-# TODO-maindocs; @add_example()
 def card_header(
     *args: TagChild | TagAttrs,
     container: TagFunction = tags.div,
@@ -953,7 +1073,7 @@ def navset_bar(
     title: TagChild,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    sidebar: Optional[Sidebar] = None,
+    sidebar: Optional[MainSidebar] = None,
     fillable: bool | list[str] = True,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
@@ -997,7 +1117,7 @@ def navset_card_tab(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    sidebar: Optional[Sidebar] = None,
+    sidebar: Optional[MainSidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
 ) -> MainNavSetCard:
@@ -1021,7 +1141,7 @@ def navset_card_pill(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    sidebar: Optional[Sidebar] = None,
+    sidebar: Optional[MainSidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
     placement: Literal["above", "below"] = "above",

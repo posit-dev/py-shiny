@@ -14,7 +14,7 @@ from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, div, tags
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from ..types import MISSING, MISSING_TYPE, NavSetArg
-from ._html_dependencies import bootstrap_deps
+from ._html_deps import bootstrap_deps
 from ._navs import navset_bar
 from ._utils import get_window_title
 

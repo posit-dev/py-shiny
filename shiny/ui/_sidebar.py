@@ -7,23 +7,36 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, css, div
 from htmltools import svg as svgtags
 from htmltools import tags
 
-from ... import Session
-from ..._namespaces import resolve_id_or_none
-from ...session import require_active_session
-from ...ui._tag import consolidate_attrs, trinary
-from ...ui._x._htmldeps import sidebar_dependency
-from ...ui.css_unit import CssUnit, as_css_padding, as_css_unit
-from ...ui.fill import as_fill_item, as_fillable_container
+from .. import Session
+from .._deprecated import warn_deprecated
+from .._namespaces import resolve_id_or_none
+from ..session import require_active_session
 from ._card import CardItem
+from ._html_deps_external import sidebar_dependency
+from ._tag import consolidate_attrs, trinary
+from .css_unit import CssUnit, as_css_padding, as_css_unit
+from .fill import as_fill_item, as_fillable_container
+
+__all__ = (
+    "Sidebar",
+    "sidebar",
+    "layout_sidebar",
+    "toggle_sidebar",
+    # Legacy
+    "panel_sidebar",
+    "panel_main",
+    "DeprecatedPanelSidebar",
+    "DeprecatedPanelMain",
+)
 
 
 class Sidebar:
     """
     Sidebar object
 
-    Class returned from :func:`~shiny.experimental.ui.sidebar`. Please do not use this
-    class directly. Instead, supply the :func:`~shiny.experimental.ui.sidebar` object to
-    :func:`~shiny.experimental.ui.layout_sidebar`.
+    Class returned from :func:`~shiny.ui.sidebar`. Please do not use this
+    class directly. Instead, supply the :func:`~shiny.ui.sidebar` object to
+    :func:`~shiny.ui.layout_sidebar`.
 
     Attributes
     ----------
@@ -40,7 +53,7 @@ class Sidebar:
     max_height_mobile
         The maximum height of the horizontal sidebar when viewed on mobile devices.
         The default is `250px` unless the sidebar is included in a
-        :func:`~shiny.experimental.ui.layout_sidebar` with a specified height, in
+        :func:`~shiny.ui.layout_sidebar` with a specified height, in
         which case the default is to take up no more than 50% of the layout container.
     color_fg
         A foreground color.
@@ -62,7 +75,7 @@ class Sidebar:
     max_height_mobile
         The maximum height of the horizontal sidebar when viewed on mobile devices.
         The default is `250px` unless the sidebar is included in a
-        :func:`~shiny.experimental.ui.layout_sidebar` with a specified height, in
+        :func:`~shiny.ui.layout_sidebar` with a specified height, in
         which case the default is to take up no more than 50% of the layout container.
     color_fg
         A foreground color.
@@ -131,9 +144,9 @@ def sidebar(
     Create a collapsing sidebar layout by providing a `sidebar()` object to the
     `sidebar=` argument of:
 
-    * :func:`~shiny.experimental.ui.layout_sidebar`
-      * Creates a sidebar layout component which can be dropped inside any Shiny UI page method (e.g. :func:`~shiny.experimental.ui.page_fillable`) or :func:`~shiny.experimental.ui.card` context.
-    * :func:`~shiny.experimental.ui.navset_bar`, :func:`~shiny.experimental.ui.navset_card_tab`, and :func:`~shiny.experimental.ui.navset_card_pill`
+    * :func:`~shiny.ui.layout_sidebar`
+      * Creates a sidebar layout component which can be dropped inside any Shiny UI page method (e.g. :func:`~shiny.ui.page_fillable`) or :func:`~shiny.ui.card` context.
+    * :func:`~shiny.ui.navset_bar`, :func:`~shiny.ui.navset_card_tab`, and :func:`~shiny.ui.navset_card_pill`
       * Creates a multi page/tab UI with a singular `sidebar()` (which is
         shown on every page/tab).
 
@@ -152,10 +165,10 @@ def sidebar(
         open), `"closed"` or `False` (the sidebar starts closed), or `"always"` or
         `None` (the sidebar is always open and cannot be closed).
 
-        In :func:`~shiny.experimental.ui.toggle_sidebar`, `open` indicates the desired
+        In :func:`~shiny.ui.toggle_sidebar`, `open` indicates the desired
         state of the sidebar, where the default of `open = None` will cause the sidebar
         to be toggled open if closed or vice versa. Note that
-        :func:`~shiny.experimental.ui.toggle_sidebar` can only open or close the
+        :func:`~shiny.ui.toggle_sidebar` can only open or close the
         sidebar, so it does not support the `"desktop"` and `"always"` options.
     id
         A character string. Required if wanting to re-actively read (or update) the
@@ -173,7 +186,7 @@ def sidebar(
     max_height_mobile
         The maximum height of the horizontal sidebar when viewed on mobile devices.
         The default is `250px` unless the sidebar is included in a
-        :func:`~shiny.experimental.ui.layout_sidebar` with a specified height, in
+        :func:`~shiny.ui.layout_sidebar` with a specified height, in
         which case the default is to take up no more than 50% of the layout container.
     gap
         A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
@@ -191,14 +204,14 @@ def sidebar(
     Returns
     -------
     :
-        A :class:`~shiny.experimental.ui.Sidebar` object.
+        A :class:`~shiny.ui.Sidebar` object.
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.layout_sidebar`
-    * :func:`~shiny.experimental.ui.navset_bar`
-    * :func:`~shiny.experimental.ui.navset_card_tab`
-    * :func:`~shiny.experimental.ui.navset_card_pill`
+    * :func:`~shiny.ui.layout_sidebar`
+    * :func:`~shiny.ui.navset_bar`
+    * :func:`~shiny.ui.navset_card_tab`
+    * :func:`~shiny.ui.navset_card_pill`
     """
     # TODO-future; validate `open`, bg, fg, class_, max_height_mobile
 
@@ -278,22 +291,22 @@ def layout_sidebar(
     Sidebar layout
 
     Create a sidebar layout component which can be dropped inside any Shiny UI page
-    method (e.g. :func:`~shiny.experimental.ui.page_fillable`) or
-    :func:`~shiny.experimental.ui.card` context.
+    method (e.g. :func:`~shiny.shiny.ui.page_fillable`) or
+    :func:`~shiny.ui.card` context.
 
     Parameters
     ----------
     sidebar
-        A :class:`~shiny.experimental.ui.Sidebar` object created by :func:`~shiny.experimental.ui.sidebar`.
+        A :class:`~shiny.ui.Sidebar` object created by :func:`~shiny.ui.sidebar`.
     *args
         Contents to the main content area. Or tag attributes that are supplied to the
         resolved :class:`~htmltools.Tag` object.
     fillable
         Whether or not the main content area should be wrapped in a fillable container.
-        See :func:`~shiny.experimental.ui.as_fillable_container` for details.
+        See :func:`~shiny.ui.as_fillable_container` for details.
     fill
         Whether or not the sidebar layout should be wrapped in a fillable container. See
-        :func:`~shiny.experimental.ui.as_fill_item` for details.
+        :func:`~shiny.ui.as_fill_item` for details.
     bg,fg
         A background or foreground color.
     border
@@ -324,7 +337,7 @@ def layout_sidebar(
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.sidebar`
+    * :func:`~shiny.ui.sidebar`
     """
     updated_args = list(args)
     has_upgraded: bool = False
@@ -423,12 +436,12 @@ def toggle_sidebar(
     """
     Toggle a sidebar
 
-    Toggle a :func:`~shiny.experimental.ui.sidebar` state during an active Shiny user session.
+    Toggle a :func:`~shiny.ui.sidebar` state during an active Shiny user session.
 
     Parameters
     ----------
     id
-        The `id` of the :func:`~shiny.experimental.ui.sidebar` to toggle.
+        The `id` of the :func:`~shiny.ui.sidebar` to toggle.
     open
         The desired state of the sidebar, choosing from the following options: `None`
         (toggle sidebar open and closed), `"open"` or `True` (open the sidebar),
@@ -439,8 +452,8 @@ def toggle_sidebar(
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.sidebar`
-    * :func:`~shiny.experimental.ui.layout_sidebar`
+    * :func:`~shiny.ui.sidebar`
+    * :func:`~shiny.ui.layout_sidebar`
     """
     session = require_active_session(session)
 
@@ -498,13 +511,58 @@ def _sidebar_init_js() -> Tag:
 
 
 # Deprecated 2023-06-13
+# Includes: DeprecatedPanelSidebar
+def panel_sidebar(
+    *args: TagChild | TagAttrs,
+    width: int = 4,
+    **kwargs: TagAttrValue,
+) -> DeprecatedPanelSidebar:
+    """Deprecated. Please use :func:`shiny.ui.sidebar` instead of
+    `ui.panel_sidebar()`."""
+    # TODO-future: >= 2024-01-01; Add deprecation message below
+    # Plan of action:
+    # * No deprecation messages today (2023-10-11), and existing code _just works_.
+    # * Change all examples to use the new API.
+    # * In, say, 6 months, start emitting messages for code that uses the old API.
+
+    # warn_deprecated("Please use `sidebar()` instead of `panel_sidebar()`. `panel_sidebar()` will go away in a future version of Shiny.")
+    return DeprecatedPanelSidebar(
+        *args,
+        width=width,
+        **kwargs,
+    )
+
+
+# Deprecated 2023-06-13
+# Includes: DeprecatedPanelMain
+def panel_main(
+    *args: TagChild | TagAttrs,
+    width: int = 8,
+    **kwargs: TagAttrValue,
+) -> DeprecatedPanelMain:
+    """Deprecated. Please supply `panel_main(*args)` directly to `layout_sidebar()`."""
+    # TODO-future: >= 2023-11-01; Add deprecation message below
+    # warn_deprecated("Please use `layout_sidebar(*args)` instead of `panel_main()`. `panel_main()` will go away in a future version of Shiny.")
+
+    # warn if keys are being ignored
+    attrs, children = consolidate_attrs(*args, **kwargs)
+    if len(attrs) > 0:
+        return DeprecatedPanelMain(attrs=attrs, children=children)
+        warn_deprecated(
+            "`*args: TagAttrs` or `**kwargs: TagAttrValue` values supplied to `panel_main()` are being ignored. Please supply them directly to `layout_sidebar()`."
+        )
+
+    return DeprecatedPanelMain(attrs={}, children=children)
+
+
+# Deprecated 2023-06-13
 class DeprecatedPanelSidebar:
     """
     [Deprecated] Sidebar panel
 
-    Class returned from :func:`~shiny.experimental.ui.panel_sidebar`. Please do not
+    Class returned from :func:`~shiny.ui.panel_sidebar`. Please do not
     use this class and instead supply your content to
-    :func:`~shiny.experimental.ui.layout_sidebar` directly.
+    :func:`~shiny.ui.layout_sidebar` directly.
 
     Parameters
     ----------
@@ -520,12 +578,12 @@ class DeprecatedPanelSidebar:
     Attributes
     ----------
     sidebar
-        A output from :func:`~shiny.experimental.ui.sidebar`.
+        A output from :func:`~shiny.ui.sidebar`.
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.layout_sidebar`
-    * :func:`~shiny.experimental.ui.sidebar`
+    * :func:`~shiny.ui.layout_sidebar`
+    * :func:`~shiny.ui.sidebar`
     """
 
     # Store `attrs` for `layout_sidebar()` to retrieve
@@ -552,9 +610,9 @@ class DeprecatedPanelMain:
     """
     [Deprecated] Main panel
 
-    Class returned from :func:`~shiny.experimental.ui.panel_main`. Please do not use
+    Class returned from :func:`~shiny.ui.panel_main`. Please do not use
     this class and instead supply your content to
-    :func:`~shiny.experimental.ui.layout_sidebar` directly.
+    :func:`~shiny.ui.layout_sidebar` directly.
 
 
     Parameters
@@ -573,8 +631,8 @@ class DeprecatedPanelMain:
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.layout_sidebar`
-    * :func:`~shiny.experimental.ui.sidebar`
+    * :func:`~shiny.ui.layout_sidebar`
+    * :func:`~shiny.ui.sidebar`
     """
 
     # Store `attrs` for `layout_sidebar()` to retrieve

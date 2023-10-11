@@ -27,11 +27,11 @@ from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
-from ..experimental.ui._sidebar import Sidebar, layout_sidebar
 from ..types import NavSetArg
 from ._bootstrap import column, row
 from ._card import CardItem, card, card_body, card_footer, card_header
-from ._html_dependencies import nav_spacer_deps
+from ._html_deps import nav_spacer_deps
+from ._sidebar import Sidebar, layout_sidebar
 from ._tag import tag_add_style
 from .css_unit import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_carrier
