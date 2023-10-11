@@ -33,15 +33,16 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 
 if TYPE_CHECKING:
-    from ... import Session
+    from ...session import Session
+    from htmltools import MetadataNode, Tag, TagList
 
-from ... import _utils
 from ..._docstring import add_example
 from ..._typing_extensions import Concatenate, ParamSpec
-from ..._utils import is_async_callable
+from ..._utils import is_async_callable, run_coro_sync
 
 # Input type for the user-spplied function that is passed to a render.xx
 IT = TypeVar("IT")
@@ -220,6 +221,7 @@ class OutputRenderer(Generic[OT], ABC):
         value_fn: ValueFn[IT],
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
+        default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
     ) -> None:
         """
         Parameters
@@ -234,7 +236,10 @@ class OutputRenderer(Generic[OT], ABC):
             function), then the function should execute synchronously.
         params
             App-provided parameters for the transform function (`transform_fn`).
-
+        default_ui
+            Optional function that takes an `output_id` string and returns a Shiny UI
+            object that can be used to display the output. This allows render functions
+            to respond to `_repr_html_` method calls in environments like Jupyter.
         """
 
         # Copy over function name as it is consistent with how Session and Output
@@ -250,6 +255,23 @@ class OutputRenderer(Generic[OT], ABC):
         self._value_fn = value_fn
         self._transformer = transform_fn
         self._params = params
+        self.default_ui = default_ui
+        self._auto_registered = False
+
+        from ...session import get_current_session
+
+        s = get_current_session()
+        if s is not None:
+            s.output(self)
+            # We mark the fact that we're auto-registered so that, if an explicit
+            # registration now occurs, we can undo this auto-registration.
+            self._auto_registered = True
+
+    def on_register(self) -> None:
+        if self._auto_registered:
+            # We're being explicitly registered now. Undo the auto-registration.
+            self._session.output.remove(self.__name__)
+            self._auto_registered = False
 
     def _set_metadata(self, session: Session, name: str) -> None:
         """
@@ -294,6 +316,18 @@ class OutputRenderer(Generic[OT], ABC):
         )
         return ret
 
+    def _repr_html_(self) -> str | None:
+        import htmltools
+
+        if self.default_ui is None:
+            return None
+        return htmltools.TagList(self.default_ui(self.__name__))._repr_html_()
+
+    def tagify(self) -> TagList | Tag | MetadataNode | str:
+        if self.default_ui is None:
+            raise TypeError("No default UI exists for this type of render function")
+        return self.default_ui(self.__name__)
+
 
 # Using a second class to help clarify that it is of a particular type
 class OutputRendererSync(OutputRenderer[OT]):
@@ -314,6 +348,7 @@ class OutputRendererSync(OutputRenderer[OT]):
         value_fn: ValueFnSync[IT],
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
+        default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
     ) -> None:
         if is_async_callable(value_fn):
             raise TypeError(
@@ -324,13 +359,14 @@ class OutputRendererSync(OutputRenderer[OT]):
             value_fn=value_fn,
             transform_fn=transform_fn,
             params=params,
+            default_ui=default_ui,
         )
 
     def __call__(self) -> OT:
         """
         Synchronously executes the output renderer as a function.
         """
-        return _utils.run_coro_sync(self._run())
+        return run_coro_sync(self._run())
 
 
 # The reason for having a separate RendererAsync class is because the __call__
@@ -354,6 +390,7 @@ class OutputRendererAsync(OutputRenderer[OT]):
         value_fn: ValueFnAsync[IT],
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
+        default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
     ) -> None:
         if not is_async_callable(value_fn):
             raise TypeError(
@@ -364,6 +401,7 @@ class OutputRendererAsync(OutputRenderer[OT]):
             value_fn=value_fn,
             transform_fn=transform_fn,
             params=params,
+            default_ui=default_ui,
         )
 
     async def __call__(self) -> OT:  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -526,10 +564,30 @@ class OutputTransformer(Generic[IT, OT, P]):
         self.OutputRendererDecorator = OutputRendererDecorator[IT, OT]
 
 
-@add_example()
+@overload
+def output_transformer(
+    *,
+    default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
+) -> Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]:
+    ...
+
+
+@overload
 def output_transformer(
     transform_fn: TransformFn[IT, P, OT],
 ) -> OutputTransformer[IT, OT, P]:
+    ...
+
+
+@add_example()
+def output_transformer(
+    transform_fn: TransformFn[IT, P, OT] | None = None,
+    *,
+    default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
+) -> (
+    OutputTransformer[IT, OT, P]
+    | Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]
+):
     """
     Output transformer decorator
 
@@ -551,20 +609,20 @@ def output_transformer(
     function, and any keyword arguments supplied to the output tranformer decorator:
 
     * The first parameter to the handler function has the class
-      :class:`~shiny.render.transformer.TransformerMetadata` and is typically called
-      `_meta`. This information gives context the to the handler while trying to
-      resolve the app-supplied value function (typically called `_fn`).
+    :class:`~shiny.render.transformer.TransformerMetadata` and is typically called
+    `_meta`. This information gives context the to the handler while trying to
+    resolve the app-supplied value function (typically called `_fn`).
     * The second parameter is the app-defined output value function (e.g. `_fn`). It's
-      return type (`IT`) determines what types can be returned by the app-supplied
-      output value function. For example, if `_fn` has the type `ValueFn[str | None]`,
-      both the `str` and `None` types are allowed to be returned from the app-supplied
-      output value function.
+    return type (`IT`) determines what types can be returned by the app-supplied
+    output value function. For example, if `_fn` has the type `ValueFn[str | None]`,
+    both the `str` and `None` types are allowed to be returned from the app-supplied
+    output value function.
     * The remaining parameters are the keyword arguments (e.g. `alt:Optional[str] =
-      None` or `**kwargs: object`) that app authors may supply to the renderer (when the
-      renderer decorator is called with parentheses). Variadic positional parameters
-      (e.g. `*args`) are not allowed. All keyword arguments should have a type and
-      default value. No default value is needed for keyword arguments that are passed
-      through (e.g. `**kwargs: Any`).
+    None` or `**kwargs: object`) that app authors may supply to the renderer (when the
+    renderer decorator is called with parentheses). Variadic positional parameters
+    (e.g. `*args`) are not allowed. All keyword arguments should have a type and
+    default value. No default value is needed for keyword arguments that are passed
+    through (e.g. `**kwargs: Any`).
 
     The tranform function's return type (`OT`) determines the output type of the
     :class:`~shiny.render.transformer.OutputRenderer`. Note that in many cases (but not
@@ -577,15 +635,15 @@ def output_transformer(
     -----
 
     * When defining the renderer decorator overloads, if you have extra parameters of
-      `**kwargs: object`, you may get a type error about incompatible signatures. To fix
-      this, you can use `**kwargs: Any` instead or add `_fn: None = None` as the first
-      parameter in the overload containing the `**kwargs: object`.
+    `**kwargs: object`, you may get a type error about incompatible signatures. To fix
+    this, you can use `**kwargs: Any` instead or add `_fn: None = None` as the first
+    parameter in the overload containing the `**kwargs: object`.
 
     * The `transform_fn` should be defined as an asynchronous function but should only
-      asynchronously yield (i.e. use `await` syntax) when the value function (the second
-      parameter of type `ValueFn[IT]`) is awaitable. If the value function is not
-      awaitable (i.e. it is a _synchronous_ function), then the execution of the
-      transform function should also be synchronous.
+    asynchronously yield (i.e. use `await` syntax) when the value function (the second
+    parameter of type `ValueFn[IT]`) is awaitable. If the value function is not
+    awaitable (i.e. it is a _synchronous_ function), then the execution of the
+    transform function should also be synchronous.
 
 
     Parameters
@@ -594,6 +652,10 @@ def output_transformer(
         Asynchronous function used to determine the app-supplied output value function
         return type (`IT`), the transformed type (`OT`), and the keyword arguments (`P`)
         app authors can supply to the renderer decorator.
+    default_ui
+        Optional function that takes an `output_id` string and returns a Shiny UI object
+        that can be used to display the output. This allows render functions to respond
+        to `_repr_html_` method calls in environments like Jupyter.
 
     Returns
     -------
@@ -603,28 +665,37 @@ def output_transformer(
         renderer is called without parentheses and the other is for when the renderer is
         called with parentheses.
     """
-    _assert_transformer(transform_fn)
 
-    def renderer_decorator(
-        value_fn: ValueFn[IT] | None,
-        params: TransformerParams[P],
-    ) -> OutputRenderer[OT] | OutputRendererDecorator[IT, OT]:
-        def as_value_fn(
-            fn: ValueFn[IT],
-        ) -> OutputRenderer[OT]:
-            if is_async_callable(fn):
-                return OutputRendererAsync(fn, transform_fn, params)
-            else:
-                # To avoid duplicate work just for a typeguard, we cast the function
-                fn = cast(ValueFnSync[IT], fn)
-                return OutputRendererSync(fn, transform_fn, params)
+    def output_transformer_impl(
+        transform_fn: TransformFn[IT, P, OT],
+    ) -> OutputTransformer[IT, OT, P]:
+        _assert_transformer(transform_fn)
 
-        if value_fn is None:
-            return as_value_fn
-        val = as_value_fn(value_fn)
-        return val
+        def renderer_decorator(
+            value_fn: ValueFn[IT] | None,
+            params: TransformerParams[P],
+        ) -> OutputRenderer[OT] | OutputRendererDecorator[IT, OT]:
+            def as_value_fn(
+                fn: ValueFn[IT],
+            ) -> OutputRenderer[OT]:
+                if is_async_callable(fn):
+                    return OutputRendererAsync(fn, transform_fn, params, default_ui)
+                else:
+                    # To avoid duplicate work just for a typeguard, we cast the function
+                    fn = cast(ValueFnSync[IT], fn)
+                    return OutputRendererSync(fn, transform_fn, params, default_ui)
 
-    return OutputTransformer(renderer_decorator)
+            if value_fn is None:
+                return as_value_fn
+            val = as_value_fn(value_fn)
+            return val
+
+        return OutputTransformer(renderer_decorator)
+
+    if transform_fn is not None:
+        return output_transformer_impl(transform_fn)
+    else:
+        return output_transformer_impl
 
 
 async def resolve_value_fn(value_fn: ValueFn[IT]) -> IT:

@@ -5,10 +5,9 @@ from typing import Literal, Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
-from ... import Session
 from ..._namespaces import resolve_id_or_none
 from ..._utils import drop_none
-from ...session import require_active_session
+from ...session import Session, require_active_session
 from ...types import MISSING, MISSING_TYPE
 from ._css_unit import CssUnit, as_css_unit
 from ._htmldeps import accordion_dependency

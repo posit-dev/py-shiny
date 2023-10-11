@@ -7,7 +7,7 @@ from htmltools import HTMLDependency
 from ..._versions import bslib as bslib_version
 from ..._versions import htmltools as htmltools_version
 
-_x_www = PurePath(__file__).parent.parent.parent / "www" / "shared" / "_x"
+_x_www = PurePath("") / "www" / "shared" / "_x"
 _x_sidebar_path = str(_x_www / "bslib" / "components" / "sidebar")
 _x_nav_spacer_path = str(_x_www / "bslib" / "components" / "nav_spacer")
 _x_bslibshiny_path = str(_x_www / "bslib" / "components" / "bslibShiny")
