@@ -146,6 +146,7 @@ def run(
     app_dir: str,
     factory: bool,
     launch_browser: bool,
+    **kwargs,
 ) -> None:
     reload_includes_list = reload_includes.split(",")
     return run_app(
@@ -161,6 +162,7 @@ def run(
         app_dir=app_dir,
         factory=factory,
         launch_browser=launch_browser,
+        **kwargs,
     )
 
 
@@ -177,6 +179,7 @@ def run_app(
     app_dir: Optional[str] = ".",
     factory: bool = False,
     launch_browser: bool = False,
+    **kwargs,
 ) -> None:
     """
     Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop.
@@ -217,6 +220,9 @@ def run_app(
         Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
     launch_browser
         Launch app browser after app starts, using the Python webbrowser module.
+    **kwargs
+        Additional keyword arguments which are passed to ``uvicorn.run``. For more
+        information see `
 
     Tip
     ---
@@ -312,6 +318,7 @@ def run_app(
         app_dir=app_dir,
         factory=factory,
         **reload_args,
+        **kwargs,
     )
 
 
