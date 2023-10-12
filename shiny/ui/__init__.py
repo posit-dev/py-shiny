@@ -24,6 +24,9 @@ from ._sidebar import (
     panel_main,
 )
 
+from ._layout import layout_column_wrap
+
+
 # from . import css_unit
 # from . import fill
 
@@ -162,6 +165,8 @@ __all__ = (
     "toggle_sidebar",
     "panel_sidebar",
     "panel_main",
+    # _layout
+    "layout_column_wrap",
     # _card
     "CardItem",
     "card",

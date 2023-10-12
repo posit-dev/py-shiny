@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
@@ -18,7 +15,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect
     @reactive.event(input.toggle_btn)
     def _():
-        x.ui.toggle_switch("switch_value")
+        ui.toggle_switch("switch_value")
 
     @output
     @render.text

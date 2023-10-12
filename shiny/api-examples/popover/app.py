@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, render, ui
 
 # https://icons.getbootstrap.com/icons/gear-fill/
@@ -9,17 +6,17 @@ gear_fill = ui.HTML(
 )
 
 app_ui = ui.page_fluid(
-    x.ui.popover(
+    ui.popover(
         ui.input_action_button("btn", "A button", class_="mt-3"),
         "A popover with more context and information than should be used in a tooltip.",
         "You can even have multiple DOM elements in a popover!",
         id="btn_popover",
     ),
     ui.hr(),
-    x.ui.card(
-        x.ui.card_header(
+    ui.card(
+        ui.card_header(
             "Plot title (Click the gear to change variables)",
-            x.ui.popover(
+            ui.popover(
                 ui.span(
                     gear_fill,
                     style="position:absolute; top: 5px; right: 7px;",

@@ -1,10 +1,7 @@
-from __future__ import annotations
-
-import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
-app_ui = x.ui.page_sidebar(
-    x.ui.sidebar("Sidebar content", id="sidebar"),
+app_ui = ui.page_sidebar(
+    ui.sidebar("Sidebar content", id="sidebar"),
     ui.input_action_button(
         "toggle_sidebar",
         label="Toggle sidebar",
@@ -18,7 +15,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect
     @reactive.event(input.toggle_sidebar)
     def _():
-        x.ui.toggle_sidebar("sidebar")
+        ui.toggle_sidebar("sidebar")
 
     @output
     @render.text

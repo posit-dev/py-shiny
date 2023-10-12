@@ -1,19 +1,15 @@
-from __future__ import annotations
-
 import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, req, ui
 
 app_ui = ui.page_fluid(
-    ui.input_action_button("btn_show", "Show popover", class_="mt-3 me-3"),
-    ui.input_action_button("btn_close", "Close popover", class_="mt-3 me-3"),
-    ui.br(),
-    ui.input_action_button("btn_toggle", "Toggle popover", class_="mt-3 me-3"),
+    ui.input_action_button("btn_update", "Update popover phrase", class_="mt-3 me-3"),
     ui.br(),
     ui.br(),
     x.ui.popover(
         ui.input_action_button("btn_w_popover", "A button w/ a popover", class_="mt-3"),
         "A message",
         id="popover_id",
+        title="To start",
     ),
 )
 
@@ -21,21 +17,18 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect
     def _():
-        req(input.btn_show())
-
+        # Immediately display popover
         x.ui.toggle_popover("popover_id", show=True)
 
     @reactive.Effect
+    @reactive.event(input.btn_update)
     def _():
-        req(input.btn_close())
+        content = (
+            "A " + " ".join(["NEW" for _ in range(input.btn_update())]) + " message"
+        )
 
-        x.ui.toggle_popover("popover_id", show=False)
-
-    @reactive.Effect
-    def _():
-        req(input.btn_toggle())
-
-        x.ui.toggle_popover("popover_id")
+        x.ui.update_popover("popover_id", content)
+        # x.ui.toggle_popover("popover_id", show=True)
 
     @reactive.Effect
     def _():

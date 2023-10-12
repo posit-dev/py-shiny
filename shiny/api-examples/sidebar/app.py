@@ -1,30 +1,27 @@
-from __future__ import annotations
-
-import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
-    x.ui.card(
-        x.ui.layout_sidebar(
-            x.ui.sidebar("Left sidebar content", id="sidebar_left"),
+    ui.card(
+        ui.layout_sidebar(
+            ui.sidebar("Left sidebar content", id="sidebar_left"),
             ui.output_text_verbatim("state_left"),
         )
     ),
-    x.ui.card(
-        x.ui.layout_sidebar(
-            x.ui.sidebar("Right sidebar content", id="sidebar_right", position="right"),
+    ui.card(
+        ui.layout_sidebar(
+            ui.sidebar("Right sidebar content", id="sidebar_right", position="right"),
             ui.output_text_verbatim("state_right"),
         ),
     ),
-    x.ui.card(
-        x.ui.layout_sidebar(
-            x.ui.sidebar("Closed sidebar content", id="sidebar_closed", open="closed"),
+    ui.card(
+        ui.layout_sidebar(
+            ui.sidebar("Closed sidebar content", id="sidebar_closed", open="closed"),
             ui.output_text_verbatim("state_closed"),
         )
     ),
-    x.ui.card(
-        x.ui.layout_sidebar(
-            x.ui.sidebar("Always sidebar content", id="sidebar_always", open="always"),
+    ui.card(
+        ui.layout_sidebar(
+            ui.sidebar("Always sidebar content", id="sidebar_always", open="always"),
             ui.output_text_verbatim("state_always"),
         )
     ),

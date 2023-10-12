@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from shiny import App, ui
 
 app_ui = ui.page_fluid(
