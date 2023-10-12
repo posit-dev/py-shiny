@@ -1,8 +1,6 @@
 from data import adjectives, animals, dark_color, light_color
 
-from shiny import App, Inputs, Outputs, Session
-from shiny import experimental as x
-from shiny import reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fixed(
     ui.h1("Toggle Sidebars"),
@@ -14,8 +12,8 @@ app_ui = ui.page_fixed(
         ui.input_action_button("toggle_inner", "Toggle inner"),
         class_="my-2",
     ),
-    x.ui.layout_sidebar(
-        x.ui.sidebar(
+    ui.layout_sidebar(
+        ui.sidebar(
             "Outer Sidebar",
             ui.input_select(
                 "adjective",
@@ -30,8 +28,8 @@ app_ui = ui.page_fixed(
             open="desktop",
             max_height_mobile="300px",
         ),
-        x.ui.layout_sidebar(
-            x.ui.sidebar(
+        ui.layout_sidebar(
+            ui.sidebar(
                 "Inner Sidebar",
                 ui.input_select(
                     "animal",
@@ -67,24 +65,24 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     @reactive.Effect
     @reactive.event(input.open_all)
     def _():
-        x.ui.toggle_sidebar("sidebar_inner", open=True)
-        x.ui.toggle_sidebar("sidebar_outer", open=True)
+        ui.toggle_sidebar("sidebar_inner", open=True)
+        ui.toggle_sidebar("sidebar_outer", open=True)
 
     @reactive.Effect
     @reactive.event(input.close_all)
     def _():
-        x.ui.toggle_sidebar("sidebar_inner", open=False)
-        x.ui.toggle_sidebar("sidebar_outer", open=False)
+        ui.toggle_sidebar("sidebar_inner", open=False)
+        ui.toggle_sidebar("sidebar_outer", open=False)
 
     @reactive.Effect
     @reactive.event(input.toggle_inner)
     def _():
-        x.ui.toggle_sidebar("sidebar_inner")
+        ui.toggle_sidebar("sidebar_inner")
 
     @reactive.Effect
     @reactive.event(input.toggle_outer)
     def _():
-        x.ui.toggle_sidebar("sidebar_outer")
+        ui.toggle_sidebar("sidebar_outer")
 
 
 app = App(app_ui, server)

@@ -1,5 +1,3 @@
-TODO-barret; move more api-example apps and make sure they work before and after
-
 from __future__ import annotations
 
 import htmltools

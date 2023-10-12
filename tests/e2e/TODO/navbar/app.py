@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import shiny.experimental as x
 from shiny import App, ui
 from shiny.types import NavSetArg
 
-my_sidebar = x.ui.sidebar("My sidebar!!", open="open", title="Barret")
+my_sidebar = ui.sidebar("Sidebar content", open="open", title="Sidebar title")
 
 
 def nav_with_content(letter: str, prefix: str) -> ui._navs.Nav:
@@ -40,7 +39,7 @@ def nav_items(prefix: str) -> list[NavSetArg]:
 
 
 app = App(
-    ui=x.ui.page_navbar(
+    ui=ui.page_navbar(
         # theme = bs_theme(),
         *nav_items("page_navbar()"),
         sidebar=my_sidebar,
@@ -52,18 +51,18 @@ app = App(
         footer=ui.div(
             {"style": "width:80%; margin: 0 auto"},
             ui.h4("navset_card_tab()"),
-            x.ui.navset_card_tab(
+            ui.navset_card_tab(
                 *nav_items("navset_card_tab()"),
                 sidebar=my_sidebar,
             ),
             ui.h4("navset_card_pill()"),
-            x.ui.navset_card_pill(
+            ui.navset_card_pill(
                 *nav_items("navset_card_pill()"),
                 sidebar=my_sidebar,
             ),
             # Do not include `navset_bar()` in example. Ok for testing only
             ui.h4("navset_bar()"),
-            x.ui.navset_bar(
+            ui.navset_bar(
                 *nav_items("navset_bar()"),
                 title="Test!",
                 sidebar=my_sidebar,
