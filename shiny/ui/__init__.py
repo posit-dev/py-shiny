@@ -3,19 +3,37 @@ Tools for creating user interfaces including: custom components, HTML components
 layout helpers, page-level containers, and more.
 """
 
+# TODO-barret; Export all new methods!
+
 from ._bootstrap import (
     row,
     column,
-    layout_sidebar,
     panel_well,
-    panel_sidebar,
-    panel_main,
     panel_conditional,
     panel_title,
     panel_fixed,
     panel_absolute,
     help_text,
 )
+from ._sidebar import (
+    Sidebar,
+    sidebar,
+    layout_sidebar,
+    toggle_sidebar,
+    panel_sidebar,
+    panel_main,
+)
+
+# from . import css_unit
+# from . import fill
+
+from ._card import (
+    card,
+    CardItem,
+    card_header,
+    card_footer,
+)
+
 from ._download_button import download_button, download_link
 from ._plot_output_opts import brush_opts, click_opts, dblclick_opts, hover_opts
 from ._include_helpers import include_css, include_js
@@ -49,6 +67,8 @@ from ._input_update import (
     update_text,
     update_text_area,
     update_navs,
+    update_tooltip,
+    update_popover,
 )
 from ._insert import insert_ui, remove_ui
 from ._markdown import markdown
@@ -78,10 +98,23 @@ from ._output import (
     output_table,
     output_ui,
 )
-from ._page import page_navbar, page_fluid, page_fixed, page_bootstrap
+from ._page import (
+    page_sidebar,
+    page_navbar,
+    page_fillable,
+    page_fluid,
+    page_fixed,
+    page_bootstrap,
+)
 from ._progress import Progress
 
 from .dataframe import output_data_frame
+
+from ._input_toggle import toggle_switch, toggle_tooltip, toggle_popover
+from ._popover import popover
+from ._valuebox import value_box
+from ._tooltip import tooltip
+
 
 from htmltools import (
     TagList,
@@ -113,44 +146,67 @@ from htmltools import (
 
 
 __all__ = (
+    # _bootstrap
     "row",
     "column",
-    "layout_sidebar",
     "panel_well",
-    "panel_sidebar",
-    "panel_main",
     "panel_conditional",
     "panel_title",
     "panel_fixed",
     "panel_absolute",
     "help_text",
+    # _sidebar
+    "Sidebar",
+    "sidebar",
+    "layout_sidebar",
+    "toggle_sidebar",
+    "panel_sidebar",
+    "panel_main",
+    # _card
+    "CardItem",
+    "card",
+    "card_header",
+    "card_footer",
+    # _download_button
     "download_button",
     "download_link",
+    # _plot_output_opts
     "brush_opts",
     "click_opts",
     "dblclick_opts",
     "hover_opts",
+    # _include_helpers
     "include_css",
     "include_js",
+    # _input_action_button
     "input_action_button",
     "input_action_link",
+    # _input_check_radio
     "input_checkbox",
     "input_checkbox_group",
     "input_switch",
     "input_radio_buttons",
+    # _input_date
     "input_date",
     "input_date_range",
+    # _input_file
     "input_file",
+    # _input_numeric
     "input_numeric",
+    # _input_password
     "input_password",
+    # _input_select
     "input_select",
     "input_selectize",
+    # _input_slider
     "input_slider",
     "SliderValueArg",
     "SliderStepArg",
     "AnimationOptions",
+    # _input_text
     "input_text",
     "input_text_area",
+    # _input_update
     "update_action_button",
     "update_action_link",
     "update_checkbox",
@@ -166,39 +222,62 @@ __all__ = (
     "update_text",
     "update_text_area",
     "update_navs",
+    "update_tooltip",
+    "update_popover",
+    # _insert
     "insert_ui",
     "remove_ui",
+    # _markdown
     "markdown",
+    # _modal
     "modal_button",
     "modal",
     "modal_show",
     "modal_remove",
+    # _navs
     "nav",
     "nav_menu",
     "nav_control",
     "nav_spacer",
     "navset_tab",
-    "navset_tab_card",
     "navset_card_tab",
     "navset_card_pill",
     "navset_pill",
-    "navset_pill_card",
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
+    # # Deprecated
+    "navset_pill_card",
+    "navset_tab_card",
+    # _notification
     "notification_show",
     "notification_remove",
-    "output_data_frame",
+    # _output
+    "output_data_frame",  # dataframe
     "output_plot",
     "output_image",
     "output_text",
     "output_text_verbatim",
     "output_table",
     "output_ui",
+    # _page
+    "page_sidebar",
     "page_navbar",
+    "page_fillable",
     "page_fluid",
     "page_fixed",
     "page_bootstrap",
+    # _input_toggle
+    "toggle_switch",
+    "toggle_tooltip",
+    "toggle_popover",
+    # _popover
+    "popover",
+    # _valuebox
+    "value_box",
+    # _tooltip
+    "tooltip",
+    # _progress
     "Progress",
     # Items below are from htmltools
     "TagList",
