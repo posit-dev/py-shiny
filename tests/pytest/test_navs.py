@@ -106,7 +106,7 @@ def test_nav_markup():
 
     assert TagList(x).render()["html"] == textwrap.dedent(
         """\
-        <div class="card">
+        <div class="html-fill-item html-fill-container card bslib-card bslib-mb-spacing" data-bslib-card-init="">
           <div class="card-header">
             <ul class="nav nav-pills card-header-pills" data-tabsetid="7311">
               <li class="nav-item">
@@ -125,13 +125,14 @@ def test_nav_markup():
               </li>
             </ul>
           </div>
-          <div class="card-body">
+          <div class="html-fill-item html-fill-container card-body bslib-gap-spacing" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
             <div class="tab-content" data-tabsetid="7311">
               <div class="tab-pane" role="tabpanel" data-value="a" id="tab-7311-0">a</div>
               <div class="tab-pane active" role="tabpanel" data-value="c" id="tab-7890-0">c</div>
               <div class="tab-pane" role="tabpanel" data-value="b" id="tab-7311-2">b</div>
             </div>
           </div>
+          <script data-bslib-card-init="">window.bslib.Card.initializeAllCards();</script>
         </div>"""
     )
 
@@ -163,11 +164,11 @@ def test_nav_markup():
             </div>
           </div>
         </nav>
-        <div class="container-fluid">
-          <div class="row">Page header</div>
-          <div class="tab-content" data-tabsetid="7311">
-            <div class="tab-pane active" role="tabpanel" data-value="c" id="tab-7890-1">c</div>
+        <div class="html-fill-item html-fill-container container-fluid">
+          Page header
+          <div class="html-fill-item html-fill-container tab-content" data-tabsetid="7311">
+            <div class="html-fill-item html-fill-container tab-pane active" role="tabpanel" data-value="c" id="tab-7890-1" style="--bslib-navbar-margin:0;;">c</div>
           </div>
-          <div class="row">Page footer</div>
+          Page footer
         </div>"""
     )
