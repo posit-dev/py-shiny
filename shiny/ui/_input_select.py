@@ -13,7 +13,7 @@ from htmltools import Tag, TagChild, TagList, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from ._html_deps import selectize_deps
+from ._html_deps_external import selectize_deps
 from ._utils import shiny_input_label
 
 _Choices = Mapping[str, TagChild]

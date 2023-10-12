@@ -12,7 +12,7 @@ from .._deprecated import warn_deprecated
 from .._namespaces import resolve_id_or_none
 from ..session import require_active_session
 from ._card import CardItem
-from ._html_deps_external import sidebar_dependency
+from ._html_deps_shinyverse import sidebar_dependency
 from ._tag import consolidate_attrs, trinary
 from .css_unit import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container

@@ -30,7 +30,7 @@ from .._utils import private_random_int
 from ..types import NavSetArg
 from ._bootstrap import column, row
 from ._card import CardItem, card, card_body, card_footer, card_header
-from ._html_deps import nav_spacer_deps
+from ._html_deps_shinyverse import nav_spacer_dependency
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import tag_add_style
 from .css_unit import CssUnit, as_css_padding, as_css_unit
@@ -201,7 +201,7 @@ def nav_spacer() -> Nav:
     See :func:`~shiny.ui.nav`
     """
 
-    return Nav(tags.li(nav_spacer_deps(), class_="bslib-nav-spacer"))
+    return Nav(tags.li(nav_spacer_dependency(), class_="bslib-nav-spacer"))
 
 
 class NavMenu:

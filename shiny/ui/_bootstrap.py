@@ -30,7 +30,7 @@ from htmltools import (
 from .._docstring import add_example
 from ..module import current_namespace
 from ..types import MISSING, MISSING_TYPE
-from ._html_deps import jqui_deps
+from ._html_deps_external import jqui_deps
 from ._utils import get_window_title
 
 

@@ -2,23 +2,11 @@ from __future__ import annotations
 
 __all__ = ("output_data_frame",)
 
-from htmltools import HTMLDependency, Tag
+from htmltools import Tag
 
-from ... import __version__
 from ..._namespaces import resolve_id
+from .._html_deps_py_shiny import data_frame_deps
 from ..fill import as_fill_carrier
-
-
-def data_frame_deps() -> HTMLDependency:
-    return HTMLDependency(
-        name="shiny-data-frame-output",
-        version=__version__,
-        source={
-            "package": "shiny",
-            "subdir": "www/shared/dataframe",
-        },
-        script={"src": "dataframe.js", "type": "module"},
-    )
 
 
 def output_data_frame(id: str) -> Tag:

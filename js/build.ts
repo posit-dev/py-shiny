@@ -1,14 +1,16 @@
 import { BuildOptions, build } from "esbuild";
 import { sassPlugin } from "esbuild-sass-plugin";
-import * as fs from "node:fs";
+import * as fs from "node:fs/promises";
 
-async function bundle() {
+const outDir = "../shiny/www/shared/py-shiny";
+
+async function bundle_dataframe() {
   try {
     const options: BuildOptions = {
       entryPoints: { dataframe: "dataframe/index.tsx" },
       format: "esm",
       bundle: true,
-      outdir: "../shiny/www/shared/dataframe",
+      outdir: outDir + "/dataframe",
       minify: true,
       sourcemap: true,
       plugins: [sassPlugin({ type: "css-text", sourceMap: false })],
@@ -16,12 +18,39 @@ async function bundle() {
     };
 
     const result = await build(options);
-    console.log("Build completed successfully!");
+    console.log("Building dataframe completed successfully!");
     // console.log("Output:", result);
-    fs.writeFileSync("esbuild-metadata.json", JSON.stringify(result.metafile));
+    await fs.writeFile(
+      "esbuild-metadata.json",
+      JSON.stringify(result.metafile)
+    );
   } catch (error) {
     console.error("Build failed:", error);
   }
 }
 
-bundle();
+async function bundle_textarea() {
+  try {
+    const options: BuildOptions = {
+      entryPoints: {
+        "textarea-autoresize": "text-area/textarea-autoresize.ts",
+      },
+      format: "iife",
+      bundle: true,
+      outdir: outDir + "/text-area",
+      minify: false,
+      sourcemap: false,
+      metafile: false,
+    };
+    const result = await build(options);
+    console.log("Building textarea-autoresize completed successfully!");
+  } catch (error) {
+    console.error("Build failed for textarea-autoresize:", error);
+  }
+}
+
+// Run function to avoid top level await
+async function main(): Promise<void> {
+  await Promise.all([bundle_dataframe(), bundle_textarea()]);
+}
+main();

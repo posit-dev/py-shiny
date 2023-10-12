@@ -4,7 +4,7 @@ from typing import Callable, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, tags
 
-from ...ui._html_deps_external import value_box_dependency
+from ...ui._html_deps_shinyverse import value_box_dependency
 from ...ui._layout import layout_column_wrap
 from ...ui._tag import consolidate_attrs
 from ...ui._utils import is_01_scalar

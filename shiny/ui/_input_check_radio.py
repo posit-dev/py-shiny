@@ -12,7 +12,7 @@ from htmltools import Tag, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from ._html_deps_external import bslibshiny_dependency
+from ._html_deps_shinyverse import bslibshiny_dependency
 from ._utils import shiny_input_label
 
 # Canonical format for representing select options.

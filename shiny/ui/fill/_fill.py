@@ -5,7 +5,7 @@ from typing import TypeVar
 from htmltools import Tag
 
 from ..._docstring import add_example
-from .._html_deps_external import fill_dependency
+from .._html_deps_shinyverse import fill_dependency
 from .._tag import tag_prepend_class, tag_remove_class
 
 __all__ = (

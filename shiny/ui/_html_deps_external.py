@@ -1,121 +1,82 @@
 from __future__ import annotations
 
-from pathlib import PurePath
-from typing import Literal
+from htmltools import HTML, HTMLDependency
 
-from htmltools import HTMLDependency
-
-from .._typing_extensions import NotRequired, TypedDict
-from .._versions import bslib as bslib_version
-from .._versions import htmltools as htmltools_version
-
-_x_www = PurePath(__file__).parent.parent / "www" / "shared" / "_x"
+from .._versions import bootstrap as bootstrap_version
+from .._versions import shiny_html_deps
+from ..html_dependencies import jquery_deps
 
 
-_x_htmltools_path = _x_www / "htmltools"
-_x_components_path = _x_www / "bslib" / "components"
+def bootstrap_deps() -> list[HTMLDependency]:
+    dep = HTMLDependency(
+        name="bootstrap",
+        version=bootstrap_version,
+        source={"package": "shiny", "subdir": "www/shared/bootstrap/"},
+        script={"src": "bootstrap.bundle.min.js"},
+        stylesheet={"href": "bootstrap.min.css"},
+        meta={"name": "viewport", "content": "width=device-width, initial-scale=1"},
+    )
+    deps = [jquery_deps(), dep]
+    return deps
 
 
-def _htmltools_dep(
-    name: str,
-    script: bool = False,
-    stylesheet: bool = False,
-    all_files: bool = True,
-) -> HTMLDependency:
+def ionrangeslider_deps() -> list[HTMLDependency]:
+    return [
+        HTMLDependency(
+            name="ionrangeslider",
+            version="2.3.1",
+            source={"package": "shiny", "subdir": "www/shared/ionrangeslider/"},
+            script={"src": "js/ion.rangeSlider.min.js"},
+        ),
+        HTMLDependency(
+            name="preset-shiny-ionrangeslider",
+            version=shiny_html_deps,
+            source={"package": "shiny", "subdir": "www/shared/ionrangeslider/"},
+            stylesheet={"href": "css/ion.rangeSlider.css"},
+        ),
+        HTMLDependency(
+            name="strftime",
+            version="0.9.2",
+            source={"package": "shiny", "subdir": "www/shared/strftime/"},
+            script={"src": "strftime-min.js"},
+        ),
+    ]
+
+
+def datepicker_deps() -> HTMLDependency:
     return HTMLDependency(
-        name=f"htmltools-{name}",
-        version=htmltools_version,
-        source={
-            "package": "shiny",
-            "subdir": str(_x_htmltools_path / name),
-        },
-        script={"src": f"{name}.min.js"} if script else None,
-        stylesheet={"href": f"{name}.css"} if stylesheet else None,
-        all_files=all_files,
+        name="bootstrap-datepicker",
+        version="1.9.0",
+        source={"package": "shiny", "subdir": "www/shared/datepicker/"},
+        # TODO: pre-compile the Bootstrap 5 version?
+        stylesheet={"href": "css/bootstrap-datepicker3.min.css"},
+        script={"src": "js/bootstrap-datepicker.min.js"},
+        # Need to enable noConflict mode. See #1346.
+        head=HTML(
+            "<script>(function() { var datepicker = $.fn.datepicker.noConflict(); $.fn.bsDatepicker = datepicker; })();</script>"
+        ),
     )
 
 
-class _ScriptItemDict(TypedDict):
-    src: str
-    type: NotRequired[Literal["module"]]
-
-
-def _bslib_component_dep(
-    name: str,
-    script: bool = False,
-    stylesheet: bool = False,
-    all_files: bool = True,
-    script_is_module: bool = False,
-) -> HTMLDependency:
-    script_val: _ScriptItemDict | None = None
-    if script:
-        script_val = {"src": f"{name}.min.js"}
-        if script_is_module:
-            script_val["type"] = "module"
-
+def selectize_deps() -> HTMLDependency:
     return HTMLDependency(
-        name=f"bslib-{name}",
-        version=bslib_version,
-        source={
-            "package": "shiny",
-            "subdir": str(_x_components_path / name),
-        },
-        script=script_val,  # type: ignore # https://github.com/posit-dev/py-htmltools/issues/59
-        stylesheet={"href": f"{name}.css"} if stylesheet else None,
-        all_files=all_files,
+        name="selectize",
+        version="0.12.6",
+        source={"package": "shiny", "subdir": "www/shared/selectize/"},
+        script=[
+            {"src": "js/selectize.min.js"},
+            {"src": "accessibility/js/selectize-plugin-a11y.min.js"},
+        ],
+        # TODO: pre-compile the Bootstrap 5 version?
+        stylesheet={"href": "css/selectize.bootstrap3.css"},
     )
 
 
-# -- htmltools ---------------------
-
-
-def fill_dependency() -> HTMLDependency:
-    return _htmltools_dep("fill", stylesheet=True)
-
-
-# -- bslib -------------------------
-
-
-def accordion_dependency() -> HTMLDependency:
-    return _bslib_component_dep("accordion", script=True, stylesheet=True)
-
-
-def card_dependency() -> HTMLDependency:
-    return _bslib_component_dep("card", script=True, stylesheet=True)
-
-
-def grid_dependency() -> HTMLDependency:
-    return _bslib_component_dep("grid", stylesheet=True)
-
-
-def nav_spacer_dependency() -> HTMLDependency:
-    return _bslib_component_dep("nav_spacer", stylesheet=True)
-
-
-def page_fillable_dependency() -> HTMLDependency:
-    return _bslib_component_dep("page_fillable", stylesheet=True)
-
-
-# # Not used!
-# def page_navbar_dependency() -> HTMLDependency:
-#     return _bslib_component_dep("page_navbar", stylesheet=True)
-
-
-def page_sidebar_dependency() -> HTMLDependency:
-    return _bslib_component_dep("page_sidebar", stylesheet=True)
-
-
-def sidebar_dependency() -> HTMLDependency:
-    return _bslib_component_dep("sidebar", script=True, stylesheet=True)
-
-
-def value_box_dependency() -> HTMLDependency:
-    return _bslib_component_dep("value_box", stylesheet=True)
-
-
-def web_component_dependency() -> HTMLDependency:
-    return _bslib_component_dep("webComponents", script=True, script_is_module=True)
-
-
-def bslibshiny_dependency() -> HTMLDependency:
-    return _bslib_component_dep("bslibShiny", script=True)
+def jqui_deps() -> HTMLDependency:
+    return HTMLDependency(
+        name="jquery-ui",
+        version="1.12.1",
+        source={"package": "shiny", "subdir": "www/shared/jqueryui/"},
+        script={"src": "jquery-ui.min.js"},
+        stylesheet={"href": "jquery-ui.min.css"},
+    )

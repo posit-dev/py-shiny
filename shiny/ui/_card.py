@@ -17,7 +17,7 @@ from htmltools import (
 
 # from .._docstring import add_example
 from ..types import MISSING, MISSING_TYPE
-from ._html_deps_external import card_dependency
+from ._html_deps_shinyverse import card_dependency
 from ._tag import consolidate_attrs
 from ._tooltip import tooltip
 from .css_unit._css_unit import CssUnit, as_css_padding, as_css_unit

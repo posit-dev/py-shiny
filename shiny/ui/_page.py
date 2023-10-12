@@ -27,8 +27,8 @@ from htmltools import (
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
-from ._html_deps import bootstrap_deps
-from ._html_deps_external import page_fillable_dependency, page_sidebar_dependency
+from ._html_deps_external import bootstrap_deps
+from ._html_deps_shinyverse import page_fillable_dependency, page_sidebar_dependency
 from ._navs import navset_bar
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import consolidate_attrs
