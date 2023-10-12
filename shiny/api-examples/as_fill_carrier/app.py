@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import htmltools
 
-import shiny.experimental as x
 from shiny import App, ui
+from shiny.ui import fill
 
 
 def outer_inner() -> tuple[htmltools.Tag, htmltools.Tag, htmltools.Tag]:
@@ -39,19 +39,19 @@ outer0, middle0, inner0 = outer_inner()
 outer1, middle1, inner1 = outer_inner()
 outer2, middle2, inner2 = outer_inner()
 outer3, middle3, inner3 = outer_inner()
-x.ui.as_fillable_container(outer0)
-x.ui.as_fillable_container(outer1)
-x.ui.as_fillable_container(outer2)
-x.ui.as_fillable_container(outer3)
+fill.as_fillable_container(outer0)
+fill.as_fillable_container(outer1)
+fill.as_fillable_container(outer2)
+fill.as_fillable_container(outer3)
 
-x.ui.as_fill_item(inner0)
-x.ui.as_fill_item(inner1)
-x.ui.as_fill_item(inner2)
-x.ui.as_fill_item(inner3)
+fill.as_fill_item(inner0)
+fill.as_fill_item(inner1)
+fill.as_fill_item(inner2)
+fill.as_fill_item(inner3)
 
-x.ui.as_fill_item(middle1)
-x.ui.as_fillable_container(middle2)
-x.ui.as_fill_carrier(middle3)
+fill.as_fill_item(middle1)
+fill.as_fillable_container(middle2)
+fill.as_fill_carrier(middle3)
 
 app_ui = ui.page_fluid(
     ui.markdown(

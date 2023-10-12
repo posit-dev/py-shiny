@@ -4,12 +4,9 @@ from typing import TypeVar
 
 from htmltools import Tag
 
+from ..._docstring import add_example
 from .._html_deps_external import fill_dependency
 from .._tag import tag_prepend_class, tag_remove_class
-
-# TODO-barret; export publically
-# TODO-barret; double check documentation; remove experimental from links. update fill location
-
 
 __all__ = (
     "as_fillable_container",
@@ -28,6 +25,7 @@ FILL_ITEM_CLASS = "html-fill-item"
 FILL_CONTAINER_CLASS = "html-fill-container"
 
 
+@add_example()
 def as_fillable_container(
     tag: TagT,
 ) -> TagT:
@@ -36,6 +34,7 @@ def as_fillable_container(
     return tag
 
 
+@add_example()
 def as_fill_item(
     tag: TagT,
 ) -> TagT:
@@ -45,10 +44,10 @@ def as_fill_item(
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
     why most UI components (e.g., :func:`~shiny.ui.card`,
-    :func:`~shiny.ui.layout_sidebar`) possess both `fillable` and `fill`
-    arguments (to control their fill behavior). However, sometimes it's useful to add,
-    remove, and/or test fillable/fill properties on arbitrary :class:`~htmltools.Tag`,
-    which these functions are designed to do.
+    :func:`~shiny.ui.layout_sidebar`) possess both `fillable` and `fill` arguments (to
+    control their fill behavior). However, sometimes it's useful to add, remove, and/or
+    test fillable/fill properties on arbitrary :class:`~htmltools.Tag`, which these
+    functions are designed to do.
 
     Parameters
     ----------
@@ -63,18 +62,19 @@ def as_fill_item(
 
     See Also
     --------
-    * :func:`~shiny.ui.as_fill_carrier`
-    * :func:`~shiny.ui.as_fillable_container`
-    * :func:`~shiny.ui.remove_all_fill`
-    * :func:`~shiny.ui.is_fill_carrier`
-    * :func:`~shiny.ui.is_fill_item`
-    * :func:`~shiny.ui.is_fillable_container`
+    * :func:`~shiny.ui.fill.as_fill_carrier`
+    * :func:`~shiny.ui.fill.as_fillable_container`
+    * :func:`~shiny.ui.fill.remove_all_fill`
+    * :func:`~shiny.ui.fill.is_fill_carrier`
+    * :func:`~shiny.ui.fill.is_fill_item`
+    * :func:`~shiny.ui.fill.is_fillable_container`
     """
     tag_prepend_class(tag, FILL_ITEM_CLASS)
     tag.append(fill_dependency())
     return tag
 
 
+@add_example()
 def as_fill_carrier(
     tag: TagT,
 ) -> TagT:
@@ -84,10 +84,10 @@ def as_fill_carrier(
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
     why most UI components (e.g., :func:`~shiny.ui.card`,
-    :func:`~shiny.ui.layout_sidebar`) possess both `fillable` and `fill`
-    arguments (to control their fill behavior). However, sometimes it's useful to add,
-    remove, and/or test fillable/fill properties on arbitrary :class:`~htmltools.Tag`,
-    which these functions are designed to do.
+    :func:`~shiny.ui.layout_sidebar`) possess both `fillable` and `fill` arguments (to
+    control their fill behavior). However, sometimes it's useful to add, remove, and/or
+    test fillable/fill properties on arbitrary :class:`~htmltools.Tag`, which these
+    functions are designed to do.
 
     Parameters
     ----------
@@ -102,12 +102,12 @@ def as_fill_carrier(
 
     See Also
     --------
-    * :func:`~shiny.ui.as_fill_item`
-    * :func:`~shiny.ui.as_fillable_container`
-    * :func:`~shiny.ui.remove_all_fill`
-    * :func:`~shiny.ui.is_fill_carrier`
-    * :func:`~shiny.ui.is_fill_item`
-    * :func:`~shiny.ui.is_fillable_container`
+    * :func:`~shiny.ui.fill.as_fill_item`
+    * :func:`~shiny.ui.fill.as_fillable_container`
+    * :func:`~shiny.ui.fill.remove_all_fill`
+    * :func:`~shiny.ui.fill.is_fill_carrier`
+    * :func:`~shiny.ui.fill.is_fill_item`
+    * :func:`~shiny.ui.fill.is_fillable_container`
     """
     as_fillable_container(tag)
     as_fill_item(tag)
@@ -123,10 +123,10 @@ def remove_all_fill(
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
     why most UI components (e.g., :func:`~shiny.ui.card`,
-    :func:`~shiny.ui.layout_sidebar`) possess both `fillable` and `fill`
-    arguments (to control their fill behavior). However, sometimes it's useful to add,
-    remove, and/or test fillable/fill properties on arbitrary :class:`~htmltools.Tag`,
-    which these functions are designed to do.
+    :func:`~shiny.ui.layout_sidebar`) possess both `fillable` and `fill` arguments (to
+    control their fill behavior). However, sometimes it's useful to add, remove, and/or
+    test fillable/fill properties on arbitrary :class:`~htmltools.Tag`, which these
+    functions are designed to do.
 
     Parameters
     ----------
@@ -142,12 +142,12 @@ def remove_all_fill(
 
     See Also
     --------
-    * :func:`~shiny.ui.as_fill_carrier`
-    * :func:`~shiny.ui.as_fill_item`
-    * :func:`~shiny.ui.as_fillable_container`
-    * :func:`~shiny.ui.is_fill_carrier`
-    * :func:`~shiny.ui.is_fill_item`
-    * :func:`~shiny.ui.is_fillable_container`
+    * :func:`~shiny.ui.fill.as_fill_carrier`
+    * :func:`~shiny.ui.fill.as_fill_item`
+    * :func:`~shiny.ui.fill.as_fillable_container`
+    * :func:`~shiny.ui.fill.is_fill_carrier`
+    * :func:`~shiny.ui.fill.is_fill_item`
+    * :func:`~shiny.ui.fill.is_fillable_container`
     """
 
     tag_remove_class(tag, FILL_CONTAINER_CLASS)

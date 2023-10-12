@@ -9,7 +9,8 @@ from .._typing_extensions import NotRequired, TypedDict
 from .._versions import bslib as bslib_version
 from .._versions import htmltools as htmltools_version
 
-_x_www = PurePath(__file__).parent.parent.parent / "www" / "shared" / "_x"
+_x_www = PurePath(__file__).parent.parent / "www" / "shared" / "_x"
+
 
 _x_htmltools_path = _x_www / "htmltools"
 _x_components_path = _x_www / "bslib" / "components"

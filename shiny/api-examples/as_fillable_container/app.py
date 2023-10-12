@@ -1,9 +1,11 @@
+TODO-barret; move more api-example apps and make sure they work before and after
+
 from __future__ import annotations
 
 import htmltools
 
-import shiny.experimental as x
 from shiny import App, ui
+from shiny.ui import fill
 
 
 def outer_inner() -> tuple[htmltools.Tag, htmltools.Tag]:
@@ -26,19 +28,19 @@ def outer_inner() -> tuple[htmltools.Tag, htmltools.Tag]:
 
 
 outer0, inner0 = outer_inner()
-
 outer1, inner1 = outer_inner()
-x.ui.as_fill_item(inner1)
-
 outer2, inner2 = outer_inner()
-x.ui.as_fillable_container(outer2)
-x.ui.as_fill_item(inner2)
+
+fill.as_fillable_container(outer2)
+
+fill.as_fillable_container(outer2)
+fill.as_fill_item(inner2)
 
 
 app_ui = ui.page_fluid(
     ui.markdown(
         """\
-        # `as_fill_item()`
+        # `as_fill_container()`
 
         For an item to fill its parent element,
         * the item must have `as_fill_item()` be called on it
@@ -49,7 +51,7 @@ app_ui = ui.page_fluid(
     ),
     ui.row(
         ui.column(4, ui.h5("Default behavior")),
-        ui.column(4, ui.h5(ui.markdown("`as_fill_item(blue)`"))),
+        ui.column(4, ui.h5(ui.markdown("`as_fill_container(red)`"))),
         ui.column(
             4,
             ui.h5(ui.markdown("`as_fill_item(blue)` + `as_fillable_container(red)`")),
@@ -58,7 +60,7 @@ app_ui = ui.page_fluid(
     ui.row(
         ui.column(4, ui.div(outer0)),
         ui.column(4, ui.div(outer1)),
-        ui.column(4, x.ui.as_fill_carrier(ui.span(outer2))),
+        ui.column(4, fill.as_fill_carrier(ui.span(outer2))),
     ),
 )
 
