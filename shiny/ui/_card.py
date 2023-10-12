@@ -15,7 +15,7 @@ from htmltools import (
     tags,
 )
 
-# from .._docstring import add_example
+from .._docstring import add_example
 from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import card_dependency
 from ._tag import consolidate_attrs
@@ -41,15 +41,15 @@ __all__ = (
 )
 
 ############################################################################
-# Partial implementations
+# Experimental+ full implementation
 ############################################################################
-# Reasons for partial implementations:
+# Reasons for experimental implementations:
 # * Missing parameter of `wrapper=`
 # * Missing helper function `card_body()`
 ############################################################################
 
 
-# @add_example()
+@add_example()
 def card(
     *args: TagChild | TagAttrs | CardItem,
     full_screen: bool = False,
@@ -415,7 +415,7 @@ class CardItem:
         return TagList(self.resolve()).tagify()
 
 
-# @add_example()
+@add_example()
 def card_header(
     *args: TagChild | TagAttrs,
     container: TagFunction = tags.div,
@@ -454,7 +454,7 @@ def card_header(
     )
 
 
-# @add_example()
+@add_example()
 def card_footer(
     *args: TagChild | TagAttrs,
     **kwargs: TagAttrValue,

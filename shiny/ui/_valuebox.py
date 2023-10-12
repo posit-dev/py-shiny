@@ -4,6 +4,7 @@ from typing import Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild
 
+from .._docstring import add_example
 from .css_unit._css_unit import CssUnit
 
 # TODO-barret; Remove experimental from docs
@@ -14,7 +15,7 @@ __all__ = ("value_box",)
 # When future value_box changes are made to `showcase_layout`, `theme_color`... remove experimental method.
 
 
-# TODO-maindocs; @add_example()
+@add_example()
 def value_box(
     title: TagChild,
     value: TagChild,

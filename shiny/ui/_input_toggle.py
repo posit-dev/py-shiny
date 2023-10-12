@@ -3,12 +3,14 @@ from __future__ import annotations
 from typing import Literal, Optional
 
 from .. import Session
+from .._docstring import add_example
 from .._utils import drop_none
 from ..module import resolve_id
 from ..session import require_active_session
 from ._utils import _session_on_flush_send_msg
 
 
+@add_example()
 def toggle_popover(
     id: str,
     show: Optional[bool] = None,
@@ -46,6 +48,7 @@ def toggle_popover(
     )
 
 
+@add_example()
 def toggle_tooltip(
     id: str, show: Optional[bool] = None, session: Optional[Session] = None
 ) -> None:
@@ -80,6 +83,7 @@ def _normalize_show_value(show: bool | None) -> Literal["toggle", "show", "hide"
     return "show" if show else "hide"
 
 
+@add_example()
 def toggle_switch(
     id: str, value: Optional[bool] = None, session: Optional[Session] = None
 ):

@@ -902,6 +902,7 @@ def update_navs(
 # -----------------------------------------------------------------------------
 # tooltips.py
 # -----------------------------------------------------------------------------
+@add_example()
 def update_tooltip(id: str, *args: TagChild, session: Optional[Session] = None) -> None:
     """
     Update tooltip contents
@@ -932,6 +933,7 @@ def update_tooltip(id: str, *args: TagChild, session: Optional[Session] = None) 
 # -----------------------------------------------------------------------------
 # popover.py
 # -----------------------------------------------------------------------------
+@add_example()
 def update_popover(
     id: str,
     *args: TagChild,

@@ -5,12 +5,14 @@ from typing import Any, Literal, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, div, tags
 
+from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import drop_none
 from ._tag import consolidate_attrs
 from ._web_component import web_component
 
 
+@add_example()
 def popover(
     trigger: TagChild,
     *args: TagChild | TagAttrs,

@@ -9,6 +9,7 @@ from htmltools import tags
 
 from .. import Session
 from .._deprecated import warn_deprecated
+from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from ..session import require_active_session
 from ._card import CardItem
@@ -116,7 +117,7 @@ class Sidebar:
         )
 
 
-# TODO-maindocs; @add_example()
+@add_example()
 def sidebar(
     *args: TagChild | TagAttrs,
     width: CssUnit = 250,
@@ -271,7 +272,7 @@ def sidebar(
     )
 
 
-# TODO-maindocs; @add_example()
+@add_example()
 def layout_sidebar(
     sidebar: Sidebar | TagChild | TagAttrs,
     *args: TagChild | TagAttrs,
@@ -427,7 +428,7 @@ def layout_sidebar(
     return CardItem(res)
 
 
-# TODO-maindocs; @add_example()
+@add_example()
 def toggle_sidebar(
     id: str,
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
