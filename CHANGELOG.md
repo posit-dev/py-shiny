@@ -12,23 +12,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `shiny.render.renderer_components` decorator to help create new output renderers (#621).
 * Added `shiny.experimental.ui.popover()`, `update_popover()`, and `toggle_popover()` for easy creation (and server-side updating) of [Bootstrap popovers](https://getbootstrap.com/docs/5.2/components/popovers/). Popovers are similar to tooltips, but are more persistent, and should primarily be used with button-like UI elements (e.g. `input_action_button()` or icons) (#680).
-* Added `shiny.experimental.ui.toggle_switch()` (#680).
 * Added CSS classes to UI input methods (#680) .
 * `Session` objects can now accept an asynchronous (or synchronous) function for `.on_flush(fn=)`, `.on_flushed(fn=)`, and `.on_ended(fn=)` (#686).
 
 ### API changes
 
+#### API additions
+
+* Added `shiny.ui.toggle_switch()` to toggle any `shiny.ui.input_switch()` components on and off (#680).
+* Added `shiny.ui.card()` to create a container inspired from Bootstrap card (#680).
+* Added `shiny.ui.valuebox()`, an opinionated (:func:`shiny.ui.card()`-powered) box, designed for displaying a `value` and `title` (#680).
+* Added support for `shiny.ui.navset_card_tab(sidebar=)`, `shiny.ui.navset_card_pill(sidebar=)`, `shiny.ui.navset_bar(sidebar=, fillable=, gap=, padding=)` (#680).
+
+
+TODO-barret; api change of layout_sidebar. Do not use panel_main anymore
+
+* Added support for `shiny.ui.output_plot(fill=)`, `shiny.ui.output_image(fill=)`, `shiny.ui.output_ui(fill=, fillable=)` (#680).
+
+
+#### API renames
+
 | From | To | Link |
 | ---- | -- | ---- |
-| `ui.navset_pill_card()` | `ui.navset_card_pill()` | #492 |
-| `ui.navset_tab_card()` | `ui.navset_card_tab()` | #492 |
-| `experimental.ui.navset_pill_card` | `experimental.ui.navset_card_pill` | #492 |
-| `experimental.ui.navset_tab_card` | `experimental.ui.navset_card_tab` | #492 |
-| `experimental.ui.sidebar_toggle()` | `experimental.ui.toggle_sidebar()` | #680 |
-| `experimental.ui.tooltip_toggle()` | `experimental.ui.toggle_tooltip()` | #680 |
-| `experimental.ui.tooltip_update()` | `experimental.ui.update_tooltip()` | #680 |
+| `shiny.ui.navset_pill_card()` | `shiny.ui.navset_card_pill()` | #492 |
+| `shiny.ui.navset_tab_card()` | `shiny.ui.navset_card_tab()` | #492 |
+| `shiny.experimental.ui.navset_pill_card` | `shiny.experimental.ui.navset_card_pill` | #492 |
+| `shiny.experimental.ui.navset_tab_card` | `shiny.experimental.ui.navset_card_tab` | #492 |
+| `shiny.experimental.ui.tooltip()` | `shiny.ui.tooltip()` | #680 |
+| `shiny.experimental.ui.tooltip_toggle()` | `shiny.ui.toggle_tooltip()` | #680 |
+| `shiny.experimental.ui.tooltip_update()` | `shiny.ui.update_tooltip()` | #680 |
+| `shiny.experimental.ui.popover()` | `shiny.ui.popover()` | #680 |
+| `shiny.experimental.ui.toggle_popover()` | `shiny.ui.toggle_popover()` | #680 |
+| `shiny.experimental.ui.update_popover()` | `shiny.ui.update_popover()` | #680 |
+
+| `shiny.experimental.ui.sidebar_toggle()` | `shiny.experimental.ui.toggle_sidebar()` | #680 |
+
+
+| `shiny.experimental.ui.TagCallable()` | `htmltools.TagFunction()` | #680 |
+| `shiny.experimental.ui.as_fill_carrier()` | `shiny.ui.fill.as_fill_carrier()` | #680 |
+| `shiny.experimental.ui.as_fillable_container()` | `shiny.ui.fill.as_fillable_container()` | #680 |
+| `shiny.experimental.ui.as_fill_item()` | `shiny.ui.fill.as_fill_item()` | #680 |
+| `shiny.experiemntal.ui.input_text_area(autoresize=)` | `shiny.ui.input_text_area(autoresize=)` | #680 |
+
+| `shiny.experimental.ui.CardItem` class | `shiny.ui.CardItem` class | #680 |
+| `shiny.experimental.ui.card_header()` class | `shiny.ui.card_header()` class | #680 |
+| `shiny.experimental.ui.card_footer()` class | `shiny.ui.card_footer()` class | #680 |
+| `shiny.experimental.ui.navset_card_tab(sidebar=)` | `shiny.ui.navset_card_tab(sidebar=)` | #680|
+| `shiny.experimental.ui.navset_card_tab(sidebar=)` | `shiny.ui.navset_card_tab(sidebar=)` | #680 |
+| `shiny.experimental.ui.navset_card_pill(sidebar=)` | `shiny.ui.navset_card_pill(sidebar=)` | #680 |
+| `shiny.experimental.ui.navset_bar(sidebar=, fillable=, gap=, padding=)` | `shiny.ui.navset_bar(sidebar=, fillable=, gap=, padding=)` | #680 |
+| `shiny.experimental.ui.output_plot(fill=)` | `shiny.ui.output_plot(fill=)` | #680 |
+| `shiny.experimental.ui.output_image(fill=)` | `shiny.ui.output_image(fill=)` | #680 |
+| `shiny.experimental.ui.output_ui(fill=, fillable=)` | `shiny.ui.output_ui(fill=, fillable=)` | #680 |
+| `shiny.experimental.ui.page_sidebar()` | `shiny.ui.page_sidebar()` | #680 |
+| `shiny.experimental.ui.page_navbar(sidebar=,fillable=,fillable_mobile=,gap=,padding=)` | `shiny.ui.page_navbar(sidebar=,fillable=,fillable_mobile=,gap=,padding=)` | #680 |
+| `shiny.ui.page_navbar(inverse=False)` | `shiny.ui.page_navbar(inverse=True)` | #680 |
+| `shiny.experimental.ui.page_fillable()` | `shiny.ui.page_fillable()` | #680 |
+
+
+
 
 All originally named methods will display a deprecation warning when executed.
+
+#### API removals
+
+* `shiny.experimental.ui.FillingLayout` has been removed. (#481)
+* `shiny.experimental.ui.layout_sidebar()` has been removed. (#481)
+* Support for `min_height=`, `max_height=`, and `gap=` in `shiny.experimental.ui.as_fill_carrier()`, `shiny.experimental.ui.as_fillable_container()` and `as_fill_item()` has been removed. (#481)
+* `shiny.experimental.ui.TagCallable` has been removed. Its type is equivalent to `htmltools.TagFunction`. (#680)
+
+TODO-barret; Do not yank function away. Instead, add a deprecation warning and remove them after a bit. Don't be _that_ mean.
+TODO-barret; It's ok to have main iomport experimental directly while we're porting things over.
 
 
 ### Bug fixes
