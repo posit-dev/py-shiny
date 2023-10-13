@@ -1,4 +1,3 @@
-import shiny.experimental as x
 from shiny import App, ui
 
 # https://icons.getbootstrap.com/icons/question-circle-fill/
@@ -7,15 +6,15 @@ question_circle_fill = ui.HTML(
 )
 
 app_ui = ui.page_fluid(
-    x.ui.tooltip(
+    ui.tooltip(
         ui.input_action_button("btn", "A button", class_="mt-3"),
         "A message",
         id="btn_tooltip",
     ),
     ui.hr(),
-    x.ui.card(
-        x.ui.card_header(
-            x.ui.tooltip(
+    ui.card(
+        ui.card_header(
+            ui.tooltip(
                 ui.span("Card title ", question_circle_fill),
                 "Additional info",
                 placement="right",

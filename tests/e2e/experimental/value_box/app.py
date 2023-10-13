@@ -9,7 +9,7 @@ arrow_up = ui.HTML(
 )
 
 app_ui = ui.page_fluid(
-    x.ui.value_box(
+    ui.value_box(
         "KPI Title",
         ui.h1(ui.HTML("$1 <i>Billion</i> Dollars")),
         ui.span(arrow_up, " 30% VS PREVIOUS 30 DAYS"),

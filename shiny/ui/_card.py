@@ -26,10 +26,6 @@ from .fill import as_fill_item, as_fillable_container
 # No fill / fillable!
 # TODO-barret; Handle `card_body()` in docs
 # TODO-barret; Update all docs
-# TODO-barret; Add API-examples:
-# * `card()`
-# * `card_header()`
-# * `card_footer()`
 # TODO-barret-future; Update header to return CardHeader class. Same for footer. Then we can check `*args` for a CardHeader class and move it to the top. And footer to the bottom. Can throw error if multiple headers/footers are provided or could concatenate.
 
 

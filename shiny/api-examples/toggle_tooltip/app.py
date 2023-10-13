@@ -1,4 +1,3 @@
-import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, req, ui
 
 app_ui = ui.page_fluid(
@@ -8,7 +7,7 @@ app_ui = ui.page_fluid(
     ui.input_action_button("btn_toggle", "Toggle tooltip", class_="mt-3 me-3"),
     ui.br(),
     ui.br(),
-    x.ui.tooltip(
+    ui.tooltip(
         ui.input_action_button("btn_w_tooltip", "A button w/ a tooltip", class_="mt-3"),
         "A message",
         id="tooltip_id",
@@ -21,19 +20,19 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         req(input.btn_show())
 
-        x.ui.toggle_tooltip("tooltip_id", show=True)
+        ui.toggle_tooltip("tooltip_id", show=True)
 
     @reactive.Effect
     def _():
         req(input.btn_close())
 
-        x.ui.toggle_tooltip("tooltip_id", show=False)
+        ui.toggle_tooltip("tooltip_id", show=False)
 
     @reactive.Effect
     def _():
         req(input.btn_toggle())
 
-        x.ui.toggle_tooltip("tooltip_id")
+        ui.toggle_tooltip("tooltip_id")
 
     @reactive.Effect
     def _():

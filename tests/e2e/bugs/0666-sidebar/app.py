@@ -17,7 +17,7 @@ app_ui = ui.page_fluid(
     ),
     # # Can not use X sidebar as only one htmldependency wins.
     # import shiny.experimental as x
-    # x.ui.layout_sidebar(
+    # ui.layout_sidebar(
     #     x.ui.sidebar(
     #         "`x` - Sidebar content",
     #         open="always",
