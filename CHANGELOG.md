@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added `shiny.experimental.ui.toggle_switch()` (#680).
 * Added CSS classes to UI input methods (#680) .
 * `Session` objects can now accept an asynchronous (or synchronous) function for `.on_flush(fn=)`, `.on_flushed(fn=)`, and `.on_ended(fn=)` (#686).
+* `App()` now allows `static_assets` to represent multiple paths. To do this, pass in a dictionary instead of a string (#763).
 
 ### API changes
 
