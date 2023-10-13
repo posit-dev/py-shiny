@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, TypeGuard, overload
+from typing import Optional, overload
 
 from htmltools import (
     HTMLDependency,
@@ -12,6 +12,7 @@ from htmltools import (
     tags,
 )
 
+from .._typing_extensions import TypeGuard
 from ..session import Session, require_active_session
 from ..types import MISSING, MISSING_TYPE
 
