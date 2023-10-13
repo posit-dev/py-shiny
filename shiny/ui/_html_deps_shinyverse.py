@@ -67,7 +67,7 @@ def _bslib_component_dep(
 
 
 def fill_dependency() -> HTMLDependency:
-    return _htmltools_dep("fill", stylesheet=True)
+    return _htmltools_dep("fill", stylesheet=True, all_files=False)
 
 
 # -- bslib -------------------------

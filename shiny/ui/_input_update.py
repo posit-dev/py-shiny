@@ -31,8 +31,7 @@ from .._docstring import add_example, doc_format
 from .._namespaces import resolve_id
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import drop_none
-from ..module import session_context
-from ..session import Session, require_active_session
+from ..session import Session, require_active_session, session_context
 from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
 from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
