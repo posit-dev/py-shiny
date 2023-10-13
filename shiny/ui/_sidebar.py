@@ -7,11 +7,10 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, css, div
 from htmltools import svg as svgtags
 from htmltools import tags
 
-from .. import Session
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
-from ..session import require_active_session
+from ..session import Session, require_active_session
 from ._card import CardItem
 from ._html_deps_shinyverse import sidebar_dependency
 from ._tag import consolidate_attrs, trinary

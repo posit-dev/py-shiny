@@ -12,8 +12,7 @@ from htmltools import (
     tags,
 )
 
-from .. import Session
-from ..session import require_active_session
+from ..session import Session, require_active_session
 from ..types import MISSING, MISSING_TYPE
 
 
