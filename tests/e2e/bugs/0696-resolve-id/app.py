@@ -87,8 +87,8 @@ def mod_x_ui(label: str) -> ui.TagChild:
             for letter in letters
         ]
 
-    return x.ui.layout_sidebar(
-        x.ui.sidebar("Sidebar content", id="sidebar", width="100px"),
+    return ui.layout_sidebar(
+        ui.sidebar("Sidebar content", id="sidebar", width="100px"),
         ui.h2(label),
         ui.tags.label("Output status:"),
         ui.tags.style(
@@ -100,7 +100,7 @@ def mod_x_ui(label: str) -> ui.TagChild:
             }
             """
         ),
-        x.ui.layout_column_wrap(
+        ui.layout_column_wrap(
             1 / 2,
             *[
                 ui.output_text_verbatim(f"status_x_{x_input_key}", placeholder=True)
@@ -114,20 +114,20 @@ def mod_x_ui(label: str) -> ui.TagChild:
             heights_equal="row",
         ),
         ui.tags.label("Inputs that need to be visible when updated:"),
-        x.ui.card(
-            x.ui.popover(
+        ui.card(
+            ui.popover(
                 ui.input_action_button("popover_btn", "Popover btn"),
                 "Popover content",
                 id="popover",
             ),
-            x.ui.tooltip(
+            ui.tooltip(
                 ui.input_action_button("tooltip_btn", "Tooltip btn"),
                 "Tooltip content",
                 id="tooltip",
             ),
         ),
         ui.tags.label("Manual inputs / outputs:"),
-        x.ui.card(
+        ui.card(
             ui.input_action_button("input_action_button", "input_button"),
             ui.input_action_link("input_action_link", "Link"),
             ui.download_button("download_button", "Download"),
@@ -171,7 +171,7 @@ def mod_x_ui(label: str) -> ui.TagChild:
         ui.input_text_area("input_text_area", "Text area"),
         ui.p("(Navbars are in Cards to give some sort of bounding box.)"),
         *[
-            x.ui.card(y)
+            ui.card(y)
             for y in (
                 ui.navset_bar(
                     *ui_navs("Navset Bar"), title="Navset Bar", id="navset_bar"
@@ -189,7 +189,7 @@ def mod_x_ui(label: str) -> ui.TagChild:
             )
         ],
         *[
-            x.ui.card(ui.tags.label(ui.markdown(f"{label}:")), y)
+            ui.card(ui.tags.label(ui.markdown(f"{label}:")), y)
             for label, y in (
                 (
                     "Data Frame (Grows w/ `input.radio_buttons()`)",
@@ -341,7 +341,7 @@ app_ui = ui.page_fluid(
         """
         )
     ),
-    x.ui.popover(
+    ui.popover(
         ui.input_action_button("ignore", "Explanation of test"),
         ui.markdown(
             """
@@ -374,7 +374,7 @@ app_ui = ui.page_fluid(
         ),
         id="explanation",
     ),
-    x.ui.layout_column_wrap(
+    ui.layout_column_wrap(
         1 / 3,
         mod_x_ui("", "Global"),  # "" == Root
         mod_x_ui("mod1", "Module 1"),
@@ -394,7 +394,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     # https://stackoverflow.com/a/64523765/591574
     if hasattr(sys, "ps1"):
         # Open the explanation popover
-        x.ui.toggle_popover("explanation", show=True)
+        ui.toggle_popover("explanation", show=True)
 
         # On button clicks, hide the explanation popover
         @reactive.Effect(suspended=True)
@@ -403,7 +403,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             input.update_global()
             input.update_mod1()
             input.update_mod2()
-            x.ui.toggle_popover("explanation", show=False)
+            ui.toggle_popover("explanation", show=False)
 
     # Master function to update a module's features
     def update_session(
@@ -444,7 +444,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 # https://github.com/posit-dev/py-shiny/issues/716
                 # ui.update_sidebar("sidebar", value=True)
                 if session.input.sidebar() is False:
-                    x.ui.toggle_sidebar("sidebar")
+                    ui.toggle_sidebar("sidebar")
 
                 # Turn off switch
                 ui.update_switch("input_switch", value=False)
@@ -453,20 +453,20 @@ def server(input: Inputs, output: Outputs, session: Session):
                 # https://github.com/posit-dev/py-shiny/issues/717
                 # ui.update_popover("popover", show=False)
                 if session.input.popover() is True:
-                    x.ui.toggle_popover("popover")
+                    ui.toggle_popover("popover")
                 # Hide tooltip
                 # https://github.com/posit-dev/py-shiny/issues/717
                 if session.input.tooltip() is True:
-                    x.ui.toggle_tooltip("tooltip")
+                    ui.toggle_tooltip("tooltip")
             else:
                 if session.input.sidebar() == on_off:
-                    x.ui.toggle_sidebar("sidebar")
+                    ui.toggle_sidebar("sidebar")
                 if session.input.input_switch() != on_off:
-                    x.ui.toggle_switch("input_switch")
+                    ui.toggle_switch("input_switch")
                 if session.input.popover() != on_off:
-                    x.ui.toggle_popover("popover")
+                    ui.toggle_popover("popover")
                 if session.input.tooltip() != on_off:
-                    x.ui.toggle_tooltip("tooltip")
+                    ui.toggle_tooltip("tooltip")
 
             ui.update_navs("navset_bar", selected=letter)
             ui.update_navs("navset_card_pill", selected=letter)
