@@ -28,7 +28,7 @@ def test_panel_main_and_panel_sidebar():
         )
         raise AssertionError("Should have raised TypeError")
     except TypeError as e:
-        assert "Multiple `panel_sidebar()` calls detected" in str(e)
+        assert "Only one `sidebar=`" in str(e)
 
     try:
         ui.layout_sidebar(
@@ -37,4 +37,4 @@ def test_panel_main_and_panel_sidebar():
         )
         raise AssertionError("Should have raised TypeError")
     except TypeError as e:
-        assert "was supplied along with" in str(e)
+        assert "Only one `sidebar=`" in str(e)

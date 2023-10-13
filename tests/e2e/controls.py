@@ -574,6 +574,19 @@ class InputTextArea(
     ) -> None:
         expect_attr(self.loc, "resize", value=value, timeout=timeout)
 
+    def expect_autoresize(
+        self,
+        value: bool,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        _expect_class_value(
+            self.loc,
+            "textarea-autoresize",
+            value,
+            timeout=timeout,
+        )
+
 
 class _InputSelectBase(
     _WidthLocM,
