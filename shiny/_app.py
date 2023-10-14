@@ -27,9 +27,9 @@ from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
-from ._utils import is_async_callable
+from ._utils import guess_mime_type, is_async_callable
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
-from .http_staticfiles import StaticFiles
+from .http_staticfiles import FileResponse, StaticFiles
 from .session import Inputs, Outputs, Session, session_context
 
 # Default values for App options.
@@ -54,7 +54,10 @@ class App:
         A function which is called once for each session, ensuring that each app is
         independent.
     static_assets
-        An absolute directory containing static files to be served by the app.
+        Static files to be served by the app. If this is a string or Path object, it
+        must be a directory, and it will be mounted at `/`. If this is a dictionary,
+        each key is a mount point and each value is a file or directory to be served at
+        that mount point.
     debug
         Whether to enable debug mode.
 
@@ -100,7 +103,7 @@ class App:
         ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
         server: Optional[Callable[[Inputs, Outputs, Session], None]],
         *,
-        static_assets: Optional["str" | "os.PathLike[str]"] = None,
+        static_assets: Optional["str" | "os.PathLike[str]" | dict[str, Path]] = None,
         debug: bool = False,
     ) -> None:
         if server is None:
@@ -119,15 +122,16 @@ class App:
         self.sanitize_errors: bool = SANITIZE_ERRORS
         self.sanitize_error_msg: str = SANITIZE_ERROR_MSG
 
-        if static_assets is not None:
-            if not os.path.isdir(static_assets):
-                raise ValueError(f"static_assets must be a directory: {static_assets}")
+        if static_assets is None:
+            static_assets = {}
+        if isinstance(static_assets, (str, os.PathLike)):
             if not os.path.isabs(static_assets):
                 raise ValueError(
                     f"static_assets must be an absolute path: {static_assets}"
                 )
+            static_assets = {"/": Path(static_assets)}
 
-        self._static_assets: str | os.PathLike[str] | None = static_assets
+        self._static_assets: dict[str, Path] = static_assets
 
         self._sessions: dict[str, Session] = {}
 
@@ -136,13 +140,9 @@ class App:
         self._registered_dependencies: dict[str, HTMLDependency] = {}
         self._dependency_handler = starlette.routing.Router()
 
-        if self._static_assets is not None:
+        for mount_point, static_asset_path in self._static_assets.items():
             self._dependency_handler.routes.append(
-                starlette.routing.Mount(
-                    "/",
-                    StaticFiles(directory=self._static_assets),
-                    name="shiny-app-static-assets-directory",
-                )
+                create_static_asset_route(mount_point, static_asset_path)
             )
 
         starlette_app = self.init_starlette_app()
@@ -414,3 +414,35 @@ def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]):
 
 def html_dep_name(dep: HTMLDependency) -> str:
     return dep.name + "-" + str(dep.version)
+
+
+def create_static_asset_route(
+    mount_point: str, static_asset_path: Path
+) -> starlette.routing.BaseRoute:
+    """
+    Create a Starlette route for serving static assets.
+
+    Parameters
+    ----------
+    mount_point
+        The mount point where the static assets will be served.
+    static_asset_path
+        The path on disk to the static assets.
+    """
+    if static_asset_path.is_dir():
+        return starlette.routing.Mount(
+            mount_point,
+            StaticFiles(directory=static_asset_path),
+            name="shiny-app-static-assets-" + mount_point,
+        )
+    else:
+        mime_type = guess_mime_type(static_asset_path, strict=False)
+
+        def file_response_handler(req: Request) -> FileResponse:
+            return FileResponse(static_asset_path, media_type=mime_type)
+
+        return starlette.routing.Route(
+            mount_point,
+            file_response_handler,
+            name="shiny-app-static-assets-" + mount_point,
+        )
