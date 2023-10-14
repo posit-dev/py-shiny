@@ -78,12 +78,8 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 { "".join(session_code_cell_texts) }
 
 
-def make_route_map(root: Path, paths: list[str]) -> dict[str, Path]:
-    \"""Make a dictionary of routes to paths.\"""
-    return {{"/" + path: root / path for path in paths}}
-
 _static_assets = ##STATIC_ASSETS_PLACEHOLDER##
-_static_assets = make_route_map(Path(__file__).parent, _static_assets)
+_static_assets = {{"/" + sa: Path(__file__).parent / sa for sa in _static_assets}}
 
 app = App(
     Path(__file__).parent / "{ data["html_file"] }",
