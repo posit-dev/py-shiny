@@ -103,7 +103,7 @@ class App:
         ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
         server: Optional[Callable[[Inputs, Outputs, Session], None]],
         *,
-        static_assets: "str" | "os.PathLike[str]" | dict[str, Path] | None = None,
+        static_assets: Optional["str" | "os.PathLike[str]" | dict[str, Path]] = None,
         debug: bool = False,
     ) -> None:
         if server is None:
