@@ -38,6 +38,18 @@ from ._card import (
     card_footer,
 )
 
+from ._accordion import (
+    AccordionPanel,
+    accordion,
+    accordion_panel,
+    accordion_panel_open,
+    accordion_panel_close,
+    accordion_panel_insert,
+    accordion_panel_remove,
+    accordion_panel_set,
+    update_accordion_panel,
+)
+
 from ._download_button import download_button, download_link
 from ._plot_output_opts import brush_opts, click_opts, dblclick_opts, hover_opts
 from ._include_helpers import include_css, include_js
@@ -173,6 +185,16 @@ __all__ = (
     "card",
     "card_header",
     "card_footer",
+    # _accordion
+    "AccordionPanel",
+    "accordion",
+    "accordion_panel",
+    "accordion_panel_open",
+    "accordion_panel_close",
+    "accordion_panel_insert",
+    "accordion_panel_remove",
+    "accordion_panel_set",
+    "update_accordion_panel",
     # _download_button
     "download_button",
     "download_link",

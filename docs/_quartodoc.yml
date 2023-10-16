@@ -81,11 +81,16 @@ quartodoc:
         - ui.popover
         - ui.tooltip
         - ui.value_box
+        - ui.accordion
+        - ui.accordion_panel
     - title: Update UI elements
       desc: Programmatically update UI elements.
       contents:
         - ui.update_tooltip
         - ui.update_popover
+        - ui.accordion_panel_insert
+        - ui.accordion_panel_remove
+        - ui.update_accordion_panel
     - title: Toggle UI elements
       desc: Programmatically toggle UI elements.
       contents:
@@ -93,6 +98,9 @@ quartodoc:
         - ui.toggle_switch
         - ui.toggle_tooltip
         - ui.toggle_popover
+        - ui.accordion_panel_set
+        - ui.accordion_panel_open
+        - ui.accordion_panel_close
     - title: Navigation (tab) panels
       desc: Create segments of UI content.
       contents:
@@ -243,6 +251,7 @@ quartodoc:
             - types.NavSetArg
             - ui.Sidebar
             - ui.CardItem
+            - ui.AccordionPanel
             - ui.css_unit.CssUnit
             - ui._input_slider.SliderValueArg
             - ui._input_slider.SliderStepArg
@@ -289,22 +298,6 @@ quartodoc:
             - experimental.ui.card_image
             - experimental.ui.ImgContainer
             - experimental.ui.WrapperCallable
-        - kind: page
-          path: ExAccordionPanels
-          summary:
-            name: "Accordion panels"
-            desc: "Methods related to creating and updating vertically collapsing accordion panels."
-          flatten: true
-          contents:
-            - experimental.ui.accordion
-            - experimental.ui.accordion_panel
-            - experimental.ui.accordion_panel_set
-            - experimental.ui.accordion_panel_open
-            - experimental.ui.accordion_panel_close
-            - experimental.ui.accordion_panel_insert
-            - experimental.ui.accordion_panel_remove
-            - experimental.ui.update_accordion_panel
-            - experimental.ui.AccordionPanel
         - kind: page
           path: ExValueBoxes
           summary:

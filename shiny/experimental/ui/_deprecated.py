@@ -15,6 +15,14 @@ from htmltools import (
 from ..._deprecated import warn_deprecated
 from ...session import Session
 from ...types import MISSING, MISSING_TYPE
+from ...ui import AccordionPanel as MainAccordionPanel
+from ...ui import accordion as main_accordion
+from ...ui import accordion_panel as main_accordion_panel
+from ...ui import accordion_panel_close as main_accordion_panel_close
+from ...ui import accordion_panel_insert as main_accordion_panel_insert
+from ...ui import accordion_panel_open as main_accordion_panel_open
+from ...ui import accordion_panel_remove as main_accordion_panel_remove
+from ...ui import accordion_panel_set as main_accordion_panel_set
 from ...ui import input_text_area as main_input_text_area
 from ...ui import popover as main_popover
 from ...ui import tags
@@ -22,18 +30,9 @@ from ...ui import toggle_popover as main_toggle_popover
 from ...ui import toggle_switch as main_toggle_switch
 from ...ui import toggle_tooltip as main_toggle_tooltip
 from ...ui import tooltip as main_tooltip
+from ...ui import update_accordion_panel as main_update_accordion_panel
 from ...ui import update_popover as main_update_popover
 from ...ui import update_tooltip as main_update_tooltip
-
-# from ...ui import AccordionPanel as MainAccordionPanel
-# from ...ui import accordion as main_accordion
-# from ...ui import accordion_panel as main_accordion_panel
-# from ...ui import accordion_panel_close as main_accordion_panel_close
-# from ...ui import accordion_panel_insert as main_accordion_panel_insert
-# from ...ui import accordion_panel_open as main_accordion_panel_open
-# from ...ui import accordion_panel_remove as main_accordion_panel_remove
-# from ...ui import accordion_panel_set as main_accordion_panel_set
-# from ...ui import update_accordion_panel as main_update_accordion_panel
 from ...ui._card import CardItem as MainCardItem
 from ...ui._card import WrapperCallable as MainWrapperCallable
 from ...ui._card import card_footer as main_card_footer
@@ -108,15 +107,15 @@ __all__ = (
     "toggle_popover",
     "update_popover",
     # # Accordion
-    # "AccordionPanel",
-    # "accordion",
-    # "accordion_panel",
-    # "accordion_panel_set",
-    # "accordion_panel_open",
-    # "accordion_panel_close",
-    # "accordion_panel_insert",
-    # "accordion_panel_remove",
-    # "update_accordion_panel",
+    "AccordionPanel",
+    "accordion",
+    "accordion_panel",
+    "accordion_panel_set",
+    "accordion_panel_open",
+    "accordion_panel_close",
+    "accordion_panel_insert",
+    "accordion_panel_remove",
+    "update_accordion_panel",
     # Fill
     "as_fill_carrier",
     "as_fillable_container",
@@ -684,179 +683,179 @@ def update_popover(
 # ######################
 
 
-# # Deprecated 2023-09-12
-# class AccordionPanel(MainAccordionPanel):
-#     """
-#     Deprecated. Please use `shiny.ui.AccordionPanel` instead.
-#     """
+# Deprecated 2023-09-12
+class AccordionPanel(MainAccordionPanel):
+    """
+    Deprecated. Please use `shiny.ui.AccordionPanel` instead.
+    """
 
-#     ...
-
-
-# # Deprecated 2023-09-12
-# def accordion(
-#     *args: AccordionPanel | TagAttrs,
-#     id: Optional[str] = None,
-#     open: Optional[bool | str | list[str]] = None,
-#     multiple: bool = True,
-#     class_: Optional[str] = None,
-#     width: Optional[CssUnit] = None,
-#     height: Optional[CssUnit] = None,
-#     **kwargs: TagAttrValue,
-# ) -> Tag:
-#     """Deprecated. Please use `shiny.ui.accordion()` instead."""
-#     warn_deprecated(
-#         "`shiny.experimental.ui.accordion()` is deprecated. "
-#         "This method will be removed in a future version, "
-#         "please use `shiny.ui.accordion()` instead."
-#     )
-#     return main_accordion(
-#         *args,
-#         id=id,
-#         open=open,
-#         multiple=multiple,
-#         class_=class_,
-#         width=width,
-#         height=height,
-#         **kwargs,
-#     )
+    ...
 
 
-# # Deprecated 2023-09-12
-# def accordion_panel(
-#     title: TagChild,
-#     *args: TagChild | TagAttrs,
-#     value: Optional[str] | MISSING_TYPE = MISSING,
-#     icon: Optional[TagChild] = None,
-#     **kwargs: TagAttrValue,
-# ) -> AccordionPanel:
-#     """Deprecated. Please use `shiny.ui.accordion_panel()` instead."""
-#     warn_deprecated(
-#         "`shiny.experimental.ui.accordion_panel()` is deprecated. "
-#         "This method will be removed in a future version, "
-#         "please use `shiny.ui.accordion_panel()` instead."
-#     )
-#     return main_accordion_panel(
-#         title,
-#         *args,
-#         value=value,
-#         icon=icon,
-#         **kwargs,
-#     )
+# Deprecated 2023-09-12
+def accordion(
+    *args: AccordionPanel | TagAttrs,
+    id: Optional[str] = None,
+    open: Optional[bool | str | list[str]] = None,
+    multiple: bool = True,
+    class_: Optional[str] = None,
+    width: Optional[CssUnit] = None,
+    height: Optional[CssUnit] = None,
+    **kwargs: TagAttrValue,
+) -> Tag:
+    """Deprecated. Please use `shiny.ui.accordion()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.accordion()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.accordion()` instead."
+    )
+    return main_accordion(
+        *args,
+        id=id,
+        open=open,
+        multiple=multiple,
+        class_=class_,
+        width=width,
+        height=height,
+        **kwargs,
+    )
 
 
-# # Deprecated 2023-09-12
-# def accordion_panel_set(
-#     id: str,
-#     values: bool | str | list[str],
-#     session: Optional[Session] = None,
-# ) -> None:
-#     """Deprecated. Please use `shiny.ui.accordion_panel_set()` instead."""
-#     warn_deprecated(
-#         "`shiny.experimental.ui.accordion_panel_set()` is deprecated. "
-#         "This method will be removed in a future version, "
-#         "please use `shiny.ui.accordion_panel_set()` instead."
-#     )
-#     return main_accordion_panel_set(id, values, session=session)
+# Deprecated 2023-09-12
+def accordion_panel(
+    title: TagChild,
+    *args: TagChild | TagAttrs,
+    value: Optional[str] | MISSING_TYPE = MISSING,
+    icon: Optional[TagChild] = None,
+    **kwargs: TagAttrValue,
+) -> MainAccordionPanel:
+    """Deprecated. Please use `shiny.ui.accordion_panel()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.accordion_panel()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.accordion_panel()` instead."
+    )
+    return main_accordion_panel(
+        title,
+        *args,
+        value=value,
+        icon=icon,
+        **kwargs,
+    )
 
 
 # # Deprecated 2023-09-12
-# def accordion_panel_open(
-#     id: str,
-#     values: bool | str | list[str],
-#     session: Optional[Session] = None,
-# ) -> None:
-#     """Deprecated. Please use `shiny.ui.accordion_panel_open()` instead."""
-#     warn_deprecated(
-#         "`shiny.experimental.ui.accordion_panel_open()` is deprecated. "
-#         "This method will be removed in a future version, "
-#         "please use `shiny.ui.accordion_panel_open()` instead."
-#     )
-#     return main_accordion_panel_open(id, values, session=session)
+def accordion_panel_set(
+    id: str,
+    values: bool | str | list[str],
+    session: Optional[Session] = None,
+) -> None:
+    """Deprecated. Please use `shiny.ui.accordion_panel_set()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.accordion_panel_set()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.accordion_panel_set()` instead."
+    )
+    return main_accordion_panel_set(id, values, session=session)
 
 
 # # Deprecated 2023-09-12
-# def accordion_panel_close(
-#     id: str,
-#     values: bool | str | list[str],
-#     session: Optional[Session] = None,
-# ) -> None:
-#     """Deprecated. Please use `shiny.ui.accordion_panel_close()` instead."""
-#     warn_deprecated(
-#         "`shiny.experimental.ui.accordion_panel_close()` is deprecated. "
-#         "This method will be removed in a future version, "
-#         "please use `shiny.ui.accordion_panel_close()` instead."
-#     )
-#     return main_accordion_panel_close(id, values, session=session)
+def accordion_panel_open(
+    id: str,
+    values: bool | str | list[str],
+    session: Optional[Session] = None,
+) -> None:
+    """Deprecated. Please use `shiny.ui.accordion_panel_open()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.accordion_panel_open()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.accordion_panel_open()` instead."
+    )
+    return main_accordion_panel_open(id, values, session=session)
 
 
 # # Deprecated 2023-09-12
-# def accordion_panel_insert(
-#     id: str,
-#     panel: AccordionPanel,
-#     target: Optional[str] = None,
-#     position: Literal["after", "before"] = "after",
-#     session: Optional[Session] = None,
-# ) -> None:
-#     """Deprecated. Please use `shiny.ui.accordion_panel_insert()` instead."""
-#     warn_deprecated(
-#         "`shiny.experimental.ui.accordion_panel_insert()` is deprecated. "
-#         "This method will be removed in a future version, "
-#         "please use `shiny.ui.accordion_panel_insert()` instead."
-#     )
-#     return main_accordion_panel_insert(
-#         id,
-#         panel,
-#         target=target,
-#         position=position,
-#         session=session,
-#     )
+def accordion_panel_close(
+    id: str,
+    values: bool | str | list[str],
+    session: Optional[Session] = None,
+) -> None:
+    """Deprecated. Please use `shiny.ui.accordion_panel_close()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.accordion_panel_close()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.accordion_panel_close()` instead."
+    )
+    return main_accordion_panel_close(id, values, session=session)
 
 
 # # Deprecated 2023-09-12
-# def accordion_panel_remove(
-#     id: str,
-#     target: str | list[str],
-#     session: Optional[Session] = None,
-# ) -> None:
-#     """Deprecated. Please use `shiny.ui.accordion_panel_remove()` instead."""
-#     warn_deprecated(
-#         "`shiny.experimental.ui.accordion_panel_remove()` is deprecated. "
-#         "This method will be removed in a future version, "
-#         "please use `shiny.ui.accordion_panel_remove()` instead."
-#     )
-#     return main_accordion_panel_remove(
-#         id,
-#         target=target,
-#         session=session,
-#     )
+def accordion_panel_insert(
+    id: str,
+    panel: AccordionPanel,
+    target: Optional[str] = None,
+    position: Literal["after", "before"] = "after",
+    session: Optional[Session] = None,
+) -> None:
+    """Deprecated. Please use `shiny.ui.accordion_panel_insert()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.accordion_panel_insert()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.accordion_panel_insert()` instead."
+    )
+    return main_accordion_panel_insert(
+        id,
+        panel,
+        target=target,
+        position=position,
+        session=session,
+    )
 
 
 # # Deprecated 2023-09-12
-# def update_accordion_panel(
-#     id: str,
-#     target: str,
-#     *body: TagChild,
-#     title: TagChild | None | MISSING_TYPE = MISSING,
-#     value: str | None | MISSING_TYPE = MISSING,
-#     icon: TagChild | None | MISSING_TYPE = MISSING,
-#     session: Optional[Session] = None,
-# ) -> None:
-#     """Deprecated. Please use `shiny.ui.update_accordion_panel()` instead."""
-#     warn_deprecated(
-#         "`shiny.experimental.ui.update_accordion_panel()` is deprecated. "
-#         "This method will be removed in a future version, "
-#         "please use `shiny.ui.update_accordion_panel()` instead."
-#     )
-#     return main_update_accordion_panel(
-#         id,
-#         target,
-#         *body,
-#         title=title,
-#         value=value,
-#         icon=icon,
-#         session=session,
-#     )
+def accordion_panel_remove(
+    id: str,
+    target: str | list[str],
+    session: Optional[Session] = None,
+) -> None:
+    """Deprecated. Please use `shiny.ui.accordion_panel_remove()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.accordion_panel_remove()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.accordion_panel_remove()` instead."
+    )
+    return main_accordion_panel_remove(
+        id,
+        target=target,
+        session=session,
+    )
+
+
+# Deprecated 2023-09-12
+def update_accordion_panel(
+    id: str,
+    target: str,
+    *body: TagChild,
+    title: TagChild | None | MISSING_TYPE = MISSING,
+    value: str | None | MISSING_TYPE = MISSING,
+    icon: TagChild | None | MISSING_TYPE = MISSING,
+    session: Optional[Session] = None,
+) -> None:
+    """Deprecated. Please use `shiny.ui.update_accordion_panel()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.update_accordion_panel()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.update_accordion_panel()` instead."
+    )
+    return main_update_accordion_panel(
+        id,
+        target,
+        *body,
+        title=title,
+        value=value,
+        icon=icon,
+        session=session,
+    )
 
 
 # ######################

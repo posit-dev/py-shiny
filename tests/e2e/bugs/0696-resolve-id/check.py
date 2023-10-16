@@ -21,7 +21,7 @@ from app import input_keys, x_input_keys
 
 class ModState(NamedTuple):
     sidebar: bool
-    x_accordion: tuple[str, ...]
+    accordion: tuple[str, ...]
     popover: bool
     tooltip: bool
     input_action_button: int
@@ -54,7 +54,7 @@ x_input_keys = ("x_" + key for key in x_input_keys)
 
 component = ModState(
     sidebar=True,
-    x_accordion=("a",),
+    accordion=("a",),
     popover=False,
     tooltip=False,
     input_action_button=0,

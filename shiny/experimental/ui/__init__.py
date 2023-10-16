@@ -42,16 +42,16 @@ from ._deprecated import (
     popover,
     toggle_popover,
     update_popover,
-    # # Accordion
-    # AccordionPanel,
-    # accordion,
-    # accordion_panel,
-    # accordion_panel_close,
-    # accordion_panel_insert,
-    # accordion_panel_open,
-    # accordion_panel_remove,
-    # accordion_panel_set,
-    # update_accordion_panel,
+    # Accordion
+    AccordionPanel,
+    accordion,
+    accordion_panel,
+    accordion_panel_close,
+    accordion_panel_insert,
+    accordion_panel_open,
+    accordion_panel_remove,
+    accordion_panel_set,
+    update_accordion_panel,
     # Fill
     # FillingLayout,
     as_fill_carrier,
@@ -81,20 +81,6 @@ from ._deprecated import (
     page_fillable,
     page_navbar,
     page_sidebar,
-)
-
-
-# TODO-barret; Remove or trim
-from ._accordion import (
-    AccordionPanel,
-    accordion,
-    accordion_panel,
-    accordion_panel_close,
-    accordion_panel_insert,
-    accordion_panel_open,
-    accordion_panel_remove,
-    accordion_panel_set,
-    update_accordion_panel,
 )
 
 

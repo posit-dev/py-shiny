@@ -15,9 +15,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from htmltools import TagList
 
-from shiny import App, Inputs, Outputs, Session
-from shiny import experimental as x
-from shiny import module, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 from shiny.session import session_context
 from shiny.types import ImgData
 
@@ -40,6 +38,7 @@ input_keys = (
     "input_action_link",
     "download_button",
     "download_link",
+    "accordion",
     "input_file",
     "input_checkbox",
     "input_checkbox_group",
@@ -60,13 +59,11 @@ input_keys = (
     "navset_hidden",
     "navset_pill",
     "navset_tab",
-)
-x_input_keys = (
     "sidebar",
-    "accordion",
     "popover",
     "tooltip",
 )
+x_input_keys = ()
 
 
 session_dict: dict[str, Session] = {}
@@ -137,9 +134,9 @@ def mod_x_ui(label: str) -> ui.TagChild:
             ui.tags.label(ui.markdown("Plot (Changes w/ `input.radio_buttons()`)")),
             ui.output_plot("out_plot"),
         ),
-        x.ui.accordion(
+        ui.accordion(
             *[
-                x.ui.accordion_panel(
+                ui.accordion_panel(
                     ui.markdown(f"Panel for `{letter}`"),
                     ui.markdown(f"Content for `{letter}`"),
                     value=letter,
@@ -414,7 +411,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         letter = letters[count % len(letters)]
         on_off = count % 2 == 1
         with session_context(session):
-            x.ui.accordion_panel_set("accordion", letter)
+            ui.accordion_panel_set("accordion", letter)
 
             ui.update_checkbox("input_checkbox", value=on_off)
             checkbox_group_letters = letters.copy()

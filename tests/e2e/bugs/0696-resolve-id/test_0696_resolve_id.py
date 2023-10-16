@@ -154,7 +154,7 @@ def test_module_support(page: Page, local_app: ShinyAppProc) -> None:
         page,
         module_id="mod2",
         sidebar=False,
-        x_accordion=("d",),
+        accordion=("d",),
         popover=True,
         tooltip=True,
         input_action_button=3,

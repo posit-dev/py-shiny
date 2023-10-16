@@ -70,8 +70,13 @@ TODO-barret; api change of layout_sidebar. Do not use panel_main anymore
 | `shiny.experimental.ui.page_navbar(sidebar=,fillable=,fillable_mobile=,gap=,padding=)` | `shiny.ui.page_navbar(sidebar=,fillable=,fillable_mobile=,gap=,padding=)` | #680 |
 | `shiny.ui.page_navbar(inverse=False)` | `shiny.ui.page_navbar(inverse=True)` | #680 |
 | `shiny.experimental.ui.page_fillable()` | `shiny.ui.page_fillable()` | #680 |
-
-
+| `shiny.experimental.ui.accordion()` | `shiny.ui.accordion()` | #680 |
+| `shiny.experimental.ui.accordion_panel()` | `shiny.ui.accordion_panel()` | #680 |
+| `shiny.experimental.ui.accordion_panel_close()` | `shiny.ui.accordion_panel_close()` | #680 |
+| `shiny.experimental.ui.accordion_panel_insert()` | `shiny.ui.accordion_panel_insert()` | #680 |
+| `shiny.experimental.ui.accordion_panel_open()` | `shiny.ui.accordion_panel_open()` | #680 |
+| `shiny.experimental.ui.accordion_panel_remove()` | `shiny.ui.accordion_panel_remove()` | #680 |
+| `shiny.experimental.ui.accordion_panel_set()` | `shiny.ui.accordion_panel_set()` | #680 |
 
 
 All originally named methods will display a deprecation warning when executed.

@@ -1,11 +1,10 @@
 import random
 
-import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, ui
 
 
-def make_panel(letter: str) -> x.ui.AccordionPanel:
-    return x.ui.accordion_panel(
+def make_panel(letter: str) -> ui.AccordionPanel:
+    return ui.accordion_panel(
         f"Section {letter}", f"Some narrative for section {letter}"
     )
 
@@ -21,7 +20,7 @@ app_ui = ui.page_fluid(
         f"Remove Section {choices[-1]}",
         class_="mt-3 mb-3",
     ),
-    x.ui.accordion(*items, id="acc", multiple=True),
+    ui.accordion(*items, id="acc", multiple=True),
 )
 
 
@@ -37,7 +36,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             return
 
         # Remove panel
-        x.ui.accordion_panel_remove("acc", f"Section { user_choices.pop() }")
+        ui.accordion_panel_remove("acc", f"Section { user_choices.pop() }")
 
         label = "No more panels to remove!"
         if len(user_choices) > 0:

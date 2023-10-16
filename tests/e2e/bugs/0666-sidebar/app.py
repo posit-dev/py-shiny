@@ -20,18 +20,6 @@ app_ui = ui.page_fluid(
         ui.panel_main("Main content - 2", id="m2"),
         "right",
     ),
-    # # Can not use X sidebar as only one htmldependency wins.
-    # import shiny.experimental as x
-    # ui.layout_sidebar(
-    #     x.ui.sidebar(
-    #         "`x` - Sidebar content",
-    #         open="always",
-    #         width=f"{int(4 / 12 * 100)}%",
-    #         id="x-sidebar",
-    #     ),
-    #     "`x` - Main content",
-    #     id="x-content",
-    # ),
 )
 
 app = App(app_ui, None)
