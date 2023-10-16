@@ -294,17 +294,23 @@ def server(input: Inputs, output: Outputs, session: Session):
         """
 
         reactive.invalidate_later(15)
-        min_time, max_time = pd.to_datetime(
-            con.execute(
-                "select min(timestamp), max(timestamp) from accuracy_scores"
-            ).fetchone(),
-            utc=True,
-        )
-        ui.update_slider(
-            "timerange",
-            min=min_time.replace(tzinfo=timezone.utc),
-            max=max_time.replace(tzinfo=timezone.utc),
-        )
+        try:
+            min_time, max_time = pd.to_datetime(
+                con.execute(
+                    "select min(timestamp), max(timestamp) from accuracy_scores"
+                ).fetchone(),
+                utc=True,
+            )
+            ui.update_slider(
+                "timerange",
+                min=min_time.replace(tzinfo=timezone.utc),
+                max=max_time.replace(tzinfo=timezone.utc),
+            )
+        except sqlite3.OperationalError:
+            # Sometimes this executes before the background thread has had a
+            # chance to even create the sample data table. In that case, just
+            # ignore the error and try again later.
+            pass
 
 
 app = App(app_ui, server)
