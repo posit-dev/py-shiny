@@ -11,7 +11,7 @@ import shutil
 import sys
 import types
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 import click
 import uvicorn
@@ -31,6 +31,7 @@ def main() -> None:
 stop_shortcut = "Ctrl+C"
 
 RELOAD_INCLUDES_DEFAULT = ("*.py", "*.css", "*.js", "*.htm", "*.html", "*.png")
+RELOAD_EXCLUDES_DEFAULT = (".*", "*.py[cod]", "__pycache__", "env", "venv")
 
 
 @main.command(
@@ -96,6 +97,13 @@ any of the following will work:
     f' to "{",".join(RELOAD_INCLUDES_DEFAULT)}".',
 )
 @click.option(
+    "--reload-excldues",
+    "reload_excludes",
+    default=",".join(RELOAD_INCLUDES_DEFAULT),
+    help="File glob(s) to indicate which files should be excluded from file monitoring. Defaults"
+    f' to "{",".join(RELOAD_INCLUDES_DEFAULT)}".',
+)
+@click.option(
     "--ws-max-size",
     type=int,
     default=16777216,
@@ -141,14 +149,16 @@ def run(
     reload: bool,
     reload_dirs: tuple[str, ...],
     reload_includes: str,
+    reload_excludes: str,
     ws_max_size: int,
     log_level: str,
     app_dir: str,
     factory: bool,
     launch_browser: bool,
-    **kwargs,
+    **kwargs: Dict[str, Any],
 ) -> None:
     reload_includes_list = reload_includes.split(",")
+    reload_excludes_list = reload_excludes.split(",")
     return run_app(
         app,
         host=host,
@@ -157,6 +167,7 @@ def run(
         reload=reload,
         reload_dirs=list(reload_dirs),
         reload_includes=reload_includes_list,
+        reload_excludes=reload_excludes_list,
         ws_max_size=ws_max_size,
         log_level=log_level,
         app_dir=app_dir,
@@ -174,12 +185,13 @@ def run_app(
     reload: bool = False,
     reload_dirs: Optional[list[str]] = None,
     reload_includes: list[str] | tuple[str, ...] = RELOAD_INCLUDES_DEFAULT,
+    reload_excludes: list[str] | tuple[str, ...] = RELOAD_EXCLUDES_DEFAULT,
     ws_max_size: int = 16777216,
     log_level: Optional[str] = None,
     app_dir: Optional[str] = ".",
     factory: bool = False,
     launch_browser: bool = False,
-    **kwargs,
+    **kwargs: Dict[str, Any],
 ) -> None:
     """
     Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop.
@@ -210,6 +222,9 @@ def run_app(
     reload_includes
         List or tuple of file globs to indicate which files should be monitored for
         changes.
+    reload_excludes
+        List or tuple of file globas to indicate which files should be excluded from
+        reload monitoring. Can be combined with `reload_includes`
     ws_max_size
         WebSocket max size message in bytes.
     log_level
@@ -222,7 +237,7 @@ def run_app(
         Launch app browser after app starts, using the Python webbrowser module.
     **kwargs
         Additional keyword arguments which are passed to ``uvicorn.run``. For more
-        information see `
+        information see [Uvicorn documentation](https://www.uvicorn.org/).
 
     Tip
     ---
