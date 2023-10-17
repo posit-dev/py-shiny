@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import ast
 import re
+import sys
 from pathlib import Path
+from typing import Any
 
 from htmltools import HTML, Tag, Tagifiable, TagList
 
@@ -33,13 +36,11 @@ def is_flat_app(app: str, app_dir: str | None) -> bool:
 
 
 def flat_run(file: Path) -> TagList:
-    import ast
-    import sys
-
     with open(file) as f:
         content = f.read()
 
     tree = ast.parse(content, file)
+    DisplayFuncsTransformer().visit(tree)
 
     collected_ui = TagList()
 
@@ -53,6 +54,7 @@ def flat_run(file: Path) -> TagList:
     sys.displayhook = collect_ui
 
     var_context: dict[str, object] = {}
+    var_context["__sys"] = sys
 
     # Execute each top-level node in the AST
     for node in tree.body:
@@ -88,3 +90,83 @@ def create_flat_app(file: Path) -> App:
     app = App(app_ui, flat_server)
 
     return app
+
+
+class DisplayFuncsTransformer(ast.NodeTransformer):
+    # Visit functions and async functions, inserting @sys.displayhook at the top of
+    # their decorator lists
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
+        node.decorator_list.insert(
+            0,
+            set_loc(
+                ast.Attribute(
+                    value=set_loc(ast.Name(id="__sys", ctx=ast.Load()), node),
+                    attr="displayhook",
+                    ctx=ast.Load(),
+                ),
+                node,
+            ),
+        )
+        return node
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> Any:
+        node.decorator_list.insert(
+            0,
+            set_loc(
+                ast.Attribute(
+                    value=set_loc(ast.Name(id="__sys", ctx=ast.Load()), node),
+                    attr="displayhook",
+                    ctx=ast.Load(),
+                ),
+                node,
+            ),
+        )
+        return node
+
+    # These are nodes that we WANT to descend into, looking for function definitions to
+    # mangle. We specifically DON'T want to descend into the body of a function, because
+    # only top-level function definitions should be displayed.
+    #
+    # For these nodes, we use the superclass's generic_visit, instead of our own, which
+    # short-circuits the transformation.
+
+    def visit_Module(self, node: ast.Module) -> Any:
+        return super().generic_visit(node)
+
+    def visit_With(self, node: ast.With) -> Any:
+        return super().generic_visit(node)
+
+    def visit_AsyncWith(self, node: ast.AsyncWith) -> Any:
+        return super().generic_visit(node)
+
+    def visit_If(self, node: ast.If) -> Any:
+        return super().generic_visit(node)
+
+    def visit_IfExp(self, node: ast.IfExp) -> Any:
+        return super().generic_visit(node)
+
+    def visit_For(self, node: ast.For) -> Any:
+        return super().generic_visit(node)
+
+    def visit_AsyncFor(self, node: ast.AsyncFor) -> Any:
+        return super().generic_visit(node)
+
+    def visit_While(self, node: ast.While) -> Any:
+        return super().generic_visit(node)
+
+    def visit_Try(self, node: ast.Try) -> Any:
+        return super().generic_visit(node)
+
+    # For all other nodes, short-circuit the transformation--that is, don't recurse into
+    # them.
+
+    def generic_visit(self, node: ast.AST) -> ast.AST:
+        return node
+
+
+# ast.compile is insistent that all expressions have a lineno and col_offset
+def set_loc(target: ast.expr, source: ast.AST) -> ast.expr:
+    target.lineno = source.lineno
+    target.col_offset = source.col_offset
+    return target
