@@ -11,7 +11,7 @@ from htmltools import HTML, Tag, Tagifiable, TagList
 from . import render
 from ._app import App
 from .session import Inputs, Outputs, Session
-from .ui import output_ui, page_fluid
+from .ui import output_ui, page_fluid, tags
 
 
 def is_flat_app(app: str, app_dir: str | None) -> bool:
@@ -48,8 +48,9 @@ def flat_run(file: Path) -> TagList:
         if isinstance(value, (Tag, TagList, Tagifiable)):
             collected_ui.append(value)
         elif hasattr(value, "_repr_html_"):
-            # TODO: Make render functions have a tagify method
             collected_ui.append(HTML(value._repr_html_()))
+        else:
+            collected_ui.append(tags.pre(repr(value)))
 
     sys.displayhook = collect_ui
 
