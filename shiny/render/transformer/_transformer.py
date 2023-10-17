@@ -25,6 +25,7 @@ import inspect
 from abc import ABC, abstractmethod
 from typing import (
     TYPE_CHECKING,
+    Any,
     Awaitable,
     Callable,
     Generic,
@@ -256,6 +257,8 @@ class OutputRenderer(Generic[OT], ABC):
         self._transformer = transform_fn
         self._params = params
         self.default_ui = default_ui
+        self.default_ui_args: tuple[Any, ...] = []
+        self.default_ui_kwargs: dict[str, Any] = dict()
         self._auto_registered = False
 
         from ...session import get_current_session
@@ -321,12 +324,14 @@ class OutputRenderer(Generic[OT], ABC):
 
         if self.default_ui is None:
             return None
-        return htmltools.TagList(self.default_ui(self.__name__))._repr_html_()
+        return htmltools.TagList(self.tagify())._repr_html_()
 
     def tagify(self) -> TagList | Tag | MetadataNode | str:
         if self.default_ui is None:
             raise TypeError("No default UI exists for this type of render function")
-        return self.default_ui(self.__name__)
+        return self.default_ui(
+            self.__name__, *self.default_ui_args, **self.default_ui_kwargs
+        )
 
 
 # Using a second class to help clarify that it is of a particular type
