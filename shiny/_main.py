@@ -18,6 +18,7 @@ import uvicorn
 import uvicorn.config
 
 import shiny
+from shiny._flat import create_flat_app, is_flat_app
 
 from . import _autoreload, _hostenv, _static, _utils
 from ._typing_extensions import NotRequired, TypedDict
@@ -252,7 +253,11 @@ def run_app(
     os.environ["SHINY_PORT"] = str(port)
 
     if isinstance(app, str):
-        app, app_dir = resolve_app(app, app_dir)
+        # TODO: handle default app value of "app.py:app"
+        if is_flat_app(app, app_dir):
+            app = create_flat_app(Path(app))
+        else:
+            app, app_dir = resolve_app(app, app_dir)
 
     if app_dir:
         app_dir = os.path.realpath(app_dir)
@@ -359,7 +364,7 @@ def is_file(app: str) -> bool:
     return "/" in app or app.endswith(".py")
 
 
-def resolve_app(app: str, app_dir: Optional[str]) -> tuple[str, Optional[str]]:
+def resolve_app(app: str, app_dir: str | None) -> tuple[str, str | None]:
     # The `app` parameter can be:
     #
     # - A module:attribute name
