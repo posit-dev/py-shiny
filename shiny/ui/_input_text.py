@@ -97,9 +97,7 @@ def input_text_area(
     spellcheck: Optional[Literal["true", "false"]] = None,
 ) -> Tag:
     """
-    Create a textarea input control for entry of unstructured text values. This is an
-    experimental version of :func:`~shiny.ui.input_text_area` that can automatically
-    resize to fit the input text.
+    Create a textarea input control for entry of unstructured text values.
 
     Parameters
     ----------
