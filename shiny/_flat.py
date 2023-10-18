@@ -20,7 +20,7 @@ def is_flat_app(app: str, app_dir: str | None) -> bool:
         app_path = Path(app)
 
     if not app_path.exists():
-        raise ValueError(f"App file at {app_path} does not exist")
+        return False
 
     with open(app_path) as f:
         pattern = re.compile(
@@ -54,14 +54,18 @@ def flat_run(file: Path) -> TagList:
 
     sys.displayhook = collect_ui
 
-    var_context: dict[str, object] = {}
-    var_context["__sys"] = sys
+    file_path = str(file.resolve())
+
+    var_context: dict[str, object] = {
+        "__file__": file_path,
+        "__sys": sys,
+    }
 
     # Execute each top-level node in the AST
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             exec(
-                compile(ast.Module([node], type_ignores=[]), "<ast>", "exec"),
+                compile(ast.Module([node], type_ignores=[]), file_path, "exec"),
                 var_context,
                 var_context,
             )
@@ -69,7 +73,7 @@ def flat_run(file: Path) -> TagList:
             sys.displayhook(func)
         else:
             exec(
-                compile(ast.Interactive([node], type_ignores=[]), "<ast>", "single"),
+                compile(ast.Interactive([node], type_ignores=[]), file_path, "single"),
                 var_context,
                 var_context,
             )

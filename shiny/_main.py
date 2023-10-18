@@ -255,7 +255,9 @@ def run_app(
     if isinstance(app, str):
         # TODO: handle default app value of "app.py:app"
         if is_flat_app(app, app_dir):
-            app = create_flat_app(Path(app))
+            app_path = Path(app).resolve()
+            app = create_flat_app(app_path)
+            app_dir = str(app_path.parent)
         else:
             app, app_dir = resolve_app(app, app_dir)
 
