@@ -31,6 +31,6 @@ def autoresize_dependency() -> HTMLDependency:
         "shiny-textarea-autoresize",
         __version__,
         source={"package": "shiny", "subdir": "www/shared/py-shiny/text-area"},
-        script={"src": "textarea-autoresize.js"},
+        script={"src": "textarea-autoresize.js", "type": "module"},
         stylesheet={"href": "textarea-autoresize.css"},
     )

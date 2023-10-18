@@ -35,7 +35,7 @@ async function bundle_textarea() {
       entryPoints: {
         "textarea-autoresize": "text-area/textarea-autoresize.ts",
       },
-      format: "iife",
+      format: "esm",
       bundle: true,
       outdir: outDir + "/text-area",
       minify: false,
