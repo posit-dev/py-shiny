@@ -369,8 +369,8 @@ def output_ui(
     if not container:
         container = tags.span if inline else tags.div
     res = container({"class": "shiny-html-output"}, id=resolve_id(id), **kwargs)
-    if fillable:
-        res = as_fillable_container(res)
     if fill:
         res = as_fill_item(res)
+    if fillable:
+        res = as_fillable_container(res)
     return res

@@ -145,9 +145,9 @@ def _card_impl(
         card_dependency(),
         _card_js_init(),
     )
-    tag = as_fillable_container(tag)
     if fill:
         tag = as_fill_item(tag)
+    tag = as_fillable_container(tag)
 
     return tag
 
@@ -350,10 +350,10 @@ def card_body(
         **kwargs,
     )
 
-    if fillable:
-        tag = as_fillable_container(tag)
     if fill:
         tag = as_fill_item(tag)
+    if fillable:
+        tag = as_fillable_container(tag)
 
     return CardItem(tag)
 
