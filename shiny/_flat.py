@@ -47,7 +47,7 @@ def flat_run(file: Path) -> TagList:
         if isinstance(value, (Tag, TagList, Tagifiable)):
             collected_ui.append(value)
         elif hasattr(value, "_repr_html_"):
-            collected_ui.append(HTML(value._repr_html_()))
+            collected_ui.append(HTML(value._repr_html_()))  # pyright: ignore
         else:
             collected_ui.append(tags.pre(repr(value)))
 
