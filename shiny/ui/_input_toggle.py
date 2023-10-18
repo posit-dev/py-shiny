@@ -10,7 +10,8 @@ from ._utils import _session_on_flush_send_msg
 
 
 @add_example()
-def toggle_popover(
+# TODO-barret-API; Should toggle methods exist? You should know (or can retrieve) the current state and where you are wanting to go.
+def toggle_popover(  # TODO-barret-API; Move into update popover method
     id: str,
     show: Optional[bool] = None,
     session: Optional[Session] = None,
@@ -48,7 +49,8 @@ def toggle_popover(
 
 
 @add_example()
-def toggle_tooltip(
+# TODO-barret-API; Should toggle methods exist? You should know (or can retrieve) the current state and where you are wanting to go.
+def toggle_tooltip(  # TODO-barret-API; Move into update tooltip method
     id: str, show: Optional[bool] = None, session: Optional[Session] = None
 ) -> None:
     """
@@ -83,7 +85,8 @@ def _normalize_show_value(show: bool | None) -> Literal["toggle", "show", "hide"
 
 
 @add_example()
-def toggle_switch(
+# TODO-barret-API; Should toggle methods exist? You should know (or can retrieve) the current state and where you are wanting to go.
+def toggle_switch(  # TODO-barret-API; Move into `update_switch()` method
     id: str, value: Optional[bool] = None, session: Optional[Session] = None
 ):
     """

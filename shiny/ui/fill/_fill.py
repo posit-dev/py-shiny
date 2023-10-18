@@ -24,7 +24,7 @@ FILL_CONTAINER_CLASS = "html-fill-container"
 
 
 @add_example()
-def as_fillable_container(
+def as_fillable_container(  # TODO-barret-API; These methods mutate their input values. Should they return a new object instead? Or not return at all (like `LIST.sort()`)?
     tag: TagT,
 ) -> TagT:
     tag_prepend_class(tag, FILL_CONTAINER_CLASS)
@@ -33,7 +33,7 @@ def as_fillable_container(
 
 
 @add_example()
-def as_fill_item(
+def as_fill_item(  # TODO-barret-API; These methods mutate their input values. Should they return a new object instead? Or not return at all (like `LIST.sort()`)?
     tag: TagT,
 ) -> TagT:
     """

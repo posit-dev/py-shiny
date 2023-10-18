@@ -457,7 +457,7 @@ def layout_sidebar(
 
 
 @add_example()
-def toggle_sidebar(
+def toggle_sidebar(  # TODO-barret-API; Rename to `update_sidebar()`
     id: str,
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
     session: Session | None = None,
