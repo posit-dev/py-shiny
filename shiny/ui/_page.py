@@ -38,7 +38,9 @@ from .fill import as_fillable_container
 
 
 def page_sidebar(
-    sidebar: Sidebar | TagChild | TagAttrs,
+    sidebar: Sidebar
+    | TagChild
+    | TagAttrs,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` include `Sidebar` and have the sidebar retrieved from within the args?
     *args: TagChild | TagAttrs,
     title: Optional[str | Tag | TagList] = None,
     fillable: bool = True,
@@ -108,8 +110,10 @@ def page_navbar(
     title: Optional[str | Tag | TagList] = None,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    sidebar: Optional[Sidebar] = None,
-    # Only page_navbar gets enhancedtreatement for `fillable`
+    sidebar: Optional[
+        Sidebar
+    ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` include `Sidebar` and have the sidebar retrieved from within the args?
+    # Only page_navbar gets enhanced treatement for `fillable`
     # If an `*args`'s `data-value` attr string is in `fillable`, then the component is fillable
     fillable: bool | list[str] = True,
     fillable_mobile: bool = False,

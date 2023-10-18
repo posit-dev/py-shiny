@@ -690,7 +690,9 @@ def navset_card_pill(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    sidebar: Optional[Sidebar] = None,
+    sidebar: Optional[
+        Sidebar
+    ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` include `Sidebar` and have the sidebar retrieved from within the args?
     header: TagChild = None,
     footer: TagChild = None,
     placement: Literal["above", "below"] = "above",
@@ -1011,7 +1013,9 @@ def navset_bar(
     title: TagChild,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    sidebar: Optional[Sidebar] = None,
+    sidebar: Optional[
+        Sidebar
+    ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` include `Sidebar` and have the sidebar retrieved from within the args?
     fillable: bool | list[str] = True,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,

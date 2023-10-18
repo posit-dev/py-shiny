@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### API changes
 
-* TODO-barret-API; `shiny.ui.panel_main()` and `shiny.ui.panel_sidebar()` are deprecated in favor of new API for `shiny.ui.layout_sidebar()`. Please use `shiny.ui.sidebar()` to construct `shiny.ui.layout_sidebar(sidebar=)` and supply main content to `shiny.ui.layout_sidebar(*args, **kwargs)`. (#680)
+* TODO-barret-API; `shiny.ui.panel_main()` and `shiny.ui.panel_sidebar()` are deprecated in favor of new API for `shiny.ui.layout_sidebar()`. Please use `shiny.ui.sidebar()` to construct a sidebar and supply it (along with the main content) to `shiny.ui.layout_sidebar(*args, **kwargs)`. (#680)
 
 #### API relocations
 
