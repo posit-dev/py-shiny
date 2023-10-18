@@ -272,7 +272,7 @@ def sidebar(
 
 
 @add_example()
-def layout_sidebar(
+def layout_sidebar(  # TODO-barret-API; Should this be `layout_sidebar(*args, sidebar: Optional[Sidebar] = None)`?
     *args: Sidebar | TagChild | TagAttrs,
     fillable: bool = True,
     fill: bool = True,

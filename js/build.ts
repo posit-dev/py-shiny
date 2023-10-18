@@ -4,6 +4,8 @@ import * as fs from "node:fs/promises";
 
 const outDir = "../shiny/www/shared/py-shiny";
 
+// TODO-barret-future; Map over options and wait their build to finish
+
 async function bundle_dataframe() {
   try {
     const options: BuildOptions = {
