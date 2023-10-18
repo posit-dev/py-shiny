@@ -49,7 +49,8 @@ def flat_run(file: Path) -> TagList:
         elif hasattr(value, "_repr_html_"):
             collected_ui.append(HTML(value._repr_html_()))  # pyright: ignore
         else:
-            collected_ui.append(tags.pre(repr(value)))
+            if value is not None:
+                collected_ui.append(tags.pre(repr(value)))
 
     sys.displayhook = collect_ui
 
