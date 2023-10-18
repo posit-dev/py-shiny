@@ -195,25 +195,7 @@ def page_navbar(
             "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
         )
 
-    # If a sidebar is provided, we want the layout_sidebar(fill = TRUE) component
-    # (which is a sibling of the <nav>) to always fill the page
-    if fillable is False and sidebar is None:
-        # `page_func = page_bootstrap` throws type errors. Wrap in a function to get around them
-        def page_func(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
-            return page_bootstrap(*args, **kwargs)
-
-    else:
-
-        def page_func(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
-            return page_fillable(
-                *args,
-                fillable_mobile=fillable_mobile,
-                padding=0,
-                gap=0,
-                **kwargs,
-            )
-
-    return page_func(
+    page_args = (
         navset_bar(
             *args,
             title=title,
@@ -232,10 +214,28 @@ def page_navbar(
             fluid=fluid,
         ),
         get_window_title(title, window_title=window_title),
-        title=None,
-        # theme = theme,
-        lang=lang,
     )
+    page_kwargs = {
+        "title": None,
+        "lang": lang,
+    }
+
+    # If a sidebar is provided, we want the layout_sidebar(fill = TRUE) component
+    # (which is a sibling of the <nav>) to always fill the page
+    if fillable is False and sidebar is None:
+        return page_bootstrap(
+            *page_args,
+            **page_kwargs,
+        )
+
+    else:
+        return page_fillable(
+            *page_args,
+            fillable_mobile=fillable_mobile,
+            padding=0,
+            gap=0,
+            **page_kwargs,
+        )
 
 
 def page_fillable(
