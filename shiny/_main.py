@@ -18,7 +18,7 @@ import uvicorn
 import uvicorn.config
 
 import shiny
-from shiny._flat import create_flat_app, is_flat_app
+from shiny.flat.app import is_flat_app, wrap_flat_app
 
 from . import _autoreload, _hostenv, _static, _utils
 from ._typing_extensions import NotRequired, TypedDict
@@ -256,7 +256,9 @@ def run_app(
         # TODO: handle default app value of "app.py:app"
         if is_flat_app(app, app_dir):
             app_path = Path(app).resolve()
-            app = create_flat_app(app_path)
+            # Set this so shiny.flat.app.wrap_flat_app() can find the flat app file.
+            os.environ["SHINY_FLAT_APP_FILE"] = str(app_path)
+            app = "shiny.flat.app:app"
             app_dir = str(app_path.parent)
         else:
             app, app_dir = resolve_app(app, app_dir)
