@@ -8,39 +8,14 @@ import sys
 from contextlib import AbstractContextManager
 from typing import Any, Callable, ParamSpec, TypeVar, cast, overload
 
-from . import ui
-from .render.transformer import OutputRenderer
-from .session import Inputs, Outputs, Session
-from .session import _utils as session_utils
+from .. import ui
+from ..render.transformer import OutputRenderer
 
-__all__ = ("input", "output", "session", "output_args", "suspend_display")
+__all__ = ("output_args", "suspend_display")
 
 OT = TypeVar("OT")
 P = ParamSpec("P")
 R = TypeVar("R")
-
-# TODO: Warn when loading this module in interactive sessions
-
-# Add a type so that type checkers
-input: Inputs
-output: Outputs
-session: Session
-
-
-class ThisMod(sys.modules[__name__].__class__):
-    def __getattr__(self, name: str):
-        # TODO: cache the value so that it is the same on subsequent calls?
-        if name == "input":
-            return session_utils.get_current_session().input
-        elif name == "session":
-            return session_utils.get_current_session()
-        elif name == "output":
-            # warn?
-            return session_utils.get_current_session().output
-        raise AttributeError(name=name)
-
-
-sys.modules[__name__].__class__ = ThisMod
 
 
 def output_args(
