@@ -407,13 +407,14 @@ def layout_sidebar(
 def _get_layout_sidebar_sidebar(
     args: tuple[Sidebar | TagChild | TagAttrs, ...],
 ) -> tuple[tuple[TagChild | Sidebar | TagAttrs, ...], Sidebar]:
-    updated_args = list(args)
+    updated_args: list[Sidebar | TagChild | TagAttrs] = []
+    original_args = tuple(args)
 
     sidebar: Sidebar | None = None
     sidebar_orig_arg: Sidebar | DeprecatedPanelSidebar | None = None
 
-    # Use `args` here so `updated_args` can be safely altered in place
-    for i, arg in zip(range(len(args)), args):
+    # Use `original_args` here so `updated_args` can be safely altered in place
+    for i, arg in zip(range(len(original_args)), original_args):
         if isinstance(arg, Sidebar):
             if sidebar is not None:
                 raise ValueError(
@@ -456,10 +457,17 @@ def _get_layout_sidebar_sidebar(
                 sidebar.position = cast(  # pyright: ignore[reportOptionalMemberAccess]
                     Literal["left", "right"], arg2
                 )
-                # Remove _position_ from updated_args
-                updated_args.pop(1)
 
-            # Extract `DeprecatedPanelMain` attrs and children for loop below
+            # Only keep panel_main content
+            updated_args = [arg]
+
+            # Cases have been covered, quit loop
+            break
+
+            # Extract `DeprecatedPanelMain` attrs and children in followup for loop
+        else:
+            # Keep the arg!
+            updated_args.append(arg)
 
     if sidebar is None:
         raise ValueError(

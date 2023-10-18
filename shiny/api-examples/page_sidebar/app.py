@@ -1,7 +1,7 @@
 from shiny import App, ui
 
 app_ui = ui.page_sidebar(
-    "Sidebar content",
+    ui.sidebar("Sidebar content"),
     "Main content",
 )
 
