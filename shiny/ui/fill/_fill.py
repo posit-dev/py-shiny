@@ -109,7 +109,9 @@ def remove_all_fill(
     return tag
 
 
-def is_fillable_container(tag: object) -> bool:
+def is_fillable_container(  # TODO-barret-api; Should this be exported?
+    tag: object,
+) -> bool:
     """
     Test a tag for being a fillable container
 
@@ -147,7 +149,7 @@ def is_fillable_container(tag: object) -> bool:
     return isinstance(tag, Tag) and tag.has_class(FILL_CONTAINER_CLASS)
 
 
-def is_fill_item(tag: object) -> bool:
+def is_fill_item(tag: object) -> bool:  # TODO-barret-api; Should this be exported?
     """
     Test a tag for being a fill item
 
