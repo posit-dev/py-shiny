@@ -8,6 +8,16 @@ from .._typing_extensions import NotRequired, TypedDict
 from .._versions import bslib as bslib_version
 from .._versions import htmltools as htmltools_version
 
+"""
+HTML dependencies for shinyverse dependencies from R packages such as bslib or htmltools.
+
+For...
+* External dependencies (e.g. jQuery, Bootstrap), see `shiny.ui._html_deps_external`
+* Internal dependencies (e.g. dataframe, autoresize), see `shiny.ui._html_deps_py_shiny`
+* shinyverse dependencies (e.g. bslib, htmltools), see `shiny.ui._html_deps_shinyverse`
+"""
+
+
 _rel_www_shared = "www/shared"
 _htmltools_path = f"{_rel_www_shared}/htmltools"
 _components_path = f"{_rel_www_shared}/bslib/components"

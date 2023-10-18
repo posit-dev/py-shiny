@@ -4,6 +4,15 @@ from htmltools import HTMLDependency
 
 from .. import __version__
 
+"""
+HTML dependencies for internal dependencies such as dataframe or text area's autoresize.
+
+For...
+* External dependencies (e.g. jQuery, Bootstrap), see `shiny.ui._html_deps_external`
+* Internal dependencies (e.g. dataframe, autoresize), see `shiny.ui._html_deps_py_shiny`
+* shinyverse dependencies (e.g. bslib, htmltools), see `shiny.ui._html_deps_shinyverse`
+"""
+
 
 def data_frame_deps() -> HTMLDependency:
     return HTMLDependency(

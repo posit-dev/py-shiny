@@ -6,6 +6,15 @@ from .._versions import bootstrap as bootstrap_version
 from .._versions import shiny_html_deps
 from ..html_dependencies import jquery_deps
 
+"""
+HTML dependencies for external dependencies Bootstrap, ionrangeslider, datepicker, selectize, and jQuery UI.
+
+For...
+* External dependencies (e.g. jQuery, Bootstrap), see `shiny.ui._html_deps_external`
+* Internal dependencies (e.g. dataframe, autoresize), see `shiny.ui._html_deps_py_shiny`
+* shinyverse dependencies (e.g. bslib, htmltools), see `shiny.ui._html_deps_shinyverse`
+"""
+
 
 def bootstrap_deps() -> list[HTMLDependency]:
     dep = HTMLDependency(
