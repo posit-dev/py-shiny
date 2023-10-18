@@ -18,7 +18,6 @@ function onDelegatedEvent(
 }
 
 function update_height(target: HTMLTextAreaElement) {
-  window.console.log("update_height", target, document.readyState);
   // Automatically resize the textarea to fit its content.
   target.style.height = "auto";
   target.style.height = target.scrollHeight + "px";
@@ -29,7 +28,6 @@ onDelegatedEvent(
   "input",
   "textarea.textarea-autoresize",
   (target: HTMLTextAreaElement) => {
-    window.console.log("delegated update");
     update_height(target);
   }
 );
@@ -43,7 +41,6 @@ function update_on_load() {
   }
 
   // document.readyState in ["interactive", "complete"];\
-  window.console.log("load update");
   document
     .querySelectorAll("textarea.textarea-autoresize")
     .forEach(update_height);
