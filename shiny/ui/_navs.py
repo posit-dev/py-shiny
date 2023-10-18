@@ -614,7 +614,9 @@ def navset_card_tab(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    sidebar: Optional[Sidebar] = None,
+    sidebar: Optional[
+        Sidebar
+    ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` be of type `NavSetArg | Sidebar` and have the sidebar retrieved from within the args?
     header: TagChild = None,
     footer: TagChild = None,
 ) -> NavSetCard:
@@ -859,7 +861,9 @@ class NavSetBar(NavSet):
         title: TagChild,
         id: Optional[str],
         selected: Optional[str],
-        sidebar: Optional[Sidebar] = None,
+        sidebar: Optional[
+            Sidebar
+        ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` be of type `NavSetArg | Sidebar` and have the sidebar retrieved from within the args?
         fillable: bool | list[str] = False,
         gap: Optional[CssUnit],
         padding: Optional[CssUnit | list[CssUnit]],
