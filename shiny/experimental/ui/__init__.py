@@ -63,7 +63,6 @@ from ._deprecated import (
     remove_all_fill,
     # Card
     TagCallable,
-    WrapperCallable,
     CardItem,
     card_footer,
     card_header,
@@ -86,6 +85,7 @@ from ._deprecated import (
 
 __all__ = (
     # Card
+    "WrapperCallable",
     "ImgContainer",
     "TagCallable",
     "card",
@@ -155,7 +155,6 @@ __all__ = (
     "is_fill_item",
     # # Card
     "TagCallable",
-    "WrapperCallable",
     "CardItem",
     "card_header",
     "card_footer",

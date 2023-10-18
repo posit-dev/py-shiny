@@ -34,7 +34,6 @@ from ...ui import update_accordion_panel as main_update_accordion_panel
 from ...ui import update_popover as main_update_popover
 from ...ui import update_tooltip as main_update_tooltip
 from ...ui._card import CardItem as MainCardItem
-from ...ui._card import WrapperCallable as MainWrapperCallable
 from ...ui._card import card_footer as main_card_footer
 from ...ui._card import card_header as main_card_header
 from ...ui._layout import layout_column_wrap as main_layout_column_wrap
@@ -993,9 +992,6 @@ def is_fill_item(tag: TagChild) -> bool:
 
 TagCallable = TagFunction
 """Deprecated. Please use `htmltools.TagFunction"""
-
-WrapperCallable = MainWrapperCallable
-"""Deprecated. Please use `shiny.ui.WrapperCallable` instead."""
 
 
 class CardItem(MainCardItem):
