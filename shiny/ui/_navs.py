@@ -543,7 +543,7 @@ def navset_hidden(
 
 class NavSetCard(NavSet):
     placement: Literal["above", "below"]
-    sidbar: Optional[Sidebar]
+    sidebar: Optional[Sidebar]
 
     def __init__(
         self,
