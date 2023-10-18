@@ -3,7 +3,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "build": "tsc -noEmit && eslint dataframe && tsx build.ts",
+    "build": "tsc -noEmit && eslint . && tsx build.ts",
     "watch": "npx nodemon --exec 'npm run build' --ext '*' --ignore dist/ --ignore esbuild-metadata.json",
     "build-fast": "tsx build.ts",
     "watch-fast": "npx nodemon --exec 'npm run build-fast' --ext '*' --ignore dist/ --ignore esbuild-metadata.json"
