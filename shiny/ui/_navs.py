@@ -34,7 +34,7 @@ from ._html_deps_shinyverse import nav_spacer_dependency
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import tag_add_style
 from .css_unit import CssUnit, as_css_padding, as_css_unit
-from .fill import as_fill_carrier
+from .fill import as_fill_item, as_fillable_container
 
 
 # -----------------------------------------------------------------------------
@@ -943,7 +943,7 @@ class NavSetBar(NavSet):
             )
             # If fillable is truthy, the .container also needs to be fillable
             if self.fillable:
-                content_div = as_fill_carrier(content_div)
+                content_div = as_fillable_container(as_fill_item(content_div))
         else:
             content_div = div(
                 # In the fluid case, the sidebar layout should be flush (i.e.,
@@ -959,7 +959,7 @@ class NavSetBar(NavSet):
             )
             # Always have the sidebar layout fill its parent (in this case
             # fillable controls whether the _main_ content portion is fillable)
-            content_div = as_fill_carrier(content_div)
+            content_div = as_fillable_container(as_fill_item(content_div))
 
         return TagList(nav_final, content_div)
 
@@ -977,7 +977,7 @@ def _make_tabs_fillable(
 
     # Even if only one .tab-pane wants fillable behavior, the .tab-content
     # must to be a fillable container.
-    content = as_fill_carrier(content)
+    content = as_fillable_container(as_fill_item(content))
 
     for child in content.children:
         # Only work on Tags
@@ -997,7 +997,7 @@ def _make_tabs_fillable(
             __bslib_navbar_margin="0;" if navbar else None,
         )
         child = tag_add_style(child, styles)
-        child = as_fill_carrier(child)
+        child = as_fillable_container(as_fill_item(child))
 
     return content
 

@@ -9,7 +9,7 @@ from ...ui._layout import layout_column_wrap
 from ...ui._tag import consolidate_attrs
 from ...ui._utils import is_01_scalar
 from ...ui.css_unit import CssUnit, as_css_unit, as_width_unit
-from ...ui.fill import as_fill_carrier
+from ...ui.fill import as_fill_item, as_fillable_container
 from ._card import CardItem, card, card_body
 
 __all__ = (
@@ -106,7 +106,7 @@ def value_box(
         *children,
         class_="value-box-area",
     )
-    contents = as_fill_carrier(contents)
+    contents = as_fillable_container(as_fill_item(contents))
 
     if showcase is not None:
         contents = showcase_layout(showcase, contents)
@@ -221,7 +221,7 @@ def _showcase_layout(
             {"class": "showcase-top-right"} if top_right else None,
             style=css(**css_args),
         )
-        showcase_container = as_fill_carrier(showcase_container)
+        showcase_container = as_fillable_container(as_fill_item(showcase_container))
 
         if not top_right:
             contents.add_class("border-start")

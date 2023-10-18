@@ -20,7 +20,7 @@ from htmltools import (
 from ...types import MISSING, MISSING_TYPE
 from ...ui._card import CardItem, WrapperCallable, _card_impl, card_body
 from ...ui.css_unit import CssUnit, as_css_unit
-from ...ui.fill import as_fill_carrier, as_fill_item
+from ...ui.fill import as_fill_item, as_fillable_container
 
 __all__ = (
     # Worried about `wrapper`
@@ -271,10 +271,12 @@ def card_image(
         image = as_fill_item(image)
 
     if href is not None:
-        image = as_fill_carrier(
-            tags.a(
-                image,
-                href=href,
+        image = as_fillable_container(
+            as_fill_item(
+                tags.a(
+                    image,
+                    href=href,
+                )
             )
         )
 

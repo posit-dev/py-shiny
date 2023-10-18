@@ -58,7 +58,7 @@ app_ui = ui.page_fluid(
     ui.row(
         ui.column(4, ui.div(outer0)),
         ui.column(4, ui.div(outer1)),
-        ui.column(4, fill.as_fill_carrier(ui.span(outer2))),
+        ui.column(4, ui.span(outer2)),
     ),
 )
 

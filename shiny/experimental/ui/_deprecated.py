@@ -67,7 +67,6 @@ from ...ui.css_unit._css_unit import as_width_unit as main_as_width_unit
 from ...ui.fill import as_fill_carrier as main_as_fill_carrier
 from ...ui.fill import as_fill_item as main_as_fill_item
 from ...ui.fill import as_fillable_container as main_as_fillable_container
-from ...ui.fill import is_fill_carrier as main_is_fill_carrier
 from ...ui.fill import is_fill_item as main_is_fill_item
 from ...ui.fill import is_fillable_container as main_is_fillable_container
 from ...ui.fill import remove_all_fill as main_remove_all_fill
@@ -870,11 +869,11 @@ def as_fill_carrier(
     max_height: None = None,
     gap: None = None,
 ) -> TagT:
-    """Deprecated. Please use `shiny.ui.fill.as_fill_carrier()` instead."""
+    """Deprecated. Please use a combination of `shiny.ui.fill.as_fillable_container()` and `shiny.ui.fill.as_fill_item()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.as_fill_carrier()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.fill.as_fill_carrier()` instead."
+        "please use `shiny.ui.fill.as_fill_container()` and `shiny.ui.fill.as_fillable_item()` instead."
     )
 
     if min_height is not None:
@@ -889,8 +888,7 @@ def as_fill_carrier(
         raise RuntimeError(
             "`gap` is no longer supported. Please add the attribute directly to the Tag's style."
         )
-
-    return main_as_fill_carrier(tag)
+    return main_as_fillable_container(main_as_fill_item(tag))
 
 
 def as_fillable_container(
@@ -957,13 +955,13 @@ def remove_all_fill(tag: TagT) -> TagT:
 
 
 def is_fill_carrier(tag: Tag) -> bool:
-    """Deprecated. Please use `shiny.ui.fill.is_fill_carrier()` instead."""
+    """Deprecated. Please use a combination of `shiny.ui.fill.is_fillable_container()` and `shiny.ui.fill.is_fill_item()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.is_fill_carrier()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.fill.is_fill_carrier()` instead."
+        "please use a combination of `shiny.ui.fill.is_fillable_container()` and `shiny.ui.fill.is_fill_item()` instead."
     )
-    return main_is_fill_carrier(tag)
+    return main_is_fill_item(main_is_fillable_container(tag))
 
 
 def is_fillable_container(tag: TagChild) -> bool:

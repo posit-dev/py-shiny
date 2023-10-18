@@ -6,7 +6,7 @@ from htmltools import Tag
 
 from ..._namespaces import resolve_id
 from .._html_deps_py_shiny import data_frame_deps
-from ..fill import as_fill_carrier
+from ..fill import as_fill_item, as_fillable_container
 
 
 def output_data_frame(id: str) -> Tag:
@@ -28,10 +28,12 @@ def output_data_frame(id: str) -> Tag:
     --------
     :func:`~shiny.render.data_frame`
     """
-    return as_fill_carrier(
-        Tag(
-            "shiny-data-frame",
-            data_frame_deps(),
-            id=resolve_id(id),
-        ),
+    return as_fillable_container(
+        as_fill_item(
+            Tag(
+                "shiny-data-frame",
+                data_frame_deps(),
+                id=resolve_id(id),
+            ),
+        )
     )
