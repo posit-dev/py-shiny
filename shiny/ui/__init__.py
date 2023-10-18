@@ -26,7 +26,7 @@ from ._layout import layout_column_wrap
 
 
 # Expose the following modules for extended usage: ex: ui.fill.as_fill_item(x)
-from . import css_unit  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from . import css  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from . import fill  # noqa: F401  # pyright: ignore[reportUnusedImport]
 
 from ._card import (

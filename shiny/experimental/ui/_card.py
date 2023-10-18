@@ -19,7 +19,7 @@ from htmltools import (
 
 from ...types import MISSING, MISSING_TYPE
 from ...ui._card import CardItem, WrapperCallable, _card_impl, card_body
-from ...ui.css_unit import CssUnit, as_css_unit
+from ...ui.css import CssUnit, as_css_unit
 from ...ui.fill import as_fill_item, as_fillable_container
 
 __all__ = (

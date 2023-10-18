@@ -33,7 +33,7 @@ The following methods have been moved from `shiny.experimental.ui` and integrate
   * `page_fillable()`, `fill.as_fillable_container()`, `fill.as_fill_item()`, `fill.is_fillable_container()`, `fill.is_fill_item()`, `fill.remove_all_fill()`
   * `output_plot(fill=)`, `output_image(fill=)`, `output_ui(fill=, fillable=)`
 * CSS units - CSS units and padding
-  * `css_unit.as_css_unit()`, `css_unit.as_css_padding()`, `css_unit.as_width_unit()`, `css_unit.CssUnit`
+  * `css.as_css_unit()`, `css.as_css_padding()`, `css.as_width_unit()`, `css.CssUnit`
 * Tooltip - Hover-based context UI element
   * `tooltip()`, `toggle_tooltip()`, `update_tooltip()`
 * Popover - Click-based context UI element

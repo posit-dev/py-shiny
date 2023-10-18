@@ -33,7 +33,7 @@ from ._navs import navset_bar
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import consolidate_attrs
 from ._utils import get_window_title
-from .css_unit import CssUnit, as_css_padding, as_css_unit
+from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fillable_container
 
 

@@ -145,8 +145,8 @@ quartodoc:
         - ui.fill.remove_all_fill
         - ui.fill.is_fillable_container
         - ui.fill.is_fill_item
-        - ui.css_unit.as_css_unit
-        - ui.css_unit.as_css_padding
+        - ui.css.as_css_unit
+        - ui.css.as_css_padding
     - title: Rendering outputs
       desc: "UI (output_*()) and server (render)ing functions for generating content server-side."
       contents:
@@ -250,7 +250,7 @@ quartodoc:
             - ui.Sidebar
             - ui.CardItem
             - ui.AccordionPanel
-            - ui.css_unit.CssUnit
+            - ui.css.CssUnit
             - ui._input_slider.SliderValueArg
             - ui._input_slider.SliderStepArg
         - kind: page

@@ -7,7 +7,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 from ._html_deps_shinyverse import grid_dependency
 from ._tag import consolidate_attrs
 from ._utils import is_01_scalar
-from .css_unit import CssUnit, as_css_unit
+from .css import CssUnit, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
 

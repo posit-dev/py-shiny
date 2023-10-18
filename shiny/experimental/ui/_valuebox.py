@@ -8,7 +8,7 @@ from ...ui._html_deps_shinyverse import value_box_dependency
 from ...ui._layout import layout_column_wrap
 from ...ui._tag import consolidate_attrs
 from ...ui._utils import is_01_scalar
-from ...ui.css_unit import CssUnit, as_css_unit, as_width_unit
+from ...ui.css import CssUnit, as_css_unit, as_width_unit
 from ...ui.fill import as_fill_item, as_fillable_container
 from ._card import CardItem, card, card_body
 

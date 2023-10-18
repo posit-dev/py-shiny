@@ -5,7 +5,7 @@ from typing import Optional
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild
 
 from .._docstring import add_example
-from .css_unit._css_unit import CssUnit
+from .css._css_unit import CssUnit
 
 __all__ = ("value_box",)
 

@@ -20,7 +20,7 @@ from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import card_dependency
 from ._tag import consolidate_attrs
 from ._tooltip import tooltip
-from .css_unit._css_unit import CssUnit, as_css_padding, as_css_unit
+from .css._css_unit import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
 # TODO-barret-future; Update header to return CardHeader class. Same for footer. Then we can check `*args` for a CardHeader class and move it to the top. And footer to the bottom. Can throw error if multiple headers/footers are provided or could concatenate.

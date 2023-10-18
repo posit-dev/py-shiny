@@ -14,7 +14,7 @@ from ..session import Session, require_active_session
 from ._card import CardItem
 from ._html_deps_shinyverse import sidebar_dependency
 from ._tag import consolidate_attrs, trinary
-from .css_unit import CssUnit, as_css_padding, as_css_unit
+from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
 __all__ = (

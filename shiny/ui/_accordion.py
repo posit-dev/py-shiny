@@ -11,7 +11,7 @@ from ..session import Session, require_active_session
 from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import accordion_dependency
 from ._tag import consolidate_attrs
-from .css_unit._css_unit import CssUnit, as_css_unit
+from .css._css_unit import CssUnit, as_css_unit
 
 __all__ = (
     "accordion",
