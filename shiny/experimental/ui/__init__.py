@@ -2,6 +2,7 @@
 
 from ._valuebox import showcase_left_center, showcase_top_right, value_box
 from ._card import (
+    WrapperCallable,
     ImgContainer,
     card,
     card_body,
@@ -53,7 +54,6 @@ from ._deprecated import (
     accordion_panel_set,
     update_accordion_panel,
     # Fill
-    # FillingLayout,
     as_fill_carrier,
     as_fill_item,
     as_fillable_container,
@@ -96,16 +96,6 @@ __all__ = (
     "value_box",
     "showcase_left_center",
     "showcase_top_right",
-    # Accordion
-    "AccordionPanel",
-    "accordion",
-    "accordion_panel",
-    "accordion_panel_set",
-    "accordion_panel_open",
-    "accordion_panel_close",
-    "accordion_panel_insert",
-    "accordion_panel_remove",
-    "update_accordion_panel",
     # Deprecated
     # # Sidebar
     "Sidebar",
@@ -145,18 +135,17 @@ __all__ = (
     "popover",
     "toggle_popover",
     "update_popover",
-    # # # Accordion
-    # "AccordionPanel",
-    # "accordion",
-    # "accordion_panel",
-    # "accordion_panel_close",
-    # "accordion_panel_insert",
-    # "accordion_panel_open",
-    # "accordion_panel_remove",
-    # "accordion_panel_set",
-    # "update_accordion_panel",
+    # Accordion
+    "AccordionPanel",
+    "accordion",
+    "accordion_panel",
+    "accordion_panel_set",
+    "accordion_panel_open",
+    "accordion_panel_close",
+    "accordion_panel_insert",
+    "accordion_panel_remove",
+    "update_accordion_panel",
     # # Fill
-    # "FillingLayout",
     "as_fill_carrier",
     "as_fillable_container",
     "as_fill_item",

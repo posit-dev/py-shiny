@@ -23,9 +23,6 @@ from ._tooltip import tooltip
 from .css_unit._css_unit import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
-# No fill / fillable!
-# TODO-barret; Handle `card_body()` in docs
-# TODO-barret; Update all docs
 # TODO-barret-future; Update header to return CardHeader class. Same for footer. Then we can check `*args` for a CardHeader class and move it to the top. And footer to the bottom. Can throw error if multiple headers/footers are provided or could concatenate.
 
 
@@ -118,6 +115,13 @@ def _card_impl(
     wrapper: WrapperCallable | None | MISSING_TYPE = MISSING,
     **kwargs: TagAttrValue,
 ) -> Tag:
+    """
+    Common implementation method between `shiny.ui.card()` and `shiny.experimental.ui.card()`.
+
+    Experimental implements the parameter `wrapper=`. Main does not as `card_body()` is not in `main`.
+    """
+    # TODO-barret-API: Should card_body() ever exist in main?
+    # Barret: Yes? Need to customize fill/fillable content (ex: Fixed height for item B where content = A, B, C; fill = TRUE, fillable = TRUE).
     if isinstance(wrapper, MISSING_TYPE):
         wrapper = card_body
 
@@ -366,7 +370,7 @@ class CardItem:
     :func:`~shiny.card_footer`).
 
     This class is used to allow for consecutive non-card items to be bundled into a
-    single `card_body` within :func:`~shiny.ui.card`.
+    single group within :func:`~shiny.ui.card`.
 
     Parameters
     ----------

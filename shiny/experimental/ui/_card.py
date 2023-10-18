@@ -19,14 +19,8 @@ from htmltools import (
 
 from ...types import MISSING, MISSING_TYPE
 from ...ui._card import CardItem, WrapperCallable, _card_impl, card_body
-
-# from ...ui._tooltip import tooltip
-# from ...ui._x._htmldeps import card_dependency
-# from ...ui._tag import consolidate_attrs
 from ...ui.css_unit import CssUnit, as_css_unit
 from ...ui.fill import as_fill_carrier, as_fill_item
-
-# TODO-barret; Docs; Dropped methods: CardItem, card_header, card_footer
 
 __all__ = (
     # Worried about `wrapper`

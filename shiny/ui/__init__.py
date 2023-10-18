@@ -3,8 +3,6 @@ Tools for creating user interfaces including: custom components, HTML components
 layout helpers, page-level containers, and more.
 """
 
-# TODO-barret; Export all new methods!
-
 from ._bootstrap import (
     row,
     column,

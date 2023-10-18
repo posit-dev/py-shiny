@@ -13,18 +13,16 @@ from ._html_deps_shinyverse import accordion_dependency
 from ._tag import consolidate_attrs
 from .css_unit._css_unit import CssUnit, as_css_unit
 
-# TODO-barret; use these methods. Deprecate X methods.
-
 __all__ = (
     "accordion",
     "accordion_panel",
-    "accordion_panel_close",  # rename to `update_accordion_panel(open=False)`?
-    "accordion_panel_open",  # rename to `update_accordion_panel(open=True)`?
+    "accordion_panel_close",  # TODO-barret-API: rename to `update_accordion_panel(open=False)`?
+    "accordion_panel_open",  # TODO-barret-API: rename to `update_accordion_panel(open=True)`?
     "accordion_panel_insert",
     "accordion_panel_remove",
-    "accordion_panel_set",  # rename to `update_accordion(selected=)`
-    "update_accordion_panel",  # rename to `update_accordion()`?
-    # Add `toggle_accordion(values=list[str] | None)`? - Toggles all accordion panels if `values=None` or toggle the specified panels
+    "accordion_panel_set",  # TODO-barret-API: rename to `update_accordion(selected=)`
+    "update_accordion_panel",  # TODO-barret-API: rename to `update_accordion()`?
+    # TODO-barret-API: Add `toggle_accordion(values=list[str] | None)`? - Toggles all accordion panels if `values=None` or toggle the specified panels
 )
 
 
