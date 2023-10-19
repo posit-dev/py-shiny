@@ -11,7 +11,7 @@ versions <- list()
 message("Installing GitHub packages: bslib, shiny, htmltools")
 withr::local_temp_libpaths()
 ignore <- capture.output({
-  pak::pkg_install(c("rstudio/bslib@a076e72e78562d7f006889da4118cd781c66c84c", "rstudio/shiny@main", "rstudio/htmltools@9338b7f3e2ed7b3fef8fd813904b9b05281344aa"))
+  pak::pkg_install(c("rstudio/bslib@a076e72e78562d7f006889da4118cd781c66c84c", "rstudio/shiny@main", "rstudio/htmltools@main"))
 })
 # pak::pkg_install(c("cran::bslib", "cran::shiny", "cran::htmltools"))
 
