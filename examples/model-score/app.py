@@ -9,7 +9,6 @@ import scoredata
 from plotly_streaming import render_plotly_streaming
 from shinywidgets import output_widget
 
-import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 THRESHOLD_MID = 0.85
@@ -82,8 +81,8 @@ def app_ui(req):
     end_time = datetime.now(timezone.utc)
     start_time = end_time - timedelta(minutes=1)
 
-    return x.ui.page_sidebar(
-        x.ui.sidebar(
+    return ui.page_sidebar(
+        ui.sidebar(
             ui.input_checkbox_group(
                 "models", "Models", model_names, selected=model_names
             ),
@@ -124,10 +123,10 @@ def app_ui(req):
         ui.div(
             ui.h1("Model monitoring dashboard"),
             ui.p(
-                x.ui.output_ui("value_boxes"),
+                ui.output_ui("value_boxes"),
             ),
-            x.ui.card(output_widget("plot_timeseries")),
-            x.ui.card(output_widget("plot_dist")),
+            ui.card(output_widget("plot_timeseries")),
+            ui.card(output_widget("plot_dist")),
             style="max-width: 800px;",
         ),
         fillable=False,
@@ -190,12 +189,12 @@ def server(input: Inputs, output: Outputs, session: Session):
         # Round scores to 2 decimal places
         scores_by_model = {x: round(y, 2) for x, y in scores_by_model.items()}
 
-        return x.ui.layout_column_wrap(
+        return ui.layout_column_wrap(
             "135px",
             *[
                 # For each model, return a value_box with the score, colored based on
                 # how high the score is.
-                x.ui.value_box(
+                ui.value_box(
                     model,
                     ui.h2(score),
                     theme_color="success"
@@ -294,17 +293,23 @@ def server(input: Inputs, output: Outputs, session: Session):
         """
 
         reactive.invalidate_later(15)
-        min_time, max_time = pd.to_datetime(
-            con.execute(
-                "select min(timestamp), max(timestamp) from accuracy_scores"
-            ).fetchone(),
-            utc=True,
-        )
-        ui.update_slider(
-            "timerange",
-            min=min_time.replace(tzinfo=timezone.utc),
-            max=max_time.replace(tzinfo=timezone.utc),
-        )
+        try:
+            min_time, max_time = pd.to_datetime(
+                con.execute(
+                    "select min(timestamp), max(timestamp) from accuracy_scores"
+                ).fetchone(),
+                utc=True,
+            )
+            ui.update_slider(
+                "timerange",
+                min=min_time.replace(tzinfo=timezone.utc),
+                max=max_time.replace(tzinfo=timezone.utc),
+            )
+        except sqlite3.OperationalError:
+            # Sometimes this executes before the background thread has had a
+            # chance to even create the sample data table. In that case, just
+            # ignore the error and try again later.
+            pass
 
 
 app = App(app_ui, server)
