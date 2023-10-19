@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 
-def make_panel(letter: str) -> x.ui.AccordionPanel:
-    return x.ui.accordion_panel(
+def make_panel(letter: str) -> ui.AccordionPanel:
+    return ui.accordion_panel(
         f"Section {letter}",
         f"Some narrative for section {letter}",
     )
@@ -13,7 +12,7 @@ def make_panel(letter: str) -> x.ui.AccordionPanel:
 
 items = [make_panel(letter) for letter in "ABCD"]
 
-accordion = x.ui.accordion(*items, id="acc")
+accordion = ui.accordion(*items, id="acc")
 app_ui = ui.page_fluid(
     ui.tags.div(
         ui.input_action_button("toggle_b", "Open/Close B"),
@@ -43,19 +42,19 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
         with reactive.isolate():
             if "Section B" in acc():
-                x.ui.accordion_panel_close("acc", "Section B")
+                ui.accordion_panel_close("acc", "Section B")
             else:
-                x.ui.accordion_panel_open("acc", "Section B")
+                ui.accordion_panel_open("acc", "Section B")
 
     @reactive.Effect
     def _():
         req(input.open_all())
-        x.ui.accordion_panel_open("acc", True)
+        ui.accordion_panel_open("acc", True)
 
     @reactive.Effect
     def _():
         req(input.close_all())
-        x.ui.accordion_panel_close("acc", True)
+        ui.accordion_panel_close("acc", True)
 
     has_efg = False
     has_alternate = True
@@ -77,7 +76,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         nonlocal has_alternate
         val = int(has_alternate)
         sections = [section for i, section in enumerate(sections) if i % 2 == val]
-        x.ui.accordion_panel_set("acc", sections)
+        ui.accordion_panel_set("acc", sections)
         has_alternate = not has_alternate
 
     @reactive.Effect
@@ -86,11 +85,11 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
         nonlocal has_efg
         if has_efg:
-            x.ui.accordion_panel_remove("acc", ["Section E", "Section F", "Section G"])
+            ui.accordion_panel_remove("acc", ["Section E", "Section F", "Section G"])
         else:
-            x.ui.accordion_panel_insert("acc", make_panel("E"), "Section D")
-            x.ui.accordion_panel_insert("acc", make_panel("F"), "Section E")
-            x.ui.accordion_panel_insert("acc", make_panel("G"), "Section F")
+            ui.accordion_panel_insert("acc", make_panel("E"), "Section D")
+            ui.accordion_panel_insert("acc", make_panel("F"), "Section E")
+            ui.accordion_panel_insert("acc", make_panel("G"), "Section F")
         has_efg = not has_efg
 
     @reactive.Effect
@@ -99,7 +98,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
         nonlocal has_updates
         if has_updates:
-            x.ui.update_accordion_panel(
+            ui.update_accordion_panel(
                 "acc",
                 "updated_section_a",
                 "Some narrative for section A",
@@ -112,8 +111,8 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
                 # print(acc())
                 if "Section A" not in acc():
                     ui.notification_show("Opening Section A", duration=2)
-                    x.ui.accordion_panel_open("acc", "Section A")
-            x.ui.update_accordion_panel(
+                    ui.accordion_panel_open("acc", "Section A")
+            ui.update_accordion_panel(
                 "acc",
                 "Section A",
                 "Updated body",
