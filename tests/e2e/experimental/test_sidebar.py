@@ -1,11 +1,11 @@
-from conftest import ShinyAppProc, x_create_doc_example_fixture
+from conftest import ShinyAppProc, create_doc_example_fixture
 from controls import OutputTextVerbatim, Sidebar
 from playwright.sync_api import Page
 
-app = x_create_doc_example_fixture("sidebar")
+app = create_doc_example_fixture("sidebar")
 
 
-def test_autoresize(page: Page, app: ShinyAppProc) -> None:
+def test_sidebar_position_and_open(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
     left_sidebar = Sidebar(page, "sidebar_left")

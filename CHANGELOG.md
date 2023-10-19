@@ -14,24 +14,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added support for integration with Quarto (#746).
 * Added `shiny.render.renderer_components` decorator to help create new output renderers (#621).
 * Added `shiny.experimental.ui.popover()`, `update_popover()`, and `toggle_popover()` for easy creation (and server-side updating) of [Bootstrap popovers](https://getbootstrap.com/docs/5.2/components/popovers/). Popovers are similar to tooltips, but are more persistent, and should primarily be used with button-like UI elements (e.g. `input_action_button()` or icons) (#680).
-* Added `shiny.experimental.ui.toggle_switch()` (#680).
 * Added CSS classes to UI input methods (#680) .
 * `Session` objects can now accept an asynchronous (or synchronous) function for `.on_flush(fn=)`, `.on_flushed(fn=)`, and `.on_ended(fn=)` (#686).
 * `App()` now allows `static_assets` to represent multiple paths. To do this, pass in a dictionary instead of a string (#763).
 
 ### API changes
 
-* Renamed `shiny.ui.navset_pill_card` to `shiny.ui.navset_card_pill`. `shiny.ui.navset_pill_card` will throw a deprecated warning (#492).
-* Renamed `shiny.ui.navset_tab_card` to `shiny.ui.navset_card_tab`. `shiny.ui.navset_tab_card` will throw a deprecated warning (#492).
+* TODO-barret-API; `shiny.ui.panel_main()` and `shiny.ui.panel_sidebar()` are deprecated in favor of new API for `shiny.ui.layout_sidebar()`. Please use `shiny.ui.sidebar()` to construct a sidebar and supply it (along with the main content) to `shiny.ui.layout_sidebar(*args, **kwargs)`. (#680)
 
-#### Experimental API changes
+#### API relocations
 
-* Renamed `shiny.experimental.ui.navset_pill_card` to `shiny.experimental.ui.navset_card_pill` (#492).
-* Renamed `shiny.experimental.ui.navset_tab_card` to `shiny.experimental.ui.navset_card_tab` (#492).
-* Renamed `shiny.experimental.ui.sidebar_toggle()` to `shiny.experimental.ui.toggle_sidebar()` (#680).
-* Renamed `shiny.experimental.ui.tooltip_toggle()` to `shiny.experimental.ui.toggle_tooltip()` (#680).
-* Renamed `shiny.experimental.ui.tooltip_update()` to `shiny.experimental.ui.update_tooltip()` (#680).
+* `shiny.ui`'s `navset_pill_card()` and `navset_tab_card()` have been renamed to `.navset_card_pill()` and `navset_tab_card()` respectively (#492).
 
+The following methods have been moved from `shiny.experimental.ui` and integrated into `shiny.ui` (final locations under `shiny.ui` are displayed) (#680):
+
+* Sidebar - Sidebar layout or manipulation
+  * `page_sidebar()`, `toggle_sidebar()`, `layout_sidebar()`
+* Filling layout - Allow UI components to expand into the parent container and/or allow its content to expand
+  * `page_fillable()`, `fill.as_fillable_container()`, `fill.as_fill_item()`, `fill.is_fillable_container()`, `fill.is_fill_item()`, `fill.remove_all_fill()`
+  * `output_plot(fill=)`, `output_image(fill=)`, `output_ui(fill=, fillable=)`
+* CSS units - CSS units and padding
+  * `css.as_css_unit()`, `css.as_css_padding()`, `css.as_width_unit()`, `css.CssUnit`
+* Tooltip - Hover-based context UI element
+  * `tooltip()`, `toggle_tooltip()`, `update_tooltip()`
+* Popover - Click-based context UI element
+  * `popover()`, `toggle_popover()`, `update_popover()`
+* Accordion - Vertically collapsible UI element
+  * `accordion()`, `accordion_panel()`, `accordion_panel_close()`, `accordion_panel_insert()`, `accordion_panel_open()`, `accordion_panel_remove()`, `accordion_panel_set()`, `Accordion`
+* Card - A general purpose container for grouping related UI elements together
+  * `card()`, `card_header()`, `card_footer()`, `CardItem`
+* Valuebox - Opinionated container for displaying a value and title
+  * `valuebox()`
+* Navs - Navigation within a page
+  * `navset_bar()`, `navset_tab_card()`, `navset_pill_card()`
+  * `page_navbar(sidebar=, fillable=, fillable_mobile=, gap=, padding=, inverse=True)`, `navset_card_tab(sidebar=)`, `navset_card_pill(sidebar=)`, `navset_bar(sidebar=, fillable=, gap=, padding=)`
+* Inputs - UI elements for user input
+  * `toggle_switch()`
+  * `input_text_area(autoresize=)`
+
+If a ported method is called from `shiny.experimental.ui`, a deprecation warning will be displayed.
+
+Methods still under consideration in `shiny.experimental.ui`:
+* `value_box(showcase=)`
+* `card(wrapper=)`, `card_body()`, `card_image()`, `card_header()`
+
+
+#### API removals
+
+* `shiny.experimental.ui.FillingLayout` has been removed. (#481)
+* Support for `min_height=`, `max_height=`, and `gap=` in `shiny.experimental.ui.as_fillable_container()` and `as_fill_item()` has been removed. (#481)
+* `shiny.experimental.ui.TagCallable` has been deprecated. Its type is equivalent to `htmltools.TagFunction`. (#680)
+* `shiny.eperimental.ui.as_fill_carrier()` and `shiny.eperimental.ui.is_fill_carrier()` have been deprecated. Please use `shiny.ui.fill.as_fill_item()` and `shiny.ui.fill.as_fillable_container()` or `shiny.ui.fill.is_fill_item()` and `shiny.ui.fill.is_fillable_container()` respectively in combination to achieve similar behavior. (#680)
 
 ### Bug fixes
 

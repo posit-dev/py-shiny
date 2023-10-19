@@ -20,10 +20,10 @@ from app import input_keys, x_input_keys
 
 
 class ModState(NamedTuple):
-    x_sidebar: bool
-    x_accordion: tuple[str, ...]
-    x_popover: bool
-    x_tooltip: bool
+    sidebar: bool
+    accordion: tuple[str, ...]
+    popover: bool
+    tooltip: bool
     input_action_button: int
     input_action_link: int
     input_file: str | None
@@ -53,10 +53,10 @@ blacklist = set(["awesome_component"])
 x_input_keys = ("x_" + key for key in x_input_keys)
 
 component = ModState(
-    x_sidebar=True,
-    x_accordion=("a",),
-    x_popover=False,
-    x_tooltip=False,
+    sidebar=True,
+    accordion=("a",),
+    popover=False,
+    tooltip=False,
     input_action_button=0,
     input_action_link=0,
     input_file=None,
