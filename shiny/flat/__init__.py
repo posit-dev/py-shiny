@@ -8,7 +8,7 @@ import sys
 from ..session import Inputs, Outputs, Session
 from ..session import _utils as session_utils
 
-from ._flat import output_args, suspend_display
+from ._flat import output_args, suspend_display, is_flat_app, wrap_flat_app
 from . import app
 
 # Add types to help type checkers
@@ -37,7 +37,9 @@ __all__ = (
     "input",
     "output",
     "session",
+    "is_flat_app",
     "output_args",
     "suspend_display",
+    "wrap_flat_app",
     "app",
 )

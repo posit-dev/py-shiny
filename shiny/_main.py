@@ -18,7 +18,7 @@ import uvicorn
 import uvicorn.config
 
 import shiny
-from shiny.flat.app import is_flat_app, wrap_flat_app
+from shiny.flat import is_flat_app, wrap_flat_app
 
 from . import _autoreload, _hostenv, _static, _utils
 from ._typing_extensions import NotRequired, TypedDict
