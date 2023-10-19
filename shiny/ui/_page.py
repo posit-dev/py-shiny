@@ -28,7 +28,7 @@ from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._html_deps_external import bootstrap_deps
-from ._html_deps_shinyverse import page_fillable_dependency, page_sidebar_dependency
+from ._html_deps_shinyverse import components_dependency
 from ._navs import navset_bar
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import consolidate_attrs
@@ -97,7 +97,6 @@ def page_sidebar(
             border_radius=False,
         ),
         get_window_title(title, window_title=window_title),
-        page_sidebar_dependency(),
         padding=0,
         gap=0,
         lang=lang,
@@ -302,7 +301,7 @@ def page_fillable(
                 *children,
             )
         ),
-        page_fillable_dependency(),
+        components_dependency(),
         title=title,
         lang=lang,
     )

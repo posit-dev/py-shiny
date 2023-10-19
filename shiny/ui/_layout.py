@@ -4,7 +4,7 @@ from typing import Literal, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
-from ._html_deps_shinyverse import grid_dependency
+from ._html_deps_shinyverse import components_dependency
 from ._tag import consolidate_attrs
 from ._utils import is_01_scalar
 from .css import CssUnit, as_css_unit
@@ -122,7 +122,7 @@ def layout_column_wrap(
         },
         attrs,
         *upgraded_children,
-        grid_dependency(),
+        components_dependency(),
     )
     if fill:
         tag = as_fill_item(tag)
