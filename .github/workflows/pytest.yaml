@@ -192,4 +192,4 @@ jobs:
           TESTRAIL_PASSWORD: "${{ secrets.TESTRAIL_PASSWORD }}"
         run: |
           current_date="$(date +'%Y-%m-%d') - Nightly tests"
-          trcli -y -h $TESTRAIL_URL --project $TESTRAIL_PROJECT --username $TESTRAIL_USER --password $secrets.TESTRAIL_PASSWORD parse_junit --title $current_date --yes --file output.xml --close-run
+          trcli -y -h $TESTRAIL_URL --project $TESTRAIL_PROJECT --username $TESTRAIL_USER --password $secrets.TESTRAIL_PASSWORD parse_junit --title $current_date --yes --file report.xml --close-run
