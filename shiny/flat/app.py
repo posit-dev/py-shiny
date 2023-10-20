@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 
 from .._app import App
-from ._flat import wrap_flat_app
+from ._run import wrap_flat_app
 
 app: App
 
