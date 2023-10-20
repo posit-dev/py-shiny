@@ -7,6 +7,8 @@ on:
   pull_request:
   release:
     types: [published]
+  schedule:
+    - cron: "0 8 * * *"
 
 jobs:
   build:
@@ -124,6 +126,7 @@ jobs:
           DEPLOY_SHINYAPPS_SECRET: "${{ secrets.DEPLOY_SHINYAPPS_SECRET }}"
         run: |
           make e2e-deploys
+
   pypi:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest
@@ -160,3 +163,33 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
+
+  testrail-reporting-nightly:
+    runs-on: ${{ matrix.os }}
+    concurrency: e2e-deploys
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'testrail')) }}
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.10", "3.9", "3.8"]
+        os: [ubuntu-latest]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run End-to-End tests
+        run: |
+          make e2e-junit
+      - name: Report results to Testrail
+        env:
+          TESTRAIL_URL: "https://posit.testrail.io"
+          TESTRAIL_PROJECT: "Shiny for Python"
+          TESTRAIL_USER: "${{ secrets.TESTRAIL_USER }}"
+          TESTRAIL_PASSWORD: "${{ secrets.TESTRAIL_PASSWORD }}"
+        run: |
+          current_date="$(date +'%Y-%m-%d') - Nightly tests"
+          trcli -y -h $TESTRAIL_URL --project $TESTRAIL_PROJECT --username $TESTRAIL_USER --password $secrets.TESTRAIL_PASSWORD parse_junit --title $current_date --yes --file output.xml --close-run

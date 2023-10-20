@@ -88,6 +88,9 @@ DEPLOYS_FILE:=tests/deploys
 playwright-install:
 	playwright install --with-deps
 
+trcli-install:
+	which trcli || pip install trcli
+
 e2e: playwright-install ## end-to-end tests with playwright
 	pytest $(FILE) -m "not examples and not integrationtest"
 
@@ -96,6 +99,9 @@ e2e-examples: playwright-install ## end-to-end tests on examples with playwright
 
 e2e-deploys: playwright-install ## end-to-end tests on deploys with playwright
 	pytest $(DEPLOYS_FILE) -s -m "integrationtest"
+
+e2e-junit: playwright-install trcli-install ## end-to-end tests with playwright and generate junit report
+	pytest $(FILE) --junitxml=path/to/report.xml
 
 coverage: ## check combined code coverage (must run e2e last)
 	pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/e2e/ -m "not examples and not integrationtest"
