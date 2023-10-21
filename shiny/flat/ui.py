@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-import inspect
-
-__all__ = ("sidebar", "page_sidebar")
-
 import functools
 import sys
 from types import TracebackType
@@ -12,6 +8,8 @@ from typing import Callable, Optional, ParamSpec, Type, TypeVar
 from htmltools import TagAttrValue, TagChild
 
 from .. import ui
+
+__all__ = ("sidebar", "page_sidebar")
 
 P = ParamSpec("P")
 T = TypeVar("T")

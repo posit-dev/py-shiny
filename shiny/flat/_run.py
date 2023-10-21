@@ -1,6 +1,3 @@
-# This file should only be imported by the user, not by any modules in Shiny, because it
-# has side effects.
-
 from __future__ import annotations
 
 import ast

@@ -1,6 +1,3 @@
-# This file should only be imported by the user, not by any modules in Shiny, because it
-# has side effects.
-
 from __future__ import annotations
 
 import sys
@@ -13,6 +10,19 @@ from ._run import is_flat_app, wrap_flat_app
 from . import app
 from . import open
 from . import ui
+
+__all__ = (
+    "input",
+    "output",
+    "session",
+    "is_flat_app",
+    "output_args",
+    "suspend_display",
+    "wrap_flat_app",
+    "app",
+    "open",
+    "ui",
+)
 
 # Add types to help type checkers
 input: Inputs
@@ -34,17 +44,3 @@ class ThisMod(sys.modules[__name__].__class__):
 
 
 sys.modules[__name__].__class__ = ThisMod
-
-
-__all__ = (
-    "input",
-    "output",
-    "session",
-    "is_flat_app",
-    "output_args",
-    "suspend_display",
-    "wrap_flat_app",
-    "app",
-    "open",
-    "ui",
-)
