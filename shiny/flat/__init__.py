@@ -11,6 +11,7 @@ from ..session import _utils as session_utils
 from ._output import output_args, suspend_display
 from ._run import is_flat_app, wrap_flat_app
 from . import app
+from . import open
 from . import ui
 
 # Add types to help type checkers
@@ -44,5 +45,6 @@ __all__ = (
     "suspend_display",
     "wrap_flat_app",
     "app",
+    "open",
     "ui",
 )
