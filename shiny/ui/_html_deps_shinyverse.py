@@ -38,18 +38,6 @@ def fill_dependency() -> HTMLDependency:
 # -- bslib -------------------------
 
 
-def sidebar_dependency() -> HTMLDependency:
-    return HTMLDependency(
-        name="bslib-sidebar",
-        version=bslib_version,
-        source={
-            "package": "shiny",
-            "subdir": f"{_components_path}/sidebar",
-        },
-        stylesheet={"href": "sidebar.css"},
-    )
-
-
 def components_dependency() -> HTMLDependency:
     return HTMLDependency(
         name="bslib-components",
@@ -71,5 +59,5 @@ def web_component_dependency() -> HTMLDependency:
             "package": "shiny",
             "subdir": f"{_components_path}",
         },
-        script={"src": "web-components.min.js"},
+        script={"src": "web-components.min.js", "type": "module"},
     )
