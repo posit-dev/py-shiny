@@ -4,12 +4,13 @@ from typing import Callable, Optional
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, tags
 
+from ...ui._html_deps_shinyverse import value_box_dependency
+from ...ui._layout import layout_column_wrap
+from ...ui._tag import consolidate_attrs
+from ...ui._utils import is_01_scalar
+from ...ui.css import CssUnit, as_css_unit, as_width_unit
+from ...ui.fill import as_fill_item, as_fillable_container
 from ._card import CardItem, card, card_body
-from ._css_unit import CssUnit, as_css_unit, as_width_unit
-from ._fill import as_fill_carrier
-from ._htmldeps import value_box_dependency
-from ._layout import layout_column_wrap
-from ._utils import consolidate_attrs, is_01_scalar
 
 __all__ = (
     "value_box",
@@ -36,7 +37,7 @@ def value_box(
     """
     Value box
 
-    An opinionated (:func:`~shiny.experimental.ui.card`-powered) box, designed for
+    An opinionated (:func:`~shiny.ui.card`-powered) box, designed for
     displaying a `value` and `title`. Optionally, a `showcase` can provide for context
     for what the `value` represents (for example, it could hold an icon, or even a
     :func:`~shiny.ui.output_plot`).
@@ -48,7 +49,7 @@ def value_box(
         the title or value of the value box. The `title` appears above the `value`.
     *args
         Unnamed arguments may be any :class:`~htmltools.Tag` children to display below
-        `value`. Named arguments are passed to :func:`~shiny.experimental.ui.card` as
+        `value`. Named arguments are passed to :func:`~shiny.ui.card` as
         element attributes.
     showcase
         A :class:`~htmltools.Tag` child to showcase (e.g., an icon, a
@@ -66,22 +67,22 @@ def value_box(
         :func:`~shiny.experimental.ui.card_body`).
     fill
         Whether to allow the value box to grow/shrink to fit a fillable container with
-        an opinionated height (e.g., :func:`~shiny.experimental.ui.page_fillable`).
+        an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
     class_
         Utility classes for customizing the appearance of the summary card. Use `bg-*`
         and `text-*` classes (e.g, `"bg-danger"` and `"text-light"`) to customize the
         background/foreground colors.
     **kwargs
-        Additional attributes to pass to :func:`~shiny.experimental.ui.card`.
+        Additional attributes to pass to :func:`~shiny.ui.card`.
 
     Returns
     -------
     :
-        A :func:`~shiny.experimental.ui.card`
+        A :func:`~shiny.ui.card`
 
     See Also
     --------
-    * :func:`~shiny.experimental.ui.card`
+    * :func:`~shiny.ui.card`
     """
     attrs, children = consolidate_attrs(
         # Must be before `attrs` so that `class_` is applied before any `attrs` values
@@ -105,7 +106,7 @@ def value_box(
         *children,
         class_="value-box-area",
     )
-    contents = as_fill_carrier(contents)
+    contents = as_fillable_container(as_fill_item(contents))
 
     if showcase is not None:
         contents = showcase_layout(showcase, contents)
@@ -220,7 +221,7 @@ def _showcase_layout(
             {"class": "showcase-top-right"} if top_right else None,
             style=css(**css_args),
         )
-        showcase_container = as_fill_carrier(showcase_container)
+        showcase_container = as_fillable_container(as_fill_item(showcase_container))
 
         if not top_right:
             contents.add_class("border-start")

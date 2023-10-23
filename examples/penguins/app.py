@@ -20,8 +20,8 @@ numeric_cols: List[str] = df.select_dtypes(include=["float64"]).columns.tolist()
 species: List[str] = df["Species"].unique().tolist()
 species.sort()
 
-app_ui = x.ui.page_sidebar(
-    x.ui.sidebar(
+app_ui = ui.page_sidebar(
+    ui.sidebar(
         # Artwork by @allison_horst
         ui.tags.img(src="palmerpenguins.png", width="80%", class_="mt-0 mb-2 mx-auto"),
         ui.input_selectize(
@@ -44,7 +44,7 @@ app_ui = x.ui.page_sidebar(
         ui.input_switch("show_margins", "Show marginal plots", value=True),
     ),
     ui.output_ui("value_boxes"),
-    x.ui.output_plot("scatter", fill=True),
+    ui.output_plot("scatter", fill=True),
 )
 
 
@@ -87,7 +87,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 title,
                 count,
                 {"class": "pt-1 pb-0"},
-                showcase=x.ui.as_fill_item(
+                showcase=ui.fill.as_fill_item(
                     ui.tags.img(
                         {"style": "object-fit:contain;"},
                         src=showcase_img,
@@ -120,7 +120,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             if name in input.species()
         ]
 
-        return x.ui.layout_column_wrap(1 / len(value_boxes), *value_boxes)
+        return ui.layout_column_wrap(1 / len(value_boxes), *value_boxes)
 
 
 app = App(
