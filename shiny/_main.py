@@ -282,6 +282,8 @@ def run_app(
 
     if reload_dirs is None:
         reload_dirs = []
+        if app_dir is not None:
+            reload_dirs = [app_dir]
 
     if reload:
         # Always watch the app_dir
@@ -305,10 +307,6 @@ def run_app(
 
     reload_args: ReloadArgs = {}
     if reload:
-        reload_dirs = []
-        if app_dir is not None:
-            reload_dirs = [app_dir]
-
         reload_args = {
             "reload": reload,
             # Adding `reload_includes` param while `reload=False` produces an warning
