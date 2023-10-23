@@ -244,7 +244,7 @@ def sidebar(
     #     bg = get_color_contrast(fg)
 
     if isinstance(title, (str, int, float)):
-        title = div(str(title), class_="sidebar-title")
+        title = tags.header(str(title), class_="sidebar-title")
 
     collapse_tag = None
     if open != "always":
@@ -257,7 +257,7 @@ def sidebar(
             aria_controls=resolved_id,
         )
 
-    tag = div(
+    tag = tags.aside(
         div(
             title,
             {
@@ -270,9 +270,11 @@ def sidebar(
             *args,
         ),
         {"class": "bslib-sidebar-input"} if resolved_id is not None else None,
-        {"class": "sidebar"},
+        {
+            "class": "sidebar",
+            "hidden": True if (open == "closed") else None,
+        },
         id=resolved_id,
-        role="complementary",
         class_=class_,
     )
 
@@ -373,7 +375,6 @@ def layout_sidebar(  # TODO-barret-API; Should this be `layout_sidebar(*args, si
 
     main = div(
         {
-            "role": "main",
             "class": f"main{' bslib-gap-spacing' if fillable else ''}",
             ""
             "style": css(

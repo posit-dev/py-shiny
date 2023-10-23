@@ -75,6 +75,9 @@ Methods still under consideration in `shiny.experimental.ui`:
 
 ### Other changes
 
+* `layout_sidebar()` now uses an `<aside>` element for the sidebar's container and a `<header>` element for the sidebar title. The classes of each element remain the same, but the semantic meaning of the elements is now better reflected in the HTML markup.
+* `layout_sidebar()` no longer gives the sidebar main content area the `role="main"` attribute.
+
 
 ## [0.5.1] - 2023-08-08
 
