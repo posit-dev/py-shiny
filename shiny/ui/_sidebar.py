@@ -400,7 +400,7 @@ def layout_sidebar(  # TODO-barret-API; Should this be `layout_sidebar(*args, si
         sidebar.collapse_tag,
         components_dependency(),
         _sidebar_init_js(),
-        data_bslib_sidebar_init="true" if sidebar.open != "always" else None,
+        data_bslib_sidebar_init="true",
         data_bslib_sidebar_open=sidebar.open,
         data_bslib_sidebar_border=trinary(border),
         data_bslib_sidebar_border_radius=trinary(border_radius),
