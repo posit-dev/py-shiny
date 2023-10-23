@@ -198,12 +198,9 @@ jobs:
       - name: Report results to Testrail
         env:
           TESTRAIL_URL: "https://posit.testrail.io"
-          TESTRAIL_PROJECT: "Shiny for Python"
+          TESTRAIL_PROJECT: "Shiny-Python"
           TESTRAIL_USER: "${{ secrets.TESTRAIL_USER }}"
           TESTRAIL_PASSWORD: "${{ secrets.TESTRAIL_PASSWORD }}"
         run: |
           current_date="$(date +'%Y-%m-%d %H:%M:%S') - Nightly tests"
-          ls
-          echo $current_date
-          echo $TESTRAIL_URL
           trcli --yes --host $TESTRAIL_URL --project $TESTRAIL_PROJECT --username $TESTRAIL_USER --password $TESTRAIL_PASSWORD parse_junit --file report.xml --title $current_date  --close-run
