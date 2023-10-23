@@ -8,24 +8,24 @@ def nav_controls(prefix: str) -> List[NavSetArg]:
     return [
         ui.nav("a", prefix + ": tab a content"),
         ui.nav("b", prefix + ": tab b content"),
-        ui.nav_control(
-            ui.a(
-                "Shiny",
-                href="https://github.com/rstudio/shiny",
-                target="_blank",
-            )
-        ),
+        ui.nav("c", prefix + ": tab c content"),
         ui.nav_spacer(),
         ui.nav_menu(
-            "Other links",
-            ui.nav("c", prefix + ": tab c content"),
+            "Links",
+            ui.nav_control(
+                ui.a(
+                    "Shiny",
+                    href="https://shiny.posit.co/py/",
+                    target="_blank",
+                )
+            ),
             "----",
             "Plain text",
             "----",
             ui.nav_control(
                 ui.a(
-                    "RStudio",
-                    href="https://rstudio.com",
+                    "Posit",
+                    href="https://posit.co",
                     target="_blank",
                 )
             ),
