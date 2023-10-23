@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 import random
+import warnings
 from typing import Literal, Optional, cast
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, css, div
-from htmltools import svg as svgtags
-from htmltools import tags
+from htmltools import (
+    HTML,
+    Tag,
+    TagAttrs,
+    TagAttrValue,
+    TagChild,
+    TagList,
+    css,
+    div,
+    tags,
+)
 
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
@@ -184,10 +193,10 @@ def sidebar(
         CSS classes for the sidebar container element, in addition to the fixed
         `.sidebar` class.
     max_height_mobile
-        The maximum height of the horizontal sidebar when viewed on mobile devices.
-        The default is `250px` unless the sidebar is included in a
-        :func:`~shiny.ui.layout_sidebar` with a specified height, in
-        which case the default is to take up no more than 50% of the layout container.
+        A CSS length unit (passed through :func:`~shiny.ui.css.as_css_unit`) defining
+        the maximum height of the horizontal sidebar when viewed on mobile devices. Only
+        applies to always-open sidebars that use `open = "always"`, where by default the
+        sidebar container is placed below the main content container on mobile devices.
     gap
         A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
         provided to `*args`.
@@ -214,6 +223,14 @@ def sidebar(
     * :func:`~shiny.ui.navset_card_pill`
     """
     # TODO-future; validate `open`, bg, fg, class_, max_height_mobile
+
+    if max_height_mobile is not None and open != "always":
+        warnings.warn(
+            "The `shiny.ui.sidebar(max_height_mobile=)` argument only applies to when `open = 'always'`. The `max_height_mobile` argument will be ignored.",
+            # `stacklevel=2`: Refers to the caller of `sidebar()`
+            stacklevel=2,
+        )
+        max_height_mobile = None
 
     if id is None and open != "always":
         # but always provide id when collapsible for accessibility reasons
@@ -360,8 +377,6 @@ def layout_sidebar(  # TODO-barret-API; Should this be `layout_sidebar(*args, si
             "class": f"main{' bslib-gap-spacing' if fillable else ''}",
             ""
             "style": css(
-                background_color=bg,
-                color=fg,
                 gap=as_css_unit(gap),
                 padding=as_css_padding(padding),
             ),
@@ -391,8 +406,10 @@ def layout_sidebar(  # TODO-barret-API; Should this be `layout_sidebar(*args, si
         data_bslib_sidebar_border_radius=trinary(border_radius),
         style=css(
             __bslib_sidebar_width=as_css_unit(sidebar.width),
-            __bslib_sidebar_bg=as_css_unit(sidebar.color_bg),
-            __bslib_sidebar_fg=as_css_unit(sidebar.color_fg),
+            __bslib_sidebar_bg=sidebar.color_bg,
+            __bslib_sidebar_fg=sidebar.color_fg,
+            __bslib_sidebar_main_fg=fg,
+            __bslib_sidebar_main_bg=bg,
             __bs_card_border_color=border_color,
             height=as_css_unit(height),
             __bslib_sidebar_max_height_mobile=as_css_unit(max_height_mobile),
@@ -532,18 +549,9 @@ def toggle_sidebar(  # TODO-barret-API; Rename to `update_sidebar()`
 _sidebar_func = sidebar
 
 
-def _collapse_icon() -> Tag:
-    return tags.svg(
-        svgtags.path(
-            fill_rule="evenodd",
-            d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z",
-        ),
-        xmlns="http://www.w3.org/2000/svg",
-        viewBox="0 0 16 16",
-        class_="bi bi-chevron-down collapse-icon",
-        style="fill:currentColor;",
-        aria_hidden="true",
-        role="img",
+def _collapse_icon() -> TagChild:
+    return HTML(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-arrow-bar-left collapse-icon" style="fill:currentColor;" aria-hidden="true" role="img" ><path fill-rule="evenodd" d="M12.5 15a.5.5 0 0 1-.5-.5v-13a.5.5 0 0 1 1 0v13a.5.5 0 0 1-.5.5ZM10 8a.5.5 0 0 1-.5.5H3.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L3.707 7.5H9.5a.5.5 0 0 1 .5.5Z"></path></svg>'
     )
 
 
