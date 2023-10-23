@@ -124,19 +124,26 @@ def input_switch(
     ~shiny.ui.input_radio_buttons
     """
 
-    return _input_checkbox(id, label, "form-check form-switch", value, width=width)
+    return _input_checkbox(
+        id,
+        label,
+        "bslib-input-switch form-switch",
+        value,
+        width=width,
+    )
 
 
 def _input_checkbox(
     id: str,
     label: TagChild,
-    class_: str = "form-check",
+    class_: str = "bslib-input-checkbox",
     value: bool = False,
     *,
     width: Optional[str] = None,
 ) -> Tag:
     return div(
         div(
+            {"class": "form-check"},
             tags.input(
                 id=resolve_id(id),
                 class_="form-check-input",
