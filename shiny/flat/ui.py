@@ -9,7 +9,7 @@ from htmltools import TagAttrValue, TagChild
 
 from .. import ui
 
-__all__ = ("sidebar", "page_sidebar")
+__all__ = ("sidebar", "page_sidebar", "column", "row")
 
 P = ParamSpec("P")
 T = TypeVar("T")
