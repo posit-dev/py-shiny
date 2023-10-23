@@ -35,6 +35,7 @@ from ._tag import consolidate_attrs
 from ._utils import get_window_title
 from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fillable_container
+from .fill._fill import FILLABLE_CONTAINTER_ATTRS
 
 
 def page_sidebar(
@@ -298,13 +299,11 @@ def page_fillable(
 
     return page_bootstrap(
         head_content(tags.style("html { height: 100%; }")),
-        as_fillable_container(
-            tags.body(
-                {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
-                attrs,
-                *children,
-            )
-        ),
+        # Even though page_bootstrap accepts *args/**kwargs, we need to prepend the class value to the tags.body. To avoid having a body within a body for a core component, we can manually use `FILLABLE_CONTAINER_ATTRS` here as the first set of attributes.
+        FILLABLE_CONTAINTER_ATTRS,
+        {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
+        attrs,
+        *children,
         components_dependency(),
         title=title,
         lang=lang,
@@ -400,6 +399,7 @@ def page_bootstrap(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
     lang: Optional[str] = None,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Create a Bootstrap UI page container.
@@ -416,6 +416,8 @@ def page_bootstrap(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
+    kwargs
+        Attributes on the the `<body>` tag.
 
     Returns
     -------
@@ -428,4 +430,8 @@ def page_bootstrap(
     :func:`~shiny.ui.page_navbar`
     """
     head = tags.title(title) if title else None
-    return tags.html(tags.head(head), tags.body(*bootstrap_deps(), *args), lang=lang)
+    return tags.html(
+        tags.head(head),
+        tags.body(*bootstrap_deps(), *args, **kwargs),
+        lang=lang,
+    )
