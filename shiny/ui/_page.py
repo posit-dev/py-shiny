@@ -87,6 +87,7 @@ def page_sidebar(
     attrs, children = consolidate_attrs(*args, **kwargs)
 
     return page_fillable(
+        {"class": "bslib-page-sidebar"},
         title,
         layout_sidebar(
             sidebar,
@@ -122,7 +123,7 @@ def page_navbar(
     header: Optional[TagChild] = None,
     footer: Optional[TagChild] = None,
     bg: Optional[str] = None,
-    inverse: bool = True,
+    inverse: bool = False,
     collapsible: bool = True,
     fluid: bool = True,
     window_title: str | MISSING_TYPE = MISSING,
@@ -198,7 +199,10 @@ def page_navbar(
             "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
         )
 
+    tagAttrs: TagAttrs = {"class": "bslib-page-navbar"}
+
     page_args = (
+        tagAttrs,
         navset_bar(
             *args,
             title=title,

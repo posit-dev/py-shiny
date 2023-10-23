@@ -47,7 +47,7 @@ The following methods have been moved from `shiny.experimental.ui` and integrate
   * `valuebox()`
 * Navs - Navigation within a page
   * `navset_bar()`, `navset_tab_card()`, `navset_pill_card()`
-  * `page_navbar(sidebar=, fillable=, fillable_mobile=, gap=, padding=, inverse=True)`, `navset_card_tab(sidebar=)`, `navset_card_pill(sidebar=)`, `navset_bar(sidebar=, fillable=, gap=, padding=)`
+  * `page_navbar(sidebar=, fillable=, fillable_mobile=, gap=, padding=)`, `navset_card_tab(sidebar=)`, `navset_card_pill(sidebar=)`, `navset_bar(sidebar=, fillable=, gap=, padding=)`
 * Inputs - UI elements for user input
   * `toggle_switch()`
   * `input_text_area(autoresize=)`
