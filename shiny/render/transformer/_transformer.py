@@ -118,16 +118,16 @@ class TransformerParams(Generic[P]):
         self.args = args
         self.kwargs = kwargs
 
-    @staticmethod
-    def empty_params() -> TransformerParams[P]:
-        """
-        Return `TransformerParams` definition with no parameters.
-        """
 
-        def inner(*args: P.args, **kwargs: P.kwargs) -> TransformerParams[P]:
-            return TransformerParams[P](*args, **kwargs)
+def empty_params() -> TransformerParams[P]:
+    """
+    Return `TransformerParams` definition with no parameters.
+    """
 
-        return inner()
+    def inner(*args: P.args, **kwargs: P.kwargs) -> TransformerParams[P]:
+        return TransformerParams[P](*args, **kwargs)
+
+    return inner()
 
 
 # ======================================================================================
@@ -319,14 +319,21 @@ class OutputRenderer(Generic[OT], ABC):
     def _repr_html_(self) -> str | None:
         import htmltools
 
-        if self.default_ui is None:
-            return None
-        return htmltools.TagList(self.default_ui(self.__name__))._repr_html_()
+        return htmltools.TagList(self._render_default())._repr_html_()
 
     def tagify(self) -> TagList | Tag | MetadataNode | str:
         if self.default_ui is None:
             raise TypeError("No default UI exists for this type of render function")
-        return self.default_ui(self.__name__)
+        return self._render_default()
+
+    def _render_default(self) -> TagList | Tag | MetadataNode | str:
+        if self.default_ui is None:
+            return TagList()
+
+        if "_params" in inspect.signature(self.default_ui).parameters:
+            return self.default_ui(self.__name__, _params=self._params.kwargs)  # type: ignore
+        else:
+            return self.default_ui(self.__name__)
 
 
 # Using a second class to help clarify that it is of a particular type

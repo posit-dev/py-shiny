@@ -36,9 +36,6 @@ def try_render_matplotlib(
     try:
         import matplotlib.pyplot as plt  # pyright: ignore[reportUnusedImport] # noqa: F401
 
-        fig.set_size_inches(width / ppi, height / ppi)
-        fig.set_dpi(ppi * pixelratio)
-
         # Suppress the message `UserWarning: The figure layout has changed to tight`
         with warnings.catch_warnings():
             warnings.filterwarnings(
@@ -61,10 +58,17 @@ def try_render_matplotlib(
             data = base64.b64encode(buf.read())
             data_str = data.decode("utf-8")
 
+        width_out, height_out = cast(
+            list[float],
+            fig.get_size_inches(),  # pyright: ignore[reportUnknownMemberType]
+        )
+        ppi_out = fig.get_dpi() / pixelratio
+
+        # TODO: Get figure size and use that to inform width/height
         res: ImgData = {
             "src": "data:image/png;base64," + data_str,
-            "width": "100%",
-            "height": "100%",
+            "width": f"{width_out * ppi_out / pixelratio}px",
+            "height": f"{height_out * ppi_out / pixelratio}px",
         }
 
         if alt is not None:

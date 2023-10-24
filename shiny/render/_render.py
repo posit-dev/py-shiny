@@ -16,6 +16,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Optional,
+    ParamSpec,
     Protocol,
     Union,
     cast,
@@ -23,7 +24,7 @@ from typing import (
     runtime_checkable,
 )
 
-from htmltools import TagChild
+from htmltools import Tag, TagChild
 
 if TYPE_CHECKING:
     from ..session._utils import RenderedDeps
@@ -100,14 +101,47 @@ def text(
 #   Union[matplotlib.figure.Figure, PIL.Image.Image]
 # However, if we did that, we'd have to import those modules at load time, which adds
 # a nontrivial amount of overhead. So for now, we're just using `object`.
-@output_transformer(default_ui=_ui.output_plot)
+def default_plot_ui(
+    id: str, *args: Any, _params: dict[str, Any] | None = None, **kwargs: Any
+) -> Tag:
+    if _params is not None:
+        extra_args = {}
+
+        if "width" in _params:
+            extra_args["width"] = (
+                f"{_params['width']}px"
+                if isinstance(_params["width"], (int, float))
+                else str(_params["width"])
+            )
+
+        if "height" in _params:
+            extra_args["height"] = (
+                f"{_params['height']}px"
+                if isinstance(_params["height"], (int, float))
+                else str(_params["height"])
+            )
+
+        kwargs.update(extra_args)
+
+    return _ui.output_plot(id, *args, **kwargs)
+
+
+P = ParamSpec("P")
+
+
+@output_transformer(default_ui=default_plot_ui)
 async def PlotTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[object],
     *,
     alt: Optional[str] = None,
+    width: Optional[float] = None,
+    height: Optional[float] = None,
     **kwargs: object,
 ) -> ImgData | None:
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+
     is_userfn_async = is_async_callable(_fn)
     name = _meta.name
     session = _meta.session
@@ -120,12 +154,18 @@ async def PlotTransformer(
     pixelratio: float = typing.cast(
         float, inputs[ResolvedId(".clientdata_pixelratio")]()
     )
-    width: float = typing.cast(
-        float, inputs[ResolvedId(f".clientdata_output_{name}_width")]()
-    )
-    height: float = typing.cast(
-        float, inputs[ResolvedId(f".clientdata_output_{name}_height")]()
-    )
+    if width is None:
+        width = typing.cast(
+            float, inputs[ResolvedId(f".clientdata_output_{name}_width")]()
+        )
+    if height is None:
+        height = typing.cast(
+            float, inputs[ResolvedId(f".clientdata_output_{name}_height")]()
+        )
+
+    mpl.rcParams["figure.dpi"] = ppi * pixelratio
+    mpl.rcParams["figure.figsize"] = [width / ppi, height / ppi]
+    plt.close()  # type: ignore
 
     # Call the user function to get the plot object.
     x = await resolve_value_fn(_fn)
@@ -203,6 +243,8 @@ async def PlotTransformer(
 def plot(
     *,
     alt: Optional[str] = None,
+    width: Optional[float] = None,
+    height: Optional[float] = None,
     **kwargs: Any,
 ) -> PlotTransformer.OutputRendererDecorator:
     ...
@@ -217,6 +259,8 @@ def plot(
     _fn: PlotTransformer.ValueFn | None = None,
     *,
     alt: Optional[str] = None,
+    width: Optional[float] = None,
+    height: Optional[float] = None,
     **kwargs: Any,
 ) -> PlotTransformer.OutputRenderer | PlotTransformer.OutputRendererDecorator:
     """
@@ -262,7 +306,9 @@ def plot(
     ~shiny.ui.output_plot
     ~shiny.render.image
     """
-    return PlotTransformer(_fn, PlotTransformer.params(alt=alt, **kwargs))
+    return PlotTransformer(
+        _fn, PlotTransformer.params(alt=alt, width=width, height=height, **kwargs)
+    )
 
 
 # ======================================================================================
