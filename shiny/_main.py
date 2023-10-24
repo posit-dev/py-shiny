@@ -97,7 +97,7 @@ any of the following will work:
     f' to "{",".join(RELOAD_INCLUDES_DEFAULT)}".',
 )
 @click.option(
-    "--reload-excldues",
+    "--reload-excludes",
     "reload_excludes",
     default=",".join(RELOAD_INCLUDES_DEFAULT),
     help="File glob(s) to indicate which files should be excluded from file monitoring. Defaults"
@@ -312,7 +312,7 @@ def run_app(
             # Adding `reload_includes` param while `reload=False` produces an warning
             # https://github.com/encode/uvicorn/blob/d43afed1cfa018a85c83094da8a2dd29f656d676/uvicorn/config.py#L298-L304
             "reload_includes": list(reload_includes),
-            "reload_excludes": [".*", "*.py[cod]", "__pycache__", "env", "venv"],
+            "reload_excludes": list(reload_excludes),
             "reload_dirs": reload_dirs,
         }
 
