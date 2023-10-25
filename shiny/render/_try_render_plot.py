@@ -48,6 +48,31 @@ class PlotSizeInfo:
         fig_result_size_inches: tuple[float, float],
         dpi: float,
     ) -> tuple[float, float, str, str]:
+        """
+        Determines the desired size of the image in logical pixels (not doubling
+        resolution for retina displays--the caller needs to worry about that), and the
+        width and height attributes that should be set on the <img> tag.
+
+        Args:
+            fig_initial_size_inches: The size of the figure before the user's plotting
+                code was run. We care about this because we want to know if the user
+                modified the figure size in their plotting code--if so, we'll respect
+                the `fig_result_size_inches`, otherwise we'll ignore it and use the
+                container size instead.
+            fig_result_size_inches: The size of the figure after the user's plotting
+                code was run.
+            dpi: The desired DPI of the image.
+
+        Returns:
+            A tuple of (width, height, width_attr, height_attr), where width and height
+            are the desired size of the image in logical pixels, and width_attr and
+            height_attr are the width and height attributes that should be set on the
+            <img> tag. The width and height attributes may differ from the width and
+            height values because when we use the container size as the image size, we
+            set the width/height attributes to 100% so that the image will continuously
+            fill the container even as the container is resized (i.e. the re-render
+            hasn't happened yet).
+        """
         w, w_attr = self._get_img_size_px(
             0,
             fig_initial_size_inches[0],
@@ -75,18 +100,19 @@ class PlotSizeInfo:
         if user_specified_size_px is not None:
             return user_specified_size_px, f"{user_specified_size_px}px"
 
+        # If they specified a figure size in their plotting code, we'll respect that.
+        if abs(fig_initial_size_inches - fig_result_size_inches) > 1e-6:
+            native_size = fig_result_size_inches * dpi
+            return native_size, f"{native_size}px"
+
         # If the user didn't specify an explicit size on @render.plot and didn't modify
         # the figure size in their plotting code, then assume that they're filling the
         # container, in which case we set the img size to 100% in order to have nicer
         # resize behavior.
-        if abs(fig_initial_size_inches - fig_result_size_inches) < 1e-6:
-            # Retrieve the container size, taking a reactive dependency
-            container_size_px = self._container_size_px_fn[i]()
-            return container_size_px, "100%"
-
-        # They specified a figure size in their plotting code, we'll respect that.
-        native_size = fig_result_size_inches * dpi
-        return native_size, f"{native_size}px"
+        #
+        # Retrieve the container size, taking a reactive dependency
+        container_size_px = self._container_size_px_fn[i]()
+        return container_size_px, "100%"
 
 
 # Try to render a matplotlib object (or the global figure, if it's been used). If `fig`
@@ -338,11 +364,13 @@ def try_render_plotnine(
     return (True, res)
 
 
-# This is a weird one... the dpi of the figure is not set to rcParam["figure.dpi"], but
-# rather to rcParam["figure.dpi"] * fig.canvas.device_pixel_ratio (which is 2.0 on
-# my Mac with the 'MacOSX' mpl backend). We want to undo that scaling, as it makes the
-# text ridiculously large. This does mean that if the user intentionally set the dpi to
-# rcParam * device_pixel_ratio, we're going to ignore it--sorry.
+# This is a weird one... the default dpi is not set to rcParam["figure.dpi"], but rather
+# to rcParam["figure.dpi"] * fig.canvas.device_pixel_ratio (which is 2.0 on my Mac with
+# the 'MacOSX' mpl backend). We want to undo that scaling, as it makes the text
+# ridiculously large.
+#
+# One negative consequence of this logic: if the user intentionally set the dpi to
+# rcParam * device_pixel_ratio, we're going to ignore it.
 def get_desired_dpi_from_fig(fig: Figure):
     ppi_out = fig.get_dpi()
 
