@@ -2,11 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from shiny import render, ui
-from shiny.flat import input
-from shiny.flat import ui as uic
+from shiny.flat import input, layout
 
-with uic.page_sidebar():
-    with uic.sidebar():
+with layout.page_sidebar():
+    with layout.sidebar():
         ui.input_slider("n", "N", 1, 100, 50)
 
     @render.plot
