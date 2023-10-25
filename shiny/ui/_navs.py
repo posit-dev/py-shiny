@@ -229,7 +229,8 @@ class NavMenu:
     ) -> tuple[TagChild, TagChild]:
         nav, content = render_navset(
             *self.nav_controls,
-            ul_class=f"dropdown-menu {'dropdown-menu-right' if self.align == 'right' else ''}",
+            # `.dropdown-menu-right` is for Bootstrap 3; BS5 uses `.dropdown-menu-end`
+            ul_class=f"dropdown-menu{' dropdown-menu-end' if self.align == 'right' else ''}",
             id=None,
             selected=selected,
             context={**context, "is_menu": True},
