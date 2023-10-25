@@ -1,16 +1,17 @@
+from __future__ import annotations
+
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 from pathlib import Path
 from typing import Any, Callable
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-import plotnine.options as p9options
 from PIL import Image
 from plotnine import aes, element_rect, facet_wrap, geom_point, stat_smooth, theme
 from plotnine.data import mtcars
 from plotnine.ggplot import ggplot
 
-from shiny import App, Inputs, Outputs, Session, module, reactive, render, req, ui
+from shiny import App, Inputs, Outputs, Session, module, render, req, ui
 
 
 @module.ui
@@ -98,7 +99,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         return fig
 
-    def plot_with_plotnine(fig_size: tuple[float, float] | None):
+    def plot_with_plotnine(fig_size: tuple[float, float] | None) -> Any:
         p = (
             ggplot(mtcars, aes("wt", "mpg", color="factor(gear)"))
             + geom_point()
