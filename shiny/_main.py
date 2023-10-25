@@ -258,7 +258,7 @@ def run_app(
             app_path = Path(app).resolve()
             # Set this so shiny.express.app.wrap_express_app() can find the app file.
             os.environ["SHINY_EXPRESS_APP_FILE"] = str(app_path)
-            app = "shiny.flat.app:app"
+            app = "shiny.express.app:app"
             app_dir = str(app_path.parent)
         else:
             app, app_dir = resolve_app(app, app_dir)
