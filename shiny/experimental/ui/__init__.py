@@ -1,6 +1,5 @@
 # Experimental
 
-from ._valuebox import showcase_left_center, showcase_top_right, value_box
 from ._card import (
     WrapperCallable,
     ImgContainer,
@@ -66,6 +65,10 @@ from ._deprecated import (
     CardItem,
     card_footer,
     card_header,
+    # Value Box
+    showcase_left_center,
+    showcase_top_right,
+    value_box,
     # Layout
     layout_column_wrap,
     # Navs
@@ -92,10 +95,6 @@ __all__ = (
     "card_title",
     "card_body",
     "card_image",
-    # ValueBox
-    "value_box",
-    "showcase_left_center",
-    "showcase_top_right",
     # Deprecated
     # # Sidebar
     "Sidebar",
@@ -158,6 +157,10 @@ __all__ = (
     "CardItem",
     "card_header",
     "card_footer",
+    # # ValueBox
+    "value_box",
+    "showcase_left_center",
+    "showcase_top_right",
     # # Layout
     "layout_column_wrap",
     # # Navs

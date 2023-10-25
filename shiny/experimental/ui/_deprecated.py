@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Optional, Sequence, TypeVar, overload
+from typing import Any, Callable, Literal, Optional, Sequence, TypeVar, overload
 
 from htmltools import (
     MetadataNode,
@@ -60,6 +60,9 @@ from ...ui._sidebar import panel_main as main_panel_main
 from ...ui._sidebar import panel_sidebar as main_panel_sidebar
 from ...ui._sidebar import sidebar as main_sidebar
 from ...ui._sidebar import toggle_sidebar as main_toggle_sidebar
+from ...ui._valuebox import showcase_left_center as main_showcase_left_center
+from ...ui._valuebox import showcase_top_right as main_showcase_top_right
+from ...ui._valuebox import value_box as main_value_box
 from ...ui.css._css_unit import CssUnit as MainCssUnit
 from ...ui.css._css_unit import as_css_padding as main_as_css_padding
 from ...ui.css._css_unit import as_css_unit as main_as_css_unit
@@ -103,7 +106,7 @@ __all__ = (
     "popover",
     "toggle_popover",
     "update_popover",
-    # # Accordion
+    # Accordion
     "AccordionPanel",
     "accordion",
     "accordion_panel",
@@ -126,10 +129,22 @@ __all__ = (
     "CardItem",
     "card_header",
     "card_footer",
+    # Value Box
+    "value_box",
+    # Layout
+    "layout_column_wrap",
     # Navs
     "navset_bar",
     "navset_card_tab",
     "navset_card_pill",
+    # Output
+    "output_ui",
+    "output_plot",
+    "output_image",
+    # Page
+    "page_navbar",
+    "page_sidebar",
+    "page_fillable",
 )
 
 ######################
@@ -1032,6 +1047,87 @@ def card_footer(
     )
 
     return main_card_footer(*args, **kwargs)
+
+
+######################
+# # Valuebox
+######################
+
+
+def value_box(
+    title: TagChild,
+    value: TagChild,
+    *args: TagChild | TagAttrs,
+    showcase: Optional[TagChild] = None,
+    showcase_layout: Callable[[TagChild, Tag], MainCardItem] | None = None,
+    full_screen: bool = False,
+    theme_color: Optional[str] = "primary",
+    height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
+    fill: bool = True,
+    class_: Optional[str] = None,
+    **kwargs: TagAttrValue,
+) -> Tag:
+    """Deprecated. Please use `shiny.ui.value_box()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.value_box()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.value_box()` instead."
+    )
+    return main_value_box(
+        title,
+        value,
+        *args,
+        showcase=showcase,
+        showcase_layout=showcase_layout,
+        full_screen=full_screen,
+        theme_color=theme_color,
+        height=height,
+        max_height=max_height,
+        fill=fill,
+        class_=class_,
+        **kwargs,
+    )
+
+
+def showcase_left_center(
+    width: CssUnit = "30%",
+    max_height: CssUnit = "100px",
+    max_height_full_screen: CssUnit = "67%",
+) -> Callable[[TagChild | TagAttrs, Tag], MainCardItem]:
+    # TODO-barret; Give better message. These are defunct
+    """Deprecated. Please use `shiny.ui.showcase_left_center()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.showcase_left_center()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.showcase_left_center()` instead."
+    )
+    # TODO-barret; Return new structure
+    return main_showcase_left_center(
+        width=width,
+        max_height=max_height,
+        max_height_full_screen=max_height_full_screen,
+    )
+
+
+def showcase_top_right(
+    width: CssUnit = "30%",
+    max_height: CssUnit = "75px",
+    max_height_full_screen: CssUnit = "67%",
+) -> Callable[[TagChild | TagAttrs, Tag], MainCardItem]:
+    # TODO-barret; Give better message. These are defunct
+    """Deprecated. Please use `shiny.ui.showcase_top_right()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.showcase_top_right()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.showcase_top_right()` instead."
+    )
+    # TODO-barret; Return new structure
+    return main_showcase_top_right(
+        width=width,
+        max_height=max_height,
+        max_height_full_screen=max_height_full_screen,
+    )
 
 
 # ######################

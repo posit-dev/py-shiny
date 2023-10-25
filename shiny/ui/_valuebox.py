@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Callable, Literal, NamedTuple, Optional
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
+from ._card import CardItem, card, card_body
+from ._layout import layout_column_wrap
+from ._tag import consolidate_attrs
+from ._utils import is_01_scalar
+from .css import as_css_unit, as_width_unit
 from .css._css_unit import CssUnit
+from .fill import as_fill_item, as_fillable_container
 
 __all__ = ("value_box",)
 
@@ -18,7 +24,7 @@ def value_box(
     value: TagChild,
     *args: TagChild | TagAttrs,
     showcase: Optional[TagChild] = None,
-    # showcase_layout: Callable[[TagChild, Tag], CardItem] | None = None,
+    showcase_layout: Callable[[TagChild, Tag], CardItem] | None = None,
     full_screen: bool = False,
     # theme_color: Optional[str] = "primary",
     height: Optional[CssUnit] = None,
@@ -69,6 +75,7 @@ def value_box(
     --------
     * :func:`~shiny.ui.card`
     """
+
     # showcase_layout
     #     Either :func:`~shiny.experimental.ui.showcase_left_center` or
     #     :func:`~shiny.experimental.ui.showcase_top_right`.
@@ -81,20 +88,172 @@ def value_box(
     #     `full_screen` (in this case, consider setting a `height` in
     #     :func:`~shiny.experimental.ui.card_body`).
 
-    # Move down to avoid circular import
-    from ..experimental.ui._valuebox import value_box as x_value_box
-
-    return x_value_box(
-        title,
-        value,
+    attrs, children = consolidate_attrs(
+        # Must be before `attrs` so that `class_` is applied before any `attrs` values
+        {"class": "bslib-value-box border-0"},
+        # {"class": f"bg-{theme_color}"} if theme_color else None,
         *args,
-        showcase=showcase,
-        # showcase_layout=showcase_layout,
-        full_screen=full_screen,
-        # theme_color=theme_color,
-        height=height,
-        max_height=max_height,
-        fill=fill,
         class_=class_,
         **kwargs,
     )
+
+    showcase_layout = None  # TODO-barret; Support parameter
+
+    # TODO-barret; Handle legacy function for new object method
+    if showcase_layout is None:
+        showcase_layout = showcase_left_center()
+    if isinstance(title, (str, int, float)):
+        title = tags.p(str(title), class_="h6 mb-1")
+    if isinstance(value, (str, int, float)):
+        value = tags.p(str(value), class_="h2 mb-2")
+
+    contents = tags.div(
+        title,
+        value,
+        *children,
+        class_="value-box-area",
+    )
+    contents = as_fillable_container(as_fill_item(contents))
+
+    if showcase is not None:
+        contents = showcase_layout(showcase, contents)
+
+    return card(
+        contents,
+        attrs,
+        full_screen=full_screen,
+        height=height,
+        max_height=max_height,
+        fill=fill,
+    )
+
+
+# TODO-maindocs; @add_example()
+def showcase_left_center(
+    width: CssUnit = "30%",
+    max_height: CssUnit = "100px",
+    max_height_full_screen: CssUnit = "67%",
+) -> Callable[[TagChild | TagAttrs, Tag], CardItem]:
+    """
+    Left center showcase for a value box
+
+    Gives the showcase a width and centers it vertically.
+
+    Parameters
+    ----------
+    width
+        A proportion (i.e., a number between 0 and 1) of available width to allocate to
+        the showcase. Or, A vector of length 2 valid CSS unit defining the width of each
+        column (for `showcase_left_center()` the 1st unit defines the showcase width and
+        for `showcase_top_right` the 2nd unit defines the showcase width). Note that any
+        units supported by the CSS grid `grid-template-columns` property may be used
+        (e.g., `fr` units).
+    max_height,max_height_full_screen
+        A proportion (i.e., a number between 0 and 1) or any valid CSS unit defining the
+        showcase max_height.
+
+    Returns
+    -------
+    :
+        A function that takes a showcase and contents and returns a :func:`~shiny.experimental.ui.card_body`
+    """
+    return _showcase_layout(
+        width=width,
+        max_height=max_height,
+        max_height_full_screen=max_height_full_screen,
+        top_right=False,
+    )
+
+
+# TODO-maindocs; @add_example()
+def showcase_top_right(
+    width: CssUnit = "30%",
+    max_height: CssUnit = "75px",
+    max_height_full_screen: CssUnit = "67%",
+) -> Callable[[TagChild | TagAttrs, Tag], CardItem]:
+    """
+    Top right showcase for a value box
+
+    Gives the showcase a width and in the top right corner.
+
+    Parameters
+    ----------
+    width
+        A proportion (i.e., a number between 0 and 1) of available width to allocate to
+        the showcase. Or, A vector of length 2 valid CSS unit defining the width of each
+        column (for `showcase_left_center()` the 1st unit defines the showcase width and
+        for `showcase_top_right` the 2nd unit defines the showcase width). Note that any
+        units supported by the CSS grid `grid-template-columns` property may be used
+        (e.g., `fr` units).
+    max_height,max_height_full_screen
+        A proportion (i.e., a number between 0 and 1) or any valid CSS unit defining the
+        showcase max_height.
+
+    Returns
+    -------
+    :
+        A function that takes a showcase and contents and returns a :func:`~shiny.experimental.ui.card_body`
+    """
+
+    if is_01_scalar(width):
+        width = 1 - width
+    return _showcase_layout(
+        width=width,
+        max_height=max_height,
+        max_height_full_screen=max_height_full_screen,
+        top_right=True,
+    )
+
+
+def _showcase_layout(
+    width: CssUnit,
+    max_height: CssUnit,
+    max_height_full_screen: CssUnit,
+    top_right: bool,
+) -> Callable[[TagChild | TagAttrs, Tag], CardItem]:
+    # Do not "magically" turn `0.3` into `"30%"` as it is not clear to the user when it happens
+    width_css_unit = as_width_unit(width)
+    max_height_css_unit = as_css_unit(max_height)
+    max_height_full_screen_css_unit = as_css_unit(max_height_full_screen)
+
+    def _layout(showcase: TagChild | TagAttrs, contents: Tag) -> CardItem:
+        css_args = {
+            "--bslib-value-box-max-height": max_height_css_unit,
+            "--bslib-value-box-max-height-full-screen": max_height_full_screen_css_unit,
+        }
+        showcase_container = tags.div(
+            showcase,
+            {"class": "value-box-showcase overflow-hidden"},
+            {"class": "showcase-top-right"} if top_right else None,
+            style=css(**css_args),
+        )
+        showcase_container = as_fillable_container(as_fill_item(showcase_container))
+
+        if not top_right:
+            contents.add_class("border-start")
+
+        items = [showcase_container, contents]
+        width_fs = ["1fr", "auto"]
+        if top_right:
+            items = reversed(items)
+            width_fs = reversed(width_fs)
+
+        width_fs = " ".join(width_fs)
+
+        layout_css_args = {
+            "--bslib-value-box-widths": width_css_unit,
+            "--bslib-value-box-widths-full-screen": width_fs,
+        }
+        return card_body(
+            layout_column_wrap(
+                None,  # width
+                *items,
+                style=css(**layout_css_args),
+                gap=0,
+                heights_equal="row",
+                class_="value-box-grid",
+            ),
+            style=css(padding=0),
+        )
+
+    return _layout
