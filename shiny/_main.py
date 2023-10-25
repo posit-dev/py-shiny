@@ -163,6 +163,7 @@ def run(
         app,
         host=host,
         port=port,
+        **kwargs,
         autoreload_port=autoreload_port,
         reload=reload,
         reload_dirs=list(reload_dirs),
@@ -173,7 +174,6 @@ def run(
         app_dir=app_dir,
         factory=factory,
         launch_browser=launch_browser,
-        **kwargs,
     )
 
 
@@ -223,7 +223,7 @@ def run_app(
         List or tuple of file globs to indicate which files should be monitored for
         changes. Can be combined with `reload_excludes`.
     reload_excludes
-        List or tuple of file globas to indicate which files should be excluded from
+        List or tuple of file globs to indicate which files should be excluded from
         reload monitoring. Can be combined with `reload_includes`
     ws_max_size
         WebSocket max size message in bytes.
@@ -287,7 +287,7 @@ def run_app(
 
     if reload:
         # Always watch the app_dir
-        if app_dir:
+        if app_dir and app_dir not in reload_dirs:
             reload_dirs.append(app_dir)
         # For developers of Shiny itself; autoreload the app when Shiny package changes
         if os.getenv("SHINY_PKG_AUTORELOAD"):
