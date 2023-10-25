@@ -88,9 +88,8 @@ def text(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_text` container (see :func:`~shiny.ui.output_text` for
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_text` container (see :func:`~shiny.ui.output_text` for
     example usage).
 
     See Also
@@ -269,6 +268,12 @@ def plot(
     alt
         Alternative text for the image if it cannot be displayed or viewed (i.e., the
         user uses a screen reader).
+    width
+        Width of the plot in pixels. If ``None``, the width will be determined by the
+        size of the corresponding :func:`~shiny.ui.output_plot`.
+    height
+        Height of the plot in pixels. If ``None``, the height will be determined by the
+        size of the corresponding :func:`~shiny.ui.output_plot`.
     **kwargs
         Additional keyword arguments passed to the relevant method for saving the image
         (e.g., for matplotlib, arguments to ``savefig()``; for PIL and plotnine,
@@ -294,9 +299,8 @@ def plot(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of a
-    :func:`~shiny.ui.output_plot` container (see :func:`~shiny.ui.output_plot` for
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_plot` container (see :func:`~shiny.ui.output_plot` for
     example usage).
 
     See Also
@@ -369,10 +373,9 @@ def image(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_image` container (see :func:`~shiny.ui.output_image` for
-    example usage).
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_image` container (see :func:`~shiny.ui.output_image`
+    for example usage).
 
     See Also
     --------
@@ -485,8 +488,8 @@ def table(
         objects; call ``style.hide(axis="index")`` from user code instead.)
     classes
         CSS classes (space separated) to apply to the resulting table. By default, we
-        use `table shiny-table w-auto` which is designed to look reasonable with Bootstrap 5.
-        (Ignored for pandas :class:`Styler` objects; call
+        use `table shiny-table w-auto` which is designed to look reasonable with
+        Bootstrap 5. (Ignored for pandas :class:`Styler` objects; call
         ``style.set_table_attributes('class="dataframe table shiny-table w-auto"')``
         from user code instead.)
     **kwargs
@@ -505,10 +508,9 @@ def table(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_table` container (see :func:`~shiny.ui.output_table` for
-    example usage).
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_table` container (see :func:`~shiny.ui.output_table`
+    for example usage).
 
     See Also
     --------
@@ -563,10 +565,9 @@ def ui(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_ui` container (see :func:`~shiny.ui.output_ui` for example
-    usage).
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_ui` container (see :func:`~shiny.ui.output_ui` for
+    example usage).
 
     See Also
     --------
