@@ -18,7 +18,6 @@ from typing import (
     Callable,
     Literal,
     Optional,
-    ParamSpec,
     Protocol,
     Union,
     cast,
@@ -104,13 +103,14 @@ def text(
 # ======================================================================================
 # RenderPlot
 # ======================================================================================
-# It would be nice to specify the return type of RenderPlotFunc to be something like:
-#   Union[matplotlib.figure.Figure, PIL.Image.Image]
-# However, if we did that, we'd have to import those modules at load time, which adds
-# a nontrivial amount of overhead. So for now, we're just using `object`.
-def default_plot_ui(
+
+
+def _default_plot_ui(
     id: str, *args: Any, _params: dict[str, Any] | None = None, **kwargs: Any
 ) -> Tag:
+    # The _params argument contains the arguments that were passed to `@render.plot`. In
+    # the specific case of `@render.plot`, we grab the width and height arguments from
+    # the decorator and apply them to the output_plot call.
     if _params is not None:
         extra_args = {}
 
@@ -133,10 +133,11 @@ def default_plot_ui(
     return _ui.output_plot(id, *args, **kwargs)
 
 
-P = ParamSpec("P")
-
-
-@output_transformer(default_ui=default_plot_ui)
+# It would be nice to specify the return type of RenderPlotFunc to be something like:
+#   Union[matplotlib.figure.Figure, PIL.Image.Image]
+# However, if we did that, we'd have to import those modules at load time, which adds
+# a nontrivial amount of overhead. So for now, we're just using `object`.
+@output_transformer(default_ui=_default_plot_ui)
 async def PlotTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[object],
@@ -150,8 +151,6 @@ async def PlotTransformer(
     name = _meta.name
     session = _meta.session
 
-    ppi: float = 96
-
     inputs = session.root_scope().input
 
     # Reactively read some information about the plot.
@@ -162,17 +161,14 @@ async def PlotTransformer(
     # Do NOT call this unless you actually are going to respect the container dimension
     # you're asking for. It takes a reactive dependency. If the client hasn't reported
     # the requested dimension, you'll get a SilentException.
-    def container_size(dimension: Literal["width", "height"]) -> Callable[[], float]:
-        def container_size_fn() -> float:
-            result = inputs[ResolvedId(f".clientdata_output_{name}_{dimension}")]()
-            return typing.cast(float, result)
-
-        return container_size_fn
+    def container_size(dimension: Literal["width", "height"]) -> float:
+        result = inputs[ResolvedId(f".clientdata_output_{name}_{dimension}")]()
+        return typing.cast(float, result)
 
     plot_size_info = PlotSizeInfo(
         container_size_px_fn=(
-            container_size("width"),
-            container_size("height"),
+            lambda: container_size("width"),
+            lambda: container_size("height"),
         ),
         user_specified_size_px=(width, height),
         pixelratio=pixelratio,
@@ -223,7 +219,6 @@ async def PlotTransformer(
         ok, result = try_render_pil(
             x,
             plot_size_info=plot_size_info,
-            ppi=ppi,
             alt=alt,
             **kwargs,
         )

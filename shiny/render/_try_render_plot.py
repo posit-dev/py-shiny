@@ -16,21 +16,30 @@ if TYPE_CHECKING:
 
 
 class PlotSizeInfo:
+    """This class carries information from the render.plot transformer to the logic that
+    actually renders the plot to PNG. It also encapsulates the tricky logic for figuring
+    out what the image size and attributes should be."""
+
     def __init__(
         self,
         container_size_px_fn: tuple[Callable[[], float], Callable[[], float]],
         user_specified_size_px: tuple[float | None, float | None],
         pixelratio: float,
     ):
-        self._container_size_px = (
-            None
-            if user_specified_size_px[0] is not None
-            else container_size_px_fn[0](),
-            None
-            if user_specified_size_px[1] is not None
-            else container_size_px_fn[1](),
-        )
-        self._user_specified_size_px = user_specified_size_px
+        """
+        Args:
+            container_size_px_fn: A tuple of two functions that return the width and
+                height of the container, in pixels. If the user specified an explicit
+                width/height on the @render.plot decorator, then these functions should
+                not be called, as doing so will take a reactive dependency on that
+                dimension.
+            user_specified_size_px: A tuple of two floats, or None. If the user
+                specified an explicit width/height on the @render.plot decorator, then
+                the corresponding float will be that value. Otherwise, it will be None.
+            pixelratio: The device pixel ratio that was detected from the client.
+        """
+        self._container_size_px_fn = container_size_px_fn
+        self.user_specified_size_px = user_specified_size_px
         self.pixelratio = pixelratio
 
     def get_img_size_px(
@@ -62,7 +71,7 @@ class PlotSizeInfo:
     ) -> tuple[float, str]:
         # If user specified explicit width/height on @render.plot decorator, set the img
         # size to that exactly. We assume there's some reason they wanted that exact size.
-        user_specified_size_px = self._user_specified_size_px[i]
+        user_specified_size_px = self.user_specified_size_px[i]
         if user_specified_size_px is not None:
             return user_specified_size_px, f"{user_specified_size_px}px"
 
@@ -71,9 +80,9 @@ class PlotSizeInfo:
         # container, in which case we set the img size to 100% in order to have nicer
         # resize behavior.
         if abs(fig_initial_size_inches - fig_result_size_inches) < 1e-6:
-            container_size_px = self._container_size_px[i]
-            if container_size_px is not None and container_size_px > 0:
-                return container_size_px, "100%"
+            # Retrieve the container size, taking a reactive dependency
+            container_size_px = self._container_size_px_fn[i]()
+            return container_size_px, "100%"
 
         # They specified a figure size in their plotting code, we'll respect that.
         native_size = fig_result_size_inches * dpi
@@ -102,15 +111,9 @@ def try_render_matplotlib(
 
         pixelratio = plot_size_info.pixelratio
 
-        # jcheng: I know the double cast looks weird, but it was very hard to do a
-        # single cast in a way that made both black and pyright happy (pyright needs
-        # pramga comments and black wants to move them to random locations to keep the
-        # line length down).
-        fig_initial_size_inches = convert_unknown_list_to_size_tuple(
-            plt.rcParams["figure.figsize"]
-        )
+        fig_initial_size_inches = cast_to_size_tuple(plt.rcParams["figure.figsize"])
 
-        fig_result_size_inches = convert_unknown_list_to_size_tuple(
+        fig_result_size_inches = cast_to_size_tuple(
             fig.get_size_inches(),  # pyright: ignore[reportUnknownMemberType]
         )
 
@@ -242,9 +245,9 @@ def try_render_pil(
         data = base64.b64encode(buf.read())
         data_str = data.decode("utf-8")
 
-    width_attr = plot_size_info._user_specified_size_px[0]
+    width_attr = plot_size_info.user_specified_size_px[0]
     width_attr = f"{width_attr}px" if width_attr is not None else "100%"
-    height_attr = plot_size_info._user_specified_size_px[1]
+    height_attr = plot_size_info.user_specified_size_px[1]
     height_attr = f"{height_attr}px" if height_attr is not None else "100%"
 
     res: ImgData = {
@@ -349,5 +352,5 @@ def get_desired_dpi_from_fig(fig: Figure):
     return ppi_out
 
 
-def convert_unknown_list_to_size_tuple(lst: Any) -> tuple[float, float]:
-    return cast(tuple[float, float], tuple(cast(list[float], lst)))
+def cast_to_size_tuple(lst: Any) -> tuple[float, float]:
+    return cast(tuple[float, float], tuple(lst))
