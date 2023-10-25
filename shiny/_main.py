@@ -99,9 +99,9 @@ any of the following will work:
 @click.option(
     "--reload-excludes",
     "reload_excludes",
-    default=",".join(RELOAD_INCLUDES_DEFAULT),
+    default=",".join(RELOAD_EXCLUDES_DEFAULT),
     help="File glob(s) to indicate which files should be excluded from file monitoring. Defaults"
-    f' to "{",".join(RELOAD_INCLUDES_DEFAULT)}".',
+    f' to "{",".join(RELOAD_EXCLUDES_DEFAULT)}".',
 )
 @click.option(
     "--ws-max-size",
@@ -155,7 +155,7 @@ def run(
     app_dir: str,
     factory: bool,
     launch_browser: bool,
-    **kwargs: Dict[str, Any],
+    **kwargs: object,
 ) -> None:
     reload_includes_list = reload_includes.split(",")
     reload_excludes_list = reload_excludes.split(",")
@@ -191,7 +191,7 @@ def run_app(
     app_dir: Optional[str] = ".",
     factory: bool = False,
     launch_browser: bool = False,
-    **kwargs: Dict[str, Any],
+    **kwargs: object,
 ) -> None:
     """
     Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop.
@@ -221,7 +221,7 @@ def run_app(
         will trigger app reloading.
     reload_includes
         List or tuple of file globs to indicate which files should be monitored for
-        changes.
+        changes. Can be combined with `reload_excludes`.
     reload_excludes
         List or tuple of file globas to indicate which files should be excluded from
         reload monitoring. Can be combined with `reload_includes`
