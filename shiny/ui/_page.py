@@ -34,7 +34,6 @@ from ._sidebar import Sidebar, layout_sidebar
 from ._tag import consolidate_attrs
 from ._utils import get_window_title
 from .css import CssUnit, as_css_padding, as_css_unit
-from .fill import as_fillable_container
 from .fill._fill import FILLABLE_CONTAINTER_ATTRS
 
 
@@ -301,7 +300,10 @@ def page_fillable(
 
     return page_bootstrap(
         head_content(tags.style("html { height: 100%; }")),
-        # Even though page_bootstrap accepts *args/**kwargs, we need to prepend the class value to the tags.body. To avoid having a body within a body for a core component, we can manually use `FILLABLE_CONTAINER_ATTRS` here as the first set of attributes.
+        # Even though page_bootstrap accepts *args/**kwargs, we need to prepend the
+        # class value to the tags.body. To avoid having a <body> within a <body> for a
+        # core code path, we can manually use `FILLABLE_CONTAINER_ATTRS` here as the
+        # first set of attributes.
         FILLABLE_CONTAINTER_ATTRS,
         {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
         attrs,
