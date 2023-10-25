@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal, Optional, cast
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
+from .._deprecated import warn_deprecated
+from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import components_dependency
 from ._tag import consolidate_attrs
 from ._utils import is_01_scalar
@@ -13,8 +15,8 @@ from .fill import as_fill_item, as_fillable_container
 
 # TODO-barret-API; Move `width` to after `args`
 def layout_column_wrap(
-    width: Optional[CssUnit],
     *args: TagChild | TagAttrs,
+    width: CssUnit | None | MISSING_TYPE = MISSING,
     fixed_width: bool = False,
     heights_equal: Literal["all", "row"] = "all",
     fill: bool = True,
@@ -36,17 +38,18 @@ def layout_column_wrap(
 
     Parameters
     ----------
+    *args
+        Unnamed arguments should be UI elements (e.g.,
+        :func:`~shiny.ui.card`). Named arguments become attributes on the
+        containing :class:`~htmltools.Tag` element.
     width
         The desired width of each card. It can be a (unit-less) number between 0 and 1
         and should be specified as `1/num`, where `num` represents the number of desired
         columns. It can be a CSS length unit representing either the minimum (when
         `fixed_width=False`) or fixed width (`fixed_width=True`). It can also be `None`,
         which allows power users to set the `grid-template-columns` CSS property
-        manually, either via a `style` attribute or a CSS stylesheet.
-    *args
-        Unnamed arguments should be UI elements (e.g.,
-        :func:`~shiny.ui.card`). Named arguments become attributes on the
-        containing :class:`~htmltools.Tag` element.
+        manually, either via a `style` attribute or a CSS stylesheet. If missing, a
+        value of `200px` will be used.
     fixed_width
         When `width` is greater than 1 or is a CSS length unit, e.g. `"200px"`,
         `fixed_width` indicates whether that `width` value represents the absolute size
@@ -82,6 +85,26 @@ def layout_column_wrap(
         A :class:`~htmltools.Tag` element.
     """
     attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
+
+    if isinstance(width, MISSING_TYPE):
+        if len(children) > 0 and (
+            children[0] is None or is_probably_a_css_unit(children[0])
+        ):
+            # Code changed from
+            #   `layout_column_wrap(width, *args)`
+            # to
+            #   `layout_column_wrap(*args, width)`.
+            # Provide deprecation warning
+
+            # Assume an unnamed first argument that matches our expectations for
+            # `width` is actually the width argument, with a warning
+            warn_deprecated(
+                "`layout_column_wrap(*args, width=)`'s `width` parameter must be named."
+            )
+            width = cast(CssUnit, children[0])
+            children = children[1:]
+        else:
+            width = "200px"
 
     colspec: str | None = None
     if width is not None:
@@ -133,3 +156,11 @@ def layout_column_wrap(
         tag = as_fill_item(tag)
 
     return tag
+
+
+def is_probably_a_css_unit(x: TagChild) -> bool:
+    if isinstance(x, str):
+        return False
+    if isinstance(x, CssUnit):
+        return True
+    return False
