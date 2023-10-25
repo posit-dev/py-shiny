@@ -19,7 +19,6 @@ __all__ = (
     "navset_tab_card",
 )
 
-# TODO-barret; Add See Also entries for `navset_underline` and `navset_card_underline()`
 # TODO-barret; Add Docs entries for `navset_underline` and `navset_card_underline()`
 # TODO-barret; Add quartodoc entries for `navset_underline` and `navset_card_underline()`
 
@@ -134,8 +133,11 @@ def nav(
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
     """
     if value is None:
@@ -175,8 +177,11 @@ def nav_control(*args: TagChild) -> Nav:
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -198,8 +203,11 @@ def nav_spacer() -> Nav:
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -332,8 +340,11 @@ def nav_menu(
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -427,8 +438,11 @@ def navset_tab(
     * ~shiny.ui.nav_spacer
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -479,8 +493,11 @@ def navset_pill(
     * ~shiny.ui.nav_spacer
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -547,12 +564,14 @@ def navset_hidden(
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
-    * ~shiny.ui.navset_tab
-    * ~shiny.ui.navset_card_tab
-    * ~shiny.ui.navset_pill
-    * ~shiny.ui.navset_card_pill
-    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_bar
+    * ~shiny.ui.navset_tab
+    * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
+    * ~shiny.ui.navset_card_tab
+    * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     """
 
     return NavSet(
@@ -682,7 +701,10 @@ def navset_card_tab(
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -746,7 +768,10 @@ def navset_card_pill(
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -863,12 +888,13 @@ def navset_pill_list(
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
-    * ~shiny.ui.navset_tab
-    * ~shiny.ui.navset_card_tab
-    * ~shiny.ui.navset_pill
-    * ~shiny.ui.navset_card_pill
-    * ~shiny.ui.navset_hidden
     * ~shiny.ui.navset_bar
+    * ~shiny.ui.navset_tab
+    * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
+    * ~shiny.ui.navset_card_tab
+    * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
     * ~shiny.ui.navset_hidden
 
     Example
@@ -1145,8 +1171,11 @@ def navset_bar(
     * ~shiny.ui.nav_spacer
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
