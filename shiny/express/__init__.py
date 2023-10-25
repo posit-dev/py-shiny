@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..session import Inputs, Outputs, Session
-from ..session import _utils as session_utils
+from ..session import _utils as _session_utils
 
 from ._output import output_args, suspend_display
 from ._run import is_express_app, wrap_express_app
@@ -26,13 +26,48 @@ output: Outputs
 session: Session
 
 
+# Note that users should use `from shiny.express import input` instead of `from shiny
+# import express` and acces via `express.input`. The former provides a static value for
+# `input`, but the latter is dynamic -- every time `express.input` is accessed, it
+# returns the input for the current session. This will work in the vast majority of
+# cases, but when it fails, it will be very confusing.
 def __getattr__(name: str):
-    # TODO: cache the value so that it is the same on subsequent calls?
     if name == "input":
-        return session_utils.get_current_session().input
-    elif name == "session":
-        return session_utils.get_current_session()
+        return _get_current_session_or_mock().input
     elif name == "output":
-        # warn?
-        return session_utils.get_current_session().output
+        return _get_current_session_or_mock().output
+    elif name == "session":
+        return _get_current_session_or_mock()
+
     raise AttributeError(name=name)
+
+
+# A very bare-bones mock session class that is used only in shiny.express.
+class _MockSession:
+    def __init__(self):
+        from .._namespaces import Root
+        from typing import cast
+
+        self.input = Inputs({})
+        self.output = Outputs(cast(Session, self), Root, {}, {})
+
+    # This is needed so that Outputs don't throw an error.
+    def _is_hidden(self, name: str) -> bool:
+        return False
+
+
+_current_mock_session: _MockSession | None = None
+
+
+def _get_current_session_or_mock() -> Session:
+    from typing import cast
+
+    session = _session_utils.get_current_session()
+    if session is None:
+        global _current_mock_session
+        if _current_mock_session is None:
+            _current_mock_session = _MockSession()
+        return cast(Session, _current_mock_session)
+
+    else:
+        return session
