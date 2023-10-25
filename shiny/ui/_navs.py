@@ -19,7 +19,6 @@ __all__ = (
     "navset_tab_card",
 )
 
-# TODO-barret; Add `title` support to all navs where it makes sense. This goes in the navbar
 # TODO-barret; Add See Also entries for `navset_underline` and `navset_card_underline()`
 # TODO-barret; Add Docs entries for `navset_underline` and `navset_card_underline()`
 # TODO-barret; Add quartodoc entries for `navset_underline` and `navset_card_underline()`
@@ -28,7 +27,7 @@ import copy
 import re
 from typing import Any, Literal, Optional, Sequence, cast
 
-from htmltools import MetadataNode, Tag, TagChild, TagList, css, div, tags
+from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, css, div, tags
 
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
@@ -569,6 +568,7 @@ def navset_hidden(
 class NavSetCard(NavSet):
     placement: Literal["above", "below"]
     sidebar: Optional[Sidebar]
+    title: Optional[TagChild]
 
     def __init__(
         self,
@@ -576,6 +576,7 @@ class NavSetCard(NavSet):
         ul_class: str,
         id: Optional[str],
         selected: Optional[str],
+        title: Optional[TagChild] = None,
         sidebar: Optional[Sidebar] = None,
         header: TagChild = None,
         footer: TagChild = None,
@@ -589,6 +590,7 @@ class NavSetCard(NavSet):
             header=header,
             footer=footer,
         )
+        self.title = title
         self.sidebar = sidebar
         self.placement = placement
 
@@ -614,10 +616,12 @@ class NavSetCard(NavSet):
                 )
             ]
 
+        nav_items = [*navset_title(self.title), nav]
+
         return card(
-            card_header(nav) if self.placement == "above" else None,
+            card_header(*nav_items) if self.placement == "above" else None,
             *contents,
-            card_footer(nav) if self.placement == "below" else None,
+            card_footer(*nav_items) if self.placement == "below" else None,
         )
 
 
@@ -625,6 +629,7 @@ def navset_card_tab(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
+    title: Optional[TagChild] = None,
     sidebar: Optional[
         Sidebar
     ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` be of type `NavSetArg | Sidebar` and have the sidebar retrieved from within the args?
@@ -690,6 +695,7 @@ def navset_card_tab(
         ul_class="nav nav-tabs card-header-tabs",
         id=resolve_id_or_none(id),
         selected=selected,
+        title=title,
         sidebar=sidebar,
         header=header,
         footer=footer,
@@ -701,6 +707,7 @@ def navset_card_pill(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
+    title: Optional[TagChild] = None,
     sidebar: Optional[
         Sidebar
     ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` include `Sidebar` and have the sidebar retrieved from within the args?
@@ -752,6 +759,7 @@ def navset_card_pill(
         ul_class="nav nav-pills card-header-pills",
         id=resolve_id_or_none(id),
         selected=selected,
+        title=title,
         sidebar=sidebar,
         header=header,
         footer=footer,
@@ -763,6 +771,7 @@ def navset_card_underline(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
+    title: Optional[TagChild] = None,
     sidebar: Optional[
         Sidebar
     ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` include `Sidebar` and have the sidebar retrieved from within the args?
@@ -775,6 +784,7 @@ def navset_card_underline(
         ul_class="nav nav-underline",
         id=resolve_id_or_none(id),
         selected=selected,
+        title=title,
         sidebar=sidebar,
         header=header,
         footer=footer,
@@ -1227,6 +1237,18 @@ def wrap_each_content(
         else:
             ret.append(wrapper(content_item))
     return ret
+
+
+def navset_title(
+    title: TagChild | None,
+) -> list[TagChild | TagAttrs]:
+    """Note: Return value should be spread into parent container."""
+
+    if title is None:
+        return [None]
+
+    title_attrs: TagAttrs = {"class": "bslib-navs-card-title"}
+    return [title_attrs, tags.span(title)]
 
 
 ##############################################
