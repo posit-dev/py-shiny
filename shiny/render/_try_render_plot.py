@@ -381,4 +381,4 @@ def get_desired_dpi_from_fig(fig: Figure):
 
 
 def cast_to_size_tuple(lst: Any) -> tuple[float, float]:
-    return cast(tuple[float, float], tuple(lst))
+    return cast(Tuple[float, float], tuple(lst))
