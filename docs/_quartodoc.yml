@@ -60,11 +60,13 @@ quartodoc:
         - ui.nav_control
         - ui.nav_spacer
         - ui.nav_menu
-        - ui.navset_tab
         - ui.navset_bar
-        - ui.navset_card_tab
+        - ui.navset_tab
         - ui.navset_pill
+        - ui.navset_underline
+        - ui.navset_card_tab
         - ui.navset_card_pill
+        - ui.navset_card_underline
         - ui.navset_pill_list
         - ui.navset_hidden
     - title: UI panels

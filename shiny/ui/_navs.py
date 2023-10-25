@@ -19,9 +19,6 @@ __all__ = (
     "navset_tab_card",
 )
 
-# TODO-barret; Add Docs entries for `navset_underline` and `navset_card_underline()`
-# TODO-barret; Add quartodoc entries for `navset_underline` and `navset_card_underline()`
-
 import copy
 import re
 from typing import Any, Literal, Optional, Sequence, cast
@@ -522,6 +519,43 @@ def navset_underline(
     header: TagChild = None,
     footer: TagChild = None,
 ) -> NavSet:
+    """
+    Render nav items whose active/focused navigation links are styled with an underline.
+
+    Parameters
+    ----------
+    *args
+        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+    id
+        If provided, will create an input value that holds the currently selected nav
+        item.
+    selected
+        Choose a particular nav item to select by default value (should match it's
+        ``value``).
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+
+    See Also
+    --------
+    * ~shiny.ui.nav
+    * ~shiny.ui.nav_menu
+    * ~shiny.ui.nav_control
+    * ~shiny.ui.nav_spacer
+    * ~shiny.ui.navset_bar
+    * ~shiny.ui.navset_tab
+    * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_card_tab
+    * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
+    * ~shiny.ui.navset_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`
+    """
     return NavSet(
         *args,
         ul_class="nav nav-underline",
@@ -804,6 +838,47 @@ def navset_card_underline(
     footer: TagChild = None,
     placement: Literal["above", "below"] = "above",
 ) -> NavSetCard:
+    """
+    Render nav items active/focused navigation links are styled with an underline inside a card container.
+
+    Parameters
+    ----------
+    *args
+        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+    id
+        If provided, will create an input value that holds the currently selected nav
+        item.
+    selected
+        Choose a particular nav item to select by default value (should match it's
+        ``value``).
+    sidebar
+        A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav` page.
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+    placement
+        Placement of the nav items relative to the content.
+
+    See Also
+    --------
+    * ~shiny.ui.nav
+    * ~shiny.ui.nav_menu
+    * ~shiny.ui.nav_control
+    * ~shiny.ui.nav_spacer
+    * ~shiny.ui.navset_bar
+    * ~shiny.ui.navset_tab
+    * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
+    * ~shiny.ui.navset_card_tab
+    * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_pill_list
+    * ~shiny.ui.navset_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`
+    """
     return NavSetCard(
         *args,
         ul_class="nav nav-underline",
