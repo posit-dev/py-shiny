@@ -569,46 +569,32 @@ class NavSetCard(NavSet):
         self.placement = placement
 
     def layout(self, nav: Tag, content: Tag) -> Tag:
-        # navs = [child for child in content.children if isinstance(child, Nav)]
-        # not_navs = [child for child in content.children if child not in navs]
-        content_val: Tag | CardItem = content
+        content = _make_tabs_fillable(content, fillable=True, gap=0, padding=0)
 
-        if self.sidebar:
-            content_val = navset_card_body(content, sidebar=self.sidebar)
-
-        if self.placement == "below":
-            # TODO-carson; have carson double check this change
-            return card(
-                card_header(self.header) if self.header else None,
-                content_val,
-                card_body(self.footer, fillable=False, fill=False)
-                if self.footer
-                else None,
-                card_footer(nav),
-            )
-        else:
-            # TODO-carson; have carson double check this change
-            return card(
-                card_header(nav),
-                card_body(self.header, fill=False, fillable=False)
-                if self.header
-                else None,
-                content_val,
-                card_footer(self.footer) if self.footer else None,
-            )
-
-
-def navset_card_body(content: Tag, sidebar: Optional[Sidebar] = None) -> CardItem:
-    content = _make_tabs_fillable(content, fillable=True, gap=0, padding=0)
-    if sidebar:
-        return layout_sidebar(
-            sidebar,
-            content,
-            fillable=True,
-            border=False,
+        contents: list[CardItem] = wrap_each_content(
+            [
+                child
+                for child in [self.header, content, self.footer]
+                if child is not None
+            ]
         )
-    else:
-        return CardItem(content)
+
+        # If there is a sidebar, make a size 1 array of the layout_sidebar content
+        if self.sidebar:
+            contents = [
+                layout_sidebar(
+                    self.sidebar,
+                    *contents,
+                    fillable=True,
+                    border=False,
+                )
+            ]
+
+        return card(
+            card_header(nav) if self.placement == "above" else None,
+            *contents,
+            card_footer(nav) if self.placement == "below" else None,
+        )
 
 
 def navset_card_tab(
@@ -1168,6 +1154,18 @@ def render_navset(
         div_tag.append(contents)
 
     return ul_tag, div_tag
+
+
+def wrap_each_content(
+    contents: list[TagChild], wrapper: WrapperCallable = card_body
+) -> list[CardItem]:
+    ret: list[CardItem] = []
+    for content_item in contents:
+        if isinstance(content_item, CardItem):
+            ret.append(content_item)
+        else:
+            ret.append(wrapper(content_item))
+    return ret
 
 
 ##############################################
