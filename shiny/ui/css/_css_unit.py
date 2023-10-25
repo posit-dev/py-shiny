@@ -100,3 +100,7 @@ def as_width_unit(x: str | float | int) -> str:
     # TODO-bslib: validateCssUnit() should maybe support fr units?
     # return(paste(x, collapse = " "))
     return as_css_unit(x)
+
+
+def _isinstance_cssunit(x: object) -> bool:
+    return isinstance(x, (int, float, str))
