@@ -11,7 +11,7 @@ import shutil
 import sys
 import types
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import click
 import uvicorn
@@ -145,6 +145,7 @@ def run(
     app: str | shiny.App,
     host: str,
     port: int,
+    *,
     autoreload_port: int,
     reload: bool,
     reload_dirs: tuple[str, ...],
@@ -163,7 +164,6 @@ def run(
         app,
         host=host,
         port=port,
-        **kwargs,
         autoreload_port=autoreload_port,
         reload=reload,
         reload_dirs=list(reload_dirs),
@@ -174,6 +174,7 @@ def run(
         app_dir=app_dir,
         factory=factory,
         launch_browser=launch_browser,
+        **kwargs,
     )
 
 
@@ -181,6 +182,7 @@ def run_app(
     app: str | shiny.App = "app:app",
     host: str = "127.0.0.1",
     port: int = 8000,
+    *,
     autoreload_port: int = 0,
     reload: bool = False,
     reload_dirs: Optional[list[str]] = None,
