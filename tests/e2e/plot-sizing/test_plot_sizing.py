@@ -35,7 +35,7 @@ def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:
             # These assertions are mostly to ensure that the plots load before we
             # evaluate their sizes
             img.expect_inline(inline=False)
-            img.expect_img_src(re.compile(r"data:image/png;base64"))
+            img.expect_img_src(re.compile(r"data:image/png;base64"), timeout=20)
 
             rect = page.evaluate(
                 f"() => document.querySelector('#{plotid} img').getBoundingClientRect()"
