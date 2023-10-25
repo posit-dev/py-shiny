@@ -14,19 +14,19 @@ from ..session import Inputs, Outputs, Session
 from ..ui import tags
 
 __all__ = (
-    "wrap_flat_app",
-    "is_flat_app",
+    "wrap_express_app",
+    "is_express_app",
 )
 
 
-def wrap_flat_app(file: Path | None = None) -> App:
-    """Wrap a flat Shiny app into a Shiny `App` object.
+def wrap_express_app(file: Path | None = None) -> App:
+    """Wrap a Shiny express-mode app into a Shiny `App` object.
 
     Parameters
     ----------
     file
-        The path to the file containing the flat Shiny application. If `None`, the
-        `SHINY_FLAT_APP_FILE` environment variable is used.
+        The path to the file containing the Shiny express application. If `None`, the
+        `SHINY_EXPRESS_APP_FILE` environment variable is used.
 
     Returns
     -------
@@ -34,10 +34,10 @@ def wrap_flat_app(file: Path | None = None) -> App:
         A `shiny.App` object.
     """
     if file is None:
-        app_file = os.getenv("SHINY_FLAT_APP_FILE")
+        app_file = os.getenv("SHINY_EXPRESS_APP_FILE")
         if app_file is None:
             raise ValueError(
-                "No app file was specified and the SHINY_FLAT_APP_FILE environment variable "
+                "No app file was specified and the SHINY_EXPRESS_APP_FILE environment variable "
                 "is not set."
             )
         file = Path(os.getcwd()) / app_file
@@ -45,19 +45,19 @@ def wrap_flat_app(file: Path | None = None) -> App:
     # TODO: title and lang
     app_ui = ui.page_fluid(ui.output_ui("__page__", style="display: contents;"))
 
-    def flat_server(input: Inputs, output: Outputs, session: Session):
-        dyn_ui = flat_run(file)
+    def express_server(input: Inputs, output: Outputs, session: Session):
+        dyn_ui = express_run(file)
 
         @render.ui
         def __page__():
             return dyn_ui
 
-    app = App(app_ui, flat_server)
+    app = App(app_ui, express_server)
 
     return app
 
 
-def is_flat_app(app: str, app_dir: str | None) -> bool:
+def is_express_app(app: str, app_dir: str | None) -> bool:
     if app_dir is not None:
         app_path = Path(app_dir) / app
     else:
@@ -68,7 +68,7 @@ def is_flat_app(app: str, app_dir: str | None) -> bool:
 
     with open(app_path) as f:
         pattern = re.compile(
-            "^(import shiny.flat)|(from shiny.flat import)|(from shiny import flat)"
+            r"^(import shiny.express)|(from shiny.express import)|(from shiny import .*\bexpress\b)"
         )
 
         for line in f:
@@ -78,7 +78,7 @@ def is_flat_app(app: str, app_dir: str | None) -> bool:
     return False
 
 
-def flat_run(file: Path) -> TagList:
+def express_run(file: Path) -> TagList:
     with open(file) as f:
         content = f.read()
 

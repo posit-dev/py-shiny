@@ -6,7 +6,7 @@ from ..session import Inputs, Outputs, Session
 from ..session import _utils as session_utils
 
 from ._output import output_args, suspend_display
-from ._run import is_flat_app, wrap_flat_app
+from ._run import is_express_app, wrap_express_app
 from . import app
 from . import layout
 
@@ -14,10 +14,10 @@ __all__ = (
     "input",
     "output",
     "session",
-    "is_flat_app",
+    "is_express_app",
     "output_args",
     "suspend_display",
-    "wrap_flat_app",
+    "wrap_express_app",
     "app",
     "layout",
 )

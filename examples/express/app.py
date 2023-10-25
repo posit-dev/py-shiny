@@ -1,5 +1,5 @@
 from shiny import render, ui
-from shiny.flat import input, layout, output_args, suspend_display
+from shiny.express import input, layout, output_args, suspend_display
 
 ui.input_slider("n", "N", 1, 100, 50)
 

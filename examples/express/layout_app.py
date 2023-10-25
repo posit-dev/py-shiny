@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from shiny import render, ui
-from shiny.flat import input, layout
+from shiny.express import input, layout
 
 with layout.page_sidebar():
     with layout.sidebar():
