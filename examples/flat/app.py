@@ -1,5 +1,5 @@
 from shiny import render, ui
-from shiny.flat import input, output_args, suspend_display
+from shiny.flat import input, layout, output_args, suspend_display
 
 ui.input_slider("n", "N", 1, 100, 50)
 
@@ -21,3 +21,6 @@ with suspend_display():
     ui.div("This div should not be displayed")
 
 ui.div("But this one should")
+
+with layout.div(style="color: red;"):
+    "Hello"

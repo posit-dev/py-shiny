@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
-from htmltools import Tag, TagAttrValue, TagList
+import htmltools
+from htmltools import Tag, TagAttrValue, TagChild, TagList
 
 from .. import ui
 from .._recall_context import RecallContextManager, wrap_recall_context_manager
 from ..types import MISSING, MISSING_TYPE
+from ..ui.css import CssUnit
 
 __all__ = (
     "sidebar",
@@ -16,7 +18,49 @@ __all__ = (
 )
 
 
-sidebar = wrap_recall_context_manager(ui.sidebar)
+# ======================================================================================
+# htmltools Tag functions
+# ======================================================================================
+
+p = wrap_recall_context_manager(htmltools.p)
+div = wrap_recall_context_manager(htmltools.div)
+span = wrap_recall_context_manager(htmltools.span)
+pre = wrap_recall_context_manager(htmltools.pre)
+
+
+# ======================================================================================
+# Shiny layout components
+# ======================================================================================
+
+
+def sidebar(
+    *,
+    width: CssUnit = 250,
+    position: Literal["left", "right"] = "left",
+    open: Literal["desktop", "open", "closed", "always"] = "desktop",
+    id: Optional[str] = None,
+    title: TagChild | str = None,
+    bg: Optional[str] = None,
+    fg: Optional[str] = None,
+    class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
+    max_height_mobile: Optional[str | float] = None,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+) -> RecallContextManager[ui.Sidebar]:
+    return RecallContextManager(
+        ui.sidebar,
+        width=width,
+        position=position,
+        open=open,
+        id=id,
+        title=title,
+        bg=bg,
+        fg=fg,
+        class_=class_,
+        max_height_mobile=max_height_mobile,
+        gap=gap,
+        padding=padding,
+    )
 
 
 def page_sidebar(
@@ -39,15 +83,36 @@ def page_sidebar(
     )
 
 
-def column(
-    width: int, *, offset: int = 0, **kwargs: TagAttrValue
-) -> RecallContextManager:
+def column(width: int, *, offset: int = 0, **kwargs: TagAttrValue):
     return RecallContextManager(
         ui.column,
-        width=width,
+        width,
         offset=offset,
         **kwargs,
     )
 
 
-row = wrap_recall_context_manager(ui.row)
+def row(**kwargs: TagAttrValue):
+    return RecallContextManager(ui.row, **kwargs)
+
+
+def card(
+    *,
+    full_screen: bool = False,
+    height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
+    fill: bool = True,
+    class_: Optional[str] = None,
+    **kwargs: TagAttrValue,
+):
+    return RecallContextManager(
+        ui.card,
+        full_screen=full_screen,
+        height=height,
+        max_height=max_height,
+        min_height=min_height,
+        fill=fill,
+        class_=class_,
+        **kwargs,
+    )

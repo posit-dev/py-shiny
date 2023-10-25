@@ -3,15 +3,15 @@ from __future__ import annotations
 import functools
 import sys
 from types import TracebackType
-from typing import Callable, Optional, ParamSpec, Type, TypeVar
+from typing import Callable, Generic, Optional, ParamSpec, Type, TypeVar
 
 P = ParamSpec("P")
 R = TypeVar("R")
 U = TypeVar("U")
 
 
-class RecallContextManager:
-    def __init__(self, fn: Callable[..., object], *args: object, **kwargs: object):
+class RecallContextManager(Generic[R]):
+    def __init__(self, fn: Callable[..., R], *args: object, **kwargs: object):
         self._fn = fn
         self._args: list[object] = list(args)
         self._kwargs: dict[str, object] = kwargs
@@ -34,9 +34,11 @@ class RecallContextManager:
         return False
 
 
-def wrap_recall_context_manager(fn: Callable[P, object]):
+def wrap_recall_context_manager(
+    fn: Callable[P, R]
+) -> Callable[P, RecallContextManager[R]]:
     @functools.wraps(fn)
-    def wrapped_fn(*args: P.args, **kwargs: P.kwargs) -> RecallContextManager:
+    def wrapped_fn(*args: P.args, **kwargs: P.kwargs) -> RecallContextManager[R]:
         return RecallContextManager(fn, *args, **kwargs)
 
     return wrapped_fn
