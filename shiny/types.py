@@ -12,7 +12,7 @@ __all__ = (
     "SilentCancelOutputException",
 )
 
-from typing import TYPE_CHECKING, Any, BinaryIO, Literal, Optional, Protocol
+from typing import TYPE_CHECKING, Any, BinaryIO, Literal, NamedTuple, Optional, Protocol
 
 from htmltools import TagChild
 
@@ -187,6 +187,7 @@ class PlotnineFigure(Protocol):
     facet: Any
     layout: Any
     mapping: dict[str, str]
+    theme: PlotnineTheme
 
     def save(
         self,
@@ -203,6 +204,18 @@ class PlotnineFigure(Protocol):
 
     def draw(self, show: bool) -> Figure:
         ...
+
+
+class PlotnineTheme(NamedTuple):
+    themeables: PlotnineThemeables
+
+
+class PlotnineThemeables(TypedDict):
+    figure_size: PlotnineThemeable | None
+
+
+class PlotnineThemeable(NamedTuple):
+    properties: dict[str, Any]
 
 
 class CoordmapDims(TypedDict):

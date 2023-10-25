@@ -15,6 +15,8 @@ import typing
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
+    Literal,
     Optional,
     ParamSpec,
     Protocol,
@@ -34,7 +36,12 @@ from .. import _utils
 from .. import ui as _ui
 from .._namespaces import ResolvedId
 from ..types import ImgData
-from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_plotnine
+from ._try_render_plot import (
+    PlotSizeInfo,
+    try_render_matplotlib,
+    try_render_pil,
+    try_render_plotnine,
+)
 from .transformer import (
     TransformerMetadata,
     ValueFn,
@@ -139,9 +146,6 @@ async def PlotTransformer(
     height: Optional[float] = None,
     **kwargs: object,
 ) -> ImgData | None:
-    import matplotlib as mpl
-    import matplotlib.pyplot as plt
-
     is_userfn_async = is_async_callable(_fn)
     name = _meta.name
     session = _meta.session
@@ -154,18 +158,25 @@ async def PlotTransformer(
     pixelratio: float = typing.cast(
         float, inputs[ResolvedId(".clientdata_pixelratio")]()
     )
-    if width is None:
-        width = typing.cast(
-            float, inputs[ResolvedId(f".clientdata_output_{name}_width")]()
-        )
-    if height is None:
-        height = typing.cast(
-            float, inputs[ResolvedId(f".clientdata_output_{name}_height")]()
-        )
 
-    mpl.rcParams["figure.dpi"] = ppi * pixelratio
-    mpl.rcParams["figure.figsize"] = [width / ppi, height / ppi]
-    plt.close()  # type: ignore
+    # Do NOT call this unless you actually are going to respect the container dimension
+    # you're asking for. It takes a reactive dependency. If the client hasn't reported
+    # the requested dimension, you'll get a SilentException.
+    def container_size(dimension: Literal["width", "height"]) -> Callable[[], float]:
+        def container_size_fn() -> float:
+            result = inputs[ResolvedId(f".clientdata_output_{name}_{dimension}")]()
+            return typing.cast(float, result)
+
+        return container_size_fn
+
+    plot_size_info = PlotSizeInfo(
+        container_size_px_fn=(
+            container_size("width"),
+            container_size("height"),
+        ),
+        user_specified_size_px=(width, height),
+        pixelratio=pixelratio,
+    )
 
     # Call the user function to get the plot object.
     x = await resolve_value_fn(_fn)
@@ -190,11 +201,8 @@ async def PlotTransformer(
     if "plotnine" in sys.modules:
         ok, result = try_render_plotnine(
             x,
-            width,
-            height,
-            pixelratio,
-            ppi,
-            alt,
+            plot_size_info=plot_size_info,
+            alt=alt,
             **kwargs,
         )
         if ok:
@@ -203,10 +211,7 @@ async def PlotTransformer(
     if "matplotlib" in sys.modules:
         ok, result = try_render_matplotlib(
             x,
-            width,
-            height,
-            pixelratio=pixelratio,
-            ppi=ppi,
+            plot_size_info=plot_size_info,
             allow_global=not is_userfn_async,
             alt=alt,
             **kwargs,
@@ -217,11 +222,9 @@ async def PlotTransformer(
     if "PIL" in sys.modules:
         ok, result = try_render_pil(
             x,
-            width,
-            height,
-            pixelratio,
-            ppi,
-            alt,
+            plot_size_info=plot_size_info,
+            ppi=ppi,
+            alt=alt,
             **kwargs,
         )
         if ok:
