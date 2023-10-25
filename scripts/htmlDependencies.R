@@ -212,6 +212,26 @@ message("Cleanup bootstrap bundle")
 # comes in naturally via the bootstrap HTMLDependency()
 fs::dir_delete(fs::path(www_shared, "bs3compat"))
 
+# Remove non-minified or unused files
+fs::file_delete(
+  fs::path(www_shared, c(
+    "datepicker/css/bootstrap-datepicker3.css",
+    "datepicker/js/bootstrap-datepicker.js",
+    "datepicker/scss",
+    "ionrangeslider/js/ion.rangeSlider.js",
+    "ionrangeslider/scss",
+    "jquery/jquery-3.6.0.js",
+    "jqueryui/jquery-ui.css",
+    "jqueryui/jquery-ui.js",
+    "jqueryui/jquery-ui.structure.css",
+    "jqueryui/jquery-ui.structure.min.css",
+    "jqueryui/jquery-ui.theme.css",
+    "jqueryui/jquery-ui.theme.min.css",
+    "selectize/accessibility/js/selectize-plugin-a11y.js",
+    "selectize/js/selectize.js"
+  ))
+)
+
 
 # ------------------------------------------------------------------------------
 message("Save requirejs")
