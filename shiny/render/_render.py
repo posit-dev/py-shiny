@@ -15,7 +15,6 @@ import typing
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Literal,
     Optional,
     Protocol,
