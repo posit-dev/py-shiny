@@ -48,8 +48,13 @@ def layout_column_wrap(
         :func:`~shiny.ui.card`). Named arguments become attributes on the
         containing :class:`~htmltools.Tag` element.
     fixed_width
-        Whether or not to interpret the `width` as a minimum (`fixed_width=False`) or
-        fixed (`fixed_width=True`) width when it is a CSS length unit.
+        When `width` is greater than 1 or is a CSS length unit, e.g. `"200px"`,
+        `fixed_width` indicates whether that `width` value represents the absolute size
+        of each column (`fixed_width=TRUE`) or the minimum size of a column
+        (`fixed_width=FALSE`). When `fixed_width=FALSE`, new columns are added to a row
+        when `width` space is available and columns will never exceed the container or
+        viewport size. When `fixed_width=TRUE`, all columns will be exactly `width`
+        wide, which may result in columns overflowing the parent container.
     heights_equal
         If `"all"` (the default), every card in every row of the grid will have the same
         height. If `"row"`, then every card in _each_ row of the grid will have the same
@@ -92,7 +97,7 @@ def layout_column_wrap(
             if fixed_width:
                 colspec = f"repeat(auto-fit, minmax({width_css_unit}, 1fr))"
             else:
-                colspec = f"repeat(auto-fit, minmax(0, {width_css_unit}))"
+                colspec = f"repeat(auto-fit, minmax(min({width_css_unit}, 100%), 1fr))"
 
     # Use a new dict so that we don't mutate the original `children` dict
     upgraded_children: list[TagChild] = []
