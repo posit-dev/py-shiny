@@ -8,7 +8,9 @@ __all__ = (
     "navset_tab",
     "navset_card_tab",
     "navset_pill",
+    "navset_underline",
     "navset_card_pill",
+    "navset_card_underline",
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
@@ -16,6 +18,11 @@ __all__ = (
     "navset_pill_card",
     "navset_tab_card",
 )
+
+# TODO-barret; Add `title` support to all navs where it makes sense. This goes in the navbar
+# TODO-barret; Add See Also entries for `navset_underline` and `navset_card_underline()`
+# TODO-barret; Add Docs entries for `navset_underline` and `navset_card_underline()`
+# TODO-barret; Add quartodoc entries for `navset_underline` and `navset_card_underline()`
 
 import copy
 import re
@@ -29,7 +36,7 @@ from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
 from ..types import NavSetArg
 from ._bootstrap import column, row
-from ._card import CardItem, card, card_body, card_footer, card_header
+from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
 from ._html_deps_shinyverse import components_dependency
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import tag_add_style
@@ -492,6 +499,23 @@ def navset_pill(
     )
 
 
+def navset_underline(
+    *args: NavSetArg,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+) -> NavSet:
+    return NavSet(
+        *args,
+        ul_class="nav nav-underline",
+        id=resolve_id_or_none(id),
+        selected=selected,
+        header=header,
+        footer=footer,
+    )
+
+
 @add_example()
 def navset_hidden(
     *args: NavSetArg,
@@ -735,6 +759,29 @@ def navset_card_pill(
     )
 
 
+def navset_card_underline(
+    *args: NavSetArg,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    sidebar: Optional[
+        Sidebar
+    ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` include `Sidebar` and have the sidebar retrieved from within the args?
+    header: TagChild = None,
+    footer: TagChild = None,
+    placement: Literal["above", "below"] = "above",
+) -> NavSetCard:
+    return NavSetCard(
+        *args,
+        ul_class="nav nav-underline",
+        id=resolve_id_or_none(id),
+        selected=selected,
+        sidebar=sidebar,
+        header=header,
+        footer=footer,
+        placement=placement,
+    )
+
+
 class NavSetPillList(NavSet):
     well: bool
     widths: tuple[int, int]
@@ -840,6 +887,7 @@ class NavSetBar(NavSet):
     position: Literal["static-top", "fixed-top", "fixed-bottom", "sticky-top"]
     bg: Optional[str]
     inverse: bool
+    underline: bool
     collapsible: bool
     fluid: bool
 
@@ -864,6 +912,7 @@ class NavSetBar(NavSet):
         bg: Optional[str] = None,
         # TODO: default to 'auto', like we have in R (parse color via webcolors?)
         inverse: bool = False,
+        underline: bool = True,
         collapsible: bool = True,
         fluid: bool = True,
     ) -> None:
@@ -883,6 +932,7 @@ class NavSetBar(NavSet):
         self.position = position
         self.bg = bg
         self.inverse = inverse
+        self.underline = underline
         self.collapsible = collapsible
         self.fluid = fluid
 
@@ -921,7 +971,11 @@ class NavSetBar(NavSet):
             nav_final.add_class(f"bg-{'dark' if self.inverse else 'light'}")
 
         content = _make_tabs_fillable(
-            content, self.fillable, gap=self.gap, padding=self.padding, navbar=True
+            content,
+            self.fillable,
+            gap=self.gap,
+            padding=self.padding,
+            navbar=True,
         )
 
         # 2023-05-11; Do not wrap `row()` around `self.header` and `self.footer`
@@ -995,6 +1049,7 @@ def _make_tabs_fillable(
     return content
 
 
+# TODO-future; Content should not be indented unless when called from `page_navbar()`
 def navset_bar(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     title: TagChild,
@@ -1014,6 +1069,7 @@ def navset_bar(
     bg: Optional[str] = None,
     # TODO: default to 'auto', like we have in R (parse color via webcolors?)
     inverse: bool = False,
+    underline: bool = True,
     collapsible: bool = True,
     fluid: bool = True,
 ) -> NavSetBar:
@@ -1096,9 +1152,13 @@ def navset_bar(
         else:
             new_args.append(cast(NavSetArg, arg))
 
+    ul_class = "nav navbar-nav"
+    if underline:
+        ul_class += " nav-underline"
+
     return NavSetBar(
         *new_args,
-        ul_class="nav navbar-nav",
+        ul_class=ul_class,
         id=resolve_id_or_none(id),
         selected=selected,
         sidebar=sidebar,
@@ -1111,6 +1171,7 @@ def navset_bar(
         footer=footer,
         bg=bg,
         inverse=inverse,
+        underline=underline,
         collapsible=collapsible,
         fluid=fluid,
     )
