@@ -949,7 +949,7 @@ class NavSetBar(NavSet):
     def layout(self, nav: Tag, content: Tag) -> TagList:
         nav_container = div(
             {"class": "container-fluid" if self.fluid else "container"},
-            tags.a({"class": "navbar-brand", "href": "#"}, self.title),
+            tags.span({"class": "navbar-brand"}, self.title),
         )
         if self.collapsible:
             collapse_id = "navbar-collapse-" + private_random_int(1000, 10000)
