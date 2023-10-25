@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import sys
-
 from ..session import Inputs, Outputs, Session
 from ..session import _utils as session_utils
 
@@ -28,17 +26,13 @@ output: Outputs
 session: Session
 
 
-class ThisMod(sys.modules[__name__].__class__):
-    def __getattr__(self, name: str):
-        # TODO: cache the value so that it is the same on subsequent calls?
-        if name == "input":
-            return session_utils.get_current_session().input
-        elif name == "session":
-            return session_utils.get_current_session()
-        elif name == "output":
-            # warn?
-            return session_utils.get_current_session().output
-        raise AttributeError(name=name)
-
-
-sys.modules[__name__].__class__ = ThisMod
+def __getattr__(name: str):
+    # TODO: cache the value so that it is the same on subsequent calls?
+    if name == "input":
+        return session_utils.get_current_session().input
+    elif name == "session":
+        return session_utils.get_current_session()
+    elif name == "output":
+        # warn?
+        return session_utils.get_current_session().output
+    raise AttributeError(name=name)
