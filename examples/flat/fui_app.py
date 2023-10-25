@@ -3,10 +3,10 @@ import numpy as np
 
 from shiny import render, ui
 from shiny.flat import input
-from shiny.flat import ui as fui
+from shiny.flat import ui as uic
 
-with fui.page_sidebar():
-    with fui.sidebar():
+with uic.page_sidebar():
+    with uic.sidebar():
         ui.input_slider("n", "N", 1, 100, 50)
 
     @render.plot
