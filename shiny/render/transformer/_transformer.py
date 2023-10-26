@@ -264,7 +264,7 @@ class OutputRenderer(Generic[OT], ABC):
         self._transformer = transform_fn
         self._params = params
         self.default_ui = default_ui
-        self.default_ui_args: tuple[object, ...] = []
+        self.default_ui_args: tuple[object, ...] = cast(tuple[object, ...], [])
         self.default_ui_kwargs: dict[str, object] = dict()
         self._auto_registered = False
 

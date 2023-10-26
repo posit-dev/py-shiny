@@ -1,4 +1,5 @@
 import sys
+from typing import Any
 
 import pytest
 
@@ -56,6 +57,12 @@ def test_suspend_display():
         with suspend_display():
             sys.displayhook("foo")
         suspend_display(lambda: sys.displayhook("bar"))()
+
+        @suspend_display
+        def whatever(x: Any):
+            sys.displayhook(x)
+
+        whatever(100)
 
         assert not called
 

@@ -16,6 +16,7 @@ __all__ = (
 OT = TypeVar("OT")
 P = ParamSpec("P")
 R = TypeVar("R")
+CallableT = TypeVar("CallableT", bound=Callable[..., object])
 
 
 def output_args(
@@ -52,12 +53,7 @@ def output_args(
 
 
 @overload
-def suspend_display(fn: OutputRenderer[OT]) -> OutputRenderer[OT]:
-    ...
-
-
-@overload
-def suspend_display(fn: Callable[P, R]) -> Callable[P, R]:
+def suspend_display(fn: CallableT) -> CallableT:
     ...
 
 
