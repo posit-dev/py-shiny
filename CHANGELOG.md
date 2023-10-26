@@ -79,6 +79,9 @@ Methods still under consideration in `shiny.experimental.ui`:
 
 ### Other changes
 
+### Breaking Changes
+* `shiny.run` only allows positional arguments for `app`, `host`, and `port`, all other arguments must be specified with keywords.
+
 
 ## [0.5.1] - 2023-08-08
 
