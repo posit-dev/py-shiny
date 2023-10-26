@@ -27,6 +27,7 @@ from typing import (
     TYPE_CHECKING,
     Awaitable,
     Callable,
+    Dict,
     Generic,
     NamedTuple,
     Optional,
@@ -164,10 +165,10 @@ is not awaitable (a _synchronous_ function), then the execution of the transform
 function should also be synchronous.
 """
 
-DefaultUIFn = Callable[[str], TagList | Tag | MetadataNode | str]
+DefaultUIFn = Callable[[str], Union[TagList, Tag, MetadataNode, str]]
 DefaultUIFnImpl = Union[
     DefaultUIFn,
-    Callable[[dict[str, object], str], TagList | Tag | MetadataNode | str],
+    Callable[[Dict[str, object], str], Union[TagList, Tag, MetadataNode, str]],
 ]
 
 

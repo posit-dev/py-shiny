@@ -2,7 +2,7 @@ from __future__ import annotations
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -37,7 +37,7 @@ def plot_server(
     input: Inputs,
     output: Outputs,
     session: Session,
-    plot_fn: Callable[[tuple[float, float] | None], Any],
+    plot_fn: Callable[[tuple[float, float] | None], object],
 ):
     @render.plot
     def plot_default():
@@ -83,7 +83,7 @@ app_ui = ui.page_navbar(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    def plot_with_mpl(fig_size: tuple[float, float] | None):
+    def plot_with_mpl(fig_size: tuple[float, float] | None) -> object:
         fig, ax = plt.subplots(facecolor="lavender")
         X, Y = np.mgrid[-4:4, -4:4]
         ax.quiver(X, Y)
@@ -99,7 +99,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         return fig
 
-    def plot_with_plotnine(fig_size: tuple[float, float] | None) -> Any:
+    def plot_with_plotnine(fig_size: tuple[float, float] | None) -> object:
         p = (
             ggplot(mtcars, aes("wt", "mpg", color="factor(gear)"))
             + geom_point()
@@ -119,7 +119,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             )
         return p
 
-    def plot_with_pil(fig_size: tuple[float, float] | None):
+    def plot_with_pil(fig_size: tuple[float, float] | None) -> object:
         req(fig_size is None)
         return Image.open(Path(__file__).parent / "bike.jpg")
 
