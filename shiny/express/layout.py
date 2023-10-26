@@ -6,16 +6,28 @@ import htmltools
 from htmltools import Tag, TagAttrValue, TagChild, TagList
 
 from .. import ui
-from .._recall_context import RecallContextManager, wrap_recall_context_manager
 from ..types import MISSING, MISSING_TYPE
 from ..ui.css import CssUnit
+from . import _run
+from ._recall_context import RecallContextManager, wrap_recall_context_manager
 
 __all__ = (
+    "set_page",
     "sidebar",
     "page_sidebar",
     "column",
     "row",
 )
+
+
+# ======================================================================================
+# Page functions
+# ======================================================================================
+
+
+def set_page(page_fn: RecallContextManager[Tag]):
+    """Set the page function for the current Shiny express app."""
+    _run.replace_top_level_recall_context_manager(page_fn)
 
 
 # ======================================================================================
@@ -31,6 +43,20 @@ pre = wrap_recall_context_manager(htmltools.pre)
 # ======================================================================================
 # Shiny layout components
 # ======================================================================================
+
+
+def page_fluid(
+    *,
+    title: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: str,
+) -> RecallContextManager[Tag]:
+    return RecallContextManager(
+        ui.page_fluid,
+        title=title,
+        lang=lang,
+        **kwargs,
+    )
 
 
 def sidebar(

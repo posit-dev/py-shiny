@@ -6,12 +6,13 @@ import re
 import sys
 from pathlib import Path
 
-from htmltools import HTML, Tag, Tagifiable, TagList
+from htmltools import Tag, TagList
 
 from .. import render, ui
 from .._app import App
 from ..session import Inputs, Outputs, Session
 from ..ui import tags
+from ._recall_context import RecallContextManager
 
 __all__ = (
     "wrap_express_app",
@@ -43,7 +44,11 @@ def wrap_express_app(file: Path | None = None) -> App:
         file = Path(os.getcwd()) / app_file
 
     # TODO: title and lang
-    app_ui = ui.page_fluid(ui.output_ui("__page__", style="display: contents;"))
+    app_ui = tags.html(
+        tags.head(),
+        ui.output_ui("__page__", container=ui.tags.body),
+        lang="en",
+    )
 
     def express_server(input: Inputs, output: Outputs, session: Session):
         dyn_ui = express_run(file)
@@ -78,25 +83,23 @@ def is_express_app(app: str, app_dir: str | None) -> bool:
     return False
 
 
-def express_run(file: Path) -> TagList:
+def express_run(file: Path) -> Tag | TagList:
     with open(file) as f:
         content = f.read()
 
     tree = ast.parse(content, file)
     DisplayFuncsTransformer().visit(tree)
 
-    collected_ui = TagList()
+    ui_result: Tag | TagList = TagList()
 
-    def collect_ui(value: object):
-        if isinstance(value, (Tag, TagList, Tagifiable)):
-            collected_ui.append(value)
-        elif hasattr(value, "_repr_html_"):
-            collected_ui.append(HTML(value._repr_html_()))  # pyright: ignore
-        else:
-            if value is not None:
-                collected_ui.append(tags.pre(repr(value)))
+    def set_result(x: object):
+        nonlocal ui_result
+        ui_result = x
 
-    sys.displayhook = collect_ui
+    sys.displayhook = set_result
+
+    reset_top_level_recall_context_manager()
+    get_top_level_recall_context_manager().__enter__()
 
     file_path = str(file.resolve())
 
@@ -122,7 +125,56 @@ def express_run(file: Path) -> TagList:
                 var_context,
             )
 
-    return collected_ui
+    get_top_level_recall_context_manager().__exit__(None, None, None)
+    return ui_result
+
+
+_top_level_recall_context_manager: RecallContextManager[Tag]
+
+
+def reset_top_level_recall_context_manager():
+    global _top_level_recall_context_manager
+    _top_level_recall_context_manager = RecallContextManager(ui.page_fluid)
+
+
+def get_top_level_recall_context_manager():
+    return _top_level_recall_context_manager
+
+
+def replace_top_level_recall_context_manager(
+    cm: RecallContextManager[Tag],
+) -> RecallContextManager[Tag]:
+    """
+    Replace the current top level RecallContextManager with another one.
+
+    This transfers the `args` and `kwargs` from the previous RecallContextManager to the
+    new one.
+
+    Parameters
+    ----------
+    cm
+        The RecallContextManager to replace the previous one.
+
+    Returns
+    -------
+    :
+        The previous top level RecallContextManager.
+    """
+    global _top_level_recall_context_manager
+    old_cm = _top_level_recall_context_manager
+
+    args = old_cm._args.copy()
+    args.extend(cm._args)
+    cm._args = args
+
+    kwargs = old_cm._kwargs.copy()
+    kwargs.update(cm._kwargs)
+    cm._kwargs = kwargs
+
+    old_cm.__exit__(BaseException, None, None)
+    cm.__enter__()
+    _top_level_recall_context_manager = cm
+    return old_cm
 
 
 class DisplayFuncsTransformer(ast.NodeTransformer):
