@@ -3,9 +3,10 @@ from __future__ import annotations
 import contextlib
 import sys
 from contextlib import AbstractContextManager
-from typing import Callable, ParamSpec, TypeVar, cast, overload
+from typing import Callable, TypeVar, cast, overload
 
 from .. import ui
+from .._typing_extensions import ParamSpec
 from ..render.transformer import OutputRenderer
 
 __all__ = (
