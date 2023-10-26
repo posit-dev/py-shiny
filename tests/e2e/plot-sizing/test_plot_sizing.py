@@ -42,3 +42,16 @@ def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:
             )
             assert abs(rect["width"] - 300) < 1e-4
             assert abs(rect["height"] - 200) < 1e-4
+
+
+def test_decorator_passthrough_size():
+    """Make sure that render.plot width/height are passed through to implicit output"""
+    from shiny import render
+
+    @render.plot(width=1280, height=960)
+    def foo():
+        ...
+
+    rendered = str(foo.tagify())
+    assert "1280px" in rendered
+    assert "960px" in rendered

@@ -24,7 +24,7 @@ from typing import (
     runtime_checkable,
 )
 
-from htmltools import Tag, TagChild
+from htmltools import TagChild
 
 if TYPE_CHECKING:
     from ..session._utils import RenderedDeps
@@ -103,39 +103,13 @@ def text(
 # ======================================================================================
 
 
-def _default_plot_ui(
-    id: str, *args: Any, _params: dict[str, Any] | None = None, **kwargs: Any
-) -> Tag:
-    # The _params argument contains the arguments that were passed to `@render.plot`. In
-    # the specific case of `@render.plot`, we grab the width and height arguments from
-    # the decorator and apply them to the output_plot call.
-    if _params is not None:
-        extra_args = {}
-
-        if "width" in _params:
-            extra_args["width"] = (
-                f"{_params['width']}px"
-                if isinstance(_params["width"], (int, float))
-                else str(_params["width"])
-            )
-
-        if "height" in _params:
-            extra_args["height"] = (
-                f"{_params['height']}px"
-                if isinstance(_params["height"], (int, float))
-                else str(_params["height"])
-            )
-
-        kwargs.update(extra_args)
-
-    return _ui.output_plot(id, *args, **kwargs)
-
-
 # It would be nice to specify the return type of RenderPlotFunc to be something like:
 #   Union[matplotlib.figure.Figure, PIL.Image.Image]
 # However, if we did that, we'd have to import those modules at load time, which adds
 # a nontrivial amount of overhead. So for now, we're just using `object`.
-@output_transformer(default_ui=_default_plot_ui)
+@output_transformer(
+    default_ui=_ui.output_plot, default_ui_passthrough_args=("width", "height")
+)
 async def PlotTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[object],

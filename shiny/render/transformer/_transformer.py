@@ -163,6 +163,13 @@ is not awaitable (a _synchronous_ function), then the execution of the transform
 function should also be synchronous.
 """
 
+if TYPE_CHECKING:
+    DefaultUIFn = Callable[[str], TagList | Tag | MetadataNode | str]
+    DefaultUIFnImpl = Union[
+        DefaultUIFn,
+        Callable[[dict[str, object], str], TagList | Tag | MetadataNode | str],
+    ]
+
 
 class OutputRenderer(Generic[OT], ABC):
     """
@@ -221,7 +228,7 @@ class OutputRenderer(Generic[OT], ABC):
         value_fn: ValueFn[IT],
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
-        default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
+        default_ui: Optional[DefaultUIFnImpl] = None,
     ) -> None:
         """
         Parameters
@@ -330,10 +337,11 @@ class OutputRenderer(Generic[OT], ABC):
         if self.default_ui is None:
             return TagList()
 
-        if "_params" in inspect.signature(self.default_ui).parameters:
-            return self.default_ui(self.__name__, _params=self._params.kwargs)  # type: ignore
+        params = tuple(inspect.signature(self.default_ui).parameters.values())
+        if len(params) > 0 and params[0].name == "_params":
+            return self.default_ui(self._params.kwargs, self.__name__)  # type: ignore
         else:
-            return self.default_ui(self.__name__)
+            return cast(DefaultUIFn, self.default_ui)(self.__name__)
 
 
 # Using a second class to help clarify that it is of a particular type
@@ -355,7 +363,7 @@ class OutputRendererSync(OutputRenderer[OT]):
         value_fn: ValueFnSync[IT],
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
-        default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
+        default_ui: Optional[DefaultUIFnImpl] = None,
     ) -> None:
         if is_async_callable(value_fn):
             raise TypeError(
@@ -397,7 +405,7 @@ class OutputRendererAsync(OutputRenderer[OT]):
         value_fn: ValueFnAsync[IT],
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
-        default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
+        default_ui: Optional[DefaultUIFnImpl] = None,
     ) -> None:
         if not is_async_callable(value_fn):
             raise TypeError(
@@ -574,7 +582,8 @@ class OutputTransformer(Generic[IT, OT, P]):
 @overload
 def output_transformer(
     *,
-    default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
+    default_ui: Optional[DefaultUIFn] = None,
+    default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
 ) -> Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]:
     ...
 
@@ -590,7 +599,8 @@ def output_transformer(
 def output_transformer(
     transform_fn: TransformFn[IT, P, OT] | None = None,
     *,
-    default_ui: Callable[[str], TagList | Tag | MetadataNode | str] | None = None,
+    default_ui: Optional[DefaultUIFn] = None,
+    default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
 ) -> (
     OutputTransformer[IT, OT, P]
     | Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]
@@ -673,6 +683,19 @@ def output_transformer(
         called with parentheses.
     """
 
+    # If default_ui_passthrough_args was used, modify the default_ui function so it is
+    # ready to mix in extra arguments from the decorator.
+    if (
+        default_ui is not None
+        and default_ui_passthrough_args is not None
+        and len(default_ui_passthrough_args) > 0
+    ):
+        default_ui_impl = decorator_args_passthrough(
+            default_ui, default_ui_passthrough_args
+        )
+    else:
+        default_ui_impl = default_ui
+
     def output_transformer_impl(
         transform_fn: TransformFn[IT, P, OT],
     ) -> OutputTransformer[IT, OT, P]:
@@ -686,11 +709,13 @@ def output_transformer(
                 fn: ValueFn[IT],
             ) -> OutputRenderer[OT]:
                 if is_async_callable(fn):
-                    return OutputRendererAsync(fn, transform_fn, params, default_ui)
+                    return OutputRendererAsync(
+                        fn, transform_fn, params, default_ui_impl
+                    )
                 else:
                     # To avoid duplicate work just for a typeguard, we cast the function
                     fn = cast(ValueFnSync[IT], fn)
-                    return OutputRendererSync(fn, transform_fn, params, default_ui)
+                    return OutputRendererSync(fn, transform_fn, params, default_ui_impl)
 
             if value_fn is None:
                 return as_value_fn
@@ -751,3 +776,36 @@ async def resolve_value_fn(value_fn: ValueFn[IT]) -> IT:
         # To avoid duplicate work just for a typeguard, we cast the function
         value_fn = cast(ValueFnSync[IT], value_fn)
         return value_fn()
+
+
+R = TypeVar("R")
+
+
+def decorator_args_passthrough(
+    fn: Callable[P, R], passthrough: tuple[str, ...]
+) -> Callable[Concatenate[dict[str, object], P], R]:
+    """
+    Modifies a default_ui function so that it can receive certain kwargs that are
+    passed to the OutputRenderer. For example, @render.plot takes `width` and `height`
+    arguments that we'd like to pass through to `ui.output_plot`. We can do that by
+    calling `enrich_default_ui_output_fn(ui.output_plot, ("width", "height"))`.
+
+    This works by returning a wrapped version of the function that has the same
+    signature, except, with an added `_params` first argument. The OutputRenderer base
+    class will look for this magic argument and pass it the params it was created with.
+    The wrapped function will use those to prepopulate the kwargs.
+    """
+
+    def inner(_params: dict[str, object], *args: P.args, **kwargs: P.kwargs):
+        # Filter down to just the params that we care about (`in passthrough`) and did
+        # not explicitly get overwritten by more explicit argument passing (`in kwargs`)
+        extra_args = {
+            k: v for k, v in _params.items() if k in passthrough and k not in kwargs
+        }
+        # Theoretically this is mutating a dict that possibly doesn't belong to us. In
+        # practice, we're the only ones to call default_ui, so it's fine.
+        kwargs.update(extra_args)
+        # Call the wrapped function and return the result
+        return fn(*args, **kwargs)
+
+    return inner

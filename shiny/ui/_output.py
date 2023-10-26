@@ -33,8 +33,8 @@ from .fill import as_fill_item, as_fillable_container
 @add_example()
 def output_plot(
     id: str,
-    width: str = "100%",
-    height: str = "400px",
+    width: str | float | int = "100%",
+    height: str | float | int = "400px",
     *,
     inline: bool = False,
     click: bool | ClickOpts = False,
@@ -123,8 +123,8 @@ def output_plot(
 @add_example()
 def output_image(
     id: str,
-    width: str = "100%",
-    height: str = "400px",
+    width: str | float | int = "100%",
+    height: str | float | int = "400px",
     *,
     inline: bool = False,
     click: bool | ClickOpts = False,
@@ -190,6 +190,8 @@ def output_image(
     * :func:`~shiny.ui.output_plot`
     """
     func = tags.span if inline else div
+    width = f"{width}px" if isinstance(width, (float, int)) else width
+    height = f"{height}px" if isinstance(height, (float, int)) else height
     style = None if inline else css(width=width, height=height)
 
     args: dict[str, str] = dict()
