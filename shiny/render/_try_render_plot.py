@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import io
 import warnings
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, cast
 
 from ..types import ImgData, PlotnineFigure
 from ._coordmap import get_coordmap, get_coordmap_plotnine
@@ -15,15 +15,119 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
 
+class PlotSizeInfo:
+    """This class carries information from the render.plot transformer to the logic that
+    actually renders the plot to PNG. It also encapsulates the tricky logic for figuring
+    out what the image size and attributes should be."""
+
+    def __init__(
+        self,
+        container_size_px_fn: tuple[Callable[[], float], Callable[[], float]],
+        user_specified_size_px: tuple[float | None, float | None],
+        pixelratio: float,
+    ):
+        """
+        Parameters
+        ----------
+        container_size_px_fn
+            A tuple of two functions that return the width and height of the container,
+            in pixels. If the user specified an explicit width/height on the
+            @render.plot decorator, then these functions should not be called, as doing
+            so will take a reactive dependency on that dimension.
+        user_specified_size_px
+            A tuple of two floats, or None. If the user specified an explicit
+            width/height on the @render.plot decorator, then the corresponding float
+            will be that value. Otherwise, it will be None.
+        pixelratio
+            The device pixel ratio that was detected from the client.
+        """
+        self._container_size_px_fn = container_size_px_fn
+        self.user_specified_size_px = user_specified_size_px
+        self.pixelratio = pixelratio
+
+    def get_img_size_px(
+        self,
+        fig_initial_size_inches: tuple[float, float],
+        fig_result_size_inches: tuple[float, float],
+        dpi: float,
+    ) -> tuple[float, float, str, str]:
+        """
+        Determines the desired size of the image in logical pixels (not doubling
+        resolution for retina displays--the caller needs to worry about that), and the
+        width and height attributes that should be set on the <img> tag.
+
+        Parameters
+        ----------
+        fig_initial_size_inches
+            The default matplotlib/plotnine figure size.
+        fig_result_size_inches
+            The size of the matplotlib/plotnine figure that the user created. If this is
+            different than fig_initial_size_inches, we'll respect it. Otherwise, we'll
+            use the container size instead.
+        dpi
+            The desired DPI of the image.
+
+        Returns
+        -------
+        :
+            A tuple of (width, height, width_attr, height_attr), where width and height
+            are the desired size of the image in CSS pixels, and width_attr and
+            height_attr are the width and height attributes that should be set on the
+            <img> tag. The width and height attributes may differ from the width and
+            height values because when we use the container size as the image size, we
+            set the width/height attributes to 100% so that the image will continuously
+            fill the container even as the container is resized (i.e. the re-render
+            hasn't happened yet).
+        """
+        w, w_attr = self._get_img_size_px(
+            0,
+            fig_initial_size_inches[0],
+            fig_result_size_inches[0],
+            dpi,
+        )
+        h, h_attr = self._get_img_size_px(
+            1,
+            fig_initial_size_inches[1],
+            fig_result_size_inches[1],
+            dpi,
+        )
+        return (w, h, w_attr, h_attr)
+
+    def _get_img_size_px(
+        self,
+        i: int,
+        fig_initial_size_inches: float,
+        fig_result_size_inches: float,
+        dpi: float,
+    ) -> tuple[float, str]:
+        # If user specified explicit width/height on @render.plot decorator, set the img
+        # size to that exactly. We assume there's some reason they wanted that exact size.
+        user_specified_size_px = self.user_specified_size_px[i]
+        if user_specified_size_px is not None:
+            return user_specified_size_px, f"{user_specified_size_px}px"
+
+        # If they specified a figure size in their plotting code, we'll respect that.
+        if abs(fig_initial_size_inches - fig_result_size_inches) > 1e-6:
+            native_size = fig_result_size_inches * dpi
+            return native_size, f"{native_size}px"
+
+        # If the user didn't specify an explicit size on @render.plot and didn't modify
+        # the figure size in their plotting code, then assume that they're filling the
+        # container, in which case we set the img size to 100% in order to have nicer
+        # resize behavior.
+        #
+        # Retrieve the container size, taking a reactive dependency
+        container_size_px = self._container_size_px_fn[i]()
+        return container_size_px, "100%"
+
+
 # Try to render a matplotlib object (or the global figure, if it's been used). If `fig`
 # is not a matplotlib object, return (False, None). If there's an error in rendering,
 # return None. If successful in rendering, return an ImgData object.
 def try_render_matplotlib(
     x: object,
-    width: float,
-    height: float,
-    pixelratio: float,
-    ppi: float,
+    *,
+    plot_size_info: PlotSizeInfo,
     allow_global: bool,
     alt: Optional[str],
     **kwargs: object,
@@ -34,10 +138,27 @@ def try_render_matplotlib(
         return (False, None)
 
     try:
+        import matplotlib
         import matplotlib.pyplot as plt  # pyright: ignore[reportUnusedImport] # noqa: F401
 
-        fig.set_size_inches(width / ppi, height / ppi)
-        fig.set_dpi(ppi * pixelratio)
+        pixelratio = plot_size_info.pixelratio
+
+        fig_initial_size_inches = cast_to_size_tuple(plt.rcParams["figure.figsize"])
+
+        fig_result_size_inches = cast_to_size_tuple(
+            fig.get_size_inches(),  # pyright: ignore[reportUnknownMemberType]
+        )
+
+        ppi_out = get_desired_dpi_from_fig(fig)
+
+        width, height, width_attr, height_attr = plot_size_info.get_img_size_px(
+            fig_initial_size_inches, fig_result_size_inches, ppi_out
+        )
+        fig.set_size_inches(
+            width / ppi_out,
+            height / ppi_out,
+        )
+        fig.set_dpi(ppi_out * pixelratio)
 
         # Suppress the message `UserWarning: The figure layout has changed to tight`
         with warnings.catch_warnings():
@@ -54,7 +175,7 @@ def try_render_matplotlib(
             fig.savefig(  # pyright: ignore[reportUnknownMemberType]
                 buf,
                 format="png",
-                dpi=ppi * pixelratio,
+                dpi=ppi_out * pixelratio,
                 **kwargs,
             )
             buf.seek(0)
@@ -63,8 +184,8 @@ def try_render_matplotlib(
 
         res: ImgData = {
             "src": "data:image/png;base64," + data_str,
-            "width": "100%",
-            "height": "100%",
+            "width": width_attr,
+            "height": height_attr,
         }
 
         if alt is not None:
@@ -140,10 +261,8 @@ def get_matplotlib_figure(
 
 def try_render_pil(
     x: object,
-    width: float,
-    height: float,
-    pixelratio: float,
-    ppi: float,
+    *,
+    plot_size_info: PlotSizeInfo,
     alt: Optional[str] = None,
     **kwargs: object,
 ) -> TryPlotResult:
@@ -158,10 +277,15 @@ def try_render_pil(
         data = base64.b64encode(buf.read())
         data_str = data.decode("utf-8")
 
+    width_attr = plot_size_info.user_specified_size_px[0]
+    width_attr = f"{width_attr}px" if width_attr is not None else "100%"
+    height_attr = plot_size_info.user_specified_size_px[1]
+    height_attr = f"{height_attr}px" if height_attr is not None else "100%"
+
     res: ImgData = {
         "src": "data:image/png;base64," + data_str,
-        "width": "100%",
-        "height": "100%",
+        "width": width_attr,
+        "height": height_attr,
         "style": "object-fit:contain",
     }
 
@@ -173,63 +297,68 @@ def try_render_pil(
 
 def try_render_plotnine(
     x: object,
-    width: float,
-    height: float,
-    pixelratio: float,
-    ppi: float,
+    *,
+    plot_size_info: PlotSizeInfo,
     alt: Optional[str] = None,
     **kwargs: object,
 ) -> TryPlotResult:
+    import plotnine.options as p9options
     from plotnine.ggplot import ggplot
 
     if not isinstance(x, ggplot):
         return (False, None)
 
+    fig_initial_size_inches = p9options.figure_size
+
     x = cast(PlotnineFigure, x)
 
+    fig_result_size_inches = fig_initial_size_inches
+    figure_size = x.theme.themeables.get("figure_size")
+    if figure_size is not None:
+        result_size = figure_size.properties.get("value")
+        if result_size is not None:
+            fig_result_size_inches = result_size
+    ppi = p9options.dpi
+    figure_dpi = x.theme.themeables.get("dpi")
+    if figure_dpi is not None:
+        result_dpi = figure_dpi.properties.get("value")
+        if result_dpi is not None:
+            ppi = result_dpi
+
+    w, h, w_attr, h_attr = plot_size_info.get_img_size_px(
+        fig_initial_size_inches, fig_result_size_inches, ppi
+    )
+
     with io.BytesIO() as buf:
-        # save_helper was added in plotnine 0.10.1-dev. If this method exists, we can
-        # use it to get the matplotlib Figure object, which we can then use to get the
-        # coordmap. Once this version of plotnine is released and in common use, we can
-        # add a version dependency and remove the conditional code.
-        if hasattr(x, "save_helper"):
-            res = x.save_helper(  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues, reportUnknownVariableType]
-                filename=buf,
-                format="png",
-                units="in",
-                dpi=ppi * pixelratio,
-                width=width / ppi,
-                height=height / ppi,
-                verbose=False,
-                **kwargs,
+        if not hasattr(x, "save_helper"):
+            raise RuntimeError(
+                "plotnine>=0.10.1 is required to render plotnine plots in Shiny"
             )
-            coordmap = get_coordmap_plotnine(
-                x,
-                res.figure,  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportGeneralTypeIssues]
-            )
-            res.figure.savefig(  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
-                **res.kwargs  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
-            )
-        else:
-            x.save(
-                filename=buf,
-                format="png",
-                units="in",
-                dpi=ppi * pixelratio,
-                width=width / ppi,
-                height=height / ppi,
-                verbose=False,
-                **kwargs,
-            )
-            coordmap = None
+        res = x.save_helper(  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues, reportUnknownVariableType]
+            filename=buf,
+            format="png",
+            units="in",
+            dpi=ppi * plot_size_info.pixelratio,
+            width=w / ppi,
+            height=h / ppi,
+            verbose=False,
+            **kwargs,
+        )
+        coordmap = get_coordmap_plotnine(
+            x,
+            res.figure,  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportGeneralTypeIssues]
+        )
+        res.figure.savefig(  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
+            **res.kwargs  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
+        )
         buf.seek(0)
         data = base64.b64encode(buf.read())
         data_str = data.decode("utf-8")
 
     res: ImgData = {
         "src": "data:image/png;base64," + data_str,
-        "width": "100%",
-        "height": "100%",
+        "width": w_attr,
+        "height": h_attr,
     }
 
     if alt is not None:
@@ -239,3 +368,23 @@ def try_render_plotnine(
         res["coordmap"] = coordmap
 
     return (True, res)
+
+
+# This is a weird one... the default dpi is not set to rcParam["figure.dpi"], but rather
+# to rcParam["figure.dpi"] * fig.canvas.device_pixel_ratio (which is 2.0 on my Mac with
+# the 'MacOSX' mpl backend). We want to undo that scaling, as it makes the text
+# ridiculously large.
+#
+# One negative consequence of this logic: if the user intentionally set the dpi to
+# rcParam * device_pixel_ratio, we're going to ignore it.
+def get_desired_dpi_from_fig(fig: Figure):
+    ppi_out = fig.get_dpi()
+
+    if fig.canvas.device_pixel_ratio != 1 and hasattr(fig, "_original_dpi"):
+        if fig._original_dpi == ppi_out / fig.canvas.device_pixel_ratio:  # type: ignore
+            return cast(float, fig._original_dpi)  # type: ignore
+    return ppi_out
+
+
+def cast_to_size_tuple(lst: Any) -> tuple[float, float]:
+    return cast(Tuple[float, float], tuple(lst))
