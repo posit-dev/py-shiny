@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import sys
 from types import TracebackType
-from typing import Callable, Generic, Optional, ParamSpec, Type, TypeVar
+from typing import Callable, Generic, Mapping, Optional, ParamSpec, Type, TypeVar
 
 from htmltools import HTML, Tag, Tagifiable, TagList, tags
 
@@ -13,21 +13,38 @@ U = TypeVar("U")
 
 
 class RecallContextManager(Generic[R]):
-    def __init__(self, fn: Callable[..., R], *args: object, **kwargs: object):
-        self._fn = fn
-        self._args: list[object] = list(args)
-        self._kwargs: dict[str, object] = kwargs
+    def __init__(
+        self,
+        fn: Callable[..., R],
+        *,
+        default_page: RecallContextManager[Tag] | None = None,
+        args: tuple[object, ...] | None = None,
+        kwargs: Mapping[str, object] | None = None,
+    ):
+        self.fn = fn
+        self.default_page = default_page
+        if args is None:
+            args = tuple()
+        if kwargs is None:
+            kwargs = {}
+        self.args: list[object] = list(args)
+        self.kwargs: dict[str, object] = dict(kwargs)
 
     def append_arg(self, value: object):
         if isinstance(value, (Tag, TagList, Tagifiable)):
-            self._args.append(value)
+            self.args.append(value)
         elif hasattr(value, "_repr_html_"):
-            self._args.append(HTML(value._repr_html_()))  # pyright: ignore
+            self.args.append(HTML(value._repr_html_()))  # pyright: ignore
         else:
             if value is not None:
-                self._args.append(tags.pre(repr(value)))
+                self.args.append(tags.pre(repr(value)))
 
     def __enter__(self) -> None:
+        if self.default_page is not None:
+            from . import _run
+
+            _run.replace_top_level_recall_context_manager(self.default_page)
+
         self._prev_displayhook = sys.displayhook
         # Collect each of the "printed" values in the args list.
         sys.displayhook = self.append_arg
@@ -40,7 +57,7 @@ class RecallContextManager(Generic[R]):
     ) -> bool:
         sys.displayhook = self._prev_displayhook
         if exc_type is None:
-            res = self._fn(*self._args, **self._kwargs)
+            res = self.fn(*self.args, **self.kwargs)
             sys.displayhook(res)
         return False
 
@@ -50,6 +67,6 @@ def wrap_recall_context_manager(
 ) -> Callable[P, RecallContextManager[R]]:
     @functools.wraps(fn)
     def wrapped_fn(*args: P.args, **kwargs: P.kwargs) -> RecallContextManager[R]:
-        return RecallContextManager(fn, *args, **kwargs)
+        return RecallContextManager(fn, args=args, kwargs=kwargs)
 
     return wrapped_fn

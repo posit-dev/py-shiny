@@ -51,7 +51,7 @@ def wrap_express_app(file: Path | None = None) -> App:
     )
 
     def express_server(input: Inputs, output: Outputs, session: Session):
-        dyn_ui = express_run(file)
+        dyn_ui = run_express(file)
 
         @render.ui
         def __page__():
@@ -63,6 +63,21 @@ def wrap_express_app(file: Path | None = None) -> App:
 
 
 def is_express_app(app: str, app_dir: str | None) -> bool:
+    """ "Detect whether an app file is a Shiny express app
+
+    Parameters
+    ----------
+    app
+        App filename. This may be a relative path or absolute path.
+    app_dir
+        Directory containing the app file. If this is `None`, then `app` must be an
+        absolute path.
+
+    Returns
+    -------
+    :
+        `True` if it is a Shiny express app, `False` otherwise.
+    """
     if app_dir is not None:
         app_path = Path(app_dir) / app
     else:
@@ -83,7 +98,7 @@ def is_express_app(app: str, app_dir: str | None) -> bool:
     return False
 
 
-def express_run(file: Path) -> Tag | TagList:
+def run_express(file: Path) -> Tag | TagList:
     with open(file) as f:
         content = f.read()
 
@@ -130,11 +145,14 @@ def express_run(file: Path) -> Tag | TagList:
 
 
 _top_level_recall_context_manager: RecallContextManager[Tag]
+_top_level_recall_context_manager_has_been_replaced = False
 
 
 def reset_top_level_recall_context_manager():
     global _top_level_recall_context_manager
+    global _top_level_recall_context_manager_has_been_replaced
     _top_level_recall_context_manager = RecallContextManager(ui.page_fluid)
+    _top_level_recall_context_manager_has_been_replaced = False
 
 
 def get_top_level_recall_context_manager():
@@ -143,17 +161,23 @@ def get_top_level_recall_context_manager():
 
 def replace_top_level_recall_context_manager(
     cm: RecallContextManager[Tag],
+    force: bool = False,
 ) -> RecallContextManager[Tag]:
     """
     Replace the current top level RecallContextManager with another one.
 
     This transfers the `args` and `kwargs` from the previous RecallContextManager to the
-    new one.
+    new one. Normally it will only have an effect the first time it's run; it only
+    replace the previous one if has not already been replaced. To override this
+    behavior, this use `force=True`.
 
     Parameters
     ----------
     cm
         The RecallContextManager to replace the previous one.
+    force
+        If `False` (the default) and the top level RecallContextManager has already been
+        replaced, return with no chnages. If `True`, this will aways replace.
 
     Returns
     -------
@@ -161,19 +185,26 @@ def replace_top_level_recall_context_manager(
         The previous top level RecallContextManager.
     """
     global _top_level_recall_context_manager
+    global _top_level_recall_context_manager_has_been_replaced
+
     old_cm = _top_level_recall_context_manager
 
-    args = old_cm._args.copy()
-    args.extend(cm._args)
-    cm._args = args
+    if force is False and _top_level_recall_context_manager_has_been_replaced:
+        return old_cm
 
-    kwargs = old_cm._kwargs.copy()
-    kwargs.update(cm._kwargs)
-    cm._kwargs = kwargs
+    args = old_cm.args.copy()
+    args.extend(cm.args)
+    cm.args = args
+
+    kwargs = old_cm.kwargs.copy()
+    kwargs.update(cm.kwargs)
+    cm.kwargs = kwargs
 
     old_cm.__exit__(BaseException, None, None)
     cm.__enter__()
     _top_level_recall_context_manager = cm
+    _top_level_recall_context_manager_has_been_replaced = True
+
     return old_cm
 
 

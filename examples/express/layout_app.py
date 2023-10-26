@@ -4,8 +4,6 @@ import numpy as np
 from shiny import render, ui
 from shiny.express import input, layout
 
-layout.set_page(layout.page_sidebar())
-
 with layout.sidebar():
     ui.input_slider("n", "N", 1, 100, 50)
 

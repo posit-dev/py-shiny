@@ -27,7 +27,7 @@ __all__ = (
 
 def set_page(page_fn: RecallContextManager[Tag]):
     """Set the page function for the current Shiny express app."""
-    _run.replace_top_level_recall_context_manager(page_fn)
+    _run.replace_top_level_recall_context_manager(page_fn, force=True)
 
 
 # ======================================================================================
@@ -53,9 +53,11 @@ def page_fluid(
 ) -> RecallContextManager[Tag]:
     return RecallContextManager(
         ui.page_fluid,
-        title=title,
-        lang=lang,
-        **kwargs,
+        kwargs=dict(
+            title=title,
+            lang=lang,
+            **kwargs,
+        ),
     )
 
 
@@ -75,17 +77,20 @@ def sidebar(
 ) -> RecallContextManager[ui.Sidebar]:
     return RecallContextManager(
         ui.sidebar,
-        width=width,
-        position=position,
-        open=open,
-        id=id,
-        title=title,
-        bg=bg,
-        fg=fg,
-        class_=class_,
-        max_height_mobile=max_height_mobile,
-        gap=gap,
-        padding=padding,
+        default_page=page_sidebar(),
+        kwargs=dict(
+            width=width,
+            position=position,
+            open=open,
+            id=id,
+            title=title,
+            bg=bg,
+            fg=fg,
+            class_=class_,
+            max_height_mobile=max_height_mobile,
+            gap=gap,
+            padding=padding,
+        ),
     )
 
 
@@ -100,26 +105,30 @@ def page_sidebar(
 ):
     return RecallContextManager(
         ui.page_sidebar,
-        title=title,
-        fillable=fillable,
-        fillable_mobile=fillable_mobile,
-        window_title=window_title,
-        lang=lang,
-        **kwargs,
+        kwargs=dict(
+            title=title,
+            fillable=fillable,
+            fillable_mobile=fillable_mobile,
+            window_title=window_title,
+            lang=lang,
+            **kwargs,
+        ),
     )
 
 
 def column(width: int, *, offset: int = 0, **kwargs: TagAttrValue):
     return RecallContextManager(
         ui.column,
-        width,
-        offset=offset,
-        **kwargs,
+        args=(width,),
+        kwargs=dict(
+            offset=offset,
+            **kwargs,
+        ),
     )
 
 
 def row(**kwargs: TagAttrValue):
-    return RecallContextManager(ui.row, **kwargs)
+    return RecallContextManager(ui.row, kwargs=kwargs)
 
 
 def card(
@@ -134,11 +143,13 @@ def card(
 ):
     return RecallContextManager(
         ui.card,
-        full_screen=full_screen,
-        height=height,
-        max_height=max_height,
-        min_height=min_height,
-        fill=fill,
-        class_=class_,
-        **kwargs,
+        kwargs=dict(
+            full_screen=full_screen,
+            height=height,
+            max_height=max_height,
+            min_height=min_height,
+            fill=fill,
+            class_=class_,
+            **kwargs,
+        ),
     )
