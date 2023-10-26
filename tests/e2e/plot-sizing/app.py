@@ -117,7 +117,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             kwargs["aspect"] = fig_size[0] / fig_size[1]
 
         # FacetGrid has an opinion about its figure size
-        g = sns.FacetGrid(tips, **kwargs)
+        g = sns.FacetGrid(tips, **kwargs)  # pyright: ignore[reportUnknownArgumentType]
         g.figure.set_facecolor("lavender")
         g.map(sns.scatterplot, "total_bill", "tip")
         plt.gca().set_facecolor("lavender")

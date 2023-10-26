@@ -57,7 +57,10 @@ typings/matplotlib/__init__.pyi: ## grab type stubs from GitHub
 	mv typings/python-type-stubs/stubs/matplotlib typings/
 	rm -rf typings/python-type-stubs
 
-pyright: typings/uvicorn typings/matplotlib/__init__.pyi ## type check with pyright
+typings/seaborn:
+	pyright --createstub seaborn
+
+pyright: typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn ## type check with pyright
 	pyright
 
 lint: ## check style with flake8
