@@ -10,7 +10,7 @@ from ._html_deps_shinyverse import components_dependency
 from ._tag import consolidate_attrs
 from ._utils import is_01_scalar
 from .css import CssUnit, as_css_unit
-from .css._css_unit import _isinstance_cssunit
+from .css._css_unit import isinstance_cssunit
 from .fill import as_fill_item, as_fillable_container
 
 
@@ -162,6 +162,6 @@ def layout_column_wrap(
 def is_probably_a_css_unit(x: TagChild) -> bool:
     if isinstance(x, str):
         return False
-    if _isinstance_cssunit(x):
+    if isinstance_cssunit(x):
         return True
     return False

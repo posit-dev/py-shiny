@@ -19,7 +19,7 @@ quartodoc:
         - ui.page_fluid
         - ui.page_fixed
         - ui.page_bootstrap
-    - title: UI Layout
+    - title: UI Layouts
       desc: Control the layout of multiple UI components.
       contents:
         - ui.sidebar
@@ -28,7 +28,6 @@ quartodoc:
         - ui.card
         - ui.card_header
         - ui.card_footer
-        - ui.value_box
         - ui.popover
         - ui.tooltip
         - ui.accordion
@@ -53,6 +52,16 @@ quartodoc:
         - ui.input_password
         - ui.input_action_button
         - ui.input_action_link
+    - title: Value boxes
+      desc: Prominently display a value and label in a box that can be expanded to show more information.
+      contents:
+        - ui.value_box
+        - ui.value_box_theme
+        - ui.showcase_bottom
+        - ui.showcase_left_center
+        - ui.showcase_top_right
+        - ui.ValueBoxTheme
+        - ui.ShowcaseLayout
     - title: Navigation (tab) panels
       desc: Create segments of UI content.
       contents:
@@ -279,7 +288,7 @@ quartodoc:
           path: ExCard
           summary:
             name: "Card"
-            desc: "Cards are a common organizing unit for modern user interfaces (UI). At their core, they’re just rectangular containers with borders and padding. However, when utilized properly to group related information, they help users better digest, engage, and navigate through content."
+            desc: "Cards are a common organizing unit for modern user interfaces (UI). At their core, they're just rectangular containers with borders and padding. However, when utilized properly to group related information, they help users better digest, engage, and navigate through content."
           flatten: true
           contents:
             - experimental.ui.card_body
@@ -287,13 +296,3 @@ quartodoc:
             - experimental.ui.card_image
             - experimental.ui.ImgContainer
             - experimental.ui.WrapperCallable
-        - kind: page
-          path: ExValueBoxes
-          summary:
-            name: "Value boxes"
-            desc: "Prominently display a value and label in a box that can be expanded to show more information."
-          flatten: true
-          contents:
-            - experimental.ui.value_box
-            - experimental.ui.showcase_left_center
-            - experimental.ui.showcase_top_right

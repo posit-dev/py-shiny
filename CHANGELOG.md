@@ -17,11 +17,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added CSS classes to UI input methods (#680) .
 * `Session` objects can now accept an asynchronous (or synchronous) function for `.on_flush(fn=)`, `.on_flushed(fn=)`, and `.on_ended(fn=)` (#686).
 * `App()` now allows `static_assets` to represent multiple paths. To do this, pass in a dictionary instead of a string (#763).
+* The `showcase_layout` argument of `value_box()` now accepts one of three character values: `"left center"`, `"top right"`, `"bottom"`. (#772)
+* `value_box()` now supports many new themes and styles, or fully customizable themes using the new `value_box_theme()` function. To reflect the new capabilities, we've replaced `theme_color` with a new `theme` argument. The previous argument will continue work as expected, but with a deprecation warning. (#772)
 
+  In addition to the Bootstrap theme names (`primary` ,`secondary`, etc.), you can now use the main Boostrap colors (`purple`, `blue`, `red`, etc.). You can also choose to apply the color to the background or foreground by prepending a `bg-` or `text-` prefix to the theme or color name. Finally, we've also added new gradient themes allowing you to pair any two color names as `bg-gradient-{from}-{to}` (e.g., `bg-gradient-purple-blue`).
+
+  These named color themes aren't limited to value boxes: because they're powered by small utility classes, you can use them anywhere within your bslib-powered UI.
+
+* Added `shiny.ui.showcase_bottom()`, a new `shiny.ui.value_box()` layout that places the showcase below the value box `title` and `value`, perfect for a full-bleed plot. (#772)
 ### API changes
 
 * Added `shiny.ui.navset_underline()` and `shiny.ui.navset_card_underline()` whose navigation container is similar to `shiny.ui.navset_tab()` and `shiny.ui.navset_card_tab()` respectively, but its active/focused navigation links are styled with an underline. (#772)
 * `shiny.ui.layout_column_wrap(width, *args)` was rearranged to `shiny.ui.layout_column_wrap(*args, width)`. Now, `width` will default to `200px` is no value is provided. (#772)
+* `shiny.ui.showcase_left_center()` and `shiny.ui.showcase_top_right()` no longer take two values for the `width` argument. Instead, they now take a single value (e.g., `width = "30%"`) representing the width of the showcase are in the value box. Furthermore, they've both gained `width_full_screen` arguments that determine the width of the showcase area when the value box is expanded to fill the screen. (#772)
+*
 
 * TODO-barret-API; `shiny.ui.panel_main()` and `shiny.ui.panel_sidebar()` are deprecated in favor of new API for `shiny.ui.layout_sidebar()`. Please use `shiny.ui.sidebar()` to construct a sidebar and supply it (along with the main content) to `shiny.ui.layout_sidebar(*args, **kwargs)`. (#680)
 
@@ -37,7 +46,7 @@ The following methods have been moved from `shiny.experimental.ui` and integrate
   * `page_fillable()`, `fill.as_fillable_container()`, `fill.as_fill_item()`, `fill.is_fillable_container()`, `fill.is_fill_item()`, `fill.remove_all_fill()`
   * `output_plot(fill=)`, `output_image(fill=)`, `output_ui(fill=, fillable=)`
 * CSS units - CSS units and padding
-  * `css.as_css_unit()`, `css.as_css_padding()`, `css.as_width_unit()`, `css.CssUnit`
+  * `css.as_css_unit()`, `css.as_css_padding()`, `css.CssUnit`
 * Tooltip - Hover-based context UI element
   * `tooltip()`, `toggle_tooltip()`, `update_tooltip()`
 * Popover - Click-based context UI element
@@ -48,6 +57,8 @@ The following methods have been moved from `shiny.experimental.ui` and integrate
   * `card()`, `card_header()`, `card_footer()`, `CardItem`
 * Valuebox - Opinionated container for displaying a value and title
   * `valuebox()`
+  * `showcase_left_center()`
+  * `showcase_top_right()`
 * Navs - Navigation within a page
   * `navset_bar()`, `navset_tab_card()`, `navset_pill_card()`
   * `page_navbar(sidebar=, fillable=, fillable_mobile=, gap=, padding=)`, `navset_card_tab(sidebar=)`, `navset_card_pill(sidebar=)`, `navset_bar(sidebar=, fillable=, gap=, padding=)`
@@ -58,13 +69,16 @@ The following methods have been moved from `shiny.experimental.ui` and integrate
 If a ported method is called from `shiny.experimental.ui`, a deprecation warning will be displayed.
 
 Methods still under consideration in `shiny.experimental.ui`:
-* `value_box(showcase=)`
-* `card(wrapper=)`, `card_body()`, `card_image()`, `card_header()`
+* `card(wrapper=)`: A function (which returns a UI element) to call on unnamed arguments in `card(*args)` which are not already `shiny.ui.CardItem` objects.
+* `card_body()`: A container for grouping related UI elements together
+* `card_image()`: A general container for an image within a `shiny.ui.card`.
+* `card_title()`: A general container for the "title" of a `shiny.ui.card`.
 
 
 #### API removals
 
 * `shiny.experimental.ui.FillingLayout` has been removed. (#481)
+* `shiny.experimental.ui.as_width_unit()` has been removed. (#772)
 * Support for `min_height=`, `max_height=`, and `gap=` in `shiny.experimental.ui.as_fillable_container()` and `as_fill_item()` has been removed. (#481)
 * `shiny.experimental.ui.TagCallable` has been deprecated. Its type is equivalent to `htmltools.TagFunction`. (#680)
 * `shiny.eperimental.ui.as_fill_carrier()` and `shiny.eperimental.ui.is_fill_carrier()` have been deprecated. Please use `shiny.ui.fill.as_fill_item()` and `shiny.ui.fill.as_fillable_container()` or `shiny.ui.fill.is_fill_item()` and `shiny.ui.fill.is_fillable_container()` respectively in combination to achieve similar behavior. (#680)

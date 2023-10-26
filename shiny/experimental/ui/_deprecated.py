@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Literal, Optional, Sequence, TypeVar, overload
+from typing import Any, Literal, Optional, Sequence, TypeVar, overload
 
 from htmltools import (
     MetadataNode,
@@ -60,13 +60,13 @@ from ...ui._sidebar import panel_main as main_panel_main
 from ...ui._sidebar import panel_sidebar as main_panel_sidebar
 from ...ui._sidebar import sidebar as main_sidebar
 from ...ui._sidebar import toggle_sidebar as main_toggle_sidebar
+from ...ui._valuebox import ShowcaseLayout as MainShowcaseLayout
 from ...ui._valuebox import showcase_left_center as main_showcase_left_center
 from ...ui._valuebox import showcase_top_right as main_showcase_top_right
 from ...ui._valuebox import value_box as main_value_box
 from ...ui.css._css_unit import CssUnit as MainCssUnit
 from ...ui.css._css_unit import as_css_padding as main_as_css_padding
 from ...ui.css._css_unit import as_css_unit as main_as_css_unit
-from ...ui.css._css_unit import as_width_unit as main_as_width_unit
 from ...ui.fill import as_fill_item as main_as_fill_item
 from ...ui.fill import as_fillable_container as main_as_fillable_container
 from ...ui.fill import is_fill_item as main_is_fill_item
@@ -101,7 +101,6 @@ __all__ = (
     "CssUnit",
     "as_css_unit",
     "as_css_padding",
-    "as_width_unit",
     # Popover
     "popover",
     "toggle_popover",
@@ -146,6 +145,25 @@ __all__ = (
     "page_sidebar",
     "page_fillable",
 )
+
+
+def as_width_unit(x: str | float | int) -> str:
+    """Defunct. Please do not use method."""
+    warn_deprecated(
+        "`shiny.experimental.ui.as_width_unit()` is defunct. "
+        "This method will be removed in a future version, "
+        "please update your code accordingly."
+    )
+    if isinstance(x, (int, float)):
+        return main_as_css_unit(x)
+    if isinstance(x, str) and x.endswith("%") and x.count("%") == 1:
+        x1_num = float(x[:-1])
+        x2_num = 100 - x1_num
+        return f"{x1_num}% {x2_num}%"
+    # TODO-bslib: validateCssUnit() should maybe support fr units?
+    # return(paste(x, collapse = " "))
+    return main_as_css_unit(x)
+
 
 ######################
 # Input Switch
@@ -616,17 +634,6 @@ def as_css_padding(padding: CssUnit | list[CssUnit] | None) -> str | None:
     return main_as_css_padding(padding)
 
 
-# Deprecated 2023-09-12
-def as_width_unit(x: str | float | int) -> str:
-    """Deprecated. Please use `shiny.ui.css_unit.as_width_unit()` instead."""
-    warn_deprecated(
-        "`shiny.experimental.ui.as_width_unit()` is deprecated. "
-        "This method will be removed in a future version, "
-        "please use `shiny.ui.css_unit.as_width_unit()` instead."
-    )
-    return main_as_width_unit(x)
-
-
 ######################
 # Popover
 ######################
@@ -1059,7 +1066,7 @@ def value_box(
     value: TagChild,
     *args: TagChild | TagAttrs,
     showcase: Optional[TagChild] = None,
-    showcase_layout: Callable[[TagChild, Tag], MainCardItem] | None = None,
+    showcase_layout: MainShowcaseLayout | None = None,
     full_screen: bool = False,
     theme_color: Optional[str] = "primary",
     height: Optional[CssUnit] = None,
@@ -1074,12 +1081,17 @@ def value_box(
         "This method will be removed in a future version, "
         "please use `shiny.ui.value_box()` instead."
     )
+    if showcase_layout is None:
+        showcase_layout_val = "left center"
+    else:
+        showcase_layout_val = showcase_layout
+
     return main_value_box(
         title,
         value,
         *args,
         showcase=showcase,
-        showcase_layout=showcase_layout,
+        showcase_layout=showcase_layout_val,
         full_screen=full_screen,
         theme_color=theme_color,
         height=height,
@@ -1094,15 +1106,13 @@ def showcase_left_center(
     width: CssUnit = "30%",
     max_height: CssUnit = "100px",
     max_height_full_screen: CssUnit = "67%",
-) -> Callable[[TagChild | TagAttrs, Tag], MainCardItem]:
-    # TODO-barret; Give better message. These are defunct
+) -> MainShowcaseLayout:
     """Deprecated. Please use `shiny.ui.showcase_left_center()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.showcase_left_center()` is deprecated. "
         "This method will be removed in a future version, "
         "please use `shiny.ui.showcase_left_center()` instead."
     )
-    # TODO-barret; Return new structure
     return main_showcase_left_center(
         width=width,
         max_height=max_height,
@@ -1114,15 +1124,13 @@ def showcase_top_right(
     width: CssUnit = "30%",
     max_height: CssUnit = "75px",
     max_height_full_screen: CssUnit = "67%",
-) -> Callable[[TagChild | TagAttrs, Tag], MainCardItem]:
-    # TODO-barret; Give better message. These are defunct
+) -> MainShowcaseLayout:
     """Deprecated. Please use `shiny.ui.showcase_top_right()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.showcase_top_right()` is deprecated. "
         "This method will be removed in a future version, "
         "please use `shiny.ui.showcase_top_right()` instead."
     )
-    # TODO-barret; Return new structure
     return main_showcase_top_right(
         width=width,
         max_height=max_height,
