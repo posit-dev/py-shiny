@@ -264,6 +264,8 @@ class OutputRenderer(Generic[OT], ABC):
         self._transformer = transform_fn
         self._params = params
         self.default_ui = default_ui
+        self.default_ui_args: tuple[object, ...] = []
+        self.default_ui_kwargs: dict[str, object] = dict()
         self._auto_registered = False
 
         from ...session import get_current_session
@@ -342,9 +344,16 @@ class OutputRenderer(Generic[OT], ABC):
 
         params = tuple(inspect.signature(self.default_ui).parameters.values())
         if len(params) > 0 and params[0].name == "_params":
-            return self.default_ui(self._params.kwargs, self.__name__)  # type: ignore
+            return self.default_ui(
+                self._params.kwargs,
+                self.__name__,  # pyright: ignore[reportGeneralTypeIssues]
+                *self.default_ui_args,
+                **self.default_ui_kwargs,
+            )
         else:
-            return cast(DefaultUIFn, self.default_ui)(self.__name__)
+            return cast(DefaultUIFn, self.default_ui)(
+                self.__name__, *self.default_ui_args, **self.default_ui_kwargs
+            )
 
 
 # Using a second class to help clarify that it is of a particular type
