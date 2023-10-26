@@ -104,17 +104,16 @@ class PlotSizeInfo:
         # size to that exactly. We assume there's some reason they wanted that exact size.
         user_specified_size_px = self.user_specified_size_px[i]
         if user_specified_size_px is not None:
-            return user_specified_size_px, f"{user_specified_size_px}px"
+            if user_specified_size_px == 0:
+                # If the explicit size is 0, we'll respect the user's figure size.
+                native_size = fig_result_size_inches * dpi
+                return native_size, f"{native_size}px"
+            else:
+                return user_specified_size_px, f"{user_specified_size_px}px"
 
-        # If they specified a figure size in their plotting code, we'll respect that.
-        if abs(fig_initial_size_inches - fig_result_size_inches) > 1e-6:
-            native_size = fig_result_size_inches * dpi
-            return native_size, f"{native_size}px"
-
-        # If the user didn't specify an explicit size on @render.plot and didn't modify
-        # the figure size in their plotting code, then assume that they're filling the
-        # container, in which case we set the img size to 100% in order to have nicer
-        # resize behavior.
+        # If the user didn't specify an explicit size on @render.plot then assume that
+        # they're filling the container, in which case we set the img size to 100% in
+        # order to have nicer resize behavior.
         #
         # Retrieve the container size, taking a reactive dependency
         container_size_px = self._container_size_px_fn[i]()

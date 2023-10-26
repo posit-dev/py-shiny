@@ -6,12 +6,16 @@ from typing import Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 from PIL import Image
-from plotnine import aes, element_rect, facet_wrap, geom_point, stat_smooth, theme
+from plotnine import aes, element_rect, geom_point, theme, theme_minimal
 from plotnine.data import mtcars
 from plotnine.ggplot import ggplot
 
 from shiny import App, Inputs, Outputs, Session, module, render, req, ui
+
+tips = sns.load_dataset("tips")
+dpi = 150
 
 
 @module.ui
@@ -51,7 +55,7 @@ def plot_server(
     def plot_decorator_size():
         return plot_fn(None)
 
-    @render.plot
+    @render.plot(width=0, height=0)
     def plot_native_size():
         return plot_fn((300, 200))
 
@@ -66,11 +70,18 @@ app_ui = ui.page_navbar(
         value="mpl",
     ),
     ui.nav(
+        "seaborn",
+        ui.p(
+            "The following four plots should all be the same size. The last one should have larger text."
+        ),
+        plot_ui("sns"),
+        value="sns",
+    ),
+    ui.nav(
         "plotnine",
         ui.p(
             "The following four plots should all be the same size. The last one should have larger text."
         ),
-        ui.p("It may take a moment for the plots to render."),
         plot_ui("plotnine"),
     ),
     ui.nav(
@@ -99,19 +110,31 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         return fig
 
+    def plot_with_sns(fig_size: tuple[float, float] | None) -> object:
+        kwargs = dict()
+        if fig_size:
+            kwargs["height"] = fig_size[1] / dpi
+            kwargs["aspect"] = fig_size[0] / fig_size[1]
+
+        # FacetGrid has an opinion about its figure size
+        g = sns.FacetGrid(tips, **kwargs)  # pyright: ignore[reportUnknownArgumentType]
+        g.figure.set_facecolor("lavender")
+        g.map(sns.scatterplot, "total_bill", "tip")
+        plt.gca().set_facecolor("lavender")
+        if fig_size:
+            plt.gcf().set_dpi(dpi)
+
     def plot_with_plotnine(fig_size: tuple[float, float] | None) -> object:
         p = (
-            ggplot(mtcars, aes("wt", "mpg", color="factor(gear)"))
+            ggplot(mtcars, aes("wt", "mpg"))
             + geom_point()
-            + stat_smooth(method="lm")
-            + facet_wrap("~gear")
+            + theme_minimal()
             + theme(
                 plot_background=element_rect(fill="lavender"),
                 legend_background=element_rect(fill="lavender"),
             )
         )
         if fig_size is not None:
-            dpi = 150
             p = p + theme(
                 figure_size=(fig_size[0] / dpi, fig_size[1] / dpi),
                 plot_background=element_rect(fill="lavender"),
@@ -124,6 +147,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return Image.open(Path(__file__).parent / "bike.jpg")
 
     plot_server("mpl", plot_with_mpl)
+    plot_server("sns", plot_with_sns)
     plot_server("plotnine", plot_with_plotnine)
     plot_server("pil", plot_with_pil)
 
