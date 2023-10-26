@@ -326,6 +326,8 @@ class OutputRenderer(Generic[OT], ABC):
     def _repr_html_(self) -> str | None:
         import htmltools
 
+        if self.default_ui is None:
+            return None
         return htmltools.TagList(self._render_default())._repr_html_()
 
     def tagify(self) -> TagList | Tag | MetadataNode | str:
@@ -335,7 +337,7 @@ class OutputRenderer(Generic[OT], ABC):
 
     def _render_default(self) -> TagList | Tag | MetadataNode | str:
         if self.default_ui is None:
-            return TagList()
+            raise TypeError("No default UI exists for this type of render function")
 
         params = tuple(inspect.signature(self.default_ui).parameters.values())
         if len(params) > 0 and params[0].name == "_params":

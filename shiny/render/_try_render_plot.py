@@ -27,16 +27,19 @@ class PlotSizeInfo:
         pixelratio: float,
     ):
         """
-        Args:
-            container_size_px_fn: A tuple of two functions that return the width and
-                height of the container, in pixels. If the user specified an explicit
-                width/height on the @render.plot decorator, then these functions should
-                not be called, as doing so will take a reactive dependency on that
-                dimension.
-            user_specified_size_px: A tuple of two floats, or None. If the user
-                specified an explicit width/height on the @render.plot decorator, then
-                the corresponding float will be that value. Otherwise, it will be None.
-            pixelratio: The device pixel ratio that was detected from the client.
+        Parameters
+        ----------
+        container_size_px_fn
+            A tuple of two functions that return the width and height of the container,
+            in pixels. If the user specified an explicit width/height on the
+            @render.plot decorator, then these functions should not be called, as doing
+            so will take a reactive dependency on that dimension.
+        user_specified_size_px
+            A tuple of two floats, or None. If the user specified an explicit
+            width/height on the @render.plot decorator, then the corresponding float
+            will be that value. Otherwise, it will be None.
+        pixelratio
+            The device pixel ratio that was detected from the client.
         """
         self._container_size_px_fn = container_size_px_fn
         self.user_specified_size_px = user_specified_size_px
@@ -53,19 +56,22 @@ class PlotSizeInfo:
         resolution for retina displays--the caller needs to worry about that), and the
         width and height attributes that should be set on the <img> tag.
 
-        Args:
-            fig_initial_size_inches: The size of the figure before the user's plotting
-                code was run. We care about this because we want to know if the user
-                modified the figure size in their plotting code--if so, we'll respect
-                the `fig_result_size_inches`, otherwise we'll ignore it and use the
-                container size instead.
-            fig_result_size_inches: The size of the figure after the user's plotting
-                code was run.
-            dpi: The desired DPI of the image.
+        Parameters
+        ----------
+        fig_initial_size_inches
+            The default matplotlib/plotnine figure size.
+        fig_result_size_inches
+            The size of the matplotlib/plotnine figure that the user created. If this is
+            different than fig_initial_size_inches, we'll respect it. Otherwise, we'll
+            use the container size instead.
+        dpi
+            The desired DPI of the image.
 
-        Returns:
+        Returns
+        -------
+        :
             A tuple of (width, height, width_attr, height_attr), where width and height
-            are the desired size of the image in logical pixels, and width_attr and
+            are the desired size of the image in CSS pixels, and width_attr and
             height_attr are the width and height attributes that should be set on the
             <img> tag. The width and height attributes may differ from the width and
             height values because when we use the container size as the image size, we

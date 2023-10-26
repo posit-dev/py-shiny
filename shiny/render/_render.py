@@ -125,6 +125,11 @@ async def PlotTransformer(
 
     inputs = session.root_scope().input
 
+    # We don't have enough information at this point to decide what size the plot should
+    # be. This is because the user's plotting code itself may express an opinion about
+    # the plot size. We'll take the information we will need and stash it in
+    # PlotSizeInfo, which then gets passed into the various plotting strategies.
+
     # Reactively read some information about the plot.
     pixelratio: float = typing.cast(
         float, inputs[ResolvedId(".clientdata_pixelratio")]()
@@ -243,10 +248,14 @@ def plot(
         user uses a screen reader).
     width
         Width of the plot in pixels. If ``None``, the width will be determined by the
-        size of the corresponding :func:`~shiny.ui.output_plot`.
+        size of the corresponding :func:`~shiny.ui.output_plot`. (You should not need to
+        use this argument in most Shiny apps--set the desired width on
+        :func:`~shiny.ui.output_plot` instead.)
     height
         Height of the plot in pixels. If ``None``, the height will be determined by the
-        size of the corresponding :func:`~shiny.ui.output_plot`.
+        size of the corresponding :func:`~shiny.ui.output_plot`. (You should not need to
+        use this argument in most Shiny apps--set the desired height on
+        :func:`~shiny.ui.output_plot` instead.)
     **kwargs
         Additional keyword arguments passed to the relevant method for saving the image
         (e.g., for matplotlib, arguments to ``savefig()``; for PIL and plotnine,
@@ -278,8 +287,7 @@ def plot(
 
     See Also
     --------
-    ~shiny.ui.output_plot
-    ~shiny.render.image
+    ~shiny.ui.output_plot ~shiny.render.image
     """
     return PlotTransformer(
         _fn, PlotTransformer.params(alt=alt, width=width, height=height, **kwargs)

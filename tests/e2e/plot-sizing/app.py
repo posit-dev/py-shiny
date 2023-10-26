@@ -121,7 +121,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     def plot_with_pil(fig_size: tuple[float, float] | None):
         req(fig_size is None)
-        return Image.open(Path(__file__).parent / "IMG_0997.jpg")
+        return Image.open(Path(__file__).parent / "bike.jpg")
 
     plot_server("mpl", plot_with_mpl)
     plot_server("plotnine", plot_with_plotnine)
