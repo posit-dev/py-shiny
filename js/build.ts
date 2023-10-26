@@ -51,8 +51,32 @@ async function bundle_textarea() {
   }
 }
 
+async function bundle_pageoutput() {
+  try {
+    const options: BuildOptions = {
+      entryPoints: {
+        "page-output": "page-output/page-output.ts",
+      },
+      format: "esm",
+      bundle: true,
+      outdir: outDir + "/page-output",
+      minify: false,
+      sourcemap: false,
+      metafile: false,
+    };
+    const result = await build(options);
+    console.log("Building page-output completed successfully!");
+  } catch (error) {
+    console.error("Build failed for page-output:", error);
+  }
+}
+
 // Run function to avoid top level await
 async function main(): Promise<void> {
-  await Promise.all([bundle_dataframe(), bundle_textarea()]);
+  await Promise.all([
+    bundle_dataframe(),
+    bundle_textarea(),
+    bundle_pageoutput(),
+  ]);
 }
 main();

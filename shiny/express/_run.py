@@ -11,7 +11,6 @@ from htmltools import Tag, TagList
 from .. import render, ui
 from .._app import App
 from ..session import Inputs, Outputs, Session
-from ..ui import tags
 from ._recall_context import RecallContextManager
 
 __all__ = (
@@ -44,11 +43,7 @@ def wrap_express_app(file: Path | None = None) -> App:
         file = Path(os.getcwd()) / app_file
 
     # TODO: title and lang
-    app_ui = tags.html(
-        tags.head(),
-        ui.output_ui("__page__", container=ui.tags.body),
-        lang="en",
-    )
+    app_ui = ui.page_output("__page__")
 
     def express_server(input: Inputs, output: Outputs, session: Session):
         dyn_ui = run_express(file)

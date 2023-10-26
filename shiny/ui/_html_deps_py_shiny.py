@@ -34,3 +34,12 @@ def autoresize_dependency() -> HTMLDependency:
         script={"src": "textarea-autoresize.js", "type": "module"},
         stylesheet={"href": "textarea-autoresize.css"},
     )
+
+
+def page_output_dependency() -> HTMLDependency:
+    return HTMLDependency(
+        "shiny-page-output",
+        __version__,
+        source={"package": "shiny", "subdir": "www/shared/py-shiny/page-output"},
+        script={"src": "page-output.js", "type": "module"},
+    )
