@@ -36,9 +36,10 @@ from typing import (
     overload,
 )
 
+from htmltools import MetadataNode, Tag, TagList
+
 if TYPE_CHECKING:
     from ...session import Session
-    from htmltools import MetadataNode, Tag, TagList
 
 from ..._docstring import add_example
 from ..._typing_extensions import Concatenate, ParamSpec
@@ -163,12 +164,11 @@ is not awaitable (a _synchronous_ function), then the execution of the transform
 function should also be synchronous.
 """
 
-if TYPE_CHECKING:
-    DefaultUIFn = Callable[[str], TagList | Tag | MetadataNode | str]
-    DefaultUIFnImpl = Union[
-        DefaultUIFn,
-        Callable[[dict[str, object], str], TagList | Tag | MetadataNode | str],
-    ]
+DefaultUIFn = Callable[[str], TagList | Tag | MetadataNode | str]
+DefaultUIFnImpl = Union[
+    DefaultUIFn,
+    Callable[[dict[str, object], str], TagList | Tag | MetadataNode | str],
+]
 
 
 class OutputRenderer(Generic[OT], ABC):
