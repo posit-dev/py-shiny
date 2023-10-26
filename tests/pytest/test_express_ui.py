@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 
 from shiny import render, ui
@@ -38,3 +40,27 @@ def test_render_output_controls():
 
     with pytest.raises(TypeError, match="width"):
         text4.tagify()
+
+
+def test_suspend_display():
+    old_displayhook = sys.displayhook
+    try:
+        called = False
+
+        def display_hook_spy(_):
+            nonlocal called
+            called = True
+
+        sys.displayhook = display_hook_spy
+
+        with suspend_display():
+            sys.displayhook("foo")
+        suspend_display(lambda: sys.displayhook("bar"))()
+
+        assert not called
+
+        sys.displayhook("baz")
+        assert called
+
+    finally:
+        sys.displayhook = old_displayhook
