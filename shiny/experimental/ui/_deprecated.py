@@ -1161,8 +1161,8 @@ def layout_column_wrap(
         "please use `shiny.ui.layout_column_wrap()` instead."
     )
     return main_layout_column_wrap(
-        width,
         *args,
+        width=width,
         fixed_width=fixed_width,
         heights_equal=heights_equal,
         fill=fill,
