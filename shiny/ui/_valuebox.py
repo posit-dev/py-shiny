@@ -92,7 +92,7 @@ class ShowcaseLayout:
 
 
 def showcase_left_center(
-    *_: object,
+    *,
     width: CssUnit = "30%",
     width_full_screen: CssUnit | None = "1fr",
     max_height: CssUnit | None = "100px",
@@ -115,10 +115,6 @@ def showcase_left_center(
     * :func:`~shiny.ui.showcase_bottom`
     * :func:`~shiny.ui.value_box`
     """
-    if len(_) > 0:
-        warn_deprecated(
-            "`showcase_left_center()` requires named arguments instead of positional arguments. Ignoring values."
-        )
     return ShowcaseLayout(
         class_="showcase-left-center",
         width=width,
@@ -129,7 +125,7 @@ def showcase_left_center(
 
 
 def showcase_top_right(
-    *_: object,
+    *,
     width: CssUnit = "40%",
     width_full_screen: CssUnit | None = "1fr",
     max_height: CssUnit | None = "75px",
@@ -153,10 +149,6 @@ def showcase_top_right(
     * :func:`~shiny.ui.value_box`
     """
 
-    if len(_) > 0:
-        warn_deprecated(
-            "`showcase_top_right()` requires named arguments instead of positional arguments. Ignoring values."
-        )
     return ShowcaseLayout(
         class_="showcase-top-right",
         width=width,
