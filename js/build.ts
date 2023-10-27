@@ -25,6 +25,16 @@ async function bundle_helper(
         );
       }
     );
+
+    if (options.metafile) {
+      // Save metafile
+      const dataframe_results = result;
+      await fs.writeFile(
+        "esbuild-metadata.json",
+        JSON.stringify(dataframe_results.metafile)
+      );
+      console.log("Metadata file written to esbuild-metadata.json");
+    }
     return result;
   } catch (error) {
     console.error("Build failed:", error);
@@ -40,8 +50,6 @@ const opts: Array<BuildOptions> = [
   {
     entryPoints: {
       "text-area/textarea-autoresize": "text-area/textarea-autoresize.ts",
-      "value-box/value-box-icon-gradient":
-        "value-box/value-box-icon-gradient.ts",
     },
     minify: false,
     sourcemap: false,
@@ -50,13 +58,6 @@ const opts: Array<BuildOptions> = [
 
 // Run function to avoid top level await
 async function main(): Promise<void> {
-  const results = await Promise.all(opts.map(bundle_helper));
-
-  // Save metafile
-  const dataframe_results = results[0];
-  await fs.writeFile(
-    "esbuild-metadata.json",
-    JSON.stringify(dataframe_results.metafile)
-  );
+  await Promise.all(opts.map(bundle_helper));
 }
 main();
