@@ -14,7 +14,6 @@ from htmltools import (
     tags,
 )
 
-from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from ._card import CardItem, card, card_body
 from ._tag import consolidate_attrs

@@ -1,5 +1,6 @@
-from shiny import App, ui
 from icons import piggy_bank
+
+from shiny import App, ui
 
 app_ui = ui.page_fluid(
     ui.layout_column_wrap(
