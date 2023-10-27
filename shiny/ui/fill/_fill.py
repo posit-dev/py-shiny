@@ -31,7 +31,8 @@ FILLABLE_CONTAINTER_ATTRS: TagAttrs = {"class": FILL_CONTAINER_CLASS}
 
 
 @add_example()
-def as_fillable_container(  # TODO-barret-API; These methods mutate their input values. Should they return a new object instead? Or not return at all (like `LIST.sort()`)?
+# TODO-future-API; These methods mutate their input values. Should they return a new object instead? Or not return at all (like `LIST.sort()`)?
+def as_fillable_container(
     tag: TagT,
 ) -> TagT:
     tag_prepend_class(tag, FILL_CONTAINER_CLASS)
@@ -40,7 +41,8 @@ def as_fillable_container(  # TODO-barret-API; These methods mutate their input 
 
 
 @add_example()
-def as_fill_item(  # TODO-barret-API; These methods mutate their input values. Should they return a new object instead? Or not return at all (like `LIST.sort()`)?
+# TODO-future-API; These methods mutate their input values. Should they return a new object instead? Or not return at all (like `LIST.sort()`)?
+def as_fill_item(
     tag: TagT,
 ) -> TagT:
     """

@@ -38,9 +38,7 @@ from .fill._fill import FILLABLE_CONTAINTER_ATTRS
 
 
 def page_sidebar(
-    sidebar: Sidebar
-    | TagChild
-    | TagAttrs,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` include `Sidebar` and have the sidebar retrieved from within the args?
+    sidebar: Sidebar,
     *args: TagChild | TagAttrs,
     title: Optional[str | Tag | TagList] = None,
     fillable: bool = True,

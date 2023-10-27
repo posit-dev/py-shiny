@@ -292,8 +292,9 @@ def sidebar(
 
 
 @add_example()
-def layout_sidebar(  # TODO-barret-API; Should this be `layout_sidebar(*args, sidebar: Optional[Sidebar] = None)`?
-    *args: Sidebar | TagChild | TagAttrs,
+def layout_sidebar(
+    sidebar: Sidebar,
+    *args: TagChild | TagAttrs,
     fillable: bool = True,
     fill: bool = True,
     bg: Optional[str] = None,
@@ -359,7 +360,7 @@ def layout_sidebar(  # TODO-barret-API; Should this be `layout_sidebar(*args, si
     * :func:`~shiny.ui.sidebar`
     """
 
-    args, sidebar = _get_layout_sidebar_sidebar(args)
+    sidebar, args = _get_layout_sidebar_sidebar(sidebar, args)
 
     # TODO-future; implement
     # if fg is None and bg is not None:
@@ -426,57 +427,57 @@ def layout_sidebar(  # TODO-barret-API; Should this be `layout_sidebar(*args, si
 
 
 def _get_layout_sidebar_sidebar(
+    sidebar: Sidebar,
     args: tuple[Sidebar | TagChild | TagAttrs, ...],
-) -> tuple[tuple[TagChild | Sidebar | TagAttrs, ...], Sidebar]:
+) -> tuple[Sidebar, tuple[TagChild | Sidebar | TagAttrs, ...]]:
     updated_args: list[Sidebar | TagChild | TagAttrs] = []
     original_args = tuple(args)
 
-    sidebar: Sidebar | None = None
+    # sidebar: Sidebar | None = None
     sidebar_orig_arg: Sidebar | DeprecatedPanelSidebar | None = None
+
+    if isinstance(sidebar, DeprecatedPanelSidebar):
+        sidebar = sidebar.sidebar
 
     # Use `original_args` here so `updated_args` can be safely altered in place
     for i, arg in zip(range(len(original_args)), original_args):
         if isinstance(arg, Sidebar):
-            if sidebar is not None:
-                raise ValueError(
-                    "`layout_sidebar()` is being supplied with multiple `sidebar()` objects. Please supply only one `sidebar()` object to `layout_sidebar()`."
-                )
-            sidebar = arg
+            raise ValueError(
+                "`layout_sidebar()` is being supplied with multiple `sidebar()` objects. Please supply only one `sidebar()` object to `layout_sidebar()`."
+            )
         elif isinstance(arg, DeprecatedPanelSidebar):
+            raise ValueError(
+                "`panel_sidebar()` is not being used as the first argument to `layout_sidebar(sidebar,)`. `panel_sidebar()` has been deprecated and will go away in a future version of Shiny. Please supply `panel_sidebar()` arguments directly to `args` in `layout_sidebar(sidebar)` and use `sidebar()` instead of `panel_sidebar()`."
+            )
+        elif isinstance(arg, DeprecatedPanelMain):
             if i != 0:
                 raise ValueError(
-                    "`panel_sidebar()` is not being used as the first argument to `layout_sidebar()`. `panel_sidebar()` has been deprecated and will go away in a future version of Shiny. Please supply `panel_sidebar()` arguments directly to `args` in `layout_sidebar(*args)` and use `sidebar()` instead of `panel_sidebar()`."
-                )
-            sidebar_orig_arg = arg
-            sidebar = arg.sidebar
-        elif isinstance(arg, DeprecatedPanelMain):
-            if i != 1:
-                raise ValueError(
-                    "`panel_main()` is not being supplied as the second argument to `layout_sidebar()`. `panel_main()`/`panel_sidebar()` have been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(*args)` and use `sidebar()` instead of `panel_sidebar()`."
+                    "`panel_main()` is not being supplied as the second argument to `layout_sidebar()`. `panel_main()`/`panel_sidebar()` have been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)` and use `sidebar()` instead of `panel_sidebar()`."
                 )
             if not isinstance(sidebar_orig_arg, DeprecatedPanelSidebar):
                 raise ValueError(
-                    "`panel_main()` is not being used with `panel_sidebar()`. `panel_main()`/`panel_sidebar()` have been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(*args)` and use `sidebar()` instead of `panel_sidebar()`."
+                    "`panel_main()` is not being used with `panel_sidebar()`. `panel_main()`/`panel_sidebar()` have been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)` and use `sidebar()` instead of `panel_sidebar()`."
                 )
 
-            if len(args) > 3:
+            if len(args) > 2:
                 raise ValueError(
-                    "Unexpected extra legacy `*args` have been supplied to `layout_sidebar()` in addition to `panel_main()` or `panel_sidebar()`. `panel_main()` has been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(*args)` and use `sidebar()` instead of `panel_sidebar()`."
+                    "Unexpected extra legacy `*args` have been supplied to `layout_sidebar()` in addition to `panel_main()` or `panel_sidebar()`. `panel_main()` has been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)` and use `sidebar()` instead of `panel_sidebar()`."
                 )
             # Notes for this point in the code:
-            # * We are working with args[1], a `DeprecatedPanelMain`; args[0] is `DeprecatedPanelSidebar`
-            # * len(args) == 2 or 3
+            # * We are working with args[0], a `DeprecatedPanelMain`; sidebar was originally a `DeprecatedPanelSidebar`
+            # * len(args) == 1 or 2
 
             # Handle legacy `layout_sidebar(sidebar, main, position=)` value
-            if len(args) == 3:
-                arg2 = args[2]
-                if not (arg2 == "left" or arg2 == "right"):
+            if len(args) == 2:
+                arg1 = args[1]
+                if not (arg1 == "left" or arg1 == "right"):
                     raise ValueError(
-                        "layout_sidebar(*args) contains non-valid legacy values. Please use `sidebar()` instead of `panel_sidebar()` and supply any `panel_main()` arguments directly to `args` in `layout_sidebar(*args)`."
+                        "layout_sidebar(*args) contains non-valid legacy values. Please use `sidebar()` instead of `panel_sidebar()` and supply any `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)`."
                     )
                 # We know `sidebar_orig_arg` is a `DeprecatedPanelSidebar` here
                 sidebar.position = cast(  # pyright: ignore[reportOptionalMemberAccess]
-                    Literal["left", "right"], arg2
+                    Literal["left", "right"],
+                    arg1,
                 )
 
             # Only keep panel_main content
@@ -490,12 +491,7 @@ def _get_layout_sidebar_sidebar(
             # Keep the arg!
             updated_args.append(arg)
 
-    if sidebar is None:
-        raise ValueError(
-            "`layout_sidebar()` did not receive a `sidebar()` object. To use `layout_sidebar()`, please supply a `sidebar()` object."
-        )
-
-    return (tuple(updated_args), sidebar)
+    return (sidebar, tuple(updated_args))
 
 
 @add_example()
@@ -618,7 +614,7 @@ def panel_main(
 
 
 # Deprecated 2023-06-13
-class DeprecatedPanelSidebar:
+class DeprecatedPanelSidebar(Sidebar):
     """
     [Deprecated] Sidebar panel
 
