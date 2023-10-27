@@ -42,7 +42,7 @@ def tooltip(
         The placement of the tooltip relative to its trigger.
     options
         A list of additional [Bootstrap
-        options](https://getbootstrap.com/docs/5.2/components/tooltips/#options).
+        options](https://getbootstrap.com/docs/5.3/components/tooltips/#options).
 
     Details
     -------
@@ -104,7 +104,7 @@ def tooltip(
     See Also
     --------
 
-    * [Bootstrap tooltips documentation](https://getbootstrap.com/docs/5.2/components/tooltips/)
+    * [Bootstrap tooltips documentation](https://getbootstrap.com/docs/5.3/components/tooltips/)
     """
 
     # * If you're using [bsicons::bs_icon()], provide a `title`.

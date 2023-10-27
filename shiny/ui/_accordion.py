@@ -215,7 +215,7 @@ def accordion(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -321,7 +321,7 @@ def accordion_panel(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -414,7 +414,7 @@ def accordion_panel_set(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -451,7 +451,7 @@ def accordion_panel_open(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -488,7 +488,7 @@ def accordion_panel_close(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -531,7 +531,7 @@ def accordion_panel_insert(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -577,7 +577,7 @@ def accordion_panel_remove(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -647,7 +647,7 @@ def update_accordion_panel(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
