@@ -158,9 +158,9 @@ __all__ = (
     "card_header",
     "card_footer",
     # # ValueBox
-    "value_box",
     "showcase_left_center",
     "showcase_top_right",
+    "value_box",
     # # Layout
     "layout_column_wrap",
     # # Navs

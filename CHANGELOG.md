@@ -36,12 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### API relocations
 
-* `shiny.ui`'s `navset_pill_card()` and `navset_tab_card()` have been renamed to `.navset_card_pill()` and `navset_tab_card()` respectively (#492).
+* `shiny.ui`'s `navset_pill_card()` and `navset_tab_card()` have been renamed to `navset_card_pill()` and `navset_card_tab()` respectively (#492).
 
 The following methods have been moved from `shiny.experimental.ui` and integrated into `shiny.ui` (final locations under `shiny.ui` are displayed) (#680):
 
 * Sidebar - Sidebar layout or manipulation
-  * `page_sidebar()`, `toggle_sidebar()`, `layout_sidebar()`
+  * `sidebar()`, `page_sidebar()`, `toggle_sidebar()`, `layout_sidebar()`, `Sidebar`
 * Filling layout - Allow UI components to expand into the parent container and/or allow its content to expand
   * `page_fillable()`, `fill.as_fillable_container()`, `fill.as_fill_item()`, `fill.is_fillable_container()`, `fill.is_fill_item()`, `fill.remove_all_fill()`
   * `output_plot(fill=)`, `output_image(fill=)`, `output_ui(fill=, fillable=)`
@@ -52,7 +52,7 @@ The following methods have been moved from `shiny.experimental.ui` and integrate
 * Popover - Click-based context UI element
   * `popover()`, `toggle_popover()`, `update_popover()`
 * Accordion - Vertically collapsible UI element
-  * `accordion()`, `accordion_panel()`, `accordion_panel_close()`, `accordion_panel_insert()`, `accordion_panel_open()`, `accordion_panel_remove()`, `accordion_panel_set()`, `Accordion`
+  * `accordion()`, `accordion_panel()`, `accordion_panel_close()`, `accordion_panel_insert()`, `accordion_panel_open()`, `accordion_panel_remove()`, `accordion_panel_set()`, `update_accordion_panel()`, `Accordion`, `AccordionPanel`
 * Card - A general purpose container for grouping related UI elements together
   * `card()`, `card_header()`, `card_footer()`, `CardItem`
 * Valuebox - Opinionated container for displaying a value and title
@@ -62,6 +62,8 @@ The following methods have been moved from `shiny.experimental.ui` and integrate
 * Navs - Navigation within a page
   * `navset_bar()`, `navset_tab_card()`, `navset_pill_card()`
   * `page_navbar(sidebar=, fillable=, fillable_mobile=, gap=, padding=)`, `navset_card_tab(sidebar=)`, `navset_card_pill(sidebar=)`, `navset_bar(sidebar=, fillable=, gap=, padding=)`
+* Layout - Layout of UI elements
+  * `layout_column_wrap()`
 * Inputs - UI elements for user input
   * `toggle_switch()`
   * `input_text_area(autoresize=)`
