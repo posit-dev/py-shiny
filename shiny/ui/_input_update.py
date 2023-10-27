@@ -23,7 +23,7 @@ import re
 from datetime import date
 from typing import Literal, Mapping, Optional
 
-from htmltools import TagChild
+from htmltools import TagChild, TagList
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
@@ -31,12 +31,12 @@ from .._docstring import add_example, doc_format
 from .._namespaces import resolve_id
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import drop_none
-from ..module import session_context
-from ..session import Session, require_active_session
+from ..session import Session, require_active_session, session_context
 from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
 from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
+from ._utils import _session_on_flush_send_msg
 
 _note = """
     The input updater functions send a message to the client, telling it to change the
@@ -896,3 +896,82 @@ def update_navs(
     session = require_active_session(session)
     msg = {"value": selected}
     session.send_input_message(id, drop_none(msg))
+
+
+# -----------------------------------------------------------------------------
+# tooltips.py
+# -----------------------------------------------------------------------------
+@add_example()
+def update_tooltip(id: str, *args: TagChild, session: Optional[Session] = None) -> None:
+    """
+    Update tooltip contents
+
+    Parameters
+    ----------
+    id
+        A character string that matches an existing tooltip id.
+    *args
+        Contents to the tooltip's body.
+    session
+        A Shiny session object (the default should almost always be used).
+    """
+    _session_on_flush_send_msg(
+        id,
+        session,
+        drop_none(
+            {
+                "method": "update",
+                "title": require_active_session(session)._process_ui(TagList(*args))
+                if len(args) > 0
+                else None,
+            }
+        ),
+    )
+
+
+# -----------------------------------------------------------------------------
+# popover.py
+# -----------------------------------------------------------------------------
+
+
+# @add_example()
+def update_popover(
+    id: str,
+    *args: TagChild,
+    title: Optional[TagChild] = None,
+    session: Optional[Session] = None,
+) -> None:
+    """
+    Update the contents or title of a popover.
+
+    Parameters
+    ----------
+    id
+        The id of the popover DOM element to update.
+    args
+        The new contents of the popover.
+    title
+        The new title of the popover.
+    session
+        A Shiny session object (the default should almost always be used).
+
+    See Also
+    --------
+    * :func:`~shiny.ui.popover`
+    * :func:`~shiny.ui.toggle_popover`
+    """
+    session = require_active_session(session)
+
+    _session_on_flush_send_msg(
+        id,
+        session,
+        drop_none(
+            {
+                "method": "update",
+                "content": session._process_ui(TagList(*args))
+                if len(args) > 0
+                else None,
+                "header": session._process_ui(title) if title is not None else None,
+            },
+        ),
+    )

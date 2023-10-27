@@ -2,9 +2,10 @@
   "name": "shiny-dataframe-binding",
   "private": true,
   "license": "MIT",
-  "main": "index.js",
   "scripts": {
-    "build": "tsc -noEmit && eslint . && tsx build.ts",
+    "lint": "tsc -noEmit && eslint .",
+    "bundle": "tsx build.ts",
+    "build": "npm run lint && npm run bundle",
     "watch": "npx nodemon --exec 'npm run build' --ext '*' --ignore dist/ --ignore esbuild-metadata.json",
     "build-fast": "tsx build.ts",
     "watch-fast": "npx nodemon --exec 'npm run build-fast' --ext '*' --ignore dist/ --ignore esbuild-metadata.json"

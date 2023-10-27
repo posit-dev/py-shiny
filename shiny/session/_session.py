@@ -955,7 +955,7 @@ class Outputs:
     def __init__(
         self,
         session: Session,
-        ns: Callable[[str], str],
+        ns: Callable[[str], ResolvedId],
         effects: dict[str, Effect_],
         suspend_when_hidden: dict[str, bool],
     ) -> None:
@@ -997,6 +997,9 @@ class Outputs:
             id = name
 
         def set_renderer(renderer_fn: OutputRenderer[OT]) -> None:
+            if hasattr(renderer_fn, "on_register"):
+                renderer_fn.on_register()
+
             # Get the (possibly namespaced) output id
             output_name = self._ns(id or renderer_fn.__name__)
 
@@ -1009,8 +1012,7 @@ class Outputs:
             # renderer_fn is a Renderer object. Give it a bit of metadata.
             renderer_fn._set_metadata(self._session, output_name)
 
-            if output_name in self._effects:
-                self._effects[output_name].destroy()
+            self.remove(output_name)
 
             self._suspend_when_hidden[output_name] = suspend_when_hidden
 
@@ -1045,7 +1047,7 @@ class Outputs:
                         err_msg = str(e)
                     # Register the outbound error message
                     err_message = {
-                        output_name: {
+                        str(output_name): {
                             "message": err_msg,
                             # TODO: is it possible to get the call?
                             "call": None,
@@ -1073,6 +1075,13 @@ class Outputs:
             return set_renderer
         else:
             return set_renderer(renderer_fn)
+
+    def remove(self, id: Id):
+        output_name = self._ns(id)
+        if output_name in self._effects:
+            self._effects[output_name].destroy()
+            del self._effects[output_name]
+            del self._suspend_when_hidden[output_name]
 
     def _manage_hidden(self) -> None:
         "Suspends execution of hidden outputs and resumes execution of visible outputs."

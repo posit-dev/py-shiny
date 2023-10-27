@@ -9,10 +9,10 @@ from .transformer._transformer import (
     OutputRendererAsync,
     OutputRendererSync,
     TransformerMetadata,
-    TransformerParams,
     ValueFn,
     ValueFnAsync,
     ValueFnSync,
+    empty_params,
 )
 
 # ======================================================================================
@@ -45,7 +45,7 @@ class RenderFunction(Generic[IT, OT], OutputRendererSync[OT], ABC):
         super().__init__(
             value_fn=fn,
             transform_fn=transformer,
-            params=TransformerParams.empty_params(),
+            params=empty_params(),
         )
         self._fn = fn
 
@@ -74,6 +74,6 @@ class RenderFunctionAsync(Generic[IT, OT], OutputRendererAsync[OT], ABC):
         super().__init__(
             value_fn=fn,
             transform_fn=transformer,
-            params=TransformerParams.empty_params(),
+            params=empty_params(),
         )
         self._fn = fn

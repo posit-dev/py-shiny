@@ -34,7 +34,6 @@ write_json <- function(file, x, ..., pretty = TRUE, auto_unbox = TRUE) {
     ...,
     pretty = pretty, auto_unbox = auto_unbox
   )
-
 }
 
 bslib_version <- pkg_source_version("bslib")
@@ -48,10 +47,8 @@ shiny_path <- fs::path(getwd(), "shiny")
 www <- fs::path(shiny_path, "www")
 www_shared <- fs::path(www, "shared")
 
-x_www <- fs::path(shiny_path, "experimental", "www")
-x_www_bslib_components <- fs::path(x_www, "bslib", "components")
-x_www_htmltools_fill <- fs::path(x_www, "htmltools", "fill")
-main_x_www <- fs::path(www_shared, "_x")
+www_bslib_components <- fs::path(www_shared, "bslib", "components")
+www_htmltools_fill <- fs::path(www_shared, "htmltools", "fill")
 
 # Copy over shiny's www/shared directory
 copy_from_pkg <- function(pkg_name, pkg_dir, local_dir, version_dir = fs::path_dir(local_dir)) {
@@ -86,13 +83,19 @@ copy_from_pkg <- function(pkg_name, pkg_dir, local_dir, version_dir = fs::path_d
 
 
 # ------------------------------------------------------------------------------
+# Must come first!
+message("Copy shiny www/shared")
+# Copy over shiny's www/shared directory
+copy_from_pkg("shiny", "www/shared", www_shared, www_shared)
+
+# ------------------------------------------------------------------------------
 message("Copy bslib components")
 # Copy over bslib's components directory
-copy_from_pkg("bslib", "components/dist", x_www_bslib_components)
+copy_from_pkg("bslib", "components/dist", www_bslib_components)
 # Remove non-minified files
 fs::file_delete(
   fs::dir_ls(
-    x_www_bslib_components,
+    www_bslib_components,
     type = "file",
     recurse = TRUE,
     regexp = "\\.(min\\.|css)",
@@ -100,18 +103,10 @@ fs::file_delete(
   )
 )
 
-
 # ------------------------------------------------------------------------------
 message("Copy htmltools - fill")
 # Copy over htmltools's fill directory
-copy_from_pkg("htmltools", "fill", fs::path(x_www, "htmltools", "fill"))
-
-
-# ------------------------------------------------------------------------------
-message("Copy shiny www/shared")
-# Copy over shiny's www/shared directory
-copy_from_pkg("shiny", "www/shared", www_shared, www_shared)
-
+copy_from_pkg("htmltools", "fill", www_htmltools_fill)
 
 # ------------------------------------------------------------------------------
 message("Cleanup shiny www/shared")
@@ -119,6 +114,8 @@ message("Cleanup shiny www/shared")
 fs::dir_delete(fs::path(www_shared, "legacy"))
 # Don't need dataTables (hopefully)
 fs::dir_delete(fs::path(www_shared, "datatables"))
+# Don't need sass files (hopefully)
+fs::dir_delete(fs::path(www_shared, "shiny_scss"))
 
 # jQuery will come in via bslib (below)
 fs::file_delete(
@@ -176,12 +173,17 @@ message("Save bootstrap bundle")
 deps <- bslib::bs_theme_dependencies(shiny_theme)
 withr::with_options(
   list(htmltools.dir.version = FALSE),
-  ignore <- lapply(deps, copyDependencyToDir, www_shared)
+  ignore <- lapply(deps, function(dep) {
+    if (dep$name %in% c("bslib-component-css", "bslib-component-js")) {
+      return()
+    }
+    copyDependencyToDir(dep, www_shared)
+  })
 )
 bs_ver <- names(bslib::versions())[bslib::versions() == "5"]
 versions["bootstrap"] <- bs_ver
 write_json(
-  "shiny/www/shared/bootstrap/_version.json",
+  fs::path(www_shared, "bootstrap/_version.json"),
   list(
     shiny_version = shiny_version,
     bslib_version = bslib_version,
@@ -191,8 +193,8 @@ write_json(
 )
 
 message("Reduce font files")
-font_txt <- unlist(strsplit(readLines("shiny/www/shared/bootstrap/font.css"), ";"))
-woff_files <- list.files("shiny/www/shared/bootstrap/fonts", pattern = "\\.woff", full.names = TRUE)
+font_txt <- unlist(strsplit(readLines(fs::path(www_shared, "bootstrap/font.css")), ";"))
+woff_files <- list.files(fs::path(www_shared, "bootstrap/fonts"), pattern = "\\.woff", full.names = TRUE)
 ignored <- lapply(woff_files, function(woff_file) {
   file_name <- basename(woff_file)
   if (!any(grepl(file_name, font_txt, fixed = TRUE))) {
@@ -206,9 +208,29 @@ message("Cleanup bootstrap bundle")
 # This additional bs3compat HTMLDependency() only holds
 # the JS shim for tab panel logic, which we don't need
 # since we're generating BS5+ tab markup. Note, however,
-# we still do have bs3compat's CSS on the page, which
-# comes in via the bootstrap HTMLDependency()
+# we still do have bs3compat's bundled CSS on the page, which
+# comes in naturally via the bootstrap HTMLDependency()
 fs::dir_delete(fs::path(www_shared, "bs3compat"))
+
+# Remove non-minified or unused files
+fs::file_delete(
+  fs::path(www_shared, c(
+    "datepicker/css/bootstrap-datepicker3.css",
+    "datepicker/js/bootstrap-datepicker.js",
+    "datepicker/scss",
+    "ionrangeslider/js/ion.rangeSlider.js",
+    "ionrangeslider/scss",
+    "jquery/jquery-3.6.0.js",
+    "jqueryui/jquery-ui.css",
+    "jqueryui/jquery-ui.js",
+    "jqueryui/jquery-ui.structure.css",
+    "jqueryui/jquery-ui.structure.min.css",
+    "jqueryui/jquery-ui.theme.css",
+    "jqueryui/jquery-ui.theme.min.css",
+    "selectize/accessibility/js/selectize-plugin-a11y.js",
+    "selectize/js/selectize.js"
+  ))
+)
 
 
 # ------------------------------------------------------------------------------
@@ -251,31 +273,10 @@ cat(
 )
 
 
-# ------------------------------------------------------------------------------
-message("Copy www/shared/_x assets")
-
-if (fs::dir_exists(main_x_www)) fs::dir_delete(main_x_www)
-
-main_x_bslib_components <- fs::path(main_x_www, "bslib")
-main_x_htmltools_fill <- fs::path(main_x_www, "htmltools")
-fs::dir_create(c(main_x_bslib_components, main_x_htmltools_fill))
-
-# Copy bslib
-fs::dir_copy(x_www_bslib_components, main_x_bslib_components)
-# Copy htmltools
-fs::dir_copy(x_www_htmltools_fill, main_x_htmltools_fill)
-# Remove unused files
-fs::file_delete(
-  fs::dir_ls(
-    fs::path(main_x_bslib_components, "components"),
-    regexp="(_version|sidebar|nav_spacer|bslibShiny)",
-    invert = TRUE
-  )
-)
 
 
 # ------------------------------------------------------------------------------
-message("Create dataframe.js via npm")
+message("Copy ./js deps via npm")
 
 js_path <- fs::path_abs(fs::path(shiny_path, "..", "js"))
 ignore <- system(

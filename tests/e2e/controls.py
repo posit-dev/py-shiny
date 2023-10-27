@@ -7,7 +7,7 @@ import re
 import sys
 import time
 import typing
-from typing import Literal, Protocol
+from typing import Literal, Optional, Protocol
 
 from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
@@ -64,10 +64,10 @@ Questions:
 """
 
 
-OptionalStr = typing.Optional[str]
-OptionalInt = typing.Optional[int]
-OptionalFloat = typing.Optional[float]
-OptionalBool = typing.Optional[bool]
+OptionalStr = Optional[str]
+OptionalInt = Optional[int]
+OptionalFloat = Optional[float]
+OptionalBool = Optional[bool]
 
 PatternStr = typing.Pattern[str]
 PatternOrStr = typing.Union[str, PatternStr]
@@ -573,6 +573,19 @@ class InputTextArea(
         timeout: Timeout = None,
     ) -> None:
         expect_attr(self.loc, "resize", value=value, timeout=timeout)
+
+    def expect_autoresize(
+        self,
+        value: bool,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        _expect_class_value(
+            self.loc,
+            "textarea-autoresize",
+            value,
+            timeout=timeout,
+        )
 
 
 class _InputSelectBase(
@@ -2373,13 +2386,25 @@ class Sidebar(
         super().__init__(
             page,
             id=id,
-            loc=f"> div#{id}",
+            loc=f"> aside#{id}",
             loc_container="div.bslib-sidebar-layout",
         )
         self.loc_handle = self.loc_container.locator("button.collapse-toggle")
+        self.loc_position = self.loc.locator("..")
 
     def expect_title(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc).to_have_text(value, timeout=timeout)
+
+    def expect_position(
+        self, position: Literal["left", "right"], *, timeout: Timeout = None
+    ) -> None:
+        is_right_sidebar = position == "right"
+        _expect_class_value(
+            self.loc_position,
+            f"sidebar-{position}",
+            is_right_sidebar,
+            timeout=timeout,
+        )
 
     def expect_handle(self, exists: bool, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc_handle).to_have_count(int(exists), timeout=timeout)
@@ -2486,13 +2511,11 @@ class ValueBox(
             loc="> div > .value-box-grid",
         )
         value_box_grid = self.loc
-        self.loc_showcase = value_box_grid.locator("> div > .value-box-showcase")
-        self.loc_title = value_box_grid.locator(
-            "> div > .value-box-area > :nth-child(1)"
-        )
-        self.loc = value_box_grid.locator("> div > .value-box-area > :nth-child(2)")
+        self.loc_showcase = value_box_grid.locator("> .value-box-showcase")
+        self.loc_title = value_box_grid.locator("> .value-box-area > .value-box-title")
+        self.loc = value_box_grid.locator("> .value-box-area > .value-box-value")
         self.loc_body = value_box_grid.locator(
-            "> div > .value-box-area > :not(:nth-child(1), :nth-child(2))"
+            "> .value-box-area > :not(.value-box-title, .value-box-value)"
         )
         self._loc_fullscreen = self.loc_container.locator(
             "> bslib-tooltip > .bslib-full-screen-enter"
@@ -2507,9 +2530,7 @@ class ValueBox(
         )
 
     def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
-        expect_to_have_style(
-            self.loc_container, "--bslib-grid-height", value, timeout=timeout
-        )
+        expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
 
     def expect_title(
         self,
@@ -2983,18 +3004,8 @@ class LayoutNavsetTab(_LayoutNavItemBase):
         super().__init__(
             page,
             id=id,
-            loc_container=f"ul#{id}.nav-tabs.shiny-tab-input",
+            loc_container=f"ul#{id}.nav-tabs",
             loc="a[role='tab']",
-        )
-
-
-class LayoutNavSetCardTab(_LayoutNavItemBase):
-    def __init__(self, page: Page, id: str) -> None:
-        super().__init__(
-            page,
-            id=id,
-            loc_container=f"ul#{id}.card-header-tabs.shiny-tab-input",
-            loc="> li.nav-item",
         )
 
 
@@ -3003,7 +3014,17 @@ class LayoutNavSetPill(_LayoutNavItemBase):
         super().__init__(
             page,
             id=id,
-            loc_container=f"ul#{id}.nav-pills.shiny-tab-input",
+            loc_container=f"ul#{id}.nav-pills",
+            loc="> li.nav-item",
+        )
+
+
+class LayoutNavSetUnderline(_LayoutNavItemBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-underline",
             loc="> li.nav-item",
         )
 
@@ -3013,7 +3034,17 @@ class LayoutNavSetPillList(_LayoutNavItemBase):
         super().__init__(
             page,
             id=id,
-            loc_container=f"ul#{id}.nav-stacked.shiny-tab-input",
+            loc_container=f"ul#{id}.nav-stacked",
+            loc="> li.nav-item",
+        )
+
+
+class LayoutNavSetCardTab(_LayoutNavItemBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f".bslib-card > div > ul#{id}.nav-tabs",
             loc="> li.nav-item",
         )
 
@@ -3023,7 +3054,17 @@ class LayoutNavSetCardPill(_LayoutNavItemBase):
         super().__init__(
             page,
             id=id,
-            loc_container=f"ul#{id}.nav-pills.card-header-pills.shiny-tab-input",
+            loc_container=f".bslib-card > div > ul#{id}.nav-pills",
+            loc="> li.nav-item",
+        )
+
+
+class LayoutNavSetCardUnderline(_LayoutNavItemBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f".bslib-card > div > ul#{id}.nav-underline",
             loc="> li.nav-item",
         )
 
@@ -3033,7 +3074,7 @@ class LayoutNavSetHidden(_LayoutNavItemBase):
         super().__init__(
             page,
             id=id,
-            loc_container=f"ul#{id}.nav-hidden.shiny-tab-input",
+            loc_container=f"ul#{id}.nav-hidden",
             loc="> li.nav-item",
         )
 
@@ -3043,17 +3084,7 @@ class LayoutNavSetBar(_LayoutNavItemBase):
         super().__init__(
             page,
             id=id,
-            loc_container=f"ul#{id}.navbar-nav.shiny-tab-input",
-            loc="> li.nav-item",
-        )
-
-
-class LayoutNavsetHidden(_LayoutNavItemBase):
-    def __init__(self, page: Page, id: str) -> None:
-        super().__init__(
-            page,
-            id=id,
-            loc_container=f"ul#{id}.nav-tabs.shiny-tab-input",
+            loc_container=f"ul#{id}.navbar-nav",
             loc="> li.nav-item",
         )
 

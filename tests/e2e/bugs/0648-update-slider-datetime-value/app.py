@@ -3,13 +3,10 @@ from __future__ import annotations
 import datetime
 from typing import Any, Optional, Union
 
-import shiny.experimental as x
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 
 start_time = datetime.datetime(2023, 7, 1, 0, 0, 0, 0, tzinfo=datetime.timezone.utc)
 end_time = start_time + datetime.timedelta(hours=1)
-
-from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 
 
 @module.ui
@@ -21,7 +18,7 @@ def slider_with_reset_ui(
         list[datetime.datetime],
     ],
 ) -> ui.TagChild:
-    return x.ui.card(
+    return ui.card(
         ui.input_slider(
             "times",
             "Times",
@@ -61,7 +58,7 @@ def slider_with_reset_server(
 
 
 app_ui = ui.page_fluid(
-    x.ui.layout_column_wrap(
+    ui.layout_column_wrap(
         "400px",
         slider_with_reset_ui("one", "Jump to end", start_time),
         slider_with_reset_ui("two", "Select all", (start_time, start_time)),

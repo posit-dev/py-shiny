@@ -13,6 +13,7 @@ from typing import (
     runtime_checkable,
 )
 
+from .. import ui
 from .._docstring import add_example
 from ._dataframe_unsafe import serialize_numpy_dtypes
 from .transformer import (
@@ -224,7 +225,7 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
 DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
 
-@output_transformer
+@output_transformer(default_ui=ui.output_data_frame)
 async def DataFrameTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[DataFrameResult | None],

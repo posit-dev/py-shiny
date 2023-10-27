@@ -1,10 +1,11 @@
 """A package for building reactive web applications."""
 
-__version__ = "0.5.1.9000"
+__version__ = "0.5.1.9003"
 
 from ._shinyenv import is_pyodide as _is_pyodide
 
 # User-facing subpackages that should be available on `from shiny import *`
+from . import quarto
 from . import reactive
 from . import render
 from .session import (
@@ -37,6 +38,7 @@ else:
 
 __all__ = (
     # public sub-packages
+    "quarto",
     "reactive",
     "render",
     "session",
