@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from colors import bg_color, fg_color
 from conftest import ShinyAppProc
-
 from controls import Sidebar
 from playwright.sync_api import Page, expect
 
