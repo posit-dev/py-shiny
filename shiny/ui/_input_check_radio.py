@@ -124,7 +124,7 @@ def input_switch(
     ~shiny.ui.input_radio_buttons
     """
 
-    return _input_checkbox(
+    return _bslib_input_checkbox(
         id,
         label,
         "bslib-input-switch form-switch",
@@ -133,7 +133,7 @@ def input_switch(
     )
 
 
-def _input_checkbox(
+def _bslib_input_checkbox(
     id: str,
     label: TagChild,
     class_: str = "bslib-input-checkbox",

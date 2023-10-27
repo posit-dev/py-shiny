@@ -87,6 +87,7 @@ def layout_column_wrap(
     """
     attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
 
+    # TODO-future; Remove this when we remove `shiny.experimental.ui.layout_column_wrap()`
     if isinstance(width, MISSING_TYPE):
         if len(children) > 0 and (
             children[0] is None or is_probably_a_css_unit(children[0])

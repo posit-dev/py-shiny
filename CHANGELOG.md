@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   These named color themes aren't limited to value boxes: because they're powered by small utility classes, you can use them anywhere within your bslib-powered UI.
 
 * Added `shiny.ui.showcase_bottom()`, a new `shiny.ui.value_box()` layout that places the showcase below the value box `title` and `value`, perfect for a full-bleed plot. (#772)
+
 ### API changes
 
 * Added `shiny.ui.navset_underline()` and `shiny.ui.navset_card_underline()` whose navigation container is similar to `shiny.ui.navset_tab()` and `shiny.ui.navset_card_tab()` respectively, but its active/focused navigation links are styled with an underline. (#772)
@@ -80,10 +81,10 @@ Methods still under consideration in `shiny.experimental.ui`:
 #### API removals
 
 * `shiny.experimental.ui.FillingLayout` has been removed. (#481)
-* `shiny.experimental.ui.as_width_unit()` has been made defunkt. Please remove it from your code. (#772)
+* `shiny.experimental.ui.as_width_unit()` has been made defunct. Please remove it from your code. (#772)
 * Support for `min_height=`, `max_height=`, and `gap=` in `shiny.experimental.ui.as_fillable_container()` and `as_fill_item()` has been removed. (#481)
 * `shiny.experimental.ui.TagCallable` has been deprecated. Its type is equivalent to `htmltools.TagFunction`. (#680)
-* `shiny.eperimental.ui.as_fill_carrier()` and `shiny.eperimental.ui.is_fill_carrier()` have been deprecated. Please use `shiny.ui.fill.as_fill_item()` and `shiny.ui.fill.as_fillable_container()` or `shiny.ui.fill.is_fill_item()` and `shiny.ui.fill.is_fillable_container()` respectively in combination to achieve similar behavior. (#680)
+* `shiny.experimental.ui.as_fill_carrier()` and `shiny.experimental.ui.is_fill_carrier()` have been deprecated. Please use `shiny.ui.fill.as_fill_item()` and `shiny.ui.fill.as_fillable_container()` or `shiny.ui.fill.is_fill_item()` and `shiny.ui.fill.is_fillable_container()` respectively in combination to achieve similar behavior. (#680)
 
 ### Bug fixes
 
