@@ -230,6 +230,7 @@ class OutputRenderer(Generic[OT], ABC):
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
         default_ui: Optional[DefaultUIFnImpl] = None,
+        default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
     ) -> None:
         """
         Parameters
@@ -264,6 +265,10 @@ class OutputRenderer(Generic[OT], ABC):
         self._transformer = transform_fn
         self._params = params
         self.default_ui = default_ui
+        self.default_ui_passthrough_args = default_ui_passthrough_args
+        self.default_ui_args: tuple[object, ...] = tuple()
+        self.default_ui_kwargs: dict[str, object] = dict()
+
         self._auto_registered = False
 
         from ...session import get_current_session
@@ -340,11 +345,21 @@ class OutputRenderer(Generic[OT], ABC):
         if self.default_ui is None:
             raise TypeError("No default UI exists for this type of render function")
 
-        params = tuple(inspect.signature(self.default_ui).parameters.values())
-        if len(params) > 0 and params[0].name == "_params":
-            return self.default_ui(self._params.kwargs, self.__name__)  # type: ignore
-        else:
-            return cast(DefaultUIFn, self.default_ui)(self.__name__)
+        # Merge the kwargs from the render function passthrough, with the kwargs from
+        # explicit @output_args call. The latter take priority.
+        kwargs: dict[str, object] = dict()
+        if self.default_ui_passthrough_args is not None:
+            kwargs.update(
+                {
+                    k: v
+                    for k, v in self._params.kwargs.items()
+                    if k in self.default_ui_passthrough_args
+                }
+            )
+        kwargs.update(self.default_ui_kwargs)
+        return cast(DefaultUIFn, self.default_ui)(
+            self.__name__, *self.default_ui_args, **kwargs
+        )
 
 
 # Using a second class to help clarify that it is of a particular type
@@ -367,6 +382,7 @@ class OutputRendererSync(OutputRenderer[OT]):
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
         default_ui: Optional[DefaultUIFnImpl] = None,
+        default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
     ) -> None:
         if is_async_callable(value_fn):
             raise TypeError(
@@ -378,6 +394,7 @@ class OutputRendererSync(OutputRenderer[OT]):
             transform_fn=transform_fn,
             params=params,
             default_ui=default_ui,
+            default_ui_passthrough_args=default_ui_passthrough_args,
         )
 
     def __call__(self) -> OT:
@@ -409,6 +426,7 @@ class OutputRendererAsync(OutputRenderer[OT]):
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
         default_ui: Optional[DefaultUIFnImpl] = None,
+        default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
     ) -> None:
         if not is_async_callable(value_fn):
             raise TypeError(
@@ -420,6 +438,7 @@ class OutputRendererAsync(OutputRenderer[OT]):
             transform_fn=transform_fn,
             params=params,
             default_ui=default_ui,
+            default_ui_passthrough_args=default_ui_passthrough_args,
         )
 
     async def __call__(self) -> OT:  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -688,17 +707,6 @@ def output_transformer(
 
     # If default_ui_passthrough_args was used, modify the default_ui function so it is
     # ready to mix in extra arguments from the decorator.
-    if (
-        default_ui is not None
-        and default_ui_passthrough_args is not None
-        and len(default_ui_passthrough_args) > 0
-    ):
-        default_ui_impl = decorator_args_passthrough(
-            default_ui, default_ui_passthrough_args
-        )
-    else:
-        default_ui_impl = default_ui
-
     def output_transformer_impl(
         transform_fn: TransformFn[IT, P, OT],
     ) -> OutputTransformer[IT, OT, P]:
@@ -713,12 +721,22 @@ def output_transformer(
             ) -> OutputRenderer[OT]:
                 if is_async_callable(fn):
                     return OutputRendererAsync(
-                        fn, transform_fn, params, default_ui_impl
+                        fn,
+                        transform_fn,
+                        params,
+                        default_ui,
+                        default_ui_passthrough_args,
                     )
                 else:
                     # To avoid duplicate work just for a typeguard, we cast the function
                     fn = cast(ValueFnSync[IT], fn)
-                    return OutputRendererSync(fn, transform_fn, params, default_ui_impl)
+                    return OutputRendererSync(
+                        fn,
+                        transform_fn,
+                        params,
+                        default_ui,
+                        default_ui_passthrough_args,
+                    )
 
             if value_fn is None:
                 return as_value_fn
