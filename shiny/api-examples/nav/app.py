@@ -37,8 +37,6 @@ def nav_controls(prefix: str) -> List[NavSetArg]:
 app_ui = ui.page_navbar(
     *nav_controls("page_navbar"),
     title="page_navbar()",
-    bg="#0062cc",
-    inverse=True,
     id="navbar_id",
     footer=ui.div(
         {"style": "width:80%;margin: 0 auto"},
@@ -53,10 +51,14 @@ app_ui = ui.page_navbar(
         ui.navset_tab(*nav_controls("navset_tab()")),
         ui.h4("navset_pill()"),
         ui.navset_pill(*nav_controls("navset_pill()")),
+        ui.h4("navset_underline()"),
+        ui.navset_underline(*nav_controls("navset_underline()")),
         ui.h4("navset_card_tab()"),
         ui.navset_card_tab(*nav_controls("navset_card_tab()")),
         ui.h4("navset_card_pill()"),
         ui.navset_card_pill(*nav_controls("navset_card_pill()")),
+        ui.h4("navset_card_underline()"),
+        ui.navset_card_underline(*nav_controls("navset_card_underline()")),
         ui.h4("navset_pill_list()"),
         ui.navset_pill_list(*nav_controls("navset_pill_list()")),
     )
