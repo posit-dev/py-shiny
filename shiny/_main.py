@@ -253,9 +253,12 @@ def run_app(
     os.environ["SHINY_PORT"] = str(port)
 
     if isinstance(app, str):
-        # TODO: handle default app value of "app.py:app"
-        if is_express_app(app, app_dir):
-            app_path = Path(app).resolve()
+        # Remove ":app" suffix if present. Normally users would just pass in the
+        # filename without the trailing ":app", as in `shiny run app.py`, but the
+        # default value for `shiny run` is "app.py:app", so we need to handle it.
+        app_no_suffix = re.sub(r":app$", "", app)
+        if is_express_app(app_no_suffix, app_dir):
+            app_path = Path(app_no_suffix).resolve()
             # Set this so shiny.express.app.wrap_express_app() can find the app file.
             os.environ["SHINY_EXPRESS_APP_FILE"] = str(app_path)
             app = "shiny.express.app:app"

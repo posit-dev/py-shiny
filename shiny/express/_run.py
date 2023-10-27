@@ -63,7 +63,7 @@ def is_express_app(app: str, app_dir: str | None) -> bool:
     Parameters
     ----------
     app
-        App filename. This may be a relative path or absolute path.
+        App filename, like "app.py". It may be a relative path or absolute path.
     app_dir
         Directory containing the app file. If this is `None`, then `app` must be an
         absolute path.
@@ -73,6 +73,9 @@ def is_express_app(app: str, app_dir: str | None) -> bool:
     :
         `True` if it is a Shiny express app, `False` otherwise.
     """
+    if not app.lower().endswith(".py"):
+        return False
+
     if app_dir is not None:
         app_path = Path(app_dir) / app
     else:
