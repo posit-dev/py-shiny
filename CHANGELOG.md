@@ -8,8 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
-### New features
+### Breaking Changes
+* `shiny.run` only allows positional arguments for `app`, `host`, and `port`, all other arguments must be specified with keywords.
 
+### New features
+* `shiny run` now takes `reload-includes` and `reload-excludes` to allow you to define which files trigger a reload (#780).
+* `shiny.run` now passes keyword arguments to `uvicorn.run` (#780).
 * The `@output` decorator is no longer required for rendering functions; `@render.xxx` decorators now register themselves automatically. You can still use `@output` explicitly if you need to set specific output options (#747).
 * Added support for integration with Quarto (#746).
 * Added `shiny.render.renderer_components` decorator to help create new output renderers (#621).
@@ -77,6 +81,9 @@ Methods still under consideration in `shiny.experimental.ui`:
 * `card_image()`: A general container for an image within a `shiny.ui.card`.
 * `card_title()`: A general container for the "title" of a `shiny.ui.card`.
 
+
+### Bug fixes
+* `shiny run` now respects the user provided `reload-dir` argument (#765).
 
 #### API removals
 
