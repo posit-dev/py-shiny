@@ -100,6 +100,7 @@ Methods still under consideration in `shiny.experimental.ui`:
 
 ### Other changes
 
+* `input_action_button()` now defaults to having whitespace around it. (#758)
 * `layout_sidebar()` now uses an `<aside>` element for the sidebar's container and a `<header>` element for the sidebar title. The classes of each element remain the same, but the semantic meaning of the elements is now better reflected in the HTML markup.  (#772)
 * `layout_sidebar()` no longer gives the sidebar main content area the `role="main"` attribute. (#772)
 * Improved the style and appearance of the button to enter full screen in `card()`s and `value_box()`es to better adapt to Bootstrap's dark mode. (#772)
