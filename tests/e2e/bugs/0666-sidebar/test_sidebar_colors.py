@@ -29,7 +29,6 @@ def test_sidebar_bg_colors(page: Page, local_app: ShinyAppProc) -> None:
     expect(first_sidebar).to_have_css("background-color", bg_color)
     expect(first_sidebar).to_have_css("color", fg_color)
 
-    # # TODO-karan; Test that sidebar position is left
     s1 = Sidebar(page, "s1")
     s1.expect_position("left")
     s2 = Sidebar(page, "s2")
