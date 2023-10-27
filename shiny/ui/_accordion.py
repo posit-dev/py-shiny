@@ -9,7 +9,7 @@ from .._namespaces import resolve_id_or_none
 from .._utils import drop_none
 from ..session import Session, require_active_session
 from ..types import MISSING, MISSING_TYPE
-from ._html_deps_shinyverse import accordion_dependency
+from ._html_deps_shinyverse import components_dependency
 from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit
 
@@ -215,7 +215,7 @@ def accordion(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -280,7 +280,7 @@ def accordion(
         # just for ease of identifying autoclosing client-side
         {"class": "autoclose"} if not multiple else None,
         binding_class_value,
-        accordion_dependency(),
+        components_dependency(),
         attrs,
         *panel_tags,
     )
@@ -321,7 +321,7 @@ def accordion_panel(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -414,7 +414,7 @@ def accordion_panel_set(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -451,7 +451,7 @@ def accordion_panel_open(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -488,7 +488,7 @@ def accordion_panel_close(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -531,7 +531,7 @@ def accordion_panel_insert(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -577,7 +577,7 @@ def accordion_panel_remove(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------
@@ -647,7 +647,7 @@ def update_accordion_panel(
 
     References
     ----------
-    [Bootstrap Accordion](https://getbootstrap.com/docs/5.2/components/accordion/)
+    [Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
 
     See Also
     --------

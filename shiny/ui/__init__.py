@@ -94,7 +94,9 @@ from ._navs import (
     nav_spacer,
     navset_tab,
     navset_pill,
+    navset_underline,
     navset_card_pill,
+    navset_card_underline,
     navset_card_tab,
     navset_pill_list,
     navset_hidden,
@@ -127,7 +129,15 @@ from .dataframe import output_data_frame
 
 from ._input_toggle import toggle_switch, toggle_tooltip, toggle_popover
 from ._popover import popover
-from ._valuebox import value_box
+from ._valuebox import (
+    value_box,
+    value_box_theme,
+    showcase_bottom,
+    showcase_left_center,
+    showcase_top_right,
+    ValueBoxTheme,
+    ShowcaseLayout,
+)
 from ._tooltip import tooltip
 
 
@@ -269,7 +279,9 @@ __all__ = (
     "navset_tab",
     "navset_card_tab",
     "navset_card_pill",
+    "navset_card_underline",
     "navset_pill",
+    "navset_underline",
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
@@ -303,6 +315,12 @@ __all__ = (
     "popover",
     # _valuebox
     "value_box",
+    "value_box_theme",
+    "showcase_bottom",
+    "showcase_left_center",
+    "showcase_top_right",
+    "ValueBoxTheme",
+    "ShowcaseLayout",
     # _tooltip
     "tooltip",
     # _progress

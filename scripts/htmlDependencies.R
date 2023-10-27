@@ -11,7 +11,7 @@ versions <- list()
 message("Installing GitHub packages: bslib, shiny, htmltools")
 withr::local_temp_libpaths()
 ignore <- capture.output({
-  pak::pkg_install(c("rstudio/bslib@a076e72e78562d7f006889da4118cd781c66c84c", "rstudio/shiny@ab69d7292c51d8983174e0828496a7096f513673", "rstudio/htmltools@9338b7f3e2ed7b3fef8fd813904b9b05281344aa"))
+  pak::pkg_install(c("rstudio/bslib@main", "rstudio/shiny@main", "rstudio/htmltools@main"))
 })
 # pak::pkg_install(c("cran::bslib", "cran::shiny", "cran::htmltools"))
 
@@ -173,7 +173,12 @@ message("Save bootstrap bundle")
 deps <- bslib::bs_theme_dependencies(shiny_theme)
 withr::with_options(
   list(htmltools.dir.version = FALSE),
-  ignore <- lapply(deps, copyDependencyToDir, www_shared)
+  ignore <- lapply(deps, function(dep) {
+    if (dep$name %in% c("bslib-component-css", "bslib-component-js")) {
+      return()
+    }
+    copyDependencyToDir(dep, www_shared)
+  })
 )
 bs_ver <- names(bslib::versions())[bslib::versions() == "5"]
 versions["bootstrap"] <- bs_ver
@@ -203,9 +208,29 @@ message("Cleanup bootstrap bundle")
 # This additional bs3compat HTMLDependency() only holds
 # the JS shim for tab panel logic, which we don't need
 # since we're generating BS5+ tab markup. Note, however,
-# we still do have bs3compat's CSS on the page, which
-# comes in via the bootstrap HTMLDependency()
+# we still do have bs3compat's bundled CSS on the page, which
+# comes in naturally via the bootstrap HTMLDependency()
 fs::dir_delete(fs::path(www_shared, "bs3compat"))
+
+# Remove non-minified or unused files
+fs::file_delete(
+  fs::path(www_shared, c(
+    "datepicker/css/bootstrap-datepicker3.css",
+    "datepicker/js/bootstrap-datepicker.js",
+    "datepicker/scss",
+    "ionrangeslider/js/ion.rangeSlider.js",
+    "ionrangeslider/scss",
+    "jquery/jquery-3.6.0.js",
+    "jqueryui/jquery-ui.css",
+    "jqueryui/jquery-ui.js",
+    "jqueryui/jquery-ui.structure.css",
+    "jqueryui/jquery-ui.structure.min.css",
+    "jqueryui/jquery-ui.theme.css",
+    "jqueryui/jquery-ui.theme.min.css",
+    "selectize/accessibility/js/selectize-plugin-a11y.js",
+    "selectize/js/selectize.js"
+  ))
+)
 
 
 # ------------------------------------------------------------------------------

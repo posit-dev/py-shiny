@@ -20,6 +20,16 @@ app_ui = ui.page_fluid(
         ui.panel_main("Main content - 2", id="m2"),
         "right",
     ),
+    ui.layout_sidebar(
+        ui.sidebar("Sidebar content - 3", id="s3"),
+        "Main content - 3",
+        id="m3",
+    ),
+    ui.layout_sidebar(
+        ui.sidebar("Sidebar content - 4", id="s4", position="right"),
+        "Main content - 4",
+        id="m4",
+    ),
 )
 
 app = App(app_ui, None)

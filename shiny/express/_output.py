@@ -3,9 +3,10 @@ from __future__ import annotations
 import contextlib
 import sys
 from contextlib import AbstractContextManager
-from typing import Any, Callable, ParamSpec, TypeVar, cast, overload
+from typing import Callable, TypeVar, cast, overload
 
 from .. import ui
+from .._typing_extensions import ParamSpec
 from ..render.transformer import OutputRenderer
 
 __all__ = (
@@ -16,10 +17,11 @@ __all__ = (
 OT = TypeVar("OT")
 P = ParamSpec("P")
 R = TypeVar("R")
+CallableT = TypeVar("CallableT", bound=Callable[..., object])
 
 
 def output_args(
-    *args: Any, **kwargs: Any
+    *args: object, **kwargs: object
 ) -> Callable[[OutputRenderer[OT]], OutputRenderer[OT]]:
     """Sets default UI arguments for a Shiny rendering function.
 
@@ -39,7 +41,8 @@ def output_args(
 
     Returns
     -------
-    A decorator that sets the default UI arguments for a Shiny rendering function.
+    :
+        A decorator that sets the default UI arguments for a Shiny rendering function.
     """
 
     def wrapper(renderer: OutputRenderer[OT]) -> OutputRenderer[OT]:
@@ -51,12 +54,7 @@ def output_args(
 
 
 @overload
-def suspend_display(fn: OutputRenderer[OT]) -> OutputRenderer[OT]:
-    ...
-
-
-@overload
-def suspend_display(fn: Callable[P, R]) -> Callable[P, R]:
+def suspend_display(fn: CallableT) -> CallableT:
     ...
 
 
@@ -92,8 +90,10 @@ def suspend_display(
 
     Returns
     -------
-    If `fn` is `None`, returns a context manager that suppresses the display of UI
-    elements within the context block. Otherwise, returns a decorated version of `fn`.
+    :
+        If `fn` is `None`, returns a context manager that suppresses the display of UI
+        elements within the context block. Otherwise, returns a decorated version of
+        `fn`.
     """
 
     if fn is None:
@@ -118,9 +118,9 @@ def suspend_display_ctxmgr():
         sys.displayhook = oldhook
 
 
-def null_ui(id: str, *args: Any, **kwargs: Any) -> ui.TagList:
+def null_ui(id: str, *args: object, **kwargs: object) -> ui.TagList:
     return ui.TagList()
 
 
-def null_displayhook(x: Any) -> None:
+def null_displayhook(x: object) -> None:
     pass

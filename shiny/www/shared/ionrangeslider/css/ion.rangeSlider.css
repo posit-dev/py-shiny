@@ -1,5 +1,4 @@
 @charset "UTF-8";
-/*-- scss:defaults --*/
 /* 'shiny' skin for Ion.RangeSlider, largely based on the 'big' skin, but with smaller dimensions, grayscale grid text, and without gradients
 © Posit, PBC, 2023
 © RStudio, Inc, 2014
@@ -173,7 +172,7 @@
   top: 32px;
   height: 1px;
   background: none;
-  background-color: #707782;
+  background-color: RGBA(var(--bs-emphasis-color-rgb, 0, 0, 0), 0.65);
   border: none;
   border-radius: 1px;
   overflow: visible;
@@ -237,7 +236,7 @@
 }
 
 .irs--shiny .irs-handle.state_hover, .irs--shiny .irs-handle:hover {
-  background: #268fcb;
+  background: rgba(0, 123, 194, 0.85);
 }
 
 .irs--shiny .irs-min,
@@ -245,7 +244,7 @@
   top: 0;
   padding: 1px 3px;
   text-shadow: none;
-  background-color: #e9ecef;
+  background-color: RGBA(var(--bs-emphasis-color-rgb, 0, 0, 0), 0.1);
   border-radius: 3px;
   font-size: 10px;
   line-height: 1.333;
@@ -279,12 +278,12 @@
 }
 
 .irs--shiny .irs-grid-pol {
-  background-color: #707782;
+  background-color: RGBA(var(--bs-emphasis-color-rgb, 0, 0, 0), 0.65);
 }
 
 .irs--shiny .irs-grid-text {
   bottom: 5px;
-  color: #343A46;
+  color: RGBA(var(--bs-emphasis-color-rgb, 0, 0, 0), 0.85);
 }
 
 .irs--shiny .irs-grid-pol.small {
@@ -295,7 +294,6 @@
 /* shiny preset styles */
 
 
-/*-- scss:defaults --*/
 .irs.irs--shiny {
   margin-top: 3px;
 }

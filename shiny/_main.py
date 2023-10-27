@@ -32,6 +32,7 @@ def main() -> None:
 stop_shortcut = "Ctrl+C"
 
 RELOAD_INCLUDES_DEFAULT = ("*.py", "*.css", "*.js", "*.htm", "*.html", "*.png")
+RELOAD_EXCLUDES_DEFAULT = (".*", "*.py[cod]", "__pycache__", "env", "venv")
 
 
 @main.command(
@@ -97,6 +98,13 @@ any of the following will work:
     f' to "{",".join(RELOAD_INCLUDES_DEFAULT)}".',
 )
 @click.option(
+    "--reload-excludes",
+    "reload_excludes",
+    default=",".join(RELOAD_EXCLUDES_DEFAULT),
+    help="File glob(s) to indicate which files should be excluded from file monitoring. Defaults"
+    f' to "{",".join(RELOAD_EXCLUDES_DEFAULT)}".',
+)
+@click.option(
     "--ws-max-size",
     type=int,
     default=16777216,
@@ -138,17 +146,21 @@ def run(
     app: str | shiny.App,
     host: str,
     port: int,
+    *,
     autoreload_port: int,
     reload: bool,
     reload_dirs: tuple[str, ...],
     reload_includes: str,
+    reload_excludes: str,
     ws_max_size: int,
     log_level: str,
     app_dir: str,
     factory: bool,
     launch_browser: bool,
+    **kwargs: object,
 ) -> None:
     reload_includes_list = reload_includes.split(",")
+    reload_excludes_list = reload_excludes.split(",")
     return run_app(
         app,
         host=host,
@@ -157,11 +169,13 @@ def run(
         reload=reload,
         reload_dirs=list(reload_dirs),
         reload_includes=reload_includes_list,
+        reload_excludes=reload_excludes_list,
         ws_max_size=ws_max_size,
         log_level=log_level,
         app_dir=app_dir,
         factory=factory,
         launch_browser=launch_browser,
+        **kwargs,
     )
 
 
@@ -169,15 +183,18 @@ def run_app(
     app: str | shiny.App = "app:app",
     host: str = "127.0.0.1",
     port: int = 8000,
+    *,
     autoreload_port: int = 0,
     reload: bool = False,
     reload_dirs: Optional[list[str]] = None,
     reload_includes: list[str] | tuple[str, ...] = RELOAD_INCLUDES_DEFAULT,
+    reload_excludes: list[str] | tuple[str, ...] = RELOAD_EXCLUDES_DEFAULT,
     ws_max_size: int = 16777216,
     log_level: Optional[str] = None,
     app_dir: Optional[str] = ".",
     factory: bool = False,
     launch_browser: bool = False,
+    **kwargs: object,
 ) -> None:
     """
     Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop.
@@ -207,7 +224,10 @@ def run_app(
         will trigger app reloading.
     reload_includes
         List or tuple of file globs to indicate which files should be monitored for
-        changes.
+        changes. Can be combined with `reload_excludes`.
+    reload_excludes
+        List or tuple of file globs to indicate which files should be excluded from
+        reload monitoring. Can be combined with `reload_includes`
     ws_max_size
         WebSocket max size message in bytes.
     log_level
@@ -218,6 +238,9 @@ def run_app(
         Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
     launch_browser
         Launch app browser after app starts, using the Python webbrowser module.
+    **kwargs
+        Additional keyword arguments which are passed to ``uvicorn.run``. For more
+        information see [Uvicorn documentation](https://www.uvicorn.org/).
 
     Tip
     ---
@@ -273,10 +296,12 @@ def run_app(
 
     if reload_dirs is None:
         reload_dirs = []
+        if app_dir is not None:
+            reload_dirs = [app_dir]
 
     if reload:
         # Always watch the app_dir
-        if app_dir:
+        if app_dir and app_dir not in reload_dirs:
             reload_dirs.append(app_dir)
         # For developers of Shiny itself; autoreload the app when Shiny package changes
         if os.getenv("SHINY_PKG_AUTORELOAD"):
@@ -296,16 +321,12 @@ def run_app(
 
     reload_args: ReloadArgs = {}
     if reload:
-        reload_dirs = []
-        if app_dir is not None:
-            reload_dirs = [app_dir]
-
         reload_args = {
             "reload": reload,
             # Adding `reload_includes` param while `reload=False` produces an warning
             # https://github.com/encode/uvicorn/blob/d43afed1cfa018a85c83094da8a2dd29f656d676/uvicorn/config.py#L298-L304
             "reload_includes": list(reload_includes),
-            "reload_excludes": [".*", "*.py[cod]", "__pycache__", "env", "venv"],
+            "reload_excludes": list(reload_excludes),
             "reload_dirs": reload_dirs,
         }
 
@@ -324,6 +345,7 @@ def run_app(
         app_dir=app_dir,
         factory=factory,
         **reload_args,
+        **kwargs,
     )
 
 

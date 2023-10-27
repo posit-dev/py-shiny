@@ -31,19 +31,19 @@ app_ui = ui.page_fillable(
         " Select one or more countries in the table below to see more information.",
     ),
     ui.layout_column_wrap(
-        1,
         ui.card(
             ui.output_data_frame("summary_data"),
         ),
         ui.layout_column_wrap(
-            1 / 2,
             ui.card(
                 output_widget("country_detail_pop", height="100%"),
             ),
             ui.card(
                 output_widget("country_detail_percap", height="100%"),
             ),
+            width=1 / 2,
         ),
+        width=1,
     ),
 )
 

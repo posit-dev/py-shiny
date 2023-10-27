@@ -4,79 +4,67 @@ import * as fs from "node:fs/promises";
 
 const outDir = "../shiny/www/shared/py-shiny";
 
-// TODO-barret-future; Map over options and wait their build to finish
-
-async function bundle_dataframe() {
+async function bundle_helper(
+  options: BuildOptions
+): Promise<ReturnType<typeof build>> {
   try {
-    const options: BuildOptions = {
-      entryPoints: { dataframe: "dataframe/index.tsx" },
+    const result = await build({
       format: "esm",
       bundle: true,
-      outdir: outDir + "/dataframe",
       minify: true,
       sourcemap: true,
-      plugins: [sassPlugin({ type: "css-text", sourceMap: false })],
-      metafile: true,
-    };
+      metafile: false,
+      outdir: outDir,
+      ...options,
+    });
 
-    const result = await build(options);
-    console.log("Building dataframe completed successfully!");
-    // console.log("Output:", result);
-    await fs.writeFile(
-      "esbuild-metadata.json",
-      JSON.stringify(result.metafile)
+    Object.entries(options.entryPoints as Record<string, string>).forEach(
+      ([output_file_stub, input_path]) => {
+        console.log(
+          "Building " + output_file_stub + ".js completed successfully!"
+        );
+      }
     );
+
+    if (options.metafile) {
+      // Save metafile
+      const dataframe_results = result;
+      await fs.writeFile(
+        "esbuild-metadata.json",
+        JSON.stringify(dataframe_results.metafile)
+      );
+      console.log("Metadata file written to esbuild-metadata.json");
+    }
+    return result;
   } catch (error) {
     console.error("Build failed:", error);
   }
 }
 
-async function bundle_textarea() {
-  try {
-    const options: BuildOptions = {
-      entryPoints: {
-        "textarea-autoresize": "text-area/textarea-autoresize.ts",
-      },
-      format: "esm",
-      bundle: true,
-      outdir: outDir + "/text-area",
-      minify: false,
-      sourcemap: false,
-      metafile: false,
-    };
-    const result = await build(options);
-    console.log("Building textarea-autoresize completed successfully!");
-  } catch (error) {
-    console.error("Build failed for textarea-autoresize:", error);
-  }
-}
-
-async function bundle_pageoutput() {
-  try {
-    const options: BuildOptions = {
-      entryPoints: {
-        "page-output": "page-output/page-output.ts",
-      },
-      format: "esm",
-      bundle: true,
-      outdir: outDir + "/page-output",
-      minify: false,
-      sourcemap: false,
-      metafile: false,
-    };
-    const result = await build(options);
-    console.log("Building page-output completed successfully!");
-  } catch (error) {
-    console.error("Build failed for page-output:", error);
-  }
-}
+const opts: Array<BuildOptions> = [
+  {
+    entryPoints: { "dataframe/dataframe": "dataframe/index.tsx" },
+    plugins: [sassPlugin({ type: "css-text", sourceMap: false })],
+    metafile: true,
+  },
+  {
+    entryPoints: {
+      "text-area/textarea-autoresize": "text-area/textarea-autoresize.ts",
+    },
+    minify: false,
+    sourcemap: false,
+  },
+  {
+    entryPoints: {
+      "page-output/page-output": "page-output/page-output.ts",
+    },
+    minify: false,
+    sourcemap: false,
+  },
+];
 
 // Run function to avoid top level await
 async function main(): Promise<void> {
-  await Promise.all([
-    bundle_dataframe(),
-    bundle_textarea(),
-    bundle_pageoutput(),
-  ]);
+  await Promise.all(opts.map(bundle_helper));
 }
 main();
