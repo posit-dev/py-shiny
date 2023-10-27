@@ -2395,12 +2395,16 @@ class Sidebar(
     def expect_title(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc).to_have_text(value, timeout=timeout)
 
-    def expect_position(self, position: str, *, timeout: Timeout = None) -> None:
-        if position == 'right':
-            is_sidebar_right = True
-        else:
-            is_sidebar_right = False
-        _expect_class_value(self.loc_position, f"sidebar-{position}", is_sidebar_right, timeout=timeout)
+    def expect_position(
+        self, position: Literal["left", "right"], *, timeout: Timeout = None
+    ) -> None:
+        is_right_sidebar = position == "right"
+        _expect_class_value(
+            self.loc_position,
+            f"sidebar-{position}",
+            is_right_sidebar,
+            timeout=timeout,
+        )
 
     def expect_handle(self, exists: bool, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc_handle).to_have_count(int(exists), timeout=timeout)
