@@ -7,7 +7,7 @@ import re
 import sys
 import time
 import typing
-from typing import Literal, Protocol
+from typing import Literal, Optional, Protocol
 
 from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
@@ -64,10 +64,10 @@ Questions:
 """
 
 
-OptionalStr = typing.Optional[str]
-OptionalInt = typing.Optional[int]
-OptionalFloat = typing.Optional[float]
-OptionalBool = typing.Optional[bool]
+OptionalStr = Optional[str]
+OptionalInt = Optional[int]
+OptionalFloat = Optional[float]
+OptionalBool = Optional[bool]
 
 PatternStr = typing.Pattern[str]
 PatternOrStr = typing.Union[str, PatternStr]
@@ -2992,18 +2992,8 @@ class LayoutNavsetTab(_LayoutNavItemBase):
         super().__init__(
             page,
             id=id,
-            loc_container=f"ul#{id}.nav-tabs.shiny-tab-input",
+            loc_container=f"ul#{id}.nav-tabs",
             loc="a[role='tab']",
-        )
-
-
-class LayoutNavSetCardTab(_LayoutNavItemBase):
-    def __init__(self, page: Page, id: str) -> None:
-        super().__init__(
-            page,
-            id=id,
-            loc_container=f"ul#{id}.card-header-tabs.shiny-tab-input",
-            loc="> li.nav-item",
         )
 
 
@@ -3012,7 +3002,17 @@ class LayoutNavSetPill(_LayoutNavItemBase):
         super().__init__(
             page,
             id=id,
-            loc_container=f"ul#{id}.nav-pills.shiny-tab-input",
+            loc_container=f"ul#{id}.nav-pills",
+            loc="> li.nav-item",
+        )
+
+
+class LayoutNavSetUnderline(_LayoutNavItemBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f"ul#{id}.nav-underline",
             loc="> li.nav-item",
         )
 
@@ -3022,7 +3022,17 @@ class LayoutNavSetPillList(_LayoutNavItemBase):
         super().__init__(
             page,
             id=id,
-            loc_container=f"ul#{id}.nav-stacked.shiny-tab-input",
+            loc_container=f"ul#{id}.nav-stacked",
+            loc="> li.nav-item",
+        )
+
+
+class LayoutNavSetCardTab(_LayoutNavItemBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f".bslib-card > div > ul#{id}.nav-tabs",
             loc="> li.nav-item",
         )
 
@@ -3032,7 +3042,17 @@ class LayoutNavSetCardPill(_LayoutNavItemBase):
         super().__init__(
             page,
             id=id,
-            loc_container=f"ul#{id}.nav-pills.card-header-pills.shiny-tab-input",
+            loc_container=f".bslib-card > div > ul#{id}.nav-pills",
+            loc="> li.nav-item",
+        )
+
+
+class LayoutNavSetCardUnderline(_LayoutNavItemBase):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc_container=f".bslib-card > div > ul#{id}.nav-underline",
             loc="> li.nav-item",
         )
 
@@ -3042,7 +3062,7 @@ class LayoutNavSetHidden(_LayoutNavItemBase):
         super().__init__(
             page,
             id=id,
-            loc_container=f"ul#{id}.nav-hidden.shiny-tab-input",
+            loc_container=f"ul#{id}.nav-hidden",
             loc="> li.nav-item",
         )
 
@@ -3052,17 +3072,7 @@ class LayoutNavSetBar(_LayoutNavItemBase):
         super().__init__(
             page,
             id=id,
-            loc_container=f"ul#{id}.navbar-nav.shiny-tab-input",
-            loc="> li.nav-item",
-        )
-
-
-class LayoutNavsetHidden(_LayoutNavItemBase):
-    def __init__(self, page: Page, id: str) -> None:
-        super().__init__(
-            page,
-            id=id,
-            loc_container=f"ul#{id}.nav-tabs.shiny-tab-input",
+            loc_container=f"ul#{id}.navbar-nav",
             loc="> li.nav-item",
         )
 
