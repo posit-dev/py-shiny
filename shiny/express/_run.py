@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import os
-import re
 import sys
 from pathlib import Path
 
@@ -84,16 +83,14 @@ def is_express_app(app: str, app_dir: str | None) -> bool:
     if not app_path.exists():
         return False
 
+    # Read the file, parse it, and look for any imports of shiny.express.
     with open(app_path) as f:
-        pattern = re.compile(
-            r"^(import shiny.express)|(from shiny.express import)|(from shiny import .*\bexpress\b)"
-        )
+        content = f.read()
+    tree = ast.parse(content, app_path)
+    detector = DetectShinyExpressVisitor()
+    detector.visit(tree)
 
-        for line in f:
-            if pattern.match(line):
-                return True
-
-    return False
+    return detector.found_shiny_express_import
 
 
 def run_express(file: Path) -> Tag | TagList:
@@ -204,6 +201,32 @@ def replace_top_level_recall_context_manager(
     _top_level_recall_context_manager_has_been_replaced = True
 
     return old_cm
+
+
+class DetectShinyExpressVisitor(ast.NodeVisitor):
+    def __init__(self):
+        super().__init__()
+        self.found_shiny_express_import = False
+
+    def visit_Import(self, node: ast.Import):
+        if any(alias.name == "shiny.express" for alias in node.names):
+            self.found_shiny_express_import = True
+
+    def visit_ImportFrom(self, node: ast.ImportFrom):
+        if node.module == "shiny.express":
+            self.found_shiny_express_import = True
+        elif node.module == "shiny" and any(
+            alias.name == "express" for alias in node.names
+        ):
+            self.found_shiny_express_import = True
+
+    # Visit top-level nodes.
+    def visit_Module(self, node: ast.Module):
+        super().generic_visit(node)
+
+    # Don't recurse into any nodes, so the we'll only ever look at top-level nodes.
+    def generic_visit(self, node: ast.AST):
+        pass
 
 
 class DisplayFuncsTransformer(ast.NodeTransformer):
