@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from colors import bg_color, fg_color
 from conftest import ShinyAppProc
-
-# from controls import Sidebar
+from controls import Sidebar
 from playwright.sync_api import Page, expect
 
 
@@ -29,8 +28,7 @@ def test_sidebar_bg_colors(page: Page, local_app: ShinyAppProc) -> None:
     expect(first_sidebar).to_have_css("background-color", bg_color)
     expect(first_sidebar).to_have_css("color", fg_color)
 
-    # # TODO-karan; Test that sidebar position is left
-    # s1 = Sidebar(page, "s1")
-    # s1.expect_position("left")
-    # s2 = Sidebar(page, "s2")
-    # s2.expect_position("right")
+    s1 = Sidebar(page, "s1")
+    s1.expect_position("left")
+    s2 = Sidebar(page, "s2")
+    s2.expect_position("right")
