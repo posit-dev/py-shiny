@@ -21,7 +21,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.text
     def acc_val():
-        return input.acc()
+        return "input.acc(): " + str(input.acc())
 
 
 app = App(app_ui, server)

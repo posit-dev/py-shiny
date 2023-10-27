@@ -46,7 +46,7 @@ def test_nav_markup():
           <li>Some item</li>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle " data-bs-toggle="dropdown" data-value="Menu" href="#" role="button">Menu</a>
-            <ul class="dropdown-menu " data-tabsetid="7890">
+            <ul class="dropdown-menu" data-tabsetid="7890">
               <li>
                 <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item" href="#tab-7890-0">c</a>
               </li>
@@ -76,7 +76,7 @@ def test_nav_markup():
         <ul class="nav nav-pills shiny-tab-input" id="navset_pill_id" data-tabsetid="7311">
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle active" data-bs-toggle="dropdown" data-value="Menu" href="#" role="button">Menu</a>
-            <ul class="dropdown-menu " data-tabsetid="7890">
+            <ul class="dropdown-menu" data-tabsetid="7890">
               <li>
                 <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item active" href="#tab-7890-0">c</a>
               </li>
@@ -114,7 +114,7 @@ def test_nav_markup():
               </li>
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle active" data-bs-toggle="dropdown" data-value="Menu" href="#" role="button">Menu</a>
-                <ul class="dropdown-menu " data-tabsetid="7890">
+                <ul class="dropdown-menu" data-tabsetid="7890">
                   <li>
                     <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item active" href="#tab-7890-0">c</a>
                   </li>
@@ -126,10 +126,10 @@ def test_nav_markup():
             </ul>
           </div>
           <div class="html-fill-container html-fill-item card-body bslib-gap-spacing" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
-            <div class="tab-content" data-tabsetid="7311">
-              <div class="tab-pane" role="tabpanel" data-value="a" id="tab-7311-0">a</div>
-              <div class="tab-pane active" role="tabpanel" data-value="c" id="tab-7890-0">c</div>
-              <div class="tab-pane" role="tabpanel" data-value="b" id="tab-7311-2">b</div>
+            <div class="html-fill-container html-fill-item tab-content" data-tabsetid="7311">
+              <div class="html-fill-container html-fill-item tab-pane" role="tabpanel" data-value="a" id="tab-7311-0" style="gap:0;padding:0;">a</div>
+              <div class="html-fill-container html-fill-item tab-pane active" role="tabpanel" data-value="c" id="tab-7890-0" style="gap:0;padding:0;">c</div>
+              <div class="html-fill-container html-fill-item tab-pane" role="tabpanel" data-value="b" id="tab-7311-2" style="gap:0;padding:0;">b</div>
             </div>
           </div>
           <script data-bslib-card-init="">window.bslib.Card.initializeAllCards();</script>
@@ -148,12 +148,12 @@ def test_nav_markup():
         """\
         <nav class="navbar navbar-expand-md navbar-light bg-light">
           <div class="container-fluid">
-            <a class="navbar-brand" href="#">Page title</a><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-collapse-1663" aria-controls="navbar-collapse-1663" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+            <span class="navbar-brand">Page title</span><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-collapse-1663" aria-controls="navbar-collapse-1663" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
             <div id="navbar-collapse-1663" class="collapse navbar-collapse">
-              <ul class="nav navbar-nav" data-tabsetid="7311">
+              <ul class="nav navbar-nav nav-underline" data-tabsetid="7311">
                 <li class="nav-item dropdown">
                   <a class="nav-link dropdown-toggle active" data-bs-toggle="dropdown" data-value="Menu" href="#" role="button">Menu</a>
-                  <ul class="dropdown-menu " data-tabsetid="7890">
+                  <ul class="dropdown-menu" data-tabsetid="7890">
                     <li class="dropdown-header">Plain text</li>
                     <li>
                       <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item active" href="#tab-7890-1">c</a>

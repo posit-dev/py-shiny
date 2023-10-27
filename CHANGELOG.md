@@ -8,47 +8,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking Changes
+* `shiny.run` only allows positional arguments for `app`, `host`, and `port`, all other arguments must be specified with keywords.
+
 ### New features
 * `shiny run` now takes `reload-includes` and `reload-excludes` to allow you to define which files trigger a reload (#780).
 * `shiny.run` now passes keyword arguments to `uvicorn.run` (#780).
 * The `@output` decorator is no longer required for rendering functions; `@render.xxx` decorators now register themselves automatically. You can still use `@output` explicitly if you need to set specific output options (#747).
 * Added support for integration with Quarto (#746).
 * Added `shiny.render.renderer_components` decorator to help create new output renderers (#621).
-* Added `shiny.experimental.ui.popover()`, `update_popover()`, and `toggle_popover()` for easy creation (and server-side updating) of [Bootstrap popovers](https://getbootstrap.com/docs/5.2/components/popovers/). Popovers are similar to tooltips, but are more persistent, and should primarily be used with button-like UI elements (e.g. `input_action_button()` or icons) (#680).
+* Added `shiny.experimental.ui.popover()`, `update_popover()`, and `toggle_popover()` for easy creation (and server-side updating) of [Bootstrap popovers](https://getbootstrap.com/docs/5.3/components/popovers/). Popovers are similar to tooltips, but are more persistent, and should primarily be used with button-like UI elements (e.g. `input_action_button()` or icons) (#680).
 * Added CSS classes to UI input methods (#680) .
 * `Session` objects can now accept an asynchronous (or synchronous) function for `.on_flush(fn=)`, `.on_flushed(fn=)`, and `.on_ended(fn=)` (#686).
 * `App()` now allows `static_assets` to represent multiple paths. To do this, pass in a dictionary instead of a string (#763).
+* The `showcase_layout` argument of `value_box()` now accepts one of three character values: `"left center"`, `"top right"`, `"bottom"`. (#772)
+* `value_box()` now supports many new themes and styles, or fully customizable themes using the new `value_box_theme()` function. To reflect the new capabilities, we've replaced `theme_color` with a new `theme` argument. The previous argument will continue work as expected, but with a deprecation warning. (#772)
+
+  In addition to the Bootstrap theme names (`primary` ,`secondary`, etc.), you can now use the main Boostrap colors (`purple`, `blue`, `red`, etc.). You can also choose to apply the color to the background or foreground by prepending a `bg-` or `text-` prefix to the theme or color name. Finally, we've also added new gradient themes allowing you to pair any two color names as `bg-gradient-{from}-{to}` (e.g., `bg-gradient-purple-blue`).
+
+  These named color themes aren't limited to value boxes: because they're powered by small utility classes, you can use them anywhere within your bslib-powered UI.
+
+* Added `shiny.ui.showcase_bottom()`, a new `shiny.ui.value_box()` layout that places the showcase below the value box `title` and `value`, perfect for a full-bleed plot. (#772)
 
 ### API changes
+
+* Added `shiny.ui.navset_underline()` and `shiny.ui.navset_card_underline()` whose navigation container is similar to `shiny.ui.navset_tab()` and `shiny.ui.navset_card_tab()` respectively, but its active/focused navigation links are styled with an underline. (#772)
+* `shiny.ui.layout_column_wrap(width, *args)` was rearranged to `shiny.ui.layout_column_wrap(*args, width)`. Now, `width` will default to `200px` is no value is provided. (#772)
+* `shiny.ui.showcase_left_center()` and `shiny.ui.showcase_top_right()` no longer take two values for the `width` argument. Instead, they now take a single value (e.g., `width = "30%"`) representing the width of the showcase are in the value box. Furthermore, they've both gained `width_full_screen` arguments that determine the width of the showcase area when the value box is expanded to fill the screen. (#772)
+
 
 * TODO-barret-API; `shiny.ui.panel_main()` and `shiny.ui.panel_sidebar()` are deprecated in favor of new API for `shiny.ui.layout_sidebar()`. Please use `shiny.ui.sidebar()` to construct a sidebar and supply it (along with the main content) to `shiny.ui.layout_sidebar(*args, **kwargs)`. (#680)
 
 #### API relocations
 
-* `shiny.ui`'s `navset_pill_card()` and `navset_tab_card()` have been renamed to `.navset_card_pill()` and `navset_tab_card()` respectively (#492).
+* `shiny.ui`'s `navset_pill_card()` and `navset_tab_card()` have been renamed to `navset_card_pill()` and `navset_card_tab()` respectively (#492).
 
 The following methods have been moved from `shiny.experimental.ui` and integrated into `shiny.ui` (final locations under `shiny.ui` are displayed) (#680):
 
 * Sidebar - Sidebar layout or manipulation
-  * `page_sidebar()`, `toggle_sidebar()`, `layout_sidebar()`
+  * `sidebar()`, `page_sidebar()`, `toggle_sidebar()`, `layout_sidebar()`, `Sidebar`
 * Filling layout - Allow UI components to expand into the parent container and/or allow its content to expand
   * `page_fillable()`, `fill.as_fillable_container()`, `fill.as_fill_item()`, `fill.is_fillable_container()`, `fill.is_fill_item()`, `fill.remove_all_fill()`
   * `output_plot(fill=)`, `output_image(fill=)`, `output_ui(fill=, fillable=)`
 * CSS units - CSS units and padding
-  * `css.as_css_unit()`, `css.as_css_padding()`, `css.as_width_unit()`, `css.CssUnit`
+  * `css.as_css_unit()`, `css.as_css_padding()`, `css.CssUnit`
 * Tooltip - Hover-based context UI element
   * `tooltip()`, `toggle_tooltip()`, `update_tooltip()`
 * Popover - Click-based context UI element
   * `popover()`, `toggle_popover()`, `update_popover()`
 * Accordion - Vertically collapsible UI element
-  * `accordion()`, `accordion_panel()`, `accordion_panel_close()`, `accordion_panel_insert()`, `accordion_panel_open()`, `accordion_panel_remove()`, `accordion_panel_set()`, `Accordion`
+  * `accordion()`, `accordion_panel()`, `accordion_panel_close()`, `accordion_panel_insert()`, `accordion_panel_open()`, `accordion_panel_remove()`, `accordion_panel_set()`, `update_accordion_panel()`, `Accordion`, `AccordionPanel`
 * Card - A general purpose container for grouping related UI elements together
   * `card()`, `card_header()`, `card_footer()`, `CardItem`
 * Valuebox - Opinionated container for displaying a value and title
   * `valuebox()`
+  * `showcase_left_center()`
+  * `showcase_top_right()`
 * Navs - Navigation within a page
   * `navset_bar()`, `navset_tab_card()`, `navset_pill_card()`
-  * `page_navbar(sidebar=, fillable=, fillable_mobile=, gap=, padding=, inverse=True)`, `navset_card_tab(sidebar=)`, `navset_card_pill(sidebar=)`, `navset_bar(sidebar=, fillable=, gap=, padding=)`
+  * `page_navbar(sidebar=, fillable=, fillable_mobile=, gap=, padding=)`, `navset_card_tab(sidebar=)`, `navset_card_pill(sidebar=)`, `navset_bar(sidebar=, fillable=, gap=, padding=)`
+* Layout - Layout of UI elements
+  * `layout_column_wrap()`
 * Inputs - UI elements for user input
   * `toggle_switch()`
   * `input_text_area(autoresize=)`
@@ -56,31 +76,33 @@ The following methods have been moved from `shiny.experimental.ui` and integrate
 If a ported method is called from `shiny.experimental.ui`, a deprecation warning will be displayed.
 
 Methods still under consideration in `shiny.experimental.ui`:
-* `value_box(showcase=)`
-* `card(wrapper=)`, `card_body()`, `card_image()`, `card_header()`
-
-
-### Bug fixes
-* `shiny run` now respects the user provided `reload-dir` argument (#765).
+* `card(wrapper=)`: A function (which returns a UI element) to call on unnamed arguments in `card(*args)` which are not already `shiny.ui.CardItem` objects.
+* `card_body()`: A container for grouping related UI elements together
+* `card_image()`: A general container for an image within a `shiny.ui.card`.
+* `card_title()`: A general container for the "title" of a `shiny.ui.card`.
 
 #### API removals
 
 * `shiny.experimental.ui.FillingLayout` has been removed. (#481)
+* `shiny.experimental.ui.as_width_unit()` has been made defunct. Please remove it from your code. (#772)
 * Support for `min_height=`, `max_height=`, and `gap=` in `shiny.experimental.ui.as_fillable_container()` and `as_fill_item()` has been removed. (#481)
 * `shiny.experimental.ui.TagCallable` has been deprecated. Its type is equivalent to `htmltools.TagFunction`. (#680)
-* `shiny.eperimental.ui.as_fill_carrier()` and `shiny.eperimental.ui.is_fill_carrier()` have been deprecated. Please use `shiny.ui.fill.as_fill_item()` and `shiny.ui.fill.as_fillable_container()` or `shiny.ui.fill.is_fill_item()` and `shiny.ui.fill.is_fillable_container()` respectively in combination to achieve similar behavior. (#680)
+* `shiny.experimental.ui.as_fill_carrier()` and `shiny.experimental.ui.is_fill_carrier()` have been deprecated. Please use `shiny.ui.fill.as_fill_item()` and `shiny.ui.fill.as_fillable_container()` or `shiny.ui.fill.is_fill_item()` and `shiny.ui.fill.is_fillable_container()` respectively in combination to achieve similar behavior. (#680)
 
 ### Bug fixes
 
+* `shiny run` now respects the user provided `reload-dir` argument (#765).
 * Fixed #646: Wrap bare value box value in `<p />` tags. (#668)
 * Fixed #676: The `render.data_frame` selection feature was underdocumented and buggy (sometimes returning `None` as a row identifier if the pandas data frame's index had gaps in it). With this release, the selection is consistently a tuple of the 0-based row numbers of the selected rows--or `None` if no rows are selected. (#677)
 * Added tests to verify that ui input methods, ui labels, ui update (value) methods, and ui output methods work within modules (#696).
 * Adjusted the `@render.plot` input type to be `object` to allow for any object (if any) to be returned (#712).
+* In `layout_column_wrap()`, when `width` is a CSS unit -- e.g. `width = "400px"` or `width = "25%"` -- and `fixed_width = FALSE`, `layout_column_wrap()` will ensure that the columns are at least `width` wide, unless the parent container is narrower than `width`. (#772)
 
 ### Other changes
 
-### Breaking Changes
-* `shiny.run` only allows positional arguments for `app`, `host`, and `port`, all other arguments must be specified with keywords.
+* `layout_sidebar()` now uses an `<aside>` element for the sidebar's container and a `<header>` element for the sidebar title. The classes of each element remain the same, but the semantic meaning of the elements is now better reflected in the HTML markup.  (#772)
+* `layout_sidebar()` no longer gives the sidebar main content area the `role="main"` attribute. (#772)
+* Improved the style and appearance of the button to enter full screen in `card()`s and `value_box()`es to better adapt to Bootstrap's dark mode. (#772)
 
 
 ## [0.5.1] - 2023-08-08

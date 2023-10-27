@@ -13,29 +13,31 @@ def nav_with_content(letter: str, prefix: str) -> ui._navs.Nav:
 def nav_items(prefix: str) -> list[NavSetArg]:
     a = nav_with_content("a", prefix)
     b = nav_with_content("b", prefix)
-    github = ui.nav_control(
-        ui.tags.a(
-            # ui.icon("github"),
-            "Shiny",
-            href="https://github.com/rstudio/shiny",
-            target="_blank",
-        ),
-    )
+    c = nav_with_content("c", prefix)
     space = ui.nav_spacer()
-    other = ui.nav_menu(
-        "Other links",
-        nav_with_content("c", prefix),
+    links = ui.nav_menu(
+        "Links",
         ui.nav_control(
             ui.tags.a(
-                # icon("r-project"),
-                "RStudio",
-                href="https://rstudio.com",
+                # ui.icon("github"),
+                "Shiny",
+                href="https://github.com/posit-dev/py-shiny",
                 target="_blank",
             ),
         ),
+        "---",
+        "Plain text",
+        "---",
+        ui.nav_control(
+            ui.a(
+                "Posit",
+                href="https://posit.co",
+                target="_blank",
+            )
+        ),
         align="right",
     )
-    return [a, b, github, space, other]
+    return [a, b, c, space, links]
 
 
 app = App(

@@ -60,10 +60,13 @@ from ...ui._sidebar import panel_main as main_panel_main
 from ...ui._sidebar import panel_sidebar as main_panel_sidebar
 from ...ui._sidebar import sidebar as main_sidebar
 from ...ui._sidebar import toggle_sidebar as main_toggle_sidebar
+from ...ui._valuebox import ShowcaseLayout as MainShowcaseLayout
+from ...ui._valuebox import showcase_left_center as main_showcase_left_center
+from ...ui._valuebox import showcase_top_right as main_showcase_top_right
+from ...ui._valuebox import value_box as main_value_box
 from ...ui.css._css_unit import CssUnit as MainCssUnit
 from ...ui.css._css_unit import as_css_padding as main_as_css_padding
 from ...ui.css._css_unit import as_css_unit as main_as_css_unit
-from ...ui.css._css_unit import as_width_unit as main_as_width_unit
 from ...ui.fill import as_fill_item as main_as_fill_item
 from ...ui.fill import as_fillable_container as main_as_fillable_container
 from ...ui.fill import is_fill_item as main_is_fill_item
@@ -98,12 +101,11 @@ __all__ = (
     "CssUnit",
     "as_css_unit",
     "as_css_padding",
-    "as_width_unit",
     # Popover
     "popover",
     "toggle_popover",
     "update_popover",
-    # # Accordion
+    # Accordion
     "AccordionPanel",
     "accordion",
     "accordion_panel",
@@ -126,11 +128,42 @@ __all__ = (
     "CardItem",
     "card_header",
     "card_footer",
+    # Value Box
+    "value_box",
+    # Layout
+    "layout_column_wrap",
     # Navs
     "navset_bar",
     "navset_card_tab",
     "navset_card_pill",
+    # Output
+    "output_ui",
+    "output_plot",
+    "output_image",
+    # Page
+    "page_navbar",
+    "page_sidebar",
+    "page_fillable",
 )
+
+
+def as_width_unit(x: str | float | int) -> str:
+    """Defunct. Please do not use method."""
+    warn_deprecated(
+        "`shiny.experimental.ui.as_width_unit()` is defunct. "
+        "This method will be removed in a future version, "
+        "please update your code accordingly."
+    )
+    if isinstance(x, (int, float)):
+        return main_as_css_unit(x)
+    if isinstance(x, str) and x.endswith("%") and x.count("%") == 1:
+        x1_num = float(x[:-1])
+        x2_num = 100 - x1_num
+        return f"{x1_num}% {x2_num}%"
+    # TODO-bslib: validateCssUnit() should maybe support fr units?
+    # return(paste(x, collapse = " "))
+    return main_as_css_unit(x)
+
 
 ######################
 # Input Switch
@@ -601,17 +634,6 @@ def as_css_padding(padding: CssUnit | list[CssUnit] | None) -> str | None:
     return main_as_css_padding(padding)
 
 
-# Deprecated 2023-09-12
-def as_width_unit(x: str | float | int) -> str:
-    """Deprecated. Please use `shiny.ui.css_unit.as_width_unit()` instead."""
-    warn_deprecated(
-        "`shiny.experimental.ui.as_width_unit()` is deprecated. "
-        "This method will be removed in a future version, "
-        "please use `shiny.ui.css_unit.as_width_unit()` instead."
-    )
-    return main_as_width_unit(x)
-
-
 ######################
 # Popover
 ######################
@@ -1034,6 +1056,88 @@ def card_footer(
     return main_card_footer(*args, **kwargs)
 
 
+######################
+# # Valuebox
+######################
+
+
+def value_box(
+    title: TagChild,
+    value: TagChild,
+    *args: TagChild | TagAttrs,
+    showcase: Optional[TagChild] = None,
+    showcase_layout: MainShowcaseLayout | None = None,
+    full_screen: bool = False,
+    theme_color: Optional[str] = "primary",
+    height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
+    fill: bool = True,
+    class_: Optional[str] = None,
+    **kwargs: TagAttrValue,
+) -> Tag:
+    """Deprecated. Please use `shiny.ui.value_box()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.value_box()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.value_box()` instead."
+    )
+    if showcase_layout is None:
+        showcase_layout_val = "left center"
+    else:
+        showcase_layout_val = showcase_layout
+
+    return main_value_box(
+        title,
+        value,
+        *args,
+        showcase=showcase,
+        showcase_layout=showcase_layout_val,
+        full_screen=full_screen,
+        theme_color=theme_color,
+        height=height,
+        max_height=max_height,
+        fill=fill,
+        class_=class_,
+        **kwargs,
+    )
+
+
+def showcase_left_center(
+    width: CssUnit = "30%",
+    max_height: CssUnit = "100px",
+    max_height_full_screen: CssUnit = "67%",
+) -> MainShowcaseLayout:
+    """Deprecated. Please use `shiny.ui.showcase_left_center()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.showcase_left_center()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.showcase_left_center()` instead."
+    )
+    return main_showcase_left_center(
+        width=width,
+        max_height=max_height,
+        max_height_full_screen=max_height_full_screen,
+    )
+
+
+def showcase_top_right(
+    width: CssUnit = "30%",
+    max_height: CssUnit = "75px",
+    max_height_full_screen: CssUnit = "67%",
+) -> MainShowcaseLayout:
+    """Deprecated. Please use `shiny.ui.showcase_top_right()` instead."""
+    warn_deprecated(
+        "`shiny.experimental.ui.showcase_top_right()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use `shiny.ui.showcase_top_right()` instead."
+    )
+    return main_showcase_top_right(
+        width=width,
+        max_height=max_height,
+        max_height_full_screen=max_height_full_screen,
+    )
+
+
 # ######################
 # # Layout
 # ######################
@@ -1057,8 +1161,8 @@ def layout_column_wrap(
         "please use `shiny.ui.layout_column_wrap()` instead."
     )
     return main_layout_column_wrap(
-        width,
         *args,
+        width=width,
         fixed_width=fixed_width,
         heights_equal=heights_equal,
         fill=fill,

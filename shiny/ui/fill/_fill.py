@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TypeVar
 
-from htmltools import Tag
+from htmltools import Tag, TagAttrs
 
 from ..._docstring import add_example
 from .._html_deps_shinyverse import fill_dependency
@@ -21,6 +21,13 @@ TagT = TypeVar("TagT", bound="Tag")
 
 FILL_ITEM_CLASS = "html-fill-item"
 FILL_CONTAINER_CLASS = "html-fill-container"
+
+# Attributes which must be used as a prepended value.
+# This allows for the user to add a class and overright the value.
+# THIS OBJECTS SHOULD BE USED ONLY IF NECESSARY!; Ex: `page_fillable()` should send
+# *arg/**kwargs to `page_bootstrap()` rather than nesting alterted tags.body() objects.
+FILL_ITEM_ATTRS: TagAttrs = {"class": FILL_ITEM_CLASS}
+FILLABLE_CONTAINTER_ATTRS: TagAttrs = {"class": FILL_CONTAINER_CLASS}
 
 
 @add_example()

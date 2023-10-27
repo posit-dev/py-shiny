@@ -20,6 +20,7 @@ app_ui = ui.page_fluid(
         f"Remove Section {choices[-1]}",
         class_="mt-3 mb-3",
     ),
+    " (Sections randomly picked at server start)",
     ui.accordion(*items, id="acc", multiple=True),
 )
 

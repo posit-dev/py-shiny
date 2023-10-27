@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import re
 from typing import Union, overload
 
 __all__ = (
     "CssUnit",
     "as_css_unit",
     "as_css_padding",
-    "as_width_unit",
+    # "as_width_unit",
+    # "isinstance_cssunit",
+    # "as_grid_unit",
 )
 
 CssUnit = Union[
@@ -87,16 +90,48 @@ def as_css_padding(padding: CssUnit | list[CssUnit] | None) -> str | None:
     return " ".join(as_css_unit(p) for p in padding)
 
 
-# It seems to be to use % over fr here since there is no gap on the grid
-def as_width_unit(x: str | float | int) -> str:
-    if isinstance(x, (int, float)):
+# # It seems to be to use % over fr here since there is no gap on the grid
+# def as_width_unit(x: str | float | int) -> str:
+#     if isinstance(x, (int, float)):
+#         return as_css_unit(x)
+
+#     if isinstance(x, str) and x.endswith("%") and x.count("%") == 1:
+#         x1_num = float(x[:-1])
+#         x2_num = 100 - x1_num
+#         return f"{x1_num}% {x2_num}%"
+
+#     # TODO-bslib: validateCssUnit() should maybe support fr units?
+#     # return(paste(x, collapse = " "))
+#     return as_css_unit(x)
+
+
+# Method for python legacy typing support. Can't just call `isinstance(x, CssUnit)` < python v3.10
+def isinstance_cssunit(x: object) -> bool:
+    return isinstance(x, (int, float, str))
+
+
+@overload
+def as_grid_unit(x: CssUnit) -> str:
+    ...
+
+
+@overload
+def as_grid_unit(x: None) -> None:
+    ...
+
+
+def as_grid_unit(x: CssUnit | None) -> str | None:
+    if x is None:
+        return None
+
+    if not isinstance(x, str):
         return as_css_unit(x)
 
-    if isinstance(x, str) and x.endswith("%") and x.count("%") == 1:
-        x1_num = float(x[:-1])
-        x2_num = 100 - x1_num
-        return f"{x1_num}% {x2_num}%"
-
-    # TODO-bslib: validateCssUnit() should maybe support fr units?
-    # return(paste(x, collapse = " "))
-    return as_css_unit(x)
+    x_lower = x.lower()
+    if x_lower in ("auto", "min-content", "max-content"):
+        return x_lower
+    if x.startswith("minmax("):
+        return x
+    if re.match(r"\d+\s*fr$", x):
+        x = as_css_unit(x)
+    return x

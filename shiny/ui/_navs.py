@@ -8,7 +8,9 @@ __all__ = (
     "navset_tab",
     "navset_card_tab",
     "navset_pill",
+    "navset_underline",
     "navset_card_pill",
+    "navset_card_underline",
     "navset_pill_list",
     "navset_hidden",
     "navset_bar",
@@ -21,7 +23,7 @@ import copy
 import re
 from typing import Any, Literal, Optional, Sequence, cast
 
-from htmltools import MetadataNode, Tag, TagChild, TagList, css, div, tags
+from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, css, div, tags
 
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
@@ -29,8 +31,8 @@ from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
 from ..types import NavSetArg
 from ._bootstrap import column, row
-from ._card import CardItem, card, card_body, card_footer, card_header
-from ._html_deps_shinyverse import nav_spacer_dependency
+from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
+from ._html_deps_shinyverse import components_dependency
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import tag_add_style
 from .css import CssUnit, as_css_padding, as_css_unit
@@ -128,8 +130,11 @@ def nav(
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
     """
     if value is None:
@@ -169,8 +174,11 @@ def nav_control(*args: TagChild) -> Nav:
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -192,8 +200,11 @@ def nav_spacer() -> Nav:
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -201,7 +212,7 @@ def nav_spacer() -> Nav:
     See :func:`~shiny.ui.nav`
     """
 
-    return Nav(tags.li(nav_spacer_dependency(), class_="bslib-nav-spacer"))
+    return Nav(tags.li(components_dependency(), class_="bslib-nav-spacer"))
 
 
 class NavMenu:
@@ -229,7 +240,8 @@ class NavMenu:
     ) -> tuple[TagChild, TagChild]:
         nav, content = render_navset(
             *self.nav_controls,
-            ul_class=f"dropdown-menu {'dropdown-menu-right' if self.align == 'right' else ''}",
+            # `.dropdown-menu-right` is for Bootstrap 3; BS5 uses `.dropdown-menu-end`
+            ul_class=f"dropdown-menu{' dropdown-menu-end' if self.align == 'right' else ''}",
             id=None,
             selected=selected,
             context={**context, "is_menu": True},
@@ -325,8 +337,11 @@ def nav_menu(
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -420,8 +435,11 @@ def navset_tab(
     * ~shiny.ui.nav_spacer
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -472,8 +490,11 @@ def navset_pill(
     * ~shiny.ui.nav_spacer
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -484,6 +505,60 @@ def navset_pill(
     return NavSet(
         *args,
         ul_class="nav nav-pills",
+        id=resolve_id_or_none(id),
+        selected=selected,
+        header=header,
+        footer=footer,
+    )
+
+
+def navset_underline(
+    *args: NavSetArg,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+) -> NavSet:
+    """
+    Render nav items whose active/focused navigation links are styled with an underline.
+
+    Parameters
+    ----------
+    *args
+        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+    id
+        If provided, will create an input value that holds the currently selected nav
+        item.
+    selected
+        Choose a particular nav item to select by default value (should match it's
+        ``value``).
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+
+    See Also
+    --------
+    * ~shiny.ui.nav
+    * ~shiny.ui.nav_menu
+    * ~shiny.ui.nav_control
+    * ~shiny.ui.nav_spacer
+    * ~shiny.ui.navset_bar
+    * ~shiny.ui.navset_tab
+    * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_card_tab
+    * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
+    * ~shiny.ui.navset_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`
+    """
+    return NavSet(
+        *args,
+        ul_class="nav nav-underline",
         id=resolve_id_or_none(id),
         selected=selected,
         header=header,
@@ -523,12 +598,14 @@ def navset_hidden(
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
-    * ~shiny.ui.navset_tab
-    * ~shiny.ui.navset_card_tab
-    * ~shiny.ui.navset_pill
-    * ~shiny.ui.navset_card_pill
-    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_bar
+    * ~shiny.ui.navset_tab
+    * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
+    * ~shiny.ui.navset_card_tab
+    * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     """
 
     return NavSet(
@@ -544,6 +621,7 @@ def navset_hidden(
 class NavSetCard(NavSet):
     placement: Literal["above", "below"]
     sidebar: Optional[Sidebar]
+    title: Optional[TagChild]
 
     def __init__(
         self,
@@ -551,6 +629,7 @@ class NavSetCard(NavSet):
         ul_class: str,
         id: Optional[str],
         selected: Optional[str],
+        title: Optional[TagChild] = None,
         sidebar: Optional[Sidebar] = None,
         header: TagChild = None,
         footer: TagChild = None,
@@ -564,56 +643,46 @@ class NavSetCard(NavSet):
             header=header,
             footer=footer,
         )
+        self.title = title
         self.sidebar = sidebar
         self.placement = placement
 
     def layout(self, nav: Tag, content: Tag) -> Tag:
-        # navs = [child for child in content.children if isinstance(child, Nav)]
-        # not_navs = [child for child in content.children if child not in navs]
-        content_val: Tag | CardItem = content
+        content = _make_tabs_fillable(content, fillable=True, gap=0, padding=0)
 
-        if self.sidebar:
-            content_val = navset_card_body(content, sidebar=self.sidebar)
-
-        if self.placement == "below":
-            # TODO-carson; have carson double check this change
-            return card(
-                card_header(self.header) if self.header else None,
-                content_val,
-                card_body(self.footer, fillable=False, fill=False)
-                if self.footer
-                else None,
-                card_footer(nav),
-            )
-        else:
-            # TODO-carson; have carson double check this change
-            return card(
-                card_header(nav),
-                card_body(self.header, fill=False, fillable=False)
-                if self.header
-                else None,
-                content_val,
-                card_footer(self.footer) if self.footer else None,
-            )
-
-
-def navset_card_body(content: Tag, sidebar: Optional[Sidebar] = None) -> CardItem:
-    content = _make_tabs_fillable(content, fillable=True, gap=0, padding=0)
-    if sidebar:
-        return layout_sidebar(
-            sidebar,
-            content,
-            fillable=True,
-            border=False,
+        contents: list[CardItem] = wrap_each_content(
+            [
+                child
+                for child in [self.header, content, self.footer]
+                if child is not None
+            ]
         )
-    else:
-        return CardItem(content)
+
+        # If there is a sidebar, make a size 1 array of the layout_sidebar content
+        if self.sidebar:
+            contents = [
+                layout_sidebar(
+                    self.sidebar,
+                    *contents,
+                    fillable=True,
+                    border=False,
+                )
+            ]
+
+        nav_items = [*navset_title(self.title), nav]
+
+        return card(
+            card_header(*nav_items) if self.placement == "above" else None,
+            *contents,
+            card_footer(*nav_items) if self.placement == "below" else None,
+        )
 
 
 def navset_card_tab(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
+    title: Optional[TagChild] = None,
     sidebar: Optional[
         Sidebar
     ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` be of type `NavSetArg | Sidebar` and have the sidebar retrieved from within the args?
@@ -666,7 +735,10 @@ def navset_card_tab(
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -679,6 +751,7 @@ def navset_card_tab(
         ul_class="nav nav-tabs card-header-tabs",
         id=resolve_id_or_none(id),
         selected=selected,
+        title=title,
         sidebar=sidebar,
         header=header,
         footer=footer,
@@ -690,6 +763,7 @@ def navset_card_pill(
     *args: NavSetArg,
     id: Optional[str] = None,
     selected: Optional[str] = None,
+    title: Optional[TagChild] = None,
     sidebar: Optional[
         Sidebar
     ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` include `Sidebar` and have the sidebar retrieved from within the args?
@@ -728,7 +802,10 @@ def navset_card_pill(
     * ~shiny.ui.navset_bar
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -741,6 +818,73 @@ def navset_card_pill(
         ul_class="nav nav-pills card-header-pills",
         id=resolve_id_or_none(id),
         selected=selected,
+        title=title,
+        sidebar=sidebar,
+        header=header,
+        footer=footer,
+        placement=placement,
+    )
+
+
+def navset_card_underline(
+    *args: NavSetArg,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    title: Optional[TagChild] = None,
+    sidebar: Optional[
+        Sidebar
+    ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` include `Sidebar` and have the sidebar retrieved from within the args?
+    header: TagChild = None,
+    footer: TagChild = None,
+    placement: Literal["above", "below"] = "above",
+) -> NavSetCard:
+    """
+    Render nav items active/focused navigation links are styled with an underline inside a card container.
+
+    Parameters
+    ----------
+    *args
+        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+    id
+        If provided, will create an input value that holds the currently selected nav
+        item.
+    selected
+        Choose a particular nav item to select by default value (should match it's
+        ``value``).
+    sidebar
+        A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav` page.
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+    placement
+        Placement of the nav items relative to the content.
+
+    See Also
+    --------
+    * ~shiny.ui.nav
+    * ~shiny.ui.nav_menu
+    * ~shiny.ui.nav_control
+    * ~shiny.ui.nav_spacer
+    * ~shiny.ui.navset_bar
+    * ~shiny.ui.navset_tab
+    * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
+    * ~shiny.ui.navset_card_tab
+    * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_pill_list
+    * ~shiny.ui.navset_hidden
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`
+    """
+    return NavSetCard(
+        *args,
+        ul_class="nav nav-underline",
+        id=resolve_id_or_none(id),
+        selected=selected,
+        title=title,
         sidebar=sidebar,
         header=header,
         footer=footer,
@@ -819,12 +963,13 @@ def navset_pill_list(
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
-    * ~shiny.ui.navset_tab
-    * ~shiny.ui.navset_card_tab
-    * ~shiny.ui.navset_pill
-    * ~shiny.ui.navset_card_pill
-    * ~shiny.ui.navset_hidden
     * ~shiny.ui.navset_bar
+    * ~shiny.ui.navset_tab
+    * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
+    * ~shiny.ui.navset_card_tab
+    * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
     * ~shiny.ui.navset_hidden
 
     Example
@@ -853,6 +998,7 @@ class NavSetBar(NavSet):
     position: Literal["static-top", "fixed-top", "fixed-bottom", "sticky-top"]
     bg: Optional[str]
     inverse: bool
+    underline: bool
     collapsible: bool
     fluid: bool
 
@@ -877,6 +1023,7 @@ class NavSetBar(NavSet):
         bg: Optional[str] = None,
         # TODO: default to 'auto', like we have in R (parse color via webcolors?)
         inverse: bool = False,
+        underline: bool = True,
         collapsible: bool = True,
         fluid: bool = True,
     ) -> None:
@@ -896,13 +1043,14 @@ class NavSetBar(NavSet):
         self.position = position
         self.bg = bg
         self.inverse = inverse
+        self.underline = underline
         self.collapsible = collapsible
         self.fluid = fluid
 
     def layout(self, nav: Tag, content: Tag) -> TagList:
         nav_container = div(
             {"class": "container-fluid" if self.fluid else "container"},
-            tags.a({"class": "navbar-brand", "href": "#"}, self.title),
+            tags.span({"class": "navbar-brand"}, self.title),
         )
         if self.collapsible:
             collapse_id = "navbar-collapse-" + private_random_int(1000, 10000)
@@ -934,7 +1082,11 @@ class NavSetBar(NavSet):
             nav_final.add_class(f"bg-{'dark' if self.inverse else 'light'}")
 
         content = _make_tabs_fillable(
-            content, self.fillable, gap=self.gap, padding=self.padding, navbar=True
+            content,
+            self.fillable,
+            gap=self.gap,
+            padding=self.padding,
+            navbar=True,
         )
 
         # 2023-05-11; Do not wrap `row()` around `self.header` and `self.footer`
@@ -1008,6 +1160,7 @@ def _make_tabs_fillable(
     return content
 
 
+# TODO-future; Content should not be indented unless when called from `page_navbar()`
 def navset_bar(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     title: TagChild,
@@ -1027,6 +1180,7 @@ def navset_bar(
     bg: Optional[str] = None,
     # TODO: default to 'auto', like we have in R (parse color via webcolors?)
     inverse: bool = False,
+    underline: bool = True,
     collapsible: bool = True,
     fluid: bool = True,
 ) -> NavSetBar:
@@ -1092,8 +1246,11 @@ def navset_bar(
     * ~shiny.ui.nav_spacer
     * ~shiny.ui.navset_tab
     * ~shiny.ui.navset_pill
+    * ~shiny.ui.navset_underline
     * ~shiny.ui.navset_card_tab
     * ~shiny.ui.navset_card_pill
+    * ~shiny.ui.navset_card_underline
+    * ~shiny.ui.navset_pill_list
     * ~shiny.ui.navset_hidden
 
     Example
@@ -1109,9 +1266,13 @@ def navset_bar(
         else:
             new_args.append(cast(NavSetArg, arg))
 
+    ul_class = "nav navbar-nav"
+    if underline:
+        ul_class += " nav-underline"
+
     return NavSetBar(
         *new_args,
-        ul_class="nav navbar-nav",
+        ul_class=ul_class,
         id=resolve_id_or_none(id),
         selected=selected,
         sidebar=sidebar,
@@ -1124,6 +1285,7 @@ def navset_bar(
         footer=footer,
         bg=bg,
         inverse=inverse,
+        underline=underline,
         collapsible=collapsible,
         fluid=fluid,
     )
@@ -1167,6 +1329,30 @@ def render_navset(
         div_tag.append(contents)
 
     return ul_tag, div_tag
+
+
+def wrap_each_content(
+    contents: list[TagChild], wrapper: WrapperCallable = card_body
+) -> list[CardItem]:
+    ret: list[CardItem] = []
+    for content_item in contents:
+        if isinstance(content_item, CardItem):
+            ret.append(content_item)
+        else:
+            ret.append(wrapper(content_item))
+    return ret
+
+
+def navset_title(
+    title: TagChild | None,
+) -> list[TagChild | TagAttrs]:
+    """Note: Return value should be spread into parent container."""
+
+    if title is None:
+        return [None]
+
+    title_attrs: TagAttrs = {"class": "bslib-navs-card-title"}
+    return [title_attrs, tags.span(title)]
 
 
 ##############################################

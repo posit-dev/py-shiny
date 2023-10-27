@@ -28,13 +28,13 @@ from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._html_deps_external import bootstrap_deps
-from ._html_deps_shinyverse import page_fillable_dependency, page_sidebar_dependency
+from ._html_deps_shinyverse import components_dependency
 from ._navs import navset_bar
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import consolidate_attrs
 from ._utils import get_window_title
 from .css import CssUnit, as_css_padding, as_css_unit
-from .fill import as_fillable_container
+from .fill._fill import FILLABLE_CONTAINTER_ATTRS
 
 
 def page_sidebar(
@@ -87,6 +87,7 @@ def page_sidebar(
     attrs, children = consolidate_attrs(*args, **kwargs)
 
     return page_fillable(
+        {"class": "bslib-page-sidebar"},
         title,
         layout_sidebar(
             sidebar,
@@ -97,7 +98,6 @@ def page_sidebar(
             border_radius=False,
         ),
         get_window_title(title, window_title=window_title),
-        page_sidebar_dependency(),
         padding=0,
         gap=0,
         lang=lang,
@@ -123,7 +123,8 @@ def page_navbar(
     header: Optional[TagChild] = None,
     footer: Optional[TagChild] = None,
     bg: Optional[str] = None,
-    inverse: bool = True,
+    inverse: bool = False,
+    underline: bool = True,
     collapsible: bool = True,
     fluid: bool = True,
     window_title: str | MISSING_TYPE = MISSING,
@@ -199,7 +200,10 @@ def page_navbar(
             "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
         )
 
+    tagAttrs: TagAttrs = {"class": "bslib-page-navbar"}
+
     page_args = (
+        tagAttrs,
         navset_bar(
             *args,
             title=title,
@@ -214,6 +218,7 @@ def page_navbar(
             footer=footer,
             bg=bg,
             inverse=inverse,
+            underline=underline,
             collapsible=collapsible,
             fluid=fluid,
         ),
@@ -295,14 +300,15 @@ def page_fillable(
 
     return page_bootstrap(
         head_content(tags.style("html { height: 100%; }")),
-        as_fillable_container(
-            tags.body(
-                {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
-                attrs,
-                *children,
-            )
-        ),
-        page_fillable_dependency(),
+        # Even though page_bootstrap accepts *args/**kwargs, we need to prepend the
+        # class value to the tags.body. To avoid having a <body> within a <body> for a
+        # core code path, we can manually use `FILLABLE_CONTAINER_ATTRS` here as the
+        # first set of attributes.
+        FILLABLE_CONTAINTER_ATTRS,
+        {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
+        attrs,
+        *children,
+        components_dependency(),
         title=title,
         lang=lang,
     )
@@ -397,6 +403,7 @@ def page_bootstrap(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
     lang: Optional[str] = None,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     Create a Bootstrap UI page container.
@@ -413,6 +420,8 @@ def page_bootstrap(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
+    kwargs
+        Attributes on the the `<body>` tag.
 
     Returns
     -------
@@ -425,4 +434,8 @@ def page_bootstrap(
     :func:`~shiny.ui.page_navbar`
     """
     head = tags.title(title) if title else None
-    return tags.html(tags.head(head), tags.body(*bootstrap_deps(), *args), lang=lang)
+    return tags.html(
+        tags.head(head),
+        tags.body(*bootstrap_deps(), *args, **kwargs),
+        lang=lang,
+    )

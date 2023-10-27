@@ -79,3 +79,16 @@ def _session_on_flush_send_msg(
 
 def is_01_scalar(x: object) -> TypeGuard[float]:
     return isinstance(x, (int, float)) and x >= 0.0 and x <= 1.0
+
+
+def css_no_sub(**kwargs: str | float | None) -> Optional[str]:
+    """
+    Altered from py-htmltools's `css()`. Does not support substitutions of any kind.
+    """
+    res = ""
+    for k, v in kwargs.items():
+        if v is None:
+            continue
+        v = " ".join(v) if isinstance(v, list) else str(v)
+        res += k + ":" + v + ";"
+    return None if res == "" else res
