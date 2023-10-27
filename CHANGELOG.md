@@ -81,10 +81,6 @@ Methods still under consideration in `shiny.experimental.ui`:
 * `card_image()`: A general container for an image within a `shiny.ui.card`.
 * `card_title()`: A general container for the "title" of a `shiny.ui.card`.
 
-
-### Bug fixes
-* `shiny run` now respects the user provided `reload-dir` argument (#765).
-
 #### API removals
 
 * `shiny.experimental.ui.FillingLayout` has been removed. (#481)
@@ -95,6 +91,7 @@ Methods still under consideration in `shiny.experimental.ui`:
 
 ### Bug fixes
 
+* `shiny run` now respects the user provided `reload-dir` argument (#765).
 * Fixed #646: Wrap bare value box value in `<p />` tags. (#668)
 * Fixed #676: The `render.data_frame` selection feature was underdocumented and buggy (sometimes returning `None` as a row identifier if the pandas data frame's index had gaps in it). With this release, the selection is consistently a tuple of the 0-based row numbers of the selected rows--or `None` if no rows are selected. (#677)
 * Added tests to verify that ui input methods, ui labels, ui update (value) methods, and ui output methods work within modules (#696).
@@ -103,8 +100,9 @@ Methods still under consideration in `shiny.experimental.ui`:
 
 ### Other changes
 
-* `layout_sidebar()` now uses an `<aside>` element for the sidebar's container and a `<header>` element for the sidebar title. The classes of each element remain the same, but the semantic meaning of the elements is now better reflected in the HTML markup.
-* `layout_sidebar()` no longer gives the sidebar main content area the `role="main"` attribute.
+* `layout_sidebar()` now uses an `<aside>` element for the sidebar's container and a `<header>` element for the sidebar title. The classes of each element remain the same, but the semantic meaning of the elements is now better reflected in the HTML markup.  (#772)
+* `layout_sidebar()` no longer gives the sidebar main content area the `role="main"` attribute. (#772)
+* Improved the style and appearance of the button to enter full screen in `card()`s and `value_box()`es to better adapt to Bootstrap's dark mode. (#772)
 
 
 ## [0.5.1] - 2023-08-08

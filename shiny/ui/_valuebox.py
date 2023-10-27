@@ -17,6 +17,7 @@ from htmltools import (
 from .._docstring import add_example
 from ._card import CardItem, card, card_body
 from ._tag import consolidate_attrs
+from ._utils import css_no_sub
 from .css import as_css_unit
 from .css._css_unit import CssUnit, as_grid_unit
 from .fill import as_fill_item, as_fillable_container
@@ -432,7 +433,15 @@ def value_box(
     return card(
         {
             "class": "bslib-value-box",
-            "style": css(color=theme.fg, background_color=theme.bg),
+            "style": css_no_sub(
+                **{
+                    "color": theme.fg,
+                    "background-color": theme.bg,
+                    # These variables are used by the full screen card button
+                    "--bslib-color-fg": theme.fg,
+                    "--bslib-color-bg": theme.bg,
+                },
+            ),
         },
         {"class": theme.class_} if theme.class_ else None,
         {"class": class_} if class_ else None,
@@ -492,8 +501,7 @@ def render_showcase_layout(
 ) -> CardItem:
     showcase = wrap_in_carrier_tag_with_class("value-box-showcase", showcase)
 
-    grid_props = css(
-        collapse_="",  # provide to supress pyright general type issue
+    grid_props = css_no_sub(
         **{
             "--bslib-grid-height": "auto",
             "--bslib-grid-height-mobile": "auto",

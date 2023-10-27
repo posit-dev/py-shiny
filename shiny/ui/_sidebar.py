@@ -23,6 +23,7 @@ from ..session import Session, require_active_session
 from ._card import CardItem
 from ._html_deps_shinyverse import components_dependency
 from ._tag import consolidate_attrs, trinary
+from ._utils import css_no_sub
 from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
@@ -405,15 +406,17 @@ def layout_sidebar(  # TODO-barret-API; Should this be `layout_sidebar(*args, si
         data_bslib_sidebar_open=sidebar.open,
         data_bslib_sidebar_border=trinary(border),
         data_bslib_sidebar_border_radius=trinary(border_radius),
-        style=css(
-            __bslib_sidebar_width=as_css_unit(sidebar.width),
-            __bslib_sidebar_bg=sidebar.color_bg,
-            __bslib_sidebar_fg=sidebar.color_fg,
-            __bslib_sidebar_main_fg=fg,
-            __bslib_sidebar_main_bg=bg,
-            __bs_card_border_color=border_color,
-            height=as_css_unit(height),
-            __bslib_sidebar_max_height_mobile=as_css_unit(max_height_mobile),
+        style=css_no_sub(
+            **{
+                "--_sidebar-width": as_css_unit(sidebar.width),
+                "--_sidebar-bg": sidebar.color_bg,
+                "--_sidebar-fg": sidebar.color_fg,
+                "--_main-fg": fg,
+                "--_main-bg": bg,
+                "--bs-card-border-color": border_color,
+                "height": as_css_unit(height),
+                "--_sidebar-max-height-mobile": as_css_unit(max_height_mobile),
+            },
         ),
     )
     if fill:
