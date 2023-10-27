@@ -1,4 +1,3 @@
-import shiny.experimental as x
 from shiny import App, ui
 
 piggy_bank = ui.HTML(
@@ -14,21 +13,23 @@ app_ui = ui.page_fluid(
         ui.h1(ui.HTML("$1 <i>Billion</i> Dollars")),
         ui.span(arrow_up, " 30% VS PREVIOUS 30 DAYS"),
         showcase=piggy_bank,
-        class_="bg-success",
+        theme="bg-gradient-orange-cyan",
         full_screen=True,
         # showcase_layout=x.ui._valuebox.showcase_left_center(),
         id="valuebox1",
     ),
-    x.ui.value_box(
+    ui.value_box(
         "title",
         "value",
         ui.p("content"),
         ui.p("more body"),
         showcase=piggy_bank,
-        class_="bg-success",
+        theme="text-green",
         full_screen=True,
-        showcase_layout=x.ui.showcase_top_right(width="70%"),
+        showcase_layout=ui.showcase_top_right(width="70%"),
         id="valuebox2",
+        height="300px",
+        max_height="500px",
     ),
 )
 

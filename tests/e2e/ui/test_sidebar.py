@@ -45,5 +45,5 @@ def test_sidebar_position_and_open(page: Page, app: ShinyAppProc) -> None:
     always_sidebar = Sidebar(page, "sidebar_always")
     output_txt_always = OutputTextVerbatim(page, "state_always")
     always_sidebar.expect_title("Always sidebar content")
-    output_txt_always.expect_value("input.sidebar_always(): False")
+    output_txt_always.expect_value("input.sidebar_always(): True")
     always_sidebar.expect_handle(False)

@@ -2386,7 +2386,7 @@ class Sidebar(
         super().__init__(
             page,
             id=id,
-            loc=f"> div#{id}",
+            loc=f"> aside#{id}",
             loc_container="div.bslib-sidebar-layout",
         )
         self.loc_handle = self.loc_container.locator("button.collapse-toggle")
@@ -2499,13 +2499,11 @@ class ValueBox(
             loc="> div > .value-box-grid",
         )
         value_box_grid = self.loc
-        self.loc_showcase = value_box_grid.locator("> div > .value-box-showcase")
-        self.loc_title = value_box_grid.locator(
-            "> div > .value-box-area > :nth-child(1)"
-        )
-        self.loc = value_box_grid.locator("> div > .value-box-area > :nth-child(2)")
+        self.loc_showcase = value_box_grid.locator("> .value-box-showcase")
+        self.loc_title = value_box_grid.locator("> .value-box-area > .value-box-title")
+        self.loc = value_box_grid.locator("> .value-box-area > .value-box-value")
         self.loc_body = value_box_grid.locator(
-            "> div > .value-box-area > :not(:nth-child(1), :nth-child(2))"
+            "> .value-box-area > :not(.value-box-title, .value-box-value)"
         )
         self._loc_fullscreen = self.loc_container.locator(
             "> bslib-tooltip > .bslib-full-screen-enter"
@@ -2520,9 +2518,7 @@ class ValueBox(
         )
 
     def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
-        expect_to_have_style(
-            self.loc_container, "--bslib-grid-height", value, timeout=timeout
-        )
+        expect_to_have_style(self.loc_container, "height", value, timeout=timeout)
 
     def expect_title(
         self,
