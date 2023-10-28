@@ -31,12 +31,10 @@ __all__ = (
     "Sidebar",
     "sidebar",
     "layout_sidebar",
-    "toggle_sidebar",
+    "update_sidebar",
     # Legacy
     "panel_sidebar",
     "panel_main",
-    "DeprecatedPanelSidebar",
-    "DeprecatedPanelMain",
 )
 
 
@@ -175,10 +173,8 @@ def sidebar(
         open), `"closed"` or `False` (the sidebar starts closed), or `"always"` or
         `None` (the sidebar is always open and cannot be closed).
 
-        In :func:`~shiny.ui.toggle_sidebar`, `open` indicates the desired
-        state of the sidebar, where the default of `open = None` will cause the sidebar
-        to be toggled open if closed or vice versa. Note that
-        :func:`~shiny.ui.toggle_sidebar` can only open or close the
+        In :func:`~shiny.ui.update_sidebar`, `open` indicates the desired state of the
+        sidebar. Note that :func:`~shiny.ui.update_sidebar` can only open or close the
         sidebar, so it does not support the `"desktop"` and `"always"` options.
     id
         A character string. Required if wanting to re-actively read (or update) the
@@ -292,8 +288,9 @@ def sidebar(
 
 
 @add_example()
-def layout_sidebar(  # TODO-barret-API; Should this be `layout_sidebar(*args, sidebar: Optional[Sidebar] = None)`?
-    *args: Sidebar | TagChild | TagAttrs,
+def layout_sidebar(
+    sidebar: Sidebar,
+    *args: TagChild | TagAttrs,
     fillable: bool = True,
     fill: bool = True,
     bg: Optional[str] = None,
@@ -359,7 +356,7 @@ def layout_sidebar(  # TODO-barret-API; Should this be `layout_sidebar(*args, si
     * :func:`~shiny.ui.sidebar`
     """
 
-    args, sidebar = _get_layout_sidebar_sidebar(args)
+    sidebar, args = _get_layout_sidebar_sidebar(sidebar, args)
 
     # TODO-future; implement
     # if fg is None and bg is not None:
@@ -426,57 +423,63 @@ def layout_sidebar(  # TODO-barret-API; Should this be `layout_sidebar(*args, si
 
 
 def _get_layout_sidebar_sidebar(
-    args: tuple[Sidebar | TagChild | TagAttrs, ...],
-) -> tuple[tuple[TagChild | Sidebar | TagAttrs, ...], Sidebar]:
-    updated_args: list[Sidebar | TagChild | TagAttrs] = []
+    sidebar: Sidebar,
+    args: tuple[TagChild | TagAttrs, ...],
+) -> tuple[Sidebar, tuple[TagChild | TagAttrs, ...]]:
+    updated_args: list[TagChild | TagAttrs] = []
     original_args = tuple(args)
 
-    sidebar: Sidebar | None = None
-    sidebar_orig_arg: Sidebar | DeprecatedPanelSidebar | None = None
+    # sidebar: Sidebar | None = None
+    sidebar_orig_arg: Sidebar | DeprecatedPanelSidebar = sidebar
+
+    if isinstance(sidebar, DeprecatedPanelSidebar):
+        sidebar = sidebar.sidebar
+
+    if not isinstance(sidebar, Sidebar):
+        raise ValueError(
+            "`layout_sidebar()` is not being supplied with a `sidebar()` object. Please supply a `sidebar()` object to `layout_sidebar(sidebar)`."
+        )
 
     # Use `original_args` here so `updated_args` can be safely altered in place
     for i, arg in zip(range(len(original_args)), original_args):
-        if isinstance(arg, Sidebar):
-            if sidebar is not None:
-                raise ValueError(
-                    "`layout_sidebar()` is being supplied with multiple `sidebar()` objects. Please supply only one `sidebar()` object to `layout_sidebar()`."
-                )
-            sidebar = arg
-        elif isinstance(arg, DeprecatedPanelSidebar):
+        if isinstance(arg, DeprecatedPanelSidebar):
+            raise ValueError(
+                "`panel_sidebar()` is not being used as the first argument to `layout_sidebar(sidebar,)`. `panel_sidebar()` has been deprecated and will go away in a future version of Shiny. Please supply `panel_sidebar()` arguments directly to `args` in `layout_sidebar(sidebar)` and use `sidebar()` instead of `panel_sidebar()`."
+            )
+        elif isinstance(arg, Sidebar):
+            raise ValueError(
+                "`layout_sidebar()` is being supplied with multiple `sidebar()` objects. Please supply only one `sidebar()` object to `layout_sidebar()`."
+            )
+
+        elif isinstance(arg, DeprecatedPanelMain):
             if i != 0:
                 raise ValueError(
-                    "`panel_sidebar()` is not being used as the first argument to `layout_sidebar()`. `panel_sidebar()` has been deprecated and will go away in a future version of Shiny. Please supply `panel_sidebar()` arguments directly to `args` in `layout_sidebar(*args)` and use `sidebar()` instead of `panel_sidebar()`."
-                )
-            sidebar_orig_arg = arg
-            sidebar = arg.sidebar
-        elif isinstance(arg, DeprecatedPanelMain):
-            if i != 1:
-                raise ValueError(
-                    "`panel_main()` is not being supplied as the second argument to `layout_sidebar()`. `panel_main()`/`panel_sidebar()` have been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(*args)` and use `sidebar()` instead of `panel_sidebar()`."
+                    "`panel_main()` is not being supplied as the second argument to `layout_sidebar()`. `panel_main()`/`panel_sidebar()` have been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)` and use `sidebar()` instead of `panel_sidebar()`."
                 )
             if not isinstance(sidebar_orig_arg, DeprecatedPanelSidebar):
                 raise ValueError(
-                    "`panel_main()` is not being used with `panel_sidebar()`. `panel_main()`/`panel_sidebar()` have been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(*args)` and use `sidebar()` instead of `panel_sidebar()`."
+                    "`panel_main()` is not being used with `panel_sidebar()`. `panel_main()`/`panel_sidebar()` have been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)` and use `sidebar()` instead of `panel_sidebar()`."
                 )
 
-            if len(args) > 3:
+            if len(args) > 2:
                 raise ValueError(
-                    "Unexpected extra legacy `*args` have been supplied to `layout_sidebar()` in addition to `panel_main()` or `panel_sidebar()`. `panel_main()` has been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(*args)` and use `sidebar()` instead of `panel_sidebar()`."
+                    "Unexpected extra legacy `*args` have been supplied to `layout_sidebar()` in addition to `panel_main()` or `panel_sidebar()`. `panel_main()` has been deprecated and will go away in a future version of Shiny. Please supply `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)` and use `sidebar()` instead of `panel_sidebar()`."
                 )
             # Notes for this point in the code:
-            # * We are working with args[1], a `DeprecatedPanelMain`; args[0] is `DeprecatedPanelSidebar`
-            # * len(args) == 2 or 3
+            # * We are working with args[0], a `DeprecatedPanelMain`; sidebar was originally a `DeprecatedPanelSidebar`
+            # * len(args) == 1 or 2
 
             # Handle legacy `layout_sidebar(sidebar, main, position=)` value
-            if len(args) == 3:
-                arg2 = args[2]
-                if not (arg2 == "left" or arg2 == "right"):
+            if len(args) == 2:
+                arg1 = args[1]
+                if not (arg1 == "left" or arg1 == "right"):
                     raise ValueError(
-                        "layout_sidebar(*args) contains non-valid legacy values. Please use `sidebar()` instead of `panel_sidebar()` and supply any `panel_main()` arguments directly to `args` in `layout_sidebar(*args)`."
+                        "layout_sidebar(*args) contains non-valid legacy values. Please use `sidebar()` instead of `panel_sidebar()` and supply any `panel_main()` arguments directly to `args` in `layout_sidebar(sidebar, *args)`."
                     )
                 # We know `sidebar_orig_arg` is a `DeprecatedPanelSidebar` here
                 sidebar.position = cast(  # pyright: ignore[reportOptionalMemberAccess]
-                    Literal["left", "right"], arg2
+                    Literal["left", "right"],
+                    arg1,
                 )
 
             # Only keep panel_main content
@@ -490,34 +493,27 @@ def _get_layout_sidebar_sidebar(
             # Keep the arg!
             updated_args.append(arg)
 
-    if sidebar is None:
-        raise ValueError(
-            "`layout_sidebar()` did not receive a `sidebar()` object. To use `layout_sidebar()`, please supply a `sidebar()` object."
-        )
-
-    return (tuple(updated_args), sidebar)
+    return (sidebar, tuple(updated_args))
 
 
 @add_example()
-def toggle_sidebar(  # TODO-barret-API; Rename to `update_sidebar()`
+def update_sidebar(
     id: str,
-    open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
-    session: Session | None = None,
+    *,
+    show: Optional[bool] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
-    Toggle a sidebar
+    Update a sidebar's visibility
 
-    Toggle a :func:`~shiny.ui.sidebar` state during an active Shiny user session.
+    Set a :func:`~shiny.ui.sidebar` state during an active Shiny user session.
 
     Parameters
     ----------
     id
         The `id` of the :func:`~shiny.ui.sidebar` to toggle.
-    open
-        The desired state of the sidebar, choosing from the following options: `None`
-        (toggle sidebar open and closed), `"open"` or `True` (open the sidebar),
-        `"closed"` or `False` (close the sidebar). Note that `toggle_sidebar()` can only
-        open or close the sidebar, so it does not support the `"desktop"` and `"always"`
+    show
+        The desired visible state of the sidebar, where `True` opens the sidebar and `False` closes the sidebar (if not already in that state).
     session
         A Shiny session object (the default should almost always be used).
 
@@ -528,29 +524,28 @@ def toggle_sidebar(  # TODO-barret-API; Rename to `update_sidebar()`
     """
     session = require_active_session(session)
 
-    method: Literal["toggle", "open", "close"]
-    if open is None or open == "toggle":
-        method = "toggle"
-    elif open is True or open == "open":
-        method = "open"
-    elif open is False or open == "closed":
-        method = "close"
-    else:
-        if open == "always" or open == "desktop":
-            raise ValueError(
-                f"`open = '{open}'` is not supported by `toggle_sidebar()`"
-            )
-        raise ValueError(
-            "open must be NULL (or 'toggle'), TRUE (or 'open'), or FALSE (or 'closed')"
-        )
+    # method: Literal["toggle", "open", "close"]
+    # if open is None or open == "toggle":
+    #     method = "toggle"
+    # elif open is True or open == "open":
+    #     method = "open"
+    # elif open is False or open == "closed":
+    #     method = "close"
+    # else:
+    #     if open == "always" or open == "desktop":
+    #         raise ValueError(
+    #             f"`open = '{open}'` is not supported by `update_sidebar()`"
+    #         )
+    #     raise ValueError(
+    #         "open must be NULL (or 'toggle'), TRUE (or 'open'), or FALSE (or 'closed')"
+    #     )
+    if show is not None:
+        method = "open" if bool(show) else "close"
 
-    def callback() -> None:
-        session.send_input_message(id, {"method": method})
+        def callback() -> None:
+            session.send_input_message(id, {"method": method})
 
-    session.on_flush(callback, once=True)
-
-
-_sidebar_func = sidebar
+        session.on_flush(callback, once=True)
 
 
 def _collapse_icon() -> TagChild:
@@ -618,7 +613,15 @@ def panel_main(
 
 
 # Deprecated 2023-06-13
-class DeprecatedPanelSidebar:
+
+
+# This class should be removed when `panel_sidebar()` is removed
+class DeprecatedPanelSidebar(
+    # While it doesn't seem right to inherit from `Sidebar`, it's the easiest way to
+    # make sure `layout_sidebar(sidebar: Sidebar)` works without mucking up the
+    # function signature.
+    Sidebar
+):
     """
     [Deprecated] Sidebar panel
 
@@ -669,6 +672,8 @@ class DeprecatedPanelSidebar:
         return self.sidebar.tag.tagify()
 
 
+# This class should be removed when `panel_main()` is removed
+# Must be `Tagifiable`, so it can fit as a type `TagChild`
 class DeprecatedPanelMain:
     """
     [Deprecated] Main panel

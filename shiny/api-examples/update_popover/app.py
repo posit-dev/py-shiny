@@ -4,8 +4,6 @@ app_ui = ui.page_fluid(
     ui.input_action_button("btn_show", "Show popover", class_="mt-3 me-3"),
     ui.input_action_button("btn_close", "Close popover", class_="mt-3 me-3"),
     ui.br(),
-    ui.input_action_button("btn_toggle", "Toggle popover", class_="mt-3 me-3"),
-    ui.br(),
     ui.br(),
     ui.popover(
         ui.input_action_button("btn_w_popover", "A button w/ a popover", class_="mt-3"),
@@ -20,19 +18,13 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         req(input.btn_show())
 
-        ui.toggle_popover("popover_id", show=True)
+        ui.update_popover("popover_id", show=True)
 
     @reactive.Effect
     def _():
         req(input.btn_close())
 
-        ui.toggle_popover("popover_id", show=False)
-
-    @reactive.Effect
-    def _():
-        req(input.btn_toggle())
-
-        ui.toggle_popover("popover_id")
+        ui.update_popover("popover_id", show=False)
 
     @reactive.Effect
     def _():

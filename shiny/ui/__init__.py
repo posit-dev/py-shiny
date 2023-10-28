@@ -17,7 +17,7 @@ from ._sidebar import (
     Sidebar,
     sidebar,
     layout_sidebar,
-    toggle_sidebar,
+    update_sidebar,
     panel_sidebar,
     panel_main,
 )
@@ -40,11 +40,9 @@ from ._accordion import (
     AccordionPanel,
     accordion,
     accordion_panel,
-    accordion_panel_open,
-    accordion_panel_close,
-    accordion_panel_insert,
-    accordion_panel_remove,
-    accordion_panel_set,
+    insert_accordion_panel,
+    remove_accordion_panel,
+    update_accordion,
     update_accordion_panel,
 )
 
@@ -126,7 +124,6 @@ from ._progress import Progress
 
 from .dataframe import output_data_frame
 
-from ._input_toggle import toggle_switch, toggle_tooltip, toggle_popover
 from ._popover import popover
 from ._valuebox import (
     value_box,
@@ -183,7 +180,7 @@ __all__ = (
     "Sidebar",
     "sidebar",
     "layout_sidebar",
-    "toggle_sidebar",
+    "update_sidebar",
     "panel_sidebar",
     "panel_main",
     # _layout
@@ -197,11 +194,9 @@ __all__ = (
     "AccordionPanel",
     "accordion",
     "accordion_panel",
-    "accordion_panel_open",
-    "accordion_panel_close",
-    "accordion_panel_insert",
-    "accordion_panel_remove",
-    "accordion_panel_set",
+    "insert_accordion_panel",
+    "remove_accordion_panel",
+    "update_accordion",
     "update_accordion_panel",
     # _download_button
     "download_button",
@@ -305,10 +300,6 @@ __all__ = (
     "page_fluid",
     "page_fixed",
     "page_bootstrap",
-    # _input_toggle
-    "toggle_switch",
-    "toggle_tooltip",
-    "toggle_popover",
     # _popover
     "popover",
     # _valuebox

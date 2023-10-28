@@ -12,8 +12,8 @@ __all__ = (
     "as_fillable_container",
     "as_fill_item",
     "remove_all_fill",
-    "is_fill_item",
-    "is_fillable_container",
+    # "is_fill_item",
+    # "is_fillable_container",
 )
 
 TagT = TypeVar("TagT", bound="Tag")
@@ -31,7 +31,8 @@ FILLABLE_CONTAINTER_ATTRS: TagAttrs = {"class": FILL_CONTAINER_CLASS}
 
 
 @add_example()
-def as_fillable_container(  # TODO-barret-API; These methods mutate their input values. Should they return a new object instead? Or not return at all (like `LIST.sort()`)?
+# TODO-future-API; These methods mutate their input values. Should they return a new object instead? Or not return at all (like `LIST.sort()`)?
+def as_fillable_container(
     tag: TagT,
 ) -> TagT:
     tag_prepend_class(tag, FILL_CONTAINER_CLASS)
@@ -40,7 +41,8 @@ def as_fillable_container(  # TODO-barret-API; These methods mutate their input 
 
 
 @add_example()
-def as_fill_item(  # TODO-barret-API; These methods mutate their input values. Should they return a new object instead? Or not return at all (like `LIST.sort()`)?
+# TODO-future-API; These methods mutate their input values. Should they return a new object instead? Or not return at all (like `LIST.sort()`)?
+def as_fill_item(
     tag: TagT,
 ) -> TagT:
     """
@@ -69,8 +71,6 @@ def as_fill_item(  # TODO-barret-API; These methods mutate their input values. S
     --------
     * :func:`~shiny.ui.fill.as_fillable_container`
     * :func:`~shiny.ui.fill.remove_all_fill`
-    * :func:`~shiny.ui.fill.is_fill_item`
-    * :func:`~shiny.ui.fill.is_fillable_container`
     """
     tag_prepend_class(tag, FILL_ITEM_CLASS)
     tag.append(fill_dependency())
@@ -107,8 +107,6 @@ def remove_all_fill(
     --------
     * :func:`~shiny.ui.fill.as_fill_item`
     * :func:`~shiny.ui.fill.as_fillable_container`
-    * :func:`~shiny.ui.fill.is_fill_item`
-    * :func:`~shiny.ui.fill.is_fillable_container`
     """
 
     tag_remove_class(tag, FILL_CONTAINER_CLASS)
@@ -116,7 +114,8 @@ def remove_all_fill(
     return tag
 
 
-def is_fillable_container(  # TODO-barret-api; Should this be exported?
+# Method currently not exposed, but implemented within bslib
+def is_fillable_container(
     tag: object,
 ) -> bool:
     """
@@ -146,8 +145,6 @@ def is_fillable_container(  # TODO-barret-api; Should this be exported?
     * :func:`~shiny.ui.fill.as_fill_item`
     * :func:`~shiny.ui.fill.as_fillable_container`
     * :func:`~shiny.ui.fill.remove_all_fill`
-    * :func:`~shiny.ui.fill.is_fill_item`
-    * :func:`~shiny.ui.fill.is_fillable_container`
     """
     # TODO-future; Handle widgets
     # # won't actually work until (htmltools#334) gets fixed
@@ -156,7 +153,8 @@ def is_fillable_container(  # TODO-barret-api; Should this be exported?
     return isinstance(tag, Tag) and tag.has_class(FILL_CONTAINER_CLASS)
 
 
-def is_fill_item(tag: object) -> bool:  # TODO-barret-api; Should this be exported?
+# Method currently not exposed, but implemented within bslib
+def is_fill_item(tag: object) -> bool:
     """
     Test a tag for being a fill item
 
@@ -183,7 +181,6 @@ def is_fill_item(tag: object) -> bool:  # TODO-barret-api; Should this be export
     * :func:`~shiny.ui.fill.as_fill_item`
     * :func:`~shiny.ui.fill.as_fillable_container`
     * :func:`~shiny.ui.fill.remove_all_fill`
-    * :func:`~shiny.ui.fill.is_fillable_container`
     """
     # TODO-future; Handle widgets
     # # won't actually work until (htmltools#334) gets fixed

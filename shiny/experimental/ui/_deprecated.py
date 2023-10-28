@@ -13,23 +13,20 @@ from htmltools import (
 )
 
 from ..._deprecated import warn_deprecated
-from ...session import Session
+from ..._namespaces import resolve_id
+from ..._utils import drop_none
+from ...session import Session, require_active_session
 from ...types import MISSING, MISSING_TYPE
 from ...ui import AccordionPanel as MainAccordionPanel
 from ...ui import accordion as main_accordion
 from ...ui import accordion_panel as main_accordion_panel
-from ...ui import accordion_panel_close as main_accordion_panel_close
-from ...ui import accordion_panel_insert as main_accordion_panel_insert
-from ...ui import accordion_panel_open as main_accordion_panel_open
-from ...ui import accordion_panel_remove as main_accordion_panel_remove
-from ...ui import accordion_panel_set as main_accordion_panel_set
 from ...ui import input_text_area as main_input_text_area
+from ...ui import insert_accordion_panel as main_insert_accordion_panel
 from ...ui import popover as main_popover
+from ...ui import remove_accordion_panel as main_remove_accordion_panel
 from ...ui import tags
-from ...ui import toggle_popover as main_toggle_popover
-from ...ui import toggle_switch as main_toggle_switch
-from ...ui import toggle_tooltip as main_toggle_tooltip
 from ...ui import tooltip as main_tooltip
+from ...ui import update_accordion as main_update_accordion
 from ...ui import update_accordion_panel as main_update_accordion_panel
 from ...ui import update_popover as main_update_popover
 from ...ui import update_tooltip as main_update_tooltip
@@ -59,7 +56,7 @@ from ...ui._sidebar import layout_sidebar as main_layout_sidebar
 from ...ui._sidebar import panel_main as main_panel_main
 from ...ui._sidebar import panel_sidebar as main_panel_sidebar
 from ...ui._sidebar import sidebar as main_sidebar
-from ...ui._sidebar import toggle_sidebar as main_toggle_sidebar
+from ...ui._sidebar import update_sidebar as main_update_sidebar
 from ...ui._valuebox import ShowcaseLayout as MainShowcaseLayout
 from ...ui._valuebox import showcase_left_center as main_showcase_left_center
 from ...ui._valuebox import showcase_top_right as main_showcase_top_right
@@ -69,9 +66,9 @@ from ...ui.css._css_unit import as_css_padding as main_as_css_padding
 from ...ui.css._css_unit import as_css_unit as main_as_css_unit
 from ...ui.fill import as_fill_item as main_as_fill_item
 from ...ui.fill import as_fillable_container as main_as_fillable_container
-from ...ui.fill import is_fill_item as main_is_fill_item
-from ...ui.fill import is_fillable_container as main_is_fillable_container
 from ...ui.fill import remove_all_fill as main_remove_all_fill
+from ...ui.fill._fill import is_fill_item as main_is_fill_item
+from ...ui.fill._fill import is_fillable_container as main_is_fillable_container
 
 __all__ = (
     # Input Switch
@@ -176,13 +173,22 @@ def toggle_switch(
     value: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.toggle_switch()` instead."""
+    """Defunct. Please do not use method."""
     warn_deprecated(
-        "`shiny.experimental.ui.toggle_switch()` is deprecated. "
+        "`shiny.experimental.ui.toggle_switch()` is defunct. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.toggle_switch()` instead."
+        "please update your code accordingly."
     )
-    return main_toggle_switch(id, value, session=session)
+
+    if value is not None and not isinstance(value, bool):
+        raise TypeError("`value` must be `None` or a single boolean value.")
+    msg = drop_none({"id": resolve_id(id), "value": value})
+    session = require_active_session(session)
+
+    async def callback():
+        await session.send_custom_message("bslib.toggle-input-binary", msg)
+
+    session.on_flush(callback, once=True)
 
 
 ######################
@@ -350,13 +356,13 @@ def tooltip_toggle(
     show: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.toggle_tooltip()`."""
+    """Deprecated. Please use `shiny.ui.update_tooltip()`."""
     warn_deprecated(
         "`shiny.experimental.ui.tooltip_toggle()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.toggle_tooltip()` instead."
+        "please use `shiny.ui.update_tooltip()` instead."
     )
-    main_toggle_tooltip(
+    main_update_tooltip(
         id=id,
         show=show,
         session=session,
@@ -369,13 +375,13 @@ def toggle_tooltip(
     show: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.toggle_tooltip()` instead."""
+    """Deprecated. Please use `shiny.ui.update_tooltip()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.tooltip_toggle()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.toggle_tooltip()` instead."
+        "please use `shiny.ui.update_tooltip()` instead."
     )
-    main_toggle_tooltip(
+    main_update_tooltip(
         id=id,
         show=show,
         session=session,
@@ -455,7 +461,7 @@ def sidebar(
 
 
 def layout_sidebar(
-    sidebar: Sidebar | TagChild | TagAttrs,
+    sidebar: MainSidebar | TagChild | TagAttrs,
     *args: TagChild | TagAttrs,
     fillable: bool = True,
     fill: bool = True,
@@ -475,6 +481,8 @@ def layout_sidebar(
         "This method will be removed in a future version, "
         "please use `shiny.ui.layout_sidebar()` instead."
     )
+    if not isinstance(sidebar, MainSidebar):
+        sidebar = main_sidebar(sidebar)
     return main_layout_sidebar(
         sidebar,
         *args,
@@ -497,15 +505,16 @@ def toggle_sidebar(
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
     session: Session | None = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.toggle_sidebar()` instead."""
+    """Deprecated. Please use `shiny.ui.update_sidebar()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.toggle_sidebar()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.toggle_sidebar()` instead."
+        "please use `shiny.ui.update_sidebar()` instead."
     )
-    return main_toggle_sidebar(
+    open_val = (open is True) or (open == "open")
+    return main_update_sidebar(
         id,
-        open=open,
+        show=open_val,
         session=session,
     )
 
@@ -522,15 +531,17 @@ def sidebar_toggle(
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
     session: Session | None = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.toggle_sidebar()` instead of `sidebar_toggle()`."""
+    """Deprecated. Please use `shiny.ui.update_sidebar()` instead of
+    `shiny.experimental.ui.sidebar_toggle()`."""
     warn_deprecated(
         "`shiny.experimental.ui.sidebar_toggle()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.toggle_sidebar()` instead."
+        "please use `shiny.ui.update_sidebar()` instead."
     )
-    main_toggle_sidebar(
+    open_val = (open is True) or (open == "open")
+    main_update_sidebar(
         id=id,
-        open=open,
+        show=open_val,
         session=session,
     )
 
@@ -672,13 +683,13 @@ def toggle_popover(
     show: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.toggle_popover()` instead."""
+    """Deprecated. Please use `shiny.ui.update_popover()` instead."""
     warn_deprecated(
-        "`shiny.experimental.ui.toggle_popover()` is deprecated. "
+        "`shiny.experimental.ui.update_popover()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.toggle_popover()` instead."
+        "please use `shiny.ui.update_popover()` instead."
     )
-    return main_toggle_popover(id, show, session=session)
+    return main_update_popover(id, show, session=session)
 
 
 # Deprecated 2023-09-12
@@ -769,13 +780,13 @@ def accordion_panel_set(
     values: bool | str | list[str],
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.accordion_panel_set()` instead."""
+    """Deprecated. Please use `shiny.ui.update_accordion()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel_set()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.accordion_panel_set()` instead."
+        "please use `shiny.ui.update_accordion()` instead."
     )
-    return main_accordion_panel_set(id, values, session=session)
+    return main_update_accordion(id, show=values, session=session)
 
 
 # # Deprecated 2023-09-12
@@ -784,13 +795,22 @@ def accordion_panel_open(
     values: bool | str | list[str],
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.accordion_panel_open()` instead."""
+    """Deprecated. Please use `shiny.ui.update_accordion_panel(id, value, show=True)` or `shiny.ui.update_accordion(id, show = True)` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel_open()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.accordion_panel_open()` instead."
+        "please use `shiny.ui.shiny.ui.update_accordion_panel(id, value, show=True)` or `shiny.ui.update_accordion(id, show = True)` instead."
     )
-    return main_accordion_panel_open(id, values, session=session)
+
+    if isinstance(values, bool):
+        main_update_accordion(id, show=True, session=session)
+        return
+
+    if not isinstance(values, list):
+        values = [values]
+
+    for value in values:
+        main_update_accordion_panel(id, value, show=True, session=session)
 
 
 # # Deprecated 2023-09-12
@@ -799,13 +819,21 @@ def accordion_panel_close(
     values: bool | str | list[str],
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.accordion_panel_close()` instead."""
+    """Deprecated. Please use `shiny.ui.update_accordion_panel(id, value, show=False)` or `shiny.ui.update_accordion(id, show = False)` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel_close()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.accordion_panel_close()` instead."
+        "please use `shiny.ui.update_accordion_panel(id, value, show=False)` or `shiny.ui.update_accordion(id, show = False)` instead."
     )
-    return main_accordion_panel_close(id, values, session=session)
+    if isinstance(values, bool):
+        main_update_accordion(id, show=False, session=session)
+        return
+
+    if not isinstance(values, list):
+        values = [values]
+
+    for value in values:
+        main_update_accordion_panel(id, value, show=False, session=session)
 
 
 # # Deprecated 2023-09-12
@@ -816,13 +844,13 @@ def accordion_panel_insert(
     position: Literal["after", "before"] = "after",
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.accordion_panel_insert()` instead."""
+    """Deprecated. Please use `shiny.ui.insert_accordion_panel()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel_insert()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.accordion_panel_insert()` instead."
+        "please use `shiny.ui.insert_accordion_panel()` instead."
     )
-    return main_accordion_panel_insert(
+    return main_insert_accordion_panel(
         id,
         panel,
         target=target,
@@ -837,13 +865,13 @@ def accordion_panel_remove(
     target: str | list[str],
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.accordion_panel_remove()` instead."""
+    """Deprecated. Please use `shiny.ui.remove_accordion_panel()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel_remove()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.accordion_panel_remove()` instead."
+        "please use `shiny.ui.remove_accordion_panel()` instead."
     )
-    return main_accordion_panel_remove(
+    return main_remove_accordion_panel(
         id,
         target=target,
         session=session,
@@ -976,31 +1004,31 @@ def remove_all_fill(tag: TagT) -> TagT:
 
 
 def is_fill_carrier(tag: Tag) -> bool:
-    """Deprecated. Please use a combination of `shiny.ui.fill.is_fillable_container()` and `shiny.ui.fill.is_fill_item()` instead."""
+    """Defunct. Please do not use method."""
     warn_deprecated(
-        "`shiny.experimental.ui.is_fill_carrier()` is deprecated. "
+        "`shiny.experimental.ui.is_fill_carrier()` is defunct. "
         "This method will be removed in a future version, "
-        "please use a combination of `shiny.ui.fill.is_fillable_container()` and `shiny.ui.fill.is_fill_item()` instead."
+        "please update your code accordingly."
     )
     return main_is_fill_item(main_is_fillable_container(tag))
 
 
 def is_fillable_container(tag: TagChild) -> bool:
-    """Deprecated. Please use `shiny.ui.fill.is_fillable_container()` instead."""
+    """Defunct. Please do not use method."""
     warn_deprecated(
-        "`shiny.experimental.ui.is_fillable_container()` is deprecated. "
+        "`shiny.experimental.ui.is_fillable_container()` is defunct. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.fill.is_fillable_container()` instead."
+        "please update your code accordingly."
     )
     return main_is_fillable_container(tag)
 
 
 def is_fill_item(tag: TagChild) -> bool:
-    """Deprecated. Please use `shiny.ui.fill.is_fill_item()` instead."""
+    """Defunct. Please do not use method."""
     warn_deprecated(
-        "`shiny.experimental.ui.is_fill_item()` is deprecated. "
+        "`shiny.experimental.ui.is_fill_item()` is defunct. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.fill.is_fill_item()` instead."
+        "please update your code accordingly."
     )
     return main_is_fill_item(tag)
 
@@ -1093,7 +1121,7 @@ def value_box(
         showcase=showcase,
         showcase_layout=showcase_layout_val,
         full_screen=full_screen,
-        theme_color=theme_color,
+        theme=theme_color,
         height=height,
         max_height=max_height,
         fill=fill,
@@ -1387,6 +1415,8 @@ def page_sidebar(
         "This method will be removed in a future version, "
         "please use `shiny.ui.page_sidebar()` instead."
     )
+    if not isinstance(sidebar, MainSidebar):
+        sidebar = main_sidebar(sidebar)
     return main_page_sidebar(
         sidebar,
         *args,
