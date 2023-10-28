@@ -19,7 +19,7 @@ __all__ = (
     "accordion_panel",
     "accordion_panel_close",  # TODO-barret-API: rename to `update_accordion_panel(open=False)`?
     "accordion_panel_open",  # TODO-barret-API: rename to `update_accordion_panel(open=True)`?
-    "accordion_panel_insert",
+    "insert_accordion_panel",
     "accordion_panel_remove",
     "update_accordion",  # TODO-barret-API: rename to `update_accordion(selected=)`
     "update_accordion_panel",  # TODO-barret-API: rename to `update_accordion()`?
@@ -56,7 +56,7 @@ class AccordionPanel:
     * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_open`
     * :func:`~shiny.ui.accordion_panel_close`
-    * :func:`~shiny.ui.accordion_panel_insert`
+    * :func:`~shiny.ui.insert_accordion_panel`
     * :func:`~shiny.ui.accordion_panel_remove`
     * :func:`~shiny.ui.update_accordion_panel`
     """
@@ -224,7 +224,7 @@ def accordion(
     * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_open`
     * :func:`~shiny.ui.accordion_panel_close`
-    * :func:`~shiny.ui.accordion_panel_insert`
+    * :func:`~shiny.ui.insert_accordion_panel`
     * :func:`~shiny.ui.accordion_panel_remove`
     * :func:`~shiny.ui.update_accordion_panel`
     """
@@ -330,7 +330,7 @@ def accordion_panel(
     * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_open`
     * :func:`~shiny.ui.accordion_panel_close`
-    * :func:`~shiny.ui.accordion_panel_insert`
+    * :func:`~shiny.ui.insert_accordion_panel`
     * :func:`~shiny.ui.accordion_panel_remove`
     * :func:`~shiny.ui.update_accordion_panel`
     """
@@ -424,7 +424,7 @@ def update_accordion(
     * :func:`~shiny.ui.accordion_panel`
     * :func:`~shiny.ui.accordion_panel_open`
     * :func:`~shiny.ui.accordion_panel_close`
-    * :func:`~shiny.ui.accordion_panel_insert`
+    * :func:`~shiny.ui.insert_accordion_panel`
     * :func:`~shiny.ui.accordion_panel_remove`
     * :func:`~shiny.ui.update_accordion_panel`
     """
@@ -461,7 +461,7 @@ def accordion_panel_open(
     * :func:`~shiny.ui.accordion_panel`
     * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_close`
-    * :func:`~shiny.ui.accordion_panel_insert`
+    * :func:`~shiny.ui.insert_accordion_panel`
     * :func:`~shiny.ui.accordion_panel_remove`
     * :func:`~shiny.ui.update_accordion_panel`
     """
@@ -498,7 +498,7 @@ def accordion_panel_close(
     * :func:`~shiny.ui.accordion_panel`
     * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_open`
-    * :func:`~shiny.ui.accordion_panel_insert`
+    * :func:`~shiny.ui.insert_accordion_panel`
     * :func:`~shiny.ui.accordion_panel_remove`
     * :func:`~shiny.ui.update_accordion_panel`
     """
@@ -506,7 +506,7 @@ def accordion_panel_close(
 
 
 # TODO-maindocs; @add_example()
-def accordion_panel_insert(
+def insert_accordion_panel(
     id: str,
     panel: AccordionPanel,
     target: Optional[str] = None,
@@ -588,7 +588,7 @@ def accordion_panel_remove(
     * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_open`
     * :func:`~shiny.ui.accordion_panel_close`
-    * :func:`~shiny.ui.accordion_panel_insert`
+    * :func:`~shiny.ui.insert_accordion_panel`
     * :func:`~shiny.ui.update_accordion_panel`
     """
     if not isinstance(target, list):
@@ -658,7 +658,7 @@ def update_accordion_panel(
     * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_open`
     * :func:`~shiny.ui.accordion_panel_close`
-    * :func:`~shiny.ui.accordion_panel_insert`
+    * :func:`~shiny.ui.insert_accordion_panel`
     * :func:`~shiny.ui.accordion_panel_remove`
     """
 
