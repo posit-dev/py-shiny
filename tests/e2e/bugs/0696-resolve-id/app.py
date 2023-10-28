@@ -441,7 +441,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 # https://github.com/posit-dev/py-shiny/issues/716
                 # ui.update_sidebar("sidebar", value=True)
                 if session.input.sidebar() is False:
-                    ui.toggle_sidebar("sidebar")
+                    ui.update_sidebar("sidebar", open=True)
 
                 # Turn off switch
                 ui.update_switch("input_switch", value=False)
@@ -457,9 +457,9 @@ def server(input: Inputs, output: Outputs, session: Session):
                     ui.toggle_tooltip("tooltip")
             else:
                 if session.input.sidebar() == on_off:
-                    ui.toggle_sidebar("sidebar")
+                    ui.update_sidebar("sidebar", open=not on_off)
                 if session.input.input_switch() != on_off:
-                    ui.toggle_switch("input_switch")
+                    ui.update_switch("input_switch", value=on_off)
                 if session.input.popover() != on_off:
                     ui.toggle_popover("popover")
                 if session.input.tooltip() != on_off:

@@ -17,7 +17,7 @@ from ._sidebar import (
     Sidebar,
     sidebar,
     layout_sidebar,
-    toggle_sidebar,
+    update_sidebar,
     panel_sidebar,
     panel_main,
 )
@@ -126,7 +126,7 @@ from ._progress import Progress
 
 from .dataframe import output_data_frame
 
-from ._input_toggle import toggle_switch, toggle_tooltip, toggle_popover
+from ._input_toggle import toggle_tooltip, toggle_popover
 from ._popover import popover
 from ._valuebox import (
     value_box,
@@ -183,7 +183,7 @@ __all__ = (
     "Sidebar",
     "sidebar",
     "layout_sidebar",
-    "toggle_sidebar",
+    "update_sidebar",
     "panel_sidebar",
     "panel_main",
     # _layout
@@ -306,7 +306,6 @@ __all__ = (
     "page_fixed",
     "page_bootstrap",
     # _input_toggle
-    "toggle_switch",
     "toggle_tooltip",
     "toggle_popover",
     # _popover

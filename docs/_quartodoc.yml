@@ -140,8 +140,7 @@ quartodoc:
     - title: Update UI Layouts
       desc: ""
       contents:
-        - ui.toggle_sidebar
-        - ui.toggle_switch
+        - ui.update_sidebar
         - ui.toggle_tooltip
         - ui.toggle_popover
         - ui.update_tooltip

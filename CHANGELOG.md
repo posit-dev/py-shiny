@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `shiny.ui.layout_column_wrap(width, *args)` was rearranged to `shiny.ui.layout_column_wrap(*args, width)`. Now, `width` will default to `200px` is no value is provided. (#772)
 * `shiny.ui.showcase_left_center()` and `shiny.ui.showcase_top_right()` no longer take two values for the `width` argument. Instead, they now take a single value (e.g., `width = "30%"`) representing the width of the showcase are in the value box. Furthermore, they've both gained `width_full_screen` arguments that determine the width of the showcase area when the value box is expanded to fill the screen. (#772)
 * `shiny.ui.panel_main()` and `shiny.ui.panel_sidebar()` are deprecated in favor of new API for `shiny.ui.layout_sidebar()`. Please use `shiny.ui.sidebar()` to construct a `sidebar=` and supply it to `shiny.ui.layout_sidebar(sidebar, *args, **kwargs)`. (#788)
+* `shiny.experimental.ui.toggle_sidebar()` has been renamed to `shiny.ui.update_sidebar()`. It's `open` value now only supports `bool` values. (#788)
 
 #### API relocations
 
@@ -44,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The following methods have been moved from `shiny.experimental.ui` and integrated into `shiny.ui` (final locations under `shiny.ui` are displayed) (#680):
 
 * Sidebar - Sidebar layout or manipulation
-  * `sidebar()`, `page_sidebar()`, `toggle_sidebar()`, `layout_sidebar()`, `Sidebar`
+  * `sidebar()`, `page_sidebar()`, `update_sidebar()`, `layout_sidebar()`, `Sidebar`
 * Filling layout - Allow UI components to expand into the parent container and/or allow its content to expand
   * `page_fillable()`, `fill.as_fillable_container()`, `fill.as_fill_item()`, `fill.remove_all_fill()`
   * `output_plot(fill=)`, `output_image(fill=)`, `output_ui(fill=, fillable=)`
@@ -68,7 +69,6 @@ The following methods have been moved from `shiny.experimental.ui` and integrate
 * Layout - Layout of UI elements
   * `layout_column_wrap()`
 * Inputs - UI elements for user input
-  * `toggle_switch()`
   * `input_text_area(autoresize=)`
 
 If a ported method is called from `shiny.experimental.ui`, a deprecation warning will be displayed.
@@ -82,10 +82,11 @@ Methods still under consideration in `shiny.experimental.ui`:
 #### API removals
 
 * `shiny.experimental.ui.FillingLayout` has been removed. (#481)
+* `shiny.experimental.ui.toggle_switch()` has been made defunct. Please remove it from your code and use `shiny.ui.update_switch()` instead. (#772)
 * `shiny.experimental.ui.as_width_unit()` has been made defunct. Please remove it from your code. (#772)
 * `shiny.experimental.ui`' `as_fill_carrier()`, `is_fill_carrier()`, `is_fillable_container()`, and `is_fill_item()` have been made defunct. Remove them from your code. (#680, #788)
 * Support for `min_height=`, `max_height=`, and `gap=` in `shiny.experimental.ui.as_fillable_container()` and `as_fill_item()` has been removed. (#481)
-* `shiny.experimental.ui.TagCallable` has been deprecated. Its type is equivalent to `htmltools.TagFunction`. (#680)
+* `shiny.experimental.ui.TagCallable` has been made defunct. Please use its type is equivalent to `htmltools.TagFunction`. (#680)
 
 ### Bug fixes
 

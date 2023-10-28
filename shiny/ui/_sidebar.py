@@ -31,7 +31,7 @@ __all__ = (
     "Sidebar",
     "sidebar",
     "layout_sidebar",
-    "toggle_sidebar",
+    "update_sidebar",
     # Legacy
     "panel_sidebar",
     "panel_main",
@@ -173,10 +173,8 @@ def sidebar(
         open), `"closed"` or `False` (the sidebar starts closed), or `"always"` or
         `None` (the sidebar is always open and cannot be closed).
 
-        In :func:`~shiny.ui.toggle_sidebar`, `open` indicates the desired
-        state of the sidebar, where the default of `open = None` will cause the sidebar
-        to be toggled open if closed or vice versa. Note that
-        :func:`~shiny.ui.toggle_sidebar` can only open or close the
+        In :func:`~shiny.ui.update_sidebar`, `open` indicates the desired state of the
+        sidebar. Note that :func:`~shiny.ui.update_sidebar` can only open or close the
         sidebar, so it does not support the `"desktop"` and `"always"` options.
     id
         A character string. Required if wanting to re-actively read (or update) the
@@ -499,25 +497,24 @@ def _get_layout_sidebar_sidebar(
 
 
 @add_example()
-def toggle_sidebar(  # TODO-barret-API; Rename to `update_sidebar()`
+def update_sidebar(
     id: str,
-    open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
-    session: Session | None = None,
+    *,
+    open: Optional[bool] = None,
+    session: Optional[Session] = None,
 ) -> None:
     """
-    Toggle a sidebar
+    Update a sidebar's visibility
 
-    Toggle a :func:`~shiny.ui.sidebar` state during an active Shiny user session.
+    Set a :func:`~shiny.ui.sidebar` state during an active Shiny user session.
 
     Parameters
     ----------
     id
         The `id` of the :func:`~shiny.ui.sidebar` to toggle.
     open
-        The desired state of the sidebar, choosing from the following options: `None`
-        (toggle sidebar open and closed), `"open"` or `True` (open the sidebar),
-        `"closed"` or `False` (close the sidebar). Note that `toggle_sidebar()` can only
-        open or close the sidebar, so it does not support the `"desktop"` and `"always"`
+        The desired state of the sidebar, where `True` sets the sidebar state to be
+        open, and `False` sets the sidebar state to be closed.
     session
         A Shiny session object (the default should almost always be used).
 
@@ -528,29 +525,27 @@ def toggle_sidebar(  # TODO-barret-API; Rename to `update_sidebar()`
     """
     session = require_active_session(session)
 
-    method: Literal["toggle", "open", "close"]
-    if open is None or open == "toggle":
-        method = "toggle"
-    elif open is True or open == "open":
-        method = "open"
-    elif open is False or open == "closed":
-        method = "close"
-    else:
-        if open == "always" or open == "desktop":
-            raise ValueError(
-                f"`open = '{open}'` is not supported by `toggle_sidebar()`"
-            )
-        raise ValueError(
-            "open must be NULL (or 'toggle'), TRUE (or 'open'), or FALSE (or 'closed')"
-        )
+    # method: Literal["toggle", "open", "close"]
+    # if open is None or open == "toggle":
+    #     method = "toggle"
+    # elif open is True or open == "open":
+    #     method = "open"
+    # elif open is False or open == "closed":
+    #     method = "close"
+    # else:
+    #     if open == "always" or open == "desktop":
+    #         raise ValueError(
+    #             f"`open = '{open}'` is not supported by `update_sidebar()`"
+    #         )
+    #     raise ValueError(
+    #         "open must be NULL (or 'toggle'), TRUE (or 'open'), or FALSE (or 'closed')"
+    #     )
+    method = "open" if bool(open) else "close"
 
     def callback() -> None:
         session.send_input_message(id, {"method": method})
 
     session.on_flush(callback, once=True)
-
-
-_sidebar_func = sidebar
 
 
 def _collapse_icon() -> TagChild:

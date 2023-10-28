@@ -13,7 +13,9 @@ from htmltools import (
 )
 
 from ..._deprecated import warn_deprecated
-from ...session import Session
+from ..._namespaces import resolve_id
+from ..._utils import drop_none
+from ...session import Session, require_active_session
 from ...types import MISSING, MISSING_TYPE
 from ...ui import AccordionPanel as MainAccordionPanel
 from ...ui import accordion as main_accordion
@@ -27,7 +29,6 @@ from ...ui import input_text_area as main_input_text_area
 from ...ui import popover as main_popover
 from ...ui import tags
 from ...ui import toggle_popover as main_toggle_popover
-from ...ui import toggle_switch as main_toggle_switch
 from ...ui import toggle_tooltip as main_toggle_tooltip
 from ...ui import tooltip as main_tooltip
 from ...ui import update_accordion_panel as main_update_accordion_panel
@@ -59,7 +60,7 @@ from ...ui._sidebar import layout_sidebar as main_layout_sidebar
 from ...ui._sidebar import panel_main as main_panel_main
 from ...ui._sidebar import panel_sidebar as main_panel_sidebar
 from ...ui._sidebar import sidebar as main_sidebar
-from ...ui._sidebar import toggle_sidebar as main_toggle_sidebar
+from ...ui._sidebar import update_sidebar as main_update_sidebar
 from ...ui._valuebox import ShowcaseLayout as MainShowcaseLayout
 from ...ui._valuebox import showcase_left_center as main_showcase_left_center
 from ...ui._valuebox import showcase_top_right as main_showcase_top_right
@@ -176,13 +177,22 @@ def toggle_switch(
     value: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.toggle_switch()` instead."""
+    """Defunct. Please do not use method."""
     warn_deprecated(
-        "`shiny.experimental.ui.toggle_switch()` is deprecated. "
+        "`shiny.experimental.ui.toggle_switch()` is defunct. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.toggle_switch()` instead."
+        "please update your code accordingly."
     )
-    return main_toggle_switch(id, value, session=session)
+
+    if value is not None and not isinstance(value, bool):
+        raise TypeError("`value` must be `None` or a single boolean value.")
+    msg = drop_none({"id": resolve_id(id), "value": value})
+    session = require_active_session(session)
+
+    async def callback():
+        await session.send_custom_message("bslib.toggle-input-binary", msg)
+
+    session.on_flush(callback, once=True)
 
 
 ######################
@@ -499,15 +509,16 @@ def toggle_sidebar(
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
     session: Session | None = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.toggle_sidebar()` instead."""
+    """Deprecated. Please use `shiny.ui.update_sidebar()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.toggle_sidebar()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.toggle_sidebar()` instead."
+        "please use `shiny.ui.update_sidebar()` instead."
     )
-    return main_toggle_sidebar(
+    open_val = (open is True) or (open == "open")
+    return main_update_sidebar(
         id,
-        open=open,
+        open=open_val,
         session=session,
     )
 
@@ -524,15 +535,17 @@ def sidebar_toggle(
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
     session: Session | None = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.toggle_sidebar()` instead of `sidebar_toggle()`."""
+    """Deprecated. Please use `shiny.ui.update_sidebar()` instead of
+    `shiny.experimental.ui.sidebar_toggle()`."""
     warn_deprecated(
         "`shiny.experimental.ui.sidebar_toggle()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.toggle_sidebar()` instead."
+        "please use `shiny.ui.update_sidebar()` instead."
     )
-    main_toggle_sidebar(
+    open_val = (open is True) or (open == "open")
+    main_update_sidebar(
         id=id,
-        open=open,
+        open=open_val,
         session=session,
     )
 
@@ -1095,7 +1108,7 @@ def value_box(
         showcase=showcase,
         showcase_layout=showcase_layout_val,
         full_screen=full_screen,
-        theme_color=theme_color,
+        theme=theme_color,
         height=height,
         max_height=max_height,
         fill=fill,

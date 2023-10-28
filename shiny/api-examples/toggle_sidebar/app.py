@@ -3,7 +3,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 app_ui = ui.page_sidebar(
     ui.sidebar("Sidebar content", id="sidebar"),
     ui.input_action_button(
-        "toggle_sidebar",
+        "toggle_sidebar_btn",
         label="Toggle sidebar",
         width="fit-content",
     ),
@@ -13,9 +13,10 @@ app_ui = ui.page_sidebar(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect
-    @reactive.event(input.toggle_sidebar)
+    @reactive.event(input.toggle_sidebar_btn)
     def _():
-        ui.toggle_sidebar("sidebar")
+        sidebar_is_open = input.sidebar()
+        ui.update_sidebar("sidebar", open=not sidebar_is_open)
 
     @output
     @render.text
