@@ -28,8 +28,6 @@ from ...ui import accordion_panel_set as main_accordion_panel_set
 from ...ui import input_text_area as main_input_text_area
 from ...ui import popover as main_popover
 from ...ui import tags
-from ...ui import toggle_popover as main_toggle_popover
-from ...ui import toggle_tooltip as main_toggle_tooltip
 from ...ui import tooltip as main_tooltip
 from ...ui import update_accordion_panel as main_update_accordion_panel
 from ...ui import update_popover as main_update_popover
@@ -360,13 +358,13 @@ def tooltip_toggle(
     show: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.toggle_tooltip()`."""
+    """Deprecated. Please use `shiny.ui.update_tooltip()`."""
     warn_deprecated(
         "`shiny.experimental.ui.tooltip_toggle()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.toggle_tooltip()` instead."
+        "please use `shiny.ui.update_tooltip()` instead."
     )
-    main_toggle_tooltip(
+    main_update_tooltip(
         id=id,
         show=show,
         session=session,
@@ -379,13 +377,13 @@ def toggle_tooltip(
     show: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.toggle_tooltip()` instead."""
+    """Deprecated. Please use `shiny.ui.update_tooltip()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.tooltip_toggle()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.toggle_tooltip()` instead."
+        "please use `shiny.ui.update_tooltip()` instead."
     )
-    main_toggle_tooltip(
+    main_update_tooltip(
         id=id,
         show=show,
         session=session,
@@ -518,7 +516,7 @@ def toggle_sidebar(
     open_val = (open is True) or (open == "open")
     return main_update_sidebar(
         id,
-        open=open_val,
+        show=open_val,
         session=session,
     )
 
@@ -545,7 +543,7 @@ def sidebar_toggle(
     open_val = (open is True) or (open == "open")
     main_update_sidebar(
         id=id,
-        open=open_val,
+        show=open_val,
         session=session,
     )
 
@@ -687,13 +685,13 @@ def toggle_popover(
     show: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.toggle_popover()` instead."""
+    """Deprecated. Please use `shiny.ui.update_popover()` instead."""
     warn_deprecated(
-        "`shiny.experimental.ui.toggle_popover()` is deprecated. "
+        "`shiny.experimental.ui.update_popover()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.toggle_popover()` instead."
+        "please use `shiny.ui.update_popover()` instead."
     )
-    return main_toggle_popover(id, show, session=session)
+    return main_update_popover(id, show, session=session)
 
 
 # Deprecated 2023-09-12

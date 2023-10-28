@@ -500,7 +500,7 @@ def _get_layout_sidebar_sidebar(
 def update_sidebar(
     id: str,
     *,
-    open: Optional[bool] = None,
+    show: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -512,9 +512,8 @@ def update_sidebar(
     ----------
     id
         The `id` of the :func:`~shiny.ui.sidebar` to toggle.
-    open
-        The desired state of the sidebar, where `True` sets the sidebar state to be
-        open, and `False` sets the sidebar state to be closed.
+    show
+        The desired visible state of the sidebar, where `True` opens the sidebar and `False` closes the sidebar (if not already in that state).
     session
         A Shiny session object (the default should almost always be used).
 
@@ -540,12 +539,13 @@ def update_sidebar(
     #     raise ValueError(
     #         "open must be NULL (or 'toggle'), TRUE (or 'open'), or FALSE (or 'closed')"
     #     )
-    method = "open" if bool(open) else "close"
+    if show is not None:
+        method = "open" if bool(show) else "close"
 
-    def callback() -> None:
-        session.send_input_message(id, {"method": method})
+        def callback() -> None:
+            session.send_input_message(id, {"method": method})
 
-    session.on_flush(callback, once=True)
+        session.on_flush(callback, once=True)
 
 
 def _collapse_icon() -> TagChild:

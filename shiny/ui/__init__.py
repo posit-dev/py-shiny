@@ -126,7 +126,6 @@ from ._progress import Progress
 
 from .dataframe import output_data_frame
 
-from ._input_toggle import toggle_tooltip, toggle_popover
 from ._popover import popover
 from ._valuebox import (
     value_box,
@@ -305,9 +304,6 @@ __all__ = (
     "page_fluid",
     "page_fixed",
     "page_bootstrap",
-    # _input_toggle
-    "toggle_tooltip",
-    "toggle_popover",
     # _popover
     "popover",
     # _valuebox

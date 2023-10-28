@@ -1,7 +1,12 @@
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, Outputs, Session, reactive, req, ui
 
 app_ui = ui.page_fluid(
-    ui.input_action_button("btn_update", "Update tooltip phrase", class_="mt-3 me-3"),
+    ui.input_action_button("btn_show", "Show tooltip", class_="mt-3 me-3"),
+    ui.input_action_button("btn_close", "Close tooltip", class_="mt-3 me-3"),
+    ui.br(),
+    ui.input_action_button(
+        "btn_update", "Update tooltip phrase (and show tooltip)", class_="mt-3 me-3"
+    ),
     ui.br(),
     ui.br(),
     ui.tooltip(
@@ -15,8 +20,15 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect
     def _():
-        # Immediately display tooltip
-        ui.toggle_tooltip("tooltip_id", show=True)
+        req(input.btn_show())
+
+        ui.update_tooltip("tooltip_id", show=True)
+
+    @reactive.Effect
+    def _():
+        req(input.btn_close())
+
+        ui.update_tooltip("tooltip_id", show=False)
 
     @reactive.Effect
     @reactive.event(input.btn_update)
@@ -25,12 +37,11 @@ def server(input: Inputs, output: Outputs, session: Session):
             "A " + " ".join(["NEW" for _ in range(input.btn_update())]) + " message"
         )
 
-        ui.update_tooltip("tooltip_id", content)
-        ui.toggle_tooltip("tooltip_id", show=True)
+        ui.update_tooltip("tooltip_id", content, show=True)
 
     @reactive.Effect
-    @reactive.event(input.btn_w_tooltip)
     def _():
+        req(input.btn_w_tooltip())
         ui.notification_show("Button clicked!", duration=3, type="message")
 
 

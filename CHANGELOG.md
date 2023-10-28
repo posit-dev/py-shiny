@@ -52,9 +52,9 @@ The following methods have been moved from `shiny.experimental.ui` and integrate
 * CSS units - CSS units and padding
   * `css.as_css_unit()`, `css.as_css_padding()`, `css.CssUnit`
 * Tooltip - Hover-based context UI element
-  * `tooltip()`, `toggle_tooltip()`, `update_tooltip()`
+  * `tooltip()`, `update_tooltip()`
 * Popover - Click-based context UI element
-  * `popover()`, `toggle_popover()`, `update_popover()`
+  * `popover()`, `update_popover()`
 * Accordion - Vertically collapsible UI element
   * `accordion()`, `accordion_panel()`, `accordion_panel_close()`, `accordion_panel_insert()`, `accordion_panel_open()`, `accordion_panel_remove()`, `accordion_panel_set()`, `update_accordion_panel()`, `Accordion`, `AccordionPanel`
 * Card - A general purpose container for grouping related UI elements together

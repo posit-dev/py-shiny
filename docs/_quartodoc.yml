@@ -141,8 +141,6 @@ quartodoc:
       desc: ""
       contents:
         - ui.update_sidebar
-        - ui.toggle_tooltip
-        - ui.toggle_popover
         - ui.update_tooltip
         - ui.update_popover
         - ui.update_accordion_panel
