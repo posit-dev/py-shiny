@@ -16,7 +16,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect
     @reactive.event(input.set_acc)
     def _():
-        ui.accordion_panel_set("acc", ["Section A", "Section C", "Section E"])
+        ui.update_accordion("acc", show=["Section A", "Section C", "Section E"])
 
 
 app = App(app_ui, server)

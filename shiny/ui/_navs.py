@@ -683,9 +683,7 @@ def navset_card_tab(
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
-    sidebar: Optional[
-        Sidebar
-    ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` be of type `NavSetArg | Sidebar` and have the sidebar retrieved from within the args?
+    sidebar: Optional[Sidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
 ) -> NavSetCard:
@@ -764,9 +762,7 @@ def navset_card_pill(
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
-    sidebar: Optional[
-        Sidebar
-    ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` include `Sidebar` and have the sidebar retrieved from within the args?
+    sidebar: Optional[Sidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
     placement: Literal["above", "below"] = "above",
@@ -831,9 +827,7 @@ def navset_card_underline(
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
-    sidebar: Optional[
-        Sidebar
-    ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` include `Sidebar` and have the sidebar retrieved from within the args?
+    sidebar: Optional[Sidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
     placement: Literal["above", "below"] = "above",
@@ -1009,9 +1003,7 @@ class NavSetBar(NavSet):
         title: TagChild,
         id: Optional[str],
         selected: Optional[str],
-        sidebar: Optional[
-            Sidebar
-        ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` be of type `NavSetArg | Sidebar` and have the sidebar retrieved from within the args?
+        sidebar: Optional[Sidebar] = None,
         fillable: bool | list[str] = False,
         gap: Optional[CssUnit],
         padding: Optional[CssUnit | list[CssUnit]],
@@ -1166,9 +1158,7 @@ def navset_bar(
     title: TagChild,
     id: Optional[str] = None,
     selected: Optional[str] = None,
-    sidebar: Optional[
-        Sidebar
-    ] = None,  # TODO-barret-API; Simlar to `layout_sidebar(*args: Sidebar | TagChild)`, should `*args` include `Sidebar` and have the sidebar retrieved from within the args?
+    sidebar: Optional[Sidebar] = None,
     fillable: bool | list[str] = True,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,

@@ -98,7 +98,6 @@ def mod_x_ui(label: str) -> ui.TagChild:
             """
         ),
         ui.layout_column_wrap(
-            1 / 2,
             *[
                 ui.output_text_verbatim(f"status_x_{x_input_key}", placeholder=True)
                 for x_input_key in x_input_keys
@@ -107,6 +106,7 @@ def mod_x_ui(label: str) -> ui.TagChild:
                 ui.output_text_verbatim(f"status_{input_key}", placeholder=True)
                 for input_key in input_keys
             ],
+            width=1 / 2,
             gap="2px",
             heights_equal="row",
         ),
@@ -372,10 +372,10 @@ app_ui = ui.page_fluid(
         id="explanation",
     ),
     ui.layout_column_wrap(
-        1 / 3,
         mod_x_ui("", "Global"),  # "" == Root
         mod_x_ui("mod1", "Module 1"),
         mod_x_ui("mod2", "Module 2"),
+        width=1 / 3,
     ),
     # ui.h3("Inputs that are not in a module:"),
     # ui.output_text_verbatim("not_modules", placeholder=True),
@@ -391,7 +391,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     # https://stackoverflow.com/a/64523765/591574
     if hasattr(sys, "ps1"):
         # Open the explanation popover
-        ui.toggle_popover("explanation", show=True)
+        ui.update_popover("explanation", show=True)
 
         # On button clicks, hide the explanation popover
         @reactive.Effect(suspended=True)
@@ -400,7 +400,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             input.update_global()
             input.update_mod1()
             input.update_mod2()
-            ui.toggle_popover("explanation", show=False)
+            ui.update_popover("explanation", show=False)
 
     # Master function to update a module's features
     def update_session(
@@ -411,7 +411,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         letter = letters[count % len(letters)]
         on_off = count % 2 == 1
         with session_context(session):
-            ui.accordion_panel_set("accordion", letter)
+            ui.update_accordion("accordion", show=letter)
 
             ui.update_checkbox("input_checkbox", value=on_off)
             checkbox_group_letters = letters.copy()
@@ -441,7 +441,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 # https://github.com/posit-dev/py-shiny/issues/716
                 # ui.update_sidebar("sidebar", value=True)
                 if session.input.sidebar() is False:
-                    ui.toggle_sidebar("sidebar")
+                    ui.update_sidebar("sidebar", show=True)
 
                 # Turn off switch
                 ui.update_switch("input_switch", value=False)
@@ -450,20 +450,20 @@ def server(input: Inputs, output: Outputs, session: Session):
                 # https://github.com/posit-dev/py-shiny/issues/717
                 # ui.update_popover("popover", show=False)
                 if session.input.popover() is True:
-                    ui.toggle_popover("popover")
+                    ui.update_popover("popover", show=False)
                 # Hide tooltip
                 # https://github.com/posit-dev/py-shiny/issues/717
                 if session.input.tooltip() is True:
-                    ui.toggle_tooltip("tooltip")
+                    ui.update_tooltip("tooltip", show=False)
             else:
                 if session.input.sidebar() == on_off:
-                    ui.toggle_sidebar("sidebar")
+                    ui.update_sidebar("sidebar", show=not on_off)
                 if session.input.input_switch() != on_off:
-                    ui.toggle_switch("input_switch")
+                    ui.update_switch("input_switch", value=on_off)
                 if session.input.popover() != on_off:
-                    ui.toggle_popover("popover")
+                    ui.update_popover("popover", show=on_off)
                 if session.input.tooltip() != on_off:
-                    ui.toggle_tooltip("tooltip")
+                    ui.update_tooltip("tooltip", show=on_off)
 
             ui.update_navs("navset_bar", selected=letter)
             ui.update_navs("navset_card_pill", selected=letter)

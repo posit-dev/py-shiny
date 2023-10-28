@@ -17,7 +17,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect
     def _():
         # Immediately display popover
-        ui.toggle_popover("popover_id", show=True)
+        ui.update_popover("popover_id", show=True)
 
     @reactive.Effect
     @reactive.event(input.btn_update)
@@ -26,8 +26,12 @@ def server(input: Inputs, output: Outputs, session: Session):
             "A " + " ".join(["NEW" for _ in range(input.btn_update())]) + " message"
         )
 
-        ui.update_popover("popover_id", content)
-        # ui.toggle_popover("popover_id", show=True)
+        ui.update_popover(
+            "popover_id",
+            content,
+            # #   Causes bug. Skipping for now
+            #   show=True
+        )
 
     @reactive.Effect
     def _():

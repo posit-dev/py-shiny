@@ -42,19 +42,19 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
         with reactive.isolate():
             if "Section B" in acc():
-                ui.accordion_panel_close("acc", "Section B")
+                ui.update_accordion_panel("acc", "Section B", show=False)
             else:
-                ui.accordion_panel_open("acc", "Section B")
+                ui.update_accordion_panel("acc", "Section B", show=True)
 
     @reactive.Effect
     def _():
         req(input.open_all())
-        ui.accordion_panel_open("acc", True)
+        ui.update_accordion("acc", show=True)
 
     @reactive.Effect
     def _():
         req(input.close_all())
-        ui.accordion_panel_close("acc", True)
+        ui.update_accordion("acc", show=False)
 
     has_efg = False
     has_alternate = True
@@ -76,7 +76,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         nonlocal has_alternate
         val = int(has_alternate)
         sections = [section for i, section in enumerate(sections) if i % 2 == val]
-        ui.accordion_panel_set("acc", sections)
+        ui.update_accordion("acc", show=sections)
         has_alternate = not has_alternate
 
     @reactive.Effect
@@ -85,11 +85,11 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
         nonlocal has_efg
         if has_efg:
-            ui.accordion_panel_remove("acc", ["Section E", "Section F", "Section G"])
+            ui.remove_accordion_panel("acc", ["Section E", "Section F", "Section G"])
         else:
-            ui.accordion_panel_insert("acc", make_panel("G"), "Section F")
-            ui.accordion_panel_insert("acc", make_panel("F"), "Section E")
-            ui.accordion_panel_insert("acc", make_panel("E"), "Section D")
+            ui.insert_accordion_panel("acc", make_panel("G"), "Section F")
+            ui.insert_accordion_panel("acc", make_panel("F"), "Section E")
+            ui.insert_accordion_panel("acc", make_panel("E"), "Section D")
 
         has_efg = not has_efg
 
@@ -112,7 +112,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
                 # print(acc())
                 if "Section A" not in acc():
                     ui.notification_show("Opening Section A", duration=2)
-                    ui.accordion_panel_open("acc", "Section A")
+                    ui.update_accordion_panel("acc", "Section A", show=True)
             ui.update_accordion_panel(
                 "acc",
                 "Section A",

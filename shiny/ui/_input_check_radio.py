@@ -148,10 +148,16 @@ def _bslib_input_checkbox(
                 id=resolve_id(id),
                 class_="form-check-input",
                 type="checkbox",
+                role="switch",
                 checked="checked" if value else None,
             ),
             " ",
-            tags.label(label, class_="form-check-label", for_=resolve_id(id)),
+            tags.label(
+                # Must be wrapped in `span` for update_switch(label=) method to work
+                tags.span(label),
+                class_="form-check-label",
+                for_=resolve_id(id),
+            ),
             class_=class_,
         ),
         components_dependency(),

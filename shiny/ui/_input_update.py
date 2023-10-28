@@ -21,7 +21,7 @@ __all__ = (
 import json
 import re
 from datetime import date
-from typing import Literal, Mapping, Optional
+from typing import Literal, Mapping, Optional, overload
 
 from htmltools import TagChild, TagList
 from starlette.requests import Request
@@ -902,7 +902,12 @@ def update_navs(
 # tooltips.py
 # -----------------------------------------------------------------------------
 @add_example()
-def update_tooltip(id: str, *args: TagChild, session: Optional[Session] = None) -> None:
+def update_tooltip(
+    id: str,
+    *args: TagChild,
+    show: Optional[bool] = None,
+    session: Optional[Session] = None,
+) -> None:
     """
     Update tooltip contents
 
@@ -912,9 +917,12 @@ def update_tooltip(id: str, *args: TagChild, session: Optional[Session] = None) 
         A character string that matches an existing tooltip id.
     *args
         Contents to the tooltip's body.
+    show
+        Opens (`True`) or closes (`False`) the tooltip.
     session
         A Shiny session object (the default should almost always be used).
     """
+
     _session_on_flush_send_msg(
         id,
         session,
@@ -927,6 +935,15 @@ def update_tooltip(id: str, *args: TagChild, session: Optional[Session] = None) 
             }
         ),
     )
+    if show is not None:
+        _session_on_flush_send_msg(
+            id,
+            session,
+            {
+                "method": "toggle",
+                "value": _normalize_show_value(show),
+            },
+        )
 
 
 # -----------------------------------------------------------------------------
@@ -939,6 +956,7 @@ def update_popover(
     id: str,
     *args: TagChild,
     title: Optional[TagChild] = None,
+    show: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -952,26 +970,53 @@ def update_popover(
         The new contents of the popover.
     title
         The new title of the popover.
+    show
+        Opens (`True`) or closes (`False) the popover.
     session
         A Shiny session object (the default should almost always be used).
 
     See Also
     --------
     * :func:`~shiny.ui.popover`
-    * :func:`~shiny.ui.toggle_popover`
     """
     session = require_active_session(session)
 
-    _session_on_flush_send_msg(
-        id,
-        session,
-        drop_none(
+    if title is not None or len(args) > 0:
+        _session_on_flush_send_msg(
+            id,
+            session,
+            drop_none(
+                {
+                    "method": "update",
+                    "content": session._process_ui(TagList(*args))
+                    if len(args) > 0
+                    else None,
+                    "header": session._process_ui(title) if title is not None else None,
+                },
+            ),
+        )
+    if show is not None:
+        _session_on_flush_send_msg(
+            id,
+            session,
             {
-                "method": "update",
-                "content": session._process_ui(TagList(*args))
-                if len(args) > 0
-                else None,
-                "header": session._process_ui(title) if title is not None else None,
+                "method": "toggle",
+                "value": _normalize_show_value(show),
             },
-        ),
-    )
+        )
+
+
+@overload
+def _normalize_show_value(show: None) -> Literal["toggle"]:
+    ...
+
+
+@overload
+def _normalize_show_value(show: bool) -> Literal["show", "hide"]:
+    ...
+
+
+def _normalize_show_value(show: bool | None) -> Literal["toggle", "show", "hide"]:
+    if show is None:
+        return "toggle"
+    return "show" if show else "hide"

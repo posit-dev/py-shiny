@@ -21,7 +21,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.Effect
     @reactive.event(input.add_panel)
     def _():
-        ui.accordion_panel_insert("acc", make_panel(str(random.randint(0, 10000))))
+        ui.insert_accordion_panel("acc", make_panel(str(random.randint(0, 10000))))
 
 
 app = App(app_ui, server)

@@ -120,7 +120,7 @@ def _card_impl(
 
     Experimental implements the parameter `wrapper=`. Main does not as `card_body()` is not in `main`.
     """
-    # TODO-barret-API: Should card_body() ever exist in main?
+    # TODO-question Should card_body() ever exist in main?
     # Barret: Yes? Need to customize fill/fillable content (ex: Fixed height for item B where content = A, B, C; fill = TRUE, fillable = TRUE).
     if isinstance(wrapper, MISSING_TYPE):
         wrapper = card_body
