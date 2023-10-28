@@ -85,7 +85,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
         nonlocal has_efg
         if has_efg:
-            ui.accordion_panel_remove("acc", ["Section E", "Section F", "Section G"])
+            ui.remove_accordion_panel("acc", ["Section E", "Section F", "Section G"])
         else:
             ui.insert_accordion_panel("acc", make_panel("G"), "Section F")
             ui.insert_accordion_panel("acc", make_panel("F"), "Section E")

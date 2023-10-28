@@ -22,10 +22,10 @@ from ...ui import accordion as main_accordion
 from ...ui import accordion_panel as main_accordion_panel
 from ...ui import accordion_panel_close as main_accordion_panel_close
 from ...ui import accordion_panel_open as main_accordion_panel_open
-from ...ui import accordion_panel_remove as main_accordion_panel_remove
 from ...ui import input_text_area as main_input_text_area
 from ...ui import insert_accordion_panel as main_insert_accordion_panel
 from ...ui import popover as main_popover
+from ...ui import remove_accordion_panel as main_remove_accordion_panel
 from ...ui import tags
 from ...ui import tooltip as main_tooltip
 from ...ui import update_accordion as main_update_accordion
@@ -784,7 +784,7 @@ def accordion_panel_set(
 ) -> None:
     """Deprecated. Please use `shiny.ui.update_accordion()` instead."""
     warn_deprecated(
-        "`shiny.experimental.ui.update_accordion()` is deprecated. "
+        "`shiny.experimental.ui.accordion_panel_set()` is deprecated. "
         "This method will be removed in a future version, "
         "please use `shiny.ui.update_accordion()` instead."
     )
@@ -831,7 +831,7 @@ def accordion_panel_insert(
 ) -> None:
     """Deprecated. Please use `shiny.ui.insert_accordion_panel()` instead."""
     warn_deprecated(
-        "`shiny.experimental.ui.insert_accordion_panel()` is deprecated. "
+        "`shiny.experimental.ui.accordion_panel_insert()` is deprecated. "
         "This method will be removed in a future version, "
         "please use `shiny.ui.insert_accordion_panel()` instead."
     )
@@ -850,13 +850,13 @@ def accordion_panel_remove(
     target: str | list[str],
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.accordion_panel_remove()` instead."""
+    """Deprecated. Please use `shiny.ui.remove_accordion_panel()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel_remove()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.accordion_panel_remove()` instead."
+        "please use `shiny.ui.remove_accordion_panel()` instead."
     )
-    return main_accordion_panel_remove(
+    return main_remove_accordion_panel(
         id,
         target=target,
         session=session,
