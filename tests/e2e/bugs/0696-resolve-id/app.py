@@ -98,7 +98,6 @@ def mod_x_ui(label: str) -> ui.TagChild:
             """
         ),
         ui.layout_column_wrap(
-            1 / 2,
             *[
                 ui.output_text_verbatim(f"status_x_{x_input_key}", placeholder=True)
                 for x_input_key in x_input_keys
@@ -107,6 +106,7 @@ def mod_x_ui(label: str) -> ui.TagChild:
                 ui.output_text_verbatim(f"status_{input_key}", placeholder=True)
                 for input_key in input_keys
             ],
+            width=1 / 2,
             gap="2px",
             heights_equal="row",
         ),
@@ -372,10 +372,10 @@ app_ui = ui.page_fluid(
         id="explanation",
     ),
     ui.layout_column_wrap(
-        1 / 3,
         mod_x_ui("", "Global"),  # "" == Root
         mod_x_ui("mod1", "Module 1"),
         mod_x_ui("mod2", "Module 2"),
+        width=1 / 3,
     ),
     # ui.h3("Inputs that are not in a module:"),
     # ui.output_text_verbatim("not_modules", placeholder=True),
