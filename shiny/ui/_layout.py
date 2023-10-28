@@ -14,7 +14,6 @@ from .css._css_unit import isinstance_cssunit
 from .fill import as_fill_item, as_fillable_container
 
 
-# TODO-barret-API; Move `width` to after `args`
 def layout_column_wrap(
     *args: TagChild | TagAttrs,
     width: CssUnit | None | MISSING_TYPE = MISSING,

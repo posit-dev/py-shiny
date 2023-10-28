@@ -35,8 +35,6 @@ __all__ = (
     # Legacy
     "panel_sidebar",
     "panel_main",
-    "DeprecatedPanelSidebar",
-    "DeprecatedPanelMain",
 )
 
 
@@ -428,27 +426,33 @@ def layout_sidebar(
 
 def _get_layout_sidebar_sidebar(
     sidebar: Sidebar,
-    args: tuple[Sidebar | TagChild | TagAttrs, ...],
-) -> tuple[Sidebar, tuple[TagChild | Sidebar | TagAttrs, ...]]:
-    updated_args: list[Sidebar | TagChild | TagAttrs] = []
+    args: tuple[TagChild | TagAttrs, ...],
+) -> tuple[Sidebar, tuple[TagChild | TagAttrs, ...]]:
+    updated_args: list[TagChild | TagAttrs] = []
     original_args = tuple(args)
 
     # sidebar: Sidebar | None = None
-    sidebar_orig_arg: Sidebar | DeprecatedPanelSidebar | None = None
+    sidebar_orig_arg: Sidebar | DeprecatedPanelSidebar = sidebar
 
     if isinstance(sidebar, DeprecatedPanelSidebar):
         sidebar = sidebar.sidebar
 
+    if not isinstance(sidebar, Sidebar):
+        raise ValueError(
+            "`layout_sidebar()` is not being supplied with a `sidebar()` object. Please supply a `sidebar()` object to `layout_sidebar(sidebar)`."
+        )
+
     # Use `original_args` here so `updated_args` can be safely altered in place
     for i, arg in zip(range(len(original_args)), original_args):
-        if isinstance(arg, Sidebar):
-            raise ValueError(
-                "`layout_sidebar()` is being supplied with multiple `sidebar()` objects. Please supply only one `sidebar()` object to `layout_sidebar()`."
-            )
-        elif isinstance(arg, DeprecatedPanelSidebar):
+        if isinstance(arg, DeprecatedPanelSidebar):
             raise ValueError(
                 "`panel_sidebar()` is not being used as the first argument to `layout_sidebar(sidebar,)`. `panel_sidebar()` has been deprecated and will go away in a future version of Shiny. Please supply `panel_sidebar()` arguments directly to `args` in `layout_sidebar(sidebar)` and use `sidebar()` instead of `panel_sidebar()`."
             )
+        elif isinstance(arg, Sidebar):
+            raise ValueError(
+                "`layout_sidebar()` is being supplied with multiple `sidebar()` objects. Please supply only one `sidebar()` object to `layout_sidebar()`."
+            )
+
         elif isinstance(arg, DeprecatedPanelMain):
             if i != 0:
                 raise ValueError(
@@ -614,7 +618,15 @@ def panel_main(
 
 
 # Deprecated 2023-06-13
-class DeprecatedPanelSidebar(Sidebar):
+
+
+# This class should be removed when `panel_sidebar()` is removed
+class DeprecatedPanelSidebar(
+    # While it doesn't seem right to inherit from `Sidebar`, it's the easiest way to
+    # make sure `layout_sidebar(sidebar: Sidebar)` works without mucking up the
+    # function signature.
+    Sidebar
+):
     """
     [Deprecated] Sidebar panel
 
@@ -665,6 +677,8 @@ class DeprecatedPanelSidebar(Sidebar):
         return self.sidebar.tag.tagify()
 
 
+# This class should be removed when `panel_main()` is removed
+# Must be `Tagifiable`, so it can fit as a type `TagChild`
 class DeprecatedPanelMain:
     """
     [Deprecated] Main panel

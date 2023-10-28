@@ -16,8 +16,6 @@ def test_panel_main_and_panel_sidebar():
     # OK
     ui.layout_sidebar(_s)
     ui.layout_sidebar(_s, None)
-    ui.layout_sidebar(None, _s)
-    ui.layout_sidebar(None, _s, None)
 
     try:
         ui.layout_sidebar(_s, _s)
@@ -26,10 +24,10 @@ def test_panel_main_and_panel_sidebar():
         assert "multiple `sidebar()` objects" in str(e)
 
     try:
-        ui.layout_sidebar(None, _ps)
+        ui.layout_sidebar(None, _ps)  # pyright: ignore[reportGeneralTypeIssues]
         raise AssertionError("Should have raised ValueError")
     except ValueError as e:
-        assert "not being used as the first argument" in str(e)
+        assert "not being supplied with a `sidebar()` object." in str(e)
 
     try:
         ui.layout_sidebar(_s, _pm)
@@ -37,11 +35,6 @@ def test_panel_main_and_panel_sidebar():
     except ValueError as e:
         assert "is not being used with `panel_sidebar()`" in str(e)
 
-    try:
-        ui.layout_sidebar(_pm)
-        raise AssertionError("Should have raised ValueError")
-    except ValueError as e:
-        assert "not being supplied as the second argument" in str(e)
     try:
         ui.layout_sidebar(_ps, None, _pm)
         raise AssertionError("Should have raised ValueError")
@@ -52,9 +45,3 @@ def test_panel_main_and_panel_sidebar():
         raise AssertionError("Should have raised ValueError")
     except ValueError as e:
         assert "Unexpected extra legacy `*args`" in str(e)
-
-    try:
-        ui.layout_sidebar(_m)
-        raise AssertionError("Should have raised ValueError")
-    except ValueError as e:
-        assert "did not receive a `sidebar()`" in str(e)

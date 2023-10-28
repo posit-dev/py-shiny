@@ -455,7 +455,7 @@ def sidebar(
 
 
 def layout_sidebar(
-    sidebar: Sidebar | TagChild | TagAttrs,
+    sidebar: MainSidebar | TagChild | TagAttrs,
     *args: TagChild | TagAttrs,
     fillable: bool = True,
     fill: bool = True,
@@ -475,6 +475,8 @@ def layout_sidebar(
         "This method will be removed in a future version, "
         "please use `shiny.ui.layout_sidebar()` instead."
     )
+    if not isinstance(sidebar, MainSidebar):
+        sidebar = main_sidebar(sidebar)
     return main_layout_sidebar(
         sidebar,
         *args,
@@ -1387,6 +1389,8 @@ def page_sidebar(
         "This method will be removed in a future version, "
         "please use `shiny.ui.page_sidebar()` instead."
     )
+    if not isinstance(sidebar, MainSidebar):
+        sidebar = main_sidebar(sidebar)
     return main_page_sidebar(
         sidebar,
         *args,
