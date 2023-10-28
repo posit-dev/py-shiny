@@ -43,24 +43,6 @@ pre = wrap_recall_context_manager(htmltools.pre)
 # ======================================================================================
 # Shiny layout components
 # ======================================================================================
-
-
-def page_fluid(
-    *,
-    title: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs: str,
-) -> RecallContextManager[Tag]:
-    return RecallContextManager(
-        ui.page_fluid,
-        kwargs=dict(
-            title=title,
-            lang=lang,
-            **kwargs,
-        ),
-    )
-
-
 def sidebar(
     *,
     width: CssUnit = 250,
@@ -94,23 +76,32 @@ def sidebar(
     )
 
 
-def page_sidebar(
+def layout_column_wrap(
     *,
-    title: Optional[str | Tag | TagList] = None,
+    width: CssUnit | None | MISSING_TYPE = MISSING,
+    fixed_width: bool = False,
+    heights_equal: Literal["all", "row"] = "all",
+    fill: bool = True,
     fillable: bool = True,
-    fillable_mobile: bool = False,
-    window_title: str | MISSING_TYPE = MISSING,
-    lang: Optional[str] = None,
+    height: Optional[CssUnit] = None,
+    height_mobile: Optional[CssUnit] = None,
+    gap: Optional[CssUnit] = None,
+    class_: Optional[str] = None,
     **kwargs: TagAttrValue,
 ):
     return RecallContextManager(
-        ui.page_sidebar,
+        ui.layout_column_wrap,
+        default_page=page_fillable(),
         kwargs=dict(
-            title=title,
+            width=width,
+            fixed_width=fixed_width,
+            heights_equal=heights_equal,
+            fill=fill,
             fillable=fillable,
-            fillable_mobile=fillable_mobile,
-            window_title=window_title,
-            lang=lang,
+            height=height,
+            height_mobile=height_mobile,
+            gap=gap,
+            class_=class_,
             **kwargs,
         ),
     )
@@ -150,6 +141,69 @@ def card(
             min_height=min_height,
             fill=fill,
             class_=class_,
+            **kwargs,
+        ),
+    )
+
+
+# ======================================================================================
+# Page components
+# ======================================================================================
+def page_fluid(
+    *,
+    title: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: str,
+) -> RecallContextManager[Tag]:
+    return RecallContextManager(
+        ui.page_fluid,
+        kwargs=dict(
+            title=title,
+            lang=lang,
+            **kwargs,
+        ),
+    )
+
+
+def page_fillable(
+    *,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+    gap: Optional[CssUnit] = None,
+    fillable_mobile: bool = False,
+    title: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: TagAttrValue,
+):
+    return RecallContextManager(
+        ui.page_fillable,
+        kwargs=dict(
+            padding=padding,
+            gap=gap,
+            fillable_mobile=fillable_mobile,
+            title=title,
+            lang=lang,
+            **kwargs,
+        ),
+    )
+
+
+def page_sidebar(
+    *,
+    title: Optional[str | Tag | TagList] = None,
+    fillable: bool = True,
+    fillable_mobile: bool = False,
+    window_title: str | MISSING_TYPE = MISSING,
+    lang: Optional[str] = None,
+    **kwargs: TagAttrValue,
+):
+    return RecallContextManager(
+        ui.page_sidebar,
+        kwargs=dict(
+            title=title,
+            fillable=fillable,
+            fillable_mobile=fillable_mobile,
+            window_title=window_title,
+            lang=lang,
             **kwargs,
         ),
     )
