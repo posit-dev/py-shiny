@@ -76,7 +76,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         nonlocal has_alternate
         val = int(has_alternate)
         sections = [section for i, section in enumerate(sections) if i % 2 == val]
-        ui.accordion_panel_set("acc", sections)
+        ui.update_accordion("acc", show=sections)
         has_alternate = not has_alternate
 
     @reactive.Effect

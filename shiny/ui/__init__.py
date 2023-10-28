@@ -44,7 +44,7 @@ from ._accordion import (
     accordion_panel_close,
     accordion_panel_insert,
     accordion_panel_remove,
-    accordion_panel_set,
+    update_accordion,
     update_accordion_panel,
 )
 
@@ -200,7 +200,7 @@ __all__ = (
     "accordion_panel_close",
     "accordion_panel_insert",
     "accordion_panel_remove",
-    "accordion_panel_set",
+    "update_accordion",
     "update_accordion_panel",
     # _download_button
     "download_button",

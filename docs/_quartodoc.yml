@@ -143,7 +143,10 @@ quartodoc:
         - ui.update_sidebar
         - ui.update_tooltip
         - ui.update_popover
+        - ui.update_accordion
         - ui.update_accordion_panel
+        - ui.insert_accordion_panel
+        - ui.remove_accordion_panel
     - title: Rendering outputs
       desc: "UI (output_*()) and server (render)ing functions for generating content server-side."
       contents:

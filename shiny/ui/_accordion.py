@@ -5,6 +5,7 @@ from typing import Literal, Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
+from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import drop_none
 from ..session import Session, require_active_session
@@ -20,7 +21,7 @@ __all__ = (
     "accordion_panel_open",  # TODO-barret-API: rename to `update_accordion_panel(open=True)`?
     "accordion_panel_insert",
     "accordion_panel_remove",
-    "accordion_panel_set",  # TODO-barret-API: rename to `update_accordion(selected=)`
+    "update_accordion",  # TODO-barret-API: rename to `update_accordion(selected=)`
     "update_accordion_panel",  # TODO-barret-API: rename to `update_accordion()`?
     # TODO-barret-API: Add `toggle_accordion(values=list[str] | None)`? - Toggles all accordion panels if `values=None` or toggle the specified panels
 )
@@ -52,7 +53,7 @@ class AccordionPanel:
     See Also
     --------
     * :func:`~shiny.ui.accordion`
-    * :func:`~shiny.ui.accordion_panel_set`
+    * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_open`
     * :func:`~shiny.ui.accordion_panel_close`
     * :func:`~shiny.ui.accordion_panel_insert`
@@ -164,7 +165,7 @@ class AccordionPanel:
         return self.resolve().tagify()
 
 
-# TODO-maindocs; @add_example()
+@add_example()
 def accordion(
     *args: AccordionPanel | TagAttrs,
     id: Optional[str] = None,
@@ -220,7 +221,7 @@ def accordion(
     See Also
     --------
     * :func:`~shiny.ui.accordion_panel`
-    * :func:`~shiny.ui.accordion_panel_set`
+    * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_open`
     * :func:`~shiny.ui.accordion_panel_close`
     * :func:`~shiny.ui.accordion_panel_insert`
@@ -287,7 +288,7 @@ def accordion(
     return tag
 
 
-# TODO-maindocs; @add_example()
+@add_example()
 def accordion_panel(
     title: TagChild,
     *args: TagChild | TagAttrs,
@@ -326,7 +327,7 @@ def accordion_panel(
     See Also
     --------
     * :func:`~shiny.ui.accordion`
-    * :func:`~shiny.ui.accordion_panel_set`
+    * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_open`
     * :func:`~shiny.ui.accordion_panel_close`
     * :func:`~shiny.ui.accordion_panel_insert`
@@ -388,10 +389,11 @@ def _accordion_panel_action(
     )
 
 
-# TODO-maindocs; @add_example()
-def accordion_panel_set(
+@add_example()
+def update_accordion(
     id: str,
-    values: bool | str | list[str],
+    *,
+    show: bool | str | list[str],
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -405,7 +407,7 @@ def accordion_panel_set(
     ----------
     id
         A string that matches an existing :func:`~shiny.ui.accordion`'s `id`.
-    values
+    show
         either a string or list of strings (used to identify particular
         :func:`~shiny.ui.accordion_panel`(s) by their `value`) or a `bool` to set the state of all
         panels.
@@ -426,7 +428,7 @@ def accordion_panel_set(
     * :func:`~shiny.ui.accordion_panel_remove`
     * :func:`~shiny.ui.update_accordion_panel`
     """
-    _accordion_panel_action(id=id, method="set", values=values, session=session)
+    _accordion_panel_action(id=id, method="set", values=show, session=session)
 
 
 # TODO-maindocs; @add_example()
@@ -457,7 +459,7 @@ def accordion_panel_open(
     --------
     * :func:`~shiny.ui.accordion`
     * :func:`~shiny.ui.accordion_panel`
-    * :func:`~shiny.ui.accordion_panel_set`
+    * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_close`
     * :func:`~shiny.ui.accordion_panel_insert`
     * :func:`~shiny.ui.accordion_panel_remove`
@@ -494,7 +496,7 @@ def accordion_panel_close(
     --------
     * :func:`~shiny.ui.accordion`
     * :func:`~shiny.ui.accordion_panel`
-    * :func:`~shiny.ui.accordion_panel_set`
+    * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_open`
     * :func:`~shiny.ui.accordion_panel_insert`
     * :func:`~shiny.ui.accordion_panel_remove`
@@ -537,7 +539,7 @@ def accordion_panel_insert(
     --------
     * :func:`~shiny.ui.accordion`
     * :func:`~shiny.ui.accordion_panel`
-    * :func:`~shiny.ui.accordion_panel_set`
+    * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_open`
     * :func:`~shiny.ui.accordion_panel_close`
     * :func:`~shiny.ui.accordion_panel_remove`
@@ -583,7 +585,7 @@ def accordion_panel_remove(
     --------
     * :func:`~shiny.ui.accordion`
     * :func:`~shiny.ui.accordion_panel`
-    * :func:`~shiny.ui.accordion_panel_set`
+    * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_open`
     * :func:`~shiny.ui.accordion_panel_close`
     * :func:`~shiny.ui.accordion_panel_insert`
@@ -653,7 +655,7 @@ def update_accordion_panel(
     --------
     * :func:`~shiny.ui.accordion`
     * :func:`~shiny.ui.accordion_panel`
-    * :func:`~shiny.ui.accordion_panel_set`
+    * :func:`~shiny.ui.update_accordion`
     * :func:`~shiny.ui.accordion_panel_open`
     * :func:`~shiny.ui.accordion_panel_close`
     * :func:`~shiny.ui.accordion_panel_insert`

@@ -411,7 +411,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         letter = letters[count % len(letters)]
         on_off = count % 2 == 1
         with session_context(session):
-            ui.accordion_panel_set("accordion", letter)
+            ui.update_accordion("accordion", show=letter)
 
             ui.update_checkbox("input_checkbox", value=on_off)
             checkbox_group_letters = letters.copy()

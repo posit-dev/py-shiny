@@ -24,11 +24,11 @@ from ...ui import accordion_panel_close as main_accordion_panel_close
 from ...ui import accordion_panel_insert as main_accordion_panel_insert
 from ...ui import accordion_panel_open as main_accordion_panel_open
 from ...ui import accordion_panel_remove as main_accordion_panel_remove
-from ...ui import accordion_panel_set as main_accordion_panel_set
 from ...ui import input_text_area as main_input_text_area
 from ...ui import popover as main_popover
 from ...ui import tags
 from ...ui import tooltip as main_tooltip
+from ...ui import update_accordion as main_update_accordion
 from ...ui import update_accordion_panel as main_update_accordion_panel
 from ...ui import update_popover as main_update_popover
 from ...ui import update_tooltip as main_update_tooltip
@@ -782,13 +782,13 @@ def accordion_panel_set(
     values: bool | str | list[str],
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.accordion_panel_set()` instead."""
+    """Deprecated. Please use `shiny.ui.update_accordion()` instead."""
     warn_deprecated(
-        "`shiny.experimental.ui.accordion_panel_set()` is deprecated. "
+        "`shiny.experimental.ui.update_accordion()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.accordion_panel_set()` instead."
+        "please use `shiny.ui.update_accordion()` instead."
     )
-    return main_accordion_panel_set(id, values, session=session)
+    return main_update_accordion(id, show=values, session=session)
 
 
 # # Deprecated 2023-09-12
