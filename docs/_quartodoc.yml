@@ -106,8 +106,8 @@ quartodoc:
         - ui.fill.as_fillable_container
         - ui.fill.as_fill_item
         - ui.fill.remove_all_fill
-        - ui.fill.is_fillable_container
-        - ui.fill.is_fill_item
+        # - ui.fill.is_fillable_container
+        # - ui.fill.is_fill_item
         - ui.css.as_css_unit
         - ui.css.as_css_padding
     - title: Update inputs

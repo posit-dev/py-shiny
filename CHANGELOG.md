@@ -46,7 +46,7 @@ The following methods have been moved from `shiny.experimental.ui` and integrate
 * Sidebar - Sidebar layout or manipulation
   * `sidebar()`, `page_sidebar()`, `toggle_sidebar()`, `layout_sidebar()`, `Sidebar`
 * Filling layout - Allow UI components to expand into the parent container and/or allow its content to expand
-  * `page_fillable()`, `fill.as_fillable_container()`, `fill.as_fill_item()`, `fill.is_fillable_container()`, `fill.is_fill_item()`, `fill.remove_all_fill()`
+  * `page_fillable()`, `fill.as_fillable_container()`, `fill.as_fill_item()`, `fill.remove_all_fill()`
   * `output_plot(fill=)`, `output_image(fill=)`, `output_ui(fill=, fillable=)`
 * CSS units - CSS units and padding
   * `css.as_css_unit()`, `css.as_css_padding()`, `css.CssUnit`
@@ -83,9 +83,9 @@ Methods still under consideration in `shiny.experimental.ui`:
 
 * `shiny.experimental.ui.FillingLayout` has been removed. (#481)
 * `shiny.experimental.ui.as_width_unit()` has been made defunct. Please remove it from your code. (#772)
+* `shiny.experimental.ui`' `as_fill_carrier()`, `is_fill_carrier()`, `is_fillable_container()`, and `is_fill_item()` have been made defunct. Remove them from your code. (#680, #788)
 * Support for `min_height=`, `max_height=`, and `gap=` in `shiny.experimental.ui.as_fillable_container()` and `as_fill_item()` has been removed. (#481)
 * `shiny.experimental.ui.TagCallable` has been deprecated. Its type is equivalent to `htmltools.TagFunction`. (#680)
-* `shiny.experimental.ui.as_fill_carrier()` and `shiny.experimental.ui.is_fill_carrier()` have been deprecated. Please use `shiny.ui.fill.as_fill_item()` and `shiny.ui.fill.as_fillable_container()` or `shiny.ui.fill.is_fill_item()` and `shiny.ui.fill.is_fillable_container()` respectively in combination to achieve similar behavior. (#680)
 
 ### Bug fixes
 

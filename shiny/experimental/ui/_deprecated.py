@@ -69,9 +69,9 @@ from ...ui.css._css_unit import as_css_padding as main_as_css_padding
 from ...ui.css._css_unit import as_css_unit as main_as_css_unit
 from ...ui.fill import as_fill_item as main_as_fill_item
 from ...ui.fill import as_fillable_container as main_as_fillable_container
-from ...ui.fill import is_fill_item as main_is_fill_item
-from ...ui.fill import is_fillable_container as main_is_fillable_container
 from ...ui.fill import remove_all_fill as main_remove_all_fill
+from ...ui.fill._fill import is_fill_item as main_is_fill_item
+from ...ui.fill._fill import is_fillable_container as main_is_fillable_container
 
 __all__ = (
     # Input Switch
@@ -978,31 +978,31 @@ def remove_all_fill(tag: TagT) -> TagT:
 
 
 def is_fill_carrier(tag: Tag) -> bool:
-    """Deprecated. Please use a combination of `shiny.ui.fill.is_fillable_container()` and `shiny.ui.fill.is_fill_item()` instead."""
+    """Defunct. Please do not use method."""
     warn_deprecated(
-        "`shiny.experimental.ui.is_fill_carrier()` is deprecated. "
+        "`shiny.experimental.ui.is_fill_carrier()` is defunct. "
         "This method will be removed in a future version, "
-        "please use a combination of `shiny.ui.fill.is_fillable_container()` and `shiny.ui.fill.is_fill_item()` instead."
+        "please update your code accordingly."
     )
     return main_is_fill_item(main_is_fillable_container(tag))
 
 
 def is_fillable_container(tag: TagChild) -> bool:
-    """Deprecated. Please use `shiny.ui.fill.is_fillable_container()` instead."""
+    """Defunct. Please do not use method."""
     warn_deprecated(
-        "`shiny.experimental.ui.is_fillable_container()` is deprecated. "
+        "`shiny.experimental.ui.is_fillable_container()` is defunct. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.fill.is_fillable_container()` instead."
+        "please update your code accordingly."
     )
     return main_is_fillable_container(tag)
 
 
 def is_fill_item(tag: TagChild) -> bool:
-    """Deprecated. Please use `shiny.ui.fill.is_fill_item()` instead."""
+    """Defunct. Please do not use method."""
     warn_deprecated(
-        "`shiny.experimental.ui.is_fill_item()` is deprecated. "
+        "`shiny.experimental.ui.is_fill_item()` is defunct. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.fill.is_fill_item()` instead."
+        "please update your code accordingly."
     )
     return main_is_fill_item(tag)
 
