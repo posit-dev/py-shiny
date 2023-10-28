@@ -5,6 +5,7 @@ import datetime
 import os
 from pathlib import Path
 
+import pytest
 from conftest import ShinyAppProc
 from controls import (
     DownloadButton,
@@ -105,6 +106,8 @@ def expect_default_outputs(page: Page, module_id: str):
     expect_outputs(page, module_id, "a", 0)
 
 
+# Python 3.8 and sidebars do not seem to work on webkit. Skipping test on webkit
+@pytest.mark.skip_browser("webkit")
 def test_module_support(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
