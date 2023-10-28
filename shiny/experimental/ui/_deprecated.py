@@ -20,8 +20,6 @@ from ...types import MISSING, MISSING_TYPE
 from ...ui import AccordionPanel as MainAccordionPanel
 from ...ui import accordion as main_accordion
 from ...ui import accordion_panel as main_accordion_panel
-from ...ui import accordion_panel_close as main_accordion_panel_close
-from ...ui import accordion_panel_open as main_accordion_panel_open
 from ...ui import input_text_area as main_input_text_area
 from ...ui import insert_accordion_panel as main_insert_accordion_panel
 from ...ui import popover as main_popover
@@ -797,13 +795,22 @@ def accordion_panel_open(
     values: bool | str | list[str],
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.accordion_panel_open()` instead."""
+    """Deprecated. Please use `shiny.ui.update_accordion_panel(id, value, show=True)` or `shiny.ui.update_accordion(id, show = True)` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel_open()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.accordion_panel_open()` instead."
+        "please use `shiny.ui.shiny.ui.update_accordion_panel(id, value, show=True)` or `shiny.ui.update_accordion(id, show = True)` instead."
     )
-    return main_accordion_panel_open(id, values, session=session)
+
+    if isinstance(values, bool):
+        main_update_accordion(id, show=True, session=session)
+        return
+
+    if not isinstance(values, list):
+        values = [values]
+
+    for value in values:
+        main_update_accordion_panel(id, value, show=True, session=session)
 
 
 # # Deprecated 2023-09-12
@@ -812,13 +819,21 @@ def accordion_panel_close(
     values: bool | str | list[str],
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.accordion_panel_close()` instead."""
+    """Deprecated. Please use `shiny.ui.update_accordion_panel(id, value, show=False)` or `shiny.ui.update_accordion(id, show = False)` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel_close()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.accordion_panel_close()` instead."
+        "please use `shiny.ui.update_accordion_panel(id, value, show=False)` or `shiny.ui.update_accordion(id, show = False)` instead."
     )
-    return main_accordion_panel_close(id, values, session=session)
+    if isinstance(values, bool):
+        main_update_accordion(id, show=False, session=session)
+        return
+
+    if not isinstance(values, list):
+        values = [values]
+
+    for value in values:
+        main_update_accordion_panel(id, value, show=False, session=session)
 
 
 # # Deprecated 2023-09-12

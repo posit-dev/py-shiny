@@ -56,7 +56,7 @@ The following methods have been moved from `shiny.experimental.ui` and integrate
 * Popover - Click-based context UI element
   * `popover()`, `update_popover()`
 * Accordion - Vertically collapsible UI element
-  * `accordion()`, `accordion_panel()`, `accordion_panel_close()`, `insert_accordion_panel()`, `accordion_panel_open()`, `remove_accordion_panel()`, `update_accordion()`, `update_accordion_panel()`, `Accordion`, `AccordionPanel`
+  * `accordion()`, `accordion_panel()`, `insert_accordion_panel()`, `remove_accordion_panel()`, `update_accordion()`, `update_accordion_panel()`, `Accordion`, `AccordionPanel`
 * Card - A general purpose container for grouping related UI elements together
   * `card()`, `card_header()`, `card_footer()`, `CardItem`
 * Valuebox - Opinionated container for displaying a value and title
