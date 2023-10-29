@@ -13,18 +13,26 @@ from ._recall_context import RecallContextManager, wrap_recall_context_manager
 
 __all__ = (
     "set_page",
+    "p",
+    "div",
+    "span",
+    "pre",
     "sidebar",
-    "page_sidebar",
+    "layout_column_wrap",
     "column",
     "row",
+    "card",
+    "accordion",
+    "accordion_panel",
+    "page_fluid",
+    "page_fillable",
+    "page_sidebar",
 )
 
 
 # ======================================================================================
 # Page functions
 # ======================================================================================
-
-
 def set_page(page_fn: RecallContextManager[Tag]):
     """Set the page function for the current Shiny express app."""
     _run.replace_top_level_recall_context_manager(page_fn, force=True)
@@ -33,7 +41,6 @@ def set_page(page_fn: RecallContextManager[Tag]):
 # ======================================================================================
 # htmltools Tag functions
 # ======================================================================================
-
 p = wrap_recall_context_manager(htmltools.p)
 div = wrap_recall_context_manager(htmltools.div)
 span = wrap_recall_context_manager(htmltools.span)
@@ -141,6 +148,48 @@ def card(
             min_height=min_height,
             fill=fill,
             class_=class_,
+            **kwargs,
+        ),
+    )
+
+
+def accordion(
+    *,
+    id: Optional[str] = None,
+    open: Optional[bool | str | list[str]] = None,
+    multiple: bool = True,
+    class_: Optional[str] = None,
+    width: Optional[CssUnit] = None,
+    height: Optional[CssUnit] = None,
+    **kwargs: TagAttrValue,
+):
+    return RecallContextManager(
+        ui.accordion,
+        kwargs=dict(
+            id=id,
+            open=open,
+            multiple=multiple,
+            class_=class_,
+            width=width,
+            height=height,
+            **kwargs,
+        ),
+    )
+
+
+def accordion_panel(
+    title: TagChild,
+    *,
+    value: Optional[str] | MISSING_TYPE = MISSING,
+    icon: Optional[TagChild] = None,
+    **kwargs: TagAttrValue,
+):
+    return RecallContextManager(
+        ui.accordion_panel,
+        args=(title,),
+        kwargs=dict(
+            value=value,
+            icon=icon,
             **kwargs,
         ),
     )
