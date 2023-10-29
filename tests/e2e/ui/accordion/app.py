@@ -134,7 +134,6 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
         has_updates = not has_updates
 
-    @output
     @render.text
     def acc_txt():
         return f"input.acc(): {input.acc()}"

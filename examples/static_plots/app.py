@@ -62,7 +62,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         cov = [(input.var(), input.cov()), (input.cov(), 1 / input.var())]
         return rng.multivariate_normal(mean, cov, n).T
 
-    @output
     @render.plot
     def seaborn():
         x, y = fake_data()
@@ -72,7 +71,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         sns.kdeplot(x=x, y=y, levels=5, color="w", linewidths=1)
         return f
 
-    @output
     @render.plot
     def plotnine():
         from plotnine import (
@@ -97,7 +95,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             + theme(legend_position="top")
         )
 
-    @output
     @render.plot
     def pandas():
         ts = pd.Series(
@@ -106,7 +103,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         ts = ts.cumsum()
         return ts.plot()
 
-    @output
     @render.plot
     def holoviews():
         import holoviews as hv
@@ -115,7 +111,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         links = pd.DataFrame(les_mis["links"])
         return hv.render(hv.Chord(links), backend="matplotlib")
 
-    @output
     @render.plot
     def xarray():
         import xarray as xr
@@ -126,7 +121,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         air.attrs["units"] = "deg C"
         return air.isel(lon=10, lat=[19, 21, 22]).plot.line(x="time")
 
-    @output
     @render.plot
     def geopandas():
         import geodatasets
@@ -138,7 +132,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         boros.sort_index(inplace=True)
         return boros.plot()
 
-    @output
     @render.plot
     def missingno():
         import matplotlib.pyplot as plt

@@ -66,7 +66,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         val = await btn_async_r()
         print("async @calc() event:   ", str(val))
 
-    @output
     @render.ui
     @reactive.event(btn_async_r)
     async def btn_async_value():

@@ -1131,7 +1131,6 @@ async def test_event_type_check():
     with pytest.raises(TypeError):
         # Should complain that @event must be applied before @output.
         @event(lambda: 1)  # type: ignore
-        @output
         @render.text
         async def _():
             ...
@@ -1202,12 +1201,10 @@ async def test_output_type_check():
         def _():
             ...
 
-    @output
     @render.text
     def _():
         ...
 
-    @output
     @render.plot
     @event(lambda: 1)
     def _():

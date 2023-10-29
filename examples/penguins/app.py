@@ -59,7 +59,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         # Filter the rows so we only include the desired species
         return df[df["Species"].isin(input.species())]
 
-    @output
     @render.plot
     def scatter():
         """Generates a plot for Shiny to display to the user"""
@@ -77,7 +76,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             legend=False,
         )
 
-    @output
     @render.ui
     def value_boxes():
         df = filtered_df()

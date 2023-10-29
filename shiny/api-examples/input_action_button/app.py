@@ -11,7 +11,6 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.plot(alt="A histogram")
     # Use reactive.event() to invalidate the plot only when the button is pressed
     # (not when the slider is changed)

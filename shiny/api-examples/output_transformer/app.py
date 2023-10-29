@@ -53,7 +53,6 @@ async def CapitalizeTransformer(
 # First, create an overload where users can supply the extra parameters.
 # Example of usage:
 # ```
-# @output
 # @render_capitalize(to="upper")
 # def value():
 #     return input.caption()
@@ -71,7 +70,6 @@ def render_capitalize(
 # While it doesn't look necessary, it is needed for the type checker.
 # Example of usage:
 # ```
-# @output
 # @render_capitalize
 # def value():
 #     return input.caption()
@@ -118,19 +116,16 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     # Without parentheses
     @render_capitalize
     def no_parens():
         return input.caption()
 
-    @output
     # With parentheses. Equivalent to `@render_capitalize()`
     @render_capitalize(to="upper")
     def to_upper():
         return input.caption()
 
-    @output
     @render_capitalize(to="lower")
     # Works with async output value functions
     async def to_lower():

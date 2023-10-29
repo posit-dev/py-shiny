@@ -41,8 +41,8 @@ class Value(Generic[T]):
 
     Reactive values are the source of reactivity in Shiny. Changes to reactive values
     invalidate downstream reactive functions (:func:`~shiny.reactive.Calc`,
-    :func:`~shiny.reactive.Effect`, and `render` functions decorated with `@output`).
-    When these functions are invalidated, they get scheduled to re-execute.
+    :func:`~shiny.reactive.Effect`, and `render` functions). When these functions are
+    invalidated, they get scheduled to re-execute.
 
     Shiny input values are read-only reactive values. For example, `input.x` is a
     reactive value object, and to get the current value, you can call `input.x()` or
@@ -771,7 +771,7 @@ def event(
         if not callable(user_fn):
             raise TypeError(
                 "`@reactive.event()` must be applied to a function or Callable object.\n"
-                + "It should usually be applied before `@Calc`,` @Effect`, `@output`, or `@render.xx` function.\n"
+                + "It should usually be applied before `@Calc`,` @Effect`, or `@render.xx` function.\n"
                 + "In other words, `@reactive.event()` goes below the other decorators."
             )
 

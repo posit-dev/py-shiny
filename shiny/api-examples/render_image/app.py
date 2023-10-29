@@ -5,7 +5,6 @@ app_ui = ui.page_fluid(ui.output_image("image"))
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.image
     def image():
         from pathlib import Path
