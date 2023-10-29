@@ -975,7 +975,6 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-        name: Optional[str] = None,
     ) -> Callable[[OutputRenderer[Any]], None]:
         ...
 
@@ -986,16 +985,7 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-        name: Optional[str] = None,
     ) -> None | Callable[[OutputRenderer[OT]], None]:
-        if name is not None:
-            from .. import _deprecated
-
-            _deprecated.warn_deprecated(
-                "`@output(name=...)` is deprecated. Use `@output(id=...)` instead."
-            )
-            id = name
-
         def set_renderer(renderer_fn: OutputRenderer[OT]) -> None:
             if hasattr(renderer_fn, "on_register"):
                 renderer_fn.on_register()
