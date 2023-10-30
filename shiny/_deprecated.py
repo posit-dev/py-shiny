@@ -27,12 +27,16 @@ def warn_deprecated(message: str):
 
 def render_text():
     """Deprecated. Please use render.text() instead of render_text()."""
+    import shiny.render as render
+
     warn_deprecated("render_text() is deprecated. Use render.text() instead.")
     return render.text()
 
 
 def render_ui():
     """Deprecated. Please use render.ui() instead of render_ui()."""
+    import shiny.render as render
+
     warn_deprecated("render_ui() is deprecated. Use render.ui() instead.")
     return render.ui()
 
