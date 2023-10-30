@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 from .. import _utils
 from .. import ui as _ui
 from .._namespaces import ResolvedId
-from ..types import ImgData
+from ..types import MISSING, MISSING_TYPE, ImgData
 from ._try_render_plot import (
     PlotSizeInfo,
     try_render_matplotlib,
@@ -115,8 +115,8 @@ async def PlotTransformer(
     _fn: ValueFn[object],
     *,
     alt: Optional[str] = None,
-    width: Optional[float] = None,
-    height: Optional[float] = None,
+    width: Optional[float] | MISSING_TYPE = MISSING,
+    height: Optional[float] | MISSING_TYPE = MISSING,
     **kwargs: object,
 ) -> ImgData | None:
     is_userfn_async = is_async_callable(_fn)
@@ -124,6 +124,11 @@ async def PlotTransformer(
     session = _meta.session
 
     inputs = session.root_scope().input
+
+    if width is MISSING:
+        width = None
+    if height is MISSING:
+        height = None
 
     # We don't have enough information at this point to decide what size the plot should
     # be. This is because the user's plotting code itself may express an opinion about
@@ -218,8 +223,8 @@ async def PlotTransformer(
 def plot(
     *,
     alt: Optional[str] = None,
-    width: Optional[float] = None,
-    height: Optional[float] = None,
+    width: Optional[float] | MISSING_TYPE = MISSING,
+    height: Optional[float] | MISSING_TYPE = MISSING,
     **kwargs: Any,
 ) -> PlotTransformer.OutputRendererDecorator:
     ...
@@ -234,8 +239,8 @@ def plot(
     _fn: PlotTransformer.ValueFn | None = None,
     *,
     alt: Optional[str] = None,
-    width: Optional[float] = None,
-    height: Optional[float] = None,
+    width: Optional[float] | MISSING_TYPE = MISSING,
+    height: Optional[float] | MISSING_TYPE = MISSING,
     **kwargs: Any,
 ) -> PlotTransformer.OutputRenderer | PlotTransformer.OutputRendererDecorator:
     """
