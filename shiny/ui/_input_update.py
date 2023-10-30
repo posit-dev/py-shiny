@@ -27,16 +27,18 @@ from htmltools import TagChild, TagList
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from .._deprecated import _session_param_docs as _session_param
 from .._docstring import add_example, doc_format
 from .._namespaces import resolve_id
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import drop_none
-from ..session import Session, require_active_session, session_context
+from ..session import require_active_session, session_context
+from ..types import MISSING, MISSING_TYPE
 from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
 from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
-from ._utils import _session_on_flush_send_msg
+from ._utils import session_on_flush_send_msg
 
 _note = """
     The input updater functions send a message to the client, telling it to change the
@@ -61,13 +63,13 @@ _note = """
 # input_action_button.py
 # -----------------------------------------------------------------------------
 @add_example()
-@doc_format(note=_note)
+@doc_format(note=_note, session_param=_session_param)
 def update_action_button(
     id: str,
     *,
     label: Optional[str] = None,
     icon: TagChild = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Change the label and/or icon of an action button on the client.
@@ -80,9 +82,7 @@ def update_action_button(
         An input label.
     icon
         An icon to appear inline with the button/link.
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Note
     ----
@@ -93,11 +93,14 @@ def update_action_button(
     :func:`~shiny.input_action_button`
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
     # TODO: supporting a TagChild for label would require changes to shiny.js
     # https://github.com/rstudio/shiny/issues/1140
-    msg = {"label": label, "icon": session._process_ui(icon)["html"] if icon else None}
-    session.send_input_message(id, drop_none(msg))
+    msg = {
+        "label": label,
+        "icon": active_session._process_ui(icon)["html"] if icon else None,
+    }
+    active_session.send_input_message(id, drop_none(msg))
 
 
 update_action_link = update_action_button
@@ -108,13 +111,13 @@ update_action_link.__doc__ = update_action_button.__doc__
 # input_check_radio.py
 # -----------------------------------------------------------------------------
 @add_example()
-@doc_format(note=_note)
+@doc_format(note=_note, session_param=_session_param)
 def update_checkbox(
     id: str,
     *,
     label: Optional[str] = None,
     value: Optional[bool] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Change the value of a checkbox input on the client.
@@ -127,9 +130,7 @@ def update_checkbox(
         An input label.
     value
         A new value.
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Note
     ----
@@ -140,18 +141,18 @@ def update_checkbox(
     ~shiny.ui.input_checkbox
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
     msg = {"label": label, "value": value}
-    session.send_input_message(id, drop_none(msg))
+    active_session.send_input_message(id, drop_none(msg))
 
 
-@doc_format(note=_note)
+@doc_format(note=_note, session_param=_session_param)
 def update_switch(
     id: str,
     *,
     label: Optional[str] = None,
     value: Optional[bool] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Change the value of a switch input on the client.
@@ -164,9 +165,7 @@ def update_switch(
         An input label.
     value
         A new value.
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Note
     ----
@@ -177,13 +176,13 @@ def update_switch(
     ~shiny.ui.input_switch
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
     msg = {"label": label, "value": value}
-    session.send_input_message(id, drop_none(msg))
+    active_session.send_input_message(id, drop_none(msg))
 
 
 @add_example()
-@doc_format(note=_note)
+@doc_format(note=_note, session_param=_session_param)
 def update_checkbox_group(
     id: str,
     *,
@@ -191,7 +190,7 @@ def update_checkbox_group(
     choices: Optional[ChoicesArg] = None,
     selected: Optional[str | list[str] | tuple[str, ...]] = None,
     inline: bool = False,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Change the value of a checkbox group input on the client.
@@ -210,9 +209,7 @@ def update_checkbox_group(
         The values that should be initially selected, if any.
     inline
         If ``True``, the result is displayed inline
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Note
     ----
@@ -235,7 +232,7 @@ def update_checkbox_group(
 
 
 @add_example()
-@doc_format(note=_note)
+@doc_format(note=_note, session_param=_session_param)
 def update_radio_buttons(
     id: str,
     *,
@@ -243,7 +240,7 @@ def update_radio_buttons(
     choices: Optional[ChoicesArg] = None,
     selected: Optional[str] = None,
     inline: bool = False,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Change the value of a radio input on the client.
@@ -262,9 +259,7 @@ def update_radio_buttons(
         The values that should be initially selected, if any.
     inline
         If ``True```, the result is displayed inline
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Note
     ----
@@ -294,13 +289,13 @@ def _update_choice_input(
     choices: Optional[ChoicesArg] = None,
     selected: Optional[str | list[str] | tuple[str, ...]] = None,
     inline: bool = False,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
-    session = require_active_session(session)
+    active_session = require_active_session(session)
     options = None
     if choices is not None:
         # https://github.com/posit-dev/py-shiny/issues/708#issuecomment-1696352934
-        with session_context(session):
+        with session_context(active_session):
             resolved_id = resolve_id(id)
 
         opts = _generate_options(
@@ -310,16 +305,16 @@ def _update_choice_input(
             selected=selected,
             inline=inline,
         )
-        options = session._process_ui(opts)["html"]
+        options = active_session._process_ui(opts)["html"]
     msg = {"label": label, "options": options, "value": selected}
-    session.send_input_message(id, drop_none(msg))
+    active_session.send_input_message(id, drop_none(msg))
 
 
 # -----------------------------------------------------------------------------
 # input_date.py
 # -----------------------------------------------------------------------------
 @add_example()
-@doc_format(note=_note)
+@doc_format(note=_note, session_param=_session_param)
 def update_date(
     id: str,
     *,
@@ -327,7 +322,7 @@ def update_date(
     value: Optional[date | str] = None,
     min: Optional[date | str] = None,
     max: Optional[date | str] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Change the value of a date input on the client.
@@ -345,9 +340,7 @@ def update_date(
         The minimum allowed value.
     max
         The maximum allowed value.
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Note
     ----
@@ -358,18 +351,18 @@ def update_date(
     ~shiny.ui.input_date
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
     msg = {
         "label": label,
         "value": _as_date_attr(value),
         "min": _as_date_attr(min),
         "max": _as_date_attr(max),
     }
-    session.send_input_message(id, drop_none(msg))
+    active_session.send_input_message(id, drop_none(msg))
 
 
 @add_example()
-@doc_format(note=_note)
+@doc_format(note=_note, session_param=_session_param)
 def update_date_range(
     id: str,
     *,
@@ -378,7 +371,7 @@ def update_date_range(
     end: Optional[date | str] = None,
     min: Optional[date | str] = None,
     max: Optional[date | str] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Change the start and end values of a date range input on the client.
@@ -401,9 +394,7 @@ def update_date_range(
         The minimum allowed value.
     max
         The maximum allowed value.
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Note
     ----
@@ -414,7 +405,7 @@ def update_date_range(
     ~shiny.ui.input_date_range
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
     value = {"start": _as_date_attr(start), "end": _as_date_attr(end)}
     msg = {
         "label": label,
@@ -422,14 +413,14 @@ def update_date_range(
         "min": _as_date_attr(min),
         "max": _as_date_attr(max),
     }
-    session.send_input_message(id, drop_none(msg))
+    active_session.send_input_message(id, drop_none(msg))
 
 
 # -----------------------------------------------------------------------------
 # input_numeric.py
 # -----------------------------------------------------------------------------
 @add_example()
-@doc_format(note=_note)
+@doc_format(note=_note, session_param=_session_param)
 def update_numeric(
     id: str,
     *,
@@ -438,7 +429,7 @@ def update_numeric(
     min: Optional[float] = None,
     max: Optional[float] = None,
     step: Optional[float] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Change the value of a number input on the client.
@@ -457,8 +448,7 @@ def update_numeric(
         The maximum allowed value.
     step
         Interval to use when stepping between min and max.
-    session
-        The :class:`~shiny.Session` object passed to the server function of a :func:`~shiny.App`.
+    {session_param}
 
     Note
     ----
@@ -469,7 +459,7 @@ def update_numeric(
     ~shiny.ui.input_numeric
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
     msg = {
         "label": label,
         "value": value,
@@ -477,21 +467,21 @@ def update_numeric(
         "max": max,
         "step": step,
     }
-    session.send_input_message(id, drop_none(msg))
+    active_session.send_input_message(id, drop_none(msg))
 
 
 # -----------------------------------------------------------------------------
 # input_select.py
 # -----------------------------------------------------------------------------
 @add_example()
-@doc_format(note=_note)
+@doc_format(note=_note, session_param=_session_param)
 def update_select(
     id: str,
     *,
     label: Optional[str] = None,
     choices: Optional[SelectChoicesArg] = None,
     selected: Optional[str | list[str]] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Change the value of a select input on the client.
@@ -510,9 +500,7 @@ def update_select(
         ``<optgroup>`` labels.
     selected
         The values that should be initially selected, if any.
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Note
     ----
@@ -524,7 +512,7 @@ def update_select(
     ~shiny.ui.update_selectize
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
 
     selected_values = selected
     if isinstance(selected, str):
@@ -534,16 +522,14 @@ def update_select(
         options = None
     else:
         option_tags = _render_choices(_normalize_choices(choices), selected)
-        # Typing problem due to a bug in pylance:
-        # https://github.com/microsoft/pylance-release/issues/2377
-        options = session._process_ui(option_tags)["html"]  # type: ignore
+        options = active_session._process_ui(option_tags)["html"]
 
     msg = {
         "label": label,
         "options": options,
         "value": selected_values,
     }
-    session.send_input_message(id, drop_none(msg))
+    active_session.send_input_message(id, drop_none(msg))
 
 
 class FlatSelectChoice(TypedDict):
@@ -553,7 +539,7 @@ class FlatSelectChoice(TypedDict):
 
 
 @add_example()
-@doc_format(note=_note)
+@doc_format(note=_note, session_param=_session_param)
 def update_selectize(
     id: str,
     *,
@@ -563,7 +549,7 @@ def update_selectize(
     # TODO: we need the equivalent of base::I()/htmlwidgets::JS() for marking strings as strings to be evaluated
     # options: Optional[Dict[str, str]] = None,
     server: bool = False,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Change the value of a selectize.js powered input on the client.
@@ -586,9 +572,7 @@ def update_selectize(
         Whether to store choices on the server side, and load the select options
         dynamically on searching, instead of writing all choices into the page at once
         (i.e., only use the client-side version of selectize.js)
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Note
     ----
@@ -599,7 +583,7 @@ def update_selectize(
     ~shiny.ui.input_selectize
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
 
     if not server:
         return update_select(
@@ -613,13 +597,17 @@ def update_selectize(
         for k, v in _normalize_choices(choices).items():
             if not isinstance(v, Mapping):
                 flat_choices.append(
-                    FlatSelectChoice(value=k, label=session._process_ui(v)["html"])
+                    FlatSelectChoice(
+                        value=k, label=active_session._process_ui(v)["html"]
+                    )
                 )
             else:  # The optgroup case
                 flat_choices.extend(
                     [
                         FlatSelectChoice(
-                            optgroup=k, value=k2, label=session._process_ui(v2)["html"]
+                            optgroup=k,
+                            value=k2,
+                            label=active_session._process_ui(v2)["html"],
                         )
                         for (k2, v2) in v.items()
                     ]
@@ -710,17 +698,19 @@ def update_selectize(
     msg = {
         "label": label,
         "value": selected_values,
-        "url": session.dynamic_route(f"update_selectize_{id}", selectize_choices_json),
+        "url": active_session.dynamic_route(
+            f"update_selectize_{id}", selectize_choices_json
+        ),
     }
 
-    return session.send_input_message(id, drop_none(msg))
+    return active_session.send_input_message(id, drop_none(msg))
 
 
 # -----------------------------------------------------------------------------
 # input_slider.py
 # -----------------------------------------------------------------------------
 @add_example()
-@doc_format(note=_note)
+@doc_format(note=_note, session_param=_session_param)
 def update_slider(
     id: str,
     *,
@@ -731,7 +721,7 @@ def update_slider(
     step: Optional[SliderStepArg] = None,
     time_format: Optional[str] = None,
     timezone: Optional[str] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Change the value of a slider input on the client.
@@ -764,9 +754,7 @@ def update_slider(
         specifying the time zone offset for the displayed times, in the format "+HHMM"
         or "-HHMM". If ``None`` (the default), times will be displayed in the browser's
         time zone. The value "+0000" will result in UTC time.
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Note
     ----
@@ -777,7 +765,7 @@ def update_slider(
     ~shiny.ui.input_slider
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
 
     # Get any non-None value to see if the `data-type` may need to change
     val = value[0] if isinstance(value, (tuple, list)) else value
@@ -807,21 +795,21 @@ def update_slider(
         "time_format": time_format,
         "timezone": timezone,
     }
-    session.send_input_message(id, drop_none(msg))
+    active_session.send_input_message(id, drop_none(msg))
 
 
 # -----------------------------------------------------------------------------
 # input_text.py
 # -----------------------------------------------------------------------------
 @add_example()
-@doc_format(note=_note)
+@doc_format(note=_note, session_param=_session_param)
 def update_text(
     id: str,
     *,
     label: Optional[str] = None,
     value: Optional[str] = None,
     placeholder: Optional[str] = None,
-    session: Optional[Session] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Change the value of a text input on the client.
@@ -836,9 +824,7 @@ def update_text(
         A new value.
     placeholder
         A hint as to what can be entered into the control.
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Note
     ----
@@ -849,9 +835,9 @@ def update_text(
     ~shiny.ui.input_text
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
     msg = {"label": label, "value": value, "placeholder": placeholder}
-    session.send_input_message(id, drop_none(msg))
+    active_session.send_input_message(id, drop_none(msg))
 
 
 update_text_area = update_text
@@ -865,9 +851,11 @@ update_text_area.__doc__ = update_text.__doc__
 
 # TODO: we should probably provide a nav_select() alias for this as well
 @add_example()
-@doc_format(note=_note)
+@doc_format(note=_note, session_param=_session_param)
 def update_navs(
-    id: str, selected: Optional[str] = None, session: Optional[Session] = None
+    id: str,
+    selected: Optional[str] = None,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Change the value of a navs container on the client.
@@ -878,9 +866,7 @@ def update_navs(
         An input id.
     selected
         The values that should be initially selected, if any.
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     Note
     ----
@@ -893,9 +879,9 @@ def update_navs(
     ~shiny.ui.page_navbar
     """
 
-    session = require_active_session(session)
+    active_session = require_active_session(session)
     msg = {"value": selected}
-    session.send_input_message(id, drop_none(msg))
+    active_session.send_input_message(id, drop_none(msg))
 
 
 # -----------------------------------------------------------------------------
@@ -906,7 +892,6 @@ def update_tooltip(
     id: str,
     *args: TagChild,
     show: Optional[bool] = None,
-    session: Optional[Session] = None,
 ) -> None:
     """
     Update tooltip contents
@@ -919,26 +904,22 @@ def update_tooltip(
         Contents to the tooltip's body.
     show
         Opens (`True`) or closes (`False`) the tooltip.
-    session
-        A Shiny session object (the default should almost always be used).
     """
 
-    _session_on_flush_send_msg(
+    session_on_flush_send_msg(
         id,
-        session,
         drop_none(
             {
                 "method": "update",
-                "title": require_active_session(session)._process_ui(TagList(*args))
+                "title": require_active_session()._process_ui(TagList(*args))
                 if len(args) > 0
                 else None,
             }
         ),
     )
     if show is not None:
-        _session_on_flush_send_msg(
+        session_on_flush_send_msg(
             id,
-            session,
             {
                 "method": "toggle",
                 "value": _normalize_show_value(show),
@@ -952,12 +933,12 @@ def update_tooltip(
 
 
 # @add_example()
+@doc_format(session_param=_session_param)
 def update_popover(
     id: str,
     *args: TagChild,
     title: Optional[TagChild] = None,
     show: Optional[bool] = None,
-    session: Optional[Session] = None,
 ) -> None:
     """
     Update the contents or title of a popover.
@@ -972,19 +953,16 @@ def update_popover(
         The new title of the popover.
     show
         Opens (`True`) or closes (`False) the popover.
-    session
-        A Shiny session object (the default should almost always be used).
 
     See Also
     --------
     * :func:`~shiny.ui.popover`
     """
-    session = require_active_session(session)
 
     if title is not None or len(args) > 0:
-        _session_on_flush_send_msg(
+        session = require_active_session()
+        session_on_flush_send_msg(
             id,
-            session,
             drop_none(
                 {
                     "method": "update",
@@ -996,9 +974,8 @@ def update_popover(
             ),
         )
     if show is not None:
-        _session_on_flush_send_msg(
+        session_on_flush_send_msg(
             id,
-            session,
             {
                 "method": "toggle",
                 "value": _normalize_show_value(show),

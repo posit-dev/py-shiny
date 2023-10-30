@@ -2,6 +2,8 @@
 # See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
+from ..types import MISSING, MISSING_TYPE
+
 __all__ = (
     "get_current_session",
     "session_context",
@@ -12,11 +14,13 @@ from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 
-if TYPE_CHECKING:
-    from ._session import Session
-
+from .._deprecated import session_type_warning
+from .._docstring import add_example
 from .._namespaces import namespace_context
 from .._typing_extensions import TypedDict
+
+if TYPE_CHECKING:
+    from ._session import Session
 
 
 class RenderedDeps(TypedDict):
@@ -55,10 +59,17 @@ def get_current_session() -> Optional[Session]:
     return _current_session.get() or _default_session
 
 
+@add_example()
 @contextmanager
 def session_context(session: Optional[Session]):
     """
     Context manager for current session.
+
+    This context manager is used to set the current session for the duration of the code
+    block. This is meant for advanced use cases where a custom session handling is
+    needed.
+
+    For example, if you want to use a session value (e.g.  module's session) that is different from the current session (e.g. a global session), then executing the module code within `with session_context(mod_sess):` will execute the code in the context of the module session.
 
     Parameters
     ----------
@@ -74,15 +85,16 @@ def session_context(session: Optional[Session]):
         _current_session.reset(token)
 
 
-def require_active_session(session: Optional[Session]) -> Session:
+def require_active_session(session: MISSING_TYPE = MISSING) -> Session:
     """
     Raise an exception if no Shiny session is currently active.
 
     Parameters
     ----------
     session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+        Deprecated. If a custom session is needed, please execute your code inside `with
+        shiny.session.session_context(session):`. See
+        :func:`~shiny.session.session_context` for more details.
 
     Returns
     -------
@@ -105,9 +117,19 @@ def require_active_session(session: Optional[Session]) -> Session:
     ~get_current_session
     """
 
-    if session is None:
-        session = get_current_session()
-    if session is None:
+    session_is_missing = True
+
+    if not isinstance(session, MISSING_TYPE):
+        session_type_warning()
+        session_is_missing = (
+            session is None
+        )  # pyright: ignore[reportUnnecessaryComparison]
+
+    ret_session: Session | None = None
+    if session_is_missing:
+        ret_session = get_current_session()
+
+    if ret_session is None:
         import inspect
 
         call_stack = inspect.stack()
@@ -127,7 +149,7 @@ def require_active_session(session: Optional[Session]) -> Session:
         raise RuntimeError(
             f"{calling_fn_name}() must be called from within an active Shiny session."
         )
-    return session
+    return ret_session
 
 
 # Ideally I'd love not to limit the types for T, but if I don't, the type checker has

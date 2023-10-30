@@ -1,8 +1,6 @@
 import warnings
 from typing import Any
 
-from . import reactive, render
-
 __all__ = (
     "render_text",
     "render_plot",
@@ -41,17 +39,37 @@ def render_ui():
 
 def render_plot(*args: Any, **kwargs: Any):  # type: ignore
     """Deprecated. Please use render.plot() instead of render_plot()."""
+    import shiny.render as render
+
     warn_deprecated("render_plot() is deprecated. Use render.plot() instead.")
     return render.plot(*args, **kwargs)  # type: ignore
 
 
 def render_image(*args: Any, **kwargs: Any):  # type: ignore
     """Deprecated. Please use render.image() instead of render_image()."""
+    import shiny.render as render
+
     warn_deprecated("render_image() is deprecated. Use render.image() instead.")
     return render.image(*args, **kwargs)  # type: ignore
 
 
 def event(*args: Any, **kwargs: Any):
     """Deprecated. Please use @reactive.event() instead of @event()."""
+    import shiny.reactive as reactive
+
     warn_deprecated("@event() is deprecated. Use @reactive.event() instead.")
     return reactive.event(*args, **kwargs)
+
+
+def session_type_warning() -> None:
+    warn_deprecated(
+        "`session=` is deprecated. Please call with no `session=` argument as this parameter will be removed in the near future. If you need to pass a session, use your code inside a `with session_context(session):`."
+    )
+
+
+_session_param_docs = """
+    session
+        Deprecated. If a custom session is needed, please execute your code inside `with
+        shiny.session.session_context(session):`. See
+        :func:`~shiny.session.session_context` for more details.
+    """

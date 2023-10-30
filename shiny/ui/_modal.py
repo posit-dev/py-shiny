@@ -11,8 +11,9 @@ from typing import Literal, Optional
 
 from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, div, tags
 
-from .._docstring import add_example
-from ..session import Session, require_active_session
+from .._deprecated import _session_param_docs as _session_param
+from .._docstring import add_example, doc_format
+from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE
 
 
@@ -152,7 +153,11 @@ def modal(
     )
 
 
-def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
+@doc_format(session_param=_session_param)
+def modal_show(
+    modal: Tag,
+    session: MISSING_TYPE = MISSING,
+) -> None:
     """
     Show a modal dialog.
 
@@ -160,9 +165,7 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     ----------
     modal
         Typically a :func:`modal` instance.
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     See Also
     -------
@@ -173,20 +176,21 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     -------
     See :func:`modal`.
     """
-    session = require_active_session(session)
-    msg = session._process_ui(modal)
-    session._send_message_sync({"modal": {"type": "show", "message": msg}})
+    active_session = require_active_session(session)
+    msg = active_session._process_ui(modal)
+    active_session._send_message_sync({"modal": {"type": "show", "message": msg}})
 
 
-def modal_remove(session: Optional[Session] = None) -> None:
+@doc_format(session_param=_session_param)
+def modal_remove(
+    session: MISSING_TYPE = MISSING,
+) -> None:
     """
     Remove a modal dialog.
 
     Parameters
     ----------
-    session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+    {session_param}
 
     See Also
     -------
@@ -197,5 +201,5 @@ def modal_remove(session: Optional[Session] = None) -> None:
     -------
     See :func:`modal`.
     """
-    session = require_active_session(session)
-    session._send_message_sync({"modal": {"type": "remove", "message": None}})
+    active_session = require_active_session(session)
+    active_session._send_message_sync({"modal": {"type": "remove", "message": None}})

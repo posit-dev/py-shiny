@@ -22,7 +22,9 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Optional, TypeVar
 
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
-from .._docstring import add_example
+from .._deprecated import _session_param_docs as _session_param
+from .._deprecated import session_type_warning
+from .._docstring import add_example, doc_format
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
@@ -297,8 +299,11 @@ def lock() -> asyncio.Lock:
 
 
 @add_example()
+@doc_format(session_param=_session_param)
 def invalidate_later(
-    delay: float, *, session: "MISSING_TYPE | Session | None" = MISSING
+    delay: float,
+    *,
+    session: MISSING_TYPE = MISSING,
 ) -> None:
     """
     Scheduled Invalidation
@@ -310,6 +315,7 @@ def invalidate_later(
     ----------
     delay
         The number of seconds to wait before invalidating.
+    {session_param}
 
     Note
     ----
@@ -321,12 +327,19 @@ def invalidate_later(
     that prevents the ``invalidate_later`` from being run.
     """
 
+    cur_session: Session | MISSING_TYPE | None = None
+
     if isinstance(session, MISSING_TYPE):
         from ..session import get_current_session
 
         # If no session is provided, autodetect the current session (this
         # could be None if outside of a session).
-        session = get_current_session()
+        cur_session = get_current_session()
+    else:
+        # Display warning that they should use `session_context()`
+        session_type_warning()
+        # Use current session value
+        cur_session = session
 
     ctx = get_current_context()
     # Pass an absolute time to our subtask, rather than passing the delay directly, in
@@ -376,5 +389,5 @@ def invalidate_later(
             task.cancel()
 
     ctx.on_invalidate(cancel_task)
-    if session:
-        unsub = session.on_ended(cancel_task)
+    if cur_session:
+        unsub = cur_session.on_ended(cancel_task)

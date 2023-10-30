@@ -8,7 +8,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import drop_none
-from ..session import Session, require_active_session
+from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import components_dependency
 from ._tag import consolidate_attrs
@@ -352,11 +352,10 @@ def accordion_panel(
 # you might want to open a panel after inserting it.
 def _send_panel_message(
     id: str,
-    session: Session | None,
     **kwargs: object,
 ) -> None:
     message = drop_none(kwargs)
-    session = require_active_session(session)
+    session = require_active_session()
     session.on_flush(lambda: session.send_input_message(id, message), once=True)
 
 
@@ -365,7 +364,6 @@ def _accordion_panel_action(
     id: str,
     method: str,
     values: bool | str | list[str],
-    session: Session | None,
 ) -> None:
     if not isinstance(values, bool):
         if not isinstance(values, list):
@@ -374,7 +372,6 @@ def _accordion_panel_action(
 
     _send_panel_message(
         id,
-        session,
         method=method,
         values=values,
     )
@@ -385,7 +382,6 @@ def update_accordion(
     id: str,
     *,
     show: bool | str | list[str],
-    session: Optional[Session] = None,
 ) -> None:
     """
     Dynamically set accordions panel state
@@ -402,8 +398,6 @@ def update_accordion(
         either a string or list of strings (used to identify particular
         :func:`~shiny.ui.accordion_panel`(s) by their `value`) or a `bool` to set the state of all
         panels.
-    session
-        A shiny session object (the default should almost always be used).
 
     References
     ----------
@@ -421,7 +415,7 @@ def update_accordion(
         show_val = []
     else:
         show_val = show
-    _accordion_panel_action(id=id, method="set", values=show_val, session=session)
+    _accordion_panel_action(id=id, method="set", values=show_val)
 
 
 @add_example()
@@ -430,7 +424,6 @@ def insert_accordion_panel(
     panel: AccordionPanel,
     target: Optional[str] = None,
     position: Literal["after", "before"] = "after",
-    session: Optional[Session] = None,
 ) -> None:
     """
     Insert an :func:`~shiny.ui.accordion_panel`
@@ -447,8 +440,6 @@ def insert_accordion_panel(
         Should `panel` be added before or after the target? When `target=None`,
         `"after"` will append after the last panel and `"before"` will prepend before
         the first panel.
-    session
-        A shiny session object (the default should almost always be used).
 
     References
     ----------
@@ -465,10 +456,9 @@ def insert_accordion_panel(
 
     if position not in ("after", "before"):
         raise ValueError("`position` must be either 'after' or 'before'")
-    session = require_active_session(session)
+    session = require_active_session()
     _send_panel_message(
         id,
-        session,
         method="insert",
         panel=session._process_ui(panel.resolve()),
         target=None if target is None else _assert_str(target),
@@ -480,7 +470,6 @@ def insert_accordion_panel(
 def remove_accordion_panel(
     id: str,
     target: str | list[str],
-    session: Optional[Session] = None,
 ) -> None:
     """
     Remove an :func:`~shiny.ui.accordion_panel`
@@ -491,8 +480,6 @@ def remove_accordion_panel(
         A string that matches an existing :func:`~shiny.ui.accordion`'s `id`.
     target
         The `value` of an existing panel to remove.
-    session
-        A shiny session object (the default should almost always be used).
 
     References
     ----------
@@ -511,7 +498,6 @@ def remove_accordion_panel(
 
     _send_panel_message(
         id,
-        session,
         method="remove",
         target=_assert_list_str(target),
     )
@@ -537,7 +523,6 @@ def update_accordion_panel(
     value: str | None | MISSING_TYPE = MISSING,
     icon: TagChild | None | MISSING_TYPE = MISSING,
     show: Optional[bool] = None,
-    session: Optional[Session] = None,
 ) -> None:
     """
     Dynamically update accordions panel contents
@@ -560,8 +545,6 @@ def update_accordion_panel(
         If not missing, the new value of the panel.
     icon
         If not missing, the new icon of the panel.
-    session
-        A shiny session object (the default should almost always be used).
 
     References
     ----------
@@ -576,7 +559,7 @@ def update_accordion_panel(
     * :func:`~shiny.ui.remove_accordion_panel`
     """
 
-    session = require_active_session(session)
+    session = require_active_session()
 
     # If `show` is given, then we need to open/close the targeted panel
     # Perform before changing `value` at the same time.
@@ -585,7 +568,6 @@ def update_accordion_panel(
             id=id,
             method="open" if bool(show) else "close",
             values=[target],
-            session=session,
         )
 
     title = _missing_none_x(title)
@@ -593,7 +575,6 @@ def update_accordion_panel(
     icon = _missing_none_x(icon)
     _send_panel_message(
         id,
-        session,
         method="update",
         target=_assert_str(target),
         value=None if value is None else _assert_str(value),

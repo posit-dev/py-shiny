@@ -19,7 +19,7 @@ from htmltools import (
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
-from ..session import Session, require_active_session
+from ..session import require_active_session
 from ._card import CardItem
 from ._html_deps_shinyverse import components_dependency
 from ._tag import consolidate_attrs, trinary
@@ -501,7 +501,6 @@ def update_sidebar(
     id: str,
     *,
     show: Optional[bool] = None,
-    session: Optional[Session] = None,
 ) -> None:
     """
     Update a sidebar's visibility
@@ -514,15 +513,13 @@ def update_sidebar(
         The `id` of the :func:`~shiny.ui.sidebar` to toggle.
     show
         The desired visible state of the sidebar, where `True` opens the sidebar and `False` closes the sidebar (if not already in that state).
-    session
-        A Shiny session object (the default should almost always be used).
 
     See Also
     --------
     * :func:`~shiny.ui.sidebar`
     * :func:`~shiny.ui.layout_sidebar`
     """
-    session = require_active_session(session)
+    session = require_active_session()
 
     # method: Literal["toggle", "open", "close"]
     # if open is None or open == "toggle":
