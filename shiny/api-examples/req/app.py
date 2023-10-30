@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
+from shiny import App, Inputs, reactive, render, req, ui
 from shiny.types import SafeException
 
 app_ui = ui.page_fluid(
@@ -14,18 +14,16 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.Calc
     def safe_click():
         req(input.safe())
         return input.safe()
 
-    @output
     @render.ui
     def safe():
         raise SafeException(f"You've clicked {str(safe_click())} times")
 
-    @output
     @render.ui
     def unsafe():
         req(input.unsafe())
@@ -37,7 +35,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         print("unsafe clicks:", input.unsafe())
         # raise Exception("Observer exception: this should cause a crash")
 
-    @output
     @render.ui
     def txt_out():
         req(input.txt(), cancel_output=True)

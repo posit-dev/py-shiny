@@ -2,7 +2,7 @@ import typing
 
 import pandas as pd
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
+from shiny import App, Inputs, reactive, render, req, ui
 from shiny.types import FileInfo
 
 app_ui = ui.page_fluid(
@@ -19,7 +19,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.Calc
     def parsed_file():
         file: typing.Union[typing.List["FileInfo"], None] = input.file1()
@@ -29,7 +29,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             file[0]["datapath"]
         )
 
-    @output
     @render.table
     def summary():
         df = parsed_file()
@@ -56,7 +55,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         # checkboxes
         return info_df.loc[:, input.stats()]
 
-    @output
     @render.text
     def file2_info():
         file2: typing.Union[typing.List["FileInfo"], None] = input.file2()

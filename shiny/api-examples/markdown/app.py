@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, ui
+from shiny import App, Inputs, ui
 
 ui_app = ui.page_fluid(
     ui.markdown(
@@ -15,7 +15,7 @@ ui_app = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     pass
 
 

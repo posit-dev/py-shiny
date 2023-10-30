@@ -8,8 +8,7 @@ import pandas as pd
 import seaborn as sns
 from colors import bg_palette, palette
 
-import shiny.experimental as x
-from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
+from shiny import App, Inputs, reactive, render, req, ui
 
 sns.set_theme()
 
@@ -48,7 +47,7 @@ app_ui = ui.page_sidebar(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.Calc
     def filtered_df() -> pd.DataFrame:
         """Returns a Pandas data frame that includes only the desired rows"""
@@ -59,7 +58,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         # Filter the rows so we only include the desired species
         return df[df["Species"].isin(input.species())]
 
-    @output
     @render.plot
     def scatter():
         """Generates a plot for Shiny to display to the user"""
@@ -77,13 +75,12 @@ def server(input: Inputs, output: Outputs, session: Session):
             legend=False,
         )
 
-    @output
     @render.ui
     def value_boxes():
         df = filtered_df()
 
         def penguin_value_box(title: str, count: int, bgcol: str, showcase_img: str):
-            return x.ui.value_box(
+            return ui.value_box(
                 title,
                 count,
                 {"class": "pt-1 pb-0"},
@@ -120,7 +117,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             if name in input.species()
         ]
 
-        return ui.layout_column_wrap(1 / len(value_boxes), *value_boxes)
+        return ui.layout_column_wrap(*value_boxes, width=1 / len(value_boxes))
 
 
 app = App(

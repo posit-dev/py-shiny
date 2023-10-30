@@ -6,7 +6,7 @@ from typing import Any, Awaitable
 
 import pandas as pd
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 SYMBOLS = ["AAA", "BBB", "CCC", "DDD", "EEE", "FFF"]
 
@@ -108,14 +108,13 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session) -> None:
+def server(input: Inputs):
     def filtered_quotes():
         df = stock_quotes()
         if input.symbols():
             df = df[df["symbol"].isin(input.symbols())]
         return df
 
-    @output
     @render.ui
     def table():
         return ui.HTML(

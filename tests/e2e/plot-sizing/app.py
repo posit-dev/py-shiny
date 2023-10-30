@@ -93,7 +93,7 @@ app_ui = ui.page_navbar(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     def plot_with_mpl(fig_size: tuple[float, float] | None) -> object:
         fig, ax = plt.subplots(facecolor="lavender")
         X, Y = np.mgrid[-4:4, -4:4]

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from shiny import App, Inputs, Outputs, Session, ui
+from shiny import App, Inputs, ui
 
 app_ui = ui.page_fluid(
     ui.tags.link(href="css/styles.css", rel="stylesheet"),
@@ -22,7 +22,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     pass
 
 

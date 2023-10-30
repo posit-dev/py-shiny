@@ -2,7 +2,7 @@
 
 import typing
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_numeric("n", "N", 20),
@@ -24,7 +24,7 @@ class ShinyInputs(Inputs):
     check: reactive.Value[bool]
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     # Cast `input` to our ShinyInputs class. This just tells the static type checker
     # that we want it treated as a ShinyInputs object for type checking; it has no
     # run-time effect.
@@ -42,21 +42,21 @@ def server(input: Inputs, output: Outputs, session: Session):
     # thinks the return type of input.n() is Any, so we don't get type checking here.
     # The function is returning the wrong value here: it returns an int instead of a
     # string, but this error is not flagged.
-    @output
+
     @render.text
     async def txt():
         return input.n() * 2
 
     # In contrast, input.n2() is declared to return an int, so the type check does flag
     # this error -- the `render.text()` is underlined in red.
-    @output
+
     @render.text
     async def txt2():
         return str(input.n2() * 2)
 
     # This is a corrected version of the function above. It returns a string, and is not
     # marked in red.
-    @output
+
     @render.text
     async def txt3():
         return str(input.n2() * 2)

@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, reactive, ui
 
 app_ui = ui.page_fixed(
     ui.layout_sidebar(
@@ -12,7 +12,7 @@ app_ui = ui.page_fixed(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.Effect
     def _():
         val = input.control()

@@ -41,7 +41,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input, output, session):
+def server(input):
     # BROWNIAN MOTION ====
 
     @reactive.Calc
@@ -85,22 +85,18 @@ def server(input, output, session):
 
     # DEBUGGING ====
 
-    @output
     @render.text
     def x_debug():
         return camera_eye()["x"]
 
-    @output
     @render.text
     def y_debug():
         return camera_eye()["y"]
 
-    @output
     @render.text
     def z_debug():
         return camera_eye()["z"]
 
-    @output
     @render.text
     def mag_debug():
         eye = camera_eye()

@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_text_area(
@@ -17,13 +17,11 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
-    @output
+def server(input: Inputs):
     @render.text
     def value_regular():
         return input.caption_regular()
 
-    @output
     @render.text
     def value_autoresize():
         return input.caption_autoresize()

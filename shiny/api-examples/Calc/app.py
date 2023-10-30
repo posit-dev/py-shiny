@@ -1,7 +1,7 @@
 import random
 import time
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_action_button("first", "Invalidate first (slow) computation"),
@@ -12,7 +12,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.Calc
     def first():
         input.first()
@@ -28,7 +28,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         input.second()
         return random.randint(1, 1000)
 
-    @output
     @render.ui
     def result():
         return first() + second()

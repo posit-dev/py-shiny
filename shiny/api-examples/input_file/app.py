@@ -1,6 +1,6 @@
 import pandas as pd
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 from shiny.types import FileInfo
 
 app_ui = ui.page_fluid(
@@ -15,7 +15,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.Calc
     def parsed_file():
         file: list[FileInfo] | None = input.file1()
@@ -25,7 +25,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             file[0]["datapath"]
         )
 
-    @output
     @render.table
     def summary():
         df = parsed_file()

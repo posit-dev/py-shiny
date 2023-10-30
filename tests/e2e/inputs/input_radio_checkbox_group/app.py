@@ -1,6 +1,6 @@
 from htmltools import HTML
 
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, render, ui
 
 app_ui = ui.page_fluid(
     ui.row(
@@ -64,23 +64,19 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
-    @output
+def server(input: Inputs):
     @render.text
     def radio1_out():
         return input.radio1()
 
-    @output
     @render.text
     def radio2_out():
         return input.radio2()
 
-    @output
     @render.text
     def check1_out():
         return input.check1()
 
-    @output
     @render.text
     def check2_out():
         return input.check2()

@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_checkbox("render", "Render", value=True),
@@ -18,14 +18,12 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
-    @output
+def server(input: Inputs):
     @render.plot
     def mpl():
         if input.render():
             plt.hist([1, 1, 2, 3, 5])
 
-    @output
     @render.plot
     async def mpl_bad():
         if input.render():

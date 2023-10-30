@@ -2,7 +2,7 @@ import pandas as pd
 import seaborn as sns
 from shinyswatch.theme import darkly
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
+from shiny import App, Inputs, reactive, render, req, ui
 
 
 def app_ui(req):
@@ -54,14 +54,13 @@ def light_dark_switcher(dark):
     )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     df: reactive.Value[pd.DataFrame] = reactive.Value()
 
     @reactive.Effect
     def update_df():
         return df.set(sns.load_dataset(req(input.dataset())))
 
-    @output
     @render.data_frame
     def grid():
         height = 350
@@ -91,7 +90,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         df_copy.iat[edit["row"], edit["col"]] = edit["new_value"]
         df.set(df_copy)
 
-    @output
     @render.text
     def detail():
         if (

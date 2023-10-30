@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_text("txt", "Enter the text to display below:", "delete me"),
@@ -21,18 +21,15 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
-    @output
+def server(input: Inputs):
     @render.text
     def text():
         return input.txt()
 
-    @output
     @render.text
     def verb():
         return input.txt()
 
-    @output
     @render.text
     def verb_no_placeholder():
         return input.txt()

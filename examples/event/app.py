@@ -1,6 +1,6 @@
 import asyncio
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.tags.p(
@@ -26,7 +26,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.Effect
     @reactive.event(input.btn)
     def _():
@@ -66,7 +66,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         val = await btn_async_r()
         print("async @calc() event:   ", str(val))
 
-    @output
     @render.ui
     @reactive.event(btn_async_r)
     async def btn_async_value():
