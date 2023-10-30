@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import os
 import secrets
+from inspect import signature
 from pathlib import Path
 from typing import Any, Callable, Optional, cast
 
@@ -101,19 +102,30 @@ class App:
     def __init__(
         self,
         ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
-        server: Optional[Callable[[Inputs, Outputs, Session], None]],
+        server: Optional[
+            Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None]
+        ],
         *,
         static_assets: Optional["str" | "os.PathLike[str]" | dict[str, Path]] = None,
         debug: bool = False,
     ) -> None:
         if server is None:
 
-            def _server(inputs: Inputs, outputs: Outputs, session: Session):
+            def _server(input: Inputs, output: Outputs, session: Session):
                 pass
 
-            server = _server
+            self.server = _server
+        else:
+            if len(signature(server).parameters) == 1:
 
-        self.server = server
+                def _server(input: Inputs, output: Outputs, session: Session):
+                    # Only has 1 parameter, ignore output, session
+                    server(input)  # pyright: ignore[reportGeneralTypeIssues]
+
+                self.server = _server
+            else:
+                # Pass through all three arguments
+                self.server = server  # pyright: ignore[reportGeneralTypeIssues]
 
         self._debug: bool = debug
 
