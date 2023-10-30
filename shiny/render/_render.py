@@ -115,8 +115,8 @@ async def PlotTransformer(
     _fn: ValueFn[object],
     *,
     alt: Optional[str] = None,
-    width: Optional[float] | MISSING_TYPE = MISSING,
-    height: Optional[float] | MISSING_TYPE = MISSING,
+    width: float | None | MISSING_TYPE = MISSING,
+    height: float | None | MISSING_TYPE = MISSING,
     **kwargs: object,
 ) -> ImgData | None:
     is_userfn_async = is_async_callable(_fn)
@@ -222,8 +222,8 @@ async def PlotTransformer(
 def plot(
     *,
     alt: Optional[str] = None,
-    width: Optional[float] | MISSING_TYPE = MISSING,
-    height: Optional[float] | MISSING_TYPE = MISSING,
+    width: float | None | MISSING_TYPE = MISSING,
+    height: float | None | MISSING_TYPE = MISSING,
     **kwargs: Any,
 ) -> PlotTransformer.OutputRendererDecorator:
     ...
@@ -238,8 +238,8 @@ def plot(
     _fn: PlotTransformer.ValueFn | None = None,
     *,
     alt: Optional[str] = None,
-    width: Optional[float] | MISSING_TYPE = MISSING,
-    height: Optional[float] | MISSING_TYPE = MISSING,
+    width: float | None | MISSING_TYPE = MISSING,
+    height: float | None | MISSING_TYPE = MISSING,
     **kwargs: Any,
 ) -> PlotTransformer.OutputRenderer | PlotTransformer.OutputRendererDecorator:
     """
@@ -251,15 +251,15 @@ def plot(
         Alternative text for the image if it cannot be displayed or viewed (i.e., the
         user uses a screen reader).
     width
-        Width of the plot in pixels. If ``None``, the width will be determined by the
-        size of the corresponding :func:`~shiny.ui.output_plot`. (You should not need to
-        use this argument in most Shiny apps--set the desired width on
-        :func:`~shiny.ui.output_plot` instead.)
+        Width of the plot in pixels. If ``None`` or ``MISSING``, the width will be
+        determined by the size of the corresponding :func:`~shiny.ui.output_plot`. (You
+        should not need to use this argument in most Shiny apps--set the desired width
+        on :func:`~shiny.ui.output_plot` instead.)
     height
-        Height of the plot in pixels. If ``None``, the height will be determined by the
-        size of the corresponding :func:`~shiny.ui.output_plot`. (You should not need to
-        use this argument in most Shiny apps--set the desired height on
-        :func:`~shiny.ui.output_plot` instead.)
+        Height of the plot in pixels. If ``None`` or ``MISSING``, the height will be
+        determined by the size of the corresponding :func:`~shiny.ui.output_plot`. (You
+        should not need to use this argument in most Shiny apps--set the desired height
+        on :func:`~shiny.ui.output_plot` instead.)
     **kwargs
         Additional keyword arguments passed to the relevant method for saving the image
         (e.g., for matplotlib, arguments to ``savefig()``; for PIL and plotnine,
