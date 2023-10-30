@@ -49,6 +49,16 @@ app_allow_shiny_errors: typing.Dict[
         "RuntimeWarning: divide by zero encountered",
         "UserWarning: This figure includes Axes that are not compatible with tight_layout",
     ],
+    "airmass": [
+        # shinywidgets.register_widget() uses `session` when registering widget
+        "ShinyDeprecationWarning: `session=` is deprecated",
+        "session_type_warning()",  # continutation of line above
+    ],
+    "brownian": [
+        # shinywidgets.register_widget() uses `session` when registering widget
+        "ShinyDeprecationWarning: `session=` is deprecated",
+        "session_type_warning()",  # continutation of line above
+    ],
 }
 app_allow_external_errors: typing.List[str] = [
     # plotnine: https://github.com/has2k1/plotnine/issues/713
