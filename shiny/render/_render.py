@@ -125,11 +125,6 @@ async def PlotTransformer(
 
     inputs = session.root_scope().input
 
-    if width is MISSING:
-        width = None
-    if height is MISSING:
-        height = None
-
     # We don't have enough information at this point to decide what size the plot should
     # be. This is because the user's plotting code itself may express an opinion about
     # the plot size. We'll take the information we will need and stash it in
@@ -147,12 +142,16 @@ async def PlotTransformer(
         result = inputs[ResolvedId(f".clientdata_output_{name}_{dimension}")]()
         return typing.cast(float, result)
 
+    non_missing_size = (
+        cast(Union[float, None], width) if width is not MISSING else None,
+        cast(Union[float, None], height) if height is not MISSING else None,
+    )
     plot_size_info = PlotSizeInfo(
         container_size_px_fn=(
             lambda: container_size("width"),
             lambda: container_size("height"),
         ),
-        user_specified_size_px=(width, height),
+        user_specified_size_px=non_missing_size,
         pixelratio=pixelratio,
     )
 
