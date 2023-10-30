@@ -46,6 +46,7 @@ if TYPE_CHECKING:
 from ..._docstring import add_example
 from ..._typing_extensions import Concatenate, ParamSpec
 from ..._utils import is_async_callable, run_coro_sync
+from ...types import MISSING
 
 # Input type for the user-spplied function that is passed to a render.xx
 IT = TypeVar("IT")
@@ -354,10 +355,12 @@ class OutputRenderer(Generic[OT], ABC):
                 {
                     k: v
                     for k, v in self._params.kwargs.items()
-                    if k in self.default_ui_passthrough_args
+                    if k in self.default_ui_passthrough_args and v is not MISSING
                 }
             )
-        kwargs.update(self.default_ui_kwargs)
+        kwargs.update(
+            {k: v for k, v in self.default_ui_kwargs.items() if v is not MISSING}
+        )
         return cast(DefaultUIFn, self.default_ui)(
             self.__name__, *self.default_ui_args, **kwargs
         )
@@ -801,33 +804,3 @@ async def resolve_value_fn(value_fn: ValueFn[IT]) -> IT:
 
 
 R = TypeVar("R")
-
-
-def decorator_args_passthrough(
-    fn: Callable[P, R], passthrough: tuple[str, ...]
-) -> Callable[Concatenate[dict[str, object], P], R]:
-    """
-    Modifies a default_ui function so that it can receive certain kwargs that are
-    passed to the OutputRenderer. For example, @render.plot takes `width` and `height`
-    arguments that we'd like to pass through to `ui.output_plot`. We can do that by
-    calling `enrich_default_ui_output_fn(ui.output_plot, ("width", "height"))`.
-
-    This works by returning a wrapped version of the function that has the same
-    signature, except, with an added `_params` first argument. The OutputRenderer base
-    class will look for this magic argument and pass it the params it was created with.
-    The wrapped function will use those to prepopulate the kwargs.
-    """
-
-    def inner(_params: dict[str, object], *args: P.args, **kwargs: P.kwargs):
-        # Filter down to just the params that we care about (`in passthrough`) and did
-        # not explicitly get overwritten by more explicit argument passing (`in kwargs`)
-        extra_args = {
-            k: v for k, v in _params.items() if k in passthrough and k not in kwargs
-        }
-        # Theoretically this is mutating a dict that possibly doesn't belong to us. In
-        # practice, we're the only ones to call default_ui, so it's fine.
-        kwargs.update(extra_args)
-        # Call the wrapped function and return the result
-        return fn(*args, **kwargs)
-
-    return inner

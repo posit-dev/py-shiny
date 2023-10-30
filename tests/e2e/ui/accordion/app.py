@@ -87,9 +87,9 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         if has_efg:
             ui.remove_accordion_panel("acc", ["Section E", "Section F", "Section G"])
         else:
-            ui.insert_accordion_panel("acc", make_panel("G"), "Section F")
-            ui.insert_accordion_panel("acc", make_panel("F"), "Section E")
             ui.insert_accordion_panel("acc", make_panel("E"), "Section D")
+            ui.insert_accordion_panel("acc", make_panel("F"), "Section E")
+            ui.insert_accordion_panel("acc", make_panel("G"), "Section F")
 
         has_efg = not has_efg
 

@@ -254,7 +254,7 @@ def accordion(
     # but only create a binding when it is provided
     binding_class_value: TagAttrs | None = None
     if id is None:
-        id = f"bslib-accordion-{random.randint(1000, 10000)}"
+        id = f"bslib_accordion_{random.randint(1000, 10000)}"
         binding_class_value = None
     else:
         binding_class_value = {"class": "bslib-accordion-input"}
