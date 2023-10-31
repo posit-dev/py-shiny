@@ -170,7 +170,11 @@ jobs:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'testrail')) }}
     strategy:
       matrix:
-        python-version: ["3.11", "3.10", "3.9", "3.8"]
+        python-version:
+          - "3.11"
+          - "3.10"
+          - "3.9"
+          # - "3.8" # Testrail has errors when running on python 3.8; Skipping
         os: [ubuntu-latest]
       fail-fast: false
 
