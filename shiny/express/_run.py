@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-from htmltools import Tag, TagList
+from htmltools import HTML, Tag, Tagifiable, TagList
 
 from .. import render, ui
 from .._app import App
@@ -115,7 +115,7 @@ def run_express(file: Path) -> Tag | TagList:
 
     var_context: dict[str, object] = {
         "__file__": file_path,
-        "__sys": sys,
+        "_display_decorator_function_def": _display_decorator_function_def,
     }
 
     # Execute each top-level node in the AST
@@ -237,12 +237,7 @@ class DisplayFuncsTransformer(ast.NodeTransformer):
         node.decorator_list.insert(
             0,
             set_loc(
-                ast.Attribute(
-                    value=set_loc(ast.Name(id="__sys", ctx=ast.Load()), node),
-                    attr="displayhook",
-                    ctx=ast.Load(),
-                ),
-                node,
+                ast.Name(id="_display_decorator_function_def", ctx=ast.Load()), node
             ),
         )
         return node
@@ -251,12 +246,7 @@ class DisplayFuncsTransformer(ast.NodeTransformer):
         node.decorator_list.insert(
             0,
             set_loc(
-                ast.Attribute(
-                    value=set_loc(ast.Name(id="__sys", ctx=ast.Load()), node),
-                    attr="displayhook",
-                    ctx=ast.Load(),
-                ),
-                node,
+                ast.Name(id="_display_decorator_function_def", ctx=ast.Load()), node
             ),
         )
         return node
@@ -307,3 +297,11 @@ def set_loc(target: ast.expr, source: ast.AST) -> ast.expr:
     target.lineno = source.lineno
     target.col_offset = source.col_offset
     return target
+
+
+# A decorator used for `def` statements. It makes sure that any `def` statement which
+# returns a tag-like object, or one with a `_repr_html` method, will be passed on to
+# the current sys.displayhook.
+def _display_decorator_function_def(fn: object) -> None:
+    if isinstance(fn, (Tag, TagList, Tagifiable)) or hasattr(fn, "_repr_html_"):
+        sys.displayhook(fn)
