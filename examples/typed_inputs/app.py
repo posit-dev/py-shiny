@@ -52,7 +52,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @output
     @render.text
     async def txt2():
-        return str(input.n2() * 2)
+        return input.n2() * 2
 
     # This is a corrected version of the function above. It returns a string, and is not
     # marked in red.
