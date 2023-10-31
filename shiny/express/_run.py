@@ -17,6 +17,8 @@ __all__ = (
     "is_express_app",
 )
 
+_DEFAULT_PAGE_FUNCTION = ui.page_fluid
+
 
 def wrap_express_app(file: Path | None = None) -> App:
     """Wrap a Shiny express-mode app into a Shiny `App` object.
@@ -146,7 +148,7 @@ _top_level_recall_context_manager_has_been_replaced = False
 def reset_top_level_recall_context_manager():
     global _top_level_recall_context_manager
     global _top_level_recall_context_manager_has_been_replaced
-    _top_level_recall_context_manager = RecallContextManager(ui.page_fluid)
+    _top_level_recall_context_manager = RecallContextManager(_DEFAULT_PAGE_FUNCTION)
     _top_level_recall_context_manager_has_been_replaced = False
 
 
