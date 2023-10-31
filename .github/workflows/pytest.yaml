@@ -166,7 +166,6 @@ jobs:
 
   testrail-reporting-nightly:
     runs-on: ${{ matrix.os }}
-    concurrency: e2e-deploys
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'testrail')) }}
     strategy:
       matrix:
