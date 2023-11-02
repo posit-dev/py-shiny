@@ -128,8 +128,6 @@ def run_express(file: Path) -> Tag | TagList:
                 var_context,
                 var_context,
             )
-            func = var_context[node.name]
-            sys.displayhook(func)
         else:
             exec(
                 compile(ast.Interactive([node], type_ignores=[]), file_path, "single"),
