@@ -475,6 +475,9 @@ def insert_accordion_panel(
     if position not in ("after", "before"):
         raise ValueError("`position` must be either 'after' or 'before'")
     session = require_active_session(session)
+    # Add accordion ID to panel; Used when `accordion(multiple=False)`
+    panel._accordion_id = id
+
     _send_panel_message(
         id,
         session,
