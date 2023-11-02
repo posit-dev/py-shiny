@@ -22,7 +22,6 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ..render.transformer import OutputRenderer
 from ..types import MISSING, MISSING_TYPE, ActionButtonValue, SilentException
 from ._core import Context, Dependents, ReactiveWarning, isolate
 
@@ -781,6 +780,10 @@ def event(
                 "`@reactive.event()` must be applied before `@reactive.Calc`.\n"
                 + "In other words, `@reactive.Calc` must be above `@reactive.event()`."
             )
+
+        # This is here instead of at the top of the .py file in order to avoid a
+        # circular dependency.
+        from ..render.transformer import OutputRenderer
 
         if isinstance(user_fn, OutputRenderer):
             # At some point in the future, we may allow this condition, if we find an

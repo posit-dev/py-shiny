@@ -16,7 +16,7 @@ from htmltools import HTML, Tag, TagAttrValue, TagChild, css, div, tags
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from .._typing_extensions import NotRequired, TypedDict
-from ._html_dependencies import ionrangeslider_deps
+from ._html_deps_external import ionrangeslider_deps
 from ._utils import shiny_input_label
 
 # TODO: validate value(s) are within (min,max)?
@@ -201,8 +201,9 @@ def input_slider(
     # ionRangeSlider wants attr = 'true'/'false'
     props = {k: str(v).lower() if isinstance(v, bool) else v for k, v in props.items()}
 
+    resolved_id = resolve_id(id)
     slider_tag = div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         tags.input(**props),
         *ionrangeslider_deps(),
         class_="form-group shiny-input-container",
@@ -221,7 +222,7 @@ def input_slider(
             tags.span(animate.get("pause_button", _pause_icon()), class_="pause"),
             href="#",
             class_="slider-animate-button link-secondary",
-            data_target_id=id,
+            data_target_id=resolved_id,
             data_interval=animate.get("interval", 500),
             data_loop=animate.get("loop", True),
         ),

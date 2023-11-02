@@ -12,6 +12,8 @@ from htmltools import (
     tags,
 )
 
+from .._typing_extensions import TypeGuard
+from ..session import Session, require_active_session
 from ..types import MISSING, MISSING_TYPE
 
 
@@ -66,3 +68,27 @@ def _find_child_strings(x: TagList | TagNode) -> str:
     if isinstance(x, str):
         return x
     return ""
+
+
+def _session_on_flush_send_msg(
+    id: str, session: Session | None, msg: dict[str, object]
+) -> None:
+    session = require_active_session(session)
+    session.on_flush(lambda: session.send_input_message(id, msg), once=True)
+
+
+def is_01_scalar(x: object) -> TypeGuard[float]:
+    return isinstance(x, (int, float)) and x >= 0.0 and x <= 1.0
+
+
+def css_no_sub(**kwargs: str | float | None) -> Optional[str]:
+    """
+    Altered from py-htmltools's `css()`. Does not support substitutions of any kind.
+    """
+    res = ""
+    for k, v in kwargs.items():
+        if v is None:
+            continue
+        v = " ".join(v) if isinstance(v, list) else str(v)
+        res += k + ":" + v + ";"
+    return None if res == "" else res

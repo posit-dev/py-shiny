@@ -43,6 +43,7 @@ from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from .._namespaces import Id, ResolvedId, Root
 from .._typing_extensions import TypedDict
+from .._utils import wrap_async
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect, Effect_, Value, flush, isolate
@@ -196,15 +197,15 @@ class Session(object, metaclass=SessionMeta):
             str, Callable[..., Awaitable[object]]
         ] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
-        self._on_ended_callbacks = _utils.Callbacks()
+        self._on_ended_callbacks = _utils.AsyncCallbacks()
         self._has_run_session_end_tasks: bool = False
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
 
         self._register_session_end_callbacks()
 
-        self._flush_callbacks = _utils.Callbacks()
-        self._flushed_callbacks = _utils.Callbacks()
+        self._flush_callbacks = _utils.AsyncCallbacks()
+        self._flushed_callbacks = _utils.AsyncCallbacks()
 
     def _register_session_end_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions
@@ -213,13 +214,13 @@ class Session(object, metaclass=SessionMeta):
         # Clear file upload directories, if present
         self.on_ended(self._file_upload_manager.rm_upload_dir)
 
-    def _run_session_end_tasks(self) -> None:
+    async def _run_session_end_tasks(self) -> None:
         if self._has_run_session_end_tasks:
             return
         self._has_run_session_end_tasks = True
 
         try:
-            self._on_ended_callbacks.invoke()
+            await self._on_ended_callbacks.invoke()
         finally:
             self.app._remove_session(self)
 
@@ -228,7 +229,7 @@ class Session(object, metaclass=SessionMeta):
         Close the session.
         """
         await self._conn.close(code, None)
-        self._run_session_end_tasks()
+        await self._run_session_end_tasks()
 
     async def _run(self) -> None:
         conn_state: ConnectionState = ConnectionState.Start
@@ -318,7 +319,7 @@ class Session(object, metaclass=SessionMeta):
                 finally:
                     await self.close()
             finally:
-                self._run_session_end_tasks()
+                await self._run_session_end_tasks()
 
     def _manage_inputs(self, data: dict[str, object]) -> None:
         for key, val in data.items():
@@ -632,7 +633,11 @@ class Session(object, metaclass=SessionMeta):
     # Flush
     # ==========================================================================
     @add_example()
-    def on_flush(self, fn: Callable[[], None], once: bool = True) -> Callable[[], None]:
+    def on_flush(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+        once: bool = True,
+    ) -> Callable[[], None]:
         """
         Register a function to call before the next reactive flush.
 
@@ -648,11 +653,13 @@ class Session(object, metaclass=SessionMeta):
         :
             A function that can be used to cancel the registration.
         """
-        return self._flush_callbacks.register(fn, once)
+        return self._flush_callbacks.register(wrap_async(fn), once)
 
     @add_example()
     def on_flushed(
-        self, fn: Callable[[], None], once: bool = True
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+        once: bool = True,
     ) -> Callable[[], None]:
         """
         Register a function to call after the next reactive flush.
@@ -669,14 +676,14 @@ class Session(object, metaclass=SessionMeta):
         :
             A function that can be used to cancel the registration.
         """
-        return self._flushed_callbacks.register(fn, once)
+        return self._flushed_callbacks.register(wrap_async(fn), once)
 
     def _request_flush(self) -> None:
         self.app._request_flush(self)
 
     async def _flush(self) -> None:
         with session_context(self):
-            self._flush_callbacks.invoke()
+            await self._flush_callbacks.invoke()
 
         try:
             omq = self._outbound_message_queues
@@ -701,13 +708,16 @@ class Session(object, metaclass=SessionMeta):
                 self._outbound_message_queues = empty_outbound_message_queues()
         finally:
             with session_context(self):
-                self._flushed_callbacks.invoke()
+                await self._flushed_callbacks.invoke()
 
     # ==========================================================================
     # On session ended
     # ==========================================================================
     @add_example()
-    def on_ended(self, fn: Callable[[], None]) -> Callable[[], None]:
+    def on_ended(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+    ) -> Callable[[], None]:
         """
         Registers a function to be called after the client has disconnected.
 
@@ -721,7 +731,7 @@ class Session(object, metaclass=SessionMeta):
         :
             A function that can be used to cancel the registration.
         """
-        return self._on_ended_callbacks.register(fn)
+        return self._on_ended_callbacks.register(wrap_async(fn))
 
     # ==========================================================================
     # Misc
@@ -874,7 +884,7 @@ class SessionProxy:
 
 
 # TODO: provide a real input typing example when we have an answer for that
-# https://github.com/rstudio/py-shiny/issues/70
+# https://github.com/posit-dev/py-shiny/issues/70
 class Inputs:
     """
     A class representing Shiny input values.
@@ -945,7 +955,7 @@ class Outputs:
     def __init__(
         self,
         session: Session,
-        ns: Callable[[str], str],
+        ns: Callable[[str], ResolvedId],
         effects: dict[str, Effect_],
         suspend_when_hidden: dict[str, bool],
     ) -> None:
@@ -965,7 +975,6 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-        name: Optional[str] = None,
     ) -> Callable[[OutputRenderer[Any]], None]:
         ...
 
@@ -976,17 +985,11 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-        name: Optional[str] = None,
     ) -> None | Callable[[OutputRenderer[OT]], None]:
-        if name is not None:
-            from .. import _deprecated
-
-            _deprecated.warn_deprecated(
-                "`@output(name=...)` is deprecated. Use `@output(id=...)` instead."
-            )
-            id = name
-
         def set_renderer(renderer_fn: OutputRenderer[OT]) -> None:
+            if hasattr(renderer_fn, "on_register"):
+                renderer_fn.on_register()
+
             # Get the (possibly namespaced) output id
             output_name = self._ns(id or renderer_fn.__name__)
 
@@ -999,8 +1002,7 @@ class Outputs:
             # renderer_fn is a Renderer object. Give it a bit of metadata.
             renderer_fn._set_metadata(self._session, output_name)
 
-            if output_name in self._effects:
-                self._effects[output_name].destroy()
+            self.remove(output_name)
 
             self._suspend_when_hidden[output_name] = suspend_when_hidden
 
@@ -1035,7 +1037,7 @@ class Outputs:
                         err_msg = str(e)
                     # Register the outbound error message
                     err_message = {
-                        output_name: {
+                        str(output_name): {
                             "message": err_msg,
                             # TODO: is it possible to get the call?
                             "call": None,
@@ -1063,6 +1065,13 @@ class Outputs:
             return set_renderer
         else:
             return set_renderer(renderer_fn)
+
+    def remove(self, id: Id):
+        output_name = self._ns(id)
+        if output_name in self._effects:
+            self._effects[output_name].destroy()
+            del self._effects[output_name]
+            del self._suspend_when_hidden[output_name]
 
     def _manage_hidden(self) -> None:
         "Suspends execution of hidden outputs and resumes execution of visible outputs."

@@ -57,7 +57,10 @@ typings/matplotlib/__init__.pyi: ## grab type stubs from GitHub
 	mv typings/python-type-stubs/stubs/matplotlib typings/
 	rm -rf typings/python-type-stubs
 
-pyright: typings/uvicorn typings/matplotlib/__init__.pyi ## type check with pyright
+typings/seaborn:
+	pyright --createstub seaborn
+
+pyright: typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn ## type check with pyright
 	pyright
 
 lint: ## check style with flake8
@@ -77,26 +80,36 @@ check: ## check code quality with black and isort
 	isort --check-only --diff .
 
 test: ## run tests quickly with the default Python
-	python3 tests/asyncio_prevent.py
-	pytest tests
+	python3 tests/pytest/asyncio_prevent.py
+	pytest
 
 # Default `FILE` to `e2e` if not specified
-FILE:=e2e
+FILE:=tests/e2e
 
-e2e: ## end-to-end tests with playwright
-	playwright install --with-deps
-	pytest $(FILE) -m "not examples"
+DEPLOYS_FILE:=tests/deploys
 
-e2e-examples: ## end-to-end tests on examples with playwright
+playwright-install:
 	playwright install --with-deps
+
+trcli-install:
+	which trcli || pip install trcli
+
+e2e: playwright-install ## end-to-end tests with playwright
+	pytest $(FILE) -m "not examples and not integrationtest"
+
+e2e-examples: playwright-install ## end-to-end tests on examples with playwright
 	pytest $(FILE) -m "examples"
 
-coverage: ## check code coverage quickly with the default Python
-	coverage run --source shiny -m pytest
-	coverage report -m
+e2e-deploys: playwright-install ## end-to-end tests on deploys with playwright
+	pytest $(DEPLOYS_FILE) -s -m "integrationtest"
+
+e2e-junit: playwright-install trcli-install ## end-to-end tests with playwright and generate junit report
+	pytest $(FILE) --junitxml=report.xml
+
+coverage: ## check combined code coverage (must run e2e last)
+	pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/e2e/ -m "not examples and not integrationtest"
 	coverage html
 	$(BROWSER) htmlcov/index.html
-
 
 release: dist ## package and upload a release
 	twine upload dist/*

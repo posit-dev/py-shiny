@@ -33,7 +33,7 @@ pip install shiny
 To install the latest development version from this repository:
 
 ``` sh
-pip install https://github.com/rstudio/py-shiny/tarball/main
+pip install https://github.com/posit-dev/py-shiny/tarball/main
 ```
 
 You can create and run your first application with:

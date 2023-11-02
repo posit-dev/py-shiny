@@ -15,6 +15,7 @@ import typing
 from typing import (
     TYPE_CHECKING,
     Any,
+    Literal,
     Optional,
     Protocol,
     Union,
@@ -30,9 +31,15 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from .. import _utils
+from .. import ui as _ui
 from .._namespaces import ResolvedId
-from ..types import ImgData
-from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_plotnine
+from ..types import MISSING, MISSING_TYPE, ImgData
+from ._try_render_plot import (
+    PlotSizeInfo,
+    try_render_matplotlib,
+    try_render_pil,
+    try_render_plotnine,
+)
 from .transformer import (
     TransformerMetadata,
     ValueFn,
@@ -46,7 +53,7 @@ from .transformer import (
 # ======================================================================================
 
 
-@output_transformer
+@output_transformer(default_ui=_ui.output_text_verbatim)
 async def TextTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[str | None],
@@ -80,9 +87,8 @@ def text(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_text` container (see :func:`~shiny.ui.output_text` for
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_text` container (see :func:`~shiny.ui.output_text` for
     example usage).
 
     See Also
@@ -95,35 +101,58 @@ def text(
 # ======================================================================================
 # RenderPlot
 # ======================================================================================
+
+
 # It would be nice to specify the return type of RenderPlotFunc to be something like:
 #   Union[matplotlib.figure.Figure, PIL.Image.Image]
 # However, if we did that, we'd have to import those modules at load time, which adds
 # a nontrivial amount of overhead. So for now, we're just using `object`.
-@output_transformer
+@output_transformer(
+    default_ui=_ui.output_plot, default_ui_passthrough_args=("width", "height")
+)
 async def PlotTransformer(
     _meta: TransformerMetadata,
-    _fn: ValueFn[ImgData | None],
+    _fn: ValueFn[object],
     *,
     alt: Optional[str] = None,
+    width: float | None | MISSING_TYPE = MISSING,
+    height: float | None | MISSING_TYPE = MISSING,
     **kwargs: object,
 ) -> ImgData | None:
     is_userfn_async = is_async_callable(_fn)
     name = _meta.name
     session = _meta.session
 
-    ppi: float = 96
-
     inputs = session.root_scope().input
+
+    # We don't have enough information at this point to decide what size the plot should
+    # be. This is because the user's plotting code itself may express an opinion about
+    # the plot size. We'll take the information we will need and stash it in
+    # PlotSizeInfo, which then gets passed into the various plotting strategies.
 
     # Reactively read some information about the plot.
     pixelratio: float = typing.cast(
         float, inputs[ResolvedId(".clientdata_pixelratio")]()
     )
-    width: float = typing.cast(
-        float, inputs[ResolvedId(f".clientdata_output_{name}_width")]()
+
+    # Do NOT call this unless you actually are going to respect the container dimension
+    # you're asking for. It takes a reactive dependency. If the client hasn't reported
+    # the requested dimension, you'll get a SilentException.
+    def container_size(dimension: Literal["width", "height"]) -> float:
+        result = inputs[ResolvedId(f".clientdata_output_{name}_{dimension}")]()
+        return typing.cast(float, result)
+
+    non_missing_size = (
+        cast(Union[float, None], width) if width is not MISSING else None,
+        cast(Union[float, None], height) if height is not MISSING else None,
     )
-    height: float = typing.cast(
-        float, inputs[ResolvedId(f".clientdata_output_{name}_height")]()
+    plot_size_info = PlotSizeInfo(
+        container_size_px_fn=(
+            lambda: container_size("width"),
+            lambda: container_size("height"),
+        ),
+        user_specified_size_px=non_missing_size,
+        pixelratio=pixelratio,
     )
 
     # Call the user function to get the plot object.
@@ -149,11 +178,8 @@ async def PlotTransformer(
     if "plotnine" in sys.modules:
         ok, result = try_render_plotnine(
             x,
-            width,
-            height,
-            pixelratio,
-            ppi,
-            alt,
+            plot_size_info=plot_size_info,
+            alt=alt,
             **kwargs,
         )
         if ok:
@@ -162,10 +188,7 @@ async def PlotTransformer(
     if "matplotlib" in sys.modules:
         ok, result = try_render_matplotlib(
             x,
-            width,
-            height,
-            pixelratio=pixelratio,
-            ppi=ppi,
+            plot_size_info=plot_size_info,
             allow_global=not is_userfn_async,
             alt=alt,
             **kwargs,
@@ -176,11 +199,8 @@ async def PlotTransformer(
     if "PIL" in sys.modules:
         ok, result = try_render_pil(
             x,
-            width,
-            height,
-            pixelratio,
-            ppi,
-            alt,
+            plot_size_info=plot_size_info,
+            alt=alt,
             **kwargs,
         )
         if ok:
@@ -202,6 +222,8 @@ async def PlotTransformer(
 def plot(
     *,
     alt: Optional[str] = None,
+    width: float | None | MISSING_TYPE = MISSING,
+    height: float | None | MISSING_TYPE = MISSING,
     **kwargs: Any,
 ) -> PlotTransformer.OutputRendererDecorator:
     ...
@@ -216,6 +238,8 @@ def plot(
     _fn: PlotTransformer.ValueFn | None = None,
     *,
     alt: Optional[str] = None,
+    width: float | None | MISSING_TYPE = MISSING,
+    height: float | None | MISSING_TYPE = MISSING,
     **kwargs: Any,
 ) -> PlotTransformer.OutputRenderer | PlotTransformer.OutputRendererDecorator:
     """
@@ -226,6 +250,16 @@ def plot(
     alt
         Alternative text for the image if it cannot be displayed or viewed (i.e., the
         user uses a screen reader).
+    width
+        Width of the plot in pixels. If ``None`` or ``MISSING``, the width will be
+        determined by the size of the corresponding :func:`~shiny.ui.output_plot`. (You
+        should not need to use this argument in most Shiny apps--set the desired width
+        on :func:`~shiny.ui.output_plot` instead.)
+    height
+        Height of the plot in pixels. If ``None`` or ``MISSING``, the height will be
+        determined by the size of the corresponding :func:`~shiny.ui.output_plot`. (You
+        should not need to use this argument in most Shiny apps--set the desired height
+        on :func:`~shiny.ui.output_plot` instead.)
     **kwargs
         Additional keyword arguments passed to the relevant method for saving the image
         (e.g., for matplotlib, arguments to ``savefig()``; for PIL and plotnine,
@@ -251,23 +285,23 @@ def plot(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of a
-    :func:`~shiny.ui.output_plot` container (see :func:`~shiny.ui.output_plot` for
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_plot` container (see :func:`~shiny.ui.output_plot` for
     example usage).
 
     See Also
     --------
-    ~shiny.ui.output_plot
-    ~shiny.render.image
+    ~shiny.ui.output_plot ~shiny.render.image
     """
-    return PlotTransformer(_fn, PlotTransformer.params(alt=alt, **kwargs))
+    return PlotTransformer(
+        _fn, PlotTransformer.params(alt=alt, width=width, height=height, **kwargs)
+    )
 
 
 # ======================================================================================
 # RenderImage
 # ======================================================================================
-@output_transformer
+@output_transformer(default_ui=_ui.output_image)
 async def ImageTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[ImgData | None],
@@ -324,10 +358,9 @@ def image(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_image` container (see :func:`~shiny.ui.output_image` for
-    example usage).
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_image` container (see :func:`~shiny.ui.output_image`
+    for example usage).
 
     See Also
     --------
@@ -353,7 +386,7 @@ class PandasCompatible(Protocol):
 TableResult = Union["pd.DataFrame", PandasCompatible, None]
 
 
-@output_transformer
+@output_transformer(default_ui=_ui.output_table)
 async def TableTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[TableResult | None],
@@ -440,8 +473,8 @@ def table(
         objects; call ``style.hide(axis="index")`` from user code instead.)
     classes
         CSS classes (space separated) to apply to the resulting table. By default, we
-        use `table shiny-table w-auto` which is designed to look reasonable with Bootstrap 5.
-        (Ignored for pandas :class:`Styler` objects; call
+        use `table shiny-table w-auto` which is designed to look reasonable with
+        Bootstrap 5. (Ignored for pandas :class:`Styler` objects; call
         ``style.set_table_attributes('class="dataframe table shiny-table w-auto"')``
         from user code instead.)
     **kwargs
@@ -460,10 +493,9 @@ def table(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_table` container (see :func:`~shiny.ui.output_table` for
-    example usage).
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_table` container (see :func:`~shiny.ui.output_table`
+    for example usage).
 
     See Also
     --------
@@ -483,7 +515,7 @@ def table(
 # ======================================================================================
 # RenderUI
 # ======================================================================================
-@output_transformer
+@output_transformer(default_ui=_ui.output_ui)
 async def UiTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[TagChild],
@@ -518,10 +550,9 @@ def ui(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_ui` container (see :func:`~shiny.ui.output_ui` for example
-    usage).
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_ui` container (see :func:`~shiny.ui.output_ui` for
+    example usage).
 
     See Also
     --------

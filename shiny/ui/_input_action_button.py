@@ -51,6 +51,9 @@ def input_action_button(
     ~shiny.reactive.event
     """
 
+    if "_add_ws" not in kwargs:
+        kwargs["_add_ws"] = True
+
     return tags.button(
         {"class": "btn btn-default action-button", "style": css(width=width)},
         icon,

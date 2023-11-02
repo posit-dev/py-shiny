@@ -13,7 +13,7 @@ from htmltools import Tag, TagChild, TagList, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from ._html_dependencies import selectize_deps
+from ._html_deps_external import selectize_deps
 from ._utils import shiny_input_label
 
 _Choices = Mapping[str, TagChild]
@@ -171,21 +171,22 @@ def input_select(
 
     choices_tags = _render_choices(choices_, selected)
 
-    id = resolve_id(id)
+    resolved_id = resolve_id(id)
 
     return div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         div(
             tags.select(
                 *choices_tags,
-                id=id,
+                {"class": "shiny-input-select"},
                 class_=None if selectize else "form-select",
+                id=resolved_id,
                 multiple=multiple,
                 size=size,
             ),
             (
                 TagList(
-                    tags.script("{}", type="application/json", data_for=id),
+                    tags.script("{}", type="application/json", data_for=resolved_id),
                     selectize_deps(),
                 )
                 if selectize

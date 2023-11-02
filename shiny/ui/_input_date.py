@@ -10,7 +10,7 @@ from htmltools import Tag, TagAttrValue, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from ._html_dependencies import datepicker_deps
+from ._html_deps_external import datepicker_deps
 from ._utils import shiny_input_label
 
 
@@ -110,10 +110,11 @@ def input_date(
     ~shiny.ui.input_date_range
     """
 
+    resolved_id = resolve_id(id)
     return div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         _date_input_tag(
-            id=resolve_id(id),
+            id=resolved_id,
             value=value,
             min=min,
             max=max,
@@ -125,7 +126,7 @@ def input_date(
             data_date_dates_disabled=json.dumps(datesdisabled),
             data_date_days_of_week_disabled=json.dumps(daysofweekdisabled),
         ),
-        id=resolve_id(id),
+        id=resolved_id,
         class_="shiny-date-input form-group shiny-input-container",
         style=css(width=width),
     )
@@ -228,11 +229,12 @@ def input_date_range(
     ~shiny.ui.input_date
     """
 
+    resolved_id = resolve_id(id)
     return div(
-        shiny_input_label(id, label),
+        shiny_input_label(resolved_id, label),
         div(
             _date_input_tag(
-                id=resolve_id(id),
+                id=resolved_id,
                 value=start,
                 min=min,
                 max=max,
@@ -248,7 +250,7 @@ def input_date_range(
                 class_="input-group-addon input-group-prepend input-group-append",
             ),
             _date_input_tag(
-                id=resolve_id(id),
+                id=resolved_id,
                 value=end,
                 min=min,
                 max=max,
@@ -261,7 +263,7 @@ def input_date_range(
             # input-daterange class is needed for dropdown behavior
             class_="input-daterange input-group input-group-sm",
         ),
-        id=resolve_id(id),
+        id=resolved_id,
         class_="shiny-date-range-input form-group shiny-input-container",
         style=css(width=width),
     )
