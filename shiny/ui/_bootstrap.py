@@ -230,7 +230,18 @@ def panel_title(
     return TagList(get_window_title(title, window_title), title)
 
 
-def panel_fixed(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> TagList:
+def panel_fixed(
+    *args: TagChild | TagAttrs,
+    top: Optional[str] = None,
+    left: Optional[str] = None,
+    right: Optional[str] = None,
+    bottom: Optional[str] = None,
+    width: Optional[str] = None,
+    height: Optional[str] = None,
+    draggable: bool = False,
+    cursor: Literal["auto", "move", "default", "inherit"] = "auto",
+    **kwargs: TagAttrValue,
+) -> TagList:
     """
     Create a panel of absolutely positioned content.
 
@@ -254,7 +265,19 @@ def panel_fixed(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> TagList:
     -------
     :func:`~shiny.ui.panel_absolute`
     """
-    return panel_absolute(*args, fixed=True, **kwargs)
+    return panel_absolute(
+        *args,
+        top=top,
+        left=left,
+        right=right,
+        bottom=bottom,
+        width=width,
+        height=height,
+        draggable=draggable,
+        cursor=cursor,
+        fixed=True,
+        **kwargs,
+    )
 
 
 @add_example()
