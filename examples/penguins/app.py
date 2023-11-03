@@ -8,7 +8,6 @@ import pandas as pd
 import seaborn as sns
 from colors import bg_palette, palette
 
-import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 sns.set_theme()
@@ -45,6 +44,11 @@ app_ui = ui.page_sidebar(
     ),
     ui.output_ui("value_boxes"),
     ui.output_plot("scatter", fill=True),
+    ui.help_text(
+        "Artwork by ",
+        ui.a("@allison_horst", href="https://twitter.com/allison_horst"),
+        class_="text-end",
+    ),
 )
 
 
@@ -83,7 +87,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         df = filtered_df()
 
         def penguin_value_box(title: str, count: int, bgcol: str, showcase_img: str):
-            return x.ui.value_box(
+            return ui.value_box(
                 title,
                 count,
                 {"class": "pt-1 pb-0"},
