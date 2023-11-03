@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Fix support for `shiny.ui.accordion(multiple=)` (#799).
+
 ### Other changes
 
 
