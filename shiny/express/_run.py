@@ -4,6 +4,7 @@ import ast
 import os
 import sys
 from pathlib import Path
+from typing import cast
 
 from htmltools import Tag, Tagifiable, TagList
 
@@ -59,7 +60,7 @@ def wrap_express_app(file: Path | None = None) -> App:
 
 
 def is_express_app(app: str, app_dir: str | None) -> bool:
-    """ "Detect whether an app file is a Shiny express app
+    """Detect whether an app file is a Shiny express app
 
     Parameters
     ----------
@@ -106,7 +107,7 @@ def run_express(file: Path) -> Tag | TagList:
 
     def set_result(x: object):
         nonlocal ui_result
-        ui_result = x
+        ui_result = cast(Tag, x)
 
     sys.displayhook = set_result
 
