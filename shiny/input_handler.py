@@ -97,7 +97,10 @@ getType: function(el) {
 def _(value: str | list[str], name: str, session: Session) -> date | tuple[date, date]:
     if isinstance(value, str):
         return datetime.strptime(value, "%Y-%m-%d").date()
-    return tuple(datetime.strptime(v, "%Y-%m-%d").date() for v in value)
+    return tuple(
+        datetime.strptime(v, "%Y-%m-%d").date()
+        for v in value  # pyright: ignore[reportGeneralTypeIssues]
+    )
 
 
 @input_handlers.add("shiny.datetime")
@@ -106,7 +109,10 @@ def _(
 ) -> datetime | tuple[datetime, datetime]:
     if isinstance(value, (int, float)):
         return datetime.utcfromtimestamp(value)
-    return tuple(datetime.utcfromtimestamp(v) for v in value)
+    return tuple(
+        datetime.utcfromtimestamp(v)
+        for v in value  # pyright: ignore[reportGeneralTypeIssues]
+    )
 
 
 @input_handlers.add("shiny.action")

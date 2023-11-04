@@ -332,7 +332,7 @@ def run_app(
         log_config=log_config,
         app_dir=app_dir,
         factory=factory,
-        **reload_args,
+        **reload_args,  # pyright: ignore[reportGeneralTypeIssues]
         **kwargs,
     )
 

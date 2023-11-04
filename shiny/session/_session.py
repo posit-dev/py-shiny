@@ -873,7 +873,9 @@ class SessionProxy:
     ) -> Callable[[DownloadHandler], None]:
         def wrapper(fn: DownloadHandler):
             id_ = self.ns(id or fn.__name__)
-            return self._parent.download(id=id_, **kwargs)(fn)
+            return self._parent.download(
+                id=id_, **kwargs  # pyright: ignore[reportGeneralTypeIssues]
+            )(fn)
 
         return wrapper
 
