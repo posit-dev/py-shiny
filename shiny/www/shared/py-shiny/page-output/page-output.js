@@ -25,9 +25,14 @@ var PageOutputBinding = class extends Shiny.OutputBinding {
       }
     }
     let content = typeof data === "string" ? data : data.html;
-    const bodyTagText = content.match(/<body[^>]*>/gis).pop();
     const parser = new DOMParser();
-    const doc = parser.parseFromString(bodyTagText, "text/html");
+    const doc = parser.parseFromString(content, "text/html");
+    if (doc.documentElement.lang) {
+      document.documentElement.lang = doc.documentElement.lang;
+    }
+    if (doc.title) {
+      document.title = doc.title;
+    }
     for (const attr of Array.from(doc.body.attributes)) {
       if (attr.name === "class")
         el.classList.add(...attr.value.split(" "));

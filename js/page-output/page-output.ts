@@ -35,10 +35,19 @@ class PageOutputBinding extends Shiny.OutputBinding {
 
     let content = typeof data === "string" ? data : data.html;
 
-    // Extract the <body> tag from the HTML
-    const bodyTagText = content.match(/<body[^>]*>/gis).pop();
+    // Parse the HTML
     const parser = new DOMParser();
-    const doc = parser.parseFromString(bodyTagText, "text/html");
+    const doc = parser.parseFromString(content, "text/html");
+
+    // Copy the <html> tag's lang attribute, if present.
+    if (doc.documentElement.lang) {
+      document.documentElement.lang = doc.documentElement.lang;
+    }
+
+    // Copy the <title>, if present.
+    if (doc.title) {
+      document.title = doc.title;
+    }
 
     // Copy attributes from parsed <body> to the output element (which should be a
     // <body>)
