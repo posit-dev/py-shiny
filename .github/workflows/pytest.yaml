@@ -7,6 +7,8 @@ on:
   pull_request:
   release:
     types: [published]
+  schedule:
+    - cron: "0 8 * * *"
 
 jobs:
   build:
@@ -124,6 +126,7 @@ jobs:
           DEPLOY_SHINYAPPS_SECRET: "${{ secrets.DEPLOY_SHINYAPPS_SECRET }}"
         run: |
           make e2e-deploys
+
   pypi:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest
@@ -160,3 +163,56 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
+
+  testrail-reporting-nightly:
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'testrail')) }}
+    strategy:
+      matrix:
+        python-version:
+          - "3.11"
+          - "3.10"
+          - "3.9"
+          # - "3.8" # Testrail has errors when running on python 3.8; Skipping
+        os: [ubuntu-latest]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: npm
+          cache-dependency-path: examples/brownian/shinymediapipe/package-lock.json
+      - name: Install node.js package
+        working-directory: examples/brownian/shinymediapipe
+        run: |
+          npm ci
+
+      - name: Run End-to-End tests
+        run: |
+          make e2e-junit
+      - name: Report results to Testrail
+        env:
+          TESTRAIL_URL: "https://posit.testrail.io"
+          TESTRAIL_PROJECT: "Shiny-Python"
+          TESTRAIL_USER: "${{ secrets.TESTRAIL_USER }}"
+          TESTRAIL_PASSWORD: "${{ secrets.TESTRAIL_PASSWORD }}"
+        run: |
+          CURRENT_DATE="$(date +'%Y-%m-%d %H:%M:%S') Nightly tests"
+          trcli \
+            --yes \
+            --host "$TESTRAIL_URL" \
+            --project "$TESTRAIL_PROJECT" \
+            --username "$TESTRAIL_USER" \
+            --password "$TESTRAIL_PASSWORD" \
+            parse_junit \
+            --file "report.xml" \
+            --title "$CURRENT_DATE"  \
+            --close-run

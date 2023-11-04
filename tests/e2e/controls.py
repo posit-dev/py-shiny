@@ -767,7 +767,9 @@ class _InputActionBase(_InputBase):
         self.expect.to_have_text(value, timeout=timeout)
 
     def click(self, *, timeout: Timeout = None, **kwargs: object) -> None:
-        self.loc.click(timeout=timeout, **kwargs)
+        self.loc.click(
+            timeout=timeout, **kwargs  # pyright: ignore[reportGeneralTypeIssues]
+        )
 
 
 class InputActionButton(
@@ -831,12 +833,16 @@ class _InputCheckboxBase(
     def set(self, value: bool, *, timeout: Timeout = None, **kwargs: object) -> None:
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
-        self.loc.set_checked(value, timeout=timeout, **kwargs)
+        self.loc.set_checked(
+            value, timeout=timeout, **kwargs  # pyright: ignore[reportGeneralTypeIssues]
+        )
 
     def toggle(self, *, timeout: Timeout = None, **kwargs: object) -> None:
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
-        self.loc.click(timeout=timeout, **kwargs)
+        self.loc.click(
+            timeout=timeout, **kwargs  # pyright: ignore[reportGeneralTypeIssues]
+        )
 
     def expect_checked(self, value: bool, *, timeout: Timeout = None) -> None:
         if value:
@@ -1142,7 +1148,11 @@ class InputCheckboxGroup(
         # as `set_checked()` likes a single element.
         for checkbox in self.loc_choices.element_handles():
             is_selected = in_selected(checkbox.input_value(timeout=timeout))
-            checkbox.set_checked(is_selected, timeout=timeout, **kwargs)
+            checkbox.set_checked(
+                is_selected,
+                timeout=timeout,
+                **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+            )
 
     def expect_choices(
         self,

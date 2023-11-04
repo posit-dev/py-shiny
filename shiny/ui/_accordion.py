@@ -64,6 +64,7 @@ class AccordionPanel:
     _title: TagChild | None
     _id: str | None
 
+    _accordion_id: str | MISSING_TYPE  # Set within `accordion()`
     _is_open: bool  # Set within `accordion()`
     _is_multiple: bool  # Set within `accordion()`
 
@@ -81,6 +82,7 @@ class AccordionPanel:
         self._icon = icon
         self._title = title
         self._id = id
+        self._accordion_id = MISSING
         self._kwargs = kwargs
         self._is_multiple = False
         self._is_open = True
@@ -103,9 +105,6 @@ class AccordionPanel:
             btn_attrs["class"] = "collapsed"
             btn_attrs["aria-expanded"] = "false"
 
-        if not self._is_multiple:
-            btn_attrs["data-bs-parent"] = f"#{self._id}"
-
         btn = tags.button(
             {
                 "class": "accordion-button",
@@ -121,6 +120,11 @@ class AccordionPanel:
         )
 
         attrs, children = consolidate_attrs(*self._args, **self._kwargs)
+
+        if isinstance(self._accordion_id, MISSING_TYPE):
+            raise RuntimeError(
+                "Internal error: _accordion_id not set. Did you add your AccordionPanel an `accordion()`?"
+            )
 
         return tags.div(
             {
@@ -139,6 +143,9 @@ class AccordionPanel:
                     "class": "accordion-collapse collapse",
                 },
                 {"class": "show"} if self._is_open else None,
+                {"data-bs-parent": f"#{self._accordion_id}"}
+                if not self._is_multiple
+                else None,
                 tags.div(
                     {"class": "accordion-body"},
                     attrs,
@@ -259,7 +266,9 @@ def accordion(
     else:
         binding_class_value = {"class": "bslib-accordion-input"}
 
+    accordion_id = resolve_id_or_none(id)
     for panel, open in zip(panels, is_open):
+        panel._accordion_id = accordion_id
         panel._is_multiple = multiple
         panel._is_open = open
 
@@ -267,7 +276,7 @@ def accordion(
 
     tag = tags.div(
         {
-            "id": resolve_id_or_none(id),
+            "id": accordion_id,
             "class": "accordion",
             "style": css(width=as_css_unit(width), height=as_css_unit(height)),
         },
@@ -466,6 +475,9 @@ def insert_accordion_panel(
     if position not in ("after", "before"):
         raise ValueError("`position` must be either 'after' or 'before'")
     session = require_active_session(session)
+    # Add accordion ID to panel; Used when `accordion(multiple=False)`
+    panel._accordion_id = id
+
     _send_panel_message(
         id,
         session,

@@ -230,7 +230,7 @@ class App:
         """
         from ._main import run_app
 
-        run_app(self, **kwargs)
+        run_app(self, **kwargs)  # pyright: ignore[reportGeneralTypeIssues]
 
     # ASGI entrypoint. Handles HTTP, WebSocket, and lifespan.
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:

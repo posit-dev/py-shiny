@@ -408,9 +408,7 @@ async def TableTransformer(
     if isinstance(x, pandas.io.formats.style.Styler):
         html = cast(  # pyright: ignore[reportUnnecessaryCast]
             str,
-            x.to_html(  # pyright: ignore[reportUnknownMemberType]
-                **kwargs  # pyright: ignore[reportGeneralTypeIssues]
-            ),
+            x.to_html(**kwargs),  # pyright: ignore
         )
     else:
         if not isinstance(x, pandas.DataFrame):
@@ -424,7 +422,7 @@ async def TableTransformer(
 
         html = cast(  # pyright: ignore[reportUnnecessaryCast]
             str,
-            x.to_html(  # pyright: ignore[reportUnknownMemberType]
+            x.to_html(  # pyright: ignore
                 index=index,
                 classes=classes,
                 border=border,

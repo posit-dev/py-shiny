@@ -175,7 +175,7 @@ def try_render_matplotlib(
                 buf,
                 format="png",
                 dpi=ppi_out * pixelratio,
-                **kwargs,
+                **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
             )
             buf.seek(0)
             data = base64.b64encode(buf.read())
@@ -271,7 +271,7 @@ def try_render_pil(
         return (False, None)
 
     with io.BytesIO() as buf:
-        x.save(buf, format="PNG", **kwargs)
+        x.save(buf, format="PNG", **kwargs)  # pyright: ignore[reportGeneralTypeIssues]
         buf.seek(0)
         data = base64.b64encode(buf.read())
         data_str = data.decode("utf-8")
