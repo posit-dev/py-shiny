@@ -31,7 +31,7 @@ session: Session
 # `input`, but the latter is dynamic -- every time `express.input` is accessed, it
 # returns the input for the current session. This will work in the vast majority of
 # cases, but when it fails, it will be very confusing.
-def __getattr__(name: str):
+def __getattr__(name: str) -> object:
     if name == "input":
         return _get_current_session_or_mock().input
     elif name == "output":
@@ -39,14 +39,15 @@ def __getattr__(name: str):
     elif name == "session":
         return _get_current_session_or_mock()
 
-    raise AttributeError(name=name)
+    raise AttributeError(f"Module 'shiny.express' has no attribute '{name}'")
 
 
 # A very bare-bones mock session class that is used only in shiny.express.
 class _MockSession:
     def __init__(self):
-        from .._namespaces import Root
         from typing import cast
+
+        from .._namespaces import Root
 
         self.input = Inputs({})
         self.output = Outputs(cast(Session, self), Root, {}, {})

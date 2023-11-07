@@ -9,4 +9,4 @@ app: App
 def __getattr__(name: str):
     if name == "app":
         return wrap_express_app()
-    raise AttributeError(name=name)
+    raise AttributeError(f"Module 'shiny.express.app' has no attribute '{name}'")

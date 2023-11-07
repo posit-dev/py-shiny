@@ -3,9 +3,11 @@ from __future__ import annotations
 import functools
 import sys
 from types import TracebackType
-from typing import Callable, Generic, Mapping, Optional, ParamSpec, Type, TypeVar
+from typing import Callable, Generic, Mapping, Optional, Type, TypeVar
 
 from htmltools import HTML, Tag, Tagifiable, TagList, tags
+
+from .._typing_extensions import ParamSpec
 
 P = ParamSpec("P")
 R = TypeVar("R")
