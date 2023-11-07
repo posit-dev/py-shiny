@@ -25,7 +25,6 @@ import inspect
 from abc import ABC, abstractmethod
 from typing import (
     TYPE_CHECKING,
-    Any,
     Awaitable,
     Callable,
     Dict,
