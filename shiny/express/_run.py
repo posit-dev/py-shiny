@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import cast
 
-from htmltools import Tag, Tagifiable, TagList
+from htmltools import Tag, TagList
 
 from .. import render, ui
 from .._app import App
