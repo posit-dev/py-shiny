@@ -156,7 +156,7 @@ def test_annotations():
         return 0
 
     assert annotated.__name__ == "annotated"
-    assert annotated.__annotations__ == {"x": int, "y": int, "return": int}
+    assert annotated.__annotations__ == {"x": "int", "y": "int", "return": "int"}
     assert annotated.__doc__ == "Here's a docstring"
 
     assert inspect.getsource(annotated) == inspect.getsource(annotated.__wrapped__)  # type: ignore
