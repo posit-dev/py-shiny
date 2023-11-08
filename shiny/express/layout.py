@@ -196,6 +196,67 @@ def accordion_panel(
 
 
 # ======================================================================================
+# Nav components
+# ======================================================================================
+
+
+def navset_tab(
+    *,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+):
+    return RecallContextManager(
+        ui.navset_tab,
+        kwargs=dict(
+            id=id,
+            selected=selected,
+            header=header,
+            footer=footer,
+        ),
+    )
+
+
+def navset_card_tab(
+    *,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    title: Optional[TagChild] = None,
+    sidebar: Optional[ui.Sidebar] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+):
+    return RecallContextManager(
+        ui.navset_card_tab,
+        kwargs=dict(
+            id=id,
+            selected=selected,
+            title=title,
+            sidebar=sidebar,
+            header=header,
+            footer=footer,
+        ),
+    )
+
+
+def nav(
+    title: TagChild,
+    *,
+    value: Optional[str] = None,
+    icon: TagChild = None,
+):
+    return RecallContextManager(
+        ui.nav,
+        args=(title,),
+        kwargs=dict(
+            value=value,
+            icon=icon,
+        ),
+    )
+
+
+# ======================================================================================
 # Page components
 # ======================================================================================
 def page_fluid(

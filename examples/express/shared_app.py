@@ -9,14 +9,15 @@ import shared
 from shiny import reactive, render, ui
 from shiny.express import input
 
-ui.input_slider("n", "N", 1, 100, 50)
-
 
 @render.plot
 def histogram():
     np.random.seed(19680801)
     x = 100 + 15 * np.random.randn(437)
     plt.hist(x, shared.rv(), density=True)
+
+
+ui.input_slider("n", "N", 1, 100, 50)
 
 
 @reactive.Effect
@@ -26,4 +27,9 @@ def _():
 
 @render.text
 def rv_value():
-    return f"Shared rv = {shared.rv.get()}"
+    return f"shared.rv() = {shared.rv()}"
+
+
+@render.text
+def text_data():
+    return "shared.data = " + str(shared.data)
