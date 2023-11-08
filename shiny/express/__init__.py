@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from ..session import Inputs, Outputs, Session
 from ..session import _utils as _session_utils
-
+from . import app, layout
 from ._output import output_args, suspend_display
 from ._run import is_express_app, wrap_express_app
-from . import app
-from . import layout
+from .display_decorator import display_body
 
 __all__ = (
     "input",
@@ -18,6 +17,7 @@ __all__ = (
     "wrap_express_app",
     "app",
     "layout",
+    "display_body",
 )
 
 # Add types to help type checkers

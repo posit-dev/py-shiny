@@ -12,6 +12,11 @@ from .. import render, ui
 from .._app import App
 from ..session import Inputs, Outputs, Session
 from ._recall_context import RecallContextManager
+from .display_decorator._func_displayhook import _display_decorator_function_def
+from .display_decorator._node_transformers import (
+    DisplayFuncsTransformer,
+    display_decorator_func_name,
+)
 
 __all__ = (
     "wrap_express_app",
@@ -48,11 +53,18 @@ def wrap_express_app(file: Path | None = None) -> App:
     app_ui = ui.page_output("__page__")
 
     def express_server(input: Inputs, output: Outputs, session: Session):
-        dyn_ui = run_express(file)
+        try:
+            dyn_ui = run_express(file)
 
-        @render.ui
-        def __page__():
-            return dyn_ui
+            @render.ui
+            def __page__():
+                return dyn_ui
+
+        except Exception as e:
+            import traceback
+
+            traceback.print_exception(e)
+            raise
 
     app = App(app_ui, express_server)
 
@@ -101,7 +113,8 @@ def run_express(file: Path) -> Tag | TagList:
         content = f.read()
 
     tree = ast.parse(content, file)
-    DisplayFuncsTransformer().visit(tree)
+    tree = DisplayFuncsTransformer().visit(tree)
+    tree = ast.fix_missing_locations(tree)
 
     ui_result: Tag | TagList = TagList()
 
@@ -118,7 +131,7 @@ def run_express(file: Path) -> Tag | TagList:
 
     var_context: dict[str, object] = {
         "__file__": file_path,
-        "_display_decorator_function_def": _display_decorator_function_def,
+        display_decorator_func_name: _display_decorator_function_def,
     }
 
     # Execute each top-level node in the AST
@@ -228,83 +241,3 @@ class DetectShinyExpressVisitor(ast.NodeVisitor):
     # Don't recurse into any nodes, so the we'll only ever look at top-level nodes.
     def generic_visit(self, node: ast.AST):
         pass
-
-
-class DisplayFuncsTransformer(ast.NodeTransformer):
-    # Visit functions and async functions, inserting @sys.displayhook at the top of
-    # their decorator lists
-
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
-        node.decorator_list.insert(
-            0,
-            set_loc(
-                ast.Name(id="_display_decorator_function_def", ctx=ast.Load()), node
-            ),
-        )
-        return node
-
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> object:
-        node.decorator_list.insert(
-            0,
-            set_loc(
-                ast.Name(id="_display_decorator_function_def", ctx=ast.Load()), node
-            ),
-        )
-        return node
-
-    # These are nodes that we WANT to descend into, looking for function definitions to
-    # mangle. We specifically DON'T want to descend into the body of a function, because
-    # only top-level function definitions should be displayed.
-    #
-    # For these nodes, we use the superclass's generic_visit, instead of our own, which
-    # short-circuits the transformation.
-
-    def visit_Module(self, node: ast.Module) -> object:
-        return super().generic_visit(node)
-
-    def visit_With(self, node: ast.With) -> object:
-        return super().generic_visit(node)
-
-    def visit_AsyncWith(self, node: ast.AsyncWith) -> object:
-        return super().generic_visit(node)
-
-    def visit_If(self, node: ast.If) -> object:
-        return super().generic_visit(node)
-
-    def visit_IfExp(self, node: ast.IfExp) -> object:
-        return super().generic_visit(node)
-
-    def visit_For(self, node: ast.For) -> object:
-        return super().generic_visit(node)
-
-    def visit_AsyncFor(self, node: ast.AsyncFor) -> object:
-        return super().generic_visit(node)
-
-    def visit_While(self, node: ast.While) -> object:
-        return super().generic_visit(node)
-
-    def visit_Try(self, node: ast.Try) -> object:
-        return super().generic_visit(node)
-
-    # For all other nodes, short-circuit the transformation--that is, don't recurse into
-    # them.
-
-    def generic_visit(self, node: ast.AST) -> ast.AST:
-        return node
-
-
-# ast.compile is insistent that all expressions have a lineno and col_offset
-def set_loc(target: ast.expr, source: ast.AST) -> ast.expr:
-    target.lineno = source.lineno
-    target.col_offset = source.col_offset
-    return target
-
-
-# A decorator used for `def` statements. It makes sure that any `def` statement which
-# returns a tag-like object, or one with a `_repr_html` method, will be passed on to
-# the current sys.displayhook.
-def _display_decorator_function_def(fn: object) -> object:
-    if isinstance(fn, (Tag, TagList, Tagifiable)) or hasattr(fn, "_repr_html_"):
-        sys.displayhook(fn)
-
-    return fn
