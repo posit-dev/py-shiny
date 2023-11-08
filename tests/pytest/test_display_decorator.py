@@ -1,5 +1,7 @@
 # pyright: reportUnusedExpression=false
 # flake8: noqa
+from __future__ import annotations
+
 import contextlib
 import inspect
 import sys as sys1
