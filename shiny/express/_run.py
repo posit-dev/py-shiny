@@ -60,10 +60,10 @@ def wrap_express_app(file: Path | None = None) -> App:
             def __page__():
                 return dyn_ui
 
-        except Exception as e:
+        except Exception:
             import traceback
 
-            traceback.print_exception(e)
+            traceback.print_exception(*sys.exc_info())
             raise
 
     app = App(app_ui, express_server)
