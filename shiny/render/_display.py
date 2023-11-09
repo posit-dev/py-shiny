@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 import sys
-from typing import Any, Callable, Optional, overload
+from typing import Any, Callable, Optional, Union, overload
 
 from htmltools import TagAttrValue, TagFunction, TagList
 
@@ -45,7 +45,7 @@ async def DisplayTransformer(
     )
 
 
-DisplayRenderer = OutputRendererSync[RenderedDeps | None]
+DisplayRenderer = OutputRendererSync[Union[RenderedDeps, None]]
 
 
 @overload
