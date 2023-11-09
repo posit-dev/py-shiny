@@ -3,8 +3,9 @@ from __future__ import annotations
 from ..session import Inputs, Outputs, Session
 from ..session import _utils as _session_utils
 from . import app, layout
+from ._is_express import is_express_app
 from ._output import output_args, suspend_display
-from ._run import is_express_app, wrap_express_app
+from ._run import wrap_express_app
 from .display_decorator import display_body
 
 __all__ = (

@@ -18,10 +18,7 @@ from .display_decorator._node_transformers import (
     display_decorator_func_name,
 )
 
-__all__ = (
-    "wrap_express_app",
-    "is_express_app",
-)
+__all__ = ("wrap_express_app",)
 
 _DEFAULT_PAGE_FUNCTION = ui.page_fluid
 
@@ -64,43 +61,6 @@ def wrap_express_app(file: Path | None = None) -> App:
     app = App(app_ui, express_server)
 
     return app
-
-
-def is_express_app(app: str, app_dir: str | None) -> bool:
-    """Detect whether an app file is a Shiny express app
-
-    Parameters
-    ----------
-    app
-        App filename, like "app.py". It may be a relative path or absolute path.
-    app_dir
-        Directory containing the app file. If this is `None`, then `app` must be an
-        absolute path.
-
-    Returns
-    -------
-    :
-        `True` if it is a Shiny express app, `False` otherwise.
-    """
-    if not app.lower().endswith(".py"):
-        return False
-
-    if app_dir is not None:
-        app_path = Path(app_dir) / app
-    else:
-        app_path = Path(app)
-
-    if not app_path.exists():
-        return False
-
-    # Read the file, parse it, and look for any imports of shiny.express.
-    with open(app_path) as f:
-        content = f.read()
-    tree = ast.parse(content, app_path)
-    detector = DetectShinyExpressVisitor()
-    detector.visit(tree)
-
-    return detector.found_shiny_express_import
 
 
 def run_express(file: Path) -> Tag | TagList:
@@ -210,29 +170,3 @@ def replace_top_level_recall_context_manager(
     _top_level_recall_context_manager_has_been_replaced = True
 
     return old_cm
-
-
-class DetectShinyExpressVisitor(ast.NodeVisitor):
-    def __init__(self):
-        super().__init__()
-        self.found_shiny_express_import = False
-
-    def visit_Import(self, node: ast.Import):
-        if any(alias.name == "shiny.express" for alias in node.names):
-            self.found_shiny_express_import = True
-
-    def visit_ImportFrom(self, node: ast.ImportFrom):
-        if node.module == "shiny.express":
-            self.found_shiny_express_import = True
-        elif node.module == "shiny" and any(
-            alias.name == "express" for alias in node.names
-        ):
-            self.found_shiny_express_import = True
-
-    # Visit top-level nodes.
-    def visit_Module(self, node: ast.Module):
-        super().generic_visit(node)
-
-    # Don't recurse into any nodes, so the we'll only ever look at top-level nodes.
-    def generic_visit(self, node: ast.AST):
-        pass
