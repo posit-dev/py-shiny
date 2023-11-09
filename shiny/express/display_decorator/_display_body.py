@@ -3,7 +3,7 @@ import functools
 import inspect
 import sys
 import types
-from typing import Any, Callable, Dict, TypeVar, cast
+from typing import Any, Callable, Dict, Protocol, TypeVar, cast, runtime_checkable
 
 from ._func_displayhook import _display_decorator_function_def
 from ._helpers import find_code_for_func
@@ -29,6 +29,48 @@ def auto_displayhook(x: T) -> T:
     if x is not None:
         sys.displayhook(x)
     return x
+
+
+@runtime_checkable
+class WrappedFunction(Protocol):
+    __wrapped__: types.FunctionType
+
+
+def unwrap(fn: TFunc) -> TFunc:
+    while isinstance(fn, WrappedFunction):
+        fn = fn.__wrapped__
+    return fn
+
+
+display_body_attr = "__display_body__"
+
+
+def display_body_unwrap_inplace():
+    """
+    Like `display_body`, but far more violent. This will attempt to traverse any
+    decorators between this one and the function, and then modify the function _in
+    place_. It will then return the function that was passed in.
+    """
+
+    def decorator(fn: TFunc) -> TFunc:
+        unwrapped_fn = unwrap(fn)
+
+        # Check if we've already done this
+        if hasattr(unwrapped_fn, display_body_attr):
+            return fn
+
+        if unwrapped_fn.__code__ in code_cache:
+            fcode = code_cache[fn.__code__]
+        else:
+            # Save for next time
+            fcode = _transform_body(cast(types.FunctionType, unwrapped_fn))
+            code_cache[unwrapped_fn.__code__] = fcode
+
+        unwrapped_fn.__code__ = fcode
+        setattr(unwrapped_fn, display_body_attr, True)
+        return fn
+
+    return decorator
 
 
 def display_body():
@@ -151,3 +193,7 @@ def compare_decorated_code_objects(func_ast: ast.FunctionDef):
         return False
 
     return comparator
+
+
+__builtins__[sys_alias] = auto_displayhook
+__builtins__[display_decorator_func_name] = _display_decorator_function_def
