@@ -8,7 +8,7 @@ from typing import cast
 
 from htmltools import Tag, TagList
 
-from .. import render, ui
+from .. import ui
 from .._app import App
 from ..session import Inputs, Outputs, Session
 from ._recall_context import RecallContextManager
