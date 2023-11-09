@@ -49,16 +49,11 @@ def wrap_express_app(file: Path | None = None) -> App:
             )
         file = Path(os.getcwd()) / app_file
 
-    # TODO: title and lang
-    app_ui = ui.page_output("__page__")
+    app_ui = run_express(file)
 
     def express_server(input: Inputs, output: Outputs, session: Session):
         try:
-            dyn_ui = run_express(file)
-
-            @render.ui
-            def __page__():
-                return dyn_ui
+            run_express(file)
 
         except Exception:
             import traceback
