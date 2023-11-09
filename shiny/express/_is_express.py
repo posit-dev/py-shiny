@@ -37,12 +37,16 @@ def is_express_app(app: str, app_dir: str | None) -> bool:
     if not app_path.exists():
         return False
 
-    # Read the file, parse it, and look for any imports of shiny.express.
-    with open(app_path) as f:
-        content = f.read()
-    tree = ast.parse(content, app_path)
-    detector = DetectShinyExpressVisitor()
-    detector.visit(tree)
+    try:
+        # Read the file, parse it, and look for any imports of shiny.express.
+        with open(app_path) as f:
+            content = f.read()
+        tree = ast.parse(content, app_path)
+        detector = DetectShinyExpressVisitor()
+        detector.visit(tree)
+
+    except Exception:
+        return False
 
     return detector.found_shiny_express_import
 
