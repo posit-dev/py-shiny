@@ -18,6 +18,7 @@ import uvicorn
 import uvicorn.config
 
 import shiny
+from shiny.express import is_express_app
 
 from . import _autoreload, _hostenv, _static, _utils
 from ._typing_extensions import NotRequired, TypedDict
@@ -275,7 +276,18 @@ def run_app(
     os.environ["SHINY_PORT"] = str(port)
 
     if isinstance(app, str):
-        app, app_dir = resolve_app(app, app_dir)
+        # Remove ":app" suffix if present. Normally users would just pass in the
+        # filename without the trailing ":app", as in `shiny run app.py`, but the
+        # default value for `shiny run` is "app.py:app", so we need to handle it.
+        app_no_suffix = re.sub(r":app$", "", app)
+        if is_express_app(app_no_suffix, app_dir):
+            app_path = Path(app_no_suffix).resolve()
+            # Set this so shiny.express.app.wrap_express_app() can find the app file.
+            os.environ["SHINY_EXPRESS_APP_FILE"] = str(app_path)
+            app = "shiny.express.app:app"
+            app_dir = str(app_path.parent)
+        else:
+            app, app_dir = resolve_app(app, app_dir)
 
     if app_dir:
         app_dir = os.path.realpath(app_dir)
@@ -381,7 +393,7 @@ def is_file(app: str) -> bool:
     return "/" in app or app.endswith(".py")
 
 
-def resolve_app(app: str, app_dir: Optional[str]) -> tuple[str, Optional[str]]:
+def resolve_app(app: str, app_dir: str | None) -> tuple[str, str | None]:
     # The `app` parameter can be:
     #
     # - A module:attribute name
