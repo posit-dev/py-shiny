@@ -1,8 +1,6 @@
 {
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true,
-    "python.formatting.provider": "black",
-    "python.linting.flake8Enabled": true,
     "editor.tabSize": 2,
     "files.encoding": "utf8",
     "files.eol": "\n",
@@ -27,6 +25,7 @@
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
     "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
         "editor.codeActionsOnSave": {
@@ -42,5 +41,5 @@
     "autoDocstring.guessTypes": false,
     "search.exclude": {
         "build/**": true
-    }
+    },
 }
