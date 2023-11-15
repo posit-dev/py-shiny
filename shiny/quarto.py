@@ -5,6 +5,7 @@ from pathlib import Path
 
 __all__ = ("convert_code_cells_to_app_py", "get_shiny_deps")
 
+import ast
 from typing import Literal, cast
 
 from ._typing_extensions import NotRequired, TypedDict
@@ -60,6 +61,7 @@ def convert_code_cells_to_app_py(json_file: str | Path, app_file: str | Path) ->
         if "server-setup" in cell["context"]:
             global_code_cell_texts.append(cell["text"] + "\n\n# " + "=" * 72 + "\n\n")
         elif "server" in cell["context"]:
+            validate_code_has_no_star_import(cell["text"])
             session_code_cell_texts.append(
                 indent(cell["text"], "    ") + "\n\n    # " + "=" * 72 + "\n\n"
             )
@@ -128,3 +130,57 @@ def get_shiny_deps() -> str:
     import json
 
     return json.dumps([placeholder_dep()], indent=2)
+
+
+# =============================================================================
+# Functions for checking if code has a star import
+# =============================================================================
+def validate_code_has_no_star_import(content: str) -> None:
+    """
+    Check if Python code has a star import at the top level and if so raise an error.
+
+    Parameters
+    ----------
+    content
+        A string with Python code.
+
+    Returns
+    -------
+    :
+        None
+    """
+    if code_has_star_import(content):
+        raise ValueError(
+            "'import *' statements cannot be used in a regular Shiny code block in Quarto.\n"
+            "Please move '*' imports to a code block with '#| context: setup', or used named imports instead.\n"
+        )
+
+
+def code_has_star_import(content: str) -> bool:
+    try:
+        tree = ast.parse(content)
+        detector = DetectImportStarVisitor()
+        detector.visit(tree)
+
+    except Exception:
+        return False
+
+    return detector.found_star_import
+
+
+class DetectImportStarVisitor(ast.NodeVisitor):
+    def __init__(self):
+        super().__init__()
+        self.found_star_import = False
+
+    def visit_ImportFrom(self, node: ast.ImportFrom):
+        if any(alias.name == "*" for alias in node.names):
+            self.found_star_import = True
+
+    # Visit top-level nodes.
+    def visit_Module(self, node: ast.Module):
+        super().generic_visit(node)
+
+    # Don't recurse into any nodes, so the we'll only ever look at top-level nodes.
+    def generic_visit(self, node: ast.AST):
+        pass
