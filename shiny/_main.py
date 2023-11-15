@@ -520,7 +520,11 @@ def create(appdir: str) -> None:
     if not app_dir.exists():
         app_dir.mkdir()
 
-    shutil.copytree(template_dir, app_dir)
+    for item in template_dir.iterdir():
+        if item.is_file():
+            shutil.copy(item, app_dir / item.name)
+        else:
+            shutil.copytree(item, app_dir / item.name)
 
     print(f"Created Shiny app at {app_dir}")
 
