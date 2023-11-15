@@ -16,6 +16,8 @@ from typing import Any, Optional
 import click
 import uvicorn
 import uvicorn.config
+from InquirerPy import inquirer
+from InquirerPy.base.control import Choice
 
 import shiny
 from shiny.express import is_express_app
@@ -466,20 +468,56 @@ After creating the application, you use `shiny run`:
 )
 @click.argument("appdir", type=str, default=".")
 def create(appdir: str) -> None:
+    template = inquirer.select(
+        message="Which template would you like to use?:",
+        choices=[
+            Choice("basic-app", name="Basic App"),
+            Choice("express", name="Express app"),
+            Choice("dashboard", name="Dashboard"),
+            Choice("multi-page", name="Multi-page app with modules"),
+            Choice("wizard", name="Data entry wizard"),
+            Choice("js-component", name="Custom JavaScript Component"),
+            Choice(value=None, name="Cancel"),
+        ],
+    ).execute()
+
+    if template == "js-component":
+        template = inquirer.select(
+            message="What kind of component do you want to build?:",
+            choices=[
+                Choice("js-input", name="Input component"),
+                Choice("js-output", name="Output component"),
+                Choice("js-react", name="React component"),
+                Choice(value=None, name="Cancel"),
+            ],
+        ).execute()
+
+    appdir = inquirer.filepath(
+        message="Enter destination directory:",
+        default="./",
+        only_directories=True,
+    ).execute()
+
     app_dir = Path(appdir)
-    app_path = app_dir / "app.py"
-    if app_path.exists():
-        print(f"Error: Can't create {app_path} because it already exists.")
+    template_dir = Path(__file__).parent / "templates" / template
+    duplicate_files = [
+        (app_dir / file.name).exists() for file in template_dir.iterdir()
+    ]
+
+    if any(duplicate_files):
+        print(
+            f"Error: Can't create new files because the following files already exist in the destination directory: {duplicate_files}"
+        )
         sys.exit(1)
 
     if not app_dir.exists():
         app_dir.mkdir()
 
-    shutil.copyfile(
-        Path(__file__).parent / "api-examples" / "template" / "app.py", app_path
-    )
+    for file in template_dir.iterdir():
+        print(file)
+        shutil.copy(file, app_dir / file.name)
 
-    print(f"Created Shiny app at {app_dir / 'app.py'}")
+    print(f"Created Shiny app at {app_dir}")
 
 
 @main.command(
