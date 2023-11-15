@@ -30,9 +30,11 @@ To get started with shiny follow the [installation instructions](https://shiny.p
 pip install shiny
 ```
 
-To install the latest development version from this repository:
+To install the latest development version:
 
 ``` sh
+# First install htmltools, then shiny
+pip install https://github.com/posit-dev/py-htmltools/tarball/main
 pip install https://github.com/posit-dev/py-shiny/tarball/main
 ```
 
