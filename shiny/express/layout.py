@@ -54,7 +54,7 @@ def sidebar(
     *,
     width: CssUnit = 250,
     position: Literal["left", "right"] = "left",
-    open: Literal["desktop", "open", "closed", "always"] = "desktop",
+    open: Literal["desktop", "open", "closed", "always"] = "always",
     id: Optional[str] = None,
     title: TagChild | str = None,
     bg: Optional[str] = None,
