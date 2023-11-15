@@ -1,7 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-const customInputTag = "shiny-custom-input";
+const customInputTag = "custom-component";
 /**
  * An example element.
  *
@@ -9,7 +9,7 @@ const customInputTag = "shiny-custom-input";
  * @csspart display - The span containing the value
  */
 @customElement(customInputTag)
-export class ShinyCustomInput extends LitElement {
+export class CustomComponentEl extends LitElement {
   static override styles = css`
     :host {
       display: block;
@@ -57,12 +57,12 @@ class CustomInputBinding extends Shiny.InputBinding {
     return $(scope).find(customInputTag);
   }
 
-  override getValue(el: ShinyCustomInput) {
+  override getValue(el: CustomComponentEl) {
     return el.value;
   }
 
   override subscribe(
-    el: ShinyCustomInput,
+    el: CustomComponentEl,
     callback: (x: boolean) => void
   ): void {
     // Our custom input has a callback that it calls when its value has changed.

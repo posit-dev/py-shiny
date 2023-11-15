@@ -3,11 +3,11 @@ requires = ["setuptools>=40.6.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "customReactComponent"
+name = "custom_component"
 version = "0.1"
 dependencies = ["shiny >= 0.6.0"]
 
 [tool.setuptools]
-packages = ["customReactComponent"]
+packages = ["custom_component"]
 include-package-data = true
 zip-safe = false

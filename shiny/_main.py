@@ -7,7 +7,6 @@ import inspect
 import os
 import platform
 import re
-import shutil
 import sys
 import types
 from pathlib import Path
@@ -23,6 +22,8 @@ import shiny
 from shiny.express import is_express_app
 
 from . import _autoreload, _hostenv, _static, _utils
+from ._custom_component_template_questions import componentTemplateQuestions
+from ._template_utils import copyTemplateFiles
 from ._typing_extensions import NotRequired, TypedDict
 
 
@@ -478,26 +479,19 @@ def create(appdir: str) -> None:
         ("Cancel", "cancel"),
     ]
 
-    js_component_choices = [
-        ("Input component", "js-input"),
-        ("Output component", "js-output"),
-        ("React component", "js-react"),
-        ("Cancel", "cancel"),
-    ]
-
     template = questionary.select(
         "Which template would you like to use?:",
         choices=[Choice(name, value=value) for name, value in top_level_choices],
     ).ask()
 
-    if template == "js-component":
-        template = questionary.select(
-            "What kind of component do you want to build?:",
-            choices=[Choice(name, value=value) for name, value in js_component_choices],
-        ).ask()
-
     if template == "cancel":
         sys.exit()
+
+    if template == "js-component":
+        # Go into component template questions This will handle the rest of the process
+        # including the creation and copying of files etc
+        componentTemplateQuestions()
+        return
 
     appdir = questionary.path(
         "Enter destination directory:",
@@ -505,26 +499,7 @@ def create(appdir: str) -> None:
         only_directories=True,
     ).ask()
 
-    app_dir = Path(appdir)
-    template_dir = Path(__file__).parent / "templates" / template
-    duplicate_files = [
-        (app_dir / file.name).exists() for file in template_dir.iterdir()
-    ]
-
-    if any(duplicate_files):
-        print(
-            f"Error: Can't create new files because the following files already exist in the destination directory: {duplicate_files}"
-        )
-        sys.exit(1)
-
-    if not app_dir.exists():
-        app_dir.mkdir()
-
-    for item in template_dir.iterdir():
-        if item.is_file():
-            shutil.copy(item, app_dir / item.name)
-        else:
-            shutil.copytree(item, app_dir / item.name)
+    app_dir = copyTemplateFiles(appdir, template)
 
     print(f"Created Shiny app at {app_dir}")
 

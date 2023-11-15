@@ -6,8 +6,8 @@ import { customElement, property } from "lit/decorators.js";
  *
  * @csspart display - The span containing the value
  */
-@customElement("shiny-custom-output")
-export class ShinyCustomOutput extends LitElement {
+@customElement("custom-component")
+export class CustomComponentEl extends LitElement {
   static override styles = css`
     :host {
       display: block;
@@ -39,7 +39,7 @@ class CustomOutputBinding extends Shiny.OutputBinding {
    * binding.
    */
   override find(scope: JQuery<HTMLElement>) {
-    return scope.find("shiny-custom-output");
+    return scope.find("custom-component");
   }
 
   /**
@@ -50,15 +50,15 @@ class CustomOutputBinding extends Shiny.OutputBinding {
    * the function to clear the element and re-render the content.
    * @param el The element that was found by `find()`
    * @param payload An object as provided from server with the
-   * `render_custom_output` function
+   * `render_custom_component` function
    */
   override renderValue(el: HTMLElement, payload: { value: number }) {
     // Return early if el is not an instance of the custom element
-    if (!(el instanceof ShinyCustomOutput)) {
+    if (!(el instanceof CustomComponentEl)) {
       return;
     }
 
     el.count = payload.value;
   }
 }
-Shiny.outputBindings.register(new CustomOutputBinding(), "shiny-custom-output");
+Shiny.outputBindings.register(new CustomOutputBinding(), "custom-component");
