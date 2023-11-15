@@ -14,10 +14,10 @@ from pathlib import Path
 from typing import Any, Optional
 
 import click
+import questionary
 import uvicorn
 import uvicorn.config
-from InquirerPy import inquirer
-from InquirerPy.base.control import Choice
+from questionary import Choice
 
 import shiny
 from shiny.express import is_express_app
@@ -468,35 +468,42 @@ After creating the application, you use `shiny run`:
 )
 @click.argument("appdir", type=str, default=".")
 def create(appdir: str) -> None:
-    template = inquirer.select(
-        message="Which template would you like to use?:",
-        choices=[
-            Choice("basic-app", name="Basic App"),
-            Choice("express", name="Express app"),
-            Choice("dashboard", name="Dashboard"),
-            Choice("multi-page", name="Multi-page app with modules"),
-            Choice("wizard", name="Data entry wizard"),
-            Choice("js-component", name="Custom JavaScript Component"),
-            Choice(value=None, name="Cancel"),
-        ],
-    ).execute()
+    top_level_choices = [
+        ("Basic App", "basic-app"),
+        ("Express app", "express"),
+        ("Dashboard", "dashboard"),
+        ("Multi-page app with modules", "multi-page"),
+        ("Data entry wizard", "wizard"),
+        ("Custom JavaScript Component", "js-component"),
+        ("Cancel", "cancel"),
+    ]
+
+    js_component_choices = [
+        ("Input component", "js-input"),
+        ("Output component", "js-output"),
+        ("React component", "js-react"),
+        ("Cancel", "cancel"),
+    ]
+
+    template = questionary.select(
+        "Which template would you like to use?:",
+        choices=[Choice(name, value=value) for name, value in top_level_choices],
+    ).ask()
 
     if template == "js-component":
-        template = inquirer.select(
-            message="What kind of component do you want to build?:",
-            choices=[
-                Choice("js-input", name="Input component"),
-                Choice("js-output", name="Output component"),
-                Choice("js-react", name="React component"),
-                Choice(value=None, name="Cancel"),
-            ],
-        ).execute()
+        template = questionary.select(
+            "What kind of component do you want to build?:",
+            choices=[Choice(name, value=value) for name, value in js_component_choices],
+        ).ask()
 
-    appdir = inquirer.filepath(
-        message="Enter destination directory:",
+    if template == "cancel":
+        sys.exit()
+
+    appdir = questionary.path(
+        "Enter destination directory:",
         default="./",
         only_directories=True,
-    ).execute()
+    ).ask()
 
     app_dir = Path(appdir)
     template_dir = Path(__file__).parent / "templates" / template
@@ -513,9 +520,7 @@ def create(appdir: str) -> None:
     if not app_dir.exists():
         app_dir.mkdir()
 
-    for file in template_dir.iterdir():
-        print(file)
-        shutil.copy(file, app_dir / file.name)
+    shutil.copytree(template_dir, app_dir)
 
     print(f"Created Shiny app at {app_dir}")
 
