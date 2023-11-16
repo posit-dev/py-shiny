@@ -7,15 +7,20 @@ from pathlib import Path
 
 
 def copyTemplateFiles(dest: str, template: str):
+    if dest == ".":
+        dest = f"./{template}"
+
     app_dir = Path(dest)
     template_dir = Path(__file__).parent / "templates" / template
     duplicate_files = [
-        (app_dir / file.name).exists() for file in template_dir.iterdir()
+        file.name for file in template_dir.iterdir() if (app_dir / file.name).exists()
     ]
+    print(duplicate_files)
 
     if any(duplicate_files):
+        err_files = ", ".join(['"' + file + '"' for file in duplicate_files])
         print(
-            f"Error: Can't create new files because the following files already exist in the destination directory: {duplicate_files}"
+            f"Error: Can't create new files because the following files already exist in the destination directory: {err_files}"
         )
         sys.exit(1)
 

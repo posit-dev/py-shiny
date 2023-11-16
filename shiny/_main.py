@@ -459,23 +459,64 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
 @main.command(
     help="""Create a Shiny application from a template.
 
-APPDIR is the directory to the Shiny application. A file named app.py will be created in
-that directory.
+Create an app based on a template. You will be prompted with
+a number of application types, as well as the destination folder.
+If you don't provide a destination folder, it will be created in the current working
+directory based on the template name.
 
 After creating the application, you use `shiny run`:
 
-    shiny run APPDIR/app.py --reload
+    shiny run ./APPDIR/app.py --reload
 """
 )
-@click.argument("appdir", type=str, default=".")
-def create(appdir: str) -> None:
+def create() -> None:
+    template = template_query()
+
+    appdir = questionary.path(
+        "Enter destination directory:",
+        default="./",
+        only_directories=True,
+    ).ask()
+
+    if appdir == ".":
+        appdir = f"./{template}"
+
+    app_dir = Path(appdir)
+    template_dir = Path(__file__).parent / "templates" / template
+    duplicate_files = [
+        file.name for file in template_dir.iterdir() if (app_dir / file.name).exists()
+    ]
+    print(duplicate_files)
+
+    if any(duplicate_files):
+        err_files = ", ".join(['"' + file + '"' for file in duplicate_files])
+        print(
+            f"Error: Can't create new files because the following files already exist in the destination directory: {err_files}"
+        )
+        sys.exit(1)
+
+    if not app_dir.exists():
+        app_dir.mkdir()
+
+    for item in template_dir.iterdir():
+        if item.is_file():
+            shutil.copy(item, app_dir / item.name)
+        else:
+            shutil.copytree(item, app_dir / item.name)
+
+    print(f"Created Shiny app at {app_dir}")
+
+
+def template_query() -> str:
+    # TODO: If we add additional menu levels we will need to modify this function so
+    # that the recursion picks up at the right level when the user clicks back.
     top_level_choices = [
         ("Basic App", "basic-app"),
         ("Express app", "express"),
         ("Dashboard", "dashboard"),
         ("Multi-page app with modules", "multi-page"),
-        ("Data entry wizard", "wizard"),
-        ("Custom JavaScript Component", "js-component"),
+        # Removing until the JS components are finalized
+        # ("Custom JavaScript Component", "js-component"),
         ("Cancel", "cancel"),
     ]
 
@@ -487,21 +528,23 @@ def create(appdir: str) -> None:
     if template == "cancel":
         sys.exit()
 
+    js_component_choices = [
+        ("Input component", "js-input"),
+        ("Output component", "js-output"),
+        ("React component", "js-react"),
+        ("Back", "back"),
+    ]
+
     if template == "js-component":
-        # Go into component template questions This will handle the rest of the process
-        # including the creation and copying of files etc
-        componentTemplateQuestions()
-        return
+        template = questionary.select(
+            "What kind of component do you want to build?:",
+            choices=[Choice(name, value=value) for name, value in js_component_choices],
+        ).ask()
 
-    appdir = questionary.path(
-        "Enter destination directory:",
-        default="./",
-        only_directories=True,
-    ).ask()
+        if template == "back":
+            return template_query()
 
-    app_dir = copyTemplateFiles(appdir, template)
-
-    print(f"Created Shiny app at {app_dir}")
+    return template
 
 
 @main.command(
