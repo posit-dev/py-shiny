@@ -3,7 +3,7 @@ import { SketchPicker } from "react-color";
 import type { ColorResult } from "react-color";
 import React from "react";
 
-const customInputTag = "custom-react-input";
+const customInputTag = "custom-component";
 
 const styleTag = `${customInputTag} {
   display: block;
@@ -18,7 +18,7 @@ const styleTag = `${customInputTag} {
  * all the dependencies and logic for the react component and only expose a
  * simple HTML tag interface to Shiny.
  */
-export class ShinyReactComponent extends HTMLElement {
+export class CustomComponentEl extends HTMLElement {
   /**
    * The current value of the input.
    */
@@ -72,22 +72,22 @@ function ColorPickerReact({
   return <SketchPicker color={currentColor} onChange={handleChange} />;
 }
 
-customElements.define(customInputTag, ShinyReactComponent);
+customElements.define(customInputTag, CustomComponentEl);
 
 // Setup the input binding for the custom input
-class ReactWithLitBinding extends Shiny.InputBinding {
+class CustomComponentInputBinding extends Shiny.InputBinding {
   override find(scope: HTMLElement): JQuery<HTMLElement> {
     return $(scope).find(customInputTag);
   }
 
-  override getValue(el: ShinyReactComponent) {
+  override getValue(el: CustomComponentEl) {
     // Our component stores the value in the `value` property. In this case it's
     // a string with the current color.
     return el.value;
   }
 
   override subscribe(
-    el: ShinyReactComponent,
+    el: CustomComponentEl,
     callback: (x: boolean) => void
   ): void {
     // Hook up callback used to tell Shiny that the value has changed
@@ -95,14 +95,14 @@ class ReactWithLitBinding extends Shiny.InputBinding {
     el.onChangeCallback = () => callback(true);
   }
 
-  override unsubscribe(el: ShinyReactComponent): void {
+  override unsubscribe(el: CustomComponentEl): void {
     // Remove the value-has-updated callback so that it doesn't get called
     // after Shiny is no longer bound to the element
     el.onChangeCallback = () => null;
   }
 }
 
-Shiny.inputBindings.register(new ReactWithLitBinding(), customInputTag);
+Shiny.inputBindings.register(new CustomComponentInputBinding(), customInputTag);
 /**
  * Add styles to the dom for a given tag but only once.
  * @param tag Name of the tag to add styles for

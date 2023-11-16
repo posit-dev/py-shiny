@@ -1,12 +1,11 @@
 # pyright: basic
 
-from shiny import ui, App, render
+from custom_component import custom_component
 
-from customInputComponent import custom_input
-
+from shiny import App, render, ui
 
 app_ui = ui.page_fluid(
-    custom_input("myInput"),
+    custom_component("myComponent"),
     ui.output_text("valueOut"),
 )
 
@@ -14,7 +13,7 @@ app_ui = ui.page_fluid(
 def server(input, output, session):
     @render.text
     def valueOut():
-        return f"Value from input is {input.myInput()}"
+        return f"Value from input is {input.myComponent()}"
 
 
 app = App(app_ui, server)
