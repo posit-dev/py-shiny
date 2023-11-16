@@ -1,18 +1,6 @@
 import subprocess
 from pathlib import Path
 
-import questionary
-from questionary import Choice
-
-from ._template_utils import copyTemplateFiles
-
-js_component_choices = [
-    ("Input component", "js-input"),
-    ("Output component", "js-output"),
-    ("React component", "js-react"),
-    ("Cancel", "cancel"),
-]
-
 
 def isValidName(name: str):
     """
@@ -27,56 +15,6 @@ def isValidName(name: str):
         return False
 
     return True
-
-
-def componentTemplateQuestions():
-    """
-    Hand question branch for the custom js templates. This should handle the entire rest
-    of the question flow and is responsible for placing files etc. Currently it repeats
-    a lot of logic from the default flow but as the custom templates get more
-    complicated the logic will diverge
-    """
-    component_type = questionary.select(
-        "What kind of component do you want to build?:",
-        choices=[Choice(name, value=value) for name, value in js_component_choices],
-    ).ask()
-
-    # As what the user wants the name of their component to be
-    component_name = questionary.text(
-        "What do you want to name your component?",
-        instruction="Name must be dash-delimited and all lowercase. E.g. 'my-component-name'",
-        validate=isValidName,
-    ).ask()
-
-    appdir = questionary.path(
-        "Enter destination directory:",
-        default=f"./{component_name}",
-        only_directories=True,
-    ).ask()
-
-    app_dir = copyTemplateFiles(appdir, component_type)
-
-    # Print messsage saying we're building the component
-    print(f"Setting up {component_name} component package...")
-    updateComponentNameInTemplate(app_dir, component_name)
-
-    shouldInstallDeps = questionary.confirm(
-        "Do you want to install js dependencies now?"
-    ).ask()
-
-    if shouldInstallDeps:
-        install_js_dependencies(app_dir)
-    else:
-        print("Skipping installing NPM deps. Run `npm install` to install them later.")
-
-    print(f"Successfully created {component_name} component package!")
-    print("Next steps:")
-    print(f"- Run `cd {app_dir}` to change into the new directory")
-    if not shouldInstallDeps:
-        print("- Run `npm install` to install dependencies")
-    print("- Run `npm run build` to build the component")
-    print("- Install package locally with `pip install -e .`")
-    print("- Open and run the example app in the `example-app` directory")
 
 
 def install_js_dependencies(app_dir: Path):

@@ -13,17 +13,14 @@ from pathlib import Path
 from typing import Any, Optional
 
 import click
-import questionary
 import uvicorn
 import uvicorn.config
-from questionary import Choice
 
 import shiny
 from shiny.express import is_express_app
 
 from . import _autoreload, _hostenv, _static, _utils
-from ._custom_component_template_questions import componentTemplateQuestions
-from ._template_utils import copyTemplateFiles
+from ._template_utils import template_query
 from ._typing_extensions import NotRequired, TypedDict
 
 
@@ -470,81 +467,7 @@ After creating the application, you use `shiny run`:
 """
 )
 def create() -> None:
-    template = template_query()
-
-    appdir = questionary.path(
-        "Enter destination directory:",
-        default="./",
-        only_directories=True,
-    ).ask()
-
-    if appdir == ".":
-        appdir = f"./{template}"
-
-    app_dir = Path(appdir)
-    template_dir = Path(__file__).parent / "templates" / template
-    duplicate_files = [
-        file.name for file in template_dir.iterdir() if (app_dir / file.name).exists()
-    ]
-    print(duplicate_files)
-
-    if any(duplicate_files):
-        err_files = ", ".join(['"' + file + '"' for file in duplicate_files])
-        print(
-            f"Error: Can't create new files because the following files already exist in the destination directory: {err_files}"
-        )
-        sys.exit(1)
-
-    if not app_dir.exists():
-        app_dir.mkdir()
-
-    for item in template_dir.iterdir():
-        if item.is_file():
-            shutil.copy(item, app_dir / item.name)
-        else:
-            shutil.copytree(item, app_dir / item.name)
-
-    print(f"Created Shiny app at {app_dir}")
-
-
-def template_query() -> str:
-    # TODO: If we add additional menu levels we will need to modify this function so
-    # that the recursion picks up at the right level when the user clicks back.
-    top_level_choices = [
-        ("Basic App", "basic-app"),
-        ("Express app", "express"),
-        ("Dashboard", "dashboard"),
-        ("Multi-page app with modules", "multi-page"),
-        # Removing until the JS components are finalized
-        # ("Custom JavaScript Component", "js-component"),
-        ("Cancel", "cancel"),
-    ]
-
-    template = questionary.select(
-        "Which template would you like to use?:",
-        choices=[Choice(name, value=value) for name, value in top_level_choices],
-    ).ask()
-
-    if template == "cancel":
-        sys.exit()
-
-    js_component_choices = [
-        ("Input component", "js-input"),
-        ("Output component", "js-output"),
-        ("React component", "js-react"),
-        ("Back", "back"),
-    ]
-
-    if template == "js-component":
-        template = questionary.select(
-            "What kind of component do you want to build?:",
-            choices=[Choice(name, value=value) for name, value in js_component_choices],
-        ).ask()
-
-        if template == "back":
-            return template_query()
-
-    return template
+    template_query()
 
 
 @main.command(
