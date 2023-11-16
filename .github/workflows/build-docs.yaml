@@ -33,6 +33,8 @@ jobs:
       - name: Install dependencies
         run: |
           cd docs
+          make ../venv
+          . ../venv/bin/activate && pip install https://github.com/rstudio/py-htmltools/tarball/main
           make deps
 
       - name: Run quartodoc
