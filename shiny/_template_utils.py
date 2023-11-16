@@ -1,7 +1,7 @@
 import shutil
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import questionary
 from questionary import Choice
@@ -130,7 +130,7 @@ def jsComponentQuestions():
     print("- Open and run the example app in the `example-app` directory")
 
 
-def choicesArray(choices: list[tuple[str, str]]):
+def choicesArray(choices: List[Tuple[str, str]]):
     """
     Convert tuple of key-value pairs for Questionary questions to a list of Choice objects
     """
