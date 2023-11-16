@@ -1,15 +1,15 @@
 # from pathlib import Path
-from htmltools import Tag, HTMLDependency
 from pathlib import PurePath
 
+from htmltools import HTMLDependency, Tag
+
+from shiny.module import resolve_id
 from shiny.render.transformer import (
-    output_transformer,
-    resolve_value_fn,
     TransformerMetadata,
     ValueFn,
+    output_transformer,
+    resolve_value_fn,
 )
-from shiny.module import resolve_id
-
 
 # This object is used to let Shiny know where the dependencies needed to run
 # our component all live. In this case, we're just using a single javascript

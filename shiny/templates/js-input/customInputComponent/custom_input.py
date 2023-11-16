@@ -1,5 +1,7 @@
-from htmltools import Tag, HTMLDependency
 from pathlib import PurePath
+
+from htmltools import HTMLDependency, Tag
+
 from shiny.module import resolve_id
 
 # This object is used to let Shiny know where the dependencies needed to run
