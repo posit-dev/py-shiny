@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 import questionary
@@ -40,20 +41,20 @@ def componentTemplateQuestions():
         choices=[Choice(name, value=value) for name, value in js_component_choices],
     ).ask()
 
-    appdir = questionary.path(
-        "Enter destination directory:",
-        default="./",
-        only_directories=True,
-    ).ask()
-
-    app_dir = copyTemplateFiles(appdir, component_type)
-
     # As what the user wants the name of their component to be
     component_name = questionary.text(
         "What do you want to name your component?",
         instruction="Name must be dash-delimited and all lowercase. E.g. 'my-component-name'",
         validate=isValidName,
     ).ask()
+
+    appdir = questionary.path(
+        "Enter destination directory:",
+        default=f"./{component_name}",
+        only_directories=True,
+    ).ask()
+
+    app_dir = copyTemplateFiles(appdir, component_type)
 
     # Print messsage saying we're building the component
     print(f"Setting up {component_name} component package...")
@@ -64,9 +65,63 @@ def componentTemplateQuestions():
     ).ask()
 
     if shouldInstallDeps:
-        print("Installing NPM deps now...")
+        install_js_dependencies(app_dir)
     else:
         print("Skipping installing NPM deps. Run `npm install` to install them later.")
+
+    print(f"Successfully created {component_name} component package!")
+    print("Next steps:")
+    print(f"- Run `cd {app_dir}` to change into the new directory")
+    if not shouldInstallDeps:
+        print("- Run `npm install` to install dependencies")
+    print("- Run `npm run build` to build the component")
+    print("- Install package locally with `pip install -e .`")
+    print("- Open and run the example app in the `example-app` directory")
+
+
+def install_js_dependencies(app_dir: Path):
+    """
+    Installs JS dependencies using npm in the specified directory and streams the output.
+
+    Args:
+    app_dir (str): The directory where npm install should be executed.
+    """
+    print("Installing NPM deps now...")
+
+    try:
+        process = subprocess.Popen(
+            ["npm", "install"],
+            cwd=app_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,  # Line buffered
+            universal_newlines=True,  # Ensures text mode is used
+        )
+
+        # Stream the output line by line
+        while True:
+            stdout = process.stdout
+            if stdout is None:
+                break
+            output = stdout.readline()
+            if output == "" and process.poll() is not None:
+                break
+            if output:
+                print(output.strip())
+
+        # Check the return code
+        rc = process.poll()
+        if rc != 0:
+            print(f"npm install failed with exit code {rc}")
+            return False
+        else:
+            print("npm install completed successfully.")
+            return True
+
+    except Exception as e:
+        print(f"An error occurred while installing NPM dependencies: {e}")
+        return False
 
 
 def updateComponentNameInTemplate(templateDir: Path, newComponentName: str):
