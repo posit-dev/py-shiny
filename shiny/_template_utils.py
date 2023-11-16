@@ -13,7 +13,7 @@ from ._custom_component_template_questions import (
 )
 
 
-def template_query(question_state: Optional[str] = None):
+def template_query(question_state: Optional[str] = "start"):
     """
     This will initiate a CLI query which will ask the user which template they would like.
     If called without arguments this function will start from the top level and ask which
@@ -27,10 +27,9 @@ def template_query(question_state: Optional[str] = None):
     :param question_state: The question state you would like to return to. Currently, the options are:
         "cancel": Cancel the operation and exit.
         "js-component": Start the questions for creating a custom JavaScript component.
-        "default": Start the questions for creating an app template.
     """
     if question_state is None:
-        template: str = questionary.select(
+        template = questionary.select(
             "Which template would you like to use?:",
             choices=choicesArray(
                 [
@@ -43,6 +42,8 @@ def template_query(question_state: Optional[str] = None):
                 ]
             ),
         ).ask()
+    else:
+        template = question_state
 
     # Define the control flow for the top level menu
     # This is simple now but will get more complicated as we add more templates
