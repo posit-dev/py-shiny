@@ -1,6 +1,7 @@
 import shutil
 import sys
 from pathlib import Path
+from typing import Optional
 
 import questionary
 from questionary import Choice
@@ -12,22 +13,36 @@ from ._custom_component_template_questions import (
 )
 
 
-def template_query():
-    # TODO: If we add additional menu levels we will need to modify this function so
-    # that the recursion picks up at the right level when the user clicks back.
-    template = questionary.select(
-        "Which template would you like to use?:",
-        choices=choicesArray(
-            [
-                ("Basic App", "basic-app"),
-                ("Express app", "express"),
-                ("Dashboard", "dashboard"),
-                ("Multi-page app with modules", "multi-page"),
-                ("Custom JavaScript Component", "js-component"),
-                ("Cancel", "cancel"),
-            ]
-        ),
-    ).ask()
+def template_query(question_state: Optional[str] = None):
+    """
+    This will initiate a CLI query which will ask the user which template they would like.
+    If called without arguments this function will start from the top level and ask which
+    type of template the user would like.
+
+    You can also specify a question state to return to another level. For example if you
+    were at level 5 of a question chain and wanted to return to level 4.
+    This is not that useful currently because we only have two levels of questions.
+
+
+    :param question_state: The question state you would like to return to. Currently, the options are:
+        "cancel": Cancel the operation and exit.
+        "js-component": Start the questions for creating a custom JavaScript component.
+        "default": Start the questions for creating an app template.
+    """
+    if question_state is None:
+        template = questionary.select(
+            "Which template would you like to use?:",
+            choices=choicesArray(
+                [
+                    ("Basic App", "basic-app"),
+                    ("Express app", "express"),
+                    ("Dashboard", "dashboard"),
+                    ("Multi-page app with modules", "multi-page"),
+                    ("Custom JavaScript Component", "js-component"),
+                    ("Cancel", "cancel"),
+                ]
+            ),
+        ).ask()
 
     # Define the control flow for the top level menu
     # This is simple now but will get more complicated as we add more templates
