@@ -30,7 +30,7 @@ def template_query(question_state: Optional[str] = None):
         "default": Start the questions for creating an app template.
     """
     if question_state is None:
-        template = questionary.select(
+        template: str = questionary.select(
             "Which template would you like to use?:",
             choices=choicesArray(
                 [
