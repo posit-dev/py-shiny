@@ -458,46 +458,18 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
 @main.command(
     help="""Create a Shiny application from a template.
 
-APPDIR is the directory to the Shiny application. A file named app.py will be created in
-that directory.
+Create an app based on a template. You will be prompted with
+a number of application types, as well as the destination folder.
+If you don't provide a destination folder, it will be created in the current working
+directory based on the template name.
 
 After creating the application, you use `shiny run`:
 
-    shiny run APPDIR/app.py --reload
+    shiny run ./APPDIR/app.py --reload
 """
 )
-@click.argument("appdir", type=str, default=".")
-def create(appdir: str) -> None:
-    top_level_choices = [
-        ("Basic App", "basic-app"),
-        ("Express app", "express"),
-        ("Dashboard", "dashboard"),
-        ("Multi-page app with modules", "multi-page"),
-        ("Data entry wizard", "wizard"),
-        ("Custom JavaScript Component", "js-component"),
-        ("Cancel", "cancel"),
-    ]
-
-    js_component_choices = [
-        ("Input component", "js-input"),
-        ("Output component", "js-output"),
-        ("React component", "js-react"),
-        ("Cancel", "cancel"),
-    ]
-
-    template = questionary.select(
-        "Which template would you like to use?:",
-        choices=[Choice(name, value=value) for name, value in top_level_choices],
-    ).ask()
-
-    if template == "js-component":
-        template = questionary.select(
-            "What kind of component do you want to build?:",
-            choices=[Choice(name, value=value) for name, value in js_component_choices],
-        ).ask()
-
-    if template == "cancel":
-        sys.exit()
+def create() -> None:
+    template = template_query()
 
     appdir = questionary.path(
         "Enter destination directory:",
@@ -505,15 +477,20 @@ def create(appdir: str) -> None:
         only_directories=True,
     ).ask()
 
+    if appdir == ".":
+        appdir = f"./{template}"
+
     app_dir = Path(appdir)
     template_dir = Path(__file__).parent / "templates" / template
     duplicate_files = [
-        (app_dir / file.name).exists() for file in template_dir.iterdir()
+        file.name for file in template_dir.iterdir() if (app_dir / file.name).exists()
     ]
+    print(duplicate_files)
 
     if any(duplicate_files):
+        err_files = ", ".join(['"' + file + '"' for file in duplicate_files])
         print(
-            f"Error: Can't create new files because the following files already exist in the destination directory: {duplicate_files}"
+            f"Error: Can't create new files because the following files already exist in the destination directory: {err_files}"
         )
         sys.exit(1)
 
@@ -527,6 +504,46 @@ def create(appdir: str) -> None:
             shutil.copytree(item, app_dir / item.name)
 
     print(f"Created Shiny app at {app_dir}")
+
+
+def template_query() -> str:
+    # TODO: If we add additional menu levels we will need to modify this function so
+    # that the recursion picks up at the right level when the user clicks back.
+    top_level_choices = [
+        ("Basic App", "basic-app"),
+        ("Express app", "express"),
+        ("Dashboard", "dashboard"),
+        ("Multi-page app with modules", "multi-page"),
+        # Removing until the JS components are finalized
+        # ("Custom JavaScript Component", "js-component"),
+        ("Cancel", "cancel"),
+    ]
+
+    template = questionary.select(
+        "Which template would you like to use?:",
+        choices=[Choice(name, value=value) for name, value in top_level_choices],
+    ).ask()
+
+    if template == "cancel":
+        sys.exit()
+
+    js_component_choices = [
+        ("Input component", "js-input"),
+        ("Output component", "js-output"),
+        ("React component", "js-react"),
+        ("Back", "back"),
+    ]
+
+    if template == "js-component":
+        template = questionary.select(
+            "What kind of component do you want to build?:",
+            choices=[Choice(name, value=value) for name, value in js_component_choices],
+        ).ask()
+
+        if template == "back":
+            return template_query()
+
+    return template
 
 
 @main.command(
