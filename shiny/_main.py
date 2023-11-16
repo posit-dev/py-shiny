@@ -463,7 +463,7 @@ directory based on the template name.
 
 After creating the application, you use `shiny run`:
 
-    shiny run ./APPDIR/app.py --reload
+    shiny run APPDIR/app.py --reload
 """
 )
 def create() -> None:
