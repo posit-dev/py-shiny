@@ -13,7 +13,7 @@ from ._custom_component_template_questions import (
 )
 
 
-def template_query(question_state: Optional[str] = "start"):
+def template_query(question_state: Optional[str] = None):
     """
     This will initiate a CLI query which will ask the user which template they would like.
     If called without arguments this function will start from the top level and ask which
