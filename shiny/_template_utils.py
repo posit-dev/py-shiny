@@ -46,15 +46,13 @@ def template_query(question_state: Optional[str] = None):
         template = question_state
 
     # Define the control flow for the top level menu
-    # This is simple now but will get more complicated as we add more templates
-    flow_dispatch = {
-        "cancel": lambda: sys.exit(),
-        "js-component": lambda: jsComponentQuestions(),
-        "default": lambda: appTemplateQuestions(template),
-    }
-
-    # Call the appropriate function based on the user's choice
-    flow_dispatch.get(template, flow_dispatch["default"])()
+    if template is None or template == "cancel":
+        sys.exit(1)
+    elif template == "js-component":
+        jsComponentQuestions()
+        return
+    else:
+        appTemplateQuestions(template)
 
 
 def appTemplateQuestions(template: str):
