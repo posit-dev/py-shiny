@@ -13,6 +13,18 @@ from ._custom_component_template_questions import (
     updateComponentNameInTemplate,
 )
 
+styles_for_questions = questionary.Style(
+    [
+        (
+            "secondary",
+            "italic",
+        ),
+    ]
+)
+# Prebuild some common choices
+cancel_choice = Choice(title=[("class:secondary", "[Cancel]")], value="cancel")
+back_choice = Choice(title=[("class:secondary", "← Back")], value="back")
+
 
 def template_query(question_state: Optional[str] = None):
     """
@@ -29,19 +41,19 @@ def template_query(question_state: Optional[str] = None):
         "cancel": Cancel the operation and exit.
         "js-component": Start the questions for creating a custom JavaScript component.
     """
+
     if question_state is None:
         template = questionary.select(
             "Which template would you like to use?:",
-            choices=choicesArray(
-                [
-                    ("Basic App", "basic-app"),
-                    ("Express app", "express"),
-                    ("Dashboard", "dashboard"),
-                    ("Multi-page app with modules", "multi-page"),
-                    ("Custom JavaScript Component", "js-component"),
-                    ("Cancel", "cancel"),
-                ]
-            ),
+            choices=[
+                Choice(title="Basic App", value="basic-app"),
+                Choice(title="Express app", value="express"),
+                Choice(title="Dashboard", value="dashboard"),
+                Choice(title="Multi-page app with modules", value="multi-page"),
+                Choice(title="Custom JavaScript Component", value="js-component"),
+                cancel_choice,
+            ],
+            style=styles_for_questions,
         ).ask()
     else:
         template = question_state
@@ -77,14 +89,14 @@ def jsComponentQuestions():
 
     component_type = questionary.select(
         "What kind of component do you want to build?:",
-        choices=choicesArray(
-            [
-                ("Input component", "js-input"),
-                ("Output component", "js-output"),
-                ("React component", "js-react"),
-                ("Back", "back"),
-            ]
-        ),
+        choices=[
+            Choice(title="Input component", value="js-input"),
+            Choice(title="Output component", value="js-output"),
+            Choice(title="React component", value="js-react"),
+            back_choice,
+            cancel_choice,
+        ],
+        style=styles_for_questions,
     ).ask()
 
     if component_type == "back":
