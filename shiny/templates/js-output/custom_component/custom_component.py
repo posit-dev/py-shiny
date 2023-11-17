@@ -18,7 +18,7 @@ custom_component_deps = HTMLDependency(
     "custom-component",
     "1.0.0",
     source={
-        "package": "customOutputComponent",
+        "package": "custom_component",
         "subdir": str(PurePath(__file__).parent / "distjs"),
     },
     script={"src": "index.js", "type": "module"},
