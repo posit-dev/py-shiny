@@ -2,7 +2,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import questionary
 from questionary import Choice
@@ -139,13 +139,6 @@ def jsComponentQuestions():
     print("- Run `npm run build` to build the component")
     print("- Install package locally with `pip install -e .`")
     print("- Open and run the example app in the `example-app` directory")
-
-
-def choicesArray(choices: List[Tuple[str, str]]):
-    """
-    Convert tuple of key-value pairs for Questionary questions to a list of Choice objects
-    """
-    return [Choice(name, value=value) for name, value in choices]
 
 
 def buildPathString(*path: str):
