@@ -103,6 +103,9 @@ def jsComponentQuestions():
         template_query()
         return
 
+    if component_type is None:
+        sys.exit(1)
+
     # As what the user wants the name of their component to be
     component_name = questionary.text(
         "What do you want to name your component?",
@@ -110,11 +113,17 @@ def jsComponentQuestions():
         validate=ComponentNameValidator,
     ).ask()
 
+    if component_name is None:
+        sys.exit(1)
+
     appdir = questionary.path(
         "Enter destination directory:",
         default=buildPathString(component_name),
         only_directories=True,
     ).ask()
+
+    if appdir is None:
+        sys.exit(1)
 
     app_dir = copyTemplateFiles(appdir, component_type)
 
