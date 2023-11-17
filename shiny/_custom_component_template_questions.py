@@ -1,20 +1,37 @@
 import subprocess
 from pathlib import Path
 
+from prompt_toolkit.document import Document
+from questionary import ValidationError, Validator
 
-def isValidName(name: str):
-    """
-    Validate that the name is all lowercase and dash or space-delimited
-    """
-    # Check for underscores
-    if "_" in name:
-        return False
 
-    # Check for uppercase letters
-    if name != name.lower():
-        return False
+class ComponentNameValidator(Validator):
+    def validate(self, document: Document):
+        """
+        Validate that the name is all lowercase and dash or space-delimited
+        """
+        name = document.text
 
-    return True
+        # Dont accept empty names
+        if len(name) == 0:
+            raise ValidationError(
+                message="Name needed for component",
+                cursor_position=len(name),
+            )
+
+        # Check for underscores
+        if "_" in name:
+            raise ValidationError(
+                message="Use dashes `-` instead of underscores `_`",
+                cursor_position=len(name),
+            )
+
+        # Check for uppercase letters
+        if name != name.lower():
+            raise ValidationError(
+                message="Name must be all lowercase",
+                cursor_position=len(name),
+            )
 
 
 def install_js_dependencies(app_dir: Path):

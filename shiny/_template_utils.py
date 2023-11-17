@@ -8,8 +8,8 @@ import questionary
 from questionary import Choice
 
 from ._custom_component_template_questions import (
+    ComponentNameValidator,
     install_js_dependencies,
-    isValidName,
     updateComponentNameInTemplate,
 )
 
@@ -95,7 +95,7 @@ def jsComponentQuestions():
     component_name = questionary.text(
         "What do you want to name your component?",
         instruction="Name must be dash-delimited and all lowercase. E.g. 'my-component-name'",
-        validate=isValidName,
+        validate=ComponentNameValidator,
     ).ask()
 
     appdir = questionary.path(
