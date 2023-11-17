@@ -135,15 +135,22 @@ def jsComponentQuestions():
         "Do you want to install js dependencies now?"
     ).ask()
 
+    success_intalling_deps = True
     if shouldInstallDeps:
-        install_js_dependencies(app_dir)
+        success_intalling_deps = install_js_dependencies(app_dir)
     else:
         print("Skipping installing NPM deps. Run `npm install` to install them later.")
 
-    print(f"Successfully created {component_name} component package!")
-    print("Next steps:")
+    if success_intalling_deps:
+        print("Successfully installed NPM dependencies.")
+    else:
+        print(
+            "Error: Failed to install NPM dependencies. You may need to install Node/npm. After doing this you can try installing manually."
+        )
+
+    print("\nNext steps:")
     print(f"- Run `cd {app_dir}` to change into the new directory")
-    if not shouldInstallDeps:
+    if not shouldInstallDeps or not success_intalling_deps:
         print("- Run `npm install` to install dependencies")
     print("- Run `npm run build` to build the component")
     print("- Install package locally with `pip install -e .`")

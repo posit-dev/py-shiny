@@ -34,7 +34,7 @@ class ComponentNameValidator(Validator):
             )
 
 
-def install_js_dependencies(app_dir: Path):
+def install_js_dependencies(app_dir: Path) -> bool:
     """
     Installs JS dependencies using npm in the specified directory and streams the output.
 
