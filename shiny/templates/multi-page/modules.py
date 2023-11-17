@@ -88,6 +88,4 @@ def data_view_server(
     @render.data_frame
     def data():
         print(df().columns)
-        return df()[
-            ["id", "date", "account", "training_score", "is_electronics", "annotation"]
-        ]
+        return df()
