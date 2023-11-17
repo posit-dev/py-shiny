@@ -1,3 +1,4 @@
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -58,7 +59,7 @@ def template_query(question_state: Optional[str] = None):
 def appTemplateQuestions(template: str):
     appdir = questionary.path(
         "Enter destination directory:",
-        default="./",
+        default=buildPathString(),
         only_directories=True,
     ).ask()
 
@@ -99,7 +100,7 @@ def jsComponentQuestions():
 
     appdir = questionary.path(
         "Enter destination directory:",
-        default=f"./{component_name}",
+        default=buildPathString(component_name),
         only_directories=True,
     ).ask()
 
@@ -135,9 +136,21 @@ def choicesArray(choices: List[Tuple[str, str]]):
     return [Choice(name, value=value) for name, value in choices]
 
 
+def buildPathString(*path: str):
+    """
+    Build a path string that is valid for the current OS
+    """
+    # If no args are provided we should add an empty path to the list
+    # so that the result is properly formed. E.g. "./" on Unix systems
+    prefix = f".{os.path.sep}"
+    if len(path) == 0:
+        return prefix
+    return f"{prefix}{str(Path(*path))}"
+
+
 def copyTemplateFiles(dest: str, template: str):
     if dest == ".":
-        dest = f"./{template}"
+        dest = buildPathString(template)
 
     app_dir = Path(dest)
     template_dir = Path(__file__).parent / "templates" / template
