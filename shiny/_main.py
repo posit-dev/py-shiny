@@ -18,10 +18,11 @@ import uvicorn
 import uvicorn.config
 
 import shiny
-from shiny.express import is_express_app
 
 from . import _autoreload, _hostenv, _static, _utils
 from ._typing_extensions import NotRequired, TypedDict
+from .express import is_express_app
+from .express._utils import escape_to_var_name
 
 
 @click.group("main")
@@ -282,9 +283,9 @@ def run_app(
         app_no_suffix = re.sub(r":app$", "", app)
         if is_express_app(app_no_suffix, app_dir):
             app_path = Path(app_no_suffix).resolve()
-            # Set this so shiny.express.app.wrap_express_app() can find the app file.
-            os.environ["SHINY_EXPRESS_APP_FILE"] = str(app_path)
-            app = "shiny.express.app:app"
+            # If the file is "/path/to/app.py", our entrypoint with the escaped filename
+            # is "shiny.express.app:_2f_path_2f_to_2f_app_2e_py".
+            app = "shiny.express.app:" + escape_to_var_name(str(app_path))
             app_dir = str(app_path.parent)
         else:
             app, app_dir = resolve_app(app, app_dir)
