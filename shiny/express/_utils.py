@@ -14,9 +14,9 @@ def escape_to_var_name(x: str) -> str:
     is_first = True
 
     for char in x:
-        if is_first and char.isdigit():
+        if is_first and re.match("[0-9]", char):
             encoded += f"_{ord(char):x}_"
-        elif char.isalnum():
+        elif re.match("[a-zA-Z0-9]", char):
             encoded += char
         else:
             encoded += f"_{ord(char):x}_"
