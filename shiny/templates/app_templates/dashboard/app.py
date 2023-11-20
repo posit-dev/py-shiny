@@ -38,8 +38,8 @@ app_ui = ui.page_sidebar(
     ui.row(
         ui.layout_column_wrap(
             ui.card(
-                ui.card_header("Body mass distribution"),
-                ui.output_plot("mass_distribution"),
+                ui.card_header("Summary statistics"),
+                ui.output_data_frame("summary_statistics"),
             ),
             ui.card(
                 ui.card_header("Penguin bills"),
@@ -79,13 +79,18 @@ def server(input: Inputs, output: Outputs, session: Session):
             hue="Species",
         )
 
-    @render.plot
-    def mass_distribution():
-        return sns.histplot(
-            data=filtered_df(),
-            x="Body Mass (g)",
-            hue="Species",
-        )
+    @render.data_frame
+    def summary_statistics():
+        display_df = filtered_df()[
+            [
+                "Species",
+                "Island",
+                "Bill Length (mm)",
+                "Bill Depth (mm)",
+                "Body Mass (g)",
+            ]
+        ]
+        return render.DataGrid(display_df, filters=True)
 
 
 def count_species(df, species):
