@@ -47,7 +47,6 @@ def template_query(question_state: Optional[str] = None):
             "Which template would you like to use?:",
             choices=[
                 Choice(title="Basic App", value="basic-app"),
-                Choice(title="Express app", value="express"),
                 Choice(title="Dashboard", value="dashboard"),
                 Choice(title="Multi-page app with modules", value="multi-page"),
                 Choice(title="Custom JavaScript Component", value="js-component"),
