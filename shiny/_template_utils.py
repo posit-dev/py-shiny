@@ -77,6 +77,7 @@ def app_template_questions(template: str):
 
     app_dir = copy_template_files(appdir, template, template_subdir="app_templates")
     print(f"Created Shiny app at {app_dir}")
+    print(f"Next steps open and edit the app file: {app_dir}/app.py")
 
 
 def js_component_questions():
