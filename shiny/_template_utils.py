@@ -75,7 +75,7 @@ def appTemplateQuestions(template: str):
         only_directories=True,
     ).ask()
 
-    app_dir = copyTemplateFiles(appdir, template)
+    app_dir = copyTemplateFiles(appdir, template, template_subdir="app_templates")
     print(f"Created Shiny app at {app_dir}")
 
 
@@ -125,7 +125,9 @@ def jsComponentQuestions():
     if appdir is None:
         sys.exit(1)
 
-    app_dir = copyTemplateFiles(appdir, component_type)
+    app_dir = copyTemplateFiles(
+        appdir, component_type, template_subdir="package_templates"
+    )
 
     # Print messsage saying we're building the component
     print(f"Setting up {component_name} component package...")
@@ -169,12 +171,12 @@ def buildPathString(*path: str):
     return f"{prefix}{str(Path(*path))}"
 
 
-def copyTemplateFiles(dest: str, template: str):
+def copyTemplateFiles(dest: str, template: str, template_subdir: str):
     if dest == ".":
         dest = buildPathString(template)
 
     app_dir = Path(dest)
-    template_dir = Path(__file__).parent / "templates" / template
+    template_dir = Path(__file__).parent / "templates" / template_subdir / template
     duplicate_files = [
         file.name for file in template_dir.iterdir() if (app_dir / file.name).exists()
     ]

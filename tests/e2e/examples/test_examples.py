@@ -33,6 +33,8 @@ example_apps: typing.List[str] = [
     *get_apps("shiny/api-examples"),
 ]
 
+template_apps: typing.List[str] = [*get_apps("shiny/templates/app_templates")]
+
 app_idle_wait = {"duration": 300, "timeout": 5 * 1000}
 app_hard_wait: typing.Dict[str, int] = {
     "brownian": 250,
@@ -125,11 +127,7 @@ def wait_for_idle_app(
     )
 
 
-# Run this test for each example app
-@pytest.mark.examples
-@pytest.mark.parametrize("ex_app_path", example_apps)
-@pytest.mark.flaky(reruns=reruns, reruns_delay=1)
-def test_examples(page: Page, ex_app_path: str) -> None:
+def test_app(page: Page, ex_app_path: str) -> None:
     app = run_shiny_app(here_root / ex_app_path, wait_for_start=True)
 
     console_errors: typing.List[str] = []
@@ -211,3 +209,19 @@ def test_examples(page: Page, ex_app_path: str) -> None:
             + " had JavaScript console errors!\n"
             + "* ".join(console_errors)
         )
+
+
+# Run this test for each template app
+@pytest.mark.examples
+@pytest.mark.parametrize("ex_app_path", template_apps)
+@pytest.mark.flaky(reruns=reruns, reruns_delay=1)
+def test_templates(page: Page, ex_app_path: str) -> None:
+    test_app(page, ex_app_path)
+
+
+# Run this test for each example app
+@pytest.mark.examples
+@pytest.mark.parametrize("ex_app_path", example_apps)
+@pytest.mark.flaky(reruns=reruns, reruns_delay=1)
+def test_examples(page: Page, ex_app_path: str) -> None:
+    test_app(page, ex_app_path)

@@ -12,7 +12,6 @@ def training_ui():
         "Training Dashboard",
         ui.row(
             ui.layout_column_wrap(
-                1 / 2,
                 ui.card(
                     ui.card_header("Model Metrics"),
                     ui.output_plot("metric"),
@@ -26,6 +25,7 @@ def training_ui():
                     ui.card_header("Training Scores"),
                     ui.output_plot("score_dist"),
                 ),
+                width=1 / 2,
             ),
         ),
     )
@@ -56,7 +56,6 @@ def data_view_ui():
         "View Data",
         ui.row(
             ui.layout_column_wrap(
-                1 / 2,
                 ui.value_box(
                     title="Row count",
                     value=ui.output_text("row_count"),
@@ -67,6 +66,7 @@ def data_view_ui():
                     value=ui.output_text("mean_score"),
                     theme="bg-green",
                 ),
+                width=1 / 2,
             ),
         ),
         ui.row(ui.card(ui.output_data_frame("data"))),
