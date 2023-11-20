@@ -213,10 +213,10 @@ def test_app(page: Page, ex_app_path: str) -> None:
 
 # Run this test for each template app
 @pytest.mark.examples
-@pytest.mark.parametrize("ex_app_path", template_apps)
+@pytest.mark.parametrize("template_app_path", template_apps)
 @pytest.mark.flaky(reruns=reruns, reruns_delay=1)
-def test_templates(page: Page, ex_app_path: str) -> None:
-    test_app(page, ex_app_path)
+def test_templates(page: Page, template_app_path: str) -> None:
+    test_app(page, template_app_path)
 
 
 # Run this test for each example app
