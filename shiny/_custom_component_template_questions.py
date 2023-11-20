@@ -79,7 +79,7 @@ def install_js_dependencies(app_dir: Path) -> bool:
         return False
 
 
-def updateComponentNameInTemplate(templateDir: Path, newComponentName: str):
+def update_component_name_in_template(template_dir: Path, new_component_name: str):
     """
     Function to update the name of a custom component in the template files
     Needs to find and replace the following:
@@ -105,7 +105,7 @@ def updateComponentNameInTemplate(templateDir: Path, newComponentName: str):
     # e.g. "new-component-name" -> "new component name"
     #      "new component name" -> "new component name"
     # and then split into an array of words
-    name_parts = newComponentName.replace("-", " ").split(" ")
+    name_parts = new_component_name.replace("-", " ").split(" ")
 
     # Now create the various formats needed
     underscore_name = "_".join(name_parts)
@@ -113,14 +113,14 @@ def updateComponentNameInTemplate(templateDir: Path, newComponentName: str):
     capital_case_name = "".join([part.capitalize() for part in name_parts])
 
     # Rename the directory containing the python code: aka ./custom_component -> ./new_component_name
-    python_pkg_dir = templateDir / old_underscore_name
-    python_pkg_dir.rename(templateDir / underscore_name)
+    python_pkg_dir = template_dir / old_underscore_name
+    python_pkg_dir.rename(template_dir / underscore_name)
 
     # Next rename the python module: aka ./new_component_name/custom_component.py -> ./new_component_name/new_component_name.py
-    python_module_path = templateDir / underscore_name / f"{old_underscore_name}.py"
-    python_module_path.rename(templateDir / underscore_name / f"{underscore_name}.py")
+    python_module_path = template_dir / underscore_name / f"{old_underscore_name}.py"
+    python_module_path.rename(template_dir / underscore_name / f"{underscore_name}.py")
 
-    def updateNamesInFiles(dir: Path):
+    def update_names_in_files(dir: Path):
         # Now do a find-and-replace for the various name types across all the files in the
         # template directory
         for item in dir.iterdir():
@@ -144,4 +144,4 @@ def updateComponentNameInTemplate(templateDir: Path, newComponentName: str):
 
     # Loop over dirs_to_update and run the update function on them
     for dir_to_update in ["", "srcts", underscore_name, "example-app"]:
-        updateNamesInFiles(templateDir / dir_to_update)
+        update_names_in_files(template_dir / dir_to_update)

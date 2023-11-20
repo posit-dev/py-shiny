@@ -10,7 +10,7 @@ from questionary import Choice
 from ._custom_component_template_questions import (
     ComponentNameValidator,
     install_js_dependencies,
-    updateComponentNameInTemplate,
+    update_component_name_in_template,
 )
 
 styles_for_questions = questionary.Style(
@@ -62,24 +62,24 @@ def template_query(question_state: Optional[str] = None):
     if template is None or template == "cancel":
         sys.exit(1)
     elif template == "js-component":
-        jsComponentQuestions()
+        js_component_questions()
         return
     else:
-        appTemplateQuestions(template)
+        app_template_questions(template)
 
 
-def appTemplateQuestions(template: str):
+def app_template_questions(template: str):
     appdir = questionary.path(
         "Enter destination directory:",
-        default=buildPathString(),
+        default=build_path_string(),
         only_directories=True,
     ).ask()
 
-    app_dir = copyTemplateFiles(appdir, template, template_subdir="app_templates")
+    app_dir = copy_template_files(appdir, template, template_subdir="app_templates")
     print(f"Created Shiny app at {app_dir}")
 
 
-def jsComponentQuestions():
+def js_component_questions():
     """
     Hand question branch for the custom js templates. This should handle the entire rest
     of the question flow and is responsible for placing files etc. Currently it repeats
@@ -118,32 +118,32 @@ def jsComponentQuestions():
 
     appdir = questionary.path(
         "Enter destination directory:",
-        default=buildPathString(component_name),
+        default=build_path_string(component_name),
         only_directories=True,
     ).ask()
 
     if appdir is None:
         sys.exit(1)
 
-    app_dir = copyTemplateFiles(
+    app_dir = copy_template_files(
         appdir, component_type, template_subdir="package_templates"
     )
 
     # Print messsage saying we're building the component
     print(f"Setting up {component_name} component package...")
-    updateComponentNameInTemplate(app_dir, component_name)
+    update_component_name_in_template(app_dir, component_name)
 
-    shouldInstallDeps = questionary.confirm(
+    should_install_deps = questionary.confirm(
         "Do you want to install js dependencies now?"
     ).ask()
 
-    success_intalling_deps = True
-    if shouldInstallDeps:
-        success_intalling_deps = install_js_dependencies(app_dir)
+    success_installing_deps = True
+    if should_install_deps:
+        success_installing_deps = install_js_dependencies(app_dir)
     else:
         print("Skipping installing NPM deps. Run `npm install` to install them later.")
 
-    if success_intalling_deps:
+    if success_installing_deps:
         print("Successfully installed NPM dependencies.")
     else:
         print(
@@ -152,14 +152,14 @@ def jsComponentQuestions():
 
     print("\nNext steps:")
     print(f"- Run `cd {app_dir}` to change into the new directory")
-    if not shouldInstallDeps or not success_intalling_deps:
+    if not should_install_deps or not success_installing_deps:
         print("- Run `npm install` to install dependencies")
     print("- Run `npm run build` to build the component")
     print("- Install package locally with `pip install -e .`")
     print("- Open and run the example app in the `example-app` directory")
 
 
-def buildPathString(*path: str):
+def build_path_string(*path: str):
     """
     Build a path string that is valid for the current OS
     """
@@ -171,9 +171,9 @@ def buildPathString(*path: str):
     return f"{prefix}{str(Path(*path))}"
 
 
-def copyTemplateFiles(dest: str, template: str, template_subdir: str):
+def copy_template_files(dest: str, template: str, template_subdir: str):
     if dest == ".":
-        dest = buildPathString(template)
+        dest = build_path_string(template)
 
     app_dir = Path(dest)
     template_dir = Path(__file__).parent / "templates" / template_subdir / template
