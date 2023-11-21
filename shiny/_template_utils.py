@@ -74,7 +74,7 @@ def app_template_questions(template: str):
         only_directories=True,
     ).ask()
 
-    app_dir = copy_template_files(appdir, template, template_subdir="app_templates")
+    app_dir = copy_template_files(appdir, template, template_subdir="app-templates")
     print(f"Created Shiny app at {app_dir}")
     print(f"Next steps open and edit the app file: {app_dir}/app.py")
 
@@ -126,7 +126,7 @@ def js_component_questions():
         sys.exit(1)
 
     app_dir = copy_template_files(
-        appdir, component_type, template_subdir="package_templates"
+        appdir, component_type, template_subdir="package-templates"
     )
 
     # Print messsage saying we're building the component
