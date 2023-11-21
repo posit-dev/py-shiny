@@ -223,7 +223,7 @@ def sidebar(
 
     if max_height_mobile is not None and open != "always":
         warnings.warn(
-            "The `shiny.ui.sidebar(max_height_mobile=)` argument only applies to when `open = 'always'`. The `max_height_mobile` argument will be ignored.",
+            "The `shiny.ui.sidebar(max_height_mobile=)` argument only applies to the sidebar when `open = 'always'`. The `max_height_mobile` argument will be ignored.",
             # `stacklevel=2`: Refers to the caller of `sidebar()`
             stacklevel=2,
         )
