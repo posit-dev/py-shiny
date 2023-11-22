@@ -12,6 +12,7 @@ from ._custom_component_template_questions import (
     install_js_dependencies,
     update_component_name_in_template,
 )
+from ._main import app_template_choices, package_template_choices
 
 styles_for_questions = questionary.Style(
     [
@@ -24,27 +25,6 @@ styles_for_questions = questionary.Style(
 # Prebuild some common choices
 cancel_choice: Choice = Choice(title=[("class:secondary", "[Cancel]")], value="cancel")
 back_choice: Choice = Choice(title=[("class:secondary", "← Back")], value="back")
-
-
-# These templates are copied over fromt the `shiny/templates/app_templates`
-# directory. The process for adding new ones is to add your app folder to
-# that directory, and then add another entry to this dictionary.
-app_template_choices = {
-    "Basic App": "basic-app",
-    "Dashboard": "dashboard",
-    "Multi-page app with modules": "multi-page",
-    "Custom JavaScript Component": "js-component",
-}
-
-# These are templates which produce a Python package and have content filled in at
-# various places based on the user input. You can add new ones by following the
-# examples in `shiny/templates/package-templates` and then adding entries to this
-# dictionary.
-package_template_choices = {
-    "Input component": "js-input",
-    "Output component": "js-output",
-    "React component": "js-react",
-}
 
 
 def choice_from_dict(choice_dict: Dict[str, str]) -> List[Choice]:

@@ -20,11 +20,6 @@ import shiny
 from shiny.express import is_express_app
 
 from . import _autoreload, _hostenv, _static, _utils
-from ._template_utils import (
-    app_template_choices,
-    package_template_choices,
-    template_query,
-)
 from ._typing_extensions import NotRequired, TypedDict
 
 
@@ -457,6 +452,30 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
     return importlib.import_module(module)
 
 
+# The template choices are defined here instead of in `_template_utiles.py` in
+# order to delay loading the questionary package until shiny create is called.
+
+# These templates are copied over fromt the `shiny/templates/app_templates`
+# directory. The process for adding new ones is to add your app folder to
+# that directory, and then add another entry to this dictionary.
+app_template_choices = {
+    "Basic App": "basic-app",
+    "Dashboard": "dashboard",
+    "Multi-page app with modules": "multi-page",
+    "Custom JavaScript Component": "js-component",
+}
+
+# These are templates which produce a Python package and have content filled in at
+# various places based on the user input. You can add new ones by following the
+# examples in `shiny/templates/package-templates` and then adding entries to this
+# dictionary.
+package_template_choices = {
+    "Input component": "js-input",
+    "Output component": "js-output",
+    "React component": "js-react",
+}
+
+
 @main.command(
     help="""Create a Shiny application from a template.
 
@@ -480,6 +499,8 @@ After creating the application, you use `shiny run`:
     help="Choose a template for your new application.",
 )
 def create(template: Optional[str] = None) -> None:
+    from ._template_utils import template_query
+
     template_query(template)
 
 
