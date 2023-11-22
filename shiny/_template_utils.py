@@ -163,12 +163,7 @@ def build_path_string(*path: str):
     """
     Build a path string that is valid for the current OS
     """
-    # If no args are provided we should add an empty path to the list
-    # so that the result is properly formed. E.g. "./" on Unix systems
-    prefix = f".{os.path.sep}"
-    if len(path) == 0:
-        return prefix
-    return f"{prefix}{str(Path(*path))}"
+    return os.path.join(".", *path)
 
 
 def copy_template_files(dest: str, template: str, template_subdir: str):
