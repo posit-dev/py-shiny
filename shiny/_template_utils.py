@@ -2,7 +2,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
 
 import questionary
 from questionary import Choice
@@ -22,8 +22,33 @@ styles_for_questions = questionary.Style(
     ]
 )
 # Prebuild some common choices
-cancel_choice = Choice(title=[("class:secondary", "[Cancel]")], value="cancel")
-back_choice = Choice(title=[("class:secondary", "← Back")], value="back")
+cancel_choice: Choice = Choice(title=[("class:secondary", "[Cancel]")], value="cancel")
+back_choice: Choice = Choice(title=[("class:secondary", "← Back")], value="back")
+
+
+# These templates are copied over fromt the `shiny/templates/app_templates`
+# directory. The process for adding new ones is to add your app folder to
+# that directory, and then add another entry to this dictionary.
+app_template_choices = {
+    "Basic App": "basic-app",
+    "Dashboard": "dashboard",
+    "Multi-page app with modules": "multi-page",
+    "Custom JavaScript Component": "js-component",
+}
+
+# These are templates which produce a Python package and have content filled in at
+# various places based on the user input. You can add new ones by following the
+# examples in `shiny/templates/package-templates` and then adding entries to this
+# dictionary.
+package_template_choices = {
+    "Input component": "js-input",
+    "Output component": "js-output",
+    "React component": "js-react",
+}
+
+
+def choice_from_dict(choice_dict: Dict[str, str]) -> List[Choice]:
+    return [Choice(title=key, value=value) for key, value in choice_dict.items()]
 
 
 def template_query(question_state: Optional[str] = None):
@@ -45,13 +70,7 @@ def template_query(question_state: Optional[str] = None):
     if question_state is None:
         template = questionary.select(
             "Which template would you like to use?:",
-            choices=[
-                Choice(title="Basic App", value="basic-app"),
-                Choice(title="Dashboard", value="dashboard"),
-                Choice(title="Multi-page app with modules", value="multi-page"),
-                Choice(title="Custom JavaScript Component", value="js-component"),
-                cancel_choice,
-            ],
+            choices=[*choice_from_dict(app_template_choices), cancel_choice],
             style=styles_for_questions,
         ).ask()
     else:
@@ -63,6 +82,8 @@ def template_query(question_state: Optional[str] = None):
     elif template == "js-component":
         js_component_questions()
         return
+    elif template in package_template_choices.values():
+        js_component_questions(template)
     else:
         app_template_questions(template)
 
@@ -79,31 +100,29 @@ def app_template_questions(template: str):
     print(f"Next steps open and edit the app file: {app_dir}/app.py")
 
 
-def js_component_questions():
+def js_component_questions(component_type: Optional[str] = None):
     """
     Hand question branch for the custom js templates. This should handle the entire rest
     of the question flow and is responsible for placing files etc. Currently it repeats
     a lot of logic from the default flow but as the custom templates get more
     complicated the logic will diverge
     """
-
-    component_type = questionary.select(
-        "What kind of component do you want to build?:",
-        choices=[
-            Choice(title="Input component", value="js-input"),
-            Choice(title="Output component", value="js-output"),
-            Choice(title="React component", value="js-react"),
-            back_choice,
-            cancel_choice,
-        ],
-        style=styles_for_questions,
-    ).ask()
+    if component_type is None:
+        component_type = questionary.select(
+            "What kind of component do you want to build?:",
+            choices=[
+                *choice_from_dict(package_template_choices),
+                back_choice,
+                cancel_choice,
+            ],
+            style=styles_for_questions,
+        ).ask()
 
     if component_type == "back":
         template_query()
         return
 
-    if component_type is None:
+    if component_type is None or component_type == "cancel":
         sys.exit(1)
 
     # As what the user wants the name of their component to be

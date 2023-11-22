@@ -20,7 +20,11 @@ import shiny
 from shiny.express import is_express_app
 
 from . import _autoreload, _hostenv, _static, _utils
-from ._template_utils import template_query
+from ._template_utils import (
+    app_template_choices,
+    package_template_choices,
+    template_query,
+)
 from ._typing_extensions import NotRequired, TypedDict
 
 
@@ -466,8 +470,17 @@ After creating the application, you use `shiny run`:
     shiny run APPDIR/app.py --reload
 """
 )
-def create() -> None:
-    template_query()
+@click.option(
+    "--template",
+    "-t",
+    type=click.Choice(
+        list({**app_template_choices, **package_template_choices}.values()),
+        case_sensitive=False,
+    ),
+    help="Choose a template for your new application.",
+)
+def create(template: Optional[str] = None) -> None:
+    template_query(template)
 
 
 @main.command(
