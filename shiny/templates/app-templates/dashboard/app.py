@@ -22,7 +22,7 @@ app_ui = ui.page_sidebar(
             "mass",
             "Mass",
             2000,
-            8000,
+            6000,
             3400,
         ),
         ui.input_checkbox_group(

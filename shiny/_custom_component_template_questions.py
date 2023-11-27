@@ -1,8 +1,18 @@
+import re
 import subprocess
 from pathlib import Path
 
 from prompt_toolkit.document import Document
 from questionary import ValidationError, Validator
+
+
+def is_pep508_identifier(name: str):
+    """
+    Checks if a package name is a PEP 508 identifier.
+    """
+    # Regex from https://peps.python.org/pep-0508/#names
+    pattern = re.compile(r"^([A-Z0-9]|[A-Z0-9][A-Z0-9._-]*[A-Z0-9])$", re.IGNORECASE)
+    return bool(pattern.match(name))
 
 
 class ComponentNameValidator(Validator):
@@ -30,6 +40,29 @@ class ComponentNameValidator(Validator):
         if name != name.lower():
             raise ValidationError(
                 message="Name must be all lowercase",
+                cursor_position=len(name),
+            )
+
+        # Check for quotations
+
+        if (
+            name.startswith('"')
+            or name.endswith('"')
+            or name.startswith("'")
+            or name.endswith("'")
+        ):
+            raise ValidationError(
+                message="The name should be unquoted.",
+                cursor_position=len(name),
+            )
+
+        # Pypi only allows names shorter than 214 characters
+        if len(name) > 214:
+            raise ValidationError(message="Name can't exceed 214 characters")
+
+        if not is_pep508_identifier(name):
+            raise ValidationError(
+                message="Name must be a pep508 identifier: https://peps.python.org/pep-0508/#names",
                 cursor_position=len(name),
             )
 

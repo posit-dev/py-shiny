@@ -12,6 +12,9 @@ from ._custom_component_template_questions import (
     install_js_dependencies,
     update_component_name_in_template,
 )
+
+# The choices are specified in _main because they populate the
+# CLI flag options.
 from ._main import app_template_choices, package_template_choices
 
 styles_for_questions = questionary.Style(
@@ -74,6 +77,9 @@ def app_template_questions(template: str):
         default=build_path_string(),
         only_directories=True,
     ).ask()
+
+    if appdir is None:
+        sys.exit(1)
 
     app_dir = copy_template_files(appdir, template, template_subdir="app-templates")
     print(f"Created Shiny app at {app_dir}")
