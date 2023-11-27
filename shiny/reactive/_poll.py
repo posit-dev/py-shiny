@@ -96,10 +96,10 @@ def poll(
     """
 
     with reactive.isolate():
-        last_value: reactive.Value[Any] = reactive.Value(poll_func())
-        last_error: reactive.Value[Optional[Exception]] = reactive.Value(None)
+        last_value: reactive.value[Any] = reactive.value(poll_func())
+        last_error: reactive.value[Optional[Exception]] = reactive.value(None)
 
-    @reactive.Effect(priority=priority, session=session)
+    @reactive.effect(priority=priority, session=session)
     async def _():
         try:
             if _utils.is_async_callable(poll_func):
@@ -159,7 +159,7 @@ def poll(
     def wrapper(fn: Callable[[], T]) -> Callable[[], T]:
         if _utils.is_async_callable(fn):
 
-            @reactive.Calc(session=session)
+            @reactive.calc(session=session)
             @functools.wraps(fn)
             async def result_async() -> T:
                 # If an error occurred, raise it
@@ -182,7 +182,7 @@ def poll(
 
         else:
 
-            @reactive.Calc(session=session)
+            @reactive.calc(session=session)
             @functools.wraps(fn)
             def result_sync() -> T:
                 # If an error occurred, raise it

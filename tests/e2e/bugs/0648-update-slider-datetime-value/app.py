@@ -51,7 +51,7 @@ def slider_with_reset_server(
         else:
             return input.times()
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.reset)
     def reset_time():
         ui.update_slider("times", min=min, max=max, value=value)

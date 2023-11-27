@@ -37,7 +37,7 @@ from starlette.types import ASGIApp
 if TYPE_CHECKING:
     from .._app import App
 
-from .. import _utils, render
+from .. import _utils, reactive, render
 from .._connection import Connection, ConnectionClosed
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
@@ -46,7 +46,7 @@ from .._typing_extensions import TypedDict
 from .._utils import wrap_async
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
-from ..reactive import Effect, Effect_, Value, flush, isolate
+from ..reactive import Effect_, effect, flush, isolate, value
 from ..reactive._core import lock, on_flushed
 from ..render.transformer import OutputRenderer
 from ..types import SafeException, SilentCancelOutputException, SilentException
@@ -345,7 +345,7 @@ class Session(object, metaclass=SessionMeta):
             # id; make that explicit by wrapping it in ResolvedId, otherwise self.input
             # will throw an id validation error.
             hidden_value_obj = cast(
-                Value[bool], self.input[ResolvedId(f".clientdata_output_{name}_hidden")]
+                value[bool], self.input[ResolvedId(f".clientdata_output_{name}_hidden")]
             )
             if not hidden_value_obj.is_set():
                 return True
@@ -898,24 +898,24 @@ class Inputs:
     """
 
     def __init__(
-        self, values: dict[str, Value[Any]], ns: Callable[[str], str] = Root
+        self, values: dict[str, value[Any]], ns: Callable[[str], str] = Root
     ) -> None:
         self._map = values
         self._ns = ns
 
-    def __setitem__(self, key: str, value: Value[Any]) -> None:
-        if not isinstance(value, Value):
+    def __setitem__(self, key: str, value: value[Any]) -> None:
+        if not isinstance(value, reactive.value):
             raise TypeError("`value` must be a reactive.Value object.")
 
         self._map[self._ns(key)] = value
 
-    def __getitem__(self, key: str) -> Value[Any]:
+    def __getitem__(self, key: str) -> value[Any]:
         key = self._ns(key)
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
         # yet.
         if key not in self._map:
-            self._map[key] = Value[Any](read_only=True)
+            self._map[key] = value[Any](read_only=True)
 
         return self._map[key]
 
@@ -923,14 +923,14 @@ class Inputs:
         del self._map[self._ns(key)]
 
     # Allow access of values as attributes.
-    def __setattr__(self, attr: str, value: Value[Any]) -> None:
+    def __setattr__(self, attr: str, value: value[Any]) -> None:
         if attr in ("_map", "_ns"):
             super().__setattr__(attr, value)
             return
 
         self.__setitem__(attr, value)
 
-    def __getattr__(self, attr: str) -> Value[Any]:
+    def __getattr__(self, attr: str) -> value[Any]:
         if attr in ("_map", "_ns"):
             return object.__getattribute__(self, attr)
         return self.__getitem__(attr)
@@ -1008,7 +1008,7 @@ class Outputs:
 
             self._suspend_when_hidden[output_name] = suspend_when_hidden
 
-            @Effect(
+            @effect(
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
                 priority=priority,
             )

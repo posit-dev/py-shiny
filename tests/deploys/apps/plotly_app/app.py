@@ -61,7 +61,7 @@ def server(input, output, session):
             height="100%",
         )
 
-    @reactive.Calc
+    @reactive.calc
     def filtered_df():
         selected_idx = list(req(input.summary_data_selected_rows()))
         countries = summary_df["country"][selected_idx]
@@ -116,7 +116,7 @@ def synchronize_size(output_id):
     def wrapper(func):
         input = session.get_current_session().input
 
-        @reactive.Effect
+        @reactive.effect
         def size_updater():
             func(
                 input[f".clientdata_output_{output_id}_width"](),

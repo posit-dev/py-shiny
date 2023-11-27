@@ -29,14 +29,14 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session) -> None:
-    @reactive.Calc
+    @reactive.calc
     def acc() -> list[str]:
         acc_val: list[str] | None = input.acc()
         if acc_val is None:
             acc_val = []
         return acc_val
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         req(input.toggle_b())
 
@@ -46,12 +46,12 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             else:
                 ui.update_accordion_panel("acc", "Section B", show=True)
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         req(input.open_all())
         ui.update_accordion("acc", show=True)
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         req(input.close_all())
         ui.update_accordion("acc", show=False)
@@ -60,7 +60,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     has_alternate = True
     has_updates = False
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         req(input.alternate())
 
@@ -79,7 +79,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         ui.update_accordion("acc", show=sections)
         has_alternate = not has_alternate
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         req(input.toggle_efg())
 
@@ -93,7 +93,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
         has_efg = not has_efg
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         req(input.toggle_updates())
 
