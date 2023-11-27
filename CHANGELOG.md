@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Closed #814: The classes `reactive.Value`, `reactive.Calc`, and `reactive.Effect` have been changed to have lowercase names: `reactive.value`, `reactive.calc`, and `reactive.effect`. The old capitalized names are now aliases to the new lowercase names, so existing code will continue to work. The examples have not been changed yet, but will be changed in a future release. (#822)
+
 ### Bug fixes
 
 * Fix support for `shiny.ui.accordion(multiple=)` (#799).
