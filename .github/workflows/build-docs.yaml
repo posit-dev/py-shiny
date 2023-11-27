@@ -48,14 +48,14 @@ jobs:
           make site
 
       - name: Upload site artifact
-        # if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v1
         with:
           path: "docs/_site"
 
 
   deploy:
-    # if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     needs: build
 
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
