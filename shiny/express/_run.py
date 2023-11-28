@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import os
 import sys
 from pathlib import Path
 from typing import cast
@@ -23,28 +22,19 @@ __all__ = ("wrap_express_app",)
 _DEFAULT_PAGE_FUNCTION = ui.page_fluid
 
 
-def wrap_express_app(file: Path | None = None) -> App:
-    """Wrap a Shiny express-mode app into a Shiny `App` object.
+def wrap_express_app(file: Path) -> App:
+    """Wrap a Shiny Express mode app into a Shiny `App` object.
 
     Parameters
     ----------
     file
-        The path to the file containing the Shiny express application. If `None`, the
-        `SHINY_EXPRESS_APP_FILE` environment variable is used.
+        The path to the file containing the Shiny express application.
 
     Returns
     -------
     :
         A `shiny.App` object.
     """
-    if file is None:
-        app_file = os.getenv("SHINY_EXPRESS_APP_FILE")
-        if app_file is None:
-            raise ValueError(
-                "No app file was specified and the SHINY_EXPRESS_APP_FILE environment variable "
-                "is not set."
-            )
-        file = Path(os.getcwd()) / app_file
 
     app_ui = run_express(file)
 
@@ -105,6 +95,17 @@ def run_express(file: Path) -> Tag | TagList:
             )
 
     get_top_level_recall_context_manager().__exit__(None, None, None)
+
+    # If we're running as an Express app but there's also a top-level item named app
+    # which is a shiny.App object, the user probably made a mistake.
+    if "app" in var_context and isinstance(var_context["app"], App):
+        raise RuntimeError(
+            "This looks like a Shiny Express app because it imports shiny.express, "
+            "but it also looks like a Shiny Classic app because it has a variable named "
+            "`app` which is a shiny.App object. Remove either the shiny.express import, "
+            "or the app=App()."
+        )
+
     return ui_result
 
 
