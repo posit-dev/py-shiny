@@ -1,12 +1,17 @@
 import { LitElement, html, css } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { property } from "lit/decorators.js";
+
+import { makeOutputBinding } from "@shiny-helpers/main";
+
+// What the server-side output binding will send to the client. It's important
+// to make sure this matches what the python code is sending.
+type Payload = { value: number };
 
 /**
  * An example element.
  *
  * @csspart display - The span containing the value
  */
-@customElement("custom-component")
 export class CustomComponentEl extends LitElement {
   static override styles = css`
     :host {
@@ -23,6 +28,10 @@ export class CustomComponentEl extends LitElement {
   @property({ type: Number })
   count = 0;
 
+  onNewValue(payload: Payload) {
+    this.count = payload.value;
+  }
+
   override render() {
     return html`
       <span part="display"> Value: ${this.count} </span>
@@ -31,34 +40,5 @@ export class CustomComponentEl extends LitElement {
   }
 }
 
-class CustomOutputBinding extends Shiny.OutputBinding {
-  /**
-   * Find the element that will be rendered by this output binding.
-   * @param scope The scope in which to search for the element.
-   * @returns The element that will be rendered by this output
-   * binding.
-   */
-  override find(scope: JQuery<HTMLElement>) {
-    return scope.find("custom-component");
-  }
-
-  /**
-   * Function to run when rendering the output. This function will be passed the
-   * element that was found by `find()` and the payload that was sent by the
-   * server when there's new data to render. Note that the element passed may
-   * already be populated with content from a previous render and it is up to
-   * the function to clear the element and re-render the content.
-   * @param el The element that was found by `find()`
-   * @param payload An object as provided from server with the
-   * `render_custom_component` function
-   */
-  override renderValue(el: HTMLElement, payload: { value: number }) {
-    // Return early if el is not an instance of the custom element
-    if (!(el instanceof CustomComponentEl)) {
-      return;
-    }
-
-    el.count = payload.value;
-  }
-}
-Shiny.outputBindings.register(new CustomOutputBinding(), "custom-component");
+// Setup output binding. This also registers the custom element.
+makeOutputBinding<Payload>("custom-component", CustomComponentEl);

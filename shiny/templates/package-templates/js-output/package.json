@@ -10,11 +10,11 @@
   "author": "Nick Strayer",
   "license": "MIT",
   "devDependencies": {
-    "@types/rstudio-shiny": "git+https://github.com/rstudio/shiny#v1.7.4",
     "esbuild": "0.19.5",
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "lit": "^3.0.2"
+    "lit": "^3.0.2",
+    "@shiny-helpers/main": "^0.0.18"
   }
 }

@@ -38,9 +38,8 @@ async def render_custom_component(
         # Throw an error if the value is not a dataframe
         raise TypeError(f"Expected a integer, got {type(res)}. ")
 
-    # Get data from dataframe as a list of lists where each inner list is a
-    # row, column names as array of strings and types of each column as an
-    # array of strings
+    # Send the results to the client. Make sure that this is a serializable
+    # object and matches what is expected in the javascript code.
     return {"value": res}
 
 
