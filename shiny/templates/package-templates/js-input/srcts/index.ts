@@ -1,5 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import type { CustomElementInput } from "@shiny-helpers/main";
+import { makeInputBinding } from "@shiny-helpers/main";
 
 const customInputTag = "custom-component";
 /**
@@ -9,7 +11,10 @@ const customInputTag = "custom-component";
  * @csspart display - The span containing the value
  */
 @customElement(customInputTag)
-export class CustomComponentEl extends LitElement {
+export class CustomComponentEl
+  extends LitElement
+  implements CustomElementInput<number>
+{
   static override styles = css`
     :host {
       display: block;
@@ -28,14 +33,14 @@ export class CustomComponentEl extends LitElement {
    * This alerts Shiny that the value has changed and it should check for the
    * latest value. This is set by the input binding.
    */
-  onChangeCallback: null | ((x: boolean) => void) = null;
+  notifyBindingOfChange: (x?: boolean) => void = () => {};
 
   /**
    * Function to run when the increment button is clicked.
    */
   onIncrement() {
     this.value++;
-    this.onChangeCallback?.(true);
+    this.notifyBindingOfChange(true);
   }
 
   override render() {
@@ -47,29 +52,5 @@ export class CustomComponentEl extends LitElement {
   }
 }
 
-// Setup the input binding for the custom input
-class CustomInputBinding extends Shiny.InputBinding {
-  constructor() {
-    super();
-  }
-
-  override find(scope: HTMLElement): JQuery<HTMLElement> {
-    return $(scope).find(customInputTag);
-  }
-
-  override getValue(el: CustomComponentEl) {
-    return el.value;
-  }
-
-  override subscribe(
-    el: CustomComponentEl,
-    callback: (x: boolean) => void
-  ): void {
-    // Our custom input has a callback that it calls when its value has changed.
-    // By setting this here we can alert Shiny that the value has changed and it
-    // should check for the latest value.
-    el.onChangeCallback = callback;
-  }
-}
-
-Shiny.inputBindings.register(new CustomInputBinding(), customInputTag);
+// Setup the input binding
+makeInputBinding<CustomComponentEl>(customInputTag);
