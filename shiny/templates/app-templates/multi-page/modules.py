@@ -69,7 +69,7 @@ def data_view_ui():
                 width=1 / 2,
             ),
         ),
-        ui.row(ui.card(ui.output_data_frame("data"))),
+        ui.card(ui.output_data_frame("data")),
     )
 
 
@@ -87,5 +87,4 @@ def data_view_server(
 
     @render.data_frame
     def data():
-        print(df().columns)
         return df()
