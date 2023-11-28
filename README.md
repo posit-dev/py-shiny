@@ -47,6 +47,8 @@ shiny run app.py --reload
 
 ## Development
 
+API documentation for the `main` branch of Shiny: https://posit-dev.github.io/py-shiny/api/
+
 If you want to do development on Shiny for Python:
 
 ``` sh
