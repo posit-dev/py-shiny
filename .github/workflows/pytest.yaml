@@ -65,6 +65,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Run End-to-End tests
+        timeout-minutes: 20
         run: |
           make e2e
 
@@ -96,6 +97,7 @@ jobs:
           npm ci
 
       - name: Run example app tests
+        timeout-minutes: 20
         run: |
           make e2e-examples
 
@@ -124,6 +126,7 @@ jobs:
           DEPLOY_SHINYAPPS_NAME: "${{ secrets.DEPLOY_SHINYAPPS_NAME }}"
           DEPLOY_SHINYAPPS_TOKEN: "${{ secrets.DEPLOY_SHINYAPPS_TOKEN }}"
           DEPLOY_SHINYAPPS_SECRET: "${{ secrets.DEPLOY_SHINYAPPS_SECRET }}"
+        timeout-minutes: 30
         run: |
           make e2e-deploys
 
@@ -197,6 +200,7 @@ jobs:
           npm ci
 
       - name: Run End-to-End tests
+        timeout-minutes: 20
         run: |
           make e2e-junit
       - name: Report results to Testrail
