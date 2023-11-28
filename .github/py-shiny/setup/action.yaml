@@ -22,6 +22,7 @@ runs:
       - name: Install dependencies
         shell: bash
         run: |
+          pip install https://github.com/rstudio/py-htmltools/tarball/main
           make install-deps
 
       - name: Install

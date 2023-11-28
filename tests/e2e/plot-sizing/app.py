@@ -119,7 +119,11 @@ def server(input: Inputs, output: Outputs, session: Session):
         # FacetGrid has an opinion about its figure size
         g = sns.FacetGrid(tips, **kwargs)  # pyright: ignore[reportUnknownArgumentType]
         g.figure.set_facecolor("lavender")
-        g.map(sns.scatterplot, "total_bill", "tip")
+        g.map(
+            sns.scatterplot,  # pyright: ignore[reportUnknownArgumentType]
+            "total_bill",
+            "tip",
+        )
         plt.gca().set_facecolor("lavender")
         if fig_size:
             plt.gcf().set_dpi(dpi)

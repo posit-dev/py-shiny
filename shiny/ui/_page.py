@@ -7,6 +7,7 @@ __all__ = (
     "page_fluid",
     "page_fixed",
     "page_bootstrap",
+    "page_output",
 )
 
 from typing import Literal, Optional, Sequence
@@ -28,6 +29,7 @@ from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._html_deps_external import bootstrap_deps
+from ._html_deps_py_shiny import page_output_dependency
 from ._html_deps_shinyverse import components_dependency
 from ._navs import navset_bar
 from ._sidebar import Sidebar, layout_sidebar
@@ -90,6 +92,8 @@ def page_sidebar(
         layout_sidebar(
             sidebar,
             *children,
+            # Make the main area background white instead of the default gray.
+            {"style": "--bslib-shiny-preset-main-bg: white"},
             attrs,
             fillable=fillable,
             border=False,
@@ -322,7 +326,6 @@ def page_fluid(
 
     Parameters
     ----------
-
     args
         UI elements.
     title
@@ -364,7 +367,6 @@ def page_fixed(
 
     Parameters
     ----------
-
     args
         UI elements.
     title
@@ -406,7 +408,6 @@ def page_bootstrap(
 
     Parameters
     ----------
-
     args
         UI elements.
     title
@@ -434,4 +435,26 @@ def page_bootstrap(
         tags.head(head),
         tags.body(*bootstrap_deps(), *args, **kwargs),
         lang=lang,
+    )
+
+
+def page_output(id: str) -> Tag:
+    """
+    Create a page container where the entire body is a UI output.
+
+    Parameters
+    ----------
+    id
+        An output id.
+
+    Returns
+    -------
+    :
+        A UI element which is meant to be used as a page container.
+    """
+    return tags.html(
+        tags.head(),
+        tags.body(id=id, class_="shiny-page-output"),
+        page_output_dependency(),
+        lang="en",
     )

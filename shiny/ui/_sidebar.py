@@ -412,7 +412,7 @@ def layout_sidebar(
                 "--_main-bg": bg,
                 "--bs-card-border-color": border_color,
                 "height": as_css_unit(height),
-                "--_sidebar-max-height-mobile": as_css_unit(max_height_mobile),
+                "--_max-height-mobile": as_css_unit(max_height_mobile),
             },
         ),
     )
@@ -661,7 +661,7 @@ class DeprecatedPanelSidebar(
             *args,
             width=f"{int(width / 12 * 100)}%",
             open="always",
-            **kwargs,
+            **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
         )
 
     # Hopefully this is never used. But wanted to try to be safe

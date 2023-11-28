@@ -119,6 +119,7 @@ from ._page import (
     page_fluid,
     page_fixed,
     page_bootstrap,
+    page_output,
 )
 from ._progress import Progress
 
@@ -293,6 +294,7 @@ __all__ = (
     "output_text_verbatim",
     "output_table",
     "output_ui",
+    "page_output",
     # _page
     "page_sidebar",
     "page_navbar",

@@ -873,7 +873,9 @@ class SessionProxy:
     ) -> Callable[[DownloadHandler], None]:
         def wrapper(fn: DownloadHandler):
             id_ = self.ns(id or fn.__name__)
-            return self._parent.download(id=id_, **kwargs)(fn)
+            return self._parent.download(
+                id=id_, **kwargs  # pyright: ignore[reportGeneralTypeIssues]
+            )(fn)
 
         return wrapper
 
@@ -965,7 +967,7 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    def __call__(self, renderer_fn: OutputRenderer[Any]) -> None:
+    def __call__(self, renderer_fn: OutputRenderer[OT]) -> OutputRenderer[OT]:
         ...
 
     @overload
@@ -975,7 +977,7 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-    ) -> Callable[[OutputRenderer[Any]], None]:
+    ) -> Callable[[OutputRenderer[OT]], OutputRenderer[OT]]:
         ...
 
     def __call__(
@@ -985,8 +987,8 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-    ) -> None | Callable[[OutputRenderer[OT]], None]:
-        def set_renderer(renderer_fn: OutputRenderer[OT]) -> None:
+    ) -> OutputRenderer[OT] | Callable[[OutputRenderer[OT]], OutputRenderer[OT]]:
+        def set_renderer(renderer_fn: OutputRenderer[OT]) -> OutputRenderer[OT]:
             if hasattr(renderer_fn, "on_register"):
                 renderer_fn.on_register()
 
@@ -1059,7 +1061,7 @@ class Outputs:
 
             self._effects[output_name] = output_obs
 
-            return None
+            return renderer_fn
 
         if renderer_fn is None:
             return set_renderer

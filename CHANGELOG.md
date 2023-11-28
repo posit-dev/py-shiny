@@ -12,7 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Fix support for `shiny.ui.accordion(multiple=)` (#799).
+
 ### Other changes
+
+* Update penguins example to credit Allison Horst and drop usage of `shiny.experimental` (#798).
 
 
 ## [0.6.0] - 2023-08-08

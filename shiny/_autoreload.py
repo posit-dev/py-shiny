@@ -19,17 +19,6 @@ from asgiref.typing import (
     Scope,
 )
 
-from ._shinyenv import is_pyodide
-
-if not is_pyodide:
-    # Warning: `import websockets` alone doesn't work because the websockets package uses
-    # a lazy loading technique which is opaque to mypy and pyright.
-    # https://github.com/aaugustin/websockets/issues/940#issuecomment-874012438
-    from websockets.client import connect
-    from websockets.server import serve, WebSocketServerProtocol
-    import websockets.exceptions
-    import websockets.datastructures
-
 from ._hostenv import get_proxy_url
 
 # CHILD PROCESS ------------------------------------------------------------
@@ -67,6 +56,8 @@ def reload_begin():
 
 # Called from child process when new application instance starts up
 def reload_end():
+    import websockets
+
     # os.kill(os.getppid(), signal.SIGUSR1)
 
     port = os.getenv("SHINY_AUTORELOAD_PORT")
@@ -82,7 +73,9 @@ def reload_end():
             }
         }
         try:
-            async with connect(url, **options) as websocket:
+            async with websockets.connect(
+                url, **options  # pyright: ignore[reportGeneralTypeIssues]
+            ) as websocket:
                 await websocket.send("reload_end")
         except websockets.exceptions.ConnectionClosed:
             pass
@@ -163,6 +156,8 @@ def _thread_main(port: int, app_url: str, secret: str, launch_browser: bool):
 async def _coro_main(
     port: int, app_url: str, secret: str, launch_browser: bool
 ) -> None:
+    import websockets
+
     reload_now: asyncio.Event = asyncio.Event()
 
     def nudge():
@@ -174,7 +169,7 @@ async def _coro_main(
         reload_now.set()
         reload_now.clear()
 
-    async def reload_server(conn: WebSocketServerProtocol):
+    async def reload_server(conn: websockets.server.WebSocketServerProtocol):
         try:
             if conn.path == "/autoreload":
                 # The client wants to be notified when the app has reloaded. The client
@@ -207,7 +202,9 @@ async def _coro_main(
         if request_headers.get("Upgrade") is None:
             return (http.HTTPStatus.MOVED_PERMANENTLY, [("Location", app_url)], b"")
 
-    async with serve(reload_server, "127.0.0.1", port, process_request=process_request):
+    async with websockets.serve(
+        reload_server, "127.0.0.1", port, process_request=process_request
+    ):
         await asyncio.Future()  # wait forever
 
 
