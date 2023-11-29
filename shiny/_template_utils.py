@@ -9,7 +9,6 @@ from questionary import Choice
 
 from ._custom_component_template_questions import (
     ComponentNameValidator,
-    install_js_dependencies,
     update_component_name_in_template,
 )
 
@@ -138,27 +137,9 @@ def js_component_questions(component_type: Optional[str] = None):
     print(f"Setting up {component_name} component package...")
     update_component_name_in_template(app_dir, component_name)
 
-    should_install_deps = questionary.confirm(
-        "Do you want to install js dependencies now?"
-    ).ask()
-
-    success_installing_deps = True
-    if should_install_deps:
-        success_installing_deps = install_js_dependencies(app_dir)
-    else:
-        print("Skipping installing NPM deps. Run `npm install` to install them later.")
-
-    if success_installing_deps:
-        print("Successfully installed NPM dependencies.")
-    else:
-        print(
-            "Error: Failed to install NPM dependencies. You may need to install Node/npm. After doing this you can try installing manually."
-        )
-
     print("\nNext steps:")
     print(f"- Run `cd {app_dir}` to change into the new directory")
-    if not should_install_deps or not success_installing_deps:
-        print("- Run `npm install` to install dependencies")
+    print("- Run `npm install` to install dependencies")
     print("- Run `npm run build` to build the component")
     print("- Install package locally with `pip install -e .`")
     print("- Open and run the example app in the `example-app` directory")

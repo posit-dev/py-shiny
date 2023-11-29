@@ -67,51 +67,6 @@ class ComponentNameValidator(Validator):
             )
 
 
-def install_js_dependencies(app_dir: Path) -> bool:
-    """
-    Installs JS dependencies using npm in the specified directory and streams the output.
-
-    Args:
-    app_dir (str): The directory where npm install should be executed.
-    """
-    print("Installing NPM deps now...")
-
-    try:
-        process = subprocess.Popen(
-            ["npm", "install"],
-            cwd=app_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,  # Line buffered
-            universal_newlines=True,  # Ensures text mode is used
-        )
-
-        # Stream the output line by line
-        while True:
-            stdout = process.stdout
-            if stdout is None:
-                break
-            output = stdout.readline()
-            if output == "" and process.poll() is not None:
-                break
-            if output:
-                print(output.strip())
-
-        # Check the return code
-        rc = process.poll()
-        if rc != 0:
-            print(f"npm install failed with exit code {rc}")
-            return False
-        else:
-            print("npm install completed successfully.")
-            return True
-
-    except Exception as e:
-        print(f"An error occurred while installing NPM dependencies: {e}")
-        return False
-
-
 def update_component_name_in_template(template_dir: Path, new_component_name: str):
     """
     Function to update the name of a custom component in the template files
