@@ -1,5 +1,4 @@
 import re
-import subprocess
 from pathlib import Path
 
 from prompt_toolkit.document import Document
