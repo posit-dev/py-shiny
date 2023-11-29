@@ -28,6 +28,7 @@ __all__ = (
     "navset_card_tab",
     "nav",
     "page_fluid",
+    "page_fixed",
     "page_fillable",
     "page_sidebar",
 )
@@ -614,6 +615,44 @@ def page_fluid(
     """
     return RecallContextManager(
         ui.page_fluid,
+        kwargs=dict(
+            title=title,
+            lang=lang,
+            **kwargs,
+        ),
+    )
+
+
+def page_fixed(
+    *,
+    title: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: str,
+) -> RecallContextManager[Tag]:
+    """
+    Create a fixed page.
+
+    This function wraps :func:`~shiny.ui.page_fixed`.
+
+    Parameters
+    ----------
+    title
+        The browser window title (defaults to the host URL of the page). Can also be set
+        as a side effect via :func:`~shiny.ui.panel_title`.
+    lang
+        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+        default, `None`, results in an empty string.
+    kwargs
+        Attributes on the page level container.
+
+    Returns
+    -------
+    :
+        A UI element.
+    """
+    return RecallContextManager(
+        ui.page_fixed,
         kwargs=dict(
             title=title,
             lang=lang,
