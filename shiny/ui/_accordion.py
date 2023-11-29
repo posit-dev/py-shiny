@@ -98,7 +98,7 @@ class AccordionPanel:
             A :class:`~htmltools.Tag` object representing the
             :class:`~shiny.ui.AccordionPanel`.
         """
-        btn_attrs: dict[str, str] = {}
+        btn_attrs = {}
         if self._is_open:
             btn_attrs["aria-expanded"] = "true"
         else:
