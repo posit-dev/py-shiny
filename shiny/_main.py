@@ -7,7 +7,6 @@ import inspect
 import os
 import platform
 import re
-import shutil
 import sys
 import types
 from pathlib import Path
@@ -454,33 +453,56 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
     return importlib.import_module(module)
 
 
+# The template choices are defined here instead of in `_template_utiles.py` in
+# order to delay loading the questionary package until shiny create is called.
+
+# These templates are copied over fromt the `shiny/templates/app_templates`
+# directory. The process for adding new ones is to add your app folder to
+# that directory, and then add another entry to this dictionary.
+app_template_choices = {
+    "Basic App": "basic-app",
+    "Dashboard": "dashboard",
+    "Multi-page app with modules": "multi-page",
+    "Custom JavaScript Component": "js-component",
+}
+
+# These are templates which produce a Python package and have content filled in at
+# various places based on the user input. You can add new ones by following the
+# examples in `shiny/templates/package-templates` and then adding entries to this
+# dictionary.
+package_template_choices = {
+    "Input component": "js-input",
+    "Output component": "js-output",
+    "React component": "js-react",
+}
+
+
 @main.command(
     help="""Create a Shiny application from a template.
 
-APPDIR is the directory to the Shiny application. A file named app.py will be created in
-that directory.
+Create an app based on a template. You will be prompted with
+a number of application types, as well as the destination folder.
+If you don't provide a destination folder, it will be created in the current working
+directory based on the template name.
 
 After creating the application, you use `shiny run`:
 
     shiny run APPDIR/app.py --reload
 """
 )
-@click.argument("appdir", type=str, default=".")
-def create(appdir: str) -> None:
-    app_dir = Path(appdir)
-    app_path = app_dir / "app.py"
-    if app_path.exists():
-        print(f"Error: Can't create {app_path} because it already exists.")
-        sys.exit(1)
+@click.option(
+    "--template",
+    "-t",
+    type=click.Choice(
+        list({**app_template_choices, **package_template_choices}.values()),
+        case_sensitive=False,
+    ),
+    help="Choose a template for your new application.",
+)
+def create(template: Optional[str] = None) -> None:
+    from ._template_utils import template_query
 
-    if not app_dir.exists():
-        app_dir.mkdir()
-
-    shutil.copyfile(
-        Path(__file__).parent / "api-examples" / "template" / "app.py", app_path
-    )
-
-    print(f"Created Shiny app at {app_dir / 'app.py'}")
+    template_query(template)
 
 
 @main.command(
