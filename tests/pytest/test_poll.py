@@ -11,7 +11,7 @@ import pytest
 
 from shiny import Session, _utils, session
 from shiny._namespaces import Root
-from shiny.reactive import effect, file_reader, flush, isolate, poll, value
+from shiny.reactive import Value, effect, file_reader, flush, isolate, poll
 
 from .mocktime import MockTime
 
@@ -57,9 +57,9 @@ async def test_poll():
     async with OnEndedSessionCallbacks():
         poll_invocations = 0
         poll_return1 = 0  # A non-reactive component of the return value
-        poll_return2 = value(0)  # A reactive component of the return value
+        poll_return2 = Value(0)  # A reactive component of the return value
         value_invocations = 0
-        value_dep = value(0)
+        value_dep = Value(0)
 
         def poll_func():
             nonlocal poll_invocations

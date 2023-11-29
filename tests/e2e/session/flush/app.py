@@ -81,12 +81,12 @@ def server(input: Inputs, output: Outputs, session: Session):
     session.on_ended(on_ended_async("session ended - async - test3"))
     session.on_ended(on_ended_sync("session ended - sync - test4"))
 
-    all_vals: reactive.value[tuple[str, ...]] = reactive.value(())
-    flush_vals: reactive.value[tuple[str, ...]] = reactive.value(())
-    flushed_vals: reactive.value[tuple[str, ...]] = reactive.value(())
+    all_vals: reactive.Value[tuple[str, ...]] = reactive.Value(())
+    flush_vals: reactive.Value[tuple[str, ...]] = reactive.Value(())
+    flushed_vals: reactive.Value[tuple[str, ...]] = reactive.Value(())
 
     def call_a(
-        vals: reactive.value[tuple[str, ...]],
+        vals: reactive.Value[tuple[str, ...]],
         suffix: str,
     ):
         def _():
@@ -97,7 +97,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return _
 
     def call_b(
-        vals: reactive.value[tuple[str, ...]],
+        vals: reactive.Value[tuple[str, ...]],
         suffix: str,
     ):
         async def _():
@@ -112,7 +112,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return _
 
     def call_c(
-        vals: reactive.value[tuple[str, ...]],
+        vals: reactive.Value[tuple[str, ...]],
         suffix: str,
     ):
         def _():

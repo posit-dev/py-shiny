@@ -46,7 +46,7 @@ T = TypeVar("T")
 # Value
 # ==============================================================================
 @add_example()
-class value(Generic[T]):
+class Value(Generic[T]):
     """
     Create a reactive value.
 
@@ -215,8 +215,7 @@ class value(Generic[T]):
         self._value = MISSING
 
 
-# Alias for backward compatibility
-Value = value
+value = Value
 
 # ==============================================================================
 # Calc

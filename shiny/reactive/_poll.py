@@ -96,8 +96,8 @@ def poll(
     """
 
     with reactive.isolate():
-        last_value: reactive.value[Any] = reactive.value(poll_func())
-        last_error: reactive.value[Optional[Exception]] = reactive.value(None)
+        last_value: reactive.Value[Any] = reactive.Value(poll_func())
+        last_error: reactive.Value[Optional[Exception]] = reactive.Value(None)
 
     @reactive.effect(priority=priority, session=session)
     async def _():

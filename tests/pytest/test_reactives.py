@@ -7,7 +7,7 @@ import pytest
 
 from shiny import App, render, req, ui
 from shiny._connection import MockConnection
-from shiny.reactive import calc, effect, event, flush, invalidate_later, isolate, value
+from shiny.reactive import Value, calc, effect, event, flush, invalidate_later, isolate
 from shiny.reactive._core import ReactiveWarning
 from shiny.types import ActionButtonValue, SilentException
 
@@ -21,8 +21,8 @@ async def test_flush_runs_newly_invalidated():
     flush.
     """
 
-    v1 = value(1)
-    v2 = value(2)
+    v1 = Value(1)
+    v2 = Value(2)
 
     v2_result = None
 
@@ -50,8 +50,8 @@ async def test_flush_runs_newly_invalidated_async():
     flush. (Same as previous test, but async.)
     """
 
-    v1 = value(1)
-    v2 = value(2)
+    v1 = Value(1)
+    v2 = Value(2)
 
     v2_result = None
 
@@ -77,7 +77,7 @@ async def test_flush_runs_newly_invalidated_async():
 # ======================================================================
 @pytest.mark.asyncio
 async def test_reactive_value_same_no_invalidate():
-    v = value(1)
+    v = Value(1)
 
     @effect()
     def o():
@@ -96,7 +96,7 @@ async def test_reactive_value_same_no_invalidate():
 # ======================================================================
 @pytest.mark.asyncio
 async def test_reactive_value_unset():
-    v = value[int]()
+    v = Value[int]()
 
     with isolate():
         assert v.is_set() is False
@@ -136,7 +136,7 @@ async def test_reactive_value_unset():
 # ======================================================================
 @pytest.mark.asyncio
 async def test_reactive_value_is_set():
-    v = value[int]()
+    v = Value[int]()
     v_is_set: bool = False
 
     @effect()
@@ -179,7 +179,7 @@ async def test_reactive_value_is_set():
 # ======================================================================
 @pytest.mark.asyncio
 async def test_recursive_calc():
-    v = value(5)
+    v = Value(5)
 
     @calc()
     def r():
@@ -201,7 +201,7 @@ async def test_recursive_calc():
 
 @pytest.mark.asyncio
 async def test_recursive_async_calc():
-    v = value(5)
+    v = Value(5)
 
     @calc()
     async def r() -> int:
@@ -228,7 +228,7 @@ async def test_recursive_async_calc():
 
 @pytest.mark.asyncio
 async def test_async_sequential():
-    x: value[int] = value(1)
+    x: Value[int] = Value(1)
     results: list[int] = []
     exec_order: list[str] = []
 
@@ -277,7 +277,7 @@ async def test_async_sequential():
 @pytest.mark.asyncio
 async def test_isolate_basic_without_context():
     # isolate() works with calc and Value; allows executing without a reactive context.
-    v = value(1)
+    v = Value(1)
 
     @calc()
     def r():
@@ -296,13 +296,13 @@ async def test_isolate_basic_without_context():
 
 @pytest.mark.asyncio
 async def test_isolate_prevents_dependency():
-    v = value(1)
+    v = Value(1)
 
     @calc()
     def r():
         return v() + 10
 
-    v_dep = value(1)  # Use this only for invalidating the effect
+    v_dep = Value(1)  # Use this only for invalidating the effect
     o_val = None
 
     @effect()
@@ -344,7 +344,7 @@ async def test_isolate_async_basic_value():
 async def test_isolate_async_basic_without_context():
     # async isolate works with calc and Value; allows executing without a reactive
     # context.
-    v = value(1)
+    v = Value(1)
 
     @calc()
     async def r():
@@ -360,13 +360,13 @@ async def test_isolate_async_basic_without_context():
 
 @pytest.mark.asyncio
 async def test_isolate_async_prevents_dependency():
-    v = value(1)
+    v = Value(1)
 
     @calc()
     async def r():
         return v() + 10
 
-    v_dep = value(1)  # Use this only for invalidating the effect
+    v_dep = Value(1)  # Use this only for invalidating the effect
     o_val = None
 
     @effect()
@@ -397,7 +397,7 @@ async def test_isolate_async_prevents_dependency():
 # ======================================================================
 @pytest.mark.asyncio
 async def test_effect_priority():
-    v = value(1)
+    v = Value(1)
     results: list[int] = []
 
     @effect(priority=1)
@@ -448,7 +448,7 @@ async def test_effect_priority():
 # Same as previous, but with async
 @pytest.mark.asyncio
 async def test_async_effect_priority():
-    v = value(1)
+    v = Value(1)
     results: list[int] = []
 
     @effect(priority=1)
@@ -501,7 +501,7 @@ async def test_async_effect_priority():
 # ======================================================================
 @pytest.mark.asyncio
 async def test_effect_destroy():
-    v = value(1)
+    v = Value(1)
     results: list[int] = []
 
     @effect()
@@ -519,7 +519,7 @@ async def test_effect_destroy():
     assert results == [1]
 
     # Same as above, but destroy before running first time
-    v = value(1)
+    v = Value(1)
     results: list[int] = []
 
     @effect()
@@ -587,7 +587,7 @@ async def test_error_handling():
 async def test_calc_error_rethrow():
     # Make sure calcs re-throw errors.
     vals: List[str] = []
-    v = value(1)
+    v = Value(1)
 
     @calc()
     def r():
@@ -624,8 +624,8 @@ async def test_calc_error_rethrow():
 # For https://github.com/posit-dev/py-shiny/issues/26
 @pytest.mark.asyncio
 async def test_dependent_invalidation():
-    trigger = value(0)
-    v = value(0)
+    trigger = Value(0)
+    v = Value(0)
     error_occurred = False
 
     @effect()
@@ -749,7 +749,7 @@ async def test_invalidate_later():
 async def test_invalidate_later_invalidation():
     mock_time = MockTime()
     with mock_time():
-        rv = value(0)
+        rv = Value(0)
 
         @effect()
         def obs1():
@@ -833,7 +833,7 @@ async def test_event_decorator():
     assert n_times == 2
 
     # Is invalidated properly by reactive values
-    v = value(1)
+    v = Value(1)
 
     @effect()
     @event(v)
@@ -853,7 +853,7 @@ async def test_event_decorator():
     assert n_times == 4
 
     # Doesn't run on init
-    v = value(1)
+    v = Value(1)
 
     @effect()
     @event(v, ignore_init=True)
@@ -869,8 +869,8 @@ async def test_event_decorator():
     assert n_times == 5
 
     # Isolates properly
-    v = value(1)
-    v2 = value(1)
+    v = Value(1)
+    v2 = Value(1)
 
     @effect()
     @event(v)
@@ -886,7 +886,7 @@ async def test_event_decorator():
     assert n_times == 6
 
     # works with @calc()
-    v2 = value(1)
+    v2 = Value(1)
 
     @calc()
     @event(lambda: v2(), ignore_init=True)
@@ -944,7 +944,7 @@ async def test_event_async_decorator():
     assert n_times == 2
 
     # Is invalidated properly by reactive values
-    v = value(1)
+    v = Value(1)
 
     @effect()
     @event(v)
@@ -964,7 +964,7 @@ async def test_event_async_decorator():
     assert n_times == 4
 
     # Doesn't run on init
-    v = value(1)
+    v = Value(1)
 
     @effect()
     @event(v, ignore_init=True)
@@ -980,8 +980,8 @@ async def test_event_async_decorator():
     assert n_times == 5
 
     # Isolates properly
-    v = value(1)
-    v2 = value(1)
+    v = Value(1)
+    v2 = Value(1)
 
     @effect()
     @event(v)
@@ -997,7 +997,7 @@ async def test_event_async_decorator():
     assert n_times == 6
 
     # works with @calc()
-    v2 = value(1)
+    v2 = Value(1)
 
     @calc()
     async def r_a():
@@ -1030,7 +1030,7 @@ async def test_event_async_decorator():
 @pytest.mark.asyncio
 async def test_event_silent_exception():
     n_times = 0
-    x = value[bool]()
+    x = Value[bool]()
 
     @effect()
     @event(x)
@@ -1060,7 +1060,7 @@ async def test_event_silent_exception():
 @pytest.mark.asyncio
 async def test_event_silent_exception_async():
     n_times = 0
-    x = value[bool]()
+    x = Value[bool]()
 
     async def req_fn() -> int:
         await asyncio.sleep(0)
@@ -1219,7 +1219,7 @@ async def test_output_type_check():
 # ------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_effect_pausing():
-    a = value(float(1))
+    a = Value(float(1))
 
     @calc()
     def funcA():
@@ -1301,7 +1301,7 @@ async def test_effect_pausing():
 # ------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_effect_async_pausing():
-    a = value(float(1))
+    a = Value(float(1))
 
     @calc()
     async def funcA():
@@ -1380,7 +1380,7 @@ async def test_effect_async_pausing():
 
 @pytest.mark.asyncio
 async def test_observer_async_suspended_resumed_observers_run_at_most_once():
-    a = value(1)
+    a = Value(1)
 
     @effect()
     async def obs():
