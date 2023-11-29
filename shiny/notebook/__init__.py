@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from typing import Any, cast
+from typing import Any
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 from IPython.core.interactiveshell import InteractiveShell
@@ -10,7 +10,7 @@ from IPython.display import display
 
 import shiny._namespaces
 import shiny.reactive
-from shiny.session import _utils as session_utils
+from shiny.types import SilentCancelOutputException, SilentException
 
 from ._mimerender import initialize as initialize_mime_render
 from .shiny_shim import JupyterKernelConnection, create_kernel_session
@@ -25,6 +25,11 @@ def load_ipython_extension(ipython: InteractiveShell):
     # The `ipython` argument is the currently active `InteractiveShell`
     # instance, which can be used in any way. This allows you to register
     # new magics or aliases, for example.
+
+    # Squelch SilentException and SilentCancelOutputException (TODO: bad idea??)
+    ipython.set_custom_exc(
+        (SilentException, SilentCancelOutputException), lambda *a, **kw: None
+    )
 
     initialize_mime_render(ipython)
 

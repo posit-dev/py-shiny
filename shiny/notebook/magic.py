@@ -2,15 +2,14 @@ from __future__ import annotations
 
 # pyright: reportUnknownVariableType=false, reportUnknownMemberType=false, reportUntypedFunctionDecorator=false
 import asyncio
-import uuid
 from contextlib import contextmanager
-from typing import Any, cast
+from typing import cast
 
-from IPython.core.display_functions import display, update_display
 from IPython.core.getipython import get_ipython
+from IPython.core.interactiveshell import InteractiveShell
 from IPython.core.magic import register_cell_magic
 from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
-from IPython.display import HTML, clear_output
+from IPython.display import clear_output
 
 from shiny import reactive as shiny_reactive
 from shiny import ui
@@ -69,7 +68,10 @@ def reactive(line: str, cell: str):
 
     # TODO: If line/cell magics are still in the cell, error.
 
-    ipy = get_ipython()
+    if get_ipython() is None:
+        raise RuntimeError("ipython not found")
+
+    ipy = cast(InteractiveShell, get_ipython())
 
     # This basically captures a reference to "the cell that's executing us" while we're
     # still in the main IPython event loop. We need to re-install this whenever we
@@ -113,49 +115,6 @@ def reactive(line: str, cell: str):
             await shiny_reactive.flush()
 
     asyncio.create_task(flush())
-
-
-#     code = """
-# import ipywidgets as widgets
-# from shiny import reactive
-# from IPython.core.getipython import get_ipython
-
-# if "__{reactive_name}_output_effect__" in globals():
-#     __{reactive_name}_output_effect__.destroy()
-# if "__{reactive_name}_output_sink__" in globals():
-#     # Output.clear_output() does not work reliably from "threaded" contexts
-#     # https://github.com/jupyter-widgets/ipywidgets/issues/3260#issuecomment-907715980
-#     __{reactive_name}_output_sink__.outputs = ()
-
-# @reactive.Calc
-# def {reactive_name}():
-#     res = get_ipython().run_cell('''{cell}''')
-#     if res.success:
-#         return res.result
-#     else:
-#         if execution_result.error_before_exec:
-#             raise execution_result.error_before_exec
-#         if execution_result.error_in_exec:
-#             raise execution_result.error_in_exec
-# """
-#     code += (
-#         """
-# __{reactive_name}_output_sink__ = widgets.Output()
-# @reactive.Effect
-# def __{reactive_name}_output_effect__():
-#     # Output.clear_output() does not work reliably from "threaded" contexts
-#     # https://github.com/jupyter-widgets/ipywidgets/issues/3260#issuecomment-907715980
-#     __{reactive_name}_output_sink__.outputs = ()
-#     __{reactive_name}_output_sink__.append_display_data({reactive_name}())
-# display(__{reactive_name}_output_sink__)
-# """
-#         if not args.no_echo
-#         else ""
-#     )
-
-#     code = code.replace("{reactive_name}", reactive_name).replace("{cell}", cell)
-
-#     ipy.run_cell(code)
 
 
 @contextmanager

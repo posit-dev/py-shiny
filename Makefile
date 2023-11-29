@@ -48,6 +48,9 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 	rm -rf typings/
 
+typings/comm:
+	pyright --createstub comm
+
 typings/uvicorn:
 	pyright --createstub uvicorn
 
@@ -60,7 +63,7 @@ typings/matplotlib/__init__.pyi: ## grab type stubs from GitHub
 typings/seaborn:
 	pyright --createstub seaborn
 
-pyright: typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn ## type check with pyright
+pyright: typings/comm typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn ## type check with pyright
 	pyright
 
 lint: ## check style with flake8

@@ -110,8 +110,8 @@ async function injectShinyDependencies() {
   // Dynamically inserted <script> tags aren't guaranteed to load in order, so we need
   // to serialize them using each one's load event.
   const scripts = [
-    '/shiny/shared/jquery/jquery-3.6.0.js',
-    '/shiny/shared/shiny.js',
+    '/shiny/shared/jquery/jquery-3.6.0.min.js',
+    '/shiny/shared/shiny.min.js',
     '/shiny/shared/bootstrap/bootstrap.bundle.min.js',
     '/shiny/shared/ionrangeslider/js/ion.rangeSlider.min.js'
   ];
