@@ -9,6 +9,28 @@ quartodoc:
     style: _renderer.py
     show_signature_annotations: false
   sections:
+    - title: Shiny Express
+      desc: Functions for Shiny Express applications
+      contents:
+        - express.layout.set_page
+        - express.layout.p
+        - express.layout.div
+        - express.layout.span
+        - express.layout.pre
+        - express.layout.sidebar
+        - express.layout.layout_column_wrap
+        - express.layout.column
+        - express.layout.row
+        - express.layout.card
+        - express.layout.accordion
+        - express.layout.accordion_panel
+        - express.layout.navset_tab
+        - express.layout.navset_card_tab
+        - express.layout.nav
+        - express.layout.page_fluid
+        - express.layout.page_fixed
+        - express.layout.page_fillable
+        - express.layout.page_sidebar
     - title: Page containers
       desc: Create a user interface page container.
       contents:
