@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [UNRELEASED]
 
 ### New features
+- `shiny create` now allows you to select from a list of template apps.
+- `shiny create` provides templates which help you build your own custom JavaScript components.
 
 ### Bug fixes
 
