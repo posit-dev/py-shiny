@@ -223,7 +223,7 @@ def sidebar(
 
     if max_height_mobile is not None and open != "always":
         warnings.warn(
-            "The `shiny.ui.sidebar(max_height_mobile=)` argument only applies to when `open = 'always'`. The `max_height_mobile` argument will be ignored.",
+            "The `shiny.ui.sidebar(max_height_mobile=)` argument only applies to the sidebar when `open = 'always'`. The `max_height_mobile` argument will be ignored.",
             # `stacklevel=2`: Refers to the caller of `sidebar()`
             stacklevel=2,
         )
@@ -269,7 +269,7 @@ def sidebar(
         {"class": "bslib-sidebar-input"} if resolved_id is not None else None,
         {
             "class": "sidebar",
-            "hidden": True if (open == "closed") else None,
+            "hidden": True if (open in ["closed", "desktop"]) else None,
         },
         id=resolved_id,
         class_=class_,
@@ -412,7 +412,7 @@ def layout_sidebar(
                 "--_main-bg": bg,
                 "--bs-card-border-color": border_color,
                 "height": as_css_unit(height),
-                "--_max-height-mobile": as_css_unit(max_height_mobile),
+                "--_mobile-max-height": as_css_unit(max_height_mobile),
             },
         ),
     )

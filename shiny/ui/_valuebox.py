@@ -426,8 +426,6 @@ def value_box(
     if not isinstance(theme, ValueBoxTheme):
         theme = value_box_theme(theme)
 
-    border_class = value_box_auto_border(theme, class_)
-
     # ---- Layout ----
 
     return card(
@@ -445,7 +443,6 @@ def value_box(
         },
         {"class": theme.class_} if theme.class_ else None,
         {"class": class_} if class_ else None,
-        {"class": border_class} if border_class else None,
         {"class": showcase_layout.class_}
         if showcase and isinstance(showcase_layout, ShowcaseLayout)
         else None,
@@ -456,40 +453,6 @@ def value_box(
         max_height=max_height,
         fill=fill,
     )
-
-
-def value_box_auto_border(theme: ValueBoxTheme, class_: str | None) -> TagAttrValue:
-    # We add .border-auto to value boxes that might benefit from a border.
-    # These are disabled if `$bslib-value-box-enable-border` is set to `"never"`
-    # and are ignored if `$bslib-value-box-enable-border` is set to `"always".
-    # When `$bslib-value-box-enable-border` is set to `"auto"` (the default), we
-    # add a border if the theme color changes only the text and not the background
-    # and when shadows are disabled for the value boxes (via `$enable-shadows` or
-    # `$bslib-value-box-enable-shadow`).
-    if class_ is not None:
-        has_border_in_class = "border" in class_
-        if has_border_in_class:
-            # If the user does **anything** with the border, we don't get involved
-            return None
-
-    if theme.class_ == "default" and class_ is None:
-        # Add border to default boxes (which generally don't have a bg color)
-        return "border-auto"
-
-    all_classes = [cls for cls in [theme.class_, class_] if cls is not None]
-    if len(all_classes) > 0:
-        sets_foreground = (
-            any(cls.startswith("text-") for cls in all_classes) or theme.fg is not None
-        )
-        sets_background = (
-            any(cls.startswith("bg-") for cls in all_classes) or theme.bg is not None
-        )
-
-        if sets_foreground and not sets_background:
-            # Add a border if the theme changes only text and not background
-            return "border-auto"
-
-    return None
 
 
 def render_showcase_layout(

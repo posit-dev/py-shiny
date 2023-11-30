@@ -375,7 +375,10 @@ def panel_absolute(
     divTag.add_class("draggable")
     deps = jqui_deps()
     deps.stylesheet = []
-    return TagList(deps, divTag, tags.script('$(".draggable").draggable();'))
+    # Add Shiny inputs and htmlwidgets to 'non-draggable' elements
+    # Cf. https://api.jqueryui.com/draggable/#option-cancel
+    dragOpts = '{cancel: ".shiny-input-container,.html-widget,input,textarea,button,select,option"}'
+    return TagList(deps, divTag, tags.script(f'$(".draggable").draggable({dragOpts});'))
 
 
 def help_text(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
