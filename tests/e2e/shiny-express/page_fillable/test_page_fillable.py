@@ -1,10 +1,11 @@
 from conftest import ShinyAppProc
-from controls import OutputPlot
+from controls import Card, OutputTextVerbatim
 from playwright.sync_api import Page
 
 
 def test_express_page_fillable(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
-    plot = OutputPlot(page, "histogram")
-    plot.expect_img_height("100%")
-    plot.expect_img_width("100%")
+    card = Card(page, "card")
+    assert card.loc.bounding_box()["height"] > 300
+    output_txt = OutputTextVerbatim(page, "txt")
+    output_txt.expect_value("50")
