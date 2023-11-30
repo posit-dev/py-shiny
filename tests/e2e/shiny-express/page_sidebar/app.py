@@ -12,4 +12,3 @@ with layout.card(id="card"):
     @render.text
     def txt():
         return input.a()
-
