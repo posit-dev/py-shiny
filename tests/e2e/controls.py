@@ -2402,7 +2402,7 @@ class Sidebar(
         self.loc_handle = self.loc_container.locator("button.collapse-toggle")
         self.loc_position = self.loc.locator("..")
 
-    def expect_title(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+    def expect_text(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         playwright_expect(self.loc).to_have_text(value, timeout=timeout)
 
     def expect_position(
