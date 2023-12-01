@@ -64,7 +64,7 @@ def sidebar(
     bg: Optional[str] = None,
     fg: Optional[str] = None,
     class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
-    max_height_mobile: Optional[str | float] = None,
+    max_height_mobile: Optional[str | float] = "auto",
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
 ) -> RecallContextManager[ui.Sidebar]:
