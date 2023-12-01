@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__ = ("Session", "Inputs", "Outputs")
 
+import asyncio
 import contextlib
 import dataclasses
 import enum
@@ -164,6 +165,7 @@ class Session(object, metaclass=SessionMeta):
         self.id: str = id
         self._conn: Connection = conn
         self._debug: bool = debug
+        self._lock = asyncio.Lock()
 
         # The HTTPConnection representing the WebSocket. This is used so that we can
         # query information about the request, like headers, cookies, etc.
@@ -269,7 +271,7 @@ class Session(object, metaclass=SessionMeta):
                         self._send_error_response("Message does not contain 'method'.")
                         return
 
-                    async with lock():
+                    async with self._lock:
                         if message_obj["method"] == "init":
                             verify_state(ConnectionState.Start)
 
