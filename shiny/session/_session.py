@@ -37,7 +37,7 @@ from starlette.types import ASGIApp
 if TYPE_CHECKING:
     from .._app import App
 
-from .. import _utils, render
+from .. import _utils, reactive, render
 from .._connection import Connection, ConnectionClosed
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
@@ -46,7 +46,7 @@ from .._typing_extensions import TypedDict
 from .._utils import wrap_async
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
-from ..reactive import Effect, Effect_, Value, flush, isolate
+from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
 from ..render.transformer import OutputRenderer
 from ..types import SafeException, SilentCancelOutputException, SilentException
@@ -904,7 +904,7 @@ class Inputs:
         self._ns = ns
 
     def __setitem__(self, key: str, value: Value[Any]) -> None:
-        if not isinstance(value, Value):
+        if not isinstance(value, reactive.Value):
             raise TypeError("`value` must be a reactive.Value object.")
 
         self._map[self._ns(key)] = value
@@ -1008,7 +1008,7 @@ class Outputs:
 
             self._suspend_when_hidden[output_name] = suspend_when_hidden
 
-            @Effect(
+            @effect(
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
                 priority=priority,
             )

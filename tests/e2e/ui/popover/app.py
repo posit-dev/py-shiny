@@ -15,19 +15,19 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
+    @reactive.effect
     def _():
         req(input.btn_show())
 
         ui.update_popover("popover_id", show=True)
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         req(input.btn_close())
 
         ui.update_popover("popover_id", show=False)
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         req(input.btn_w_popover())
         ui.notification_show("Button clicked!", duration=3, type="message")

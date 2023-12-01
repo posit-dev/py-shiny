@@ -11,7 +11,7 @@ import pytest
 
 from shiny import Session, _utils, session
 from shiny._namespaces import Root
-from shiny.reactive import Effect, Value, file_reader, flush, isolate, poll
+from shiny.reactive import Value, effect, file_reader, flush, isolate, poll
 
 from .mocktime import MockTime
 
@@ -83,7 +83,7 @@ async def test_poll():
             # @poll returns a lazy Calc, so value hasn't been invoked yet.
             assert (poll_invocations, value_invocations) == (2, 0)
 
-            @Effect()
+            @effect()
             def _():
                 value_func()
 
@@ -157,7 +157,7 @@ async def test_poll_errors():
 
             invocations = 0
 
-            @Effect()
+            @effect()
             def _():
                 nonlocal invocations
                 invocations += 1

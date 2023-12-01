@@ -2,7 +2,18 @@
 
 from __future__ import annotations
 
-__all__ = ("Value", "Calc", "Calc_", "CalcAsync_", "Effect", "Effect_", "event")
+__all__ = (
+    "value",
+    "Value",
+    "calc",
+    "Calc",
+    "Calc_",
+    "CalcAsync_",
+    "effect",
+    "Effect",
+    "Effect_",
+    "event",
+)
 
 import functools
 import traceback
@@ -204,6 +215,8 @@ class Value(Generic[T]):
         self._value = MISSING
 
 
+value = Value
+
 # ==============================================================================
 # Calc
 # ==============================================================================
@@ -343,12 +356,12 @@ class CalcAsync_(Calc_[T]):
 
 
 @overload
-def Calc(fn: CalcFunctionAsync[T]) -> CalcAsync_[T]:
+def calc(fn: CalcFunctionAsync[T]) -> CalcAsync_[T]:
     ...
 
 
 @overload
-def Calc(fn: CalcFunction[T]) -> Calc_[T]:
+def calc(fn: CalcFunction[T]) -> Calc_[T]:
     ...
 
 
@@ -373,14 +386,14 @@ def Calc(fn: CalcFunction[T]) -> Calc_[T]:
 # __call__ method) or CalcAsync object (which has an async __call__ method), and it
 # works out.
 @overload
-def Calc(
+def calc(
     *, session: "MISSING_TYPE | Session | None" = MISSING
 ) -> Callable[[CalcFunction[T]], Calc_[T]]:
     ...
 
 
 @add_example()
-def Calc(
+def calc(
     fn: Optional[CalcFunction[T] | CalcFunctionAsync[T]] = None,
     *,
     session: "MISSING_TYPE | Session | None" = MISSING,
@@ -433,6 +446,9 @@ def Calc(
     else:
         return create_calc(fn)
 
+
+# Alias for backward compatibility
+Calc = calc
 
 # ==============================================================================
 # Effect
@@ -630,12 +646,12 @@ class Effect_:
 
 
 @overload
-def Effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_:
+def effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_:
     ...
 
 
 @overload
-def Effect(
+def effect(
     *,
     suspended: bool = False,
     priority: int = 0,
@@ -645,7 +661,7 @@ def Effect(
 
 
 @add_example()
-def Effect(
+def effect(
     fn: Optional[EffectFunction | EffectFunctionAsync] = None,
     *,
     suspended: bool = False,
@@ -704,6 +720,9 @@ def Effect(
         return create_effect
     else:
         return create_effect(fn)
+
+
+Effect = effect
 
 
 # ==============================================================================

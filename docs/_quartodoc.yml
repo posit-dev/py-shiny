@@ -208,6 +208,9 @@ quartodoc:
     - title: Reactive programming
       desc: ""
       contents:
+        - reactive.calc
+        - reactive.effect
+        - reactive.value
         - reactive.Calc
         - reactive.Effect
         - reactive.Value

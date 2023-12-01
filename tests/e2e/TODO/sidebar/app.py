@@ -62,24 +62,24 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     def ui_content():
         return f"Hello, {input.adjective()} {input.animal()}!"
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.open_all)
     def _():
         ui.update_sidebar("sidebar_inner", show=True)
         ui.update_sidebar("sidebar_outer", show=True)
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.close_all)
     def _():
         ui.update_sidebar("sidebar_inner", show=False)
         ui.update_sidebar("sidebar_outer", show=False)
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.toggle_inner)
     def _():
         ui.update_sidebar("sidebar_inner", show=not input.sidebar_inner())
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.toggle_outer)
     def _():
         ui.update_sidebar("sidebar_outer", show=not input.sidebar_outer())

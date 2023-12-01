@@ -45,11 +45,11 @@ async def test_session_scoping():
 
     @module.server
     def inner_server(input: Inputs, output: Outputs, session: Session):
-        @reactive.Calc
+        @reactive.calc
         def out():
             return get_current_session()
 
-        @reactive.Effect
+        @reactive.effect
         def _():
             sessions["inner"] = session
             sessions["inner_current"] = get_current_session()
@@ -59,11 +59,11 @@ async def test_session_scoping():
 
     @module.server
     def outer_server(input: Inputs, output: Outputs, session: Session):
-        @reactive.Calc
+        @reactive.calc
         def out():
             return get_current_session()
 
-        @reactive.Effect
+        @reactive.effect
         def _():
             inner_server("mod_inner")
             sessions["outer"] = session
@@ -75,11 +75,11 @@ async def test_session_scoping():
     def server(input: Inputs, output: Outputs, session: Session):
         outer_server("mod_outer")
 
-        @reactive.Calc
+        @reactive.calc
         def out():
             return get_current_session()
 
-        @reactive.Effect
+        @reactive.effect
         def _():
             sessions["top"] = session
             sessions["top_current"] = get_current_session()
