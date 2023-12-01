@@ -48,7 +48,7 @@ from .._utils import wrap_async
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect, Effect_, Value, flush, isolate
-from ..reactive._core import lock, on_flushed
+from ..reactive._core import on_flushed
 from ..render.transformer import OutputRenderer
 from ..types import SafeException, SilentCancelOutputException, SilentException
 from ._utils import RenderedDeps, read_thunk_opt, session_context
