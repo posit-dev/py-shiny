@@ -1,8 +1,5 @@
-import matplotlib.pyplot as plt
-import numpy as np
-
-from shiny import render, ui
-from shiny.express import input, layout
+from shiny import ui
+from shiny.express import layout
 
 ui.tags.style(
     """
@@ -10,6 +7,8 @@ ui.tags.style(
     background-color: #00000022}
 """
 )
+
+
 with layout.div(id="shell"):
     with layout.row():
         with layout.column(width=8):

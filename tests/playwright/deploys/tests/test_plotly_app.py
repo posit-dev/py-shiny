@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from deploy import deploy
+from tests.playwright.utils.deploy_utils import deploy
 from playwright.sync_api import Page, expect
 
 COUNTRY = "Afghanistan"

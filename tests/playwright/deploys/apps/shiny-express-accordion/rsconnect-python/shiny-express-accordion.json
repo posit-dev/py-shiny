@@ -1,0 +1,12 @@
+{
+    "https://rsc.radixu.com/": {
+        "server_url": "https://rsc.radixu.com/",
+        "filename": "/Users/karangathani/Documents/GitHub/py-shiny/tests/playwright/deploys/apps/shiny-express-accordion",
+        "app_url": "https://rsc.radixu.com/content/ffa9f420-fe06-459e-9528-8d70dc55e36f/",
+        "app_id": "ffa9f420-fe06-459e-9528-8d70dc55e36f",
+        "app_guid": "ffa9f420-fe06-459e-9528-8d70dc55e36f",
+        "title": "shiny_express_accordion",
+        "app_mode": "python-shiny",
+        "app_store_version": 1
+    }
+}

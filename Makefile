@@ -84,9 +84,9 @@ test: ## run tests quickly with the default Python
 	pytest
 
 # Default `FILE` to `e2e` if not specified
-FILE:=tests/e2e
+FILE:=tests/playwright/e2e
 
-DEPLOYS_FILE:=tests/deploys
+DEPLOYS_FILE:=tests/playwright/deploys
 
 playwright-install:
 	playwright install --with-deps
