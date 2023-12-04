@@ -44,7 +44,7 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     elements that should appear on the same line (if the browser has adequate width) and
     :func:`~shiny.ui.column` to define how much horizontal space within a 12-unit wide
     grid each on of these elements should occupy. See the [layout
-    guide](https://shiny.posit.co/articles/layout-guide.html>) for more context and
+    guide](https://shiny.posit.co/articles/layout-guide.html) for more context and
     examples.
     (The article is about Shiny for R, but the general principles are the same.)
 
@@ -375,7 +375,10 @@ def panel_absolute(
     divTag.add_class("draggable")
     deps = jqui_deps()
     deps.stylesheet = []
-    return TagList(deps, divTag, tags.script('$(".draggable").draggable();'))
+    # Add Shiny inputs and htmlwidgets to 'non-draggable' elements
+    # Cf. https://api.jqueryui.com/draggable/#option-cancel
+    dragOpts = '{cancel: ".shiny-input-container,.html-widget,input,textarea,button,select,option"}'
+    return TagList(deps, divTag, tags.script(f'$(".draggable").draggable({dragOpts});'))
 
 
 def help_text(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:

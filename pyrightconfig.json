@@ -7,7 +7,8 @@
     "typings",
     "sandbox",
     "docs",
-    "tests/deploys/apps"
+    "tests/deploys/apps",
+    "shiny/templates"
   ],
   "typeCheckingMode": "strict",
   "reportImportCycles": "none",

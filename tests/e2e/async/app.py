@@ -31,7 +31,7 @@ def server(input: s.Inputs, output: s.Outputs, session: s.Session):
         content = await hash_result()
         return content
 
-    @reactive.Calc()
+    @reactive.calc()
     async def hash_result() -> str:
         with ui.Progress() as p:
             p.set(message="Calculating...")

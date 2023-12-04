@@ -125,11 +125,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     # Continuously trigger the reactive graph to ensure that the flush / flushed
     # callbacks are called. If this Effect is not called, then the click counter will
     # always be one higher than the flush/flushed values displayed.
-    @reactive.Effect
+    @reactive.effect
     def _():
         reactive.invalidate_later(0.25)
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.btn)
     def _():
         btn_count = input.btn()

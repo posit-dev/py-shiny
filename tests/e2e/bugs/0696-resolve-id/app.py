@@ -217,7 +217,7 @@ def mod_x_server(
 ):
     session_dict[session.ns] = session
 
-    @reactive.Calc
+    @reactive.calc
     def n():
         return int(letters.index(input.input_radio_buttons()))
 
@@ -394,7 +394,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         ui.update_popover("explanation", show=True)
 
         # On button clicks, hide the explanation popover
-        @reactive.Effect(suspended=True)
+        @reactive.effect(suspended=True)
         def _():
             input.reset()
             input.update_global()
@@ -482,7 +482,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     for _input_key, session_key in module_keys:
         offsets[session_key] = 0
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         # trigger reactivity
         input.reset()
@@ -492,7 +492,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 update_session(session_dict[session_key], count=0)
 
     def update_session_effect(*, input_key: str, session_key: str) -> None:
-        @reactive.Effect
+        @reactive.effect
         @reactive.event(input[input_key])
         def _():
             update_session(

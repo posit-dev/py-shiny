@@ -20,7 +20,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Calc
+    @reactive.calc
     def parsed_file():
         file: typing.Union[typing.List["FileInfo"], None] = input.file1()
         if file is None:

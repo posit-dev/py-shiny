@@ -200,7 +200,11 @@ def page_navbar(
             "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
         )
 
-    tagAttrs: TagAttrs = {"class": "bslib-page-navbar"}
+    pageClass = "bslib-page-navbar"
+    if sidebar is not None:
+        pageClass += " has-page-sidebar"
+
+    tagAttrs: TagAttrs = {"class": pageClass}
 
     page_args = (
         tagAttrs,
@@ -292,11 +296,7 @@ def page_fillable(
     """
     attrs, children = consolidate_attrs(*args, **kwargs)
 
-    style = css(
-        padding=as_css_padding(padding),
-        gap=as_css_unit(gap),
-        __bslib_page_fill_mobile_height="100%" if fillable_mobile else "auto",
-    )
+    style = css(padding=as_css_padding(padding), gap=as_css_unit(gap))
 
     return page_bootstrap(
         head_content(tags.style("html { height: 100%; }")),
@@ -306,6 +306,7 @@ def page_fillable(
         # first set of attributes.
         FILLABLE_CONTAINTER_ATTRS,
         {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
+        {"class": "bslib-flow-mobile"} if fillable_mobile else None,
         attrs,
         *children,
         components_dependency(),

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [UNRELEASED]
 
 ### New features
+- `shiny create` now allows you to select from a list of template apps.
+- `shiny create` provides templates which help you build your own custom JavaScript components.
+
+* Closed #814: The functions `reactive.Calc` and `reactive.Effect` have been changed to have lowercase names: `reactive.calc`, and `reactive.effect`. The old capitalized names are now aliases to the new lowercase names, so existing code will continue to work. Similarly, the class `reactive.Value` has a new alias, `reactive.value`, but in this case, since the original was a class, it keeps the original capitalized name as the primary name. The examples have not been changed yet, but will be changed in a future release. (#822)
 
 ### Bug fixes
 
