@@ -15,6 +15,7 @@ EXPECT_TIMEOUT = 30 * 1000
 current_dir = os.path.dirname(os.path.abspath(__file__))
 app_file_path = os.path.join(os.path.dirname(current_dir), "apps", APP_DIR)
 
+
 @pytest.mark.integrationtest
 @pytest.mark.only_browser("chromium")
 @pytest.mark.parametrize("location", ["connect"])

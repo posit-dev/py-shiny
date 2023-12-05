@@ -1,6 +1,5 @@
-
 from shiny import ui
-from shiny.express import  layout
+from shiny.express import layout
 
 ui.tags.style(
     """
