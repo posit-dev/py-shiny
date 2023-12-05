@@ -71,6 +71,34 @@ def template_query(question_state: Optional[str] = None, mode: Optional[str] = N
 
 
 def app_template_questions(template: str, mode: Optional[str] = None):
+    # Not all apps will be implemented in both express and classic so we can
+    # avoid the questions if it's a classic only app.
+    template_dir = Path(__file__).parent / "templates/app-templates" / template
+    template_files = [file.name for file in template_dir.iterdir() if file.is_file()]
+    express_available = (
+        "express.py" in template_files and "classic.py" in template_files
+    )
+
+    if mode == "express" and not express_available:
+        raise Exception("Express mode not available for that template.")
+
+    if mode is None and express_available:
+        mode = questionary.select(
+            "Would you like to use express or classic mode?",
+            [
+                Choice("Classic", "classic"),
+                Choice("Express", "express"),
+                back_choice,
+                cancel_choice,
+            ],
+        ).ask()
+
+        if mode is None or mode == "cancel":
+            sys.exit(1)
+        if mode == "back":
+            template_query()
+            return
+
     appdir = questionary.path(
         "Enter destination directory:",
         default=build_path_string(),
@@ -85,6 +113,7 @@ def app_template_questions(template: str, mode: Optional[str] = None):
         template,
         template_subdir="app-templates",
         mode=mode,
+        express_available=express_available,
     )
     print(f"Created Shiny app at {app_dir}")
     print(f"Next steps open and edit the app file: {app_dir}/app.py")
@@ -135,7 +164,11 @@ def js_component_questions(component_type: Optional[str] = None):
         sys.exit(1)
 
     app_dir = copy_template_files(
-        appdir, component_type, template_subdir="package-templates"
+        appdir,
+        component_type,
+        template_subdir="package-templates",
+        express_available=False,
+        mode=None,
     )
 
     # Print messsage saying we're building the component
@@ -158,40 +191,17 @@ def build_path_string(*path: str):
 
 
 def copy_template_files(
-    dest: str, template: str, template_subdir: str, mode: Optional[str] = None
+    dest: str,
+    template: str,
+    template_subdir: str,
+    express_available: bool,
+    mode: Optional[str] = None,
 ):
     if dest == ".":
         dest = build_path_string(template)
 
     app_dir = Path(dest)
     template_dir = Path(__file__).parent / "templates" / template_subdir / template
-
-    # Not all apps will be implemented in both express and classic so we can
-    # avoid the questions if it's a classic only app.
-    template_files = [file.name for file in template_dir.iterdir() if file.is_file()]
-    express_available = (
-        "express.py" in template_files and "classic.py" in template_files
-    )
-
-    if mode == "express" and not express_available:
-        raise Exception("Express mode not available for that template.")
-
-    if mode is None and express_available:
-        mode = questionary.select(
-            "Would you like to use express or classic mode?",
-            [
-                Choice("Classic", "classic"),
-                Choice("Express", "express"),
-                back_choice,
-                cancel_choice,
-            ],
-        ).ask()
-
-        if mode is None or mode == "cancel":
-            sys.exit(1)
-        if mode == "back":
-            template_query(template)
-            return
 
     duplicate_files = [
         file.name for file in template_dir.iterdir() if (app_dir / file.name).exists()

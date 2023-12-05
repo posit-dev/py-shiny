@@ -506,7 +506,7 @@ After creating the application, you use `shiny run`:
         ["classic", "express"],
         case_sensitive=False,
     ),
-    help="Do you want to use an express template or a classic template?",
+    help="Do you want to use a shiny express template or a classic template?",
 )
 def create(template: Optional[str] = None, mode: Optional[str] = None) -> None:
     from ._template_utils import template_query
