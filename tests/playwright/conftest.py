@@ -191,24 +191,6 @@ def create_app_fixture(app: Union[PurePath, str], scope: str = "module"):
     )(fixture_func)
 
 
-def create_template_fixture(template: str, scope: str = "module"):
-    def fixture_func():
-        tmp_path = MAKE_TEMP_FOLDER()
-        app_path = shiny.CREATE_TEMPLATE(template, tmp_path)
-        sa = run_shiny_app(app_path, wait_for_start=False)
-        try:
-            with sa:
-                sa.wait_until_ready(30)
-                yield sa
-        finally:
-            logging.warning("Application output:\n" + str(sa.stderr))
-            REMOVE_TMP_FOLDER(tmp_path)
-
-    return pytest.fixture(
-        scope=scope,  # type: ignore
-    )(fixture_func)
-
-
 def create_example_fixture(example_name: str, scope: str = "module"):
     """Used to create app fixtures from apps in py-shiny/examples"""
     return create_app_fixture(here_root / "examples" / example_name / "app.py", scope)
