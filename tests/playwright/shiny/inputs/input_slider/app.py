@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from shiny import App, Inputs, Outputs, Session, render, ui
 import typing
+
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 slider_nums: list[int] = []
 
