@@ -1,2 +1,2 @@
-shiny @ git+https://github.com/posit-dev/py-shiny.git@d466195562d53607eb949c7aeb33833f18c039cb
-htmltools @ git+https://github.com/posit-dev/py-htmltools.git@5905626a911eca42b6d647998178e78fb11bf86c
+git+https://github.com/posit-dev/py-shiny.git#egg=shiny
+git+https://github.com/posit-dev/py-htmltools#egg=htmltools
