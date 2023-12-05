@@ -1,9 +1,9 @@
 import os
+
 import pytest
 from playwright.sync_api import Page
-from utils.express_utils import verify_express_page_sidebar
 from utils.deploy_utils import deploy
-
+from utils.express_utils import verify_express_page_sidebar
 
 APP_DIR = "shiny-express-page-sidebar"
 APP_NAME = "express_page_sidebar"
