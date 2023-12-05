@@ -2,10 +2,10 @@ import os
 import pytest
 from playwright.sync_api import Page
 from utils.express_utils import verify_express_page_fluid
-from tests.playwright.utils.deploy_utils import deploy
+from utils.deploy_utils import deploy
 
 
-APP_DIR = "page_fluid"
+APP_DIR = "shiny-express-page-fluid"
 APP_NAME = "express_page_fluid"
 # reqd since the app on connect takes a while to load
 PAGE_TIMEOUT = 120 * 1000

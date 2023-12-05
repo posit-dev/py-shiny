@@ -2,11 +2,11 @@ import os
 import pytest
 from playwright.sync_api import Page
 from utils.express_utils import verify_express_page_default
-from tests.playwright.utils.deploy_utils import deploy
+from utils.deploy_utils import deploy
 
 
-APP_DIR = "page_default"
-APP_NAME = "express_page_default"
+APP_DIR = "shiny-express-page-default"
+APP_NAME = "shiny_express_page_default"
 # reqd since the app on connect takes a while to load
 PAGE_TIMEOUT = 120 * 1000
 EXPECT_TIMEOUT = 30 * 1000
