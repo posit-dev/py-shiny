@@ -1,9 +1,9 @@
 import os
+
 import pytest
 from playwright.sync_api import Page
-from utils.express_utils import verify_express_page_fillable
 from utils.deploy_utils import deploy
-
+from utils.express_utils import verify_express_page_fillable
 
 APP_DIR = "shiny-express-page-fillable"
 APP_NAME = "express_page_fillable"

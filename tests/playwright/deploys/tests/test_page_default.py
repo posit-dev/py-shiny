@@ -1,9 +1,9 @@
 import os
+
 import pytest
 from playwright.sync_api import Page
-from utils.express_utils import verify_express_page_default
 from utils.deploy_utils import deploy
-
+from utils.express_utils import verify_express_page_default
 
 APP_DIR = "shiny-express-page-default"
 APP_NAME = "shiny_express_page_default"

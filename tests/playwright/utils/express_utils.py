@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import typing
 
-from controls import Accordion, LayoutNavsetTab, Card, OutputTextVerbatim, Sidebar
+from controls import Accordion, Card, LayoutNavsetTab, OutputTextVerbatim, Sidebar
 from playwright.sync_api import Page
+
 from shiny import ui
 from shiny.express import layout
 

@@ -1,7 +1,8 @@
 import os
+
 import pytest
-from utils.deploy_utils import deploy
 from playwright.sync_api import Page
+from utils.deploy_utils import deploy
 from utils.express_utils import verify_express_accordion
 
 APP_DIR = "shiny-express-accordion"

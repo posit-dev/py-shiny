@@ -1,8 +1,8 @@
 import os
 
 import pytest
-from utils.deploy_utils import deploy
 from playwright.sync_api import Page, expect
+from utils.deploy_utils import deploy
 
 COUNTRY = "Afghanistan"
 APP_DIR = "plotly_app"
