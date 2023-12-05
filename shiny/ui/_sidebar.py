@@ -289,7 +289,7 @@ def sidebar(
 
 @add_example()
 def layout_sidebar(
-    sidebar: Sidebar,
+    sidebar: Sidebar | TagChild,
     *args: TagChild | TagAttrs,
     fillable: bool = True,
     fill: bool = True,
@@ -423,22 +423,20 @@ def layout_sidebar(
 
 
 def _get_layout_sidebar_sidebar(
-    sidebar: Sidebar,
+    sidebar: Sidebar | DeprecatedPanelSidebar | TagChild,
     args: tuple[TagChild | TagAttrs, ...],
 ) -> tuple[Sidebar, tuple[TagChild | TagAttrs, ...]]:
     updated_args: list[TagChild | TagAttrs] = []
     original_args = tuple(args)
 
     # sidebar: Sidebar | None = None
-    sidebar_orig_arg: Sidebar | DeprecatedPanelSidebar = sidebar
+    sidebar_orig_arg = sidebar
 
     if isinstance(sidebar, DeprecatedPanelSidebar):
         sidebar = sidebar.sidebar
 
     if not isinstance(sidebar, Sidebar):
-        raise ValueError(
-            "`layout_sidebar()` is not being supplied with a `sidebar()` object. Please supply a `sidebar()` object to `layout_sidebar(sidebar)`."
-        )
+        sidebar = _sidebar_func(sidebar)
 
     # Use `original_args` here so `updated_args` can be safely altered in place
     for i, arg in zip(range(len(original_args)), original_args):
@@ -494,6 +492,10 @@ def _get_layout_sidebar_sidebar(
             updated_args.append(arg)
 
     return (sidebar, tuple(updated_args))
+
+
+# Save an internal copy of sidebar func so we can use `sidebar` as an arg name
+_sidebar_func = sidebar
 
 
 @add_example()

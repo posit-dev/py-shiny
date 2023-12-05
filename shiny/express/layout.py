@@ -56,59 +56,42 @@ pre = wrap_recall_context_manager(htmltools.pre)
 # ======================================================================================
 def sidebar(
     *,
-    width: CssUnit = 250,
-    position: Literal["left", "right"] = "left",
-    open: Literal["desktop", "open", "closed", "always"] = "always",
-    id: Optional[str] = None,
-    title: TagChild | str = None,
+    fillable: bool = True,
+    fill: bool = True,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
-    class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
-    max_height_mobile: Optional[str | float] = "auto",
+    border: Optional[bool] = None,
+    border_radius: Optional[bool] = None,
+    border_color: Optional[str] = None,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
-) -> RecallContextManager[ui.Sidebar]:
+    height: Optional[CssUnit] = None,
+    **kwargs: TagAttrValue,
+) -> RecallContextManager[ui.CardItem]:
     """
-    Sidebar element
+    A sidebar layout.
 
-    Create a collapsing sidebar layout. This function wraps :func:`~shiny.ui.sidebar`.
+    Create a collapsing sidebar layout. This function wraps :func:`~shiny.ui.layout_sidebar`.
 
     Parameters
     ----------
-    width
-        A valid CSS unit used for the width of the sidebar.
-    position
-        Where the sidebar should appear relative to the main content.
-    open
-        The initial state of the sidebar. It can be `"desktop"` (the sidebar starts open
-        on desktop screen, closed on mobile), `"open"` or `True` (the sidebar starts
-        open), `"closed"` or `False` (the sidebar starts closed), or `"always"` or
-        `None` (the sidebar is always open and cannot be closed).
-
-        In :func:`~shiny.ui.update_sidebar`, `open` indicates the desired state of the
-        sidebar. Note that :func:`~shiny.ui.update_sidebar` can only open or close the
-        sidebar, so it does not support the `"desktop"` and `"always"` options.
-    id
-        A character string. Required if wanting to re-actively read (or update) the
-        `collapsible` state in a Shiny app.
-    title
-        A character title to be used as the sidebar title, which will be wrapped in a
-        `<div>` element with class `sidebar-title`. You can also provide a custom
-        :class:`~htmltools.Tag` for the title element, in which case you'll
-        likely want to give this element `class = "sidebar-title"`.
+    fillable
+        Whether or not the main content area should be wrapped in a fillable container.
+        See :func:`~shiny.ui.as_fillable_container` for details.
+    fill
+        Whether or not the sidebar layout should be wrapped in a fillable container. See
+        :func:`~shiny.ui.as_fill_item` for details.
     bg,fg
         A background or foreground color.
-    class_
-        CSS classes for the sidebar container element, in addition to the fixed
-        `.sidebar` class.
-    max_height_mobile
-        A CSS length unit (passed through :func:`~shiny.ui.css.as_css_unit`) defining
-        the maximum height of the horizontal sidebar when viewed on mobile devices. Only
-        applies to always-open sidebars that use `open = "always"`, where by default the
-        sidebar container is placed below the main content container on mobile devices.
+    border
+        Whether or not to show a border around the sidebar layout.
+    border_radius
+        Whether or not to round the corners of the sidebar layout.
+    border_color
+        A border color.
     gap
         A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
-        provided to `*args`.
+        provided to `*args`. This value will only be used if `fillable` is `True`.
     padding
         Padding within the sidebar itself. This can be a numeric vector (which will be
         interpreted as pixels) or a character vector with valid CSS lengths. `padding`
@@ -118,27 +101,29 @@ def sidebar(
         be used for top, the second will be left and right, and the third will be
         bottom. If four, then the values will be interpreted as top, right, bottom, and
         left respectively.
+    height
+        Any valid CSS unit to use for the height.
 
     Returns
     -------
     :
-        A :class:`~shiny.ui.Sidebar` object.
+        A :class:`~shiny.ui.CardItem` object.
     """
     return RecallContextManager(
-        ui.sidebar,
-        default_page=page_sidebar(),
+        ui.layout_sidebar,
+        default_page=page_fillable(padding=0, gap=0),
         kwargs=dict(
-            width=width,
-            position=position,
-            open=open,
-            id=id,
-            title=title,
+            fillable=fillable,
+            fill=fill,
             bg=bg,
             fg=fg,
-            class_=class_,
-            max_height_mobile=max_height_mobile,
+            border=border,
+            border_radius=border_radius,
+            border_color=border_color,
             gap=gap,
             padding=padding,
+            height=height,
+            **kwargs,
         ),
     )
 
@@ -673,7 +658,7 @@ def page_fillable(
     """
     Creates a fillable page.
 
-    This function wraps :func:`~shiny.ui.page_fixed`.
+    This function wraps :func:`~shiny.ui.page_fillable`.
 
     Parameters
     ----------
