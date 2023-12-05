@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import ast
 import functools
 import inspect
+import linecache
 import sys
 import types
 from typing import Any, Callable, Dict, Protocol, TypeVar, cast, runtime_checkable
@@ -127,8 +130,12 @@ def _transform_body(fn: types.FunctionType) -> types.CodeType:
             " This should never happen, please file an issue!"
         )
 
-    with open(filename) as fd:
-        parsed_ast = ast.parse(fd.read(), filename=filename)
+    parsed_ast = read_ast(filename)
+    if parsed_ast is None:
+        raise RuntimeError(
+            f"Failed to read source code for function '{fn.__name__}'."
+            " This should never happen, please file an issue!"
+        )
 
     tft = TargetFunctionTransformer(
         fn,
@@ -164,6 +171,20 @@ def _transform_body(fn: types.FunctionType) -> types.CodeType:
         )
 
     return fcode
+
+
+def read_ast(filename: str) -> ast.Module | None:
+    # This is the logic we originally used to read the AST, but it doesn't work when the
+    # function being decorated is defined in a Jupyter notebook cell. However, the code
+    # is available in linecache (without which, tracebacks wouldn't work right).
+
+    # with open(filename) as fd:
+    #     return ast.parse(fd.read(), filename=filename)
+
+    lines = linecache.getlines(filename)
+    if len(lines) == 0:
+        return None
+    return ast.parse("".join(lines), filename=filename)
 
 
 def _transform_function_ast(node: ast.AST) -> ast.AST:
