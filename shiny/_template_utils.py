@@ -75,9 +75,7 @@ def app_template_questions(template: str, mode: Optional[str] = None):
     # avoid the questions if it's a classic only app.
     template_dir = Path(__file__).parent / "templates/app-templates" / template
     template_files = [file.name for file in template_dir.iterdir() if file.is_file()]
-    express_available = (
-        "express.py" in template_files and "classic.py" in template_files
-    )
+    express_available = "app-express.py" in template_files
 
     if mode == "express" and not express_available:
         raise Exception("Express mode not available for that template.")
@@ -223,12 +221,16 @@ def copy_template_files(
         else:
             shutil.copytree(item, app_dir / item.name)
 
+    def rename_unlink(file_to_rename: str, file_to_delete: str, dir: Path = app_dir):
+        (dir / file_to_rename).rename(dir / "app.py")
+        (dir / file_to_delete).unlink()
+
     if express_available:
         if mode == "express":
-            (app_dir / "express.py").rename(app_dir / "app.py")
-            (app_dir / "classic.py").unlink()
+            rename_unlink("app-express.py", "app-classic.py")
         if mode == "classic":
-            (app_dir / "classic.py").rename(app_dir / "app.py")
-            (app_dir / "express.py").unlink()
+            rename_unlink("app-classic.py", "app-express.py")
+    else:
+        (app_dir / "app-classic.py").rename(app_dir / "app.py")
 
     return app_dir
