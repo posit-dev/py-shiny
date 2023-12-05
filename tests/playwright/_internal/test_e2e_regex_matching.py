@@ -1,6 +1,6 @@
 import re
 
-from tests.e2e.controls import _attr_match_str, _style_match_str, _xpath_match_str
+from controls import _attr_match_str, _style_match_str, _xpath_match_str
 
 
 def test_style_match_str() -> None:
