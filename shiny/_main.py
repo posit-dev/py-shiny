@@ -499,10 +499,19 @@ After creating the application, you use `shiny run`:
     ),
     help="Choose a template for your new application.",
 )
-def create(template: Optional[str] = None) -> None:
+@click.option(
+    "--mode",
+    "-m",
+    type=click.Choice(
+        ["classic", "express"],
+        case_sensitive=False,
+    ),
+    help="Do you want to use an express template or a classic template?",
+)
+def create(template: Optional[str] = None, mode: Optional[str] = None) -> None:
     from ._template_utils import template_query
 
-    template_query(template)
+    template_query(template, mode)
 
 
 @main.command(

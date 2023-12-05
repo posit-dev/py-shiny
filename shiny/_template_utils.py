@@ -33,7 +33,7 @@ def choice_from_dict(choice_dict: Dict[str, str]) -> List[Choice]:
     return [Choice(title=key, value=value) for key, value in choice_dict.items()]
 
 
-def template_query(question_state: Optional[str] = None):
+def template_query(question_state: Optional[str] = None, mode: Optional[str] = None):
     """
     This will initiate a CLI query which will ask the user which template they would like.
     If called without arguments this function will start from the top level and ask which
@@ -67,10 +67,10 @@ def template_query(question_state: Optional[str] = None):
     elif template in package_template_choices.values():
         js_component_questions(template)
     else:
-        app_template_questions(template)
+        app_template_questions(template, mode)
 
 
-def app_template_questions(template: str):
+def app_template_questions(template: str, mode: Optional[str] = None):
     appdir = questionary.path(
         "Enter destination directory:",
         default=build_path_string(),
@@ -80,7 +80,12 @@ def app_template_questions(template: str):
     if appdir is None:
         sys.exit(1)
 
-    app_dir = copy_template_files(appdir, template, template_subdir="app-templates")
+    app_dir = copy_template_files(
+        appdir,
+        template,
+        template_subdir="app-templates",
+        mode=mode,
+    )
     print(f"Created Shiny app at {app_dir}")
     print(f"Next steps open and edit the app file: {app_dir}/app.py")
 
@@ -152,12 +157,42 @@ def build_path_string(*path: str):
     return os.path.join(".", *path)
 
 
-def copy_template_files(dest: str, template: str, template_subdir: str):
+def copy_template_files(
+    dest: str, template: str, template_subdir: str, mode: Optional[str] = None
+):
     if dest == ".":
         dest = build_path_string(template)
 
     app_dir = Path(dest)
     template_dir = Path(__file__).parent / "templates" / template_subdir / template
+
+    # Not all apps will be implemented in both express and classic so we can
+    # avoid the questions if it's a classic only app.
+    template_files = [file.name for file in template_dir.iterdir() if file.is_file()]
+    express_available = (
+        "express.py" in template_files and "classic.py" in template_files
+    )
+
+    if mode == "express" and not express_available:
+        raise Exception("Express mode not available for that template.")
+
+    if mode is None and express_available:
+        mode = questionary.select(
+            "Would you like to use express or classic mode?",
+            [
+                Choice("Classic", "classic"),
+                Choice("Express", "express"),
+                back_choice,
+                cancel_choice,
+            ],
+        ).ask()
+
+        if mode is None or mode == "cancel":
+            sys.exit(1)
+        if mode == "back":
+            template_query(template)
+            return
+
     duplicate_files = [
         file.name for file in template_dir.iterdir() if (app_dir / file.name).exists()
     ]
@@ -177,5 +212,13 @@ def copy_template_files(dest: str, template: str, template_subdir: str):
             shutil.copy(item, app_dir / item.name)
         else:
             shutil.copytree(item, app_dir / item.name)
+
+    if express_available:
+        if mode == "express":
+            (app_dir / "express.py").rename(app_dir / "app.py")
+            (app_dir / "classic.py").unlink()
+        if mode == "classic":
+            (app_dir / "classic.py").rename(app_dir / "app.py")
+            (app_dir / "express.py").unlink()
 
     return app_dir
