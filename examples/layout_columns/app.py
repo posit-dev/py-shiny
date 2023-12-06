@@ -1,5 +1,6 @@
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 import numpy as np
+
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 kid_phrases = [
     "Why is the sky blue?",

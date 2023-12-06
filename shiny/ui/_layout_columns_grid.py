@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Iterable, Literal, Optional, Dict, TypeVar, TypedDict, Union, cast
+from json import dumps as toJSON
+from typing import Dict, Iterable, Literal, Optional, TypedDict, TypeVar, Union, cast
+from warnings import warn as warn
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
@@ -8,10 +10,6 @@ from ._html_deps_shinyverse import web_component_dependency
 from ._tag import consolidate_attrs
 from .css import CssUnit, as_css_unit
 from .fill import as_fill_item, as_fillable_container
-
-
-from json import dumps as toJSON
-from warnings import warn as warn
 
 T = TypeVar("T")
 
