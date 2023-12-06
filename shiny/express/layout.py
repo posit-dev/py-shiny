@@ -56,11 +56,11 @@ pre = wrap_recall_context_manager(htmltools.pre)
 # ======================================================================================
 def sidebar(
     *,
+    title: Optional[str | Tag | TagList] = None,
     width: CssUnit = 250,
     position: Literal["left", "right"] = "left",
     open: Literal["desktop", "open", "closed", "always"] = "always",
     id: Optional[str] = None,
-    title: TagChild | str = None,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
     class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
@@ -69,12 +69,14 @@ def sidebar(
     padding: Optional[CssUnit | list[CssUnit]] = None,
 ) -> RecallContextManager[ui.Sidebar]:
     """
-    Sidebar element
+    A page-level sidebar layout.
 
     Create a collapsing sidebar layout. This function wraps :func:`~shiny.ui.sidebar`.
 
     Parameters
     ----------
+    title
+        A title to display at the top of the page.
     width
         A valid CSS unit used for the width of the sidebar.
     position
@@ -91,11 +93,6 @@ def sidebar(
     id
         A character string. Required if wanting to re-actively read (or update) the
         `collapsible` state in a Shiny app.
-    title
-        A character title to be used as the sidebar title, which will be wrapped in a
-        `<div>` element with class `sidebar-title`. You can also provide a custom
-        :class:`~htmltools.Tag` for the title element, in which case you'll
-        likely want to give this element `class = "sidebar-title"`.
     bg,fg
         A background or foreground color.
     class_
@@ -126,13 +123,12 @@ def sidebar(
     """
     return RecallContextManager(
         ui.sidebar,
-        default_page=page_sidebar(),
+        default_page=page_sidebar(title=title),
         kwargs=dict(
             width=width,
             position=position,
             open=open,
             id=id,
-            title=title,
             bg=bg,
             fg=fg,
             class_=class_,
