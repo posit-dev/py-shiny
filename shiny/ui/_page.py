@@ -306,7 +306,7 @@ def page_fillable(
         # first set of attributes.
         FILLABLE_CONTAINTER_ATTRS,
         {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
-        {"class": "bslib-flow-mobile"} if fillable_mobile else None,
+        {"class": "bslib-flow-mobile"} if not fillable_mobile else None,
         attrs,
         *children,
         components_dependency(),
