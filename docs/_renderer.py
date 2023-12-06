@@ -128,7 +128,7 @@ class Renderer(MdRenderer):
         return ""
 
     @dispatch
-    def render_annotation(self, el: exp.Expression):
+    def render_annotation(self, el: exp.Expr):
         # an expression is essentially a list[exp.Name | str]
         # e.g. Optional[TagList]
         #   -> [Name(source="Optional", ...), "[", Name(...), "]"]
@@ -136,9 +136,9 @@ class Renderer(MdRenderer):
         return "".join(map(self.render_annotation, el))
 
     @dispatch
-    def render_annotation(self, el: exp.Name):
+    def render_annotation(self, el: exp.ExprName):
         # e.g. Name(source="Optional", full="typing.Optional")
-        return f"[{el.source}](`{el.full}`)"
+        return f"[{el.path}](`{el.canonical_path}`)"
 
     @dispatch
     def summarize(self, el: dc.Object | dc.Alias):
