@@ -18,6 +18,7 @@ __all__ = (
     "span",
     "pre",
     "sidebar",
+    "layout_sidebar",
     "layout_column_wrap",
     "column",
     "row",
@@ -139,6 +140,80 @@ def sidebar(
             max_height_mobile=max_height_mobile,
             gap=gap,
             padding=padding,
+        ),
+    )
+
+
+def layout_sidebar(
+    *,
+    fillable: bool = True,
+    fill: bool = True,
+    bg: Optional[str] = None,
+    fg: Optional[str] = None,
+    border: Optional[bool] = None,
+    border_radius: Optional[bool] = None,
+    border_color: Optional[str] = None,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+    height: Optional[CssUnit] = None,
+    **kwargs: TagAttrValue,
+) -> RecallContextManager[ui.CardItem]:
+    """
+    A sidebar layout.
+
+    Create a collapsing sidebar layout. This function wraps :func:`~shiny.ui.layout_sidebar`.
+
+    Parameters
+    ----------
+    fillable
+        Whether or not the main content area should be wrapped in a fillable container.
+        See :func:`~shiny.ui.as_fillable_container` for details.
+    fill
+        Whether or not the sidebar layout should be wrapped in a fillable container. See
+        :func:`~shiny.ui.as_fill_item` for details.
+    bg,fg
+        A background or foreground color.
+    border
+        Whether or not to show a border around the sidebar layout.
+    border_radius
+        Whether or not to round the corners of the sidebar layout.
+    border_color
+        A border color.
+    gap
+        A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
+        provided to `*args`. This value will only be used if `fillable` is `True`.
+    padding
+        Padding within the sidebar itself. This can be a numeric vector (which will be
+        interpreted as pixels) or a character vector with valid CSS lengths. `padding`
+        may be one to four values. If one, then that value will be used for all four
+        sides. If two, then the first value will be used for the top and bottom, while
+        the second value will be used for left and right. If three, then the first will
+        be used for top, the second will be left and right, and the third will be
+        bottom. If four, then the values will be interpreted as top, right, bottom, and
+        left respectively.
+    height
+        Any valid CSS unit to use for the height.
+
+    Returns
+    -------
+    :
+        A :class:`~shiny.ui.CardItem` object.
+    """
+    return RecallContextManager(
+        ui.layout_sidebar,
+        default_page=page_fillable(padding=0, gap=0),
+        kwargs=dict(
+            fillable=fillable,
+            fill=fill,
+            bg=bg,
+            fg=fg,
+            border=border,
+            border_radius=border_radius,
+            border_color=border_color,
+            gap=gap,
+            padding=padding,
+            height=height,
+            **kwargs,
         ),
     )
 
