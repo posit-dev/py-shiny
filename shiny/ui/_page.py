@@ -144,7 +144,7 @@ def page_navbar(
         If provided, will create an input value that holds the currently selected nav
         item.
     selected
-        Choose a particular nav item to select by default value (should match it's
+        Choose a particular nav item to select by default value (should match its
         ``value``).
     sidebar
         A :func:`~shiny.ui.sidebar` component to display on every page.
@@ -261,7 +261,7 @@ def page_fillable(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Creates a fillable page
+    Create a fillable page.
 
     Parameters
     ----------
@@ -419,7 +419,7 @@ def page_bootstrap(
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
     kwargs
-        Attributes on the the `<body>` tag.
+        Attributes on the `<body>` tag.
 
     Returns
     -------
