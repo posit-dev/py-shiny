@@ -36,7 +36,7 @@ from ._sidebar import Sidebar, layout_sidebar
 from ._tag import consolidate_attrs
 from ._utils import get_window_title
 from .css import CssUnit, as_css_padding, as_css_unit
-from .fill._fill import FILLABLE_CONTAINTER_ATTRS
+from .fill._fill import as_fillable_container
 
 
 def page_sidebar(
@@ -298,13 +298,8 @@ def page_fillable(
 
     style = css(padding=as_css_padding(padding), gap=as_css_unit(gap))
 
-    return page_bootstrap(
+    page = page_bootstrap(
         head_content(tags.style("html { height: 100%; }")),
-        # Even though page_bootstrap accepts *args/**kwargs, we need to prepend the
-        # class value to the tags.body. To avoid having a <body> within a <body> for a
-        # core code path, we can manually use `FILLABLE_CONTAINER_ATTRS` here as the
-        # first set of attributes.
-        FILLABLE_CONTAINTER_ATTRS,
         {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
         {"class": "bslib-flow-mobile"} if fillable_mobile else None,
         attrs,
@@ -313,6 +308,15 @@ def page_fillable(
         title=title,
         lang=lang,
     )
+
+    # page returns a <html> tag, but we need to make the <body> fillable
+    body = page.children[1]
+    if not isinstance(body, Tag) or body.name != "body":
+        raise ValueError("Expected a <body> tag")
+
+    as_fillable_container(body)
+
+    return page
 
 
 @add_example()
