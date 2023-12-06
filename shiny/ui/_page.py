@@ -56,7 +56,7 @@ def page_sidebar(
     ----------
     sidebar
         Content to display in the sidebar.
-    args
+    *args
         UI elements.
     title
         A title to display at the top of the page.
@@ -72,7 +72,7 @@ def page_sidebar(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Additional attributes passed to :func:`~shiny.ui.layout_sidebar`.
 
     Returns
@@ -135,7 +135,7 @@ def page_navbar(
 
     Parameters
     ----------
-    args
+    *args
         UI elements.
     title
         The browser window title (defaults to the host URL of the page). Can also be set
@@ -327,7 +327,7 @@ def page_fluid(
 
     Parameters
     ----------
-    args
+    *args
         UI elements.
     title
         The browser window title (defaults to the host URL of the page). Can also be set
@@ -336,7 +336,7 @@ def page_fluid(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Attributes on the page level container.
 
     Returns
@@ -368,7 +368,7 @@ def page_fixed(
 
     Parameters
     ----------
-    args
+    *args
         UI elements.
     title
         The browser window title (defaults to the host URL of the page). Can also be set
@@ -377,7 +377,7 @@ def page_fixed(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Attributes on the page level container.
 
     Returns
@@ -409,7 +409,7 @@ def page_bootstrap(
 
     Parameters
     ----------
-    args
+    *args
         UI elements.
     title
         The browser window title (defaults to the host URL of the page). Can also be set
@@ -418,7 +418,7 @@ def page_bootstrap(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Attributes on the the `<body>` tag.
 
     Returns
