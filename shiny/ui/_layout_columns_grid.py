@@ -152,10 +152,18 @@ def row_heights_css_vars(
         return {"style": {}, "classes": ""}
 
     if isinstance(x, CssUnit):
-        x = {"xs": [x], "sm": [x]}
+        x = [x]
 
     if hasattr(x, "__iter__") and not isinstance(x, Dict):
-        x = {"xs": x, "sm": x}
+        # For a single row_heights, we use the same value across all breakpoints,
+        # including mobile
+        height = " ".join([maybe_fr_unit(h) for h in x])
+        return {
+            "style": {
+                "--bslib-grid--row-heights": height,
+            },
+            "classes": "",
+        }
 
     x = cast(BreakpointsSoft[CssUnit], x)
 
