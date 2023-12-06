@@ -57,7 +57,7 @@ def layout_columns(
 
 
 Breakpoints = Literal["xs", "sm", "md", "lg", "xl"]
-BreakpointsDict = Dict[Union[Breakpoints, str], Union[List[int], None]]
+BreakpointsDict = Dict[Union[Breakpoints, str], Union[List[int], int, None]]
 
 
 def validate_col_spec(
@@ -74,14 +74,13 @@ def validate_col_spec(
         if bk is None:
             continue
 
+        if isinstance(bk, int):
+            bk = [bk]
+            col_widths[break_name] = bk
+
         if any(b == 0 for b in bk):
             raise ValueError(
                 "Column values must be greater than 0 to indicate width, or negative to indicate a column offset."
-            )
-
-        if len(bk) > 1 and any(b is None for b in bk):
-            raise ValueError(
-                "Cannot mix widths and None values. All column widths must be specified, or choose auto widths using a single None value."
             )
 
         if not any(b > 0 for b in bk):

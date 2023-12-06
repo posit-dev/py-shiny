@@ -104,6 +104,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return ui.layout_columns(
             cards()[: input.n_cards()],
             col_widths={
+                "sm": 3,
                 "md": [4, 2, 3, 3],
                 "lg": [3, 4, 2, 3],
                 "xl": [3, 3, 4, 2],
