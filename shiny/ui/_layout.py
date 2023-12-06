@@ -33,7 +33,7 @@ def layout_column_wrap(
     """
     A grid-like, column-first layout
 
-    Wraps a 1d sequence of UI elements into a 2d grid. The number of columns 
+    Wraps a 1d sequence of UI elements into a 2d grid. The number of columns
     (and rows) in the grid depends on the column width and the size of the display.
 
     Parameters

@@ -38,8 +38,8 @@ SelectChoicesArg = Union[
 _topics = {
     "Server value": """
 If `multiple=False`, the server value is a string with the value of the selected item.
-If `multiple=True`, the server value is a tuple containing the values of the 
-selected items. When ``multiple=True`` and nothing is selected, this value 
+If `multiple=True`, the server value is a tuple containing the values of the
+selected items. When ``multiple=True`` and nothing is selected, this value
 will be ``None``.
 """
 }
@@ -87,8 +87,8 @@ def input_selectize(
     ------
     ::: {.callout-note title="Server value"}
     If `multiple=False`, the server value is a string with the value of the selected item.
-    If `multiple=True`, the server value is a tuple containing the values of the 
-    selected items. When ``multiple=True`` and nothing is selected, this value 
+    If `multiple=True`, the server value is a tuple containing the values of the
+    selected items. When ``multiple=True`` and nothing is selected, this value
     will be ``None``.
     :::
 
@@ -158,8 +158,8 @@ def input_select(
     ------
     ::: {.callout-note title="Server value"}
     If `multiple=False`, the server value is a string with the value of the selected item.
-    If `multiple=True`, the server value is a tuple containing the values of the 
-    selected items. When ``multiple=True`` and nothing is selected, this value 
+    If `multiple=True`, the server value is a tuple containing the values of the
+    selected items. When ``multiple=True`` and nothing is selected, this value
     will be ``None``.
     :::
 
