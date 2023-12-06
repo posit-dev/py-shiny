@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Iterable, Literal, Optional, Dict, TypeVar, TypedDict, Union, cast
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
 from ._html_deps_shinyverse import web_component_dependency
 from ._tag import consolidate_attrs
@@ -41,11 +41,11 @@ def layout_columns(
     # Create the bslib-layout-columns element
     tag = Tag(
         "bslib-layout-columns",
-        *children,
         {
             "class": "bslib-grid grid",
         },
         attrs,
+        *wrap_all_in_grid_item_container(children, fillable),
         web_component_dependency(),
         class_=row_heights_attr["classes"],
         col_widths=json_col_spec(col_widths),
@@ -63,6 +63,26 @@ def layout_columns(
         tag = as_fillable_container(tag)
 
     return tag
+
+
+def wrap_all_in_grid_item_container(
+    children: Iterable[TagChild],
+    fillable: bool = True,
+    class_: Optional[str] = None,
+) -> list[TagChild]:
+    item_class = "bslib-grid-item bslib-gap-spacing"
+    if class_ is not None:
+        item_class = f"{item_class} {class_}"
+
+    # Use a new list so that we don't mutate the original `children`
+    wrapped_children: list[TagChild] = []
+    for child_value in children:
+        child = div({"class": item_class}, child_value)
+        if fillable:
+            child = as_fillable_container(child)
+        wrapped_children.append(child)
+
+    return wrapped_children
 
 
 def validate_col_spec(
