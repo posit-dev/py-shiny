@@ -673,7 +673,7 @@ def page_fillable(
     """
     Creates a fillable page.
 
-    This function wraps :func:`~shiny.ui.page_fixed`.
+    This function wraps :func:`~shiny.ui.page_fillable`.
 
     Parameters
     ----------
