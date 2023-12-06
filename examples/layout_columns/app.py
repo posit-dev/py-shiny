@@ -101,7 +101,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.ui
     def layout_columns_example():
-        return ui.layout_columns(
+        return ui.layout_columns_grid(
             *cards()[: input.n_cards()],
             class_="MY-CLASS",
             # col_widths=[4, 2, 3, 3],

@@ -15,14 +15,14 @@ from warnings import warn as warn
 
 T = TypeVar("T")
 
-Breakpoints = Literal["xs", "sm", "md", "lg", "xl"]
+Breakpoints = Literal["xs", "sm", "md", "lg", "xl", "xxl"]
 BreakpointsSoft = Dict[Union[Breakpoints, str], Union[Iterable[T], T, None]]
 BreakpointsHard = Dict[Union[Breakpoints, str], Union[Iterable[T], None]]
 BreakpointsComplete = Dict[Union[Breakpoints, str], Iterable[T]]
 BreakpointsUser = Union[BreakpointsSoft[T], Iterable[T], T, None]
 
 
-def layout_columns(
+def layout_columns_grid(
     *args: TagChild | TagAttrs,
     col_widths: BreakpointsUser[int] = None,
     row_heights: BreakpointsUser[CssUnit] = None,
