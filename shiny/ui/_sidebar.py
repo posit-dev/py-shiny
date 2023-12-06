@@ -205,7 +205,7 @@ def sidebar(
         the second value will be used for left and right. If three, then the first will
         be used for top, the second will be left and right, and the third will be
         bottom. If four, then the values will be interpreted as top, right, bottom, and
-        left respectively.
+        left, respectively.
 
     Returns
     -------
@@ -342,7 +342,7 @@ def layout_sidebar(
         the second value will be used for left and right. If three, then the first will
         be used for top, the second will be left and right, and the third will be
         bottom. If four, then the values will be interpreted as top, right, bottom, and
-        left respectively.
+        left, respectively.
     height
         Any valid CSS unit to use for the height.
 
