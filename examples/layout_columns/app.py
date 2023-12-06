@@ -103,12 +103,18 @@ def server(input: Inputs, output: Outputs, session: Session):
     def layout_columns_example():
         return ui.layout_columns(
             cards()[: input.n_cards()],
+            class_="MY-CLASS",
+            # col_widths=[4, 2, 3, 3],
+            # col_widths={"sm": 3},
+            # col_widths=(8, 4),
+            row_heights=(2, 3, 4),
+            # row_heights="500px",
             col_widths={
                 "sm": 3,
-                "md": [4, 2, 3, 3],
+                "md": (4, 2, 3, 3),
                 "lg": [3, 4, 2, 3],
-                "xl": [3, 3, 4, 2],
-                "xxl": [2, 3, 3, 4],
+                "xl": (3, 3, 4, 2),
+                "xxl": (2, 3, 3, -1, 3),
             },
         )
 
