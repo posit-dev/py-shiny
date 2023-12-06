@@ -98,7 +98,7 @@ def input_slider(
     animate
         ``True`` to show simple animation controls with default settings; ``False`` not
         to; or a custom settings list, such as those created using
-        :class:`~AnimationOptions()`.
+        :class:`~AnimationOptions`.
     width
         The CSS width, e.g. '400px', or '100%'
     sep
