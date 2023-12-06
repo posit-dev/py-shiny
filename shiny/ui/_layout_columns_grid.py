@@ -14,9 +14,15 @@ from .fill import as_fill_item, as_fillable_container
 T = TypeVar("T")
 
 Breakpoints = Literal["xs", "sm", "md", "lg", "xl", "xxl"]
-BreakpointsSoft = Dict[Union[Breakpoints, str], Union[Iterable[T], T, None]]
-BreakpointsHard = Dict[Union[Breakpoints, str], Union[Iterable[T], None]]
-BreakpointsComplete = Dict[Union[Breakpoints, str], Iterable[T]]
+"""
+References
+----------
+* [Available Bootstrap breakpoints](https://getbootstrap.com/docs/5.3/layout/breakpoints/#available-breakpoints)
+"""
+
+BreakpointsSoft = Dict[Breakpoints, Union[Iterable[T], T, None]]
+BreakpointsHard = Dict[Breakpoints, Union[Iterable[T], None]]
+BreakpointsComplete = Dict[Breakpoints, Iterable[T]]
 BreakpointsUser = Union[BreakpointsSoft[T], Iterable[T], T, None]
 
 
@@ -34,24 +40,22 @@ def layout_columns_grid(
     attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
 
     col_widths = validate_col_spec(col_widths, len(children))
-    row_heights_attr = row_heights_css_vars(row_heights)
 
     # Create the bslib-layout-columns element
     tag = Tag(
         "bslib-layout-columns",
         {
             "class": "bslib-grid grid",
+            "col-widths": json_col_spec(col_widths),
+            "style": css(
+                gap=as_css_unit(gap),
+                height=as_css_unit(height),
+            ),
         },
         attrs,
+        row_heights_attrs(row_heights),
         *wrap_all_in_grid_item_container(children, fillable),
         web_component_dependency(),
-        class_=row_heights_attr["classes"],
-        col_widths=json_col_spec(col_widths),
-        style=css(
-            gap=as_css_unit(gap),
-            height=as_css_unit(height),
-            **row_heights_attr["style"],
-        ),
     )
 
     # Apply fill and fillable
@@ -138,16 +142,14 @@ def maybe_fr_unit(x: CssUnit) -> str:
     return x
 
 
-class RowHeightsDict(TypedDict):
-    style: Dict[str, str]
-    classes: str
+RowHeightsDict = TypedDict("RowHeightsDict", {"style": Dict[str, str], "class": str})
 
 
-def row_heights_css_vars(
+def row_heights_attrs(
     x: BreakpointsUser[CssUnit],
-) -> RowHeightsDict:
+) -> TagAttrs:
     if x is None:
-        return {"style": {}, "classes": ""}
+        return {"style": "", "class": ""}
 
     if isinstance(x, CssUnit):
         x = [x]
@@ -157,26 +159,27 @@ def row_heights_css_vars(
         # including mobile
         height = " ".join([maybe_fr_unit(h) for h in x])
         return {
-            "style": {
-                "--bslib-grid--row-heights": height,
-            },
-            "classes": "",
+            "style": css(
+                **{"--bslib-grid--row-heights": height},
+            ),
+            "class": "",
         }
 
     x = cast(BreakpointsSoft[CssUnit], x)
 
     # Remove any None values from x
-    x = {k: v for k, v in x.items() if v is not None}
-    x = cast(BreakpointsComplete[CssUnit], x)
+    x_complete = {k: v for k, v in x.items() if v is not None}
 
     # We use classes to activate CSS variables at the right breakpoints. Note: Mobile
     # row height is derived from xs or defaults to auto in the CSS, so we don't need the
     # class to activate it
-    classes = [f"bslib-grid--row-heights--{brk}" for brk in x.keys() if brk != "xs"]
+    classes = [
+        f"bslib-grid--row-heights--{brk}" for brk in x_complete.keys() if brk != "xs"
+    ]
 
     # Create CSS variables, treating numeric values as fractional units, passing strings
     css_vars: Dict[str, str] = {}
-    for brk, heights in x.items():
+    for brk, heights in x_complete.items():
         var = f"--bslib-grid--row-heights--{brk}"
 
         if isinstance(heights, CssUnit):
@@ -186,6 +189,6 @@ def row_heights_css_vars(
         css_vars[var] = value
 
     return {
-        "style": css_vars,
-        "classes": " ".join(classes),
+        "style": css(**css_vars),
+        "class": " ".join(classes),
     }
