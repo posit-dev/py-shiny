@@ -30,7 +30,7 @@ def input_action_button(
     icon
         An icon to appear inline with the button/link.
     width
-        The CSS width, e.g. '400px', or '100%'
+        The CSS width, e.g., '400px', or '100%'.
     kwargs
         Attributes to be applied to the button.
 
