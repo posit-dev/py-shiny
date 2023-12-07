@@ -40,7 +40,7 @@ __all__ = (
 
 class Sidebar:
     """
-    Sidebar object
+    A sidebar object
 
     Class returned from :func:`~shiny.ui.sidebar`. Please do not use this
     class directly. Instead, supply the :func:`~shiny.ui.sidebar` object to
@@ -55,7 +55,7 @@ class Sidebar:
     position
         Where the sidebar should appear relative to the main content.
     open
-        The initial state of the sidebar.
+        The initial state of the sidebar (open or collapsed).
     width
         A valid CSS unit used for the width of the sidebar.
     max_height_mobile
@@ -77,7 +77,7 @@ class Sidebar:
     position
         Where the sidebar should appear relative to the main content.
     open
-        The initial state of the sidebar.
+        The initial state of the sidebar (open or collapsed).
     width
         A valid CSS unit used for the width of the sidebar.
     max_height_mobile

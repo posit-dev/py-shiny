@@ -367,7 +367,7 @@ def card_body(
 
 class CardItem:
     """
-    A wrapper around a :class:`~htmltools.Tag` object that represent the content of a
+    A wrapper around a :class:`~htmltools.Tag` object that represents the content of a
     card item (e.g., :func:`~shiny.ui.card_header` or
     :func:`~shiny.card_footer`).
 
@@ -377,15 +377,15 @@ class CardItem:
     Parameters
     ----------
     item
-        A :class:`~htmltools.Tag` object that represent the content of a card item
+        A :class:`~htmltools.Tag` object that represents the content of a card item
         (e.g., :func:`~shiny.ui.card_header` or
         :func:`~shiny.card_footer`).
 
     See Also
     --------
     * :func:`~shiny.ui.card` for creating a card component.
-    * :func:`~shiny.ui.card_header` for creating a header within the card.
-    * :func:`~shiny.ui.card_footer` for creating a footer within the card.
+    * :func:`~shiny.ui.card_header` for creating a header within a card.
+    * :func:`~shiny.ui.card_footer` for creating a footer within a card.
     """
 
     def __init__(
@@ -396,7 +396,7 @@ class CardItem:
 
     def resolve(self) -> TagChild:
         """
-        Resolves the `CardItem` class by returning the `item` provided at initialization.
+        Resolves an object with the `CardItem` class by returning the `item` provided at initialization.
 
         Returns
         -------

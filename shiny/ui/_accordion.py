@@ -26,7 +26,7 @@ __all__ = (
 
 class AccordionPanel:
     """
-    Internal class used to represent an accordion panel.
+    The internal class used to represent an accordion panel.
 
     This class is used to represent an accordion panel. It is not intended to be
     instantiated directly. Instead, use :func:`~shiny.ui.accordion_panel`.
@@ -34,7 +34,7 @@ class AccordionPanel:
     Parameters
     ----------
     *args
-        Contents to the accordion panel body. Or tag attributes that are supplied to the
+        Contents to appear in the accordion panel body, or tag attributes that are supplied to the
         returned :class:`~htmltools.Tag` object.
     data_value
         A character string that uniquely identifies this panel.
