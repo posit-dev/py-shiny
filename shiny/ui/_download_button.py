@@ -74,7 +74,7 @@ def download_link(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Create a download button
+    Create a download button.
 
     Parameters
     ----------
