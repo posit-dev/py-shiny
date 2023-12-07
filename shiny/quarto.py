@@ -79,6 +79,8 @@ from shiny import App, Inputs, Outputs, Session, ui
 def server(input: Inputs, output: Outputs, session: Session) -> None:
 { "".join(session_code_cell_texts) }
 
+    return None
+
 
 _static_assets = ##STATIC_ASSETS_PLACEHOLDER##
 _static_assets = {{"/" + sa: Path(__file__).parent / sa for sa in _static_assets}}
