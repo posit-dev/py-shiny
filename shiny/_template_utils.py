@@ -148,7 +148,7 @@ def app_template_questions(
 
     appdir = questionary.path(
         "Enter destination directory:",
-        default=build_path_string(),
+        default=build_path_string(""),
         only_directories=True,
     ).ask()
 
