@@ -21,7 +21,7 @@ References
 """
 
 BreakpointsSoft = Dict[Breakpoints, Union[Iterable[T], T, None]]
-BreakpointsHard = Dict[Breakpoints, Union[Iterable[T], None]]
+BreakpointsOptional = Dict[Breakpoints, Union[Iterable[T], None]]
 BreakpointsComplete = Dict[Breakpoints, Iterable[T]]
 BreakpointsUser = Union[BreakpointsSoft[T], Iterable[T], T, None]
 
@@ -90,7 +90,7 @@ def wrap_all_in_grid_item_container(
 def as_col_spec(
     col_widths: BreakpointsUser[int],
     n_kids: int,
-) -> BreakpointsHard[int] | None:
+) -> BreakpointsOptional[int] | None:
     if col_widths is None:
         return None
 
@@ -122,10 +122,10 @@ def as_col_spec(
                 f"More column widths than children at breakpoint '{break_name}', extra widths will be ignored."
             )
 
-    return cast(BreakpointsHard[int], col_widths)
+    return cast(BreakpointsOptional[int], col_widths)
 
 
-def json_col_spec(col_widths: BreakpointsHard[int] | None) -> Optional[str]:
+def json_col_spec(col_widths: BreakpointsOptional[int] | None) -> Optional[str]:
     if col_widths is None:
         return None
 
