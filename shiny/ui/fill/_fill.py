@@ -7,7 +7,6 @@ from htmltools import Tag, TagAttrs
 
 from ..._docstring import add_example
 from .._html_deps_shinyverse import fill_dependency
-from .._tag import tag_prepend_class, tag_remove_class
 
 __all__ = (
     "as_fillable_container",
@@ -36,7 +35,7 @@ def as_fillable_container(
     tag: TagT,
 ) -> TagT:
     res = copy(tag)
-    tag_prepend_class(res, FILL_CONTAINER_CLASS)
+    res.add_class(FILL_CONTAINER_CLASS)
     res.append(fill_dependency())
     return res
 
@@ -73,7 +72,7 @@ def as_fill_item(
     * :func:`~shiny.ui.fill.remove_all_fill`
     """
     res = copy(tag)
-    tag_prepend_class(res, FILL_ITEM_CLASS)
+    res.add_class(FILL_ITEM_CLASS)
     res.append(fill_dependency())
     return res
 
@@ -110,8 +109,8 @@ def remove_all_fill(
     * :func:`~shiny.ui.fill.as_fillable_container`
     """
 
-    tag_remove_class(tag, FILL_CONTAINER_CLASS)
-    tag_remove_class(tag, FILL_ITEM_CLASS)
+    tag.remove_class(FILL_CONTAINER_CLASS)
+    tag.remove_class(FILL_ITEM_CLASS)
     return tag
 
 
