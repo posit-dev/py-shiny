@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 __all__ = (
-    "nav",
+    "nav_panel",
     "nav_menu",
     "nav_control",
     "nav_spacer",
@@ -17,6 +17,7 @@ __all__ = (
     # Deprecated - 2023-08-15
     "navset_pill_card",
     "navset_tab_card",
+    "nav",
 )
 
 import copy
@@ -98,7 +99,7 @@ class Nav:
 
 
 @add_example()
-def nav(
+def nav_panel(
     title: TagChild,
     *args: TagChild,
     value: Optional[str] = None,
@@ -1393,4 +1394,25 @@ def navset_tab_card(
         selected=selected,
         header=header,
         footer=footer,
+    )
+
+
+# Deprecated 2023-12-07
+def nav(
+    title: TagChild,
+    *args: TagChild,
+    value: Optional[str] = None,
+    icon: TagChild = None,
+) -> Nav:
+    """Deprecated. Please use `nav_panel()` instead of `nav()`."""
+    warn_deprecated(
+        "`nav()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`~shiny.ui.nav_panel` instead."
+    )
+    return nav_panel(
+        title,
+        *args,
+        value=value,
+        icon=icon,
     )

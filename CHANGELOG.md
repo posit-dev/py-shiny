@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
+* Closed #492: `shiny.ui.nav()` is now deprecated in favor of the more aptly named `shiny.ui.nav_panel()` (#876).
 * Update penguins example to credit Allison Horst and drop usage of `shiny.experimental` (#798).
 
 
