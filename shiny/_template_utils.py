@@ -4,9 +4,8 @@ import sys
 import tempfile
 import zipfile
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import Dict, List, Optional
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse
 
 import questionary
 import requests
@@ -157,7 +156,7 @@ def app_template_questions(
         sys.exit(1)
 
     if appdir == ".":
-        appdir = build_path_string(component_type)
+        appdir = build_path_string(template)
 
     app_dir = copy_template_files(
         Path(appdir),
@@ -168,6 +167,54 @@ def app_template_questions(
 
     print(f"Created Shiny app at {app_dir}")
     print(f"Next steps open and edit the app file: {app_dir}/app.py")
+
+
+def build_path_string(*path: str):
+    """
+    Build a path string that is valid for the current OS
+    """
+    return os.path.join(".", *path)
+
+
+def copy_template_files(
+    app_dir: Path,
+    template_dir: Path,
+    express_available: bool,
+    mode: Optional[str] = None,
+):
+    duplicate_files = [
+        file.name for file in template_dir.iterdir() if (app_dir / file.name).exists()
+    ]
+
+    if any(duplicate_files):
+        err_files = ", ".join(['"' + file + '"' for file in duplicate_files])
+        print(
+            f"Error: Can't create new files because the following files already exist in the destination directory: {err_files}"
+        )
+        sys.exit(1)
+
+    if not app_dir.exists():
+        app_dir.mkdir()
+
+    for item in template_dir.iterdir():
+        if item.is_file():
+            shutil.copy(item, app_dir / item.name)
+        else:
+            shutil.copytree(item, app_dir / item.name)
+
+    def rename_unlink(file_to_rename: str, file_to_delete: str, dir: Path = app_dir):
+        (dir / file_to_rename).rename(dir / "app.py")
+        (dir / file_to_delete).unlink()
+
+    if express_available:
+        if mode == "express":
+            rename_unlink("app-express.py", "app-classic.py")
+        if mode == "classic":
+            rename_unlink("app-classic.py", "app-express.py")
+    if (app_dir / "app-classic.py").exists():
+        (app_dir / "app-classic.py").rename(app_dir / "app.py")
+
+    return app_dir
 
 
 def js_component_questions(component_type: Optional[str] = None):
@@ -236,51 +283,3 @@ def js_component_questions(component_type: Optional[str] = None):
     print("- Run `npm run build` to build the component")
     print("- Install package locally with `pip install -e .`")
     print("- Open and run the example app in the `example-app` directory")
-
-
-def build_path_string(*path: str):
-    """
-    Build a path string that is valid for the current OS
-    """
-    return os.path.join(".", *path)
-
-
-def copy_template_files(
-    app_dir: Path,
-    template_dir: Path,
-    express_available: bool,
-    mode: Optional[str] = None,
-):
-    duplicate_files = [
-        file.name for file in template_dir.iterdir() if (app_dir / file.name).exists()
-    ]
-
-    if any(duplicate_files):
-        err_files = ", ".join(['"' + file + '"' for file in duplicate_files])
-        print(
-            f"Error: Can't create new files because the following files already exist in the destination directory: {err_files}"
-        )
-        sys.exit(1)
-
-    if not app_dir.exists():
-        app_dir.mkdir()
-
-    for item in template_dir.iterdir():
-        if item.is_file():
-            shutil.copy(item, app_dir / item.name)
-        else:
-            shutil.copytree(item, app_dir / item.name)
-
-    def rename_unlink(file_to_rename: str, file_to_delete: str, dir: Path = app_dir):
-        (dir / file_to_rename).rename(dir / "app.py")
-        (dir / file_to_delete).unlink()
-
-    if express_available:
-        if mode == "express":
-            rename_unlink("app-express.py", "app-classic.py")
-        if mode == "classic":
-            rename_unlink("app-classic.py", "app-express.py")
-    if (app_dir / "app-classic.py").exists():
-        (app_dir / "app-classic.py").rename(app_dir / "app.py")
-
-    return app_dir
