@@ -39,14 +39,14 @@ def layout_columns_grid(
 ) -> Tag:
     attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
 
-    col_widths = validate_col_spec(col_widths, len(children))
+    col_widths_spec = as_col_spec(col_widths, len(children))
 
     # Create the bslib-layout-columns element
     tag = Tag(
         "bslib-layout-columns",
         {
             "class": "bslib-grid grid",
-            "col-widths": json_col_spec(col_widths),
+            "col-widths": json_col_spec(col_widths_spec),
             "style": css(
                 gap=as_css_unit(gap),
                 height=as_css_unit(height),
@@ -87,7 +87,7 @@ def wrap_all_in_grid_item_container(
     return wrapped_children
 
 
-def validate_col_spec(
+def as_col_spec(
     col_widths: BreakpointsUser[int],
     n_kids: int,
 ) -> BreakpointsHard[int] | None:
