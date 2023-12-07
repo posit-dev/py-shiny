@@ -522,6 +522,7 @@ def create(
 
     if github is not None:
         use_git_template(github, mode)
+        return
 
     template_query(template, mode)
 

@@ -1,6 +1,7 @@
 import os
 import shutil
 import sys
+import tempfile
 import zipfile
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -88,14 +89,10 @@ def use_git_template(url: str, mode: Optional[str] = None):
     response = requests.get(zip_url)
     response.raise_for_status()
 
-    # Create a temporary directory
-    temp_dir = Path("download-dir")
-    temp_dir.mkdir(parents=True, exist_ok=True)
-
-    # Save the zip file to the temporary directory
-    zip_file_path = temp_dir / "repo.zip"
-    with open(zip_file_path, "wb") as zip_file:
-        zip_file.write(response.content)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_dir = Path(temp_dir)
+        zip_file_path = temp_dir / "repo.zip"
+        zip_file_path.write_bytes(response.content)
 
         # Extract the zip file
         with zipfile.ZipFile(zip_file_path, "r") as zip_file:
@@ -110,13 +107,23 @@ def use_git_template(url: str, mode: Optional[str] = None):
         if not os.path.exists(template_dir):
             raise Exception(f"Template directory '{template_dir}' does not exist")
 
-        return template_dir
+        directory = repo_name + "-" + branch_name
+        path = temp_dir / directory / subdirectory
+        return app_template_questions(mode=mode, template_dir=path)
 
 
-def app_template_questions(template: str, mode: Optional[str] = None):
+def app_template_questions(
+    template: Optional[str] = None,
+    mode: Optional[str] = None,
+    template_dir: Optional[Path] = None,
+):
+    if template_dir is None:
+        if template is None:
+            raise ValueError("You must provide either template or template_dir")
+        template_dir = Path(__file__).parent / "templates/app-templates" / template
+
     # Not all apps will be implemented in both express and classic so we can
     # avoid the questions if it's a classic only app.
-    template_dir = Path(__file__).parent / "templates/app-templates" / template
     template_files = [file.name for file in template_dir.iterdir() if file.is_file()]
     express_available = "app-express.py" in template_files
 
@@ -149,13 +156,16 @@ def app_template_questions(template: str, mode: Optional[str] = None):
     if appdir is None:
         sys.exit(1)
 
+    if appdir == ".":
+        appdir = build_path_string(component_type)
+
     app_dir = copy_template_files(
-        appdir,
-        template,
-        template_subdir="app-templates",
-        mode=mode,
-        express_available=express_available,
+        Path(appdir),
+        template_dir=template_dir,
+        express_available=False,
+        mode=None,
     )
+
     print(f"Created Shiny app at {app_dir}")
     print(f"Next steps open and edit the app file: {app_dir}/app.py")
 
@@ -204,10 +214,14 @@ def js_component_questions(component_type: Optional[str] = None):
     if appdir is None:
         sys.exit(1)
 
+    if appdir == ".":
+        appdir = build_path_string(component_type)
+
     app_dir = copy_template_files(
-        appdir,
-        component_type,
-        template_subdir="package-templates",
+        Path(appdir),
+        template_dir=Path(__file__).parent
+        / "templates/package-templates"
+        / component_type,
         express_available=False,
         mode=None,
     )
@@ -232,18 +246,11 @@ def build_path_string(*path: str):
 
 
 def copy_template_files(
-    dest: str,
-    template: str,
-    template_subdir: str,
+    app_dir: Path,
+    template_dir: Path,
     express_available: bool,
     mode: Optional[str] = None,
 ):
-    if dest == ".":
-        dest = build_path_string(template)
-
-    app_dir = Path(dest)
-    template_dir = Path(__file__).parent / "templates" / template_subdir / template
-
     duplicate_files = [
         file.name for file in template_dir.iterdir() if (app_dir / file.name).exists()
     ]
@@ -273,7 +280,7 @@ def copy_template_files(
             rename_unlink("app-express.py", "app-classic.py")
         if mode == "classic":
             rename_unlink("app-classic.py", "app-express.py")
-    else:
+    if (app_dir / "app-classic.py").exists():
         (app_dir / "app-classic.py").rename(app_dir / "app.py")
 
     return app_dir
