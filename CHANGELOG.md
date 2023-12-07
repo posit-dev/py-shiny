@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Closed #492: `shiny.ui.nav()` is now deprecated in favor of the more aptly named `shiny.ui.nav_panel()` (#876).
 * Update penguins example to credit Allison Horst and drop usage of `shiny.experimental` (#798).
 
+* `as_fillable_container()` and `as_fill_item()` no longer mutate the `Tag` object that was passed in. Instead, it returns a new `Tag` object. Also closed #856: these functions now put the `html-fill-container` and `html-fill-item` CSS classes last, instead of first. (#862)
+
 
 ## [0.6.0] - 2023-08-08
 

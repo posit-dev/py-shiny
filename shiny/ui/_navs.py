@@ -35,7 +35,6 @@ from ._bootstrap import column, row
 from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
 from ._html_deps_shinyverse import components_dependency
 from ._sidebar import Sidebar, layout_sidebar
-from ._tag import tag_add_style
 from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
@@ -1130,7 +1129,7 @@ def _make_tabs_fillable(
     # must to be a fillable container.
     content = as_fillable_container(as_fill_item(content))
 
-    for child in content.children:
+    for i, child in enumerate(content.children):
         # Only work on Tags
         if not isinstance(child, Tag):
             continue
@@ -1147,8 +1146,10 @@ def _make_tabs_fillable(
             padding=as_css_padding(padding),
             __bslib_navbar_margin="0;" if navbar else None,
         )
-        child = tag_add_style(child, styles)
+        child.add_style(cast(str, styles))
         child = as_fillable_container(as_fill_item(child))
+
+        content.children[i] = child
 
     return content
 
