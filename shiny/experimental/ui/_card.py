@@ -97,17 +97,17 @@ def card(
     """
 
 
-return _card_impl(
-    *args,
-    full_screen=full_screen,
-    height=height,
-    max_height=max_height,
-    min_height=min_height,
-    fill=fill,
-    class_=class_,
-    wrapper=wrapper,
-    **kwargs,
-)
+    return _card_impl(
+        *args,
+        full_screen=full_screen,
+        height=height,
+        max_height=max_height,
+        min_height=min_height,
+        fill=fill,
+        class_=class_,
+        wrapper=wrapper,
+        **kwargs,
+    )
 
 
 ############################################################################
