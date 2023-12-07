@@ -1129,7 +1129,7 @@ def _make_tabs_fillable(
     # must to be a fillable container.
     content = as_fillable_container(as_fill_item(content))
 
-    for child in content.children:
+    for i, child in enumerate(content.children):
         # Only work on Tags
         if not isinstance(child, Tag):
             continue
@@ -1148,6 +1148,8 @@ def _make_tabs_fillable(
         )
         child = tag_add_style(child, styles)
         child = as_fillable_container(as_fill_item(child))
+
+        content.children[i] = child
 
     return content
 

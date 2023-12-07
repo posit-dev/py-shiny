@@ -1,22 +1,23 @@
 """Tests for """
 
 
+import contextlib
 import random
 import textwrap
-from typing import Any, Callable
+from typing import Generator
 
 from htmltools import TagList
 
 from shiny import ui
 from shiny._utils import private_seed
-from shiny.ui._navs import NavSet
 
 
 # Fix the randomness of these functions to make the tests deterministic
-def with_private_seed(func: Callable[[], NavSet], *args: Any, **kwargs: Any):
+@contextlib.contextmanager
+def private_seed_n(n: int = 0) -> Generator[None, None, None]:
     with private_seed():
-        random.seed(0)
-        return func(*args, **kwargs)
+        random.seed(n)
+        yield
 
 
 def test_nav_markup():
@@ -32,7 +33,8 @@ def test_nav_markup():
         ui.nav_control("Other item"),
     )
 
-    x = with_private_seed(ui.navset_tab, a, b, ui.nav_control("Some item"), menu)
+    with private_seed_n():
+        x = ui.navset_tab(a, b, ui.nav_control("Some item"), menu)
 
     assert TagList(x).render()["html"] == textwrap.dedent(
         """\
@@ -64,12 +66,8 @@ def test_nav_markup():
         </div>"""
     )
 
-    x = with_private_seed(
-        ui.navset_pill,
-        menu,
-        a,
-        id="navset_pill_id",
-    )
+    with private_seed_n():
+        x = ui.navset_pill(menu, a, id="navset_pill_id")
 
     assert TagList(x).render()["html"] == textwrap.dedent(
         """\
@@ -96,13 +94,13 @@ def test_nav_markup():
         </div>"""
     )
 
-    x = with_private_seed(
-        ui.navset_card_pill,
-        a,
-        ui.nav_menu("Menu", c),
-        b,
-        selected="c",
-    )
+    with private_seed_n():
+        x = ui.navset_card_pill(
+            a,
+            ui.nav_menu("Menu", c),
+            b,
+            selected="c",
+        )
 
     assert TagList(x).render()["html"] == textwrap.dedent(
         """\
@@ -136,13 +134,13 @@ def test_nav_markup():
         </div>"""
     )
 
-    x = with_private_seed(
-        ui.navset_bar,  # type: ignore
-        ui.nav_menu("Menu", "Plain text", c),
-        title="Page title",
-        footer="Page footer",
-        header="Page header",
-    )
+    with private_seed_n():
+        x = ui.navset_bar(
+            ui.nav_menu("Menu", "Plain text", c),
+            title="Page title",
+            footer="Page footer",
+            header="Page header",
+        )
 
     assert TagList(x).render()["html"] == textwrap.dedent(
         """\
