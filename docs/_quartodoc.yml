@@ -24,8 +24,8 @@ quartodoc:
         - express.layout.card
         - express.layout.accordion
         - express.layout.accordion_panel
-        - express.layout.navset_tab
-        - express.layout.navset_card_tab
+        - express.layout.navset
+        - express.layout.navset_card
         - express.layout.nav
         - express.layout.page_fluid
         - express.layout.page_fixed
