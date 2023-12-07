@@ -68,7 +68,7 @@ Note
 ``add()`` ing an input handler will make it persist for the duration of the Python
 process (unless Shiny is explicitly reloaded). For that reason, verbose naming is
 encouraged to minimize the risk of colliding with other Shiny input binding(s) which
-happen to use the same ``type`` (if this the binding is bundled with a package, we
+happen to use the same ``type`` (if the binding is bundled with a package, we
 recommend the format of "packageName.widgetName").
 
 Example
