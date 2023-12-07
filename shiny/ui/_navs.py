@@ -114,11 +114,11 @@ def nav(
     *args
         UI elements to display when the item is active.
     value
-        The value of the item. This is used to determine whether the item is active
-        (when an ``id`` is provided to the nav container), programmatically select the
-        item (e.g., :func:`~shiny.ui.update_navs`), and/or be provided to the
-        ``selected`` argument of the navigation container (e.g.,
-        :func:`~shiny.ui.navset_tab`).
+        The value of the item. Use this value to determine whether the item is active
+        (when an ``id`` is provided to the nav container) or to programmatically
+        select the item (e.g., :func:`~shiny.ui.update_navs`). You can also
+        provide the value to the ``selected`` argument of the navigation container
+        (e.g., :func:`~shiny.ui.navset_tab`).
     icon
         An icon to appear inline with the button/link.
 
@@ -314,11 +314,11 @@ def nav_menu(
         of two or more hyphens (e.g., ``---``), in which case it will be rendered
         as a divider.
     value
-        The value of the item. This is used to determine whether the item is active
-        (when an ``id`` is provided to the nav container), programmatically select the
-        item (e.g., :func:`~shiny.ui.update_navs`), and/or be provided to the
-        ``selected`` argument of the navigation container (e.g.,
-        :func:`~shiny.ui.navset_tab`).
+        The value of the item. Use this value to determine whether the item is active
+        (when an ``id`` is provided to the nav container) or to programmatically
+        select the item (e.g., :func:`~shiny.ui.update_navs`). You can also
+        provide the value to the ``selected`` argument of the navigation container
+        (e.g., :func:`~shiny.ui.navset_tab`).
     icon
         An icon to appear inline with the button/link.
     align
@@ -833,7 +833,7 @@ def navset_card_underline(
     placement: Literal["above", "below"] = "above",
 ) -> NavSetCard:
     """
-    Render nav items active/focused navigation links are styled with an underline inside a card container.
+    Render nav items inside a card container. Active/focused navigation links are styled with an underline.
 
     Parameters
     ----------
