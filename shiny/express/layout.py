@@ -26,7 +26,7 @@ __all__ = (
     "accordion_panel",
     "navset_tab",
     "navset_card_tab",
-    "nav",
+    "nav_panel",
     "page_fluid",
     "page_fixed",
     "page_fillable",
@@ -548,7 +548,7 @@ def navset_card_tab(
     )
 
 
-def nav(
+def nav_panel(
     title: TagChild,
     *,
     value: Optional[str] = None,
@@ -573,7 +573,7 @@ def nav(
         An icon to appear inline with the button/link.
     """
     return RecallContextManager(
-        ui.nav,
+        ui.nav_panel,
         args=(title,),
         kwargs=dict(
             value=value,
