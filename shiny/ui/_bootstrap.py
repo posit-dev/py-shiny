@@ -110,9 +110,9 @@ def column(
 
 def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
-    Create a well panel
+    Create a well panel.
 
-    Creates a panel with a slightly inset border and grey background. Equivalent to
+    Creates a panel with a slightly inset border and gray background. Equivalent to
     Bootstrap's ``well`` CSS class.
 
     Parameters
@@ -147,7 +147,7 @@ def panel_conditional(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Create a conditional panel
+    Create a conditional panel.
 
     Show UI elements only if a ``JavaScript`` condition is ``true``.
 
@@ -170,12 +170,13 @@ def panel_conditional(
     ----
     In the JS expression, you can refer to input and output JavaScript objects that
     contain the current values of input and output. For example, if you have an input
-    with an id of foo, then you can use input.foo to read its value. (Be sure not to
-    modify the input/output objects, as this may cause unpredictable behavior.)
+    with an ``id`` of ``foo``, then you can use ``input.foo`` to read its value.
+    (Be sure not to modify the input/output objects, as this may cause unpredictable
+    behavior.)
 
     You are not recommended to use special JavaScript characters such as a period . in
-    the input id's, but if you do use them anyway, for example, ``id = "foo.bar"``, you
-    will have to use ``input["foo.bar"]`` instead of ``input.foo.bar`` to read the input
+    the input id's, but if you do use them anyway, for example, `id = "foo.bar"`, you
+    will have to use `input["foo.bar"]` instead of ``input.foo.bar`` to read the input
     value.
 
     Tip
@@ -297,11 +298,11 @@ def panel_absolute(
     """
     Create a panel of absolutely positioned content.
 
-    Creates a ``<div>`` tag whose CSS position is set to absolute (or fixed if ``fixed =
-    True``). The way absolute positioning works in HTML is that absolute coordinates are
-    specified relative to its nearest parent element whose position is not set to static
-    (which is the default), and if no such parent is found, then relative to the page
-    borders. If you're not sure what that means, just keep in mind that you may get
+    Creates a `<div>` tag whose CSS position is set to absolute (or fixed if ``fixed =
+    True``). In HTML, absolute coordinates are specified relative to an element's
+    nearest parent element whose position is not set to static (the default).
+    If no such parent is found, the coordinates are relative to the page borders.
+    If you're not sure what that means, just keep in mind that you may get
     strange results if you use this function from inside of certain types of panels.
 
     Parameters
@@ -309,16 +310,16 @@ def panel_absolute(
     args
         UI elements to include inside the panel.
     top
-        Distance between the top of the panel, and the top of the page or parent
+        Distance between the top of the panel and the top of the page or parent
         container.
     left
-        Distance between the left side of the panel, and the left of the page or parent
+        Distance between the left side of the panel and the left of the page or parent
         container.
     right
-        Distance between the right side of the panel, and the right of the page or
+        Distance between the right side of the panel and the right of the page or
         parent container.
     bottom
-        Distance between the bottom of the panel, and the bottom of the page or parent
+        Distance between the bottom of the panel and the bottom of the page or parent
         container.
     width
         Width of the panel.
@@ -351,12 +352,12 @@ def panel_absolute(
     results.
 
     Like most other distance parameters in Shiny, the position and size parameters take
-    a number (interpreted as pixels) or a valid CSS size string, such as ``"100px"``
-    (100 pixels) or ``"25%"``.
+    a number (interpreted as pixels) or a valid CSS size string, such as `"100px"`
+    (100 pixels) or `"25%"`.
 
-    For arcane HTML reasons, to have the panel fill the page or parent you should
+    For arcane HTML reasons, to have the panel fill the page or parent,
     specify 0 for ``top``, ``left``, ``right``, and ``bottom`` rather than the more
-    obvious ``width = "100%"`` and ``height = "100%"``.
+    obvious `width = "100%"` and `height = "100%"`.
     """
 
     style = css(
