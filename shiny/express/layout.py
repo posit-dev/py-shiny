@@ -462,7 +462,7 @@ def navset(
     footer: TagChild = None,
 ):
     """
-    Render nav items whose active/focused navigation links are styled with an underline.
+    Render a set of nav items
 
     Parameters
     ----------
@@ -514,7 +514,7 @@ def navset_card(
     footer: TagChild = None,
 ):
     """
-    Render nav items active/focused navigation links are styled with an underline inside a card container.
+    Render a set of nav items inside a card container.
 
     Parameters
     ----------
