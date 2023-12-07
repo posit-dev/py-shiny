@@ -87,6 +87,37 @@ def wrap_all_in_grid_item_container(
     return wrapped_children
 
 
+def validate_col_width(
+    x: Iterable[int] | int, n_kids: int, break_name: str
+) -> Iterable[int]:
+    if isinstance(x, int):
+        y = [x]
+    else:
+        y = x
+
+    if not all(isinstance(i, int) for i in y):
+        raise ValueError(
+            f"Column values at breakpoint '{break_name}' must be integers. Values greater than 0 indicate width, and negative values indicate a column offset."
+        )
+
+    if any(i == 0 for i in y):
+        raise ValueError(
+            f"Column values at breakpoint '{break_name}' must be greater than 0 to indicate width, or negative to indicate a column offset."
+        )
+
+    if not any(b > 0 for b in y):
+        raise ValueError(
+            f"Column values at breakpoint '{break_name}' must include at least one positive integer width."
+        )
+
+    if len(list(y)) > n_kids:
+        warn(
+            f"More column widths than children at breakpoint '{break_name}', extra widths will be ignored."
+        )
+
+    return y
+
+
 def as_col_spec(
     col_widths: BreakpointsUser[int],
     n_kids: int,
@@ -95,34 +126,27 @@ def as_col_spec(
         return None
 
     if not isinstance(col_widths, Dict):
-        col_widths = {"md": col_widths}
+        return {"md": validate_col_width(col_widths, n_kids, "md")}
 
-    col_widths = cast(BreakpointsSoft[int], col_widths)
+    ret: BreakpointsOptional[int] = {}
+    col_widths_items = cast(BreakpointsSoft[int], col_widths).items()
 
-    for break_name, bk in col_widths.items():
-        if bk is None:
-            continue
-
-        if isinstance(bk, int):
-            bk = (bk,)
-            col_widths[break_name] = bk
-
-        if any(b == 0 for b in bk):
+    for brk, value in col_widths_items:
+        if brk not in ["xs", "sm", "md", "lg", "xl", "xxl"]:
             raise ValueError(
-                "Column values must be greater than 0 to indicate width, or negative to indicate a column offset."
+                f"Breakpoint '{brk}' is not valid. Valid breakpoints are: 'xs', 'sm', 'md', 'lg', 'xl', 'xxl'."
             )
 
-        if not any(b > 0 for b in bk):
-            raise ValueError(
-                "Column values must include at least one positive integer width."
+        if value is None:
+            ret[brk] = None
+        elif isinstance(value, (int, Iterable)):
+            ret[brk] = validate_col_width(value, n_kids, brk)
+        else:
+            raise TypeError(
+                f"Invalid type for value at breakpoint '{brk}'. Expected int or Iterable[int]."
             )
 
-        if len(list(bk)) > n_kids:
-            warn(
-                f"More column widths than children at breakpoint '{break_name}', extra widths will be ignored."
-            )
-
-    return cast(BreakpointsOptional[int], col_widths)
+    return ret
 
 
 def json_col_spec(col_widths: BreakpointsOptional[int] | None) -> Optional[str]:
