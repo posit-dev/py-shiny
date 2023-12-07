@@ -6,10 +6,10 @@ from shiny.express import input, layout
 
 with layout.column(width=6):
     with layout.navset_tab():
-        with layout.nav(title="One"):
+        with layout.nav_panel(title="One"):
             ui.input_slider("n", "N", 1, 100, 50)
 
-        with layout.nav(title="Two"):
+        with layout.nav_panel(title="Two"):
 
             @render.plot
             def histogram():
@@ -20,10 +20,10 @@ with layout.column(width=6):
 
 with layout.column(width=6):
     with layout.navset_card_tab():
-        with layout.nav(title="One"):
+        with layout.nav_panel(title="One"):
             ui.input_slider("n2", "N", 1, 100, 50)
 
-        with layout.nav(title="Two"):
+        with layout.nav_panel(title="Two"):
 
             @render.plot
             def histogram2():

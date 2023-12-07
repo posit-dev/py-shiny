@@ -20,9 +20,9 @@ def with_private_seed(func: Callable[[], NavSet], *args: Any, **kwargs: Any):
 
 
 def test_nav_markup():
-    a = ui.nav("a", "a")
-    b = ui.nav("b", "b")
-    c = ui.nav("c", "c")
+    a = ui.nav_panel("a", "a")
+    b = ui.nav_panel("b", "b")
+    c = ui.nav_panel("c", "c")
     menu = ui.nav_menu(
         "Menu",
         c,

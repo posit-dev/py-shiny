@@ -76,7 +76,7 @@ session_dict: dict[str, Session] = {}
 def mod_x_ui(label: str) -> ui.TagChild:
     def ui_navs(label: str) -> list[ui._navs.Nav]:
         return [
-            ui.nav(
+            ui.nav_panel(
                 letter.capitalize(),
                 f"{label} - {letter.capitalize()} content",
                 value=letter,

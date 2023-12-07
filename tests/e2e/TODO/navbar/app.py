@@ -7,7 +7,7 @@ my_sidebar = ui.sidebar("Sidebar content", open="open", title="Sidebar title")
 
 
 def nav_with_content(letter: str, prefix: str) -> ui._navs.Nav:
-    return ui.nav(letter, ui.markdown(f"`{prefix}`: tab {letter} content"))
+    return ui.nav_panel(letter, ui.markdown(f"`{prefix}`: tab {letter} content"))
 
 
 def nav_items(prefix: str) -> list[NavSetArg]:
