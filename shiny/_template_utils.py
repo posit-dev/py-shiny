@@ -1,10 +1,14 @@
 import os
 import shutil
 import sys
+import zipfile
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Dict, List, Optional
+from urllib.parse import urlparse, urlunparse
 
 import questionary
+import requests
 from questionary import Choice
 
 from ._custom_component_template_questions import (
@@ -68,6 +72,45 @@ def template_query(question_state: Optional[str] = None, mode: Optional[str] = N
         js_component_questions(template)
     else:
         app_template_questions(template, mode)
+
+
+def use_git_template(url: str, mode: Optional[str] = None):
+    # Parse the URL to get the repository, branch, and subdirectory
+    parsed_url = urlparse(url)
+    path_parts = parsed_url.path.strip("/").split("/")
+    repo_owner, repo_name, _, branch_name = path_parts[:4]
+    subdirectory = "/".join(path_parts[4:])
+
+    # Construct the URL to download the repository as a zip file
+    zip_url = f"https://github.com/{repo_owner}/{repo_name}/archive/refs/heads/{branch_name}.zip"
+
+    # Download the zip file
+    response = requests.get(zip_url)
+    response.raise_for_status()
+
+    # Create a temporary directory
+    temp_dir = Path("download-dir")
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save the zip file to the temporary directory
+    zip_file_path = temp_dir / "repo.zip"
+    with open(zip_file_path, "wb") as zip_file:
+        zip_file.write(response.content)
+
+        # Extract the zip file
+        with zipfile.ZipFile(zip_file_path, "r") as zip_file:
+            zip_file.extractall(temp_dir)
+
+        # Get the path to the subdirectory
+        template_dir = os.path.join(
+            temp_dir, f"{repo_name}-{branch_name}", subdirectory
+        )
+
+        # Check if the subdirectory exists
+        if not os.path.exists(template_dir):
+            raise Exception(f"Template directory '{template_dir}' does not exist")
+
+        return template_dir
 
 
 def app_template_questions(template: str, mode: Optional[str] = None):

@@ -508,8 +508,20 @@ After creating the application, you use `shiny run`:
     ),
     help="Do you want to use a shiny express template or a classic template?",
 )
-def create(template: Optional[str] = None, mode: Optional[str] = None) -> None:
-    from ._template_utils import template_query
+@click.option(
+    "--github",
+    "-g",
+    help="The github url for the hosted template",
+)
+def create(
+    template: Optional[str] = None,
+    mode: Optional[str] = None,
+    github: Optional[str] = None,
+) -> None:
+    from ._template_utils import template_query, use_git_template
+
+    if github is not None:
+        use_git_template(github, mode)
 
     template_query(template, mode)
 
