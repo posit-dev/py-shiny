@@ -7,14 +7,14 @@ from pathlib import Path, PurePath
 from typing import Literal, Optional, Protocol
 
 from htmltools import (
-  Tag,
-  TagAttrs,
-  TagAttrValue,
-  TagChild,
-  TagFunction,
-  Tagifiable,
-  css,
-  tags,
+    Tag,
+    TagAttrs,
+    TagAttrValue,
+    TagChild,
+    TagFunction,
+    Tagifiable,
+    css,
+    tags,
 )
 
 from ...types import MISSING, MISSING_TYPE
@@ -23,27 +23,27 @@ from ...ui.css import CssUnit, as_css_unit
 from ...ui.fill import as_fill_item, as_fillable_container
 
 __all__ = (
-  # Worried about `wrapper`
-  "card",
-  # Do not want to expose card_body yet
-  "card_body",
-  # Questioning:
-  "card_title",
-  "card_image",
+    # Worried about `wrapper`
+    "card",
+    # Do not want to expose card_body yet
+    "card_body",
+    # Questioning:
+    "card_title",
+    "card_image",
 )
 
 
 # TODO-maindocs; @add_example()
 def card(
-  *args: TagChild | TagAttrs | CardItem,
-  full_screen: bool = False,
-  height: Optional[CssUnit] = None,
-  max_height: Optional[CssUnit] = None,
-  min_height: Optional[CssUnit] = None,
-  fill: bool = True,
-  class_: Optional[str] = None,
-  wrapper: WrapperCallable | None | MISSING_TYPE = MISSING,
-  **kwargs: TagAttrValue,
+    *args: TagChild | TagAttrs | CardItem,
+    full_screen: bool = False,
+    height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
+    fill: bool = True,
+    class_: Optional[str] = None,
+    wrapper: WrapperCallable | None | MISSING_TYPE = MISSING,
+    **kwargs: TagAttrValue,
 ) -> Tag:
     """
     A Bootstrap card component
@@ -87,7 +87,7 @@ def card(
 
     See Also
     --------
-    * :func:`~shiny.ui.layout_column_wrap` for laying out multiple cards 
+    * :func:`~shiny.ui.layout_column_wrap` for laying out multiple cards
       or multiple columns inside a card.
     * :func:`~shiny.ui.card_header` for creating a header within a card.
     * :func:`~shiny.experimental.ui.card_title` for creating a title within a card body.
@@ -95,16 +95,18 @@ def card(
     * :func:`~shiny.ui.card_footer` for creating a footer within a card.
     * :func:`~shiny.experimental.ui.card_image` for adding an image to a card.
     """
+
+
 return _card_impl(
-  *args,
-  full_screen=full_screen,
-  height=height,
-  max_height=max_height,
-  min_height=min_height,
-  fill=fill,
-  class_=class_,
-  wrapper=wrapper,
-  **kwargs,
+    *args,
+    full_screen=full_screen,
+    height=height,
+    max_height=max_height,
+    min_height=min_height,
+    fill=fill,
+    class_=class_,
+    wrapper=wrapper,
+    **kwargs,
 )
 
 
@@ -113,14 +115,14 @@ return _card_impl(
 
 # TODO-maindocs; @add_example()
 def card_title(
-  *args: TagChild | TagAttrs,
-  container: TagFunction = tags.h5,
-  **kwargs: TagAttrValue,
+    *args: TagChild | TagAttrs,
+    container: TagFunction = tags.h5,
+    **kwargs: TagAttrValue,
 ) -> Tagifiable:
     """
     A card title container
 
-    :func:`~shiny.experimental.ui.card_title` creates a general container for the "title" of 
+    :func:`~shiny.experimental.ui.card_title` creates a general container for the "title" of
     a :func:`~shiny.ui.card`. This component is designed
     to be provided as a direct child to :func:`~shiny.ui.card`.
 
@@ -130,7 +132,7 @@ def card_title(
         Contents to appear in the card's title, or tag attributes to pass to the
         resolved :class:`~htmltools.Tag` object.
     container
-        Method for the returned :class:`~htmltools.Tag` object. Defaults to 
+        Method for the returned :class:`~htmltools.Tag` object. Defaults to
         :func:`~shiny.ui.tags`.h5.
     **kwargs
         Additional HTML attributes for the returned :class:`~htmltools.Tag` object.
@@ -192,7 +194,7 @@ def card_image(
     """
     A card image container
 
-    :func:`~shiny.experimental.ui.card_image` creates a general container for an image within a 
+    :func:`~shiny.experimental.ui.card_image` creates a general container for an image within a
     :func:`~shiny.ui.card`. This component is designed to be
     provided as a direct child to :func:`~shiny.ui.card`.
 
@@ -224,7 +226,7 @@ def card_image(
     width
         Any valid CSS unit (e.g., `width="100%"`).
     container
-        Method to wrap the returned :class:`~htmltools.Tag` object. Defaults to 
+        Method to wrap the returned :class:`~htmltools.Tag` object. Defaults to
         :func:`~shiny.experimental.ui.card_body`.
         If :func:`~shiny.experimental.ui.card_body` is used, each image will be in separate cards. If
         the `container` method does not return a :class:`~shiny.ui.CardItem`, it
@@ -242,20 +244,20 @@ def card_image(
                     "`mime_type` must be provided when passing an in-memory buffer"
                 )
             src = f"data:{mime_type};base64,{b64_str}"
-    
+
         elif isinstance(file, (str, Path, PurePath)):
             with open(file, "rb") as img_file:
                 b64_str = base64.b64encode(img_file.read()).decode("utf-8")
                 if mime_type is None:
                     mime_type = mimetypes.guess_type(file)[0]
                 src = f"data:{mime_type};base64,{b64_str}"
-    
+
     card_class_map = {
         "all": "card-img",
         "top": "card-img-top",
         "bottom": "card-img-bottom",
     }
-    
+
     image = tags.img(
         {
             "src": src,
@@ -270,10 +272,10 @@ def card_image(
         class_=class_,
         **kwargs,
     )
-    
+
     if fill:
         image = as_fill_item(image)
-    
+
     if href is not None:
         image = as_fillable_container(
             as_fill_item(
@@ -283,7 +285,7 @@ def card_image(
                 )
             )
         )
-    
+
     if container:
         return container(image)
     else:
