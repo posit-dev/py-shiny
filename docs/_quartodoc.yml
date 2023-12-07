@@ -306,6 +306,7 @@ quartodoc:
       contents:
         - ui.panel_main
         - ui.panel_sidebar
+        - ui.nav
     - title: Experimental
       desc: "These methods are under consideration and are considered unstable. However, if there is a method you are excited about, please let us know!"
       contents:
