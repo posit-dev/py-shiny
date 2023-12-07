@@ -189,8 +189,8 @@ def modal_remove(session: Optional[Session] = None) -> None:
     """
     Remove a modal dialog box.
 
-    :func:`~shiny.ui.modal_remove` provides a way to remove a modal programatically. 
-    Modals can also be removed manually by the user if a :func:`~shiny.ui.modal_button` 
+    :func:`~shiny.ui.modal_remove` provides a way to remove a modal programatically.
+    Modals can also be removed manually by the user if a :func:`~shiny.ui.modal_button`
     is provided, or if the modal is created with `easy_close=True`.
 
     Parameters
