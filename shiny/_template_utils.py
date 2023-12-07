@@ -4,9 +4,8 @@ import sys
 import tempfile
 import zipfile
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import Dict, List, Optional
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse
 
 import questionary
 import requests
@@ -157,7 +156,7 @@ def app_template_questions(
         sys.exit(1)
 
     if appdir == ".":
-        appdir = build_path_string(component_type)
+        appdir = build_path_string(template_dir.name)
 
     app_dir = copy_template_files(
         Path(appdir),
