@@ -95,8 +95,6 @@ def card(
     * :func:`~shiny.ui.card_footer` for creating a footer within a card.
     * :func:`~shiny.experimental.ui.card_image` for adding an image to a card.
     """
-
-
     return _card_impl(
         *args,
         full_screen=full_screen,
