@@ -314,7 +314,7 @@ def page_fillable(
     if not isinstance(body, Tag) or body.name != "body":
         raise ValueError("Expected a <body> tag")
 
-    as_fillable_container(body)
+    page.children[1] = as_fillable_container(body)
 
     return page
 
