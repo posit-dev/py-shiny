@@ -1,7 +1,7 @@
 import { SketchPicker } from "react-color";
 import React from "react";
 
-import { makeReactInput } from "@shiny-helpers/react";
+import { makeReactInput } from "@posit-dev/shiny-bindings-react";
 
 // Generates a new input binding that renders the supplied react component
 // into the root of the webcomponent.

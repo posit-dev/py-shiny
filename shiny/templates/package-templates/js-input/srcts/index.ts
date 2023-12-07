@@ -1,7 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import type { CustomElementInput } from "@shiny-helpers/main";
-import { makeInputBinding } from "@shiny-helpers/main";
+import type { CustomElementInput } from "@posit-dev/shiny-bindings-core";
+import { makeInputBinding } from "@posit-dev/shiny-bindings-core";
 
 const customInputTag = "custom-component";
 /**

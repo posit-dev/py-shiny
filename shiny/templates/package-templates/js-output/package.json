@@ -14,7 +14,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "lit": "^3.0.2",
-    "@shiny-helpers/main": "^0.0.18"
+    "@posit-dev/shiny-bindings-core": "^0.0.2",
+    "lit": "^3.0.2"
   }
 }
