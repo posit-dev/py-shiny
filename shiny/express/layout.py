@@ -24,8 +24,8 @@ __all__ = (
     "card",
     "accordion",
     "accordion_panel",
-    "navset_tab",
-    "navset_card_tab",
+    "navset",
+    "navset_card",
     "nav_panel",
     "page_fluid",
     "page_fixed",
@@ -453,20 +453,23 @@ def accordion_panel(
 # ======================================================================================
 
 
-def navset_tab(
+def navset(
     *,
+    type: Literal["underline", "pill", "tab"] = "underline",
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
     footer: TagChild = None,
 ):
     """
-    Render nav items as a tabset.
-
-    This function wraps :func:`~shiny.ui.navset_tab`.
+    Render a set of nav items
 
     Parameters
     ----------
+    *args
+        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+    type
+        The type of navset to render. Can be one of `"underline"`, `"pill"`, or `"tab"`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -478,8 +481,19 @@ def navset_tab(
     footer
         UI to display below the selected content.
     """
+
+    funcs = {
+        "underline": ui.navset_underline,
+        "pill": ui.navset_pill,
+        "tab": ui.navset_tab,
+    }
+
+    func = funcs.get(type, None)
+    if func is None:
+        raise ValueError(f"Invalid navset type: {type!r}")
+
     return RecallContextManager(
-        ui.navset_tab,
+        func,
         kwargs=dict(
             id=id,
             selected=selected,
@@ -489,8 +503,9 @@ def navset_tab(
     )
 
 
-def navset_card_tab(
+def navset_card(
     *,
+    type: Literal["underline", "pill", "tab"] = "underline",
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
@@ -499,12 +514,14 @@ def navset_card_tab(
     footer: TagChild = None,
 ):
     """
-    Render nav items as a tabset inside a card container.
-
-    This function wraps :func:`~shiny.ui.navset_card_tab`.
+    Render a set of nav items inside a card container.
 
     Parameters
     ----------
+    *args
+        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+    type
+        The type of navset to render. Can be one of `"underline"`, `"pill"`, or `"tab"`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -512,31 +529,25 @@ def navset_card_tab(
         Choose a particular nav item to select by default value (should match it's
         ``value``).
     sidebar
-        A `Sidebar` component to display on every `nav()` page.
-    fillable
-        Whether or not to allow fill items to grow/shrink to fit the browser window. If
-        `True`, all `nav()` pages are fillable. A character vector, matching the value
-        of `nav()`s to be filled, may also be provided. Note that, if a `sidebar` is
-        provided, `fillable` makes the main content portion fillable.
-    gap
-        A CSS length unit defining the gap (i.e., spacing) between elements provided to
-        `*args`.
-    padding
-        Padding to use for the body. This can be a numeric vector (which will be
-        interpreted as pixels) or a character vector with valid CSS lengths. The length
-        can be between one and four. If one, then that value will be used for all four
-        sides. If two, then the first value will be used for the top and bottom, while
-        the second value will be used for left and right. If three, then the first will
-        be used for top, the second will be left and right, and the third will be
-        bottom. If four, then the values will be interpreted as top, right, bottom, and
-        left respectively.
+        A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav` page.
     header
         UI to display above the selected content.
     footer
         UI to display below the selected content.
     """
+
+    funcs = {
+        "underline": ui.navset_card_underline,
+        "pill": ui.navset_card_pill,
+        "tab": ui.navset_card_tab,
+    }
+
+    func = funcs.get(type, None)
+    if func is None:
+        raise ValueError(f"Invalid navset type: {type!r}")
+
     return RecallContextManager(
-        ui.navset_card_tab,
+        func,
         kwargs=dict(
             id=id,
             selected=selected,
