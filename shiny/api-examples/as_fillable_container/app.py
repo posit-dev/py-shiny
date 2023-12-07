@@ -6,7 +6,7 @@ from shiny import App, ui
 from shiny.ui import fill
 
 
-def outer_inner() -> tuple[htmltools.Tag, htmltools.Tag]:
+def outer_inner() -> htmltools.Tag:
     inner = ui.div(
         id="inner",
         style=htmltools.css(
@@ -22,23 +22,22 @@ def outer_inner() -> tuple[htmltools.Tag, htmltools.Tag]:
             border="3px red solid",
         ),
     )
-    return outer, inner
+    return outer
 
 
-outer0, inner0 = outer_inner()
-outer1, inner1 = outer_inner()
-outer2, inner2 = outer_inner()
+outer0 = outer_inner()
 
-fill.as_fillable_container(outer2)
+outer1 = outer_inner()
+outer1 = fill.as_fillable_container(outer1)
 
-fill.as_fillable_container(outer2)
-fill.as_fill_item(inner2)
-
+outer2 = outer_inner()
+outer2 = fill.as_fillable_container(outer2)
+outer2.children[0] = fill.as_fill_item(outer2.children[0])
 
 app_ui = ui.page_fluid(
     ui.markdown(
         """\
-        # `as_fill_container()`
+        # `as_fillable_container()`
 
         For an item to fill its parent element,
         * the item must have `as_fill_item()` be called on it
@@ -49,7 +48,7 @@ app_ui = ui.page_fluid(
     ),
     ui.row(
         ui.column(4, ui.h5("Default behavior")),
-        ui.column(4, ui.h5(ui.markdown("`as_fill_container(red)`"))),
+        ui.column(4, ui.h5(ui.markdown("`as_fillable_container(red)`"))),
         ui.column(
             4,
             ui.h5(ui.markdown("`as_fill_item(blue)` + `as_fillable_container(red)`")),
