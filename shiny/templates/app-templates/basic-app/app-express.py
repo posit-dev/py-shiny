@@ -1,4 +1,4 @@
-from shiny import render, ui
+from shiny import App, render, ui
 from shiny.express import input
 
 ui.panel_title("Hello Shiny!")
