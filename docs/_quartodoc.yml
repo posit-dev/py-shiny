@@ -26,7 +26,7 @@ quartodoc:
         - express.layout.accordion_panel
         - express.layout.navset_tab
         - express.layout.navset_card_tab
-        - express.layout.nav
+        - express.layout.nav_panel
         - express.layout.page_fluid
         - express.layout.page_fixed
         - express.layout.page_fillable
@@ -87,10 +87,10 @@ quartodoc:
     - title: Navigation (tab) panels
       desc: Create segments of UI content.
       contents:
-        - ui.nav
-        - ui.nav_control
+        - ui.nav_panel
         - ui.nav_spacer
         - ui.nav_menu
+        - ui.nav_control
         - ui.navset_bar
         - ui.navset_tab
         - ui.navset_pill
