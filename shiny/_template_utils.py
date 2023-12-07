@@ -74,6 +74,15 @@ def template_query(question_state: Optional[str] = None, mode: Optional[str] = N
         app_template_questions(template, mode)
 
 
+def download_and_extract_zip(url: str, temp_dir: Path):
+    response = requests.get(url)
+    response.raise_for_status()
+    zip_file_path = temp_dir / "repo.zip"
+    zip_file_path.write_bytes(response.content)
+    with zipfile.ZipFile(zip_file_path, "r") as zip_file:
+        zip_file.extractall(temp_dir)
+
+
 def use_git_template(url: str, mode: Optional[str] = None):
     # Parse the URL to get the repository, branch, and subdirectory
     parsed_url = urlparse(url)
@@ -84,18 +93,9 @@ def use_git_template(url: str, mode: Optional[str] = None):
     # Construct the URL to download the repository as a zip file
     zip_url = f"https://github.com/{repo_owner}/{repo_name}/archive/refs/heads/{branch_name}.zip"
 
-    # Download the zip file
-    response = requests.get(zip_url)
-    response.raise_for_status()
-
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir = Path(temp_dir)
-        zip_file_path = temp_dir / "repo.zip"
-        zip_file_path.write_bytes(response.content)
-
-        # Extract the zip file
-        with zipfile.ZipFile(zip_file_path, "r") as zip_file:
-            zip_file.extractall(temp_dir)
+        download_and_extract_zip(zip_url, temp_dir)
 
         # Get the path to the subdirectory
         template_dir = os.path.join(
