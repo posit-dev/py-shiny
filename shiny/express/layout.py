@@ -208,6 +208,11 @@ def layout_column_wrap(
     -------
     :
         A :class:`~htmltools.Tag` element.
+
+    See Also
+    --------
+    * :func:`~shiny.express.layout.layout_columns` for laying out elements into a
+      responsive 12-column grid.
     """
     return RecallContextManager(
         ui.layout_column_wrap,
@@ -239,11 +244,82 @@ def layout_columns(
     **kwargs: TagAttrValue,
 ):
     """
-    Layout Columns using Bootstrap's 12-Column CSS Grid
+    Create responsive, column-based grid layouts, based on a 12-column grid.
 
-    References
+    Parameters
     ----------
-    * https://getbootstrap.com/docs/5.3/layout/css-grid/
+    col_widths
+        The widths of the columns, possibly at different breakpoints. Can be one of the
+        following:
+
+        * `None` (the default): Automatically determines a sensible number of columns
+          based on the number of children given to the layout.
+        * A list or tuple of integers between 1 and 12, where each element represents
+          the number of columns for the relevant UI element. Column widths are recycled
+          to extend the values in `col_widths` to match the actual number of items in
+          the layout, and children are wrapped onto the next row when a row exceeds 12
+          column units. For example, `col_widths=(4, 8, 12)` allocates 4 columns to the
+          first element, 8 columns to the second element, and 12 columns to the third
+          element (which wraps to the next row). Negative values are also allowed, and
+          are treated as empty columns. For example, `col_widths=(-2, 8, -2)` would
+          allocate 8 columns to an element (with 2 empty columns on either side).
+        * A dictionary of column widths at different breakpoints. The keys should be
+          one of `"xs"`, `"sm"`, `"md"`, `"lg"`, `"xl"`, or `"xxl"`, and the values are
+          either of the above. For example, `col_widths={"sm": (3, 3, 6), "lg": (4)}`.
+
+    row_heights
+        The heights of the rows, possibly at different breakpoints. Can be one of the
+        following:
+
+        * A numeric vector, where each value represents the
+          [fractional unit](https://css-tricks.com/introduction-fr-css-unit/)
+          (`fr`) height of the relevant row. If there are more rows than values
+          provided, the pattern will be repeated. For example, `row_heights=(1, 2)`
+          allows even rows to take up twice as much space as odd rows.
+        * A list of numeric or CSS length units, where each value represents the height
+          of the relevant row. If more rows are needed than values provided, the pattern
+          will repeat. For example, `row_heights=["auto", 1]` allows the height of odd
+          rows to be driven my it's contents and even rows to be
+          [`1fr`](https://css-tricks.com/introduction-fr-css-unit/).
+        * A single string containing CSS length units. In this case, the value is
+          supplied directly to `grid-auto-rows`.
+        * A dictionary of row heights at different breakpoints, where each key is a
+          breakpoint name (one of `"xs"`, `"sm"`, `"md"`, `"lg"`, `"xl"`, or `"xxl"`)
+          and where the values may be any of the above options.
+
+    fill
+        Whether or not to allow the layout to grow/shrink to fit a fillable container
+        with an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
+
+    fillable
+        Whether or not each element is wrapped in a fillable container.
+
+    gap
+        Any valid CSS unit to use for the gap between columns.
+
+    class_
+        CSS class(es) to apply to the containing element.
+
+    height
+        Any valid CSS unit to use for the height.
+
+    **kwargs
+        Additional attributes to apply to the containing element.
+
+    Returns
+    -------
+    :
+        An :class:`~htmltools.Tag` element.
+
+    See Also
+    --------
+    * :func:`~shiny.express.layout.layout_column_wrap` for laying out elements into a
+      uniform grid.
+
+    Reference
+    --------
+    * [Bootstrap CSS Grid](https://getbootstrap.com/docs/5.3/layout/grid/)
+    * [Bootstrap Breakpoints](https://getbootstrap.com/docs/5.3/layout/breakpoints/)
     """
     return RecallContextManager(
         ui.layout_columns,
