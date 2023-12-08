@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from json import dumps as toJSON
 from typing import Dict, Iterable, Literal, Optional, TypedDict, TypeVar, Union, cast
 from warnings import warn as warn
 
