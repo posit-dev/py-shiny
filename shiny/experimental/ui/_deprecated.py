@@ -922,7 +922,7 @@ def as_fill_carrier(
     warn_deprecated(
         "`shiny.experimental.ui.as_fill_carrier()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.fill.as_fill_container()` and `shiny.ui.fill.as_fillable_item()` instead."
+        "please use `shiny.ui.fill.as_fillable_container()` and `shiny.ui.fill.as_fillable_item()` instead."
     )
 
     if min_height is not None:
