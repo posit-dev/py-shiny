@@ -38,7 +38,7 @@ def insert_ui(
         before the selector element itself; "beforeEnd": just inside the selector
         element, after its last child (default); "afterEnd": after the selector
         element itself. Adapted from
-        [https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML](https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML).
+        https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML.
     multiple
         In case your selector matches more than one element, ``multiple``
         determines whether Shiny should insert the UI object relative to all
