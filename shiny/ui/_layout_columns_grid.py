@@ -46,12 +46,12 @@ def layout_columns_grid(
         "bslib-layout-columns",
         {
             "class": "bslib-grid grid",
-            "col-widths": json_col_spec(col_widths_spec),
             "style": css(
                 gap=as_css_unit(gap),
                 height=as_css_unit(height),
             ),
         },
+        col_widths_attrs(col_widths_spec),
         attrs,
         row_heights_attrs(row_heights),
         *wrap_all_in_grid_item_container(children, fillable),
@@ -149,11 +149,19 @@ def as_col_spec(
     return ret
 
 
-def json_col_spec(col_widths: BreakpointsOptional[int] | None) -> Optional[str]:
+def col_widths_attrs(col_widths: BreakpointsOptional[int] | None) -> TagAttrs:
+    ret: Dict[str, TagAttrValue] = {}
     if col_widths is None:
-        return None
+        return ret
 
-    return toJSON(col_widths, default=lambda x: "null" if x is None else x)
+    for break_name, value in col_widths.items():
+        break_name = f"col-widths-{break_name}"
+        if value is None:
+            ret[break_name] = ""
+        else:
+            ret[break_name] = ",".join([str(v) for v in value])
+
+    return ret
 
 
 def maybe_fr_unit(x: CssUnit) -> str:
