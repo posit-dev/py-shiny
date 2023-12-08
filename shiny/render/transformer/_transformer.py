@@ -652,7 +652,7 @@ def output_transformer(
 
     * The first parameter to the handler function has the class
       :class:`~shiny.render.transformer.TransformerMetadata` and is typically called
-      `_meta`. This information gives context the to the handler while trying to
+      `_meta`. This information gives context to the handler while trying to
       resolve the app-supplied value function (typically called `_fn`).
     * The second parameter is the app-defined output value function (e.g. `_fn`). It's
       return type (`IT`) determines what types can be returned by the app-supplied
@@ -666,7 +666,7 @@ def output_transformer(
       default value. No default value is needed for keyword arguments that are passed
       through (e.g. `**kwargs: Any`).
 
-    The tranform function's return type (`OT`) determines the output type of the
+    The transform function's return type (`OT`) determines the output type of the
     :class:`~shiny.render.transformer.OutputRenderer`. Note that in many cases (but not
     all!) `IT` and `OT` will be the same. The `None` type should typically be defined in
     both `IT` and `OT`. If `IT` allows for `None` values, it (typically) signals that
