@@ -423,7 +423,7 @@ def calc(
     ---
     Reactive calculations should not produce any side effects; to reactively produce
     side effects, use :func:`~shiny.reactive.effect` instead.
-    
+
     Reactive calculations are analagous to reactive expressions in Shiny for R.
 
     See Also
@@ -703,7 +703,7 @@ def effect(
     -------
     :
         A decorator that marks a function as a reactive effect (:class:`Effect_`).
-        
+
     Tip
     ---
     Reactive effects are analagous to observers in Shiny for R.
@@ -747,17 +747,17 @@ def event(
     (:func:`~shiny.reactive.effect`) that respond to **any** of their inputs changing.
     That's often what is desired in Shiny apps, but not always: sometimes you want to
     wait for a specific action to be taken from the user, like clicking an
-    :func:`~shiny.ui.input_action_button`, before calculating or taking an action. You 
-    do not want the calculation or action to be prematurely triggered if other reactive 
-    values that it calls are invalidated. The reactive value (or function) which triggers 
+    :func:`~shiny.ui.input_action_button`, before calculating or taking an action. You
+    do not want the calculation or action to be prematurely triggered if other reactive
+    values that it calls are invalidated. The reactive value (or function) which triggers
     other calculations or actions in this way is called an event.
 
     These situations demand a more imperative, "event handling" style of programming,
     which ``@reactive.event()`` provides. It does this by using the
     :func:`~shiny.reactive.isolate` primitive under-the-hood to essentially "limit" the
-    set of reactive dependencies to those in ``args``. In other words, the event can call 
-    as many reactive values as it likes in its code body without taking a reactive 
-    dependency on them; it will be invalidated only when a dependency listed in args is 
+    set of reactive dependencies to those in ``args``. In other words, the event can call
+    as many reactive values as it likes in its code body without taking a reactive
+    dependency on them; it will be invalidated only when a dependency listed in args is
     invalidated.
 
     Parameters

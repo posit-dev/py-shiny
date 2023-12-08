@@ -270,8 +270,8 @@ def on_flushed(
     func
         The function to be called when the reactive environment is flushed
     once
-        Should the function be run once, and then cleared, or should it 
-        re-run each time the event occurs. 
+        Should the function be run once, and then cleared, or should it
+        re-run each time the event occurs.
 
     Returns
     -------
@@ -304,7 +304,7 @@ def invalidate_later(
     """
     Scheduled Invalidation
 
-    When called from within a reactive context, :func:`~shiny.reactive.invalidate_later` 
+    When called from within a reactive context, :func:`~shiny.reactive.invalidate_later`
     schedules the reactive context to be invalidated in the given number of seconds.
 
     Parameters
