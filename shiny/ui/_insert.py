@@ -103,9 +103,9 @@ def remove_ui(
         Examples below. (Alternatively, you could also wrap the inputs/outputs that you
         want to be able to remove easily in a ``<div>`` with an id.)
     multiple
-        In case your selector matches more than one element, `multiple` determines whether
-        Shiny should insert the UI object relative to all matched elements or just
-        relative to the first matched element (default).
+        In case your selector matches more than one element, ``multiple`` determines
+        whether Shiny should insert the UI object relative to all matched elements
+        or just relative to the first matched element (default).
     immediate
         Whether the UI object should be immediately inserted or removed, or whether
         Shiny should wait until all outputs have been updated and all effects have been
