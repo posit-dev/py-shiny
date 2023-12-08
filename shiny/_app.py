@@ -225,7 +225,7 @@ class App:
 
         Parameters
         ----------
-        kwargs
+        **kwargs
             Keyword arguments passed to :func:`~shiny.run_app`.
         """
         from ._main import run_app

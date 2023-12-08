@@ -82,7 +82,7 @@ def update_action_button(
         An icon to appear inline with the button/link.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -966,7 +966,7 @@ def update_popover(
     ----------
     id
         The id of the popover DOM element to update.
-    args
+    *args
         The new contents of the popover.
     title
         The new title of the popover.

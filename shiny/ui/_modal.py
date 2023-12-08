@@ -27,7 +27,7 @@ def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue)
         An input label.
     icon
         An icon to appear inline with the button/link.
-    kwargs
+    **kwargs
         Attributes to be applied to the button.
 
     Returns
@@ -73,7 +73,7 @@ def modal(
 
     Parameters
     ----------
-    args
+    *args
         UI elements for the body of the modal.
     title
         An optional title for the modal dialog.
@@ -89,7 +89,7 @@ def modal(
     fade
         If ``False``, the modal dialog will have no fade-in animation (it will simply
         appear rather than fade in to view).
-    kwargs
+    **kwargs
         Attributes to be applied to the modal's body tag.
 
     Returns
