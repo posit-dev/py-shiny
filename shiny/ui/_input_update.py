@@ -909,7 +909,7 @@ def update_tooltip(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Update tooltip contents
+    Update tooltip contents.
 
     Parameters
     ----------
@@ -971,7 +971,7 @@ def update_popover(
     title
         The new title of the popover.
     show
-        Opens (`True`) or closes (`False) the popover.
+        Opens (`True`) or closes (`False`) the popover.
     session
         A Shiny session object (the default should almost always be used).
 
