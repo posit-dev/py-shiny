@@ -30,8 +30,8 @@ def input_action_button(
     icon
         An icon to appear inline with the button/link.
     width
-        The CSS width, e.g., '400px', or '100%'.
-    kwargs
+        The CSS width, e.g. '400px', or '100%'
+    **kwargs
         Attributes to be applied to the button.
 
     Returns
@@ -85,7 +85,7 @@ def input_action_link(
         An input label.
     icon
         An icon to appear inline with the button/link.
-    kwargs
+    **kwargs
         Attributes to be applied to the link.
 
     Returns
