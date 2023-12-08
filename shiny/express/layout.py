@@ -7,7 +7,7 @@ from htmltools import Tag, TagAttrValue, TagChild, TagList
 
 from .. import ui
 from ..types import MISSING, MISSING_TYPE
-from ..ui._layout_columns_grid import BreakpointsUser
+from ..ui._layout_columns import BreakpointsUser
 from ..ui.css import CssUnit
 from . import _run
 from ._recall_context import RecallContextManager, wrap_recall_context_manager
@@ -20,7 +20,7 @@ __all__ = (
     "pre",
     "sidebar",
     "layout_column_wrap",
-    "layout_columns_grid",
+    "layout_columns",
     "column",
     "row",
     "card",
@@ -227,7 +227,7 @@ def layout_column_wrap(
     )
 
 
-def layout_columns_grid(
+def layout_columns(
     *,
     col_widths: BreakpointsUser[int] = None,
     row_heights: BreakpointsUser[CssUnit] = None,
@@ -246,7 +246,7 @@ def layout_columns_grid(
     * https://getbootstrap.com/docs/5.3/layout/css-grid/
     """
     return RecallContextManager(
-        ui.layout_columns_grid,
+        ui.layout_columns,
         default_page=page_fillable(),
         kwargs=dict(
             col_widths=col_widths,

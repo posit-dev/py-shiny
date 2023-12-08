@@ -26,7 +26,7 @@ BreakpointsComplete = Dict[Breakpoints, Iterable[T]]
 BreakpointsUser = Union[BreakpointsSoft[T], Iterable[T], T, None]
 
 
-def layout_columns_grid(
+def layout_columns(
     *args: TagChild | TagAttrs,
     col_widths: BreakpointsUser[int] = None,
     row_heights: BreakpointsUser[CssUnit] = None,

@@ -23,7 +23,7 @@ from ._sidebar import (
 )
 
 from ._layout import layout_column_wrap
-from ._layout_columns_grid import layout_columns_grid
+from ._layout_columns import layout_columns
 
 
 # Expose the following modules for extended usage: ex: ui.fill.as_fill_item(x)
