@@ -3,10 +3,11 @@ from __future__ import annotations
 import functools
 import sys
 from types import TracebackType
-from typing import Callable, Generic, Mapping, Optional, Type, TypeVar
+from typing import Callable, Generic, Mapping, Optional, Type, TypeVar, cast
 
 from htmltools import HTML, Tag, Tagifiable, TagList, tags
 
+from .. import ui
 from .._typing_extensions import ParamSpec
 
 P = ParamSpec("P")
@@ -20,11 +21,13 @@ class RecallContextManager(Generic[R]):
         fn: Callable[..., R],
         *,
         default_page: RecallContextManager[Tag] | None = None,
+        add_panel_title: bool = False,
         args: tuple[object, ...] | None = None,
         kwargs: Mapping[str, object] | None = None,
     ):
         self.fn = fn
         self.default_page = default_page
+        self.add_panel_title = add_panel_title
         if args is None:
             args = tuple()
         if kwargs is None:
@@ -63,9 +66,18 @@ class RecallContextManager(Generic[R]):
     ) -> bool:
         sys.displayhook = self._prev_displayhook
         if exc_type is None:
+            self._add_panel_title()
             res = self.fn(*self.args, **self.kwargs)
             sys.displayhook(res)
         return False
+
+    def _add_panel_title(self):
+        if not self.add_panel_title:
+            return
+
+        title = cast(str | Tag | TagList | None, self.kwargs.get("title"))
+        if title is not None:
+            self.args.insert(0, ui.panel_title(title))
 
 
 def wrap_recall_context_manager(
