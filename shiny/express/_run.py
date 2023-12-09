@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import logging
 import sys
 from pathlib import Path
 from typing import cast
@@ -35,6 +36,10 @@ def wrap_express_app(file: Path) -> App:
     :
         A `shiny.App` object.
     """
+    logging.getLogger("uvicorn.error").warning(
+        "Detected Shiny Express app. please note that Shiny Express is still in "
+        "development and the API is subject to change!"
+    )
 
     app_ui = run_express(file)
 
