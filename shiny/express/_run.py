@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import logging
 import sys
 from pathlib import Path
 from typing import cast
@@ -35,6 +36,10 @@ def wrap_express_app(file: Path) -> App:
     :
         A `shiny.App` object.
     """
+    logging.getLogger("uvicorn.error").warning(
+        "Detected Shiny Express app. please note that Shiny Express is still in "
+        "development and the API is subject to change!"
+    )
 
     app_ui = run_express(file)
 
@@ -94,6 +99,11 @@ def run_express(file: Path) -> Tag | TagList:
                 var_context,
             )
 
+    # When we called the function to get the top level recall context manager, we didn't
+    # store the result in a variable and re-use that variable here. That is intentional,
+    # because during the evaluation of the app code,
+    # replace_top_level_recall_context_manager() may have been called, which swaps
+    # out the context manager, and it's the new one that we need to exit here.
     get_top_level_recall_context_manager().__exit__(None, None, None)
 
     # If we're running as an Express app but there's also a top-level item named app
