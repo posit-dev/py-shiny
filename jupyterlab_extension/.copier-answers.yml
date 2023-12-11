@@ -1,0 +1,20 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v4.2.1
+_src_path: https://github.com/jupyterlab/extension-template
+author_email: joe@posit.co
+author_name: Joe Cheng
+data_format: string
+file_extension: ''
+has_binder: false
+has_settings: false
+kind: frontend
+labextension_name: jupyterlab-shiny
+mimetype: ''
+mimetype_name: ''
+project_short_description: A JupyterLab extension for running interactive Shiny applications
+    directly within notebooks.
+python_name: jupyterlab_shiny
+repository: https://github.com/posit-dev/py-shiny
+test: true
+viewer_name: ''
+

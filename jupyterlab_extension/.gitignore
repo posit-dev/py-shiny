@@ -1,3 +1,24 @@
+*.bundle.*
+lib/
+node_modules/
+*.log
+.eslintcache
+.stylelintcache
+*.egg-info/
+.ipynb_checkpoints
+*.tsbuildinfo
+jupyterlab_shiny/labextension
+# Version file is handled by hatchling
+jupyterlab_shiny/_version.py
+
+# Integration tests
+ui-tests/test-results/
+ui-tests/playwright-report/
+
+# Created by https://www.gitignore.io/api/python
+# Edit at https://www.gitignore.io/?templates=python
+
+### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -8,9 +29,9 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-env/
 build/
 develop-eggs/
+dist/
 downloads/
 eggs/
 .eggs/
@@ -20,10 +41,11 @@ parts/
 sdist/
 var/
 wheels/
-dist/
-*.egg-info/
+pip-wheel-metadata/
+share/python-wheels/
 .installed.cfg
 *.egg
+MANIFEST
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -38,10 +60,12 @@ pip-delete-this-directory.txt
 # Unit test / coverage reports
 htmlcov/
 .tox/
+.nox/
 .coverage
 .coverage.*
 .cache
 nosetests.xml
+coverage/
 coverage.xml
 *.cover
 .hypothesis/
@@ -50,14 +74,6 @@ coverage.xml
 # Translations
 *.mo
 *.pot
-
-# Django stuff:
-*.log
-local_settings.py
-
-# Flask stuff:
-instance/
-.webassets-cache
 
 # Scrapy stuff:
 .scrapy
@@ -68,9 +84,6 @@ docs/_build/
 # PyBuilder
 target/
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
 # pyenv
 .python-version
 
@@ -80,15 +93,6 @@ celerybeat-schedule
 # SageMath parsed files
 *.sage.py
 
-# dotenv
-.env
-
-# virtualenv
-.venv/
-.venv-*/
-venv/
-ENV/
-
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -96,18 +100,26 @@ ENV/
 # Rope project settings
 .ropeproject
 
+# Mr Developer
+.mr.developer.cfg
+.project
+.pydevproject
+
 # mkdocs documentation
 /site
 
 # mypy
 .mypy_cache/
+.dmypy.json
+dmypy.json
 
-typings/
+# Pyre type checker
+.pyre/
 
-docs/source/generated/
-docs/source/reference/
+# End of https://www.gitignore.io/api/python
 
+# OSX files
 .DS_Store
-.Rproj.user
 
-/.luarc.json
+# Yarn cache
+.yarn/
