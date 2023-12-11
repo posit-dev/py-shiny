@@ -186,7 +186,7 @@ __all__ = (
     "panel_sidebar",
     "panel_main",
     # _layout
-    "layout_columns_grid",
+    "layout_columns",
     "layout_column_wrap",
     # _card
     "CardItem",
