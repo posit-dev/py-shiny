@@ -262,7 +262,7 @@ def row_heights_attrs(
     if x is None:
         return {"style": "", "class": ""}
 
-    if isinstance(x, CssUnit):
+    if isinstance(x, (int, float, str)):  # CssUnit
         x = [x]
 
     if hasattr(x, "__iter__") and not isinstance(x, Dict):
