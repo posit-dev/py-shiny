@@ -334,7 +334,7 @@ def value_box(
         :func:`~shiny.ui.showcase_left_center`, :func:`~shiny.ui.showcase_top_right()`,
         or :func:`~shiny.ui.showcase_bottom()` functions. Use the options functions when
         you want to control the height or width of the showcase area.
-     theme
+    theme
         The name of a theme (e.g. `"primary"`, `"danger"`, `"purple"`, `"bg-green"`,
         `"text-red"`) for the value box, or a theme constructed with
         :func:`~shiny.ui.value_box_theme`. The theme names provide a convenient way to

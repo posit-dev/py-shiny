@@ -350,7 +350,7 @@ def column(width: int, *, offset: int = 0, **kwargs: TagAttrValue):
         The width of the column (an integer between 1 and 12).
     offset
         The number of columns to offset this column from the end of the previous column.
-    kwargs
+    **kwargs
         Attributes to place on the column tag.
 
     Returns
@@ -386,7 +386,7 @@ def row(**kwargs: TagAttrValue):
 
     Parameters
     ----------
-    kwargs
+    **kwargs
         Attributes to place on the row tag.
 
     Returns
@@ -728,7 +728,7 @@ def page_fluid(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Attributes on the page level container.
 
     Returns
@@ -766,7 +766,7 @@ def page_fixed(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Attributes on the page level container.
 
     Returns
@@ -867,7 +867,7 @@ def page_sidebar(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Additional attributes passed to :func:`~shiny.ui.layout_sidebar`.
 
     Returns

@@ -50,9 +50,9 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
 
     Parameters
     ----------
-    args
+    *args
         Any number of child elements.
-    kwargs
+    **kwargs
         Attributes to place on the row tag.
 
     Returns
@@ -79,11 +79,11 @@ def column(
     ----------
     width
         The width of the column (an integer between 1 and 12).
-    args
+    *args
         UI elements to place within the column.
     offset
         The number of columns to offset this column from the end of the previous column.
-    kwargs
+    **kwargs
         Attributes to place on the column tag.
 
     Returns
@@ -117,9 +117,9 @@ def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
 
     Parameters
     ----------
-    args
+    *args
         UI elements to include inside the panel.
-    kwargs
+    **kwargs
         Attributes to place on the panel tag.
 
     Returns
@@ -156,9 +156,9 @@ def panel_conditional(
     condition
         A JavaScript expression that will be evaluated repeatedly to determine whether
         the panel should be displayed.
-    args
+    *args
         UI elements to include inside the panel.
-    kwargs
+    **kwargs
         Attributes to place on the panel tag.
 
     Returns
@@ -251,9 +251,9 @@ def panel_fixed(
 
     Parameters
     ----------
-    args
+    *args
         UI elements to include inside the panel.
-    kwargs
+    **kwargs
         Arguments passed along to :func:`~shiny.ui.panel_absolute`.
 
     Returns
@@ -306,7 +306,7 @@ def panel_absolute(
 
     Parameters
     ----------
-    args
+    *args
         UI elements to include inside the panel.
     top
         Distance between the top of the panel, and the top of the page or parent
@@ -335,7 +335,7 @@ def panel_absolute(
         arrow, or ``"inherit"`` for the usual cursor behavior (including changing to an
         I-beam when the cursor is over text). The default is ``"auto"``, which is
         equivalent to ``"move" if draggable else "inherit"``.
-    kwargs
+    **kwargs
         Attributes added to the content's container tag.
 
     Returns
@@ -387,9 +387,9 @@ def help_text(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
 
     Parameters
     ----------
-    args
+    *args
         UI elements to include inside the help text.
-    kwargs
+    **kwargs
         Attributes to add to the text container.
 
     Returns

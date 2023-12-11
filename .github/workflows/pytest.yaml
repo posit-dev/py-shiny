@@ -48,7 +48,7 @@ jobs:
         run: |
           make check
 
-  e2e:
+  playwright-shiny:
     runs-on: ${{ matrix.os }}
     if: github.event_name != 'release'
     strategy:
@@ -67,9 +67,9 @@ jobs:
       - name: Run End-to-End tests
         timeout-minutes: 20
         run: |
-          make e2e
+          make playwright-shiny
 
-  e2e-examples:
+  playwright-examples:
     runs-on: ${{ matrix.os }}
     if: github.event_name != 'release'
     strategy:
@@ -99,11 +99,11 @@ jobs:
       - name: Run example app tests
         timeout-minutes: 20
         run: |
-          make e2e-examples
+          make playwright-examples
 
-  e2e-deploys:
-    # Only allow one `e2e-deploys` job to run at a time. (Independent of branch / PR)
-    concurrency: e2e-deploys
+  playwright-deploys:
+    # Only allow one `playwright-deploys` job to run at a time. (Independent of branch / PR)
+    concurrency: playwright-deploys
     runs-on: ${{ matrix.os }}
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'deploy')) }}
     strategy:
@@ -128,7 +128,7 @@ jobs:
           DEPLOY_SHINYAPPS_SECRET: "${{ secrets.DEPLOY_SHINYAPPS_SECRET }}"
         timeout-minutes: 30
         run: |
-          make e2e-deploys
+          make playwright-deploys
 
   pypi:
     name: "Deploy to PyPI"
@@ -202,7 +202,7 @@ jobs:
       - name: Run End-to-End tests
         timeout-minutes: 20
         run: |
-          make e2e-junit
+          make testrail-junit
       - name: Report results to Testrail
         env:
           TESTRAIL_URL: "https://posit.testrail.io"
