@@ -126,7 +126,7 @@ def run_express(file: Path) -> Tag | TagList:
         # Need to catch AttributeError and convert to a different type of error, because
         # uvicorn specifically catches AttributeErrors and prints an error message that
         # is helpful for normal ASGI apps, but misleading in the case of Shiny Express.
-        raise RuntimeError(e)
+        raise RuntimeError(e) from e
 
     finally:
         sys.displayhook = prev_displayhook
