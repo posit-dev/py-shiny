@@ -1,5 +1,4 @@
 import numpy as np
-from htmltools import TagList
 
 from shiny import ui
 
