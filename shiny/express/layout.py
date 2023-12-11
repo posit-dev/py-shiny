@@ -8,11 +8,9 @@ from htmltools import Tag, TagAttrValue, TagChild, TagList
 from .. import ui
 from ..types import MISSING, MISSING_TYPE
 from ..ui.css import CssUnit
-from . import _run
 from ._recall_context import RecallContextManager, wrap_recall_context_manager
 
 __all__ = (
-    "set_page",
     "p",
     "div",
     "span",
@@ -27,19 +25,7 @@ __all__ = (
     "navset",
     "navset_card",
     "nav",
-    "page_fluid",
-    "page_fixed",
-    "page_fillable",
-    "page_sidebar",
 )
-
-
-# ======================================================================================
-# Page functions
-# ======================================================================================
-def set_page(page_fn: RecallContextManager[Tag]):
-    """Set the page function for the current Shiny express app."""
-    _run.replace_top_level_recall_context_manager(page_fn, force=True)
 
 
 # ======================================================================================
@@ -126,7 +112,6 @@ def sidebar(
     """
     return RecallContextManager(
         ui.sidebar,
-        default_page=page_sidebar(),
         kwargs=dict(
             width=width,
             position=position,
@@ -209,7 +194,6 @@ def layout_column_wrap(
     """
     return RecallContextManager(
         ui.layout_column_wrap,
-        default_page=page_fillable(),
         kwargs=dict(
             width=width,
             fixed_width=fixed_width,
@@ -589,188 +573,5 @@ def nav(
         kwargs=dict(
             value=value,
             icon=icon,
-        ),
-    )
-
-
-# ======================================================================================
-# Page components
-# ======================================================================================
-def page_fluid(
-    *,
-    title: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs: str,
-) -> RecallContextManager[Tag]:
-    """
-    Create a fluid page.
-
-    This function wraps :func:`~shiny.ui.page_fluid`.
-
-    Parameters
-    ----------
-    title
-        The browser window title (defaults to the host URL of the page). Can also be set
-        as a side effect via :func:`~shiny.ui.panel_title`.
-    lang
-        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
-        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
-        default, `None`, results in an empty string.
-    **kwargs
-        Attributes on the page level container.
-
-    Returns
-    -------
-    :
-        A UI element.
-    """
-    return RecallContextManager(
-        ui.page_fluid,
-        kwargs=dict(
-            title=title,
-            lang=lang,
-            **kwargs,
-        ),
-    )
-
-
-def page_fixed(
-    *,
-    title: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs: str,
-) -> RecallContextManager[Tag]:
-    """
-    Create a fixed page.
-
-    This function wraps :func:`~shiny.ui.page_fixed`.
-
-    Parameters
-    ----------
-    title
-        The browser window title (defaults to the host URL of the page). Can also be set
-        as a side effect via :func:`~shiny.ui.panel_title`.
-    lang
-        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
-        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
-        default, `None`, results in an empty string.
-    **kwargs
-        Attributes on the page level container.
-
-    Returns
-    -------
-    :
-        A UI element.
-    """
-    return RecallContextManager(
-        ui.page_fixed,
-        kwargs=dict(
-            title=title,
-            lang=lang,
-            **kwargs,
-        ),
-    )
-
-
-def page_fillable(
-    *,
-    padding: Optional[CssUnit | list[CssUnit]] = None,
-    gap: Optional[CssUnit] = None,
-    fillable_mobile: bool = False,
-    title: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs: TagAttrValue,
-):
-    """
-    Creates a fillable page.
-
-    This function wraps :func:`~shiny.ui.page_fillable`.
-
-    Parameters
-    ----------
-    padding
-        Padding to use for the body. See :func:`~shiny.ui.css_unit.as_css_padding`
-        for more details.
-    fillable_mobile
-        Whether or not the page should fill the viewport's height on mobile devices
-        (i.e., narrow windows).
-    gap
-        A CSS length unit passed through :func:`~shiny.ui.css_unit.as_css_unit`
-        defining the `gap` (i.e., spacing) between elements provided to `*args`.
-    title
-        The browser window title (defaults to the host URL of the page). Can also be set
-        as a side effect via :func:`~shiny.ui.panel_title`.
-    lang
-        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
-        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
-        default, `None`, results in an empty string.
-
-    Returns
-    -------
-    :
-        A UI element.
-    """
-    return RecallContextManager(
-        ui.page_fillable,
-        kwargs=dict(
-            padding=padding,
-            gap=gap,
-            fillable_mobile=fillable_mobile,
-            title=title,
-            lang=lang,
-            **kwargs,
-        ),
-    )
-
-
-def page_sidebar(
-    *,
-    title: Optional[str | Tag | TagList] = None,
-    fillable: bool = True,
-    fillable_mobile: bool = False,
-    window_title: str | MISSING_TYPE = MISSING,
-    lang: Optional[str] = None,
-    **kwargs: TagAttrValue,
-):
-    """
-    Create a page with a sidebar and a title.
-
-    This function wraps :func:`~shiny.ui.page_sidebar`.
-
-    Parameters
-    ----------
-    sidebar
-        Content to display in the sidebar.
-    title
-        A title to display at the top of the page.
-    fillable
-        Whether or not the main content area should be considered a fillable
-        (i.e., flexbox) container.
-    fillable_mobile
-        Whether or not ``fillable`` should apply on mobile devices.
-    window_title
-        The browser's window title (defaults to the host URL of the page). Can also be
-        set as a side effect via :func:`~shiny.ui.panel_title`.
-    lang
-        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
-        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
-        default, `None`, results in an empty string.
-    **kwargs
-        Additional attributes passed to :func:`~shiny.ui.layout_sidebar`.
-
-    Returns
-    -------
-    :
-        A UI element.
-    """
-    return RecallContextManager(
-        ui.page_sidebar,
-        kwargs=dict(
-            title=title,
-            fillable=fillable,
-            fillable_mobile=fillable_mobile,
-            window_title=window_title,
-            lang=lang,
-            **kwargs,
         ),
     )

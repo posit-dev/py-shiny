@@ -8,10 +8,9 @@ from typing import cast
 
 from htmltools import Tag, TagList
 
-from .. import ui
 from .._app import App
 from ..session import Inputs, Outputs, Session
-from ._recall_context import RecallContextManager
+from ._recall_context import RecallContextManager, TopLevelRecallContextManager
 from .display_decorator._func_displayhook import _display_decorator_function_def
 from .display_decorator._node_transformers import (
     DisplayFuncsTransformer,
@@ -19,8 +18,6 @@ from .display_decorator._node_transformers import (
 )
 
 __all__ = ("wrap_express_app",)
-
-_DEFAULT_PAGE_FUNCTION = ui.page_fixed
 
 
 def wrap_express_app(file: Path) -> App:
@@ -139,7 +136,7 @@ _top_level_recall_context_manager_has_been_replaced = False
 def reset_top_level_recall_context_manager():
     global _top_level_recall_context_manager
     global _top_level_recall_context_manager_has_been_replaced
-    _top_level_recall_context_manager = RecallContextManager(_DEFAULT_PAGE_FUNCTION)
+    _top_level_recall_context_manager = TopLevelRecallContextManager()
     _top_level_recall_context_manager_has_been_replaced = False
 
 
