@@ -20,7 +20,7 @@ from .display_decorator._node_transformers import (
 
 __all__ = ("wrap_express_app",)
 
-_DEFAULT_PAGE_FUNCTION = ui.page_fillable
+_DEFAULT_PAGE_FUNCTION = ui.page_fixed
 
 
 def wrap_express_app(file: Path) -> App:
