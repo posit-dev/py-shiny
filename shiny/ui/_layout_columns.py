@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable, Literal, Optional, TypedDict, TypeVar, Union, cast
-from warnings import warn as warn
+from typing import Dict, Iterable, Literal, Optional, TypeVar, Union, cast
+from warnings import warn
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
@@ -251,9 +251,6 @@ def maybe_fr_unit(x: CssUnit) -> str:
         return f"{x}fr"
 
     return x
-
-
-RowHeightsDict = TypedDict("RowHeightsDict", {"style": Dict[str, str], "class": str})
 
 
 def row_heights_attrs(
