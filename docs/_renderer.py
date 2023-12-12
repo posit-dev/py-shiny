@@ -14,6 +14,7 @@ from griffe.docstrings import dataclasses as ds
 from plum import dispatch
 from quartodoc import MdRenderer
 from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
+from tabulate import tabulate
 
 SHINY_PATH = Path(files("shiny").joinpath())
 
@@ -158,7 +159,7 @@ class Renderer(MdRenderer):
         # Wrap everything in a code block to allow for links
         param = "<code>" + param + "</code>"
 
-        clean_desc = sanitize(el.description, allow_markdown=True)
+        clean_desc = el.description.replace("|", "&vert;")
         return (param, clean_desc)
 
     @dispatch
@@ -166,7 +167,7 @@ class Renderer(MdRenderer):
         rows = list(map(self.render, el.value))
         header = ["Parameter", "Description"]
 
-        return self._render_table(rows, header)
+        return render_grid_table(rows, header)
 
     @dispatch
     def signature(self, el: dc.Function, source: Optional[dc.Alias] = None):
@@ -182,6 +183,16 @@ class Renderer(MdRenderer):
 
         # Not a __call__ Function, so render as normal.
         return super().signature(el, source)
+
+
+def render_grid_table(rows: list[tuple[str, str]], headers: list[str]) -> str:
+    table = tabulate(rows, headers=headers, tablefmt="grid")
+
+    # TODO: pandoc (via quarto) adds an empty row for certain tables. We should
+    #       find the offending characters and fix them, but for now this works.
+    table = table + "\n\n<style>#parameters tr td:empty { display: none; }</style>"
+
+    return table
 
 
 def html_escape_except_backticks(s: str) -> str:
