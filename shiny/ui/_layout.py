@@ -83,6 +83,11 @@ def layout_column_wrap(
     -------
     :
         A :class:`~htmltools.Tag` element.
+
+    See Also
+    --------
+    * :func:`~shiny.ui.layout_columns` for laying out elements into a responsive
+      12-column grid.
     """
     attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
 

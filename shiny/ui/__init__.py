@@ -23,6 +23,7 @@ from ._sidebar import (
 )
 
 from ._layout import layout_column_wrap
+from ._layout_columns import layout_columns
 
 
 # Expose the following modules for extended usage: ex: ui.fill.as_fill_item(x)
@@ -185,6 +186,7 @@ __all__ = (
     "panel_sidebar",
     "panel_main",
     # _layout
+    "layout_columns",
     "layout_column_wrap",
     # _card
     "CardItem",
