@@ -43,13 +43,15 @@ def layout_column_wrap(
         :func:`~shiny.ui.card`). Named arguments become attributes on the
         containing :class:`~htmltools.Tag` element.
     width
-        The desired width of each card. It can be a (unit-less) number between 0 and 1
-        and should be specified as `1/num`, where `num` represents the number of desired
-        columns. It can be a CSS length unit representing either the minimum (when
-        `fixed_width=False`) or fixed width (`fixed_width=True`). It can also be `None`,
-        which allows power users to set the `grid-template-columns` CSS property
-        manually, either via a `style` attribute or a CSS stylesheet. If missing, a
-        value of `200px` will be used.
+        The desired width of each card. It can be one of the following:
+
+        * A (unit-less) number between 0 and 1, specified as `1/num`, where `num`
+          represents the number of desired columns.
+        * A CSS length unit representing either the minimum (when `fixed_width=False`)
+          or fixed width (`fixed_width=True`).
+        * `None`, which allows power users to set the `grid-template-columns` CSS
+          property manually, either via a `style` attribute or a CSS stylesheet.
+        * If missing, a value of `200px` will be used.
     fixed_width
         When `width` is greater than 1 or is a CSS length unit, e.g. `"200px"`,
         `fixed_width` indicates whether that `width` value represents the absolute size
