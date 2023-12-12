@@ -2,21 +2,62 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-import htmltools
-from htmltools import Tag, TagAttrValue, TagChild, TagList
+from htmltools import (
+    Tag,
+    TagAttrValue,
+    TagChild,
+    TagList,
+    a,
+    br,
+    code,
+    div,
+    em,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    hr,
+    img,
+    p,
+    pre,
+    span,
+    strong,
+    tags,
+)
 
 from .. import ui
 from ..types import MISSING, MISSING_TYPE
+from ..ui import input_slider
 from ..ui.css import CssUnit
 from . import _run
-from ._recall_context import RecallContextManager, wrap_recall_context_manager
+from ._recall_context import RecallContextManager
 
 __all__ = (
-    "set_page",
-    "p",
+    # htmltools imports
+    "a",
+    "br",
+    "code",
     "div",
-    "span",
+    "em",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "hr",
+    "img",
+    "p",
     "pre",
+    "span",
+    "strong",
+    "tags",
+    # Imports from ..ui
+    "input_slider",
+    # Locally-defined functions
+    "set_page",
     "sidebar",
     "layout_column_wrap",
     "column",
@@ -40,15 +81,6 @@ __all__ = (
 def set_page(page_fn: RecallContextManager[Tag]):
     """Set the page function for the current Shiny express app."""
     _run.replace_top_level_recall_context_manager(page_fn, force=True)
-
-
-# ======================================================================================
-# htmltools Tag functions
-# ======================================================================================
-p = wrap_recall_context_manager(htmltools.p)
-div = wrap_recall_context_manager(htmltools.div)
-span = wrap_recall_context_manager(htmltools.span)
-pre = wrap_recall_context_manager(htmltools.pre)
 
 
 # ======================================================================================
