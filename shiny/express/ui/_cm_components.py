@@ -1,64 +1,21 @@
+"Context manager components for Shiny Express"
+
 from __future__ import annotations
 
 from typing import Literal, Optional
 
-from htmltools import (
-    Tag,
-    TagAttrValue,
-    TagChild,
-    TagList,
-    a,
-    br,
-    code,
-    div,
-    em,
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6,
-    hr,
-    img,
-    p,
-    pre,
-    span,
-    strong,
-    tags,
-)
+from htmltools import Tag, TagAttrValue, TagChild, TagList
 
-from .. import ui
-from ..types import MISSING, MISSING_TYPE
-from ..ui import input_slider
-from ..ui.css import CssUnit
-from . import _run
-from ._recall_context import RecallContextManager
+from ... import ui
+from ...types import MISSING, MISSING_TYPE
+from ...ui.css import CssUnit
+from .. import _run
+from .._recall_context import RecallContextManager
 
 __all__ = (
-    # htmltools imports
-    "a",
-    "br",
-    "code",
-    "div",
-    "em",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "hr",
-    "img",
-    "p",
-    "pre",
-    "span",
-    "strong",
-    "tags",
-    # Imports from ..ui
-    "input_slider",
-    # Locally-defined functions
     "set_page",
     "sidebar",
+    "layout_sidebar",
     "layout_column_wrap",
     "column",
     "row",
@@ -68,10 +25,15 @@ __all__ = (
     "navset",
     "navset_card",
     "nav",
+    "panel_well",
+    "panel_conditional",
+    "panel_fixed",
+    "panel_absolute",
     "page_fluid",
     "page_fixed",
     "page_fillable",
     "page_sidebar",
+    "page_navbar",
 )
 
 
@@ -150,11 +112,6 @@ def sidebar(
         be used for top, the second will be left and right, and the third will be
         bottom. If four, then the values will be interpreted as top, right, bottom, and
         left respectively.
-
-    Returns
-    -------
-    :
-        A :class:`~shiny.ui.Sidebar` object.
     """
     return RecallContextManager(
         ui.sidebar,
@@ -171,6 +128,82 @@ def sidebar(
             max_height_mobile=max_height_mobile,
             gap=gap,
             padding=padding,
+        ),
+    )
+
+
+# TODO: Figure out sidebar arg for ui.layout_sidebar
+def layout_sidebar(
+    *,
+    fillable: bool = True,
+    fill: bool = True,
+    bg: Optional[str] = None,
+    fg: Optional[str] = None,
+    border: Optional[bool] = None,
+    border_radius: Optional[bool] = None,
+    border_color: Optional[str] = None,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+    height: Optional[CssUnit] = None,
+    **kwargs: TagAttrValue,
+):
+    """
+    Sidebar layout
+
+    Create a sidebar layout component which can be dropped inside any Shiny UI page
+    method (e.g. :func:`~shiny.shiny.ui.page_fillable`) or :func:`~shiny.ui.card`
+    context.
+
+    The first child needs to be of class :class:`~shiny.ui.Sidebar` object created by
+    :func:`~shiny.express.ui.sidebar`. The remaining arguments will contain the contents
+    to the main content area. Or tag attributes that are supplied to the resolved
+    :class:`~htmltools.Tag` object.
+
+    Parameters
+    ----------
+    fillable
+        Whether or not the main content area should be wrapped in a fillable container.
+        See :func:`~shiny.ui.as_fillable_container` for details.
+    fill
+        Whether or not the sidebar layout should be wrapped in a fillable container. See
+        :func:`~shiny.ui.as_fill_item` for details.
+    bg,fg
+        A background or foreground color.
+    border
+        Whether or not to show a border around the sidebar layout.
+    border_radius
+        Whether or not to round the corners of the sidebar layout.
+    border_color
+        A border color.
+    gap
+        A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
+        provided to `*args`. This value will only be used if `fillable` is `True`.
+    padding
+        Padding within the sidebar itself. This can be a numeric vector (which will be
+        interpreted as pixels) or a character vector with valid CSS lengths. `padding`
+        may be one to four values. If one, then that value will be used for all four
+        sides. If two, then the first value will be used for the top and bottom, while
+        the second value will be used for left and right. If three, then the first will
+        be used for top, the second will be left and right, and the third will be
+        bottom. If four, then the values will be interpreted as top, right, bottom, and
+        left respectively.
+    height
+        Any valid CSS unit to use for the height.
+    """
+    return RecallContextManager(
+        ui.layout_sidebar,
+        kwargs=dict(
+            fillable=fillable,
+            fill=fill,
+            bg=bg,
+            fg=fg,
+            border=border,
+            border_radius=border_radius,
+            border_color=border_color,
+            gap=gap,
+            padding=padding,
+            height=height,
+            **kwargs,
         ),
     )
 
@@ -233,11 +266,6 @@ def layout_column_wrap(
         A CSS class to apply to the containing element.
     **kwargs
         Additional attributes to apply to the containing element.
-
-    Returns
-    -------
-    :
-        A :class:`~htmltools.Tag` element.
     """
     return RecallContextManager(
         ui.layout_column_wrap,
@@ -273,11 +301,6 @@ def column(width: int, *, offset: int = 0, **kwargs: TagAttrValue):
     **kwargs
         Attributes to place on the column tag.
 
-    Returns
-    -------
-    :
-        A UI element.
-
     See Also
     -------
     :func:`~shiny.ui.row`
@@ -308,11 +331,6 @@ def row(**kwargs: TagAttrValue):
     ----------
     **kwargs
         Attributes to place on the row tag.
-
-    Returns
-    -------
-    :
-        A UI element.
 
     See Also
     -------
@@ -361,11 +379,6 @@ def card(
         `"b"` and once with `"d"`).
     **kwargs
         HTML attributes on the returned Tag.
-
-    Returns
-    -------
-    :
-        An :func:`~shiny.ui.tags.div` tag.
     """
     return RecallContextManager(
         ui.card,
@@ -420,11 +433,6 @@ def accordion(
         Any valid CSS unit; for example, height="100%".
     **kwargs
         Attributes to this tag.
-
-    Returns
-    -------
-    :
-        Accordion panel Tag object.
     """
     return RecallContextManager(
         ui.accordion,
@@ -463,11 +471,6 @@ def accordion_panel(
         A :class:`~htmltools.Tag` which is positioned just before the `title`.
     **kwargs
         Tag attributes to the `accordion-body` div Tag.
-
-    Returns
-    -------
-    :
-        `AccordionPanel` object.
     """
     return RecallContextManager(
         ui.accordion_panel,
@@ -626,6 +629,244 @@ def nav(
 
 
 # ======================================================================================
+# Value boxes
+# ======================================================================================
+def value_box(
+    title: TagChild,
+    value: TagChild,
+    *,
+    showcase: Optional[TagChild] = None,
+    showcase_layout: ui._valuebox.SHOWCASE_LAYOUTS_STR
+    | ui.ShowcaseLayout = "left center",
+    full_screen: bool = False,
+    theme: Optional[str | ui.ValueBoxTheme] = None,
+    height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
+    fill: bool = True,
+    class_: Optional[str] = None,
+    **kwargs: TagAttrValue,
+):
+    return RecallContextManager(
+        ui.value_box,
+        args=(title, value),
+        kwargs=dict(
+            showcase=showcase,
+            showcase_layout=showcase_layout,
+            full_screen=full_screen,
+            theme=theme,
+            height=height,
+            max_height=max_height,
+            fill=fill,
+            class_=class_,
+            **kwargs,
+        ),
+    )
+
+
+# ======================================================================================
+# Panels
+# ======================================================================================
+
+
+def panel_well(**kwargs: TagAttrValue):
+    """
+    Create a well panel
+
+    This function wraps :func:`~shiny.ui.panel_well`.
+
+    A well panel is a simple container with a border and some padding. It's useful for
+    grouping related content together.
+    """
+    return RecallContextManager(
+        ui.panel_well,
+        kwargs=dict(
+            **kwargs,
+        ),
+    )
+
+
+def panel_conditional(
+    *,
+    condition: str,
+    **kwargs: TagAttrValue,
+):
+    """
+    Create a conditional panel
+
+    This function wraps :func:`~shiny.ui.panel_conditional`.
+
+    Show UI elements only if a ``JavaScript`` condition is ``true``.
+
+    Parameters
+    ----------
+    condition
+        A JavaScript expression that will be evaluated repeatedly to determine whether
+        the panel should be displayed.
+    **kwargs
+        Attributes to place on the panel tag.
+
+    Note
+    ----
+    In the JS expression, you can refer to input and output JavaScript objects that
+    contain the current values of input and output. For example, if you have an input
+    with an id of foo, then you can use input.foo to read its value. (Be sure not to
+    modify the input/output objects, as this may cause unpredictable behavior.)
+
+    You are not recommended to use special JavaScript characters such as a period . in
+    the input id's, but if you do use them anyway, for example, ``id = "foo.bar"``, you
+    will have to use ``input["foo.bar"]`` instead of ``input.foo.bar`` to read the input
+    value.
+
+    Tip
+    ---
+    A more powerful (but slower) way to conditionally show UI content is to use
+    :func:`~shiny.render.ui`.
+    """
+    return RecallContextManager(
+        ui.panel_conditional,
+        kwargs=dict(
+            condition=condition,
+            **kwargs,
+        ),
+    )
+
+
+def panel_fixed(
+    *,
+    top: Optional[str] = None,
+    left: Optional[str] = None,
+    right: Optional[str] = None,
+    bottom: Optional[str] = None,
+    width: Optional[str] = None,
+    height: Optional[str] = None,
+    draggable: bool = False,
+    cursor: Literal["auto", "move", "default", "inherit"] = "auto",
+    **kwargs: TagAttrValue,
+):
+    """
+    Create a panel of absolutely positioned content.
+
+    This function wraps :func:`~shiny.ui.panel_fixed`.
+
+    This function is equivalent to calling :func:`~shiny.ui.panel_absolute` with
+    ``fixed=True`` (i.e., the panel does not scroll with the rest of the page). See
+    :func:`~shiny.ui.panel_absolute` for more information.
+
+    Parameters
+    ----------
+    **kwargs
+        Arguments passed along to :func:`~shiny.ui.panel_absolute`.
+
+    See Also
+    -------
+    :func:`~shiny.ui.panel_absolute`
+    """
+    return RecallContextManager(
+        ui.panel_fixed,
+        kwargs=dict(
+            top=top,
+            left=left,
+            right=right,
+            bottom=bottom,
+            width=width,
+            height=height,
+            draggable=draggable,
+            cursor=cursor,
+            **kwargs,
+        ),
+    )
+
+
+def panel_absolute(
+    *,
+    top: Optional[str] = None,
+    left: Optional[str] = None,
+    right: Optional[str] = None,
+    bottom: Optional[str] = None,
+    width: Optional[str] = None,
+    height: Optional[str] = None,
+    draggable: bool = False,
+    fixed: bool = False,
+    cursor: Literal["auto", "move", "default", "inherit"] = "auto",
+    **kwargs: TagAttrValue,
+):
+    """
+    Create a panel of absolutely positioned content.
+
+    This function wraps :func:`~shiny.ui.panel_absolute`.
+
+    Creates a ``<div>`` tag whose CSS position is set to absolute (or fixed if ``fixed =
+    True``). The way absolute positioning works in HTML is that absolute coordinates are
+    specified relative to its nearest parent element whose position is not set to static
+    (which is the default), and if no such parent is found, then relative to the page
+    borders. If you're not sure what that means, just keep in mind that you may get
+    strange results if you use this function from inside of certain types of panels.
+
+    Parameters
+    ----------
+    top
+        Distance between the top of the panel, and the top of the page or parent
+        container.
+    left
+        Distance between the left side of the panel, and the left of the page or parent
+        container.
+    right
+        Distance between the right side of the panel, and the right of the page or
+        parent container.
+    bottom
+        Distance between the bottom of the panel, and the bottom of the page or parent
+        container.
+    width
+        Width of the panel.
+    height
+        Height of the panel.
+    draggable
+        If ``True``, allows the user to move the panel by clicking and dragging.
+    fixed
+        Positions the panel relative to the browser window and prevents it from being
+        scrolled with the rest of the page.
+    cursor
+        The type of cursor that should appear when the user mouses over the panel. Use
+        ``"move"`` for a north-east-south-west icon, ``"default"`` for the usual cursor
+        arrow, or ``"inherit"`` for the usual cursor behavior (including changing to an
+        I-beam when the cursor is over text). The default is ``"auto"``, which is
+        equivalent to ``"move" if draggable else "inherit"``.
+    **kwargs
+        Attributes added to the content's container tag.
+
+    Tip
+    ----
+    The position (``top``, ``left``, ``right``, ``bottom``) and size (``width``,
+    ``height``) parameters are all optional, but you should specify exactly two of top,
+    bottom, and height and exactly two of left, right, and width for predictable
+    results.
+
+    Like most other distance parameters in Shiny, the position and size parameters take
+    a number (interpreted as pixels) or a valid CSS size string, such as ``"100px"``
+    (100 pixels) or ``"25%"``.
+
+    For arcane HTML reasons, to have the panel fill the page or parent you should
+    specify 0 for ``top``, ``left``, ``right``, and ``bottom`` rather than the more
+    obvious ``width = "100%"`` and ``height = "100%"``.
+    """
+    return RecallContextManager(
+        ui.panel_absolute,
+        kwargs=dict(
+            top=top,
+            left=left,
+            right=right,
+            bottom=bottom,
+            width=width,
+            height=height,
+            draggable=draggable,
+            fixed=fixed,
+            cursor=cursor,
+            **kwargs,
+        ),
+    )
+
+
+# ======================================================================================
 # Page components
 # ======================================================================================
 def page_fluid(
@@ -650,11 +891,6 @@ def page_fluid(
         default, `None`, results in an empty string.
     **kwargs
         Attributes on the page level container.
-
-    Returns
-    -------
-    :
-        A UI element.
     """
     return RecallContextManager(
         ui.page_fluid,
@@ -688,11 +924,6 @@ def page_fixed(
         default, `None`, results in an empty string.
     **kwargs
         Attributes on the page level container.
-
-    Returns
-    -------
-    :
-        A UI element.
     """
     return RecallContextManager(
         ui.page_fixed,
@@ -737,10 +968,6 @@ def page_fillable(
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
 
-    Returns
-    -------
-    :
-        A UI element.
     """
     return RecallContextManager(
         ui.page_fillable,
@@ -789,11 +1016,6 @@ def page_sidebar(
         default, `None`, results in an empty string.
     **kwargs
         Additional attributes passed to :func:`~shiny.ui.layout_sidebar`.
-
-    Returns
-    -------
-    :
-        A UI element.
     """
     return RecallContextManager(
         ui.page_sidebar,
@@ -804,5 +1026,111 @@ def page_sidebar(
             window_title=window_title,
             lang=lang,
             **kwargs,
+        ),
+    )
+
+
+# TODO: Figure out sidebar arg for ui.page_navbar
+def page_navbar(
+    *,
+    title: Optional[str | Tag | TagList] = None,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    fillable: bool | list[str] = True,
+    fillable_mobile: bool = False,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+    position: Literal["static-top", "fixed-top", "fixed-bottom"] = "static-top",
+    header: Optional[TagChild] = None,
+    footer: Optional[TagChild] = None,
+    bg: Optional[str] = None,
+    inverse: bool = False,
+    underline: bool = True,
+    collapsible: bool = True,
+    fluid: bool = True,
+    window_title: str | MISSING_TYPE = MISSING,
+    lang: Optional[str] = None,
+):
+    """
+    Create a page with a navbar and a title.
+
+    This function wraps :func:`~shiny.ui.page_navbar`.
+
+    Parameters
+    ----------
+    title
+        The browser window title (defaults to the host URL of the page). Can also be set
+        as a side effect via :func:`~shiny.ui.panel_title`.
+    id
+        If provided, will create an input value that holds the currently selected nav
+        item.
+    selected
+        Choose a particular nav item to select by default value (should match it's
+        ``value``).
+    sidebar
+        A :func:`~shiny.ui.sidebar` component to display on every page.
+    fillable
+        Whether or not the main content area should be considered a fillable
+        (i.e., flexbox) container.
+    fillable_mobile
+        Whether or not ``fillable`` should apply on mobile devices.
+    position
+        Determines whether the navbar should be displayed at the top of the page with
+        normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or
+        pinned at the bottom ("fixed-bottom"). Note that using "fixed-top" or
+        "fixed-bottom" will cause the navbar to overlay your body content, unless you
+        add padding (e.g., ``tags.style("body {padding-top: 70px;}")``).
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+    bg
+        Background color of the navbar (a CSS color).
+    inverse
+        Either ``True`` for a light text color or ``False`` for a dark text color.
+    collapsible
+        ``True`` to automatically collapse the elements into an expandable menu on mobile devices or narrow window widths.
+    fluid
+        ``True`` to use fluid layout; ``False`` to use fixed layout.
+    window_title
+        The browser's window title (defaults to the host URL of the page). Can also be
+        set as a side effect via :func:`~shiny.ui.panel_title`.
+    lang
+        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+        default, `None`, results in an empty string.
+
+    See Also
+    -------
+    * :func:`~shiny.ui.nav`
+    * :func:`~shiny.ui.nav_menu`
+    * :func:`~shiny.ui.navset_bar`
+    * :func:`~shiny.ui.page_fluid`
+
+    Example
+    -------
+    See :func:`~shiny.ui.nav`.
+    """
+
+    return RecallContextManager(
+        ui.page_navbar,
+        kwargs=dict(
+            title=title,
+            id=id,
+            selected=selected,
+            fillable=fillable,
+            fillable_mobile=fillable_mobile,
+            gap=gap,
+            padding=padding,
+            position=position,
+            header=header,
+            footer=footer,
+            bg=bg,
+            inverse=inverse,
+            underline=underline,
+            collapsible=collapsible,
+            fluid=fluid,
+            window_title=window_title,
+            lang=lang,
         ),
     )
