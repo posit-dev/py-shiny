@@ -53,7 +53,6 @@ def layout_columns(
     ----------
     *args
         Child elements or attributes to be added to the layout.
-
     col_widths
         The widths of the columns, possibly at different breakpoints. Can be one of the
         following:
@@ -72,7 +71,6 @@ def layout_columns(
         * A dictionary of column widths at different breakpoints. The keys should be
           one of `"xs"`, `"sm"`, `"md"`, `"lg"`, `"xl"`, or `"xxl"`, and the values are
           either of the above. For example, `col_widths={"sm": (3, 3, 6), "lg": (4)}`.
-
     row_heights
         The heights of the rows, possibly at different breakpoints. Can be one of the
         following:
@@ -92,23 +90,17 @@ def layout_columns(
         * A dictionary of row heights at different breakpoints, where each key is a
           breakpoint name (one of `"xs"`, `"sm"`, `"md"`, `"lg"`, `"xl"`, or `"xxl"`)
           and where the values may be any of the above options.
-
     fill
         Whether or not to allow the layout to grow/shrink to fit a fillable container
         with an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
-
     fillable
         Whether or not each element is wrapped in a fillable container.
-
     gap
         Any valid CSS unit to use for the gap between columns.
-
     class_
         CSS class(es) to apply to the containing element.
-
     height
         Any valid CSS unit to use for the height.
-
     **kwargs
         Additional attributes to apply to the containing element.
 
