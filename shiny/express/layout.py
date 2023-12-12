@@ -323,7 +323,6 @@ def layout_columns(
     """
     return RecallContextManager(
         ui.layout_columns,
-        default_page=page_fillable(),
         kwargs=dict(
             col_widths=col_widths,
             row_heights=row_heights,
