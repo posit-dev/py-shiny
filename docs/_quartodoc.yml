@@ -18,6 +18,7 @@ quartodoc:
         - express.layout.span
         - express.layout.pre
         - express.layout.sidebar
+        - express.layout.layout_columns
         - express.layout.layout_column_wrap
         - express.layout.column
         - express.layout.row
@@ -46,6 +47,7 @@ quartodoc:
       contents:
         - ui.sidebar
         - ui.layout_sidebar
+        - ui.layout_columns
         - ui.layout_column_wrap
         - ui.card
         - ui.card_header
