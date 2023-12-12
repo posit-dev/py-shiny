@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable, Literal, Optional, TypeVar, Union, cast
+from enum import Enum
+from typing import Dict, Iterable, Optional, TypeVar, Union, cast
 from warnings import warn
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
@@ -12,12 +13,21 @@ from .fill import as_fill_item, as_fillable_container
 
 T = TypeVar("T")
 
-Breakpoints = Literal["xs", "sm", "md", "lg", "xl", "xxl"]
-"""
-References
-----------
-* [Available Bootstrap breakpoints](https://getbootstrap.com/docs/5.3/layout/breakpoints/#available-breakpoints)
-"""
+
+class Breakpoints(Enum):
+    """
+    References
+    ----------
+    * [Available Bootstrap breakpoints](https://getbootstrap.com/docs/5.3/layout/breakpoints/#available-breakpoints)
+    """
+
+    xs = "xs"
+    sm = "sm"
+    md = "md"
+    lg = "lg"
+    xl = "xl"
+    xxl = "xxl"
+
 
 BreakpointsSoft = Dict[Breakpoints, Union[Iterable[T], T, None]]
 BreakpointsOptional = Dict[Breakpoints, Union[Iterable[T], None]]
@@ -166,8 +176,40 @@ def wrap_all_in_grid_item_container(
     return wrapped_children
 
 
+def as_col_spec(
+    col_widths: BreakpointsUser[int],
+    n_kids: int,
+) -> BreakpointsOptional[int] | None:
+    if col_widths is None:
+        return None
+
+    if not isinstance(col_widths, Dict):
+        return {Breakpoints.md: validate_col_width(col_widths, n_kids, Breakpoints.md)}
+
+    ret: BreakpointsOptional[int] = {}
+    col_widths_items = cast(BreakpointsSoft[int], col_widths).items()
+
+    for brk, value in col_widths_items:
+        bs_breakpoints = [str(bp.value) for bp in Breakpoints]
+        if str(brk) not in bs_breakpoints:
+            raise ValueError(
+                f"Breakpoint '{brk}' is not valid. Valid breakpoints are: {', '.join(bs_breakpoints)}'."
+            )
+
+        if value is None:
+            ret[brk] = None
+        elif isinstance(value, (int, Iterable)):
+            ret[brk] = validate_col_width(value, n_kids, brk)
+        else:
+            raise TypeError(
+                f"Invalid type for value at breakpoint '{brk}'. Expected int or Iterable[int]."
+            )
+
+    return ret
+
+
 def validate_col_width(
-    x: Iterable[int] | int, n_kids: int, break_name: str
+    x: Iterable[int] | int, n_kids: int, break_name: Breakpoints
 ) -> Iterable[int]:
     if isinstance(x, int):
         y = [x]
@@ -195,37 +237,6 @@ def validate_col_width(
         )
 
     return y
-
-
-def as_col_spec(
-    col_widths: BreakpointsUser[int],
-    n_kids: int,
-) -> BreakpointsOptional[int] | None:
-    if col_widths is None:
-        return None
-
-    if not isinstance(col_widths, Dict):
-        return {"md": validate_col_width(col_widths, n_kids, "md")}
-
-    ret: BreakpointsOptional[int] = {}
-    col_widths_items = cast(BreakpointsSoft[int], col_widths).items()
-
-    for brk, value in col_widths_items:
-        if brk not in ["xs", "sm", "md", "lg", "xl", "xxl"]:
-            raise ValueError(
-                f"Breakpoint '{brk}' is not valid. Valid breakpoints are: 'xs', 'sm', 'md', 'lg', 'xl', 'xxl'."
-            )
-
-        if value is None:
-            ret[brk] = None
-        elif isinstance(value, (int, Iterable)):
-            ret[brk] = validate_col_width(value, n_kids, brk)
-        else:
-            raise TypeError(
-                f"Invalid type for value at breakpoint '{brk}'. Expected int or Iterable[int]."
-            )
-
-    return ret
 
 
 def col_widths_attrs(col_widths: BreakpointsOptional[int] | None) -> TagAttrs:
@@ -282,7 +293,9 @@ def row_heights_attrs(
     # row height is derived from xs or defaults to auto in the CSS, so we don't need the
     # class to activate it
     classes = [
-        f"bslib-grid--row-heights--{brk}" for brk in x_complete.keys() if brk != "xs"
+        f"bslib-grid--row-heights--{brk}"
+        for brk in x_complete.keys()
+        if brk != Breakpoints.xs
     ]
 
     # Create CSS variables, treating numeric values as fractional units, passing strings
