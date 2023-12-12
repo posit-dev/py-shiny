@@ -1,16 +1,14 @@
 import { LitElement, html, css } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { property } from "lit/decorators.js";
 import type { CustomElementInput } from "@posit-dev/shiny-bindings-core";
 import { makeInputBinding } from "@posit-dev/shiny-bindings-core";
 
-const customInputTag = "custom-component";
 /**
  * An example element.
  *
  * @csspart button - The button that increments the value
  * @csspart display - The span containing the value
  */
-@customElement(customInputTag)
 export class CustomComponentEl
   extends LitElement
   implements CustomElementInput<number>
@@ -53,4 +51,6 @@ export class CustomComponentEl
 }
 
 // Setup the input binding
-makeInputBinding<CustomComponentEl>(customInputTag);
+makeInputBinding("custom-component", CustomComponentEl, {
+  registerElement: true,
+});
