@@ -6,6 +6,7 @@
     "dist",
     "typings",
     "sandbox",
+    "_dev",
     "docs",
     "tests/playwright/deploys/apps",
     "shiny/templates"
