@@ -237,6 +237,8 @@ def col_widths_attrs(col_widths: BreakpointsOptional[int] | None) -> TagAttrs:
         return ret
 
     for break_name, value in col_widths.items():
+        if isinstance(break_name, Enum):
+            break_name = break_name.value
         break_name = f"col-widths-{break_name}"
         if value is None:
             ret[break_name] = ""
