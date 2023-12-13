@@ -1,6 +1,6 @@
 from model_plots import *  # model plots and cards
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
     ui.panel_title(ui.h2("Model Dashboard")),
