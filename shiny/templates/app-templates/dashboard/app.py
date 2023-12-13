@@ -30,13 +30,12 @@ app_ui = ui.page_sidebar(
         ),
     ),
     ui.row(
-        ui.layout_column_wrap(
+        ui.layout_columns(
             *[make_value_box(penguin) for penguin in species],
-            width=1 / 3,
         )
     ),
     ui.row(
-        ui.layout_column_wrap(
+        ui.layout_columns(
             ui.card(
                 ui.card_header("Summary statistics"),
                 ui.output_data_frame("summary_statistics"),
@@ -45,7 +44,6 @@ app_ui = ui.page_sidebar(
                 ui.card_header("Penguin bills"),
                 ui.output_plot("length_depth"),
             ),
-            width=1 / 2,
         ),
     ),
 )

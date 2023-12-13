@@ -4,12 +4,13 @@ from enum import Enum
 from typing import Dict, Iterable, Optional, TypeVar, Union, cast
 from warnings import warn
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css
 
 from ._html_deps_shinyverse import web_component_dependency
+from ._layout import wrap_all_in_gap_spaced_container
 from ._tag import consolidate_attrs
 from .css import CssUnit, as_css_unit
-from .fill import as_fill_item, as_fillable_container
+from .fill import as_fill_item
 
 T = TypeVar("T")
 
@@ -126,7 +127,7 @@ def layout_columns(
     tag = Tag(
         "bslib-layout-columns",
         {
-            "class": "bslib-grid grid",
+            "class": "bslib-grid grid bslib-mb-spacing",
             "style": css(
                 gap=as_css_unit(gap),
                 height=as_css_unit(height),
@@ -135,37 +136,15 @@ def layout_columns(
         col_widths_attrs(col_widths_spec),
         attrs,
         row_heights_attrs(row_heights),
-        *wrap_all_in_grid_item_container(children, fillable),
+        *wrap_all_in_gap_spaced_container(children, fillable, "bslib-grid-item"),
         web_component_dependency(),
     )
 
-    # Apply fill and fillable
+    # Apply fill to the outer layout (fillable is applied to the children)
     if fill:
         tag = as_fill_item(tag)
-    if fillable:
-        tag = as_fillable_container(tag)
 
     return tag
-
-
-def wrap_all_in_grid_item_container(
-    children: Iterable[TagChild],
-    fillable: bool = True,
-    class_: Optional[str] = None,
-) -> list[TagChild]:
-    item_class = "bslib-grid-item bslib-gap-spacing"
-    if class_ is not None:
-        item_class = f"{item_class} {class_}"
-
-    # Use a new list so that we don't mutate the original `children`
-    wrapped_children: list[TagChild] = []
-    for child_value in children:
-        child = div({"class": item_class}, child_value)
-        if fillable:
-            child = as_fillable_container(child)
-        wrapped_children.append(child)
-
-    return wrapped_children
 
 
 def as_col_spec(
@@ -237,6 +216,8 @@ def col_widths_attrs(col_widths: BreakpointsOptional[int] | None) -> TagAttrs:
         return ret
 
     for break_name, value in col_widths.items():
+        if isinstance(break_name, Enum):
+            break_name = break_name.value
         break_name = f"col-widths-{break_name}"
         if value is None:
             ret[break_name] = ""

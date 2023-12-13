@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Optional, cast
+from typing import Iterable, Literal, Optional, cast
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
@@ -133,14 +133,6 @@ def layout_column_wrap(
             else:
                 colspec = f"repeat(auto-fit, minmax(min({width_css_unit}, 100%), 1fr))"
 
-    # Use a new dict so that we don't mutate the original `children` dict
-    upgraded_children: list[TagChild] = []
-    for child_value in children:
-        child = div({"class": "bslib-gap-spacing"}, child_value)
-        if fillable:
-            child = as_fillable_container(child)
-        upgraded_children.append(child)
-
     tag_style_css = {
         "grid-template-columns": colspec,
         "grid-auto-rows": "1fr" if (heights_equal == "all") else None,
@@ -160,7 +152,7 @@ def layout_column_wrap(
             "style": css(**tag_style_css),
         },
         attrs,
-        *upgraded_children,
+        *wrap_all_in_gap_spaced_container(children, fillable),
         components_dependency(),
     )
     if fill:
@@ -175,3 +167,23 @@ def is_probably_a_css_unit(x: TagChild) -> bool:
     if isinstance_cssunit(x):
         return True
     return False
+
+
+def wrap_all_in_gap_spaced_container(
+    children: Iterable[TagChild],
+    fillable: bool = True,
+    class_: Optional[str] = None,
+) -> list[TagChild]:
+    item_class = "bslib-gap-spacing"
+    if class_ is not None:
+        item_class = f"{item_class} {class_}"
+
+    # Use a new list so that we don't mutate the original `children`
+    wrapped_children: list[TagChild] = []
+    for child_value in children:
+        child = div({"class": item_class}, child_value)
+        if fillable:
+            child = as_fillable_container(child)
+        wrapped_children.append(child)
+
+    return wrapped_children
