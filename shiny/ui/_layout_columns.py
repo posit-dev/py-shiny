@@ -126,7 +126,7 @@ def layout_columns(
     tag = Tag(
         "bslib-layout-columns",
         {
-            "class": "bslib-grid grid",
+            "class": "bslib-grid grid bslib-mb-spacing",
             "style": css(
                 gap=as_css_unit(gap),
                 height=as_css_unit(height),
