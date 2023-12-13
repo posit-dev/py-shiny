@@ -25,6 +25,8 @@ __all__ = (
     "navset",
     "navset_card",
     "nav",
+    "nav_control",
+    "nav_menu",
     "panel_well",
     "panel_conditional",
     "panel_fixed",
@@ -624,6 +626,64 @@ def nav(
         kwargs=dict(
             value=value,
             icon=icon,
+        ),
+    )
+
+
+def nav_control():
+    """
+    Place a control in the navigation container.
+
+    This function wraps :func:`~shiny.ui.nav_control`.
+
+    Parameters
+    ----------
+    *args
+        UI elements to display as the nav item.
+    """
+    return RecallContextManager(ui.nav_control)
+
+
+def nav_menu(
+    title: TagChild,
+    *,
+    value: Optional[str] = None,
+    icon: TagChild = None,
+    align: Literal["left", "right"] = "left",
+):
+    """
+    Create a menu of nav items.
+
+    This function wraps :func:`~shiny.ui.nav_menu`.
+
+    Parameters
+    ----------
+    title
+        A title to display. Can be a character string or UI elements (i.e., tags).
+    *args
+        A collection of nav items (e.g., :func:`~shiny.ui.nav`) and/or strings.
+        Strings will be rendered as a section header unless the string is a set
+        of two or more hyphens (e.g., ``---``), in which case it will be rendered
+        as a divider.
+    value
+        The value of the item. This is used to determine whether the item is active
+        (when an ``id`` is provided to the nav container), programmatically select the
+        item (e.g., :func:`~shiny.ui.update_navs`), and/or be provided to the
+        ``selected`` argument of the navigation container (e.g.,
+        :func:`~shiny.ui.navset_tab`).
+    icon
+        An icon to appear inline with the button/link.
+    align
+        Horizontal alignment of the dropdown menu relative to dropdown toggle.
+    """
+
+    return RecallContextManager(
+        ui.nav_menu,
+        args=(title,),
+        kwargs=dict(
+            value=value,
+            icon=icon,
+            align=align,
         ),
     )
 

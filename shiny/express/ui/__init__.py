@@ -96,6 +96,7 @@ from ...ui import (
     modal_remove,
     notification_show,
     notification_remove,
+    nav_spacer,
     output_plot,
     output_image,
     output_text,
@@ -120,6 +121,8 @@ from ._cm_components import (
     navset,
     navset_card,
     nav,
+    nav_control,
+    nav_menu,
     value_box,
     panel_well,
     panel_conditional,
@@ -227,6 +230,7 @@ __all__ = (
     "modal_remove",
     "notification_show",
     "notification_remove",
+    "nav_spacer",
     "output_plot",
     "output_image",
     "output_text",
@@ -249,6 +253,8 @@ __all__ = (
     "navset",
     "navset_card",
     "nav",
+    "nav_control",
+    "nav_menu",
     "value_box",
     "panel_well",
     "panel_conditional",
@@ -265,9 +271,6 @@ __all__ = (
 _known_missing = {
     # Items from shiny.ui that don't have a counterpart in shiny.express.ui
     "shiny.ui": (
-        "nav_control",
-        "nav_menu",
-        "nav_spacer",
         "navset_bar",
         "navset_card_pill",
         "navset_card_tab",
@@ -280,10 +283,10 @@ _known_missing = {
         "navset_tab_card",
         "navset_underline",
         "page_bootstrap",
-        "panel_main",
-        "panel_sidebar",
-        "panel_title",
         "page_output",
+        "panel_main",  # Deprecated
+        "panel_sidebar",  # Deprecated
+        "panel_title",
         "popover",
         "showcase_bottom",
         "showcase_left_center",
