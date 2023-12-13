@@ -139,11 +139,9 @@ def layout_columns(
         web_component_dependency(),
     )
 
-    # Apply fill and fillable
+    # Apply fill to the outer layout (fillable is applied to the children)
     if fill:
         tag = as_fill_item(tag)
-    if fillable:
-        tag = as_fillable_container(tag)
 
     return tag
 
