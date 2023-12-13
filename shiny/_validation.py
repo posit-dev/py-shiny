@@ -1,9 +1,13 @@
 from __future__ import annotations
 
-from typing import TypeVar, overload
+from typing import Literal, TypeVar, overload
 
 from ._docstring import add_example
-from .types import SilentCancelOutputException, SilentException
+from .types import (
+    SilentCancelOutputException,
+    SilentException,
+    SilentOperationInProgressException,
+)
 
 T = TypeVar("T")
 
@@ -19,7 +23,7 @@ def req(*args: T, cancel_output: bool = False) -> T:
 
 
 @add_example()
-def req(*args: T, cancel_output: bool = False) -> T | None:
+def req(*args: T, cancel_output: bool | Literal["progress"] = False) -> T | None:
     """
     Throw a silent exception for falsy values.
 
@@ -51,8 +55,10 @@ def req(*args: T, cancel_output: bool = False) -> T | None:
 
     for arg in args:
         if not arg:
-            if cancel_output:
+            if cancel_output is True:
                 raise SilentCancelOutputException()
+            elif cancel_output == "progress":
+                raise SilentOperationInProgressException()
             else:
                 raise SilentException()
 
