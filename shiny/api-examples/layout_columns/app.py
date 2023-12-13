@@ -4,7 +4,7 @@ from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
     ui.panel_title(ui.h2("Model Dashboard")),
-    ui.div("Using", ui.code("ui.layout_columns()"), ".", class_="mb-2"),
+    ui.markdown("Using `ui.layout_columns()` for the layout."),
     ui.layout_columns(
         card_loss,
         card_acc,
