@@ -5,7 +5,7 @@ import sys
 from types import TracebackType
 from typing import Callable, Generic, Mapping, Optional, Type, TypeVar
 
-from htmltools import HTML, Tag, Tagifiable, TagList, tags
+from htmltools import HTML, Tag, Tagifiable, TagList
 
 from .._typing_extensions import ParamSpec
 
@@ -43,7 +43,7 @@ class RecallContextManager(Generic[R]):
             # This is only for other kinds of expressions, the kind which would normally
             # be printed at the console.
             if value is not None:
-                self.args.append(tags.pre(repr(value)))
+                self.args.append(value)
 
     def __enter__(self) -> None:
         if self.default_page is not None:
