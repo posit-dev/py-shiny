@@ -35,7 +35,7 @@ async def render_custom_component(
         return None
 
     if not isinstance(res, int):
-        # Throw an error if the value is not a dataframe
+        # Throw an error if the value is not an integer.
         raise TypeError(f"Expected a integer, got {type(res)}. ")
 
     # Send the results to the client. Make sure that this is a serializable
