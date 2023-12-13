@@ -21,9 +21,18 @@ def test_express_ui_is_complete():
     ui_known_missing = set(xui._known_missing["shiny.ui"])
     xui_known_missing = set(xui._known_missing["shiny.express.ui"])
 
-    # Make sure that in shiny.express.ui, there's no overlap between __all__ and
-    # _known_missing.
-    assert xui_all.isdisjoint(ui_known_missing)
+    # Make sure that there's no overlap between shiny.express.ui.__all__ and
+    # _known_missing["shiny.ui"]; and same for other combinations. Note that the use of
+    # `.intersection() == set()` instead of `disjoint()` is intentional, because if the
+    # test fails, the first form provides an error message that shows the difference,
+    # while the second form does note.
+    assert xui_all.intersection(ui_known_missing) == set()
+    assert ui_all.intersection(xui_known_missing) == set()
+
+    # Similar to above, use .difference() instead of .issubset() to get better error
+    # messages.
+    assert xui_known_missing.difference(xui_all) == set()
+    assert ui_known_missing.difference(ui_all) == set()
 
     # Make sure that everything from shiny.ui is either exported by shiny.express.ui, or
     # explicitly listed in shiny.express.ui._known_missing.
