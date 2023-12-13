@@ -40,14 +40,17 @@ def plot_feature_importance():
 card_loss = ui.card(
     ui.card_header("Loss Over Time"),
     ui.output_plot("loss_over_time"),
+    full_screen=True,
 )
 
 card_acc = ui.card(
     ui.card_header("Accuracy Over Time"),
     ui.output_plot("accuracy_over_time"),
+    full_screen=True,
 )
 
 card_feat = ui.card(
     ui.card_header("Feature Importance"),
     ui.output_plot("feature_importance"),
+    full_screen=True,
 )
