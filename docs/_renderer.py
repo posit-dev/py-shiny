@@ -167,7 +167,7 @@ class Renderer(MdRenderer):
         rows = list(map(self.render, el.value))
         header = ["Parameter", "Description"]
 
-        return render_grid_table(rows, header)
+        return render_definition_list(rows)
 
     @dispatch
     def signature(self, el: dc.Function, source: Optional[dc.Alias] = None):
@@ -185,14 +185,13 @@ class Renderer(MdRenderer):
         return super().signature(el, source)
 
 
-def render_grid_table(rows: list[tuple[str, str]], headers: list[str]) -> str:
-    table = tabulate(rows, headers=headers, tablefmt="grid")
+def render_definition_list(rows: list[tuple[str, str]]) -> str:
+    def indent_newlines(s: str) -> str:
+        return s.replace("\n", "\n    ")
 
-    # TODO: pandoc (via quarto) adds an empty row for certain tables. We should
-    #       find the offending characters and fix them, but for now this works.
-    table = table + "\n\n<style>#parameters tr td:empty { display: none; }</style>"
+    out = [f"{param}\n\n:   {indent_newlines(desc)}" for param, desc in rows]
 
-    return table
+    return "\n\n".join(out)
 
 
 def html_escape_except_backticks(s: str) -> str:
