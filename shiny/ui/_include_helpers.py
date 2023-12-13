@@ -108,7 +108,6 @@ def include_css(
     path
         A path to a CSS file.
     method
-    method
         One of the following:
 
         * ``"link"`` is the link to the CSS file via a :func:`~ui.tags.link` tag. This

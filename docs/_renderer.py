@@ -14,7 +14,6 @@ from griffe.docstrings import dataclasses as ds
 from plum import dispatch
 from quartodoc import MdRenderer
 from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
-from tabulate import tabulate
 
 SHINY_PATH = Path(files("shiny").joinpath())
 
@@ -159,8 +158,7 @@ class Renderer(MdRenderer):
         # Wrap everything in a code block to allow for links
         param = "<code>" + param + "</code>"
 
-        clean_desc = el.description.replace("|", "&vert;")
-        return (param, clean_desc)
+        return (param, el.description)
 
     @dispatch
     def render(self, el: ds.DocstringSectionParameters):
