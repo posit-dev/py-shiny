@@ -10,7 +10,7 @@ from ._html_deps_shinyverse import web_component_dependency
 from ._layout import wrap_all_in_gap_spaced_container
 from ._tag import consolidate_attrs
 from .css import CssUnit, as_css_unit
-from .fill import as_fill_item, as_fillable_container
+from .fill import as_fill_item
 
 T = TypeVar("T")
 
