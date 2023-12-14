@@ -11,8 +11,8 @@
     "checkJs": false,
     "skipLibCheck": true,
     "isolatedModules": true,
-    "outDir": "dist",
-    "rootDir": "./src",
+    "outDir": "custom_component/distjs",
+    "rootDir": "srcts",
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
@@ -25,13 +25,7 @@
     "noImplicitOverride": true,
     "esModuleInterop": true,
     "strict": true,
-    "jsx": "react-jsx",
-    "plugins": [
-      {
-        "name": "ts-lit-plugin",
-        "strict": true
-      }
-    ]
+    "jsx": "react-jsx"
   },
   "include": ["srcts/**/*.ts", "srcts/index.tsx"],
   "exclude": []

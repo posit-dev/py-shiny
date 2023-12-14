@@ -1,7 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { property } from "lit/decorators.js";
 
-import { makeOutputBinding } from "@shiny-helpers/main";
+import { makeOutputBinding } from "@posit-dev/shiny-bindings-core";
 
 // What the server-side output binding will send to the client. It's important
 // to make sure this matches what the python code is sending.

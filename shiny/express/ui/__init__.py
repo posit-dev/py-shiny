@@ -113,6 +113,7 @@ from ._cm_components import (
     sidebar,
     layout_sidebar,
     layout_column_wrap,
+    layout_columns,
     column,
     row,
     card,
@@ -120,7 +121,7 @@ from ._cm_components import (
     accordion_panel,
     navset,
     navset_card,
-    nav,
+    nav_panel,
     nav_control,
     nav_menu,
     value_box,
@@ -245,6 +246,7 @@ __all__ = (
     "sidebar",
     "layout_sidebar",
     "layout_column_wrap",
+    "layout_columns",
     "column",
     "row",
     "card",
@@ -252,7 +254,7 @@ __all__ = (
     "accordion_panel",
     "navset",
     "navset_card",
-    "nav",
+    "nav_panel",
     "nav_control",
     "nav_menu",
     "value_box",
@@ -271,6 +273,7 @@ __all__ = (
 _known_missing = {
     # Items from shiny.ui that don't have a counterpart in shiny.express.ui
     "shiny.ui": (
+        "nav",  # Deprecated
         "navset_bar",
         "navset_card_pill",
         "navset_card_tab",
