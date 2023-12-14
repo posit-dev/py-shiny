@@ -19,8 +19,6 @@ __all__ = (
     "layout_sidebar",
     "layout_column_wrap",
     "layout_columns",
-    "column",
-    "row",
     "card",
     "accordion",
     "accordion_panel",
@@ -391,60 +389,6 @@ def layout_columns(
             **kwargs,
         ),
     )
-
-
-def column(width: int, *, offset: int = 0, **kwargs: TagAttrValue):
-    """
-    Responsive row-column based layout
-
-    This function wraps :func:`~shiny.ui.column`. See :func:`~shiny.ui.row` for more
-    information.
-
-    Parameters
-    ----------
-    width
-        The width of the column (an integer between 1 and 12).
-    offset
-        The number of columns to offset this column from the end of the previous column.
-    **kwargs
-        Attributes to place on the column tag.
-
-    See Also
-    -------
-    :func:`~shiny.ui.row`
-    """
-    return RecallContextManager(
-        ui.column,
-        args=(width,),
-        kwargs=dict(
-            offset=offset,
-            **kwargs,
-        ),
-    )
-
-
-def row(**kwargs: TagAttrValue):
-    """
-    Responsive row-column based layout
-
-    This function wraps :func:`~shiny.ui.row`. Layout UI components using Bootstrap's
-    grid layout system. Use ``row()`` to group elements that should appear on the same
-    line (if the browser has adequate width) and :func:`~shiny.ui.column` to define how
-    much horizontal space within a 12-unit wide grid each on of these elements should
-    occupy. See the [layout guide](https://shiny.posit.co/articles/layout-guide.html>)
-    for more context and examples. (The article is about Shiny for R, but the general
-    principles are the same.)
-
-    Parameters
-    ----------
-    **kwargs
-        Attributes to place on the row tag.
-
-    See Also
-    -------
-    :func:`~shiny.ui.column`
-    """
-    return RecallContextManager(ui.row, kwargs=kwargs)
 
 
 def card(
