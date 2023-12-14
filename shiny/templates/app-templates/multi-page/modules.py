@@ -10,22 +10,19 @@ from shiny import Inputs, Outputs, Session, module, render, ui
 def training_ui():
     return ui.nav_panel(
         "Training Dashboard",
-        ui.row(
-            ui.layout_column_wrap(
-                ui.card(
-                    ui.card_header("Model Metrics"),
-                    ui.output_plot("metric"),
-                    ui.input_select(
-                        "metric",
-                        "Metric",
-                        choices=["ROC Curve", "Precision-Recall"],
-                    ),
+        ui.layout_columns(
+            ui.card(
+                ui.card_header("Model Metrics"),
+                ui.output_plot("metric"),
+                ui.input_select(
+                    "metric",
+                    "Metric",
+                    choices=["ROC Curve", "Precision-Recall"],
                 ),
-                ui.card(
-                    ui.card_header("Training Scores"),
-                    ui.output_plot("score_dist"),
-                ),
-                width=1 / 2,
+            ),
+            ui.card(
+                ui.card_header("Training Scores"),
+                ui.output_plot("score_dist"),
             ),
         ),
     )
@@ -54,22 +51,23 @@ def training_server(
 def data_view_ui():
     return ui.nav_panel(
         "View Data",
-        ui.row(
-            ui.layout_column_wrap(
-                ui.value_box(
-                    title="Row count",
-                    value=ui.output_text("row_count"),
-                    theme="primary",
-                ),
-                ui.value_box(
-                    title="Mean score",
-                    value=ui.output_text("mean_score"),
-                    theme="bg-green",
-                ),
-                width=1 / 2,
+        ui.layout_columns(
+            ui.value_box(
+                title="Row count",
+                value=ui.output_text("row_count"),
+                theme="primary",
             ),
+            ui.value_box(
+                title="Mean score",
+                value=ui.output_text("mean_score"),
+                theme="bg-green",
+            ),
+            gap="20px",
         ),
-        ui.card(ui.output_data_frame("data")),
+        ui.layout_columns(
+            ui.card(ui.output_data_frame("data")),
+            style="margin-top: 20px;",
+        ),
     )
 
 

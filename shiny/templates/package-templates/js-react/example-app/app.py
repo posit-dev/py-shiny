@@ -1,19 +1,23 @@
 # pyright: basic
 
-from custom_component import custom_component
+from custom_component import (
+    input_custom_component,
+    output_custom_component,
+    render_custom_component,
+)
 
-from shiny import App, render, ui
+from shiny import App, ui
 
 app_ui = ui.page_fluid(
-    custom_component("myComponent"),
-    ui.output_text("valueOut"),
+    input_custom_component("color"),
+    output_custom_component("valueOut"),
 )
 
 
 def server(input, output, session):
-    @render.text
+    @render_custom_component
     def valueOut():
-        return f"Value from input is {input.myComponent()}"
+        return input.color()
 
 
 app = App(app_ui, server)

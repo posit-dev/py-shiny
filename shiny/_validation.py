@@ -28,7 +28,7 @@ def req(*args: T, cancel_output: bool = False) -> T | None:
 
     Parameters
     ----------
-    args
+    *args
         Any number of arguments to check.
     cancel_output
         If ``True``, throw :func:`~shiny.types.SilentCancelOutputException` instead of

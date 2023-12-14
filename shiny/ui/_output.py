@@ -354,7 +354,7 @@ def output_ui(
     fillable
         Whether or not the UI output area should be considered a fillable (i.e.,
         flexbox) container.
-    kwargs
+    **kwargs
         Attributes to be applied to the output container.
 
     Returns
