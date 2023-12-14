@@ -5,7 +5,7 @@ import sys
 from types import TracebackType
 from typing import Callable, Generic, Mapping, Optional, Type, TypeVar
 
-from htmltools import HTML, Tag, Tagifiable, TagList
+from htmltools import Tag, wrap_displayhook_handler
 
 from .._typing_extensions import ParamSpec
 
@@ -32,19 +32,6 @@ class RecallContextManager(Generic[R]):
         self.args: list[object] = list(args)
         self.kwargs: dict[str, object] = dict(kwargs)
 
-    def append_arg(self, value: object):
-        if isinstance(value, (Tag, TagList, Tagifiable)):
-            self.args.append(value)
-        elif hasattr(value, "_repr_html_"):
-            self.args.append(HTML(value._repr_html_()))  # pyright: ignore
-        else:
-            # We should NOT end up here for objects that were `def`ed, because they
-            # would already have been filtered out by _display_decorator_function_def().
-            # This is only for other kinds of expressions, the kind which would normally
-            # be printed at the console.
-            if value not in [None, ...]:
-                self.args.append(value)
-
     def __enter__(self) -> None:
         if self.default_page is not None:
             from . import _run
@@ -53,7 +40,7 @@ class RecallContextManager(Generic[R]):
 
         self._prev_displayhook = sys.displayhook
         # Collect each of the "printed" values in the args list.
-        sys.displayhook = self.append_arg
+        sys.displayhook = wrap_displayhook_handler(self.args.append)
 
     def __exit__(
         self,
