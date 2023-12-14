@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 __all__ = (
-    "nav",
+    "nav_panel",
     "nav_menu",
     "nav_control",
     "nav_spacer",
@@ -17,6 +17,7 @@ __all__ = (
     # Deprecated - 2023-08-15
     "navset_pill_card",
     "navset_tab_card",
+    "nav",
 )
 
 import copy
@@ -41,7 +42,7 @@ from .fill import as_fill_item, as_fillable_container
 # -----------------------------------------------------------------------------
 # Navigation items
 # -----------------------------------------------------------------------------
-class Nav:
+class NavPanel:
     nav: Tag
     content: Optional[Tag]
 
@@ -97,12 +98,12 @@ class Nav:
 
 
 @add_example()
-def nav(
+def nav_panel(
     title: TagChild,
     *args: TagChild,
     value: Optional[str] = None,
     icon: TagChild = None,
-) -> Nav:
+) -> NavPanel:
     """
     Create a nav item pointing to some internal content.
 
@@ -150,13 +151,13 @@ def nav(
         role="tab",
     )
 
-    return Nav(
+    return NavPanel(
         tags.li(link),
         div(*args, class_="tab-pane", role="tabpanel", data_value=value),
     )
 
 
-def nav_control(*args: TagChild) -> Nav:
+def nav_control(*args: TagChild) -> NavPanel:
     """
     Place a control in the navigation container.
 
@@ -167,7 +168,7 @@ def nav_control(*args: TagChild) -> Nav:
 
     See Also
     --------
-    * ~shiny.ui.nav
+    * ~shiny.ui.nav_panel
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_spacer
     * ~shiny.ui.navset_bar
@@ -182,18 +183,18 @@ def nav_control(*args: TagChild) -> Nav:
 
     Example
     -------
-    See :func:`~shiny.ui.nav`
+    See :func:`~shiny.ui.nav_panel`
     """
-    return Nav(tags.li(*args))
+    return NavPanel(tags.li(*args))
 
 
-def nav_spacer() -> Nav:
+def nav_spacer() -> NavPanel:
     """
     Create space between nav items.
 
     See Also
     --------
-    * ~shiny.ui.nav
+    * ~shiny.ui.nav_panel
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.navset_bar
@@ -208,10 +209,10 @@ def nav_spacer() -> Nav:
 
     Example
     -------
-    See :func:`~shiny.ui.nav`
+    See :func:`~shiny.ui.nav_panel`
     """
 
-    return Nav(tags.li(components_dependency(), class_="bslib-nav-spacer"))
+    return NavPanel(tags.li(components_dependency(), class_="bslib-nav-spacer"))
 
 
 class NavMenu:
@@ -290,12 +291,12 @@ def menu_string_as_nav(x: str | NavSetArg) -> NavSetArg:
     else:
         nav = tags.li(x, class_="dropdown-header")
 
-    return Nav(nav)
+    return NavPanel(nav)
 
 
 def nav_menu(
     title: TagChild,
-    *args: Nav | str,
+    *args: NavPanel | str,
     value: Optional[str] = None,
     icon: TagChild = None,
     align: Literal["left", "right"] = "left",
@@ -308,7 +309,7 @@ def nav_menu(
     title
         A title to display. Can be a character string or UI elements (i.e., tags).
     *args
-        A collection of nav items (e.g., :func:`~shiny.ui.nav`) and/or strings.
+        A collection of nav items (e.g., :func:`~shiny.ui.nav_panel`) and/or strings.
         Strings will be rendered as a section header unless the string is a set
         of two or more hyphens (e.g., ``---``), in which case it will be rendered
         as a divider.
@@ -330,7 +331,7 @@ def nav_menu(
 
     See Also
     -------
-    * ~shiny.ui.nav
+    * ~shiny.ui.nav_panel
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
     * ~shiny.ui.navset_bar
@@ -345,7 +346,7 @@ def nav_menu(
 
     Example
     -------
-    See :func:`~shiny.ui.nav`
+    See :func:`~shiny.ui.nav_panel`
     """
     if value is None:
         value = str(title)
@@ -413,7 +414,7 @@ def navset_tab(
     Parameters
     ----------
     *args
-        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+        A collection of nav items (e.g., :func:`shiny.ui.nav_panel`).
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -428,7 +429,7 @@ def navset_tab(
 
     See Also
     --------
-    * ~shiny.ui.nav
+    * ~shiny.ui.nav_panel
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
@@ -443,7 +444,7 @@ def navset_tab(
 
     Example
     -------
-    See :func:`~shiny.ui.nav`
+    See :func:`~shiny.ui.nav_panel`
     """
 
     return NavSet(
@@ -469,7 +470,7 @@ def navset_pill(
     Parameters
     ----------
     *args
-        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+        A collection of nav items (e.g., :func:`shiny.ui.nav_panel`).
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -483,7 +484,7 @@ def navset_pill(
 
     See Also
     --------
-    * ~shiny.ui.nav
+    * ~shiny.ui.nav_panel
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
@@ -498,7 +499,7 @@ def navset_pill(
 
     Example
     -------
-    See :func:`~shiny.ui.nav`
+    See :func:`~shiny.ui.nav_panel`
     """
 
     return NavSet(
@@ -524,7 +525,7 @@ def navset_underline(
     Parameters
     ----------
     *args
-        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+        A collection of nav items (e.g., :func:`shiny.ui.nav_panel`).
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -538,7 +539,7 @@ def navset_underline(
 
     See Also
     --------
-    * ~shiny.ui.nav
+    * ~shiny.ui.nav_panel
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
@@ -553,7 +554,7 @@ def navset_underline(
 
     Example
     -------
-    See :func:`~shiny.ui.nav`
+    See :func:`~shiny.ui.nav_panel`
     """
     return NavSet(
         *args,
@@ -579,7 +580,7 @@ def navset_hidden(
     Parameters
     ----------
     *args
-        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+        A collection of nav items (e.g., :func:`shiny.ui.nav_panel`).
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -593,7 +594,7 @@ def navset_hidden(
 
     See Also
     --------
-    * ~shiny.ui.nav
+    * ~shiny.ui.nav_panel
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
@@ -692,7 +693,7 @@ def navset_card_tab(
     Parameters
     ----------
     *args
-        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+        A collection of nav items (e.g., :func:`shiny.ui.nav_panel`).
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -725,7 +726,7 @@ def navset_card_tab(
 
     See Also
     --------
-    * ~shiny.ui.nav
+    * ~shiny.ui.nav_panel
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
@@ -740,7 +741,7 @@ def navset_card_tab(
 
     Example
     -------
-    See :func:`~shiny.ui.nav`
+    See :func:`~shiny.ui.nav_panel`
     """
 
     return NavSetCard(
@@ -772,7 +773,7 @@ def navset_card_pill(
     Parameters
     ----------
     *args
-        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+        A collection of nav items (e.g., :func:`shiny.ui.nav_panel`).
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -780,7 +781,7 @@ def navset_card_pill(
         Choose a particular nav item to select by default value (should match it's
         ``value``).
     sidebar
-        A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav` page.
+        A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav_panel` page.
     header
         UI to display above the selected content.
     footer
@@ -790,7 +791,7 @@ def navset_card_pill(
 
     See Also
     --------
-    * ~shiny.ui.nav
+    * ~shiny.ui.nav_panel
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
@@ -805,7 +806,7 @@ def navset_card_pill(
 
     Example
     -------
-    See :func:`~shiny.ui.nav`
+    See :func:`~shiny.ui.nav_panel`
     """
 
     return NavSetCard(
@@ -837,7 +838,7 @@ def navset_card_underline(
     Parameters
     ----------
     *args
-        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+        A collection of nav items (e.g., :func:`shiny.ui.nav_panel`).
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -845,7 +846,7 @@ def navset_card_underline(
         Choose a particular nav item to select by default value (should match it's
         ``value``).
     sidebar
-        A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav` page.
+        A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav_panel` page.
     header
         UI to display above the selected content.
     footer
@@ -855,7 +856,7 @@ def navset_card_underline(
 
     See Also
     --------
-    * ~shiny.ui.nav
+    * ~shiny.ui.nav_panel
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
@@ -870,7 +871,7 @@ def navset_card_underline(
 
     Example
     -------
-    See :func:`~shiny.ui.nav`
+    See :func:`~shiny.ui.nav_panel`
     """
     return NavSetCard(
         *args,
@@ -934,7 +935,7 @@ def navset_pill_list(
     Parameters
     ----------
     *args
-        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+        A collection of nav items (e.g., :func:`shiny.ui.nav_panel`).
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -952,7 +953,7 @@ def navset_pill_list(
 
     See Also
     --------
-    * ~shiny.ui.nav
+    * ~shiny.ui.nav_panel
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
@@ -967,7 +968,7 @@ def navset_pill_list(
 
     Example
     -------
-    See :func:`~shiny.ui.nav`
+    See :func:`~shiny.ui.nav_panel`
     """
 
     return NavSetPillList(
@@ -1181,7 +1182,7 @@ def navset_bar(
     Parameters
     ----------
     *args
-        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+        A collection of nav items (e.g., :func:`shiny.ui.nav_panel`).
     title
         Title to display in the navbar.
     id
@@ -1191,7 +1192,7 @@ def navset_bar(
         Choose a particular nav item to select by default value (should match it's
         ``value``).
     sidebar
-        A :class:`~shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav` page.
+        A :class:`~shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav_panel` page.
     fillable
         Whether or not to allow fill items to grow/shrink to fit the browser window. If
         `True`, all `nav()` pages are fillable. A character vector, matching the value
@@ -1231,7 +1232,7 @@ def navset_bar(
     See Also
     --------
     * ~shiny.ui.page_navbar
-    * ~shiny.ui.nav
+    * ~shiny.ui.nav_panel
     * ~shiny.ui.nav_menu
     * ~shiny.ui.nav_control
     * ~shiny.ui.nav_spacer
@@ -1246,7 +1247,7 @@ def navset_bar(
 
     Example
     -------
-    See :func:`~shiny.ui.nav`.
+    See :func:`~shiny.ui.nav_panel`.
     """
 
     # If args contains any lists, flatten them into args.
@@ -1394,4 +1395,25 @@ def navset_tab_card(
         selected=selected,
         header=header,
         footer=footer,
+    )
+
+
+# Deprecated 2023-12-07
+def nav(
+    title: TagChild,
+    *args: TagChild,
+    value: Optional[str] = None,
+    icon: TagChild = None,
+) -> NavPanel:
+    """Deprecated. Please use `nav_panel()` instead of `nav()`."""
+    warn_deprecated(
+        "`nav()` is deprecated. "
+        "This method will be removed in a future version, "
+        "please use :func:`~shiny.ui.nav_panel` instead."
+    )
+    return nav_panel(
+        title,
+        *args,
+        value=value,
+        icon=icon,
     )

@@ -8,7 +8,7 @@ from shiny import Inputs, Outputs, Session, module, render, ui
 
 @module.ui
 def training_ui():
-    return ui.nav(
+    return ui.nav_panel(
         "Training Dashboard",
         ui.layout_columns(
             ui.card(
@@ -49,7 +49,7 @@ def training_server(
 
 @module.ui
 def data_view_ui():
-    return ui.nav(
+    return ui.nav_panel(
         "View Data",
         ui.layout_columns(
             ui.value_box(
