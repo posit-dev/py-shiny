@@ -29,7 +29,7 @@ with layout.div(id="shell"):
 with layout.column(width=6):
     # check height is below 300px - bounding box
     with layout.navset_card(id="express_navset_card_tab", type="tab"):
-        with layout.nav(title="Two"):
+        with layout.nav_panel(title="Two"):
             ...
 
 
@@ -41,7 +41,7 @@ with layout.column(width=6):
                 ("div", layout.div),
                 ("span", layout.span),
             ]:
-                with layout.nav(title=fn_txt):
+                with layout.nav_panel(title=fn_txt):
                     for i in range(3):
                         with fn():
                             ui.HTML(f"{fn_txt} {i}")
