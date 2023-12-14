@@ -42,7 +42,7 @@ class RecallContextManager(Generic[R]):
             # would already have been filtered out by _display_decorator_function_def().
             # This is only for other kinds of expressions, the kind which would normally
             # be printed at the console.
-            if value is not None:
+            if value not in [None, ...]:
                 self.args.append(value)
 
     def __enter__(self) -> None:
