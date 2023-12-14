@@ -42,7 +42,7 @@ from .fill import as_fill_item, as_fillable_container
 # -----------------------------------------------------------------------------
 # Navigation items
 # -----------------------------------------------------------------------------
-class Nav:
+class NavPanel:
     nav: Tag
     content: Optional[Tag]
 
@@ -103,7 +103,7 @@ def nav_panel(
     *args: TagChild,
     value: Optional[str] = None,
     icon: TagChild = None,
-) -> Nav:
+) -> NavPanel:
     """
     Create a nav item pointing to some internal content.
 
@@ -151,13 +151,13 @@ def nav_panel(
         role="tab",
     )
 
-    return Nav(
+    return NavPanel(
         tags.li(link),
         div(*args, class_="tab-pane", role="tabpanel", data_value=value),
     )
 
 
-def nav_control(*args: TagChild) -> Nav:
+def nav_control(*args: TagChild) -> NavPanel:
     """
     Place a control in the navigation container.
 
@@ -185,10 +185,10 @@ def nav_control(*args: TagChild) -> Nav:
     -------
     See :func:`~shiny.ui.nav_panel`
     """
-    return Nav(tags.li(*args))
+    return NavPanel(tags.li(*args))
 
 
-def nav_spacer() -> Nav:
+def nav_spacer() -> NavPanel:
     """
     Create space between nav items.
 
@@ -212,7 +212,7 @@ def nav_spacer() -> Nav:
     See :func:`~shiny.ui.nav_panel`
     """
 
-    return Nav(tags.li(components_dependency(), class_="bslib-nav-spacer"))
+    return NavPanel(tags.li(components_dependency(), class_="bslib-nav-spacer"))
 
 
 class NavMenu:
@@ -291,12 +291,12 @@ def menu_string_as_nav(x: str | NavSetArg) -> NavSetArg:
     else:
         nav = tags.li(x, class_="dropdown-header")
 
-    return Nav(nav)
+    return NavPanel(nav)
 
 
 def nav_menu(
     title: TagChild,
-    *args: Nav | str,
+    *args: NavPanel | str,
     value: Optional[str] = None,
     icon: TagChild = None,
     align: Literal["left", "right"] = "left",
@@ -1404,7 +1404,7 @@ def nav(
     *args: TagChild,
     value: Optional[str] = None,
     icon: TagChild = None,
-) -> Nav:
+) -> NavPanel:
     """Deprecated. Please use `nav_panel()` instead of `nav()`."""
     warn_deprecated(
         "`nav()` is deprecated. "
