@@ -1,12 +1,17 @@
 # import griffe.docstrings.dataclasses as ds
+import json
 from typing import Union
 
 import griffe.dataclasses as dc
 import griffe.docstrings.dataclasses as ds
 import griffe.expressions as exp
 from _renderer import Renderer
+from griffe.collections import LinesCollection, ModulesCollection
+from griffe.docstrings import Parser
+from griffe.loader import GriffeLoader
 from plum import dispatch
 from quartodoc import MdRenderer, get_object, preview
+from quartodoc.parsers import get_parser_defaults
 from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
 
 from shiny import reactive, render, ui
@@ -25,6 +30,18 @@ from shiny import reactive, render, ui
 # obj = get_object("shiny.ui.input_action_button")
 # # preview(obj)
 # preview(obj.parameters)
+
+
+loader = GriffeLoader(
+    docstring_parser=Parser("numpy"),
+    docstring_options=get_parser_defaults("numpy"),
+    modules_collection=ModulesCollection(),
+    lines_collection=LinesCollection(),
+)
+
+
+def fast_get_object(path: str):
+    return get_object(path, loader=loader)
 
 
 class BarretFnSig(Renderer):
@@ -112,9 +129,9 @@ class BarretFnSig(Renderer):
 
 
 # TODO-barret; Add sentance in template to describe what the Relevant Function section is: "To learn more about details about the functions covered here, visit the reference links below."
-# print(BarretFnSig().render(get_object("shiny:ui.input_action_button")))
-# print(BarretFnSig().render(get_object("shiny:ui.input_action_button")))
-# preview(get_object("shiny:ui"))
+# print(BarretFnSig().render(fast_get_object("shiny:ui.input_action_button")))
+# print(BarretFnSig().render(fast_get_object("shiny:ui.input_action_button")))
+# preview(fast_get_object("shiny:ui"))
 # print("")
 
 
@@ -124,17 +141,30 @@ for mod_name, mod in [
     ("render", render),
     ("reactive", reactive),
 ]:
+    print(f"## Collecting signatures: {mod_name}")
     ret[mod_name] = {}
     for key, f_obj in mod.__dict__.items():
         if key.startswith("_") or key in ("AnimationOptions",):
             continue
         if not callable(f_obj):
             continue
-        print(f"## {mod_name}.{key}")
-        signature = BarretFnSig().render(get_object(f"shiny:{mod_name}.{key}"))
+        # print(f"## {mod_name}.{key}")
+        signature = BarretFnSig().render(fast_get_object(f"shiny:{mod_name}.{key}"))
         ret[mod_name][key] = signature
-preview(ret)
+# preview(ret)
 
+print("## Saving signatures")
+
+
+with open("objects.json") as infile:
+    objects_content = json.load(infile)
+objects_content["signatures"] = ret
+# Serializing json
+json_object = json.dumps(objects_content)
+
+# Writing to sample.json
+with open("objects.json", "w") as outfile:
+    outfile.write(json_object)
 # TODO-barret; Include link to GitHub source
 # print(BarretFnSig().render(f_obj.annotation))
 # print(preview(f_obj))
