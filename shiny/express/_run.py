@@ -10,7 +10,8 @@ from htmltools import Tag, TagList
 
 from .._app import App
 from ..session import Inputs, Outputs, Session
-from ._recall_context import RecallContextManager, TopLevelRecallContextManager
+from ._page import page_auto_cm
+from ._recall_context import RecallContextManager
 from .display_decorator._func_displayhook import _display_decorator_function_def
 from .display_decorator._node_transformers import (
     DisplayFuncsTransformer,
@@ -136,7 +137,7 @@ _top_level_recall_context_manager_has_been_replaced = False
 def reset_top_level_recall_context_manager():
     global _top_level_recall_context_manager
     global _top_level_recall_context_manager_has_been_replaced
-    _top_level_recall_context_manager = TopLevelRecallContextManager()
+    _top_level_recall_context_manager = page_auto_cm()
     _top_level_recall_context_manager_has_been_replaced = False
 
 
@@ -162,7 +163,7 @@ def replace_top_level_recall_context_manager(
         The RecallContextManager to replace the previous one.
     force
         If `False` (the default) and the top level RecallContextManager has already been
-        replaced, return with no chnages. If `True`, this will aways replace.
+        replaced, return with no changes. If `True`, this will aways replace.
 
     Returns
     -------
