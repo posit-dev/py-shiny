@@ -51,11 +51,11 @@ def verify_express_page_default(page: Page) -> None:
     nav_html.set("span")
     nav_html.expect_content("span 0span 1span 2")
     navset_card_tab = LayoutNavsetTab(page, "express_navset_card_tab")
-    navset_card_tab.expect_content("Ellipsis")
+    navset_card_tab.expect_content("")
     # since it is a custom table we can't use the OutputTable controls
     shell_text = page.locator("#shell").inner_text().strip()
     assert shell_text == (
-        "'R1C1R1'\n'R1C1R2-R1C1R1'\n'R1C1R2-R1C1R2'\n'R1C1R2-R1C2'\n'R1C2'"
+        "R1C1R1\nR1C1R2-R1C1R1\nR1C1R2-R1C1R2\nR1C1R2-R1C2\nR1C2"
     ), "Locator contents don't match expected text"
 
 
@@ -79,7 +79,7 @@ def verify_express_page_fluid(page: Page) -> None:
 
 def verify_express_page_sidebar(page: Page) -> None:
     sidebar = Sidebar(page, "sidebar")
-    sidebar.expect_text("SidebarTitle 'Sidebar Content'")
+    sidebar.expect_text("SidebarTitle Sidebar Content")
     output_txt = OutputTextVerbatim(page, "txt")
     output_txt.expect_value("50")
     compare_annotations(ui.sidebar, layout.sidebar)
