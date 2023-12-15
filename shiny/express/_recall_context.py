@@ -5,11 +5,11 @@ import sys
 from types import TracebackType
 from typing import Callable, Generic, Mapping, Optional, Type, TypeVar, cast
 
-from htmltools import HTML, Tag, Tagifiable, TagList, tags
+from htmltools import Tag, wrap_displayhook_handler
 
 from .. import ui
 from .._typing_extensions import ParamSpec
-from ..ui._navs import Nav, NavMenu
+from ..ui._navs import NavMenu, NavPanel
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -32,23 +32,10 @@ class RecallContextManager(Generic[R]):
         self.args: list[object] = list(args)
         self.kwargs: dict[str, object] = dict(kwargs)
 
-    def append_arg(self, value: object):
-        if isinstance(value, (Tag, TagList, Tagifiable)):
-            self.args.append(value)
-        elif hasattr(value, "_repr_html_"):
-            self.args.append(HTML(value._repr_html_()))  # pyright: ignore
-        else:
-            # We should NOT end up here for objects that were `def`ed, because they
-            # would already have been filtered out by _display_decorator_function_def().
-            # This is only for other kinds of expressions, the kind which would normally
-            # be printed at the console.
-            if value is not None:
-                self.args.append(tags.pre(repr(value)))
-
     def __enter__(self) -> None:
         self._prev_displayhook = sys.displayhook
         # Collect each of the "printed" values in the args list.
-        sys.displayhook = self.append_arg
+        sys.displayhook = wrap_displayhook_handler(self.args.append)
 
     def __exit__(
         self,
@@ -79,7 +66,7 @@ class TopLevelRecallContextManager(RecallContextManager[Tag]):
     @property
     def fn(self) -> Callable[..., Tag]:
         # Presence of a top-level nav items and/or sidebar determines the page function
-        navs = [x for x in self.args if isinstance(x, (Nav, NavMenu))]
+        navs = [x for x in self.args if isinstance(x, (NavPanel, NavMenu))]
         sidebars = [x for x in self.args if isinstance(x, ui.Sidebar)]
 
         nNavs = len(navs)
