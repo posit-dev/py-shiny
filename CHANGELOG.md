@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added `ui.layout_columns()` for creating responsive column-forward layouts based on Bootstrap's 12-column CSS Grid. (#856)
 * Added support for Shiny Express apps, which has a simpler, easier-to-use API than the existing API (Shiny Core). Please note that this API is still experimental and may change. (#767)
 
+* `shiny.render.RenderFunction` and `shiny.render.RenderFunctionAsync` have been removed. They were deprecated in v0.6.0. Instead, please use `shiny.render.output_transformer`. (TODO-barret)
+
 ### Bug fixes
 
 * Fix support for `shiny.ui.accordion(multiple=)` (#799).
