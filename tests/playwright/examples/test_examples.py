@@ -50,6 +50,23 @@ app_allow_shiny_errors: typing.Dict[
         "RuntimeWarning: divide by zero encountered",
         "UserWarning: This figure includes Axes that are not compatible with tight_layout",
     ],
+    # Remove after shinywidgets accepts `resolve_value_fn()` PR
+    "airmass": [
+        "ShinyDeprecationWarning: `resolve_value_fn()`",
+        "value = await resolve_value_fn(_fn)",
+    ],
+    "multi-page": [
+        "ShinyDeprecationWarning: `resolve_value_fn()`",
+        "value = await resolve_value_fn(_fn)",
+    ],
+    "model-score": [
+        "ShinyDeprecationWarning: `resolve_value_fn()`",
+        "value = await resolve_value_fn(_fn)",
+    ],
+    "data_frame": [
+        "ShinyDeprecationWarning: `resolve_value_fn()`",
+        "value = await resolve_value_fn(_fn)",
+    ],
 }
 app_allow_external_errors: typing.List[str] = [
     # plotnine: https://github.com/has2k1/plotnine/issues/713
