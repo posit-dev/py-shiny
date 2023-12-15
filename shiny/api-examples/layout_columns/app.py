@@ -9,7 +9,7 @@ app_ui = ui.page_fluid(
         card_loss,
         card_acc,
         card_feat,
-        col_widths=(5, 7, 12),
+        col_widths={"sm": (5, 7, 12)},
         # row_heights=(2, 3),
         # height="700px",
     ),
