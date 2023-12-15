@@ -1,0 +1,74 @@
+/* Override the default styles since they would make the spinner fade as well */
+.recalculating {
+  --_shiny-spinner-color: var(
+    --shiny-spinner-color,
+    var(--bs-primary, #007bc2)
+  );
+  --_shiny-spinner-svg: var(--shiny-spinner-svg, url(tadpole-spinner.svg));
+  --_shiny-spinner-size: var(--shiny-spinner-size, 80px);
+  --_shiny-spinner-easing: var(--shiny-spinner-easing, ease-in-out);
+  --_shiny-spinner-speed: var(--shiny-spinner-speed, 2s);
+
+  position: relative;
+  /*
+    This turns off the built-in greying out from the shiny styles. We replace it in
+    favor of a blur effect that doesn't also effect the spinner.
+  */
+  opacity: 1;
+}
+
+.recalculating::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: shiny-loading-spinner-fade-in 0.5s ease-in-out;
+}
+
+.recalculating::after {
+  content: "";
+  background: var(--_shiny-spinner-color, gray);
+  -webkit-mask: var(--_shiny-spinner-svg) center/contain no-repeat;
+  mask: var(--_shiny-spinner-svg) center/contain no-repeat;
+  width: var(--_shiny-spinner-size);
+  height: var(--_shiny-spinner-size);
+  position: absolute;
+  inset: calc(50% - var(--_shiny-spinner-size) / 2);
+  animation-composition: add;
+  animation: shiny-loading-spinner-grow calc(var(--_shiny-spinner-speed) / 4)
+      var(--_shiny-spinner-easing),
+    shiny-loading-spinner-spin var(--_shiny-spinner-speed)
+      var(--_shiny-spinner-easing) infinite;
+  z-index: 1001;
+}
+
+@keyframes shiny-loading-spinner-fade-in {
+  from {
+    -webkit-backdrop-filter: blur(0px);
+    backdrop-filter: blur(0px);
+  }
+  to {
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+  }
+}
+
+@keyframes shiny-loading-spinner-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shiny-loading-spinner-grow {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}

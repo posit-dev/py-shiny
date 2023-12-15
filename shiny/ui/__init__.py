@@ -139,6 +139,8 @@ from ._valuebox import (
 )
 from ._tooltip import tooltip
 
+from ._loading_spinners import use_loading_spinners
+
 
 from htmltools import (
     TagList,
@@ -346,4 +348,6 @@ __all__ = (
     "strong",
     "em",
     "hr",
+    # Items related to loading spinners
+    "use_loading_spinners",
 )
