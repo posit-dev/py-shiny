@@ -45,7 +45,6 @@ from .transformer import (
     ValueFn,
     is_async_callable,
     output_transformer,
-    resolve_value_fn,
 )
 
 # ======================================================================================
@@ -58,7 +57,7 @@ async def TextTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[str | None],
 ) -> str | None:
-    value = await resolve_value_fn(_fn)
+    value = await _fn()
     if value is None:
         return None
     return str(value)
@@ -156,7 +155,7 @@ async def PlotTransformer(
     )
 
     # Call the user function to get the plot object.
-    x = await resolve_value_fn(_fn)
+    x = await _fn()
 
     # Note that x might be None; it could be a matplotlib.pyplot
 
@@ -308,7 +307,7 @@ async def ImageTransformer(
     *,
     delete_file: bool = False,
 ) -> ImgData | None:
-    res = await resolve_value_fn(_fn)
+    res = await _fn()
     if res is None:
         return None
 
@@ -396,7 +395,7 @@ async def TableTransformer(
     border: int = 0,
     **kwargs: object,
 ) -> RenderedDeps | None:
-    x = await resolve_value_fn(_fn)
+    x = await _fn()
 
     if x is None:
         return None
@@ -518,7 +517,7 @@ async def UiTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[TagChild],
 ) -> RenderedDeps | None:
-    ui = await resolve_value_fn(_fn)
+    ui = await _fn()
     if ui is None:
         return None
 

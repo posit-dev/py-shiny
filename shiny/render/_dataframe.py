@@ -16,12 +16,7 @@ from typing import (
 from .. import ui
 from .._docstring import add_example
 from ._dataframe_unsafe import serialize_numpy_dtypes
-from .transformer import (
-    TransformerMetadata,
-    ValueFn,
-    output_transformer,
-    resolve_value_fn,
-)
+from .transformer import TransformerMetadata, ValueFn, output_transformer
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -230,7 +225,7 @@ async def DataFrameTransformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[DataFrameResult | None],
 ) -> object | None:
-    x = await resolve_value_fn(_fn)
+    x = await _fn()
     if x is None:
         return None
 
