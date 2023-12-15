@@ -1019,10 +1019,7 @@ class Outputs:
 
                 message: dict[str, Optional[OT]] = {}
                 try:
-                    if _utils.is_async_callable(renderer_fn):
-                        message[output_name] = await renderer_fn()
-                    else:
-                        message[output_name] = renderer_fn()
+                    message[output_name] = await renderer_fn()
                 except SilentCancelOutputException:
                     return
                 except SilentException:
