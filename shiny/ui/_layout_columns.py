@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, Iterable, Literal, Optional, TypeVar, Union, cast
+from typing import Dict, Iterable, Literal, Optional, Tuple, TypeVar, Union, cast
 from warnings import warn
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css
@@ -15,7 +15,7 @@ from .fill import as_fill_item
 T = TypeVar("T")
 
 
-Breakpoints = Literal["xs", "sm", "md", "lg", "xl", "xxl"]
+Breakpoint = Literal["xs", "sm", "md", "lg", "xl", "xxl"]
 """
 References
 ----------
@@ -23,13 +23,12 @@ References
 """
 
 
-def bs_breakpoints() -> Iterable[Breakpoints]:
-    return ("xs", "sm", "md", "lg", "xl", "xxl")
+breakpoints: Tuple[Breakpoint, ...] = ("xs", "sm", "md", "lg", "xl", "xxl")
 
 
-BreakpointsSoft = Dict[Breakpoints, Union[Iterable[T], T, None]]
-BreakpointsOptional = Dict[Breakpoints, Union[Iterable[T], None]]
-BreakpointsComplete = Dict[Breakpoints, Iterable[T]]
+BreakpointsSoft = Dict[Breakpoint, Union[Iterable[T], T, None]]
+BreakpointsOptional = Dict[Breakpoint, Union[Iterable[T], None]]
+BreakpointsComplete = Dict[Breakpoint, Iterable[T]]
 BreakpointsUser = Union[BreakpointsSoft[T], Iterable[T], T, None]
 
 
@@ -158,9 +157,9 @@ def as_col_spec(
     col_widths_items = cast(BreakpointsSoft[int], col_widths).items()
 
     for brk, value in col_widths_items:
-        if brk not in bs_breakpoints():
+        if brk not in breakpoints:
             raise ValueError(
-                f"Breakpoint '{brk}' is not valid. Valid breakpoints are: {', '.join(bs_breakpoints())}'."
+                f"Breakpoint '{brk}' is not valid. Valid breakpoints are: {', '.join(breakpoints)}'."
             )
 
         if value is None:
@@ -176,7 +175,7 @@ def as_col_spec(
 
 
 def validate_col_width(
-    x: Iterable[int] | int, n_kids: int, break_name: Breakpoints
+    x: Iterable[int] | int, n_kids: int, break_name: Breakpoint
 ) -> Iterable[int]:
     if isinstance(x, int):
         y = [x]
