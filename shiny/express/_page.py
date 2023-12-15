@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import cast
-
 from htmltools import Tag
 
 from .. import ui
@@ -21,7 +19,6 @@ def page_auto(*args: object) -> Tag:
     nNavs = len(navs)
     nSidebars = len(sidebars)
 
-    # TODO: How should this work with .set_page_*()/.set_title()?
     if nNavs == 0:
         if nSidebars == 0:
             return _DEFAULT_PAGE_FUNCTION(
@@ -35,25 +32,10 @@ def page_auto(*args: object) -> Tag:
                 *new_args  # pyright: ignore[reportGeneralTypeIssues]
             )
 
-        # If multiple sidebars(), wrap them in layout_sidebar()
-        # TODO:
-        # 1. Maybe this logic be should handled by non-top-level ctx managers?
-        #    That is, if we're not in a top-level ctx manager, automatically wrap
-        #    Sidebar() into layout_sidebar()?
-        # 2. Provide a way to exit the layout.sidebar() context? Maybe '---'?
         if nSidebars > 1:
-            new_args: object = []
-            sidebar_idx = [i for i, x in enumerate(args) if isinstance(x, ui.Sidebar)]
-            new_args.append(*args[0 : sidebar_idx[0]])
-            for i, x in enumerate(sidebar_idx):
-                j = sidebar_idx[i + 1] if i < len(sidebar_idx) - 1 else len(args)
-                s = ui.layout_sidebar(
-                    cast(ui.Sidebar, args[x]),
-                    *self.args[x + 1 : j],  # type: ignore
-                )
-                new_args.append(s)
-
-            return _DEFAULT_PAGE_FUNCTION(*new_args)
+            raise NotImplementedError(
+                "Multiple top-level sidebars not allowed. Did you meant to wrap each one in layout_sidebar()?"
+            )
 
     # At least one nav
     else:
