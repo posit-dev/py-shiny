@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shiny.render.RenderFunction` and `shiny.render.RenderFunctionAsync` have been removed. They were deprecated in v0.6.0. Instead, please use `shiny.render.output_transformer`. (TODO-barret)
 
+* `shiny.render.transformer.resolve_value_fn` is no longer needed as the value function given to the output transformer is now always an asynchronous function. This method has been deprecated. Please change your code from `value = await resolve_value_fn(_fn)` to `value = await _fn()`. (TODO-barret)
+
+* `shiny.render.OutputRendererSync` and `shiny.render.OutputRendererAsync` helper classes have been removed in favor of an updated `shiny.render.OutputRenderer` class. Now, the app's output value function will be transformed into an asynchronous function for simplified, consistent execution behavior. (TODO-barret)
+
 ### Bug fixes
 
 * Fix support for `shiny.ui.accordion(multiple=)` (#799).
