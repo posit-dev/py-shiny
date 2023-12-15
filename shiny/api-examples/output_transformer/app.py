@@ -3,12 +3,7 @@ from __future__ import annotations
 from typing import Literal, overload
 
 from shiny import App, Inputs, Outputs, Session, ui
-from shiny.render.transformer import (
-    TransformerMetadata,
-    ValueFn,
-    output_transformer,
-    resolve_value_fn,
-)
+from shiny.render.transformer import TransformerMetadata, ValueFn, output_transformer
 
 #######
 # Package authors can create their own output transformer methods by leveraging
@@ -32,12 +27,7 @@ async def CapitalizeTransformer(
     to: Literal["upper", "lower"] = "upper",
 ) -> str | None:
     # Get the value
-    value = await resolve_value_fn(_fn)
-    # Equvalent to:
-    # if shiny.render.transformer.is_async_callable(_fn):
-    #     value = await _fn()
-    # else:
-    #     value = _fn()
+    value = await _fn()
 
     # Render nothing if `value` is `None`
     if value is None:
