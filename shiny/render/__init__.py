@@ -11,10 +11,6 @@ from ._dataframe import (
     DataTable,
     data_frame,
 )
-from ._deprecated import (  # noqa: F401
-    RenderFunction,  # pyright: ignore[reportUnusedImport]
-    RenderFunctionAsync,  # pyright: ignore[reportUnusedImport]
-)
 from ._display import (
     display,
 )

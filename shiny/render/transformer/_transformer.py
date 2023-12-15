@@ -800,6 +800,3 @@ async def resolve_value_fn(value_fn: ValueFn[IT]) -> IT:
         # To avoid duplicate work just for a typeguard, we cast the function
         value_fn = cast(ValueFnSync[IT], value_fn)
         return value_fn()
-
-
-R = TypeVar("R")
