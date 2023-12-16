@@ -10,7 +10,6 @@ from htmltools import Tag, TagList
 
 from .._app import App
 from ..session import Inputs, Outputs, Session
-from ._page import page_auto_cm
 from ._recall_context import RecallContextManager
 from .display_decorator._func_displayhook import _display_decorator_function_def
 from .display_decorator._node_transformers import (
@@ -131,64 +130,14 @@ def run_express(file: Path) -> Tag | TagList:
 
 
 _top_level_recall_context_manager: RecallContextManager[Tag]
-_top_level_recall_context_manager_has_been_replaced = False
 
 
 def reset_top_level_recall_context_manager():
+    from ._page import page_auto_cm
+
     global _top_level_recall_context_manager
-    global _top_level_recall_context_manager_has_been_replaced
     _top_level_recall_context_manager = page_auto_cm()
-    _top_level_recall_context_manager_has_been_replaced = False
 
 
 def get_top_level_recall_context_manager():
     return _top_level_recall_context_manager
-
-
-def replace_top_level_recall_context_manager(
-    cm: RecallContextManager[Tag],
-    force: bool = False,
-) -> RecallContextManager[Tag]:
-    """
-    Replace the current top level RecallContextManager with another one.
-
-    This transfers the `args` and `kwargs` from the previous RecallContextManager to the
-    new one. Normally it will only have an effect the first time it's run; it only
-    replace the previous one if has not already been replaced. To override this
-    behavior, this use `force=True`.
-
-    Parameters
-    ----------
-    cm
-        The RecallContextManager to replace the previous one.
-    force
-        If `False` (the default) and the top level RecallContextManager has already been
-        replaced, return with no changes. If `True`, this will aways replace.
-
-    Returns
-    -------
-    :
-        The previous top level RecallContextManager.
-    """
-    global _top_level_recall_context_manager
-    global _top_level_recall_context_manager_has_been_replaced
-
-    old_cm = _top_level_recall_context_manager
-
-    if force is False and _top_level_recall_context_manager_has_been_replaced:
-        return old_cm
-
-    args = old_cm.args.copy()
-    args.extend(cm.args)
-    cm.args = args
-
-    kwargs = old_cm.kwargs.copy()
-    kwargs.update(cm.kwargs)
-    cm.kwargs = kwargs
-
-    old_cm.__exit__(BaseException, None, None)
-    cm.__enter__()
-    _top_level_recall_context_manager = cm
-    _top_level_recall_context_manager_has_been_replaced = True
-
-    return old_cm
