@@ -102,9 +102,9 @@ class App:
     def __init__(
         self,
         ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
-        server: Optional[
-            Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None]
-        ],
+        server: Callable[[Inputs], None]
+        | Callable[[Inputs, Outputs, Session], None]
+        | None,
         *,
         static_assets: Optional["str" | "os.PathLike[str]" | dict[str, Path]] = None,
         debug: bool = False,
