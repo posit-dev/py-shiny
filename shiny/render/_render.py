@@ -40,12 +40,7 @@ from ._try_render_plot import (
     try_render_pil,
     try_render_plotnine,
 )
-from .transformer import (
-    TransformerMetadata,
-    ValueFn,
-    is_async_callable,
-    output_transformer,
-)
+from .transformer import TransformerMetadata, ValueFn, output_transformer
 
 # ======================================================================================
 # RenderText
@@ -118,7 +113,7 @@ async def PlotTransformer(
     height: float | None | MISSING_TYPE = MISSING,
     **kwargs: object,
 ) -> ImgData | None:
-    is_userfn_async = is_async_callable(_fn)
+    is_userfn_async = _meta.value_fn_is_async
     name = _meta.name
     session = _meta.session
 
@@ -293,7 +288,13 @@ def plot(
     ~shiny.ui.output_plot ~shiny.render.image
     """
     return PlotTransformer(
-        _fn, PlotTransformer.params(alt=alt, width=width, height=height, **kwargs)
+        _fn,
+        PlotTransformer.params(
+            alt=alt,
+            width=width,
+            height=height,
+            **kwargs,
+        ),
     )
 
 
