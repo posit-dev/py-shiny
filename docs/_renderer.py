@@ -16,6 +16,8 @@ from quartodoc import MdRenderer
 from quartodoc.pandoc.blocks import DefinitionList
 from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
 
+# from quartodoc.ast import preview
+
 SHINY_PATH = Path(files("shiny").joinpath())
 
 SHINYLIVE_CODE_TEMPLATE = """
@@ -142,9 +144,37 @@ class Renderer(MdRenderer):
         return f"[{el.name}](`{el.canonical_path}`)"
 
     @dispatch
-    def summarize(self, el: dc.Object | dc.Alias):
-        result = super().summarize(el)
-        return html.escape(result)
+    # Overload of `quartodoc.renderers.md_renderer` to fix bug where the descriptions
+    # are cut off and never display other places. Fixing by always displaying the
+    # documentation.
+    def summarize(self, obj: Union[dc.Object, dc.Alias]) -> str:
+        # get high-level description
+        doc = obj.docstring
+        if doc is None:
+            docstring_parts = []
+        else:
+            docstring_parts = doc.parsed
+
+        if len(docstring_parts) and isinstance(
+            docstring_parts[0], ds.DocstringSectionText
+        ):
+            description = docstring_parts[0].value
+
+            # ## Approach: Always return the full description!
+            return description
+
+            # ## Alternative: Add ellipsis if the lines are cut off
+
+            # # If the description is more than one line, only show the first line.
+            # # Add `...` to indicate the description was truncated
+            # parts = description.split("\n")
+            # short = parts[0]
+            # if len(parts) > 1:
+            #     short += "&hellip;"
+
+            # return short
+
+        return ""
 
     # Consolidate the parameter type info into a single column
     @dispatch
