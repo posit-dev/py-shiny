@@ -1,4 +1,4 @@
-.PHONY: help clean clean-test clean-pyc clean-build help lint test e2e e2e-examples
+.PHONY: help clean clean-test clean-pyc clean-build help lint test playwright-shiny playwright-examples playwright-deploys install-trcli install-playwright
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -83,31 +83,34 @@ test: ## run tests quickly with the default Python
 	python3 tests/pytest/asyncio_prevent.py
 	pytest
 
-# Default `FILE` to `e2e` if not specified
-FILE:=tests/e2e
+# Default `SUB_FILE` to empty
+SUB_FILE:=
 
-DEPLOYS_FILE:=tests/deploys
+DEPLOYS_FILE:=tests/playwright/deploys
 
-playwright-install:
+install-playwright:
 	playwright install --with-deps
 
-trcli-install:
+install-trcli:
 	which trcli || pip install trcli
 
-e2e: playwright-install ## end-to-end tests with playwright
-	pytest $(FILE) -m "not examples and not integrationtest"
+install-rsconnect: ## install the main version of rsconnect till pypi version supports shiny express
+	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
 
-e2e-examples: playwright-install ## end-to-end tests on examples with playwright
-	pytest $(FILE) -m "examples"
+playwright-shiny: install-playwright ## end-to-end tests with playwright
+	pytest tests/playwright/shiny/$(SUB_FILE)
 
-e2e-deploys: playwright-install ## end-to-end tests on deploys with playwright
-	pytest $(DEPLOYS_FILE) -s -m "integrationtest"
+playwright-examples: install-playwright ## end-to-end tests on examples with playwright
+	pytest tests/playwright/examples
 
-e2e-junit: playwright-install trcli-install ## end-to-end tests with playwright and generate junit report
-	pytest $(FILE) --junitxml=report.xml
+playwright-deploys: install-playwright install-rsconnect ## end-to-end tests on deploys with playwright
+	pytest tests/playwright/deploys/$(SUB_FILE) -s
+
+testrail-junit: install-playwright install-trcli ## end-to-end tests with playwright and generate junit report
+	pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml
 
 coverage: ## check combined code coverage (must run e2e last)
-	pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/e2e/ -m "not examples and not integrationtest"
+	pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/playwright/shiny/$(SUB_FILE)
 	coverage html
 	$(BROWSER) htmlcov/index.html
 

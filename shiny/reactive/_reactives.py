@@ -762,7 +762,7 @@ def event(
 
     Parameters
     ----------
-    args
+    *args
         One or more callables that represent the event; most likely this will be a
         reactive input value linked to a :func:`~shiny.ui.input_action_button` or
         similar (e.g., ``input.click``), but it can also be a (reactive or non-reactive)
