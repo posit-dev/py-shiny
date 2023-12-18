@@ -26,7 +26,7 @@ def req(*args: T, cancel_output: bool = False) -> T | None:
     This is a convenient shorthand for throwing :func:`~shiny.types.SilentException` /
     :func:`~shiny.types.SilentCancelOutputException` if any of the arguments are falsy.
 
-    The term "falsy" generally indicates that a value is considered False when
+    The term "falsy" generally indicates that a value is considered `False` when
     encountered in a logical context. We use the term a little loosely here; our usage
     tries to match the intuitive notions of "Is this value missing or available?", or
     "Has the user provided an answer?", or in the case of action buttons, "Has the
