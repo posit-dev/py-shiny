@@ -13,6 +13,7 @@ from griffe import expressions as exp
 from griffe.docstrings import dataclasses as ds
 from plum import dispatch
 from quartodoc import MdRenderer
+from quartodoc.pandoc.blocks import DefinitionList
 from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
 
 SHINY_PATH = Path(files("shiny").joinpath())
@@ -128,17 +129,17 @@ class Renderer(MdRenderer):
         return ""
 
     @dispatch
-    def render_annotation(self, el: exp.Expression):
-        # an expression is essentially a list[exp.Name | str]
+    def render_annotation(self, el: exp.Expr):
+        # an expression is essentially a list[exp.ExprName | str]
         # e.g. Optional[TagList]
         #   -> [Name(source="Optional", ...), "[", Name(...), "]"]
 
         return "".join(map(self.render_annotation, el))
 
     @dispatch
-    def render_annotation(self, el: exp.Name):
+    def render_annotation(self, el: exp.ExprName):
         # e.g. Name(source="Optional", full="typing.Optional")
-        return f"[{el.source}](`{el.full}`)"
+        return f"[{el.name}](`{el.canonical_path}`)"
 
     @dispatch
     def summarize(self, el: dc.Object | dc.Alias):
@@ -163,9 +164,9 @@ class Renderer(MdRenderer):
     @dispatch
     def render(self, el: ds.DocstringSectionParameters):
         rows = list(map(self.render, el.value))
-        header = ["Parameter", "Description"]
+        # rows is a list of tuples of (<parameter>, <description>)
 
-        return render_definition_list(rows)
+        return str(DefinitionList(rows))
 
     @dispatch
     def signature(self, el: dc.Function, source: Optional[dc.Alias] = None):
@@ -181,15 +182,6 @@ class Renderer(MdRenderer):
 
         # Not a __call__ Function, so render as normal.
         return super().signature(el, source)
-
-
-def render_definition_list(rows: list[tuple[str, str]]) -> str:
-    def indent_newlines(s: str) -> str:
-        return s.replace("\n", "\n    ")
-
-    out = [f"{param}\n\n:   {indent_newlines(desc)}" for param, desc in rows]
-
-    return "\n\n".join(out)
 
 
 def html_escape_except_backticks(s: str) -> str:
