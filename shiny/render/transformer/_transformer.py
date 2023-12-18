@@ -1,12 +1,5 @@
 from __future__ import annotations
 
-# TODO-barret; √ - Allow for transformer to be async
-# TODO-barret; √ Remove OutputRendererSync/Async ?
-# TODO-barret; √ Use single `await run()` method in session.py
-# TODO-barret; √ remove await docs caveats for output renderer / transformer
-# TODO-barret; display works with async?
-# TODO-barret; plot stuff with seaborn
-# TODO-barret; Convey the original function was async or not?
 # TODO-barret; POST-merge; shinywidgets should not call `resolve_value_fn`
 
 # TODO-barret; Simplified renderer with no param support
@@ -89,6 +82,7 @@ class TransformerMetadata(NamedTuple):
 
     session: Session
     name: str
+    value_fn_is_async: bool
 
 
 # Motivation for using this class:
@@ -275,6 +269,7 @@ class OutputRenderer(Generic[OT]):
         # Checking if a function is async has a 180+ns overhead (barret's machine)
         # -> It is faster to always call an async function than to always check if it is async
         # Always being async simplifies the execution
+        self._value_fn_is_async = is_async_callable(value_fn)
         self._value_fn: ValueFn[IT] = wrap_async(value_fn)
         self._transformer = transform_fn
         self._params = params
@@ -316,6 +311,7 @@ class OutputRenderer(Generic[OT]):
         return TransformerMetadata(
             session=self._session,
             name=self._name,
+            value_fn_is_async=self._value_fn_is_async,
         )
 
     async def _run(self) -> OT:
