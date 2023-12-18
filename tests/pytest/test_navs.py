@@ -21,9 +21,9 @@ def private_seed_n(n: int = 0) -> Generator[None, None, None]:
 
 
 def test_nav_markup():
-    a = ui.nav("a", "a")
-    b = ui.nav("b", "b")
-    c = ui.nav("c", "c")
+    a = ui.nav_panel("a", "a")
+    b = ui.nav_panel("b", "b")
+    c = ui.nav_panel("c", "c")
     menu = ui.nav_menu(
         "Menu",
         c,

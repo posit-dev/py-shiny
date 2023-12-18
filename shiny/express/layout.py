@@ -7,6 +7,7 @@ from htmltools import Tag, TagAttrValue, TagChild, TagList
 
 from .. import ui
 from ..types import MISSING, MISSING_TYPE
+from ..ui._layout_columns import BreakpointsUser
 from ..ui.css import CssUnit
 from . import _run
 from ._recall_context import RecallContextManager, wrap_recall_context_manager
@@ -19,14 +20,15 @@ __all__ = (
     "pre",
     "sidebar",
     "layout_column_wrap",
+    "layout_columns",
     "column",
     "row",
     "card",
     "accordion",
     "accordion_panel",
-    "navset_tab",
-    "navset_card_tab",
-    "nav",
+    "navset",
+    "navset_card",
+    "nav_panel",
     "page_fluid",
     "page_fixed",
     "page_fillable",
@@ -80,10 +82,12 @@ def sidebar(
     position
         Where the sidebar should appear relative to the main content.
     open
-        The initial state of the sidebar. It can be `"desktop"` (the sidebar starts open
-        on desktop screen, closed on mobile), `"open"` or `True` (the sidebar starts
-        open), `"closed"` or `False` (the sidebar starts closed), or `"always"` or
-        `None` (the sidebar is always open and cannot be closed).
+        The initial state of the sidebar.
+
+        * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
+        * `"open"` or `True`: the sidebar starts open
+        * `"closed"` or `False`: the sidebar starts closed
+        * `"always"` or `None`: the sidebar is always open and cannot be closed
 
         In :func:`~shiny.ui.update_sidebar`, `open` indicates the desired state of the
         sidebar. Note that :func:`~shiny.ui.update_sidebar` can only open or close the
@@ -112,12 +116,15 @@ def sidebar(
     padding
         Padding within the sidebar itself. This can be a numeric vector (which will be
         interpreted as pixels) or a character vector with valid CSS lengths. `padding`
-        may be one to four values. If one, then that value will be used for all four
-        sides. If two, then the first value will be used for the top and bottom, while
-        the second value will be used for left and right. If three, then the first will
-        be used for top, the second will be left and right, and the third will be
-        bottom. If four, then the values will be interpreted as top, right, bottom, and
-        left respectively.
+        may be one to four values.
+
+        * If a single value, then that value will be used for all four sides.
+        * If two, then the first value will be used for the top and bottom, while
+          the second value will be used for left and right.
+        * If three values, then the first will be used for top, the second will be left
+          and right, and the third will be bottom.
+        * If four, then the values will be interpreted as top, right, bottom, and left
+          respectively.
 
     Returns
     -------
@@ -166,21 +173,26 @@ def layout_column_wrap(
     Parameters
     ----------
     width
-        The desired width of each card. It can be a (unit-less) number between 0 and 1
-        and should be specified as `1/num`, where `num` represents the number of desired
-        columns. It can be a CSS length unit representing either the minimum (when
-        `fixed_width=False`) or fixed width (`fixed_width=True`). It can also be `None`,
-        which allows power users to set the `grid-template-columns` CSS property
-        manually, either via a `style` attribute or a CSS stylesheet. If missing, a
-        value of `200px` will be used.
+        The desired width of each card. It can be one of the following:
+
+        * A (unit-less) number between 0 and 1, specified as `1/num`, where `num`
+          represents the number of desired columns.
+        * A CSS length unit representing either the minimum (when `fixed_width=False`)
+          or fixed width (`fixed_width=True`).
+        * `None`, which allows power users to set the `grid-template-columns` CSS
+          property manually, either via a `style` attribute or a CSS stylesheet.
+        * If missing, a value of `200px` will be used.
     fixed_width
         When `width` is greater than 1 or is a CSS length unit, e.g. `"200px"`,
         `fixed_width` indicates whether that `width` value represents the absolute size
         of each column (`fixed_width=TRUE`) or the minimum size of a column
-        (`fixed_width=FALSE`). When `fixed_width=FALSE`, new columns are added to a row
-        when `width` space is available and columns will never exceed the container or
-        viewport size. When `fixed_width=TRUE`, all columns will be exactly `width`
-        wide, which may result in columns overflowing the parent container.
+        (`fixed_width=FALSE`).
+
+        When `fixed_width=FALSE`, new columns are added to a row when `width` space is
+        available and columns will never exceed the container or viewport size.
+
+        When `fixed_width=TRUE`, all columns will be exactly `width` wide, which may
+        result in columns overflowing the parent container.
     heights_equal
         If `"all"` (the default), every card in every row of the grid will have the same
         height. If `"row"`, then every card in _each_ row of the grid will have the same
@@ -206,6 +218,11 @@ def layout_column_wrap(
     -------
     :
         A :class:`~htmltools.Tag` element.
+
+    See Also
+    --------
+    * :func:`~shiny.express.layout.layout_columns` for laying out elements into a
+      responsive 12-column grid.
     """
     return RecallContextManager(
         ui.layout_column_wrap,
@@ -225,6 +242,110 @@ def layout_column_wrap(
     )
 
 
+def layout_columns(
+    *,
+    col_widths: BreakpointsUser[int] = None,
+    row_heights: BreakpointsUser[CssUnit] = None,
+    fill: bool = True,
+    fillable: bool = True,
+    gap: Optional[CssUnit] = None,
+    class_: Optional[str] = None,
+    height: Optional[CssUnit] = None,
+    **kwargs: TagAttrValue,
+):
+    """
+    Create responsive, column-based grid layouts, based on a 12-column grid.
+
+    Parameters
+    ----------
+    col_widths
+        The widths of the columns, possibly at different breakpoints. Can be one of the
+        following:
+
+        * `None` (the default): Automatically determines a sensible number of columns
+          based on the number of children given to the layout.
+        * A list or tuple of integers between 1 and 12, where each element represents
+          the number of columns for the relevant UI element. Column widths are recycled
+          to extend the values in `col_widths` to match the actual number of items in
+          the layout, and children are wrapped onto the next row when a row exceeds 12
+          column units. For example, `col_widths=(4, 8, 12)` allocates 4 columns to the
+          first element, 8 columns to the second element, and 12 columns to the third
+          element (which wraps to the next row). Negative values are also allowed, and
+          are treated as empty columns. For example, `col_widths=(-2, 8, -2)` would
+          allocate 8 columns to an element (with 2 empty columns on either side).
+        * A dictionary of column widths at different breakpoints. The keys should be
+          one of `"xs"`, `"sm"`, `"md"`, `"lg"`, `"xl"`, or `"xxl"`, and the values are
+          either of the above. For example, `col_widths={"sm": (3, 3, 6), "lg": (4)}`.
+
+    row_heights
+        The heights of the rows, possibly at different breakpoints. Can be one of the
+        following:
+
+        * A numeric vector, where each value represents the
+          [fractional unit](https://css-tricks.com/introduction-fr-css-unit/)
+          (`fr`) height of the relevant row. If there are more rows than values
+          provided, the pattern will be repeated. For example, `row_heights=(1, 2)`
+          allows even rows to take up twice as much space as odd rows.
+        * A list of numeric or CSS length units, where each value represents the height
+          of the relevant row. If more rows are needed than values provided, the pattern
+          will repeat. For example, `row_heights=["auto", 1]` allows the height of odd
+          rows to be driven my it's contents and even rows to be
+          [`1fr`](https://css-tricks.com/introduction-fr-css-unit/).
+        * A single string containing CSS length units. In this case, the value is
+          supplied directly to `grid-auto-rows`.
+        * A dictionary of row heights at different breakpoints, where each key is a
+          breakpoint name (one of `"xs"`, `"sm"`, `"md"`, `"lg"`, `"xl"`, or `"xxl"`)
+          and where the values may be any of the above options.
+
+    fill
+        Whether or not to allow the layout to grow/shrink to fit a fillable container
+        with an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
+
+    fillable
+        Whether or not each element is wrapped in a fillable container.
+
+    gap
+        Any valid CSS unit to use for the gap between columns.
+
+    class_
+        CSS class(es) to apply to the containing element.
+
+    height
+        Any valid CSS unit to use for the height.
+
+    **kwargs
+        Additional attributes to apply to the containing element.
+
+    Returns
+    -------
+    :
+        An :class:`~htmltools.Tag` element.
+
+    See Also
+    --------
+    * :func:`~shiny.express.layout.layout_column_wrap` for laying out elements into a
+      uniform grid.
+
+    Reference
+    --------
+    * [Bootstrap CSS Grid](https://getbootstrap.com/docs/5.3/layout/grid/)
+    * [Bootstrap Breakpoints](https://getbootstrap.com/docs/5.3/layout/breakpoints/)
+    """
+    return RecallContextManager(
+        ui.layout_columns,
+        kwargs=dict(
+            col_widths=col_widths,
+            row_heights=row_heights,
+            fill=fill,
+            fillable=fillable,
+            gap=gap,
+            class_=class_,
+            height=height,
+            **kwargs,
+        ),
+    )
+
+
 def column(width: int, *, offset: int = 0, **kwargs: TagAttrValue):
     """
     Responsive row-column based layout
@@ -238,7 +359,7 @@ def column(width: int, *, offset: int = 0, **kwargs: TagAttrValue):
         The width of the column (an integer between 1 and 12).
     offset
         The number of columns to offset this column from the end of the previous column.
-    kwargs
+    **kwargs
         Attributes to place on the column tag.
 
     Returns
@@ -274,7 +395,7 @@ def row(**kwargs: TagAttrValue):
 
     Parameters
     ----------
-    kwargs
+    **kwargs
         Attributes to place on the row tag.
 
     Returns
@@ -453,20 +574,23 @@ def accordion_panel(
 # ======================================================================================
 
 
-def navset_tab(
+def navset(
     *,
+    type: Literal["underline", "pill", "tab"] = "underline",
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
     footer: TagChild = None,
 ):
     """
-    Render nav items as a tabset.
-
-    This function wraps :func:`~shiny.ui.navset_tab`.
+    Render a set of nav items
 
     Parameters
     ----------
+    *args
+        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+    type
+        The type of navset to render. Can be one of `"underline"`, `"pill"`, or `"tab"`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -478,8 +602,19 @@ def navset_tab(
     footer
         UI to display below the selected content.
     """
+
+    funcs = {
+        "underline": ui.navset_underline,
+        "pill": ui.navset_pill,
+        "tab": ui.navset_tab,
+    }
+
+    func = funcs.get(type, None)
+    if func is None:
+        raise ValueError(f"Invalid navset type: {type!r}")
+
     return RecallContextManager(
-        ui.navset_tab,
+        func,
         kwargs=dict(
             id=id,
             selected=selected,
@@ -489,8 +624,9 @@ def navset_tab(
     )
 
 
-def navset_card_tab(
+def navset_card(
     *,
+    type: Literal["underline", "pill", "tab"] = "underline",
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
@@ -499,12 +635,14 @@ def navset_card_tab(
     footer: TagChild = None,
 ):
     """
-    Render nav items as a tabset inside a card container.
-
-    This function wraps :func:`~shiny.ui.navset_card_tab`.
+    Render a set of nav items inside a card container.
 
     Parameters
     ----------
+    *args
+        A collection of nav items (e.g., :func:`shiny.ui.nav`).
+    type
+        The type of navset to render. Can be one of `"underline"`, `"pill"`, or `"tab"`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -512,31 +650,25 @@ def navset_card_tab(
         Choose a particular nav item to select by default value (should match it's
         ``value``).
     sidebar
-        A `Sidebar` component to display on every `nav()` page.
-    fillable
-        Whether or not to allow fill items to grow/shrink to fit the browser window. If
-        `True`, all `nav()` pages are fillable. A character vector, matching the value
-        of `nav()`s to be filled, may also be provided. Note that, if a `sidebar` is
-        provided, `fillable` makes the main content portion fillable.
-    gap
-        A CSS length unit defining the gap (i.e., spacing) between elements provided to
-        `*args`.
-    padding
-        Padding to use for the body. This can be a numeric vector (which will be
-        interpreted as pixels) or a character vector with valid CSS lengths. The length
-        can be between one and four. If one, then that value will be used for all four
-        sides. If two, then the first value will be used for the top and bottom, while
-        the second value will be used for left and right. If three, then the first will
-        be used for top, the second will be left and right, and the third will be
-        bottom. If four, then the values will be interpreted as top, right, bottom, and
-        left respectively.
+        A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav` page.
     header
         UI to display above the selected content.
     footer
         UI to display below the selected content.
     """
+
+    funcs = {
+        "underline": ui.navset_card_underline,
+        "pill": ui.navset_card_pill,
+        "tab": ui.navset_card_tab,
+    }
+
+    func = funcs.get(type, None)
+    if func is None:
+        raise ValueError(f"Invalid navset type: {type!r}")
+
     return RecallContextManager(
-        ui.navset_card_tab,
+        func,
         kwargs=dict(
             id=id,
             selected=selected,
@@ -548,7 +680,7 @@ def navset_card_tab(
     )
 
 
-def nav(
+def nav_panel(
     title: TagChild,
     *,
     value: Optional[str] = None,
@@ -573,7 +705,7 @@ def nav(
         An icon to appear inline with the button/link.
     """
     return RecallContextManager(
-        ui.nav,
+        ui.nav_panel,
         args=(title,),
         kwargs=dict(
             value=value,
@@ -605,7 +737,7 @@ def page_fluid(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Attributes on the page level container.
 
     Returns
@@ -643,7 +775,7 @@ def page_fixed(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Attributes on the page level container.
 
     Returns
@@ -744,7 +876,7 @@ def page_sidebar(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Additional attributes passed to :func:`~shiny.ui.layout_sidebar`.
 
     Returns

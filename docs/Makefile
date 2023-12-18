@@ -46,7 +46,7 @@ deps: $(PYBIN)  ## Install build dependencies
 	$(PYBIN)/pip install pip --upgrade
 	$(PYBIN)/pip install -e ..[doc]
 
-quartodoc:  ## Build qmd files for API docs
+quartodoc: $(PYBIN) ## Build qmd files for API docs
 	. $(PYBIN)/activate \
 	  && quartodoc interlinks \
 	  && quartodoc build --config _quartodoc.yml --verbose
