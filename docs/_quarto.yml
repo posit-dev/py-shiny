@@ -5,6 +5,7 @@ project:
 format:
   html:
     toc: true
+    css: shiny-docs.css
 
 website:
   title: "Shiny for Python (dev version)"

@@ -13,6 +13,7 @@ from griffe import expressions as exp
 from griffe.docstrings import dataclasses as ds
 from plum import dispatch
 from quartodoc import MdRenderer
+from quartodoc.pandoc.blocks import DefinitionList
 from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
 
 SHINY_PATH = Path(files("shiny").joinpath())
@@ -128,17 +129,17 @@ class Renderer(MdRenderer):
         return ""
 
     @dispatch
-    def render_annotation(self, el: exp.Expression):
-        # an expression is essentially a list[exp.Name | str]
+    def render_annotation(self, el: exp.Expr):
+        # an expression is essentially a list[exp.ExprName | str]
         # e.g. Optional[TagList]
         #   -> [Name(source="Optional", ...), "[", Name(...), "]"]
 
         return "".join(map(self.render_annotation, el))
 
     @dispatch
-    def render_annotation(self, el: exp.Name):
+    def render_annotation(self, el: exp.ExprName):
         # e.g. Name(source="Optional", full="typing.Optional")
-        return f"[{el.source}](`{el.full}`)"
+        return f"[{el.name}](`{el.canonical_path}`)"
 
     @dispatch
     def summarize(self, el: dc.Object | dc.Alias):
@@ -158,15 +159,14 @@ class Renderer(MdRenderer):
         # Wrap everything in a code block to allow for links
         param = "<code>" + param + "</code>"
 
-        clean_desc = sanitize(el.description, allow_markdown=True)
-        return (param, clean_desc)
+        return (param, el.description)
 
     @dispatch
     def render(self, el: ds.DocstringSectionParameters):
         rows = list(map(self.render, el.value))
-        header = ["Parameter", "Description"]
+        # rows is a list of tuples of (<parameter>, <description>)
 
-        return self._render_table(rows, header)
+        return str(DefinitionList(rows))
 
     @dispatch
     def signature(self, el: dc.Function, source: Optional[dc.Alias] = None):
