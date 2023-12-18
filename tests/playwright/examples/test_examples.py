@@ -39,6 +39,13 @@ app_hard_wait: typing.Dict[str, int] = {
     "brownian": 250,
     "ui-func": 250,
 }
+resolve_value_fn_errors = [
+    "ShinyDeprecationWarning: `resolve_value_fn()`",
+    "value = await resolve_value_fn(_fn)",
+    "ShinyDeprecationWarning:",
+    "`resolve_value_fn()`",
+]
+express_warnings = ["Detected Shiny Express app. "]
 app_allow_shiny_errors: typing.Dict[
     str, typing.Union[Literal[True], typing.List[str]]
 ] = {
@@ -51,29 +58,12 @@ app_allow_shiny_errors: typing.Dict[
         "UserWarning: This figure includes Axes that are not compatible with tight_layout",
     ],
     # Remove after shinywidgets accepts `resolve_value_fn()` PR
-    "airmass": [
-        "ShinyDeprecationWarning: `resolve_value_fn()`",
-        "value = await resolve_value_fn(_fn)",
-    ],
-    "brownian": [
-        "ShinyDeprecationWarning: `resolve_value_fn()`",
-        "value = await resolve_value_fn(_fn)",
-    ],
-    "multi-page": [
-        "ShinyDeprecationWarning: `resolve_value_fn()`",
-        "value = await resolve_value_fn(_fn)",
-    ],
-    "model-score": [
-        "ShinyDeprecationWarning: `resolve_value_fn()`",
-        "value = await resolve_value_fn(_fn)",
-        "ShinyDeprecationWarning:",
-        "`resolve_value_fn()`",
-    ],
-    "data_frame": [
-        "ShinyDeprecationWarning: `resolve_value_fn()`",
-        "value = await resolve_value_fn(_fn)",
-    ],
-    "render_display": ["Detected Shiny Express app. "],
+    "airmass": [*resolve_value_fn_errors],
+    "brownian": [*resolve_value_fn_errors],
+    "multi-page": [*resolve_value_fn_errors],
+    "model-score": [*resolve_value_fn_errors],
+    "data_frame": [*resolve_value_fn_errors],
+    "render_display": [*express_warnings],
 }
 app_allow_external_errors: typing.List[str] = [
     # plotnine: https://github.com/has2k1/plotnine/issues/713
