@@ -65,7 +65,7 @@ def sidebar(
     padding: Optional[CssUnit | list[CssUnit]] = None,
 ) -> RecallContextManager[ui.Sidebar]:
     """
-    Sidebar element
+    Context manager for sidebar element
 
     Create a collapsing sidebar layout. This function wraps :func:`~shiny.ui.sidebar`.
 
@@ -150,7 +150,7 @@ def layout_sidebar(
     **kwargs: TagAttrValue,
 ):
     """
-    Sidebar layout
+    Context manager for sidebar layout
 
     Create a sidebar layout component which can be dropped inside any Shiny UI page
     method (e.g. :func:`~shiny.shiny.ui.page_fillable`) or :func:`~shiny.ui.card`
@@ -224,7 +224,7 @@ def layout_column_wrap(
     **kwargs: TagAttrValue,
 ):
     """
-    A grid-like, column-first layout
+    Context manager for a grid-like, column-first layout
 
     Wraps a 1d sequence of UI elements into a 2d grid. The number of columns (and rows)
     in the grid dependent on the column `width` as well as the size of the display.
@@ -299,7 +299,8 @@ def layout_columns(
     **kwargs: TagAttrValue,
 ):
     """
-    Create responsive, column-based grid layouts, based on a 12-column grid.
+    Context manager for responsive, column-based grid layouts, based on a 12-column
+    grid.
 
     Parameters
     ----------
@@ -318,19 +319,19 @@ def layout_columns(
           element (which wraps to the next row). Negative values are also allowed, and
           are treated as empty columns. For example, `col_widths=(-2, 8, -2)` would
           allocate 8 columns to an element (with 2 empty columns on either side).
-        * A dictionary of column widths at different breakpoints. The keys should be
-          one of `"xs"`, `"sm"`, `"md"`, `"lg"`, `"xl"`, or `"xxl"`, and the values are
+        * A dictionary of column widths at different breakpoints. The keys should be one
+          of `"xs"`, `"sm"`, `"md"`, `"lg"`, `"xl"`, or `"xxl"`, and the values are
           either of the above. For example, `col_widths={"sm": (3, 3, 6), "lg": (4)}`.
 
     row_heights
         The heights of the rows, possibly at different breakpoints. Can be one of the
         following:
 
-        * A numeric vector, where each value represents the
-          [fractional unit](https://css-tricks.com/introduction-fr-css-unit/)
-          (`fr`) height of the relevant row. If there are more rows than values
-          provided, the pattern will be repeated. For example, `row_heights=(1, 2)`
-          allows even rows to take up twice as much space as odd rows.
+        * A numeric vector, where each value represents the [fractional
+          unit](https://css-tricks.com/introduction-fr-css-unit/) (`fr`) height of the
+          relevant row. If there are more rows than values provided, the pattern will be
+          repeated. For example, `row_heights=(1, 2)` allows even rows to take up twice
+          as much space as odd rows.
         * A list of numeric or CSS length units, where each value represents the height
           of the relevant row. If more rows are needed than values provided, the pattern
           will repeat. For example, `row_heights=["auto", 1]` allows the height of odd
@@ -402,7 +403,7 @@ def card(
     **kwargs: TagAttrValue,
 ):
     """
-    A Bootstrap card component
+    Context manager for Bootstrap card component
 
     This function wraps :func:`~shiny.ui.card`. A general purpose container for grouping
     related UI elements together with a border and optional padding. To learn more about
@@ -457,7 +458,7 @@ def accordion(
     **kwargs: TagAttrValue,
 ):
     """
-    Create a vertically collapsing accordion.
+    Context manager for a vertically collapsing accordion.
 
     This function wraps :func:`~shiny.ui.accordion`.
 
@@ -508,7 +509,7 @@ def accordion_panel(
     **kwargs: TagAttrValue,
 ):
     """
-    Single accordion panel.
+    Context manager for single accordion panel.
 
     This function wraps :func:`~shiny.ui.accordion_panel`.
 
@@ -549,7 +550,7 @@ def navset(
     footer: TagChild = None,
 ):
     """
-    Render a set of nav items
+    Context manager for a set of nav items
 
     Parameters
     ----------
@@ -601,7 +602,7 @@ def navset_card(
     footer: TagChild = None,
 ):
     """
-    Render a set of nav items inside a card container.
+    Context manager for a set of nav items inside a card container.
 
     Parameters
     ----------
@@ -653,7 +654,7 @@ def nav_panel(
     icon: TagChild = None,
 ):
     """
-    Create a nav item pointing to some internal content.
+    Context manager for nav item pointing to some internal content.
 
     This function wraps :func:`~shiny.ui.nav`.
 
@@ -682,7 +683,7 @@ def nav_panel(
 
 def nav_control():
     """
-    Place a control in the navigation container.
+    Context manager for a control in the navigation container.
 
     This function wraps :func:`~shiny.ui.nav_control`.
 
@@ -702,7 +703,7 @@ def nav_menu(
     align: Literal["left", "right"] = "left",
 ):
     """
-    Create a menu of nav items.
+    Context manager for a menu of nav items.
 
     This function wraps :func:`~shiny.ui.nav_menu`.
 
@@ -756,6 +757,59 @@ def value_box(
     class_: Optional[str] = None,
     **kwargs: TagAttrValue,
 ):
+    """
+    Context manager for a value box
+
+    This function wraps :func:`~shiny.ui.value_box`.
+
+    An opinionated (:func:`~shiny.ui.card`-powered) box, designed for
+    displaying a `value` and `title`. Optionally, a `showcase` can provide for context
+    for what the `value` represents (for example, it could hold an icon, or even a
+    :func:`~shiny.ui.output_plot`).
+
+    Parameters
+    ----------
+    title,value
+        A string, number, or :class:`~htmltools.Tag` child to display as
+        the title or value of the value box. The `title` appears above the `value`.
+    showcase
+        A :class:`~htmltools.Tag` child to showcase (e.g., an icon, a
+        :func:`~shiny.ui.output_plot`, etc).
+    showcase_layout
+        One of `"left center"` (default), `"top right"` or `"bottom"`. Alternatively,
+        you can customize the showcase layout options with the
+        :func:`~shiny.ui.showcase_left_center`, :func:`~shiny.ui.showcase_top_right()`,
+        or :func:`~shiny.ui.showcase_bottom()` functions. Use the options functions when
+        you want to control the height or width of the showcase area.
+    theme
+        The name of a theme (e.g. `"primary"`, `"danger"`, `"purple"`, `"bg-green"`,
+        `"text-red"`) for the value box, or a theme constructed with
+        :func:`~shiny.ui.value_box_theme`. The theme names provide a convenient way to
+        use your app's Bootstrap theme colors as the foreground or background colors of
+        the value box. For more control, you can create your own theme with
+        :func:`~shiny.ui.value_box_theme` where you can pass foreground and background
+        colors directly. Bootstrap supported color themes: `"blue"`, `"purple"`,
+        `"pink"`, `"red"`, `"orange"`, `"yellow"`, `"green"`, `"teal"`, and `"cyan"`.
+        These colors can be used with `bg-NAME`, `text-NAME`, and
+        `bg-gradient-NAME1-NAME2` to change the background, foreground, or use a
+        background gradient respectively. If a `theme` string does not start with
+        `text-` or `bg-`, it will be auto prefixed with `bg-`.
+    full_screen
+        If `True`, an icon will appear when hovering over the card body. Clicking the
+        icon expands the card to fit viewport size.
+    height,max_height
+        Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
+        `full_screen`.
+    fill
+        Whether to allow the value box to grow/shrink to fit a fillable container with
+        an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
+    class_
+        Utility classes for customizing the appearance of the summary card. Use `bg-*`
+        and `text-*` classes (e.g, `"bg-danger"` and `"text-light"`) to customize the
+        background/foreground colors.
+    **kwargs
+        Additional attributes to pass to :func:`~shiny.ui.card`.
+    """
     return RecallContextManager(
         ui.value_box,
         args=(title, value),
@@ -780,7 +834,7 @@ def value_box(
 
 def panel_well(**kwargs: TagAttrValue):
     """
-    Create a well panel
+    Context manager for a well panel
 
     This function wraps :func:`~shiny.ui.panel_well`.
 
@@ -801,7 +855,7 @@ def panel_conditional(
     **kwargs: TagAttrValue,
 ):
     """
-    Create a conditional panel
+    Context manager for a conditional panel
 
     This function wraps :func:`~shiny.ui.panel_conditional`.
 
@@ -854,7 +908,7 @@ def panel_fixed(
     **kwargs: TagAttrValue,
 ):
     """
-    Create a panel of absolutely positioned content.
+    Context manager for a panel of absolutely positioned content.
 
     This function wraps :func:`~shiny.ui.panel_fixed`.
 
@@ -901,7 +955,7 @@ def panel_absolute(
     **kwargs: TagAttrValue,
 ):
     """
-    Create a panel of absolutely positioned content.
+    Context manager for a panel of absolutely positioned content.
 
     This function wraps :func:`~shiny.ui.panel_absolute`.
 
