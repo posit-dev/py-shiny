@@ -87,7 +87,7 @@ from ._insert import insert_ui, remove_ui
 from ._markdown import markdown
 from ._modal import modal_button, modal, modal_show, modal_remove
 from ._navs import (
-    nav,
+    nav_panel,
     nav_menu,
     nav_control,
     nav_spacer,
@@ -103,6 +103,7 @@ from ._navs import (
     # Deprecated
     navset_pill_card,
     navset_tab_card,
+    nav,
 )
 from ._notification import notification_show, notification_remove
 from ._output import (
@@ -269,7 +270,7 @@ __all__ = (
     "modal_show",
     "modal_remove",
     # _navs
-    "nav",
+    "nav_panel",
     "nav_menu",
     "nav_control",
     "nav_spacer",
@@ -285,6 +286,7 @@ __all__ = (
     # # Deprecated
     "navset_pill_card",
     "navset_tab_card",
+    "nav",
     # _notification
     "notification_show",
     "notification_remove",

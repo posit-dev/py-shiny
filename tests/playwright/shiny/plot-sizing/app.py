@@ -61,7 +61,7 @@ def plot_server(
 
 
 app_ui = ui.page_navbar(
-    ui.nav(
+    ui.nav_panel(
         "matplotlib",
         ui.p(
             "The following four plots should all be the same size. The last one should have larger text."
@@ -69,7 +69,7 @@ app_ui = ui.page_navbar(
         plot_ui("mpl"),
         value="mpl",
     ),
-    ui.nav(
+    ui.nav_panel(
         "seaborn",
         ui.p(
             "The following four plots should all be the same size. The last one should have larger text."
@@ -77,14 +77,14 @@ app_ui = ui.page_navbar(
         plot_ui("sns"),
         value="sns",
     ),
-    ui.nav(
+    ui.nav_panel(
         "plotnine",
         ui.p(
             "The following four plots should all be the same size. The last one should have larger text."
         ),
         plot_ui("plotnine"),
     ),
-    ui.nav(
+    ui.nav_panel(
         "pil",
         ui.p("The following three images should all be the same size."),
         plot_ui("pil"),

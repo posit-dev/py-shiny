@@ -12,12 +12,12 @@ app_ui = ui.page_fluid(
       """
     ),
     ui.navset_card_tab(
-        ui.nav(
+        ui.nav_panel(
             "Sync",
             ui.input_action_button("btn", "Click me"),
             ui.output_ui("btn_value"),
         ),
-        ui.nav(
+        ui.nav_panel(
             "Async",
             ui.input_action_button("btn_async", "Click me"),
             ui.output_ui("btn_async_value"),
