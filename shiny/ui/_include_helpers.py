@@ -34,19 +34,22 @@ def include_js(
     path
         A path to a JS file.
     method
-        One of the following: ``"link"``, ``"link_files"``, or ``"inline"``. ``"link"``
-        is the link to the CSS file via a :func:`~ui.tags.link` tag. This method is
-        generally preferrable to ``"inline"`` since it allows the browser to cache the
-        file. ``"link_files"`` is the same as ``"link"``, but also allow for the CSS
-        file to request other files within ``path``'s immediate parent directory (e.g.,
-        ``@import()`` another file). Note that this isn't the default behavior because
-        you should **be careful not to include files in the same directory as ``path``
-        that contain sensitive information**. A good general rule of thumb to follow is
-        to have ``path`` be located in a subdirectory of the app directory. For example,
-        if the app's source is located at ``/app/app.py``, then ``path`` should be
-        somewhere like ``/app/css/custom.css`` (and all the other relevant accompanying
-        'safe' files should be located under ``/app/css/``). And finally, ``"inline"``
-        is the inline the CSS file contents within a :func:`~ui.tags.style` tag.
+        One of the following:
+
+        * ``"link"`` is the link to the CSS file via a :func:`~ui.tags.link` tag. This
+          method is generally preferable to ``"inline"`` since it allows the browser to
+          cache the file.
+        * ``"link_files"`` is the same as ``"link"``, but also allow for the CSS file to
+          request other files within ``path``'s immediate parent directory (e.g.,
+          ``@import()`` another file). Note that this isn't the default behavior because
+          you should **be careful not to include files in the same directory as ``path``
+          that contain sensitive information**. A good general rule of thumb to follow
+          is to have ``path`` be located in a subdirectory of the app directory. For
+          example, if the app's source is located at ``/app/app.py``, then ``path``
+          should be somewhere like ``/app/css/custom.css`` (and all the other relevant
+          accompanying 'safe' files should be located under ``/app/css/``).
+        * ``"inline"`` is the inline the CSS file contents within a
+          :func:`~ui.tags.style` tag.
     **kwargs
         Attributes which are passed on to `~ui.tags.script`
 
@@ -105,19 +108,22 @@ def include_css(
     path
         A path to a CSS file.
     method
-        One of the following: ``"link"``, ``"link_files"``, or ``"inline"``. ``"link"``
-        is the link to the CSS file via a :func:`~ui.tags.link` tag. This method is
-        generally preferrable to ``"inline"`` since it allows the browser to cache the
-        file. ``"link_files"`` is the same as ``"link"``, but also allow for the CSS
-        file to request other files within ``path``'s immediate parent directory (e.g.,
-        ``@import()`` another file). Note that this isn't the default behavior because
-        you should **be careful not to include files in the same directory as ``path``
-        that contain sensitive information**. A good general rule of thumb to follow is
-        to have ``path`` be located in a subdirectory of the app directory. For example,
-        if the app's source is located at ``/app/app.py``, then ``path`` should be
-        somewhere like ``/app/css/custom.css`` (and all the other relevant accompanying
-        'safe' files should be located under ``/app/css/``). And finally, ``"inline"``
-        is the inline the CSS file contents within a :func:`~ui.tags.style` tag.
+        One of the following:
+
+        * ``"link"`` is the link to the CSS file via a :func:`~ui.tags.link` tag. This
+          method is generally preferable to ``"inline"`` since it allows the browser to
+          cache the file.
+        * ``"link_files"`` is the same as ``"link"``, but also allow for the CSS file to
+          request other files within ``path``'s immediate parent directory (e.g.,
+          ``@import()`` another file). Note that this isn't the default behavior because
+          you should **be careful not to include files in the same directory as ``path``
+          that contain sensitive information**. A good general rule of thumb to follow
+          is to have ``path`` be located in a subdirectory of the app directory. For
+          example, if the app's source is located at ``/app/app.py``, then ``path``
+          should be somewhere like ``/app/css/custom.css`` (and all the other relevant
+          accompanying 'safe' files should be located under ``/app/css/``).
+        * ``"inline"`` is the inline the CSS file contents within a
+          :func:`~ui.tags.style` tag.
 
 
     Returns
