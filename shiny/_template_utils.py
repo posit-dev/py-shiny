@@ -84,25 +84,24 @@ def download_and_extract_zip(url: str, temp_dir: Path):
 
 
 def use_git_template(url: str, mode: Optional[str] = None):
-    # Parse the URL to get the repository, branch, and subdirectory
+    # Github requires that we download the whole repository, so we need to
+    # download and unzip the repo, then navigate to the subdirectory.
+
     parsed_url = urlparse(url)
     path_parts = parsed_url.path.strip("/").split("/")
     repo_owner, repo_name, _, branch_name = path_parts[:4]
     subdirectory = "/".join(path_parts[4:])
 
-    # Construct the URL to download the repository as a zip file
     zip_url = f"https://github.com/{repo_owner}/{repo_name}/archive/refs/heads/{branch_name}.zip"
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir = Path(temp_dir)
         download_and_extract_zip(zip_url, temp_dir)
 
-        # Get the path to the subdirectory
         template_dir = os.path.join(
             temp_dir, f"{repo_name}-{branch_name}", subdirectory
         )
 
-        # Check if the subdirectory exists
         if not os.path.exists(template_dir):
             raise Exception(f"Template directory '{template_dir}' does not exist")
 
