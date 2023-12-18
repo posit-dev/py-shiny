@@ -6,8 +6,9 @@
     "dist",
     "typings",
     "sandbox",
+    "_dev",
     "docs",
-    "tests/deploys/apps",
+    "tests/playwright/deploys/apps",
     "shiny/templates"
   ],
   "typeCheckingMode": "strict",

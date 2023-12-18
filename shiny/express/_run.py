@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import logging
 import sys
 from pathlib import Path
 from typing import cast
@@ -19,7 +20,7 @@ from .display_decorator._node_transformers import (
 
 __all__ = ("wrap_express_app",)
 
-_DEFAULT_PAGE_FUNCTION = ui.page_fluid
+_DEFAULT_PAGE_FUNCTION = ui.page_fixed
 
 
 def wrap_express_app(file: Path) -> App:
@@ -35,6 +36,10 @@ def wrap_express_app(file: Path) -> App:
     :
         A `shiny.App` object.
     """
+    logging.getLogger("uvicorn.error").warning(
+        "Detected Shiny Express app. please note that Shiny Express is still in "
+        "development and the API is subject to change!"
+    )
 
     app_ui = run_express(file)
 
@@ -67,46 +72,64 @@ def run_express(file: Path) -> Tag | TagList:
         nonlocal ui_result
         ui_result = cast(Tag, x)
 
+    prev_displayhook = sys.displayhook
     sys.displayhook = set_result
 
-    reset_top_level_recall_context_manager()
-    get_top_level_recall_context_manager().__enter__()
+    try:
+        reset_top_level_recall_context_manager()
+        get_top_level_recall_context_manager().__enter__()
 
-    file_path = str(file.resolve())
+        file_path = str(file.resolve())
 
-    var_context: dict[str, object] = {
-        "__file__": file_path,
-        display_decorator_func_name: _display_decorator_function_def,
-    }
+        var_context: dict[str, object] = {
+            "__file__": file_path,
+            display_decorator_func_name: _display_decorator_function_def,
+        }
 
-    # Execute each top-level node in the AST
-    for node in tree.body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            exec(
-                compile(ast.Module([node], type_ignores=[]), file_path, "exec"),
-                var_context,
-                var_context,
+        # Execute each top-level node in the AST
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                exec(
+                    compile(ast.Module([node], type_ignores=[]), file_path, "exec"),
+                    var_context,
+                    var_context,
+                )
+            else:
+                exec(
+                    compile(
+                        ast.Interactive([node], type_ignores=[]), file_path, "single"
+                    ),
+                    var_context,
+                    var_context,
+                )
+
+        # When we called the function to get the top level recall context manager, we didn't
+        # store the result in a variable and re-use that variable here. That is intentional,
+        # because during the evaluation of the app code,
+        # replace_top_level_recall_context_manager() may have been called, which swaps
+        # out the context manager, and it's the new one that we need to exit here.
+        get_top_level_recall_context_manager().__exit__(None, None, None)
+
+        # If we're running as an Express app but there's also a top-level item named app
+        # which is a shiny.App object, the user probably made a mistake.
+        if "app" in var_context and isinstance(var_context["app"], App):
+            raise RuntimeError(
+                "This looks like a Shiny Express app because it imports shiny.express, "
+                "but it also looks like a Shiny Classic app because it has a variable named "
+                "`app` which is a shiny.App object. Remove either the shiny.express import, "
+                "or the app=App()."
             )
-        else:
-            exec(
-                compile(ast.Interactive([node], type_ignores=[]), file_path, "single"),
-                var_context,
-                var_context,
-            )
 
-    get_top_level_recall_context_manager().__exit__(None, None, None)
+        return ui_result
 
-    # If we're running as an Express app but there's also a top-level item named app
-    # which is a shiny.App object, the user probably made a mistake.
-    if "app" in var_context and isinstance(var_context["app"], App):
-        raise RuntimeError(
-            "This looks like a Shiny Express app because it imports shiny.express, "
-            "but it also looks like a Shiny Classic app because it has a variable named "
-            "`app` which is a shiny.App object. Remove either the shiny.express import, "
-            "or the app=App()."
-        )
+    except AttributeError as e:
+        # Need to catch AttributeError and convert to a different type of error, because
+        # uvicorn specifically catches AttributeErrors and prints an error message that
+        # is helpful for normal ASGI apps, but misleading in the case of Shiny Express.
+        raise RuntimeError(e) from e
 
-    return ui_result
+    finally:
+        sys.displayhook = prev_displayhook
 
 
 _top_level_recall_context_manager: RecallContextManager[Tag]

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Optional, cast
+from typing import Iterable, Literal, Optional, cast
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
@@ -43,21 +43,26 @@ def layout_column_wrap(
         :func:`~shiny.ui.card`). Named arguments become attributes on the
         containing :class:`~htmltools.Tag` element.
     width
-        The desired width of each card. It can be a (unit-less) number between 0 and 1
-        and should be specified as `1/num`, where `num` represents the number of desired
-        columns. It can be a CSS length unit representing either the minimum (when
-        `fixed_width=False`) or fixed width (`fixed_width=True`). It can also be `None`,
-        which allows power users to set the `grid-template-columns` CSS property
-        manually, either via a `style` attribute or a CSS stylesheet. If missing, a
-        value of `200px` will be used.
+        The desired width of each card. It can be one of the following:
+
+        * A (unit-less) number between 0 and 1, specified as `1/num`, where `num`
+          represents the number of desired columns.
+        * A CSS length unit representing either the minimum (when `fixed_width=False`)
+          or fixed width (`fixed_width=True`).
+        * `None`, which allows power users to set the `grid-template-columns` CSS
+          property manually, either via a `style` attribute or a CSS stylesheet.
+        * If missing, a value of `200px` will be used.
     fixed_width
         When `width` is greater than 1 or is a CSS length unit, e.g. `"200px"`,
         `fixed_width` indicates whether that `width` value represents the absolute size
         of each column (`fixed_width=TRUE`) or the minimum size of a column
-        (`fixed_width=FALSE`). When `fixed_width=FALSE`, new columns are added to a row
-        when `width` space is available and columns will never exceed the container or
-        viewport size. When `fixed_width=TRUE`, all columns will be exactly `width`
-        wide, which may result in columns overflowing the parent container.
+        (`fixed_width=FALSE`).
+
+        When `fixed_width=FALSE`, new columns are added to a row when `width` space is
+        available and columns will never exceed the container or viewport size.
+
+        When `fixed_width=TRUE`, all columns will be exactly `width` wide, which may
+        result in columns overflowing the parent container.
     heights_equal
         If `"all"` (the default), every card in every row of the grid will have the same
         height. If `"row"`, then every card in _each_ row of the grid will have the same
@@ -83,6 +88,11 @@ def layout_column_wrap(
     -------
     :
         A :class:`~htmltools.Tag` element.
+
+    See Also
+    --------
+    * :func:`~shiny.ui.layout_columns` for laying out elements into a responsive
+      12-column grid.
     """
     attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
 
@@ -123,14 +133,6 @@ def layout_column_wrap(
             else:
                 colspec = f"repeat(auto-fit, minmax(min({width_css_unit}, 100%), 1fr))"
 
-    # Use a new dict so that we don't mutate the original `children` dict
-    upgraded_children: list[TagChild] = []
-    for child_value in children:
-        child = div({"class": "bslib-gap-spacing"}, child_value)
-        if fillable:
-            child = as_fillable_container(child)
-        upgraded_children.append(child)
-
     tag_style_css = {
         "grid-template-columns": colspec,
         "grid-auto-rows": "1fr" if (heights_equal == "all") else None,
@@ -150,7 +152,7 @@ def layout_column_wrap(
             "style": css(**tag_style_css),
         },
         attrs,
-        *upgraded_children,
+        *wrap_all_in_gap_spaced_container(children, fillable),
         components_dependency(),
     )
     if fill:
@@ -165,3 +167,23 @@ def is_probably_a_css_unit(x: TagChild) -> bool:
     if isinstance_cssunit(x):
         return True
     return False
+
+
+def wrap_all_in_gap_spaced_container(
+    children: Iterable[TagChild],
+    fillable: bool = True,
+    class_: Optional[str] = None,
+) -> list[TagChild]:
+    item_class = "bslib-gap-spacing"
+    if class_ is not None:
+        item_class = f"{item_class} {class_}"
+
+    # Use a new list so that we don't mutate the original `children`
+    wrapped_children: list[TagChild] = []
+    for child_value in children:
+        child = div({"class": item_class}, child_value)
+        if fillable:
+            child = as_fillable_container(child)
+        wrapped_children.append(child)
+
+    return wrapped_children

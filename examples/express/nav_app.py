@@ -4,12 +4,12 @@ import numpy as np
 from shiny import render, ui
 from shiny.express import input, layout
 
-with layout.column(width=6):
-    with layout.navset_tab():
-        with layout.nav(title="One"):
+with layout.layout_column_wrap(width=1 / 2):
+    with layout.navset():
+        with layout.nav_panel(title="One"):
             ui.input_slider("n", "N", 1, 100, 50)
 
-        with layout.nav(title="Two"):
+        with layout.nav_panel(title="Two"):
 
             @render.plot
             def histogram():
@@ -17,13 +17,11 @@ with layout.column(width=6):
                 x = 100 + 15 * np.random.randn(437)
                 plt.hist(x, input.n(), density=True)
 
-
-with layout.column(width=6):
-    with layout.navset_card_tab():
-        with layout.nav(title="One"):
+    with layout.navset_card():
+        with layout.nav_panel(title="One"):
             ui.input_slider("n2", "N", 1, 100, 50)
 
-        with layout.nav(title="Two"):
+        with layout.nav_panel(title="Two"):
 
             @render.plot
             def histogram2():

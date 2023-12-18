@@ -111,3 +111,6 @@ docs/source/reference/
 .Rproj.user
 
 /.luarc.json
+
+# Developer scratch area
+_dev/

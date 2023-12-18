@@ -7,7 +7,7 @@ app_ui = ui.page_fluid(
     ui.layout_column_wrap(y, y, y, width=1 / 2),
     ui.hr(),
     # Has three columns when viewport is wider than 750px
-    ui.layout_column_wrap(y, y, y, width="250%"),
+    ui.layout_column_wrap(y, y, y, width="250px"),
 )
 
 
