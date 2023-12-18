@@ -115,7 +115,7 @@ def run_express(file: Path) -> Tag | TagList:
         if "app" in var_context and isinstance(var_context["app"], App):
             raise RuntimeError(
                 "This looks like a Shiny Express app because it imports shiny.express, "
-                "but it also looks like a Shiny Classic app because it has a variable named "
+                "but it also looks like a Shiny Core app because it has a variable named "
                 "`app` which is a shiny.App object. Remove either the shiny.express import, "
                 "or the app=App()."
             )

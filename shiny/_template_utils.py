@@ -121,8 +121,8 @@ def app_template_questions(
             raise ValueError("You must provide either template or template_dir")
         template_dir = Path(__file__).parent / "templates/app-templates" / template
 
-    # Not all apps will be implemented in both express and classic so we can
-    # avoid the questions if it's a classic only app.
+    # Not all apps will be implemented in both express and core so we can
+    # avoid the questions if it's a core only app.
     template_files = [file.name for file in template_dir.iterdir() if file.is_file()]
     express_available = "app-express.py" in template_files
 
@@ -131,10 +131,10 @@ def app_template_questions(
 
     if mode is None and express_available:
         mode = questionary.select(
-            "Would you like to use express or classic mode?",
+            "Would you like to use Shiny Express?",
             [
-                Choice("Classic", "classic"),
-                Choice("Express", "express"),
+                Choice("Yes", "express"),
+                Choice("No", "core"),
                 back_choice,
                 cancel_choice,
             ],
@@ -161,8 +161,8 @@ def app_template_questions(
     app_dir = copy_template_files(
         Path(appdir),
         template_dir=template_dir,
-        express_available=False,
-        mode=None,
+        express_available=express_available,
+        mode=mode,
     )
 
     print(f"Created Shiny app at {app_dir}")
@@ -276,10 +276,10 @@ def copy_template_files(
 
     if express_available:
         if mode == "express":
-            rename_unlink("app-express.py", "app-classic.py")
-        if mode == "classic":
-            rename_unlink("app-classic.py", "app-express.py")
-    if (app_dir / "app-classic.py").exists():
-        (app_dir / "app-classic.py").rename(app_dir / "app.py")
+            rename_unlink("app-express.py", "app-core.py")
+        if mode == "core":
+            rename_unlink("app-core.py", "app-express.py")
+    if (app_dir / "app-core.py").exists():
+        (app_dir / "app-core.py").rename(app_dir / "app.py")
 
     return app_dir

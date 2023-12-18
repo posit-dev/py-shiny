@@ -503,10 +503,10 @@ After creating the application, you use `shiny run`:
     "--mode",
     "-m",
     type=click.Choice(
-        ["classic", "express"],
+        ["core", "express"],
         case_sensitive=False,
     ),
-    help="Do you want to use a shiny express template or a classic template?",
+    help="Do you want to use a Shiny Express template or a Shiny Core template?",
 )
 @click.option(
     "--github",
