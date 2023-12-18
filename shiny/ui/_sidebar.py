@@ -512,7 +512,7 @@ def update_sidebar(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Update a sidebar's visibility
+    Update a sidebar's visibility.
 
     Set a :func:`~shiny.ui.sidebar` state during an active Shiny user session.
 

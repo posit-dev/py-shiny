@@ -260,7 +260,7 @@ def data_frame(
     _fn: DataFrameTransformer.ValueFn | None = None,
 ) -> DataFrameTransformer.OutputRenderer | DataFrameTransformer.OutputRendererDecorator:
     """
-    Reactively render a Pandas data frame object (or similar) as an interactive table or
+    Reactively render a pandas `DataFrame` object (or similar) as an interactive table or
     grid. Features fast virtualized scrolling, sorting, filtering, and row selection
     (single or multiple).
 

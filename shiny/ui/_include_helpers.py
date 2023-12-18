@@ -27,7 +27,7 @@ def include_js(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Include a JavaScript file
+    Include a JavaScript file.
 
     Parameters
     ----------
@@ -51,7 +51,7 @@ def include_js(
         * ``"inline"`` is the inline the CSS file contents within a
           :func:`~ui.tags.style` tag.
     **kwargs
-        Attributes which are passed on to `~ui.tags.script`
+        Attributes which are passed on to `~ui.tags.script`.
 
 
     Returns
@@ -62,9 +62,10 @@ def include_js(
     Note
     ----
     This places a :func:`~ui.tags.script` tag in the :func:`~ui.tags.body` of the
-    document. If instead, you want to place the tag in the :func:`~ui.tags.head` of the
-    document, you can wrap it in ``head_content`` (in this case, just make sure you're
-    aware that the DOM probably won't be ready when the script is executed).
+    document. If you want to place the tag in the :func:`~ui.tags.head` of the
+    document instead, you can wrap it in ``head_content`` (in this case, just
+    make sure you're aware that the DOM probably won't be ready when the script
+    is executed).
 
     ```{python}
     #| eval: false
@@ -101,7 +102,7 @@ def include_css(
     path: Path | str, *, method: Literal["link", "link_files", "inline"] = "link"
 ) -> Tag:
     """
-    Include a CSS file
+    Include a CSS file.
 
     Parameters
     ----------
