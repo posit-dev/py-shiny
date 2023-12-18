@@ -34,7 +34,7 @@ def insert_ui(
         placed in a ``$(s)`` jQuery call) which determines the element(s) relative to
         which you want to insert your UI object.
     where
-        Where your UI object should go relative to the selector: "beforeBegin": 
+        Where your UI object should go relative to the selector: "beforeBegin":
         before the selector element itself; "beforeEnd": just inside the selector
         element, after its last child (default); "afterEnd": after the selector
         element itself. Adapted from
