@@ -33,8 +33,8 @@ def layout_column_wrap(
     """
     A grid-like, column-first layout
 
-    Wraps a 1d sequence of UI elements into a 2d grid. The number of columns (and rows)
-    in the grid dependent on the column `width` as well as the size of the display.
+    Wraps a 1d sequence of UI elements into a 2d grid. The number of columns
+    (and rows) in the grid depends on the column width and the size of the display.
 
     Parameters
     ----------
@@ -53,7 +53,7 @@ def layout_column_wrap(
           property manually, either via a `style` attribute or a CSS stylesheet.
         * If missing, a value of `200px` will be used.
     fixed_width
-        When `width` is greater than 1 or is a CSS length unit, e.g. `"200px"`,
+        When `width` is greater than 1 or is a CSS length unit, e.g., `"200px"`,
         `fixed_width` indicates whether that `width` value represents the absolute size
         of each column (`fixed_width=TRUE`) or the minimum size of a column
         (`fixed_width=FALSE`).
