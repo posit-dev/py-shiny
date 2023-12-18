@@ -511,7 +511,7 @@ After creating the application, you use `shiny run`:
 @click.option(
     "--github",
     "-g",
-    help="The GitHub URL for the hosted template",
+    help="The GitHub URL of the template sub-directory. For example https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard",
 )
 def create(
     template: Optional[str] = None,
