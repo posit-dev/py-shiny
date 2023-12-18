@@ -55,6 +55,10 @@ app_allow_shiny_errors: typing.Dict[
         "ShinyDeprecationWarning: `resolve_value_fn()`",
         "value = await resolve_value_fn(_fn)",
     ],
+    "brownian": [
+        "ShinyDeprecationWarning: `resolve_value_fn()`",
+        "value = await resolve_value_fn(_fn)",
+    ],
     "multi-page": [
         "ShinyDeprecationWarning: `resolve_value_fn()`",
         "value = await resolve_value_fn(_fn)",
@@ -62,11 +66,14 @@ app_allow_shiny_errors: typing.Dict[
     "model-score": [
         "ShinyDeprecationWarning: `resolve_value_fn()`",
         "value = await resolve_value_fn(_fn)",
+        "ShinyDeprecationWarning:",
+        "`resolve_value_fn()`",
     ],
     "data_frame": [
         "ShinyDeprecationWarning: `resolve_value_fn()`",
         "value = await resolve_value_fn(_fn)",
     ],
+    "render_display": ["Detected Shiny Express app. "],
 }
 app_allow_external_errors: typing.List[str] = [
     # plotnine: https://github.com/has2k1/plotnine/issues/713
@@ -193,7 +200,9 @@ def test_examples(page: Page, ex_app_path: str) -> None:
             app_allowable_errors = []
 
         # If all errors are not allowed, check for unexpected errors
-        if isinstance(app_allowable_errors, list):
+        if app_allowable_errors is not True:
+            if isinstance(app_allowable_errors, str):
+                app_allowable_errors = [app_allowable_errors]
             app_allowable_errors = (
                 # Remove ^INFO lines
                 ["INFO:"]
@@ -207,7 +216,8 @@ def test_examples(page: Page, ex_app_path: str) -> None:
             error_lines = [
                 line
                 for line in error_lines
-                if not any([error_txt in line for error_txt in app_allowable_errors])
+                if len(line.strip()) > 0
+                and not any([error_txt in line for error_txt in app_allowable_errors])
             ]
             if len(error_lines) > 0:
                 print("\n".join(error_lines))
