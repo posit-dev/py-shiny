@@ -7,9 +7,10 @@ from typing import Any, Callable, Optional, Union, overload
 from htmltools import TagAttrValue, TagFunction, TagList, wrap_displayhook_handler
 
 from .. import ui as _ui
+from .._utils import run_coro_sync
 from ..session._utils import RenderedDeps
 from .transformer import (
-    OutputRendererSync,
+    OutputRenderer,
     TransformerMetadata,
     TransformerParams,
     ValueFn,
@@ -17,7 +18,7 @@ from .transformer import (
 )
 
 
-async def DisplayTransformer(
+async def display_transformer(
     _meta: TransformerMetadata,
     _fn: ValueFn[None],
     *,
@@ -31,10 +32,11 @@ async def DisplayTransformer(
     orig_displayhook = sys.displayhook
     sys.displayhook = wrap_displayhook_handler(results.append)
     try:
-        x = _fn()
-        if inspect.iscoroutine(x):
-            raise TypeError(
-                "@render.display does not support async functions. Use @render.ui instead."
+        # We check for sync function below. Therefore, we can run `run_coro_sync` here.
+        ret = run_coro_sync(_fn())
+        if ret is not None:
+            raise RuntimeError(
+                "@render.display functions should not return values. (`None` is allowed)."
             )
     finally:
         sys.displayhook = orig_displayhook
@@ -45,7 +47,7 @@ async def DisplayTransformer(
     )
 
 
-DisplayRenderer = OutputRendererSync[Union[RenderedDeps, None]]
+DisplayRenderer = OutputRenderer[Union[RenderedDeps, None]]
 
 
 @overload
@@ -105,16 +107,20 @@ def display(
         A decorator for a function whose top-level expressions will be displayed as UI.
     """
 
-    def impl(fn: ValueFnSync[None]) -> OutputRendererSync[RenderedDeps | None]:
+    def impl(fn: ValueFnSync[None]) -> OutputRenderer[RenderedDeps | None]:
+        if inspect.iscoroutine(fn):
+            raise TypeError(
+                "@render.display does not support async functions. Use @render.ui instead."
+            )
         from shiny.express.display_decorator._display_body import (
             display_body_unwrap_inplace,
         )
 
         fn = display_body_unwrap_inplace()(fn)
-        return OutputRendererSync(
-            fn,
-            DisplayTransformer,
-            TransformerParams(
+        return OutputRenderer(
+            value_fn=fn,
+            transform_fn=display_transformer,
+            params=TransformerParams(
                 inline=inline,
                 container=container,
                 fill=fill,
