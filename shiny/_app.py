@@ -5,7 +5,7 @@ import os
 import secrets
 from inspect import signature
 from pathlib import Path
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Optional, TypeGuard, cast
 
 import starlette.applications
 import starlette.exceptions
@@ -110,22 +110,15 @@ class App:
         debug: bool = False,
     ) -> None:
         if server is None:
-
-            def _server(input: Inputs, output: Outputs, session: Session):
-                pass
-
-            self.server = _server
+            self.server = noop_server
+        elif has_only_input(server):
+            self.server = ignore_output_session_server(server)
+        elif has_input_output_session(server):
+            self.server = server
         else:
-            if len(signature(server).parameters) == 1:
-
-                def _server(input: Inputs, output: Outputs, session: Session):
-                    # Only has 1 parameter, ignore output, session
-                    server(input)  # pyright: ignore[reportGeneralTypeIssues]
-
-                self.server = _server
-            else:
-                # Pass through all three arguments
-                self.server = server  # pyright: ignore[reportGeneralTypeIssues]
+            raise ValueError(
+                "`server` must have 1 (Inputs) or 3 parameters (Inputs, Outputs, Session)"
+            )
 
         self._debug: bool = debug
 
@@ -458,3 +451,29 @@ def create_static_asset_route(
             file_response_handler,
             name="shiny-app-static-assets-" + mount_point,
         )
+
+
+def noop_server(input: Inputs, output: Outputs, session: Session) -> None:
+    pass
+
+
+def ignore_output_session_server(
+    server: Callable[[Inputs], None]
+) -> Callable[[Inputs, Outputs, Session], None]:
+    def _server(input: Inputs, output: Outputs, session: Session):
+        # Only has 1 parameter, ignore output, session
+        server(input)
+
+    return _server
+
+
+def has_only_input(
+    x: Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None]
+) -> TypeGuard[Callable[[Inputs], None]]:
+    return len(signature(x).parameters) == 1
+
+
+def has_input_output_session(
+    x: Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None]
+) -> TypeGuard[Callable[[Inputs, Outputs, Session], None]]:
+    return len(signature(x).parameters) == 3
