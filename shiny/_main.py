@@ -511,7 +511,7 @@ After creating the application, you use `shiny run`:
 @click.option(
     "--github",
     "-g",
-    help="The github url for the hosted template",
+    help="The GitHub URL for the hosted template",
 )
 def create(
     template: Optional[str] = None,
