@@ -168,10 +168,12 @@ def sidebar(
     position
         Where the sidebar should appear relative to the main content.
     open
-        The initial state of the sidebar. It can be `"desktop"` (the sidebar starts open
-        on desktop screen, closed on mobile), `"open"` or `True` (the sidebar starts
-        open), `"closed"` or `False` (the sidebar starts closed), or `"always"` or
-        `None` (the sidebar is always open and cannot be closed).
+        The initial state of the sidebar.
+
+        * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
+        * `"open"` or `True`: the sidebar starts open
+        * `"closed"` or `False`: the sidebar starts closed
+        * `"always"` or `None`: the sidebar is always open and cannot be closed
 
         In :func:`~shiny.ui.update_sidebar`, `open` indicates the desired state of the
         sidebar. Note that :func:`~shiny.ui.update_sidebar` can only open or close the
@@ -200,12 +202,15 @@ def sidebar(
     padding
         Padding within the sidebar itself. This can be a numeric vector (which will be
         interpreted as pixels) or a character vector with valid CSS lengths. `padding`
-        may be one to four values. If one, then that value will be used for all four
-        sides. If two, then the first value will be used for the top and bottom, while
-        the second value will be used for left and right. If three, then the first will
-        be used for top, the second will be left and right, and the third will be
-        bottom. If four, then the values will be interpreted as top, right, bottom, and
-        left, respectively.
+        may be one to four values.
+
+        * If a single value, then that value will be used for all four sides.
+        * If two, then the first value will be used for the top and bottom, while
+          the second value will be used for left and right.
+        * If three values, then the first will be used for top, the second will be left
+          and right, and the third will be bottom.
+        * If four, then the values will be interpreted as top, right, bottom, and left
+          respectively.
 
     Returns
     -------
@@ -337,12 +342,15 @@ def layout_sidebar(
     padding
         Padding within the sidebar itself. This can be a numeric vector (which will be
         interpreted as pixels) or a character vector with valid CSS lengths. `padding`
-        may be one to four values. If one, then that value will be used for all four
-        sides. If two, then the first value will be used for the top and bottom, while
-        the second value will be used for left and right. If three, then the first will
-        be used for top, the second will be left and right, and the third will be
-        bottom. If four, then the values will be interpreted as top, right, bottom, and
-        left, respectively.
+        may be one to four values.
+
+        * If a single value, then that value will be used for all four sides.
+        * If two, then the first value will be used for the top and bottom, while
+          the second value will be used for left and right.
+        * If three values, then the first will be used for top, the second will be left
+          and right, and the third will be bottom.
+        * If four, then the values will be interpreted as top, right, bottom, and left
+          respectively.
     height
         Any valid CSS unit to use for the height.
 

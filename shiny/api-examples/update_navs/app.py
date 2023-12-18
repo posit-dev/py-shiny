@@ -7,9 +7,9 @@ app_ui = ui.page_fixed(
         ),
         ui.panel_main(
             ui.navset_card_tab(
-                ui.nav("Panel 1", "Panel 1 content", value="panel1"),
-                ui.nav("Panel 2", "Panel 2 content", value="panel2"),
-                ui.nav("Panel 3", "Panel 3 content", value="panel3"),
+                ui.nav_panel("Panel 1", "Panel 1 content", value="panel1"),
+                ui.nav_panel("Panel 2", "Panel 2 content", value="panel2"),
+                ui.nav_panel("Panel 3", "Panel 3 content", value="panel3"),
                 id="inTabset",
             ),
         ),

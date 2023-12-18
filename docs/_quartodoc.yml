@@ -18,6 +18,7 @@ quartodoc:
         - express.layout.span
         - express.layout.pre
         - express.layout.sidebar
+        - express.layout.layout_columns
         - express.layout.layout_column_wrap
         - express.layout.column
         - express.layout.row
@@ -26,7 +27,7 @@ quartodoc:
         - express.layout.accordion_panel
         - express.layout.navset
         - express.layout.navset_card
-        - express.layout.nav
+        - express.layout.nav_panel
         - express.layout.page_fluid
         - express.layout.page_fixed
         - express.layout.page_fillable
@@ -46,6 +47,7 @@ quartodoc:
       contents:
         - ui.sidebar
         - ui.layout_sidebar
+        - ui.layout_columns
         - ui.layout_column_wrap
         - ui.card
         - ui.card_header
@@ -87,10 +89,10 @@ quartodoc:
     - title: Navigation (tab) panels
       desc: Create segments of UI content.
       contents:
-        - ui.nav
-        - ui.nav_control
+        - ui.nav_panel
         - ui.nav_spacer
         - ui.nav_menu
+        - ui.nav_control
         - ui.navset_bar
         - ui.navset_tab
         - ui.navset_pill
@@ -306,6 +308,7 @@ quartodoc:
       contents:
         - ui.panel_main
         - ui.panel_sidebar
+        - ui.nav
     - title: Experimental
       desc: "These methods are under consideration and are considered unstable. However, if there is a method you are excited about, please let us know!"
       contents:

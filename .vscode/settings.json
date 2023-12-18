@@ -29,7 +29,7 @@
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
         "editor.codeActionsOnSave": {
-            "source.organizeImports": true
+            "source.organizeImports": "explicit"
         }
     },
     "isort.args": ["--profile", "black"],
