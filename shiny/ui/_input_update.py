@@ -45,7 +45,7 @@ _note = """
 
     The syntax of these functions is similar to the functions that created the inputs in
     the first place. For example, :func:`~shiny.ui.input_numeric` and
-    :func:`~update_numeric` take a similar set of arguments.
+    :func:`~shiny.ui.update_numeric` take a similar set of arguments.
 
     Any arguments with ``None`` values will be ignored; they will not result in any
     changes to the input object on the client.
@@ -909,7 +909,7 @@ def update_tooltip(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Update tooltip contents
+    Update tooltip contents.
 
     Parameters
     ----------
@@ -971,7 +971,7 @@ def update_popover(
     title
         The new title of the popover.
     show
-        Opens (`True`) or closes (`False) the popover.
+        Opens (`True`) or closes (`False`) the popover.
     session
         A Shiny session object (the default should almost always be used).
 

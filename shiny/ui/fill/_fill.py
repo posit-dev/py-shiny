@@ -45,7 +45,7 @@ def as_fill_item(
     tag: TagT,
 ) -> TagT:
     """
-    Coerce a tag to a fill item
+    Coerce a tag to a fill item.
 
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
@@ -81,7 +81,7 @@ def remove_all_fill(
     tag: TagT,
 ) -> TagT:
     """
-    Remove any filling layouts from a tag
+    Remove any filling layouts from a tag.
 
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
