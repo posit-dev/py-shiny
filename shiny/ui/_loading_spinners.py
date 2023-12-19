@@ -19,15 +19,31 @@ def use_loading_spinners(
     long-running computation and want to indicate to the user that something is
     happening beyond the default grayed-out element.
 
-    Args:
-        `type`: The type of spinner to use. Options include "disc", "tadpole", and "dots".
-          Defaults to "tadpole".
-        `color`: The color of the spinner. This can be any valid CSS color. Defaults to
-          the current app "primary" color (if using a theme) or light-blue if not.
-        `size`: The size of the spinner. This can be any valid CSS size. Defaults to
-          "80px".
-        `speed`: The amount of time for the spinner to complete a single revolution. This
-          can be any valid CSS time. Defaults to "1s".
+    Parameters
+    ----------
+
+    type
+        The type of spinner to use. Options include "disc", "tadpole", and "dots".
+        Defaults to "tadpole".
+    color
+        The color of the spinner. This can be any valid CSS color. Defaults to the
+        current app "primary" color (if using a theme) or light-blue if not.
+    size
+        The size of the spinner. This can be any valid CSS size. Defaults to "80px".
+    speed
+        The amount of time for the spinner to complete a single revolution. This can be
+        any valid CSS time. Defaults to "1s".
+
+    Returns
+    -------
+    :
+        An HTMLDependency that can be included in your app's UI to enable loading
+        spinners.
+
+    Notes
+    -----
+    This function is meant to be called a single time. If it is called multiple times
+    with different arguments then only the first call will be reflected.
     """
 
     # Some of the spinners work better with linear easing and some with ease-in-out so
