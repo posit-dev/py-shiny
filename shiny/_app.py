@@ -111,11 +111,13 @@ class App:
         debug: bool = False,
     ) -> None:
         if server is None:
-            self.server = noop_server
-        elif has_only_input(server):
-            self.server = ignore_output_session_server(server)
-        elif has_input_output_session(server):
-            self.server = server
+            self.server = noop_server_fn
+        elif len(signature(server).parameters) == 1:
+            self.server = wrap_server_fn_with_output_session(
+                cast(Callable[[Inputs], None], server)
+            )
+        elif len(signature(server).parameters) == 3:
+            self.server = cast(Callable[[Inputs, Outputs, Session], None], server)
         else:
             raise ValueError(
                 "`server` must have 1 (Inputs) or 3 parameters (Inputs, Outputs, Session)"
@@ -454,11 +456,11 @@ def create_static_asset_route(
         )
 
 
-def noop_server(input: Inputs, output: Outputs, session: Session) -> None:
+def noop_server_fn(input: Inputs, output: Outputs, session: Session) -> None:
     pass
 
 
-def ignore_output_session_server(
+def wrap_server_fn_with_output_session(
     server: Callable[[Inputs], None]
 ) -> Callable[[Inputs, Outputs, Session], None]:
     def _server(input: Inputs, output: Outputs, session: Session):
@@ -466,15 +468,3 @@ def ignore_output_session_server(
         server(input)
 
     return _server
-
-
-def has_only_input(
-    x: Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None]
-) -> TypeGuard[Callable[[Inputs], None]]:
-    return len(signature(x).parameters) == 1
-
-
-def has_input_output_session(
-    x: Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None]
-) -> TypeGuard[Callable[[Inputs, Outputs, Session], None]]:
-    return len(signature(x).parameters) == 3
