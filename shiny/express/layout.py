@@ -7,7 +7,9 @@ from htmltools import Tag, TagAttrValue, TagChild, TagList
 
 from .. import ui
 from ..types import MISSING, MISSING_TYPE
+from ..ui._accordion import AccordionPanel
 from ..ui._layout_columns import BreakpointsUser
+from ..ui._navs import NavPanel, NavSet, NavSetCard
 from ..ui.css import CssUnit
 from . import _run
 from ._recall_context import RecallContextManager, wrap_recall_context_manager
@@ -39,7 +41,7 @@ __all__ = (
 # ======================================================================================
 # Page functions
 # ======================================================================================
-def set_page(page_fn: RecallContextManager[Tag]):
+def set_page(page_fn: RecallContextManager[Tag]) -> None:
     """Set the page function for the current Shiny express app."""
     _run.replace_top_level_recall_context_manager(page_fn, force=True)
 
@@ -162,7 +164,7 @@ def layout_column_wrap(
     gap: Optional[CssUnit] = None,
     class_: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     A grid-like, column-first layout
 
@@ -252,7 +254,7 @@ def layout_columns(
     class_: Optional[str] = None,
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     Create responsive, column-based grid layouts, based on a 12-column grid.
 
@@ -346,7 +348,9 @@ def layout_columns(
     )
 
 
-def column(width: int, *, offset: int = 0, **kwargs: TagAttrValue):
+def column(
+    width: int, *, offset: int = 0, **kwargs: TagAttrValue
+) -> RecallContextManager[Tag]:
     """
     Responsive row-column based layout
 
@@ -381,7 +385,7 @@ def column(width: int, *, offset: int = 0, **kwargs: TagAttrValue):
     )
 
 
-def row(**kwargs: TagAttrValue):
+def row(**kwargs: TagAttrValue) -> RecallContextManager[Tag]:
     """
     Responsive row-column based layout
 
@@ -419,7 +423,7 @@ def card(
     fill: bool = True,
     class_: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     A Bootstrap card component
 
@@ -481,7 +485,7 @@ def accordion(
     width: Optional[CssUnit] = None,
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     Create a vertically collapsing accordion.
 
@@ -537,7 +541,7 @@ def accordion_panel(
     value: Optional[str] | MISSING_TYPE = MISSING,
     icon: Optional[TagChild] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[AccordionPanel]:
     """
     Single accordion panel.
 
@@ -583,7 +587,7 @@ def navset(
     selected: Optional[str] = None,
     header: TagChild = None,
     footer: TagChild = None,
-):
+) -> RecallContextManager[NavSet]:
     """
     Render a set of nav items
 
@@ -635,7 +639,7 @@ def navset_card(
     sidebar: Optional[ui.Sidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
-):
+) -> RecallContextManager[NavSetCard]:
     """
     Render a set of nav items inside a card container.
 
@@ -687,7 +691,7 @@ def nav_panel(
     *,
     value: Optional[str] = None,
     icon: TagChild = None,
-):
+) -> RecallContextManager[NavPanel]:
     """
     Create a nav item pointing to some internal content.
 
@@ -803,7 +807,7 @@ def page_fillable(
     title: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     Creates a fillable page.
 
@@ -854,7 +858,7 @@ def page_sidebar(
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     Create a page with a sidebar and a title.
 

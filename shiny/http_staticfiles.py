@@ -50,7 +50,7 @@ else:
         def __init__(self, *, directory: str | os.PathLike[str]):
             self.dir = pathlib.Path(os.path.realpath(os.path.normpath(directory)))
 
-        async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
             if scope["type"] != "http":
                 raise AssertionError("StaticFiles can't handle non-http request")
             path = scope["path"]

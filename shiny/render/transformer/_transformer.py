@@ -31,6 +31,7 @@ from typing import (
     Generic,
     NamedTuple,
     Optional,
+    Type,
     TypeVar,
     Union,
     cast,
@@ -571,6 +572,11 @@ class OutputTransformer(Generic[IT, OT, P]):
     * :class:`~shiny.render.transformer.TransformerParams`
     * :class:`~shiny.render.transformer.OutputRenderer`
     """
+
+    fn: OutputTransformerFn[IT, P, OT]
+    ValueFn: Type[ValueFn[IT]]
+    OutputRenderer: Type[OutputRenderer[OT]]
+    OutputRendererDecorator: Type[OutputRendererDecorator[IT, OT]]
 
     def params(
         self,

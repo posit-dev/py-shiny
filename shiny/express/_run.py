@@ -136,14 +136,14 @@ _top_level_recall_context_manager: RecallContextManager[Tag]
 _top_level_recall_context_manager_has_been_replaced = False
 
 
-def reset_top_level_recall_context_manager():
+def reset_top_level_recall_context_manager() -> None:
     global _top_level_recall_context_manager
     global _top_level_recall_context_manager_has_been_replaced
     _top_level_recall_context_manager = RecallContextManager(_DEFAULT_PAGE_FUNCTION)
     _top_level_recall_context_manager_has_been_replaced = False
 
 
-def get_top_level_recall_context_manager():
+def get_top_level_recall_context_manager() -> RecallContextManager[Tag]:
     return _top_level_recall_context_manager
 
 

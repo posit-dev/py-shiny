@@ -166,7 +166,7 @@ class App:
                 cast("Tag | TagList", ui), lib_prefix=self.lib_prefix
             )
 
-    def init_starlette_app(self):
+    def init_starlette_app(self) -> starlette.applications.Starlette:
         routes: list[starlette.routing.BaseRoute] = [
             starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
             starlette.routing.Route("/", self._on_root_request_cb, methods=["GET"]),
@@ -400,7 +400,7 @@ class App:
         return rendered
 
 
-def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]):
+def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]) -> bool:
     if (
         isinstance(x, Path)
         or isinstance(x, Tag)
