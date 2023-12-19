@@ -46,10 +46,15 @@ deps: $(PYBIN)  ## Install build dependencies
 	$(PYBIN)/pip install pip --upgrade
 	$(PYBIN)/pip install -e ..[doc]
 
-quartodoc: $(PYBIN) ## Build qmd files for API docs
+quartodoc_impl: $(PYBIN) ## Build qmd files for API docs
 	. $(PYBIN)/activate \
 	  && quartodoc interlinks \
 	  && quartodoc build --config _quartodoc.yml --verbose
+quartodoc_func_info: $(PYBIN) ## Attaches func information to objects.json
+	. $(PYBIN)/activate \
+	  && python _func_info.py
+
+quartodoc: quartodoc_impl quartodoc_func_info ## Build qmd files for API docs
 
 site:  ## Build website
 	. $(PYBIN)/activate \

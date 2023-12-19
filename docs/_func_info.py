@@ -1,5 +1,6 @@
 # import griffe.docstrings.dataclasses as ds
 import json
+import subprocess
 from typing import Union
 
 import griffe.dataclasses as dc
@@ -10,9 +11,8 @@ from griffe.collections import LinesCollection, ModulesCollection
 from griffe.docstrings import Parser
 from griffe.loader import GriffeLoader
 from plum import dispatch
-from quartodoc import MdRenderer, get_object, preview
+from quartodoc import MdRenderer, get_object, preview  # noqa: F401
 from quartodoc.parsers import get_parser_defaults
-from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
 
 from shiny import reactive, render, ui
 
@@ -44,8 +44,8 @@ def fast_get_object(path: str):
     return get_object(path, loader=loader)
 
 
-class BarretFnSig(Renderer):
-    style = "custom_greg_styles"
+class FuncSignature(Renderer):
+    style = "custom_func_signature"
 
     # def __init__(self, header_level: int = 1):
     #     self.header_level = header_level
@@ -57,6 +57,7 @@ class BarretFnSig(Renderer):
     @dispatch
     def render(self, el: Union[dc.Alias, dc.Object]):
         # preview(el)
+
         param_str = ""
         if hasattr(el, "docstring") and hasattr(el.docstring, "parsed"):
             for docstring_val in el.docstring.parsed:
@@ -102,13 +103,13 @@ class BarretFnSig(Renderer):
         # preview(el)
 
         param = self.render(el.name)
-        # annotation = self.render_annotation(el.annotation)
-        # if annotation:
-        #     param = f"{param}: {annotation}"
-        if el.default:
-            return None
+        annotation = self.render_annotation(el.annotation)
+        if annotation:
+            param = f"{param}: {annotation}"
         # if el.default:
-        #     param = f"{param} = {el.default}"
+        #     return None
+        if el.default:
+            param = f"{param} = {el.default}"
         return param
 
     @dispatch
@@ -123,50 +124,118 @@ class BarretFnSig(Renderer):
 
         # return self._render_table(rows, header)
 
-    # @dispatch
-    # def render(self, el: dc.Docstring):
-    #     return f"A docstring with {len(el.parsed)} pieces"
+
+def get_git_revision_short_hash() -> str:
+    return (
+        subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
+        .decode("ascii")
+        .strip()
+    )
+
+
+def get_git_current_tag() -> str:
+    return (
+        subprocess.check_output(["git", "tag", "--points-at", "HEAD"])
+        .decode("ascii")
+        .strip()
+    )
+
+
+class FuncFileLocation(Renderer):
+    style = "custom_func_location"
+    sha: str
+
+    def __init__(self):
+        sha = get_git_current_tag()
+        if not sha:
+            sha = get_git_revision_short_hash()
+        self.sha = sha
+
+    @dispatch
+    def render(self, el):
+        raise NotImplementedError(f"Unsupported type: {type(el)}")
+
+    @dispatch
+    def render(self, el: Union[dc.Alias, dc.Object]):
+        # preview(el)
+        # import ipdb
+
+        # ipdb.set_trace()
+
+        rel_path = str(el.filepath).split("/shiny/")[-1]
+
+        return {
+            # "name": el.name,
+            # "path": el.path,
+            "gitpath": f"https://github.com/posit-dev/py-shiny/blob/{self.sha}/shiny/{rel_path}#L{el.lineno}-L{el.endlineno}",
+        }
 
 
 # TODO-barret; Add sentance in template to describe what the Relevant Function section is: "To learn more about details about the functions covered here, visit the reference links below."
-# print(BarretFnSig().render(fast_get_object("shiny:ui.input_action_button")))
-# print(BarretFnSig().render(fast_get_object("shiny:ui.input_action_button")))
+# print(FuncSignature().render(fast_get_object("shiny:ui.input_action_button")))
+# print(FuncSignature().render(fast_get_object("shiny:ui.input_action_button")))
 # preview(fast_get_object("shiny:ui"))
 # print("")
 
+with open("objects.json") as infile:
+    objects_content = json.load(infile)
 
-ret = {}
+# Collect rel links to functions
+links = {}
+for item in objects_content["items"]:
+    if not item["name"].startswith("shiny."):
+        continue
+    name = item["name"].replace("shiny.", "")
+    links[name] = item["uri"]
+# preview(links)
+
+fn_sig = FuncSignature()
+file_locs = FuncFileLocation()
+fn_info = {}
 for mod_name, mod in [
     ("ui", ui),
     ("render", render),
     ("reactive", reactive),
 ]:
-    print(f"## Collecting signatures: {mod_name}")
-    ret[mod_name] = {}
+    print(f"## Collecting: {mod_name}")
     for key, f_obj in mod.__dict__.items():
         if key.startswith("_") or key in ("AnimationOptions",):
             continue
         if not callable(f_obj):
             continue
         # print(f"## {mod_name}.{key}")
-        signature = BarretFnSig().render(fast_get_object(f"shiny:{mod_name}.{key}"))
-        ret[mod_name][key] = signature
-# preview(ret)
+        fn_obj = fast_get_object(f"shiny:{mod_name}.{key}")
+        signature = f"{mod_name}.{fn_sig.render(fn_obj)}"
+        name = f"{mod_name}.{key}"
+        uri = None
+        if name in links:
+            uri = links[name]
+        else:
+            print(f"#### WARNING: No quartodoc entry/link found for {name}")
+        fn_info[name] = {
+            # "name": name,
+            "uri": uri,
+            "signature": signature,
+            **file_locs.render(fn_obj),
+        }
+# preview(fn_info)
 
-print("## Saving signatures")
+print("## Saving function information to objects.json")
 
+objects_content["func_info"] = fn_info
 
-with open("objects.json") as infile:
-    objects_content = json.load(infile)
-objects_content["signatures"] = ret
 # Serializing json
-json_object = json.dumps(objects_content)
+json_object = json.dumps(
+    objects_content,
+    # TODO-barret; remove
+    indent=2,
+)
 
 # Writing to sample.json
 with open("objects.json", "w") as outfile:
     outfile.write(json_object)
 # TODO-barret; Include link to GitHub source
-# print(BarretFnSig().render(f_obj.annotation))
+# print(FuncSignature().render(f_obj.annotation))
 # print(preview(f_obj))
 
 # # get annotation of first parameter
