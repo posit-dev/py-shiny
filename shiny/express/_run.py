@@ -37,7 +37,7 @@ def wrap_express_app(file: Path) -> App:
         A `shiny.App` object.
     """
     logging.getLogger("uvicorn.error").warning(
-        "Detected Shiny Express app. please note that Shiny Express is still in "
+        "Detected Shiny Express app. Please note that Shiny Express is still in "
         "development and the API is subject to change!"
     )
 
