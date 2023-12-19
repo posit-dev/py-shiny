@@ -40,7 +40,7 @@ __all__ = (
 
 class Sidebar:
     """
-    Sidebar object
+    A sidebar object
 
     Class returned from :func:`~shiny.ui.sidebar`. Please do not use this
     class directly. Instead, supply the :func:`~shiny.ui.sidebar` object to
@@ -55,7 +55,7 @@ class Sidebar:
     position
         Where the sidebar should appear relative to the main content.
     open
-        The initial state of the sidebar.
+        The initial state of the sidebar (open or collapsed).
     width
         A valid CSS unit used for the width of the sidebar.
     max_height_mobile
@@ -77,7 +77,7 @@ class Sidebar:
     position
         Where the sidebar should appear relative to the main content.
     open
-        The initial state of the sidebar.
+        The initial state of the sidebar (open or collapsed).
     width
         A valid CSS unit used for the width of the sidebar.
     max_height_mobile
@@ -582,8 +582,7 @@ def panel_sidebar(
     width: int = 4,
     **kwargs: TagAttrValue,
 ) -> DeprecatedPanelSidebar:
-    """Deprecated. Please use :func:`shiny.ui.sidebar` instead of
-    `ui.panel_sidebar()`."""
+    """Deprecated. Please use :func:`~shiny.ui.sidebar` instead."""
     # TODO-future: >= 2024-01-01; Add deprecation message below
     # Plan of action:
     # * No deprecation messages today (2023-10-11), and existing code _just works_.
@@ -605,7 +604,7 @@ def panel_main(
     width: int = 8,
     **kwargs: TagAttrValue,
 ) -> DeprecatedPanelMain:
-    """Deprecated. Please supply `panel_main(*args)` directly to `layout_sidebar()`."""
+    """Deprecated. Please supply the `*args` of :func:`~shiny.ui.panel_main` directly to :func:`~shiny.ui.layout_sidebar`."""
     # TODO-future: >= 2023-11-01; Add deprecation message below
     # warn_deprecated("Please use `layout_sidebar(*args)` instead of `panel_main()`. `panel_main()` will go away in a future version of Shiny.")
 

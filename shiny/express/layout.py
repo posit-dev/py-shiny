@@ -441,13 +441,6 @@ def card(
         an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
     class_
         Additional CSS classes for the returned Tag.
-    wrapper
-        A function (which returns a UI element) to call on unnamed arguments in `*args`
-        which are not already card item(s) (like :func:`~shiny.ui.card_header`,
-        :func:`~shiny.experimental.ui.card_body`, etc.). Note that non-card items are
-        grouped together into one `wrapper` call (e.g. given `card("a", "b",
-        card_body("c"), "d")`, `wrapper` would be called twice, once with `"a"` and
-        `"b"` and once with `"d"`).
     **kwargs
         HTML attributes on the returned Tag.
 
@@ -456,6 +449,15 @@ def card(
     :
         An :func:`~shiny.ui.tags.div` tag.
     """
+
+    # wrapper
+    #     A function (which returns a UI element) to call on unnamed arguments in `*args`
+    #     which are not already card item(s) (like :func:`~shiny.ui.card_header`,
+    #     :func:`~shiny.experimental.ui.card_body`, etc.). Note that non-card items are
+    #     grouped together into one `wrapper` call (e.g. given `card("a", "b",
+    #     card_body("c"), "d")`, `wrapper` would be called twice, once with `"a"` and
+    #     `"b"` and once with `"d"`).
+
     return RecallContextManager(
         ui.card,
         kwargs=dict(
@@ -587,8 +589,6 @@ def navset(
 
     Parameters
     ----------
-    *args
-        A collection of nav items (e.g., :func:`shiny.ui.nav`).
     type
         The type of navset to render. Can be one of `"underline"`, `"pill"`, or `"tab"`.
     id
@@ -602,6 +602,8 @@ def navset(
     footer
         UI to display below the selected content.
     """
+    # *args
+    #     A collection of nav items (e.g., :func:`shiny.ui.nav`).
 
     funcs = {
         "underline": ui.navset_underline,
@@ -639,8 +641,6 @@ def navset_card(
 
     Parameters
     ----------
-    *args
-        A collection of nav items (e.g., :func:`shiny.ui.nav`).
     type
         The type of navset to render. Can be one of `"underline"`, `"pill"`, or `"tab"`.
     id
@@ -656,6 +656,8 @@ def navset_card(
     footer
         UI to display below the selected content.
     """
+    # *args
+    #     A collection of nav items (e.g., :func:`shiny.ui.nav`).
 
     funcs = {
         "underline": ui.navset_card_underline,
@@ -860,8 +862,6 @@ def page_sidebar(
 
     Parameters
     ----------
-    sidebar
-        Content to display in the sidebar.
     title
         A title to display at the top of the page.
     fillable
@@ -884,6 +884,9 @@ def page_sidebar(
     :
         A UI element.
     """
+    # sidebar
+    #     Content to display in the sidebar.
+
     return RecallContextManager(
         ui.page_sidebar,
         kwargs=dict(

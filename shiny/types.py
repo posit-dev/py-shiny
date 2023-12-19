@@ -37,7 +37,7 @@ MISSING: MISSING_TYPE = MISSING_TYPE()
 # FileUploadOperation class.
 class FileInfo(TypedDict):
     """
-    Information about a file upload.
+    Class for information about a file upload.
 
     See Also
     --------
@@ -49,7 +49,7 @@ class FileInfo(TypedDict):
     """
 
     name: str
-    """The name of the file."""
+    """The name of the file being uploaded."""
     size: int
     """The size of the file in bytes."""
     type: str
@@ -144,7 +144,7 @@ class ActionButtonValue(int):
 
 class NavSetArg(Protocol):
     """
-    An value suitable for passing to a navigation container (e.g.,
+    A value suitable for passing to a navigation container (e.g.,
     :func:`~shiny.ui.navset_tab`).
     """
 
