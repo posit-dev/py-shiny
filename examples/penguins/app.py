@@ -122,7 +122,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             if name in input.species()
         ]
 
-        return ui.layout_column_wrap(1 / len(value_boxes), *value_boxes)
+        return ui.layout_column_wrap(*value_boxes, width=1 / len(value_boxes))
 
 
 app = App(
