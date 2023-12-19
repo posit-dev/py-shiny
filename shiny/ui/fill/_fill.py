@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from copy import copy
 from typing import TypeVar
 
 from htmltools import Tag, TagAttrs
 
 from ..._docstring import add_example
 from .._html_deps_shinyverse import fill_dependency
-from .._tag import tag_prepend_class, tag_remove_class
 
 __all__ = (
     "as_fillable_container",
@@ -31,22 +31,21 @@ FILLABLE_CONTAINTER_ATTRS: TagAttrs = {"class": FILL_CONTAINER_CLASS}
 
 
 @add_example()
-# TODO-future-API; These methods mutate their input values. Should they return a new object instead? Or not return at all (like `LIST.sort()`)?
 def as_fillable_container(
     tag: TagT,
 ) -> TagT:
-    tag_prepend_class(tag, FILL_CONTAINER_CLASS)
-    tag.append(fill_dependency())
-    return tag
+    res = copy(tag)
+    res.add_class(FILL_CONTAINER_CLASS)
+    res.append(fill_dependency())
+    return res
 
 
 @add_example()
-# TODO-future-API; These methods mutate their input values. Should they return a new object instead? Or not return at all (like `LIST.sort()`)?
 def as_fill_item(
     tag: TagT,
 ) -> TagT:
     """
-    Coerce a tag to a fill item
+    Coerce a tag to a fill item.
 
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
@@ -64,24 +63,25 @@ def as_fill_item(
     Returns
     -------
     :
-        The original :class:`~htmltools.Tag` object (`tag`) with additional attributes
-        (and an :class:`~htmltools.HTMLDependency`).
+        A copy of the original :class:`~htmltools.Tag` object (`tag`) with additional
+        attributes (and an :class:`~htmltools.HTMLDependency`).
 
     See Also
     --------
     * :func:`~shiny.ui.fill.as_fillable_container`
     * :func:`~shiny.ui.fill.remove_all_fill`
     """
-    tag_prepend_class(tag, FILL_ITEM_CLASS)
-    tag.append(fill_dependency())
-    return tag
+    res = copy(tag)
+    res.add_class(FILL_ITEM_CLASS)
+    res.append(fill_dependency())
+    return res
 
 
 def remove_all_fill(
     tag: TagT,
 ) -> TagT:
     """
-    Remove any filling layouts from a tag
+    Remove any filling layouts from a tag.
 
     Filling layouts are built on the foundation of _fillable containers_ and _fill
     items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
@@ -109,8 +109,8 @@ def remove_all_fill(
     * :func:`~shiny.ui.fill.as_fillable_container`
     """
 
-    tag_remove_class(tag, FILL_CONTAINER_CLASS)
-    tag_remove_class(tag, FILL_ITEM_CLASS)
+    tag.remove_class(FILL_CONTAINER_CLASS)
+    tag.remove_class(FILL_ITEM_CLASS)
     return tag
 
 

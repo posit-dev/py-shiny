@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 from .. import _utils
 from .. import ui as _ui
 from .._namespaces import ResolvedId
-from ..types import ImgData
+from ..types import MISSING, MISSING_TYPE, ImgData
 from ._try_render_plot import (
     PlotSizeInfo,
     try_render_matplotlib,
@@ -115,8 +115,8 @@ async def PlotTransformer(
     _fn: ValueFn[object],
     *,
     alt: Optional[str] = None,
-    width: Optional[float] = None,
-    height: Optional[float] = None,
+    width: float | None | MISSING_TYPE = MISSING,
+    height: float | None | MISSING_TYPE = MISSING,
     **kwargs: object,
 ) -> ImgData | None:
     is_userfn_async = is_async_callable(_fn)
@@ -142,12 +142,16 @@ async def PlotTransformer(
         result = inputs[ResolvedId(f".clientdata_output_{name}_{dimension}")]()
         return typing.cast(float, result)
 
+    non_missing_size = (
+        cast(Union[float, None], width) if width is not MISSING else None,
+        cast(Union[float, None], height) if height is not MISSING else None,
+    )
     plot_size_info = PlotSizeInfo(
         container_size_px_fn=(
             lambda: container_size("width"),
             lambda: container_size("height"),
         ),
-        user_specified_size_px=(width, height),
+        user_specified_size_px=non_missing_size,
         pixelratio=pixelratio,
     )
 
@@ -218,8 +222,8 @@ async def PlotTransformer(
 def plot(
     *,
     alt: Optional[str] = None,
-    width: Optional[float] = None,
-    height: Optional[float] = None,
+    width: float | None | MISSING_TYPE = MISSING,
+    height: float | None | MISSING_TYPE = MISSING,
     **kwargs: Any,
 ) -> PlotTransformer.OutputRendererDecorator:
     ...
@@ -234,8 +238,8 @@ def plot(
     _fn: PlotTransformer.ValueFn | None = None,
     *,
     alt: Optional[str] = None,
-    width: Optional[float] = None,
-    height: Optional[float] = None,
+    width: float | None | MISSING_TYPE = MISSING,
+    height: float | None | MISSING_TYPE = MISSING,
     **kwargs: Any,
 ) -> PlotTransformer.OutputRenderer | PlotTransformer.OutputRendererDecorator:
     """
@@ -247,15 +251,15 @@ def plot(
         Alternative text for the image if it cannot be displayed or viewed (i.e., the
         user uses a screen reader).
     width
-        Width of the plot in pixels. If ``None``, the width will be determined by the
-        size of the corresponding :func:`~shiny.ui.output_plot`. (You should not need to
-        use this argument in most Shiny apps--set the desired width on
-        :func:`~shiny.ui.output_plot` instead.)
+        Width of the plot in pixels. If ``None`` or ``MISSING``, the width will be
+        determined by the size of the corresponding :func:`~shiny.ui.output_plot`. (You
+        should not need to use this argument in most Shiny apps--set the desired width
+        on :func:`~shiny.ui.output_plot` instead.)
     height
-        Height of the plot in pixels. If ``None``, the height will be determined by the
-        size of the corresponding :func:`~shiny.ui.output_plot`. (You should not need to
-        use this argument in most Shiny apps--set the desired height on
-        :func:`~shiny.ui.output_plot` instead.)
+        Height of the plot in pixels. If ``None`` or ``MISSING``, the height will be
+        determined by the size of the corresponding :func:`~shiny.ui.output_plot`. (You
+        should not need to use this argument in most Shiny apps--set the desired height
+        on :func:`~shiny.ui.output_plot` instead.)
     **kwargs
         Additional keyword arguments passed to the relevant method for saving the image
         (e.g., for matplotlib, arguments to ``savefig()``; for PIL and plotnine,
@@ -350,7 +354,7 @@ def image(
     Returns
     -------
     :
-        A decorator for a function that returns an `~shiny.types.ImgData` object.
+        A decorator for a function that returns an :func:`~shiny.types.ImgData` object.
 
     Tip
     ----
@@ -404,9 +408,7 @@ async def TableTransformer(
     if isinstance(x, pandas.io.formats.style.Styler):
         html = cast(  # pyright: ignore[reportUnnecessaryCast]
             str,
-            x.to_html(  # pyright: ignore[reportUnknownMemberType]
-                **kwargs  # pyright: ignore[reportGeneralTypeIssues]
-            ),
+            x.to_html(**kwargs),  # pyright: ignore
         )
     else:
         if not isinstance(x, pandas.DataFrame):
@@ -420,7 +422,7 @@ async def TableTransformer(
 
         html = cast(  # pyright: ignore[reportUnnecessaryCast]
             str,
-            x.to_html(  # pyright: ignore[reportUnknownMemberType]
+            x.to_html(  # pyright: ignore
                 index=index,
                 classes=classes,
                 border=border,
@@ -455,12 +457,14 @@ def table(
     **kwargs: object,
 ) -> TableTransformer.OutputRenderer | TableTransformer.OutputRendererDecorator:
     """
-    Reactively render a Pandas data frame object (or similar) as a basic HTML table.
+    Reactively render a pandas ``DataFrame`` object (or similar) as a basic HTML
+    table.
 
-    Consider using ~shiny.render.data_frame instead of this renderer, as it provides
-    high performance virtual scrolling, built-in filtering and sorting, and a better
-    default appearance. This renderer may still be helpful if you use pandas styling
-    features that are not currently supported by ~shiny.render.data_frame.
+    Consider using :func:`~shiny.render.data_frame` instead of this renderer, as
+    it provides high performance virtual scrolling, built-in filtering and sorting,
+    and a better default appearance. This renderer may still be helpful if you
+    use pandas styling features that are not currently supported by
+    :func:`~shiny.render.data_frame`.
 
     Parameters
     ----------
@@ -542,7 +546,8 @@ def ui(
     Returns
     -------
     :
-        A decorator for a function that returns an object of type `~shiny.ui.TagChild`.
+        A decorator for a function that returns an object of type
+        :class:`~shiny.ui.TagChild`.
 
     Tip
     ----

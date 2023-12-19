@@ -108,7 +108,7 @@ def render_capitalize(
 app_ui = ui.page_fluid(
     ui.h1("Capitalization renderer"),
     ui.input_text("caption", "Caption:", "Data summary"),
-    "No parentheses:",
+    "Renderer called with out parentheses:",
     ui.output_text_verbatim("no_parens"),
     "To upper:",
     ui.output_text_verbatim("to_upper"),
@@ -119,13 +119,13 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @output
-    # Without parentheses
+    # Called without parentheses
     @render_capitalize
     def no_parens():
         return input.caption()
 
     @output
-    # With parentheses. Equivalent to `@render_capitalize()`
+    # Called with parentheses. Equivalent to `@render_capitalize()`
     @render_capitalize(to="upper")
     def to_upper():
         return input.caption()

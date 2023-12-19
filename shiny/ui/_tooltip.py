@@ -19,7 +19,7 @@ def tooltip(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Add a tooltip to a UI element
+    Add a tooltip to a UI element.
 
     Display additional information when focusing (or hovering over) a UI element.
 
@@ -35,7 +35,7 @@ def tooltip(
         Contents to the tooltip's body. Or tag attributes that are supplied to the
         resolved :class:`~htmltools.Tag` object.
     id
-        A character string. Required to re-actively respond to the visibility of the
+        A character string. Required to reactively respond to the visibility of the
         tooltip (via the `input[id]` value) and/or update the visibility/contents of the
         tooltip.
     placement

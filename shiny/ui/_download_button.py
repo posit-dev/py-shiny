@@ -31,7 +31,7 @@ def download_button(
         An icon to display on the button.
     width
         The width of the button.
-    kwargs
+    **kwargs
         Additional attributes for the button.
 
     Returns
@@ -74,7 +74,7 @@ def download_link(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Create a download button
+    Create a download button.
 
     Parameters
     ----------
@@ -86,7 +86,7 @@ def download_link(
         An icon to display on the button.
     width
         The width of the button.
-    kwargs
+    **kwargs
         Additional attributes for the button.
 
     Returns

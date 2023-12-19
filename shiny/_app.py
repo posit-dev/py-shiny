@@ -47,14 +47,15 @@ class App:
     ----------
     ui
         The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fluid` or
-        :func:`~shiny.ui.page_fixed`, with layouts and controls nested inside). You can
+        similar, with layouts and controls nested inside). You can
         also pass a function that takes a :class:`~starlette.requests.Request` and
         returns a UI definition, if you need the UI definition to be created dynamically
         for each pageview.
     server
         A function which is called once for each session, ensuring that each app is
-        independent. This function can either take one argument (``input: Inputs``) or
-        three arguments (``input: Inputs``, ``output:Outputs``, ``session: Session``).
+        independent. This function can either take one positional argument (``input:
+        Inputs``) or three positional  arguments (``input: Inputs``, ``output:Outputs``,
+        ``session: Session``).
     static_assets
         Static files to be served by the app. If this is a string or Path object, it
         must be a directory, and it will be mounted at `/`. If this is a dictionary,
@@ -238,12 +239,12 @@ class App:
 
         Parameters
         ----------
-        kwargs
+        **kwargs
             Keyword arguments passed to :func:`~shiny.run_app`.
         """
         from ._main import run_app
 
-        run_app(self, **kwargs)
+        run_app(self, **kwargs)  # pyright: ignore[reportGeneralTypeIssues]
 
     # ASGI entrypoint. Handles HTTP, WebSocket, and lifespan.
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:

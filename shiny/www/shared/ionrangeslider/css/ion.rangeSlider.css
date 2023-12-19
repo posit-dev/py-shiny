@@ -236,7 +236,7 @@
 }
 
 .irs--shiny .irs-handle.state_hover, .irs--shiny .irs-handle:hover {
-  background: rgba(0, 123, 194, 0.85);
+  background: #268fcb;
 }
 
 .irs--shiny .irs-min,

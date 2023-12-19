@@ -7,6 +7,7 @@ __all__ = (
     "page_fluid",
     "page_fixed",
     "page_bootstrap",
+    "page_output",
 )
 
 from typing import Literal, Optional, Sequence
@@ -28,13 +29,14 @@ from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._html_deps_external import bootstrap_deps
+from ._html_deps_py_shiny import page_output_dependency
 from ._html_deps_shinyverse import components_dependency
 from ._navs import navset_bar
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import consolidate_attrs
 from ._utils import get_window_title
 from .css import CssUnit, as_css_padding, as_css_unit
-from .fill._fill import FILLABLE_CONTAINTER_ATTRS
+from .fill._fill import as_fillable_container
 
 
 def page_sidebar(
@@ -54,7 +56,7 @@ def page_sidebar(
     ----------
     sidebar
         Content to display in the sidebar.
-    args
+    *args
         UI elements.
     title
         A title to display at the top of the page.
@@ -70,7 +72,7 @@ def page_sidebar(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Additional attributes passed to :func:`~shiny.ui.layout_sidebar`.
 
     Returns
@@ -90,6 +92,8 @@ def page_sidebar(
         layout_sidebar(
             sidebar,
             *children,
+            # Make the main area background white instead of the default gray.
+            {"style": "--bslib-shiny-preset-main-bg: white"},
             attrs,
             fillable=fillable,
             border=False,
@@ -131,7 +135,7 @@ def page_navbar(
 
     Parameters
     ----------
-    args
+    *args
         UI elements.
     title
         The browser window title (defaults to the host URL of the page). Can also be set
@@ -140,7 +144,7 @@ def page_navbar(
         If provided, will create an input value that holds the currently selected nav
         item.
     selected
-        Choose a particular nav item to select by default value (should match it's
+        Choose a particular nav item to select by default value (should match its
         ``value``).
     sidebar
         A :func:`~shiny.ui.sidebar` component to display on every page.
@@ -196,7 +200,11 @@ def page_navbar(
             "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
         )
 
-    tagAttrs: TagAttrs = {"class": "bslib-page-navbar"}
+    pageClass = "bslib-page-navbar"
+    if sidebar is not None:
+        pageClass += " has-page-sidebar"
+
+    tagAttrs: TagAttrs = {"class": pageClass}
 
     page_args = (
         tagAttrs,
@@ -253,7 +261,7 @@ def page_fillable(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Creates a fillable page
+    Create a fillable page.
 
     Parameters
     ----------
@@ -288,26 +296,27 @@ def page_fillable(
     """
     attrs, children = consolidate_attrs(*args, **kwargs)
 
-    style = css(
-        padding=as_css_padding(padding),
-        gap=as_css_unit(gap),
-        __bslib_page_fill_mobile_height="100%" if fillable_mobile else "auto",
-    )
+    style = css(padding=as_css_padding(padding), gap=as_css_unit(gap))
 
-    return page_bootstrap(
+    page = page_bootstrap(
         head_content(tags.style("html { height: 100%; }")),
-        # Even though page_bootstrap accepts *args/**kwargs, we need to prepend the
-        # class value to the tags.body. To avoid having a <body> within a <body> for a
-        # core code path, we can manually use `FILLABLE_CONTAINER_ATTRS` here as the
-        # first set of attributes.
-        FILLABLE_CONTAINTER_ATTRS,
         {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
+        {"class": "bslib-flow-mobile"} if not fillable_mobile else None,
         attrs,
         *children,
         components_dependency(),
         title=title,
         lang=lang,
     )
+
+    # page returns a <html> tag, but we need to make the <body> fillable
+    body = page.children[1]
+    if not isinstance(body, Tag) or body.name != "body":
+        raise ValueError("Expected a <body> tag")
+
+    page.children[1] = as_fillable_container(body)
+
+    return page
 
 
 @add_example()
@@ -322,8 +331,7 @@ def page_fluid(
 
     Parameters
     ----------
-
-    args
+    *args
         UI elements.
     title
         The browser window title (defaults to the host URL of the page). Can also be set
@@ -332,7 +340,7 @@ def page_fluid(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Attributes on the page level container.
 
     Returns
@@ -364,8 +372,7 @@ def page_fixed(
 
     Parameters
     ----------
-
-    args
+    *args
         UI elements.
     title
         The browser window title (defaults to the host URL of the page). Can also be set
@@ -374,7 +381,7 @@ def page_fixed(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Attributes on the page level container.
 
     Returns
@@ -406,8 +413,7 @@ def page_bootstrap(
 
     Parameters
     ----------
-
-    args
+    *args
         UI elements.
     title
         The browser window title (defaults to the host URL of the page). Can also be set
@@ -416,7 +422,7 @@ def page_bootstrap(
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
         default, `None`, results in an empty string.
-    kwargs
+    **kwargs
         Attributes on the the `<body>` tag.
 
     Returns
@@ -434,4 +440,26 @@ def page_bootstrap(
         tags.head(head),
         tags.body(*bootstrap_deps(), *args, **kwargs),
         lang=lang,
+    )
+
+
+def page_output(id: str) -> Tag:
+    """
+    Create a page container where the entire body is a UI output.
+
+    Parameters
+    ----------
+    id
+        An output id.
+
+    Returns
+    -------
+    :
+        A UI element which is meant to be used as a page container.
+    """
+    return tags.html(
+        tags.head(),
+        tags.body(id=id, class_="shiny-page-output"),
+        page_output_dependency(),
+        lang="en",
     )

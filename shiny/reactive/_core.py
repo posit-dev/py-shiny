@@ -210,12 +210,12 @@ def isolate():
     Ordinarily, the simple act of reading a reactive value causes a relationship to be
     established between the caller and the reactive value, where a change to the
     reactive value will cause the caller to re-execute. (The same applies for the act of
-    getting a reactive expression's value.) `with isolate()` lets you read a reactive
-    value or expression without establishing this relationship.
+    getting a reactive calculation's value.) `with isolate()` lets you read a reactive
+    value or calculation without establishing this relationship.
 
-    ``with isolate()`` can also be useful for calling reactive expression at the
+    ``with isolate()`` can also be useful for calling reactive calculations at the
     console, which can be useful for debugging. To do so, wrap the calls to the reactive
-    expression with ``with isolate()``.
+    calculation with ``with isolate()``.
 
     Returns
     -------
@@ -255,7 +255,7 @@ async def flush() -> None:
 
     Warning
     -------
-    This function shouldn't ever need to be called inside a Shiny app. It's only
+    You shouldn't ever need to call this function inside of a Shiny app. It's only
     useful for testing and running reactive code interactively in the console.
     """
     await _reactive_environment.flush()
@@ -265,14 +265,15 @@ def on_flushed(
     func: Callable[[], Awaitable[None]], once: bool = False
 ) -> Callable[[], None]:
     """
-    Register a function to be called when the reactive environment is flushed
+    Register a function to be called when the reactive environment is flushed.
 
     Parameters
     ----------
     func
         The function to be called when the reactive environment is flushed
     once
-        If True, the function will only be called once, and then removed from the
+        Should the function be run once, and then cleared, or should it
+        re-run each time the event occurs.
 
     Returns
     -------
@@ -291,8 +292,8 @@ def lock() -> asyncio.Lock:
     """
     A lock that should be held whenever manipulating the reactive graph.
 
-    For example, this makes it safe to set a :class:`~reactive.Value` and call
-    :func:`~reactive.flush()` from a different :class:`~asyncio.Task` than the one that
+    For example, :func:`~shiny.reactive.lock` makes it safe to set a :class:`~reactive.Value` and call
+    :func:`~shiny.reactive.flush` from a different :class:`~asyncio.Task` than the one that
     is running the Shiny :class:`~shiny.Session`.
     """
     return _reactive_environment.lock
@@ -308,8 +309,8 @@ def invalidate_later(
     """
     Scheduled Invalidation
 
-    Schedules the current reactive context to be invalidated in the given number of
-    seconds.
+    When called from within a reactive context, :func:`~shiny.reactive.invalidate_later`
+    schedules the reactive context to be invalidated in the given number of seconds.
 
     Parameters
     ----------
@@ -319,7 +320,7 @@ def invalidate_later(
 
     Note
     ----
-    When called within a reactive function (i.e., :func:`Effect`, :func:`Calc`,
+    When called within a reactive function (i.e., :func:`~reactive.effect`, :func:`~reactive.calc`,
     :func:`render.ui`, etc.), that reactive context is invalidated (and re-executes)
     after the interval has passed. The re-execution will reset the invalidation flag, so
     in a typical use case, the object will keep re-executing and waiting for the

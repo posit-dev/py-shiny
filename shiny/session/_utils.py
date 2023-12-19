@@ -48,8 +48,8 @@ def get_current_session() -> Optional[Session]:
 
     Note
     ----
-    Shiny apps should not need to call this function directly. Instead, it's intended to
-    be used by Shiny developing who wish to create new functions that should only be
+    Shiny apps should not need to call this function directly. Instead, it is intended to
+    be used by Shiny developers who wish to create new functions that should only be
     called from within an active Shiny session.
 
     See Also
@@ -63,7 +63,7 @@ def get_current_session() -> Optional[Session]:
 @contextmanager
 def session_context(session: Optional[Session]):
     """
-    Context manager for current session.
+    A context manager for current session.
 
     This context manager is used to set the current session for the duration of the code
     block. This is meant for advanced use cases where a custom session handling is
@@ -74,7 +74,7 @@ def session_context(session: Optional[Session]):
     Parameters
     ----------
     session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        A :class:`~shiny.Session` instance. If not provided, the instance is inferred via
         :func:`~shiny.session.get_current_session`.
     """
     token: Token[Session | None] = _current_session.set(session)
@@ -92,7 +92,7 @@ def require_active_session(session: MISSING_TYPE = MISSING) -> Session:
     Parameters
     ----------
     session
-        Deprecated. If a custom session is needed, please execute your code inside `with
+        Deprecated. If a custom :class:`~shiny.Session` is needed, please execute your code inside `with
         shiny.session.session_context(session):`. See
         :func:`~shiny.session.session_context` for more details.
 
@@ -103,8 +103,8 @@ def require_active_session(session: MISSING_TYPE = MISSING) -> Session:
 
     Note
     ----
-    Shiny apps should not need to call this function directly. Instead, it's intended to
-    be used by Shiny developing who wish to create new functions that should only be
+    Shiny apps should not need to call this function directly. Instead, it is intended to
+    be used by Shiny developers who wish to create new functions that should only be
     called from within an active Shiny session.
 
     Raises

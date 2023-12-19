@@ -54,6 +54,13 @@ const opts: Array<BuildOptions> = [
     minify: false,
     sourcemap: false,
   },
+  {
+    entryPoints: {
+      "page-output/page-output": "page-output/page-output.ts",
+    },
+    minify: false,
+    sourcemap: false,
+  },
 ];
 
 // Run function to avoid top level await

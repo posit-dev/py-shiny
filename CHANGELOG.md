@@ -8,6 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
+* `shiny create` now allows you to select from a list of template apps.
+* `shiny create` provides templates which help you build your own custom JavaScript components.
+* Closed #814: The functions `reactive.Calc` and `reactive.Effect` have been changed to have lowercase names: `reactive.calc`, and `reactive.effect`. The old capitalized names are now aliases to the new lowercase names, so existing code will continue to work. Similarly, the class `reactive.Value` has a new alias, `reactive.value`, but in this case, since the original was a class, it keeps the original capitalized name as the primary name. The examples have not been changed yet, but will be changed in a future release. (#822)
+* Added `ui.layout_columns()` for creating responsive column-forward layouts based on Bootstrap's 12-column CSS Grid. (#856)
+
+### Bug fixes
+
+* Fix support for `shiny.ui.accordion(multiple=)` (#799).
+
+### Other changes
+
+* Closed #492: `shiny.ui.nav()` is now deprecated in favor of the more aptly named `shiny.ui.nav_panel()` (#876).
+* Update penguins example to credit Allison Horst and drop usage of `shiny.experimental` (#798).
+* `as_fillable_container()` and `as_fill_item()` no longer mutate the `Tag` object that was passed in. Instead, it returns a new `Tag` object. Also closed #856: these functions now put the `html-fill-container` and `html-fill-item` CSS classes last, instead of first. (#862)
+
+
+## [0.6.0] - 2023-10-30
+
 ### Breaking Changes
 * `shiny.run` only allows positional arguments for `app`, `host`, and `port`, all other arguments must be specified with keywords.
 
@@ -29,6 +49,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   These named color themes aren't limited to value boxes: because they're powered by small utility classes, you can use them anywhere within your bslib-powered UI.
 
 * Added `shiny.ui.showcase_bottom()`, a new `shiny.ui.value_box()` layout that places the showcase below the value box `title` and `value`, perfect for a full-bleed plot. (#772)
+
+### Bug fixes
+
+* `shiny run` now respects the user provided `reload-dir` argument (#765).
+* Fixed #646: Wrap bare value box value in `<p />` tags. (#668)
+* Fixed #676: The `render.data_frame` selection feature was underdocumented and buggy (sometimes returning `None` as a row identifier if the pandas data frame's index had gaps in it). With this release, the selection is consistently a tuple of the 0-based row numbers of the selected rows--or `None` if no rows are selected. (#677)
+* Added tests to verify that ui input methods, ui labels, ui update (value) methods, and ui output methods work within modules (#696).
+* Adjusted the `@render.plot` input type to be `object` to allow for any object (if any) to be returned (#712).
+* In `layout_column_wrap()`, when `width` is a CSS unit -- e.g. `width = "400px"` or `width = "25%"` -- and `fixed_width = FALSE`, `layout_column_wrap()` will ensure that the columns are at least `width` wide, unless the parent container is narrower than `width`. (#772)
+
+### Other changes
+
+* `input_action_button()` now defaults to having whitespace around it. (#758)
+* `layout_sidebar()` now uses an `<aside>` element for the sidebar's container and a `<header>` element for the sidebar title. The classes of each element remain the same, but the semantic meaning of the elements is now better reflected in the HTML markup.  (#772)
+* `layout_sidebar()` no longer gives the sidebar main content area the `role="main"` attribute. (#772)
+* Improved the style and appearance of the button to enter full screen in `card()`s and `value_box()`es to better adapt to Bootstrap's dark mode. (#772)
 
 ### API changes
 
@@ -87,22 +123,6 @@ Methods still under consideration in `shiny.experimental.ui`:
 * `shiny.experimental.ui`' `as_fill_carrier()`, `is_fill_carrier()`, `is_fillable_container()`, and `is_fill_item()` have been made defunct. Remove them from your code. (#680, #788)
 * Support for `min_height=`, `max_height=`, and `gap=` in `shiny.experimental.ui.as_fillable_container()` and `as_fill_item()` has been removed. (#481)
 * `shiny.experimental.ui.TagCallable` has been made defunct. Please use its type is equivalent to `htmltools.TagFunction`. (#680)
-
-### Bug fixes
-
-* `shiny run` now respects the user provided `reload-dir` argument (#765).
-* Fixed #646: Wrap bare value box value in `<p />` tags. (#668)
-* Fixed #676: The `render.data_frame` selection feature was underdocumented and buggy (sometimes returning `None` as a row identifier if the pandas data frame's index had gaps in it). With this release, the selection is consistently a tuple of the 0-based row numbers of the selected rows--or `None` if no rows are selected. (#677)
-* Added tests to verify that ui input methods, ui labels, ui update (value) methods, and ui output methods work within modules (#696).
-* Adjusted the `@render.plot` input type to be `object` to allow for any object (if any) to be returned (#712).
-* In `layout_column_wrap()`, when `width` is a CSS unit -- e.g. `width = "400px"` or `width = "25%"` -- and `fixed_width = FALSE`, `layout_column_wrap()` will ensure that the columns are at least `width` wide, unless the parent container is narrower than `width`. (#772)
-
-### Other changes
-
-* `input_action_button()` now defaults to having whitespace around it. (#758)
-* `layout_sidebar()` now uses an `<aside>` element for the sidebar's container and a `<header>` element for the sidebar title. The classes of each element remain the same, but the semantic meaning of the elements is now better reflected in the HTML markup.  (#772)
-* `layout_sidebar()` no longer gives the sidebar main content area the `role="main"` attribute. (#772)
-* Improved the style and appearance of the button to enter full screen in `card()`s and `value_box()`es to better adapt to Bootstrap's dark mode. (#772)
 
 
 ## [0.5.1] - 2023-08-08

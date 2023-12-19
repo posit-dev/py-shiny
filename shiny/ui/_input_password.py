@@ -30,7 +30,7 @@ def input_password(
     value
         Initial value.
     width
-        The CSS width, e.g. '400px', or '100%'
+        The CSS width, e.g., '400px', or '100%'.
     placeholder
         The placeholder of the input.
 

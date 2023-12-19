@@ -19,6 +19,11 @@ class Progress:
     """
     Initialize a progress bar.
 
+    :func:`~shiny.ui.Progress` creates a computation manager that can be used with `with` to
+    run a block of code. Shiny will display a progress bar while the code runs, which
+    you can update by calling the `set()` and `message()` methods of the computation
+    manager at strategic points in the code block.
+
     Parameters
     ----------
     min
@@ -70,8 +75,9 @@ class Progress:
         detail: Optional[str] = None,
     ) -> None:
         """
-        Updates the progress panel. When called the first time, the progress panel is
-        displayed.
+        Opens and updates the progress panel.
+
+        When called the first time, the progress panel is displayed.
 
         Parameters
         ----------

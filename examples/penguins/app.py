@@ -44,6 +44,11 @@ app_ui = ui.page_sidebar(
     ),
     ui.output_ui("value_boxes"),
     ui.output_plot("scatter", fill=True),
+    ui.help_text(
+        "Artwork by ",
+        ui.a("@allison_horst", href="https://twitter.com/allison_horst"),
+        class_="text-end",
+    ),
 )
 
 

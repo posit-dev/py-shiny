@@ -23,6 +23,7 @@ from ._sidebar import (
 )
 
 from ._layout import layout_column_wrap
+from ._layout_columns import layout_columns
 
 
 # Expose the following modules for extended usage: ex: ui.fill.as_fill_item(x)
@@ -86,7 +87,7 @@ from ._insert import insert_ui, remove_ui
 from ._markdown import markdown
 from ._modal import modal_button, modal, modal_show, modal_remove
 from ._navs import (
-    nav,
+    nav_panel,
     nav_menu,
     nav_control,
     nav_spacer,
@@ -102,6 +103,7 @@ from ._navs import (
     # Deprecated
     navset_pill_card,
     navset_tab_card,
+    nav,
 )
 from ._notification import notification_show, notification_remove
 from ._output import (
@@ -119,6 +121,7 @@ from ._page import (
     page_fluid,
     page_fixed,
     page_bootstrap,
+    page_output,
 )
 from ._progress import Progress
 
@@ -184,6 +187,7 @@ __all__ = (
     "panel_sidebar",
     "panel_main",
     # _layout
+    "layout_columns",
     "layout_column_wrap",
     # _card
     "CardItem",
@@ -266,7 +270,7 @@ __all__ = (
     "modal_show",
     "modal_remove",
     # _navs
-    "nav",
+    "nav_panel",
     "nav_menu",
     "nav_control",
     "nav_spacer",
@@ -282,6 +286,7 @@ __all__ = (
     # # Deprecated
     "navset_pill_card",
     "navset_tab_card",
+    "nav",
     # _notification
     "notification_show",
     "notification_remove",
@@ -293,6 +298,7 @@ __all__ = (
     "output_text_verbatim",
     "output_table",
     "output_ui",
+    "page_output",
     # _page
     "page_sidebar",
     "page_navbar",
