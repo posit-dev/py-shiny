@@ -1,10 +1,14 @@
 import os
 import shutil
 import sys
+import tempfile
+import zipfile
 from pathlib import Path
 from typing import Dict, List, Optional
+from urllib.parse import urlparse
 
 import questionary
+import requests
 from questionary import Choice
 
 from ._custom_component_template_questions import (
@@ -33,7 +37,7 @@ def choice_from_dict(choice_dict: Dict[str, str]) -> List[Choice]:
     return [Choice(title=key, value=value) for key, value in choice_dict.items()]
 
 
-def template_query(question_state: Optional[str] = None):
+def template_query(question_state: Optional[str] = None, mode: Optional[str] = None):
     """
     This will initiate a CLI query which will ask the user which template they would like.
     If called without arguments this function will start from the top level and ask which
@@ -67,20 +71,99 @@ def template_query(question_state: Optional[str] = None):
     elif template in package_template_choices.values():
         js_component_questions(template)
     else:
-        app_template_questions(template)
+        app_template_questions(template, mode)
 
 
-def app_template_questions(template: str):
+def download_and_extract_zip(url: str, temp_dir: Path):
+    response = requests.get(url)
+    response.raise_for_status()
+    zip_file_path = temp_dir / "repo.zip"
+    zip_file_path.write_bytes(response.content)
+    with zipfile.ZipFile(zip_file_path, "r") as zip_file:
+        zip_file.extractall(temp_dir)
+
+
+def use_git_template(url: str, mode: Optional[str] = None):
+    # Github requires that we download the whole repository, so we need to
+    # download and unzip the repo, then navigate to the subdirectory.
+
+    parsed_url = urlparse(url)
+    path_parts = parsed_url.path.strip("/").split("/")
+    repo_owner, repo_name, _, branch_name = path_parts[:4]
+    subdirectory = "/".join(path_parts[4:])
+
+    zip_url = f"https://github.com/{repo_owner}/{repo_name}/archive/refs/heads/{branch_name}.zip"
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_dir = Path(temp_dir)
+        download_and_extract_zip(zip_url, temp_dir)
+
+        template_dir = os.path.join(
+            temp_dir, f"{repo_name}-{branch_name}", subdirectory
+        )
+
+        if not os.path.exists(template_dir):
+            raise Exception(f"Template directory '{template_dir}' does not exist")
+
+        directory = repo_name + "-" + branch_name
+        path = temp_dir / directory / subdirectory
+        return app_template_questions(mode=mode, template_dir=path)
+
+
+def app_template_questions(
+    template: Optional[str] = None,
+    mode: Optional[str] = None,
+    template_dir: Optional[Path] = None,
+):
+    if template_dir is None:
+        if template is None:
+            raise ValueError("You must provide either template or template_dir")
+        template_dir = Path(__file__).parent / "templates/app-templates" / template
+
+    # Not all apps will be implemented in both express and core so we can
+    # avoid the questions if it's a core only app.
+    template_files = [file.name for file in template_dir.iterdir() if file.is_file()]
+    express_available = "app-express.py" in template_files
+
+    if mode == "express" and not express_available:
+        raise Exception("Express mode not available for that template.")
+
+    if mode is None and express_available:
+        mode = questionary.select(
+            "Would you like to use Shiny Express?",
+            [
+                Choice("Yes", "express"),
+                Choice("No", "core"),
+                back_choice,
+                cancel_choice,
+            ],
+        ).ask()
+
+        if mode is None or mode == "cancel":
+            sys.exit(1)
+        if mode == "back":
+            template_query()
+            return
+
     appdir = questionary.path(
         "Enter destination directory:",
-        default=build_path_string(),
+        default=build_path_string(""),
         only_directories=True,
     ).ask()
 
     if appdir is None:
         sys.exit(1)
 
-    app_dir = copy_template_files(appdir, template, template_subdir="app-templates")
+    if appdir == ".":
+        appdir = build_path_string(template_dir.name)
+
+    app_dir = copy_template_files(
+        Path(appdir),
+        template_dir=template_dir,
+        express_available=express_available,
+        mode=mode,
+    )
+
     print(f"Created Shiny app at {app_dir}")
     print(f"Next steps open and edit the app file: {app_dir}/app.py")
 
@@ -129,8 +212,16 @@ def js_component_questions(component_type: Optional[str] = None):
     if appdir is None:
         sys.exit(1)
 
+    if appdir == ".":
+        appdir = build_path_string(component_type)
+
     app_dir = copy_template_files(
-        appdir, component_type, template_subdir="package-templates"
+        Path(appdir),
+        template_dir=Path(__file__).parent
+        / "templates/package-templates"
+        / component_type,
+        express_available=False,
+        mode=None,
     )
 
     # Print messsage saying we're building the component
@@ -152,12 +243,12 @@ def build_path_string(*path: str):
     return os.path.join(".", *path)
 
 
-def copy_template_files(dest: str, template: str, template_subdir: str):
-    if dest == ".":
-        dest = build_path_string(template)
-
-    app_dir = Path(dest)
-    template_dir = Path(__file__).parent / "templates" / template_subdir / template
+def copy_template_files(
+    app_dir: Path,
+    template_dir: Path,
+    express_available: bool,
+    mode: Optional[str] = None,
+):
     duplicate_files = [
         file.name for file in template_dir.iterdir() if (app_dir / file.name).exists()
     ]
@@ -177,5 +268,17 @@ def copy_template_files(dest: str, template: str, template_subdir: str):
             shutil.copy(item, app_dir / item.name)
         else:
             shutil.copytree(item, app_dir / item.name)
+
+    def rename_unlink(file_to_rename: str, file_to_delete: str, dir: Path = app_dir):
+        (dir / file_to_rename).rename(dir / "app.py")
+        (dir / file_to_delete).unlink()
+
+    if express_available:
+        if mode == "express":
+            rename_unlink("app-express.py", "app-core.py")
+        if mode == "core":
+            rename_unlink("app-core.py", "app-express.py")
+    if (app_dir / "app-core.py").exists():
+        (app_dir / "app-core.py").rename(app_dir / "app.py")
 
     return app_dir
