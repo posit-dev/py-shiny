@@ -1,4 +1,4 @@
-import folium
+import folium  # pyright: ignore[reportMissingTypeStubs]
 
 from shiny import render, ui
 from shiny.express import input, layout
