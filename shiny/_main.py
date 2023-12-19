@@ -499,10 +499,32 @@ After creating the application, you use `shiny run`:
     ),
     help="Choose a template for your new application.",
 )
-def create(template: Optional[str] = None) -> None:
-    from ._template_utils import template_query
+@click.option(
+    "--mode",
+    "-m",
+    type=click.Choice(
+        ["core", "express"],
+        case_sensitive=False,
+    ),
+    help="Do you want to use a Shiny Express template or a Shiny Core template?",
+)
+@click.option(
+    "--github",
+    "-g",
+    help="The GitHub URL of the template sub-directory. For example https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard",
+)
+def create(
+    template: Optional[str] = None,
+    mode: Optional[str] = None,
+    github: Optional[str] = None,
+) -> None:
+    from ._template_utils import template_query, use_git_template
 
-    template_query(template)
+    if github is not None:
+        use_git_template(github, mode)
+        return
+
+    template_query(template, mode)
 
 
 @main.command(
