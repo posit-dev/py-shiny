@@ -5,14 +5,25 @@ import seaborn as sns
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
-sns.set_theme(style="white")
-df = pd.read_csv(Path(__file__).parent / "penguins.csv", na_values="NA")
 species = ["Adelie", "Gentoo", "Chinstrap"]
 
+species_images = {
+    "Adelie": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Hope_Bay-2016-Trinity_Peninsula%E2%80%93Ad%C3%A9lie_penguin_%28Pygoscelis_adeliae%29_04.jpg/1280px-Hope_Bay-2016-Trinity_Peninsula%E2%80%93Ad%C3%A9lie_penguin_%28Pygoscelis_adeliae%29_04.jpg",
+    "Gentoo": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Brown_Bluff-2016-Tabarin_Peninsula%E2%80%93Gentoo_penguin_%28Pygoscelis_papua%29_03.jpg/1202px-Brown_Bluff-2016-Tabarin_Peninsula%E2%80%93Gentoo_penguin_%28Pygoscelis_papua%29_03.jpg",
+    "Chinstrap": "https://upload.wikimedia.org/wikipedia/commons/0/08/South_Shetland-2016-Deception_Island%E2%80%93Chinstrap_penguin_%28Pygoscelis_antarctica%29_04.jpg",
+}
 
-def make_value_box(penguin):
+
+def penguin_box(x):
     return ui.value_box(
-        title=penguin, value=ui.output_text(f"{penguin}_count".lower()), theme="primary"
+        title=x,
+        value=ui.output_text(f"{x}_count".lower()),
+        showcase=ui.img(
+            src=species_images[x],
+            max_width="100%",
+            height="100%",
+        ),
+        full_screen=True,
     )
 
 
@@ -20,79 +31,75 @@ app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.input_slider(
             "mass",
-            "Mass",
-            2000,
-            6000,
-            3400,
+            "Body Mass",
+            min=2000,
+            max=6000,
+            value=3400,
         ),
-        ui.input_checkbox_group(
-            "species", "Filter by species", species, selected=species
+        ui.input_checkbox_group("species", "Species", species, selected=species),
+        title="Filter controls",
+    ),
+    ui.layout_column_wrap(*[penguin_box(penguin) for penguin in species], fill=False),
+    ui.layout_columns(
+        ui.card(
+            ui.card_header("Summary statistics"),
+            ui.output_data_frame("summary_statistics"),
         ),
-    ),
-    ui.row(
-        ui.layout_columns(
-            *[make_value_box(penguin) for penguin in species],
-        )
-    ),
-    ui.row(
-        ui.layout_columns(
-            ui.card(
-                ui.card_header("Summary statistics"),
-                ui.output_data_frame("summary_statistics"),
-            ),
-            ui.card(
-                ui.card_header("Penguin bills"),
-                ui.output_plot("length_depth"),
-            ),
+        ui.card(
+            ui.card_header("Penguin bills"),
+            ui.output_plot("length_depth"),
         ),
     ),
+    title="Palmer Penguins Dashboard",
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    df = pd.read_csv(Path(__file__).parent / "penguins.csv", na_values="NA")
+    sns.set_theme(style="white")
+
     @reactive.Calc
     def filtered_df() -> pd.DataFrame:
-        filt_df = df[df["Species"].isin(input.species())]
-        filt_df = filt_df.loc[filt_df["Body Mass (g)"] > input.mass()]
-        return filt_df
+        filt_df = df[df["species"].isin(input.species())]
+        return filt_df.loc[filt_df["body_mass_g"] > input.mass()]
+
+    @reactive.Calc
+    def aggregate_df() -> pd.DataFrame:
+        return filtered_df().groupby("species").size()
 
     @render.text
     def adelie_count():
-        return count_species(filtered_df(), "Adelie")
+        return aggregate_df()[["Adelie"]][0]
 
     @render.text
     def chinstrap_count():
-        return count_species(filtered_df(), "Chinstrap")
+        return aggregate_df()[["Chinstrap"]][0]
 
     @render.text
     def gentoo_count():
-        return count_species(filtered_df(), "Gentoo")
+        return aggregate_df()[["Gentoo"]][0]
 
     @render.plot
     def length_depth():
         return sns.scatterplot(
             data=filtered_df(),
-            x="Bill Length (mm)",
-            y="Bill Depth (mm)",
-            hue="Species",
+            x="bill_length_mm",
+            y="bill_depth_mm",
+            hue="species",
         )
 
     @render.data_frame
     def summary_statistics():
         display_df = filtered_df()[
             [
-                "Species",
-                "Island",
-                "Bill Length (mm)",
-                "Bill Depth (mm)",
-                "Body Mass (g)",
+                "species",
+                "island",
+                "bill_length_mm",
+                "bill_depth_mm",
+                "body_mass_g",
             ]
         ]
         return render.DataGrid(display_df, filters=True)
-
-
-def count_species(df, species):
-    return df[df["Species"] == species].shape[0]
 
 
 app = App(app_ui, server)
