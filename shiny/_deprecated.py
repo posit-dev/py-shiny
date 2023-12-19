@@ -73,7 +73,7 @@ def session_type_warning() -> None:
 
 _session_param_docs = """
     session
-        Deprecated. If a custom session is needed, please execute your code inside `with
-        shiny.session.session_context(session):`. See
+        Deprecated. If a custom :class:`~shiny.Session` is needed, please execute your
+        code inside `with shiny.session.session_context(session):`. See
         :func:`~shiny.session.session_context` for more details.
     """
