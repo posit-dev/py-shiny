@@ -386,6 +386,9 @@ def help_text(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Create a help text element
 
+    Help text is stylized text which can be added to the user interface to provide additional explanation
+    or context. Text passed to :func:`~shiny.ui.help_text` receives the Bootstrap `help-block` class.
+
     Parameters
     ----------
     *args
