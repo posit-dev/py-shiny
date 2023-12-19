@@ -39,11 +39,14 @@ $(PYBIN): $(VENV)
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
+dev-htmltools: $(PYBIN)  ## Install development version of htmltools
+	$(PYBIN)/pip install https://github.com/rstudio/py-htmltools/tarball/main
+
 deps: $(PYBIN)  ## Install build dependencies
 	$(PYBIN)/pip install pip --upgrade
 	$(PYBIN)/pip install -e ..[doc]
 
-quartodoc:  ## Build qmd files for API docs
+quartodoc: $(PYBIN) ## Build qmd files for API docs
 	. $(PYBIN)/activate \
 	  && quartodoc interlinks \
 	  && quartodoc build --config _quartodoc.yml --verbose

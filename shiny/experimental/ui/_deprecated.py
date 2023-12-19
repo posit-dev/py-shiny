@@ -212,7 +212,7 @@ def input_text_area(
     autocomplete: Optional[str] = None,
     spellcheck: Optional[Literal["true", "false"]] = None,
 ) -> Tag:
-    """Deprecated. Please use `shiny.ui.input_text_area()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.input_text_area()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.input_text_area()` is deprecated. "
         "This method will be removed in a future version, "
@@ -249,7 +249,7 @@ def navset_pill_card(
     footer: TagChild = None,
     placement: Literal["above", "below"] = "above",
 ) -> MainNavSetCard:
-    """Deprecated. Please use `navset_card_pill()` instead of `navset_pill_card()`."""
+    """Deprecated. Please use :func:`~navset_card_pill()` instead of `navset_pill_card()`."""
     warn_deprecated(
         "`shiny.experimental.ui.navset_pill_card()` is deprecated. "
         "This method will be removed in a future version, "
@@ -275,7 +275,7 @@ def navset_tab_card(
     header: TagChild = None,
     footer: TagChild = None,
 ) -> MainNavSetCard:
-    """Deprecated. Please use `navset_card_tab()` instead of `navset_tab_card()`."""
+    """Deprecated. Please use :func:`~navset_card_tab()` instead of `navset_tab_card()`."""
     warn_deprecated(
         "`shiny.experimental.ui.navset_tab_card()` is deprecated. "
         "This method will be removed in a future version, "
@@ -304,7 +304,7 @@ def tooltip(
     options: Optional[dict[str, object]] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    """Deprecated. Please use `shiny.ui.tooltip()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.tooltip()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.tooltip()` is deprecated. "
         "This method will be removed in a future version, "
@@ -322,7 +322,7 @@ def tooltip(
 
 # Deprecated 2023-08-23
 def tooltip_update(id: str, *args: TagChild, session: Optional[Session] = None) -> None:
-    """Deprecated. Please use `shiny.ui.update_tooltip()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.update_tooltip()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.tooltip_update()` is deprecated. "
         "This method will be removed in a future version, "
@@ -337,7 +337,7 @@ def tooltip_update(id: str, *args: TagChild, session: Optional[Session] = None) 
 
 # Deprecated 2023-09-12
 def update_tooltip(id: str, *args: TagChild, session: Optional[Session] = None) -> None:
-    """Deprecated. Please use `shiny.ui.update_tooltip()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.update_tooltip()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.update_tooltip()` is deprecated. "
         "This method will be removed in a future version, "
@@ -356,7 +356,7 @@ def tooltip_toggle(
     show: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.update_tooltip()`."""
+    """Deprecated. Please use :func:`~shiny.ui.update_tooltip()`."""
     warn_deprecated(
         "`shiny.experimental.ui.tooltip_toggle()` is deprecated. "
         "This method will be removed in a future version, "
@@ -375,7 +375,7 @@ def toggle_tooltip(
     show: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.update_tooltip()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.update_tooltip()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.tooltip_toggle()` is deprecated. "
         "This method will be removed in a future version, "
@@ -438,7 +438,7 @@ def sidebar(
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
 ) -> MainSidebar:
-    """Deprecated. Please use `shiny.ui.sidebar()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.sidebar()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.sidebar()` is deprecated. "
         "This method will be removed in a future version, "
@@ -475,7 +475,7 @@ def layout_sidebar(
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
 ) -> MainCardItem:
-    """Deprecated. Please use `shiny.ui.layout_sidebar()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.layout_sidebar()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.layout_sidebar()` is deprecated. "
         "This method will be removed in a future version, "
@@ -505,7 +505,7 @@ def toggle_sidebar(
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
     session: Session | None = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.update_sidebar()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.update_sidebar()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.toggle_sidebar()` is deprecated. "
         "This method will be removed in a future version, "
@@ -531,7 +531,7 @@ def sidebar_toggle(
     open: Literal["toggle", "open", "closed", "always"] | bool | None = None,
     session: Session | None = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.update_sidebar()` instead of
+    """Deprecated. Please use :func:`~shiny.ui.update_sidebar()` instead of
     `shiny.experimental.ui.sidebar_toggle()`."""
     warn_deprecated(
         "`shiny.experimental.ui.sidebar_toggle()` is deprecated. "
@@ -553,7 +553,7 @@ def panel_sidebar(
     width: int = 4,
     **kwargs: TagAttrValue,
 ) -> DeprecatedPanelSidebar:
-    """Deprecated. Please use `shiny.ui.sidebar()` instead of
+    """Deprecated. Please use :func:`~shiny.ui.sidebar()` instead of
     `shiny.experimental.ui.panel_sidebar()`."""
     warn_deprecated(
         "`shiny.experimental.ui.panel_sidebar()` is deprecated. "
@@ -574,7 +574,7 @@ def panel_main(
     width: int = 8,
     **kwargs: TagAttrValue,
 ) -> DeprecatedPanelMain:
-    """Deprecated. Please use `shiny.ui.layout_sidebar()` instead of
+    """Deprecated. Please use :func:`~shiny.ui.layout_sidebar()` instead of
     `shiny.experimental.ui.panel_main()`."""
     warn_deprecated(
         "`shiny.experimental.ui.panel_main()` is deprecated. "
@@ -612,7 +612,7 @@ def as_css_unit(value: CssUnit) -> str:
 # Deprecated 2023-09-12
 def as_css_unit(value: None | CssUnit) -> None | str:
     """
-    Deprecated. Please use `shiny.ui.css_unit.as_css_unit()` instead.
+    Deprecated. Please use :func:`~shiny.ui.css_unit.as_css_unit()` instead.
     """
     warn_deprecated(
         "`shiny.experimental.ui.as_css_unit()` is deprecated. "
@@ -635,7 +635,7 @@ def as_css_padding(padding: None) -> None:
 # Deprecated 2023-09-12
 def as_css_padding(padding: CssUnit | list[CssUnit] | None) -> str | None:
     """
-    Deprecated. Please use `shiny.ui.css_unit.as_css_padding()` instead.
+    Deprecated. Please use :func:`~shiny.ui.css_unit.as_css_padding()` instead.
     """
     warn_deprecated(
         "`shiny.experimental.ui.as_css_padding()` is deprecated. "
@@ -660,7 +660,7 @@ def popover(
     options: Optional[dict[str, Any]] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    """Deprecated. Please use `shiny.ui.popover()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.popover()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.popover()` is deprecated. "
         "This method will be removed in a future version, "
@@ -683,7 +683,7 @@ def toggle_popover(
     show: Optional[bool] = None,
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.update_popover()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.update_popover()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.update_popover()` is deprecated. "
         "This method will be removed in a future version, "
@@ -699,7 +699,7 @@ def update_popover(
     title: Optional[TagChild] = None,
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.update_popover()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.update_popover()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.update_popover()` is deprecated. "
         "This method will be removed in a future version, "
@@ -733,7 +733,7 @@ def accordion(
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    """Deprecated. Please use `shiny.ui.accordion()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.accordion()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion()` is deprecated. "
         "This method will be removed in a future version, "
@@ -759,7 +759,7 @@ def accordion_panel(
     icon: Optional[TagChild] = None,
     **kwargs: TagAttrValue,
 ) -> MainAccordionPanel:
-    """Deprecated. Please use `shiny.ui.accordion_panel()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.accordion_panel()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel()` is deprecated. "
         "This method will be removed in a future version, "
@@ -780,7 +780,7 @@ def accordion_panel_set(
     values: bool | str | list[str],
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.update_accordion()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.update_accordion()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel_set()` is deprecated. "
         "This method will be removed in a future version, "
@@ -795,7 +795,7 @@ def accordion_panel_open(
     values: bool | str | list[str],
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.update_accordion_panel(id, value, show=True)` or `shiny.ui.update_accordion(id, show = True)` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.update_accordion_panel(id, value, show=True)` or :func:`~shiny.ui.update_accordion(id, show = True)` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel_open()` is deprecated. "
         "This method will be removed in a future version, "
@@ -819,7 +819,7 @@ def accordion_panel_close(
     values: bool | str | list[str],
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.update_accordion_panel(id, value, show=False)` or `shiny.ui.update_accordion(id, show = False)` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.update_accordion_panel(id, value, show=False)` or :func:`~shiny.ui.update_accordion(id, show = False)` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel_close()` is deprecated. "
         "This method will be removed in a future version, "
@@ -844,7 +844,7 @@ def accordion_panel_insert(
     position: Literal["after", "before"] = "after",
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.insert_accordion_panel()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.insert_accordion_panel()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel_insert()` is deprecated. "
         "This method will be removed in a future version, "
@@ -865,7 +865,7 @@ def accordion_panel_remove(
     target: str | list[str],
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.remove_accordion_panel()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.remove_accordion_panel()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.accordion_panel_remove()` is deprecated. "
         "This method will be removed in a future version, "
@@ -888,7 +888,7 @@ def update_accordion_panel(
     icon: TagChild | None | MISSING_TYPE = MISSING,
     session: Optional[Session] = None,
 ) -> None:
-    """Deprecated. Please use `shiny.ui.update_accordion_panel()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.update_accordion_panel()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.update_accordion_panel()` is deprecated. "
         "This method will be removed in a future version, "
@@ -922,7 +922,7 @@ def as_fill_carrier(
     warn_deprecated(
         "`shiny.experimental.ui.as_fill_carrier()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.fill.as_fill_container()` and `shiny.ui.fill.as_fillable_item()` instead."
+        "please use `shiny.ui.fill.as_fillable_container()` and `shiny.ui.fill.as_fillable_item()` instead."
     )
 
     if min_height is not None:
@@ -947,7 +947,7 @@ def as_fillable_container(
     max_height: None = None,
     gap: None = None,
 ) -> TagT:
-    """Deprecated. Please use `shiny.ui.fill.as_fillable_container()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.fill.as_fillable_container()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.as_fillable_container()` is deprecated. "
         "This method will be removed in a future version, "
@@ -975,7 +975,7 @@ def as_fill_item(
     min_height: None = None,
     max_height: None = None,
 ) -> TagT:
-    """Deprecated. Please use `shiny.ui.fill.as_fill_item()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.fill.as_fill_item()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.as_fill_item()` is deprecated. "
         "This method will be removed in a future version, "
@@ -994,7 +994,7 @@ def as_fill_item(
 
 
 def remove_all_fill(tag: TagT) -> TagT:
-    """Deprecated. Please use `shiny.ui.fill.remove_all_fill()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.fill.remove_all_fill()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.remove_all_fill()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1038,7 +1038,7 @@ def is_fill_item(tag: TagChild) -> bool:
 # ######################
 
 TagCallable = TagFunction
-"""Deprecated. Please use `htmltools.TagFunction"""
+"""Deprecated. Please use `htmltools.TagFunction` instead."""
 
 
 class CardItem(MainCardItem):
@@ -1061,7 +1061,7 @@ def card_header(
     container: TagFunction = tags.div,
     **kwargs: TagAttrValue,
 ) -> MainCardItem:
-    """Deprecated. Please use `shiny.ui.card_header()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.card_header()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.card_header()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1074,7 +1074,7 @@ def card_footer(
     *args: TagChild | TagAttrs,
     **kwargs: TagAttrValue,
 ) -> MainCardItem:
-    """Deprecated. Please use `shiny.ui.card_footer()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.card_footer()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.card_footer()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1103,7 +1103,7 @@ def value_box(
     class_: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    """Deprecated. Please use `shiny.ui.value_box()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.value_box()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.value_box()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1135,7 +1135,7 @@ def showcase_left_center(
     max_height: CssUnit = "100px",
     max_height_full_screen: CssUnit = "67%",
 ) -> MainShowcaseLayout:
-    """Deprecated. Please use `shiny.ui.showcase_left_center()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.showcase_left_center()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.showcase_left_center()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1153,7 +1153,7 @@ def showcase_top_right(
     max_height: CssUnit = "75px",
     max_height_full_screen: CssUnit = "67%",
 ) -> MainShowcaseLayout:
-    """Deprecated. Please use `shiny.ui.showcase_top_right()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.showcase_top_right()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.showcase_top_right()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1182,7 +1182,7 @@ def layout_column_wrap(
     class_: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    """Deprecated. Please use `shiny.ui.layout_column_wrap()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.layout_column_wrap()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.layout_column_wrap()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1228,7 +1228,7 @@ def navset_bar(
     collapsible: bool = True,
     fluid: bool = True,
 ) -> MainNavSetBar:
-    """Deprecated. Please use `shiny.ui.navset_bar()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.navset_bar()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.navset_bar()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1261,7 +1261,7 @@ def navset_card_tab(
     header: TagChild = None,
     footer: TagChild = None,
 ) -> MainNavSetCard:
-    """Deprecated. Please use `shiny.ui.navset_card_tab()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.navset_card_tab()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.navset_card_tab()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1286,7 +1286,7 @@ def navset_card_pill(
     footer: TagChild = None,
     placement: Literal["above", "below"] = "above",
 ) -> MainNavSetCard:
-    """Deprecated. Please use `shiny.ui.navset_card_pill()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.navset_card_pill()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.navset_card_pill()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1318,7 +1318,7 @@ def output_plot(
     brush: bool | MainBrushOpts = False,
     fill: bool | MISSING_TYPE = MISSING,
 ) -> Tag:
-    """Deprecated. Please use `shiny.ui.output_plot()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.output_plot()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.output_plot()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1352,7 +1352,7 @@ def output_image(
     fill: bool = False,
     # /NEW
 ) -> Tag:
-    """Deprecated. Please use `shiny.ui.output_image()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.output_image()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.output_image()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1380,7 +1380,7 @@ def output_ui(
     fillable: bool = False,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    """Deprecated. Please use `shiny.ui.output_ui()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.output_ui()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.output_ui()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1409,7 +1409,7 @@ def page_sidebar(
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    """Deprecated. Please use `shiny.ui.page_sidebar()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.page_sidebar()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.page_sidebar()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1451,7 +1451,7 @@ def page_navbar(
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
 ) -> Tag:
-    """Deprecated. Please use `shiny.ui.page_navbar()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.page_navbar()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.page_navbar()` is deprecated. "
         "This method will be removed in a future version, "
@@ -1488,7 +1488,7 @@ def page_fillable(
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    """Deprecated. Please use `shiny.ui.page_fillable()` instead."""
+    """Deprecated. Please use :func:`~shiny.ui.page_fillable()` instead."""
     warn_deprecated(
         "`shiny.experimental.ui.page_fillable()` is deprecated. "
         "This method will be removed in a future version, "

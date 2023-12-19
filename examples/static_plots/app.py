@@ -8,7 +8,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 nav = ui.navset_pill_list(
     ui.nav_control(ui.p("Choose a package", class_="lead text-center")),
-    ui.nav(
+    ui.nav_panel(
         "Plotnine",
         ui.output_plot("plotnine"),
         ui.div(
@@ -27,7 +27,7 @@ nav = ui.navset_pill_list(
             ),
         ),
     ),
-    ui.nav(
+    ui.nav_panel(
         "Seaborn",
         ui.output_plot("seaborn"),
         ui.div(
@@ -36,11 +36,11 @@ nav = ui.navset_pill_list(
             ui.input_slider("cov", "Co-variance", min=0, max=1, value=0.4),
         ),
     ),
-    ui.nav("Pandas", ui.output_plot("pandas")),
-    ui.nav("Holoviews", ui.output_plot("holoviews", height="600px")),
-    ui.nav("xarray", ui.output_plot("xarray")),
-    ui.nav("geopandas", ui.output_plot("geopandas")),
-    ui.nav("missingno", ui.output_plot("missingno")),
+    ui.nav_panel("Pandas", ui.output_plot("pandas")),
+    ui.nav_panel("Holoviews", ui.output_plot("holoviews", height="600px")),
+    ui.nav_panel("xarray", ui.output_plot("xarray")),
+    ui.nav_panel("geopandas", ui.output_plot("geopandas")),
+    ui.nav_panel("missingno", ui.output_plot("missingno")),
     widths=(2, 10),
     well=False,
 )

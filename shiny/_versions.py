@@ -1,6 +1,6 @@
-shiny_html_deps = "1.7.5.9000"
-bslib = "0.5.1.9000"
-htmltools = "0.5.6.9001"
+shiny_html_deps = "1.8.0"
+bslib = "0.6.1.9000"
+htmltools = "0.5.7"
 bootstrap = "5.3.1"
 requirejs = "2.3.6"
 

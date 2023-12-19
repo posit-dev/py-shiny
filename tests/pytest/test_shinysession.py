@@ -3,7 +3,7 @@
 import pytest
 
 from shiny import ui
-from shiny.reactive import Effect, flush, isolate
+from shiny.reactive import effect, flush, isolate
 from shiny.session import Inputs
 from shiny.types import SilentException
 
@@ -55,7 +55,7 @@ async def test_input_nonexistent_deps():
     input = Inputs({})
     result = None
 
-    @Effect()
+    @effect()
     def o1():
         nonlocal result
         result = "x" in input

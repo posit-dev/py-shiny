@@ -48,7 +48,7 @@ def test_suspend_display():
     try:
         called = False
 
-        def display_hook_spy(_):
+        def display_hook_spy(_: object) -> Any:
             nonlocal called
             called = True
 

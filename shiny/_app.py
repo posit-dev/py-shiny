@@ -46,12 +46,12 @@ class App:
     ----------
     ui
         The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fluid` or
-        :func:`~shiny.ui.page_fixed`, with layouts and controls nested inside). You can
+        similar, with layouts and controls nested inside). You can
         also pass a function that takes a :class:`~starlette.requests.Request` and
         returns a UI definition, if you need the UI definition to be created dynamically
         for each pageview.
     server
-        A function which is called once for each session, ensuring that each app is
+        A function which is called once for each session, ensuring that each session is
         independent.
     static_assets
         Static files to be served by the app. If this is a string or Path object, it
@@ -166,7 +166,7 @@ class App:
                 cast("Tag | TagList", ui), lib_prefix=self.lib_prefix
             )
 
-    def init_starlette_app(self):
+    def init_starlette_app(self) -> starlette.applications.Starlette:
         routes: list[starlette.routing.BaseRoute] = [
             starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
             starlette.routing.Route("/", self._on_root_request_cb, methods=["GET"]),
@@ -225,12 +225,12 @@ class App:
 
         Parameters
         ----------
-        kwargs
+        **kwargs
             Keyword arguments passed to :func:`~shiny.run_app`.
         """
         from ._main import run_app
 
-        run_app(self, **kwargs)
+        run_app(self, **kwargs)  # pyright: ignore[reportGeneralTypeIssues]
 
     # ASGI entrypoint. Handles HTTP, WebSocket, and lifespan.
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
@@ -400,7 +400,7 @@ class App:
         return rendered
 
 
-def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]):
+def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]) -> bool:
     if (
         isinstance(x, Path)
         or isinstance(x, Tag)

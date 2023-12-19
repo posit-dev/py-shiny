@@ -25,6 +25,7 @@ from typing import (
     Iterable,
     Optional,
     TypeVar,
+    Union,
     cast,
     overload,
 )
@@ -37,7 +38,7 @@ from starlette.types import ASGIApp
 if TYPE_CHECKING:
     from .._app import App
 
-from .. import _utils, render
+from .. import _utils, reactive, render
 from .._connection import Connection, ConnectionClosed
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
@@ -46,7 +47,7 @@ from .._typing_extensions import TypedDict
 from .._utils import wrap_async
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
-from ..reactive import Effect, Effect_, Value, flush, isolate
+from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
 from ..render.transformer import OutputRenderer
 from ..types import SafeException, SilentCancelOutputException, SilentException
@@ -107,7 +108,8 @@ class ClientMessageOther(ClientMessage):
 #
 # (Not currently supported is Awaitable[str], could be added easily enough if needed.)
 DownloadHandler = Callable[
-    [], "str | Iterable[bytes | str] | AsyncIterable[bytes | str]"
+    [],
+    Union[str, Iterable[Union[bytes, str]], AsyncIterable[Union[bytes, str]]],
 ]
 
 DynamicRouteHandler = Callable[[Request], ASGIApp]
@@ -873,7 +875,9 @@ class SessionProxy:
     ) -> Callable[[DownloadHandler], None]:
         def wrapper(fn: DownloadHandler):
             id_ = self.ns(id or fn.__name__)
-            return self._parent.download(id=id_, **kwargs)(fn)
+            return self._parent.download(
+                id=id_, **kwargs  # pyright: ignore[reportGeneralTypeIssues]
+            )(fn)
 
         return wrapper
 
@@ -902,7 +906,7 @@ class Inputs:
         self._ns = ns
 
     def __setitem__(self, key: str, value: Value[Any]) -> None:
-        if not isinstance(value, Value):
+        if not isinstance(value, reactive.Value):
             raise TypeError("`value` must be a reactive.Value object.")
 
         self._map[self._ns(key)] = value
@@ -965,7 +969,7 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    def __call__(self, renderer_fn: OutputRenderer[Any]) -> None:
+    def __call__(self, renderer_fn: OutputRenderer[OT]) -> OutputRenderer[OT]:
         ...
 
     @overload
@@ -975,8 +979,7 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-        name: Optional[str] = None,
-    ) -> Callable[[OutputRenderer[Any]], None]:
+    ) -> Callable[[OutputRenderer[OT]], OutputRenderer[OT]]:
         ...
 
     def __call__(
@@ -986,17 +989,8 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-        name: Optional[str] = None,
-    ) -> None | Callable[[OutputRenderer[OT]], None]:
-        if name is not None:
-            from .. import _deprecated
-
-            _deprecated.warn_deprecated(
-                "`@output(name=...)` is deprecated. Use `@output(id=...)` instead."
-            )
-            id = name
-
-        def set_renderer(renderer_fn: OutputRenderer[OT]) -> None:
+    ) -> OutputRenderer[OT] | Callable[[OutputRenderer[OT]], OutputRenderer[OT]]:
+        def set_renderer(renderer_fn: OutputRenderer[OT]) -> OutputRenderer[OT]:
             if hasattr(renderer_fn, "on_register"):
                 renderer_fn.on_register()
 
@@ -1016,7 +1010,7 @@ class Outputs:
 
             self._suspend_when_hidden[output_name] = suspend_when_hidden
 
-            @Effect(
+            @effect(
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
                 priority=priority,
             )
@@ -1069,14 +1063,14 @@ class Outputs:
 
             self._effects[output_name] = output_obs
 
-            return None
+            return renderer_fn
 
         if renderer_fn is None:
             return set_renderer
         else:
             return set_renderer(renderer_fn)
 
-    def remove(self, id: Id):
+    def remove(self, id: Id) -> None:
         output_name = self._ns(id)
         if output_name in self._effects:
             self._effects[output_name].destroy()

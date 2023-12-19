@@ -189,21 +189,21 @@ def server(input: Inputs, output: Outputs, session: Session):
         scores_by_model = {x: round(y, 2) for x, y in scores_by_model.items()}
 
         return ui.layout_column_wrap(
-            "135px",
             *[
                 # For each model, return a value_box with the score, colored based on
                 # how high the score is.
                 ui.value_box(
                     model,
                     ui.h2(score),
-                    theme_color="success"
+                    theme="text-success"
                     if score > THRESHOLD_MID
-                    else "warning"
+                    else "text-warning"
                     if score > THRESHOLD_LOW
-                    else "danger",
+                    else "bg-danger",
                 )
                 for model, score in scores_by_model.items()
             ],
+            width="135px",
             fixed_width=True,
         )
 

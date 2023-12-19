@@ -106,7 +106,7 @@ def render_capitalize(
 app_ui = ui.page_fluid(
     ui.h1("Capitalization renderer"),
     ui.input_text("caption", "Caption:", "Data summary"),
-    "No parentheses:",
+    "Renderer called with out parentheses:",
     ui.output_text_verbatim("no_parens"),
     "To upper:",
     ui.output_text_verbatim("to_upper"),

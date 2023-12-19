@@ -112,7 +112,6 @@ def popover(
     See Also
     --------
     * <https://getbootstrap.com/docs/5.3/components/popovers/>
-    * :func:`~shiny.ui.toggle_popover`
     * :func:`~shiny.ui.update_popover`
     * :func:`~shiny.ui.tooltip`
     """

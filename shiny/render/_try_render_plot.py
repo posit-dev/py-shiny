@@ -3,12 +3,12 @@ from __future__ import annotations
 import base64
 import io
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Union, cast
 
 from ..types import ImgData, PlotnineFigure
 from ._coordmap import get_coordmap, get_coordmap_plotnine
 
-TryPlotResult = Tuple[bool, "ImgData| None"]
+TryPlotResult = Tuple[bool, Union[ImgData, None]]
 
 
 if TYPE_CHECKING:
@@ -175,7 +175,7 @@ def try_render_matplotlib(
                 buf,
                 format="png",
                 dpi=ppi_out * pixelratio,
-                **kwargs,
+                **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
             )
             buf.seek(0)
             data = base64.b64encode(buf.read())
@@ -271,7 +271,7 @@ def try_render_pil(
         return (False, None)
 
     with io.BytesIO() as buf:
-        x.save(buf, format="PNG", **kwargs)
+        x.save(buf, format="PNG", **kwargs)  # pyright: ignore[reportGeneralTypeIssues]
         buf.seek(0)
         data = base64.b64encode(buf.read())
         data_str = data.decode("utf-8")
@@ -376,7 +376,7 @@ def try_render_plotnine(
 #
 # One negative consequence of this logic: if the user intentionally set the dpi to
 # rcParam * device_pixel_ratio, we're going to ignore it.
-def get_desired_dpi_from_fig(fig: Figure):
+def get_desired_dpi_from_fig(fig: Figure) -> float:
     ppi_out = fig.get_dpi()
 
     if fig.canvas.device_pixel_ratio != 1 and hasattr(fig, "_original_dpi"):

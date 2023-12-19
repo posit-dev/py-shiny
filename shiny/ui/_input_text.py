@@ -22,7 +22,7 @@ def input_text(
     spellcheck: Optional[Literal["true", "false"]] = None,
 ) -> Tag:
     """
-    Create an input control for entry of text values
+    Create an input control for entry of text values.
 
     Parameters
     ----------
@@ -33,17 +33,17 @@ def input_text(
     value
         Initial value.
     width
-        The CSS width, e.g. '400px', or '100%'
+        The CSS width, e.g., '400px', or '100%'.
     placeholder
         A hint as to what can be entered into the control.
     autocomplete
-        Whether to enable browser autocompletion of the text input (default is None).
-        If None, then it will use the browser's default behavior. Other possible values
+        Whether to enable browser autocompletion of the text input (default is ``None``).
+        If `None`, then it will use the browser's default behavior. Other possible values
         include "on", "off", "name", "username", and "email". See
         https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete for
         more.
     spellcheck
-        Whether to enable browser spell checking of the text input (default is None). If
+        Whether to enable browser spell checking of the text input (default is ``None``). If
         None, then it will use the browser's default behavior.
 
     Returns
@@ -108,16 +108,16 @@ def input_text_area(
     value
         Initial value.
     width
-        The CSS width, e.g. '400px', or '100%'
+        The CSS width, e.g., '400px', or '100%'.
     height
-        The CSS height, e.g. '400px', or '100%'
+        The CSS height, e.g., '400px', or '100%'.
     cols
-        Value of the visible character columns of the input, e.g. 80. This argument will
+        Value of the visible character columns of the input, e.g., 80. This argument will
         only take effect if there is not a CSS width rule defined for this element; such
         a rule could come from the width argument of this function or from a containing
         page layout such as :func:`~shiny.ui.page_fluid`.
     rows
-        The value of the visible character rows of the input, e.g. 6. If the height
+        The value of the visible character rows of the input, e.g., 6. If the height
         argument is specified, height will take precedence in the browser's rendering.
     placeholder
         A hint as to what can be entered into the control.
@@ -131,11 +131,11 @@ def input_text_area(
     autocomplete
         Whether to enable browser autocompletion of the text input (default is "off").
         If `None`, then it will use the browser's default behavior. Other possible
-        values include "on", "name", "username", and "email". See [Mozila's autocomplete
+        values include "on", "name", "username", and "email". See [Mozilla's autocomplete
         documentation](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete)
         for more.
     spellcheck
-        Whether to enable browser spell checking of the text input (default is None). If
+        Whether to enable browser spell checking of the text input (default is ``None``). If
         None, then it will use the browser's default behavior.
 
     Returns

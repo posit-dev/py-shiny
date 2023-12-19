@@ -7,7 +7,6 @@ import inspect
 import os
 import platform
 import re
-import shutil
 import sys
 import types
 from pathlib import Path
@@ -21,6 +20,8 @@ import shiny
 
 from . import _autoreload, _hostenv, _static, _utils
 from ._typing_extensions import NotRequired, TypedDict
+from .express import is_express_app
+from .express._utils import escape_to_var_name
 
 
 @click.group("main")
@@ -196,7 +197,7 @@ def run_app(
     **kwargs: object,
 ) -> None:
     """
-    Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop.
+    Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop the app.
 
     Parameters
     ----------
@@ -206,8 +207,8 @@ def run_app(
         directory. In other cases, the app location can be specified as a
         ``<module>:<attribute>`` string where the ``:<attribute>`` is only necessary if
         the application is named something other than ``app``. Note that ``<module>``
-        can be relative path to a ``.py`` file or a directory (with an ``app.py`` file
-        inside it); and in this case, the relative path is resolved relative to the
+        can be a relative path to a ``.py`` file or a directory (with an ``app.py`` file
+        inside of it); and in this case, the relative path is resolved relative to the
         ``app_dir`` directory.
     host
         The address that the app should listen on.
@@ -219,8 +220,8 @@ def run_app(
     reload
         Enable auto-reload.
     reload_dirs
-        List of directories (in addition to the app directory) to watch for changes that
-        will trigger app reloading.
+        A list of directories (in addition to the app directory) to watch for changes that
+        will trigger an app reload.
     reload_includes
         List or tuple of file globs to indicate which files should be monitored for
         changes. Can be combined with `reload_excludes`.
@@ -232,7 +233,7 @@ def run_app(
     log_level
         Log level.
     app_dir
-        Look for ``app`` under this directory (by adding this to the ``PYTHONPATH``).
+        The directory to look for ``app`` under (by adding this to the ``PYTHONPATH``).
     factory
         Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
     launch_browser
@@ -244,7 +245,7 @@ def run_app(
     Tip
     ---
     The ``shiny run`` command-line interface (which comes installed with Shiny) provides
-    the same functionality as this function.
+    the same functionality as :func:`~shiny.run_app`.
 
     Examples
     --------
@@ -275,7 +276,18 @@ def run_app(
     os.environ["SHINY_PORT"] = str(port)
 
     if isinstance(app, str):
-        app, app_dir = resolve_app(app, app_dir)
+        # Remove ":app" suffix if present. Normally users would just pass in the
+        # filename without the trailing ":app", as in `shiny run app.py`, but the
+        # default value for `shiny run` is "app.py:app", so we need to handle it.
+        app_no_suffix = re.sub(r":app$", "", app)
+        if is_express_app(app_no_suffix, app_dir):
+            app_path = Path(app_no_suffix).resolve()
+            # If the file is "/path/to/app.py", our entrypoint with the escaped filename
+            # is "shiny.express.app:_2f_path_2f_to_2f_app_2e_py".
+            app = "shiny.express.app:" + escape_to_var_name(str(app_path))
+            app_dir = str(app_path.parent)
+        else:
+            app, app_dir = resolve_app(app, app_dir)
 
     if app_dir:
         app_dir = os.path.realpath(app_dir)
@@ -332,7 +344,7 @@ def run_app(
         log_config=log_config,
         app_dir=app_dir,
         factory=factory,
-        **reload_args,
+        **reload_args,  # pyright: ignore[reportGeneralTypeIssues]
         **kwargs,
     )
 
@@ -381,7 +393,7 @@ def is_file(app: str) -> bool:
     return "/" in app or app.endswith(".py")
 
 
-def resolve_app(app: str, app_dir: Optional[str]) -> tuple[str, Optional[str]]:
+def resolve_app(app: str, app_dir: str | None) -> tuple[str, str | None]:
     # The `app` parameter can be:
     #
     # - A module:attribute name
@@ -441,33 +453,78 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
     return importlib.import_module(module)
 
 
+# The template choices are defined here instead of in `_template_utiles.py` in
+# order to delay loading the questionary package until shiny create is called.
+
+# These templates are copied over fromt the `shiny/templates/app_templates`
+# directory. The process for adding new ones is to add your app folder to
+# that directory, and then add another entry to this dictionary.
+app_template_choices = {
+    "Basic App": "basic-app",
+    "Dashboard": "dashboard",
+    "Multi-page app with modules": "multi-page",
+    "Custom JavaScript Component": "js-component",
+}
+
+# These are templates which produce a Python package and have content filled in at
+# various places based on the user input. You can add new ones by following the
+# examples in `shiny/templates/package-templates` and then adding entries to this
+# dictionary.
+package_template_choices = {
+    "Input component": "js-input",
+    "Output component": "js-output",
+    "React component": "js-react",
+}
+
+
 @main.command(
     help="""Create a Shiny application from a template.
 
-APPDIR is the directory to the Shiny application. A file named app.py will be created in
-that directory.
+Create an app based on a template. You will be prompted with
+a number of application types, as well as the destination folder.
+If you don't provide a destination folder, it will be created in the current working
+directory based on the template name.
 
 After creating the application, you use `shiny run`:
 
     shiny run APPDIR/app.py --reload
 """
 )
-@click.argument("appdir", type=str, default=".")
-def create(appdir: str) -> None:
-    app_dir = Path(appdir)
-    app_path = app_dir / "app.py"
-    if app_path.exists():
-        print(f"Error: Can't create {app_path} because it already exists.")
-        sys.exit(1)
+@click.option(
+    "--template",
+    "-t",
+    type=click.Choice(
+        list({**app_template_choices, **package_template_choices}.values()),
+        case_sensitive=False,
+    ),
+    help="Choose a template for your new application.",
+)
+@click.option(
+    "--mode",
+    "-m",
+    type=click.Choice(
+        ["core", "express"],
+        case_sensitive=False,
+    ),
+    help="Do you want to use a Shiny Express template or a Shiny Core template?",
+)
+@click.option(
+    "--github",
+    "-g",
+    help="The GitHub URL of the template sub-directory. For example https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard",
+)
+def create(
+    template: Optional[str] = None,
+    mode: Optional[str] = None,
+    github: Optional[str] = None,
+) -> None:
+    from ._template_utils import template_query, use_git_template
 
-    if not app_dir.exists():
-        app_dir.mkdir()
+    if github is not None:
+        use_git_template(github, mode)
+        return
 
-    shutil.copyfile(
-        Path(__file__).parent / "api-examples" / "template" / "app.py", app_path
-    )
-
-    print(f"Created Shiny app at {app_dir / 'app.py'}")
+    template_query(template, mode)
 
 
 @main.command(
