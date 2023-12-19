@@ -197,7 +197,7 @@ def run_app(
     **kwargs: object,
 ) -> None:
     """
-    Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop.
+    Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop the app.
 
     Parameters
     ----------
@@ -207,8 +207,8 @@ def run_app(
         directory. In other cases, the app location can be specified as a
         ``<module>:<attribute>`` string where the ``:<attribute>`` is only necessary if
         the application is named something other than ``app``. Note that ``<module>``
-        can be relative path to a ``.py`` file or a directory (with an ``app.py`` file
-        inside it); and in this case, the relative path is resolved relative to the
+        can be a relative path to a ``.py`` file or a directory (with an ``app.py`` file
+        inside of it); and in this case, the relative path is resolved relative to the
         ``app_dir`` directory.
     host
         The address that the app should listen on.
@@ -220,8 +220,8 @@ def run_app(
     reload
         Enable auto-reload.
     reload_dirs
-        List of directories (in addition to the app directory) to watch for changes that
-        will trigger app reloading.
+        A list of directories (in addition to the app directory) to watch for changes that
+        will trigger an app reload.
     reload_includes
         List or tuple of file globs to indicate which files should be monitored for
         changes. Can be combined with `reload_excludes`.
@@ -233,7 +233,7 @@ def run_app(
     log_level
         Log level.
     app_dir
-        Look for ``app`` under this directory (by adding this to the ``PYTHONPATH``).
+        The directory to look for ``app`` under (by adding this to the ``PYTHONPATH``).
     factory
         Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
     launch_browser
@@ -245,7 +245,7 @@ def run_app(
     Tip
     ---
     The ``shiny run`` command-line interface (which comes installed with Shiny) provides
-    the same functionality as this function.
+    the same functionality as :func:`~shiny.run_app`.
 
     Examples
     --------
@@ -499,10 +499,32 @@ After creating the application, you use `shiny run`:
     ),
     help="Choose a template for your new application.",
 )
-def create(template: Optional[str] = None) -> None:
-    from ._template_utils import template_query
+@click.option(
+    "--mode",
+    "-m",
+    type=click.Choice(
+        ["core", "express"],
+        case_sensitive=False,
+    ),
+    help="Do you want to use a Shiny Express template or a Shiny Core template?",
+)
+@click.option(
+    "--github",
+    "-g",
+    help="The GitHub URL of the template sub-directory. For example https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard",
+)
+def create(
+    template: Optional[str] = None,
+    mode: Optional[str] = None,
+    github: Optional[str] = None,
+) -> None:
+    from ._template_utils import template_query, use_git_template
 
-    template_query(template)
+    if github is not None:
+        use_git_template(github, mode)
+        return
+
+    template_query(template, mode)
 
 
 @main.command(

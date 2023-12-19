@@ -354,7 +354,7 @@ def image(
     Returns
     -------
     :
-        A decorator for a function that returns an `~shiny.types.ImgData` object.
+        A decorator for a function that returns an :func:`~shiny.types.ImgData` object.
 
     Tip
     ----
@@ -457,12 +457,14 @@ def table(
     **kwargs: object,
 ) -> TableTransformer.OutputRenderer | TableTransformer.OutputRendererDecorator:
     """
-    Reactively render a Pandas data frame object (or similar) as a basic HTML table.
+    Reactively render a pandas ``DataFrame`` object (or similar) as a basic HTML
+    table.
 
-    Consider using ~shiny.render.data_frame instead of this renderer, as it provides
-    high performance virtual scrolling, built-in filtering and sorting, and a better
-    default appearance. This renderer may still be helpful if you use pandas styling
-    features that are not currently supported by ~shiny.render.data_frame.
+    Consider using :func:`~shiny.render.data_frame` instead of this renderer, as
+    it provides high performance virtual scrolling, built-in filtering and sorting,
+    and a better default appearance. This renderer may still be helpful if you
+    use pandas styling features that are not currently supported by
+    :func:`~shiny.render.data_frame`.
 
     Parameters
     ----------
@@ -544,7 +546,8 @@ def ui(
     Returns
     -------
     :
-        A decorator for a function that returns an object of type `~shiny.ui.TagChild`.
+        A decorator for a function that returns an object of type
+        :class:`~shiny.ui.TagChild`.
 
     Tip
     ----

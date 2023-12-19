@@ -26,7 +26,7 @@ __all__ = (
 
 class AccordionPanel:
     """
-    Internal class used to represent an accordion panel.
+    The internal class used to represent an accordion panel.
 
     This class is used to represent an accordion panel. It is not intended to be
     instantiated directly. Instead, use :func:`~shiny.ui.accordion_panel`.
@@ -34,7 +34,7 @@ class AccordionPanel:
     Parameters
     ----------
     *args
-        Contents to the accordion panel body. Or tag attributes that are supplied to the
+        Contents to appear in the accordion panel body, or tag attributes that are supplied to the
         returned :class:`~htmltools.Tag` object.
     data_value
         A character string that uniquely identifies this panel.
@@ -397,7 +397,7 @@ def update_accordion(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Dynamically set accordions panel state
+    Dynamically set accordions' states.
 
     Dynamically (i.e., programmatically) update/modify :func:`~shiny.ui.accordion`s in a Shiny app.
     These functions require an `id` to be provided to the :func:`~shiny.ui.accordion` and must also be
@@ -408,11 +408,11 @@ def update_accordion(
     id
         A string that matches an existing :func:`~shiny.ui.accordion`'s `id`.
     show
-        either a string or list of strings (used to identify particular
+        Either a string or list of strings (used to identify particular
         :func:`~shiny.ui.accordion_panel`(s) by their `value`) or a `bool` to set the state of all
         panels.
     session
-        A shiny session object (the default should almost always be used).
+        A Shiny session object (the default should almost always be used).
 
     References
     ----------
@@ -442,7 +442,7 @@ def insert_accordion_panel(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Insert an :func:`~shiny.ui.accordion_panel`
+    Insert an :func:`~shiny.ui.accordion_panel`.
 
     Parameters
     ----------
@@ -457,7 +457,7 @@ def insert_accordion_panel(
         `"after"` will append after the last panel and `"before"` will prepend before
         the first panel.
     session
-        A shiny session object (the default should almost always be used).
+        A Shiny session object (the default should almost always be used).
 
     References
     ----------
@@ -495,7 +495,7 @@ def remove_accordion_panel(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Remove an :func:`~shiny.ui.accordion_panel`
+    Remove an :func:`~shiny.ui.accordion_panel`.
 
     Parameters
     ----------
@@ -504,7 +504,7 @@ def remove_accordion_panel(
     target
         The `value` of an existing panel to remove.
     session
-        A shiny session object (the default should almost always be used).
+        A Shiny session object (the default should almost always be used).
 
     References
     ----------
@@ -552,7 +552,7 @@ def update_accordion_panel(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Dynamically update accordions panel contents
+    Dynamically update accordion panel contents.
 
     Dynamically (i.e., programmatically) update/modify :func:`~shiny.ui.accordion` panels in a Shiny app.
     These functions require an `id` to be provided to the :func:`~shiny.ui.accordion` and must also be
@@ -573,7 +573,7 @@ def update_accordion_panel(
     icon
         If not missing, the new icon of the panel.
     session
-        A shiny session object (the default should almost always be used).
+        A Shiny session object (the default should almost always be used).
 
     References
     ----------

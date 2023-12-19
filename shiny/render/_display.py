@@ -4,7 +4,7 @@ import inspect
 import sys
 from typing import Any, Callable, Optional, Union, overload
 
-from htmltools import TagAttrValue, TagFunction, TagList
+from htmltools import TagAttrValue, TagFunction, TagList, wrap_displayhook_handler
 
 from .. import ui as _ui
 from ..session._utils import RenderedDeps
@@ -29,7 +29,7 @@ async def DisplayTransformer(
 ) -> RenderedDeps | None:
     results: list[object] = []
     orig_displayhook = sys.displayhook
-    sys.displayhook = results.append
+    sys.displayhook = wrap_displayhook_handler(results.append)
     try:
         x = _fn()
         if inspect.iscoroutine(x):
@@ -95,7 +95,7 @@ def display(
     fillable
         Whether or not the UI output area should be considered a fillable (i.e.,
         flexbox) container.
-    kwargs
+    **kwargs
         Attributes to be applied to the output container.
 
 

@@ -16,9 +16,9 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
+    "@posit-dev/shiny-bindings-react": "^0.0.3",
     "react": "^18.2.0",
     "react-color": "^2.19.3",
-    "react-dom": "^18.2.0",
-    "@shiny-helpers/react": "^0.0.13"
+    "react-dom": "^18.2.0"
   }
 }

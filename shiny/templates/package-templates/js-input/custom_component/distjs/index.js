@@ -177,15 +177,15 @@
       super(), this._$Ep = void 0, this.isUpdatePending = false, this.hasUpdated = false, this._$Em = null, this._$Ev();
     }
     _$Ev() {
-      this._$Eg = new Promise((t4) => this.enableUpdating = t4), this._$AL = /* @__PURE__ */ new Map(), this._$E_(), this.requestUpdate(), this.constructor.l?.forEach((t4) => t4(this));
+      this._$Eg = new Promise((t4) => this.enableUpdating = t4), this._$AL = /* @__PURE__ */ new Map(), this._$ES(), this.requestUpdate(), this.constructor.l?.forEach((t4) => t4(this));
     }
     addController(t4) {
-      (this._$ES ??= []).push(t4), void 0 !== this.renderRoot && this.isConnected && t4.hostConnected?.();
+      (this._$E_ ??= /* @__PURE__ */ new Set()).add(t4), void 0 !== this.renderRoot && this.isConnected && t4.hostConnected?.();
     }
     removeController(t4) {
-      this._$ES?.splice(this._$ES.indexOf(t4) >>> 0, 1);
+      this._$E_?.delete(t4);
     }
-    _$E_() {
+    _$ES() {
       const t4 = /* @__PURE__ */ new Map(), s4 = this.constructor.elementProperties;
       for (const i4 of s4.keys())
         this.hasOwnProperty(i4) && (t4.set(i4, this[i4]), delete this[i4]);
@@ -196,12 +196,12 @@
       return S(t4, this.constructor.elementStyles), t4;
     }
     connectedCallback() {
-      this.renderRoot ??= this.createRenderRoot(), this.enableUpdating(true), this._$ES?.forEach((t4) => t4.hostConnected?.());
+      this.renderRoot ??= this.createRenderRoot(), this.enableUpdating(true), this._$E_?.forEach((t4) => t4.hostConnected?.());
     }
     enableUpdating(t4) {
     }
     disconnectedCallback() {
-      this._$ES?.forEach((t4) => t4.hostDisconnected?.());
+      this._$E_?.forEach((t4) => t4.hostDisconnected?.());
     }
     attributeChangedCallback(t4, s4, i4) {
       this._$AK(t4, i4);
@@ -248,7 +248,7 @@
       if (!this.isUpdatePending)
         return;
       if (!this.hasUpdated) {
-        if (this._$Ep) {
+        if (this.renderRoot ??= this.createRenderRoot(), this._$Ep) {
           for (const [t6, s5] of this._$Ep)
             this[t6] = s5;
           this._$Ep = void 0;
@@ -261,7 +261,7 @@
       let t4 = false;
       const s4 = this._$AL;
       try {
-        t4 = this.shouldUpdate(s4), t4 ? (this.willUpdate(s4), this._$ES?.forEach((t5) => t5.hostUpdate?.()), this.update(s4)) : this._$ET();
+        t4 = this.shouldUpdate(s4), t4 ? (this.willUpdate(s4), this._$E_?.forEach((t5) => t5.hostUpdate?.()), this.update(s4)) : this._$ET();
       } catch (s5) {
         throw t4 = false, this._$ET(), s5;
       }
@@ -270,7 +270,7 @@
     willUpdate(t4) {
     }
     _$AE(t4) {
-      this._$ES?.forEach((t5) => t5.hostUpdated?.()), this.hasUpdated || (this.hasUpdated = true, this.firstUpdated(t4)), this.updated(t4);
+      this._$E_?.forEach((t5) => t5.hostUpdated?.()), this.hasUpdated || (this.hasUpdated = true, this.firstUpdated(t4)), this.updated(t4);
     }
     _$ET() {
       this._$AL = /* @__PURE__ */ new Map(), this.isUpdatePending = false;
@@ -292,7 +292,7 @@
     firstUpdated(t4) {
     }
   };
-  b.elementStyles = [], b.shadowRootOptions = { mode: "open" }, b[d("elementProperties")] = /* @__PURE__ */ new Map(), b[d("finalized")] = /* @__PURE__ */ new Map(), p?.({ ReactiveElement: b }), (a.reactiveElementVersions ??= []).push("2.0.1");
+  b.elementStyles = [], b.shadowRootOptions = { mode: "open" }, b[d("elementProperties")] = /* @__PURE__ */ new Map(), b[d("finalized")] = /* @__PURE__ */ new Map(), p?.({ ReactiveElement: b }), (a.reactiveElementVersions ??= []).push("2.0.2");
 
   // node_modules/lit-html/lit-html.js
   var t2 = globalThis;
@@ -551,7 +551,7 @@
     }
   };
   var Z = t2.litHtmlPolyfillSupport;
-  Z?.(V, M), (t2.litHtmlVersions ??= []).push("3.0.2");
+  Z?.(V, M), (t2.litHtmlVersions ??= []).push("3.1.0");
   var j = (t4, i4, s4) => {
     const e5 = s4?.renderBefore ?? i4;
     let h3 = e5._$litPart$;
@@ -588,7 +588,7 @@
   s3._$litElement$ = true, s3["finalized", "finalized"] = true, globalThis.litElementHydrateSupport?.({ LitElement: s3 });
   var r4 = globalThis.litElementPolyfillSupport;
   r4?.({ LitElement: s3 });
-  (globalThis.litElementVersions ??= []).push("4.0.1");
+  (globalThis.litElementVersions ??= []).push("4.0.2");
 
   // node_modules/@lit/reactive-element/decorators/custom-element.js
   var t3 = (t4) => (e5, o5) => {
@@ -627,9 +627,41 @@
     })(t4, e5, o5);
   }
 
+  // node_modules/@posit-dev/shiny-bindings-core/dist/OptionalShiny.js
+  var Shiny = window.Shiny;
+
+  // node_modules/@posit-dev/shiny-bindings-core/dist/makeInputBinding.js
+  function makeInputBinding(tagName, { type = null } = {}) {
+    if (!Shiny) {
+      return;
+    }
+    class NewCustomBinding extends Shiny["InputBinding"] {
+      constructor() {
+        super();
+      }
+      find(scope) {
+        return $(scope).find(tagName);
+      }
+      getValue(el) {
+        return el.value;
+      }
+      getType(_2) {
+        return type;
+      }
+      subscribe(el, callback) {
+        el.notifyBindingOfChange = (ad) => callback(ad ?? false);
+      }
+      unsubscribe(el) {
+        el.notifyBindingOfChange = (_2) => {
+        };
+      }
+    }
+    Shiny.inputBindings.register(new NewCustomBinding(), `${tagName}-Binding`);
+  }
+
   // srcts/index.ts
-  var customInputTag = "shiny-custom-input";
-  var ShinyCustomInput = class extends s3 {
+  var customInputTag = "custom-component";
+  var CustomComponentEl = class extends s3 {
     constructor() {
       super(...arguments);
       this.value = 0;
@@ -638,14 +670,15 @@
        * This alerts Shiny that the value has changed and it should check for the
        * latest value. This is set by the input binding.
        */
-      this.onChangeCallback = null;
+      this.notifyBindingOfChange = () => {
+      };
     }
     /**
      * Function to run when the increment button is clicked.
      */
     onIncrement() {
       this.value++;
-      this.onChangeCallback?.(true);
+      this.notifyBindingOfChange(true);
     }
     render() {
       return x`
@@ -655,7 +688,7 @@
     `;
     }
   };
-  ShinyCustomInput.styles = i`
+  CustomComponentEl.styles = i`
     :host {
       display: block;
       border: solid 1px gray;
@@ -666,25 +699,11 @@
   `;
   __decorateClass([
     n4({ type: Number })
-  ], ShinyCustomInput.prototype, "value", 2);
-  ShinyCustomInput = __decorateClass([
+  ], CustomComponentEl.prototype, "value", 2);
+  CustomComponentEl = __decorateClass([
     t3(customInputTag)
-  ], ShinyCustomInput);
-  var CustomInputBinding = class extends Shiny.InputBinding {
-    constructor() {
-      super();
-    }
-    find(scope) {
-      return $(scope).find(customInputTag);
-    }
-    getValue(el) {
-      return el.value;
-    }
-    subscribe(el, callback) {
-      el.onChangeCallback = callback;
-    }
-  };
-  Shiny.inputBindings.register(new CustomInputBinding(), customInputTag);
+  ], CustomComponentEl);
+  makeInputBinding(customInputTag);
 })();
 /*! Bundled license information:
 
