@@ -24,7 +24,6 @@ app_ui = ui.page_fluid(
 
 
 def server(input: s.Inputs, output: s.Outputs, session: s.Session):
-    @output()
     @s.render.text()
     @reactive.event(input.go)
     async def hash_output():

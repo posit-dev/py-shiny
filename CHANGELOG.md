@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### New features
 * `shiny run` now takes `reload-includes` and `reload-excludes` to allow you to define which files trigger a reload (#780).
 * `shiny.run` now passes keyword arguments to `uvicorn.run` (#780).
-* The `@output` decorator is no longer required for rendering functions; `@render.xxx` decorators now register themselves automatically. You can still use `@output` explicitly if you need to set specific output options (#747).
+* The `@output` decorator is no longer required for rendering functions; `@render.xxx` decorators now register themselves automatically. You can still use `@output` explicitly if you need to set specific output options (#747, #790).
 * Added support for integration with Quarto (#746).
 * Added `shiny.render.renderer_components` decorator to help create new output renderers (#621).
 * Added `shiny.experimental.ui.popover()`, `update_popover()`, and `toggle_popover()` for easy creation (and server-side updating) of [Bootstrap popovers](https://getbootstrap.com/docs/5.3/components/popovers/). Popovers are similar to tooltips, but are more persistent, and should primarily be used with button-like UI elements (e.g. `input_action_button()` or icons) (#680).

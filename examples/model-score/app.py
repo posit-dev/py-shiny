@@ -178,7 +178,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     def filtered_model_names():
         return filtered_df()["model"].unique()
 
-    @output
     @render.ui
     def value_boxes():
         data = filtered_df()
@@ -208,7 +207,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             fixed_width=True,
         )
 
-    @output
     @render_plotly_streaming(recreate_key=filtered_model_names, update="data")
     def plot_timeseries():
         """
@@ -249,7 +247,6 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         return fig
 
-    @output
     @render_plotly_streaming(recreate_key=filtered_model_names, update="data")
     def plot_dist():
         fig = px.histogram(

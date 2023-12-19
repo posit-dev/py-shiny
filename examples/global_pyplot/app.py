@@ -19,13 +19,11 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.plot
     def mpl():
         if input.render():
             plt.hist([1, 1, 2, 3, 5])
 
-    @output
     @render.plot
     async def mpl_bad():
         if input.render():

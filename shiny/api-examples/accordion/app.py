@@ -38,7 +38,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         print(input.acc())
 
-    @output
     @render.text
     def acc_multiple_val():
         return "input.acc_multiple(): " + str(input.acc_multiple())

@@ -65,22 +65,18 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.text
     def radio1_out():
         return input.radio1()
 
-    @output
     @render.text
     def radio2_out():
         return input.radio2()
 
-    @output
     @render.text
     def check1_out():
         return input.check1()
 
-    @output
     @render.text
     def check2_out():
         return input.check2()

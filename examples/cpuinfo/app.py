@@ -145,7 +145,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     def reset_history():
         cpu_history.set(None)
 
-    @output
     @render.plot
     def plot():
         history = cpu_history_with_hold()
@@ -205,7 +204,6 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         return fig
 
-    @output
     @render.table
     def table():
         history = cpu_history_with_hold()
