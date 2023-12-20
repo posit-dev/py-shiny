@@ -36,7 +36,7 @@ def server(input, output, session):
         with reactive.isolate():
             if not first_render.get():
                 # Sleep for a second to simulate a long running process
-                await asyncio.sleep(2)
+                await asyncio.sleep(3)
             else:
                 first_render.set(False)
 

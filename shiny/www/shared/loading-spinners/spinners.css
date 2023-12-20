@@ -10,9 +10,13 @@
   --_shiny-spinner-speed: var(--shiny-spinner-speed, 2s);
   --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.1s);
 
-  /* TODO: Set up grow variables so growing can be toggled on and off by changing timing */
-  --_shiny-spinner-blur-speed: var(--shiny-spinner-blur-speed, 0.5s);
-  --_shiny-spinner-blur-easing: var(--shiny-spinner-blur-easing, ease-in-out);
+  --_shiny-spinner-blur-speed: var(--shiny-spinner-blur-speed, 0.2s);
+  --_shiny-spinner-blur-easing: var(--shiny-spinner-blur-easing, ease-in);
+
+  /* Setting the --shiny-spinner-grow-speed variable to a non-zero length will cause
+     the spinner to grow into full size to make the transition a bit smoother.
+  */
+  --_shiny_spinner-grow-speed: var(--shiny-spinner-grow-speed, 0s);
 
   position: relative;
   /*
@@ -58,7 +62,7 @@
 
   scale: 0;
   animation-name: shiny-loading-spinner-grow, shiny-loading-spinner-spin;
-  animation-duration: var(--_shiny-spinner-blur-speed),
+  animation-duration: var(--_shiny-spinner-grow-speed),
     var(--_shiny-spinner-speed);
   animation-iteration-count: 1, infinite;
   animation-timing-function: var(--_shiny-spinner-blur-easing),
