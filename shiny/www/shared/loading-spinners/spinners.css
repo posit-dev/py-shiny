@@ -8,6 +8,10 @@
   --_shiny-spinner-size: var(--shiny-spinner-size, 80px);
   --_shiny-spinner-easing: var(--shiny-spinner-easing, ease-in-out);
   --_shiny-spinner-speed: var(--shiny-spinner-speed, 2s);
+  --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.1s);
+
+  --_shiny-spinner-blur-speed: var(--shiny-spinner-blur-speed, 0.5s);
+  --_shiny-spinner-blur-easing: var(--shiny-spinner-blur-easing, ease-in-out);
 
   position: relative;
   /*
@@ -22,26 +26,12 @@
   position: absolute;
   inset: 0;
   z-index: 1000;
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
-  animation: shiny-loading-spinner-fade-in 0.5s ease-in-out;
-}
-
-.recalculating::after {
-  content: "";
-  background: var(--_shiny-spinner-color, gray);
-  -webkit-mask: var(--_shiny-spinner-svg) center/contain no-repeat;
-  mask: var(--_shiny-spinner-svg) center/contain no-repeat;
-  width: var(--_shiny-spinner-size);
-  height: var(--_shiny-spinner-size);
-  position: absolute;
-  inset: calc(50% - var(--_shiny-spinner-size) / 2);
-  animation-composition: add;
-  animation: shiny-loading-spinner-grow calc(var(--_shiny-spinner-speed) / 4)
-      var(--_shiny-spinner-easing),
-    shiny-loading-spinner-spin var(--_shiny-spinner-speed)
-      var(--_shiny-spinner-easing) infinite;
-  z-index: 1001;
+  animation-name: shiny-loading-spinner-fade-in;
+  animation-duration: var(--_shiny-spinner-blur-speed);
+  animation-timing-function: var(--_shiny-spinner-blur-easing);
+  animation-delay: var(--_shiny-spinner-delay);
+  /* This makes it so the blur stays after animating in */
+  animation-fill-mode: forwards;
 }
 
 @keyframes shiny-loading-spinner-fade-in {
@@ -55,20 +45,42 @@
   }
 }
 
+.recalculating::after {
+  content: "";
+  background: var(--_shiny-spinner-color, gray);
+  -webkit-mask: var(--_shiny-spinner-svg) center/contain no-repeat;
+  mask: var(--_shiny-spinner-svg) center/contain no-repeat;
+  width: var(--_shiny-spinner-size);
+  height: var(--_shiny-spinner-size);
+  position: absolute;
+  inset: calc(50% - var(--_shiny-spinner-size) / 2);
+
+  scale: 0;
+  animation-name: shiny-loading-spinner-grow, shiny-loading-spinner-spin;
+  animation-duration: var(--_shiny-spinner-blur-speed),
+    var(--_shiny-spinner-speed);
+  animation-iteration-count: 1, infinite;
+  animation-timing-function: var(--_shiny-spinner-blur-easing),
+    var(--_shiny-spinner-easing);
+  animation-delay: var(--_shiny-spinner-delay);
+  animation-fill-mode: forwards, none;
+  z-index: 1001;
+}
+
 @keyframes shiny-loading-spinner-spin {
   0% {
-    transform: rotate(0deg);
+    rotate: 0deg;
   }
   100% {
-    transform: rotate(360deg);
+    rotate: 360deg;
   }
 }
 
 @keyframes shiny-loading-spinner-grow {
-  from {
-    transform: scale(0);
+  0% {
+    scale: 0;
   }
-  to {
-    transform: scale(1);
+  100% {
+    scale: 1;
   }
 }

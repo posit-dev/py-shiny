@@ -10,6 +10,7 @@ def use_loading_spinners(
     color: Optional[str] = None,
     size: Optional[str] = None,
     speed: Optional[str] = None,
+    delay: Optional[str] = None,
 ) -> HTMLDependency:
     """
     Use spinners to indicate when an element is loading.
@@ -33,6 +34,10 @@ def use_loading_spinners(
     speed
         The amount of time for the spinner to complete a single revolution. This can be
         any valid CSS time. Defaults to "1s".
+    delay
+        The amount of time to wait before showing the spinner. This can be any valid
+        CSS time. Defaults to "0.5s". This is useful for not showing the spinner if the
+        computation finishes quickly.
 
     Returns
     -------
@@ -68,6 +73,7 @@ def use_loading_spinners(
         + (f"--shiny-spinner-color: {color};" if color else "")
         + (f"--shiny-spinner-size: {size};" if size else "")
         + (f"--shiny-spinner-speed: {speed};" if speed else "")
+        + (f"--shiny-spinner-delay: {delay};" if delay else "")
         + "}"
     )
 
