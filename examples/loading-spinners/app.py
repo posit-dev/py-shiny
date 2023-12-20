@@ -15,7 +15,7 @@ app_ui = ui.page_sidebar(
             ui.output_plot("plot"),
         ),
         ui.card(
-            ui.output_plot("plot2"),
+            ui.div({"class": "recalculating"}, style="height: 200px; width: 100%;"),
         ),
     ),
 )
@@ -42,15 +42,15 @@ def server(input, output, session):
 
         return plt.gcf()
 
-    @render.plot
-    async def plot2():
-        # Generate input.rows() random numbers
-        data = np.random.randn(input.rows())
-        plt.plot(data)
-        plt.ylabel("some numbers")
-        # Sleep for a second to simulate a long running process
+    # @render.plot
+    # async def plot2():
+    #     # Generate input.rows() random numbers
+    #     data = np.random.randn(input.rows())
+    #     plt.plot(data)
+    #     plt.ylabel("some numbers")
+    #     # Sleep for a second to simulate a long running process
 
-        return plt.gcf()
+    #     return plt.gcf()
 
 
 app = App(app_ui, server)

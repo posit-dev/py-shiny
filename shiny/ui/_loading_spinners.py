@@ -24,7 +24,7 @@ def use_loading_spinners(
     ----------
 
     type
-        The type of spinner to use. Options include "disc", "tadpole", and "dots".
+        The type of spinner to use. Options include "disc", "tadpole", "dots", "dot-track", and "bounce".
         Defaults to "tadpole".
     color
         The color of the spinner. This can be any valid CSS color. Defaults to the
@@ -51,6 +51,8 @@ def use_loading_spinners(
     with different arguments then only the first call will be reflected.
     """
 
+    animation = None
+    easing = None
     # Some of the spinners work better with linear easing and some with ease-in-out so
     # we modify them together.
     if type == "disc":
@@ -59,6 +61,14 @@ def use_loading_spinners(
     elif type == "dots":
         svg = "dots-spinner.svg"
         easing = "linear"
+    elif type == "dot-track":
+        svg = "dot-track-spinner.svg"
+        easing = "ease-in-out"
+    elif type == "bounce":
+        svg = "ball.svg"
+        animation = "shiny-loading-spinner-bounce"
+        # Set speed variable to 0.8s if it hasnt been set by the user
+        speed = speed or "0.8s"
     else:
         svg = "tadpole-spinner.svg"
         easing = "linear"
@@ -69,7 +79,8 @@ def use_loading_spinners(
     rule_contents = (
         ".recalculating{"
         + f"--shiny-spinner-svg: url({svg});"
-        + f"--shiny-spinner-easing: {easing};"
+        + (f"--shiny-spinner-easing: {easing};" if easing else "")
+        + (f"--shiny-spinner-animation: {animation};" if animation else "")
         + (f"--shiny-spinner-color: {color};" if color else "")
         + (f"--shiny-spinner-size: {size};" if size else "")
         + (f"--shiny-spinner-speed: {speed};" if speed else "")
