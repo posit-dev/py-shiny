@@ -114,11 +114,11 @@ def nav_panel(
     *args
         UI elements to display when the item is active.
     value
-        The value of the item. This is used to determine whether the item is active
-        (when an ``id`` is provided to the nav container), programmatically select the
-        item (e.g., :func:`~shiny.ui.update_navs`), and/or be provided to the
-        ``selected`` argument of the navigation container (e.g.,
-        :func:`~shiny.ui.navset_tab`).
+        The value of the item. Use this value to determine whether the item is active
+        (when an ``id`` is provided to the nav container) or to programmatically
+        select the item (e.g., :func:`~shiny.ui.update_navs`). You can also
+        provide the value to the ``selected`` argument of the navigation container
+        (e.g., :func:`~shiny.ui.navset_tab`).
     icon
         An icon to appear inline with the button/link.
 
@@ -314,11 +314,11 @@ def nav_menu(
         of two or more hyphens (e.g., ``---``), in which case it will be rendered
         as a divider.
     value
-        The value of the item. This is used to determine whether the item is active
-        (when an ``id`` is provided to the nav container), programmatically select the
-        item (e.g., :func:`~shiny.ui.update_navs`), and/or be provided to the
-        ``selected`` argument of the navigation container (e.g.,
-        :func:`~shiny.ui.navset_tab`).
+        The value of the item. Use this value to determine whether the item is active
+        (when an ``id`` is provided to the nav container) or to programmatically
+        select the item (e.g., :func:`~shiny.ui.update_navs`). You can also
+        provide the value to the ``selected`` argument of the navigation container
+        (e.g., :func:`~shiny.ui.navset_tab`).
     icon
         An icon to appear inline with the button/link.
     align
@@ -702,23 +702,6 @@ def navset_card_tab(
         ``value``).
     sidebar
         A `Sidebar` component to display on every `nav()` page.
-    fillable
-        Whether or not to allow fill items to grow/shrink to fit the browser window. If
-        `True`, all `nav()` pages are fillable. A character vector, matching the value
-        of `nav()`s to be filled, may also be provided. Note that, if a `sidebar` is
-        provided, `fillable` makes the main content portion fillable.
-    gap
-        A CSS length unit defining the gap (i.e., spacing) between elements provided to
-        `*args`.
-    padding
-        Padding to use for the body. This can be a numeric vector (which will be
-        interpreted as pixels) or a character vector with valid CSS lengths. The length
-        can be between one and four. If one, then that value will be used for all four
-        sides. If two, then the first value will be used for the top and bottom, while
-        the second value will be used for left and right. If three, then the first will
-        be used for top, the second will be left and right, and the third will be
-        bottom. If four, then the values will be interpreted as top, right, bottom, and
-        left respectively.
     header
         UI to display above the selected content.
     footer
@@ -833,7 +816,7 @@ def navset_card_underline(
     placement: Literal["above", "below"] = "above",
 ) -> NavSetCard:
     """
-    Render nav items active/focused navigation links are styled with an underline inside a card container.
+    Render nav items inside a card container. Active/focused navigation links are styled with an underline.
 
     Parameters
     ----------

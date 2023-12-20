@@ -33,8 +33,8 @@ def layout_column_wrap(
     """
     A grid-like, column-first layout
 
-    Wraps a 1d sequence of UI elements into a 2d grid. The number of columns (and rows)
-    in the grid dependent on the column `width` as well as the size of the display.
+    Wraps a 1d sequence of UI elements into a 2d grid. The number of columns
+    (and rows) in the grid depends on the column width and the size of the display.
 
     Parameters
     ----------
@@ -43,21 +43,26 @@ def layout_column_wrap(
         :func:`~shiny.ui.card`). Named arguments become attributes on the
         containing :class:`~htmltools.Tag` element.
     width
-        The desired width of each card. It can be a (unit-less) number between 0 and 1
-        and should be specified as `1/num`, where `num` represents the number of desired
-        columns. It can be a CSS length unit representing either the minimum (when
-        `fixed_width=False`) or fixed width (`fixed_width=True`). It can also be `None`,
-        which allows power users to set the `grid-template-columns` CSS property
-        manually, either via a `style` attribute or a CSS stylesheet. If missing, a
-        value of `200px` will be used.
+        The desired width of each card. It can be one of the following:
+
+        * A (unit-less) number between 0 and 1, specified as `1/num`, where `num`
+          represents the number of desired columns.
+        * A CSS length unit representing either the minimum (when `fixed_width=False`)
+          or fixed width (`fixed_width=True`).
+        * `None`, which allows power users to set the `grid-template-columns` CSS
+          property manually, either via a `style` attribute or a CSS stylesheet.
+        * If missing, a value of `200px` will be used.
     fixed_width
-        When `width` is greater than 1 or is a CSS length unit, e.g. `"200px"`,
+        When `width` is greater than 1 or is a CSS length unit, e.g., `"200px"`,
         `fixed_width` indicates whether that `width` value represents the absolute size
         of each column (`fixed_width=TRUE`) or the minimum size of a column
-        (`fixed_width=FALSE`). When `fixed_width=FALSE`, new columns are added to a row
-        when `width` space is available and columns will never exceed the container or
-        viewport size. When `fixed_width=TRUE`, all columns will be exactly `width`
-        wide, which may result in columns overflowing the parent container.
+        (`fixed_width=FALSE`).
+
+        When `fixed_width=FALSE`, new columns are added to a row when `width` space is
+        available and columns will never exceed the container or viewport size.
+
+        When `fixed_width=TRUE`, all columns will be exactly `width` wide, which may
+        result in columns overflowing the parent container.
     heights_equal
         If `"all"` (the default), every card in every row of the grid will have the same
         height. If `"row"`, then every card in _each_ row of the grid will have the same

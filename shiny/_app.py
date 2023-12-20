@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import os
 import secrets
+from inspect import signature
 from pathlib import Path
 from typing import Any, Callable, Optional, cast
 
@@ -46,12 +47,12 @@ class App:
     ----------
     ui
         The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fluid` or
-        :func:`~shiny.ui.page_fixed`, with layouts and controls nested inside). You can
+        similar, with layouts and controls nested inside). You can
         also pass a function that takes a :class:`~starlette.requests.Request` and
         returns a UI definition, if you need the UI definition to be created dynamically
         for each pageview.
     server
-        A function which is called once for each session, ensuring that each app is
+        A function which is called once for each session, ensuring that each session is
         independent.
     static_assets
         Static files to be served by the app. If this is a string or Path object, it
@@ -101,19 +102,25 @@ class App:
     def __init__(
         self,
         ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
-        server: Optional[Callable[[Inputs, Outputs, Session], None]],
+        server: Callable[[Inputs], None]
+        | Callable[[Inputs, Outputs, Session], None]
+        | None,
         *,
         static_assets: Optional["str" | "os.PathLike[str]" | dict[str, Path]] = None,
         debug: bool = False,
     ) -> None:
         if server is None:
-
-            def _server(inputs: Inputs, outputs: Outputs, session: Session):
-                pass
-
-            server = _server
-
-        self.server = server
+            self.server = noop_server_fn
+        elif len(signature(server).parameters) == 1:
+            self.server = wrap_server_fn_with_output_session(
+                cast(Callable[[Inputs], None], server)
+            )
+        elif len(signature(server).parameters) == 3:
+            self.server = cast(Callable[[Inputs, Outputs, Session], None], server)
+        else:
+            raise ValueError(
+                "`server` must have 1 (Inputs) or 3 parameters (Inputs, Outputs, Session)"
+            )
 
         self._debug: bool = debug
 
@@ -166,7 +173,7 @@ class App:
                 cast("Tag | TagList", ui), lib_prefix=self.lib_prefix
             )
 
-    def init_starlette_app(self):
+    def init_starlette_app(self) -> starlette.applications.Starlette:
         routes: list[starlette.routing.BaseRoute] = [
             starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
             starlette.routing.Route("/", self._on_root_request_cb, methods=["GET"]),
@@ -400,7 +407,7 @@ class App:
         return rendered
 
 
-def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]):
+def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]) -> bool:
     if (
         isinstance(x, Path)
         or isinstance(x, Tag)
@@ -446,3 +453,17 @@ def create_static_asset_route(
             file_response_handler,
             name="shiny-app-static-assets-" + mount_point,
         )
+
+
+def noop_server_fn(input: Inputs, output: Outputs, session: Session) -> None:
+    pass
+
+
+def wrap_server_fn_with_output_session(
+    server: Callable[[Inputs], None]
+) -> Callable[[Inputs, Outputs, Session], None]:
+    def _server(input: Inputs, output: Outputs, session: Session):
+        # Only has 1 parameter, ignore output, session
+        server(input)
+
+    return _server

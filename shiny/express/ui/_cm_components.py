@@ -8,7 +8,10 @@ from htmltools import Tag, TagAttrValue, TagChild, TagList
 
 from ... import ui
 from ...types import MISSING, MISSING_TYPE
+from ...ui._accordion import AccordionPanel
+from ...ui._card import CardItem
 from ...ui._layout_columns import BreakpointsUser
+from ...ui._navs import NavMenu, NavPanel, NavSet, NavSetCard
 from ...ui.css import CssUnit
 from .. import _run
 from .._recall_context import RecallContextManager
@@ -42,7 +45,7 @@ __all__ = (
 # ======================================================================================
 # Page functions
 # ======================================================================================
-def set_page(page_fn: RecallContextManager[Tag]):
+def set_page(page_fn: RecallContextManager[Tag]) -> None:
     """Set the page function for the current Shiny express app."""
     _run.replace_top_level_recall_context_manager(page_fn, force=True)
 
@@ -76,10 +79,12 @@ def sidebar(
     position
         Where the sidebar should appear relative to the main content.
     open
-        The initial state of the sidebar. It can be `"desktop"` (the sidebar starts open
-        on desktop screen, closed on mobile), `"open"` or `True` (the sidebar starts
-        open), `"closed"` or `False` (the sidebar starts closed), or `"always"` or
-        `None` (the sidebar is always open and cannot be closed).
+        The initial state of the sidebar.
+
+        * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
+        * `"open"` or `True`: the sidebar starts open
+        * `"closed"` or `False`: the sidebar starts closed
+        * `"always"` or `None`: the sidebar is always open and cannot be closed
 
         In :func:`~shiny.ui.update_sidebar`, `open` indicates the desired state of the
         sidebar. Note that :func:`~shiny.ui.update_sidebar` can only open or close the
@@ -108,12 +113,15 @@ def sidebar(
     padding
         Padding within the sidebar itself. This can be a numeric vector (which will be
         interpreted as pixels) or a character vector with valid CSS lengths. `padding`
-        may be one to four values. If one, then that value will be used for all four
-        sides. If two, then the first value will be used for the top and bottom, while
-        the second value will be used for left and right. If three, then the first will
-        be used for top, the second will be left and right, and the third will be
-        bottom. If four, then the values will be interpreted as top, right, bottom, and
-        left respectively.
+        may be one to four values.
+
+        * If a single value, then that value will be used for all four sides.
+        * If two, then the first value will be used for the top and bottom, while
+          the second value will be used for left and right.
+        * If three values, then the first will be used for top, the second will be left
+          and right, and the third will be bottom.
+        * If four, then the values will be interpreted as top, right, bottom, and left
+          respectively.
     """
     return RecallContextManager(
         ui.sidebar,
@@ -148,7 +156,7 @@ def layout_sidebar(
     padding: Optional[CssUnit | list[CssUnit]] = None,
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[CardItem]:
     """
     Context manager for sidebar layout
 
@@ -222,7 +230,7 @@ def layout_column_wrap(
     gap: Optional[CssUnit] = None,
     class_: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     Context manager for a grid-like, column-first layout
 
@@ -233,21 +241,26 @@ def layout_column_wrap(
     Parameters
     ----------
     width
-        The desired width of each card. It can be a (unit-less) number between 0 and 1
-        and should be specified as `1/num`, where `num` represents the number of desired
-        columns. It can be a CSS length unit representing either the minimum (when
-        `fixed_width=False`) or fixed width (`fixed_width=True`). It can also be `None`,
-        which allows power users to set the `grid-template-columns` CSS property
-        manually, either via a `style` attribute or a CSS stylesheet. If missing, a
-        value of `200px` will be used.
+        The desired width of each card. It can be one of the following:
+
+        * A (unit-less) number between 0 and 1, specified as `1/num`, where `num`
+          represents the number of desired columns.
+        * A CSS length unit representing either the minimum (when `fixed_width=False`)
+          or fixed width (`fixed_width=True`).
+        * `None`, which allows power users to set the `grid-template-columns` CSS
+          property manually, either via a `style` attribute or a CSS stylesheet.
+        * If missing, a value of `200px` will be used.
     fixed_width
         When `width` is greater than 1 or is a CSS length unit, e.g. `"200px"`,
         `fixed_width` indicates whether that `width` value represents the absolute size
         of each column (`fixed_width=TRUE`) or the minimum size of a column
-        (`fixed_width=FALSE`). When `fixed_width=FALSE`, new columns are added to a row
-        when `width` space is available and columns will never exceed the container or
-        viewport size. When `fixed_width=TRUE`, all columns will be exactly `width`
-        wide, which may result in columns overflowing the parent container.
+        (`fixed_width=FALSE`).
+
+        When `fixed_width=FALSE`, new columns are added to a row when `width` space is
+        available and columns will never exceed the container or viewport size.
+
+        When `fixed_width=TRUE`, all columns will be exactly `width` wide, which may
+        result in columns overflowing the parent container.
     heights_equal
         If `"all"` (the default), every card in every row of the grid will have the same
         height. If `"row"`, then every card in _each_ row of the grid will have the same
@@ -297,7 +310,7 @@ def layout_columns(
     class_: Optional[str] = None,
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     Context manager for responsive, column-based grid layouts, based on a 12-column
     grid.
@@ -401,7 +414,7 @@ def card(
     fill: bool = True,
     class_: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     Context manager for Bootstrap card component
 
@@ -423,16 +436,18 @@ def card(
         an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
     class_
         Additional CSS classes for the returned Tag.
-    wrapper
-        A function (which returns a UI element) to call on unnamed arguments in `*args`
-        which are not already card item(s) (like :func:`~shiny.ui.card_header`,
-        :func:`~shiny.experimental.ui.card_body`, etc.). Note that non-card items are
-        grouped together into one `wrapper` call (e.g. given `card("a", "b",
-        card_body("c"), "d")`, `wrapper` would be called twice, once with `"a"` and
-        `"b"` and once with `"d"`).
     **kwargs
         HTML attributes on the returned Tag.
     """
+
+    # wrapper
+    #     A function (which returns a UI element) to call on unnamed arguments in `*args`
+    #     which are not already card item(s) (like :func:`~shiny.ui.card_header`,
+    #     :func:`~shiny.experimental.ui.card_body`, etc.). Note that non-card items are
+    #     grouped together into one `wrapper` call (e.g. given `card("a", "b",
+    #     card_body("c"), "d")`, `wrapper` would be called twice, once with `"a"` and
+    #     `"b"` and once with `"d"`).
+
     return RecallContextManager(
         ui.card,
         kwargs=dict(
@@ -456,7 +471,7 @@ def accordion(
     width: Optional[CssUnit] = None,
     height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     Context manager for a vertically collapsing accordion.
 
@@ -507,7 +522,7 @@ def accordion_panel(
     value: Optional[str] | MISSING_TYPE = MISSING,
     icon: Optional[TagChild] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[AccordionPanel]:
     """
     Context manager for single accordion panel.
 
@@ -548,14 +563,12 @@ def navset(
     selected: Optional[str] = None,
     header: TagChild = None,
     footer: TagChild = None,
-):
+) -> RecallContextManager[NavSet]:
     """
     Context manager for a set of nav items
 
     Parameters
     ----------
-    *args
-        A collection of nav items (e.g., :func:`shiny.ui.nav`).
     type
         The type of navset to render. Can be one of `"underline"`, `"pill"`, or `"tab"`.
     id
@@ -569,6 +582,8 @@ def navset(
     footer
         UI to display below the selected content.
     """
+    # *args
+    #     A collection of nav items (e.g., :func:`shiny.ui.nav`).
 
     funcs = {
         "underline": ui.navset_underline,
@@ -600,14 +615,12 @@ def navset_card(
     sidebar: Optional[ui.Sidebar] = None,
     header: TagChild = None,
     footer: TagChild = None,
-):
+) -> RecallContextManager[NavSetCard]:
     """
     Context manager for a set of nav items inside a card container.
 
     Parameters
     ----------
-    *args
-        A collection of nav items (e.g., :func:`shiny.ui.nav`).
     type
         The type of navset to render. Can be one of `"underline"`, `"pill"`, or `"tab"`.
     id
@@ -623,6 +636,8 @@ def navset_card(
     footer
         UI to display below the selected content.
     """
+    # *args
+    #     A collection of nav items (e.g., :func:`shiny.ui.nav`).
 
     funcs = {
         "underline": ui.navset_card_underline,
@@ -652,7 +667,7 @@ def nav_panel(
     *,
     value: Optional[str] = None,
     icon: TagChild = None,
-):
+) -> RecallContextManager[NavPanel]:
     """
     Context manager for nav item pointing to some internal content.
 
@@ -681,7 +696,7 @@ def nav_panel(
     )
 
 
-def nav_control():
+def nav_control() -> RecallContextManager[NavPanel]:
     """
     Context manager for a control in the navigation container.
 
@@ -701,7 +716,7 @@ def nav_menu(
     value: Optional[str] = None,
     icon: TagChild = None,
     align: Literal["left", "right"] = "left",
-):
+) -> RecallContextManager[NavMenu]:
     """
     Context manager for a menu of nav items.
 
@@ -756,7 +771,7 @@ def value_box(
     fill: bool = True,
     class_: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     Context manager for a value box
 
@@ -832,7 +847,7 @@ def value_box(
 # ======================================================================================
 
 
-def panel_well(**kwargs: TagAttrValue):
+def panel_well(**kwargs: TagAttrValue) -> RecallContextManager[Tag]:
     """
     Context manager for a well panel
 
@@ -853,7 +868,7 @@ def panel_conditional(
     *,
     condition: str,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     Context manager for a conditional panel
 
@@ -906,7 +921,7 @@ def panel_fixed(
     draggable: bool = False,
     cursor: Literal["auto", "move", "default", "inherit"] = "auto",
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[TagList]:
     """
     Context manager for a panel of absolutely positioned content.
 
@@ -953,7 +968,7 @@ def panel_absolute(
     fixed: bool = False,
     cursor: Literal["auto", "move", "default", "inherit"] = "auto",
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[TagList]:
     """
     Context manager for a panel of absolutely positioned content.
 
@@ -1107,7 +1122,7 @@ def page_fillable(
     title: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     Creates a fillable page.
 
@@ -1154,7 +1169,7 @@ def page_sidebar(
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
     **kwargs: TagAttrValue,
-):
+) -> RecallContextManager[Tag]:
     """
     Create a page with a sidebar and a title.
 
@@ -1162,8 +1177,6 @@ def page_sidebar(
 
     Parameters
     ----------
-    sidebar
-        Content to display in the sidebar.
     title
         A title to display at the top of the page.
     fillable
@@ -1181,6 +1194,9 @@ def page_sidebar(
     **kwargs
         Additional attributes passed to :func:`~shiny.ui.layout_sidebar`.
     """
+    # sidebar
+    #     Content to display in the sidebar.
+
     return RecallContextManager(
         ui.page_sidebar,
         kwargs=dict(
@@ -1214,7 +1230,7 @@ def page_navbar(
     fluid: bool = True,
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
-):
+) -> RecallContextManager[Tag]:
     """
     Create a page with a navbar and a title.
 

@@ -15,7 +15,6 @@ def read_file():
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.table
     def result():
         return read_file()

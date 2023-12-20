@@ -4,3 +4,4 @@ _inv/
 _sidebar.yml
 /.quarto/
 objects.json
+site_libs/

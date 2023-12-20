@@ -221,12 +221,10 @@ def mod_x_server(
     def n():
         return int(letters.index(input.input_radio_buttons()))
 
-    @output
     @render.image
     def out_image() -> ImgData:
         return {"src": penguin_imgs[n()]}
 
-    @output
     @render.plot
     def out_plot():
         dt = [1, 2, 3, 4, 5]
@@ -234,27 +232,22 @@ def mod_x_server(
             dt[: ((n() + 1) % len(dt))], dt[: ((n() + 1) % len(dt))]  # pyright: ignore
         )
 
-    @output
     @render.table
     def out_table():
         return pandas_df.head(n() + 1)
 
-    @output
     @render.data_frame
     def out_data_frame():
         return pandas_df.head(n() + 1)
 
-    @output
     @render.text
     def out_text():
         return f"Output text content. `input.radio_buttons()`: `{input.input_radio_buttons()}`"
 
-    @output
     @render.text
     def out_text_verbatim():
         return f"Output text verbatim content. `input.radio_buttons()`: `{input.input_radio_buttons()}`"
 
-    @output
     @render.ui
     def out_ui():
         return ui.p(

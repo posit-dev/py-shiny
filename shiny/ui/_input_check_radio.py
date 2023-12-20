@@ -91,7 +91,7 @@ def input_switch(
 ) -> Tag:
     """
     Create a switch that can be used to specify logical values. Similar to
-    ~shiny.ui.input_checkbox, but implies to the user that the change will take effect
+    :func:`~shiny.ui.input_checkbox`, but implies to the user that the change will take effect
     immediately.
 
     Parameters
@@ -193,9 +193,9 @@ def input_checkbox_group(
     selected
         The values that should be initially selected, if any.
     inline
-        If `True`, the result is displayed inline
+        If `True`, the result is displayed inline.
     width
-        The CSS width, e.g. '400px', or '100%'
+        The CSS width, e.g. '400px', or '100%'.
 
     Returns
     -------
@@ -263,9 +263,9 @@ def input_radio_buttons(
     selected
         The values that should be initially selected, if any.
     inline
-        If ``True``, the result is displayed inline
+        If ``True``, the result is displayed inline.
     width
-        The CSS width, e.g. '400px', or '100%'
+        The CSS width, e.g. '400px', or '100%'.
 
     Returns
     -------
