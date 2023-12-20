@@ -5,7 +5,7 @@ import sys
 from types import TracebackType
 from typing import Callable, Generic, Mapping, Optional, Type, TypeVar
 
-from htmltools import Tag, wrap_displayhook_handler
+from htmltools import MetadataNode, Tag, TagList, wrap_displayhook_handler
 
 from .._typing_extensions import ParamSpec
 
@@ -53,6 +53,19 @@ class RecallContextManager(Generic[R]):
             res = self.fn(*self.args, **self.kwargs)
             sys.displayhook(res)
         return False
+
+    def tagify(self) -> Tag | TagList | MetadataNode | str:
+        res = self.fn(*self.args, **self.kwargs)
+
+        if callable(getattr(res, "tagify", None)):
+            return res.tagify()  # pyright: ignore
+        if callable(getattr(res, "_repr_html_", None)):
+            return res._repr_html_()  # pyright: ignore
+
+        raise RuntimeError(
+            "RecallContextManager was used without `with`. When used this way, the "
+            "result must have a .tagify() or ._repr_html_() method, but it does not."
+        )
 
 
 def wrap_recall_context_manager(
