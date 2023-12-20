@@ -1,4 +1,6 @@
-from typing import Optional
+from __future__ import annotations
+
+from typing import Literal, Optional
 
 from htmltools import HTMLDependency
 
@@ -6,7 +8,7 @@ from .. import __version__
 
 
 def use_loading_spinners(
-    type: Optional[str] = "tadpole",
+    type: Literal["tadpole", "disc", "dots", "dot-track", "bounce"] = "tadpole",
     color: Optional[str] = None,
     size: Optional[str] = None,
     speed: Optional[str] = None,
@@ -24,8 +26,8 @@ def use_loading_spinners(
     ----------
 
     type
-        The type of spinner to use. Options include "disc", "tadpole", "dots", "dot-track", and "bounce".
-        Defaults to "tadpole".
+        The type of spinner to use. Options include "disc", "tadpole", "dots",
+        "dot-track", and "bounce". Defaults to "tadpole".
     color
         The color of the spinner. This can be any valid CSS color. Defaults to the
         current app "primary" color (if using a theme) or light-blue if not.
@@ -35,8 +37,8 @@ def use_loading_spinners(
         The amount of time for the spinner to complete a single revolution. This can be
         any valid CSS time. Defaults to "1s".
     delay
-        The amount of time to wait before showing the spinner. This can be any valid
-        CSS time. Defaults to "0.5s". This is useful for not showing the spinner if the
+        The amount of time to wait before showing the spinner. This can be any valid CSS
+        time. Defaults to "0.5s". This is useful for not showing the spinner if the
         computation finishes quickly.
 
     Returns
@@ -57,13 +59,13 @@ def use_loading_spinners(
     # we modify them together.
     if type == "disc":
         svg = "disc-spinner.svg"
-        easing = "ease-in-out"
+        easing = "linear"
     elif type == "dots":
         svg = "dots-spinner.svg"
         easing = "linear"
     elif type == "dot-track":
         svg = "dot-track-spinner.svg"
-        easing = "ease-in-out"
+        easing = "linear"
     elif type == "bounce":
         svg = "ball.svg"
         animation = "shiny-loading-spinner-bounce"

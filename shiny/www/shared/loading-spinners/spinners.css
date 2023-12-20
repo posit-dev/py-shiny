@@ -93,7 +93,7 @@
   50% {
     animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
     translate: 0 calc(var(--_shiny-spinner-size) * (20.5 / 24));
-    scale: 1.2 0.75;
+    scale: 1.2 0.85;
   }
   53.125% {
     scale: 1 1;
