@@ -10,6 +10,7 @@
   --_shiny-spinner-speed: var(--shiny-spinner-speed, 2s);
   --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.1s);
 
+  /* TODO: Set up grow variables so growing can be toggled on and off by changing timing */
   --_shiny-spinner-blur-speed: var(--shiny-spinner-blur-speed, 0.5s);
   --_shiny-spinner-blur-easing: var(--shiny-spinner-blur-easing, ease-in-out);
 
