@@ -56,8 +56,6 @@ class FuncSignature(Renderer):
 
     @dispatch
     def render(self, el: Union[dc.Alias, dc.Object]):
-        # preview(el)
-
         param_str = ""
         if hasattr(el, "docstring") and hasattr(el.docstring, "parsed"):
             for docstring_val in el.docstring.parsed:
@@ -67,38 +65,24 @@ class FuncSignature(Renderer):
             for param in el.parameters:
                 param_str += self.render(param)
         return f"{el.name}({param_str})"
-        # return f"{el.name}({self.render(el.parameters)})"
-        # return self.render_annotation(el.annotation)
-        # # header = "#" * self.header_level
-        # # str_header = f"{header} {el.name}"
-        # str_header = f"## {el.name}"
-        # str_params = f"N PARAMETERS: {len(el.parameters)}"
-        # str_sections = "SECTIONS: " + self.render(el.docstring)
 
-        # # return something pretty
-        # return "\n".join([str_header, str_params, str_sections])
-
-    # Consolidate the parameter type info into a single column
     @dispatch
     def render(self, el: None):
         return "None"
 
     @dispatch
-    def render_annotation(self, el: exp.ExprName):
-        # print("exp.ExprName")
-        # preview(el)
-        return el.path
-        return f"[{el.path}](`{el.canonical_path}`)"
+    def render_annotation(self, el: str):
+        return el
 
     @dispatch
-    def render_annotation(self, el: exp.ExprSubscript):
-        # print("exp.ExprSubscript")
-        # preview(el)
+    def render_annotation(
+        self, el: Union[exp.ExprName, exp.ExprSubscript, exp.ExprBinOp]
+    ):
         return el.path
-        return f"[{el.path}](`{el.canonical_path}`)"
 
     @dispatch
     def render(self, el: ds.DocstringParameter):
+        # print("\n\n")
         # print("ds.DocstringParameter")
         # preview(el)
 
@@ -106,23 +90,15 @@ class FuncSignature(Renderer):
         annotation = self.render_annotation(el.annotation)
         if annotation:
             param = f"{param}: {annotation}"
-        # if el.default:
-        #     return None
         if el.default:
             param = f"{param} = {el.default}"
         return param
 
     @dispatch
     def render(self, el: ds.DocstringSectionParameters):
-        # print("ds.DocstringSectionParameters")
-        # preview(el)
         return ", ".join(
             [item for item in map(self.render, el.value) if item is not None]
         )
-        # rows = list(map(self.render, el.value))
-        # header = ["Parameter", "Description"]
-
-        # return self._render_table(rows, header)
 
 
 def get_git_revision_short_hash() -> str:
@@ -167,7 +143,7 @@ class FuncFileLocation(Renderer):
         return {
             # "name": el.name,
             # "path": el.path,
-            "gitpath": f"https://github.com/posit-dev/py-shiny/blob/{self.sha}/shiny/{rel_path}#L{el.lineno}-L{el.endlineno}",
+            "github": f"https://github.com/posit-dev/py-shiny/blob/{self.sha}/shiny/{rel_path}#L{el.lineno}-L{el.endlineno}",
         }
 
 
