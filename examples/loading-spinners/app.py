@@ -3,7 +3,7 @@ import asyncio
 import matplotlib.pyplot as plt
 import numpy as np
 
-from shiny import App, render, ui
+from shiny import App, reactive, render, ui
 
 app_ui = ui.page_sidebar(
     ui.sidebar(
@@ -22,6 +22,8 @@ app_ui = ui.page_sidebar(
 
 
 def server(input, output, session):
+    first_render = reactive.value(True)
+
     @render.plot
     async def plot():
         # Generate input.rows() random numbers
@@ -29,8 +31,14 @@ def server(input, output, session):
         plt.plot(data)
         plt.ylabel("some numbers")
 
-        # Sleep for a second to simulate a long running process
-        await asyncio.sleep(2)
+        # Only sleep on subsequent renders so we can quickly start looking at the
+        # spinner
+        with reactive.isolate():
+            if not first_render.get():
+                # Sleep for a second to simulate a long running process
+                await asyncio.sleep(2)
+            else:
+                first_render.set(False)
 
         return plt.gcf()
 
@@ -41,7 +49,6 @@ def server(input, output, session):
         plt.plot(data)
         plt.ylabel("some numbers")
         # Sleep for a second to simulate a long running process
-        await asyncio.sleep(0.1)
 
         return plt.gcf()
 
