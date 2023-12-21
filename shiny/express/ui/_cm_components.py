@@ -68,7 +68,7 @@ def sidebar(
     """
     Context manager for sidebar element
 
-    Create a collapsing sidebar layout. This function wraps :func:`~shiny.ui.sidebar`.
+    This function wraps :func:`~shiny.ui.sidebar`.
 
     Parameters
     ----------
@@ -158,6 +158,8 @@ def layout_sidebar(
     """
     Context manager for sidebar layout
 
+    This function wraps :func:`~shiny.ui.layout_sidebar`.
+
     Create a sidebar layout component which can be dropped inside any Shiny UI page
     method (e.g. :func:`~shiny.shiny.ui.page_fillable`) or :func:`~shiny.ui.card`
     context.
@@ -232,9 +234,10 @@ def layout_column_wrap(
     """
     Context manager for a grid-like, column-first layout
 
+    This function wraps :func:`~shiny.ui.layout_column_wrap`.
+
     Wraps a 1d sequence of UI elements into a 2d grid. The number of columns (and rows)
     in the grid dependent on the column `width` as well as the size of the display.
-    This function wraps :func:`~shiny.ui.layout_column_wrap`.
 
     Parameters
     ----------
@@ -312,6 +315,8 @@ def layout_columns(
     """
     Context manager for responsive, column-based grid layouts, based on a 12-column
     grid.
+
+    This function wraps :func:`~shiny.ui.layout_columns`.
 
     Parameters
     ----------
@@ -416,9 +421,11 @@ def card(
     """
     Context manager for Bootstrap card component
 
-    This function wraps :func:`~shiny.ui.card`. A general purpose container for grouping
-    related UI elements together with a border and optional padding. To learn more about
-    `card()`s, see [this article](https://rstudio.github.io/bslib/articles/cards.html).
+    This function wraps :func:`~shiny.ui.card`.
+
+    A general purpose container for grouping related UI elements together with a border
+    and optional padding. To learn more about `card()`s, see [this
+    article](https://rstudio.github.io/bslib/articles/cards.html).
 
     Parameters
     ----------
