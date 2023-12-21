@@ -135,6 +135,10 @@ from ._cm_components import (
     panel_absolute,
 )
 
+from ._page import (
+    page_opts,
+)
+
 __all__ = (
     # Imports from htmltools
     "TagList",
@@ -265,6 +269,8 @@ __all__ = (
     "panel_conditional",
     "panel_fixed",
     "panel_absolute",
+    # Imports from ._page
+    "page_opts",
 )
 
 
@@ -282,6 +288,7 @@ _known_missing = {
         "page_fillable",
         "page_navbar",
         "page_fluid",
+        "page_auto",
         "page_output",
         "panel_main",  # Deprecated
         "panel_sidebar",  # Deprecated
@@ -293,5 +300,5 @@ _known_missing = {
         "tooltip",
     ),
     # Items from shiny.express.ui that don't have a counterpart in shiny.ui
-    "shiny.express.ui": (),
+    "shiny.express.ui": ("page_opts",),
 }

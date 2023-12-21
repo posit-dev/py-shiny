@@ -133,7 +133,7 @@ _top_level_recall_context_manager: RecallContextManager[Tag]
 
 
 def reset_top_level_recall_context_manager() -> None:
-    from ._page import page_auto_cm
+    from .ui._page import page_auto_cm
 
     global _top_level_recall_context_manager
     _top_level_recall_context_manager = page_auto_cm()

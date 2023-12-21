@@ -19,6 +19,8 @@ quartodoc:
         - ui.page_fluid
         - ui.page_fixed
         - ui.page_bootstrap
+        - ui.page_auto
+        - ui.page_output
     - title: UI Layouts
       desc: Control the layout of multiple UI components.
       contents:
@@ -314,6 +316,15 @@ quartodoc:
             - express.ui.panel_conditional
             - express.ui.panel_fixed
             - express.ui.panel_absolute
+      contents:
+        - kind: page
+          path: PageFunctions
+          summary:
+            name: "Page functions"
+            desc: ""
+          flatten: true
+          contents:
+            - express.ui.page_opts
     - title: Deprecated
       desc: ""
       contents:
