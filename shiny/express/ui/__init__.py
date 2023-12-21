@@ -280,6 +280,7 @@ __all__ = (
 )
 
 
+# This is used for unit tests to verify that shiny.ui and shiny.express.ui stay in sync.
 _known_missing = {
     # Items from shiny.ui that don't have a counterpart in shiny.express.ui
     "shiny.ui": (
