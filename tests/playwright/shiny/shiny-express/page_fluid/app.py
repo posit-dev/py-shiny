@@ -1,7 +1,7 @@
 from shiny import render
 from shiny.express import input, ui
 
-ui.set_page(ui.page_fluid())
+ui.page_opts(full_width=True)
 
 with ui.card(id="card"):
     ui.input_slider("a", "A", 1, 100, 50)
