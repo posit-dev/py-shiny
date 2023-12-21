@@ -277,6 +277,11 @@ _known_missing = {
         "navset_pill_card",  # Deprecated
         "navset_tab_card",  # Deprecated
         "page_bootstrap",
+        "page_fixed",
+        "page_sidebar",
+        "page_fillable",
+        "page_navbar",
+        "page_fluid",
         "page_output",
         "panel_main",  # Deprecated
         "panel_sidebar",  # Deprecated
@@ -288,5 +293,5 @@ _known_missing = {
         "tooltip",
     ),
     # Items from shiny.express.ui that don't have a counterpart in shiny.ui
-    "shiny.express.ui": ("set_page",),
+    "shiny.express.ui": (),
 }
