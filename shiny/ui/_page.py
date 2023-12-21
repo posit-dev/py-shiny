@@ -446,9 +446,11 @@ def page_bootstrap(
 
 def page_auto(
     *args: TagChild | TagAttrs,
-    _page_fn: Callable[..., Tag] | None = None,
-    _fillable: bool = False,
-    _full_width: bool = False,
+    title: str | MISSING_TYPE = MISSING,
+    lang: str | MISSING_TYPE = MISSING,
+    fillable: bool | MISSING_TYPE = MISSING,
+    full_width: bool = False,
+    page_fn: Callable[..., Tag] | None = None,
     **kwargs: object,
 ) -> Tag:
     """
@@ -457,26 +459,34 @@ def page_auto(
     If there is a top-level nav, this will use :func:`~shiny.ui.page_navbar`. If not,
     and there is a top-level sidebar, this will use :func:`~shiny.ui.page_sidebar`.
 
-    If there are neither top-level navs nor sidebars, this will use the ``_fillable``
-    and ``_full_width`` arguments to determine which page function to use.
+    If there are neither top-level navs nor sidebars, this will use the ``fillable`` and
+    ``full_width`` arguments to determine which page function to use.
 
     Parameters
     ----------
     *args
         UI elements. These are used to determine which page function to use, and they
         are also passed along to that page function.
-    _page_fn
-        The page function to use. If ``None`` (the default), will automatically choose
-        one based on the arguments provided.
-    _fillable
-        This has an effect only if there are no sidebars or top-level navs. If ``True``,
-        use :func:`~shiny.ui.page_fillable`, where the content fills the window. If
-        ``False`` (the default), the value of ``_full_width`` will determine which page
-        function is used.
-    _full_width
+    title
+        The browser window title (defaults to the host URL of the page).
+    lang
+        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+        default, `None`, results in an empty string.
+    fillable
+        If there is a top-level sidebar or nav, then the value is passed through to the
+        :func:`~shiny.ui.page_sidebar` or :func:`~shiny.ui.page_navbar` function.
+        Otherwise, if ``True``, use :func:`~shiny.ui.page_fillable`, where the content
+        fills the window; if ``False`` (the default), the value of ``full_width`` will
+        determine which page function is used.
+    full_width
         This has an effect only if there are no sidebars or top-level navs, and
-        ``_fillable`` is ``False``. If this is ``False`` (the default), use use
+        ``fillable`` is ``False``. If this is ``False`` (the default), use use
         :func:`~shiny.ui.page_fixed`; if ``True``, use :func:`~shiny.ui.page_fillable`.
+    page_fn
+        The page function to use. If ``None`` (the default), will automatically choose
+        one based on the arguments provided. If not ``None``, this will override all
+        heuristics for choosing page functions.
     **kwargs
         Additional arguments, which are passed to the page function.
 
@@ -485,6 +495,10 @@ def page_auto(
     :
         A UI element.
     """
+    if not isinstance(title, MISSING_TYPE):
+        kwargs["title"] = title
+    if not isinstance(lang, MISSING_TYPE):
+        kwargs["lang"] = lang
 
     # Presence of a top-level nav items and/or sidebar determines the page function
     navs = [x for x in args if isinstance(x, (NavPanel, NavMenu))]
@@ -492,22 +506,27 @@ def page_auto(
 
     nNavs = len(navs)
     nSidebars = len(sidebars)
-
-    if _page_fn is None:
+    if page_fn is None:
         if nNavs == 0:
             if nSidebars == 0:
-                if _fillable:
-                    _page_fn = page_fillable  # pyright: ignore[reportGeneralTypeIssues]
-                elif _full_width:
-                    _page_fn = page_fluid  # pyright: ignore[reportGeneralTypeIssues]
+                if isinstance(fillable, MISSING_TYPE):
+                    fillable = False
+
+                if fillable:
+                    page_fn = page_fillable  # pyright: ignore[reportGeneralTypeIssues]
+                elif full_width:
+                    page_fn = page_fluid  # pyright: ignore[reportGeneralTypeIssues]
                 else:
-                    _page_fn = page_fixed  # pyright: ignore[reportGeneralTypeIssues]
+                    page_fn = page_fixed  # pyright: ignore[reportGeneralTypeIssues]
 
             elif nSidebars == 1:
+                if not isinstance(fillable, MISSING_TYPE):
+                    kwargs["fillable"] = fillable
+
                 # page_sidebar() needs sidebar to be the first arg
                 # TODO: Change page_sidebar() to remove `sidebar` and accept a sidebar as a
                 # *arg.
-                _page_fn = page_sidebar  # pyright: ignore[reportGeneralTypeIssues]
+                page_fn = page_sidebar  # pyright: ignore[reportGeneralTypeIssues]
                 args = tuple(sidebars + [x for x in args if x not in sidebars])
 
             else:
@@ -517,14 +536,17 @@ def page_auto(
 
         # At least one nav
         else:
+            if not isinstance(fillable, MISSING_TYPE):
+                kwargs["fillable"] = fillable
+
             if nSidebars == 0:
                 # TODO: what do we do when nArgs != nNavs? Just let page_navbar handle it (i.e. error)?
-                _page_fn = page_navbar  # pyright: ignore[reportGeneralTypeIssues]
+                page_fn = page_navbar  # pyright: ignore[reportGeneralTypeIssues]
 
             elif nSidebars == 1:
                 # TODO: change page_navbar() to remove `sidebar` and accept a sidebar as a
                 # *arg.
-                _page_fn = page_navbar  # pyright: ignore[reportGeneralTypeIssues]
+                page_fn = page_navbar  # pyright: ignore[reportGeneralTypeIssues]
                 kwargs["sidebar"] = sidebars[0]
 
             else:
@@ -533,8 +555,8 @@ def page_auto(
                 )
 
     # If we got here, _page_fn is not None, but the type checker needs a little help.
-    _page_fn = cast(Callable[..., Tag], _page_fn)
-    return _page_fn(*args, **kwargs)
+    page_fn = cast(Callable[..., Tag], page_fn)
+    return page_fn(*args, **kwargs)
 
 
 def page_output(id: str) -> Tag:
