@@ -290,7 +290,6 @@ quartodoc:
             desc: ""
           flatten: true
           contents:
-            - express.ui.set_page
             - express.ui.sidebar
             - express.ui.layout_sidebar
             - express.ui.layout_column_wrap
@@ -315,11 +314,6 @@ quartodoc:
             - express.ui.panel_conditional
             - express.ui.panel_fixed
             - express.ui.panel_absolute
-            - express.ui.page_fluid
-            - express.ui.page_fixed
-            - express.ui.page_fillable
-            - express.ui.page_sidebar
-            - express.ui.page_navbar
     - title: Deprecated
       desc: ""
       contents:
