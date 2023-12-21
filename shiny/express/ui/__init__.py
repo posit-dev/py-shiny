@@ -117,11 +117,18 @@ from ._cm_components import (
     card,
     accordion,
     accordion_panel,
-    navset,
-    navset_card,
     nav_panel,
     nav_control,
     nav_menu,
+    navset_bar,
+    navset_card_pill,
+    navset_card_tab,
+    navset_card_underline,
+    navset_hidden,
+    navset_pill,
+    navset_pill_list,
+    navset_tab,
+    navset_underline,
     value_box,
     panel_well,
     panel_conditional,
@@ -248,11 +255,18 @@ __all__ = (
     "card",
     "accordion",
     "accordion_panel",
-    "navset",
-    "navset_card",
     "nav_panel",
     "nav_control",
     "nav_menu",
+    "navset_bar",
+    "navset_card_pill",
+    "navset_card_tab",
+    "navset_card_underline",
+    "navset_hidden",
+    "navset_pill",
+    "navset_pill_list",
+    "navset_tab",
+    "navset_underline",
     "value_box",
     "panel_well",
     "panel_conditional",
@@ -272,17 +286,8 @@ _known_missing = {
         "column",  # Deprecated in favor of layout_columns
         "row",  # Deprecated in favor of layout_columns
         "nav",  # Deprecated in favor of nav_panel
-        "navset_bar",
-        "navset_card_pill",
-        "navset_card_tab",
-        "navset_card_underline",
-        "navset_hidden",
-        "navset_pill",
-        "navset_pill_card",
-        "navset_pill_list",
-        "navset_tab",
-        "navset_tab_card",
-        "navset_underline",
+        "navset_pill_card",  # Deprecated
+        "navset_tab_card",  # Deprecated
         "page_bootstrap",
         "page_output",
         "panel_main",  # Deprecated
@@ -295,10 +300,5 @@ _known_missing = {
         "tooltip",
     ),
     # Items from shiny.express.ui that don't have a counterpart in shiny.ui
-    "shiny.express.ui": (
-        "set_page",
-        # TODO: Migrate these to shiny.ui
-        "navset",
-        "navset_card",
-    ),
+    "shiny.express.ui": ("set_page",),
 }

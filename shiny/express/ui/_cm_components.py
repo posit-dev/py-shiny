@@ -11,7 +11,7 @@ from ...types import MISSING, MISSING_TYPE
 from ...ui._accordion import AccordionPanel
 from ...ui._card import CardItem
 from ...ui._layout_columns import BreakpointsUser
-from ...ui._navs import NavMenu, NavPanel, NavSet, NavSetCard
+from ...ui._navs import NavMenu, NavPanel, NavSet, NavSetBar, NavSetCard
 from ...ui.css import CssUnit
 from .. import _run
 from .._recall_context import RecallContextManager
@@ -556,21 +556,20 @@ def accordion_panel(
 # ======================================================================================
 
 
-def navset(
+def navset_tab(
     *,
-    type: Literal["underline", "pill", "tab"] = "underline",
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
     footer: TagChild = None,
 ) -> RecallContextManager[NavSet]:
     """
-    Context manager for a set of nav items
+    Context manager for a set of nav items as a tabset.
+
+    This function wraps :func:`~shiny.ui.navset_tab`.
 
     Parameters
     ----------
-    type
-        The type of navset to render. Can be one of `"underline"`, `"pill"`, or `"tab"`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -582,21 +581,8 @@ def navset(
     footer
         UI to display below the selected content.
     """
-    # *args
-    #     A collection of nav items (e.g., :func:`shiny.ui.nav`).
-
-    funcs = {
-        "underline": ui.navset_underline,
-        "pill": ui.navset_pill,
-        "tab": ui.navset_tab,
-    }
-
-    func = funcs.get(type, None)
-    if func is None:
-        raise ValueError(f"Invalid navset type: {type!r}")
-
     return RecallContextManager(
-        func,
+        ui.navset_tab,
         kwargs=dict(
             id=id,
             selected=selected,
@@ -606,9 +592,117 @@ def navset(
     )
 
 
-def navset_card(
+def navset_pill(
     *,
-    type: Literal["underline", "pill", "tab"] = "underline",
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+) -> RecallContextManager[NavSet]:
+    """
+    Context manager for a set of nav items as a pillset.
+
+    This function wraps :func:`~shiny.ui.navset_pill`.
+
+    Parameters
+    ----------
+    id
+        If provided, will create an input value that holds the currently selected nav
+        item.
+    selected
+        Choose a particular nav item to select by default value (should match it's
+        ``value``).
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+    """
+    return RecallContextManager(
+        ui.navset_pill,
+        kwargs=dict(
+            id=id,
+            selected=selected,
+            header=header,
+            footer=footer,
+        ),
+    )
+
+
+def navset_underline(
+    *,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+) -> RecallContextManager[NavSet]:
+    """
+    Context manager for a set of nav items whose active/focused navigation links are
+    styled with an underline.
+
+    This function wraps :func:`~shiny.ui.navset_underline`.
+
+    Parameters
+    ----------
+    id
+        If provided, will create an input value that holds the currently selected nav
+        item.
+    selected
+        Choose a particular nav item to select by default value (should match it's
+        ``value``).
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+    """
+    return RecallContextManager(
+        ui.navset_underline,
+        kwargs=dict(
+            id=id,
+            selected=selected,
+            header=header,
+            footer=footer,
+        ),
+    )
+
+
+def navset_hidden(
+    *,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+) -> RecallContextManager[NavSet]:
+    """
+    Context manager for nav contents without the nav items.
+
+    This function wraps :func:`~shiny.ui.navset_hidden`.
+
+    Parameters
+    ----------
+    id
+        If provided, will create an input value that holds the currently selected nav
+        item.
+    selected
+        Choose a particular nav item to select by default value (should match it's
+        ``value``).
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+    """
+    return RecallContextManager(
+        ui.navset_hidden,
+        kwargs=dict(
+            id=id,
+            selected=selected,
+            header=header,
+            footer=footer,
+        ),
+    )
+
+
+def navset_card_tab(
+    *,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
@@ -617,12 +711,12 @@ def navset_card(
     footer: TagChild = None,
 ) -> RecallContextManager[NavSetCard]:
     """
-    Context manager for a set of nav items inside a card container.
+    Context manager for a set of nav items as a tabset inside a card container.
+
+    This function wraps :func:`~shiny.ui.navset_card_tab`.
 
     Parameters
     ----------
-    type
-        The type of navset to render. Can be one of `"underline"`, `"pill"`, or `"tab"`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -636,21 +730,8 @@ def navset_card(
     footer
         UI to display below the selected content.
     """
-    # *args
-    #     A collection of nav items (e.g., :func:`shiny.ui.nav`).
-
-    funcs = {
-        "underline": ui.navset_card_underline,
-        "pill": ui.navset_card_pill,
-        "tab": ui.navset_card_tab,
-    }
-
-    func = funcs.get(type, None)
-    if func is None:
-        raise ValueError(f"Invalid navset type: {type!r}")
-
     return RecallContextManager(
-        func,
+        ui.navset_card_tab,
         kwargs=dict(
             id=id,
             selected=selected,
@@ -658,6 +739,236 @@ def navset_card(
             sidebar=sidebar,
             header=header,
             footer=footer,
+        ),
+    )
+
+
+def navset_card_pill(
+    *,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    title: Optional[TagChild] = None,
+    sidebar: Optional[ui.Sidebar] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+) -> RecallContextManager[NavSetCard]:
+    """
+    Context manager for a set of nav items as a tabset inside a card container.
+
+    This function wraps :func:`~shiny.ui.navset_card_pill`.
+
+    Parameters
+    ----------
+    id
+        If provided, will create an input value that holds the currently selected nav
+        item.
+    selected
+        Choose a particular nav item to select by default value (should match it's
+        ``value``).
+    sidebar
+        A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav` page.
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+    """
+    return RecallContextManager(
+        ui.navset_card_pill,
+        kwargs=dict(
+            id=id,
+            selected=selected,
+            title=title,
+            sidebar=sidebar,
+            header=header,
+            footer=footer,
+        ),
+    )
+
+
+def navset_card_underline(
+    *,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    title: Optional[TagChild] = None,
+    sidebar: Optional[ui.Sidebar] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+    placement: Literal["above", "below"] = "above",
+) -> RecallContextManager[NavSetCard]:
+    """
+    Context manager for a set of nav items as a tabset inside a card container.
+
+    This function wraps :func:`~shiny.ui.navset_card_underline`.
+
+    Parameters
+    ----------
+    id
+        If provided, will create an input value that holds the currently selected nav
+        item.
+    selected
+        Choose a particular nav item to select by default value (should match it's
+        ``value``).
+    sidebar
+        A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav` page.
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+    placement
+        Placement of the nav items relative to the content.
+    """
+    return RecallContextManager(
+        ui.navset_card_underline,
+        kwargs=dict(
+            id=id,
+            selected=selected,
+            title=title,
+            sidebar=sidebar,
+            header=header,
+            footer=footer,
+            placement=placement,
+        ),
+    )
+
+
+def navset_pill_list(
+    *,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    header: TagChild = None,
+    footer: TagChild = None,
+    well: bool = True,
+    widths: tuple[int, int] = (4, 8),
+) -> RecallContextManager[NavSet]:
+    """
+    Context manager for a set of nav items as a tabset inside a card container.
+
+    This function wraps :func:`~shiny.ui.navset_pill_list`.
+
+    Parameters
+    ----------
+    id
+        If provided, will create an input value that holds the currently selected nav
+        item.
+    selected
+        Choose a particular nav item to select by default value (should match it's
+        ``value``).
+    sidebar
+        A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav` page.
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+    placement
+        Placement of the nav items relative to the content.
+    """
+    return RecallContextManager(
+        ui.navset_pill_list,
+        kwargs=dict(
+            id=id,
+            selected=selected,
+            header=header,
+            footer=footer,
+            well=well,
+            widths=widths,
+        ),
+    )
+
+
+def navset_bar(
+    *,
+    title: TagChild,
+    id: Optional[str] = None,
+    selected: Optional[str] = None,
+    sidebar: Optional[ui.Sidebar] = None,
+    fillable: bool | list[str] = True,
+    gap: Optional[CssUnit] = None,
+    padding: Optional[CssUnit | list[CssUnit]] = None,
+    position: Literal[
+        "static-top", "fixed-top", "fixed-bottom", "sticky-top"
+    ] = "static-top",
+    header: TagChild = None,
+    footer: TagChild = None,
+    bg: Optional[str] = None,
+    # TODO: default to 'auto', like we have in R (parse color via webcolors?)
+    inverse: bool = False,
+    underline: bool = True,
+    collapsible: bool = True,
+    fluid: bool = True,
+) -> RecallContextManager[NavSetBar]:
+    """
+    Context manager for a set of nav items as a tabset inside a card container.
+
+    This function wraps :func:`~shiny.ui.navset_bar`.
+
+    Parameters
+    ----------
+    title
+        Title to display in the navbar.
+    id
+        If provided, will create an input value that holds the currently selected nav
+        item.
+    selected
+        Choose a particular nav item to select by default value (should match it's
+        ``value``).
+    sidebar
+        A :class:`~shiny.ui.Sidebar` component to display on every
+        :func:`~shiny.ui.nav_panel` page.
+    fillable
+        Whether or not to allow fill items to grow/shrink to fit the browser window. If
+        `True`, all `nav()` pages are fillable. A character vector, matching the value
+        of `nav()`s to be filled, may also be provided. Note that, if a `sidebar` is
+        provided, `fillable` makes the main content portion fillable.
+    gap
+        A CSS length unit defining the gap (i.e., spacing) between elements provided to
+        `*args`.
+    padding
+        Padding to use for the body. This can be a numeric vector (which will be
+        interpreted as pixels) or a character vector with valid CSS lengths. The length
+        can be between one and four. If one, then that value will be used for all four
+        sides. If two, then the first value will be used for the top and bottom, while
+        the second value will be used for left and right. If three, then the first will
+        be used for top, the second will be left and right, and the third will be
+        bottom. If four, then the values will be interpreted as top, right, bottom, and
+        left respectively.
+    position
+        Determines whether the navbar should be displayed at the top of the page with
+        normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or
+        pinned at the bottom ("fixed-bottom"). Note that using "fixed-top" or
+        "fixed-bottom" will cause the navbar to overlay your body content, unless you
+        add padding (e.g., ``tags.style("body {padding-top: 70px;}")``).
+    header
+        UI to display above the selected content.
+    footer
+        UI to display below the selected content.
+    bg
+        Background color of the navbar (a CSS color).
+    inverse
+        Either ``True`` for a light text color or ``False`` for a dark text color.
+    collapsible
+        ``True`` to automatically collapse the navigation elements into an expandable
+        menu on mobile devices or narrow window widths.
+    fluid
+        ``True`` to use fluid layout; ``False`` to use fixed layout.
+    """
+    return RecallContextManager(
+        ui.navset_bar,
+        kwargs=dict(
+            title=title,
+            id=id,
+            selected=selected,
+            sidebar=sidebar,
+            fillable=fillable,
+            gap=gap,
+            padding=padding,
+            position=position,
+            header=header,
+            footer=footer,
+            bg=bg,
+            inverse=inverse,
+            underline=underline,
+            collapsible=collapsible,
+            fluid=fluid,
         ),
     )
 
