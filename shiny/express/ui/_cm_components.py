@@ -856,16 +856,16 @@ def navset_pill_list(
         If provided, will create an input value that holds the currently selected nav
         item.
     selected
-        Choose a particular nav item to select by default value (should match it's
+        Choose a particular nav item to select by default value (should match its
         ``value``).
-    sidebar
-        A :class:`shiny.ui.Sidebar` component to display on every :func:`~shiny.ui.nav` page.
     header
         UI to display above the selected content.
     footer
         UI to display below the selected content.
-    placement
-        Placement of the nav items relative to the content.
+    well
+        ``True`` to place a well (gray rounded rectangle) around the navigation list.
+    widths
+        Column widths of the navigation list and tabset content areas respectively.
     """
     return RecallContextManager(
         ui.navset_pill_list,
@@ -1017,11 +1017,6 @@ def nav_control() -> RecallContextManager[NavPanel]:
     Context manager for a control in the navigation container.
 
     This function wraps :func:`~shiny.ui.nav_control`.
-
-    Parameters
-    ----------
-    *args
-        UI elements to display as the nav item.
     """
     return RecallContextManager(ui.nav_control)
 
@@ -1042,11 +1037,6 @@ def nav_menu(
     ----------
     title
         A title to display. Can be a character string or UI elements (i.e., tags).
-    *args
-        A collection of nav items (e.g., :func:`~shiny.ui.nav`) and/or strings.
-        Strings will be rendered as a section header unless the string is a set
-        of two or more hyphens (e.g., ``---``), in which case it will be rendered
-        as a divider.
     value
         The value of the item. This is used to determine whether the item is active
         (when an ``id`` is provided to the nav container), programmatically select the
@@ -1563,8 +1553,6 @@ def page_navbar(
     selected
         Choose a particular nav item to select by default value (should match it's
         ``value``).
-    sidebar
-        A :func:`~shiny.ui.sidebar` component to display on every page.
     fillable
         Whether or not the main content area should be considered a fillable
         (i.e., flexbox) container.
