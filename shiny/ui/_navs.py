@@ -923,7 +923,7 @@ def navset_pill_list(
         If provided, will create an input value that holds the currently selected nav
         item.
     selected
-        Choose a particular nav item to select by default value (should match it's
+        Choose a particular nav item to select by default value (should match its
         ``value``).
     header
         UI to display above the selected content.
