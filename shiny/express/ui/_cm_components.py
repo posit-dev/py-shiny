@@ -25,8 +25,6 @@ __all__ = (
     "card",
     "accordion",
     "accordion_panel",
-    "navset",
-    "navset_card",
     "nav_panel",
     "nav_control",
     "nav_menu",
