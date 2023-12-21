@@ -1,9 +1,9 @@
 from shiny import render, ui
-from shiny.express import input, layout
+from shiny.express import input, ui
 
-layout.set_page(layout.page_fluid())
+ui.set_page(ui.page_fluid())
 
-with layout.card(id="card"):
+with ui.card(id="card"):
     ui.input_slider("a", "A", 1, 100, 50)
 
     @render.text

@@ -6,7 +6,7 @@ from controls import Accordion, Card, LayoutNavsetTab, OutputTextVerbatim, Sideb
 from playwright.sync_api import Page
 
 from shiny import ui
-from shiny.express import layout
+from shiny.express import ui as xui
 
 
 def verify_express_accordion(page: Page) -> None:
@@ -82,4 +82,4 @@ def verify_express_page_sidebar(page: Page) -> None:
     sidebar.expect_text("SidebarTitle Sidebar Content")
     output_txt = OutputTextVerbatim(page, "txt")
     output_txt.expect_value("50")
-    compare_annotations(ui.sidebar, layout.sidebar)
+    compare_annotations(ui.sidebar, xui.sidebar)
