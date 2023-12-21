@@ -1,4 +1,4 @@
-from shiny import render, ui
+from shiny import render
 from shiny.express import input, ui
 
 with ui.accordion(id="express_accordion", open=["Panel 1", "Panel 2"]):

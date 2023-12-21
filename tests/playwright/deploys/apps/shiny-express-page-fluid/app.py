@@ -1,4 +1,4 @@
-from shiny import render, ui
+from shiny import render
 from shiny.express import input, ui
 
 ui.set_page(ui.page_fluid())
