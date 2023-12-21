@@ -1,14 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from shiny import render, ui
-from shiny.express import input, layout
+from shiny import render
+from shiny.express import input, ui
 
-with layout.layout_column_wrap(width=1 / 2):
-    with layout.card():
+with ui.layout_column_wrap(width=1 / 2):
+    with ui.card():
         ui.input_slider("n", "N", 1, 100, 50)
 
-    with layout.card():
+    with ui.card():
 
         @render.plot
         def histogram():
@@ -16,7 +16,7 @@ with layout.layout_column_wrap(width=1 / 2):
             x = 100 + 15 * np.random.randn(437)
             plt.hist(x, input.n(), density=True)
 
-    with layout.card():
+    with ui.card():
 
         @render.plot
         def histogram2():

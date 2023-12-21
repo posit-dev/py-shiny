@@ -260,7 +260,7 @@ def data_frame(
     _fn: DataFrameTransformer.ValueFn | None = None,
 ) -> DataFrameTransformer.OutputRenderer | DataFrameTransformer.OutputRendererDecorator:
     """
-    Reactively render a Pandas data frame object (or similar) as an interactive table or
+    Reactively render a pandas `DataFrame` object (or similar) as an interactive table or
     grid. Features fast virtualized scrolling, sorting, filtering, and row selection
     (single or multiple).
 
@@ -288,10 +288,10 @@ def data_frame(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of a
-    :func:`~shiny.ui.output_table` container (see :func:`~shiny.ui.output_table` for
-    example usage).
+    This decorator should be applied **before** the ``@output`` decorator (if that
+    decorator is used). Also, the name of the decorated function (or
+    ``@output(id=...)``) should match the ``id`` of a :func:`~shiny.ui.output_table`
+    container (see :func:`~shiny.ui.output_table` for example usage).
 
     See Also
     --------

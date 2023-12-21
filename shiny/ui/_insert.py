@@ -18,35 +18,31 @@ def insert_ui(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Insert UI objects
+    Insert UI objects.
 
     Parameters
     ----------
     ui
         The UI object you want to insert. This can be anything that you usually put
-        inside your apps's ui function. If you're inserting multiple elements in one
+        inside your app's UI function. If you're inserting multiple elements in one
         call, make sure to wrap them in either a :func:`~shiny.ui.TagList` or a
         :func:`~shiny.ui.tags.div` (the latter option has the advantage that you can
         give it an id to make it easier to reference or remove it later on). If you want
-        to insert raw html, use :func:`~shiny.ui.HTML`.
+        to insert raw HTML, use :func:`~shiny.ui.HTML`.
     selector
         A string that is accepted by jQuery's selector (i.e. the string ``s`` to be
         placed in a ``$(s)`` jQuery call) which determines the element(s) relative to
         which you want to insert your UI object.
     where
-        Where your UI object should go relative to the selector:
-
-        - beforeBegin: Before the selector element itself
-        - afterBegin: Just inside the selector element, before its first child
-        - beforeEnd: Just inside the selector element, after its last child (default)
-        - afterEnd: After the selector element itself
-
-        Adapted from
+        Where your UI object should go relative to the selector: "beforeBegin":
+        before the selector element itself; "beforeEnd": just inside the selector
+        element, after its last child (default); "afterEnd": after the selector
+        element itself. Adapted from
         https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML.
     multiple
-        In case your selector matches more than one element, multiple determines whether
-        Shiny should insert the UI object relative to all matched elements or just
-        relative to the first matched element (default).
+        In case your selector matches more than one element, ``multiple``
+        determines whether Shiny should insert the UI object relative to all
+        matched elements or just relative to the first matched element (default).
     immediate
         Whether the UI object should be immediately inserted or removed, or whether
         Shiny should wait until all outputs have been updated and all effects have been
@@ -95,21 +91,21 @@ def remove_ui(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Remove UI objects
+    Remove UI objects.
 
     Parameters
     ----------
     selector
         A string that is accepted by jQuery's selector (i.e. the string ``x`` to be
-        placed in a ``$(x)`` jQuery call) which determines the element(s) to remove. If
+        placed in a ``$(x)`` jQuery call), which determines the element(s) to remove. If
         you want to remove a Shiny input or output, note that many of these are wrapped
         in ``<div>``s, so you may need to use a somewhat complex selector — see the
         Examples below. (Alternatively, you could also wrap the inputs/outputs that you
         want to be able to remove easily in a ``<div>`` with an id.)
     multiple
-        In case your selector matches more than one element, multiple determines whether
-        Shiny should insert the UI object relative to all matched elements or just
-        relative to the first matched element (default).
+        In case your selector matches more than one element, ``multiple`` determines
+        whether Shiny should insert the UI object relative to all matched elements
+        or just relative to the first matched element (default).
     immediate
         Whether the UI object should be immediately inserted or removed, or whether
         Shiny should wait until all outputs have been updated and all effects have been

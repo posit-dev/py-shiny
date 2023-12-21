@@ -40,7 +40,7 @@ __all__ = (
 
 class Sidebar:
     """
-    Sidebar object
+    A sidebar object
 
     Class returned from :func:`~shiny.ui.sidebar`. Please do not use this
     class directly. Instead, supply the :func:`~shiny.ui.sidebar` object to
@@ -55,7 +55,7 @@ class Sidebar:
     position
         Where the sidebar should appear relative to the main content.
     open
-        The initial state of the sidebar.
+        The initial state of the sidebar (open or collapsed).
     width
         A valid CSS unit used for the width of the sidebar.
     max_height_mobile
@@ -77,7 +77,7 @@ class Sidebar:
     position
         Where the sidebar should appear relative to the main content.
     open
-        The initial state of the sidebar.
+        The initial state of the sidebar (open or collapsed).
     width
         A valid CSS unit used for the width of the sidebar.
     max_height_mobile
@@ -168,10 +168,12 @@ def sidebar(
     position
         Where the sidebar should appear relative to the main content.
     open
-        The initial state of the sidebar. It can be `"desktop"` (the sidebar starts open
-        on desktop screen, closed on mobile), `"open"` or `True` (the sidebar starts
-        open), `"closed"` or `False` (the sidebar starts closed), or `"always"` or
-        `None` (the sidebar is always open and cannot be closed).
+        The initial state of the sidebar.
+
+        * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
+        * `"open"` or `True`: the sidebar starts open
+        * `"closed"` or `False`: the sidebar starts closed
+        * `"always"` or `None`: the sidebar is always open and cannot be closed
 
         In :func:`~shiny.ui.update_sidebar`, `open` indicates the desired state of the
         sidebar. Note that :func:`~shiny.ui.update_sidebar` can only open or close the
@@ -200,12 +202,15 @@ def sidebar(
     padding
         Padding within the sidebar itself. This can be a numeric vector (which will be
         interpreted as pixels) or a character vector with valid CSS lengths. `padding`
-        may be one to four values. If one, then that value will be used for all four
-        sides. If two, then the first value will be used for the top and bottom, while
-        the second value will be used for left and right. If three, then the first will
-        be used for top, the second will be left and right, and the third will be
-        bottom. If four, then the values will be interpreted as top, right, bottom, and
-        left respectively.
+        may be one to four values.
+
+        * If a single value, then that value will be used for all four sides.
+        * If two, then the first value will be used for the top and bottom, while
+          the second value will be used for left and right.
+        * If three values, then the first will be used for top, the second will be left
+          and right, and the third will be bottom.
+        * If four, then the values will be interpreted as top, right, bottom, and left
+          respectively.
 
     Returns
     -------
@@ -337,12 +342,15 @@ def layout_sidebar(
     padding
         Padding within the sidebar itself. This can be a numeric vector (which will be
         interpreted as pixels) or a character vector with valid CSS lengths. `padding`
-        may be one to four values. If one, then that value will be used for all four
-        sides. If two, then the first value will be used for the top and bottom, while
-        the second value will be used for left and right. If three, then the first will
-        be used for top, the second will be left and right, and the third will be
-        bottom. If four, then the values will be interpreted as top, right, bottom, and
-        left respectively.
+        may be one to four values.
+
+        * If a single value, then that value will be used for all four sides.
+        * If two, then the first value will be used for the top and bottom, while
+          the second value will be used for left and right.
+        * If three values, then the first will be used for top, the second will be left
+          and right, and the third will be bottom.
+        * If four, then the values will be interpreted as top, right, bottom, and left
+          respectively.
     height
         Any valid CSS unit to use for the height.
 
@@ -504,7 +512,7 @@ def update_sidebar(
     session: Optional[Session] = None,
 ) -> None:
     """
-    Update a sidebar's visibility
+    Update a sidebar's visibility.
 
     Set a :func:`~shiny.ui.sidebar` state during an active Shiny user session.
 
@@ -574,8 +582,7 @@ def panel_sidebar(
     width: int = 4,
     **kwargs: TagAttrValue,
 ) -> DeprecatedPanelSidebar:
-    """Deprecated. Please use :func:`shiny.ui.sidebar` instead of
-    `ui.panel_sidebar()`."""
+    """Deprecated. Please use :func:`~shiny.ui.sidebar` instead."""
     # TODO-future: >= 2024-01-01; Add deprecation message below
     # Plan of action:
     # * No deprecation messages today (2023-10-11), and existing code _just works_.
@@ -597,7 +604,7 @@ def panel_main(
     width: int = 8,
     **kwargs: TagAttrValue,
 ) -> DeprecatedPanelMain:
-    """Deprecated. Please supply `panel_main(*args)` directly to `layout_sidebar()`."""
+    """Deprecated. Please supply the `*args` of :func:`~shiny.ui.panel_main` directly to :func:`~shiny.ui.layout_sidebar`."""
     # TODO-future: >= 2023-11-01; Add deprecation message below
     # warn_deprecated("Please use `layout_sidebar(*args)` instead of `panel_main()`. `panel_main()` will go away in a future version of Shiny.")
 

@@ -57,7 +57,6 @@ app_ui = ui.page_fixed(
 
 
 def server(input: Inputs, output: Outputs, session: Session) -> None:
-    @output
     @render.ui
     def ui_content():
         return f"Hello, {input.adjective()} {input.animal()}!"

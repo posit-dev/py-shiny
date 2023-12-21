@@ -9,28 +9,6 @@ quartodoc:
     style: _renderer.py
     show_signature_annotations: false
   sections:
-    - title: Shiny Express
-      desc: Functions for Shiny Express applications
-      contents:
-        - express.layout.set_page
-        - express.layout.p
-        - express.layout.div
-        - express.layout.span
-        - express.layout.pre
-        - express.layout.sidebar
-        - express.layout.layout_column_wrap
-        - express.layout.column
-        - express.layout.row
-        - express.layout.card
-        - express.layout.accordion
-        - express.layout.accordion_panel
-        - express.layout.navset
-        - express.layout.navset_card
-        - express.layout.nav_panel
-        - express.layout.page_fluid
-        - express.layout.page_fixed
-        - express.layout.page_fillable
-        - express.layout.page_sidebar
     - title: Page containers
       desc: Create a user interface page container.
       contents:
@@ -46,6 +24,7 @@ quartodoc:
       contents:
         - ui.sidebar
         - ui.layout_sidebar
+        - ui.layout_columns
         - ui.layout_column_wrap
         - ui.card
         - ui.card_header
@@ -301,6 +280,46 @@ quartodoc:
             - types.SilentException
             - types.SilentCancelOutputException
             - types.SafeException
+    - title: Shiny Express
+      desc: Functions for Shiny Express applications
+      contents:
+        - kind: page
+          path: ContextManagerComponents
+          summary:
+            name: "Context manager components"
+            desc: ""
+          flatten: true
+          contents:
+            - express.ui.set_page
+            - express.ui.sidebar
+            - express.ui.layout_sidebar
+            - express.ui.layout_column_wrap
+            - express.ui.layout_columns
+            - express.ui.card
+            - express.ui.accordion
+            - express.ui.accordion_panel
+            - express.ui.nav_panel
+            - express.ui.nav_control
+            - express.ui.nav_menu
+            - express.ui.navset_bar
+            - express.ui.navset_card_pill
+            - express.ui.navset_card_tab
+            - express.ui.navset_card_underline
+            - express.ui.navset_hidden
+            - express.ui.navset_pill
+            - express.ui.navset_pill_list
+            - express.ui.navset_tab
+            - express.ui.navset_underline
+            - express.ui.value_box
+            - express.ui.panel_well
+            - express.ui.panel_conditional
+            - express.ui.panel_fixed
+            - express.ui.panel_absolute
+            - express.ui.page_fluid
+            - express.ui.page_fixed
+            - express.ui.page_fillable
+            - express.ui.page_sidebar
+            - express.ui.page_navbar
     - title: Deprecated
       desc: ""
       contents:

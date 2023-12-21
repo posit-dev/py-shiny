@@ -112,7 +112,7 @@ def run_express(file: Path) -> Tag | TagList:
         if "app" in var_context and isinstance(var_context["app"], App):
             raise RuntimeError(
                 "This looks like a Shiny Express app because it imports shiny.express, "
-                "but it also looks like a Shiny Classic app because it has a variable named "
+                "but it also looks like a Shiny Core app because it has a variable named "
                 "`app` which is a shiny.App object. Remove either the shiny.express import, "
                 "or the app=App()."
             )
@@ -132,12 +132,12 @@ def run_express(file: Path) -> Tag | TagList:
 _top_level_recall_context_manager: RecallContextManager[Tag]
 
 
-def reset_top_level_recall_context_manager():
+def reset_top_level_recall_context_manager() -> None:
     from ._page import page_auto_cm
 
     global _top_level_recall_context_manager
     _top_level_recall_context_manager = page_auto_cm()
 
 
-def get_top_level_recall_context_manager():
+def get_top_level_recall_context_manager() -> RecallContextManager[Tag]:
     return _top_level_recall_context_manager

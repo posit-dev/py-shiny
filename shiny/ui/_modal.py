@@ -18,8 +18,9 @@ from ..types import MISSING, MISSING_TYPE
 
 def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue) -> Tag:
     """
-    Creates a button that will dismiss a :func:`modal` (useful when customising the
-    ``footer`` of :func:`modal`).
+    Creates a button that will dismiss a :func:`modal`. :func:`~shiny.ui.modal_button` is usually
+    passed to the `footer` of a :func:`~shiny.ui.modal` to add a button to the footer that will close
+    the :func:`~shiny.ui.modal`.
 
     Parameters
     ----------
@@ -67,7 +68,9 @@ def modal(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Creates the UI for a modal dialog, using Bootstrap's modal class. Modals are
+    Creates the UI for a modal dialog, using Bootstrap's modal class.
+
+    A modal is a dialog box that appears in front of the app. Modals are
     typically used for showing important messages, or for presenting UI that requires
     input from the user, such as a user name and/or password input.
 
@@ -80,10 +83,11 @@ def modal(
     footer
         UI for footer. Use ``None`` for no footer.
     size
-        One of "s" for small, "m" (the default) for medium, or "l" for large.
+        The size of the modal dialogue box. Use one of "s" for small, "m" (the default)
+        for medium, or "l" for large.
     easy_close
         If ``True``, the modal dialog can be dismissed by clicking outside the dialog
-        box, or be pressing the Escape key. If ``False`` (the default), the modal dialog
+        box, or by pressing the Escape key. If ``False`` (the default), the modal dialog
         can't be dismissed in those ways; instead it must be dismissed by clicking on a
         ``modal_button()``, or from a call to ``modal_remove()`` on the server.
     fade
@@ -156,13 +160,16 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     """
     Show a modal dialog.
 
+    :func:`~shiny.ui.modal_show` is used to display a modal that has been
+    created with :func:`~shiny.ui.modal`.
+
     Parameters
     ----------
     modal
         Typically a :func:`modal` instance.
     session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+        The :class:`~shiny.Session` instance to display the modal in. If not provided,
+        the session is inferred via :func:`~shiny.session.get_current_session`.
 
     See Also
     -------
@@ -180,13 +187,17 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
 
 def modal_remove(session: Optional[Session] = None) -> None:
     """
-    Remove a modal dialog.
+    Remove a modal dialog box.
+
+    :func:`~shiny.ui.modal_remove` provides a way to remove a modal programatically.
+    Modals can also be removed manually by the user if a :func:`~shiny.ui.modal_button`
+    is provided, or if the modal is created with `easy_close=True`.
 
     Parameters
     ----------
     session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+        The :class:`~shiny.Session` instance that contains the modal to remove. If not
+        provided, the session is inferred via :func:`~shiny.session.get_current_session`.
 
     See Also
     -------

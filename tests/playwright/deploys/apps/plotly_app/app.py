@@ -51,7 +51,6 @@ app_ui = x.ui.page_fillable(
 
 
 def server(input, output, session):
-    @output
     @render.data_frame
     def summary_data():
         return render.DataGrid(
@@ -68,7 +67,6 @@ def server(input, output, session):
         # Filter data for selected countries
         return df[df["country"].isin(countries)]
 
-    @output
     @render_widget
     def country_detail_pop():
         # Create the plot
@@ -88,7 +86,6 @@ def server(input, output, session):
 
         return widget
 
-    @output
     @render_widget
     def country_detail_percap():
         # Create the plot

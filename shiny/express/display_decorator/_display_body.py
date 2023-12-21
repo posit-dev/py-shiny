@@ -48,7 +48,7 @@ def unwrap(fn: TFunc) -> TFunc:
 display_body_attr = "__display_body__"
 
 
-def display_body_unwrap_inplace():
+def display_body_unwrap_inplace() -> Callable[[TFunc], TFunc]:
     """
     Like `display_body`, but far more violent. This will attempt to traverse any
     decorators between this one and the function, and then modify the function _in
@@ -76,7 +76,7 @@ def display_body_unwrap_inplace():
     return decorator
 
 
-def display_body():
+def display_body() -> Callable[[TFunc], TFunc]:
     def decorator(fn: TFunc) -> TFunc:
         if fn.__code__ in code_cache:
             fcode = code_cache[fn.__code__]
@@ -197,7 +197,9 @@ def _transform_function_ast(node: ast.AST) -> ast.AST:
     return func_node
 
 
-def compare_decorated_code_objects(func_ast: ast.FunctionDef):
+def compare_decorated_code_objects(
+    func_ast: ast.FunctionDef,
+) -> Callable[[types.CodeType, types.CodeType], bool]:
     linenos = [*[x.lineno for x in func_ast.decorator_list], func_ast.lineno]
 
     def comparator(candidate: types.CodeType, target: types.CodeType) -> bool:

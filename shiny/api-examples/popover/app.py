@@ -31,7 +31,6 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.text
     def plot_txt():
         return f"<Making plot using x: {input.x()} and y: {input.y()}>"

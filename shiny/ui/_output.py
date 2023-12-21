@@ -246,7 +246,7 @@ def output_text(
     id
         An output id.
     inline
-        If ``True``, the result is displayed inline
+        If ``True``, the result is displayed inline.
     container
         A Callable that returns the output container.
 
@@ -284,7 +284,8 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
         An output id.
     placeholder
         If the output is empty or ``None``, should an empty rectangle be displayed to
-        serve as a placeholder? (does not affect behavior when the output is nonempty)
+        serve as a placeholder? (This does not affect behavior when the output
+        is nonempty.)
 
     Returns
     -------
@@ -345,7 +346,7 @@ def output_ui(
     id
         An output id.
     inline
-        If ``True``, the result is displayed inline
+        If ``True``, the result is displayed inline.
     container
         A Callable that returns the output container.
     fill

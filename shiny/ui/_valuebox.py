@@ -247,11 +247,11 @@ def value_box_theme(
     Parameters
     ---------
     name
-        The name of the theme, e.g. `"primary"`, `"danger"`, `"purple"`).  `name` can
-        also be a bootstrap supported color: `"blue"`, `"purple"`, `"pink"`, `"red"`,
+        The name of the theme, e.g. `"primary"`, `"danger"`, `"purple"`.  `name` can
+        also be a Bootstrap-supported color: `"blue"`, `"purple"`, `"pink"`, `"red"`,
         `"orange"`, `"yellow"`, `"green"`, `"teal"`, and `"cyan"`. These colors can be
         used with `bg-NAME`, `text-NAME`, and `bg-gradient-NAME1-NAME2`. If a `name`
-        does not start with `text-` or `bg-`, it will be auto prefixed with `bg-`.
+        does not start with `text-` or `bg-`, it will be auto-prefixed with `bg-`.
     fg,bg
         The background and foreground colors for the theme.
 
@@ -312,7 +312,7 @@ def value_box(
     Value box
 
     An opinionated (:func:`~shiny.ui.card`-powered) box, designed for
-    displaying a `value` and `title`. Optionally, a `showcase` can provide for context
+    displaying a `value` and `title`. Optionally, a `showcase` can provide context
     for what the `value` represents (for example, it could hold an icon, or even a
     :func:`~shiny.ui.output_plot`).
 
@@ -331,22 +331,26 @@ def value_box(
     showcase_layout
         One of `"left center"` (default), `"top right"` or `"bottom"`. Alternatively,
         you can customize the showcase layout options with the
-        :func:`~shiny.ui.showcase_left_center`, :func:`~shiny.ui.showcase_top_right()`,
-        or :func:`~shiny.ui.showcase_bottom()` functions. Use the options functions when
+        :func:`~shiny.ui.showcase_left_center`, :func:`~shiny.ui.showcase_top_right`,
+        or :func:`~shiny.ui.showcase_bottom` functions. Use the options functions when
         you want to control the height or width of the showcase area.
     theme
         The name of a theme (e.g. `"primary"`, `"danger"`, `"purple"`, `"bg-green"`,
         `"text-red"`) for the value box, or a theme constructed with
-        :func:`~shiny.ui.value_box_theme`. The theme names provide a convenient way to
-        use your app's Bootstrap theme colors as the foreground or background colors of
-        the value box. For more control, you can create your own theme with
-        :func:`~shiny.ui.value_box_theme` where you can pass foreground and background
-        colors directly. Bootstrap supported color themes: `"blue"`, `"purple"`,
-        `"pink"`, `"red"`, `"orange"`, `"yellow"`, `"green"`, `"teal"`, and `"cyan"`.
-        These colors can be used with `bg-NAME`, `text-NAME`, and
-        `bg-gradient-NAME1-NAME2` to change the background, foreground, or use a
-        background gradient respectively. If a `theme` string does not start with
-        `text-` or `bg-`, it will be auto prefixed with `bg-`.
+        :func:`~shiny.ui.value_box_theme`.
+
+        The theme names provide a convenient way to use your app's Bootstrap theme
+        colors as the foreground or background colors of the value box. For more
+        control, you can create your own theme with :func:`~shiny.ui.value_box_theme`
+        where you can pass foreground and background colors directly.
+
+        Bootstrap supported color themes: `"blue"`, `"purple"`, `"pink"`, `"red"`,
+        `"orange"`, `"yellow"`, `"green"`, `"teal"`, and `"cyan"`. These colors can be
+        used with `bg-NAME`, `text-NAME`, and `bg-gradient-NAME1-NAME2` to change the
+        background, foreground, or use a background gradient respectively.
+
+        If a `theme` string does not start with `text-` or `bg-`, it will be auto
+        prefixed with `bg-`.
     full_screen
         If `True`, an icon will appear when hovering over the card body. Clicking the
         icon expands the card to fit viewport size.

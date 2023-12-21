@@ -9,7 +9,6 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.text
     def headers():
         s = ""
@@ -18,7 +17,6 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         return s
 
-    @output
     @render.text
     def user_groups():
         return f"session.user: {session.user}\nsession.groups: {session.groups}"
