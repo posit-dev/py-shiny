@@ -59,6 +59,7 @@ def use_loading_spinners(
 
     animation = None
     easing = None
+
     # Some of the spinners work better with linear easing and some with ease-in-out so
     # we modify them together.
     if type == "disc":
@@ -79,6 +80,7 @@ def use_loading_spinners(
         svg = "tadpole-spinner.svg"
         easing = "linear"
 
+    spinner_size = size or "30px" if page_level else None
     # We set options using css variables. Here we create the rule that updates the
     # appropriate variables before being included in the head of the document with our
     # html dep.
@@ -87,7 +89,7 @@ def use_loading_spinners(
         + (f"--shiny-spinner-easing: {easing};" if easing else "")
         + (f"--shiny-spinner-animation: {animation};" if animation else "")
         + (f"--shiny-spinner-color: {color};" if color else "")
-        + (f"--shiny-spinner-size: {size};" if size else "")
+        + (f"--shiny-spinner-size: {spinner_size};" if spinner_size else "")
         + (f"--shiny-spinner-speed: {speed};" if speed else "")
         + (f"--shiny-spinner-delay: {delay};" if delay else "")
     )
@@ -114,3 +116,9 @@ def use_loading_spinners(
         all_files=True,
         head=dynamic_styles,
     )
+
+
+# Notes from meeting
+
+# - If we make this by default, the page-level should probably be the default
+# - The individual with_spinner() is important for long-running tasks
