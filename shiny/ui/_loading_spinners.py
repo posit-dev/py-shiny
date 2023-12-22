@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from htmltools import HTMLDependency
+from htmltools import HTML, HTMLDependency, Tag, head_content, tags
 
 from .. import __version__
 
@@ -13,10 +13,11 @@ def use_loading_spinners(
     size: Optional[str] = None,
     speed: Optional[str] = None,
     delay: Optional[str] = None,
-    page_level: Optional[bool] = None,
 ) -> HTMLDependency:
     """
-    Use spinners to indicate when an element is loading.
+    Function to tweak loading spinner options for app.
+
+    This function allows you to tweak the style of the loading spinners used in your app.
 
     When supplied in your app's UI, elements that are loading (e.g. plots or tables)
     will have a spinner displayed over them. This is useful for when you have a
@@ -48,8 +49,7 @@ def use_loading_spinners(
     Returns
     -------
     :
-        An HTMLDependency that can be included in your app's UI to enable loading
-        spinners.
+        An HTMLDependency
 
     Notes
     -----
@@ -80,7 +80,6 @@ def use_loading_spinners(
         svg = "tadpole-spinner.svg"
         easing = "linear"
 
-    spinner_size = size or "30px" if page_level else None
     # We set options using css variables. Here we create the rule that updates the
     # appropriate variables before being included in the head of the document with our
     # html dep.
@@ -89,36 +88,53 @@ def use_loading_spinners(
         + (f"--shiny-spinner-easing: {easing};" if easing else "")
         + (f"--shiny-spinner-animation: {animation};" if animation else "")
         + (f"--shiny-spinner-color: {color};" if color else "")
-        + (f"--shiny-spinner-size: {spinner_size};" if spinner_size else "")
+        + (f"--shiny-spinner-size: {size};" if size else "")
         + (f"--shiny-spinner-speed: {speed};" if speed else "")
         + (f"--shiny-spinner-delay: {delay};" if delay else "")
     )
 
-    dynamic_styles = (
-        "<style>body:has(.recalculating){" + rule_contents + "}</style>"
-        if page_level
-        else "<style>.recalculating{" + rule_contents + "}</style>"
-    )
-
-    return HTMLDependency(
-        "shiny-loading-spinners-css",
-        version=__version__,
-        source={
-            "package": "shiny",
-            "subdir": "www/shared/loading-spinners/",
-        },
-        stylesheet=[
-            {"href": "spinners-page-level.css"}
-            if page_level
-            else {"href": "spinners-element-level.css"},
-            {"href": "spinners-common.css"},
-        ],
-        all_files=True,
-        head=dynamic_styles,
-    )
+    return head_content(tags.style(HTML("body{" + rule_contents + "}</style>")))
 
 
-# Notes from meeting
+page_level_spinners_deps = HTMLDependency(
+    "shiny-loading-spinners-css",
+    version=__version__,
+    source={
+        "package": "shiny",
+        "subdir": "www/shared/loading-spinners/",
+    },
+    stylesheet=[
+        {"href": "spinners-page-level.css"},
+        {"href": "spinners-common.css"},
+    ],
+    all_files=True,
+)
 
-# - If we make this by default, the page-level should probably be the default
-# - The individual with_spinner() is important for long-running tasks
+
+def with_spinner(el: Tag) -> Tag:
+    """
+    Enable a loading spinner for a given output. These spinners will sit directly on the
+    output itself rather than in the upper corner.
+
+    Parameters
+    ----------
+
+    el
+        The element to add the spinner to. Typically an output element like a
+        plot or table.
+
+    Returns
+    -------
+    :
+        Element with the class "show-spinner" added to it.
+
+    Examples
+    --------
+
+    ```{python}
+    #|eval: false
+    ui.with_spinner(ui.output_plot("plot")),
+    ```
+    """
+    el.attrs["class"] = el.attrs.get("class", "") + " show-spinner"
+    return el

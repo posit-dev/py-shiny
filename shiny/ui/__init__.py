@@ -139,7 +139,10 @@ from ._valuebox import (
 )
 from ._tooltip import tooltip
 
-from ._loading_spinners import use_loading_spinners
+from ._loading_spinners import (
+    use_loading_spinners,
+    with_spinner,
+)
 
 
 from htmltools import (
@@ -350,4 +353,5 @@ __all__ = (
     "hr",
     # Items related to loading spinners
     "use_loading_spinners",
+    "with_spinner",
 )

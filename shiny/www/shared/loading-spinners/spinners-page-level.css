@@ -5,7 +5,7 @@ body:has(.recalculating) {
     var(--bs-primary, #007bc2)
   );
   --_shiny-spinner-svg: var(--shiny-spinner-svg, url(tadpole-spinner.svg));
-  --_shiny-spinner-size: var(--shiny-spinner-size, 80px);
+  --_shiny-spinner-size: var(--shiny-spinner-size, 40px);
   --_shiny-spinner-easing: var(--shiny-spinner-easing, ease-in-out);
   --_shiny-spinner-speed: var(--shiny-spinner-speed, 2s);
   --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.1s);
@@ -59,17 +59,14 @@ body:has(.dot-track-spinner) {
   Here we define the main spinner container: a psueo-element on the body
   that contains the spinner svg as a mask.
 */
+.show-spinner.recalculating::after,
 body:has(.recalculating)::after {
-  --inset: max(0.5rem, 8px);
   content: var(--_shiny-spinner-content);
   background: var(--_shiny-spinner-color, gray);
   -webkit-mask: var(--_shiny-spinner-svg) center/contain no-repeat;
   mask: var(--_shiny-spinner-svg) center/contain no-repeat;
   width: var(--_shiny-spinner-size);
   height: var(--_shiny-spinner-size);
-  position: fixed;
-  top: var(--inset);
-  right: var(--inset);
 
   scale: 0;
   animation-name: var(--_shiny-spinner-animation);
@@ -78,5 +75,21 @@ body:has(.recalculating)::after {
   animation-timing-function: var(--_shiny-spinner-easing);
   animation-delay: var(--_shiny-spinner-delay);
 
+  top: var(--inset);
+  right: var(--inset);
   z-index: 1001;
+}
+
+body:has(.recalculating)::after {
+  --inset: max(0.5rem, 8px);
+  position: fixed;
+}
+
+.show-spinner.recalculating {
+  position: relative;
+}
+
+.show-spinner.recalculating::after {
+  --inset: calc(50% - var(--_shiny-spinner-size) / 2);
+  position: absolute;
 }

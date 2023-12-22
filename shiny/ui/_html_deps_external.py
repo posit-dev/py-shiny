@@ -5,7 +5,7 @@ from htmltools import HTML, HTMLDependency
 from .._versions import bootstrap as bootstrap_version
 from .._versions import shiny_html_deps
 from ..html_dependencies import jquery_deps
-from ._loading_spinners import use_loading_spinners
+from ._loading_spinners import page_level_spinners_deps
 
 """
 HTML dependencies for external dependencies Bootstrap, ionrangeslider, datepicker, selectize, and jQuery UI.
@@ -31,7 +31,7 @@ def bootstrap_deps() -> list[HTMLDependency]:
         dep,
         # Place spinners css in as a dependency. Eventually this should be in the main
         # shiny css.
-        use_loading_spinners(page_level=True),
+        page_level_spinners_deps,
     ]
     return deps
 
