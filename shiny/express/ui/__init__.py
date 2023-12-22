@@ -33,8 +33,6 @@ from ...ui import (
     AccordionPanel,
     AnimationOptions,
     CardItem,
-    card_header,
-    card_footer,
     ShowcaseLayout,
     Sidebar,
     SliderStepArg,
@@ -114,6 +112,8 @@ from ._cm_components import (
     layout_column_wrap,
     layout_columns,
     card,
+    card_header,
+    card_footer,
     accordion,
     accordion_panel,
     nav_panel,
@@ -176,8 +176,6 @@ __all__ = (
     "SliderStepArg",
     "SliderValueArg",
     "ValueBoxTheme",
-    "card_header",
-    "card_footer",
     "download_button",
     "download_link",
     "brush_opts",
@@ -250,6 +248,8 @@ __all__ = (
     "layout_column_wrap",
     "layout_columns",
     "card",
+    "card_header",
+    "card_footer",
     "accordion",
     "accordion_panel",
     "nav_panel",
@@ -274,6 +274,7 @@ __all__ = (
 )
 
 
+# This is used for unit tests to verify that shiny.ui and shiny.express.ui stay in sync.
 _known_missing = {
     # Items from shiny.ui that don't have a counterpart in shiny.express.ui
     "shiny.ui": (

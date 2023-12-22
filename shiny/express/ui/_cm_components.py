@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from htmltools import Tag, TagAttrValue, TagChild, TagList
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagList
 
 from ... import ui
 from ...types import MISSING, MISSING_TYPE
@@ -21,6 +21,8 @@ __all__ = (
     "layout_column_wrap",
     "layout_columns",
     "card",
+    "card_header",
+    "card_footer",
     "accordion",
     "accordion_panel",
     "nav_panel",
@@ -447,6 +449,72 @@ def card(
             class_=class_,
             **kwargs,
         ),
+    )
+
+
+def card_header(
+    *args: TagChild | TagAttrs,
+    container: TagFunction = ui.tags.div,
+    **kwargs: TagAttrValue,
+) -> RecallContextManager[CardItem]:
+    """
+    Context manager for a card header container
+
+    This function wraps :func:`~shiny.ui.card_header`.
+
+    A general container for the "header" of a :func:`~shiny.ui.card`. This component is designed
+    to be provided as a direct child to :func:`~shiny.ui.card`.
+
+    The header has a different background color and border than the rest of the card.
+
+    Parameters
+    ----------
+    *args
+        Contents to the header container. Or tag attributes that are supplied to the
+        resolved :class:`~htmltools.Tag` object.
+    container
+        Method for the returned Tag object. Defaults to :func:`~shiny.ui.tags.div`.
+    **kwargs
+        Additional HTML attributes for the returned Tag.
+    """
+    return RecallContextManager(
+        ui.card_header,
+        args=args,
+        kwargs=dict(
+            container=container,
+            **kwargs,
+        ),
+    )
+
+
+def card_footer(
+    *args: TagChild | TagAttrs,
+    **kwargs: TagAttrValue,
+) -> RecallContextManager[CardItem]:
+    """
+    Context manager for a card footer container
+
+    This function wraps :func:`~shiny.ui.card_footer`.
+
+
+    A general container for the "footer" of a :func:`~shiny.ui.card`. This component is designed
+    to be provided as a direct child to :func:`~shiny.ui.card`.
+
+    The footer has a different background color and border than the rest of the card.
+
+    Parameters
+    ----------
+    *args
+        Contents to the footer container. Or tag attributes that are supplied to the
+        resolved :class:`~htmltools.Tag` object.
+    **kwargs
+        Additional HTML attributes for the returned Tag.
+
+    """
+    return RecallContextManager(
+        ui.card_footer,
+        args=args,
+        kwargs=kwargs,
     )
 
 
