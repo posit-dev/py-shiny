@@ -41,10 +41,63 @@ from ._try_render_plot import (
     try_render_plotnine,
 )
 from .transformer import TransformerMetadata, ValueFn, output_transformer
+from .transformer._transformer import (
+    output_transformer_params,
+    output_transformer_simple,
+)
 
 # ======================================================================================
 # RenderText
 # ======================================================================================
+
+
+@output_transformer_simple(default_ui=_ui.output_text_verbatim)
+def text_simple(
+    value: str,
+) -> str:
+    """
+    Barret - Reactively render text. (simple)
+    """
+    return str(value)
+
+
+@text_simple
+def foo() -> str:
+    return "foo"
+
+
+@output_transformer_params(default_ui=_ui.output_text_verbatim)
+async def text(
+    _meta: TransformerMetadata,
+    _fn: ValueFn[str | None],
+) -> str | None:
+    """
+    Barret - Reactively render text.
+
+    Returns
+    -------
+    :
+        A decorator for a function that returns a string.
+
+    Tip
+    ----
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_text` container (see :func:`~shiny.ui.output_text` for
+    example usage).
+
+    See Also
+    --------
+    ~shiny.ui.output_text
+    """
+    value = await _fn()
+    if value is None:
+        return None
+    return str(value)
+
+
+@text()
+def foo2() -> str:
+    return "foo"
 
 
 @output_transformer(default_ui=_ui.output_text_verbatim)
@@ -59,16 +112,16 @@ async def TextTransformer(
 
 
 @overload
-def text() -> TextTransformer.OutputRendererDecorator:
+def textOld() -> TextTransformer.OutputRendererDecorator:
     ...
 
 
 @overload
-def text(_fn: TextTransformer.ValueFn) -> TextTransformer.OutputRenderer:
+def textOld(_fn: TextTransformer.ValueFn) -> TextTransformer.OutputRenderer:
     ...
 
 
-def text(
+def textOld(
     _fn: TextTransformer.ValueFn | None = None,
 ) -> TextTransformer.OutputRenderer | TextTransformer.OutputRendererDecorator:
     """
