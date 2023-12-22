@@ -107,7 +107,6 @@ from ...ui import (
 )
 
 from ._cm_components import (
-    set_page,
     sidebar,
     layout_sidebar,
     layout_column_wrap,
@@ -134,11 +133,10 @@ from ._cm_components import (
     panel_conditional,
     panel_fixed,
     panel_absolute,
-    page_fluid,
-    page_fixed,
-    page_fillable,
-    page_sidebar,
-    page_navbar,
+)
+
+from ._page import (
+    page_opts,
 )
 
 __all__ = (
@@ -245,7 +243,6 @@ __all__ = (
     "output_data_frame",
     "value_box_theme",
     # Imports from ._cm_components
-    "set_page",
     "sidebar",
     "layout_sidebar",
     "layout_column_wrap",
@@ -272,11 +269,8 @@ __all__ = (
     "panel_conditional",
     "panel_fixed",
     "panel_absolute",
-    "page_fluid",
-    "page_fixed",
-    "page_fillable",
-    "page_sidebar",
-    "page_navbar",
+    # Imports from ._page
+    "page_opts",
 )
 
 
@@ -290,6 +284,12 @@ _known_missing = {
         "navset_pill_card",  # Deprecated
         "navset_tab_card",  # Deprecated
         "page_bootstrap",
+        "page_fixed",
+        "page_sidebar",
+        "page_fillable",
+        "page_navbar",
+        "page_fluid",
+        "page_auto",
         "page_output",
         "panel_main",  # Deprecated
         "panel_sidebar",  # Deprecated
@@ -301,5 +301,5 @@ _known_missing = {
         "tooltip",
     ),
     # Items from shiny.express.ui that don't have a counterpart in shiny.ui
-    "shiny.express.ui": ("set_page",),
+    "shiny.express.ui": ("page_opts",),
 }

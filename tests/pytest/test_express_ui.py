@@ -10,7 +10,8 @@ from shiny.express import output_args, suspend_display
 def test_express_ui_is_complete():
     """
     Make sure shiny.express.ui covers everything that shiny.ui does, or explicitly lists
-    the item in _known_missing.
+    the item in `_known_missing`.
+    These entries are in `_known_missing` in shiny/express/ui/__init__.py
     """
 
     from shiny import ui

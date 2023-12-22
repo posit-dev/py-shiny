@@ -7,10 +7,11 @@ __all__ = (
     "page_fluid",
     "page_fixed",
     "page_bootstrap",
+    "page_auto",
     "page_output",
 )
 
-from typing import Literal, Optional, Sequence
+from typing import Callable, Literal, Optional, Sequence, cast
 
 from htmltools import (
     MetadataNode,
@@ -31,7 +32,7 @@ from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._html_deps_external import bootstrap_deps
 from ._html_deps_py_shiny import page_output_dependency
 from ._html_deps_shinyverse import components_dependency
-from ._navs import navset_bar
+from ._navs import NavMenu, NavPanel, navset_bar
 from ._sidebar import Sidebar, layout_sidebar
 from ._tag import consolidate_attrs
 from ._utils import get_window_title
@@ -441,6 +442,121 @@ def page_bootstrap(
         tags.body(*bootstrap_deps(), *args, **kwargs),
         lang=lang,
     )
+
+
+def page_auto(
+    *args: TagChild | TagAttrs,
+    title: str | MISSING_TYPE = MISSING,
+    lang: str | MISSING_TYPE = MISSING,
+    fillable: bool | MISSING_TYPE = MISSING,
+    full_width: bool = False,
+    page_fn: Callable[..., Tag] | None = None,
+    **kwargs: object,
+) -> Tag:
+    """
+    A page container which automatically decides which page function to use.
+
+    If there is a top-level nav, this will use :func:`~shiny.ui.page_navbar`. If not,
+    and there is a top-level sidebar, this will use :func:`~shiny.ui.page_sidebar`.
+
+    If there are neither top-level navs nor sidebars, this will use the ``fillable`` and
+    ``full_width`` arguments to determine which page function to use.
+
+    Parameters
+    ----------
+    *args
+        UI elements. These are used to determine which page function to use, and they
+        are also passed along to that page function.
+    title
+        The browser window title (defaults to the host URL of the page).
+    lang
+        ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+        will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+        default, `None`, results in an empty string.
+    fillable
+        If there is a top-level sidebar or nav, then the value is passed through to the
+        :func:`~shiny.ui.page_sidebar` or :func:`~shiny.ui.page_navbar` function.
+        Otherwise, if ``True``, use :func:`~shiny.ui.page_fillable`, where the content
+        fills the window; if ``False`` (the default), the value of ``full_width`` will
+        determine which page function is used.
+    full_width
+        This has an effect only if there are no sidebars or top-level navs, and
+        ``fillable`` is ``False``. If this is ``False`` (the default), use use
+        :func:`~shiny.ui.page_fixed`; if ``True``, use :func:`~shiny.ui.page_fillable`.
+    page_fn
+        The page function to use. If ``None`` (the default), will automatically choose
+        one based on the arguments provided. If not ``None``, this will override all
+        heuristics for choosing page functions.
+    **kwargs
+        Additional arguments, which are passed to the page function.
+
+    Returns
+    -------
+    :
+        A UI element.
+    """
+    if not isinstance(title, MISSING_TYPE):
+        kwargs["title"] = title
+    if not isinstance(lang, MISSING_TYPE):
+        kwargs["lang"] = lang
+
+    # Presence of a top-level nav items and/or sidebar determines the page function
+    navs = [x for x in args if isinstance(x, (NavPanel, NavMenu))]
+    sidebars = [x for x in args if isinstance(x, Sidebar)]
+
+    nNavs = len(navs)
+    nSidebars = len(sidebars)
+    if page_fn is None:
+        if nNavs == 0:
+            if nSidebars == 0:
+                if isinstance(fillable, MISSING_TYPE):
+                    fillable = False
+
+                if fillable:
+                    page_fn = page_fillable  # pyright: ignore[reportGeneralTypeIssues]
+                elif full_width:
+                    page_fn = page_fluid  # pyright: ignore[reportGeneralTypeIssues]
+                else:
+                    page_fn = page_fixed  # pyright: ignore[reportGeneralTypeIssues]
+
+            elif nSidebars == 1:
+                if not isinstance(fillable, MISSING_TYPE):
+                    kwargs["fillable"] = fillable
+
+                # page_sidebar() needs sidebar to be the first arg
+                # TODO: Change page_sidebar() to remove `sidebar` and accept a sidebar as a
+                # *arg.
+                page_fn = page_sidebar  # pyright: ignore[reportGeneralTypeIssues]
+                args = tuple(sidebars + [x for x in args if x not in sidebars])
+
+            else:
+                raise NotImplementedError(
+                    "Multiple top-level sidebars not allowed. Did you meant to wrap each one in layout_sidebar()?"
+                )
+
+        # At least one nav
+        else:
+            if not isinstance(fillable, MISSING_TYPE):
+                kwargs["fillable"] = fillable
+
+            if nSidebars == 0:
+                # TODO: what do we do when nArgs != nNavs? Just let page_navbar handle it (i.e. error)?
+                page_fn = page_navbar  # pyright: ignore[reportGeneralTypeIssues]
+
+            elif nSidebars == 1:
+                # TODO: change page_navbar() to remove `sidebar` and accept a sidebar as a
+                # *arg.
+                page_fn = page_navbar  # pyright: ignore[reportGeneralTypeIssues]
+                kwargs["sidebar"] = sidebars[0]
+
+            else:
+                raise NotImplementedError(
+                    "Multiple top-level sidebars not allowed in combination with top-level navs."
+                )
+
+    # If we got here, _page_fn is not None, but the type checker needs a little help.
+    page_fn = cast(Callable[..., Tag], page_fn)
+    return page_fn(*args, **kwargs)
 
 
 def page_output(id: str) -> Tag:
