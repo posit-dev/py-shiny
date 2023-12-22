@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import os
 import shutil
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Dict, List, Optional, cast
+from typing import Optional, cast
 from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -34,7 +36,7 @@ cancel_choice: Choice = Choice(title=[("class:secondary", "[Cancel]")], value="c
 back_choice: Choice = Choice(title=[("class:secondary", "← Back")], value="back")
 
 
-def choice_from_dict(choice_dict: Dict[str, str]) -> List[Choice]:
+def choice_from_dict(choice_dict: dict[str, str]) -> list[Choice]:
     return [Choice(title=key, value=value) for key, value in choice_dict.items()]
 
 
