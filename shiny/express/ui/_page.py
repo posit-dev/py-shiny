@@ -27,6 +27,10 @@ def page_opts(
     """
     Set page-level options for the current app.
 
+    The arguments to this function get passed to :func:`~shiny.ui.page_auto`.
+
+    Parameters
+    ----------
     title
         The browser window title (defaults to the host URL of the page).
     lang
