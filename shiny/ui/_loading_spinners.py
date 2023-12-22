@@ -13,6 +13,7 @@ def use_loading_spinners(
     size: Optional[str] = None,
     speed: Optional[str] = None,
     delay: Optional[str] = None,
+    page_level: Optional[bool] = None,
 ) -> HTMLDependency:
     """
     Use spinners to indicate when an element is loading.
@@ -40,6 +41,9 @@ def use_loading_spinners(
         The amount of time to wait before showing the spinner. This can be any valid CSS
         time. Defaults to "0.5s". This is useful for not showing the spinner if the
         computation finishes quickly.
+    page_level
+        Should the spinner be shown at the page level (i.e. one spinner per app) or at
+        the level of each output (default).
 
     Returns
     -------
@@ -79,15 +83,19 @@ def use_loading_spinners(
     # appropriate variables before being included in the head of the document with our
     # html dep.
     rule_contents = (
-        ".recalculating{"
-        + f"--shiny-spinner-svg: url({svg});"
+        f"--shiny-spinner-svg: url({svg});"
         + (f"--shiny-spinner-easing: {easing};" if easing else "")
         + (f"--shiny-spinner-animation: {animation};" if animation else "")
         + (f"--shiny-spinner-color: {color};" if color else "")
         + (f"--shiny-spinner-size: {size};" if size else "")
         + (f"--shiny-spinner-speed: {speed};" if speed else "")
         + (f"--shiny-spinner-delay: {delay};" if delay else "")
-        + "}"
+    )
+
+    dynamic_styles = (
+        "<style>body:has(.recalculating){" + rule_contents + "}</style>"
+        if page_level
+        else "<style>.recalculating{" + rule_contents + "}</style>"
     )
 
     return HTMLDependency(
@@ -97,7 +105,12 @@ def use_loading_spinners(
             "package": "shiny",
             "subdir": "www/shared/loading-spinners/",
         },
-        stylesheet={"href": "spinners.css"},
+        stylesheet=[
+            {"href": "spinners-page-level.css"}
+            if page_level
+            else {"href": "spinners-element-level.css"},
+            {"href": "spinners-common.css"},
+        ],
         all_files=True,
-        head="<style>" + rule_contents + "</style>",
+        head=dynamic_styles,
     )

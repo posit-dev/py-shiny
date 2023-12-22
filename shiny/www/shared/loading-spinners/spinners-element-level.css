@@ -1,0 +1,39 @@
+/* Override the default styles since they would make the spinner fade as well */
+.recalculating {
+  --_shiny-spinner-color: var(
+    --shiny-spinner-color,
+    var(--bs-primary, #007bc2)
+  );
+  --_shiny-spinner-svg: var(--shiny-spinner-svg, url(tadpole-spinner.svg));
+  --_shiny-spinner-size: var(--shiny-spinner-size, 80px);
+  --_shiny-spinner-easing: var(--shiny-spinner-easing, ease-in-out);
+  --_shiny-spinner-speed: var(--shiny-spinner-speed, 2s);
+  --_shiny-spinner-delay: var(--shiny-spinner-delay, 0.1s);
+  --_shiny-spinner-animation: var(
+    --shiny-spinner-animation,
+    shiny-loading-spinner-spin
+  );
+
+  --_shiny-spinner-blur-speed: var(--shiny-spinner-blur-speed, 0.2s);
+  --_shiny-spinner-blur-easing: var(--shiny-spinner-blur-easing, ease-in);
+}
+
+.recalculating::after {
+  content: "";
+  background: var(--_shiny-spinner-color, gray);
+  -webkit-mask: var(--_shiny-spinner-svg) center/contain no-repeat;
+  mask: var(--_shiny-spinner-svg) center/contain no-repeat;
+  width: var(--_shiny-spinner-size);
+  height: var(--_shiny-spinner-size);
+  position: absolute;
+  inset: calc(50% - var(--_shiny-spinner-size) / 2);
+
+  scale: 0;
+  animation-name: var(--_shiny-spinner-animation);
+  animation-duration: var(--_shiny-spinner-speed);
+  animation-iteration-count: infinite;
+  animation-timing-function: var(--_shiny-spinner-easing);
+  animation-delay: var(--_shiny-spinner-delay);
+
+  z-index: 1001;
+}
