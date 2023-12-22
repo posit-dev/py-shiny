@@ -4,6 +4,11 @@ from typing import Literal, overload
 
 from shiny import App, Inputs, Outputs, Session, ui
 from shiny.render.transformer import TransformerMetadata, ValueFn, output_transformer
+from shiny.render.transformer._transformer import (
+    output_transformer_no_params,
+    output_transformer_params,
+    output_transformer_simple,
+)
 
 #######
 # Package authors can create their own output transformer methods by leveraging
@@ -12,6 +17,74 @@ from shiny.render.transformer import TransformerMetadata, ValueFn, output_transf
 # The transformer is kept simple for demonstration purposes, but it can be much more
 # complex (e.g. shiny.render.plotly)
 #######
+
+
+@output_transformer_simple()
+def render_caps_simple(
+    value: str,
+) -> str:
+    """
+    Barret - Render Caps docs (simple)
+    """
+    # return [value.upper(), value.lower()]
+    return value.upper()
+
+
+@output_transformer_simple()
+def render_caps_simple2(
+    value: str,
+) -> str:
+    """
+    Barret - Render Caps docs (simple2)
+    """
+    # return [value.upper(), value.lower()]
+    return value.upper()
+
+
+@output_transformer_params()
+async def render_caps(
+    # Contains information about the render call: `name` and `session`
+    _meta: TransformerMetadata,
+    # The app-supplied output value function
+    _fn: ValueFn[str | None],
+) -> str | None:
+    """
+    Barret - Render Caps docs no params
+    """
+    # Get the value
+    value = await _fn()
+
+    # Render nothing if `value` is `None`
+    if value is None:
+        return None
+
+    return value.upper()
+
+
+@output_transformer_params()
+async def render_caps_params(
+    # Contains information about the render call: `name` and `session`
+    _meta: TransformerMetadata,
+    # The app-supplied output value function
+    _fn: ValueFn[str | None],
+    *,
+    to: Literal["upper", "lower"] = "upper",
+) -> str | None:
+    """
+    Barret - Render Caps docs params
+    """
+    # Get the value
+    value = await _fn()
+
+    # Render nothing if `value` is `None`
+    if value is None:
+        return None
+
+    if to == "upper":
+        return value.upper()
+    if to == "lower":
+        return value.lower()
+    raise ValueError(f"Invalid value for `to`: {to}")
 
 
 # Create renderer components from the async handler function: `capitalize_components()`
@@ -85,6 +158,9 @@ def render_capitalize(
 ) -> (
     CapitalizeTransformer.OutputRenderer | CapitalizeTransformer.OutputRendererDecorator
 ):
+    """
+    OldSchool - CapitalizeTransformer
+    """
     return CapitalizeTransformer(
         _fn,
         CapitalizeTransformer.params(to=to),
@@ -104,6 +180,14 @@ app_ui = ui.page_fluid(
     ui.output_text_verbatim("to_upper"),
     "To lower:",
     ui.output_text_verbatim("to_lower"),
+    "barret_caps:",
+    ui.output_text_verbatim("barret_caps"),
+    "barret_caps_simple:",
+    ui.output_text_verbatim("barret_caps_simple"),
+    "barret_caps_simple2:",
+    ui.output_text_verbatim("barret_caps_simple2"),
+    "barret_caps_params:",
+    ui.output_text_verbatim("barret_caps_params"),
 )
 
 
@@ -124,6 +208,26 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render_capitalize(to="lower")
     # Works with async output value functions
     async def to_lower():
+        return input.caption()
+
+    @render_caps()
+    def barret_caps():
+        return input.caption()
+
+    @render_caps_simple
+    def barret_caps_simple():
+        return input.caption()
+
+    @render_caps_simple2
+    def barret_caps_simple2():
+        return input.caption()
+
+    @render_caps_params
+    def barret_caps_params():
+        return input.caption()
+
+    @render_caps_params(to="upper")
+    def barret_caps_params2():
         return input.caption()
 
 
