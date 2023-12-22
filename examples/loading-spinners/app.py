@@ -10,21 +10,17 @@ app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.input_slider("rows", "Rows", 0, 100, 20),
     ),
-    ui.use_loading_spinners(type="bounce", page_level=True),
+    # ui.use_loading_spinners(type="bounce", page_level=True),
     ui.layout_column_wrap(
         ui.card(
             ui.output_plot("plot"),
         ),
         ui.card(
             ui.output_plot("plot2"),
-            # ui.div(
-            #     {"class": "recalculating"},
-            #     style="height: 1px; background-color:orangered; width: 100%;",
-            # ),
         ),
         height="1500px",
     ),
-    class_="no-spinner",
+    class_="dot-track-spinner",
 )
 
 
