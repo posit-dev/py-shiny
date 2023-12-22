@@ -316,7 +316,6 @@ quartodoc:
             - express.ui.panel_conditional
             - express.ui.panel_fixed
             - express.ui.panel_absolute
-      contents:
         - kind: page
           path: PageFunctions
           summary:
