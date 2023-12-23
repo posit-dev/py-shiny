@@ -547,6 +547,7 @@ def page_auto(
                 # TODO: change page_navbar() to remove `sidebar` and accept a sidebar as a
                 # *arg.
                 page_fn = page_navbar  # pyright: ignore[reportGeneralTypeIssues]
+                args = tuple([x for x in args if x not in sidebars])
                 kwargs["sidebar"] = sidebars[0]
 
             else:
