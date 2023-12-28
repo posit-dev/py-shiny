@@ -39,7 +39,7 @@ __all__ = (
 # Shiny layout components
 # ======================================================================================
 def sidebar(
-    *,
+    *args: TagChild | TagAttrs,
     width: CssUnit = 250,
     position: Literal["left", "right"] = "left",
     open: Literal["desktop", "open", "closed", "always"] = "always",
@@ -59,6 +59,8 @@ def sidebar(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.sidebar`.
     width
         A valid CSS unit used for the width of the sidebar.
     position
@@ -110,6 +112,7 @@ def sidebar(
     """
     return RecallContextManager(
         ui.sidebar,
+        args=args,
         kwargs=dict(
             width=width,
             position=position,
@@ -128,7 +131,7 @@ def sidebar(
 
 # TODO: Figure out sidebar arg for ui.layout_sidebar
 def layout_sidebar(
-    *,
+    *args: TagChild | TagAttrs,
     fillable: bool = True,
     fill: bool = True,
     bg: Optional[str] = None,
@@ -157,6 +160,8 @@ def layout_sidebar(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.layout_sidebar`.
     fillable
         Whether or not the main content area should be wrapped in a fillable container.
         See :func:`~shiny.ui.as_fillable_container` for details.
@@ -188,6 +193,7 @@ def layout_sidebar(
     """
     return RecallContextManager(
         ui.layout_sidebar,
+        args=args,
         kwargs=dict(
             fillable=fillable,
             fill=fill,
@@ -205,7 +211,7 @@ def layout_sidebar(
 
 
 def layout_column_wrap(
-    *,
+    *args: TagChild | TagAttrs,
     width: CssUnit | None | MISSING_TYPE = MISSING,
     fixed_width: bool = False,
     heights_equal: Literal["all", "row"] = "all",
@@ -227,6 +233,8 @@ def layout_column_wrap(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.layout_column_wrap`.
     width
         The desired width of each card. It can be one of the following:
 
@@ -271,6 +279,7 @@ def layout_column_wrap(
     """
     return RecallContextManager(
         ui.layout_column_wrap,
+        args=args,
         kwargs=dict(
             width=width,
             fixed_width=fixed_width,
@@ -287,7 +296,7 @@ def layout_column_wrap(
 
 
 def layout_columns(
-    *,
+    *args: TagChild | TagAttrs,
     col_widths: BreakpointsUser[int] = None,
     row_heights: BreakpointsUser[CssUnit] = None,
     fill: bool = True,
@@ -305,6 +314,8 @@ def layout_columns(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.layout_columns`.
     col_widths
         The widths of the columns, possibly at different breakpoints. Can be one of the
         following:
@@ -380,6 +391,7 @@ def layout_columns(
     """
     return RecallContextManager(
         ui.layout_columns,
+        args=args,
         kwargs=dict(
             col_widths=col_widths,
             row_heights=row_heights,
@@ -394,7 +406,7 @@ def layout_columns(
 
 
 def card(
-    *,
+    *args: TagChild | TagAttrs,
     full_screen: bool = False,
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
@@ -440,6 +452,7 @@ def card(
 
     return RecallContextManager(
         ui.card,
+        args=args,
         kwargs=dict(
             full_screen=full_screen,
             height=height,
@@ -519,7 +532,7 @@ def card_footer(
 
 
 def accordion(
-    *,
+    *args: TagChild | TagAttrs,
     id: Optional[str] = None,
     open: Optional[bool | str | list[str]] = None,
     multiple: bool = True,
@@ -535,6 +548,8 @@ def accordion(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.accordion`.
     id
         If provided, you can use `input.id()` in your server logic to determine which of
         the :func:`~shiny.ui.accordion_panel`s are currently active. The
@@ -560,6 +575,7 @@ def accordion(
     """
     return RecallContextManager(
         ui.accordion,
+        args=args,
         kwargs=dict(
             id=id,
             open=open,
@@ -573,8 +589,7 @@ def accordion(
 
 
 def accordion_panel(
-    title: TagChild,
-    *,
+    *args: TagChild | TagAttrs,
     value: Optional[str] | MISSING_TYPE = MISSING,
     icon: Optional[TagChild] = None,
     **kwargs: TagAttrValue,
@@ -586,8 +601,8 @@ def accordion_panel(
 
     Parameters
     ----------
-    title
-        A title to appear in the :func:`~shiny.ui.accordion_panel`'s header.
+    *args
+        Positional arguments for :func:`~shiny.ui.accordion_panel`.
     value
         A character string that uniquely identifies this panel. If `MISSING`, the
         `title` will be used.
@@ -598,7 +613,7 @@ def accordion_panel(
     """
     return RecallContextManager(
         ui.accordion_panel,
-        args=(title,),
+        args=args,
         kwargs=dict(
             value=value,
             icon=icon,
@@ -613,7 +628,7 @@ def accordion_panel(
 
 
 def navset_tab(
-    *,
+    *args: TagChild | TagAttrs,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -626,6 +641,8 @@ def navset_tab(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.navset_tab`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -639,6 +656,7 @@ def navset_tab(
     """
     return RecallContextManager(
         ui.navset_tab,
+        args=args,
         kwargs=dict(
             id=id,
             selected=selected,
@@ -649,7 +667,7 @@ def navset_tab(
 
 
 def navset_pill(
-    *,
+    *args: TagChild | TagAttrs,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -662,6 +680,8 @@ def navset_pill(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.navset_pill`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -675,6 +695,7 @@ def navset_pill(
     """
     return RecallContextManager(
         ui.navset_pill,
+        args=args,
         kwargs=dict(
             id=id,
             selected=selected,
@@ -685,7 +706,7 @@ def navset_pill(
 
 
 def navset_underline(
-    *,
+    *args: TagChild | TagAttrs,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -699,6 +720,8 @@ def navset_underline(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.navset_underline`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -712,6 +735,7 @@ def navset_underline(
     """
     return RecallContextManager(
         ui.navset_underline,
+        args=args,
         kwargs=dict(
             id=id,
             selected=selected,
@@ -722,7 +746,7 @@ def navset_underline(
 
 
 def navset_hidden(
-    *,
+    *args: TagChild | TagAttrs,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -735,6 +759,8 @@ def navset_hidden(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.navset_hidden`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -748,6 +774,7 @@ def navset_hidden(
     """
     return RecallContextManager(
         ui.navset_hidden,
+        args=args,
         kwargs=dict(
             id=id,
             selected=selected,
@@ -758,7 +785,7 @@ def navset_hidden(
 
 
 def navset_card_tab(
-    *,
+    *args: TagChild | TagAttrs,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
@@ -773,6 +800,8 @@ def navset_card_tab(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.navset_card_tab`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -788,6 +817,7 @@ def navset_card_tab(
     """
     return RecallContextManager(
         ui.navset_card_tab,
+        args=args,
         kwargs=dict(
             id=id,
             selected=selected,
@@ -800,7 +830,7 @@ def navset_card_tab(
 
 
 def navset_card_pill(
-    *,
+    *args: TagChild | TagAttrs,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
@@ -815,6 +845,8 @@ def navset_card_pill(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.navset_card_pill`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -830,6 +862,7 @@ def navset_card_pill(
     """
     return RecallContextManager(
         ui.navset_card_pill,
+        args=args,
         kwargs=dict(
             id=id,
             selected=selected,
@@ -842,7 +875,7 @@ def navset_card_pill(
 
 
 def navset_card_underline(
-    *,
+    *args: TagChild | TagAttrs,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
@@ -858,6 +891,8 @@ def navset_card_underline(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.navset_card_underline`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -875,6 +910,7 @@ def navset_card_underline(
     """
     return RecallContextManager(
         ui.navset_card_underline,
+        args=args,
         kwargs=dict(
             id=id,
             selected=selected,
@@ -888,7 +924,7 @@ def navset_card_underline(
 
 
 def navset_pill_list(
-    *,
+    *args: TagChild | TagAttrs,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -903,6 +939,8 @@ def navset_pill_list(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.navset_pill_list`.
     id
         If provided, will create an input value that holds the currently selected nav
         item.
@@ -920,6 +958,7 @@ def navset_pill_list(
     """
     return RecallContextManager(
         ui.navset_pill_list,
+        args=args,
         kwargs=dict(
             id=id,
             selected=selected,
@@ -932,7 +971,7 @@ def navset_pill_list(
 
 
 def navset_bar(
-    *,
+    *args: TagChild | TagAttrs,
     title: TagChild,
     id: Optional[str] = None,
     selected: Optional[str] = None,
@@ -959,6 +998,8 @@ def navset_bar(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.navset_bar`.
     title
         Title to display in the navbar.
     id
@@ -1009,6 +1050,7 @@ def navset_bar(
     """
     return RecallContextManager(
         ui.navset_bar,
+        args=args,
         kwargs=dict(
             title=title,
             id=id,
@@ -1030,20 +1072,19 @@ def navset_bar(
 
 
 def nav_panel(
-    title: TagChild,
-    *,
+    *args: TagChild | TagAttrs,
     value: Optional[str] = None,
     icon: TagChild = None,
 ) -> RecallContextManager[NavPanel]:
     """
     Context manager for nav item pointing to some internal content.
 
-    This function wraps :func:`~shiny.ui.nav`.
+    This function wraps :func:`~shiny.ui.nav_panel`.
 
     Parameters
     ----------
-    title
-        A title to display. Can be a character string or UI elements (i.e., tags).
+    *args
+        Positional arguments for :func:`~shiny.ui.nav_panel`.
     value
         The value of the item. This is used to determine whether the item is active
         (when an ``id`` is provided to the nav container), programmatically select the
@@ -1055,7 +1096,7 @@ def nav_panel(
     """
     return RecallContextManager(
         ui.nav_panel,
-        args=(title,),
+        args=args,
         kwargs=dict(
             value=value,
             icon=icon,
@@ -1073,8 +1114,7 @@ def nav_control() -> RecallContextManager[NavPanel]:
 
 
 def nav_menu(
-    title: TagChild,
-    *,
+    *args: TagChild | TagAttrs,
     value: Optional[str] = None,
     icon: TagChild = None,
     align: Literal["left", "right"] = "left",
@@ -1086,8 +1126,8 @@ def nav_menu(
 
     Parameters
     ----------
-    title
-        A title to display. Can be a character string or UI elements (i.e., tags).
+    *args
+        Positional arguments for :func:`~shiny.ui.nav_menu`.
     value
         The value of the item. This is used to determine whether the item is active
         (when an ``id`` is provided to the nav container), programmatically select the
@@ -1102,7 +1142,7 @@ def nav_menu(
 
     return RecallContextManager(
         ui.nav_menu,
-        args=(title,),
+        args=args,
         kwargs=dict(
             value=value,
             icon=icon,
@@ -1115,7 +1155,7 @@ def nav_menu(
 # Value boxes
 # ======================================================================================
 def value_box(
-    *,
+    *args: TagChild | TagAttrs,
     showcase: Optional[TagChild] = None,
     showcase_layout: ui._valuebox.SHOWCASE_LAYOUTS_STR
     | ui.ShowcaseLayout = "left center",
@@ -1140,6 +1180,8 @@ def value_box(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.value_box`.
     showcase
         A :class:`~htmltools.Tag` child to showcase (e.g., an icon, a
         :func:`~shiny.ui.output_plot`, etc).
@@ -1180,6 +1222,7 @@ def value_box(
     """
     return RecallContextManager(
         ui.value_box,
+        args=args,
         kwargs=dict(
             showcase=showcase,
             showcase_layout=showcase_layout,
@@ -1199,7 +1242,9 @@ def value_box(
 # ======================================================================================
 
 
-def panel_well(**kwargs: TagAttrValue) -> RecallContextManager[Tag]:
+def panel_well(
+    *args: TagChild | TagAttrs, **kwargs: TagAttrValue
+) -> RecallContextManager[Tag]:
     """
     Context manager for a well panel
 
@@ -1210,6 +1255,7 @@ def panel_well(**kwargs: TagAttrValue) -> RecallContextManager[Tag]:
     """
     return RecallContextManager(
         ui.panel_well,
+        args=args,
         kwargs=dict(
             **kwargs,
         ),
@@ -1217,7 +1263,7 @@ def panel_well(**kwargs: TagAttrValue) -> RecallContextManager[Tag]:
 
 
 def panel_conditional(
-    *,
+    *args: TagChild | TagAttrs,
     condition: str,
     **kwargs: TagAttrValue,
 ) -> RecallContextManager[Tag]:
@@ -1230,6 +1276,8 @@ def panel_conditional(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.panel_conditional`.
     condition
         A JavaScript expression that will be evaluated repeatedly to determine whether
         the panel should be displayed.
@@ -1255,6 +1303,7 @@ def panel_conditional(
     """
     return RecallContextManager(
         ui.panel_conditional,
+        args=args,
         kwargs=dict(
             condition=condition,
             **kwargs,
@@ -1263,7 +1312,7 @@ def panel_conditional(
 
 
 def panel_fixed(
-    *,
+    *args: TagChild | TagAttrs,
     top: Optional[str] = None,
     left: Optional[str] = None,
     right: Optional[str] = None,
@@ -1285,6 +1334,8 @@ def panel_fixed(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.panel_absolute`.
     **kwargs
         Arguments passed along to :func:`~shiny.ui.panel_absolute`.
 
@@ -1294,6 +1345,7 @@ def panel_fixed(
     """
     return RecallContextManager(
         ui.panel_fixed,
+        args=args,
         kwargs=dict(
             top=top,
             left=left,
@@ -1309,7 +1361,7 @@ def panel_fixed(
 
 
 def panel_absolute(
-    *,
+    *args: TagChild | TagAttrs,
     top: Optional[str] = None,
     left: Optional[str] = None,
     right: Optional[str] = None,
@@ -1335,6 +1387,8 @@ def panel_absolute(
 
     Parameters
     ----------
+    *args
+        Positional arguments for :func:`~shiny.ui.panel_absolute`.
     top
         Distance between the top of the panel, and the top of the page or parent
         container.
@@ -1382,6 +1436,7 @@ def panel_absolute(
     """
     return RecallContextManager(
         ui.panel_absolute,
+        args=args,
         kwargs=dict(
             top=top,
             left=left,
