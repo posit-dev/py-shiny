@@ -94,6 +94,8 @@ from ...ui import (
     modal_remove,
     notification_show,
     notification_remove,
+    tooltip,
+    popover,
     nav_spacer,
     output_plot,
     output_image,
