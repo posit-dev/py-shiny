@@ -22,7 +22,8 @@ with ui.div(id="shell"):
 with ui.layout_columns(col_widths=[6, 6]):
     # check height is below 300px - bounding box
     with ui.navset_card_tab(id="express_navset_card_tab"):
-        with ui.nav_panel(title="Two"):
+        with ui.nav_panel():
+            "Two"
             ...
 
     with ui.navset_tab(id="express_navset_tab"):
@@ -31,7 +32,9 @@ with ui.layout_columns(col_widths=[6, 6]):
             ("div", ui.div),
             ("span", ui.span),
         ]:
-            with ui.nav_panel(title=fn_txt):
+            with ui.nav_panel():
+                ui.code(f"{fn_txt}()")
+
                 for i in range(3):
                     with fn():
                         ui.HTML(f"{fn_txt} {i}")
