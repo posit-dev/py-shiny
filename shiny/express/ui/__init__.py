@@ -94,6 +94,8 @@ from ...ui import (
     modal_remove,
     notification_show,
     notification_remove,
+    tooltip,
+    popover,
     nav_spacer,
     output_plot,
     output_image,
@@ -269,6 +271,8 @@ __all__ = (
     "panel_conditional",
     "panel_fixed",
     "panel_absolute",
+    "popover",
+    "tooltip",
     # Imports from ._page
     "page_opts",
 )
@@ -294,11 +298,9 @@ _known_missing = {
         "panel_main",  # Deprecated
         "panel_sidebar",  # Deprecated
         "panel_title",
-        "popover",
         "showcase_bottom",
         "showcase_left_center",
         "showcase_top_right",
-        "tooltip",
     ),
     # Items from shiny.express.ui that don't have a counterpart in shiny.ui
     "shiny.express.ui": ("page_opts",),
