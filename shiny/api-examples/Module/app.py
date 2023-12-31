@@ -25,7 +25,6 @@ def counter_server(
     def _():
         count.set(count() + 1)
 
-    @output
     @render.text
     def out() -> str:
         return f"Click count is {count()}"

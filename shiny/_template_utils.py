@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import os
 import shutil
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional, cast
+from urllib.error import URLError
 from urllib.parse import urlparse
+from urllib.request import urlopen
 
 import questionary
-import requests
 from questionary import Choice
 
 from ._custom_component_template_questions import (
@@ -33,7 +36,7 @@ cancel_choice: Choice = Choice(title=[("class:secondary", "[Cancel]")], value="c
 back_choice: Choice = Choice(title=[("class:secondary", "← Back")], value="back")
 
 
-def choice_from_dict(choice_dict: Dict[str, str]) -> List[Choice]:
+def choice_from_dict(choice_dict: dict[str, str]) -> list[Choice]:
     return [Choice(title=key, value=value) for key, value in choice_dict.items()]
 
 
@@ -75,10 +78,16 @@ def template_query(question_state: Optional[str] = None, mode: Optional[str] = N
 
 
 def download_and_extract_zip(url: str, temp_dir: Path):
-    response = requests.get(url)
-    response.raise_for_status()
+    try:
+        response = urlopen(url)
+        data = cast(bytes, response.read())
+    except URLError as e:
+        # Note that HTTPError is a subclass of URLError
+        e.msg += f" for url: {url}"  # pyright: ignore
+        raise e
+
     zip_file_path = temp_dir / "repo.zip"
-    zip_file_path.write_bytes(response.content)
+    zip_file_path.write_bytes(data)
     with zipfile.ZipFile(zip_file_path, "r") as zip_file:
         zip_file.extractall(temp_dir)
 
