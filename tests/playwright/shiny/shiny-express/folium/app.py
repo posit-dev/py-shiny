@@ -1,16 +1,16 @@
 import folium  # pyright: ignore[reportMissingTypeStubs]
 
-from shiny import render, ui
-from shiny.express import input, layout
+from shiny import render
+from shiny.express import input, ui
 
 locations_coords = {
     "San Francisco": (37.79554, -122.39348),
     "Los Angeles": (34.05026, -118.25768),
     "New York": (40.71222, -74.00490),
 }
-layout.set_page(layout.page_fixed())
+ui.page_opts(full_width=False)
 
-with layout.card(id="card"):
+with ui.card(id="card"):
     "Static Map"
     folium.Map(
         location=locations_coords["San Francisco"], tiles="USGS.USTopo", zoom_start=12

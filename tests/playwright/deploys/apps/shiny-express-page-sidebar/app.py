@@ -1,7 +1,7 @@
 from shiny import render
 from shiny.express import input, ui
 
-ui.set_page(ui.page_sidebar(title="PageTitle"))
+ui.page_opts(title="PageTitle")
 
 with ui.sidebar(id="sidebar", title="SidebarTitle"):
     "Sidebar Content"

@@ -1,7 +1,7 @@
 import pandas as pd
 
-from shiny import render, ui
-from shiny.express import layout
+from shiny import render
+from shiny.express import ui
 
 data = {
     "A": [1, 2, 3, 4, 5, 6],
@@ -14,9 +14,9 @@ data = {
 
 df = pd.DataFrame(data)
 
-layout.set_page(layout.page_fillable())
+ui.page_opts(fillable=True)
 
-with layout.card(id="card"):
+with ui.card(id="card"):
     ui.h2("Below is a sample dataframe")
 
     @render.data_frame
