@@ -49,6 +49,7 @@ from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
 from ..render.transformer import OutputRenderer
+from ..render.transformer._transformer import BarretRenderer
 from ..types import SafeException, SilentCancelOutputException, SilentException
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
