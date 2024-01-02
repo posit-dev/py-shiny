@@ -94,8 +94,6 @@ from ...ui import (
     modal_remove,
     notification_show,
     notification_remove,
-    tooltip,
-    popover,
     nav_spacer,
     output_plot,
     output_image,
@@ -135,6 +133,8 @@ from ._cm_components import (
     panel_conditional,
     panel_fixed,
     panel_absolute,
+    tooltip,
+    popover,
 )
 
 from ._page import (
