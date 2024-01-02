@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import typing
+from functools import wraps
+
 # TODO-barret; POST-merge; shinywidgets should not call `resolve_value_fn`
 
 
@@ -737,6 +740,227 @@ def output_transformer(
         return output_transformer_impl
 
 
+# # Barret
+
+# Class needs to create an outputrenderer and call it later. Not convinced it'll work.
+# Proposing that parens are required if typing is used. :-(
+
+
+class BarretRenderer(Generic[IT, OT, P]):
+    """
+    BarretRenderer cls docs here
+    """
+
+    # Meta
+    _session: Session
+    _name: str
+    # __name__: str ??
+
+    # UI
+    default_ui: DefaultUIFnImpl | None = None
+    default_ui_passthrough_args: tuple[str, ...] | None = None
+    # App value function
+    _value_fn_original: ValueFnApp[IT]
+    _value_fn: ValueFn[IT]
+
+    # Transform function; transform value's IT -> OT
+    # _transform_fn: TransformFn[IT, P, OT] | None = None
+
+    # 0. Rename OutputRenderer to `OutputRendererLegacy` (or something)
+    # 1. OutputRenderer becomes a protocol
+    # PErform a runtime isinstance check on the class
+    # Or runtime check for attribute callable field of `_set_metadata()`
+    # 2. Don't use `P` within `OutputRenderer` base class. Instead, use `self.FOO` params within the child class / child render method
+    # Only use Barret Renderer class and have users overwrite the transform or render method as they see fit.
+
+    def __call__(self, value_fn: ValueFnApp[IT]) -> OutputRenderer[OT]:
+        """
+        BarretRenderer __call__ docs here; Sets app's value function
+        """
+        print("BarretRenderer - call", value_fn)
+        if not callable(value_fn):
+            raise TypeError("Value function must be callable")
+        self._value_fn_original = value_fn
+        self._value_fn = wrap_async(value_fn)
+
+        async def render_wrapper(
+            meta: TransformerMetadata,
+            value_fn: ValueFn[IT],
+            *args: P.args,
+            **kwargs: P.kwargs,
+        ) -> OT:
+            print("BarretRenderer - call - render_wrapper", meta, value_fn)
+            rendered = await self.render()
+            return rendered
+
+        return OutputRenderer(
+            value_fn=self._value_fn_original,
+            transform_fn=render_wrapper,
+            # params=self._params,
+            params=empty_params(),
+            default_ui=self.default_ui,
+            default_ui_passthrough_args=self.default_ui_passthrough_args,
+        )
+
+    def __init__(
+        self,
+        *init_args: P.args,
+        **init_kwargs: P.kwargs,
+        # value_fn: ValueFnApp[IT],
+        # transform_fn: TransformFn[IT, P, OT],
+        # params: TransformerParams[P],
+        # default_ui: Optional[DefaultUIFnImpl] = None,
+        # default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
+    ):
+        """
+        BarretRenderer - init docs here
+        """
+        print("BarretRenderer - init", init_args, init_kwargs)
+        self._params: TransformerParams[P] = TransformerParams(
+            *init_args, **init_kwargs
+        )
+
+    def _set_metadata(self, session: Session, name: str) -> None:
+        """
+        When `Renderer`s are assigned to Output object slots, this method is used to
+        pass along Session and name information.
+        """
+        self._session: Session = session
+        self._name: str = name
+
+    async def render(self) -> OT:
+        """
+        BarretRenderer - render docs here
+        """
+        print("BarretRenderer - render")
+        print("BarretRenderer - needs abc class?")
+        value = await self._value_fn()
+        return cast(OT, value)
+
+    def __new__(
+        _cls,
+        _value_fn: ValueFnApp[IT] | None = None,
+        *new_args: object,
+        **new_kwargs: object,
+    ) -> typing.Self:
+        # """
+        # Barret __new__ docs here; Intercepts the class creation,
+        # possibly returning a decorator instead of a class
+
+        # Check if bare class is being used as a decorator (called with a single callable
+        # arg). If so, decorate the function and return.
+        # """
+
+        print("BarretRenderer - new", new_args, new_kwargs, _cls)
+        # If only one arg is passed and it is a callable, return a decorator
+        if callable(_value_fn):
+            # if len(new_args) == 1 and callable(new_args[0]) and not new_kwargs:
+            print("BarretRenderer - creating decorator!", _cls)
+            # value_fn = new_args[0]
+
+            out_ren = _cls()(_value_fn)
+            return out_ren
+
+            resolved_cls = _cls()
+            resolved_cls._value_fn_original = value_fn
+            resolved_cls._value_fn = wrap_async(value_fn)
+
+            return resolved_cls
+
+            new_class = super().__new__(_cls)
+            return new_class(value_fn)
+
+            # @wraps(wrapped)
+            # def f(*f_args: object, **f_kwargs: object):
+            #     print("BarretRenderer - new - f", f_args, f_kwargs)
+
+            #     # with _cls() as _tag:
+            #     #     return wrapped(*args, **kwargs) or _tag
+
+            # return f
+
+        # Return like normal. Let the other methods do the work.
+        return super().__new__(_cls)
+
+
+class BarretSimple(BarretRenderer[IT, OT | None, ...]):
+    _params: TransformerParams[...]
+
+    def __new__(
+        _cls,
+        _fn: ValueFnApp[IT] | None = None,
+    ) -> typing.Self:
+        # """
+        # Barret __new__ docs here; Intercepts the class creation,
+        # possibly returning a decorator instead of a class
+
+        # Check if bare class is being used as a decorator (called with a single callable
+        # arg). If so, decorate the function and return.
+        # """
+
+        print("BarretSimple - new", _cls)
+        # If only one arg is passed and it is a callable, return a decorator
+        if callable(_fn):
+            print("BarretSimple - creating decorator!", _cls)
+
+            out_ren = _cls()(_fn)
+            return out_ren
+
+            resolved_cls = _cls()
+            resolved_cls._value_fn_original = _fn
+            resolved_cls._value_fn = wrap_async(_fn)
+
+            print("BarretSimple - exiting creating decorator!", _cls)
+
+            return resolved_cls
+
+            new_class = super().__new__(_cls)
+            return new_class(_fn)
+
+            # @wraps(wrapped)
+            # def f(*f_args: object, **f_kwargs: object):
+            #     print("BarretSimple - new - f", f_args, f_kwargs)
+
+            #     # with _cls() as _tag:
+            #     #     return wrapped(*args, **kwargs) or _tag
+
+            # return f
+
+        # Return like normal. Let the other methods do the work.
+        return super().__new__(_cls)
+
+    def __init__(
+        self,
+        _value_fn: ValueFnApp[IT] | None = None,
+    ):
+        """
+        BarretSimple - init docs here
+        """
+        super().__init__()
+        print("BarretSimple - init - no args, no kwargs")
+        self._params = empty_params()
+
+    async def transform(self, value: IT) -> OT:
+        """
+        BarretSimple - transform docs here
+        """
+        print("BarretSimple - transform")
+        print("BarretSimple - needs abc class?")
+        return cast(OT, value)
+
+    async def render(self) -> OT | None:
+        """
+        BarretSimple - render docs here
+        """
+        print("BarretSimple - render")
+        value = await self._value_fn()
+        if value is None:
+            return None
+
+        rendered = await self.transform(value)
+        return rendered
+
+
 # ======================================================================================
 # Simple transformer
 # ======================================================================================
@@ -933,31 +1157,214 @@ def output_transformer_simple(
     return simple_transformer
 
 
-# TODO-barret; Allow for no parens when calling the renderer in the app.
+JOT = TypeVar("JOT", bound=JSONifiable)
+
+
+def output_transformer_json(
+    *,
+    default_ui: Optional[DefaultUIFn] = None,
+    default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
+    # ) -> Callable[
+    #     [Callable[[IT], JOT] | Callable[[IT], Awaitable[JOT]]],
+    #     Callable[[ValueFnApp[IT]], OutputRendererSimple[JOT | None]],
+    # ]:
+):
+    def simple_transformer(
+        upgrade_fn: Callable[[IT], JOT]
+        | Callable[[IT], Awaitable[JOT]]
+        # ) -> Callable[[ValueFnApp[IT]], OutputRendererSimple[JOT | None]]:
+    ):
+        upgrade_fn = wrap_async(upgrade_fn)
+
+        async def transform_fn(
+            _meta: TransformerMetadata,
+            _fn: ValueFn[IT | None],
+        ) -> JOT | None:
+            res = await _fn()
+            if res is None:
+                return None
+
+            ret = await upgrade_fn(res)
+            return ret
+
+        with_transformer = output_transformer_params(
+            default_ui=default_ui,
+            default_ui_passthrough_args=default_ui_passthrough_args,
+        )
+        with_args = with_transformer(transform_fn)
+        # def with_args2(
+        #         (() -> (IT@simple_transformer | None)) | (() -> Awaitable[IT@simple_transformer | None]) | None
+        #     ) -> (
+        #         (((() -> (IT@simple_transformer | None)) | (() -> Awaitable[IT@simple_transformer | None])) -> OutputRenderer[JOT@simple_transformer | None]) | OutputRenderer[JOT@simple_transformer | None]
+        #     )
+        return with_args
+        # with_value_fn = with_args()
+        # return with_value_fn
+        with_value_fn: BValueFn[IT, JOT] = with_args()
+        return with_value_fn
+
+    return simple_transformer
+
+
+def output_transformer_json2(
+    *,
+    default_ui: Optional[DefaultUIFn] = None,
+    default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
+    # ) -> Callable[[TransformFn[IT, P, OT]], BArgsFn2[IT, P, OT]]:
+):
+    # _output_transform_fn = _  # Give clearer name
+
+    def simple_transformer(
+        upgrade_fn: Callable[[IT], JOT]
+        | Callable[[IT], Awaitable[JOT]]
+        # ) -> Callable[[ValueFnApp[IT]], OutputRendererSimple[JOT | None]]:
+        # ) -> (
+        #     Callable[[], Callable[[ValueFnApp[IT]], OutputRendererSimple[JOT | None]]]
+        #     | Callable[[Optional[ValueFnApp[IT]], OutputRendererSimple[JOT | None]]
+    ):
+        upgrade_fn = wrap_async(upgrade_fn)
+
+        async def transform_fn(
+            _meta: TransformerMetadata,
+            _fn: ValueFn[IT | None],
+        ) -> JOT | None:
+            res = await _fn()
+            if res is None:
+                return None
+
+            ret = await upgrade_fn(res)
+            return ret
+
+        @typing.overload
+        def output_renderer(
+            _: None = None,
+        ) -> Callable[[ValueFnApp[IT]], OutputRendererSimple[JOT | None]]:
+            pass
+
+        @typing.overload
+        def output_renderer(
+            value_fn: ValueFnApp[IT],
+        ) -> OutputRendererSimple[JOT | None]:
+            pass
+
+        def output_renderer(  # pyright: ignore[reportGeneralTypeIssues]
+            # def output_renderer(
+            _: Optional[ValueFnApp[IT]] = None,
+        ):
+            _args_value_fn = _  # Give clearer name
+
+            def with_value_fn(
+                value_fn: ValueFnApp[IT],
+            ) -> OutputRendererSimple[JOT | None]:
+                return OutputRendererSimple(
+                    value_fn=value_fn,
+                    transform_fn=transform_fn,
+                    default_ui=default_ui,
+                    default_ui_passthrough_args=default_ui_passthrough_args,
+                )
+
+            if callable(_args_value_fn):
+                # No args were given and the function was called without parens,
+                # receiving an app value function. Ex:
+                # @output_transformer_json2
+                # def my_output():
+                #     ...
+                return with_value_fn(_args_value_fn)
+            else:
+                return with_value_fn
+
+        return output_renderer
+
+    return simple_transformer
+
+
 # TODO-barret; Allow for no parens when creating the renderer. But discourage the pkg author.
+# TODO-barret; Allow for no parens when calling the renderer in the app.
 # TODO-barret; Add extra fields so that existing renderers can be used?
 # TODO-barret; Replace the original `output_transformer` with this one?
 # TODO-barret; Document `output_transformer_simple`
 # TODO-barret; Can the return type of the output_transformer_simple be OT and not JSONifiable? (Just make sure it is a subset of JSONifiable)
 
+# X = TypeVar("X")
+# Deco = Callable[[]]
+
+# Callable[
+#     Callable[[ValueFnApp[IT]], OutputRenderer[OT]]
+
+# BValueFnOut = OutputRenderer[OT]
+BValueFnIn = ValueFnApp[IT]
+BValueFn = Callable[[BValueFnIn[IT]], OutputRenderer[OT]]
+BArgsFn = Callable[
+    Concatenate[Optional[BValueFnIn[IT]], P],
+    BValueFn[IT, OT] | OutputRenderer[OT],
+]
+BArgsFn2 = BValueFnIn[IT] | Callable[P, BValueFn[IT, OT]]
+
+
+WithValueFn = Callable[[ValueFnApp[IT]], OutputRenderer[OT]]
+WithArgsFn = WithValueFn[IT, OT] | OutputRenderer[OT]
+
+WithTransformerFn = Callable[
+    Concatenate[Optional[ValueFnApp[IT]], P],
+    WithArgsFn[IT, OT],
+]
+
+# ## Barret notes:
+# If we want to allow for no parens, then the return type is either
+# * OutputRenderer[OT] == Callable[[], OT]
+# * Callable[[ValueFnApp[IT]], OutputRenderer[OT]]
+
+# By type definition rules, these are incompatible as one accepts a positional arg and the other does not.
+# So we need to use an overload.
+# However, using an overload gives the wrong function name for the no-paren call.
+# * I believe this is a pylance error and could be fixed.
+#
+# Implementing with overloads, somehow the docs for render_caps_params are passed through!
+# Current downside is that the fn name is `output_renderer` instead of the user's function name at decorator time. (This is a pylance error?)
+
+# Using overloads does not allow for us to define the type of the function.
+# Using overloads requires us to use pyright ignore statements as the overloads are not compatible with each other.
+
 
 def output_transformer_params(
     # Require that all params are keyword arguments so that if a user calls `@output_transformer_no_params` (with no parens), an error is thrown
+    # _: Optional[Callable[[TransformFn[IT, P, OT]], BArgsFn[IT, P, OT]]] = None,
     *,
     default_ui: Optional[DefaultUIFn] = None,
     default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
-) -> Callable[
-    [TransformFn[IT, P, OT]],
-    Callable[P, Callable[[ValueFnApp[IT]], OutputRenderer[OT]]],
-]:
+    # ) -> Callable[[TransformFn[IT, P, OT]], BArgsFn2[IT, P, OT]]:
+):
+    # _output_transform_fn = _  # Give clearer name
+
     def with_transformer(
         transform_fn: TransformFn[IT, P, OT],
-    ) -> Callable[P, Callable[[ValueFnApp[IT]], OutputRenderer[OT]]]:
-        def with_args(
+        # ) -> BArgsFn2[IT, P, OT]:
+    ):
+        @typing.overload
+        def output_renderer(
             *args: P.args,
             **kwargs: P.kwargs,
             # ) -> Callable[[ValueFnApp[IT]], OutputRenderer[OT]]:
-        ) -> Callable[[ValueFnApp[IT]], OutputRenderer[OT]]:
+            # ) -> BValueFn[IT, OT] | OutputRenderer[OT]:
+        ) -> BValueFn[IT, OT]:
+            pass
+
+        @typing.overload
+        def output_renderer(  # pyright: ignore[reportOverlappingOverload]
+            value_fn: BValueFnIn[IT],
+            # ) -> Callable[[ValueFnApp[IT]], OutputRenderer[OT]]:
+            # ) -> BValueFn[IT, OT] | OutputRenderer[OT]:
+        ) -> OutputRenderer[OT]:
+            pass
+
+        def output_renderer(  # pyright: ignore[reportGeneralTypeIssues]
+            _: Optional[BValueFnIn[IT]] = None,
+            *args: P.args,
+            **kwargs: P.kwargs,
+            # ) -> Callable[[ValueFnApp[IT]], OutputRenderer[OT]]:
+            # ) -> BValueFn[IT, OT] | OutputRenderer[OT]:
+        ):
+            _args_value_fn = _  # Give clearer name
             if len(args) > 0:
                 raise RuntimeError(
                     "`*args` should not be supplied."
@@ -966,7 +1373,7 @@ def output_transformer_params(
             params = TransformerParams[P](*args, **kwargs)
 
             def with_value_fn(
-                value_fn: ValueFnApp[IT],
+                value_fn: BValueFnIn[IT],
             ) -> OutputRenderer[OT]:
                 return OutputRenderer(
                     value_fn=value_fn,
@@ -976,13 +1383,35 @@ def output_transformer_params(
                     default_ui_passthrough_args=default_ui_passthrough_args,
                 )
 
-            return with_value_fn
+            if callable(_args_value_fn):
+                # No args were given and the function was called without parens,
+                # receiving an app value function. Ex:
+                # @output_transformer_params
+                # def my_output():
+                #     ...
+                return with_value_fn(_args_value_fn)
+            else:
+                return with_value_fn
 
-        return with_args
+        # if callable(_fn):
+        #     # No args were given and the function was called without parens,
+        #     # receiving an app value function. Ex:
+        #     # @output_transformer_params
+        #     # def my_output():
+        #     #     ...
+        #     return with_value_fn(_fn)
+        # else:
+        #     return with_value_fn
 
-    # TODO-barret; Add more here
-    # with_transformer.OutputRendererDecorator = OutputRendererDecorator[]
-    # with_transformer.OutputRendererDecorator = OutputRendererDecorator[]
+        return output_renderer
+
+    # # TODO-barret; Add more here
+    # # with_transformer.OutputRendererDecorator = OutputRendererDecorator[]
+    # # with_transformer.OutputRendererDecorator = OutputRendererDecorator[]
+    # if callable(_output_transform_fn):
+    #     return with_transformer(_output_transform_fn)
+    # else:
+    #     return with_transformer
     return with_transformer
 
 
