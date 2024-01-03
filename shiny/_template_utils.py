@@ -172,6 +172,7 @@ def app_template_questions(
 
     print(f"Created Shiny app at {app_dir}")
     print(f"Next steps open and edit the app file: {app_dir}/app.py")
+    print("You may need to install packages with: `pip install -r requirements.txt`")
 
 
 def js_component_questions(
