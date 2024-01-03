@@ -271,9 +271,12 @@ def copy_template_files(
     express_available: bool,
     mode: Optional[str] = None,
 ):
-    duplicate_files = [
-        file.name for file in template_dir.iterdir() if (app_dir / file.name).exists()
-    ]
+    files_to_check = [file.name for file in template_dir.iterdir()]
+
+    files_to_check.remove("__pycache__")
+    files_to_check.append("app.py")
+
+    duplicate_files = [file for file in files_to_check if (app_dir / file).exists()]
 
     if any(duplicate_files):
         err_files = ", ".join(['"' + file + '"' for file in duplicate_files])
@@ -289,7 +292,8 @@ def copy_template_files(
         if item.is_file():
             shutil.copy(item, app_dir / item.name)
         else:
-            shutil.copytree(item, app_dir / item.name)
+            if item.name != "__pycache__":
+                shutil.copytree(item, app_dir / item.name)
 
     def rename_unlink(file_to_rename: str, file_to_delete: str, dir: Path = app_dir):
         (dir / file_to_rename).rename(dir / "app.py")
