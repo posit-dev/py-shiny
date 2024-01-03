@@ -746,7 +746,7 @@ def output_transformer(
 # Proposing that parens are required if typing is used. :-(
 
 
-class BarretRenderer(Generic[IT, OT, P]):
+class BarretRenderer(Generic[IT, OT]):
     """
     BarretRenderer cls docs here
     """
@@ -804,8 +804,9 @@ class BarretRenderer(Generic[IT, OT, P]):
 
     def __init__(
         self,
-        *init_args: P.args,
-        **init_kwargs: P.kwargs,
+        _value_fn: ValueFnApp[IT] | None = None,
+        # *init_args: P.args,
+        # **init_kwargs: P.kwargs,
         # value_fn: ValueFnApp[IT],
         # transform_fn: TransformFn[IT, P, OT],
         # params: TransformerParams[P],
@@ -815,10 +816,14 @@ class BarretRenderer(Generic[IT, OT, P]):
         """
         BarretRenderer - init docs here
         """
-        print("BarretRenderer - init", init_args, init_kwargs)
-        self._params: TransformerParams[P] = TransformerParams(
-            *init_args, **init_kwargs
-        )
+        print("BarretRenderer - init (no args/kwargs)")
+        if callable(_value_fn):
+            raise TypeError(
+                "This should not be called with a callable value_fn! Only the `__call__` method should be called with a callable value_fn"
+            )
+        # self._params: TransformerParams[P] = TransformerParams(
+        #     *init_args, **init_kwargs
+        # )
 
     def _set_metadata(self, session: Session, name: str) -> None:
         """
@@ -840,8 +845,8 @@ class BarretRenderer(Generic[IT, OT, P]):
     def __new__(
         _cls,
         _value_fn: ValueFnApp[IT] | None = None,
-        *new_args: object,
-        **new_kwargs: object,
+        *new_args: typing.Any,
+        **new_kwargs: typing.Any,
     ) -> typing.Self:
         # """
         # Barret __new__ docs here; Intercepts the class creation,
@@ -883,8 +888,8 @@ class BarretRenderer(Generic[IT, OT, P]):
         return super().__new__(_cls)
 
 
-class BarretSimple(BarretRenderer[IT, OT | None, ...]):
-    _params: TransformerParams[...]
+class BarretSimple(BarretRenderer[IT, OT | None]):
+    # _params: TransformerParams[...]
 
     def __new__(
         _cls,
@@ -938,7 +943,7 @@ class BarretSimple(BarretRenderer[IT, OT | None, ...]):
         """
         super().__init__()
         print("BarretSimple - init - no args, no kwargs")
-        self._params = empty_params()
+        # self._params = empty_params()
 
     async def transform(self, value: IT) -> OT:
         """
@@ -1334,6 +1339,11 @@ def output_transformer_params(
     default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
     # ) -> Callable[[TransformFn[IT, P, OT]], BArgsFn2[IT, P, OT]]:
 ):
+    """
+    Output Transformer Params docs
+
+    Explain about default ui!
+    """
     # _output_transform_fn = _  # Give clearer name
 
     def with_transformer(
@@ -1364,21 +1374,28 @@ def output_transformer_params(
             # ) -> Callable[[ValueFnApp[IT]], OutputRenderer[OT]]:
             # ) -> BValueFn[IT, OT] | OutputRenderer[OT]:
         ):
+            async def transform_fn_with_params(
+                _meta: TransformerMetadata, _fn: ValueFn[IT | None]
+            ) -> OT:
+                return await transform_fn(_meta, _fn, *args, **kwargs)
+
             _args_value_fn = _  # Give clearer name
             if len(args) > 0:
                 raise RuntimeError(
                     "`*args` should not be supplied."
                     "\nDid you forget to add `()` to your render decorator?"
                 )
-            params = TransformerParams[P](*args, **kwargs)
+            # params = TransformerParams[P](*args, **kwargs)
 
             def with_value_fn(
                 value_fn: BValueFnIn[IT],
             ) -> OutputRenderer[OT]:
                 return OutputRenderer(
                     value_fn=value_fn,
-                    transform_fn=transform_fn,
-                    params=params,
+                    # params=params,
+                    # transform_fn=transform_fn,
+                    transform_fn=transform_fn_with_params,
+                    params=empty_params(),
                     default_ui=default_ui,
                     default_ui_passthrough_args=default_ui_passthrough_args,
                 )
@@ -1462,3 +1479,139 @@ async def resolve_value_fn(value_fn: ValueFnApp[IT]) -> IT:
         # To avoid duplicate work just for a typeguard, we cast the function
         value_fn = cast(ValueFnSync[IT], value_fn)
         return value_fn()
+
+
+# ######################################################################################
+
+
+if (False):
+
+    # # Goals
+    # Simple-ish interface for component author
+    # Component author only needs to implement one async function
+    # For user, support parens and no parens
+    # For user, support async and sync usage
+    # Support docstrings with pyright for parens and no parens
+    # Support docstrings for quartodoc
+
+    # 0. Rename OutputRenderer to `OutputRendererLegacy` (or something)
+    # 1. OutputRenderer becomes a protocol
+    # PErform a runtime isinstance check on the class
+    # Or runtime check for attribute callable field of `_set_metadata()`
+    # 2. Don't use `P` within `OutputRenderer` base class. Instead, use `self.FOO` params within the child class / child render method
+    # Only use Barret Renderer class and have users overwrite the transform or render method as they see fit.
+
+    class json(BarretSimple[object, jsonifiable]):
+        def __init__(self, _value_fn: Callable[[], object]):
+            super().__init__(_value_fn)
+
+        async def transform(self, value: object) -> jsonifiable:
+            return json.parse(json.dumps(value))
+
+    class json(BarretRenderer[jsonifiable, str]):
+        default_ui = output_json
+        """
+        Docs! - no params
+        """
+
+        def __init__(self, _value_fn: Callable[[], jsonifiable], *, indent: int = 0):
+            """
+            Docs! - params
+            """
+            super().__init__(_value_fn)
+            self.indent = indent
+
+        async def render(self) -> str:
+            value = await self._value_fn()
+            if value is None:
+                return None
+            return await self.transform(value)
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # --------------------------------------------------
+
+    class OutputRenderer2(Generic[IT], ABC):
+
+        # Try to warn that the parameter is not being set; Later
+        # @abcfield
+        # default_ui
+
+        # Called inside `_session` class when trying to retrive the value?
+        async def _get_value(self) -> OT:
+            return await self.render()
+
+        def __init__(self, _value_fn: ValueFNApp[IT] | None = None):
+            self._value_fn = _value_fn
+            # self.default_ui = Not missing
+
+        def __call__(self, _value_fn: ValueFNApp[IT]) -> typing.Self
+            self._value_fn = _value_fn
+            # TODO-barret; REturn self! Rewrite the whole base class as (almost) nothing is necessary anymore
+            return LegacyOutputRenderer()
+
+
+    class text(OutputRenderer2[str]):
+        """Render decorator for text output"""
+        default_ui = output_text
+        default_ui = None
+
+        def __init__(self, _value_fn: ValueFNApp[str] | None = None, *, to_case: str = "upper"):
+            """
+            Create a text renderer
+
+            Parameters
+            ----------
+            _value_fn
+                A function that returns the text to render
+            to_case
+                The case to convert the text to, by default "upper"
+            """
+            super().__init__(_value_fn)
+            self.to_case = to_case
+
+        def transform(self, value: str) -> JSONifiable:
+            if self.to_case == "upper":
+                return value.upper()
+            elif self.to_case == "lower":
+                return value.lower()
+            else:
+                return value
+
+    class text(OutputRenderer2[str]):
+        """Render decorator for text output"""
+        default_ui = output_text
+        default_ui = None
+
+        def __init__(self, _value_fn: ValueFNApp[JSONIfiable] | None = None):
+            """
+            Create a text renderer
+
+            Parameters
+            ----------
+            _value_fn
+                A function that returns the text to render
+            to_case
+                The case to convert the text to, by default "upper"
+            """
+            super().__init__(_value_fn)
+            # self.to_case = to_case
+
+
+    @text
+    def foo1():
+        ...
+
+    @text(to_case="lower")
+    def foo2():
+        ...
