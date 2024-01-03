@@ -43,7 +43,8 @@ def choice_from_dict(choice_dict: dict[str, str]) -> list[Choice]:
 def template_query(
     question_state: Optional[str] = None,
     mode: Optional[str] = None,
-    dest_dir: Optional[Path | None] = None,
+    dest_dir: Optional[Path] = None,
+    package_name: Optional[str] = None,
 ):
     """
     This will initiate a CLI query which will ask the user which template they would like.
@@ -73,10 +74,10 @@ def template_query(
     if template is None or template == "cancel":
         sys.exit(1)
     elif template == "js-component":
-        js_component_questions(dest_dir=dest_dir)
+        js_component_questions(dest_dir=dest_dir, package_name=package_name)
         return
     elif template in package_template_choices.values():
-        js_component_questions(template, dest_dir=dest_dir)
+        js_component_questions(template, dest_dir=dest_dir, package_name=package_name)
     else:
         app_template_questions(template, mode, dest_dir=dest_dir)
 
@@ -176,7 +177,9 @@ def app_template_questions(
 
 
 def js_component_questions(
-    component_type: Optional[str] = None, dest_dir: Optional[Path | None] = None
+    component_type: Optional[str] = None,
+    dest_dir: Optional[Path] = None,
+    package_name: Optional[str] = None,
 ):
     """
     Hand question branch for the custom js templates. This should handle the entire rest
@@ -202,15 +205,16 @@ def js_component_questions(
     if component_type is None or component_type == "cancel":
         sys.exit(1)
 
-    # As what the user wants the name of their component to be
-    component_name = questionary.text(
-        "What do you want to name your component?",
-        instruction="Name must be dash-delimited and all lowercase. E.g. 'my-component-name'",
-        validate=ComponentNameValidator,
-    ).ask()
+    # Ask what the user wants the name of their component to be
+    if package_name is None:
+        package_name = questionary.text(
+            "What do you want to name your component?",
+            instruction="Name must be dash-delimited and all lowercase. E.g. 'my-component-name'",
+            validate=ComponentNameValidator,
+        ).ask()
 
-    if component_name is None:
-        sys.exit(1)
+        if package_name is None:
+            sys.exit(1)
 
     template_dir = (
         Path(__file__).parent / "templates/package-templates" / component_type
@@ -226,8 +230,8 @@ def js_component_questions(
     )
 
     # Print messsage saying we're building the component
-    print(f"Setting up {component_name} component package...")
-    update_component_name_in_template(app_dir, component_name)
+    print(f"Setting up {package_name} component package...")
+    update_component_name_in_template(app_dir, package_name)
 
     print("\nNext steps:")
     print(f"- Run `cd {app_dir}` to change into the new directory")
@@ -273,7 +277,9 @@ def copy_template_files(
 ):
     files_to_check = [file.name for file in template_dir.iterdir()]
 
-    files_to_check.remove("__pycache__")
+    if "__pycache__" in files_to_check:
+        files_to_check.remove("__pycache__")
+
     files_to_check.append("app.py")
 
     duplicate_files = [file for file in files_to_check if (app_dir / file).exists()]

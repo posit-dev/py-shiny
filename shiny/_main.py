@@ -518,11 +518,19 @@ After creating the application, you use `shiny run`:
     "-d",
     help="The destination directory, you will be prompted if this is not provided.",
 )
+@click.option(
+    "--package-name",
+    help="""
+    If you are using one of the JavaScript component templates,
+    you can use this flag to specify the name of the resulting package without being prompted.
+    """,
+)
 def create(
     template: Optional[str] = None,
     mode: Optional[str] = None,
     github: Optional[str] = None,
     directory: Optional[str | Path] = None,
+    package_name: Optional[str] = None,
 ) -> None:
     from ._template_utils import template_query, use_git_template
 
@@ -536,7 +544,7 @@ def create(
         use_git_template(github, mode, directory)
         return
 
-    template_query(template, mode, directory)
+    template_query(template, mode, directory, package_name)
 
 
 @main.command(
