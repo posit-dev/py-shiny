@@ -38,7 +38,6 @@ def wrap_express_app(file: Path) -> App:
         "development and the API is subject to change!"
     )
 
-    app_ui = run_express(file)
     try:
         # We tagify here, instead of waiting for the App object to do it when it wraps
         # the UI in a HTMLDocument and calls render() on it. This is because
