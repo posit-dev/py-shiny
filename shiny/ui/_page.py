@@ -87,10 +87,12 @@ def page_sidebar(
     sidebars = [x for x in args if isinstance(x, Sidebar)]
     if len(sidebars) == 0:
         raise ValueError(
-            "No sidebars found in args. Use `ui.sidebar(...)` to create one."
+            "page_sidebar() requires one sidebar, but no sidebars were found in args. Use `ui.sidebar(...)` to create one."
         )
     elif len(sidebars) > 1:
-        raise ValueError("Only one sidebar allowed")
+        raise ValueError(
+            "page_sidebar() requires exactly one sidebar, but more sidebars were found in args."
+        )
     sidebar = sidebars[0]
     args = tuple([x for x in args if x not in sidebars])
 
@@ -214,7 +216,9 @@ def page_navbar(
             sidebar = sidebars[0]
             args = tuple([x for x in args if x not in sidebars])
         elif len(sidebars) > 1:
-            raise ValueError("Only one sidebar allowed.")
+            raise ValueError(
+                "page_navbar() can have up to one sidebar, but more sidebars were found in args."
+            )
 
     else:
         # Deprecated after Shiny 0.6.1
