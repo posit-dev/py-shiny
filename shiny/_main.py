@@ -526,6 +526,9 @@ def create(
 ) -> None:
     from ._template_utils import template_query, use_git_template
 
+    if github is not None and template is not None:
+        raise click.UsageError("You cannot provide both --github and --template")
+
     if isinstance(directory, str):
         directory = Path(directory)
 
