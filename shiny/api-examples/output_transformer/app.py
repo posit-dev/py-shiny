@@ -71,7 +71,7 @@ from shiny.render.transformer._transformer import (
 # @overload
 # def __init__(self, _fn: ValueFn[str | None]) -> None:
 #     ...
-class sub_barret_renderer(BarretRenderer[str, str, ({"a": int})]):
+class sub_barret_renderer(BarretRenderer[str | None, JSONifiable]):
     """
     SubBarretSimple - class docs - Render Caps docs
     """
@@ -82,6 +82,7 @@ class sub_barret_renderer(BarretRenderer[str, str, ({"a": int})]):
 
     def __init__(
         self,
+        # Required for no paren usage
         _fn: ValueFnApp[str | None] | None = None,
         *,
         a: int = 1,
@@ -91,20 +92,21 @@ class sub_barret_renderer(BarretRenderer[str, str, ({"a": int})]):
         SubBarretSimple - init docs - Render Caps docs
         """
         # Do not pass params
-        super().__init__(_fn, a=a)
-        # if callable(_fn):
-        #     self(_fn)
-        #     return
+        super().__init__(_fn)
+        self.widget = None
         self.a: int = a
         # self.default_ui = lambda(id): ui.output_text_verbatim(id, placeholder=placeholder)
         self.default_ui = ui.output_text_verbatim
 
-    async def render(self) -> str:
+    async def render(self) -> str | None:
         value = await self._value_fn()
+        values = [value, value, value]
+        [x for x in values if isinstance(x, Sidebar)]
+        if value is None:
+            return None
+        self.widget = value
         # self.a
-        return (
-            f"{value.upper()}, {self._params.args}, {self._params.kwargs}; a={self.a}"
-        )
+        return f"{value.upper()}; a={self.a}"
 
 
 from typing import Any, Awaitable, Callable, Generic
@@ -143,51 +145,55 @@ from shiny.render.transformer._transformer import IT, OT
 #         rendered = await self.transform(value)
 #         return rendered
 
+# from typing import Sequence
+# def length(value: Sequence[IT]) -> int:
+#     return len(value)
 
-def simple_fn(
-    transform_fn: Callable[[IT], Awaitable[OT]],
-    *,
-    ignore: IT | None = None,
-    ignore2: OT | None = None,
-):
-    bs = BarretSimple[IT, OT]()
 
-    async def transform_(value: IT) -> OT:
-        return await transform_fn(value)
+# def simple_fn(
+#     transform_fn: Callable[[IT], Awaitable[OT]],
+#     # *,
+#     # ignore: IT | None = None,
+#     # ignore2: OT | None = None,
+# ):
+#     bs = BarretSimple[IT, OT]()
 
-    bs.transform = transform_
-    # bs is set up
+#     async def transform_(value: IT) -> OT:
+#         return await transform_fn(value)
 
-    @overload
-    def _(_fn: None = None) -> Callable[[ValueFnApp[IT]], BarretSimple[IT, OT]]:
-        ...
+#     bs.transform = transform_
+#     # bs is set up
 
-    @overload
-    def _(_fn: ValueFnApp[IT]) -> BarretSimple[IT, OT]:
-        ...
+#     @overload
+#     def _(_fn: None = None) -> Callable[[ValueFnApp[IT]], BarretSimple[IT, OT]]:
+#         ...
 
-    def _(
-        _fn: ValueFnApp[IT] | None = None,
-    ) -> BarretSimple[IT, OT] | Callable[[], BarretSimple[IT, OT]]:
-        if callable(_fn):
-            bs(_fn)
-        return bs
+#     @overload
+#     def _(_fn: ValueFnApp[IT]) -> BarretSimple[IT, OT]:
+#         ...
 
-    return _
+#     def _(
+#         _fn: ValueFnApp[IT] | None = None,
+#     ) -> BarretSimple[IT, OT] | Callable[[ValueFnApp[IT]], BarretSimple[IT, OT]]:
+#         if callable(_fn):
+#             bs(_fn)
+#         return bs
+
+#     return _
 
 
 # return ret
 
 
-@simple_fn
-async def barret_simple_fn(value: str) -> str:
-    """
-    Barret - Simple function docs
-    """
-    return value.upper()
+# @simple_fn
+# async def barret_simple_fn(value: str) -> str:
+#     """
+#     Barret - Simple function docs
+#     """
+#     return value.upper()
 
 
-class sub_barret_simple(BarretSimple[str, str]):
+class sub_barret_simple(BarretRenderer[str, str]):
     """
     SubBarretSimple - class - Render Caps docs
     """
@@ -196,7 +202,7 @@ class sub_barret_simple(BarretSimple[str, str]):
 
     def __init__(
         self,
-        _value_fn: ValueFnApp[IT] | None = None,
+        _value_fn: ValueFnApp[str] | None = None,
     ):
         """
         SubBarretSimple - init - docs here
@@ -204,7 +210,16 @@ class sub_barret_simple(BarretSimple[str, str]):
         super().__init__()  # TODO-barret; pass through _value_fn
 
     async def transform(self, value: str) -> str:
-        return value.upper()
+        return str(value).upper()
+
+    # async def render(self) -> str:
+    #     # OPen graphics
+    #     value = await self._value_fn()
+    #     # close graphics
+    #     # self.a
+    #     return (
+    #         f"{value.upper()}, {self._params.args}, {self._params.kwargs}; a={self.a}"
+    #     )
 
 
 #######
@@ -216,29 +231,18 @@ class sub_barret_simple(BarretSimple[str, str]):
 #######
 
 
-@output_transformer_json2()
-def render_caps_simple(
-    value: str,
-) -> str:
-    """
-    Barret - Render Caps docs (simple)
-    """
-    # return [value.upper(), value.lower()]
-    return value.upper()
+# @output_transformer_json2()
+# def render_caps_simple(
+#     value: str,
+# ) -> str:
+#     """
+#     Barret - Render Caps docs (simple)
+#     """
+#     # return [value.upper(), value.lower()]
+#     return value.upper()
 
 
-@output_transformer_json2()
-def render_caps_simple2(
-    value: str,
-) -> str:
-    """
-    Barret - Render Caps docs (simple2)
-    """
-    # return [value.upper(), value.lower()]
-    return value.upper()
-
-
-@output_transformer_params()
+@output_transformer_params(default_ui=ui.output_text_verbatim)
 async def render_caps_params(
     # Contains information about the render call: `name` and `session`
     _meta: TransformerMetadata,
@@ -253,31 +257,7 @@ async def render_caps_params(
     # Get the value
     value = await _fn()
 
-    # Render nothing if `value` is `None`
-    if value is None:
-        return None
-
-    if to == "upper":
-        return value.upper()
-    if to == "lower":
-        return value.lower()
-    raise ValueError(f"Invalid value for `to`: {to}")
-
-
-# Create renderer components from the async handler function: `capitalize_components()`
-@output_transformer()
-async def CapitalizeTransformer(
-    # Contains information about the render call: `name` and `session`
-    _meta: TransformerMetadata,
-    # The app-supplied output value function
-    _fn: ValueFn[str | None],
-    *,
-    # Extra parameters that app authors can supply to the render decorator
-    # (e.g. `@render_capitalize(to="upper")`)
-    to: Literal["upper", "lower"] = "upper",
-) -> str | None:
-    # Get the value
-    value = await _fn()
+    # _meta.self.widget = value  # pyright: ignore
 
     # Render nothing if `value` is `None`
     if value is None:
@@ -290,58 +270,104 @@ async def CapitalizeTransformer(
     raise ValueError(f"Invalid value for `to`: {to}")
 
 
-# First, create an overload where users can supply the extra parameters.
-# Example of usage:
-# ```
-# @output
-# @render_capitalize(to="upper")
-# def value():
-#     return input.caption()
-# ```
-# Note: Return type is `OutputRendererDecorator`
-@overload
-def render_capitalize(
-    *,
-    to: Literal["upper", "lower"] = "upper",
-) -> CapitalizeTransformer.OutputRendererDecorator:
-    ...
+# @output_transformer_params()
+# async def render_caps_no_params(
+#     # Contains information about the render call: `name` and `session`
+#     _meta: TransformerMetadata,
+#     # The app-supplied output value function
+#     _fn: ValueFn[str | None],
+# ) -> str | None:
+#     """
+#     Barret - Render Caps docs no parameters
+#     """
+#     # Get the value
+#     value = await _fn()
+
+#     # Render nothing if `value` is `None`
+#     if value is None:
+#         return None
+
+#     return value.upper()
 
 
-# Second, create an overload where users are not using parentheses to the method.
-# While it doesn't look necessary, it is needed for the type checker.
-# Example of usage:
-# ```
-# @output
-# @render_capitalize
-# def value():
-#     return input.caption()
-# ```
-# Note: `_fn` type is the transformer's `ValueFn`
-# Note: Return type is the transformer's `OutputRenderer`
-@overload
-def render_capitalize(
-    _fn: CapitalizeTransformer.ValueFn,
-) -> CapitalizeTransformer.OutputRenderer:
-    ...
+# # Create renderer components from the async handler function: `capitalize_components()`
+# @output_transformer()
+# async def CapitalizeTransformer(
+#     # Contains information about the render call: `name` and `session`
+#     _meta: TransformerMetadata,
+#     # The app-supplied output value function
+#     _fn: ValueFn[str | None],
+#     *,
+#     # Extra parameters that app authors can supply to the render decorator
+#     # (e.g. `@render_capitalize(to="upper")`)
+#     to: Literal["upper", "lower"] = "upper",
+# ) -> str | None:
+#     # Get the value
+#     value = await _fn()
+
+#     # Render nothing if `value` is `None`
+#     if value is None:
+#         return None
+
+#     if to == "upper":
+#         return value.upper()
+#     if to == "lower":
+#         return value.lower()
+#     raise ValueError(f"Invalid value for `to`: {to}")
 
 
-# Lastly, implement the renderer.
-# Note: `_fn` type is the transformer's `ValueFn` or `None`
-# Note: Return type is the transformer's `OutputRenderer` or `OutputRendererDecorator`
-def render_capitalize(
-    _fn: CapitalizeTransformer.ValueFn | None = None,
-    *,
-    to: Literal["upper", "lower"] = "upper",
-) -> (
-    CapitalizeTransformer.OutputRenderer | CapitalizeTransformer.OutputRendererDecorator
-):
-    """
-    OldSchool - CapitalizeTransformer
-    """
-    return CapitalizeTransformer(
-        _fn,
-        CapitalizeTransformer.params(to=to),
-    )
+# # First, create an overload where users can supply the extra parameters.
+# # Example of usage:
+# # ```
+# # @output
+# # @render_capitalize(to="upper")
+# # def value():
+# #     return input.caption()
+# # ```
+# # Note: Return type is `OutputRendererDecorator`
+# @overload
+# def render_capitalize(
+#     *,
+#     to: Literal["upper", "lower"] = "upper",
+# ) -> CapitalizeTransformer.OutputRendererDecorator:
+#     ...
+
+
+# # Second, create an overload where users are not using parentheses to the method.
+# # While it doesn't look necessary, it is needed for the type checker.
+# # Example of usage:
+# # ```
+# # @output
+# # @render_capitalize
+# # def value():
+# #     return input.caption()
+# # ```
+# # Note: `_fn` type is the transformer's `ValueFn`
+# # Note: Return type is the transformer's `OutputRenderer`
+# @overload
+# def render_capitalize(
+#     _fn: CapitalizeTransformer.ValueFn,
+# ) -> CapitalizeTransformer.OutputRenderer:
+#     ...
+
+
+# # Lastly, implement the renderer.
+# # Note: `_fn` type is the transformer's `ValueFn` or `None`
+# # Note: Return type is the transformer's `OutputRenderer` or `OutputRendererDecorator`
+# def render_capitalize(
+#     _fn: CapitalizeTransformer.ValueFn | None = None,
+#     *,
+#     to: Literal["upper", "lower"] = "upper",
+# ) -> (
+#     CapitalizeTransformer.OutputRenderer | CapitalizeTransformer.OutputRendererDecorator
+# ):
+#     """
+#     OldSchool - CapitalizeTransformer
+#     """
+#     return CapitalizeTransformer(
+#         _fn,
+#         CapitalizeTransformer.params(to=to),
+#     )
 
 
 #######
@@ -374,6 +400,9 @@ app_ui = ui.page_fluid(
         text_row("barret_caps_params_no_paren"),
         text_row("barret_caps_params_paren"),
         #
+        text_row("barret_caps_no_params_no_paren"),
+        text_row("barret_caps_no_params_paren"),
+        #
         text_row("barret_sub_simple_no_paren"),
         text_row("barret_sub_simple_paren"),
         #
@@ -385,42 +414,60 @@ app_ui = ui.page_fluid(
 # import dominate.tags as dom_tags
 
 # dom_tags.h1("content")
-# with dom_tags.h1():
-#     "content"
+
+
+# @dom_tags.h1
+# def _():
+#     return "content"
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
-    # Called without parentheses
-    @render_capitalize
-    def old_no_paren():
-        return input.caption()
+    # @output
+    # # Called without parentheses
+    # @render_capitalize
+    # def old_no_paren():
+    #     return input.caption()
 
-    @output
-    # Called with parentheses. Equivalent to `@render_capitalize()`
-    @render_capitalize(to="lower")
-    def old_paren():
-        return input.caption()
+    # @output
+    # # Called with parentheses. Equivalent to `@render_capitalize()`
+    # # legacy - Barret - Too much boilerplate
+    # @render_capitalize(to="lower")
+    # def old_paren():
+    #     return input.caption()
 
-    @render_caps_simple
-    def barret_caps_simple_no_paren():
-        return input.caption()
+    # # No docstring due to overload
+    # @render_caps_simple
+    # def barret_caps_simple_no_paren():
+    #     return input.caption()
 
-    @render_caps_simple()
-    def barret_caps_simple_paren():
-        return input.caption()
+    # # No docstring due to overload
+    # @render_caps_simple()
+    # def barret_caps_simple_paren():
+    #     return input.caption()
 
     # TODO-barret; Double check this one!!!!
-    # Only downside is bad function name in pylance window.
+    # Barret - Only downside is bad function name in pylance window. Could be pylance bug?
     @render_caps_params
     def barret_caps_params_no_paren():
         return input.caption()
 
+    # Barret - Correct function name
     @render_caps_params(to="lower")
     def barret_caps_params_paren():
         return input.caption()
 
-    print("\nsub_barret_simple")
+    # @render_caps_no_params
+    # # TODO-barret; Double check this one!!!!
+    # # Barret - Only downside is bad function name in pylance window. Could be pylance bug?
+    # def barret_caps_no_params_no_paren():
+    #     return input.caption()
+
+    # # Barret - Correct function name!
+    # @render_caps_no_params()
+    # def barret_caps_no_params_paren():
+    #     return input.caption()
+
+    # print("\nsub_barret_simple")
 
     # new (<function server.<locals>.barret_sub at 0x104bd56c0>,) {}
     # creating decorator!
@@ -439,18 +486,18 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     print("\nbarret_sub_renderer_no_paren")
 
-    @barret_simple_fn
-    def barret_simple_fn_no_paren():
-        return input.caption()
+    # @barret_simple_fn
+    # def barret_simple_fn_no_paren():
+    #     return input.caption()
 
     print("\nbarret_sub_simple_paren")
 
-    # new () {}
-    # init () {}
-    # call (<function server.<locals>.barret_sub2 at 0x106146520>,) {}
-    @barret_simple_fn()
-    def barret_simple_fn_paren() -> str:
-        return input.caption()
+    # # new () {}
+    # # init () {}
+    # # call (<function server.<locals>.barret_sub2 at 0x106146520>,) {}
+    # @barret_simple_fn()
+    # def barret_simple_fn_paren() -> str:
+    #     return input.caption()
 
     print("\nbarret_sub_renderer_no_paren")
 
