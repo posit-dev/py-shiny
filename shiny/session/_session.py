@@ -24,7 +24,6 @@ from typing import (
     Callable,
     Iterable,
     Optional,
-    TypeVar,
     cast,
     overload,
 )
@@ -48,12 +47,9 @@ from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
-from ..render.transformer import OutputRenderer
-from ..render.transformer._transformer import BarretRenderer
+from ..render.renderer._renderer import JSONifiable, RendererBase
 from ..types import SafeException, SilentCancelOutputException, SilentException
 from ._utils import RenderedDeps, read_thunk_opt, session_context
-
-OT = TypeVar("OT")
 
 
 class ConnectionState(enum.Enum):
@@ -968,7 +964,7 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    def __call__(self, renderer_fn: OutputRenderer[OT]) -> OutputRenderer[OT]:
+    def __call__(self, renderer: RendererBase) -> RendererBase:
         ...
 
     @overload
@@ -978,32 +974,33 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-    ) -> Callable[[OutputRenderer[OT]], OutputRenderer[OT]]:
+    ) -> Callable[[RendererBase], RendererBase]:
         ...
 
     def __call__(
         self,
-        renderer_fn: Optional[OutputRenderer[OT]] = None,
+        renderer: Optional[RendererBase] = None,
         *,
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-    ) -> OutputRenderer[OT] | Callable[[OutputRenderer[OT]], OutputRenderer[OT]]:
-        def set_renderer(renderer_fn: OutputRenderer[OT]) -> OutputRenderer[OT]:
-            if hasattr(renderer_fn, "on_register"):
-                renderer_fn.on_register()
-
-            # Get the (possibly namespaced) output id
-            output_name = self._ns(id or renderer_fn.__name__)
-
-            if not isinstance(renderer_fn, OutputRenderer):
+    ) -> RendererBase | Callable[[RendererBase], RendererBase]:
+        def set_renderer(renderer: RendererBase) -> RendererBase:
+            if not isinstance(renderer, RendererBase):
                 raise TypeError(
                     "`@output` must be applied to a `@render.xx` function.\n"
                     + "In other words, `@output` must be above `@render.xx`."
                 )
 
-            # renderer_fn is a Renderer object. Give it a bit of metadata.
-            renderer_fn._set_metadata(self._session, output_name)
+            # TODO-barret; How does this work? Feels like it should be called after the `renderer.session` is set
+            renderer._on_register()
+
+            # Get the (possibly namespaced) output id
+            output_name = self._ns(id or renderer.__name__)
+
+            # renderer is a Renderer object. Give it a bit of metadata.
+            renderer.session = self._session
+            renderer.name = output_name
 
             self.remove(output_name)
 
@@ -1018,9 +1015,9 @@ class Outputs:
                     {"recalculating": {"name": output_name, "status": "recalculating"}}
                 )
 
-                message: dict[str, Optional[OT]] = {}
+                message: dict[str, JSONifiable] = {}
                 try:
-                    message[output_name] = await renderer_fn()
+                    message[output_name] = await renderer.render()
                 except SilentCancelOutputException:
                     return
                 except SilentException:
@@ -1059,12 +1056,12 @@ class Outputs:
 
             self._effects[output_name] = output_obs
 
-            return renderer_fn
+            return renderer
 
-        if renderer_fn is None:
+        if renderer is None:
             return set_renderer
         else:
-            return set_renderer(renderer_fn)
+            return set_renderer(renderer)
 
     def remove(self, id: Id):
         output_name = self._ns(id)
