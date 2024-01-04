@@ -735,6 +735,7 @@ Effect = effect
 # ==============================================================================
 @add_example()
 def event(
+    # TODO-barret; Accept a RendererBase here, and then wrap the render method?
     *args: Callable[[], object] | Callable[[], Awaitable[object]],
     ignore_none: bool = True,
     ignore_init: bool = False,
