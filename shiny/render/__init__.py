@@ -24,6 +24,7 @@ from ._render import (
     table,
     text,
     ui,
+    download,
 )
 
 __all__ = (
@@ -35,6 +36,7 @@ __all__ = (
     "image",
     "table",
     "ui",
+    "download",
     "DataGrid",
     "DataTable",
 )

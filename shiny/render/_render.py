@@ -6,15 +6,18 @@ __all__ = (
     "image",
     "table",
     "ui",
+    "download",
 )
 
 import base64
 import os
 import sys
 import typing
+import urllib.parse
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Literal,
     Optional,
     Protocol,
@@ -24,7 +27,7 @@ from typing import (
     runtime_checkable,
 )
 
-from htmltools import TagChild
+from htmltools import Tag, TagChild
 
 if TYPE_CHECKING:
     from ..session._utils import RenderedDeps
@@ -33,6 +36,7 @@ if TYPE_CHECKING:
 from .. import _utils
 from .. import ui as _ui
 from .._namespaces import ResolvedId
+from ..session._session import DownloadHandler, DownloadInfo
 from ..types import MISSING, MISSING_TYPE, ImgData
 from ._try_render_plot import (
     PlotSizeInfo,
@@ -560,3 +564,97 @@ def ui(
     ~shiny.ui.output_ui
     """
     return UiTransformer(_fn)
+
+
+# ======================================================================================
+# RenderDownload
+# ======================================================================================
+
+
+def download_button_wrapped(id: str) -> Tag:
+    return _ui.download_button(id, label=id)
+
+
+@output_transformer(
+    default_ui=download_button_wrapped
+)  # pyright: ignore[reportGeneralTypeIssues]
+async def DownloadTransformer(
+    _meta: TransformerMetadata,
+    _fn: DownloadHandler,
+    *,
+    button_label: Optional[TagChild] = None,
+    filename: Optional[str | Callable[[], str]] = None,
+    media_type: None | str | Callable[[], str] = None,
+    encoding: str = "utf-8",
+) -> str | None:
+    session = _meta.session
+
+    effective_name = _meta.name
+
+    session._downloads[effective_name] = DownloadInfo(
+        filename=filename,
+        content_type=media_type,
+        handler=_fn,
+        encoding=encoding,
+    )
+
+    return f"session/{urllib.parse.quote(session.id)}/download/{urllib.parse.quote(effective_name)}?w="
+
+
+@overload
+def download(
+    *,
+    filename: Optional[str | Callable[[], str]] = None,
+    media_type: None | str | Callable[[], str] = None,
+    encoding: str = "utf-8",
+) -> DownloadTransformer.OutputRendererDecorator:
+    ...
+
+
+@overload
+def download(
+    _fn: DownloadTransformer.ValueFn,
+    *,
+    filename: Optional[str | Callable[[], str]] = None,
+    media_type: None | str | Callable[[], str] = None,
+    encoding: str = "utf-8",
+) -> DownloadTransformer.OutputRenderer:
+    ...
+
+
+def download(
+    _fn: DownloadTransformer.ValueFn | None = None,
+    *,
+    button_label: Optional[TagChild] = None,
+    filename: Optional[str | Callable[[], str]] = None,
+    media_type: None | str | Callable[[], str] = None,
+    encoding: str = "utf-8",
+) -> DownloadTransformer.OutputRenderer | DownloadTransformer.OutputRendererDecorator:
+    """
+    Decorator to register a function to handle a download.
+
+    Parameters
+    ----------
+    id
+        The name of the download.
+    filename
+        The filename of the download.
+    media_type
+        The media type of the download.
+    encoding
+        The encoding of the download.
+
+    Returns
+    -------
+    :
+        The decorated function.
+    """
+    return DownloadTransformer(
+        _fn,
+        DownloadTransformer.params(
+            button_label=button_label,
+            filename=filename,
+            media_type=media_type,
+            encoding=encoding,
+        ),
+    )
