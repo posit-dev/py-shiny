@@ -18,6 +18,9 @@ from .._docstring import add_example
 from ._dataframe_unsafe import serialize_numpy_dtypes
 from .transformer import TransformerMetadata, ValueFn, output_transformer
 
+# TODO-barret; Implement dataframe
+
+
 if TYPE_CHECKING:
     import pandas as pd
 
