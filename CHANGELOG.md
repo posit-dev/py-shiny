@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.6.2] - 2023-12-22
+
+### Developer features
+
+* Output renderers should now be created with the `shiny.render.renderer.Renderer` class. This class should contain either a `.transform(self, value)` method (common) or a `.render(self)` (rare). These two methods should return something can be converted to JSON. In addition, `.default_ui(self, id)` should be implemented by returning `htmltools.Tag`-like content for use within Shiny Express. To make your own output renderer, please inherit from the `Renderer[IT]` class where `IT` is the type (excluding `None`) you expect to be returned from the App author. (#964)
+
+* `shiny.render.RenderFunction` and `shiny.render.RenderFunctionAsync` have been removed. They were deprecated in v0.6.0. Instead, please use `shiny.render.output_transformer`. (#964)
+
+* When transforming values within `shiny.render.transformer.output_transformer` transform function,  `shiny.render.transformer.resolve_value_fn` is no longer needed as the value function given to the output transformer is now **always** an asynchronous function. `resolve_value_fn(fn)` method has been deprecated. Please change your code from `value = await resolve_value_fn(_fn)` to `value = await _fn()`. (#964)
+
+* `shiny.render.OutputRendererSync` and `shiny.render.OutputRendererAsync` helper classes have been removed in favor of an updated `shiny.render.OutputRenderer` class. Now, the app's output value function will be transformed into an asynchronous function for simplified, consistent execution behavior. (#964)
+
+
 ## [0.6.1.1] - 2023-12-22
 
 ### Bug fixes
@@ -22,12 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Closed #814: The functions `reactive.Calc` and `reactive.Effect` have been changed to have lowercase names: `reactive.calc`, and `reactive.effect`. The old capitalized names are now aliases to the new lowercase names, so existing code will continue to work. Similarly, the class `reactive.Value` has a new alias, `reactive.value`, but in this case, since the original was a class, it keeps the original capitalized name as the primary name. The examples have not been changed yet, but will be changed in a future release. (#822)
 * Added `ui.layout_columns()` for creating responsive column-forward layouts based on Bootstrap's 12-column CSS Grid. (#856)
 * Added support for Shiny Express apps, which has a simpler, easier-to-use API than the existing API (Shiny Core). Please note that this API is still experimental and may change. (#767)
-
-* `shiny.render.RenderFunction` and `shiny.render.RenderFunctionAsync` have been removed. They were deprecated in v0.6.0. Instead, please use `shiny.render.output_transformer`. (TODO-barret)
-
-* `shiny.render.transformer.resolve_value_fn` is no longer needed as the value function given to the output transformer is now always an asynchronous function. This method has been deprecated. Please change your code from `value = await resolve_value_fn(_fn)` to `value = await _fn()`. (TODO-barret)
-
-* `shiny.render.OutputRendererSync` and `shiny.render.OutputRendererAsync` helper classes have been removed in favor of an updated `shiny.render.OutputRenderer` class. Now, the app's output value function will be transformed into an asynchronous function for simplified, consistent execution behavior. (TODO-barret)
 
 ### Bug fixes
 
