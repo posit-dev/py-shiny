@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 
 from shiny import render, ui
-from shiny.express import output_args, suspend_display
+from shiny.express import suspend_display, ui_kwargs
 
 
 def test_render_output_controls():
@@ -24,7 +24,7 @@ def test_render_output_controls():
 
     assert ui.TagList(text2.tagify()).get_html_string() == ""
 
-    @output_args(placeholder=True)
+    @ui_kwargs(placeholder=True)
     @render.text
     def text3():
         return "text"
@@ -34,7 +34,7 @@ def test_render_output_controls():
         == ui.output_text_verbatim("text3", placeholder=True).get_html_string()
     )
 
-    @output_args(width=100)
+    @ui_kwargs(width=100)
     @render.text
     def text4():
         return "text"
