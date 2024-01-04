@@ -38,7 +38,16 @@ def wrap_express_app(file: Path) -> App:
         "development and the API is subject to change!"
     )
 
-    app_ui = run_express(file)
+    try:
+        # We tagify here, instead of waiting for the App object to do it when it wraps
+        # the UI in a HTMLDocument and calls render() on it. This is because
+        # AttributeErrors can be thrown during the tagification process, and we need to
+        # catch them here and convert them to a different type of error, because uvicorn
+        # specifically catches AttributeErrors and prints an error message that is
+        # misleading for Shiny Express. https://github.com/posit-dev/py-shiny/issues/937
+        app_ui = run_express(file).tagify()
+    except AttributeError as e:
+        raise RuntimeError(e) from e
 
     def express_server(input: Inputs, output: Outputs, session: Session):
         try:
