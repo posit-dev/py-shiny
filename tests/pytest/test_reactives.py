@@ -1108,7 +1108,7 @@ async def test_event_type_check():
     with pytest.raises(TypeError):
         # Should complain that @event() can't take the result of @Effect (which returns
         # None).
-        @event(lambda: 1)  # type: ignore
+        @event(lambda: 1)  # pyright: ignore[reportGeneralTypeIssues]
         @effect()
         async def _():
             ...
@@ -1123,14 +1123,14 @@ async def test_event_type_check():
     with pytest.raises(TypeError):
         # Should complain that @event must be applied before @render.text. At some point
         # in the future, this may be allowed.
-        @event(lambda: 1)  # No static type error, unfortunately.
+        @event(lambda: 1)  # pyright: ignore[reportGeneralTypeIssues]
         @render.text
         async def _():
             ...
 
     with pytest.raises(TypeError):
         # Should complain that @event must be applied before @output.
-        @event(lambda: 1)  # type: ignore
+        @event(lambda: 1)  # pyright: ignore[reportGeneralTypeIssues]
         @output
         @render.text
         async def _():
@@ -1168,13 +1168,13 @@ async def test_output_type_check():
 
     with pytest.raises(TypeError):
         # Should complain about bare function
-        @output  # type: ignore
+        @output  # pyright: ignore[reportGeneralTypeIssues]
         def _():
             ...
 
     with pytest.raises(TypeError):
         # Should complain about @event
-        @output  # type: ignore
+        @output  # pyright: ignore[reportGeneralTypeIssues]
         @event(lambda: 1)
         def _():
             ...
@@ -1182,22 +1182,22 @@ async def test_output_type_check():
     with pytest.raises(TypeError):
         # Should complain about @event, even with render.text. Although maybe in the
         # future this will be allowed.
-        @output  # type: ignore
-        @event(lambda: 1)
+        @output  # pyright: ignore[reportGeneralTypeIssues]
+        @event(lambda: 1)  # pyright: ignore[reportGeneralTypeIssues]
         @render.text
         def _():
             ...
 
     with pytest.raises(TypeError):
         # Should complain about @Calc
-        @output  # type: ignore
+        @output  # pyright: ignore[reportGeneralTypeIssues]
         @calc
         def _():
             ...
 
     with pytest.raises(TypeError):
         # Should complain about @Effet
-        @output  # type: ignore
+        @output  # pyright: ignore[reportGeneralTypeIssues]
         @effect
         def _():
             ...
