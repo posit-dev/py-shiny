@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import typing
-
-# import inspect
 from abc import ABC, abstractmethod
-from typing import (  # NamedTuple,; Protocol,; cast,; overload,
+from typing import (
     TYPE_CHECKING,
     Any,
     Awaitable,
@@ -19,6 +17,8 @@ from typing import (  # NamedTuple,; Protocol,; cast,; overload,
 )
 
 from htmltools import MetadataNode, Tag, TagList
+
+from ..._utils import WrapAsync
 
 # TODO-barret; POST-merge; shinywidgets should not call `resolve_value_fn`
 
@@ -36,27 +36,18 @@ from htmltools import MetadataNode, Tag, TagList
 if TYPE_CHECKING:
     from ...session import Session
 
-# from ... import ui as _ui
-# from ..._deprecated import warn_deprecated
-# from ..._docstring import add_example
-# from ..._typing_extensions import Concatenate
-from ..._utils import WrapAsync
 
 __all__ = (
     "Renderer",
+    "RendererBase",
+    "Renderer",
+    "ValueFn",
+    "JSONifiable",
     "AsyncValueFn",
 )
 
-# from ...types import MISSING
-
 # Input type for the user-spplied function that is passed to a render.xx
 IT = TypeVar("IT")
-# # Output type after the Renderer.__call__ method is called on the IT object.
-# OT = TypeVar("OT")
-# # Param specification for value_fn function
-# P = ParamSpec("P")
-# # Generic return type for a function
-# R = TypeVar("R")
 
 
 # https://github.com/python/cpython/blob/df1eec3dae3b1eddff819fd70f58b03b3fbd0eda/Lib/json/encoder.py#L77-L95
@@ -89,13 +80,6 @@ JSONifiable = Union[
 ]
 
 
-# class DefaultUIFn(Protocol):
-#     def __call__(
-#         self, id: str, *args: Any, **kwargs: Any
-#     ) -> TagList | Tag | MetadataNode | str:
-#         ...
-
-
 DefaultUIFnResult = Union[TagList, Tag, MetadataNode, str]
 DefaultUIFnResultOrNone = Union[DefaultUIFnResult, None]
 DefaultUIFn = Callable[[str], DefaultUIFnResultOrNone]
@@ -104,8 +88,6 @@ DefaultUIFnImpl = Union[
     Callable[[Dict[str, object], str], DefaultUIFnResultOrNone],
 ]
 
-# A `ValueFn` function is an app-supplied function which returns an IT.
-# It can be either synchronous or asynchronous
 ValueFnSync = Callable[[], IT]
 """
 App-supplied output value function which returns type `IT`. This function is
@@ -155,8 +137,9 @@ class RendererBase(ABC):
     def __init__(self) -> None:
         super().__init__()
 
-    # TODO-barret; Could we do this with typing without putting `P` in the Generic?
-    # TODO-barret; Maybe in the `Renderer` class? idk...
+    # Q: Could we do this with typing without putting `P` in the Generic?
+    # A: No. Even if we had a `P` in the Generic, the calling decorator would not have access to it.
+    # Idea: Possibly use a chained method of `.ui_kwargs()`? https://github.com/posit-dev/py-shiny/issues/971
     _default_ui_kwargs: dict[str, Any] = dict()
     # _default_ui_args: tuple[Any, ...] = tuple()
 
@@ -199,7 +182,6 @@ class AsyncValueFn(WrapAsync[[], IT]):
     Type definition: `Callable[[], Awaitable[IT]]`
     """
 
-    # VALUE_FN_TYPE = Callable[[], Awaitable[IT]]
     pass
 
 
@@ -237,22 +219,11 @@ class Renderer(RendererBase, Generic[IT]):
     asynchonously.
     """
 
-    # Transform function; transform value's IT -> OT
-    # _transform_fn: TransformFn[IT, P, OT] | None = None
-
-    # 0. Rename OutputRenderer to `OutputRendererLegacy` (or something)
-    # 1. OutputRenderer becomes a protocol
-    # Perform a runtime isinstance check on the class
-    # Or runtime check for attribute callable field of `_set_metadata()`
-    # 2. Don't use `P` within `OutputRenderer` base class. Instead, use `self.FOO` params within the child class / child render method
-    # Only use Barret Renderer class and have users overwrite the transform or render method as they see fit.
-
     def __call__(self, value_fn: ValueFnApp[IT | None]) -> typing.Self:
         """
         Renderer __call__ docs here; Sets app's value function
         TODO-barret - docs
         """
-        # print("Renderer - call", value_fn, value_fn.__name__)  # TODO-barret; Delete!
         if not callable(value_fn):
             raise TypeError("Value function must be callable")
 
@@ -295,7 +266,6 @@ class Renderer(RendererBase, Generic[IT]):
         Renderer - transform docs here
         TODO-barret - docs
         """
-        # print("Renderer - transform")
         raise NotImplementedError(
             "Please implement either the `transform(self, value: IT)` or `render(self)` method.\n"
             "* `transform(self, value: IT)` should transform the `value` (of type `IT`) into JSONifiable object. Ex: `dict`, `None`, `str`. (standard)\n"
@@ -308,125 +278,9 @@ class Renderer(RendererBase, Generic[IT]):
         Renderer - render docs here
         TODO-barret - docs
         """
-        # print("Renderer - render")
         value = await self.value_fn()
         if value is None:
             return None
 
         rendered = await self.transform(value)
         return rendered
-
-
-# from collections.abc import Callable
-# from typing import Concatenate, ParamSpec, TypeVar
-
-# # P = ParamSpec("P")
-# T = TypeVar("T")
-
-
-# class text(Renderer[str]):
-#     """
-#     Reactively render text.
-
-#     Returns
-#     -------
-#     :
-#         A decorator for a function that returns a string.
-
-#     Tip
-#     ----
-#     The name of the decorated function (or ``@output(id=...)``) should match the ``id``
-#     of a :func:`~shiny.ui.output_text` container (see :func:`~shiny.ui.output_text` for
-#     example usage).
-
-#     See Also
-#     --------
-#     ~shiny.ui.output_text
-#     """
-
-#     def default_ui(self, id: str, placeholder: bool = True) -> str:
-#         return "42 - UI"
-
-#     async def transform(self, value: str) -> JSONifiable:
-#         return str(value)
-
-
-# # # import dominate
-
-
-# # class Barret:
-# class Barret(Generic[P, IT]):
-#     # Same args as init
-#     # def __new__(cls, *args: object, **kwargs: object) -> Barret[P, IT]:
-#     #     print("Barret - new", args, kwargs)
-#     #     return super().__new__(cls)
-
-#     def __init__(self, *args: P.args, **kwargs: P.kwargs) -> None:
-#         print("Barret - init", args, kwargs)
-#         # super().__init__(*args, **kwargs)
-
-#     def __call__(self, renderer: Renderer[IT]) -> typing.Self:
-#         print("Barret - call", renderer.default_ui)
-#         # default_ui: Callable[P, R]
-
-#         return self
-
-
-# def _decorate_renderer(
-#     _renderer: RendererShim[IT, P],
-#     *args: P.args,
-#     **kwargs: P.kwargs,
-# ) -> Callable[[RendererShim[IT, P]], RendererShim[IT, P]]:
-#     # renderer: RendererShim[IT, P]
-
-#     def _wrapper(renderer: RendererShim[IT, P]) -> RendererShim[IT, P]:
-#         """Also does thing XY, but first does something else."""
-#         # print(a**2)
-#         print("wrapper - ", args, kwargs)
-#         return renderer
-#         # return f(*args, **kwargs)
-
-#     return _wrapper
-
-#     def get_param_spec(fn: Callable[P, object]) -> Callable[P, object]:
-#         return P
-
-
-# @Barret(placeholder=True)
-# @text
-# def _():
-#     return "42"
-
-
-# @_decorate_renderer(text, placeholder=True)
-# @text
-# def _():
-#     return "42"
-
-
-#     Pinner = get_param_spec(renderer.default_ui)
-
-#     def _decorate(
-#         f: Callable[Concatenate[str, P], T]
-#     ) -> Callable[Concatenate[float, P], T]:
-#         if f is not known_function:  # type: ignore[comparison-overlap]
-#             raise RuntimeError("This is an exclusive decorator.")
-
-#         def _wrapper(a: float, /, *args: P.args, **kwargs: P.kwargs) -> T:
-#             """Also does thing XY, but first does something else."""
-#             print(a**2)
-#             return f(*args, **kwargs)
-
-#         return _wrapper
-
-#     renderer.default_ui = _decorate(renderer.default_ui)
-
-#     return
-
-
-# wrapper = _decorate(known_function)
-
-
-# if __name__ == "__main__":
-#     print(known_function(1, "2"))
-#     print(wrapper(3.14, 10, "10"))
