@@ -196,14 +196,16 @@ quartodoc:
             name: "Create rendering outputs"
             desc: ""
           contents:
-            - render.transformer.output_transformer
-            - render.transformer.OutputTransformer
-            - render.transformer.TransformerMetadata
-            - render.transformer.TransformerParams
-            - render.transformer.OutputRenderer
-            - render.transformer.is_async_callable
+            # TODO-barret; UPdate with renderer classes / info!
+            - render.transformer.Renderer
+            # - render.transformer.output_transformer
+            # - render.transformer.OutputTransformer
+            # - render.transformer.TransformerMetadata
+            # - render.transformer.TransformerParams
+            # - render.transformer.OutputRenderer
+            # - render.transformer.is_async_callable
             - render.transformer.ValueFn
-            - render.transformer.TransformFn
+            # - render.transformer.TransformFn
     - title: Reactive programming
       desc: ""
       contents:
