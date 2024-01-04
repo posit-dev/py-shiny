@@ -18,7 +18,7 @@ app_file_path = os.path.join(os.path.dirname(current_dir), "apps", APP_DIR)
 
 @pytest.mark.integrationtest
 @pytest.mark.only_browser("chromium")
-@pytest.mark.parametrize("location", ["connect"])
+@pytest.mark.parametrize("location", ["connect", "shinyapps"])
 def test_express_page_fluid(page: Page, location: str) -> None:
     page_url = deploy(location, APP_NAME, app_file_path)
     page.goto(page_url, timeout=PAGE_TIMEOUT)

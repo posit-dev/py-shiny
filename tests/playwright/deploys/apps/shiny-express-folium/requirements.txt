@@ -1,2 +1,3 @@
 git+https://github.com/posit-dev/py-shiny
 git+https://github.com/posit-dev/py-htmltools.git#egg=htmltools
+folium
