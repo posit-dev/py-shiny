@@ -7,8 +7,8 @@ from typing import Callable, TypeVar, overload
 
 from .. import ui
 from .._typing_extensions import ParamSpec
+from ..render.renderer import RendererBase
 from ..render.transformer import OutputRenderer
-from ..render.transformer._renderer import RendererBase
 from ..render.transformer._transformer import OT
 
 __all__ = (
@@ -21,6 +21,7 @@ R = TypeVar("R")
 CallableT = TypeVar("CallableT", bound=Callable[..., object])
 
 
+# TODO-barret; quartodoc entry?
 def ui_kwargs(
     **kwargs: object,
 ) -> Callable[[RendererBase], RendererBase]:

@@ -4,7 +4,11 @@ from ..session import Inputs, Outputs, Session
 from ..session import _utils as _session_utils
 from . import app, layout
 from ._is_express import is_express_app
-from ._output import output_args, suspend_display
+from ._output import (  # noqa: F401
+    ui_kwargs,
+    suspend_display,
+    output_args,  # pyright: ignore[reportUnusedImport]
+)
 from ._run import wrap_express_app
 from .display_decorator import display_body
 
@@ -13,7 +17,7 @@ __all__ = (
     "output",
     "session",
     "is_express_app",
-    "output_args",
+    "ui_kwargs",
     "suspend_display",
     "wrap_express_app",
     "app",
