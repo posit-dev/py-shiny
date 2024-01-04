@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import typing
 from abc import ABC, abstractmethod
 from typing import (
     TYPE_CHECKING,
@@ -18,6 +17,7 @@ from typing import (
 
 from htmltools import MetadataNode, Tag, TagList
 
+from ..._typing_extensions import Self
 from ..._utils import WrapAsync
 
 # TODO-barret; POST-merge; shinywidgets should not call `resolve_value_fn`
@@ -219,7 +219,7 @@ class Renderer(RendererBase, Generic[IT]):
     asynchonously.
     """
 
-    def __call__(self, value_fn: ValueFnApp[IT | None]) -> typing.Self:
+    def __call__(self, value_fn: ValueFnApp[IT | None]) -> Self:
         """
         Renderer __call__ docs here; Sets app's value function
         TODO-barret - docs
