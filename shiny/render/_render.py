@@ -6,6 +6,8 @@ import sys
 import typing
 from typing import (
     TYPE_CHECKING,
+    # Used for python 3.8 compatibility; Can use `dict` in python >= 3.9
+    Dict,
     Literal,
     Optional,
     Protocol,
@@ -255,7 +257,7 @@ class plot(Renderer[object]):
             if result is None:
                 return None
             img_dict = dict(result)
-            img_jsonifiable = cast(dict[str, JSONifiable], img_dict)
+            img_jsonifiable = cast(Dict[str, JSONifiable], img_dict)
             return img_jsonifiable
 
         if "plotnine" in sys.modules:
@@ -355,7 +357,7 @@ class image(Renderer[ImgData]):
             content_type = _utils.guess_mime_type(src)
             value["src"] = f"data:{content_type};base64,{data_str}"
             value_dict = dict(value)
-            value_jsonifiable = cast(dict[str, JSONifiable], value_dict)
+            value_jsonifiable = cast(Dict[str, JSONifiable], value_dict)
             return value_jsonifiable
         finally:
             if self.delete_file:
@@ -474,7 +476,7 @@ class table(Renderer[TableResult]):
         # Use typing to make sure the return shape matches
         ret: RenderedDeps = {"deps": [], "html": html}
         ret_dict = dict(ret)
-        ret_jsonifiable = cast(dict[str, JSONifiable], ret_dict)
+        ret_jsonifiable = cast(Dict[str, JSONifiable], ret_dict)
         return ret_jsonifiable
 
 
