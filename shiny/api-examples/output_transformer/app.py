@@ -1,190 +1,139 @@
-# pyright : basic
 from __future__ import annotations
 
+from typing import Literal, overload
+
 from shiny import App, Inputs, Outputs, Session, ui
-from shiny.render.renderer import Renderer, ValueFn
+from shiny.render.transformer import (
+    TransformerMetadata,
+    ValueFn,
+    output_transformer,
+    resolve_value_fn,
+)
 
-# TODO-barret Update app with docs below
-
-
-class sub_barret_renderer(Renderer[str]):
-    """
-    SubBarretSimple - class docs - Render Caps docs
-    """
-
-    def default_ui(self, id: str):
-        return ui.output_text_verbatim(id, placeholder=self.placeholder)
-
-    def __init__(
-        self,
-        # Required for no paren usage
-        _fn: ValueFn[str | None] | None = None,
-        *,
-        a: int = 1,
-        placeholder: bool = True,
-    ) -> None:
-        """
-        SubBarretSimple - init docs - Render Caps docs
-        """
-        # Do not pass params
-        super().__init__(_fn)
-        self.widget = None
-        self.a: int = a
-        self.default_ui = ui.output_text_verbatim
-
-    async def render(self) -> str | None:
-        value = await self._value_fn()
-        if value is None:
-            return None
-        self.widget = value
-        return f"{value.upper()}; a={self.a}"
+#######
+# Package authors can create their own output transformer methods by leveraging
+# `output_transformer` decorator.
+#
+# The transformer is kept simple for demonstration purposes, but it can be much more
+# complex (e.g. shiny.render.plotly)
+#######
 
 
-class sub_barret_simple(Renderer[str]):
-    """
-    SubBarretSimple - class - Render Caps docs
-    """
+# Create renderer components from the async handler function: `capitalize_components()`
+@output_transformer()
+async def CapitalizeTransformer(
+    # Contains information about the render call: `name` and `session`
+    _meta: TransformerMetadata,
+    # The app-supplied output value function
+    _fn: ValueFn[str | None],
+    *,
+    # Extra parameters that app authors can supply to the render decorator
+    # (e.g. `@render_capitalize(to="upper")`)
+    to: Literal["upper", "lower"] = "upper",
+) -> str | None:
+    # Get the value
+    value = await resolve_value_fn(_fn)
+    # Equvalent to:
+    # if shiny.render.transformer.is_async_callable(_fn):
+    #     value = await _fn()
+    # else:
+    #     value = _fn()
 
-    def default_ui(self, id: str):
-        return ui.output_text_verbatim(id, placeholder=True)
+    # Render nothing if `value` is `None`
+    if value is None:
+        return None
 
-    def __init__(
-        self,
-        _value_fn: ValueFn[str] | None = None,
-    ):
-        """
-        SubBarretSimple - init - docs here
-        """
-        super().__init__(_value_fn)
-
-    async def transform(self, value: str) -> str:
-        return str(value).upper()
-
-
-# # Create renderer components from the async handler function: `capitalize_components()`
-# @output_transformer()
-# async def CapitalizeTransformer(
-#     # Contains information about the render call: `name` and `session`
-#     _meta: TransformerMetadata,
-#     # The app-supplied output value function
-#     _fn: ValueFn[str | None],
-#     *,
-#     # Extra parameters that app authors can supply to the render decorator
-#     # (e.g. `@render_capitalize(to="upper")`)
-#     to: Literal["upper", "lower"] = "upper",
-# ) -> str | None:
-#     # Get the value
-#     value = await _fn()
-
-#     # Render nothing if `value` is `None`
-#     if value is None:
-#         return None
-
-#     if to == "upper":
-#         return value.upper()
-#     if to == "lower":
-#         return value.lower()
-#     raise ValueError(f"Invalid value for `to`: {to}")
+    if to == "upper":
+        return value.upper()
+    if to == "lower":
+        return value.lower()
+    raise ValueError(f"Invalid value for `to`: {to}")
 
 
-# # First, create an overload where users can supply the extra parameters.
-# # Example of usage:
-# # ```
-# # @output
-# # @render_capitalize(to="upper")
-# # def value():
-# #     return input.caption()
-# # ```
-# # Note: Return type is `OutputRendererDecorator`
-# @overload
-# def render_capitalize(
-#     *,
-#     to: Literal["upper", "lower"] = "upper",
-# ) -> CapitalizeTransformer.OutputRendererDecorator:
-#     ...
+# First, create an overload where users can supply the extra parameters.
+# Example of usage:
+# ```
+# @output
+# @render_capitalize(to="upper")
+# def value():
+#     return input.caption()
+# ```
+# Note: Return type is `OutputRendererDecorator`
+@overload
+def render_capitalize(
+    *,
+    to: Literal["upper", "lower"] = "upper",
+) -> CapitalizeTransformer.OutputRendererDecorator:
+    ...
 
 
-# # Second, create an overload where users are not using parentheses to the method.
-# # While it doesn't look necessary, it is needed for the type checker.
-# # Example of usage:
-# # ```
-# # @output
-# # @render_capitalize
-# # def value():
-# #     return input.caption()
-# # ```
-# # Note: `_fn` type is the transformer's `ValueFn`
-# # Note: Return type is the transformer's `OutputRenderer`
-# @overload
-# def render_capitalize(
-#     _fn: CapitalizeTransformer.ValueFn,
-# ) -> CapitalizeTransformer.OutputRenderer:
-#     ...
+# Second, create an overload where users are not using parentheses to the method.
+# While it doesn't look necessary, it is needed for the type checker.
+# Example of usage:
+# ```
+# @output
+# @render_capitalize
+# def value():
+#     return input.caption()
+# ```
+# Note: `_fn` type is the transformer's `ValueFn`
+# Note: Return type is the transformer's `OutputRenderer`
+@overload
+def render_capitalize(
+    _fn: CapitalizeTransformer.ValueFn,
+) -> CapitalizeTransformer.OutputRenderer:
+    ...
 
 
-# # Lastly, implement the renderer.
-# # Note: `_fn` type is the transformer's `ValueFn` or `None`
-# # Note: Return type is the transformer's `OutputRenderer` or `OutputRendererDecorator`
-# def render_capitalize(
-#     _fn: CapitalizeTransformer.ValueFn | None = None,
-#     *,
-#     to: Literal["upper", "lower"] = "upper",
-# ) -> (
-#     CapitalizeTransformer.OutputRenderer | CapitalizeTransformer.OutputRendererDecorator
-# ):
-#     """
-#     OldSchool - CapitalizeTransformer
-#     """
-#     return CapitalizeTransformer(
-#         _fn,
-#         CapitalizeTransformer.params(to=to),
-#     )
+# Lastly, implement the renderer.
+# Note: `_fn` type is the transformer's `ValueFn` or `None`
+# Note: Return type is the transformer's `OutputRenderer` or `OutputRendererDecorator`
+def render_capitalize(
+    _fn: CapitalizeTransformer.ValueFn | None = None,
+    *,
+    to: Literal["upper", "lower"] = "upper",
+) -> (
+    CapitalizeTransformer.OutputRenderer | CapitalizeTransformer.OutputRendererDecorator
+):
+    return CapitalizeTransformer(
+        _fn,
+        CapitalizeTransformer.params(to=to),
+    )
 
 
 #######
 # End of package author code
 #######
 
-
-def text_row(id: str):
-    return ui.tags.tr(
-        ui.tags.td(f"{id}:"),
-        ui.tags.td(ui.output_text_verbatim(id, placeholder=True)),
-    )
-    return ui.row(
-        ui.column(6, f"{id}:"),
-        ui.column(6, ui.output_text_verbatim(id, placeholder=True)),
-    )
-
-
 app_ui = ui.page_fluid(
     ui.h1("Capitalization renderer"),
     ui.input_text("caption", "Caption:", "Data summary"),
-    ui.tags.table(
-        text_row("barret_sub_simple_no_paren"),
-        text_row("barret_sub_simple_paren"),
-        #
-        text_row("barret_sub_renderer_no_paren"),
-        text_row("barret_sub_renderer_paren"),
-    ),
+    "Renderer called with out parentheses:",
+    ui.output_text_verbatim("no_parens"),
+    "To upper:",
+    ui.output_text_verbatim("to_upper"),
+    "To lower:",
+    ui.output_text_verbatim("to_lower"),
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @sub_barret_simple
-    def barret_sub_simple_no_paren():
+    @output
+    # Called without parentheses
+    @render_capitalize
+    def no_parens():
         return input.caption()
 
-    @sub_barret_simple()
-    def barret_sub_simple_paren() -> str:
+    @output
+    # Called with parentheses. Equivalent to `@render_capitalize()`
+    @render_capitalize(to="upper")
+    def to_upper():
         return input.caption()
 
-    @sub_barret_renderer
-    def barret_sub_renderer_no_paren():
-        return input.caption()
-
-    @sub_barret_renderer(a=2)
-    def barret_sub_renderer_paren():
+    @output
+    @render_capitalize(to="lower")
+    # Works with async output value functions
+    async def to_lower():
         return input.caption()
 
 
