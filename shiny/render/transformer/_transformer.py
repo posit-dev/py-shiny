@@ -32,12 +32,8 @@ from typing import (
     overload,
 )
 
-from ..renderer._renderer import (
-    DefaultUIFn,
-    DefaultUIFnResultOrNone,
-    JSONifiable,
-    RendererBase,
-)
+from ..renderer import JSONifiable, RendererBase, WrapAsync
+from ..renderer._renderer import DefaultUIFn, DefaultUIFnResultOrNone
 
 if TYPE_CHECKING:
     from ...session import Session
@@ -45,7 +41,7 @@ if TYPE_CHECKING:
 from ..._deprecated import warn_deprecated
 from ..._docstring import add_example
 from ..._typing_extensions import Concatenate, ParamSpec
-from ..._utils import is_async_callable, wrap_async
+from ..._utils import is_async_callable
 from ...types import MISSING
 
 # Input type for the user-spplied function that is passed to a render.xx
@@ -78,7 +74,6 @@ class TransformerMetadata(NamedTuple):
 
     session: Session
     name: str
-    value_fn_is_async: bool
 
 
 # Motivation for using this class:
@@ -261,8 +256,10 @@ class OutputRenderer(RendererBase, Generic[OT]):
         # Checking if a function is async has a 180+ns overhead (barret's machine)
         # -> It is faster to always call an async function than to always check if it is async
         # Always being async simplifies the execution
-        self._value_fn_is_async = is_async_callable(value_fn)
-        self._value_fn: ValueFn[IT] = wrap_async(value_fn)
+        self._value_fn = WrapAsync(value_fn)
+        self._value_fn_is_async = self._value_fn.is_async  # legacy key
+        self.__name__ = value_fn.__name__
+
         self._transformer = transform_fn
         self._params = params
         self._default_ui = default_ui
@@ -270,6 +267,9 @@ class OutputRenderer(RendererBase, Generic[OT]):
 
         self._default_ui_args: tuple[object, ...] = tuple()
         self._default_ui_kwargs: dict[str, object] = dict()
+
+        # Allow for App authors to not require `@output`
+        self._auto_register()
 
     def _set_metadata(self, session: Session, name: str) -> None:
         """
@@ -287,7 +287,6 @@ class OutputRenderer(RendererBase, Generic[OT]):
         return TransformerMetadata(
             session=self.session,
             name=self.name,
-            value_fn_is_async=self._value_fn_is_async,
         )
 
     async def _run(self) -> OT:
