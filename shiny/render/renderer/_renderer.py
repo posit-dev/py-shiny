@@ -103,7 +103,7 @@ ValueFnApp = Union[Callable[[], IT], Callable[[], Awaitable[IT]]]
 App-supplied output value function which returns type `IT`. This function can be
 synchronous or asynchronous.
 """
-ValueFn = Optional[ValueFnApp[IT | None]]
+ValueFn = Optional[ValueFnApp[Union[IT, None]]]
 
 
 class RendererBase(ABC):
