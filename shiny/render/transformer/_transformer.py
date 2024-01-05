@@ -239,6 +239,10 @@ class OutputRenderer(RendererBase, Generic[OT]):
         """
         super().__init__()
 
+        warn_deprecated(
+            "`shiny.render.transformer.output_transformer()` and `shiny.render.transformer.OutputRenderer()` output render function utiltities have been superceded by `shiny.render.renderer.Renderer` and will be removed in a near future release."
+        )
+
         # Copy over function name as it is consistent with how Session and Output
         # retrieve function names
         self.__name__ = value_fn.__name__
