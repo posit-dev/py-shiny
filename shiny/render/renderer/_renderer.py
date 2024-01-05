@@ -186,7 +186,7 @@ class RendererBase(ABC):
         )
 
 
-class AsyncValueFn(WrapAsync[[], IT]):
+class AsyncValueFn(WrapAsync[..., IT]):
     """
     App-supplied output value function which returns type `IT`.
     asynchronous.
