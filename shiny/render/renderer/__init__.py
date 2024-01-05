@@ -6,7 +6,7 @@ from ._renderer import (  # noqa: F401
     ValueFnApp,  # pyright: ignore[reportUnusedImport]
     ValueFnSync,  # pyright: ignore[reportUnusedImport]
     ValueFnAsync,  # pyright: ignore[reportUnusedImport]
-    WrapAsync,  # pyright: ignore[reportUnusedImport]
+    # WrapAsync,  # pyright: ignore[reportUnusedImport]
     AsyncValueFn,
     # IT,  # pyright: ignore[reportUnusedImport]
 )

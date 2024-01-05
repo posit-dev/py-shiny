@@ -4,9 +4,11 @@ import base64
 import os
 import sys
 import typing
+
+# `typing.Dict` sed for python 3.8 compatibility
+# Can use `dict` in python >= 3.9
 from typing import (
     TYPE_CHECKING,
-    # Used for python 3.8 compatibility; Can use `dict` in python >= 3.9
     Dict,
     Literal,
     Optional,

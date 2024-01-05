@@ -13,12 +13,13 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    cast,
 )
 
 from htmltools import MetadataNode, Tag, TagList
 
 from ..._typing_extensions import Self
-from ..._utils import WrapAsync
+from ..._utils import is_async_callable, wrap_async
 
 # TODO-barret; POST-merge; shinywidgets should not call `resolve_value_fn`
 
@@ -186,7 +187,9 @@ class RendererBase(ABC):
         )
 
 
-class AsyncValueFn(WrapAsync[..., IT]):
+# Not inheriting from `WrapAsync[[], IT]` as python 3.8 needs typing extensions that doesn't support `[]` for a ParamSpec definition. :-(
+# Would be minimal/clean if we could do `class AsyncValueFn(WrapAsync[[], IT]):`
+class AsyncValueFn(Generic[IT]):
     """
     App-supplied output value function which returns type `IT`.
     asynchronous.
@@ -194,7 +197,42 @@ class AsyncValueFn(WrapAsync[..., IT]):
     Type definition: `Callable[[], Awaitable[IT]]`
     """
 
-    pass
+    def __init__(self, fn: Callable[[], IT] | Callable[[], Awaitable[IT]]):
+        if isinstance(fn, AsyncValueFn):
+            fn = cast(AsyncValueFn[IT], fn)
+            return fn
+        self._is_async = is_async_callable(fn)
+        self._fn = wrap_async(fn)
+
+    async def __call__(self) -> IT:
+        """
+        Call the asynchronous function.
+        """
+        return await self._fn()
+
+    @property
+    def is_async(self) -> bool:
+        """
+        Was the original function asynchronous?
+
+        Returns
+        -------
+        :
+            Whether the original function is asynchronous.
+        """
+        return self._is_async
+
+    @property
+    def fn(self) -> Callable[[], IT] | Callable[[], Awaitable[IT]]:
+        """
+        Retrieve the original function
+
+        Returns
+        -------
+        :
+            Original function supplied to the `AsyncValueFn` constructor.
+        """
+        return self._fn
 
 
 # class RendererShim(RendererBase, Generic[IT, P]):
