@@ -14,6 +14,9 @@ from shiny.render.transformer import (
     resolve_value_fn,
 )
 
+# import warnings
+# warnings.filterwarnings("ignore", category=ShinyDeprecationWarning)
+
 
 def test_output_transformer_works():
     # No args works
@@ -224,7 +227,8 @@ async def test_renderer_handler_or_transform_fn_can_be_async():
     def async_renderer(
         _fn: AsyncTransformer.ValueFn | None = None,
     ) -> AsyncTransformer.OutputRenderer | AsyncTransformer.OutputRendererDecorator:
-        return AsyncTransformer(_fn)
+        with pytest.warns(ShinyDeprecationWarning):
+            return AsyncTransformer(_fn)
 
     test_val = "Test: Hello World!"
 
@@ -294,7 +298,8 @@ async def test_renderer_handler_fn_can_be_yield_while_async():
     def yield_renderer(
         _fn: YieldTransformer.ValueFn | None = None,
     ) -> YieldTransformer.OutputRenderer | YieldTransformer.OutputRendererDecorator:
-        return YieldTransformer(_fn)
+        with pytest.warns(ShinyDeprecationWarning):
+            return YieldTransformer(_fn)
 
     test_val = "Test: Hello World!"
 
