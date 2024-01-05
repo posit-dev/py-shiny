@@ -151,6 +151,18 @@ class RendererBase(ABC):
             self.session.output.remove(ns_name)
             self._auto_registered = False
 
+    def _auto_register(self) -> None:
+        # If in Express mode, register the output
+        if not self._auto_registered:
+            from ...session import get_current_session
+
+            s = get_current_session()
+            if s is not None:
+                s.output(self)
+                # We mark the fact that we're auto-registered so that, if an explicit
+                # registration now occurs, we can undo this auto-registration.
+                self._auto_registered = True
+
     def _repr_html_(self) -> str | None:
         rendered_ui = self._render_default_ui()
         if rendered_ui is None:
@@ -213,6 +225,20 @@ class Renderer(RendererBase, Generic[IT]):
     def value_fn(self) -> AsyncValueFn[IT | None]:
         return self._value_fn
 
+    def _set_value_fn(self, value_fn: ValueFnApp[Any | None]) -> None:
+        if not callable(value_fn):
+            raise TypeError("Value function must be callable")
+
+        # Copy over function name as it is consistent with how Session and Output
+        # retrieve function names
+        self.__name__ = value_fn.__name__
+
+        # Set value function with extra meta information
+        self._value_fn = AsyncValueFn(value_fn)
+
+        # Allow for App authors to not require `@output`
+        self._auto_register()
+
     """
     App-supplied output value function which returns type `IT`. This function is always
     asyncronous as the original app-supplied function possibly wrapped to execute
@@ -224,26 +250,8 @@ class Renderer(RendererBase, Generic[IT]):
         Renderer __call__ docs here; Sets app's value function
         TODO-barret - docs
         """
-        if not callable(value_fn):
-            raise TypeError("Value function must be callable")
 
-        # Copy over function name as it is consistent with how Session and Output
-        # retrieve function names
-        self.__name__ = value_fn.__name__
-
-        # Set value function with extra meta information
-        self._value_fn = AsyncValueFn(value_fn)
-
-        # If in Express mode, register the output
-        if not self._auto_registered:
-            from ...session import get_current_session
-
-            s = get_current_session()
-            if s is not None:
-                s.output(self)
-                # We mark the fact that we're auto-registered so that, if an explicit
-                # registration now occurs, we can undo this auto-registration.
-                self._auto_registered = True
+        self._set_value_fn(value_fn)
 
         return self
 
