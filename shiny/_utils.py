@@ -11,7 +11,7 @@ import random
 import secrets
 import socketserver
 import tempfile
-from typing import Any, Awaitable, Callable, Generic, Optional, TypeVar, cast
+from typing import Any, Awaitable, Callable, Optional, TypeVar, cast
 
 from ._typing_extensions import ParamSpec, TypeGuard
 
