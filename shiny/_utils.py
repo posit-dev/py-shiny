@@ -262,6 +262,9 @@ class WrapAsync(Generic[P, R]):
     """
 
     def __init__(self, fn: Callable[P, R] | Callable[P, Awaitable[R]]):
+        if isinstance(fn, WrapAsync):
+            fn = cast(WrapAsync[P, R], fn)
+            return fn
         self._is_async = is_async_callable(fn)
         self._fn = wrap_async(fn)
 
