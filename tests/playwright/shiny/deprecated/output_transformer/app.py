@@ -5,7 +5,6 @@ from typing import Literal, overload
 
 from shiny import App, Inputs, Outputs, Session, ui
 from shiny._deprecated import ShinyDeprecationWarning
-from shiny.render.renderer import JSONifiable
 from shiny.render.transformer import (
     TransformerMetadata,
     ValueFn,
