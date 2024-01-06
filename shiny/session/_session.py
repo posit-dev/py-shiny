@@ -456,7 +456,7 @@ class Session(object, metaclass=SessionMeta):
                                 warnings.warn(
                                     "Unable to infer a filename for the "
                                     f"'{download_id}' download handler; please use "
-                                    "@session.download(filename=) to specify one "
+                                    "@render.download(filename=) to specify one "
                                     "manually",
                                     SessionWarning,
                                     stacklevel=2,

@@ -41,7 +41,7 @@ def download_button(
 
     See Also
     --------
-    ~shiny.Session.download
+    ~shiny.render.download
     ~shiny.ui.download_link
     """
 
@@ -96,7 +96,7 @@ def download_link(
 
     See Also
     --------
-    ~shiny.Session.download
+    ~shiny.render.download
     ~shiny.ui.download_link
     """
 
