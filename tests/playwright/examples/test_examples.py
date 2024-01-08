@@ -46,6 +46,8 @@ output_transformer_errors = [
     "ShinyDeprecationWarning:",
     "`resolve_value_fn()`",
     "value = await resolve_value_fn(_fn)",
+    # brownian example app
+    "shiny.render.transformer.output_transformer()",
 ]
 express_warnings = ["Detected Shiny Express app. "]
 app_allow_shiny_errors: typing.Dict[
