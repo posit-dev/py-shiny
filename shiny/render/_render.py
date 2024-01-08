@@ -9,7 +9,6 @@ import typing
 # Can use `dict` in python >= 3.9
 from typing import (
     TYPE_CHECKING,
-    Dict,
     Literal,
     Optional,
     Protocol,
@@ -37,6 +36,7 @@ from ._try_render_plot import (
     try_render_plotnine,
 )
 from .renderer import Renderer, ValueFn
+from .renderer._utils import imgdata_to_jsonifiable, rendered_deps_to_jsonifiable
 
 __all__ = (
     "text",
@@ -258,9 +258,7 @@ class plot(Renderer[object]):
         def cast_result(result: ImgData | None) -> dict[str, JSONifiable] | None:
             if result is None:
                 return None
-            img_dict = dict(result)
-            img_jsonifiable = cast(Dict[str, JSONifiable], img_dict)
-            return img_jsonifiable
+            return imgdata_to_jsonifiable(result)
 
         if "plotnine" in sys.modules:
             ok, result = try_render_plotnine(
@@ -358,9 +356,7 @@ class image(Renderer[ImgData]):
                 data_str = data.decode("utf-8")
             content_type = _utils.guess_mime_type(src)
             value["src"] = f"data:{content_type};base64,{data_str}"
-            value_dict = dict(value)
-            value_jsonifiable = cast(Dict[str, JSONifiable], value_dict)
-            return value_jsonifiable
+            return imgdata_to_jsonifiable(value)
         finally:
             if self.delete_file:
                 os.remove(src)
@@ -477,9 +473,7 @@ class table(Renderer[TableResult]):
             )
         # Use typing to make sure the return shape matches
         ret: RenderedDeps = {"deps": [], "html": html}
-        ret_dict = dict(ret)
-        ret_jsonifiable = cast(Dict[str, JSONifiable], ret_dict)
-        return ret_jsonifiable
+        return rendered_deps_to_jsonifiable(ret)
 
 
 # ======================================================================================
@@ -510,7 +504,6 @@ class ui(Renderer[TagChild]):
         return _ui.output_ui(id)
 
     async def transform(self, value: TagChild) -> JSONifiable:
-        res = self.session._process_ui(value)
-        res_dict = dict(res)
-        res_jsonifiable = cast(JSONifiable, res_dict)
-        return res_jsonifiable
+        return rendered_deps_to_jsonifiable(
+            self.session._process_ui(value),
+        )
