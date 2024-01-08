@@ -995,15 +995,13 @@ class Outputs:
                     + "In other words, `@output` must be above `@render.xx`."
                 )
 
-            # TODO-barret; How does this work? Feels like it should be called after the `renderer.session` is set
-            renderer._on_register()
-
             # Get the (possibly namespaced) output id
             output_name = self._ns(id or renderer.__name__)
 
             # renderer is a Renderer object. Give it a bit of metadata.
             renderer.session = self._session
             renderer.name = output_name
+            renderer._on_register()
 
             self.remove(output_name)
 
