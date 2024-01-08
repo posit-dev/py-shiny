@@ -4,7 +4,7 @@ from __future__ import annotations
 from shiny import App, Inputs, Outputs, Session, ui
 from shiny.render.renderer import Renderer, ValueFn
 
-# TODO-barret Update app with docs below
+# TODO-barret - docs - Update app with docs below
 
 
 class sub_barret_renderer(Renderer[str]):

@@ -21,8 +21,13 @@ from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
 from ._auto_register import AutoRegisterMixin
 
-# TODO-barret; Change the base branch to `main`
 # TODO-barret; Q: Should `Renderer.default_ui` be renamed? `ui()`? `express_ui()`?
+# TODO-barret; Q: Should `.transform()` exist on `Renderer`?
+#   * If it is removed, then the `IT` type isn't required in `Renderer` and we could remove RendererBase
+#   * No confusion between `transform` and `render` methods
+#   * `render` is the only method that is required to be implemented
+#   * Can add helper decorator to do typical transform functionality?
+#   * Con: Would require the `__init__(self, fn: ValueFn[IT])` method to get typing
 # TODO-barret; POST-merge; shinywidgets should not call `resolve_value_fn`
 
 
@@ -41,6 +46,11 @@ __all__ = (
 )
 
 RendererBaseT = TypeVar("RendererBaseT", bound="RendererBase")
+"""
+Generic class to pass the Renderer class through a decorator.
+
+When accepting and returning a `RendererBase` class, utilize this TypeVar as to not reduce the variable type to `RendererBase`
+"""
 
 # Input type for the user-spplied function that is passed to a render.xx
 IT = TypeVar("IT")

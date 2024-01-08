@@ -78,10 +78,6 @@ class text(Renderer[str]):
         set_kwargs_value(kwargs, "placeholder", placeholder, None)
         return _ui.output_text_verbatim(id, **kwargs)
 
-    def __init__(self, fn: Optional[ValueFn[str]] = None, power: int = 1) -> None:
-        super().__init__(fn)
-        self.power: int = power
-
     async def transform(self, value: str) -> JSONifiable:
         return str(value)
 
