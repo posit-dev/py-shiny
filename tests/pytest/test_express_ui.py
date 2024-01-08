@@ -7,6 +7,39 @@ from shiny import render, ui
 from shiny.express import suspend_display, ui_kwargs
 
 
+def test_express_ui_is_complete():
+    """
+    Make sure shiny.express.ui covers everything that shiny.ui does, or explicitly lists
+    the item in `_known_missing`.
+    These entries are in `_known_missing` in shiny/express/ui/__init__.py
+    """
+
+    from shiny import ui
+    from shiny.express import ui as xui
+
+    ui_all = set(ui.__all__)
+    xui_all = set(xui.__all__)
+    ui_known_missing = set(xui._known_missing["shiny.ui"])
+    xui_known_missing = set(xui._known_missing["shiny.express.ui"])
+
+    # Make sure that there's no overlap between shiny.express.ui.__all__ and
+    # _known_missing["shiny.ui"]; and same for other combinations. Note that the use of
+    # `.intersection() == set()` instead of `disjoint()` is intentional, because if the
+    # test fails, the first form provides an error message that shows the difference,
+    # while the second form does note.
+    assert xui_all.intersection(ui_known_missing) == set()
+    assert ui_all.intersection(xui_known_missing) == set()
+
+    # Similar to above, use .difference() instead of .issubset() to get better error
+    # messages.
+    assert xui_known_missing.difference(xui_all) == set()
+    assert ui_known_missing.difference(ui_all) == set()
+
+    # Make sure that everything from shiny.ui is either exported by shiny.express.ui, or
+    # explicitly listed in shiny.express.ui._known_missing.
+    assert ui_all.union(xui_known_missing) == xui_all.union(ui_known_missing)
+
+
 def test_render_output_controls():
     @render.text
     def text1():

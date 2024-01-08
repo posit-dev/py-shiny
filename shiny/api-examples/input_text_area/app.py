@@ -18,12 +18,10 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.text
     def value_regular():
         return input.caption_regular()
 
-    @output
     @render.text
     def value_autoresize():
         return input.caption_autoresize()

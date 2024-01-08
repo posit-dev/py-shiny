@@ -1,10 +1,9 @@
 {
-    "https://rsc.radixu.com/": {
-        "server_url": "https://rsc.radixu.com/",
-        "filename": "/Users/karangathani/Documents/GitHub/py-shiny/tests/playwright/deploys/apps/plotly_app",
-        "app_url": "https://rsc.radixu.com/content/fc82dde5-c4ba-4748-971b-aacc09613faa/",
-        "app_id": "fc82dde5-c4ba-4748-971b-aacc09613faa",
-        "app_guid": "fc82dde5-c4ba-4748-971b-aacc09613faa",
+    "https://api.shinyapps.io": {
+        "server_url": "https://api.shinyapps.io",
+        "app_url": "https://testing-apps.shinyapps.io/example_deploy_app_a1/",
+        "app_id": 10800241,
+        "app_guid": null,
         "title": "example_deploy_app_A",
         "app_mode": "python-shiny",
         "app_store_version": 1

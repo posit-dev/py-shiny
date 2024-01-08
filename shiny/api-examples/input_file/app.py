@@ -25,7 +25,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             file[0]["datapath"]
         )
 
-    @output
     @render.table
     def summary():
         df = parsed_file()

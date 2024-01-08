@@ -56,11 +56,11 @@ class DetectShinyExpressVisitor(ast.NodeVisitor):
         super().__init__()
         self.found_shiny_express_import = False
 
-    def visit_Import(self, node: ast.Import):
+    def visit_Import(self, node: ast.Import) -> None:
         if any(alias.name == "shiny.express" for alias in node.names):
             self.found_shiny_express_import = True
 
-    def visit_ImportFrom(self, node: ast.ImportFrom):
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         if node.module == "shiny.express":
             self.found_shiny_express_import = True
         elif node.module == "shiny" and any(
@@ -69,9 +69,9 @@ class DetectShinyExpressVisitor(ast.NodeVisitor):
             self.found_shiny_express_import = True
 
     # Visit top-level nodes.
-    def visit_Module(self, node: ast.Module):
+    def visit_Module(self, node: ast.Module) -> None:
         super().generic_visit(node)
 
     # Don't recurse into any nodes, so the we'll only ever look at top-level nodes.
-    def generic_visit(self, node: ast.AST):
+    def generic_visit(self, node: ast.AST) -> None:
         pass

@@ -28,7 +28,7 @@ class _InputHandlers(Dict[str, InputHandlerType]):
 
         return _
 
-    def remove(self, type: str):
+    def remove(self, type: str) -> None:
         del self[type]
 
     def _process_value(self, type: str, value: Any, name: str, session: Session) -> Any:

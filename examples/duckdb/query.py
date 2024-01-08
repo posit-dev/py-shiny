@@ -44,7 +44,6 @@ def query_output_ui(remove_id, qry="SELECT * from weather LIMIT 10"):
 def query_output_server(
     input, output, session, con: duckdb.DuckDBPyConnection, remove_id
 ):
-    @output
     @render.data_frame
     def results():
         # In order to avoid the query re-running with each keystroke we

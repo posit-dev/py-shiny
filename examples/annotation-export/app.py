@@ -62,7 +62,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         df = df.loc[:, ["date", "temp_c", "annotation"]]
         annotated_data.set(df)
 
-    @output
     @render.plot
     def time_series():
         fig, ax = plt.subplots()
@@ -76,7 +75,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         out.tick_params(axis="x", rotation=30)
         return out.get_figure()
 
-    @output
     @render.ui
     def annotator():
         if input.time_series_brush() is not None:
@@ -104,7 +102,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             )
             return out
 
-    @output
     @render.data_frame
     def annotations():
         df = annotated_data().copy()

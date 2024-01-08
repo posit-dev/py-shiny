@@ -119,7 +119,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             for (altaz, obj) in zip(altaz_list, obj_names())
         }
 
-    @output
     @render.plot
     def plot():
         fig, [ax1, ax2] = plt.subplots(nrows=2)
@@ -160,12 +159,10 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         return fig
 
-    @output
     @render.table
     def table() -> pd.DataFrame:
         return pd.concat(df())
 
-    @output
     @render.ui
     def timeinfo():
         start_utc, end_utc = times_utc()

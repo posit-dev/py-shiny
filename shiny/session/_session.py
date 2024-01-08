@@ -24,6 +24,7 @@ from typing import (
     Callable,
     Iterable,
     Optional,
+    Union,
     cast,
     overload,
 )
@@ -104,7 +105,8 @@ class ClientMessageOther(ClientMessage):
 #
 # (Not currently supported is Awaitable[str], could be added easily enough if needed.)
 DownloadHandler = Callable[
-    [], "str | Iterable[bytes | str] | AsyncIterable[bytes | str]"
+    [],
+    Union[str, Iterable[Union[bytes, str]], AsyncIterable[Union[bytes, str]]],
 ]
 
 DynamicRouteHandler = Callable[[Request], ASGIApp]
@@ -1063,7 +1065,7 @@ class Outputs:
         else:
             return set_renderer(renderer)
 
-    def remove(self, id: Id):
+    def remove(self, id: Id) -> None:
         output_name = self._ns(id)
         if output_name in self._effects:
             self._effects[output_name].destroy()

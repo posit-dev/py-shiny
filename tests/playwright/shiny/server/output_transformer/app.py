@@ -69,33 +69,27 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render_test_text
     def t1():
         return "t1; no call"
         # return "hello"
 
-    @output
     @render_test_text
     async def t2():
         return "t2; no call"
 
-    @output
     @render_test_text()
     def t3():
         return "t3; call"
 
-    @output
     @render_test_text()
     async def t4():
         return "t4; call"
 
-    @output
     @render_test_text(extra_txt="w/ extra_txt")
     def t5():
         return "t5; call"
 
-    @output
     @render_test_text(extra_txt="w/ extra_txt")
     async def t6():
         return "t6; call"

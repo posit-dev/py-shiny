@@ -22,17 +22,14 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.text
     def text():
         return input.txt()
 
-    @output
     @render.text
     def verb():
         return input.txt()
 
-    @output
     @render.text
     def verb_no_placeholder():
         return input.txt()

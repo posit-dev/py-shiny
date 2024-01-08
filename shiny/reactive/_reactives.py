@@ -799,7 +799,7 @@ def event(
         if not callable(user_fn):
             raise TypeError(
                 "`@reactive.event()` must be applied to a function or Callable object.\n"
-                + "It should usually be applied before `@Calc`,` @Effect`, `@output`, or `@render.xx` function.\n"
+                + "It should usually be applied before `@Calc`,` @Effect`, or `@render.xx` function.\n"
                 + "In other words, `@reactive.event()` goes below the other decorators."
             )
 

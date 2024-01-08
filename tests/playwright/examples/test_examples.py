@@ -71,6 +71,8 @@ app_allow_shiny_errors: typing.Dict[
     "render_display": [*express_warnings],
 }
 app_allow_external_errors: typing.List[str] = [
+    # if shiny express app detected
+    "Detected Shiny Express app",
     # plotnine: https://github.com/has2k1/plotnine/issues/713
     # mizani: https://github.com/has2k1/mizani/issues/34
     # seaborn: https://github.com/mwaskom/seaborn/issues/3457

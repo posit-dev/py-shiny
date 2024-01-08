@@ -11,7 +11,7 @@ import random
 import secrets
 import socketserver
 import tempfile
-from typing import Any, Awaitable, Callable, Optional, TypeVar, cast
+from typing import Any, Awaitable, Callable, Generator, Optional, TypeVar, cast
 
 from ._typing_extensions import ParamSpec, TypeGuard
 
@@ -200,7 +200,7 @@ def private_random_int(min: int, max: int) -> str:
 
 
 @contextlib.contextmanager
-def private_seed():
+def private_seed() -> Generator[None, None, None]:
     state = random.getstate()
     global own_random_state
     try:

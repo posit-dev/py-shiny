@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import sys
 from contextlib import AbstractContextManager
-from typing import Callable, TypeVar, overload
+from typing import Callable, Generator, TypeVar, overload
 
 from .. import ui
 from .._typing_extensions import ParamSpec
@@ -159,7 +159,7 @@ def suspend_display(
 
 
 @contextlib.contextmanager
-def suspend_display_ctxmgr():
+def suspend_display_ctxmgr() -> Generator[None, None, None]:
     oldhook = sys.displayhook
     sys.displayhook = null_displayhook
     try:

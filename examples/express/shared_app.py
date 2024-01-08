@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import shared
 
-from shiny import reactive, render, ui
-from shiny.express import input
+from shiny import reactive, render
+from shiny.express import input, ui
 
 
 @render.plot

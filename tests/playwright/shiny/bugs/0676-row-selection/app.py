@@ -23,7 +23,6 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.data_frame
     def grid():
         return render.DataGrid(
@@ -32,7 +31,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             height=350,
         )
 
-    @output
     @render.table
     def detail():
         if (
@@ -42,7 +40,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             # "split", "records", "index", "columns", "values", "table"
             return df.iloc[list(input.grid_selected_rows())]
 
-    @output
     @render.text
     def debug():
         return input.grid_selected_rows()
