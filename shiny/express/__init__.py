@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from ..session import Inputs, Outputs, Session
+# Import these with underscore names so they won't show in autocomplete from the Python
+# console.
+from ..session import Inputs as _Inputs, Outputs as _Outputs, Session as _Session
 from ..session import _utils as _session_utils
-from . import app, layout
+from . import ui
 from ._is_express import is_express_app
 from ._output import output_args, suspend_display
 from ._run import wrap_express_app
@@ -16,15 +18,14 @@ __all__ = (
     "output_args",
     "suspend_display",
     "wrap_express_app",
-    "app",
-    "layout",
+    "ui",
     "display_body",
 )
 
 # Add types to help type checkers
-input: Inputs
-output: Outputs
-session: Session
+input: _Inputs
+output: _Outputs
+session: _Session
 
 
 # Note that users should use `from shiny.express import input` instead of `from shiny
@@ -50,8 +51,8 @@ class _MockSession:
 
         from .._namespaces import Root
 
-        self.input = Inputs({})
-        self.output = Outputs(cast(Session, self), Root, {}, {})
+        self.input = _Inputs({})
+        self.output = _Outputs(cast(_Session, self), Root, {}, {})
 
     # This is needed so that Outputs don't throw an error.
     def _is_hidden(self, name: str) -> bool:
@@ -61,7 +62,7 @@ class _MockSession:
 _current_mock_session: _MockSession | None = None
 
 
-def _get_current_session_or_mock() -> Session:
+def _get_current_session_or_mock() -> _Session:
     from typing import cast
 
     session = _session_utils.get_current_session()
@@ -69,7 +70,7 @@ def _get_current_session_or_mock() -> Session:
         global _current_mock_session
         if _current_mock_session is None:
             _current_mock_session = _MockSession()
-        return cast(Session, _current_mock_session)
+        return cast(_Session, _current_mock_session)
 
     else:
         return session

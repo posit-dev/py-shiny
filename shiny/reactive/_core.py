@@ -18,7 +18,7 @@ import traceback
 import typing
 import warnings
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Awaitable, Callable, Optional, TypeVar
+from typing import TYPE_CHECKING, Awaitable, Callable, Generator, Optional, TypeVar
 
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
@@ -190,7 +190,7 @@ class ReactiveEnvironment:
         self._pending_flush_queue.put(priority, ctx)
 
     @contextlib.contextmanager
-    def isolate(self):
+    def isolate(self) -> Generator[None, None, None]:
         token = self._current_context.set(Context())
         try:
             yield
@@ -203,7 +203,7 @@ _reactive_environment = ReactiveEnvironment()
 
 @add_example()
 @contextlib.contextmanager
-def isolate():
+def isolate() -> Generator[None, None, None]:
     """
     Create a non-reactive scope within a reactive scope.
 

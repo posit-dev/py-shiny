@@ -42,21 +42,18 @@ def server(input: Inputs):
     # thinks the return type of input.n() is Any, so we don't get type checking here.
     # The function is returning the wrong value here: it returns an int instead of a
     # string, but this error is not flagged.
-
     @render.text
     async def txt():
         return input.n() * 2
 
     # In contrast, input.n2() is declared to return an int, so the type check does flag
     # this error -- the `render.text()` is underlined in red.
-
     @render.text
     async def txt2():
         return input.n2() * 2
 
     # This is a corrected version of the function above. It returns a string, and is not
     # marked in red.
-
     @render.text
     async def txt3():
         return str(input.n2() * 2)

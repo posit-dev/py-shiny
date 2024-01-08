@@ -25,7 +25,6 @@ def counter_server(
     def _():
         count.set(count() + 1)
 
-    @output
     @render.text
     def out() -> str:
         return f"Click count is {count()}"
@@ -44,7 +43,6 @@ def counter_wrapper_ui() -> ui.TagChild:
 def counter_wrapper_server(
     input: Inputs, output: Outputs, session: Session, label: str = "Increment counter"
 ):
-    @output()
     @render.ui()
     def dynamic_counter():
         return counter_ui("counter", label)

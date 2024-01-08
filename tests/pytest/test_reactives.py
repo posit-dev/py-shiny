@@ -1095,10 +1095,6 @@ async def test_event_silent_exception_async():
 # ------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_event_type_check():
-    conn = MockConnection()
-    session = App(ui.TagList(), None)._create_session(conn)
-    output = session.output
-
     with pytest.raises(TypeError):
         # Should complain about missing argument to @event().
         @event()
@@ -1131,7 +1127,6 @@ async def test_event_type_check():
     with pytest.raises(TypeError):
         # Should complain that @event must be applied before @output.
         @event(lambda: 1)  # type: ignore
-        @output
         @render.text
         async def _():
             ...
@@ -1202,12 +1197,10 @@ async def test_output_type_check():
         def _():
             ...
 
-    @output
     @render.text
     def _():
         ...
 
-    @output
     @render.plot
     @event(lambda: 1)
     def _():
