@@ -196,11 +196,11 @@ quartodoc:
             name: "Create rendering outputs"
             desc: ""
           contents:
-            - render.transformer.Renderer
-            - render.transformer.RendererBase
-            - render.transformer.JSONifiable
-            - render.transformer.ValueFn
-            - render.transformer.AsyncValueFn
+            - render.renderer.Renderer
+            - render.renderer.RendererBase
+            - render.renderer.JSONifiable
+            - render.renderer.ValueFn
+            - render.renderer.AsyncValueFn
     - title: Reactive programming
       desc: ""
       contents:
