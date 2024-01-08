@@ -74,8 +74,7 @@ class text(Renderer[str]):
 
     def default_ui(self, id: str, placeholder: bool | MISSING_TYPE = MISSING) -> Tag:
         kwargs: dict[str, bool] = {}
-        if not isinstance(placeholder, MISSING_TYPE):
-            kwargs["placeholder"] = placeholder
+        set_kwargs_value(kwargs, "placeholder", placeholder, None)
         return _ui.output_text_verbatim(id, **kwargs)
 
     def __init__(self, fn: Optional[ValueFn[str]] = None, power: int = 1) -> None:
