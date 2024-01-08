@@ -4,7 +4,7 @@ from __future__ import annotations
 # console.
 from ..session import Inputs as _Inputs, Outputs as _Outputs, Session as _Session
 from ..session import _utils as _session_utils
-from . import app, ui
+from . import ui
 from ._is_express import is_express_app
 from ._output import output_args, suspend_display
 from ._run import wrap_express_app
@@ -18,7 +18,6 @@ __all__ = (
     "output_args",
     "suspend_display",
     "wrap_express_app",
-    "app",
     "ui",
     "display_body",
 )
