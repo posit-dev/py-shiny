@@ -259,25 +259,11 @@ class Renderer(RendererBase, Generic[IT]):
 
     # App value function
     # _value_fn_original: ValueFnApp[IT]  # TODO-barret; Remove this?
-    _value_fn: AsyncValueFn[IT | None]
+    value_fn: AsyncValueFn[IT | None]
 
-    @property
-    def value_fn(self) -> AsyncValueFn[IT | None]:
-        return self._value_fn
-
-    def _set_value_fn(self, value_fn: ValueFnApp[Any | None]) -> None:
-        if not callable(value_fn):
-            raise TypeError("Value function must be callable")
-
-        # Copy over function name as it is consistent with how Session and Output
-        # retrieve function names
-        self.__name__ = value_fn.__name__
-
-        # Set value function with extra meta information
-        self._value_fn = AsyncValueFn(value_fn)
-
-        # Allow for App authors to not require `@output`
-        self._auto_register()
+    # @property
+    # def value_fn(self) -> AsyncValueFn[IT | None]:
+    #     return self._value_fn
 
     """
     App-supplied output value function which returns type `IT`. This function is always
@@ -291,7 +277,18 @@ class Renderer(RendererBase, Generic[IT]):
         TODO-barret - docs
         """
 
-        self._set_value_fn(value_fn)
+        if not callable(value_fn):
+            raise TypeError("Value function must be callable")
+
+        # Copy over function name as it is consistent with how Session and Output
+        # retrieve function names
+        self.__name__ = value_fn.__name__
+
+        # Set value function with extra meta information
+        self.value_fn = AsyncValueFn(value_fn)
+
+        # Allow for App authors to not require `@output`
+        self._auto_register()
 
         return self
 
