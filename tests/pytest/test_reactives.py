@@ -1168,13 +1168,13 @@ async def test_output_type_check():
 
     with pytest.raises(TypeError):
         # Should complain about bare function
-        @output  # pyright: ignore[reportGeneralTypeIssues]
+        @output  # pyright: ignore[reportGeneralTypeIssues,reportUntypedFunctionDecorator]
         def _():
             ...
 
     with pytest.raises(TypeError):
         # Should complain about @event
-        @output  # pyright: ignore[reportGeneralTypeIssues]
+        @output  # pyright: ignore[reportGeneralTypeIssues,reportUntypedFunctionDecorator]
         @event(lambda: 1)
         def _():
             ...
@@ -1182,7 +1182,7 @@ async def test_output_type_check():
     with pytest.raises(TypeError):
         # Should complain about @event, even with render.text. Although maybe in the
         # future this will be allowed.
-        @output  # pyright: ignore[reportGeneralTypeIssues]
+        @output  # pyright: ignore[reportGeneralTypeIssues,reportUntypedFunctionDecorator]
         @event(lambda: 1)  # pyright: ignore[reportGeneralTypeIssues]
         @render.text
         def _():
@@ -1190,14 +1190,14 @@ async def test_output_type_check():
 
     with pytest.raises(TypeError):
         # Should complain about @Calc
-        @output  # pyright: ignore[reportGeneralTypeIssues]
+        @output  # pyright: ignore[reportGeneralTypeIssues,reportUntypedFunctionDecorator]
         @calc
         def _():
             ...
 
     with pytest.raises(TypeError):
         # Should complain about @Effet
-        @output  # pyright: ignore[reportGeneralTypeIssues]
+        @output  # pyright: ignore[reportGeneralTypeIssues,reportUntypedFunctionDecorator]
         @effect
         def _():
             ...

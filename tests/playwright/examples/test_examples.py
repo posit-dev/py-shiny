@@ -64,6 +64,7 @@ app_allow_shiny_errors: typing.Dict[
     "brownian": [*output_transformer_errors],
     "multi-page": [*output_transformer_errors],
     "model-score": [*output_transformer_errors],
+    "data_frame": [*output_transformer_errors],
     "output_transformer": [*output_transformer_errors],
     "render_display": [*express_warnings],
 }

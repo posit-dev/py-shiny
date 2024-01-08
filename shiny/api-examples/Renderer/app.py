@@ -33,7 +33,7 @@ class sub_barret_renderer(Renderer[str]):
         self.default_ui = ui.output_text_verbatim
 
     async def render(self) -> str | None:
-        value = await self._value_fn()
+        value = await self.value_fn()
         if value is None:
             return None
         self.widget = value

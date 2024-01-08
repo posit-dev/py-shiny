@@ -281,10 +281,6 @@ class Renderer(RendererBase, Generic[IT]):
     # _value_fn_original: ValueFnApp[IT]  # TODO-barret; Remove this?
     value_fn: AsyncValueFn[IT | None]
 
-    # @property
-    # def value_fn(self) -> AsyncValueFn[IT | None]:
-    #     return self._value_fn
-
     """
     App-supplied output value function which returns type `IT`. This function is always
     asyncronous as the original app-supplied function possibly wrapped to execute
