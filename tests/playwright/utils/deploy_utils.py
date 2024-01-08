@@ -103,7 +103,7 @@ def deploy(location: str, app_name: str, app_file_path: str) -> str:
 
 
 # Since connect parses python packages, we need to get latest version of shiny on HEAD
-def tweak_requirements_txt(app_file_path: str) -> None:
+def write_requirements_txt(app_file_path: str) -> None:
     app_requirements_file_path = os.path.join(app_file_path, "app_requirements.txt")
     requirements_file_path = os.path.join(app_file_path, "requirements.txt")
     git_cmd = subprocess.run(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE)
