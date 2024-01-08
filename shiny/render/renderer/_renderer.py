@@ -47,6 +47,8 @@ __all__ = (
     "AsyncValueFn",
 )
 
+RendererBaseT = TypeVar("RendererBaseT", bound="RendererBase")
+
 # Input type for the user-spplied function that is passed to a render.xx
 IT = TypeVar("IT")
 

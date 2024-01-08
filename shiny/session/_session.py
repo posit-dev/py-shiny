@@ -47,7 +47,7 @@ from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
-from ..render.renderer._renderer import JSONifiable, RendererBase
+from ..render.renderer import JSONifiable, RendererBase, RendererBaseT
 from ..types import SafeException, SilentCancelOutputException, SilentException
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
@@ -946,6 +946,8 @@ class Inputs:
 # ======================================================================================
 # Outputs
 # ======================================================================================
+
+
 class Outputs:
     """
     A class representing Shiny output definitions.
@@ -964,7 +966,8 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    def __call__(self, renderer: RendererBase) -> RendererBase:
+    # TODO-barret; Use generics to pass through the type!
+    def __call__(self, renderer: RendererBaseT) -> RendererBaseT:
         ...
 
     @overload
@@ -974,18 +977,18 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-    ) -> Callable[[RendererBase], RendererBase]:
+    ) -> Callable[[RendererBaseT], RendererBaseT]:
         ...
 
     def __call__(
         self,
-        renderer: Optional[RendererBase] = None,
+        renderer: Optional[RendererBaseT] = None,
         *,
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-    ) -> RendererBase | Callable[[RendererBase], RendererBase]:
-        def set_renderer(renderer: RendererBase) -> RendererBase:
+    ) -> RendererBaseT | Callable[[RendererBaseT], RendererBaseT]:
+        def set_renderer(renderer: RendererBaseT) -> RendererBaseT:
             if not isinstance(renderer, RendererBase):
                 raise TypeError(
                     "`@output` must be applied to a `@render.xx` function.\n"

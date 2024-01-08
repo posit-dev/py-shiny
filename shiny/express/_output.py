@@ -7,7 +7,7 @@ from typing import Callable, TypeVar, overload
 
 from .. import ui
 from .._typing_extensions import ParamSpec
-from ..render.renderer import RendererBase
+from ..render.renderer import RendererBase, RendererBaseT
 from ..render.transformer import OutputRenderer
 from ..render.transformer._transformer import OT
 
@@ -24,7 +24,7 @@ CallableT = TypeVar("CallableT", bound=Callable[..., object])
 # TODO-barret; quartodoc entry?
 def ui_kwargs(
     **kwargs: object,
-) -> Callable[[RendererBase], RendererBase]:
+) -> Callable[[RendererBaseT], RendererBaseT]:
     """
     Sets default UI arguments for a Shiny rendering function.
 
@@ -46,7 +46,7 @@ def ui_kwargs(
         A decorator that sets the default UI arguments for a Shiny rendering function.
     """
 
-    def wrapper(renderer: RendererBase) -> RendererBase:
+    def wrapper(renderer: RendererBaseT) -> RendererBaseT:
         # renderer._default_ui_args = args
         renderer._default_ui_kwargs = kwargs
         return renderer
@@ -103,7 +103,7 @@ def suspend_display(fn: CallableT) -> CallableT:
 
 
 @overload
-def suspend_display(fn: RendererBase) -> RendererBase:
+def suspend_display(fn: RendererBaseT) -> RendererBaseT:
     ...
 
 
@@ -113,8 +113,8 @@ def suspend_display() -> AbstractContextManager[None]:
 
 
 def suspend_display(
-    fn: Callable[P, R] | RendererBase | None = None
-) -> Callable[P, R] | RendererBase | AbstractContextManager[None]:
+    fn: Callable[P, R] | RendererBaseT | None = None
+) -> Callable[P, R] | RendererBaseT | AbstractContextManager[None]:
     """Suppresses the display of UI elements in various ways.
 
     If used as a context manager (`with suspend_display():`), it suppresses the display

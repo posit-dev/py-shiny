@@ -3,6 +3,7 @@ from ._renderer import (  # noqa: F401
     Renderer,
     ValueFn,
     JSONifiable,
+    RendererBaseT,  # pyright: ignore[reportUnusedImport]
     ValueFnApp,  # pyright: ignore[reportUnusedImport]
     ValueFnSync,  # pyright: ignore[reportUnusedImport]
     ValueFnAsync,  # pyright: ignore[reportUnusedImport]
