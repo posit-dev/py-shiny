@@ -19,10 +19,11 @@ from htmltools import MetadataNode, Tag, TagList
 
 from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
+from ._auto_register import AutoRegisterMixin
 
-# TODO-barret; POST-merge; shinywidgets should not call `resolve_value_fn`
-
+# TODO-barret; Change the base branch to `main`
 # TODO-barret; Q: Should `Renderer.default_ui` be renamed? `ui()`? `express_ui()`?
+# TODO-barret; POST-merge; shinywidgets should not call `resolve_value_fn`
 
 
 # TODO-future: docs; missing first paragraph from some classes: Example: TransformerMetadata.
@@ -101,7 +102,13 @@ synchronous or asynchronous.
 ValueFn = Optional[ValueFnApp[Union[IT, None]]]
 
 
-class RendererBase(ABC):
+class RendererBase(AutoRegisterMixin, ABC):
+    """
+    Base class for all renderers.
+
+    TODO-barret - docs
+    """
+
     __name__: str
     """
     Name of output function supplied. (The value will not contain any module prefix.)
@@ -152,26 +159,6 @@ class RendererBase(ABC):
     # Idea: Possibly use a chained method of `.ui_kwargs()`? https://github.com/posit-dev/py-shiny/issues/971
     _default_ui_kwargs: dict[str, Any] = dict()
     # _default_ui_args: tuple[Any, ...] = tuple()
-
-    def _on_register(self) -> None:
-        if self._auto_registered:
-            # We're being explicitly registered now. Undo the auto-registration.
-            # (w/ module support)
-            ns_name = self.session.output._ns(self.__name__)
-            self.session.output.remove(ns_name)
-            self._auto_registered = False
-
-    def _auto_register(self) -> None:
-        # If in Express mode, register the output
-        if not self._auto_registered:
-            from ...session import get_current_session
-
-            s = get_current_session()
-            if s is not None:
-                s.output(self)
-                # We mark the fact that we're auto-registered so that, if an explicit
-                # registration now occurs, we can undo this auto-registration.
-                self._auto_registered = True
 
     def _repr_html_(self) -> str | None:
         rendered_ui = self._render_default_ui()
@@ -275,19 +262,11 @@ class AsyncValueFn(Generic[IT]):
 class Renderer(RendererBase, Generic[IT]):
     """
     Renderer cls docs here
+
     TODO-barret - docs
     """
 
-    # __name__: str ??
-
-    # UI
-    # TODO-barret; Utilize these!
-    # default_ui_passthrough_args: tuple[str, ...] | None = None
-
-    # App value function
-    # _value_fn_original: ValueFnApp[IT]  # TODO-barret; Remove this?
     value_fn: AsyncValueFn[IT | None]
-
     """
     App-supplied output value function which returns type `IT`. This function is always
     asyncronous as the original app-supplied function possibly wrapped to execute
@@ -297,6 +276,7 @@ class Renderer(RendererBase, Generic[IT]):
     def __call__(self, value_fn: ValueFnApp[IT | None]) -> Self:
         """
         Renderer __call__ docs here; Sets app's value function
+
         TODO-barret - docs
         """
 
@@ -305,10 +285,10 @@ class Renderer(RendererBase, Generic[IT]):
 
         # Copy over function name as it is consistent with how Session and Output
         # retrieve function names
-        self.__name__ = value_fn.__name__
+        self.__name__: str = value_fn.__name__
 
         # Set value function with extra meta information
-        self.value_fn = AsyncValueFn(value_fn)
+        self.value_fn: AsyncValueFn[IT | None] = AsyncValueFn(value_fn)
 
         # Allow for App authors to not require `@output`
         self._auto_register()
@@ -332,6 +312,7 @@ class Renderer(RendererBase, Generic[IT]):
     async def transform(self, value: IT) -> JSONifiable:
         """
         Renderer - transform docs here
+
         TODO-barret - docs
         """
         raise NotImplementedError(
@@ -344,6 +325,7 @@ class Renderer(RendererBase, Generic[IT]):
     async def render(self) -> JSONifiable:
         """
         Renderer - render docs here
+
         TODO-barret - docs
         """
         value = await self.value_fn()
