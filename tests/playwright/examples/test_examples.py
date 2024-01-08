@@ -39,11 +39,13 @@ app_hard_wait: typing.Dict[str, int] = {
     "brownian": 250,
     "ui-func": 250,
 }
-resolve_value_fn_errors = [
+output_transformer_errors = [
+    "ShinyDeprecationWarning: `shiny.render.transformer.output_transformer()`",
+    "  return OutputRenderer",
     "ShinyDeprecationWarning: `resolve_value_fn()`",
-    "value = await resolve_value_fn(_fn)",
     "ShinyDeprecationWarning:",
     "`resolve_value_fn()`",
+    "value = await resolve_value_fn(_fn)",
 ]
 express_warnings = ["Detected Shiny Express app. "]
 app_allow_shiny_errors: typing.Dict[
@@ -58,11 +60,11 @@ app_allow_shiny_errors: typing.Dict[
         "UserWarning: This figure includes Axes that are not compatible with tight_layout",
     ],
     # Remove after shinywidgets accepts `resolve_value_fn()` PR
-    "airmass": [*resolve_value_fn_errors],
-    "brownian": [*resolve_value_fn_errors],
-    "multi-page": [*resolve_value_fn_errors],
-    "model-score": [*resolve_value_fn_errors],
-    "data_frame": [*resolve_value_fn_errors],
+    "airmass": [*output_transformer_errors],
+    "brownian": [*output_transformer_errors],
+    "multi-page": [*output_transformer_errors],
+    "model-score": [*output_transformer_errors],
+    "output_transformer": [*output_transformer_errors],
     "render_display": [*express_warnings],
 }
 app_allow_external_errors: typing.List[str] = [
@@ -210,6 +212,9 @@ def test_examples(page: Page, ex_app_path: str) -> None:
                 and not any([error_txt in line for error_txt in app_allowable_errors])
             ]
             if len(error_lines) > 0:
+                print("\napp_allowable_errors :")
+                print("\n".join(app_allowable_errors))
+                print("\nError lines remaining:")
                 print("\n".join(error_lines))
             assert len(error_lines) == 0
 
