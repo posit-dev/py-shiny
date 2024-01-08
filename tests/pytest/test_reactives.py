@@ -1127,7 +1127,6 @@ async def test_event_type_check():
     with pytest.raises(TypeError):
         # Should complain that @event must be applied before @output.
         @event(lambda: 1)  # pyright: ignore[reportGeneralTypeIssues]
-        @output
         @render.text
         async def _():
             ...

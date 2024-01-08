@@ -1,9 +1,7 @@
 from shiny import render, ui
-from shiny.express import input, layout, suspend_display
+from shiny.express import input, suspend_display
 
-layout.set_page(layout.page_fluid())
-
-with layout.card(id="card"):
+with ui.card(id="card"):
     ui.input_slider("s1", "A", 1, 100, 20)
 
     @suspend_display

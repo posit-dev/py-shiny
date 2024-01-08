@@ -466,7 +466,7 @@ class OutputTransformer(Generic[IT, OT, P]):
     """
 
     fn: OutputTransformerFn[IT, P, OT]
-    ValueFn: Type[ValueFn[IT]]
+    ValueFn: Type[ValueFnApp[IT]]
     OutputRenderer: Type[OutputRenderer[OT]]
     OutputRendererDecorator: Type[OutputRendererDecorator[IT, OT]]
 
