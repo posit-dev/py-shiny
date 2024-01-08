@@ -19,8 +19,6 @@ from typing import (
 
 from htmltools import Tag, TagAttrValue, TagChild
 
-from shiny.render.renderer import JSONifiable
-
 if TYPE_CHECKING:
     from ..session._utils import RenderedDeps
     import pandas as pd
@@ -35,8 +33,12 @@ from ._try_render_plot import (
     try_render_pil,
     try_render_plotnine,
 )
-from .renderer import Renderer, ValueFn
-from .renderer._utils import imgdata_to_jsonifiable, rendered_deps_to_jsonifiable
+from .renderer import JSONifiable, Renderer, ValueFn
+from .renderer._utils import (
+    imgdata_to_jsonifiable,
+    rendered_deps_to_jsonifiable,
+    set_kwargs_value,
+)
 
 __all__ = (
     "text",
@@ -156,23 +158,9 @@ class plot(Renderer[object]):
         height: str | float | int | MISSING_TYPE = MISSING,
         **kwargs: object,
     ) -> Tag:
-        def set_kwarg_value(
-            key: str,
-            ui_val: str | float | int | MISSING_TYPE,
-            self_val: float | None | MISSING_TYPE,
-        ):
-            if not isinstance(ui_val, MISSING_TYPE):
-                kwargs[key] = ui_val
-                return
-            if not (isinstance(self_val, MISSING_TYPE) or self_val is None):
-                kwargs[key] = self_val
-                return
-            # Do nothing as we don't want to override the default value (that could change in the future)
-            return
-
         # Only set the arg if it is available. (Prevents duplicating default values)
-        set_kwarg_value("width", width, self.width)
-        set_kwarg_value("height", height, self.height)
+        set_kwargs_value(kwargs, "width", width, self.width)
+        set_kwargs_value(kwargs, "height", height, self.height)
         return _ui.output_plot(
             id,
             # (possibly) contains `width` and `height` keys!
