@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, overload
+from typing import Any, cast, overload
 
 import pytest
 
 from shiny._deprecated import ShinyDeprecationWarning
+from shiny._namespaces import ResolvedId, Root
 from shiny._utils import is_async_callable
 from shiny.render.transformer import (
     TransformerMetadata,
@@ -13,9 +14,21 @@ from shiny.render.transformer import (
     output_transformer,
     resolve_value_fn,
 )
+from shiny.session import Session, session_context
 
 # import warnings
 # warnings.filterwarnings("ignore", category=ShinyDeprecationWarning)
+
+
+class _MockSession:
+    ns: ResolvedId = Root
+
+    # This is needed so that Outputs don't throw an error.
+    def _is_hidden(self, name: str) -> bool:
+        return False
+
+
+test_session = cast(Session, _MockSession())
 
 
 def test_output_transformer_works():
@@ -238,15 +251,15 @@ async def test_renderer_handler_or_transform_fn_can_be_async():
     # ## Test Sync: X =============================================
 
     renderer_sync = async_renderer(app_render_fn)
-    renderer_sync._set_metadata(
-        None,  # pyright: ignore[reportGeneralTypeIssues]
-        "renderer_sync",
+    renderer_sync._set_output_metadata(
+        output_name="renderer_sync",
     )
     # All renderers are async in execution.
     assert is_async_callable(renderer_sync)
 
-    val = await renderer_sync()
-    assert val == test_val
+    with session_context(test_session):
+        val = await renderer_sync()
+        assert val == test_val
 
     # ## Test Async: √ =============================================
 
@@ -257,15 +270,15 @@ async def test_renderer_handler_or_transform_fn_can_be_async():
         return async_test_val
 
     renderer_async = async_renderer(async_app_render_fn)
-    renderer_async._set_metadata(
-        None,  # pyright: ignore[reportGeneralTypeIssues]
-        "renderer_async",
+    renderer_async._set_output_metadata(
+        output_name="renderer_async",
     )
     if not is_async_callable(renderer_async):
         raise RuntimeError("Expected `renderer_async` to be a coro function")
 
-    ret = await renderer_async()
-    assert ret == async_test_val
+    with session_context(test_session):
+        ret = await renderer_async()
+        assert ret == async_test_val
 
 
 # "Currently, `ValueFnA` can not be truly async and "support sync render methods".
@@ -309,14 +322,14 @@ async def test_renderer_handler_fn_can_be_yield_while_async():
     # ## Test Sync: √ =============================================
 
     renderer_sync = yield_renderer(app_render_fn)
-    renderer_sync._set_metadata(
-        None,  # pyright: ignore[reportGeneralTypeIssues]
-        "renderer_sync",
+    renderer_sync._set_output_metadata(
+        output_name="renderer_sync",
     )
     assert is_async_callable(renderer_sync)
 
-    ret = await renderer_sync()
-    assert ret == test_val
+    with session_context(test_session):
+        ret = await renderer_sync()
+        assert ret == test_val
 
     # ## Test Async: √ =============================================
 
@@ -327,14 +340,14 @@ async def test_renderer_handler_fn_can_be_yield_while_async():
         return async_test_val
 
     renderer_async = yield_renderer(async_app_render_fn)
-    renderer_async._set_metadata(
-        None,  # pyright: ignore[reportGeneralTypeIssues]
-        "renderer_async",
+    renderer_async._set_output_metadata(
+        output_name="renderer_async",
     )
     assert is_async_callable(renderer_async)
 
-    ret = await renderer_async()
-    assert ret == async_test_val
+    with session_context(test_session):
+        ret = await renderer_async()
+        assert ret == async_test_val
 
 
 @pytest.mark.asyncio
