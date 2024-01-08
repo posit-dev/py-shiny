@@ -2,8 +2,6 @@ from __future__ import annotations
 
 # TODO-future; When `OutputRenderer` is removed, remove `output_args()`
 
-# TODO-barret; Q: Why was `DefaultUIFnImpl` being used? The type does NOT make sense. Using `DefaultUIFn`
-
 
 __all__ = (
     "TransformerMetadata",

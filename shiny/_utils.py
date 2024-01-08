@@ -245,7 +245,7 @@ def wrap_async(
     return fn_async
 
 
-# # TODO-barret; Q: Keep code?
+# # TODO-barret-future; Q: Keep code?
 # class WrapAsync(Generic[P, R]):
 #     """
 #     Make a function asynchronous.
@@ -317,7 +317,6 @@ def is_async_callable(
         Returns True if `obj` is an `async def` function, or if it's an object with a
         `__call__` method which is an `async def` function.
     """
-
     if inspect.iscoroutinefunction(obj):
         return True
     if hasattr(obj, "__call__"):  # noqa: B004

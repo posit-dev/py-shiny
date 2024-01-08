@@ -21,13 +21,6 @@ from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
 from ._auto_register import AutoRegisterMixin
 
-# TODO-barret; Q: Should `Renderer.default_ui` be renamed? `ui()`? `express_ui()`?
-# TODO-barret; Q: Should `.transform()` exist on `Renderer`?
-#   * If it is removed, then the `IT` type isn't required in `Renderer` and we could remove RendererBase
-#   * No confusion between `transform` and `render` methods
-#   * `render` is the only method that is required to be implemented
-#   * Can add helper decorator to do typical transform functionality?
-#   * Con: Would require the `__init__(self, fn: ValueFn[IT])` method to get typing
 # TODO-barret; POST-merge; shinywidgets should not call `resolve_value_fn`
 
 
@@ -89,10 +82,6 @@ JSONifiable = Union[
 DefaultUIFnResult = Union[TagList, Tag, MetadataNode, str]
 DefaultUIFnResultOrNone = Union[DefaultUIFnResult, None]
 DefaultUIFn = Callable[[str], DefaultUIFnResultOrNone]
-DefaultUIFnImpl = Union[
-    DefaultUIFn,
-    Callable[[Dict[str, object], str], DefaultUIFnResultOrNone],
-]
 
 ValueFnSync = Callable[[], IT]
 """
