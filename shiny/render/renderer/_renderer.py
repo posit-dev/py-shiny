@@ -205,6 +205,7 @@ class AsyncValueFn(Generic[IT]):
             return fn
         self._is_async = is_async_callable(fn)
         self._fn = wrap_async(fn)
+        self._orig_fn = fn
 
     async def __call__(self) -> IT:
         """
@@ -225,16 +226,35 @@ class AsyncValueFn(Generic[IT]):
         return self._is_async
 
     @property
-    def fn(self) -> Callable[[], IT] | Callable[[], Awaitable[IT]]:
+    def async_fn(self) -> Callable[[], Awaitable[IT]]:
         """
-        Retrieve the original function
+        Return the async value function.
 
         Returns
         -------
         :
-            Original function supplied to the `AsyncValueFn` constructor.
+            Async wrapped value function supplied to the `AsyncValueFn` constructor.
         """
         return self._fn
+
+    @property
+    def sync_fn(self) -> Callable[[], IT]:
+        """
+        Retrieve the original, synchronous value function function.
+
+        If the original function was asynchronous, a runtime error will be thrown.
+
+        Returns
+        -------
+        :
+            Original, synchronous function supplied to the `AsyncValueFn` constructor.
+        """
+        if self._is_async:
+            raise RuntimeError(
+                "The original function was asynchronous. Use `async_fn` instead."
+            )
+        sync_fn = cast(Callable[[], IT], self._orig_fn)
+        return sync_fn
 
 
 # class RendererShim(RendererBase, Generic[IT, P]):
