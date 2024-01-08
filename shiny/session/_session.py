@@ -966,7 +966,6 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    # TODO-barret; Use generics to pass through the type!
     def __call__(self, renderer: RendererBaseT) -> RendererBaseT:
         ...
 
@@ -999,8 +998,8 @@ class Outputs:
             output_name = self._ns(id or renderer.__name__)
 
             # renderer is a Renderer object. Give it a bit of metadata.
-            renderer.session = self._session
-            renderer.name = output_name
+            renderer._set_output_metadata(output_name=output_name)
+
             renderer._on_register()
 
             self.remove(output_name)

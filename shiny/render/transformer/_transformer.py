@@ -2,7 +2,7 @@ from __future__ import annotations
 
 # TODO-future; When `OutputRenderer` is removed, remove `output_args()`
 
-# TODO-barret; Why was `DefaultUIFnImpl` being used? The type does NOT make sense. Using `DefaultUIFn`
+# TODO-barret; Q: Why was `DefaultUIFnImpl` being used? The type does NOT make sense. Using `DefaultUIFn`
 
 
 __all__ = (
@@ -275,22 +275,17 @@ class OutputRenderer(RendererBase, Generic[OT]):
         # Allow for App authors to not require `@output`
         self._auto_register()
 
-    def _set_metadata(self, session: Session, name: str) -> None:
-        """
-        When `Renderer`s are assigned to Output object slots, this method is used to
-        pass along Session and name information.
-        """
-        self.session = session
-        self.name = name
-
     def _meta(self) -> TransformerMetadata:
         """
         Returns a named tuple of values: `session` (the :class:`~shiny.Session` object),
         and `name` (the name of the output being rendered)
         """
+        from ...session import require_active_session
+
+        session = require_active_session(None)
         return TransformerMetadata(
-            session=self.session,
-            name=self.name,
+            session=session,
+            name=self.output_name,
         )
 
     async def _run(self) -> OT:

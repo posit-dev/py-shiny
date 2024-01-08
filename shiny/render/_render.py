@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 from .. import _utils
 from .. import ui as _ui
 from .._namespaces import ResolvedId
+from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE, ImgData
 from ._try_render_plot import (
     PlotSizeInfo,
@@ -183,8 +184,8 @@ class plot(Renderer[object]):
 
     async def render(self) -> dict[str, JSONifiable] | JSONifiable | None:
         is_userfn_async = self.value_fn.is_async
-        name = self.name
-        session = self.session
+        name = self.output_name
+        session = require_active_session(None)
         width = self.width
         height = self.height
         alt = self.alt
@@ -491,6 +492,7 @@ class ui(Renderer[TagChild]):
         return _ui.output_ui(id)
 
     async def transform(self, value: TagChild) -> JSONifiable:
+        session = require_active_session(None)
         return rendered_deps_to_jsonifiable(
-            self.session._process_ui(value),
+            session._process_ui(value),
         )

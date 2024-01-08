@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import (
-    TYPE_CHECKING,
     Any,
     Awaitable,
     Callable,
@@ -24,8 +23,6 @@ from ..._utils import is_async_callable, wrap_async
 # TODO-barret; POST-merge; shinywidgets should not call `resolve_value_fn`
 
 # TODO-barret; Q: Should `Renderer.default_ui` be renamed? `ui()`? `express_ui()`?
-# TODO-barret; Q: Should `Renderer.default_ui` accept args? ... Should `output_args()` be renamed to `ui_kwargs()`? (If anything rename to `ui_args()`)
-# TODO-barret; Q: Should `Renderer.default_ui` accept kwargs? ... Should `output_kwargs()` be renamed to `ui_kwargs()`? (If anything rename to `ui_kwargs()`) Add `.ui_kwargs()` method?
 
 
 # TODO-future: docs; missing first paragraph from some classes: Example: TransformerMetadata.
@@ -34,14 +31,9 @@ from ..._utils import is_async_callable, wrap_async
 # displayed. Even if they have docs.
 
 
-if TYPE_CHECKING:
-    from ...session import Session
-
-
 __all__ = (
     "Renderer",
     "RendererBase",
-    "Renderer",
     "ValueFn",
     "JSONifiable",
     "AsyncValueFn",
@@ -111,19 +103,34 @@ ValueFn = Optional[ValueFnApp[Union[IT, None]]]
 
 class RendererBase(ABC):
     __name__: str
-    """Name of output function supplied. (The value will not contain any module prefix.)"""
+    """
+    Name of output function supplied. (The value will not contain any module prefix.)
 
-    _auto_registered: bool = False
+    Set within `.__call__()` method.
+    """
 
     # Meta
-    session: Session
-    """
-    :class:`~shiny.Session` object
-    """
-    name: str
+    output_name: str
     """
     Output function name or ID (provided to `@output(id=)`). This value will contain any module prefix.
+
+    Set when the output is registered with the session.
     """
+
+    def _set_output_metadata(
+        self,
+        *,
+        output_name: str,
+    ) -> None:
+        """
+        Method to be called within `@output` to set the renderer's metadata.
+
+        Parameters
+        ----------
+        output_name : str
+            Output function name or ID (provided to `@output(id=)`). This value will contain any module prefix.
+        """
+        self.output_name = output_name
 
     def default_ui(
         self,
