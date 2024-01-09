@@ -11,10 +11,10 @@ import {
 makeReactInput({
   name: "custom-component-input",
   initialValue: "#fff",
-  renderComp: ({ initialValue, onNewValue }) => (
+  renderComp: ({ initialValue, updateValue }) => (
     <ColorPickerReact
       initialValue={initialValue}
-      onNewValue={(color) => onNewValue(color)}
+      updateValue={(color) => updateValue(color)}
     />
   ),
 });
@@ -22,10 +22,10 @@ makeReactInput({
 // Color Picker React component
 function ColorPickerReact({
   initialValue,
-  onNewValue,
+  updateValue,
 }: {
   initialValue: string;
-  onNewValue: (x: string) => void;
+  updateValue: (x: string) => void;
 }) {
   const [currentColor, setCurrentColor] = React.useState(initialValue);
 
@@ -34,7 +34,7 @@ function ColorPickerReact({
       color={currentColor}
       onChange={(color) => {
         setCurrentColor(color.hex);
-        onNewValue(color.hex);
+        updateValue(color.hex);
       }}
     />
   );
