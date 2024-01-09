@@ -513,18 +513,38 @@ After creating the application, you use `shiny run`:
     "-g",
     help="The GitHub URL of the template sub-directory. For example https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard",
 )
+@click.option(
+    "--dir",
+    "-d",
+    help="The destination directory, you will be prompted if this is not provided.",
+)
+@click.option(
+    "--package-name",
+    help="""
+    If you are using one of the JavaScript component templates,
+    you can use this flag to specify the name of the resulting package without being prompted.
+    """,
+)
 def create(
     template: Optional[str] = None,
     mode: Optional[str] = None,
     github: Optional[str] = None,
+    dir: Optional[str | Path] = None,
+    package_name: Optional[str] = None,
 ) -> None:
     from ._template_utils import template_query, use_git_template
 
+    if github is not None and template is not None:
+        raise click.UsageError("You cannot provide both --github and --template")
+
+    if isinstance(dir, str):
+        dir = Path(dir)
+
     if github is not None:
-        use_git_template(github, mode)
+        use_git_template(github, mode, dir)
         return
 
-    template_query(template, mode)
+    template_query(template, mode, dir, package_name)
 
 
 @main.command(

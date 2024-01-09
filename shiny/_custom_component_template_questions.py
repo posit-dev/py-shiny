@@ -1,8 +1,25 @@
 import re
+from importlib import util
 from pathlib import Path
 
 from prompt_toolkit.document import Document
 from questionary import ValidationError, Validator
+
+
+def is_existing_module(name: str) -> bool:
+    """
+    Check if a module name can be imported, which indicates that it is either
+    a standard module name, or the name of an installed module.
+    In either case the new module would probably cause a name conflict.
+    """
+    try:
+        spec = util.find_spec(name)
+        if spec is not None:
+            return True
+        else:
+            return False
+    except ImportError:
+        return False
 
 
 def is_pep508_identifier(name: str):
@@ -62,6 +79,14 @@ class ComponentNameValidator(Validator):
         if not is_pep508_identifier(name):
             raise ValidationError(
                 message="Name must be a pep508 identifier: https://peps.python.org/pep-0508/#names",
+                cursor_position=len(name),
+            )
+
+        # Using the name of an existing package causes an import error
+
+        if is_existing_module(name):
+            raise ValidationError(
+                message="Package already installed in your current environment.",
                 cursor_position=len(name),
             )
 

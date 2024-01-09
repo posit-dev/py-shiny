@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Bug fixes
+
+* CLI command `shiny create`... (#965)
+  * has added a `-d`/`--dir` flag for saving to a specific output directory
+  * will raise an error if if will overwrite existing files
+  * prompt users to install `requirements.txt`
+* Fixed `js-react` template build error. (#965)
+
 
 
 ## [0.6.1.1] - 2023-12-22
