@@ -284,7 +284,7 @@ class OutputRenderer(RendererBase, Generic[OT]):
         session = require_active_session(None)
         return TransformerMetadata(
             session=session,
-            name=self.output_name,
+            name=self.output_id,
         )
 
     async def _run(self) -> OT:

@@ -122,7 +122,7 @@ class RendererBase(ABC):
     """
 
     # Meta
-    output_name: str
+    output_id: str
     """
     Output function name or ID (provided to `@output(id=)`). This value will contain any module prefix.
 
@@ -142,7 +142,7 @@ class RendererBase(ABC):
         output_name : str
             Output function name or ID (provided to `@output(id=)`). This value will contain any module prefix.
         """
-        self.output_name = output_name
+        self.output_id = output_name
 
     def default_ui(
         self,
@@ -290,14 +290,6 @@ class AsyncValueFn(Generic[IT]):
         return sync_fn
 
 
-# class RendererShim(RendererBase, Generic[IT, P]):
-#     def default_ui(
-#         self, id: str, *args: P.args, **kwargs: P.kwargs
-#     ) -> DefaultUIFnResultOrNone:
-#         return super().default_ui(id)
-
-
-# class Renderer(RendererShim[IT, ...], Generic[IT]):
 class Renderer(RendererBase, Generic[IT]):
     """
     Renderer cls docs here

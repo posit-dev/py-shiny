@@ -180,7 +180,7 @@ class plot(Renderer[object]):
 
     async def render(self) -> dict[str, JSONifiable] | JSONifiable | None:
         is_userfn_async = self.value_fn.is_async
-        name = self.output_name
+        name = self.output_id
         session = require_active_session(None)
         width = self.width
         height = self.height
