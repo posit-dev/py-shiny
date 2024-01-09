@@ -2,8 +2,15 @@ from __future__ import annotations
 
 import typing
 
-from controls import Accordion, Card, LayoutNavsetTab, OutputTextVerbatim, Sidebar
-from playwright.sync_api import Page
+from controls import (
+    Accordion,
+    Card,
+    LayoutNavsetTab,
+    OutputDataFrame,
+    OutputTextVerbatim,
+    Sidebar,
+)
+from playwright.sync_api import Page, expect
 
 from shiny import ui
 from shiny.express import ui as xui
@@ -83,3 +90,23 @@ def verify_express_page_sidebar(page: Page) -> None:
     output_txt = OutputTextVerbatim(page, "txt")
     output_txt.expect_value("50")
     compare_annotations(ui.sidebar, xui.sidebar)
+
+
+def verify_express_dataframe(page: Page) -> None:
+    dataframe = OutputDataFrame(page, "sample_data_frame")
+    dataframe.expect_n_row(6)
+
+
+def verify_express_folium_render(page: Page) -> None:
+    expect(page.get_by_text("Static Map")).to_have_count(1)
+    expect(page.get_by_text("Map inside of render display call")).to_have_count(1)
+    # map inside the @render.display
+    expect(
+        page.frame_locator("iframe").nth(1).get_by_role("link", name="OpenStreetMap")
+    ).to_have_count(1)
+    # map outside of the @render.display at the top level
+    expect(
+        page.frame_locator("iframe")
+        .nth(0)
+        .get_by_role("link", name="U.S. Geological Survey")
+    ).to_have_count(1)

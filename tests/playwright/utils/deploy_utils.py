@@ -100,3 +100,16 @@ def deploy(location: str, app_name: str, app_file_path: str) -> str:
     else:
         raise ValueError("Unknown deploy location. Cannot deploy.")
     return url
+
+
+# Since connect parses python packages, we need to get latest version of shiny on HEAD
+def write_requirements_txt(app_file_path: str) -> None:
+    app_requirements_file_path = os.path.join(app_file_path, "app_requirements.txt")
+    requirements_file_path = os.path.join(app_file_path, "requirements.txt")
+    git_cmd = subprocess.run(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE)
+    git_hash = git_cmd.stdout.decode("utf-8").strip()
+    with open(app_requirements_file_path) as f:
+        requirements = f.read()
+    with open(requirements_file_path, "a") as f:
+        f.write(f"{requirements}\n")
+        f.write(f"git+https://github.com/posit-dev/py-shiny.git@{git_hash}\n")

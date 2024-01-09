@@ -1115,8 +1115,6 @@ def nav_menu(
 # Value boxes
 # ======================================================================================
 def value_box(
-    title: TagChild,
-    value: TagChild,
     *,
     showcase: Optional[TagChild] = None,
     showcase_layout: ui._valuebox.SHOWCASE_LAYOUTS_STR
@@ -1134,16 +1132,14 @@ def value_box(
 
     This function wraps :func:`~shiny.ui.value_box`.
 
-    An opinionated (:func:`~shiny.ui.card`-powered) box, designed for
-    displaying a `value` and `title`. Optionally, a `showcase` can provide for context
-    for what the `value` represents (for example, it could hold an icon, or even a
+    An opinionated (:func:`~shiny.ui.card`-powered) box, designed for displaying a title
+    (the 1st child), value (the 2nd child), and other explanation text (other children,
+    if any). Optionally, a `showcase` can provide for context for what the `value`
+    represents (for example, it could hold an icon, or even a
     :func:`~shiny.ui.output_plot`).
 
     Parameters
     ----------
-    title,value
-        A string, number, or :class:`~htmltools.Tag` child to display as
-        the title or value of the value box. The `title` appears above the `value`.
     showcase
         A :class:`~htmltools.Tag` child to showcase (e.g., an icon, a
         :func:`~shiny.ui.output_plot`, etc).
@@ -1184,7 +1180,6 @@ def value_box(
     """
     return RecallContextManager(
         ui.value_box,
-        args=(title, value),
         kwargs=dict(
             showcase=showcase,
             showcase_layout=showcase_layout,
@@ -1397,6 +1392,93 @@ def panel_absolute(
             draggable=draggable,
             fixed=fixed,
             cursor=cursor,
+            **kwargs,
+        ),
+    )
+
+
+# ======================================================================================
+# Tooltips and popovers
+# ======================================================================================
+
+
+def tooltip(
+    *,
+    id: Optional[str] = None,
+    placement: Literal["auto", "top", "right", "bottom", "left"] = "auto",
+    options: Optional[dict[str, object]] = None,
+    **kwargs: TagAttrValue,
+) -> RecallContextManager[Tag]:
+    """
+    Context manager for a tooltip
+
+    This function wraps :func:`~shiny.ui.tooltip`.
+
+    Display additional information when focusing (or hovering over) a UI element.
+
+    Parameters
+    ----------
+    id
+        A character string. Required to reactively respond to the visibility of the
+        tooltip (via the `input[id]` value) and/or update the visibility/contents of the
+        tooltip.
+    placement
+        The placement of the tooltip relative to its trigger.
+    options
+        A list of additional [Bootstrap
+        options](https://getbootstrap.com/docs/5.3/components/tooltips/#options).
+    """
+
+    return RecallContextManager(
+        ui.tooltip,
+        kwargs=dict(
+            id=id,
+            placement=placement,
+            options=options,
+            **kwargs,
+        ),
+    )
+
+
+def popover(
+    *,
+    title: Optional[TagChild] = None,
+    id: Optional[str] = None,
+    placement: Literal["auto", "top", "right", "bottom", "left"] = "auto",
+    options: Optional[dict[str, object]] = None,
+    **kwargs: TagAttrValue,
+) -> RecallContextManager[Tag]:
+    """
+    Context manager for a popover
+
+    This function wraps :func:`~shiny.ui.popover`.
+
+    Display additional information when clicking on a UI element (typically a
+    button).
+
+    Parameters
+    ----------
+    title
+        A title to display in the popover. Can be a character string or UI elements
+        (i.e., tags).
+    id
+        A character string. Required to reactively respond to the visibility of the
+        popover (via the `input[id]` value) and/or update the visibility/contents of the
+        popover.
+    placement
+        The placement of the popover relative to its trigger.
+    options
+        A list of additional [Bootstrap
+        options](https://getbootstrap.com/docs/5.3/components/popovers/#options).
+    """
+
+    return RecallContextManager(
+        ui.popover,
+        kwargs=dict(
+            title=title,
+            id=id,
+            placement=placement,
+            options=options,
             **kwargs,
         ),
     )
