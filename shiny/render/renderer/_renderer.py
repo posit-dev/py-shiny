@@ -101,12 +101,18 @@ synchronous or asynchronous.
 ValueFn = Optional[ValueFnApp[Union[IT, None]]]
 
 
-class RendererBase(AutoRegisterMixin, ABC):
+class RendererBase(ABC):
     """
     Base class for all renderers.
 
     TODO-barret-docs
     """
+
+    # Q: Could we do this with typing without putting `P` in the Generic?
+    # A: No. Even if we had a `P` in the Generic, the calling decorator would not have access to it.
+    # Idea: Possibly use a chained method of `.ui_kwargs()`? https://github.com/posit-dev/py-shiny/issues/971
+    _default_ui_kwargs: dict[str, Any] = dict()
+    # _default_ui_args: tuple[Any, ...] = tuple()
 
     __name__: str
     """
@@ -152,13 +158,11 @@ class RendererBase(AutoRegisterMixin, ABC):
 
     def __init__(self) -> None:
         super().__init__()
+        self._auto_registered: bool = False
 
-    # Q: Could we do this with typing without putting `P` in the Generic?
-    # A: No. Even if we had a `P` in the Generic, the calling decorator would not have access to it.
-    # Idea: Possibly use a chained method of `.ui_kwargs()`? https://github.com/posit-dev/py-shiny/issues/971
-    _default_ui_kwargs: dict[str, Any] = dict()
-    # _default_ui_args: tuple[Any, ...] = tuple()
-
+    # ######
+    # Tagify-like methods
+    # ######
     def _repr_html_(self) -> str | None:
         rendered_ui = self._render_default_ui()
         if rendered_ui is None:
@@ -180,6 +184,42 @@ class RendererBase(AutoRegisterMixin, ABC):
             # Pass the `@ui_kwargs(foo="bar")` kwargs through to the default_ui function.
             **self._default_ui_kwargs,
         )
+
+    # ######
+    # Auto registering output
+    # ######
+    """
+    Auto registers the rendering method then the renderer is called.
+
+    When `@output` is called on the renderer, the renderer is automatically un-registered via `._on_register()`.
+    """
+
+    def _on_register(self) -> None:
+        if self._auto_registered:
+            # We're being explicitly registered now. Undo the auto-registration.
+            # (w/ module support)
+            from ...session import require_active_session
+
+            session = require_active_session(None)
+            ns_name = session.output._ns(self.__name__)
+            session.output.remove(ns_name)
+            self._auto_registered = False
+
+    def _auto_register(self) -> None:
+        # If in Express mode, register the output
+        if not self._auto_registered:
+            from ...session import get_current_session
+
+            s = get_current_session()
+            if s is not None:
+                from ._renderer import RendererBase
+
+                # Cast to avoid circular import as this mixin is ONLY used within RendererBase
+                renderer_self = cast(RendererBase, self)
+                s.output(renderer_self)
+                # We mark the fact that we're auto-registered so that, if an explicit
+                # registration now occurs, we can undo this auto-registration.
+                self._auto_registered = True
 
 
 # Not inheriting from `WrapAsync[[], IT]` as python 3.8 needs typing extensions that doesn't support `[]` for a ParamSpec definition. :-(
