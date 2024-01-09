@@ -239,7 +239,7 @@ class OutputRenderer(RendererBase, Generic[OT]):
         super().__init__()
 
         warn_deprecated(
-            "`shiny.render.transformer.output_transformer()` and `shiny.render.transformer.OutputRenderer()` output render function utiltities have been superceded by `shiny.render.renderer.Renderer` and will be removed in a near future release."
+            "`shiny.render.transformer.output_transformer()` and `shiny.render.transformer.OutputRenderer()` output render function utilities have been superseded by `shiny.render.renderer.Renderer` and will be removed in a near future release."
         )
 
         # Copy over function name as it is consistent with how Session and Output
@@ -248,10 +248,9 @@ class OutputRenderer(RendererBase, Generic[OT]):
 
         if not is_async_callable(transform_fn):
             raise TypeError(
-                """\
-                OutputRenderer requires an async tranformer function (`transform_fn`).
-                Please define your transform function as asynchronous. Ex `async def my_transformer(....`
-                """
+                "OutputRenderer requires an async tranformer function (`transform_fn`)."
+                " Please define your transform function as asynchronous."
+                " Ex `async def my_transformer(....`"
             )
 
         # Upgrade value function to be async;
