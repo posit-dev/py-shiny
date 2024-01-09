@@ -126,7 +126,7 @@ def _card_impl(
         wrapper = card_body
 
     attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
-    children = _wrap_children_in_card(*children, wrapper=wrapper)
+    children = _as_card_items(*children, wrapper=wrapper)
 
     tag = div(
         {
@@ -202,9 +202,9 @@ class WrapperCallable(Protocol):
 
 
 def _as_card_items(
-    *children: TagChild | CardItem | None,  # `TagAttrs` are not allowed here
+    *children: TagChild,  # `TagAttrs` are not allowed here
     wrapper: WrapperCallable | None,
-) -> list[CardItem]:
+) -> list[TagChild]:
     # We don't want `None`s creating empty card bodies
     children_vals = [child for child in children if child is not None]
 
@@ -213,9 +213,9 @@ def _as_card_items(
         raise ValueError("`TagAttrs` are not allowed in `_as_card_items(*children=)`.")
 
     if not callable(wrapper):
-        ret: list[CardItem] = []
+        ret: list[TagChild] = []
         for child in children_vals:
-            if isinstance(child, CardItem):
+            if is_card_item(child):
                 ret.append(child)
             else:
                 ret.append(CardItem(child))
@@ -225,7 +225,7 @@ def _as_card_items(
     # children that are not, should be wrapped in card_body(). Consecutive children
     # that are not card_item, should be wrapped in a single card_body().
     state = "asis"  # "wrap" | "asis"
-    new_children: list[CardItem] = []
+    new_children: list[TagChild] = []
     children_to_wrap: list[TagChild] = []
 
     def wrap_children():
@@ -235,7 +235,7 @@ def _as_card_items(
         children_to_wrap = []
 
     for child in children_vals:
-        if isinstance(child, CardItem):
+        if is_card_item(child):
             if state == "wrap":
                 wrap_children()
             state = "asis"
@@ -250,13 +250,18 @@ def _as_card_items(
     return new_children
 
 
-def _wrap_children_in_card(
-    *children: TagChild | CardItem | None,  # `TagAttrs` are not allowed here
-    wrapper: WrapperCallable | None,
-) -> list[TagChild]:
-    card_items = _as_card_items(*children, wrapper=wrapper)
-    tag_children = [card_item.resolve() for card_item in card_items]
-    return tag_children
+def is_card_item(x: object) -> bool:
+    if isinstance(x, CardItem):
+        return True
+
+    # This is for express' RecallContextManager[CardItem]
+    # which we want to treat like a CardItem.
+    fn = getattr(x, "fn", None)
+    if callable(fn):
+        ann = getattr(fn, "__annotations__", {})
+        return ann.get("return", None) == "CardItem"
+
+    return False
 
 
 # TODO-maindocs; @add_example()
@@ -394,17 +399,6 @@ class CardItem:
     ):
         self._item = item
 
-    def resolve(self) -> TagChild:
-        """
-        Resolves an object with the `CardItem` class by returning the `item` provided at initialization.
-
-        Returns
-        -------
-        :
-            The `item` provided at initialization.
-        """
-        return self._item
-
     def tagify(self) -> TagList:
         """
         Tagify the `item`
@@ -414,7 +408,7 @@ class CardItem:
         :
             A tagified :class:`~htmltools.TagList` object.
         """
-        return TagList(self.resolve()).tagify()
+        return TagList(self._item).tagify()
 
 
 @add_example()
