@@ -1,7 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { property } from "lit/decorators.js";
 
-import { makeOutputBinding } from "@posit-dev/shiny-bindings-core";
+import { makeOutputBindingWebComponent } from "@posit-dev/shiny-bindings-core";
 
 // What the server-side output binding will send to the client. It's important
 // to make sure this matches what the python code is sending.
@@ -41,4 +41,5 @@ export class CustomComponentEl extends LitElement {
 }
 
 // Setup output binding. This also registers the custom element.
-makeOutputBinding<Payload>("custom-component", CustomComponentEl);
+
+makeOutputBindingWebComponent<Payload>("custom-component", CustomComponentEl);

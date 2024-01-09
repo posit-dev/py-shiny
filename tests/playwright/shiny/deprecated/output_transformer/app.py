@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import warnings
 from typing import Literal, overload
 
 from shiny import App, Inputs, Outputs, Session, ui
+from shiny._deprecated import ShinyDeprecationWarning
 from shiny.render.transformer import (
     TransformerMetadata,
     ValueFn,
@@ -10,11 +12,9 @@ from shiny.render.transformer import (
     resolve_value_fn,
 )
 
+warnings.filterwarnings("ignore", category=ShinyDeprecationWarning)
+
 #######
-# DEPRECATED. Please see `shiny.render.renderer.Renderer` for the latest API.
-# This example is kept for backwards compatibility.
-#
-#
 # Package authors can create their own output transformer methods by leveraging
 # `output_transformer` decorator.
 #
@@ -23,7 +23,6 @@ from shiny.render.transformer import (
 #######
 
 
-# Create renderer components from the async handler function: `capitalize_components()`
 @output_transformer()
 async def CapitalizeTransformer(
     # Contains information about the render call: `name` and `session`
@@ -111,28 +110,38 @@ app_ui = ui.page_fluid(
     ui.h1("Capitalization renderer"),
     ui.input_text("caption", "Caption:", "Data summary"),
     "Renderer called with out parentheses:",
-    ui.output_text_verbatim("no_parens"),
+    ui.output_text_verbatim("no_output", placeholder=True),
+    ui.output_text_verbatim("no_parens", placeholder=True),
     "To upper:",
-    ui.output_text_verbatim("to_upper"),
+    ui.output_text_verbatim("to_upper", placeholder=True),
     "To lower:",
-    ui.output_text_verbatim("to_lower"),
+    ui.output_text_verbatim("to_lower", placeholder=True),
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
     # Without parentheses
     @render_capitalize
+    def no_output():
+        return input.caption()
+
+    @output
+    # Without parentheses
+    @render_capitalize
     def no_parens():
         return input.caption()
 
+    # @output # Do not include to make sure auto registration works
     # With parentheses. Equivalent to `@render_capitalize()`
     @render_capitalize(to="upper")
     def to_upper():
         return input.caption()
 
+    # provide a custom name to make sure the name can be overridden
+    @output(id="to_lower")
     @render_capitalize(to="lower")
     # Works with async output value functions
-    async def to_lower():
+    async def _():
         return input.caption()
 
 

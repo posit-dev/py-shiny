@@ -8,7 +8,6 @@ from shiny.render.transformer import (
     ValueFn,
     is_async_callable,
     output_transformer,
-    resolve_value_fn,
 )
 
 
@@ -19,7 +18,7 @@ async def TestTextTransformer(
     *,
     extra_txt: Optional[str] = None,
 ) -> str | None:
-    value = await resolve_value_fn(_fn)
+    value = await _fn()
     value = str(value)
     value += "; "
     value += "async" if is_async_callable(_fn) else "sync"
