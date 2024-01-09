@@ -514,7 +514,7 @@ After creating the application, you use `shiny run`:
     help="The GitHub URL of the template sub-directory. For example https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard",
 )
 @click.option(
-    "--directory",
+    "--dir",
     "-d",
     help="The destination directory, you will be prompted if this is not provided.",
 )
@@ -529,7 +529,7 @@ def create(
     template: Optional[str] = None,
     mode: Optional[str] = None,
     github: Optional[str] = None,
-    directory: Optional[str | Path] = None,
+    dir: Optional[str | Path] = None,
     package_name: Optional[str] = None,
 ) -> None:
     from ._template_utils import template_query, use_git_template
@@ -537,14 +537,14 @@ def create(
     if github is not None and template is not None:
         raise click.UsageError("You cannot provide both --github and --template")
 
-    if isinstance(directory, str):
-        directory = Path(directory)
+    if isinstance(dir, str):
+        dir = Path(dir)
 
     if github is not None:
-        use_git_template(github, mode, directory)
+        use_git_template(github, mode, dir)
         return
 
-    template_query(template, mode, directory, package_name)
+    template_query(template, mode, dir, package_name)
 
 
 @main.command(

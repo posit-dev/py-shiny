@@ -15,7 +15,7 @@ def subprocess_create(app_template: str, mode: str = "core", package_name: str =
         app_template,
         "--mode",
         mode,
-        "--directory",
+        "--dir",
         dest_dir,
         "--package-name",
         package_name,
@@ -36,7 +36,7 @@ def subprocess_create(app_template: str, mode: str = "core", package_name: str =
     shutil.rmtree(dest_dir)
 
 
-# TODO-karan; Integrate all tests below with _examples_ testing and check for JS errors / output errors. 
+# TODO-karan; Integrate all tests below with _examples_ testing and check for JS errors / output errors.
 @pytest.mark.parametrize("app_template", ["basic-app", "dashboard", "multi-page"])
 def test_create_core(app_template: str):
     subprocess_create(app_template)
