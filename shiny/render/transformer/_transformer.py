@@ -31,7 +31,7 @@ from typing import (
     overload,
 )
 
-from ..renderer import AsyncValueFn, JSONifiable, RendererBase
+from ..renderer import AsyncValueFn, Jsonifiable, RendererBase
 from ..renderer._renderer import DefaultUIFn, DefaultUIFnResultOrNone
 
 if TYPE_CHECKING:
@@ -333,12 +333,12 @@ class OutputRenderer(RendererBase, Generic[OT]):
 
         return self._default_ui(id, *self._default_ui_args, **kwargs)
 
-    async def render(self) -> JSONifiable:
+    async def render(self) -> Jsonifiable:
         ret = await self._run()
-        # Really, OT should be bound by JSONifiable.
-        # But we can't do that now as types like TypedDict break on JSONifiable
+        # Really, OT should be bound by Jsonifiable.
+        # But we can't do that now as types like TypedDict break on Jsonifiable
         # (We also don't really care as we're moving to `Renderer` class)
-        jsonifiable_ret = cast(JSONifiable, ret)
+        jsonifiable_ret = cast(Jsonifiable, ret)
         return jsonifiable_ret
 
 

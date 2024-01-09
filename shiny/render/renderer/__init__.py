@@ -2,7 +2,7 @@ from ._renderer import (  # noqa: F401
     RendererBase,
     Renderer,
     ValueFn,
-    JSONifiable,
+    Jsonifiable,
     RendererBaseT,  # pyright: ignore[reportUnusedImport]
     ValueFnApp,  # pyright: ignore[reportUnusedImport]
     ValueFnSync,  # pyright: ignore[reportUnusedImport]
@@ -16,6 +16,6 @@ __all__ = (
     "RendererBase",
     "Renderer",
     "ValueFn",
-    "JSONifiable",
+    "Jsonifiable",
     "AsyncValueFn",
 )

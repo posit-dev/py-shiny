@@ -177,7 +177,7 @@ quartodoc:
           contents:
             - render.renderer.Renderer
             - render.renderer.RendererBase
-            - render.renderer.JSONifiable
+            - render.renderer.Jsonifiable
             - render.renderer.ValueFn
             - render.renderer.AsyncValueFn
     - title: Reactive programming

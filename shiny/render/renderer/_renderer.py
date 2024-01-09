@@ -33,7 +33,7 @@ __all__ = (
     "Renderer",
     "RendererBase",
     "ValueFn",
-    "JSONifiable",
+    "Jsonifiable",
     "AsyncValueFn",
 )
 
@@ -66,15 +66,15 @@ IT = TypeVar("IT")
 # +-------------------+---------------+
 # | None              | null          |
 # +-------------------+---------------+
-JSONifiable = Union[
+Jsonifiable = Union[
     str,
     int,
     float,
     bool,
     None,
-    List["JSONifiable"],
-    Tuple["JSONifiable"],
-    Dict[str, "JSONifiable"],
+    List["Jsonifiable"],
+    Tuple["Jsonifiable"],
+    Dict[str, "Jsonifiable"],
 ]
 
 
@@ -152,7 +152,7 @@ class RendererBase(ABC):
         return None
 
     @abstractmethod
-    async def render(self) -> JSONifiable:
+    async def render(self) -> Jsonifiable:
         ...
 
     def __init__(self) -> None:
@@ -336,7 +336,7 @@ class Renderer(RendererBase, Generic[IT]):
             # Register the value function
             self(value_fn)
 
-    async def transform(self, value: IT) -> JSONifiable:
+    async def transform(self, value: IT) -> Jsonifiable:
         """
         Renderer - transform docs here
 
@@ -344,12 +344,12 @@ class Renderer(RendererBase, Generic[IT]):
         """
         raise NotImplementedError(
             "Please implement either the `transform(self, value: IT)` or `render(self)` method.\n"
-            "* `transform(self, value: IT)` should transform the `value` (of type `IT`) into JSONifiable object. Ex: `dict`, `None`, `str`. (standard)\n"
+            "* `transform(self, value: IT)` should transform the `value` (of type `IT`) into Jsonifiable object. Ex: `dict`, `None`, `str`. (standard)\n"
             "* `render(self)` method has full control of how an App author's value is retrieved (`self.value_fn()`) and utilized. (rare)\n"
             "By default, the `render` retrieves the value and then calls `transform` method on non-`None` values."
         )
 
-    async def render(self) -> JSONifiable:
+    async def render(self) -> Jsonifiable:
         """
         Renderer - render docs here
 

@@ -116,7 +116,7 @@ class render_upper(Renderer[str]):
         Returns
         -------
         str
-            The transformed value. (Must be a subset of `JSONifiable`.)
+            The transformed value. (Must be a subset of `Jsonifiable`.)
         """
 
         return str(value).upper()

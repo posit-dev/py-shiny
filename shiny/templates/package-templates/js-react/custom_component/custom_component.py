@@ -3,7 +3,7 @@ from pathlib import PurePath
 from htmltools import HTMLDependency, Tag
 
 from shiny.module import resolve_id
-from shiny.render.renderer import JSONifiable, Renderer
+from shiny.render.renderer import Jsonifiable, Renderer
 
 # This object is used to let Shiny know where the dependencies needed to run
 # our component all live. In this case, we're just using a single javascript
@@ -48,10 +48,10 @@ class render_custom_component(Renderer[str]):
     #     super().__init__(_value_fn)
     #     self.extra_arg: str = extra_arg
 
-    # Transforms non-`None` values into a JSONifiable object.
+    # Transforms non-`None` values into a `Jsonifiable` object.
     # If you'd like more control on when and how the value is resolved,
     # please use the `async def resolve(self)` method.
-    async def transform(self, value: str) -> JSONifiable:
+    async def transform(self, value: str) -> Jsonifiable:
         # Send the results to the client. Make sure that this is a serializable
         # object and matches what is expected in the javascript code.
         return {"value": str(value)}

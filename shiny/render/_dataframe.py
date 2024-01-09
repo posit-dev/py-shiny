@@ -9,7 +9,7 @@ from htmltools import Tag
 from .. import ui
 from .._docstring import add_example
 from ._dataframe_unsafe import serialize_numpy_dtypes
-from .renderer import JSONifiable, Renderer
+from .renderer import Jsonifiable, Renderer
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
-    def to_payload(self) -> JSONifiable:
+    def to_payload(self) -> Jsonifiable:
         ...
 
 
@@ -94,7 +94,7 @@ class DataGrid(AbstractTabularData):
         self.filters = filters
         self.row_selection_mode = row_selection_mode
 
-    def to_payload(self) -> JSONifiable:
+    def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
         res["options"] = dict(
             width=self.width,
@@ -182,7 +182,7 @@ class DataTable(AbstractTabularData):
         self.filters = filters
         self.row_selection_mode = row_selection_mode
 
-    def to_payload(self) -> JSONifiable:
+    def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
         res["options"] = dict(
             width=self.width,
@@ -259,7 +259,7 @@ class data_frame(Renderer[DataFrameResult]):
     def default_ui(self, id: str) -> Tag:
         return ui.output_data_frame(id=id)
 
-    async def transform(self, value: DataFrameResult) -> JSONifiable:
+    async def transform(self, value: DataFrameResult) -> Jsonifiable:
         if not isinstance(value, AbstractTabularData):
             value = DataGrid(
                 cast_to_pandas(

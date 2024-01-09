@@ -48,7 +48,7 @@ from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
-from ..render.renderer import JSONifiable, RendererBase, RendererBaseT
+from ..render.renderer import Jsonifiable, RendererBase, RendererBaseT
 from ..types import SafeException, SilentCancelOutputException, SilentException
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
@@ -1017,7 +1017,7 @@ class Outputs:
                     {"recalculating": {"name": output_name, "status": "recalculating"}}
                 )
 
-                message: dict[str, JSONifiable] = {}
+                message: dict[str, Jsonifiable] = {}
                 try:
                     message[output_name] = await renderer.render()
                 except SilentCancelOutputException:

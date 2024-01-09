@@ -34,7 +34,7 @@ from ._try_render_plot import (
     try_render_pil,
     try_render_plotnine,
 )
-from .renderer import JSONifiable, Renderer, ValueFn
+from .renderer import Jsonifiable, Renderer, ValueFn
 from .renderer._utils import (
     imgdata_to_jsonifiable,
     rendered_deps_to_jsonifiable,
@@ -78,7 +78,7 @@ class text(Renderer[str]):
         set_kwargs_value(kwargs, "placeholder", placeholder, None)
         return _ui.output_text_verbatim(id, **kwargs)
 
-    async def transform(self, value: str) -> JSONifiable:
+    async def transform(self, value: str) -> Jsonifiable:
         return str(value)
 
 
@@ -178,7 +178,7 @@ class plot(Renderer[object]):
         self.height = height
         self.kwargs = kwargs
 
-    async def render(self) -> dict[str, JSONifiable] | JSONifiable | None:
+    async def render(self) -> dict[str, Jsonifiable] | Jsonifiable | None:
         is_userfn_async = self.value_fn.is_async()
         name = self.output_id
         session = require_active_session(None)
@@ -239,7 +239,7 @@ class plot(Renderer[object]):
         ok: bool
         result: ImgData | None
 
-        def cast_result(result: ImgData | None) -> dict[str, JSONifiable] | None:
+        def cast_result(result: ImgData | None) -> dict[str, Jsonifiable] | None:
             if result is None:
                 return None
             return imgdata_to_jsonifiable(result)
@@ -332,7 +332,7 @@ class image(Renderer[ImgData]):
         super().__init__(fn)
         self.delete_file: bool = delete_file
 
-    async def transform(self, value: ImgData) -> dict[str, JSONifiable] | None:
+    async def transform(self, value: ImgData) -> dict[str, Jsonifiable] | None:
         src: str = value.get("src")
         try:
             with open(src, "rb") as f:
@@ -426,7 +426,7 @@ class table(Renderer[TableResult]):
         self.border: int = border
         self.kwargs: dict[str, object] = kwargs
 
-    async def transform(self, value: TableResult) -> dict[str, JSONifiable]:
+    async def transform(self, value: TableResult) -> dict[str, Jsonifiable]:
         import pandas
         import pandas.io.formats.style
 
@@ -487,7 +487,7 @@ class ui(Renderer[TagChild]):
     def default_ui(self, id: str) -> Tag:
         return _ui.output_ui(id)
 
-    async def transform(self, value: TagChild) -> JSONifiable:
+    async def transform(self, value: TagChild) -> Jsonifiable:
         session = require_active_session(None)
         return rendered_deps_to_jsonifiable(
             session._process_ui(value),

@@ -6,17 +6,17 @@ from htmltools import TagFunction
 
 from ...session._utils import RenderedDeps
 from ...types import MISSING_TYPE, ImgData
-from ._renderer import JSONifiable
+from ._renderer import Jsonifiable
 
-JSONifiable_dict = Dict[str, JSONifiable]
-
-
-def rendered_deps_to_jsonifiable(rendered_deps: RenderedDeps) -> JSONifiable_dict:
-    return cast(JSONifiable_dict, dict(rendered_deps))
+JsonifiableDict = Dict[str, Jsonifiable]
 
 
-def imgdata_to_jsonifiable(imgdata: ImgData) -> JSONifiable_dict:
-    return cast(JSONifiable_dict, dict(imgdata))
+def rendered_deps_to_jsonifiable(rendered_deps: RenderedDeps) -> JsonifiableDict:
+    return cast(JsonifiableDict, dict(rendered_deps))
+
+
+def imgdata_to_jsonifiable(imgdata: ImgData) -> JsonifiableDict:
+    return cast(JsonifiableDict, dict(imgdata))
 
 
 def set_kwargs_value(

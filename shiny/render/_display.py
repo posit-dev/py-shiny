@@ -11,7 +11,7 @@ from ..session._utils import require_active_session
 from ..types import MISSING, MISSING_TYPE
 from .renderer import AsyncValueFn, Renderer, ValueFn
 from .renderer._utils import (
-    JSONifiable_dict,
+    JsonifiableDict,
     rendered_deps_to_jsonifiable,
     set_kwargs_value,
 )
@@ -78,7 +78,7 @@ class display(Renderer[None]):
         self.fillable: bool = fillable
         self.kwargs: dict[str, TagAttrValue] = kwargs
 
-    async def render(self) -> JSONifiable_dict | None:
+    async def render(self) -> JsonifiableDict | None:
         results: list[object] = []
         orig_displayhook = sys.displayhook
         sys.displayhook = wrap_displayhook_handler(results.append)
