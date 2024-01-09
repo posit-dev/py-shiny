@@ -10,6 +10,7 @@ import {
 // into the root of the webcomponent.
 makeReactInput({
   name: "custom-component-input",
+  selector: "custom-component-input",
   initialValue: "#fff",
   renderComp: ({ initialValue, updateValue }) => (
     <ColorPickerReact
@@ -42,6 +43,7 @@ function ColorPickerReact({
 
 makeReactOutput<{ value: string }>({
   name: "custom-component-output",
+  selector: "custom-component-output",
   renderComp: ({ value }) => (
     <div
       style={{
