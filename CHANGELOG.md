@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Bug fixes
+
+* CLI command `shiny create`... (#965)
+  * has added a `-d`/`--dir` flag for saving to a specific output directory
+  * will raise an error if if will overwrite existing files
+  * prompt users to install `requirements.txt`
+* Fixed `js-react` template build error. (#965)
+
 ### Developer features
 
 * Output renderers should now be created with the `shiny.render.renderer.Renderer` class. This class should contain either a `.transform(self, value)` method (common) or a `.render(self)` (rare). These two methods should return something can be converted to JSON. In addition, `.default_ui(self, id)` should be implemented by returning `htmltools.Tag`-like content for use within Shiny Express. To make your own output renderer, please inherit from the `Renderer[IT]` class where `IT` is the type (excluding `None`) you expect to be returned from the App author. (#964)
@@ -17,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * When transforming values within `shiny.render.transformer.output_transformer` transform function,  `shiny.render.transformer.resolve_value_fn` is no longer needed as the value function given to the output transformer is now **always** an asynchronous function. `resolve_value_fn(fn)` method has been deprecated. Please change your code from `value = await resolve_value_fn(_fn)` to `value = await _fn()`. (#964)
 
 * `shiny.render.OutputRendererSync` and `shiny.render.OutputRendererAsync` helper classes have been removed in favor of an updated `shiny.render.OutputRenderer` class. Now, the app's output value function will be transformed into an asynchronous function for simplified, consistent execution behavior. (#964)
+
+
 
 
 ## [0.6.1.1] - 2023-12-22

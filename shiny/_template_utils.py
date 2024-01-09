@@ -40,7 +40,12 @@ def choice_from_dict(choice_dict: dict[str, str]) -> list[Choice]:
     return [Choice(title=key, value=value) for key, value in choice_dict.items()]
 
 
-def template_query(question_state: Optional[str] = None, mode: Optional[str] = None):
+def template_query(
+    question_state: Optional[str] = None,
+    mode: Optional[str] = None,
+    dest_dir: Optional[Path] = None,
+    package_name: Optional[str] = None,
+):
     """
     This will initiate a CLI query which will ask the user which template they would like.
     If called without arguments this function will start from the top level and ask which
@@ -69,12 +74,12 @@ def template_query(question_state: Optional[str] = None, mode: Optional[str] = N
     if template is None or template == "cancel":
         sys.exit(1)
     elif template == "js-component":
-        js_component_questions()
+        js_component_questions(dest_dir=dest_dir, package_name=package_name)
         return
     elif template in package_template_choices.values():
-        js_component_questions(template)
+        js_component_questions(template, dest_dir=dest_dir, package_name=package_name)
     else:
-        app_template_questions(template, mode)
+        app_template_questions(template, mode, dest_dir=dest_dir)
 
 
 def download_and_extract_zip(url: str, temp_dir: Path):
@@ -92,7 +97,9 @@ def download_and_extract_zip(url: str, temp_dir: Path):
         zip_file.extractall(temp_dir)
 
 
-def use_git_template(url: str, mode: Optional[str] = None):
+def use_git_template(
+    url: str, mode: Optional[str] = None, dest_dir: Optional[Path] = None
+):
     # Github requires that we download the whole repository, so we need to
     # download and unzip the repo, then navigate to the subdirectory.
 
@@ -116,13 +123,14 @@ def use_git_template(url: str, mode: Optional[str] = None):
 
         directory = repo_name + "-" + branch_name
         path = temp_dir / directory / subdirectory
-        return app_template_questions(mode=mode, template_dir=path)
+        return app_template_questions(mode=mode, template_dir=path, dest_dir=dest_dir)
 
 
 def app_template_questions(
     template: Optional[str] = None,
     mode: Optional[str] = None,
     template_dir: Optional[Path] = None,
+    dest_dir: Optional[Path] = None,
 ):
     if template_dir is None:
         if template is None:
@@ -154,20 +162,10 @@ def app_template_questions(
             template_query()
             return
 
-    appdir = questionary.path(
-        "Enter destination directory:",
-        default=build_path_string(""),
-        only_directories=True,
-    ).ask()
-
-    if appdir is None:
-        sys.exit(1)
-
-    if appdir == ".":
-        appdir = build_path_string(template_dir.name)
+    dest_dir = directory_prompt(template_dir, dest_dir)
 
     app_dir = copy_template_files(
-        Path(appdir),
+        dest_dir,
         template_dir=template_dir,
         express_available=express_available,
         mode=mode,
@@ -175,9 +173,14 @@ def app_template_questions(
 
     print(f"Created Shiny app at {app_dir}")
     print(f"Next steps open and edit the app file: {app_dir}/app.py")
+    print("You may need to install packages with: `pip install -r requirements.txt`")
 
 
-def js_component_questions(component_type: Optional[str] = None):
+def js_component_questions(
+    component_type: Optional[str] = None,
+    dest_dir: Optional[Path] = None,
+    package_name: Optional[str] = None,
+):
     """
     Hand question branch for the custom js templates. This should handle the entire rest
     of the question flow and is responsible for placing files etc. Currently it repeats
@@ -202,40 +205,33 @@ def js_component_questions(component_type: Optional[str] = None):
     if component_type is None or component_type == "cancel":
         sys.exit(1)
 
-    # As what the user wants the name of their component to be
-    component_name = questionary.text(
-        "What do you want to name your component?",
-        instruction="Name must be dash-delimited and all lowercase. E.g. 'my-component-name'",
-        validate=ComponentNameValidator,
-    ).ask()
+    # Ask what the user wants the name of their component to be
+    if package_name is None:
+        package_name = questionary.text(
+            "What do you want to name your component?",
+            instruction="Name must be dash-delimited and all lowercase. E.g. 'my-component-name'",
+            validate=ComponentNameValidator,
+        ).ask()
 
-    if component_name is None:
-        sys.exit(1)
+        if package_name is None:
+            sys.exit(1)
 
-    appdir = questionary.path(
-        "Enter destination directory:",
-        default=build_path_string(component_name),
-        only_directories=True,
-    ).ask()
+    template_dir = (
+        Path(__file__).parent / "templates/package-templates" / component_type
+    )
 
-    if appdir is None:
-        sys.exit(1)
-
-    if appdir == ".":
-        appdir = build_path_string(component_type)
+    dest_dir = directory_prompt(template_dir, dest_dir)
 
     app_dir = copy_template_files(
-        Path(appdir),
-        template_dir=Path(__file__).parent
-        / "templates/package-templates"
-        / component_type,
+        dest_dir,
+        template_dir=template_dir,
         express_available=False,
         mode=None,
     )
 
     # Print messsage saying we're building the component
-    print(f"Setting up {component_name} component package...")
-    update_component_name_in_template(app_dir, component_name)
+    print(f"Setting up {package_name} component package...")
+    update_component_name_in_template(app_dir, package_name)
 
     print("\nNext steps:")
     print(f"- Run `cd {app_dir}` to change into the new directory")
@@ -243,6 +239,27 @@ def js_component_questions(component_type: Optional[str] = None):
     print("- Run `npm run build` to build the component")
     print("- Install package locally with `pip install -e .`")
     print("- Open and run the example app in the `example-app` directory")
+
+
+def directory_prompt(
+    template_dir: Path, dest_dir: Optional[Path | str | None] = None
+) -> Path:
+    if dest_dir is not None:
+        return Path(dest_dir)
+
+    app_dir = questionary.path(
+        "Enter destination directory:",
+        default=build_path_string(""),
+        only_directories=True,
+    ).ask()
+
+    if app_dir is None:
+        sys.exit(1)
+
+    if app_dir == ".":
+        app_dir = build_path_string(template_dir.name)
+
+    return Path(app_dir)
 
 
 def build_path_string(*path: str):
@@ -258,9 +275,14 @@ def copy_template_files(
     express_available: bool,
     mode: Optional[str] = None,
 ):
-    duplicate_files = [
-        file.name for file in template_dir.iterdir() if (app_dir / file.name).exists()
-    ]
+    files_to_check = [file.name for file in template_dir.iterdir()]
+
+    if "__pycache__" in files_to_check:
+        files_to_check.remove("__pycache__")
+
+    files_to_check.append("app.py")
+
+    duplicate_files = [file for file in files_to_check if (app_dir / file).exists()]
 
     if any(duplicate_files):
         err_files = ", ".join(['"' + file + '"' for file in duplicate_files])
@@ -276,7 +298,8 @@ def copy_template_files(
         if item.is_file():
             shutil.copy(item, app_dir / item.name)
         else:
-            shutil.copytree(item, app_dir / item.name)
+            if item.name != "__pycache__":
+                shutil.copytree(item, app_dir / item.name)
 
     def rename_unlink(file_to_rename: str, file_to_delete: str, dir: Path = app_dir):
         (dir / file_to_rename).rename(dir / "app.py")
