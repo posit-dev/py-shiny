@@ -21,7 +21,7 @@ from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
 from ._auto_register import AutoRegisterMixin
 
-# TODO-barret; POST-merge; shinywidgets should not call `resolve_value_fn`
+# TODO-barret; POST-merge; Update shinywidgets
 
 
 # TODO-future: docs; missing first paragraph from some classes: Example: TransformerMetadata.
@@ -105,7 +105,7 @@ class RendererBase(AutoRegisterMixin, ABC):
     """
     Base class for all renderers.
 
-    TODO-barret - docs
+    TODO-barret-docs
     """
 
     __name__: str
@@ -262,7 +262,7 @@ class Renderer(RendererBase, Generic[IT]):
     """
     Renderer cls docs here
 
-    TODO-barret - docs
+    TODO-barret-docs
     """
 
     value_fn: AsyncValueFn[IT | None]
@@ -276,7 +276,7 @@ class Renderer(RendererBase, Generic[IT]):
         """
         Renderer __call__ docs here; Sets app's value function
 
-        TODO-barret - docs
+        TODO-barret-docs
         """
 
         if not callable(value_fn):
@@ -312,20 +312,20 @@ class Renderer(RendererBase, Generic[IT]):
         """
         Renderer - transform docs here
 
-        TODO-barret - docs
+        TODO-barret-docs
         """
         raise NotImplementedError(
             "Please implement either the `transform(self, value: IT)` or `render(self)` method.\n"
             "* `transform(self, value: IT)` should transform the `value` (of type `IT`) into JSONifiable object. Ex: `dict`, `None`, `str`. (standard)\n"
-            "* `render(self)` method has full control of how a value is retrieved and utilized. For full control, use this method. (rare)"
-            "\n By default, the `render` retrieves the value and then calls `transform` method on non-`None` values."
+            "* `render(self)` method has full control of how an App author's value is retrieved (`self.value_fn()`) and utilized. (rare)\n"
+            "By default, the `render` retrieves the value and then calls `transform` method on non-`None` values."
         )
 
     async def render(self) -> JSONifiable:
         """
         Renderer - render docs here
 
-        TODO-barret - docs
+        TODO-barret-docs
         """
         value = await self.value_fn()
         if value is None:

@@ -21,7 +21,7 @@ R = TypeVar("R")
 CallableT = TypeVar("CallableT", bound=Callable[..., object])
 
 
-# TODO-barret; quartodoc entry?
+# TODO-barret-future; quartodoc entry?
 def ui_kwargs(
     **kwargs: object,
 ) -> Callable[[RendererBaseT], RendererBaseT]:

@@ -11,6 +11,10 @@ from shiny.render.transformer import (
 )
 
 #######
+# DEPRECATED. Please see `shiny.render.renderer.Renderer` for the latest API.
+# This example is kept for backwards compatibility.
+#
+#
 # Package authors can create their own output transformer methods by leveraging
 # `output_transformer` decorator.
 #
