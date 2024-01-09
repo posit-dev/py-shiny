@@ -260,7 +260,7 @@ class OutputRenderer(RendererBase, Generic[OT]):
         # -> It is faster to always call an async function than to always check if it is async
         # Always being async simplifies the execution
         self._value_fn = AsyncValueFn(value_fn)
-        self._value_fn_is_async = self._value_fn.is_async  # legacy key
+        self._value_fn_is_async = self._value_fn.is_async()  # legacy key
         self.__name__ = value_fn.__name__
 
         self._transformer = transform_fn

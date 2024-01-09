@@ -19,7 +19,6 @@ from htmltools import MetadataNode, Tag, TagList
 
 from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
-from ._auto_register import AutoRegisterMixin
 
 # TODO-barret; POST-merge; Update shinywidgets
 
@@ -246,7 +245,6 @@ class AsyncValueFn(Generic[IT]):
         """
         return await self._fn()
 
-    @property
     def is_async(self) -> bool:
         """
         Was the original function asynchronous?
@@ -258,8 +256,7 @@ class AsyncValueFn(Generic[IT]):
         """
         return self._is_async
 
-    @property
-    def async_fn(self) -> Callable[[], Awaitable[IT]]:
+    def get_async_fn(self) -> Callable[[], Awaitable[IT]]:
         """
         Return the async value function.
 
@@ -270,8 +267,7 @@ class AsyncValueFn(Generic[IT]):
         """
         return self._fn
 
-    @property
-    def sync_fn(self) -> Callable[[], IT]:
+    def get_sync_fn(self) -> Callable[[], IT]:
         """
         Retrieve the original, synchronous value function function.
 
