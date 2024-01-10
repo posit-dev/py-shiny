@@ -258,8 +258,8 @@ class OutputRenderer(RendererBase, Generic[OT]):
         # Checking if a function is async has a 180+ns overhead (barret's machine)
         # -> It is faster to always call an async function than to always check if it is async
         # Always being async simplifies the execution
-        self._value_fn = AsyncValueFn(value_fn)
-        self._value_fn_is_async = self._value_fn.is_async()  # legacy key
+        self._fn = AsyncValueFn(value_fn)
+        self._value_fn_is_async = self._fn.is_async()  # legacy key
         self.__name__ = value_fn.__name__
 
         self._transformer = transform_fn
@@ -304,7 +304,7 @@ class OutputRenderer(RendererBase, Generic[OT]):
             # TransformerMetadata
             self._meta(),
             # Callable[[], Awaitable[IT]]
-            self._value_fn,
+            self._fn,
             # P
             *self._params.args,
             **self._params.kwargs,

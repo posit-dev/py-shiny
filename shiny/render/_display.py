@@ -83,14 +83,14 @@ class display(Renderer[None]):
         orig_displayhook = sys.displayhook
         sys.displayhook = wrap_displayhook_handler(results.append)
 
-        if self.value_fn.is_async():
+        if self.fn.is_async():
             raise TypeError(
                 "@render.display does not support async functions. Use @render.ui instead."
             )
 
         try:
             # Run synchronously
-            sync_value_fn = self.value_fn.get_sync_fn()
+            sync_value_fn = self.fn.get_sync_fn()
             ret = sync_value_fn()
             if ret is not None:
                 raise RuntimeError(

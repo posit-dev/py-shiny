@@ -293,29 +293,29 @@ class Renderer(RendererBase, Generic[IT]):
     TODO-barret-docs
     """
 
-    value_fn: AsyncValueFn[IT | None]
+    fn: AsyncValueFn[IT | None]
     """
     App-supplied output value function which returns type `IT`. This function is always
     asyncronous as the original app-supplied function possibly wrapped to execute
     asynchonously.
     """
 
-    def __call__(self, value_fn: ValueFnApp[IT | None]) -> Self:
+    def __call__(self, _fn: ValueFnApp[IT | None]) -> Self:
         """
         Renderer __call__ docs here; Sets app's value function
 
         TODO-barret-docs
         """
 
-        if not callable(value_fn):
+        if not callable(_fn):
             raise TypeError("Value function must be callable")
 
         # Copy over function name as it is consistent with how Session and Output
         # retrieve function names
-        self.__name__: str = value_fn.__name__
+        self.__name__: str = _fn.__name__
 
         # Set value function with extra meta information
-        self.value_fn: AsyncValueFn[IT | None] = AsyncValueFn(value_fn)
+        self.fn: AsyncValueFn[IT | None] = AsyncValueFn(_fn)
 
         # Allow for App authors to not require `@output`
         self._auto_register()
@@ -324,7 +324,7 @@ class Renderer(RendererBase, Generic[IT]):
 
     def __init__(
         self,
-        value_fn: ValueFn[IT | None] = None,
+        _fn: ValueFn[IT | None] = None,
     ):
         # Do not display docs here. If docs are present, it could highjack the docs of
         # the subclass's `__init__` method.
@@ -332,9 +332,9 @@ class Renderer(RendererBase, Generic[IT]):
         # Renderer - init docs here
         # """
         super().__init__()
-        if callable(value_fn):
+        if callable(_fn):
             # Register the value function
-            self(value_fn)
+            self(_fn)
 
     async def transform(self, value: IT) -> Jsonifiable:
         """
@@ -345,7 +345,7 @@ class Renderer(RendererBase, Generic[IT]):
         raise NotImplementedError(
             "Please implement either the `transform(self, value: IT)` or `render(self)` method.\n"
             "* `transform(self, value: IT)` should transform the `value` (of type `IT`) into Jsonifiable object. Ex: `dict`, `None`, `str`. (standard)\n"
-            "* `render(self)` method has full control of how an App author's value is retrieved (`self.value_fn()`) and utilized. (rare)\n"
+            "* `render(self)` method has full control of how an App author's value is retrieved (`self._fn()`) and utilized. (rare)\n"
             "By default, the `render` retrieves the value and then calls `transform` method on non-`None` values."
         )
 
@@ -355,7 +355,7 @@ class Renderer(RendererBase, Generic[IT]):
 
         TODO-barret-docs
         """
-        value = await self.value_fn()
+        value = await self.fn()
         if value is None:
             return None
 

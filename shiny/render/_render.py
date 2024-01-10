@@ -165,21 +165,21 @@ class plot(Renderer[object]):
 
     def __init__(
         self,
-        fn: Optional[ValueFn[object]] = None,
+        _fn: Optional[ValueFn[object]] = None,
         *,
         alt: Optional[str] = None,
         width: float | None | MISSING_TYPE = MISSING,
         height: float | None | MISSING_TYPE = MISSING,
         **kwargs: object,
     ) -> None:
-        super().__init__(fn)
+        super().__init__(_fn)
         self.alt = alt
         self.width = width
         self.height = height
         self.kwargs = kwargs
 
     async def render(self) -> dict[str, Jsonifiable] | Jsonifiable | None:
-        is_userfn_async = self.value_fn.is_async()
+        is_userfn_async = self.fn.is_async()
         name = self.output_id
         session = require_active_session(None)
         width = self.width
@@ -220,7 +220,7 @@ class plot(Renderer[object]):
         )
 
         # Call the user function to get the plot object.
-        x = await self.value_fn()
+        x = await self.fn()
 
         # Note that x might be None; it could be a matplotlib.pyplot
 
@@ -325,11 +325,11 @@ class image(Renderer[ImgData]):
 
     def __init__(
         self,
-        fn: Optional[ValueFn[ImgData]] = None,
+        _fn: Optional[ValueFn[ImgData]] = None,
         *,
         delete_file: bool = False,
     ) -> None:
-        super().__init__(fn)
+        super().__init__(_fn)
         self.delete_file: bool = delete_file
 
     async def transform(self, value: ImgData) -> dict[str, Jsonifiable] | None:
@@ -413,14 +413,14 @@ class table(Renderer[TableResult]):
 
     def __init__(
         self,
-        fn: Optional[ValueFn[TableResult]] = None,
+        _fn: Optional[ValueFn[TableResult]] = None,
         *,
         index: bool = False,
         classes: str = "table shiny-table w-auto",
         border: int = 0,
         **kwargs: object,
     ) -> None:
-        super().__init__(fn)
+        super().__init__(_fn)
         self.index: bool = index
         self.classes: str = classes
         self.border: int = border

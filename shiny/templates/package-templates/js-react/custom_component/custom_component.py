@@ -44,8 +44,8 @@ class render_custom_component(Renderer[str]):
 
     # # There are no parameters being supplied to the `output_custom_component` rendering function.
     # # Therefore, we can omit the `__init__()` method.
-    # def __init__(self, _value_fn: ValueFn[int] = None, *, extra_arg: str = "bar"):
-    #     super().__init__(_value_fn)
+    # def __init__(self, _fn: ValueFn[int] = None, *, extra_arg: str = "bar"):
+    #     super().__init__(_fn)
     #     self.extra_arg: str = extra_arg
 
     # Transforms non-`None` values into a `Jsonifiable` object.
