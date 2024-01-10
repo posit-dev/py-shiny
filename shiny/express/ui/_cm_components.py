@@ -1217,7 +1217,6 @@ def panel_well(**kwargs: TagAttrValue) -> RecallContextManager[Tag]:
 
 
 def panel_conditional(
-    *,
     condition: str,
     **kwargs: TagAttrValue,
 ) -> RecallContextManager[Tag]:
@@ -1255,10 +1254,8 @@ def panel_conditional(
     """
     return RecallContextManager(
         ui.panel_conditional,
-        kwargs=dict(
-            condition=condition,
-            **kwargs,
-        ),
+        args=(condition,),
+        kwargs=dict(**kwargs),
     )
 
 

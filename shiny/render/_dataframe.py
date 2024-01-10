@@ -2,26 +2,14 @@ from __future__ import annotations
 
 import abc
 import json
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-    Protocol,
-    Union,
-    cast,
-    overload,
-    runtime_checkable,
-)
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, cast, runtime_checkable
+
+from htmltools import Tag
 
 from .. import ui
 from .._docstring import add_example
 from ._dataframe_unsafe import serialize_numpy_dtypes
-from .transformer import (
-    TransformerMetadata,
-    ValueFn,
-    output_transformer,
-    resolve_value_fn,
-)
+from .renderer import Jsonifiable, Renderer
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -29,7 +17,7 @@ if TYPE_CHECKING:
 
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
-    def to_payload(self) -> object:
+    def to_payload(self) -> Jsonifiable:
         ...
 
 
@@ -106,7 +94,7 @@ class DataGrid(AbstractTabularData):
         self.filters = filters
         self.row_selection_mode = row_selection_mode
 
-    def to_payload(self) -> object:
+    def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
         res["options"] = dict(
             width=self.width,
@@ -194,7 +182,7 @@ class DataTable(AbstractTabularData):
         self.filters = filters
         self.row_selection_mode = row_selection_mode
 
-    def to_payload(self) -> object:
+    def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
         res["options"] = dict(
             width=self.width,
@@ -225,44 +213,12 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
 DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
 
-@output_transformer(default_ui=ui.output_data_frame)
-async def DataFrameTransformer(
-    _meta: TransformerMetadata,
-    _fn: ValueFn[DataFrameResult | None],
-) -> object | None:
-    x = await resolve_value_fn(_fn)
-    if x is None:
-        return None
-
-    if not isinstance(x, AbstractTabularData):
-        x = DataGrid(
-            cast_to_pandas(
-                x, "@render.data_frame doesn't know how to render objects of type"
-            )
-        )
-    return x.to_payload()
-
-
-@overload
-def data_frame() -> DataFrameTransformer.OutputRendererDecorator:
-    ...
-
-
-@overload
-def data_frame(
-    _fn: DataFrameTransformer.ValueFn,
-) -> DataFrameTransformer.OutputRenderer:
-    ...
-
-
 @add_example()
-def data_frame(
-    _fn: DataFrameTransformer.ValueFn | None = None,
-) -> DataFrameTransformer.OutputRenderer | DataFrameTransformer.OutputRendererDecorator:
+class data_frame(Renderer[DataFrameResult]):
     """
-    Reactively render a pandas `DataFrame` object (or similar) as an interactive table or
-    grid. Features fast virtualized scrolling, sorting, filtering, and row selection
-    (single or multiple).
+    Decorator for a function that returns a pandas `DataFrame` object (or similar) to
+    render as an interactive table or grid. Features fast virtualized scrolling, sorting,
+    filtering, and row selection (single or multiple).
 
     Returns
     -------
@@ -299,7 +255,19 @@ def data_frame(
     * :class:`~shiny.render.DataGrid` and :class:`~shiny.render.DataTable` are the
       objects you can return from the rendering function to specify options.
     """
-    return DataFrameTransformer(_fn)
+
+    def default_ui(self, id: str) -> Tag:
+        return ui.output_data_frame(id=id)
+
+    async def transform(self, value: DataFrameResult) -> Jsonifiable:
+        if not isinstance(value, AbstractTabularData):
+            value = DataGrid(
+                cast_to_pandas(
+                    value,
+                    "@render.data_frame doesn't know how to render objects of type",
+                )
+            )
+        return value.to_payload()
 
 
 @runtime_checkable

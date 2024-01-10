@@ -39,6 +39,23 @@ app_hard_wait: typing.Dict[str, int] = {
     "brownian": 250,
     "ui-func": 250,
 }
+# Remove after shinywidgets accepts `Renderer()` PR
+output_transformer_errors = [
+    "ShinyDeprecationWarning: `shiny.render.transformer.output_transformer()`",
+    "  return OutputRenderer",
+    "ShinyDeprecationWarning: `resolve_value_fn()`",
+    "ShinyDeprecationWarning:",
+    "`resolve_value_fn()`",
+    "value = await resolve_value_fn(_fn)",
+    # brownian example app
+    "shiny.render.transformer.output_transformer()",
+]
+express_warnings = ["Detected Shiny Express app. "]
+session_warnings = [
+    # shinywidgets.register_widget() uses `session` when registering widget
+    "ShinyDeprecationWarning: `session=` is deprecated",
+    "session_type_warning()",  # continutation of line above
+]
 app_allow_shiny_errors: typing.Dict[
     str, typing.Union[Literal[True], typing.List[str]]
 ] = {
@@ -50,16 +67,13 @@ app_allow_shiny_errors: typing.Dict[
         "RuntimeWarning: divide by zero encountered",
         "UserWarning: This figure includes Axes that are not compatible with tight_layout",
     ],
-    "airmass": [
-        # shinywidgets.register_widget() uses `session` when registering widget
-        "ShinyDeprecationWarning: `session=` is deprecated",
-        "session_type_warning()",  # continutation of line above
-    ],
-    "brownian": [
-        # shinywidgets.register_widget() uses `session` when registering widget
-        "ShinyDeprecationWarning: `session=` is deprecated",
-        "session_type_warning()",  # continutation of line above
-    ],
+    "airmass": [*output_transformer_errors, *session_warnings],
+    "brownian": [*output_transformer_errors, *session_warnings],
+    "multi-page": [*output_transformer_errors],
+    "model-score": [*output_transformer_errors],
+    "data_frame": [*output_transformer_errors],
+    "output_transformer": [*output_transformer_errors],
+    "render_display": [*express_warnings],
 }
 app_allow_external_errors: typing.List[str] = [
     # if shiny express app detected
@@ -188,7 +202,9 @@ def test_examples(page: Page, ex_app_path: str) -> None:
             app_allowable_errors = []
 
         # If all errors are not allowed, check for unexpected errors
-        if isinstance(app_allowable_errors, list):
+        if app_allowable_errors is not True:
+            if isinstance(app_allowable_errors, str):
+                app_allowable_errors = [app_allowable_errors]
             app_allowable_errors = (
                 # Remove ^INFO lines
                 ["INFO:"]
@@ -202,9 +218,13 @@ def test_examples(page: Page, ex_app_path: str) -> None:
             error_lines = [
                 line
                 for line in error_lines
-                if not any([error_txt in line for error_txt in app_allowable_errors])
+                if len(line.strip()) > 0
+                and not any([error_txt in line for error_txt in app_allowable_errors])
             ]
             if len(error_lines) > 0:
+                print("\napp_allowable_errors :")
+                print("\n".join(app_allowable_errors))
+                print("\nError lines remaining:")
                 print("\n".join(error_lines))
             assert len(error_lines) == 0
 

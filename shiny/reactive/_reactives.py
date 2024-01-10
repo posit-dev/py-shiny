@@ -811,9 +811,9 @@ def event(
 
         # This is here instead of at the top of the .py file in order to avoid a
         # circular dependency.
-        from ..render.transformer import OutputRenderer
+        from ..render.renderer import RendererBase
 
-        if isinstance(user_fn, OutputRenderer):
+        if isinstance(user_fn, RendererBase):
             # At some point in the future, we may allow this condition, if we find an
             # use case. For now we'll disallow it, for simplicity.
             raise TypeError(

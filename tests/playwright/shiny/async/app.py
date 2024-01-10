@@ -2,8 +2,7 @@ import asyncio
 import hashlib
 import time
 
-import shiny as s
-from shiny import reactive, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 
 def calc(value: str) -> str:
@@ -23,8 +22,8 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: s.Inputs):
-    @s.render.text()
+def server(input: Inputs):
+    @render.text()
     @reactive.event(input.go)
     async def hash_output():
         content = await hash_result()
@@ -39,4 +38,4 @@ def server(input: s.Inputs):
             return await asyncio.get_running_loop().run_in_executor(None, calc, value)
 
 
-app = s.App(app_ui, server)
+app = App(app_ui, server)
