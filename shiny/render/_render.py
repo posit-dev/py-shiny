@@ -9,6 +9,7 @@ import typing
 # Can use `dict` in python >= 3.9
 from typing import (
     TYPE_CHECKING,
+    Callable,
     Literal,
     Optional,
     Protocol,
@@ -26,7 +27,9 @@ if TYPE_CHECKING:
 from .. import _utils
 from .. import ui as _ui
 from .._namespaces import ResolvedId
-from ..session import require_active_session
+from .._typing_extensions import Self
+from ..session import get_current_session, require_active_session
+from ..session._session import DownloadHandler, DownloadInfo
 from ..types import MISSING, MISSING_TYPE, ImgData
 from ._try_render_plot import (
     PlotSizeInfo,
@@ -47,6 +50,7 @@ __all__ = (
     "image",
     "table",
     "ui",
+    "download",
 )
 # ======================================================================================
 # RenderText
@@ -492,3 +496,102 @@ class ui(Renderer[TagChild]):
         return rendered_deps_to_jsonifiable(
             session._process_ui(value),
         )
+
+
+# ======================================================================================
+# RenderDownload
+# ======================================================================================
+class download(Renderer[str]):
+    """
+    Decorator to register a function to handle a download.
+
+    Parameters
+    ----------
+    filename
+        The filename of the download.
+    label
+        A label for the button, when used in Express mode. Defaults to "Download".
+    media_type
+        The media type of the download.
+    encoding
+        The encoding of the download.
+
+    Returns
+    -------
+    :
+        The decorated function.
+
+    See Also
+    --------
+    ~shiny.ui.download_button
+    """
+
+    def default_ui(self, id: str) -> Tag:
+        return _ui.download_button(id, label=self.label)
+
+    def __init__(
+        self,
+        fn: Optional[DownloadHandler] = None,
+        *,
+        filename: Optional[str | Callable[[], str]] = None,
+        label: TagChild = "Download",
+        media_type: None | str | Callable[[], str] = None,
+        encoding: str = "utf-8",
+    ) -> None:
+        super().__init__()
+
+        self.label = label
+        self.filename = filename
+        self.media_type = media_type
+        self.encoding = encoding
+
+        if fn is not None:
+            self(fn)
+
+    def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+        fn: DownloadHandler,
+    ) -> Self:
+        # For downloads, the value function (which is passed to `__call__()`) is
+        # different than for other renderers. For normal renderers, the user supplies
+        # the value function. This function returns a value which is transformed,
+        # serialized to JSON, and then sent to the browser.
+        #
+        # For downloads, the download button itself is actually an output. The value
+        # that it renders is a URL; when the user clicks the button, the browser
+        # initiates a download from that URL, and the server provides the file via
+        # `session._downloads`.
+        #
+        # The `url()` function here is the value function for the download button. It
+        # returns the URL for downloading the file.
+        def url() -> str:
+            from urllib.parse import quote
+
+            session = require_active_session(None)
+            return f"session/{quote(session.id)}/download/{quote(self.output_id)}?w="
+
+        # Unlike most value functions, this one's name is `url`. But we want to get the
+        # name from the user-supplied function.
+        url.__name__ = fn.__name__
+
+        # We invoke `super().__call__()` now, because it indirectly invokes
+        # `Outputs.__call__()`, which sets `output_id` (and `self.__name__`), which is
+        # then used below.
+        super().__call__(url)
+
+        # Register the download handler for the session. The reason we check for session
+        # not being None is because in Express, when the UI is rendered, this function
+        # `render.download()()`  called once before any sessions have been started.
+        session = get_current_session()
+        if session is not None:
+            session._downloads[self.output_id] = DownloadInfo(
+                filename=self.filename,
+                content_type=self.media_type,
+                handler=fn,
+                encoding=self.encoding,
+            )
+
+        return self
+
+    async def transform(self, value: str) -> Jsonifiable:
+        return value
