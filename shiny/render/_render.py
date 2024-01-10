@@ -510,7 +510,7 @@ class download(Renderer[str]):
     filename
         The filename of the download.
     label
-        A label for the button. Defaults to "Download".
+        A label for the button, when used in Express mode. Defaults to "Download".
     media_type
         The media type of the download.
     encoding
