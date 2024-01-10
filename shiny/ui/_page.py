@@ -44,7 +44,7 @@ def page_sidebar(
     sidebar: Sidebar,
     *args: TagChild | TagAttrs,
     title: Optional[str | Tag | TagList] = None,
-    fillable: bool = True,
+    fillable: bool = False,
     fillable_mobile: bool = False,
     window_title: str | MISSING_TYPE = MISSING,
     lang: Optional[str] = None,
@@ -116,7 +116,7 @@ def page_navbar(
     sidebar: Optional[Sidebar] = None,
     # Only page_navbar gets enhanced treatement for `fillable`
     # If an `*args`'s `data-value` attr string is in `fillable`, then the component is fillable
-    fillable: bool | list[str] = True,
+    fillable: bool | list[str] = False,
     fillable_mobile: bool = False,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
