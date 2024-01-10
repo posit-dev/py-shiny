@@ -1,5 +1,6 @@
 # from pathlib import Path
 from pathlib import PurePath
+from typing import Optional
 
 from htmltools import HTMLDependency, Tag
 
@@ -31,7 +32,7 @@ class render_custom_component(Renderer[int]):
 
     # The init method is used to set up the renderer's parameters.
     # If no parameters are needed, then the `__init__()` method can be omitted.
-    def __init__(self, _fn: ValueFn[int] = None, *, height: str = "200px"):
+    def __init__(self, _fn: Optional[ValueFn[int]] = None, *, height: str = "200px"):
         super().__init__(_fn)
         self.height: str = height
 

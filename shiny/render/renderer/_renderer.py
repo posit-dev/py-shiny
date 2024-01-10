@@ -32,8 +32,8 @@ from ..._utils import is_async_callable, wrap_async
 __all__ = (
     "Renderer",
     "RendererBase",
-    "ValueFn",
     "Jsonifiable",
+    "ValueFn",
     "AsyncValueFn",
 )
 
@@ -82,22 +82,14 @@ DefaultUIFnResult = Union[TagList, Tag, MetadataNode, str]
 DefaultUIFnResultOrNone = Union[DefaultUIFnResult, None]
 DefaultUIFn = Callable[[str], DefaultUIFnResultOrNone]
 
-ValueFnSync = Callable[[], IT]
-"""
-App-supplied output value function which returns type `IT`. This function is
-synchronous.
-"""
-ValueFnAsync = Callable[[], Awaitable[IT]]
-"""
-App-supplied output value function which returns type `IT`. This function is
-asynchronous.
-"""
-ValueFnApp = Union[Callable[[], IT], Callable[[], Awaitable[IT]]]
+ValueFn = Union[
+    Callable[[], Union[IT, None]],
+    Callable[[], Awaitable[Union[IT, None]]],
+]
 """
 App-supplied output value function which returns type `IT`. This function can be
 synchronous or asynchronous.
 """
-ValueFn = Optional[ValueFnApp[Union[IT, None]]]
 
 
 class RendererBase(ABC):
@@ -233,8 +225,7 @@ class AsyncValueFn(Generic[IT]):
 
     def __init__(self, fn: Callable[[], IT] | Callable[[], Awaitable[IT]]):
         if isinstance(fn, AsyncValueFn):
-            fn = cast(AsyncValueFn[IT], fn)
-            return fn
+            return cast(AsyncValueFn[IT], fn)
         self._is_async = is_async_callable(fn)
         self._fn = wrap_async(fn)
         self._orig_fn = fn
@@ -300,7 +291,7 @@ class Renderer(RendererBase, Generic[IT]):
     asynchonously.
     """
 
-    def __call__(self, _fn: ValueFnApp[IT | None]) -> Self:
+    def __call__(self, _fn: ValueFn[IT]) -> Self:
         """
         Renderer __call__ docs here; Sets app's value function
 
@@ -324,7 +315,7 @@ class Renderer(RendererBase, Generic[IT]):
 
     def __init__(
         self,
-        _fn: ValueFn[IT | None] = None,
+        _fn: Optional[ValueFn[IT]] = None,
     ):
         # Do not display docs here. If docs are present, it could highjack the docs of
         # the subclass's `__init__` method.
