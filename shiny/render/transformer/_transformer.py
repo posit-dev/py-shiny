@@ -639,10 +639,7 @@ def output_transformer(
 
 async def resolve_value_fn(value_fn: ValueFn[IT]) -> IT:
     """
-    Soft deprecated. Resolve the value function
-
-    Deprecated: v0.7.0 - This function is no longer needed as all value functions are
-    now async for consistency and speed.
+    Resolve the value function
 
     This function is used to resolve the value function (`value_fn`) to an object of
     type `IT`. If the value function is asynchronous, it will be awaited. If the value
@@ -675,9 +672,6 @@ async def resolve_value_fn(value_fn: ValueFn[IT]) -> IT:
     :
         The resolved value from `value_fn`.
     """
-    warn_deprecated(
-        "`resolve_value_fn()` is unnecessary when resolving the value function in a custom render method. Now, the value function is always async. `resolve_value_fn()` will be removed in a future release."
-    )
     if is_async_callable(value_fn):
         return await value_fn()
     else:
