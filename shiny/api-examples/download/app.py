@@ -7,7 +7,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 
-from shiny import App, Inputs, Outputs, Session, ui
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 
 def make_example(id: str, label: str, title: str, desc: str, extra: Any = None):
@@ -77,7 +77,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @session.download()
+    @render.download()
     def download1():
         """
         This is the simplest case. The implementation simply returns the name of a file.
@@ -88,12 +88,12 @@ def server(input: Inputs, output: Outputs, session: Session):
         path = os.path.join(os.path.dirname(__file__), "mtcars.csv")
         return path
 
-    @session.download(filename="image.png")
+    @render.download(filename="image.png")
     def download2():
         """
         Another way to implement a file download is by yielding bytes; either all at
         once, like in this case, or by yielding multiple times. When using this
-        approach, you should pass a filename argument to @session.download, which
+        approach, you should pass a filename argument to @render.download, which
         determines what the browser will name the downloaded file.
         """
 
@@ -107,7 +107,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             plt.savefig(buf, format="png")
             yield buf.getvalue()
 
-    @session.download(
+    @render.download(
         filename=lambda: f"新型-{date.today().isoformat()}-{np.random.randint(100,999)}.csv"
     )
     async def download3():
@@ -116,7 +116,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         yield "新,1,2\n"
         yield "型,4,5\n"
 
-    @session.download(id="download4", filename="failuretest.txt")
+    @output(id="download4")
+    @render.download(filename="failuretest.txt")
     async def _():
         yield "hello"
         raise Exception("This error was caused intentionally")
