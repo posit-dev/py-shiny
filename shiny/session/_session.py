@@ -39,6 +39,7 @@ if TYPE_CHECKING:
 
 from .. import _utils, reactive, render
 from .._connection import Connection, ConnectionClosed
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from .._namespaces import Id, ResolvedId, Root
@@ -748,7 +749,7 @@ class Session(object, metaclass=SessionMeta):
         encoding: str = "utf-8",
     ) -> Callable[[DownloadHandler], None]:
         """
-        Decorator to register a function to handle a download.
+        Deprecated. Please use :func:`~shiny.render.download` instead.
 
         Parameters
         ----------
@@ -766,6 +767,10 @@ class Session(object, metaclass=SessionMeta):
         :
             The decorated function.
         """
+
+        warn_deprecated(
+            "session.download() is deprecated. Please use render.download() instead."
+        )
 
         def wrapper(fn: DownloadHandler):
             effective_name = id or fn.__name__
