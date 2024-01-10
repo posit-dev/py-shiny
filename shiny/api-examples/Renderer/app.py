@@ -68,7 +68,7 @@ class render_capitalize(Renderer[str]):
         self.to_case = to_case
 
     async def render(self) -> str | None:
-        value = await self.value_fn()
+        value = await self.fn()
         if value is None:
             # If `None` is returned, then do not render anything.
             return None
