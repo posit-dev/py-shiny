@@ -83,8 +83,8 @@ DefaultUIFnResultOrNone = Union[DefaultUIFnResult, None]
 DefaultUIFn = Callable[[str], DefaultUIFnResultOrNone]
 
 ValueFn = Union[
-    Callable[[], Union[IT, None]],
-    Callable[[], Awaitable[Union[IT, None]]],
+    Callable[[], IT],
+    Callable[[], Awaitable[IT]],
 ]
 """
 App-supplied output value function which returns type `IT`. This function can be
@@ -291,7 +291,7 @@ class Renderer(RendererBase, Generic[IT]):
     asynchonously.
     """
 
-    def __call__(self, _fn: ValueFn[IT]) -> Self:
+    def __call__(self, _fn: ValueFn[IT | None]) -> Self:
         """
         Renderer __call__ docs here; Sets app's value function
 
@@ -315,7 +315,7 @@ class Renderer(RendererBase, Generic[IT]):
 
     def __init__(
         self,
-        _fn: Optional[ValueFn[IT]] = None,
+        _fn: Optional[ValueFn[IT | None]] = None,
     ):
         # Do not display docs here. If docs are present, it could highjack the docs of
         # the subclass's `__init__` method.
