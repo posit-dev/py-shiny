@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking Changes
+
+* Closed #938: `page_sidebar()` and `page_navbar()` now use `fillable=False` by default. (#990)
+
 ### Bug fixes
 
 * CLI command `shiny create`... (#965)
