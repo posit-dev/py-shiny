@@ -29,11 +29,13 @@ class RecallContextManager(Generic[R]):
             kwargs = {}
         self.args: list[object] = list(args)
         self.kwargs: dict[str, object] = dict(kwargs)
+        # Let htmltools.wrap_displayhook_handler decide what to do with objects before
+        # we append them.
+        self.wrapped_append = wrap_displayhook_handler(self.args.append)
 
     def __enter__(self) -> None:
         self._prev_displayhook = sys.displayhook
-        # Collect each of the "printed" values in the args list.
-        sys.displayhook = wrap_displayhook_handler(self.args.append)
+        sys.displayhook = self.displayhook
 
     def __exit__(
         self,
@@ -46,6 +48,23 @@ class RecallContextManager(Generic[R]):
             res = self.fn(*self.args, **self.kwargs)
             sys.displayhook(res)
         return False
+
+    def displayhook(self, x: object) -> None:
+        if isinstance(x, RecallContextManager):
+            # This displayhook first checks if x (the child) is a RecallContextManager,
+            # in which case it uses `with x` to trigger x.__enter__() and x.__exit__().
+            # When x.__exit__() is called, it will invoke x.fn() and then pass the
+            # result to this object's (the parent) self.displayhook(), which is this
+            # same function, but instead of passing in a RecallContextManager, it will
+            # pass in the actual object.
+            #
+            # In short, this is a way of invoking a re-entrant call to the current
+            # function, but instead of passing in a RecallContextManager, it passes in
+            # the result from the RecallContextManager.
+            with x:
+                pass
+        else:
+            self.wrapped_append(x)
 
     def tagify(self) -> Tag | TagList | MetadataNode | str:
         res = self.fn(*self.args, **self.kwargs)
