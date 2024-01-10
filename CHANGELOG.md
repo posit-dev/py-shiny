@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+
+### New features
+
+* Added `@render.download` as a replacement for `@session.download`, which is now deprecated. (#977)
+
 ### Bug fixes
 
 * CLI command `shiny create`... (#965)
