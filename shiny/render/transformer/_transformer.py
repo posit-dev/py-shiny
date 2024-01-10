@@ -146,13 +146,15 @@ ValueFnAsync = Callable[[], Awaitable[IT]]
 App-supplied output value function which returns type `IT`. This function is
 asynchronous.
 """
-ValueFn = ValueFnAsync[IT]
-"""
-App-supplied output value function which returns type `IT`. This function is always
-asyncronous as the original app-supplied function possibly wrapped to execute
-asynchonously.
-"""
-ValueFnApp = Union[ValueFnSync[IT], ValueFnAsync[IT]]
+
+# ValueFnAsync = ValueFnAsync[IT]
+# """
+# App-supplied output value function which returns type `IT`. This function is always
+# asyncronous as the original app-supplied function possibly wrapped to execute
+# asynchonously.
+# """
+
+ValueFn = Union[ValueFnSync[IT], ValueFnAsync[IT]]
 """
 App-supplied output value function which returns type `IT`. This function can be
 synchronous or asynchronous.
@@ -180,7 +182,7 @@ class OutputRenderer(RendererBase, Generic[OT]):
 
     The transform function (`transform_fn`) is given `meta` information
     (:class:`~shiny.render.transformer.TranformerMetadata`), the (app-supplied) value
-    function (`ValueFn[IT]`), and any keyword arguments supplied to the render decorator
+    function (`ValueFnAsync[IT]`), and any keyword arguments supplied to the render decorator
     (`P`). For consistency, the first two parameters have been (arbitrarily) implemented
     as `_meta` and `_fn`.
 
@@ -215,7 +217,7 @@ class OutputRenderer(RendererBase, Generic[OT]):
     def __init__(
         self,
         *,
-        value_fn: ValueFnApp[IT],
+        value_fn: ValueFn[IT],
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
         default_ui: Optional[DefaultUIFn] = None,
@@ -239,7 +241,7 @@ class OutputRenderer(RendererBase, Generic[OT]):
         super().__init__()
 
         warn_deprecated(
-            "`shiny.render.transformer.output_transformer()` and `shiny.render.transformer.OutputRenderer()` output render function utilities have been superseded by `shiny.render.renderer.Renderer` and will be removed in a near future release."
+            "`shiny.render.transformer.output_transformer()` and `shiny.render.transformer.OutputRenderer()` output render function utilities have been superseded by `shiny.render.renderer.Renderer` and will be removed in the near future."
         )
 
         # Copy over function name as it is consistent with how Session and Output
@@ -300,11 +302,14 @@ class OutputRenderer(RendererBase, Generic[OT]):
         `*args` is required to use with `**kwargs` when using
         `typing.ParamSpec`.
         """
+        value_fn = (
+            self._fn.get_async_fn() if self._fn.is_async() else self._fn.get_sync_fn()
+        )
         ret = await self._transformer(
             # TransformerMetadata
             self._meta(),
-            # Callable[[], Awaitable[IT]]
-            self._fn,
+            # Callable[[], IT] | Callable[[], Awaitable[IT]]
+            value_fn,
             # P
             *self._params.args,
             **self._params.kwargs,
@@ -357,7 +362,7 @@ def _assert_transformer(transform_fn: TransformFn[IT, P, OT]) -> None:
     if len(params) < 2:
         raise TypeError(
             "`transformer=` must have 2 positional parameters which have type "
-            "`TransformerMetadata` and `ValueFn` respectively"
+            "`TransformerMetadata` and `ValueFnAsync` respectively"
         )
 
     for i, param in zip(range(len(params)), params.values()):
@@ -404,7 +409,7 @@ def _assert_transformer(transform_fn: TransformFn[IT, P, OT]) -> None:
 
 
 # Signature of a renderer decorator function
-OutputRendererDecorator = Callable[[ValueFnApp[IT]], OutputRenderer[OT]]
+OutputRendererDecorator = Callable[[ValueFn[IT]], OutputRenderer[OT]]
 """
 Decorator function that takes the output value function (then calls it and transforms
 the value) and returns an :class:`~shiny.render.transformer.OutputRenderer`.
@@ -415,7 +420,7 @@ the value) and returns an :class:`~shiny.render.transformer.OutputRenderer`.
 # Without parens returns a `OutputRendererDeco[IT, OT]`
 OutputTransformerFn = Callable[
     [
-        Optional[ValueFnApp[IT]],
+        Optional[ValueFn[IT]],
         TransformerParams[P],
     ],
     Union[OutputRenderer[OT], OutputRendererDecorator[IT, OT]],
@@ -463,7 +468,7 @@ class OutputTransformer(Generic[IT, OT, P]):
     """
 
     fn: OutputTransformerFn[IT, P, OT]
-    ValueFn: Type[ValueFnApp[IT]]
+    ValueFn: Type[ValueFn[IT]]
     OutputRenderer: Type[OutputRenderer[OT]]
     OutputRendererDecorator: Type[OutputRendererDecorator[IT, OT]]
 
@@ -476,7 +481,7 @@ class OutputTransformer(Generic[IT, OT, P]):
 
     def __call__(
         self,
-        value_fn: ValueFnApp[IT] | None,
+        value_fn: ValueFn[IT] | None,
         params: TransformerParams[P] | None = None,
     ) -> OutputRenderer[OT] | OutputRendererDecorator[IT, OT]:
         if params is None:
@@ -494,7 +499,7 @@ class OutputTransformer(Generic[IT, OT, P]):
         fn: OutputTransformerFn[IT, P, OT],
     ) -> None:
         self._fn = fn
-        self.ValueFn = ValueFnApp[IT]
+        self.ValueFn = ValueFn[IT]
         self.OutputRenderer = OutputRenderer[OT]
         self.OutputRendererDecorator = OutputRendererDecorator[IT, OT]
 
@@ -551,7 +556,7 @@ def output_transformer(
       resolve the app-supplied value function (typically called `_fn`).
     * The second parameter is the app-defined output value function (e.g. `_fn`). It's
       return type (`IT`) determines what types can be returned by the app-supplied
-      output value function. For example, if `_fn` has the type `ValueFn[str | None]`,
+      output value function. For example, if `_fn` has the type `ValueFnAsync[str | None]`,
       both the `str` and `None` types are allowed to be returned from the app-supplied
       output value function.
     * The remaining parameters are the keyword arguments (e.g. `alt:Optional[str] =
@@ -605,11 +610,11 @@ def output_transformer(
         _assert_transformer(transform_fn)
 
         def renderer_decorator(
-            value_fn: ValueFnApp[IT] | None,
+            value_fn: ValueFn[IT] | None,
             params: TransformerParams[P],
         ) -> OutputRenderer[OT] | OutputRendererDecorator[IT, OT]:
             def as_value_fn(
-                fn: ValueFnApp[IT],
+                fn: ValueFn[IT],
             ) -> OutputRenderer[OT]:
                 return OutputRenderer(
                     value_fn=fn,
@@ -632,7 +637,7 @@ def output_transformer(
         return output_transformer_impl
 
 
-async def resolve_value_fn(value_fn: ValueFnApp[IT]) -> IT:
+async def resolve_value_fn(value_fn: ValueFn[IT]) -> IT:
     """
     Soft deprecated. Resolve the value function
 

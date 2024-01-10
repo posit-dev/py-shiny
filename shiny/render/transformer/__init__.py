@@ -5,7 +5,6 @@ from ._transformer import (  # noqa: F401
     output_transformer,
     is_async_callable,
     ValueFn,
-    ValueFnApp,  # pyright: ignore[reportUnusedImport]
     ValueFnSync,  # pyright: ignore[reportUnusedImport]
     ValueFnAsync,  # pyright: ignore[reportUnusedImport]
     TransformFn,  # pyright: ignore[reportUnusedImport]

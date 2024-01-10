@@ -42,10 +42,10 @@ app_hard_wait: typing.Dict[str, int] = {
 output_transformer_errors = [
     "ShinyDeprecationWarning: `shiny.render.transformer.output_transformer()`",
     "  return OutputRenderer",
-    "ShinyDeprecationWarning: `resolve_value_fn()`",
-    "ShinyDeprecationWarning:",
-    "`resolve_value_fn()`",
-    "value = await resolve_value_fn(_fn)",
+    # "ShinyDeprecationWarning: `resolve_value_fn()`",
+    # "ShinyDeprecationWarning:",
+    # "`resolve_value_fn()`",
+    # "value = await resolve_value_fn(_fn)",
     # brownian example app
     "shiny.render.transformer.output_transformer()",
 ]
@@ -61,7 +61,7 @@ app_allow_shiny_errors: typing.Dict[
         "RuntimeWarning: divide by zero encountered",
         "UserWarning: This figure includes Axes that are not compatible with tight_layout",
     ],
-    # Remove after shinywidgets accepts `resolve_value_fn()` PR
+    # Remove after shinywidgets accepts `Renderer` PR
     "airmass": [*output_transformer_errors],
     "brownian": [*output_transformer_errors],
     "multi-page": [*output_transformer_errors],
