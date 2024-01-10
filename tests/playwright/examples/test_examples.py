@@ -42,11 +42,8 @@ app_hard_wait: typing.Dict[str, int] = {
 output_transformer_errors = [
     "ShinyDeprecationWarning: `shiny.render.transformer.output_transformer()`",
     "  return OutputRenderer",
-    # "ShinyDeprecationWarning: `resolve_value_fn()`",
-    # "ShinyDeprecationWarning:",
-    # "`resolve_value_fn()`",
-    # "value = await resolve_value_fn(_fn)",
     # brownian example app
+    "ShinyDeprecationWarning:",
     "shiny.render.transformer.output_transformer()",
 ]
 express_warnings = ["Detected Shiny Express app. "]
