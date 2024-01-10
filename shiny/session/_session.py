@@ -749,7 +749,7 @@ class Session(object, metaclass=SessionMeta):
         encoding: str = "utf-8",
     ) -> Callable[[DownloadHandler], None]:
         """
-        Deprecated. Please use :func:`~shiny.render.download` instead.
+        Deprecated. Please use :class:`~shiny.render.download` instead.
 
         Parameters
         ----------

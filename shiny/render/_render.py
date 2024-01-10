@@ -575,7 +575,8 @@ class download(Renderer[str]):
         url.__name__ = fn.__name__
 
         # We invoke `super().__call__()` now, because it indirectly invokes
-        # `Outputs.__call__()`, which sets `self.name`, which is then used below.
+        # `Outputs.__call__()`, which sets `output_id` (and `self.__name__`), which is
+        # then used below.
         super().__call__(url)
 
         # Register the download handler for the session. The reason we check for session
