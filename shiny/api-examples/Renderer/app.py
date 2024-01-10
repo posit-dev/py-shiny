@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Optional
 
 from shiny import App, Inputs, Outputs, Session, ui
 from shiny.render.renderer import Renderer, ValueFn
@@ -36,7 +36,7 @@ class render_capitalize(Renderer[str]):
 
     def __init__(
         self,
-        _fn: ValueFn[str | None] | None = None,
+        _fn: Optional[ValueFn[str]] | None = None,
         *,
         to_case: Literal["upper", "lower", "ignore"] = "upper",
         placeholder: bool = True,

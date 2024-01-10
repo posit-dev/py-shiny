@@ -41,7 +41,7 @@ class display(Renderer[None]):
         )
 
     def __call__(self, fn: ValueFn[None]) -> Self:
-        if fn is None:
+        if fn is None:  # pyright: ignore[reportUnnecessaryComparison]
             raise TypeError("@render.display requires a function when called")
 
         async_fn = AsyncValueFn(fn)
@@ -63,7 +63,7 @@ class display(Renderer[None]):
 
     def __init__(
         self,
-        _fn: ValueFn[None] = None,
+        _fn: Optional[ValueFn[None]] = None,
         *,
         inline: bool = False,
         container: Optional[TagFunction] = None,

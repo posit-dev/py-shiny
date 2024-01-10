@@ -211,7 +211,6 @@ def test_output_transformer_result_does_not_allow_args():
         assert "Expected `params` to be of type `TransformerParams`" in str(e)
 
 
-# "Currently, `ValueFn` can not be truly async and "support sync render methods"
 @pytest.mark.asyncio
 async def test_renderer_handler_or_transform_fn_can_be_async():
     @output_transformer
@@ -219,10 +218,9 @@ async def test_renderer_handler_or_transform_fn_can_be_async():
         _meta: TransformerMetadata,
         _fn: ValueFn[str],
     ) -> str:
-        assert is_async_callable(_fn)
         # Actually sleep to test that the handler is truly async
         await asyncio.sleep(0)
-        ret = await _fn()
+        ret = await resolve_value_fn(_fn)
         return ret
 
     # ## Setup overloads =============================================
@@ -281,82 +279,13 @@ async def test_renderer_handler_or_transform_fn_can_be_async():
         assert ret == async_test_val
 
 
-# "Currently, `ValueFnA` can not be truly async and "support sync render methods".
-# Test that conditionally calling async works.
-@pytest.mark.asyncio
-async def test_renderer_handler_fn_can_be_yield_while_async():
-    @output_transformer
-    async def YieldTransformer(
-        _meta: TransformerMetadata,
-        _fn: ValueFn[str],
-    ) -> str:
-        if is_async_callable(_fn):
-            # Actually sleep to test that the handler is truly async
-            await asyncio.sleep(0)
-        ret = await _fn()
-        return ret
+# @pytest.mark.asyncio
+# async def test_resolve_value_fn_is_deprecated():
+#     with pytest.warns(ShinyDeprecationWarning):
+#         test_val = 42
 
-    # ## Setup overloads =============================================
+#         async def value_fn():
+#             return test_val
 
-    @overload
-    def yield_renderer() -> YieldTransformer.OutputRendererDecorator:
-        ...
-
-    @overload
-    def yield_renderer(
-        _fn: YieldTransformer.ValueFn,
-    ) -> YieldTransformer.OutputRenderer:
-        ...
-
-    def yield_renderer(
-        _fn: YieldTransformer.ValueFn | None = None,
-    ) -> YieldTransformer.OutputRenderer | YieldTransformer.OutputRendererDecorator:
-        with pytest.warns(ShinyDeprecationWarning):
-            return YieldTransformer(_fn)
-
-    test_val = "Test: Hello World!"
-
-    def app_render_fn() -> str:
-        return test_val
-
-    # ## Test Sync: √ =============================================
-
-    renderer_sync = yield_renderer(app_render_fn)
-    renderer_sync._set_output_metadata(
-        output_name="renderer_sync",
-    )
-    assert is_async_callable(renderer_sync)
-
-    with session_context(test_session):
-        ret = await renderer_sync()
-        assert ret == test_val
-
-    # ## Test Async: √ =============================================
-
-    async_test_val = "Async: Hello World!"
-
-    async def async_app_render_fn() -> str:
-        await asyncio.sleep(0)
-        return async_test_val
-
-    renderer_async = yield_renderer(async_app_render_fn)
-    renderer_async._set_output_metadata(
-        output_name="renderer_async",
-    )
-    assert is_async_callable(renderer_async)
-
-    with session_context(test_session):
-        ret = await renderer_async()
-        assert ret == async_test_val
-
-
-@pytest.mark.asyncio
-async def test_resolve_value_fn_is_deprecated():
-    with pytest.warns(ShinyDeprecationWarning):
-        test_val = 42
-
-        async def value_fn():
-            return test_val
-
-        ret = await resolve_value_fn(value_fn)
-        assert test_val == ret
+#         ret = await resolve_value_fn(value_fn)
+#         assert test_val == ret

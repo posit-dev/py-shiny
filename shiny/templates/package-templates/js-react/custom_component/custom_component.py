@@ -44,7 +44,7 @@ class render_custom_component(Renderer[str]):
 
     # # There are no parameters being supplied to the `output_custom_component` rendering function.
     # # Therefore, we can omit the `__init__()` method.
-    # def __init__(self, _fn: ValueFn[int] = None, *, extra_arg: str = "bar"):
+    # def __init__(self, _fn: Optional[ValueFn[int]] = None, *, extra_arg: str = "bar"):
     #     super().__init__(_fn)
     #     self.extra_arg: str = extra_arg
 
