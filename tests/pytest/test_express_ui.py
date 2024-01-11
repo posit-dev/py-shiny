@@ -1,10 +1,13 @@
 import sys
+import tempfile
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from shiny import render, ui
 from shiny.express import suspend_display, ui_kwargs
+from shiny.express._run import run_express
 
 
 def test_express_ui_is_complete():
@@ -104,3 +107,33 @@ def test_suspend_display():
 
     finally:
         sys.displayhook = old_displayhook
+
+
+def test_recall_context_manager():
+    # A Shiny Express app that uses a RecallContextManager (ui.card_header()) without
+    # `with`. It is used within another RecallContextManager (ui.card()), but that one
+    # is used with `with`. This test makes sure that the non-with RecallContextManager
+    # will invoke the wrapped function and its result will be passed to the parent.
+
+    card_app_express_text = """\
+from shiny.express import ui
+
+with ui.card():
+    ui.card_header("Header")
+    "Body"
+"""
+
+    # The same UI, written in the Shiny Core style.
+    card_app_core = ui.page_fixed(
+        ui.card(
+            ui.card_header("Header"),
+            "Body",
+        )
+    )
+
+    with tempfile.NamedTemporaryFile(mode="w+t") as temp_file:
+        temp_file.write(card_app_express_text)
+        temp_file.flush()
+        res = run_express(Path(temp_file.name)).tagify()
+
+    assert str(res) == str(card_app_core)
