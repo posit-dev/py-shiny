@@ -126,7 +126,7 @@ class code(Renderer[str]):
 
     When used in Shiny Express applications, this defaults to displaying the text in a
     monospace font in a code block. When used in Shiny Core applications, this should be
-    paired with :func:`~shiny.ui.output_text_verbatim` in the UI.
+    paired with :func:`~shiny.ui.output_code` in the UI.
 
     Parameters
     ----------
@@ -134,7 +134,7 @@ class code(Renderer[str]):
         Used in Shiny Express only. If the output is empty or ``None``, should an empty
         rectangle be displayed to serve as a placeholder? This does not affect behavior
         when the output is nonempty. (This argument is passed to
-        :func:`~shiny.ui.output_text_verbatim`.)
+        :func:`~shiny.ui.output_code`.)
 
 
     Returns
@@ -145,13 +145,13 @@ class code(Renderer[str]):
     Tip
     ----
     The name of the decorated function (or ``@output(id=...)``) should match the ``id``
-    of a :func:`~shiny.ui.output_text_verbatim` container (see
-    :func:`~shiny.ui.output_text_verbatim` for example usage).
+    of a :func:`~shiny.ui.output_code` container (see :func:`~shiny.ui.output_code` for
+    example usage).
 
     See Also
     --------
-    ~shiny.render.text
-    ~shiny.ui.output_text_verbatim
+    ~shiny.render.code
+    ~shiny.ui.output_code
     """
 
     def default_ui(
@@ -162,13 +162,13 @@ class code(Renderer[str]):
     ) -> Tag:
         kwargs: dict[str, bool] = {}
         set_kwargs_value(kwargs, "placeholder", placeholder, self.placeholder)
-        return _ui.output_text_verbatim(id, **kwargs)
+        return _ui.output_code(id, **kwargs)
 
     def __init__(
         self,
         _fn: Optional[ValueFn[str]] = None,
         *,
-        placeholder: bool = False,
+        placeholder: bool = True,
     ) -> None:
         super().__init__(_fn)
         self.placeholder = placeholder

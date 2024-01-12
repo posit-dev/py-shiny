@@ -158,6 +158,7 @@ quartodoc:
         - ui.output_table
         - ui.output_data_frame
         - ui.output_text
+        - ui.output_code
         - ui.output_text_verbatim
         - ui.output_ui
         - render.plot
