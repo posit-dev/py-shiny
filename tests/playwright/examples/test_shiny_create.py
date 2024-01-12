@@ -1,13 +1,15 @@
 import os
-import shutil
 import subprocess
 import tempfile
 
 import pytest
+from playwright.sync_api import Page
+
+from tests.playwright.examples.example_apps import validate_example
 
 
 def subprocess_create(app_template: str, mode: str = "core", package_name: str = ""):
-    dest_dir = tempfile.mkdtemp()
+    dest_dir = tempfile.TemporaryDirectory("example_apps").name
     cmd = [
         "shiny",
         "create",
@@ -30,21 +32,23 @@ def subprocess_create(app_template: str, mode: str = "core", package_name: str =
     else:
         assert os.path.isfile(f"{dest_dir}/pyproject.toml")
 
+    print("\nCheck for duplicate files")
     with pytest.raises(subprocess.CalledProcessError):
         subprocess.run(cmd, check=True)
 
-    shutil.rmtree(dest_dir)
+    return dest_dir
 
 
-# TODO-karan; Integrate all tests below with _examples_ testing and check for JS errors / output errors.
 @pytest.mark.parametrize("app_template", ["basic-app", "dashboard", "multi-page"])
-def test_create_core(app_template: str):
-    subprocess_create(app_template)
+def test_create_core(app_template: str, page: Page):
+    dir = subprocess_create(app_template)
+    validate_example(page, f"{dir}/app.py")
 
 
 @pytest.mark.parametrize("app_template", ["basic-app"])
-def test_create_express(app_template: str):
-    subprocess_create(app_template, "express")
+def test_create_express(app_template: str, page: Page):
+    dir = subprocess_create(app_template, "express")
+    validate_example(page, f"{dir}/app.py")
 
 
 @pytest.mark.parametrize("app_template", ["js-input", "js-output", "js-react"])

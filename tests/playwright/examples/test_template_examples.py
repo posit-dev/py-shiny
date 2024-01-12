@@ -5,5 +5,8 @@ from playwright.sync_api import Page
 
 @pytest.mark.examples
 @pytest.mark.flaky(reruns=reruns, reruns_delay=1)
-def test_examples(page: Page) -> None:
-    [validate_example(page, example_app) for example_app in get_apps("examples")]
+def test_template_examples(page: Page) -> None:
+    [
+        validate_example(page, example_app)
+        for example_app in get_apps("shiny/templates/app-templates")
+    ]

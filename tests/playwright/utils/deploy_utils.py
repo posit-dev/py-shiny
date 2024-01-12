@@ -110,6 +110,6 @@ def write_requirements_txt(app_file_path: str) -> None:
     git_hash = git_cmd.stdout.decode("utf-8").strip()
     with open(app_requirements_file_path) as f:
         requirements = f.read()
-    with open(requirements_file_path, "a") as f:
+    with open(requirements_file_path, "w") as f:
         f.write(f"{requirements}\n")
         f.write(f"git+https://github.com/posit-dev/py-shiny.git@{git_hash}\n")
