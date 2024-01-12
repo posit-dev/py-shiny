@@ -50,7 +50,7 @@ def test_render_output_controls():
 
     assert (
         ui.TagList(text1.tagify()).get_html_string()
-        == ui.output_text_verbatim("text1").get_html_string()
+        == ui.output_text("text1").get_html_string()
     )
 
     @suspend_display
@@ -61,22 +61,22 @@ def test_render_output_controls():
     assert ui.TagList(text2.tagify()).get_html_string() == ""
 
     @ui_kwargs(placeholder=True)
-    @render.text
-    def text3():
+    @render.code
+    def code1():
         return "text"
 
     assert (
-        ui.TagList(text3.tagify()).get_html_string()
-        == ui.output_text_verbatim("text3", placeholder=True).get_html_string()
+        ui.TagList(code1.tagify()).get_html_string()
+        == ui.output_code("code1", placeholder=True).get_html_string()
     )
 
     @ui_kwargs(width=100)
-    @render.text
-    def text4():
+    @render.code
+    def code2():
         return "text"
 
     with pytest.raises(TypeError, match="width"):
-        text4.tagify()
+        code2.tagify()
 
 
 def test_suspend_display():
