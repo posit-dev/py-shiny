@@ -9,6 +9,7 @@ import typing
 # Can use `dict` in python >= 3.9
 from typing import (
     TYPE_CHECKING,
+    Any,
     Callable,
     Literal,
     Optional,
@@ -46,6 +47,7 @@ from .renderer._utils import (
 
 __all__ = (
     "text",
+    "code",
     "plot",
     "image",
     "table",
@@ -61,6 +63,17 @@ class text(Renderer[str]):
     """
     Reactively render text.
 
+    When used in Shiny Express applications, this defaults to displaying the text as
+    normal text on the web page. When used in Shiny Core applications, this should be
+    paired with :func:`~shiny.ui.output_text` in the UI.
+
+
+    Parameters
+    ----------
+    inline
+        Used in Shiny Express only. If ``True``, the result is displayed inline. (This
+        argument is passed to :func:`~shiny.ui.output_text`.)
+
     Returns
     -------
     :
@@ -74,13 +87,91 @@ class text(Renderer[str]):
 
     See Also
     --------
+    ~shiny.render.code
     ~shiny.ui.output_text
     """
 
-    def default_ui(self, id: str, placeholder: bool | MISSING_TYPE = MISSING) -> Tag:
+    def default_ui(
+        self,
+        id: str,
+        *,
+        inline: bool | MISSING_TYPE = MISSING,
+    ) -> Tag:
+        kwargs: dict[str, Any] = {}
+        set_kwargs_value(kwargs, "inline", inline, self.inline)
+
+        return _ui.output_text(id, **kwargs)
+
+    def __init__(
+        self,
+        _fn: Optional[ValueFn[str]] = None,
+        *,
+        inline: bool = False,
+    ) -> None:
+        super().__init__(_fn)
+        self.inline = inline
+
+    async def transform(self, value: str) -> Jsonifiable:
+        return str(value)
+
+
+# ======================================================================================
+# RenderCode
+# ======================================================================================
+
+
+class code(Renderer[str]):
+    """
+    Reactively render text as code (monospaced).
+
+    When used in Shiny Express applications, this defaults to displaying the text in a
+    monospace font in a code block. When used in Shiny Core applications, this should be
+    paired with :func:`~shiny.ui.output_text_verbatim` in the UI.
+
+    Parameters
+    ----------
+    placeholder
+        Used in Shiny Express only. If the output is empty or ``None``, should an empty
+        rectangle be displayed to serve as a placeholder? This does not affect behavior
+        when the output is nonempty. (This argument is passed to
+        :func:`~shiny.ui.output_text_verbatim`.)
+
+
+    Returns
+    -------
+    :
+        A decorator for a function that returns a string.
+
+    Tip
+    ----
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_text_verbatim` container (see
+    :func:`~shiny.ui.output_text_verbatim` for example usage).
+
+    See Also
+    --------
+    ~shiny.render.text
+    ~shiny.ui.output_text_verbatim
+    """
+
+    def default_ui(
+        self,
+        id: str,
+        *,
+        placeholder: bool | MISSING_TYPE = MISSING,
+    ) -> Tag:
         kwargs: dict[str, bool] = {}
-        set_kwargs_value(kwargs, "placeholder", placeholder, None)
+        set_kwargs_value(kwargs, "placeholder", placeholder, self.placeholder)
         return _ui.output_text_verbatim(id, **kwargs)
+
+    def __init__(
+        self,
+        _fn: Optional[ValueFn[str]] = None,
+        *,
+        placeholder: bool = False,
+    ) -> None:
+        super().__init__(_fn)
+        self.placeholder = placeholder
 
     async def transform(self, value: str) -> Jsonifiable:
         return str(value)
