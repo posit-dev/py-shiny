@@ -50,7 +50,12 @@ from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
 from ..render.renderer import Jsonifiable, RendererBase, RendererBaseT
-from ..types import SafeException, SilentCancelOutputException, SilentException
+from ..types import (
+    MISSING_TYPE,
+    SafeException,
+    SilentCancelOutputException,
+    SilentException,
+)
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
 
@@ -344,13 +349,15 @@ class Session(object, metaclass=SessionMeta):
             # The .clientdata_output_{name}_hidden string is already a fully namespaced
             # id; make that explicit by wrapping it in ResolvedId, otherwise self.input
             # will throw an id validation error.
-            hidden_value_obj = cast(
-                Value[bool], self.input[ResolvedId(f".clientdata_output_{name}_hidden")]
-            )
+            hidden_value_obj = self.input[
+                ResolvedId(f".clientdata_output_{name}_hidden")
+            ]
+            if isinstance(hidden_value_obj, MISSING_TYPE):
+                return True
             if not hidden_value_obj.is_set():
                 return True
 
-            return hidden_value_obj()
+            return cast(bool, hidden_value_obj())
 
     # ==========================================================================
     # Message handlers
