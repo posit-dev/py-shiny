@@ -3,13 +3,17 @@ import subprocess
 import tempfile
 
 import pytest
+from example_apps import get_apps, reruns, validate_example
 from playwright.sync_api import Page
 
-from tests.playwright.examples.example_apps import validate_example
 
-
-def subprocess_create(app_template: str, mode: str = "core", package_name: str = ""):
-    dest_dir = tempfile.TemporaryDirectory("example_apps").name
+def subprocess_create(
+    app_template: str,
+    dest_dir: str = "",
+    *,
+    mode: str = "core",
+    package_name: str = "",
+):
     cmd = [
         "shiny",
         "create",
@@ -36,21 +40,30 @@ def subprocess_create(app_template: str, mode: str = "core", package_name: str =
     with pytest.raises(subprocess.CalledProcessError):
         subprocess.run(cmd, check=True)
 
-    return dest_dir
+
+@pytest.mark.examples
+@pytest.mark.flaky(reruns=reruns, reruns_delay=1)
+@pytest.mark.parametrize("ex_app_path", get_apps("shiny/templates/app-templates"))
+def test_template_examples(page: Page, ex_app_path: str) -> None:
+    validate_example(page, ex_app_path)
 
 
 @pytest.mark.parametrize("app_template", ["basic-app", "dashboard", "multi-page"])
 def test_create_core(app_template: str, page: Page):
-    dir = subprocess_create(app_template)
-    validate_example(page, f"{dir}/app.py")
+    with tempfile.TemporaryDirectory("example_apps") as tmpdir:
+        subprocess_create(app_template, dest_dir=tmpdir)
+        validate_example(page, f"{tmpdir}/app.py")
 
 
 @pytest.mark.parametrize("app_template", ["basic-app"])
 def test_create_express(app_template: str, page: Page):
-    dir = subprocess_create(app_template, "express")
-    validate_example(page, f"{dir}/app.py")
+    with tempfile.TemporaryDirectory("example_apps") as tmpdir:
+        subprocess_create(app_template, dest_dir=tmpdir, mode="express")
+        validate_example(page, f"{tmpdir}/app.py")
 
 
 @pytest.mark.parametrize("app_template", ["js-input", "js-output", "js-react"])
 def test_create_js(app_template: str):
-    subprocess_create("js-input", package_name="my_component")
+    with tempfile.TemporaryDirectory("example_apps") as tmpdir:
+        subprocess_create(app_template, dest_dir=tmpdir, package_name="my_component")
+        # TODO-Karan: Add test to validate once flag to install packages is implemented
