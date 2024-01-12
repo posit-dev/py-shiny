@@ -23,8 +23,31 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
 
+class MISSING_SILENT_EXCEPTION:
+    def __getattribute__(self, _: str) -> None:
+        raise SilentException
+
+    def __getitem__(self, _: str) -> None:
+        raise SilentException
+
+    def __setitem__(self, _: Any, __: Any) -> None:
+        raise SilentException
+
+    def __add__(self, _: Any) -> None:
+        raise SilentException
+
+    def __sub__(self, _: Any) -> None:
+        raise SilentException
+
+    def __mul__(self, _: Any) -> None:
+        raise SilentException
+
+    def __div__(self, _: Any) -> None:
+        raise SilentException
+
+
 # Sentinel value - indicates a missing value in a function call.
-class MISSING_TYPE:
+class MISSING_TYPE(MISSING_SILENT_EXCEPTION):
     def __eq__(self, _: Any) -> bool:
         return False
 
