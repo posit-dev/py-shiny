@@ -25,7 +25,20 @@ if TYPE_CHECKING:
 
 # Sentinel value - indicates a missing value in a function call.
 class MISSING_TYPE:
-    pass
+    def __eq__(self, _: Any) -> bool:
+        return False
+
+    def __bool__(self) -> bool:
+        return False
+
+    def __len__(self) -> int:
+        return 0
+
+    def __repr__(self) -> str:
+        return "<MISSING>"
+
+    def __str__(self) -> str:
+        return ""
 
 
 MISSING: MISSING_TYPE = MISSING_TYPE()
