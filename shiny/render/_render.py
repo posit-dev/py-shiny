@@ -91,10 +91,7 @@ class text(Renderer[str]):
     ~shiny.ui.output_text
     """
 
-    def default_ui(
-        self,
-        id: str,
-    ) -> Tag:
+    def default_ui(self, id: str) -> Tag:
         return _ui.output_text(
             id,
             inline=self.inline,
@@ -155,15 +152,8 @@ class code(Renderer[str]):
     ~shiny.ui.output_code
     """
 
-    def default_ui(
-        self,
-        id: str,
-        *,
-        placeholder: bool | MISSING_TYPE = MISSING,
-    ) -> Tag:
-        kwargs: dict[str, bool] = {}
-        set_kwargs_value(kwargs, "placeholder", placeholder, self.placeholder)
-        return _ui.output_code(id, **kwargs)
+    def default_ui(self, id: str) -> Tag:
+        return _ui.output_code(id, placeholder=self.placeholder)
 
     def __init__(
         self,
@@ -507,7 +497,7 @@ class image(Renderer[ImgData]):
     ~shiny.render.plot
     """
 
-    def default_ui(self, id: str, **kwargs: object):
+    def default_ui(self, id: str):
         return _ui.output_image(
             id,
             inline=self.inline,
@@ -516,10 +506,8 @@ class image(Renderer[ImgData]):
             hover=self.hover,
             brush=self.brush,
             fill=self.fill,
-            **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
         )
-        # TODO: Figure out where these **kwargs come from.
-        # TODO: Deal with kwargs and width/height
+        # TODO: Deal with width/height
 
     def __init__(
         self,
@@ -621,6 +609,7 @@ class table(Renderer[TableResult]):
 
     def default_ui(self, id: str, **kwargs: TagAttrValue) -> Tag:
         return _ui.output_table(id, **kwargs)
+        # TODO: Deal with kwargs
 
     def __init__(
         self,
