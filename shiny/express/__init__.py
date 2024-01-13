@@ -7,7 +7,6 @@ from ..session import _utils as _session_utils
 from . import ui
 from ._is_express import is_express_app
 from ._output import (  # noqa: F401
-    ui_kwargs,
     suspend_display,
     output_args,  # pyright: ignore[reportUnusedImport]
 )
@@ -19,7 +18,6 @@ __all__ = (
     "output",
     "session",
     "is_express_app",
-    "ui_kwargs",
     "suspend_display",
     "wrap_express_app",
     "ui",

@@ -1,5 +1,4 @@
 from shiny import render, ui
-from shiny.express import ui_kwargs
 from shiny.types import MISSING
 
 
