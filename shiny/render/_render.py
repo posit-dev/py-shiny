@@ -9,7 +9,6 @@ import typing
 # Can use `dict` in python >= 3.9
 from typing import (
     TYPE_CHECKING,
-    Any,
     Callable,
     Literal,
     Optional,
@@ -19,7 +18,7 @@ from typing import (
     runtime_checkable,
 )
 
-from htmltools import Tag, TagAttrValue, TagChild
+from htmltools import Tag, TagAttrValue, TagChild, TagFunction
 
 if TYPE_CHECKING:
     from ..session._utils import RenderedDeps
@@ -32,6 +31,7 @@ from .._typing_extensions import Self
 from ..session import get_current_session, require_active_session
 from ..session._session import DownloadHandler, DownloadInfo
 from ..types import MISSING, MISSING_TYPE, ImgData
+from ..ui._plot_output_opts import BrushOpts, ClickOpts, DblClickOpts, HoverOpts
 from ._try_render_plot import (
     PlotSizeInfo,
     try_render_matplotlib,
@@ -94,22 +94,23 @@ class text(Renderer[str]):
     def default_ui(
         self,
         id: str,
-        *,
-        inline: bool | MISSING_TYPE = MISSING,
     ) -> Tag:
-        kwargs: dict[str, Any] = {}
-        set_kwargs_value(kwargs, "inline", inline, self.inline)
-
-        return _ui.output_text(id, **kwargs)
+        return _ui.output_text(
+            id,
+            inline=self.inline,
+            container=self.container,
+        )
 
     def __init__(
         self,
         _fn: Optional[ValueFn[str]] = None,
         *,
         inline: bool = False,
+        container: Optional[TagFunction] = None,
     ) -> None:
         super().__init__(_fn)
         self.inline = inline
+        self.container = container
 
     async def transform(self, value: str) -> Jsonifiable:
         return str(value)
@@ -207,6 +208,43 @@ class plot(Renderer[object]):
         determined by the size of the corresponding :func:`~shiny.ui.output_plot`. (You
         should not need to use this argument in most Shiny apps--set the desired height
         on :func:`~shiny.ui.output_plot` instead.)
+    inline
+        (Express only) If ``True``, the result is displayed inline.
+    click
+        (Express only) This can be a boolean or an object created by
+        :func:`~shiny.ui.click_opts`. The default is `False`, but if you use `True` (or
+        equivalently, `click_opts()`), the plot will send coordinates to the server
+        whenever it is clicked, and the value will be accessible via `input.xx_click()`,
+        where `xx` is replaced with the ID of this plot. The input value will be a
+        dictionary with `x` and `y` elements indicating the mouse position.
+    dblclick
+        (Express only) This is just like the `click` parameter, but for double-click
+        events.
+    hover
+        (Express only) Similar to the `click` argument, this can be a boolean or an
+        object created by :func:`~shiny.ui.hover_opts`. The default is `False`, but if
+        you use `True` (or equivalently, `hover_opts()`), the plot will send coordinates
+        to the server whenever it is clicked, and the value will be accessible via
+        `input.xx_hover()`, where `xx` is replaced with the ID of this plot. The input
+        value will be a dictionary with `x` and `y` elements indicating the mouse
+        position. To control the hover time or hover delay type, use
+        :func:`~shiny.ui.hover_opts`.
+    brush
+        (Express only) Similar to the `click` argument, this can be a boolean or an
+        object created by :func:`~shiny.ui.brush_opts`. The default is `False`, but if
+        you use `True` (or equivalently, `brush_opts()`), the plot will allow the user
+        to "brush" in the plotting area, and will send information about the brushed
+        area to the server, and the value will be accessible via `input.plot_brush()`.
+        Brushing means that the user will be able to draw a rectangle in the plotting
+        area and drag it around. The value will be a named list with `xmin`, `xmax`,
+        `ymin`, and `ymax` elements indicating the brush area. To control the brush
+        behavior, use :func:`~shiny.ui.brush_opts`. Multiple
+        `output_image`/`output_plot` calls may share the same `id` value; brushing one
+        image or plot will cause any other brushes with the same `id` to disappear.
+    fill
+        (Express only) Whether or not to allow the image output to grow/shrink to fit a
+        fillable container with an opinionated height (e.g.,
+        :func:`~shiny.ui.page_fillable`).
     **kwargs
         Additional keyword arguments passed to the relevant method for saving the image
         (e.g., for matplotlib, arguments to ``savefig()``; for PIL and plotnine,
@@ -254,9 +292,16 @@ class plot(Renderer[object]):
         set_kwargs_value(kwargs, "height", height, self.height)
         return _ui.output_plot(
             id,
+            inline=self.inline,
+            click=self.click,
+            dblclick=self.dblclick,
+            hover=self.hover,
+            brush=self.brush,
+            fill=self.fill,
             # (possibly) contains `width` and `height` keys!
             **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
         )
+        # TODO: Deal with kwargs and width/height
 
     def __init__(
         self,
@@ -265,6 +310,12 @@ class plot(Renderer[object]):
         alt: Optional[str] = None,
         width: float | None | MISSING_TYPE = MISSING,
         height: float | None | MISSING_TYPE = MISSING,
+        inline: bool = False,
+        click: bool | ClickOpts = False,
+        dblclick: bool | DblClickOpts = False,
+        hover: bool | HoverOpts = False,
+        brush: bool | BrushOpts = False,
+        fill: bool | MISSING_TYPE = MISSING,
         **kwargs: object,
     ) -> None:
         super().__init__(_fn)
@@ -272,6 +323,13 @@ class plot(Renderer[object]):
         self.width = width
         self.height = height
         self.kwargs = kwargs
+
+        self.inline = inline
+        self.click = click
+        self.dblclick = dblclick
+        self.hover = hover
+        self.brush = brush
+        self.fill = fill
 
     async def render(self) -> dict[str, Jsonifiable] | Jsonifiable | None:
         is_userfn_async = self.fn.is_async()
@@ -393,6 +451,43 @@ class image(Renderer[ImgData]):
     ----------
     delete_file
         If ``True``, the image file will be deleted after rendering.
+    inline
+        (Express only) If ``True``, the result is displayed inline.
+    click
+        (Express only) This can be a boolean or an object created by
+        :func:`~shiny.ui.click_opts`. The default is `False`, but if you use `True` (or
+        equivalently, `click_opts()`), the plot will send coordinates to the server
+        whenever it is clicked, and the value will be accessible via `input.xx_click()`,
+        where `xx` is replaced with the ID of this plot. The input value will be a
+        dictionary with `x` and `y` elements indicating the mouse position.
+    dblclick
+        (Express only) This is just like the `click` parameter, but for double-click
+        events.
+    hover
+        (Express only) Similar to the `click` argument, this can be a boolean or an
+        object created by :func:`~shiny.ui.hover_opts`. The default is `False`, but if
+        you use `True` (or equivalently, `hover_opts()`), the plot will send coordinates
+        to the server whenever it is clicked, and the value will be accessible via
+        `input.xx_hover()`, where `xx` is replaced with the ID of this plot. The input
+        value will be a dictionary with `x` and `y` elements indicating the mouse
+        position. To control the hover time or hover delay type, use
+        :func:`~shiny.ui.hover_opts`.
+    brush
+        (Express only) Similar to the `click` argument, this can be a boolean or an
+        object created by :func:`~shiny.ui.brush_opts`. The default is `False`, but if
+        you use `True` (or equivalently, `brush_opts()`), the plot will allow the user
+        to "brush" in the plotting area, and will send information about the brushed
+        area to the server, and the value will be accessible via `input.plot_brush()`.
+        Brushing means that the user will be able to draw a rectangle in the plotting
+        area and drag it around. The value will be a named list with `xmin`, `xmax`,
+        `ymin`, and `ymax` elements indicating the brush area. To control the brush
+        behavior, use :func:`~shiny.ui.brush_opts`. Multiple
+        `output_image`/`output_plot` calls may share the same `id` value; brushing one
+        image or plot will cause any other brushes with the same `id` to disappear.
+    fill
+        (Express only) Whether or not to allow the image output to grow/shrink to fit a
+        fillable container with an opinionated height (e.g.,
+        :func:`~shiny.ui.page_fillable`).
 
     Returns
     -------
@@ -415,17 +510,38 @@ class image(Renderer[ImgData]):
     def default_ui(self, id: str, **kwargs: object):
         return _ui.output_image(
             id,
+            inline=self.inline,
+            click=self.click,
+            dblclick=self.dblclick,
+            hover=self.hover,
+            brush=self.brush,
+            fill=self.fill,
             **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
         )
+        # TODO: Figure out where these **kwargs come from.
+        # TODO: Deal with kwargs and width/height
 
     def __init__(
         self,
         _fn: Optional[ValueFn[ImgData]] = None,
         *,
         delete_file: bool = False,
+        inline: bool = False,
+        click: bool | ClickOpts = False,
+        dblclick: bool | DblClickOpts = False,
+        hover: bool | HoverOpts = False,
+        brush: bool | BrushOpts = False,
+        fill: bool = False,
     ) -> None:
         super().__init__(_fn)
-        self.delete_file: bool = delete_file
+
+        self.delete_file = delete_file
+        self.inline = inline
+        self.click = click
+        self.dblclick = dblclick
+        self.hover = hover
+        self.brush = brush
+        self.fill = fill
 
     async def transform(self, value: ImgData) -> dict[str, Jsonifiable] | None:
         src: str = value.get("src")
@@ -521,6 +637,8 @@ class table(Renderer[TableResult]):
         self.border: int = border
         self.kwargs: dict[str, object] = kwargs
 
+        # TODO: deal with kwargs collision with output_table
+
     async def transform(self, value: TableResult) -> dict[str, Jsonifiable]:
         import pandas
         import pandas.io.formats.style
@@ -562,6 +680,22 @@ class ui(Renderer[TagChild]):
     """
     Reactively render HTML content.
 
+    Parameters
+    ----------
+    inline
+        (Express only) If ``True``, the result is displayed inline.
+    container
+        (Express only) A Callable that returns the output container.
+    fill
+        (Express only) Whether or not to allow the UI output to grow/shrink to fit a
+        fillable container with an opinionated height (e.g.,
+        :func:`~shiny.ui.page_fillable`).
+    fillable
+        (Express only) Whether or not the UI output area should be considered a fillable
+        (i.e., flexbox) container.
+    **kwargs
+        (Express only) Attributes to be applied to the output container.
+
     Returns
     -------
     :
@@ -580,7 +714,35 @@ class ui(Renderer[TagChild]):
     """
 
     def default_ui(self, id: str) -> Tag:
-        return _ui.output_ui(id)
+        return _ui.output_ui(
+            id,
+            inline=self.inline,
+            container=self.container,
+            fill=self.fill,
+            fillable=self.fillable,
+            **self.kwargs,
+        )
+
+    def __init__(
+        self,
+        fn: Optional[ValueFn[TagChild]] = None,
+        *,
+        inline: bool = False,
+        container: Optional[TagFunction] = None,
+        fill: bool = False,
+        fillable: bool = False,
+        **kwargs: TagAttrValue,
+    ) -> None:
+        super().__init__()
+
+        self.inline = inline
+        self.container = container
+        self.fill = fill
+        self.fillable = fillable
+        self.kwargs = kwargs
+
+        if fn is not None:
+            self(fn)
 
     async def transform(self, value: TagChild) -> Jsonifiable:
         session = require_active_session(None)
@@ -600,12 +762,18 @@ class download(Renderer[str]):
     ----------
     filename
         The filename of the download.
-    label
-        A label for the button, when used in Express mode. Defaults to "Download".
     media_type
         The media type of the download.
     encoding
         The encoding of the download.
+    label
+        (Express only) A label for the button. Defaults to "Download".
+    icon
+        (Express only) An icon to display on the button.
+    width
+        (Express only) The width of the button.
+    **kwargs
+        (Express only) Additional attributes for the button.
 
     Returns
     -------
@@ -618,23 +786,35 @@ class download(Renderer[str]):
     """
 
     def default_ui(self, id: str) -> Tag:
-        return _ui.download_button(id, label=self.label)
+        return _ui.download_button(
+            id,
+            label=self.label,
+            icon=self.icon,
+            width=self.width,
+            **self.kwargs,
+        )
 
     def __init__(
         self,
         fn: Optional[DownloadHandler] = None,
         *,
         filename: Optional[str | Callable[[], str]] = None,
-        label: TagChild = "Download",
         media_type: None | str | Callable[[], str] = None,
         encoding: str = "utf-8",
+        label: TagChild = "Download",
+        icon: TagChild = None,
+        width: Optional[str] = None,
+        **kwargs: TagAttrValue,
     ) -> None:
         super().__init__()
 
-        self.label = label
         self.filename = filename
         self.media_type = media_type
         self.encoding = encoding
+        self.label = label
+        self.icon = icon
+        self.width = width
+        self.kwargs = kwargs
 
         if fn is not None:
             self(fn)
