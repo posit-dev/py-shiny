@@ -23,7 +23,7 @@ import re
 from datetime import date
 from typing import Literal, Mapping, Optional, overload
 
-from htmltools import HTML, TagChild, TagList, tags
+from htmltools import HTML, JS, TagChild, TagList, tags
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
@@ -560,7 +560,7 @@ def update_selectize(
     label: Optional[str] = None,
     choices: Optional[SelectChoicesArg] = None,
     selected: Optional[str | list[str]] = None,
-    options: Optional[dict[str, str | float | HTML]] = None,
+    options: Optional[dict[str, str | float | HTML | JS]] = None,
     server: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -606,7 +606,9 @@ def update_selectize(
         )
 
     if options is not None:
-        js_keys = [key for key, value in options.items() if isinstance(value, HTML)]
+        js_keys = [
+            key for key, value in options.items() if isinstance(value, (HTML, JS))
+        ]
         cfg = TagList(
             tags.script(
                 json.dumps(options),

@@ -10,7 +10,7 @@ __all__ = (
 from json import dumps
 from typing import Mapping, Optional, Union, cast
 
-from htmltools import HTML, Tag, TagChild, TagList, css, div, tags
+from htmltools import HTML, JS, Tag, TagChild, TagList, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -55,7 +55,7 @@ def input_selectize(
     selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
-    options: Optional[dict[str, str | float | HTML]] = None,
+    options: Optional[dict[str, str | float | HTML | JS]] = None,
 ) -> Tag:
     """
     Create a select list that can be used to choose a single or multiple items from a
@@ -188,7 +188,7 @@ def input_select(
     if options is None:
         options = {}
 
-    js_keys = [key for key, value in options.items() if isinstance(value, HTML)]
+    js_keys = [key for key, value in options.items() if isinstance(value, (HTML, JS))]
     choices_tags = _render_choices(choices_, selected)
 
     resolved_id = resolve_id(id)

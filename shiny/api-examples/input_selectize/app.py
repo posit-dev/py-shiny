@@ -1,4 +1,4 @@
-from htmltools import HTML
+from htmltools import JS
 
 from shiny import App, Inputs, Outputs, Session, render, ui
 
@@ -26,7 +26,7 @@ app_ui = ui.page_fluid(
         options=(
             {
                 "placeholder": "Enter text",
-                "render": HTML(
+                "render": JS(
                     '{option: function(item, escape) {return "<div><strong>Select " + item.label + "</strong></div>";}}'
                 ),
                 "create": True,
