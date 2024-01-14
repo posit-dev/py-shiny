@@ -14,7 +14,7 @@ from htmltools import HTML, Tag, TagChild, TagList, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
-from ._html_dependencies import selectize_deps
+from ._html_deps_external import selectize_deps
 from ._utils import shiny_input_label
 
 _Choices = Mapping[str, TagChild]
@@ -38,8 +38,10 @@ SelectChoicesArg = Union[
 
 _topics = {
     "Server value": """
-A list of strings, usually of length 1, with the value of the selected items. When
-``multiple=True`` and nothing is selected, this value will be ``None``.
+If `multiple=False`, the server value is a string with the value of the selected item.
+If `multiple=True`, the server value is a tuple containing the values of the
+selected items. When ``multiple=True`` and nothing is selected, this value
+will be ``None``.
 """
 }
 
@@ -88,8 +90,10 @@ def input_selectize(
     Notes
     ------
     ::: {.callout-note title="Server value"}
-    A list of strings, usually of length 1, with the value of the selected items. When
-    ``multiple=True`` and nothing is selected, this value will be ``None``.
+    If `multiple=False`, the server value is a string with the value of the selected item.
+    If `multiple=True`, the server value is a tuple containing the values of the
+    selected items. When ``multiple=True`` and nothing is selected, this value
+    will be ``None``.
     :::
 
     See Also
@@ -161,8 +165,10 @@ def input_select(
     Notes
     ------
     ::: {.callout-note title="Server value"}
-    A list of strings, usually of length 1, with the value of the selected items. When
-    ``multiple=True`` and nothing is selected, this value will be ``None``.
+    If `multiple=False`, the server value is a string with the value of the selected item.
+    If `multiple=True`, the server value is a tuple containing the values of the
+    selected items. When ``multiple=True`` and nothing is selected, this value
+    will be ``None``.
     :::
 
     See Also

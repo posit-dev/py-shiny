@@ -7,7 +7,6 @@ import inspect
 import os
 import platform
 import re
-import shutil
 import sys
 import types
 from pathlib import Path
@@ -21,6 +20,8 @@ import shiny
 
 from . import _autoreload, _hostenv, _static, _utils
 from ._typing_extensions import NotRequired, TypedDict
+from .express import is_express_app
+from .express._utils import escape_to_var_name
 
 
 @click.group("main")
@@ -29,6 +30,9 @@ def main() -> None:
 
 
 stop_shortcut = "Ctrl+C"
+
+RELOAD_INCLUDES_DEFAULT = ("*.py", "*.css", "*.js", "*.htm", "*.html", "*.png")
+RELOAD_EXCLUDES_DEFAULT = (".*", "*.py[cod]", "__pycache__", "env", "venv")
 
 
 @main.command(
@@ -76,7 +80,7 @@ any of the following will work:
     "--reload",
     is_flag=True,
     default=False,
-    help="Enable auto-reload, when these types of files change: .py .css .js .html",
+    help="Enable auto-reload. See --reload-includes for types of files that are monitored for changes.",
 )
 @click.option(
     "--reload-dir",
@@ -85,6 +89,20 @@ any of the following will work:
     help="Indicate a directory `--reload` should (recursively) monitor for changes, in "
     "addition to the app's parent directory. Can be used more than once.",
     type=click.Path(exists=True),
+)
+@click.option(
+    "--reload-includes",
+    "reload_includes",
+    default=",".join(RELOAD_INCLUDES_DEFAULT),
+    help="File glob(s) to indicate which files should be monitored for changes. Defaults"
+    f' to "{",".join(RELOAD_INCLUDES_DEFAULT)}".',
+)
+@click.option(
+    "--reload-excludes",
+    "reload_excludes",
+    default=",".join(RELOAD_EXCLUDES_DEFAULT),
+    help="File glob(s) to indicate which files should be excluded from file monitoring. Defaults"
+    f' to "{",".join(RELOAD_EXCLUDES_DEFAULT)}".',
 )
 @click.option(
     "--ws-max-size",
@@ -128,15 +146,21 @@ def run(
     app: str | shiny.App,
     host: str,
     port: int,
+    *,
     autoreload_port: int,
     reload: bool,
     reload_dirs: tuple[str, ...],
+    reload_includes: str,
+    reload_excludes: str,
     ws_max_size: int,
     log_level: str,
     app_dir: str,
     factory: bool,
     launch_browser: bool,
+    **kwargs: object,
 ) -> None:
+    reload_includes_list = reload_includes.split(",")
+    reload_excludes_list = reload_excludes.split(",")
     return run_app(
         app,
         host=host,
@@ -144,11 +168,14 @@ def run(
         autoreload_port=autoreload_port,
         reload=reload,
         reload_dirs=list(reload_dirs),
+        reload_includes=reload_includes_list,
+        reload_excludes=reload_excludes_list,
         ws_max_size=ws_max_size,
         log_level=log_level,
         app_dir=app_dir,
         factory=factory,
         launch_browser=launch_browser,
+        **kwargs,
     )
 
 
@@ -156,17 +183,21 @@ def run_app(
     app: str | shiny.App = "app:app",
     host: str = "127.0.0.1",
     port: int = 8000,
+    *,
     autoreload_port: int = 0,
     reload: bool = False,
     reload_dirs: Optional[list[str]] = None,
+    reload_includes: list[str] | tuple[str, ...] = RELOAD_INCLUDES_DEFAULT,
+    reload_excludes: list[str] | tuple[str, ...] = RELOAD_EXCLUDES_DEFAULT,
     ws_max_size: int = 16777216,
     log_level: Optional[str] = None,
     app_dir: Optional[str] = ".",
     factory: bool = False,
     launch_browser: bool = False,
+    **kwargs: object,
 ) -> None:
     """
-    Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop.
+    Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop the app.
 
     Parameters
     ----------
@@ -176,8 +207,8 @@ def run_app(
         directory. In other cases, the app location can be specified as a
         ``<module>:<attribute>`` string where the ``:<attribute>`` is only necessary if
         the application is named something other than ``app``. Note that ``<module>``
-        can be relative path to a ``.py`` file or a directory (with an ``app.py`` file
-        inside it); and in this case, the relative path is resolved relative to the
+        can be a relative path to a ``.py`` file or a directory (with an ``app.py`` file
+        inside of it); and in this case, the relative path is resolved relative to the
         ``app_dir`` directory.
     host
         The address that the app should listen on.
@@ -188,21 +219,33 @@ def run_app(
         hot-reload. Set to 0 to use a random port.
     reload
         Enable auto-reload.
+    reload_dirs
+        A list of directories (in addition to the app directory) to watch for changes that
+        will trigger an app reload.
+    reload_includes
+        List or tuple of file globs to indicate which files should be monitored for
+        changes. Can be combined with `reload_excludes`.
+    reload_excludes
+        List or tuple of file globs to indicate which files should be excluded from
+        reload monitoring. Can be combined with `reload_includes`
     ws_max_size
         WebSocket max size message in bytes.
     log_level
         Log level.
     app_dir
-        Look for ``app`` under this directory (by adding this to the ``PYTHONPATH``).
+        The directory to look for ``app`` under (by adding this to the ``PYTHONPATH``).
     factory
         Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
     launch_browser
         Launch app browser after app starts, using the Python webbrowser module.
+    **kwargs
+        Additional keyword arguments which are passed to ``uvicorn.run``. For more
+        information see [Uvicorn documentation](https://www.uvicorn.org/).
 
     Tip
     ---
     The ``shiny run`` command-line interface (which comes installed with Shiny) provides
-    the same functionality as this function.
+    the same functionality as :func:`~shiny.run_app`.
 
     Examples
     --------
@@ -233,7 +276,18 @@ def run_app(
     os.environ["SHINY_PORT"] = str(port)
 
     if isinstance(app, str):
-        app, app_dir = resolve_app(app, app_dir)
+        # Remove ":app" suffix if present. Normally users would just pass in the
+        # filename without the trailing ":app", as in `shiny run app.py`, but the
+        # default value for `shiny run` is "app.py:app", so we need to handle it.
+        app_no_suffix = re.sub(r":app$", "", app)
+        if is_express_app(app_no_suffix, app_dir):
+            app_path = Path(app_no_suffix).resolve()
+            # If the file is "/path/to/app.py", our entrypoint with the escaped filename
+            # is "shiny.express.app:_2f_path_2f_to_2f_app_2e_py".
+            app = "shiny.express.app:" + escape_to_var_name(str(app_path))
+            app_dir = str(app_path.parent)
+        else:
+            app, app_dir = resolve_app(app, app_dir)
 
     if app_dir:
         app_dir = os.path.realpath(app_dir)
@@ -242,10 +296,12 @@ def run_app(
 
     if reload_dirs is None:
         reload_dirs = []
+        if app_dir is not None:
+            reload_dirs = [app_dir]
 
     if reload:
         # Always watch the app_dir
-        if app_dir:
+        if app_dir and app_dir not in reload_dirs:
             reload_dirs.append(app_dir)
         # For developers of Shiny itself; autoreload the app when Shiny package changes
         if os.getenv("SHINY_PKG_AUTORELOAD"):
@@ -265,15 +321,12 @@ def run_app(
 
     reload_args: ReloadArgs = {}
     if reload:
-        reload_dirs = []
-        if app_dir is not None:
-            reload_dirs = [app_dir]
-
         reload_args = {
             "reload": reload,
             # Adding `reload_includes` param while `reload=False` produces an warning
             # https://github.com/encode/uvicorn/blob/d43afed1cfa018a85c83094da8a2dd29f656d676/uvicorn/config.py#L298-L304
-            "reload_includes": ["*.py", "*.css", "*.js", "*.htm", "*.html", "*.png"],
+            "reload_includes": list(reload_includes),
+            "reload_excludes": list(reload_excludes),
             "reload_dirs": reload_dirs,
         }
 
@@ -291,7 +344,8 @@ def run_app(
         log_config=log_config,
         app_dir=app_dir,
         factory=factory,
-        **reload_args,
+        **reload_args,  # pyright: ignore[reportGeneralTypeIssues]
+        **kwargs,
     )
 
 
@@ -339,7 +393,7 @@ def is_file(app: str) -> bool:
     return "/" in app or app.endswith(".py")
 
 
-def resolve_app(app: str, app_dir: Optional[str]) -> tuple[str, Optional[str]]:
+def resolve_app(app: str, app_dir: str | None) -> tuple[str, str | None]:
     # The `app` parameter can be:
     #
     # - A module:attribute name
@@ -399,33 +453,98 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
     return importlib.import_module(module)
 
 
+# The template choices are defined here instead of in `_template_utiles.py` in
+# order to delay loading the questionary package until shiny create is called.
+
+# These templates are copied over fromt the `shiny/templates/app_templates`
+# directory. The process for adding new ones is to add your app folder to
+# that directory, and then add another entry to this dictionary.
+app_template_choices = {
+    "Basic App": "basic-app",
+    "Dashboard": "dashboard",
+    "Multi-page app with modules": "multi-page",
+    "Custom JavaScript Component": "js-component",
+}
+
+# These are templates which produce a Python package and have content filled in at
+# various places based on the user input. You can add new ones by following the
+# examples in `shiny/templates/package-templates` and then adding entries to this
+# dictionary.
+package_template_choices = {
+    "Input component": "js-input",
+    "Output component": "js-output",
+    "React component": "js-react",
+}
+
+
 @main.command(
     help="""Create a Shiny application from a template.
 
-APPDIR is the directory to the Shiny application. A file named app.py will be created in
-that directory.
+Create an app based on a template. You will be prompted with
+a number of application types, as well as the destination folder.
+If you don't provide a destination folder, it will be created in the current working
+directory based on the template name.
 
 After creating the application, you use `shiny run`:
 
     shiny run APPDIR/app.py --reload
 """
 )
-@click.argument("appdir", type=str, default=".")
-def create(appdir: str) -> None:
-    app_dir = Path(appdir)
-    app_path = app_dir / "app.py"
-    if app_path.exists():
-        print(f"Error: Can't create {app_path} because it already exists.")
-        sys.exit(1)
+@click.option(
+    "--template",
+    "-t",
+    type=click.Choice(
+        list({**app_template_choices, **package_template_choices}.values()),
+        case_sensitive=False,
+    ),
+    help="Choose a template for your new application.",
+)
+@click.option(
+    "--mode",
+    "-m",
+    type=click.Choice(
+        ["core", "express"],
+        case_sensitive=False,
+    ),
+    help="Do you want to use a Shiny Express template or a Shiny Core template?",
+)
+@click.option(
+    "--github",
+    "-g",
+    help="The GitHub URL of the template sub-directory. For example https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard",
+)
+@click.option(
+    "--dir",
+    "-d",
+    help="The destination directory, you will be prompted if this is not provided.",
+)
+@click.option(
+    "--package-name",
+    help="""
+    If you are using one of the JavaScript component templates,
+    you can use this flag to specify the name of the resulting package without being prompted.
+    """,
+)
+def create(
+    template: Optional[str] = None,
+    mode: Optional[str] = None,
+    github: Optional[str] = None,
+    dir: Optional[str | Path] = None,
+    package_name: Optional[str] = None,
+) -> None:
+    from ._template_utils import template_query, use_git_template
 
-    if not app_dir.exists():
-        app_dir.mkdir()
+    if github is not None and template is not None:
+        raise click.UsageError("You cannot provide both --github and --template")
 
-    shutil.copyfile(
-        Path(__file__).parent / "api-examples" / "template" / "app.py", app_path
-    )
+    if isinstance(dir, str):
+        dir = Path(dir)
 
-    print(f"Created Shiny app at {app_dir / 'app.py'}")
+    if github is not None:
+        use_git_template(github, mode, dir)
+        return
+
+    template_query(template, mode, dir, package_name)
 
 
 @main.command(
@@ -480,7 +599,26 @@ def static_assets(command: str) -> None:
         raise click.UsageError(f"Unknown command: {command}")
 
 
+@main.command(help="""Convert a JSON file with code cells to a py file.""")
+@click.argument(
+    "json_file",
+    type=str,
+)
+@click.argument(
+    "py_file",
+    type=str,
+)
+def cells_to_app(json_file: str, py_file: str) -> None:
+    shiny.quarto.convert_code_cells_to_app_py(json_file, py_file)
+
+
+@main.command(help="""Get Shiny's HTML dependencies as JSON.""")
+def get_shiny_deps() -> None:
+    print(shiny.quarto.get_shiny_deps())
+
+
 class ReloadArgs(TypedDict):
     reload: NotRequired[bool]
     reload_includes: NotRequired[list[str]]
+    reload_excludes: NotRequired[list[str]]
     reload_dirs: NotRequired[list[str]]

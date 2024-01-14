@@ -12,12 +12,12 @@ app_ui = ui.page_fluid(
       """
     ),
     ui.navset_card_tab(
-        ui.nav(
+        ui.nav_panel(
             "Sync",
             ui.input_action_button("btn", "Click me"),
             ui.output_ui("btn_value"),
         ),
-        ui.nav(
+        ui.nav_panel(
             "Async",
             ui.input_action_button("btn_async", "Click me"),
             ui.output_ui("btn_async_value"),
@@ -66,7 +66,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         val = await btn_async_r()
         print("async @calc() event:   ", str(val))
 
-    @output
     @render.ui
     @reactive.event(btn_async_r)
     async def btn_async_value():

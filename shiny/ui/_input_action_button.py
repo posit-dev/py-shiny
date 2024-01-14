@@ -31,7 +31,7 @@ def input_action_button(
         An icon to appear inline with the button/link.
     width
         The CSS width, e.g. '400px', or '100%'
-    kwargs
+    **kwargs
         Attributes to be applied to the button.
 
     Returns
@@ -50,6 +50,9 @@ def input_action_button(
     ~shiny.ui.input_action_link
     ~shiny.reactive.event
     """
+
+    if "_add_ws" not in kwargs:
+        kwargs["_add_ws"] = True
 
     return tags.button(
         {"class": "btn btn-default action-button", "style": css(width=width)},
@@ -82,7 +85,7 @@ def input_action_link(
         An input label.
     icon
         An icon to appear inline with the button/link.
-    kwargs
+    **kwargs
         Attributes to be applied to the link.
 
     Returns

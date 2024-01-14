@@ -16,7 +16,7 @@ from htmltools import HTML, Tag, TagAttrValue, TagChild, css, div, tags
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from .._typing_extensions import NotRequired, TypedDict
-from ._html_dependencies import ionrangeslider_deps
+from ._html_deps_external import ionrangeslider_deps
 from ._utils import shiny_input_label
 
 # TODO: validate value(s) are within (min,max)?
@@ -98,7 +98,7 @@ def input_slider(
     animate
         ``True`` to show simple animation controls with default settings; ``False`` not
         to; or a custom settings list, such as those created using
-        :class:`AnimationOptions()`.
+        :class:`~AnimationOptions`.
     width
         The CSS width, e.g. '400px', or '100%'
     sep
@@ -132,7 +132,7 @@ def input_slider(
     ------
     ::: {.callout-note title="Server value"}
     A number, date, or date-time (depending on the class of value), or in the case of
-    slider range, a list of two numbers/dates/date-times.
+    slider range, a tuple of two numbers/dates/date-times.
     :::
 
     See Also

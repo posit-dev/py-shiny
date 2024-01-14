@@ -28,7 +28,7 @@ class _InputHandlers(Dict[str, InputHandlerType]):
 
         return _
 
-    def remove(self, type: str):
+    def remove(self, type: str) -> None:
         del self[type]
 
     def _process_value(self, type: str, value: Any, name: str, session: Session) -> Any:
@@ -68,7 +68,7 @@ Note
 ``add()`` ing an input handler will make it persist for the duration of the Python
 process (unless Shiny is explicitly reloaded). For that reason, verbose naming is
 encouraged to minimize the risk of colliding with other Shiny input binding(s) which
-happen to use the same ``type`` (if this the binding is bundled with a package, we
+happen to use the same ``type`` (if the binding is bundled with a package, we
 recommend the format of "packageName.widgetName").
 
 Example
@@ -97,7 +97,10 @@ getType: function(el) {
 def _(value: str | list[str], name: str, session: Session) -> date | tuple[date, date]:
     if isinstance(value, str):
         return datetime.strptime(value, "%Y-%m-%d").date()
-    return tuple(datetime.strptime(v, "%Y-%m-%d").date() for v in value)
+    return tuple(
+        datetime.strptime(v, "%Y-%m-%d").date()
+        for v in value  # pyright: ignore[reportGeneralTypeIssues]
+    )
 
 
 @input_handlers.add("shiny.datetime")
@@ -106,7 +109,10 @@ def _(
 ) -> datetime | tuple[datetime, datetime]:
     if isinstance(value, (int, float)):
         return datetime.utcfromtimestamp(value)
-    return tuple(datetime.utcfromtimestamp(v) for v in value)
+    return tuple(
+        datetime.utcfromtimestamp(v)
+        for v in value  # pyright: ignore[reportGeneralTypeIssues]
+    )
 
 
 @input_handlers.add("shiny.action")

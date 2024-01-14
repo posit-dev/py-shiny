@@ -12,7 +12,7 @@ __all__ = (
     "SilentCancelOutputException",
 )
 
-from typing import TYPE_CHECKING, Any, BinaryIO, Literal, Optional, Protocol
+from typing import TYPE_CHECKING, Any, BinaryIO, Literal, NamedTuple, Optional, Protocol
 
 from htmltools import TagChild
 
@@ -37,7 +37,7 @@ MISSING: MISSING_TYPE = MISSING_TYPE()
 # FileUploadOperation class.
 class FileInfo(TypedDict):
     """
-    Information about a file upload.
+    Class for information about a file upload.
 
     See Also
     --------
@@ -49,7 +49,7 @@ class FileInfo(TypedDict):
     """
 
     name: str
-    """The name of the file."""
+    """The name of the file being uploaded."""
     size: int
     """The size of the file in bytes."""
     type: str
@@ -144,7 +144,7 @@ class ActionButtonValue(int):
 
 class NavSetArg(Protocol):
     """
-    An value suitable for passing to a navigation container (e.g.,
+    A value suitable for passing to a navigation container (e.g.,
     :func:`~shiny.ui.navset_tab`).
     """
 
@@ -187,6 +187,7 @@ class PlotnineFigure(Protocol):
     facet: Any
     layout: Any
     mapping: dict[str, str]
+    theme: PlotnineTheme
 
     def save(
         self,
@@ -203,6 +204,18 @@ class PlotnineFigure(Protocol):
 
     def draw(self, show: bool) -> Figure:
         ...
+
+
+class PlotnineTheme(NamedTuple):
+    themeables: PlotnineThemeables
+
+
+class PlotnineThemeables(TypedDict):
+    figure_size: PlotnineThemeable | None
+
+
+class PlotnineThemeable(NamedTuple):
+    properties: dict[str, Any]
 
 
 class CoordmapDims(TypedDict):

@@ -1,75 +1,63 @@
 from __future__ import annotations
 
-__all__ = (
-    "text",
-    "plot",
-    "image",
-    "table",
-    "ui",
-)
-
 import base64
 import os
 import sys
 import typing
+
+# `typing.Dict` sed for python 3.8 compatibility
+# Can use `dict` in python >= 3.9
 from typing import (
     TYPE_CHECKING,
-    Any,
+    Callable,
+    Literal,
     Optional,
     Protocol,
     Union,
     cast,
-    overload,
     runtime_checkable,
 )
 
-from htmltools import TagChild
+from htmltools import Tag, TagAttrValue, TagChild
 
 if TYPE_CHECKING:
     from ..session._utils import RenderedDeps
     import pandas as pd
 
 from .. import _utils
+from .. import ui as _ui
 from .._namespaces import ResolvedId
-from ..types import ImgData
-from ._try_render_plot import try_render_matplotlib, try_render_pil, try_render_plotnine
-from .transformer import (
-    TransformerMetadata,
-    ValueFn,
-    is_async_callable,
-    output_transformer,
-    resolve_value_fn,
+from .._typing_extensions import Self
+from ..session import get_current_session, require_active_session
+from ..session._session import DownloadHandler, DownloadInfo
+from ..types import MISSING, MISSING_TYPE, ImgData
+from ._try_render_plot import (
+    PlotSizeInfo,
+    try_render_matplotlib,
+    try_render_pil,
+    try_render_plotnine,
+)
+from .renderer import Jsonifiable, Renderer, ValueFn
+from .renderer._utils import (
+    imgdata_to_jsonifiable,
+    rendered_deps_to_jsonifiable,
+    set_kwargs_value,
 )
 
+__all__ = (
+    "text",
+    "plot",
+    "image",
+    "table",
+    "ui",
+    "download",
+)
 # ======================================================================================
 # RenderText
 # ======================================================================================
 
 
-@output_transformer
-async def TextTransformer(
-    _meta: TransformerMetadata,
-    _fn: ValueFn[str | None],
-) -> str | None:
-    value = await resolve_value_fn(_fn)
-    if value is None:
-        return None
-    return str(value)
-
-
-@overload
-def text() -> TextTransformer.OutputRendererDecorator:
-    ...
-
-
-@overload
-def text(_fn: TextTransformer.ValueFn) -> TextTransformer.OutputRenderer:
-    ...
-
-
-def text(
-    _fn: TextTransformer.ValueFn | None = None,
-) -> TextTransformer.OutputRenderer | TextTransformer.OutputRendererDecorator:
+class text(Renderer[str]):
     """
     Reactively render text.
 
@@ -80,144 +68,36 @@ def text(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_text` container (see :func:`~shiny.ui.output_text` for
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_text` container (see :func:`~shiny.ui.output_text` for
     example usage).
 
     See Also
     --------
     ~shiny.ui.output_text
     """
-    return TextTransformer(_fn)
+
+    def default_ui(self, id: str, placeholder: bool | MISSING_TYPE = MISSING) -> Tag:
+        kwargs: dict[str, bool] = {}
+        set_kwargs_value(kwargs, "placeholder", placeholder, None)
+        return _ui.output_text_verbatim(id, **kwargs)
+
+    async def transform(self, value: str) -> Jsonifiable:
+        return str(value)
 
 
 # ======================================================================================
 # RenderPlot
 # ======================================================================================
-# It would be nice to specify the return type of RenderPlotFunc to be something like:
+
+
+# It would be nice to specify the return type of ValueFn to be something like:
 #   Union[matplotlib.figure.Figure, PIL.Image.Image]
 # However, if we did that, we'd have to import those modules at load time, which adds
 # a nontrivial amount of overhead. So for now, we're just using `object`.
-@output_transformer
-async def PlotTransformer(
-    _meta: TransformerMetadata,
-    _fn: ValueFn[object],
-    *,
-    alt: Optional[str] = None,
-    **kwargs: object,
-) -> ImgData | None:
-    is_userfn_async = is_async_callable(_fn)
-    name = _meta.name
-    session = _meta.session
-
-    ppi: float = 96
-
-    inputs = session.root_scope().input
-
-    # Reactively read some information about the plot.
-    pixelratio: float = typing.cast(
-        float, inputs[ResolvedId(".clientdata_pixelratio")]()
-    )
-    width: float = typing.cast(
-        float, inputs[ResolvedId(f".clientdata_output_{name}_width")]()
-    )
-    height: float = typing.cast(
-        float, inputs[ResolvedId(f".clientdata_output_{name}_height")]()
-    )
-
-    # Call the user function to get the plot object.
-    x = await resolve_value_fn(_fn)
-
-    # Note that x might be None; it could be a matplotlib.pyplot
-
-    # Try each type of renderer in turn. The reason we do it this way is to avoid
-    # importing modules that aren't already loaded. That could slow things down, or
-    # worse, cause an error if the module isn't installed.
-    #
-    # Each try_render function should indicate whether it was able to make sense of
-    # the x value (or, in the case of matplotlib, possibly it decided to use the
-    # global pyplot figure) by returning a tuple that starts with True. The second
-    # tuple element may be None in this case, which means the try_render function
-    # explicitly wants the plot to be blanked.
-    #
-    # If a try_render function returns a tuple that starts with False, then the next
-    # try_render function should be tried. If none succeed, an error is raised.
-    ok: bool
-    result: ImgData | None
-
-    if "plotnine" in sys.modules:
-        ok, result = try_render_plotnine(
-            x,
-            width,
-            height,
-            pixelratio,
-            ppi,
-            alt,
-            **kwargs,
-        )
-        if ok:
-            return result
-
-    if "matplotlib" in sys.modules:
-        ok, result = try_render_matplotlib(
-            x,
-            width,
-            height,
-            pixelratio=pixelratio,
-            ppi=ppi,
-            allow_global=not is_userfn_async,
-            alt=alt,
-            **kwargs,
-        )
-        if ok:
-            return result
-
-    if "PIL" in sys.modules:
-        ok, result = try_render_pil(
-            x,
-            width,
-            height,
-            pixelratio,
-            ppi,
-            alt,
-            **kwargs,
-        )
-        if ok:
-            return result
-
-    # This check must happen last because
-    # matplotlib might be able to plot even if x is `None`
-    if x is None:
-        return None
-
-    raise Exception(
-        f"@render.plot doesn't know to render objects of type '{str(type(x))}'. "
-        + "Consider either requesting support for this type of plot object, and/or "
-        + " explictly saving the object to a (png) file and using @render.image."
-    )
 
 
-@overload
-def plot(
-    *,
-    alt: Optional[str] = None,
-    **kwargs: Any,
-) -> PlotTransformer.OutputRendererDecorator:
-    ...
-
-
-@overload
-def plot(_fn: PlotTransformer.ValueFn) -> PlotTransformer.OutputRenderer:
-    ...
-
-
-def plot(
-    _fn: PlotTransformer.ValueFn | None = None,
-    *,
-    alt: Optional[str] = None,
-    **kwargs: Any,
-) -> PlotTransformer.OutputRenderer | PlotTransformer.OutputRendererDecorator:
+class plot(Renderer[object]):
     """
     Reactively render a plot object as an HTML image.
 
@@ -226,6 +106,16 @@ def plot(
     alt
         Alternative text for the image if it cannot be displayed or viewed (i.e., the
         user uses a screen reader).
+    width
+        Width of the plot in pixels. If ``None`` or ``MISSING``, the width will be
+        determined by the size of the corresponding :func:`~shiny.ui.output_plot`. (You
+        should not need to use this argument in most Shiny apps--set the desired width
+        on :func:`~shiny.ui.output_plot` instead.)
+    height
+        Height of the plot in pixels. If ``None`` or ``MISSING``, the height will be
+        determined by the size of the corresponding :func:`~shiny.ui.output_plot`. (You
+        should not need to use this argument in most Shiny apps--set the desired height
+        on :func:`~shiny.ui.output_plot` instead.)
     **kwargs
         Additional keyword arguments passed to the relevant method for saving the image
         (e.g., for matplotlib, arguments to ``savefig()``; for PIL and plotnine,
@@ -251,64 +141,160 @@ def plot(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of a
-    :func:`~shiny.ui.output_plot` container (see :func:`~shiny.ui.output_plot` for
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_plot` container (see :func:`~shiny.ui.output_plot` for
     example usage).
 
     See Also
     --------
-    ~shiny.ui.output_plot
-    ~shiny.render.image
+    ~shiny.ui.output_plot ~shiny.render.image
     """
-    return PlotTransformer(_fn, PlotTransformer.params(alt=alt, **kwargs))
+
+    def default_ui(
+        self,
+        id: str,
+        *,
+        width: str | float | int | MISSING_TYPE = MISSING,
+        height: str | float | int | MISSING_TYPE = MISSING,
+        **kwargs: object,
+    ) -> Tag:
+        # Only set the arg if it is available. (Prevents duplicating default values)
+        set_kwargs_value(kwargs, "width", width, self.width)
+        set_kwargs_value(kwargs, "height", height, self.height)
+        return _ui.output_plot(
+            id,
+            # (possibly) contains `width` and `height` keys!
+            **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+        )
+
+    def __init__(
+        self,
+        _fn: Optional[ValueFn[object]] = None,
+        *,
+        alt: Optional[str] = None,
+        width: float | None | MISSING_TYPE = MISSING,
+        height: float | None | MISSING_TYPE = MISSING,
+        **kwargs: object,
+    ) -> None:
+        super().__init__(_fn)
+        self.alt = alt
+        self.width = width
+        self.height = height
+        self.kwargs = kwargs
+
+    async def render(self) -> dict[str, Jsonifiable] | Jsonifiable | None:
+        is_userfn_async = self.fn.is_async()
+        name = self.output_id
+        session = require_active_session(None)
+        width = self.width
+        height = self.height
+        alt = self.alt
+        kwargs = self.kwargs
+
+        inputs = session.root_scope().input
+
+        # We don't have enough information at this point to decide what size the plot should
+        # be. This is because the user's plotting code itself may express an opinion about
+        # the plot size. We'll take the information we will need and stash it in
+        # PlotSizeInfo, which then gets passed into the various plotting strategies.
+
+        # Reactively read some information about the plot.
+        pixelratio: float = typing.cast(
+            float, inputs[ResolvedId(".clientdata_pixelratio")]()
+        )
+
+        # Do NOT call this unless you actually are going to respect the container dimension
+        # you're asking for. It takes a reactive dependency. If the client hasn't reported
+        # the requested dimension, you'll get a SilentException.
+        def container_size(dimension: Literal["width", "height"]) -> float:
+            result = inputs[ResolvedId(f".clientdata_output_{name}_{dimension}")]()
+            return typing.cast(float, result)
+
+        non_missing_size = (
+            cast(Union[float, None], width) if width is not MISSING else None,
+            cast(Union[float, None], height) if height is not MISSING else None,
+        )
+        plot_size_info = PlotSizeInfo(
+            container_size_px_fn=(
+                lambda: container_size("width"),
+                lambda: container_size("height"),
+            ),
+            user_specified_size_px=non_missing_size,
+            pixelratio=pixelratio,
+        )
+
+        # Call the user function to get the plot object.
+        x = await self.fn()
+
+        # Note that x might be None; it could be a matplotlib.pyplot
+
+        # Try each type of renderer in turn. The reason we do it this way is to avoid
+        # importing modules that aren't already loaded. That could slow things down, or
+        # worse, cause an error if the module isn't installed.
+        #
+        # Each try_render function should indicate whether it was able to make sense of
+        # the x value (or, in the case of matplotlib, possibly it decided to use the
+        # global pyplot figure) by returning a tuple that starts with True. The second
+        # tuple element may be None in this case, which means the try_render function
+        # explicitly wants the plot to be blanked.
+        #
+        # If a try_render function returns a tuple that starts with False, then the next
+        # try_render function should be tried. If none succeed, an error is raised.
+        ok: bool
+        result: ImgData | None
+
+        def cast_result(result: ImgData | None) -> dict[str, Jsonifiable] | None:
+            if result is None:
+                return None
+            return imgdata_to_jsonifiable(result)
+
+        if "plotnine" in sys.modules:
+            ok, result = try_render_plotnine(
+                x,
+                plot_size_info=plot_size_info,
+                alt=alt,
+                **kwargs,
+            )
+            if ok:
+                return cast_result(result)
+
+        if "matplotlib" in sys.modules:
+            ok, result = try_render_matplotlib(
+                x,
+                plot_size_info=plot_size_info,
+                allow_global=not is_userfn_async,
+                alt=alt,
+                **kwargs,
+            )
+            if ok:
+                return cast_result(result)
+
+        if "PIL" in sys.modules:
+            ok, result = try_render_pil(
+                x,
+                plot_size_info=plot_size_info,
+                alt=alt,
+                **kwargs,
+            )
+            if ok:
+                return cast_result(result)
+
+        # This check must happen last because
+        # matplotlib might be able to plot even if x is `None`
+        if x is None:
+            return None
+
+        raise Exception(
+            f"@render.plot doesn't know to render objects of type '{str(type(x))}'. "
+            + "Consider either requesting support for this type of plot object, and/or "
+            + " explictly saving the object to a (png) file and using @render.image."
+        )
 
 
 # ======================================================================================
 # RenderImage
 # ======================================================================================
-@output_transformer
-async def ImageTransformer(
-    _meta: TransformerMetadata,
-    _fn: ValueFn[ImgData | None],
-    *,
-    delete_file: bool = False,
-) -> ImgData | None:
-    res = await resolve_value_fn(_fn)
-    if res is None:
-        return None
-
-    src: str = res.get("src")
-    try:
-        with open(src, "rb") as f:
-            data = base64.b64encode(f.read())
-            data_str = data.decode("utf-8")
-        content_type = _utils.guess_mime_type(src)
-        res["src"] = f"data:{content_type};base64,{data_str}"
-        return res
-    finally:
-        if delete_file:
-            os.remove(src)
-
-
-@overload
-def image(
-    *,
-    delete_file: bool = False,
-) -> ImageTransformer.OutputRendererDecorator:
-    ...
-
-
-@overload
-def image(_fn: ImageTransformer.ValueFn) -> ImageTransformer.OutputRenderer:
-    ...
-
-
-def image(
-    _fn: ImageTransformer.ValueFn | None = None,
-    *,
-    delete_file: bool = False,
-) -> ImageTransformer.OutputRendererDecorator | ImageTransformer.OutputRenderer:
+class image(Renderer[ImgData]):
     """
     Reactively render a image file as an HTML image.
 
@@ -320,14 +306,13 @@ def image(
     Returns
     -------
     :
-        A decorator for a function that returns an `~shiny.types.ImgData` object.
+        A decorator for a function that returns an :func:`~shiny.types.ImgData` object.
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_image` container (see :func:`~shiny.ui.output_image` for
-    example usage).
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_image` container (see :func:`~shiny.ui.output_image`
+    for example usage).
 
     See Also
     --------
@@ -335,7 +320,34 @@ def image(
     ~shiny.types.ImgData
     ~shiny.render.plot
     """
-    return ImageTransformer(_fn, ImageTransformer.params(delete_file=delete_file))
+
+    def default_ui(self, id: str, **kwargs: object):
+        return _ui.output_image(
+            id,
+            **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+        )
+
+    def __init__(
+        self,
+        _fn: Optional[ValueFn[ImgData]] = None,
+        *,
+        delete_file: bool = False,
+    ) -> None:
+        super().__init__(_fn)
+        self.delete_file: bool = delete_file
+
+    async def transform(self, value: ImgData) -> dict[str, Jsonifiable] | None:
+        src: str = value.get("src")
+        try:
+            with open(src, "rb") as f:
+                data = base64.b64encode(f.read())
+                data_str = data.decode("utf-8")
+            content_type = _utils.guess_mime_type(src)
+            value["src"] = f"data:{content_type};base64,{data_str}"
+            return imgdata_to_jsonifiable(value)
+        finally:
+            if self.delete_file:
+                os.remove(src)
 
 
 # ======================================================================================
@@ -353,85 +365,16 @@ class PandasCompatible(Protocol):
 TableResult = Union["pd.DataFrame", PandasCompatible, None]
 
 
-@output_transformer
-async def TableTransformer(
-    _meta: TransformerMetadata,
-    _fn: ValueFn[TableResult | None],
-    *,
-    index: bool = False,
-    classes: str = "table shiny-table w-auto",
-    border: int = 0,
-    **kwargs: object,
-) -> RenderedDeps | None:
-    x = await resolve_value_fn(_fn)
-
-    if x is None:
-        return None
-
-    import pandas
-    import pandas.io.formats.style
-
-    html: str
-    if isinstance(x, pandas.io.formats.style.Styler):
-        html = cast(  # pyright: ignore[reportUnnecessaryCast]
-            str,
-            x.to_html(  # pyright: ignore[reportUnknownMemberType]
-                **kwargs  # pyright: ignore[reportGeneralTypeIssues]
-            ),
-        )
-    else:
-        if not isinstance(x, pandas.DataFrame):
-            if not isinstance(x, PandasCompatible):
-                raise TypeError(
-                    "@render.table doesn't know how to render objects of type "
-                    f"'{str(type(x))}'. Return either a pandas.DataFrame, or an object "
-                    "that has a .to_pandas() method."
-                )
-            x = x.to_pandas()
-
-        html = cast(  # pyright: ignore[reportUnnecessaryCast]
-            str,
-            x.to_html(  # pyright: ignore[reportUnknownMemberType]
-                index=index,
-                classes=classes,
-                border=border,
-                **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
-            ),
-        )
-    return {"deps": [], "html": html}
-
-
-@overload
-def table(
-    *,
-    index: bool = False,
-    classes: str = "table shiny-table w-auto",
-    border: int = 0,
-    **kwargs: Any,
-) -> TableTransformer.OutputRendererDecorator:
-    ...
-
-
-@overload
-def table(_fn: TableTransformer.ValueFn) -> TableTransformer.OutputRenderer:
-    ...
-
-
-def table(
-    _fn: TableTransformer.ValueFn | None = None,
-    *,
-    index: bool = False,
-    classes: str = "table shiny-table w-auto",
-    border: int = 0,
-    **kwargs: object,
-) -> TableTransformer.OutputRenderer | TableTransformer.OutputRendererDecorator:
+class table(Renderer[TableResult]):
     """
-    Reactively render a Pandas data frame object (or similar) as a basic HTML table.
+    Reactively render a pandas ``DataFrame`` object (or similar) as a basic HTML
+    table.
 
-    Consider using ~shiny.render.data_frame instead of this renderer, as it provides
-    high performance virtual scrolling, built-in filtering and sorting, and a better
-    default appearance. This renderer may still be helpful if you use pandas styling
-    features that are not currently supported by ~shiny.render.data_frame.
+    Consider using :func:`~shiny.render.data_frame` instead of this renderer, as
+    it provides high performance virtual scrolling, built-in filtering and sorting,
+    and a better default appearance. This renderer may still be helpful if you
+    use pandas styling features that are not currently supported by
+    :func:`~shiny.render.data_frame`.
 
     Parameters
     ----------
@@ -440,8 +383,8 @@ def table(
         objects; call ``style.hide(axis="index")`` from user code instead.)
     classes
         CSS classes (space separated) to apply to the resulting table. By default, we
-        use `table shiny-table w-auto` which is designed to look reasonable with Bootstrap 5.
-        (Ignored for pandas :class:`Styler` objects; call
+        use `table shiny-table w-auto` which is designed to look reasonable with
+        Bootstrap 5. (Ignored for pandas :class:`Styler` objects; call
         ``style.set_table_attributes('class="dataframe table shiny-table w-auto"')``
         from user code instead.)
     **kwargs
@@ -460,71 +403,195 @@ def table(
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_table` container (see :func:`~shiny.ui.output_table` for
-    example usage).
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_table` container (see :func:`~shiny.ui.output_table`
+    for example usage).
 
     See Also
     --------
     ~shiny.ui.output_table for the corresponding UI component to this render function.
     """
-    return TableTransformer(
-        _fn,
-        TableTransformer.params(
-            index=index,
-            classes=classes,
-            border=border,
-            **kwargs,
-        ),
-    )
+
+    def default_ui(self, id: str, **kwargs: TagAttrValue) -> Tag:
+        return _ui.output_table(id, **kwargs)
+
+    def __init__(
+        self,
+        _fn: Optional[ValueFn[TableResult]] = None,
+        *,
+        index: bool = False,
+        classes: str = "table shiny-table w-auto",
+        border: int = 0,
+        **kwargs: object,
+    ) -> None:
+        super().__init__(_fn)
+        self.index: bool = index
+        self.classes: str = classes
+        self.border: int = border
+        self.kwargs: dict[str, object] = kwargs
+
+    async def transform(self, value: TableResult) -> dict[str, Jsonifiable]:
+        import pandas
+        import pandas.io.formats.style
+
+        html: str
+        if isinstance(value, pandas.io.formats.style.Styler):
+            html = cast(  # pyright: ignore[reportUnnecessaryCast]
+                str,
+                value.to_html(**self.kwargs),  # pyright: ignore
+            )
+        else:
+            if not isinstance(value, pandas.DataFrame):
+                if not isinstance(value, PandasCompatible):
+                    raise TypeError(
+                        "@render.table doesn't know how to render objects of type "
+                        f"'{str(type(value))}'. Return either a pandas.DataFrame, or an object "
+                        "that has a .to_pandas() method."
+                    )
+                value = value.to_pandas()
+
+            html = cast(  # pyright: ignore[reportUnnecessaryCast]
+                str,
+                value.to_html(  # pyright: ignore
+                    index=self.index,
+                    classes=self.classes,
+                    border=self.border,
+                    **self.kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+                ),
+            )
+        # Use typing to make sure the return shape matches
+        ret: RenderedDeps = {"deps": [], "html": html}
+        return rendered_deps_to_jsonifiable(ret)
 
 
 # ======================================================================================
 # RenderUI
 # ======================================================================================
-@output_transformer
-async def UiTransformer(
-    _meta: TransformerMetadata,
-    _fn: ValueFn[TagChild],
-) -> RenderedDeps | None:
-    ui = await resolve_value_fn(_fn)
-    if ui is None:
-        return None
-
-    return _meta.session._process_ui(ui)
-
-
-@overload
-def ui() -> UiTransformer.OutputRendererDecorator:
-    ...
-
-
-@overload
-def ui(_fn: UiTransformer.ValueFn) -> UiTransformer.OutputRenderer:
-    ...
-
-
-def ui(
-    _fn: UiTransformer.ValueFn | None = None,
-) -> UiTransformer.OutputRenderer | UiTransformer.OutputRendererDecorator:
+class ui(Renderer[TagChild]):
     """
     Reactively render HTML content.
 
     Returns
     -------
     :
-        A decorator for a function that returns an object of type `~shiny.ui.TagChild`.
+        A decorator for a function that returns an object of type
+        :class:`~shiny.ui.TagChild`.
 
     Tip
     ----
-    This decorator should be applied **before** the ``@output`` decorator. Also, the
-    name of the decorated function (or ``@output(id=...)``) should match the ``id`` of
-    a :func:`~shiny.ui.output_ui` container (see :func:`~shiny.ui.output_ui` for example
-    usage).
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_ui` container (see :func:`~shiny.ui.output_ui` for
+    example usage).
 
     See Also
     --------
     ~shiny.ui.output_ui
     """
-    return UiTransformer(_fn)
+
+    def default_ui(self, id: str) -> Tag:
+        return _ui.output_ui(id)
+
+    async def transform(self, value: TagChild) -> Jsonifiable:
+        session = require_active_session(None)
+        return rendered_deps_to_jsonifiable(
+            session._process_ui(value),
+        )
+
+
+# ======================================================================================
+# RenderDownload
+# ======================================================================================
+class download(Renderer[str]):
+    """
+    Decorator to register a function to handle a download.
+
+    Parameters
+    ----------
+    filename
+        The filename of the download.
+    label
+        A label for the button, when used in Express mode. Defaults to "Download".
+    media_type
+        The media type of the download.
+    encoding
+        The encoding of the download.
+
+    Returns
+    -------
+    :
+        The decorated function.
+
+    See Also
+    --------
+    ~shiny.ui.download_button
+    """
+
+    def default_ui(self, id: str) -> Tag:
+        return _ui.download_button(id, label=self.label)
+
+    def __init__(
+        self,
+        fn: Optional[DownloadHandler] = None,
+        *,
+        filename: Optional[str | Callable[[], str]] = None,
+        label: TagChild = "Download",
+        media_type: None | str | Callable[[], str] = None,
+        encoding: str = "utf-8",
+    ) -> None:
+        super().__init__()
+
+        self.label = label
+        self.filename = filename
+        self.media_type = media_type
+        self.encoding = encoding
+
+        if fn is not None:
+            self(fn)
+
+    def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+        fn: DownloadHandler,
+    ) -> Self:
+        # For downloads, the value function (which is passed to `__call__()`) is
+        # different than for other renderers. For normal renderers, the user supplies
+        # the value function. This function returns a value which is transformed,
+        # serialized to JSON, and then sent to the browser.
+        #
+        # For downloads, the download button itself is actually an output. The value
+        # that it renders is a URL; when the user clicks the button, the browser
+        # initiates a download from that URL, and the server provides the file via
+        # `session._downloads`.
+        #
+        # The `url()` function here is the value function for the download button. It
+        # returns the URL for downloading the file.
+        def url() -> str:
+            from urllib.parse import quote
+
+            session = require_active_session(None)
+            return f"session/{quote(session.id)}/download/{quote(self.output_id)}?w="
+
+        # Unlike most value functions, this one's name is `url`. But we want to get the
+        # name from the user-supplied function.
+        url.__name__ = fn.__name__
+
+        # We invoke `super().__call__()` now, because it indirectly invokes
+        # `Outputs.__call__()`, which sets `output_id` (and `self.__name__`), which is
+        # then used below.
+        super().__call__(url)
+
+        # Register the download handler for the session. The reason we check for session
+        # not being None is because in Express, when the UI is rendered, this function
+        # `render.download()()`  called once before any sessions have been started.
+        session = get_current_session()
+        if session is not None:
+            session._downloads[self.output_id] = DownloadInfo(
+                filename=self.filename,
+                content_type=self.media_type,
+                handler=fn,
+                encoding=self.encoding,
+            )
+
+        return self
+
+    async def transform(self, value: str) -> Jsonifiable:
+        return value

@@ -21,7 +21,7 @@ __all__ = (
 import json
 import re
 from datetime import date
-from typing import Literal, Mapping, Optional
+from typing import Literal, Mapping, Optional, overload
 
 from htmltools import HTML, TagChild, TagList, tags
 from starlette.requests import Request
@@ -31,12 +31,12 @@ from .._docstring import add_example, doc_format
 from .._namespaces import resolve_id
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import drop_none
-from ..module import session_context
-from ..session import Session, require_active_session
+from ..session import Session, require_active_session, session_context
 from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
 from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
+from ._utils import _session_on_flush_send_msg
 
 _note = """
     The input updater functions send a message to the client, telling it to change the
@@ -45,7 +45,7 @@ _note = """
 
     The syntax of these functions is similar to the functions that created the inputs in
     the first place. For example, :func:`~shiny.ui.input_numeric` and
-    :func:`~update_numeric` take a similar set of arguments.
+    :func:`~shiny.ui.update_numeric` take a similar set of arguments.
 
     Any arguments with ``None`` values will be ignored; they will not result in any
     changes to the input object on the client.
@@ -82,7 +82,7 @@ def update_action_button(
         An icon to appear inline with the button/link.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
-       :func:`~shiny.session.get_current_session`.
+        :func:`~shiny.session.get_current_session`.
 
     Note
     ----
@@ -907,3 +907,127 @@ def update_navs(
     session = require_active_session(session)
     msg = {"value": selected}
     session.send_input_message(id, drop_none(msg))
+
+
+# -----------------------------------------------------------------------------
+# tooltips.py
+# -----------------------------------------------------------------------------
+@add_example()
+def update_tooltip(
+    id: str,
+    *args: TagChild,
+    show: Optional[bool] = None,
+    session: Optional[Session] = None,
+) -> None:
+    """
+    Update tooltip contents.
+
+    Parameters
+    ----------
+    id
+        A character string that matches an existing tooltip id.
+    *args
+        Contents to the tooltip's body.
+    show
+        Opens (`True`) or closes (`False`) the tooltip.
+    session
+        A Shiny session object (the default should almost always be used).
+    """
+
+    _session_on_flush_send_msg(
+        id,
+        session,
+        drop_none(
+            {
+                "method": "update",
+                "title": require_active_session(session)._process_ui(TagList(*args))
+                if len(args) > 0
+                else None,
+            }
+        ),
+    )
+    if show is not None:
+        _session_on_flush_send_msg(
+            id,
+            session,
+            {
+                "method": "toggle",
+                "value": _normalize_show_value(show),
+            },
+        )
+
+
+# -----------------------------------------------------------------------------
+# popover.py
+# -----------------------------------------------------------------------------
+
+
+# @add_example()
+def update_popover(
+    id: str,
+    *args: TagChild,
+    title: Optional[TagChild] = None,
+    show: Optional[bool] = None,
+    session: Optional[Session] = None,
+) -> None:
+    """
+    Update the contents or title of a popover.
+
+    Parameters
+    ----------
+    id
+        The id of the popover DOM element to update.
+    *args
+        The new contents of the popover.
+    title
+        The new title of the popover.
+    show
+        Opens (`True`) or closes (`False`) the popover.
+    session
+        A Shiny session object (the default should almost always be used).
+
+    See Also
+    --------
+    * :func:`~shiny.ui.popover`
+    """
+    session = require_active_session(session)
+
+    if title is not None or len(args) > 0:
+        _session_on_flush_send_msg(
+            id,
+            session,
+            drop_none(
+                {
+                    "method": "update",
+                    "content": session._process_ui(TagList(*args))
+                    if len(args) > 0
+                    else None,
+                    "header": session._process_ui(title) if title is not None else None,
+                },
+            ),
+        )
+    if show is not None:
+        _session_on_flush_send_msg(
+            id,
+            session,
+            {
+                "method": "toggle",
+                "value": _normalize_show_value(show),
+            },
+        )
+
+
+@overload
+def _normalize_show_value(show: None) -> Literal["toggle"]:
+    ...
+
+
+@overload
+def _normalize_show_value(show: bool) -> Literal["show", "hide"]:
+    ...
+
+
+def _normalize_show_value(show: bool | None) -> Literal["toggle", "show", "hide"]:
+    if show is None:
+        return "toggle"
+    return "show" if show else "hide"

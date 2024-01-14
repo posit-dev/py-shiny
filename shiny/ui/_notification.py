@@ -25,17 +25,22 @@ def notification_show(
     """
     Show a notification to the user.
 
+    A notification is a message that appears near the bottom corner of the app.
+    Notifications normally disappear after a short period of time, and should multiple
+    notifications appear together, they will stack on top of one another.
+
     Parameters
     ----------
     ui
-        Content of message.
+        Contents of the notification message.
     action
         Message content that represents an action. For example, this could be a link
         that the user can click on. This is separate from ui so customized layouts can
-        handle the main notification content separately from action content.
+        handle the main notification content separately from the action content.
     duration
         Number of seconds to display the message before it disappears. Use ``None`` to
-        make the message not automatically disappear.
+        prevent the message from disappearing automatically. The user will need to click
+        the corner of the notification to close it.
     close_button
         If ``True``, display a button which will make the notification disappear when
         clicked. If ``False`` do not display.
@@ -44,11 +49,11 @@ def notification_show(
         notification with the same ``id`` will be replaced with this one (otherwise, a
         new notification is created).
     type
-        A string which controls the color of the notification. One of "default" (gray),
-        "message" (blue), "warning" (yellow), or "error" (red).
+        A string which controls the color of the notification. This should be one of
+        "default" (gray), "message" (blue), "warning" (yellow), or "error" (red).
     session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
-        :func:`~shiny.session.get_current_session`.
+        The :class:`~shiny.Session` in which the notification should appear.  If not
+        provided, the session is inferred via :func:`~shiny.session.get_current_session`.
 
     Returns
     -------
@@ -89,12 +94,16 @@ def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
     """
     Remove a notification.
 
+    :func:`~shiny.ui.notification_remove` provides a way to remove a notification programatically.
+    Notifications can also be removed manually by the user, or automatically after a
+    specififed amont of time passes.
+
     Parameters
     ----------
     id
-        A notification ``id``.
+        The ``id`` of the notification to remove.
     session
-        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        The :class:`~shiny.Session` in which the notification appears. If not provided, the session is inferred via
         :func:`~shiny.session.get_current_session`.
 
     Returns

@@ -8,7 +8,6 @@ import pandas as pd
 import seaborn as sns
 from colors import bg_palette, palette
 
-import shiny.experimental as x
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 sns.set_theme()
@@ -20,8 +19,8 @@ numeric_cols: List[str] = df.select_dtypes(include=["float64"]).columns.tolist()
 species: List[str] = df["Species"].unique().tolist()
 species.sort()
 
-app_ui = x.ui.page_sidebar(
-    x.ui.sidebar(
+app_ui = ui.page_sidebar(
+    ui.sidebar(
         # Artwork by @allison_horst
         ui.tags.img(src="palmerpenguins.png", width="80%", class_="mt-0 mb-2 mx-auto"),
         ui.input_selectize(
@@ -44,7 +43,12 @@ app_ui = x.ui.page_sidebar(
         ui.input_switch("show_margins", "Show marginal plots", value=True),
     ),
     ui.output_ui("value_boxes"),
-    x.ui.output_plot("scatter", fill=True),
+    ui.output_plot("scatter", fill=True),
+    ui.help_text(
+        "Artwork by ",
+        ui.a("@allison_horst", href="https://twitter.com/allison_horst"),
+        class_="text-end",
+    ),
 )
 
 
@@ -59,7 +63,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         # Filter the rows so we only include the desired species
         return df[df["Species"].isin(input.species())]
 
-    @output
     @render.plot
     def scatter():
         """Generates a plot for Shiny to display to the user"""
@@ -77,17 +80,16 @@ def server(input: Inputs, output: Outputs, session: Session):
             legend=False,
         )
 
-    @output
     @render.ui
     def value_boxes():
         df = filtered_df()
 
         def penguin_value_box(title: str, count: int, bgcol: str, showcase_img: str):
-            return x.ui.value_box(
+            return ui.value_box(
                 title,
                 count,
                 {"class": "pt-1 pb-0"},
-                showcase=x.ui.as_fill_item(
+                showcase=ui.fill.as_fill_item(
                     ui.tags.img(
                         {"style": "object-fit:contain;"},
                         src=showcase_img,
@@ -120,7 +122,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             if name in input.species()
         ]
 
-        return x.ui.layout_column_wrap(1 / len(value_boxes), *value_boxes)
+        return ui.layout_column_wrap(*value_boxes, width=1 / len(value_boxes))
 
 
 app = App(

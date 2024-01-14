@@ -1,0 +1,11 @@
+{
+    "https://api.shinyapps.io": {
+        "server_url": "https://api.shinyapps.io",
+        "app_url": "https://testing-apps.shinyapps.io/shiny_express_accordion/",
+        "app_id": 10800240,
+        "app_guid": null,
+        "title": "shiny_express_accordion",
+        "app_mode": "python-shiny",
+        "app_store_version": 1
+    }
+}

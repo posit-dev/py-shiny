@@ -11,6 +11,10 @@ from shiny.render.transformer import (
 )
 
 #######
+# DEPRECATED. Please see `shiny.render.renderer.Renderer` for the latest API.
+# This example is kept for backwards compatibility.
+#
+#
 # Package authors can create their own output transformer methods by leveraging
 # `output_transformer` decorator.
 #
@@ -20,7 +24,7 @@ from shiny.render.transformer import (
 
 
 # Create renderer components from the async handler function: `capitalize_components()`
-@output_transformer
+@output_transformer()
 async def CapitalizeTransformer(
     # Contains information about the render call: `name` and `session`
     _meta: TransformerMetadata,
@@ -53,7 +57,6 @@ async def CapitalizeTransformer(
 # First, create an overload where users can supply the extra parameters.
 # Example of usage:
 # ```
-# @output
 # @render_capitalize(to="upper")
 # def value():
 #     return input.caption()
@@ -71,7 +74,6 @@ def render_capitalize(
 # While it doesn't look necessary, it is needed for the type checker.
 # Example of usage:
 # ```
-# @output
 # @render_capitalize
 # def value():
 #     return input.caption()
@@ -108,7 +110,7 @@ def render_capitalize(
 app_ui = ui.page_fluid(
     ui.h1("Capitalization renderer"),
     ui.input_text("caption", "Caption:", "Data summary"),
-    "No parentheses:",
+    "Renderer called with out parentheses:",
     ui.output_text_verbatim("no_parens"),
     "To upper:",
     ui.output_text_verbatim("to_upper"),
@@ -118,19 +120,16 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     # Without parentheses
     @render_capitalize
     def no_parens():
         return input.caption()
 
-    @output
     # With parentheses. Equivalent to `@render_capitalize()`
     @render_capitalize(to="upper")
     def to_upper():
         return input.caption()
 
-    @output
     @render_capitalize(to="lower")
     # Works with async output value functions
     async def to_lower():

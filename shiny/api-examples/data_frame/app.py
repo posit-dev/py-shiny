@@ -3,9 +3,7 @@ import plotly.express as px
 import plotly.graph_objs as go
 from shinywidgets import output_widget, render_widget
 
-from shiny import App
-from shiny import experimental as x
-from shiny import reactive, render, req, session, ui
+from shiny import App, reactive, render, req, session, ui
 
 # Load the Gapminder dataset
 df = px.data.gapminder()
@@ -26,32 +24,31 @@ summary_df = (
 summary_df.columns = ["_".join(col).strip() for col in summary_df.columns.values]
 summary_df.rename(columns={"country_": "country"}, inplace=True)
 
-app_ui = x.ui.page_fillable(
+app_ui = ui.page_fillable(
     {"class": "p-3"},
     ui.p(
         ui.strong("Instructions:"),
         " Select one or more countries in the table below to see more information.",
     ),
-    x.ui.layout_column_wrap(
-        1,
-        x.ui.card(
+    ui.layout_column_wrap(
+        ui.card(
             ui.output_data_frame("summary_data"),
         ),
-        x.ui.layout_column_wrap(
-            1 / 2,
-            x.ui.card(
+        ui.layout_column_wrap(
+            ui.card(
                 output_widget("country_detail_pop", height="100%"),
             ),
-            x.ui.card(
+            ui.card(
                 output_widget("country_detail_percap", height="100%"),
             ),
+            width=1 / 2,
         ),
+        width=1,
     ),
 )
 
 
 def server(input, output, session):
-    @output
     @render.data_frame
     def summary_data():
         return render.DataGrid(
@@ -70,7 +67,6 @@ def server(input, output, session):
         # Filter data for selected countries
         return df[df["country"].isin(countries)]
 
-    @output
     @render_widget
     def country_detail_pop():
         # Create the plot
@@ -90,7 +86,6 @@ def server(input, output, session):
 
         return widget
 
-    @output
     @render_widget
     def country_detail_percap():
         # Create the plot

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, overload
+from typing import Any, cast, overload
 
 import pytest
 
+from shiny._deprecated import ShinyDeprecationWarning
+from shiny._namespaces import ResolvedId, Root
 from shiny._utils import is_async_callable
 from shiny.render.transformer import (
     TransformerMetadata,
@@ -12,6 +14,21 @@ from shiny.render.transformer import (
     output_transformer,
     resolve_value_fn,
 )
+from shiny.session import Session, session_context
+
+# import warnings
+# warnings.filterwarnings("ignore", category=ShinyDeprecationWarning)
+
+
+class _MockSession:
+    ns: ResolvedId = Root
+
+    # This is needed so that Outputs don't throw an error.
+    def _is_hidden(self, name: str) -> bool:
+        return False
+
+
+test_session = cast(Session, _MockSession())
 
 
 def test_output_transformer_works():
@@ -194,9 +211,8 @@ def test_output_transformer_result_does_not_allow_args():
         assert "Expected `params` to be of type `TransformerParams`" in str(e)
 
 
-# "Currently, `ValueFn` can not be truly async and "support sync render methods"
 @pytest.mark.asyncio
-async def test_renderer_handler_fn_can_be_async():
+async def test_renderer_handler_or_transform_fn_can_be_async():
     @output_transformer
     async def AsyncTransformer(
         _meta: TransformerMetadata,
@@ -222,7 +238,8 @@ async def test_renderer_handler_fn_can_be_async():
     def async_renderer(
         _fn: AsyncTransformer.ValueFn | None = None,
     ) -> AsyncTransformer.OutputRenderer | AsyncTransformer.OutputRendererDecorator:
-        return AsyncTransformer(_fn)
+        with pytest.warns(ShinyDeprecationWarning):
+            return AsyncTransformer(_fn)
 
     test_val = "Test: Hello World!"
 
@@ -232,20 +249,15 @@ async def test_renderer_handler_fn_can_be_async():
     # ## Test Sync: X =============================================
 
     renderer_sync = async_renderer(app_render_fn)
-    renderer_sync._set_metadata(
-        None,  # pyright: ignore[reportGeneralTypeIssues]
-        "renderer_sync",
+    renderer_sync._set_output_metadata(
+        output_name="renderer_sync",
     )
-    if is_async_callable(renderer_sync):
-        raise RuntimeError("Expected `renderer_sync` to be a sync function")
+    # All renderers are async in execution.
+    assert is_async_callable(renderer_sync)
 
-    # !! This line is currently not possible !!
-    try:
-        ret = renderer_sync()
-        raise Exception("Expected an exception to occur while calling `renderer_sync`")
-        assert ret == test_val
-    except RuntimeError as e:
-        assert "async function yielded control" in str(e)
+    with session_context(test_session):
+        val = await renderer_sync()
+        assert val == test_val
 
     # ## Test Async: √ =============================================
 
@@ -256,82 +268,24 @@ async def test_renderer_handler_fn_can_be_async():
         return async_test_val
 
     renderer_async = async_renderer(async_app_render_fn)
-    renderer_async._set_metadata(
-        None,  # pyright: ignore[reportGeneralTypeIssues]
-        "renderer_async",
+    renderer_async._set_output_metadata(
+        output_name="renderer_async",
     )
     if not is_async_callable(renderer_async):
         raise RuntimeError("Expected `renderer_async` to be a coro function")
 
-    ret = await renderer_async()
-    assert ret == async_test_val
+    with session_context(test_session):
+        ret = await renderer_async()
+        assert ret == async_test_val
 
 
-# "Currently, `ValueFnA` can not be truly async and "support sync render methods".
-# Test that conditionally calling async works.
-@pytest.mark.asyncio
-async def test_renderer_handler_fn_can_be_yield_while_async():
-    @output_transformer
-    async def YieldTransformer(
-        _meta: TransformerMetadata,
-        _fn: ValueFn[str],
-    ) -> str:
-        if is_async_callable(_fn):
-            # Actually sleep to test that the handler is truly async
-            await asyncio.sleep(0)
-        ret = await resolve_value_fn(_fn)
-        return ret
+# @pytest.mark.asyncio
+# async def test_resolve_value_fn_is_deprecated():
+#     with pytest.warns(ShinyDeprecationWarning):
+#         test_val = 42
 
-    # ## Setup overloads =============================================
+#         async def value_fn():
+#             return test_val
 
-    @overload
-    def yield_renderer() -> YieldTransformer.OutputRendererDecorator:
-        ...
-
-    @overload
-    def yield_renderer(
-        _fn: YieldTransformer.ValueFn,
-    ) -> YieldTransformer.OutputRenderer:
-        ...
-
-    def yield_renderer(
-        _fn: YieldTransformer.ValueFn | None = None,
-    ) -> YieldTransformer.OutputRenderer | YieldTransformer.OutputRendererDecorator:
-        return YieldTransformer(_fn)
-
-    test_val = "Test: Hello World!"
-
-    def app_render_fn() -> str:
-        return test_val
-
-    # ## Test Sync: √ =============================================
-
-    renderer_sync = yield_renderer(app_render_fn)
-    renderer_sync._set_metadata(
-        None,  # pyright: ignore[reportGeneralTypeIssues]
-        "renderer_sync",
-    )
-    if is_async_callable(renderer_sync):
-        raise RuntimeError("Expected `renderer_sync` to be a sync function")
-
-    ret = renderer_sync()
-    assert ret == test_val
-
-    # ## Test Async: √ =============================================
-
-    async_test_val = "Async: Hello World!"
-
-    async def async_app_render_fn() -> str:
-        await asyncio.sleep(0)
-        return async_test_val
-
-    renderer_async = yield_renderer(async_app_render_fn)
-    renderer_async._set_metadata(
-        None,  # pyright: ignore[reportGeneralTypeIssues]
-        "renderer_async",
-    )
-    if not is_async_callable(renderer_async):
-        raise RuntimeError("Expected `renderer_async` to be a coro function")
-
-    ret = await renderer_async()
-    assert ret == async_test_val
+#         ret = await resolve_value_fn(value_fn)
+#         assert test_val == ret

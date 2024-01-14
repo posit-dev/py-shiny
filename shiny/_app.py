@@ -3,6 +3,8 @@ from __future__ import annotations
 import copy
 import os
 import secrets
+from inspect import signature
+from pathlib import Path
 from typing import Any, Callable, Optional, cast
 
 import starlette.applications
@@ -10,7 +12,14 @@ import starlette.exceptions
 import starlette.middleware
 import starlette.routing
 import starlette.websockets
-from htmltools import HTMLDependency, HTMLDocument, RenderedHTML, Tag, TagList
+from htmltools import (
+    HTMLDependency,
+    HTMLDocument,
+    HTMLTextDocument,
+    RenderedHTML,
+    Tag,
+    TagList,
+)
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -19,9 +28,9 @@ from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
-from ._utils import is_async_callable
+from ._utils import guess_mime_type, is_async_callable
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
-from .http_staticfiles import StaticFiles
+from .http_staticfiles import FileResponse, StaticFiles
 from .session import Inputs, Outputs, Session, session_context
 
 # Default values for App options.
@@ -38,15 +47,18 @@ class App:
     ----------
     ui
         The UI definition for the app (e.g., a call to :func:`~shiny.ui.page_fluid` or
-        :func:`~shiny.ui.page_fixed`, with layouts and controls nested inside). You can
+        similar, with layouts and controls nested inside). You can
         also pass a function that takes a :class:`~starlette.requests.Request` and
         returns a UI definition, if you need the UI definition to be created dynamically
         for each pageview.
     server
-        A function which is called once for each session, ensuring that each app is
+        A function which is called once for each session, ensuring that each session is
         independent.
     static_assets
-        An absolute directory containing static files to be served by the app.
+        Static files to be served by the app. If this is a string or Path object, it
+        must be a directory, and it will be mounted at `/`. If this is a dictionary,
+        each key is a mount point and each value is a file or directory to be served at
+        that mount point.
     debug
         Whether to enable debug mode.
 
@@ -89,20 +101,26 @@ class App:
 
     def __init__(
         self,
-        ui: Tag | TagList | Callable[[Request], Tag | TagList],
-        server: Optional[Callable[[Inputs, Outputs, Session], None]],
+        ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
+        server: Callable[[Inputs], None]
+        | Callable[[Inputs, Outputs, Session], None]
+        | None,
         *,
-        static_assets: Optional["str" | "os.PathLike[str]"] = None,
+        static_assets: Optional["str" | "os.PathLike[str]" | dict[str, Path]] = None,
         debug: bool = False,
     ) -> None:
         if server is None:
-
-            def _server(inputs: Inputs, outputs: Outputs, session: Session):
-                pass
-
-            server = _server
-
-        self.server = server
+            self.server = noop_server_fn
+        elif len(signature(server).parameters) == 1:
+            self.server = wrap_server_fn_with_output_session(
+                cast(Callable[[Inputs], None], server)
+            )
+        elif len(signature(server).parameters) == 3:
+            self.server = cast(Callable[[Inputs, Outputs, Session], None], server)
+        else:
+            raise ValueError(
+                "`server` must have 1 (Inputs) or 3 parameters (Inputs, Outputs, Session)"
+            )
 
         self._debug: bool = debug
 
@@ -111,15 +129,16 @@ class App:
         self.sanitize_errors: bool = SANITIZE_ERRORS
         self.sanitize_error_msg: str = SANITIZE_ERROR_MSG
 
-        if static_assets is not None:
-            if not os.path.isdir(static_assets):
-                raise ValueError(f"static_assets must be a directory: {static_assets}")
+        if static_assets is None:
+            static_assets = {}
+        if isinstance(static_assets, (str, os.PathLike)):
             if not os.path.isabs(static_assets):
                 raise ValueError(
                     f"static_assets must be an absolute path: {static_assets}"
                 )
+            static_assets = {"/": Path(static_assets)}
 
-        self._static_assets: str | os.PathLike[str] | None = static_assets
+        self._static_assets: dict[str, Path] = static_assets
 
         self._sessions: dict[str, Session] = {}
 
@@ -128,13 +147,9 @@ class App:
         self._registered_dependencies: dict[str, HTMLDependency] = {}
         self._dependency_handler = starlette.routing.Router()
 
-        if self._static_assets is not None:
+        for mount_point, static_asset_path in self._static_assets.items():
             self._dependency_handler.routes.append(
-                starlette.routing.Mount(
-                    "/",
-                    StaticFiles(directory=self._static_assets),
-                    name="shiny-app-static-assets-directory",
-                )
+                create_static_asset_route(mount_point, static_asset_path)
             )
 
         starlette_app = self.init_starlette_app()
@@ -146,13 +161,19 @@ class App:
                 raise TypeError("App UI cannot be a coroutine function")
             # Dynamic UI: just store the function for later
             self.ui = cast("Callable[[Request], Tag | TagList]", ui)
+        elif isinstance(ui, Path):
+            if not ui.is_absolute():
+                raise ValueError("Path to UI must be absolute")
+
+            self.ui = self._render_page_from_file(ui, lib_prefix=self.lib_prefix)
+
         else:
             # Static UI: render the UI now and save the results
             self.ui = self._render_page(
                 cast("Tag | TagList", ui), lib_prefix=self.lib_prefix
             )
 
-    def init_starlette_app(self):
+    def init_starlette_app(self) -> starlette.applications.Starlette:
         routes: list[starlette.routing.BaseRoute] = [
             starlette.routing.WebSocketRoute("/websocket/", self._on_connect_cb),
             starlette.routing.Route("/", self._on_root_request_cb, methods=["GET"]),
@@ -211,12 +232,12 @@ class App:
 
         Parameters
         ----------
-        kwargs
+        **kwargs
             Keyword arguments passed to :func:`~shiny.run_app`.
         """
         from ._main import run_app
 
-        run_app(self, **kwargs)
+        run_app(self, **kwargs)  # pyright: ignore[reportGeneralTypeIssues]
 
     # ASGI entrypoint. Handles HTTP, WebSocket, and lifespan.
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
@@ -370,9 +391,29 @@ class App:
         self._ensure_web_dependencies(rendered["dependencies"])
         return rendered
 
+    def _render_page_from_file(self, file: Path, lib_prefix: str) -> RenderedHTML:
+        with open(file, "r") as f:
+            page_html = f.read()
 
-def is_uifunc(x: Tag | TagList | Callable[[Request], Tag | TagList]):
-    if isinstance(x, Tag) or isinstance(x, TagList) or not callable(x):
+        doc = HTMLTextDocument(
+            page_html,
+            deps=[require_deps(), jquery_deps(), shiny_deps()],
+            deps_replace_pattern='<meta name="shiny-dependency-placeholder" content="">',
+        )
+
+        rendered = doc.render(lib_prefix=lib_prefix)
+        self._ensure_web_dependencies(rendered["dependencies"])
+
+        return rendered
+
+
+def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]) -> bool:
+    if (
+        isinstance(x, Path)
+        or isinstance(x, Tag)
+        or isinstance(x, TagList)
+        or not callable(x)
+    ):
         return False
     else:
         return True
@@ -380,3 +421,49 @@ def is_uifunc(x: Tag | TagList | Callable[[Request], Tag | TagList]):
 
 def html_dep_name(dep: HTMLDependency) -> str:
     return dep.name + "-" + str(dep.version)
+
+
+def create_static_asset_route(
+    mount_point: str, static_asset_path: Path
+) -> starlette.routing.BaseRoute:
+    """
+    Create a Starlette route for serving static assets.
+
+    Parameters
+    ----------
+    mount_point
+        The mount point where the static assets will be served.
+    static_asset_path
+        The path on disk to the static assets.
+    """
+    if static_asset_path.is_dir():
+        return starlette.routing.Mount(
+            mount_point,
+            StaticFiles(directory=static_asset_path),
+            name="shiny-app-static-assets-" + mount_point,
+        )
+    else:
+        mime_type = guess_mime_type(static_asset_path, strict=False)
+
+        def file_response_handler(req: Request) -> FileResponse:
+            return FileResponse(static_asset_path, media_type=mime_type)
+
+        return starlette.routing.Route(
+            mount_point,
+            file_response_handler,
+            name="shiny-app-static-assets-" + mount_point,
+        )
+
+
+def noop_server_fn(input: Inputs, output: Outputs, session: Session) -> None:
+    pass
+
+
+def wrap_server_fn_with_output_session(
+    server: Callable[[Inputs], None]
+) -> Callable[[Inputs, Outputs, Session], None]:
+    def _server(input: Inputs, output: Outputs, session: Session):
+        # Only has 1 parameter, ignore output, session
+        server(input)
+
+    return _server

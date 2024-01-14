@@ -1,5 +1,4 @@
 @charset "UTF-8";
-/*-- scss:defaults --*/
 /* 'shiny' skin for Ion.RangeSlider, largely based on the 'big' skin, but with smaller dimensions, grayscale grid text, and without gradients
 © Posit, PBC, 2023
 © RStudio, Inc, 2014
@@ -173,7 +172,7 @@
   top: 32px;
   height: 1px;
   background: none;
-  background-color: #707782;
+  background-color: RGBA(var(--bs-emphasis-color-rgb, 0, 0, 0), 0.65);
   border: none;
   border-radius: 1px;
   overflow: visible;
@@ -245,7 +244,7 @@
   top: 0;
   padding: 1px 3px;
   text-shadow: none;
-  background-color: #e9ecef;
+  background-color: RGBA(var(--bs-emphasis-color-rgb, 0, 0, 0), 0.1);
   border-radius: 3px;
   font-size: 10px;
   line-height: 1.333;
@@ -279,14 +278,79 @@
 }
 
 .irs--shiny .irs-grid-pol {
-  background-color: #707782;
+  background-color: RGBA(var(--bs-emphasis-color-rgb, 0, 0, 0), 0.65);
 }
 
 .irs--shiny .irs-grid-text {
   bottom: 5px;
-  color: #343A46;
+  color: RGBA(var(--bs-emphasis-color-rgb, 0, 0, 0), 0.85);
 }
 
 .irs--shiny .irs-grid-pol.small {
   background-color: transparent;
 }
+
+
+/* shiny preset styles */
+
+
+.irs.irs--shiny {
+  margin-top: 3px;
+}
+
+.irs.irs--shiny .irs-min,
+.irs.irs--shiny .irs-max,
+.irs.irs--shiny .irs-from,
+.irs.irs--shiny .irs-to,
+.irs.irs--shiny .irs-single {
+  padding: 3px 6px;
+  top: -3px;
+}
+
+.irs.irs--shiny .irs-handle {
+  top: 23px;
+}
+
+.irs.irs--shiny .irs-bar {
+  top: 31px;
+  height: 3px;
+  border: none;
+}
+
+.irs.irs--shiny .irs-line {
+  border-radius: 8px;
+}
+
+.irs.irs--shiny .irs-grid-pol {
+  height: 6px;
+}
+
+.irs.irs--shiny .irs-grid-text {
+  bottom: 8px;
+}
+
+.irs.irs--shiny .irs-handle:focus-visible,
+.irs.irs--shiny .irs-handle:active {
+  color: #005688;
+  background-color: #005688;
+  border-color: #005688;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(0, 123, 194, 0.25);
+}
+
+.irs.irs--shiny ~ .slider-animate-container {
+  text-align: left;
+}
+
+.irs.irs--shiny ~ .slider-animate-container .slider-animate-button {
+  opacity: 1;
+}
+
+.irs.irs--shiny.irs-with-grid ~ .slider-animate-container {
+  margin-top: -5px;
+}
+
+.irs.irs--shiny:not(.irs-with-grid) ~ .slider-animate-container {
+  margin-top: 5px;
+}
+
