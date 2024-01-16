@@ -81,6 +81,7 @@ def input_selectize(
         The CSS width, e.g. '400px', or '100%'
     options
         A dictionary of options. See the documentation of selectize.js for possible options.
+        If you want to pass a JavaScript function, wrap the string in `ui.JS`.
 
     Returns
     -------
