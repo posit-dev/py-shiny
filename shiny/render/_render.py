@@ -19,7 +19,7 @@ from typing import (
     runtime_checkable,
 )
 
-from htmltools import Tag, TagAttrValue, TagChild, TagFunction
+from htmltools import Tag, TagAttrValue, TagChild
 
 if TYPE_CHECKING:
     from ..session._utils import RenderedDeps
@@ -32,7 +32,6 @@ from .._typing_extensions import Self
 from ..session import get_current_session, require_active_session
 from ..session._session import DownloadHandler, DownloadInfo
 from ..types import MISSING, MISSING_TYPE, ImgData
-from ..ui._plot_output_opts import BrushOpts, ClickOpts, DblClickOpts, HoverOpts
 from ._try_render_plot import (
     PlotSizeInfo,
     try_render_matplotlib,

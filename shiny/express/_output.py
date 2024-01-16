@@ -6,7 +6,6 @@ from contextlib import AbstractContextManager
 from typing import Callable, Generator, TypeVar, overload
 
 from .. import ui
-from .._deprecated import warn_deprecated
 from .._typing_extensions import ParamSpec
 from ..render.renderer import RendererBase, RendererBaseT
 from ..render.transformer import OutputRenderer
