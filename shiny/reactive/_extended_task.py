@@ -1,4 +1,4 @@
-# pyright: strict
+from __future__ import annotations
 
 import asyncio
 from typing import (
@@ -7,12 +7,12 @@ from typing import (
     Generic,
     Literal,
     Optional,
-    ParamSpec,
     TypeVar,
     cast,
     overload,
 )
 
+from .._typing_extensions import ParamSpec
 from .._validation import req
 from ._core import Context, flush, lock
 from ._reactives import Value, isolate
