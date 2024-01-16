@@ -1,0 +1,195 @@
+# ui.Progress { #shiny.ui.Progress }
+
+`ui.Progress(self, min=0, max=1, session=None)`
+
+Initialize a progress bar.
+
+[](:func:`~shiny.ui.Progress`) creates a computation manager that can be used with `with` to
+run a block of code. Shiny will display a progress bar while the code runs, which
+you can update by calling the `set()` and `message()` methods of the computation
+manager at strategic points in the code block.
+
+## Parameters
+
+<code><span class="parameter-name">min</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[int](`int`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">0</span></code>
+
+:   The value that represents the starting point of the progress bar. Must be less
+    than ``max``.
+
+<code><span class="parameter-name">max</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[int](`int`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">1</span></code>
+
+:   The value that represents the end of the progress bar. Must be greater than
+    ``min``.
+
+<code><span class="parameter-name">session</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Session](`shiny.session.Session`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The [](:class:`~shiny.Session`) instance that the progress bar should appear in. If not
+    provided, the session is inferred via [](:func:`~shiny.session.get_current_session`).
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+import asyncio
+
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+
+app_ui = ui.page_fluid(
+    ui.input_action_button("button", "Compute"),
+    ui.output_text("compute"),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.text
+    @reactive.event(input.button)
+    async def compute():
+        with ui.Progress(min=1, max=15) as p:
+            p.set(message="Calculation in progress", detail="This may take a while...")
+
+            for i in range(1, 15):
+                p.set(i, message="Computing")
+                await asyncio.sleep(0.1)
+                # Normally use time.sleep() instead, but it doesn't yet work in Pyodide.
+                # https://github.com/pyodide/pyodide/issues/2354
+
+        return "Done computing!"
+
+
+app = App(app_ui, server)
+
+```
+
+
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [close](#shiny.ui.Progress.close) | Close the progress bar. You can also use the Progress object as a context manager, which will cause the progress bar to close on exit. |
+| [inc](#shiny.ui.Progress.inc) | Increment the progress bar.  Like ``set``, this updates the progress panel. The difference is that ``inc`` increases the progress bar by amount, instead of setting it to a specific value. |
+| [set](#shiny.ui.Progress.set) | Opens and updates the progress panel.  When called the first time, the progress panel is displayed. |
+
+### close { #shiny.ui.Progress.close }
+
+`ui.Progress.close()`
+
+Close the progress bar. You can also use the Progress object as a context
+manager, which will cause the progress bar to close on exit.
+
+#### Parameters
+
+<code><span class="parameter-name">self</span></code>
+
+:   The object instance
+
+#### Note
+
+Removes the progress panel. Future calls to set and close will be ignored.
+
+#### Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from datetime import datetime
+
+from shiny import App, Inputs, Outputs, Session, reactive, ui
+
+app_ui = ui.page_fluid(
+    ui.input_action_button("close", "Close the session"),
+    ui.p(
+        """If this example is running on the browser (i.e., via shinylive),
+        closing the session will log a message to the JavaScript console
+        (open the browser's developer tools to see it).
+        """
+    ),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    def log():
+        print("Session ended at: " + datetime.now().strftime("%H:%M:%S"))
+
+    session.on_ended(log)
+
+    @reactive.Effect
+    @reactive.event(input.close)
+    async def _():
+        await session.close()
+
+
+app = App(app_ui, server)
+
+```
+
+
+
+### inc { #shiny.ui.Progress.inc }
+
+`ui.Progress.inc(amount=0.1, message=None, detail=None)`
+
+Increment the progress bar.
+
+Like ``set``, this updates the progress panel. The difference is that ``inc``
+increases the progress bar by amount, instead of setting it to a specific value.
+
+#### Parameters
+
+<code><span class="parameter-name">self</span></code>
+
+:   The object instance
+
+<code><span class="parameter-name">amount</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[float](`float`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">0.1</span></code>
+
+:   The amount to increment in progress.
+
+<code><span class="parameter-name">message</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The message to be displayed to the user or ``None`` to hide the current
+    message (if any).
+
+<code><span class="parameter-name">detail</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The detail message to be displayed to the user or ``None`` to hide the current
+    detail message (if any). The detail message will be shown with a
+    de-emphasized appearance relative to message.
+
+### set { #shiny.ui.Progress.set }
+
+`ui.Progress.set(value=None, message=None, detail=None)`
+
+Opens and updates the progress panel.
+
+When called the first time, the progress panel is displayed.
+
+#### Parameters
+
+<code><span class="parameter-name">self</span></code>
+
+:   The object instance
+
+<code><span class="parameter-name">value</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[float](`float`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The value at which to set the progress bar, relative to ``min`` and ``max``.
+    ``None`` hides the progress bar, if it is currently visible.
+
+<code><span class="parameter-name">message</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The message to be displayed to the user or ``None`` to hide the current
+    message (if any).
+
+<code><span class="parameter-name">detail</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The detail message to be displayed to the user or ``None`` to hide the
+    current detail message (if any). The detail message will be shown with a
+    de-emphasized appearance relative to message.

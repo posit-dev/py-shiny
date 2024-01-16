@@ -1,0 +1,90 @@
+# ui.modal { #shiny.ui.modal }
+
+`ui.modal(*args, title=None, footer=MISSING, size='m', easy_close=False, fade=True, **kwargs)`
+
+Creates the UI for a modal dialog, using Bootstrap&#x27;s modal class.
+
+A modal is a dialog box that appears in front of the app. Modals are
+typically used for showing important messages, or for presenting UI that requires
+input from the user, such as a user name and/or password input.
+
+## Parameters
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`) \| [TagAttrs](`htmltools.TagAttrs`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   UI elements for the body of the modal.
+
+<code><span class="parameter-name">title</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   An optional title for the modal dialog.
+
+<code><span class="parameter-name">footer</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`) \| [MISSING_TYPE](`shiny.types.MISSING_TYPE`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">MISSING</span></code>
+
+:   UI for footer. Use ``None`` for no footer.
+
+<code><span class="parameter-name">size</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Literal](`typing.Literal`)\['m', 's', 'l', 'xl'\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'m'</span></code>
+
+:   The size of the modal dialogue box. Use one of "s" for small, "m" (the default)
+    for medium, or "l" for large.
+
+<code><span class="parameter-name">easy_close</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   If ``True``, the modal dialog can be dismissed by clicking outside the dialog
+    box, or by pressing the Escape key. If ``False`` (the default), the modal dialog
+    can't be dismissed in those ways; instead it must be dismissed by clicking on a
+    ``modal_button()``, or from a call to ``modal_remove()`` on the server.
+
+<code><span class="parameter-name">fade</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   If ``False``, the modal dialog will have no fade-in animation (it will simply
+    appear rather than fade in to view).
+
+<code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagAttrValue](`htmltools.TagAttrValue`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
+
+:   Attributes to be applied to the modal's body tag.
+
+## Returns
+
+| Type                   | Description   |
+|------------------------|---------------|
+| [Tag](`htmltools.Tag`) | A UI element  |
+
+## See Also
+
+[](:func:`~shiny.ui.modal_show`)
+[](:func:`~shiny.ui.modal_remove`)
+[](:func:`~shiny.ui.modal_button`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, reactive, ui
+
+app_ui = ui.page_fluid(
+    ui.input_action_button("show", "Show modal dialog"),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.Effect
+    @reactive.event(input.show)
+    def _():
+        m = ui.modal(
+            "This is a somewhat important message.",
+            title="Somewhat important message",
+            easy_close=True,
+            footer=None,
+        )
+        ui.modal_show(m)
+
+
+app = App(app_ui, server)
+
+```
+

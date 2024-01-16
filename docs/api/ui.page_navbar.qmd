@@ -1,0 +1,101 @@
+# ui.page_navbar { #shiny.ui.page_navbar }
+
+`ui.page_navbar(*args, title=None, id=None, selected=None, sidebar=None, fillable=False, fillable_mobile=False, gap=None, padding=None, position='static-top', header=None, footer=None, bg=None, inverse=False, underline=True, collapsible=True, fluid=True, window_title=MISSING, lang=None)`
+
+Create a page with a navbar and a title.
+
+## Parameters
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[NavSetArg](`shiny.types.NavSetArg`) \| [MetadataNode](`htmltools.MetadataNode`) \| [Sequence](`typing.Sequence`)\[[MetadataNode](`htmltools.MetadataNode`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   UI elements.
+
+<code><span class="parameter-name">title</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`) \| [Tag](`htmltools.Tag`) \| [TagList](`htmltools.TagList`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The browser window title (defaults to the host URL of the page). Can also be set
+    as a side effect via [](:func:`~shiny.ui.panel_title`).
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   If provided, will create an input value that holds the currently selected nav
+    item.
+
+<code><span class="parameter-name">selected</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Choose a particular nav item to select by default value (should match its
+    ``value``).
+
+<code><span class="parameter-name">sidebar</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Sidebar](`shiny.ui._sidebar.Sidebar`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A [](:func:`~shiny.ui.sidebar`) component to display on every page.
+
+<code><span class="parameter-name">fillable</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`) \| [list](`list`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Whether or not the main content area should be considered a fillable
+    (i.e., flexbox) container.
+
+<code><span class="parameter-name">fillable_mobile</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Whether or not ``fillable`` should apply on mobile devices.
+
+<code><span class="parameter-name">position</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Literal](`typing.Literal`)\['static-top', 'fixed-top', 'fixed-bottom'\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'static-top'</span></code>
+
+:   Determines whether the navbar should be displayed at the top of the page with
+    normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or
+    pinned at the bottom ("fixed-bottom"). Note that using "fixed-top" or
+    "fixed-bottom" will cause the navbar to overlay your body content, unless you
+    add padding (e.g., ``tags.style("body {padding-top: 70px;}")``).
+
+<code><span class="parameter-name">header</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[TagChild](`htmltools.TagChild`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   UI to display above the selected content.
+
+<code><span class="parameter-name">footer</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[TagChild](`htmltools.TagChild`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   UI to display below the selected content.
+
+<code><span class="parameter-name">bg</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Background color of the navbar (a CSS color).
+
+<code><span class="parameter-name">inverse</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Either ``True`` for a light text color or ``False`` for a dark text color.
+
+<code><span class="parameter-name">collapsible</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   ``True`` to automatically collapse the elements into an expandable menu on mobile devices or narrow window widths.
+
+<code><span class="parameter-name">fluid</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   ``True`` to use fluid layout; ``False`` to use fixed layout.
+
+<code><span class="parameter-name">window_title</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`) \| [MISSING_TYPE](`shiny.types.MISSING_TYPE`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">MISSING</span></code>
+
+:   The browser's window title (defaults to the host URL of the page). Can also be
+    set as a side effect via [](:func:`~shiny.ui.panel_title`).
+
+<code><span class="parameter-name">lang</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
+    will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
+    default, `None`, results in an empty string.
+
+## Returns
+
+| Type                   | Description   |
+|------------------------|---------------|
+| [Tag](`htmltools.Tag`) | A UI element. |
+
+## See Also
+
+* [](:func:`~shiny.ui.nav`)
+* [](:func:`~shiny.ui.nav_menu`)
+* [](:func:`~shiny.ui.navset_bar`)
+* [](:func:`~shiny.ui.page_fluid`)
+
+
+
+## Example
+
+See [](:func:`~shiny.ui.nav`).

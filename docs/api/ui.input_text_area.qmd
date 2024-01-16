@@ -1,0 +1,130 @@
+# ui.input_text_area { #shiny.ui.input_text_area }
+
+`ui.input_text_area(id, label, value='', *, width=None, height=None, cols=None, rows=None, placeholder=None, resize=None, autoresize=False, autocomplete=None, spellcheck=None)`
+
+Create a textarea input control for entry of unstructured text values.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An input id.
+
+<code><span class="parameter-name">label</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span></code>
+
+:   An input label.
+
+<code><span class="parameter-name">value</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">''</span></code>
+
+:   Initial value.
+
+<code><span class="parameter-name">width</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The CSS width, e.g., '400px', or '100%'.
+
+<code><span class="parameter-name">height</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The CSS height, e.g., '400px', or '100%'.
+
+<code><span class="parameter-name">cols</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[int](`int`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Value of the visible character columns of the input, e.g., 80. This argument will
+    only take effect if there is not a CSS width rule defined for this element; such
+    a rule could come from the width argument of this function or from a containing
+    page layout such as [](:func:`~shiny.ui.page_fluid`).
+
+<code><span class="parameter-name">rows</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[int](`int`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The value of the visible character rows of the input, e.g., 6. If the height
+    argument is specified, height will take precedence in the browser's rendering.
+
+<code><span class="parameter-name">placeholder</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A hint as to what can be entered into the control.
+
+<code><span class="parameter-name">resize</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Literal](`typing.Literal`)\['none', 'both', 'horizontal', 'vertical'\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Which directions the textarea box can be resized. Can be one of "both", "none",
+    "vertical", and "horizontal". The default, ``None``, will use the client
+    browser's default setting for resizing textareas.
+
+<code><span class="parameter-name">autoresize</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   If True, then the textarea will automatically resize the height to fit the input
+    text.
+
+<code><span class="parameter-name">autocomplete</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Whether to enable browser autocompletion of the text input (default is "off").
+    If `None`, then it will use the browser's default behavior. Other possible
+    values include "on", "name", "username", and "email". See [Mozilla's autocomplete
+    documentation](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete)
+    for more.
+
+<code><span class="parameter-name">spellcheck</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Literal](`typing.Literal`)\['true', 'false'\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Whether to enable browser spell checking of the text input (default is ``None``). If
+    None, then it will use the browser's default behavior.
+
+## Returns
+
+| Type                   | Description   |
+|------------------------|---------------|
+| [Tag](`htmltools.Tag`) | A UI element  |
+
+## Notes
+
+
+::: {.callout-note title="Server value"}
+A string containing the current text input. The default value is ``""`` unless
+``value`` is provided.
+:::
+
+
+
+## See Also
+
+[](:func:`~shiny.ui.input_text`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, render, ui
+
+app_ui = ui.page_fluid(
+    ui.input_text_area(
+        "caption_regular",
+        "Caption:",
+        "Data summary\nwith\nmultiple\nlines",
+    ),
+    ui.output_text_verbatim("value_regular", placeholder=True),
+    ui.input_text_area(
+        "caption_autoresize",
+        ui.markdown("Caption (w/ `autoresize=True`):"),
+        "Data summary\nwith\nmultiple\nlines",
+        autoresize=True,
+    ),
+    ui.output_text_verbatim("value_autoresize", placeholder=True),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.text
+    def value_regular():
+        return input.caption_regular()
+
+    @render.text
+    def value_autoresize():
+        return input.caption_autoresize()
+
+
+app = App(app_ui, server)
+
+```
+

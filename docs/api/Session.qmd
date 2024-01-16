@@ -1,0 +1,616 @@
+# Session { #shiny.Session }
+
+`Session(self, app, id, conn, debug=False)`
+
+A class representing a user session.
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [close](#shiny.Session.close) | Close the session. |
+| [download](#shiny.Session.download) | Deprecated. Please use :class:`~shiny.render.download` instead. |
+| [dynamic_route](#shiny.Session.dynamic_route) | Register a function to call when a dynamically generated, session-specific, route is requested.  Provides a convenient way to serve-up session-dependent values for other clients/applications to consume. |
+| [on_ended](#shiny.Session.on_ended) | Registers a function to be called after the client has disconnected. |
+| [on_flush](#shiny.Session.on_flush) | Register a function to call before the next reactive flush. |
+| [on_flushed](#shiny.Session.on_flushed) | Register a function to call after the next reactive flush. |
+| [send_custom_message](#shiny.Session.send_custom_message) | Send a message to the client. |
+| [send_input_message](#shiny.Session.send_input_message) | Send an input message to the session.  Sends a message to an input on the session's client web page; if the input is present and bound on the page at the time the message is received, then the input binding object's ``receiveMessage(el, message)`` method will be called. This method should generally not be called directly from Shiny apps, but through friendlier wrapper functions like ``ui.update_text()``. |
+
+### close { #shiny.Session.close }
+
+`Session.close(code=1001)`
+
+Close the session.
+
+#### Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from datetime import datetime
+
+from shiny import App, Inputs, Outputs, Session, reactive, ui
+
+app_ui = ui.page_fluid(
+    ui.input_action_button("close", "Close the session"),
+    ui.p(
+        """If this example is running on the browser (i.e., via shinylive),
+        closing the session will log a message to the JavaScript console
+        (open the browser's developer tools to see it).
+        """
+    ),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    def log():
+        print("Session ended at: " + datetime.now().strftime("%H:%M:%S"))
+
+    session.on_ended(log)
+
+    @reactive.Effect
+    @reactive.event(input.close)
+    async def _():
+        await session.close()
+
+
+app = App(app_ui, server)
+
+```
+
+
+
+### download { #shiny.Session.download }
+
+`Session.download(id=None, filename=None, media_type=None, encoding='utf-8')`
+
+Deprecated. Please use [](:class:`~shiny.render.download`) instead.
+
+#### Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The name of the download.
+
+<code><span class="parameter-name">filename</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`) \| [Callable](`typing.Callable`)\[\[\], [str](`str`)\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The filename of the download.
+
+<code><span class="parameter-name">media_type</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">None \| [str](`str`) \| [Callable](`typing.Callable`)\[\[\], [str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The media type of the download.
+
+<code><span class="parameter-name">encoding</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'utf-8'</span></code>
+
+:   The encoding of the download.
+
+#### Returns
+
+| Type                                                                                                   | Description             |
+|--------------------------------------------------------------------------------------------------------|-------------------------|
+| [Callable](`typing.Callable`)\[\[[DownloadHandler](`shiny.session._session.DownloadHandler`)\], None\] | The decorated function. |
+
+#### Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+import asyncio
+import io
+import os
+from datetime import date
+from typing import Any
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from shiny import App, Inputs, Outputs, Session, render, ui
+
+
+def make_example(id: str, label: str, title: str, desc: str, extra: Any = None):
+    return ui.column(
+        4,
+        ui.div(
+            {"class": "card mb-4"},
+            ui.div(title, class_="card-header"),
+            ui.div(
+                {"class": "card-body"},
+                ui.p(desc, class_="card-text text-muted"),
+                extra,
+                ui.download_button(id, label, class_="btn-primary"),
+            ),
+        ),
+    )
+
+
+app_ui = ui.page_fluid(
+    ui.row(
+        make_example(
+            "download1",
+            label="Download CSV",
+            title="Simple case",
+            desc="Downloads a pre-existing file, using its existing name on disk.",
+        ),
+    ),
+    ui.row(
+        make_example(
+            "download2",
+            label="Download plot",
+            title="Dynamic data generation",
+            desc="Downloads a PNG that's generated on the fly.",
+            extra=[
+                ui.input_text("title", "Plot title", "Random scatter plot"),
+                ui.input_slider(
+                    "num_points", "Number of data points", min=1, max=100, value=50
+                ),
+            ],
+        ),
+    ),
+    ui.row(
+        make_example(
+            "download3",
+            "Download",
+            "Dynamic filename",
+            "Demonstrates that filenames can be generated on the fly (and use Unicode characters!).",
+        ),
+    ),
+    ui.row(
+        make_example(
+            "download4",
+            "Download",
+            "Failed downloads",
+            "Throws an error in the download handler, download should not succeed.",
+        ),
+    ),
+    ui.row(
+        make_example(
+            "download5",
+            "Download",
+            "Undefined download",
+            "This button doesn't have corresponding server code registered to it, download should result in 404 error",
+        ),
+    ),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.download()
+    def download1():
+        """
+        This is the simplest case. The implementation simply returns the name of a file.
+        Note that the function name (`download1`) determines which download_button()
+        corresponds to this function.
+        """
+
+        path = os.path.join(os.path.dirname(__file__), "mtcars.csv")
+        return path
+
+    @render.download(filename="image.png")
+    def download2():
+        """
+        Another way to implement a file download is by yielding bytes; either all at
+        once, like in this case, or by yielding multiple times. When using this
+        approach, you should pass a filename argument to @render.download, which
+        determines what the browser will name the downloaded file.
+        """
+
+        print(input.num_points())
+        x = np.random.uniform(size=input.num_points())
+        y = np.random.uniform(size=input.num_points())
+        plt.figure()
+        plt.scatter(x, y)
+        plt.title(input.title())
+        with io.BytesIO() as buf:
+            plt.savefig(buf, format="png")
+            yield buf.getvalue()
+
+    @render.download(
+        filename=lambda: f"新型-{date.today().isoformat()}-{np.random.randint(100,999)}.csv"
+    )
+    async def download3():
+        await asyncio.sleep(0.25)
+        yield "one,two,three\n"
+        yield "新,1,2\n"
+        yield "型,4,5\n"
+
+    @output(id="download4")
+    @render.download(filename="failuretest.txt")
+    async def _():
+        yield "hello"
+        raise Exception("This error was caused intentionally")
+
+
+app = App(app_ui, server)
+
+## file: mtcars.csv
+mpg,cyl,disp,hp,drat,wt,qsec,vs,am,gear,carb
+21,6,160,110,3.9,2.62,16.46,0,1,4,4
+21,6,160,110,3.9,2.875,17.02,0,1,4,4
+22.8,4,108,93,3.85,2.32,18.61,1,1,4,1
+21.4,6,258,110,3.08,3.215,19.44,1,0,3,1
+18.7,8,360,175,3.15,3.44,17.02,0,0,3,2
+18.1,6,225,105,2.76,3.46,20.22,1,0,3,1
+14.3,8,360,245,3.21,3.57,15.84,0,0,3,4
+24.4,4,146.7,62,3.69,3.19,20,1,0,4,2
+22.8,4,140.8,95,3.92,3.15,22.9,1,0,4,2
+19.2,6,167.6,123,3.92,3.44,18.3,1,0,4,4
+17.8,6,167.6,123,3.92,3.44,18.9,1,0,4,4
+16.4,8,275.8,180,3.07,4.07,17.4,0,0,3,3
+17.3,8,275.8,180,3.07,3.73,17.6,0,0,3,3
+15.2,8,275.8,180,3.07,3.78,18,0,0,3,3
+10.4,8,472,205,2.93,5.25,17.98,0,0,3,4
+10.4,8,460,215,3,5.424,17.82,0,0,3,4
+14.7,8,440,230,3.23,5.345,17.42,0,0,3,4
+32.4,4,78.7,66,4.08,2.2,19.47,1,1,4,1
+30.4,4,75.7,52,4.93,1.615,18.52,1,1,4,2
+33.9,4,71.1,65,4.22,1.835,19.9,1,1,4,1
+21.5,4,120.1,97,3.7,2.465,20.01,1,0,3,1
+15.5,8,318,150,2.76,3.52,16.87,0,0,3,2
+15.2,8,304,150,3.15,3.435,17.3,0,0,3,2
+13.3,8,350,245,3.73,3.84,15.41,0,0,3,4
+19.2,8,400,175,3.08,3.845,17.05,0,0,3,2
+27.3,4,79,66,4.08,1.935,18.9,1,1,4,1
+26,4,120.3,91,4.43,2.14,16.7,0,1,5,2
+30.4,4,95.1,113,3.77,1.513,16.9,1,1,5,2
+15.8,8,351,264,4.22,3.17,14.5,0,1,5,4
+19.7,6,145,175,3.62,2.77,15.5,0,1,5,6
+15,8,301,335,3.54,3.57,14.6,0,1,5,8
+21.4,4,121,109,4.11,2.78,18.6,1,1,4,2
+
+```
+
+
+
+### dynamic_route { #shiny.Session.dynamic_route }
+
+`Session.dynamic_route(name, handler)`
+
+Register a function to call when a dynamically generated, session-specific,
+route is requested.
+
+Provides a convenient way to serve-up session-dependent values for other
+clients/applications to consume.
+
+#### Parameters
+
+<code><span class="parameter-name">name</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   A name for the route (used to determine part of the URL path).
+
+<code><span class="parameter-name">handler</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[DynamicRouteHandler](`shiny.session._session.DynamicRouteHandler`)</span></code>
+
+:   The function to call when a request is made to the route. This function
+    should take a single argument (a [](:class:`starlette.requests.Request`) object)
+    and return a [](:class:`starlette.types.ASGIApp`) object.
+
+#### Returns
+
+| Type         | Description                 |
+|--------------|-----------------------------|
+| [str](`str`) | The URL path for the route. |
+
+#### Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+
+from shiny import App, Inputs, Outputs, Session, reactive, ui
+
+app_ui = ui.page_fluid(
+    ui.input_action_button("serve", "Click to serve"), ui.div(id="messages")
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.Effect
+    @reactive.event(input.serve)
+    def _():
+        async def my_handler(request: Request) -> JSONResponse:
+            return JSONResponse({"n_clicks": input.serve()}, status_code=200)
+
+        path = session.dynamic_route("my_handler", my_handler)
+
+        print("Serving at: ", path)
+
+        ui.insert_ui(
+            ui.tags.script(
+                f"""
+                fetch('{path}')
+                  .then(r => r.json())
+                  .then(x => {{ $('#messages').text(`Clicked ${{x.n_clicks}} times`); }});
+                """
+            ),
+            selector="body",
+        )
+
+
+app = App(app_ui, server)
+
+```
+
+
+
+### on_ended { #shiny.Session.on_ended }
+
+`Session.on_ended(fn)`
+
+Registers a function to be called after the client has disconnected.
+
+#### Parameters
+
+<code><span class="parameter-name">fn</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Callable](`typing.Callable`)\[\[\], None\] \| [Callable](`typing.Callable`)\[\[\], [Awaitable](`typing.Awaitable`)\[None\]\]</span></code>
+
+:   The function to call.
+
+#### Returns
+
+| Type                                        | Description                                             |
+|---------------------------------------------|---------------------------------------------------------|
+| [Callable](`typing.Callable`)\[\[\], None\] | A function that can be used to cancel the registration. |
+
+#### Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from datetime import datetime
+
+from shiny import App, Inputs, Outputs, Session, reactive, ui
+
+app_ui = ui.page_fluid(
+    ui.input_action_button("close", "Close the session"),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    def log():
+        print("Session ended at: " + datetime.now().strftime("%H:%M:%S"))
+
+    session.on_ended(log)
+
+    @reactive.Effect
+    @reactive.event(input.close)
+    async def _():
+        await session.close()
+
+
+app = App(app_ui, server)
+
+```
+
+
+
+### on_flush { #shiny.Session.on_flush }
+
+`Session.on_flush(fn, once=True)`
+
+Register a function to call before the next reactive flush.
+
+#### Parameters
+
+<code><span class="parameter-name">fn</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Callable](`typing.Callable`)\[\[\], None\] \| [Callable](`typing.Callable`)\[\[\], [Awaitable](`typing.Awaitable`)\[None\]\]</span></code>
+
+:   The function to call.
+
+<code><span class="parameter-name">once</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   Whether to call the function only once or on every flush.
+
+#### Returns
+
+| Type                                        | Description                                             |
+|---------------------------------------------|---------------------------------------------------------|
+| [Callable](`typing.Callable`)\[\[\], None\] | A function that can be used to cancel the registration. |
+
+#### Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from datetime import datetime
+
+from shiny import App, Inputs, Outputs, Session, render, ui
+
+app_ui = ui.page_fluid(
+    ui.input_action_button("flush", "Trigger flush"),
+    ui.output_ui("n_clicks"),
+    ui.div(id="flush_time"),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    def log():
+        msg = "A reactive flush occurred at " + datetime.now().strftime("%H:%M:%S:%f")
+        print(msg)
+        ui.insert_ui(
+            ui.p(msg),
+            selector="#flush_time",
+        )
+
+    session.on_flush(log, once=False)
+
+    @render.ui
+    def n_clicks():
+        return "Number of clicks: " + str(input.flush())
+
+
+app = App(app_ui, server)
+
+```
+
+
+
+### on_flushed { #shiny.Session.on_flushed }
+
+`Session.on_flushed(fn, once=True)`
+
+Register a function to call after the next reactive flush.
+
+#### Parameters
+
+<code><span class="parameter-name">fn</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Callable](`typing.Callable`)\[\[\], None\] \| [Callable](`typing.Callable`)\[\[\], [Awaitable](`typing.Awaitable`)\[None\]\]</span></code>
+
+:   The function to call.
+
+<code><span class="parameter-name">once</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   Whether to call the function only once or on every flush.
+
+#### Returns
+
+| Type                                        | Description                                             |
+|---------------------------------------------|---------------------------------------------------------|
+| [Callable](`typing.Callable`)\[\[\], None\] | A function that can be used to cancel the registration. |
+
+#### Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from datetime import datetime
+
+from shiny import App, Inputs, Outputs, Session, render, ui
+
+app_ui = ui.page_fluid(
+    ui.input_action_button("flush", "Trigger flush"),
+    ui.output_ui("n_clicks"),
+    ui.div(id="flush_time"),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    def log():
+        msg = "A reactive flush occurred at " + datetime.now().strftime("%H:%M:%S:%f")
+        print(msg)
+        ui.insert_ui(
+            ui.p(msg),
+            selector="#flush_time",
+        )
+
+    session.on_flushed(log, once=False)
+
+    @render.ui
+    def n_clicks():
+        return "Number of clicks: " + str(input.flush())
+
+
+app = App(app_ui, server)
+
+```
+
+
+
+### send_custom_message { #shiny.Session.send_custom_message }
+
+`Session.send_custom_message(type, message)`
+
+Send a message to the client.
+
+#### Parameters
+
+<code><span class="parameter-name">type</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   The type of message to send.
+
+<code><span class="parameter-name">message</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[dict](`dict`)\[[str](`str`), [object](`object`)\]</span></code>
+
+:   The message to send.
+
+#### Note
+
+Sends messages to the client which can be handled in JavaScript with
+``Shiny.addCustomMessageHandler(type, function(message){...})``. Once the
+message handler is added, it will be invoked each time ``send_custom_message()``
+is called on the server.
+
+#### Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, reactive, ui
+
+app_ui = ui.page_fluid(
+    ui.input_text("msg", "Enter a message"),
+    ui.input_action_button("submit", "Submit the message"),
+    # It'd be better to use ui.insert_ui() in order to implement this kind of
+    # functionality...this is just a basic demo of how custom message handling works.
+    ui.tags.div(id="messages"),
+    ui.tags.script(
+        """
+        $(function() {
+            Shiny.addCustomMessageHandler("append_msg", function(message) {
+                $("<p>").text(message.msg).appendTo("#messages");
+            });
+        });
+        """
+    ),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.Effect
+    @reactive.event(input.submit)
+    async def _():
+        await session.send_custom_message("append_msg", {"msg": input.msg()})
+
+
+app = App(app_ui, server, debug=True)
+
+```
+
+
+
+### send_input_message { #shiny.Session.send_input_message }
+
+`Session.send_input_message(id, message)`
+
+Send an input message to the session.
+
+Sends a message to an input on the session&#x27;s client web page; if the input is
+present and bound on the page at the time the message is received, then the
+input binding object&#x27;s ``receiveMessage(el, message)`` method will be called.
+This method should generally not be called directly from Shiny apps, but through
+friendlier wrapper functions like ``ui.update_text()``.
+
+#### Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An id matching the id of an input to update.
+
+<code><span class="parameter-name">message</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[dict](`dict`)\[[str](`str`), [object](`object`)\]</span></code>
+
+:   The message to send.

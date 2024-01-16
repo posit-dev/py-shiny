@@ -1,0 +1,58 @@
+# render.DataTable { #shiny.render.DataTable }
+
+`render.DataTable(self, data, *, width='fit-content', height='500px', summary=True, filters=False, row_selection_mode='none')`
+
+Holds the data and options for a ``shiny.render.data_frame`` output, for a
+spreadsheet-like view.
+
+## Parameters
+
+<code><span class="parameter-name">data</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[object](`object`)</span></code>
+
+:   A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
+    (e.g., a Polars data frame or Arrow table).
+
+<code><span class="parameter-name">width</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Union](`typing.Union`)\[[str](`str`), [float](`float`), None\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'fit-content'</span></code>
+
+:   A _maximum_ amount of vertical space for the data table to occupy, in CSS units
+    (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
+    default is `fit-content`, which sets the table's width according to its
+    contents. Set this to `100%` to use the maximum available horizontal space.
+
+<code><span class="parameter-name">height</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Union](`typing.Union`)\[[str](`str`), [float](`float`), None\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'500px'</span></code>
+
+:   A _maximum_ amount of vertical space for the data table to occupy, in CSS units
+    (e.g. `"400px"`) or as a number, which will be interpreted as pixels. If there
+    are more rows than can fit in this space, the table body will scroll. Set the
+    height to `None` to allow the table to grow to fit all of the rows (this is not
+    recommended for large data sets, as it may crash the browser).
+
+<code><span class="parameter-name">summary</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Union](`typing.Union`)\[[bool](`bool`), [str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   If `True` (the default), shows a message like "Viewing rows 1 through 10 of 20"
+    below the grid when not all of the rows are being shown. If `False`, the message
+    is not displayed. You can also specify a string template to customize the
+    message, containing `{start}`, `{end}`, and `{total}` tokens. For example:
+    `"Viendo filas {start} a {end} de {total}"`.
+
+<code><span class="parameter-name">filters</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   If `True`, shows a row of filter inputs below the headers, one for each column.
+
+<code><span class="parameter-name">row_selection_mode</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Union](`typing.Union`)\[[Literal](`typing.Literal`)\['none'\], [Literal](`typing.Literal`)\['single'\], [Literal](`typing.Literal`)\['multiple'\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'none'</span></code>
+
+:   Use `"none"` to disable row selection, `"single"` to allow a single row to be
+    selected at a time, and `"multiple"` to allow multiple rows to be selected by
+    clicking on them individually.
+
+## Returns
+
+| Type   | Description                                                                                  |
+|--------|----------------------------------------------------------------------------------------------|
+|        | An object suitable for being returned from a `@render.data_frame`-decorated output function. |
+
+## See Also
+
+[](:func:`~shiny.ui.output_data_frame`)
+[](:func:`~shiny.render.data_frame`)
+[](:class:`~shiny.render.DataGrid`)

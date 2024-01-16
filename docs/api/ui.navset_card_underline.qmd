@@ -1,0 +1,58 @@
+# ui.navset_card_underline { #shiny.ui.navset_card_underline }
+
+`ui.navset_card_underline(*args, id=None, selected=None, title=None, sidebar=None, header=None, footer=None, placement='above')`
+
+Render nav items inside a card container. Active/focused navigation links are styled with an underline.
+
+## Parameters
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[NavSetArg](`shiny.types.NavSetArg`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   A collection of nav items (e.g., [](:func:`shiny.ui.nav_panel`)).
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   If provided, will create an input value that holds the currently selected nav
+    item.
+
+<code><span class="parameter-name">selected</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Choose a particular nav item to select by default value (should match it's
+    ``value``).
+
+<code><span class="parameter-name">sidebar</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Sidebar](`shiny.ui._sidebar.Sidebar`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A [](:class:`shiny.ui.Sidebar`) component to display on every [](:func:`~shiny.ui.nav_panel`) page.
+
+<code><span class="parameter-name">header</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   UI to display above the selected content.
+
+<code><span class="parameter-name">footer</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   UI to display below the selected content.
+
+<code><span class="parameter-name">placement</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Literal](`typing.Literal`)\['above', 'below'\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'above'</span></code>
+
+:   Placement of the nav items relative to the content.
+
+## See Also
+
+* [](:func:`~shiny.ui.nav_panel`)
+* [](:func:`~shiny.ui.nav_menu`)
+* [](:func:`~shiny.ui.nav_control`)
+* [](:func:`~shiny.ui.nav_spacer`)
+* [](:func:`~shiny.ui.navset_bar`)
+* [](:func:`~shiny.ui.navset_tab`)
+* [](:func:`~shiny.ui.navset_pill`)
+* [](:func:`~shiny.ui.navset_underline`)
+* [](:func:`~shiny.ui.navset_card_tab`)
+* [](:func:`~shiny.ui.navset_card_pill`)
+* [](:func:`~shiny.ui.navset_pill_list`)
+* [](:func:`~shiny.ui.navset_hidden`)
+
+
+
+## Example
+
+See [](:func:`~shiny.ui.nav_panel`)

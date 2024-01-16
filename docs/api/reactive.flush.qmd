@@ -1,0 +1,12 @@
+# reactive.flush { #shiny.reactive.flush }
+
+`reactive.flush()`
+
+Run any pending invalidations (i.e., flush the reactive environment).
+
+
+
+## Warning
+
+You shouldn&#x27;t ever need to call this function inside of a Shiny app. It&#x27;s only
+useful for testing and running reactive code interactively in the console.

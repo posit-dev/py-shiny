@@ -1,0 +1,39 @@
+# ui.modal_button { #shiny.ui.modal_button }
+
+`ui.modal_button(label, icon=None, **kwargs)`
+
+Creates a button that will dismiss a [](:func:`modal`). [](:func:`~shiny.ui.modal_button`) is usually
+passed to the `footer` of a [](:func:`~shiny.ui.modal`) to add a button to the footer that will close
+the [](:func:`~shiny.ui.modal`).
+
+## Parameters
+
+<code><span class="parameter-name">label</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span></code>
+
+:   An input label.
+
+<code><span class="parameter-name">icon</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   An icon to appear inline with the button/link.
+
+<code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagAttrValue](`htmltools.TagAttrValue`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
+
+:   Attributes to be applied to the button.
+
+## Returns
+
+| Type                   | Description   |
+|------------------------|---------------|
+| [Tag](`htmltools.Tag`) | A UI element  |
+
+## See Also
+
+[](:func:`~shiny.ui.modal`)
+[](:func:`~shiny.ui.modal_show`)
+[](:func:`~shiny.ui.modal_remove`)
+
+
+
+## Example
+
+See [](:func:`modal`).

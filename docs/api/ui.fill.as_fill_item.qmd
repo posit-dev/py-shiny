@@ -1,0 +1,109 @@
+# ui.fill.as_fill_item { #shiny.ui.fill.as_fill_item }
+
+`ui.fill.as_fill_item(tag)`
+
+Coerce a tag to a fill item.
+
+Filling layouts are built on the foundation of _fillable containers_ and _fill
+items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is
+why most UI components (e.g., [](:func:`~shiny.ui.card`),
+[](:func:`~shiny.ui.layout_sidebar`)) possess both `fillable` and `fill` arguments (to
+control their fill behavior). However, sometimes it&#x27;s useful to add, remove, and/or
+test fillable/fill properties on arbitrary [](:class:`~htmltools.Tag`), which these
+functions are designed to do.
+
+## Parameters
+
+<code><span class="parameter-name">tag</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagT](`shiny.ui.fill._fill.TagT`)</span></code>
+
+:   a Tag object.
+
+## Returns
+
+| Type                               | Description                                                                                                                           |
+|------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| [TagT](`shiny.ui.fill._fill.TagT`) | A copy of the original [](:class:`~htmltools.Tag`) object (`tag`) with additional attributes (and an [](:class:`~htmltools.HTMLDependency`)). |
+
+## See Also
+
+* [](:func:`~shiny.ui.fill.as_fillable_container`)
+* [](:func:`~shiny.ui.fill.remove_all_fill`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from __future__ import annotations
+
+import htmltools
+
+from shiny import App, ui
+from shiny.ui import fill
+
+
+def outer_inner() -> htmltools.Tag:
+    inner = ui.div(
+        id="inner",
+        style=htmltools.css(
+            height="200px",
+            border="3px blue solid",
+        ),
+    )
+    outer = ui.div(
+        inner,
+        id="outer",
+        style=htmltools.css(
+            height="300px",
+            border="3px red solid",
+        ),
+    )
+    return outer
+
+
+outer0 = outer_inner()
+
+outer1 = outer_inner()
+outer1.children[0] = fill.as_fill_item(outer1.children[0])
+
+outer2 = outer_inner()
+outer2 = fill.as_fillable_container(outer2)
+outer2.children[0] = fill.as_fill_item(outer2.children[0])
+
+
+app_ui = ui.page_fluid(
+    ui.markdown(
+        """\
+        # `as_fill_item()`
+
+        For an item to fill its parent element,
+        * the item must have `as_fill_item()` be called on it
+        * the parent container must have `as_fillable_container()` called on it
+
+        Iff both methods are called, the inner child will naturally expand into its parent container.
+        """
+    ),
+    ui.row(
+        ui.column(4, ui.h5("Default behavior")),
+        ui.column(4, ui.h5(ui.markdown("`as_fill_item(blue)`"))),
+        ui.column(
+            4,
+            ui.h5(ui.markdown("`as_fill_item(blue)` + `as_fillable_container(red)`")),
+        ),
+    ),
+    ui.row(
+        ui.column(4, ui.div(outer0)),
+        ui.column(4, ui.div(outer1)),
+        ui.column(4, ui.span(outer2)),
+    ),
+)
+
+
+app = App(app_ui, server=None)
+
+```
+

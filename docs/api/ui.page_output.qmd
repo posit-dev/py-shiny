@@ -1,0 +1,17 @@
+# ui.page_output { #shiny.ui.page_output }
+
+`ui.page_output(id)`
+
+Create a page container where the entire body is a UI output.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An output id.
+
+## Returns
+
+| Type                   | Description                                                 |
+|------------------------|-------------------------------------------------------------|
+| [Tag](`htmltools.Tag`) | A UI element which is meant to be used as a page container. |

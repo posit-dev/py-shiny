@@ -1,0 +1,87 @@
+# ui.output_text { #shiny.ui.output_text }
+
+`ui.output_text(id, inline=False, container=None)`
+
+Create a output container for some text.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An output id.
+
+<code><span class="parameter-name">inline</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   If ``True``, the result is displayed inline.
+
+<code><span class="parameter-name">container</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[TagFunction](`htmltools.TagFunction`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A Callable that returns the output container.
+
+## Returns
+
+| Type                   | Description   |
+|------------------------|---------------|
+| [Tag](`htmltools.Tag`) | A UI element  |
+
+## Note
+
+Text is HTML-escaped prior to rendering.
+
+
+
+## See Also
+
+* [](:func:`~shiny.render.text`)
+* [](:func:`~shiny.ui.output_text_verbatim`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, render, ui
+
+app_ui = ui.page_fluid(
+    ui.input_text("txt", "Enter the text to display below:", "delete me"),
+    ui.row(
+        ui.column(6, ui.code("ui.output_text()"), ui.output_text("text")),
+        ui.column(
+            6,
+            ui.code("ui.output_text_verbatim(placeholder=True)"),
+            ui.output_text_verbatim("verb", placeholder=True),
+        ),
+    ),
+    ui.row(
+        ui.column(6),
+        ui.column(
+            6,
+            ui.code("ui.output_text_verbatim(placeholder=False)"),
+            ui.output_text_verbatim("verb_no_placeholder", placeholder=False),
+        ),
+    ),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.text
+    def text():
+        return input.txt()
+
+    @render.text
+    def verb():
+        return input.txt()
+
+    @render.text
+    def verb_no_placeholder():
+        return input.txt()
+
+
+app = App(app_ui, server)
+
+```
+

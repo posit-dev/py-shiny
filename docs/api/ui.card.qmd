@@ -1,0 +1,76 @@
+# ui.card { #shiny.ui.card }
+
+`ui.card(*args, full_screen=False, height=None, max_height=None, min_height=None, fill=True, class_=None, **kwargs)`
+
+A Bootstrap card component
+
+A general purpose container for grouping related UI elements together with a border
+and optional padding. To learn more about `card()`s, see [this
+article](https://rstudio.github.io/bslib/articles/cards.html).
+
+## Parameters
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`) \| [TagAttrs](`htmltools.TagAttrs`) \| [CardItem](`shiny.ui._card.CardItem`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   UI elements.
+
+<code><span class="parameter-name">full_screen</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   If `True`, an icon will appear when hovering over the card body. Clicking the
+    icon expands the card to fit viewport size.
+
+<code><span class="parameter-name">height</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[CssUnit](`shiny.ui.css._css_unit.CssUnit`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
+    `full_screen`.
+
+<code><span class="parameter-name">fill</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   Whether or not to allow the card to grow/shrink to fit a fillable container with
+    an opinionated height (e.g., [](:func:`~shiny.ui.page_fillable`)).
+
+<code><span class="parameter-name">class_</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Additional CSS classes for the returned Tag.
+
+<code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagAttrValue](`htmltools.TagAttrValue`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
+
+:   HTML attributes on the returned Tag.
+
+## Returns
+
+| Type                   | Description                        |
+|------------------------|------------------------------------|
+| [Tag](`htmltools.Tag`) | An [](:func:`~shiny.ui.tags.div`) tag. |
+
+## See Also
+
+* [](:func:`~shiny.ui.card_header`) for creating a header within the card.
+* [](:func:`~shiny.ui.card_footer`) for creating a footer within the card.
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, ui
+
+app_ui = ui.page_fluid(
+    ui.card(
+        ui.card_header("This is the header"),
+        ui.p("This is the body."),
+        ui.p("This is still the body."),
+        ui.card_footer("This is the footer"),
+        full_screen=True,
+    ),
+)
+
+
+app = App(app_ui, server=None)
+
+```
+

@@ -1,0 +1,104 @@
+# ui.notification_show { #shiny.ui.notification_show }
+
+`ui.notification_show(ui, *, action=None, duration=5, close_button=True, id=None, type='default', session=None)`
+
+Show a notification to the user.
+
+A notification is a message that appears near the bottom corner of the app.
+Notifications normally disappear after a short period of time, and should multiple
+notifications appear together, they will stack on top of one another.
+
+## Parameters
+
+<code><span class="parameter-name">ui</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span></code>
+
+:   Contents of the notification message.
+
+<code><span class="parameter-name">action</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[TagChild](`htmltools.TagChild`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Message content that represents an action. For example, this could be a link
+    that the user can click on. This is separate from ui so customized layouts can
+    handle the main notification content separately from the action content.
+
+<code><span class="parameter-name">duration</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[int](`int`) \| [float](`float`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">5</span></code>
+
+:   Number of seconds to display the message before it disappears. Use ``None`` to
+    prevent the message from disappearing automatically. The user will need to click
+    the corner of the notification to close it.
+
+<code><span class="parameter-name">close_button</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   If ``True``, display a button which will make the notification disappear when
+    clicked. If ``False`` do not display.
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   An optional unique identifier for the notification. If supplied, any existing
+    notification with the same ``id`` will be replaced with this one (otherwise, a
+    new notification is created).
+
+<code><span class="parameter-name">type</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Literal](`typing.Literal`)\['default', 'message', 'warning', 'error'\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'default'</span></code>
+
+:   A string which controls the color of the notification. This should be one of
+    "default" (gray), "message" (blue), "warning" (yellow), or "error" (red).
+
+<code><span class="parameter-name">session</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Session](`shiny.session.Session`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The [](:class:`~shiny.Session`) in which the notification should appear.  If not
+    provided, the session is inferred via [](:func:`~shiny.session.get_current_session`).
+
+## Returns
+
+| Type         | Description                |
+|--------------|----------------------------|
+| [str](`str`) | The notification's ``id``. |
+
+## See Also
+
+[](:func:`~shiny.ui.notification_remove`)
+[](:func:`~shiny.ui.modal`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, reactive, ui
+
+app_ui = ui.page_fluid(
+    ui.input_action_button("show", "Show"),
+    " ",
+    ui.input_action_button("remove", "Remove"),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    ids: list[str] = []
+    n: int = 0
+
+    @reactive.Effect
+    @reactive.event(input.show)
+    def _():
+        nonlocal ids
+        nonlocal n
+        # Save the ID for removal later
+        id = ui.notification_show("Message " + str(n), duration=None)
+        ids.append(id)
+        n += 1
+
+    @reactive.Effect
+    @reactive.event(input.remove)
+    def _():
+        nonlocal ids
+        if ids:
+            ui.notification_remove(ids.pop())
+
+
+app = App(app_ui, server, debug=True)
+
+```
+

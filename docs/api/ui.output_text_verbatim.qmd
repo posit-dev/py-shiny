@@ -1,0 +1,38 @@
+# ui.output_text_verbatim { #shiny.ui.output_text_verbatim }
+
+`ui.output_text_verbatim(id, placeholder=False)`
+
+Create a output container for some text.
+
+Place a [](:func:`~shiny.render.text`) result in the user interface.
+Differs from [](:func:`~shiny.ui.output_text`) in that it wraps the text in a
+fixed-width container with a gray-ish background color and border.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An output id.
+
+<code><span class="parameter-name">placeholder</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   If the output is empty or ``None``, should an empty rectangle be displayed to
+    serve as a placeholder? (This does not affect behavior when the output
+    is nonempty.)
+
+## Returns
+
+| Type                   | Description   |
+|------------------------|---------------|
+| [Tag](`htmltools.Tag`) | A UI element  |
+
+## See Also
+
+* [](:func:`~shiny.render.text`)
+* [](:func:`~shiny.ui.output_text`)
+
+
+
+## Example
+
+See [](:func:`~shiny.ui.output_text`)

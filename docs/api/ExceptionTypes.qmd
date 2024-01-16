@@ -1,0 +1,155 @@
+# Exception types
+
+
+
+# types.SilentException { #shiny.types.SilentException }
+
+`types.SilentException()`
+
+Throw a silent exception.
+
+Normally, when an exception occurs inside a reactive context, it&#x27;s either:
+
+- Displayed to the user (as a big red error message)
+    - This happens when the exception is raised from an output context (e.g., [](:func:`shiny.render.ui`))
+- Crashes the application
+    - This happens when the exception is raised from an [](:func:`shiny.reactive.Effect`)
+
+This exception is used to silently throw inside a reactive context, meaning that
+execution is paused, and no output is shown to users (or the python console).
+
+
+
+## See Also
+
+[](:func:`~SilentCancelOutputException`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny.types import SilentException
+
+app_ui = ui.page_fluid(
+    ui.input_text(
+        "txt",
+        "Enter text to see it displayed below the input",
+        width="400px",
+    ),
+    ui.output_ui("txt_out"),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.ui
+    def txt_out():
+        if not input.txt():
+            raise SilentException()
+        return "Your input: " + input.txt()
+
+
+app = App(app_ui, server)
+
+```
+
+
+
+# types.SilentCancelOutputException { #shiny.types.SilentCancelOutputException }
+
+`types.SilentCancelOutputException()`
+
+Throw a silent exception and don&#x27;t clear output
+
+Similar to [](:class:`~SilentException`), but if thrown in an output context,
+existing output isn&#x27;t cleared.
+
+
+
+## See Also
+
+[](:func:`~SilentException`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny.types import SilentCancelOutputException
+
+app_ui = ui.page_fluid(
+    ui.input_text(
+        "txt",
+        "Delete the input text completely: it won't get removed below the input",
+        "Some text",
+        width="400px",
+    ),
+    ui.output_ui("txt_out"),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.ui
+    def txt_out():
+        if not input.txt():
+            raise SilentCancelOutputException()
+        return "Your input: " + input.txt()
+
+
+app = App(app_ui, server)
+
+```
+
+
+
+# types.SafeException { #shiny.types.SafeException }
+
+`types.SafeException()`
+
+Throw a safe exception.
+
+When ``shiny.App.SANITIZE_ERRORS`` is ``True`` (which is the case
+in some production environments like Posit Connect), exceptions are sanitized
+to prevent leaking of sensitive information. This class provides a way to
+generate an error that is OK to be displayed to the user.
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny.types import SafeException
+
+app_ui = ui.page_fluid(ui.output_ui("safe"), ui.output_ui("unsafe"))
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.ui
+    def safe():
+        raise SafeException("This is a safe exception")
+
+    @render.ui
+    def unsafe():
+        raise Exception("This is an unsafe exception")
+
+
+app = App(app_ui, server)
+app.sanitize_errors = True
+
+```
+

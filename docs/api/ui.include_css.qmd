@@ -1,0 +1,103 @@
+# ui.include_css { #shiny.ui.include_css }
+
+`ui.include_css(path, *, method='link')`
+
+Include a CSS file.
+
+## Parameters
+
+<code><span class="parameter-name">path</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Path](`pathlib.Path`) \| [str](`str`)</span></code>
+
+:   A path to a CSS file.
+
+<code><span class="parameter-name">method</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Literal](`typing.Literal`)\['link', 'link_files', 'inline'\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'link'</span></code>
+
+:   One of the following:
+
+    * ``"link"`` is the link to the CSS file via a [](:func:`~ui.tags.link`) tag. This
+      method is generally preferable to ``"inline"`` since it allows the browser to
+      cache the file.
+    * ``"link_files"`` is the same as ``"link"``, but also allow for the CSS file to
+      request other files within ``path``'s immediate parent directory (e.g.,
+      ``@import()`` another file). Note that this isn't the default behavior because
+      you should **be careful not to include files in the same directory as ``path``
+      that contain sensitive information**. A good general rule of thumb to follow
+      is to have ``path`` be located in a subdirectory of the app directory. For
+      example, if the app's source is located at ``/app/app.py``, then ``path``
+      should be somewhere like ``/app/css/custom.css`` (and all the other relevant
+      accompanying 'safe' files should be located under ``/app/css/``).
+    * ``"inline"`` is the inline the CSS file contents within a
+      [](:func:`~ui.tags.style`) tag.
+
+## Returns
+
+| Type                   | Description                                                                                                   |
+|------------------------|---------------------------------------------------------------------------------------------------------------|
+| [Tag](`htmltools.Tag`) | If ``method="inline"``, returns a [](:func:`~ui.tags.style`) tag; otherwise, returns a [](:func:`~ui.tags.link`) tag. |
+
+## Note
+
+By default this places a [](:func:`~ui.tags.link`) (or [](:func:`~ui.tags.style`)) tag in
+the [](:func:`~ui.tags.body`) of the document, which isn&#x27;t optimal for performance, and
+may result in a Flash of Unstyled Content (FOUC). To instead place the CSS in the
+[](:func:`~ui.tags.head`) of the document, you can wrap it in ``head_content``:
+
+```{python}
+#| eval: false
+from htmltools import head_content
+from shiny import ui
+
+ui.page_fluid(
+    ui.head_content(ui.include_css("custom.css")),
+
+    # You can also inline css by passing a dictionary with a `style` element.
+    ui.div(
+        {"style": "font-weight: bold;"},
+        ui.p("Some text!"),
+    )
+)
+```
+
+
+
+## See Also
+
+[](:func:`~ui.tags.style`)
+[](:func:`~ui.tags.link`)
+[](:func:`~include_js`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from pathlib import Path
+
+from shiny import App, ui
+
+css_file = Path(__file__).parent / "css" / "styles.css"
+
+app_ui = ui.page_fluid(
+    "Almost before we knew it, we had left the ground!!!",
+    ui.include_css(css_file),
+    ui.div(
+        # Style individual elements with an attribute dictionary.
+        {"style": "font-weight: bold"},
+        ui.p("Bold text"),
+    ),
+)
+
+app = App(app_ui, None)
+
+## file: css/styles.css
+body {
+  font-size: 3rem;
+  background-color: pink
+}
+
+```
+

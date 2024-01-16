@@ -1,0 +1,91 @@
+# ui.accordion_panel { #shiny.ui.accordion_panel }
+
+`ui.accordion_panel(title, *args, value=MISSING, icon=None, **kwargs)`
+
+Single accordion panel.
+
+## Parameters
+
+<code><span class="parameter-name">title</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span></code>
+
+:   A title to appear in the [](:func:`~shiny.ui.accordion_panel`)'s header.
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`) \| [TagAttrs](`htmltools.TagAttrs`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   Contents to the accordion panel body. Or tag attributes that are supplied to the
+    returned [](:class:`~htmltools.Tag`) object.
+
+<code><span class="parameter-name">value</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\] \| [MISSING_TYPE](`shiny.types.MISSING_TYPE`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">MISSING</span></code>
+
+:   A character string that uniquely identifies this panel. If `MISSING`, the
+    `title` will be used.
+
+<code><span class="parameter-name">icon</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[TagChild](`htmltools.TagChild`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A [](:class:`~htmltools.Tag`) which is positioned just before the `title`.
+
+<code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagAttrValue](`htmltools.TagAttrValue`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
+
+:   Tag attributes to the `accordion-body` div Tag.
+
+## Returns
+
+| Type                                                   | Description              |
+|--------------------------------------------------------|--------------------------|
+| [AccordionPanel](`shiny.ui._accordion.AccordionPanel`) | `AccordionPanel` object. |
+
+
+
+
+## References
+
+[Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
+
+
+
+## See Also
+
+* [](:func:`~shiny.ui.accordion`)
+* [](:func:`~shiny.ui.update_accordion`)
+* [](:func:`~shiny.ui.insert_accordion_panel`)
+* [](:func:`~shiny.ui.remove_accordion_panel`)
+* [](:func:`~shiny.ui.update_accordion_panel`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+
+items = [
+    ui.accordion_panel(f"Section {letter}", f"Some narrative for section {letter}")
+    for letter in "ABCDE"
+]
+
+app_ui = ui.page_fluid(
+    # Provide an id to create a shiny input binding
+    ui.accordion(*items, id="acc"),
+    ui.h4("Accordion:"),
+    ui.output_text_verbatim("acc_val", placeholder=True),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.Effect
+    def _():
+        print(input.acc())
+
+    @render.text
+    def acc_val():
+        return "input.acc(): " + str(input.acc())
+
+
+app = App(app_ui, server)
+
+```
+

@@ -1,0 +1,156 @@
+# ui.input_date { #shiny.ui.input_date }
+
+`ui.input_date(id, label, *, value=None, min=None, max=None, format='yyyy-mm-dd', startview='month', weekstart=0, language='en', width=None, autoclose=True, datesdisabled=None, daysofweekdisabled=None)`
+
+Creates a text input which, when clicked on, brings up a calendar that the user can
+click on to select dates.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An input id.
+
+<code><span class="parameter-name">label</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span></code>
+
+:   An input label.
+
+<code><span class="parameter-name">value</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[date](`datetime.date`) \| [str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The starting date. Either a [](:class:`~datetime.date`) object, or a string in
+    `yyyy-mm-dd` format. If None (the default), will use the current date in the
+    client's time zone.
+
+<code><span class="parameter-name">min</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[date](`datetime.date`) \| [str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The minimum allowed date. Either a [](:class:`~datetime.date`) object, or a string in
+    yyyy-mm-dd format.
+
+<code><span class="parameter-name">max</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[date](`datetime.date`) \| [str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The maximum allowed date. Either a [](:class:`~datetime.date`) object, or a string in
+    yyyy-mm-dd format.
+
+<code><span class="parameter-name">format</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'yyyy-mm-dd'</span></code>
+
+:   The format of the date to display in the browser. Defaults to `"yyyy-mm-dd"`.
+
+<code><span class="parameter-name">startview</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'month'</span></code>
+
+:   The date range shown when the input object is first clicked. Can be "month" (the
+    default), "year", or "decade".
+
+<code><span class="parameter-name">weekstart</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[int](`int`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">0</span></code>
+
+:   Which day is the start of the week. Should be an integer from 0 (Sunday) to 6
+    (Saturday).
+
+<code><span class="parameter-name">language</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'en'</span></code>
+
+:   The language used for month and day names. Default is "en". Other valid values
+    include "ar", "az", "bg", "bs", "ca", "cs", "cy", "da", "de", "el", "en-AU",
+    "en-GB", "eo", "es", "et", "eu", "fa", "fi", "fo", "fr-CH", "fr", "gl", "he",
+    "hr", "hu", "hy", "id", "is", "it-CH", "it", "ja", "ka", "kh", "kk", "ko", "kr",
+    "lt", "lv", "me", "mk", "mn", "ms", "nb", "nl-BE", "nl", "no", "pl", "pt-BR",
+    "pt", "ro", "rs-latin", "rs", "ru", "sk", "sl", "sq", "sr-latin", "sr", "sv",
+    "sw", "th", "tr", "uk", "vi", "zh-CN", and "zh-TW".
+
+<code><span class="parameter-name">width</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The CSS width, e.g. '400px', or '100%'
+
+<code><span class="parameter-name">autoclose</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   Whether or not to close the datepicker immediately when a date is selected.
+
+<code><span class="parameter-name">datesdisabled</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[list](`list`)\[[str](`str`)\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Which dates should be disabled (in `yyyy-mm-dd` format).
+
+<code><span class="parameter-name">daysofweekdisabled</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[list](`list`)\[[int](`int`)\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Days of the week that should be disabled. Should be a integer vector with values
+    from 0 (Sunday) to 6 (Saturday).
+
+## Returns
+
+| Type                   | Description   |
+|------------------------|---------------|
+| [Tag](`htmltools.Tag`) | A UI element. |
+
+## Note
+
+The date ``format`` string specifies how the date will be displayed in the browser.
+It allows the following values:
+
+- ``yy``: Year without century (12)
+- ``yyyy``: Year with century (2012)
+- ``mm``: Month number, with leading zero (01-12)
+- ``m``: Month number, without leading zero (1-12)
+- ``M``: Abbreviated month name
+- ``MM``: Full month name
+- ``dd``: Day of month with leading zero
+- ``d``: Day of month without leading zero
+- ``D``: Abbreviated weekday name
+- ``DD``: Full weekday name
+
+
+
+## Notes
+
+::: {.callout-note title="Server value"}
+A [](:class:`~datetime.date`) object.
+:::
+
+
+
+## See Also
+
+[](:func:`~shiny.ui.update_date`)
+[](:func:`~shiny.ui.input_date_range`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from datetime import date
+
+from shiny import App, Inputs, Outputs, Session, ui
+
+app_ui = ui.page_fluid(
+    ui.input_date("date1", "Date:", value="2016-02-29"),
+    # Default value is the date in client's time zone
+    ui.input_date("date2", "Date:"),
+    # value is always yyyy-mm-dd, even if the display format is different
+    ui.input_date("date3", "Date:", value="2016-02-29", format="mm/dd/yy"),
+    # Pass in a Date object
+    ui.input_date("date4", "Date:", value=date(2016, 2, 29)),
+    # Use different language and different first day of week
+    ui.input_date("date5", "Date:", language="ru", weekstart=1),
+    # Start with decade view instead of default month view
+    ui.input_date("date6", "Date:", startview="decade"),
+    # Disable Mondays and Tuesdays.
+    ui.input_date("date7", "Date:", daysofweekdisabled=[1, 2]),
+    # Disable specific dates.
+    ui.input_date(
+        "date8",
+        "Date:",
+        value="2016-02-29",
+        datesdisabled=["2016-03-01", "2016-03-02"],
+    ),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    pass
+
+
+app = App(app_ui, server)
+
+```
+

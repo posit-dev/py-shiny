@@ -1,0 +1,99 @@
+# App { #shiny.App }
+
+`App(self, ui, server, *, static_assets=None, debug=False)`
+
+Create a Shiny app instance.
+
+## Parameters
+
+<code><span class="parameter-name">ui</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Tag](`htmltools.Tag`) \| [TagList](`htmltools.TagList`) \| [Callable](`typing.Callable`)\[\[[Request](`starlette.requests.Request`)\], [Tag](`htmltools.Tag`) \| [TagList](`htmltools.TagList`)\] \| [Path](`pathlib.Path`)</span></code>
+
+:   The UI definition for the app (e.g., a call to [](:func:`~shiny.ui.page_fluid`) or
+    similar, with layouts and controls nested inside). You can
+    also pass a function that takes a [](:class:`~starlette.requests.Request`) and
+    returns a UI definition, if you need the UI definition to be created dynamically
+    for each pageview.
+
+<code><span class="parameter-name">server</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Callable](`typing.Callable`)\[\[[Inputs](`shiny.session.Inputs`)\], None\] \| [Callable](`typing.Callable`)\[\[[Inputs](`shiny.session.Inputs`), [Outputs](`shiny.session.Outputs`), [Session](`shiny.session.Session`)\], None\] \| None</span></code>
+
+:   A function which is called once for each session, ensuring that each session is
+    independent.
+
+<code><span class="parameter-name">static_assets</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\['str' \| 'os.PathLike\[str\]' \| [dict](`dict`)\[[str](`str`), [Path](`pathlib.Path`)\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Static files to be served by the app. If this is a string or Path object, it
+    must be a directory, and it will be mounted at `/`. If this is a dictionary,
+    each key is a mount point and each value is a file or directory to be served at
+    that mount point.
+
+<code><span class="parameter-name">debug</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Whether to enable debug mode.
+
+## Example
+
+
+```{python}
+#| eval: false
+from shiny import  App, Inputs, Outputs, Session, ui
+
+app_ui = ui.page_fluid("Hello Shiny!")
+
+def server(input: Inputs, output: Outputs, session: Session):
+    pass
+
+app = App(app_ui, server)
+```
+
+## Attributes
+
+| Name | Description |
+| --- | --- |
+| [lib_prefix](#shiny.App.lib_prefix) | A path prefix to place before all HTML dependencies processed by ``register_web_dependency()``. |
+| [sanitize_error_msg](#shiny.App.sanitize_error_msg) | The message to show when an error occurs and ``SANITIZE_ERRORS=True``. |
+| [sanitize_errors](#shiny.App.sanitize_errors) | Whether or not to show a generic message (``SANITIZE_ERRORS=True``) or the actual message (``SANITIZE_ERRORS=False``) in the app UI when an error occurs. This flag may default to ``True`` in some production environments (e.g., Posit Connect). |
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [call_pyodide](#shiny.App.call_pyodide) | Communicate with pyodide.  Warning ------- This method is not intended for public usage. It's exported for use by shinylive. |
+| [run](#shiny.App.run) | Run the app. |
+| [stop](#shiny.App.stop) | Stop the app (i.e., close all sessions).  See Also -------- ~shiny.Session.close |
+
+### call_pyodide { #shiny.App.call_pyodide }
+
+`App.call_pyodide(scope, receive, send)`
+
+Communicate with pyodide.
+
+
+
+#### Warning
+
+This method is not intended for public usage. It&#x27;s exported for use by
+shinylive.
+
+### run { #shiny.App.run }
+
+`App.run(**kwargs)`
+
+Run the app.
+
+#### Parameters
+
+<code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[object](`object`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
+
+:   Keyword arguments passed to [](:func:`~shiny.run_app`).
+
+### stop { #shiny.App.stop }
+
+`App.stop()`
+
+Stop the app (i.e., close all sessions).
+
+
+
+#### See Also
+
+[](:func:`~shiny.Session.close`)

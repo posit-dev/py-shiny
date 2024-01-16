@@ -1,0 +1,12 @@
+# session.session_context { #shiny.session.session_context }
+
+`session.session_context(session)`
+
+A context manager for current session.
+
+## Parameters
+
+<code><span class="parameter-name">session</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Session](`shiny.session._session.Session`)\]</span></code>
+
+:   A [](:class:`~shiny.Session`) instance. If not provided, the instance is inferred via
+    [](:func:`~shiny.session.get_current_session`).

@@ -1,0 +1,134 @@
+# ui.input_slider { #shiny.ui.input_slider }
+
+`ui.input_slider(id, label, min, max, value, *, step=None, ticks=False, animate=False, width=None, sep=',', pre=None, post=None, time_format=None, timezone=None, drag_range=True)`
+
+Constructs a slider widget to select a number, date, or date-time from a range.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An input id.
+
+<code><span class="parameter-name">label</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span></code>
+
+:   An input label.
+
+<code><span class="parameter-name">min</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[SliderValueArg](`shiny.ui._input_slider.SliderValueArg`)</span></code>
+
+:   The minimum allowed value.
+
+<code><span class="parameter-name">max</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[SliderValueArg](`shiny.ui._input_slider.SliderValueArg`)</span></code>
+
+:   The maximum allowed value.
+
+<code><span class="parameter-name">value</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[SliderValueArg](`shiny.ui._input_slider.SliderValueArg`) \| [Iterable](`typing.Iterable`)\[[SliderValueArg](`shiny.ui._input_slider.SliderValueArg`)\]</span></code>
+
+:   Initial value.
+
+<code><span class="parameter-name">step</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[SliderStepArg](`shiny.ui._input_slider.SliderStepArg`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Interval to use when stepping between min and max.
+
+<code><span class="parameter-name">ticks</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   ``False`` to hide tick marks, ``True`` to show them according to some simple
+    heuristics.
+
+<code><span class="parameter-name">animate</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`) \| [AnimationOptions](`shiny.ui._input_slider.AnimationOptions`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   ``True`` to show simple animation controls with default settings; ``False`` not
+    to; or a custom settings list, such as those created using
+    [](:class:`~AnimationOptions`).
+
+<code><span class="parameter-name">width</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The CSS width, e.g. '400px', or '100%'
+
+<code><span class="parameter-name">sep</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">','</span></code>
+
+:   Separator between thousands places in numbers.
+
+<code><span class="parameter-name">pre</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A prefix string to put in front of the value.
+
+<code><span class="parameter-name">post</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A suffix string to put after the value.
+
+<code><span class="parameter-name">time_format</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Only used if the slider values are [](:class:`~datetime.date`) or
+    [](:class:`~datetime.datetime`) objects. A time format string, to be passed to the
+    Javascript strftime library. See https://github.com/samsonjs/strftime for more
+    details. For Dates, the default is "%F" (like "2015-07-01"), and for Datetimes,
+    the default is "%F %T" (like "2015-07-01 15:32:10").
+
+<code><span class="parameter-name">timezone</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Only used if the values are [](:class:`~datetime.datetime`) objects. A string
+    specifying the time zone offset for the displayed times, in the format "+HHMM"
+    or "-HHMM". If ``None`` (the default), times will be displayed in the browser's
+    time zone. The value "+0000" will result in UTC time.
+
+<code><span class="parameter-name">drag_range</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   This option is used only if it is a range slider (with two values). If ``True``
+    (the default), the range can be dragged. In other words, the min and max can be
+    dragged together. If ``False``, the range cannot be dragged.
+
+## Returns
+
+| Type                   | Description   |
+|------------------------|---------------|
+| [Tag](`htmltools.Tag`) | A UI element  |
+
+## Notes
+
+::: {.callout-note title="Server value"}
+A number, date, or date-time (depending on the class of value), or in the case of
+slider range, a tuple of two numbers/dates/date-times.
+:::
+
+
+
+## See Also
+
+[](:func:`~shiny.ui.update_slider`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+import matplotlib.pyplot as plt
+import numpy as np
+
+from shiny import App, Inputs, Outputs, Session, render, ui
+
+app_ui = ui.page_fluid(
+    ui.input_slider("obs", "Number of bins:", min=10, max=100, value=30),
+    ui.output_plot("distPlot"),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.plot
+    def distPlot():
+        np.random.seed(19680801)
+        x = 100 + 15 * np.random.randn(437)
+
+        fig, ax = plt.subplots()
+        ax.hist(x, input.obs(), density=True)
+        return fig
+
+
+app = App(app_ui, server)
+
+```
+

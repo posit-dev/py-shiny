@@ -1,0 +1,81 @@
+# ui.input_numeric { #shiny.ui.input_numeric }
+
+`ui.input_numeric(id, label, value, *, min=None, max=None, step=None, width=None)`
+
+Create an input control for entry of numeric values.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An input id.
+
+<code><span class="parameter-name">label</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span></code>
+
+:   An input label.
+
+<code><span class="parameter-name">value</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[float](`float`)</span></code>
+
+:   Initial value.
+
+<code><span class="parameter-name">min</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[float](`float`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The minimum allowed value.
+
+<code><span class="parameter-name">max</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[float](`float`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The maximum allowed value.
+
+<code><span class="parameter-name">step</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[float](`float`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Interval to use when stepping between min and max.
+
+<code><span class="parameter-name">width</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The CSS width, e.g. '400px', or '100%'
+
+## Returns
+
+| Type                   | Description   |
+|------------------------|---------------|
+| [Tag](`htmltools.Tag`) | A UI element. |
+
+## Notes
+
+::: {.callout-note title="Server value"}
+A numeric value.
+:::
+
+
+
+## See Also
+
+[](:func:`~shiny.ui.update_numeric`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, render, ui
+
+app_ui = ui.page_fluid(
+    ui.input_numeric("obs", "Observations:", 10, min=1, max=100),
+    ui.output_text_verbatim("value"),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.text
+    def value():
+        return input.obs()
+
+
+app = App(app_ui, server)
+
+```
+

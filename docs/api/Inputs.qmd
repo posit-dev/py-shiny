@@ -1,0 +1,10 @@
+# Inputs { #shiny.Inputs }
+
+`Inputs(self, values, ns=Root)`
+
+A class representing Shiny input values.
+
+This class provides access to a [](:class:`~shiny.Session`)&#x27;s input values. The
+input values are reactive [](:class:`~shiny.reactive.Value`)s, and can be accessed with
+the ``[]`` operator, or with ``.``. For example, if there is an input named ``x``,
+it can be accessed via `input["x"]()` or ``input.x()``.

@@ -1,0 +1,67 @@
+# reactive.isolate { #shiny.reactive.isolate }
+
+`reactive.isolate()`
+
+Create a non-reactive scope within a reactive scope.
+
+Ordinarily, the simple act of reading a reactive value causes a relationship to be
+established between the caller and the reactive value, where a change to the
+reactive value will cause the caller to re-execute. (The same applies for the act of
+getting a reactive calculation&#x27;s value.) `with isolate()` lets you read a reactive
+value or calculation without establishing this relationship.
+
+``with isolate()`` can also be useful for calling reactive calculations at the
+console, which can be useful for debugging. To do so, wrap the calls to the reactive
+calculation with ``with isolate()``.
+
+## Returns
+
+| Type                                                | Description                                                                                                                                                                               |
+|-----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Generator](`typing.Generator`)\[None, None, None\] | A context manager that executes the given expression in a scope where reactive values can be read, but do not cause the reactive scope of the caller to be re-evaluated when they change. |
+
+## See Also
+
+[](:func:`~shiny.reactive.event`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+import matplotlib.pyplot as plt
+import numpy as np
+
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+
+app_ui = ui.page_fluid(
+    ui.input_slider("n", "Number of observations", min=0, max=1000, value=500),
+    ui.input_action_button("go", "Go!", class_="btn-success"),
+    ui.output_plot("plot"),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.plot(alt="A histogram")
+    def plot():
+        # Take a reactive dependency on the action button...
+        input.go()
+
+        # ...but don't take a reactive dependency on the slider
+        with reactive.isolate():
+            np.random.seed(19680801)
+            x = 100 + 15 * np.random.randn(input.n())
+
+        fig, ax = plt.subplots()
+        ax.hist(x, bins=30, density=True)
+        return fig
+
+
+app = App(app_ui, server)
+
+```
+

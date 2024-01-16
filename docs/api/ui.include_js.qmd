@@ -1,0 +1,67 @@
+# ui.include_js { #shiny.ui.include_js }
+
+`ui.include_js(path, *, method='link', **kwargs)`
+
+Include a JavaScript file.
+
+## Parameters
+
+<code><span class="parameter-name">path</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Path](`pathlib.Path`) \| [str](`str`)</span></code>
+
+:   A path to a JS file.
+
+<code><span class="parameter-name">method</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Literal](`typing.Literal`)\['link', 'link_files', 'inline'\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'link'</span></code>
+
+:   One of the following:
+
+    * ``"link"`` is the link to the CSS file via a [](:func:`~ui.tags.link`) tag. This
+      method is generally preferable to ``"inline"`` since it allows the browser to
+      cache the file.
+    * ``"link_files"`` is the same as ``"link"``, but also allow for the CSS file to
+      request other files within ``path``'s immediate parent directory (e.g.,
+      ``@import()`` another file). Note that this isn't the default behavior because
+      you should **be careful not to include files in the same directory as ``path``
+      that contain sensitive information**. A good general rule of thumb to follow
+      is to have ``path`` be located in a subdirectory of the app directory. For
+      example, if the app's source is located at ``/app/app.py``, then ``path``
+      should be somewhere like ``/app/css/custom.css`` (and all the other relevant
+      accompanying 'safe' files should be located under ``/app/css/``).
+    * ``"inline"`` is the inline the CSS file contents within a
+      [](:func:`~ui.tags.style`) tag.
+
+<code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagAttrValue](`htmltools.TagAttrValue`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
+
+:   Attributes which are passed on to `~ui.tags.script`.
+
+## Returns
+
+| Type                   | Description                    |
+|------------------------|--------------------------------|
+| [Tag](`htmltools.Tag`) | A [](:func:`~ui.tags.script`) tag. |
+
+## Note
+
+This places a [](:func:`~ui.tags.script`) tag in the [](:func:`~ui.tags.body`) of the
+document. If you want to place the tag in the [](:func:`~ui.tags.head`) of the
+document instead, you can wrap it in ``head_content`` (in this case, just
+make sure you&#x27;re aware that the DOM probably won&#x27;t be ready when the script
+is executed).
+
+```{python}
+#| eval: false
+ui.page_fluid(
+    ui.head_content(ui.include_js("custom.js")),
+)
+
+# Alternately you can inline Javscript by changing the method.
+ui.page_fluid(
+    ui.head_content(ui.include_js("custom.js", method = "inline")),
+)
+```
+
+
+
+## See Also
+
+[](:func:`~ui.tags.script`)
+[](:func:`~include_css`)

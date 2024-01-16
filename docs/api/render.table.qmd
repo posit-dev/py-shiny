@@ -1,0 +1,50 @@
+# render.table { #shiny.render.table }
+
+`render.table(self, _fn=None, *, index=False, classes='table shiny-table w-auto', border=0, **kwargs)`
+
+Reactively render a pandas ``DataFrame`` object (or similar) as a basic HTML
+table.
+
+Consider using [](:func:`~shiny.render.data_frame`) instead of this renderer, as
+it provides high performance virtual scrolling, built-in filtering and sorting,
+and a better default appearance. This renderer may still be helpful if you
+use pandas styling features that are not currently supported by
+[](:func:`~shiny.render.data_frame`).
+
+## Parameters
+
+<code><span class="parameter-name">index</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Whether to print index (row) labels. (Ignored for pandas [](:class:`Styler`)
+    objects; call ``style.hide(axis="index")`` from user code instead.)
+
+<code><span class="parameter-name">classes</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'table shiny-table w-auto'</span></code>
+
+:   CSS classes (space separated) to apply to the resulting table. By default, we
+    use `table shiny-table w-auto` which is designed to look reasonable with
+    Bootstrap 5. (Ignored for pandas [](:class:`Styler`) objects; call
+    ``style.set_table_attributes('class="dataframe table shiny-table w-auto"')``
+    from user code instead.)
+
+<code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[object](`object`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
+
+:   Additional keyword arguments passed to ``pandas.DataFrame.to_html()`` or
+    ``pandas.io.formats.style.Styler.to_html()``.
+
+## Returns
+
+| Type   | Description                                                                                                                                                                                                                             |
+|--------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|        | A decorator for a function that returns any of the following:  1. A pandas [](:class:`DataFrame`) object. 2. A pandas [](:class:`Styler`) object. 3. Any object that has a `.to_pandas()` method (e.g., a Polars data frame or    Arrow table). |
+
+## Tip
+
+The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+of a [](:func:`~shiny.ui.output_table`) container (see [](:func:`~shiny.ui.output_table`)
+for example usage).
+
+
+
+## See Also
+
+[](:func:`~shiny.ui.output_table`) for the corresponding UI component to this render function.

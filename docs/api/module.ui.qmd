@@ -1,0 +1,4 @@
+# module.ui { #shiny.module.ui }
+
+`module.ui(fn)`
+

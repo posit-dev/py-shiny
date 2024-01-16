@@ -1,0 +1,17 @@
+# reactive.get_current_context { #shiny.reactive.get_current_context }
+
+`reactive.get_current_context()`
+
+Get the current reactive context.
+
+## Returns
+
+| Type                                      | Description          |
+|-------------------------------------------|----------------------|
+| [Context](`shiny.reactive._core.Context`) | A [](:class:`~Context`). |
+
+## Raises
+
+| Type                           | Description                              |
+|--------------------------------|------------------------------------------|
+| [RuntimeError](`RuntimeError`) | If called outside of a reactive context. |

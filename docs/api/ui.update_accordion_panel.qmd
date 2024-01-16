@@ -1,0 +1,106 @@
+# ui.update_accordion_panel { #shiny.ui.update_accordion_panel }
+
+`ui.update_accordion_panel(id, target, *body, title=MISSING, value=MISSING, icon=MISSING, show=None, session=None)`
+
+Dynamically update accordion panel contents.
+
+Dynamically (i.e., programmatically) update/modify [](:func:`~shiny.ui.accordion`) panels in a Shiny app.
+These functions require an `id` to be provided to the [](:func:`~shiny.ui.accordion`) and must also be
+called within an active Shiny session.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   A string that matches an existing [](:func:`~shiny.ui.accordion`)'s `id`.
+
+<code><span class="parameter-name">target</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   The `value` of an existing panel to update.
+
+<code><span class="parameter-name">*body</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   If provided, the new body contents of the panel.
+
+<code><span class="parameter-name">title</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`) \| None \| [MISSING_TYPE](`shiny.types.MISSING_TYPE`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">MISSING</span></code>
+
+:   If not missing, the new title of the panel.
+
+<code><span class="parameter-name">value</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`) \| None \| [MISSING_TYPE](`shiny.types.MISSING_TYPE`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">MISSING</span></code>
+
+:   If not missing, the new value of the panel.
+
+<code><span class="parameter-name">icon</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`) \| None \| [MISSING_TYPE](`shiny.types.MISSING_TYPE`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">MISSING</span></code>
+
+:   If not missing, the new icon of the panel.
+
+<code><span class="parameter-name">session</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Session](`shiny.session.Session`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A Shiny session object (the default should almost always be used).
+
+## References
+
+[Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
+
+
+
+## See Also
+
+* [](:func:`~shiny.ui.accordion`)
+* [](:func:`~shiny.ui.accordion_panel`)
+* [](:func:`~shiny.ui.update_accordion`)
+* [](:func:`~shiny.ui.insert_accordion_panel`)
+* [](:func:`~shiny.ui.remove_accordion_panel`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, reactive, ui
+
+
+def make_panel(letter: str) -> ui.AccordionPanel:
+    return ui.accordion_panel(
+        f"Section {letter}",
+        f"Some narrative for section {letter}",
+        value=f"sec_{letter}",
+    )
+
+
+items = [make_panel(letter) for letter in "ABCDE"]
+
+app_ui = ui.page_fluid(
+    ui.input_switch("update_panel", "Update (and open) Sections"),
+    ui.accordion(*items, id="acc", multiple=True),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.Effect
+    @reactive.event(input.update_panel)
+    def _():
+        txt = " (updated)" if input.update_panel() else ""
+        show = bool(input.update_panel() % 2 == 1)
+        for letter in "ABCDE":
+            ui.update_accordion_panel(
+                "acc",
+                f"sec_{letter}",
+                f"Some{txt} narrative for section {letter}",
+                title=f"Section {letter}{txt}",
+                # Open Accordion Panel to see updated contents
+                show=show,
+            )
+        next_show_txt = "close" if show else "open"
+
+        ui.update_switch("update_panel", label=f"Update (and {next_show_txt}) Sections")
+
+
+app = App(app_ui, server)
+
+```
+

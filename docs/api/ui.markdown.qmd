@@ -1,0 +1,74 @@
+# ui.markdown { #shiny.ui.markdown }
+
+`ui.markdown(text, *, render_func=None, **kwargs)`
+
+Convert a string of markdown to [](:func:`ui.HTML`).
+
+## Parameters
+
+<code><span class="parameter-name">text</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   A string of text containing markdown.
+
+<code><span class="parameter-name">render_func</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Callable](`typing.Callable`)\[\[[str](`str`)\], [str](`str`)\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A function (with at least 1 argument) which accepts a string of markdown and
+    returns a string of HTML. By default, a customized instance of the
+    [](:class:`MarkdownIt`) class (which supports Github-flavored markdown) from the
+    ``markdown-it`` package is used.
+
+<code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[object](`object`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
+
+:   Additional keyword arguments passed to the ``render_func``.
+
+## Returns
+
+| Type                     | Description                                         |
+|--------------------------|-----------------------------------------------------|
+| [HTML](`htmltools.HTML`) | An [](:func:`ui.HTML`) string of the rendered markdown. |
+
+## Note
+
+Use [](:func:`ui.include_markdown`) instead if you want to include local images (or
+other files) in the markdown.
+
+
+
+## See Also
+
+[](:func:`ui.include_markdown`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, ui
+
+ui_app = ui.page_fluid(
+    ui.markdown(
+        """
+        # Hello World
+
+        This is **markdown** and here is some `code`:
+
+        ```python
+        print('Hello world!')
+        ```
+        """
+    )
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    pass
+
+
+app = App(ui_app, server)
+
+```
+

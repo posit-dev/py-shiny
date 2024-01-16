@@ -1,0 +1,143 @@
+# reactive.event { #shiny.reactive.event }
+
+`reactive.event(*args, ignore_none=True, ignore_init=False)`
+
+Mark a function to react only when an &quot;event&quot; occurs.
+
+Shiny&#x27;s reactive programming framework is primarily designed for calculated values
+([](:func:`~shiny.reactive.calc`)) and side-effect-causing actions
+([](:func:`~shiny.reactive.effect`)) that respond to **any** of their inputs changing.
+That&#x27;s often what is desired in Shiny apps, but not always: sometimes you want to
+wait for a specific action to be taken from the user, like clicking an
+[](:func:`~shiny.ui.input_action_button`), before calculating or taking an action. You
+do not want the calculation or action to be prematurely triggered if other reactive
+values that it calls are invalidated. The reactive value (or function) which triggers
+other calculations or actions in this way is called an event.
+
+These situations demand a more imperative, &quot;event handling&quot; style of programming,
+which ``@reactive.event()`` provides. It does this by using the
+[](:func:`~shiny.reactive.isolate`) primitive under-the-hood to essentially &quot;limit&quot; the
+set of reactive dependencies to those in ``args``. In other words, the event can call
+as many reactive values as it likes in its code body without taking a reactive
+dependency on them; it will be invalidated only when a dependency listed in args is
+invalidated.
+
+## Parameters
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Callable](`typing.Callable`)\[\[\], [object](`object`)\] \| [Callable](`typing.Callable`)\[\[\], [Awaitable](`typing.Awaitable`)\[[object](`object`)\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   One or more callables that represent the event; most likely this will be a
+    reactive input value linked to a [](:func:`~shiny.ui.input_action_button`) or
+    similar (e.g., ``input.click``), but it can also be a (reactive or non-reactive)
+    function that returns a value.
+
+<code><span class="parameter-name">ignore_none</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   Whether to ignore the event if the value is ``None`` or ``0``.
+
+<code><span class="parameter-name">ignore_init</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   If ``False``, the event triggers on the first run.
+
+## Returns
+
+| Type                                                                                                                                                                                      | Description                                            |
+|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------|
+| [Callable](`typing.Callable`)\[\[[Callable](`typing.Callable`)\[\[\], [T](`shiny.reactive._reactives.T`)\]\], [Callable](`typing.Callable`)\[\[\], [T](`shiny.reactive._reactives.T`)\]\] | A decorator that marks a function as an event handler. |
+
+## Tip
+
+This decorator must be applied before the relevant reactivity decorator (i.e.,
+``@reactive.event`` must be applied before ``@reactive.effect``, ``@reactive.calc``,
+``@render.ui``, etc).
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+import random
+
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+
+app_ui = ui.page_fluid(
+    ui.markdown(
+        f"""
+        This example demonstrates how `@reactive.event()` can be used to restrict
+        execution of: (1) a `@render` function, (2) `@reactive.Calc`, or (3)
+        `@reactive.Effect`.
+
+        In all three cases, the output is dependent on a random value that gets updated
+        every 0.5 seconds (currently, it is {ui.output_ui("number", inline=True)}), but
+        the output is only updated when the button is clicked.
+        """
+    ),
+    ui.row(
+        ui.column(
+            3,
+            ui.input_action_button("btn_out", "(1) Update number"),
+            ui.output_text("out_out"),
+        ),
+        ui.column(
+            3,
+            ui.input_action_button("btn_calc", "(2) Show 1 / number"),
+            ui.output_text("out_calc"),
+        ),
+        ui.column(
+            3,
+            ui.input_action_button("btn_effect", "(3) Log number"),
+            ui.div(id="out_effect"),
+        ),
+    ),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    # Update a random number every second
+    val = reactive.Value(random.randint(0, 1000))
+
+    @reactive.Effect
+    def _():
+        reactive.invalidate_later(0.5)
+        val.set(random.randint(0, 1000))
+
+    # Always update this output when the number is updated
+    @render.ui
+    def number():
+        return val.get()
+
+    # Since ignore_none=False, the function executes before clicking the button.
+    # (input.btn_out() is 0 on page load, but @@reactive.event() treats 0 as None for
+    # action buttons.)
+    @render.text
+    @reactive.event(input.btn_out, ignore_none=False)
+    def out_out():
+        return str(val.get())
+
+    @reactive.Calc
+    @reactive.event(input.btn_calc)
+    def calc():
+        return 1 / val.get()
+
+    @render.text
+    def out_calc():
+        return str(calc())
+
+    @reactive.Effect
+    @reactive.event(input.btn_effect)
+    def _():
+        ui.insert_ui(
+            ui.p("Random number!", val.get()),
+            selector="#out_effect",
+            where="afterEnd",
+        )
+
+
+app = App(app_ui, server)
+
+```
+

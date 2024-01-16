@@ -1,0 +1,80 @@
+# ui.update_date { #shiny.ui.update_date }
+
+`ui.update_date(id, *, label=None, value=None, min=None, max=None, session=None)`
+
+Change the value of a date input on the client.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An input id.
+
+<code><span class="parameter-name">label</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   An input label.
+
+<code><span class="parameter-name">value</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[date](`datetime.date`) \| [str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The starting date. Either a `date()` object, or a string in yyyy-mm-dd format.
+    If ``None`` (the default), will use the current date in the client's time zone.
+
+<code><span class="parameter-name">min</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[date](`datetime.date`) \| [str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The minimum allowed value.
+
+<code><span class="parameter-name">max</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[date](`datetime.date`) \| [str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The maximum allowed value.
+
+<code><span class="parameter-name">session</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Session](`shiny.session.Session`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A [](:class:`~shiny.Session`) instance. If not provided, it is inferred via
+    [](:func:`~shiny.session.get_current_session`).
+
+## Note
+
+{note}
+
+
+
+## See Also
+
+[](:func:`~shiny.ui.input_date`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from datetime import date, timedelta
+
+from shiny import App, Inputs, Outputs, Session, reactive, ui
+
+app_ui = ui.page_fluid(
+    ui.input_slider("n", "Day of month", min=1, max=30, value=10),
+    ui.input_date("inDate", "Input date"),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.Effect
+    def _():
+        d = date(2013, 4, input.n())
+        ui.update_date(
+            "inDate",
+            label="Date label " + str(input.n()),
+            value=d,
+            min=d - timedelta(days=3),
+            max=d + timedelta(days=3),
+        )
+
+
+app = App(app_ui, server)
+
+```
+

@@ -1,0 +1,87 @@
+# ui.input_text { #shiny.ui.input_text }
+
+`ui.input_text(id, label, value='', *, width=None, placeholder=None, autocomplete='off', spellcheck=None)`
+
+Create an input control for entry of text values.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An input id.
+
+<code><span class="parameter-name">label</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span></code>
+
+:   An input label.
+
+<code><span class="parameter-name">value</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">''</span></code>
+
+:   Initial value.
+
+<code><span class="parameter-name">width</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The CSS width, e.g., '400px', or '100%'.
+
+<code><span class="parameter-name">placeholder</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A hint as to what can be entered into the control.
+
+<code><span class="parameter-name">autocomplete</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'off'</span></code>
+
+:   Whether to enable browser autocompletion of the text input (default is ``None``).
+    If `None`, then it will use the browser's default behavior. Other possible values
+    include "on", "off", "name", "username", and "email". See
+    https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete for
+    more.
+
+<code><span class="parameter-name">spellcheck</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Literal](`typing.Literal`)\['true', 'false'\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Whether to enable browser spell checking of the text input (default is ``None``). If
+    None, then it will use the browser's default behavior.
+
+## Returns
+
+| Type                   | Description   |
+|------------------------|---------------|
+| [Tag](`htmltools.Tag`) | A UI element  |
+
+## Notes
+
+::: {.callout-note title="Server value"}
+A string containing the current text input. The default value is ``""`` unless
+``value`` is provided.
+:::
+
+
+
+## See Also
+
+[](:func:`~shiny.ui.input_text_area`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, render, ui
+
+app_ui = ui.page_fluid(
+    ui.input_text("caption", "Caption:", "Data summary"),
+    ui.output_text_verbatim("value"),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.text
+    def value():
+        return input.caption()
+
+
+app = App(app_ui, server)
+
+```
+

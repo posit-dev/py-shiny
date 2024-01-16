@@ -1,0 +1,5 @@
+# ui.panel_main { #shiny.ui.panel_main }
+
+`ui.panel_main(*args, width=8, **kwargs)`
+
+Deprecated. Please supply the `*args` of [](:func:`~shiny.ui.panel_main`) directly to [](:func:`~shiny.ui.layout_sidebar`).

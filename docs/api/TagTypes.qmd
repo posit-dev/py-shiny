@@ -1,0 +1,427 @@
+# Tag types
+
+
+
+# htmltools.Tag { #htmltools.Tag }
+
+`Tag(self, _name, *args, _add_ws=True, **kwargs)`
+
+The HTML tag class.
+
+A Tag object consists of a name, attributes, and children. The name is a string, the
+attributes are held in a TagAttrDict object, and the children are held in a TagList
+object.
+
+This class usually should not be instantiated directly. Instead, use the tag wrapper
+functions in ``htmltools.tags``, like ``div()`` or ``a()``.
+
+## Parameters
+
+<code><span class="parameter-name">_name</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   The tag's name.
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools._core.TagChild`) \| [TagAttrs](`htmltools._core.TagAttrs`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   Children for the tag.
+
+<code><span class="parameter-name">_add_ws</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagAttrValue](`htmltools._core.TagAttrValue`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   A ``bool`` indicating whether to add whitespace surrounding the tag (see Note
+    for details).
+
+<code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagAttrValue](`htmltools._core.TagAttrValue`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
+
+:   Attributes for the tag.
+
+## Attributes
+
+| Name     | Type                                         | Description           |
+|----------|----------------------------------------------|-----------------------|
+| name     | [str](`str`)                                 | The tag's name.       |
+| attrs    | [TagAttrDict](`htmltools._core.TagAttrDict`) | The tag's attributes. |
+| children | [TagList](`htmltools._core.TagList`)         | The tag's children.   |
+
+## Note
+
+The `_add_ws` parameter controls whether whitespace is added around the tag. Inline
+tags (like `span()` and `a()`) default to  `False` and block tags (like `div()` and
+`p()`) default to `True`.
+
+When a tag with `_add_ws=True` is rendered to HTML, whitespace (including
+indentation) is added before the opening tag (like `<div>`), after the closing tag
+(like `</div>`), and also between the opening tag and its first child. This usually
+results in formatting that is easier to read.
+
+The only times that whitespace is not added around tags is when two sibling tags
+have `_add_ws=False`, or when a tag and its first child both have `_add_ws=False`.
+Bare strings are treated as children with `_add_ws=False`.
+
+If you need fine control over whitespace in the output HTML, you can create tags
+with `_add_ws=False` and manually add whitespace, like `div("\n", span("a"),
+_add_ws=False)`.
+
+## Examples
+
+```python
+>>> from htmltools import div
+>>> x = div("hello", id="foo", class_="bar")
+>>> x
+<div id="foo" class="bar">hello</div>
+>>> x.show()
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [add_class](#htmltools.Tag.add_class) | Add a class value to the HTML class attribute. |
+| [add_style](#htmltools.Tag.add_style) | Add a style value(s) to the HTML style attribute. |
+| [append](#htmltools.Tag.append) | Append tag children to the end of the list. |
+| [extend](#htmltools.Tag.extend) | Extend the children by appending an iterable of children. |
+| [get_dependencies](#htmltools.Tag.get_dependencies) | Get any HTML dependencies. |
+| [get_html_string](#htmltools.Tag.get_html_string) | Get the HTML string representation of the tag. |
+| [has_class](#htmltools.Tag.has_class) | Check if the tag has a particular class value. |
+| [insert](#htmltools.Tag.insert) | Insert tag children before a given index. |
+| [remove_class](#htmltools.Tag.remove_class) | Remove a class value from the HTML class attribute. |
+| [render](#htmltools.Tag.render) | Get string representation as well as its HTML dependencies. |
+| [save_html](#htmltools.Tag.save_html) | Save to a HTML file. |
+| [show](#htmltools.Tag.show) | Preview as a complete HTML document. |
+| [tagify](#htmltools.Tag.tagify) | Convert any tagifiable children to Tag/TagList objects. |
+
+### add_class { #htmltools.Tag.add_class }
+
+`Tag.add_class(class_, *, prepend=False)`
+
+Add a class value to the HTML class attribute.
+
+#### Parameters
+
+<code><span class="parameter-name">class_</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   The class name to add.
+
+<code><span class="parameter-name">prepend</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Bool that determines if the `class` is added to the beginning or end of the
+    class attribute.
+
+#### Returns
+
+| Type                           | Description       |
+|--------------------------------|-------------------|
+| [TagT](`htmltools._core.TagT`) | The modified tag. |
+
+### add_style { #htmltools.Tag.add_style }
+
+`Tag.add_style(style, *, prepend=False)`
+
+Add a style value(s) to the HTML style attribute.
+
+#### Parameters
+
+<code><span class="parameter-name">style</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   CSS properties and values already properly formatted. Each should already
+    contain trailing semicolons.
+
+<code><span class="parameter-name">prepend</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Bool that determines if the `style` is added to the beginning or end of the
+    style attribute.
+
+#### See Also
+
+[](:func:`~htmltools.css`)
+
+#### Returns
+
+| Type                           | Description       |
+|--------------------------------|-------------------|
+| [TagT](`htmltools._core.TagT`) | The modified tag. |
+
+### append { #htmltools.Tag.append }
+
+`Tag.append(*args)`
+
+Append tag children to the end of the list.
+
+### extend { #htmltools.Tag.extend }
+
+`Tag.extend(x)`
+
+Extend the children by appending an iterable of children.
+
+### get_dependencies { #htmltools.Tag.get_dependencies }
+
+`Tag.get_dependencies(dedup=True)`
+
+Get any HTML dependencies.
+
+### get_html_string { #htmltools.Tag.get_html_string }
+
+`Tag.get_html_string(indent=0, eol='\n')`
+
+Get the HTML string representation of the tag.
+
+#### Parameters
+
+<code><span class="parameter-name">indent</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[int](`int`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">0</span></code>
+
+:   The number of spaces to indent the tag.
+
+<code><span class="parameter-name">eol</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'\n'</span></code>
+
+:   The end-of-line character(s).
+
+### has_class { #htmltools.Tag.has_class }
+
+`Tag.has_class(class_)`
+
+Check if the tag has a particular class value.
+
+#### Parameters
+
+<code><span class="parameter-name">class_</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   The class name to check for.
+
+#### Returns
+
+| Type           | Description                                             |
+|----------------|---------------------------------------------------------|
+| [bool](`bool`) | ``True`` if the tag has the class, ``False`` otherwise. |
+
+### insert { #htmltools.Tag.insert }
+
+`Tag.insert(index, x)`
+
+Insert tag children before a given index.
+
+### remove_class { #htmltools.Tag.remove_class }
+
+`Tag.remove_class(class_)`
+
+Remove a class value from the HTML class attribute.
+
+#### Parameters
+
+<code><span class="parameter-name">class_</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   The class name to remove.
+
+#### Returns
+
+| Type                           | Description       |
+|--------------------------------|-------------------|
+| [TagT](`htmltools._core.TagT`) | The modified tag. |
+
+### render { #htmltools.Tag.render }
+
+`Tag.render()`
+
+Get string representation as well as its HTML dependencies.
+
+### save_html { #htmltools.Tag.save_html }
+
+`Tag.save_html(file, *, libdir='lib', include_version=True)`
+
+Save to a HTML file.
+
+#### Parameters
+
+<code><span class="parameter-name">file</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   The file to save to.
+
+<code><span class="parameter-name">libdir</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'lib'</span></code>
+
+:   The directory to save the dependencies to.
+
+<code><span class="parameter-name">include_version</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   Whether to include the version number in the dependency folder name.
+
+#### Returns
+
+| Type                                 | Description   |
+|--------------------------------------|---------------|
+| The path to the generated HTML file. |               |
+
+### show { #htmltools.Tag.show }
+
+`Tag.show(renderer='auto')`
+
+Preview as a complete HTML document.
+
+#### Parameters
+
+<code><span class="parameter-name">renderer</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Literal](`typing.Literal`)\['auto', 'ipython', 'browser'\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'auto'</span></code>
+
+:   The renderer to use.
+
+### tagify { #htmltools.Tag.tagify }
+
+`Tag.tagify()`
+
+Convert any tagifiable children to Tag/TagList objects.
+
+# htmltools.TagAttrs { #htmltools.TagAttrs }
+
+`TagAttrs`
+
+For dictionaries of tag attributes (e.g., `{"id": "foo"}`), which can be passed as
+unnamed arguments to Tag functions like `div()`.
+
+# htmltools.TagAttrValue { #htmltools.TagAttrValue }
+
+`TagAttrValue`
+
+Types that can be passed in as attributes to `Tag` functions. These values will be
+converted to strings before being stored as tag attributes.
+
+# htmltools.TagChild { #htmltools.TagChild }
+
+`TagChild`
+
+Types of objects that can be passed as children to Tag functions like `div()`. The `Tag`
+functions and the `TagList()` constructor can accept these as unnamed arguments; they
+will be flattened and normalized to `TagNode` objects.
+
+# htmltools.TagList { #htmltools.TagList }
+
+`TagList(self, *args)`
+
+Create an HTML tag list (i.e., a fragment of HTML)
+
+## Parameters
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools._core.TagChild`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   The tag children to add to the list.
+
+## Examples
+
+```python
+>>> from htmltools import TagList, div
+>>> TagList("hello", div(id="foo", class_="bar"))
+hello
+<div id="foo" class="bar"></div>
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [append](#htmltools.TagList.append) | Append tag children to the end of the list. |
+| [extend](#htmltools.TagList.extend) | Extend the children by appending an iterable of children. |
+| [get_dependencies](#htmltools.TagList.get_dependencies) | Get any dependencies needed to render the HTML. |
+| [get_html_string](#htmltools.TagList.get_html_string) | Return the HTML string for this tag list. |
+| [insert](#htmltools.TagList.insert) | Insert tag children before a given index. |
+| [render](#htmltools.TagList.render) | Get string representation as well as its HTML dependencies. |
+| [save_html](#htmltools.TagList.save_html) | Save to a HTML file. |
+| [show](#htmltools.TagList.show) | Preview as a complete HTML document. |
+| [tagify](#htmltools.TagList.tagify) | Convert any tagifiable children to Tag/TagList objects. |
+
+### append { #htmltools.TagList.append }
+
+`TagList.append(*args)`
+
+Append tag children to the end of the list.
+
+### extend { #htmltools.TagList.extend }
+
+`TagList.extend(x)`
+
+Extend the children by appending an iterable of children.
+
+### get_dependencies { #htmltools.TagList.get_dependencies }
+
+`TagList.get_dependencies(dedup=True)`
+
+Get any dependencies needed to render the HTML.
+
+#### Parameters
+
+<code><span class="parameter-name">dedup</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   Whether to deduplicate the dependencies.
+
+### get_html_string { #htmltools.TagList.get_html_string }
+
+`TagList.get_html_string(indent=0, eol='\n', *, add_ws=True, _escape_strings=True)`
+
+Return the HTML string for this tag list.
+
+#### Parameters
+
+<code><span class="parameter-name">indent</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[int](`int`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">0</span></code>
+
+:   Number of spaces to indent each line of the HTML.
+
+<code><span class="parameter-name">eol</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'\n'</span></code>
+
+:   End-of-line character(s).
+
+<code><span class="parameter-name">add_ws</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   Whether to add whitespace between the opening tag and the first child. If
+    either this is True, or the child's add_ws attribute is True, then
+    whitespace will be added; if they are both False, then no whitespace will be
+    added.
+
+### insert { #htmltools.TagList.insert }
+
+`TagList.insert(index, x)`
+
+Insert tag children before a given index.
+
+### render { #htmltools.TagList.render }
+
+`TagList.render()`
+
+Get string representation as well as its HTML dependencies.
+
+### save_html { #htmltools.TagList.save_html }
+
+`TagList.save_html(file, *, libdir='lib', include_version=True)`
+
+Save to a HTML file.
+
+#### Parameters
+
+<code><span class="parameter-name">file</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   The file to save to.
+
+<code><span class="parameter-name">libdir</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'lib'</span></code>
+
+:   The directory to save the dependencies to.
+
+<code><span class="parameter-name">include_version</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   Whether to include the version number in the dependency folder name.
+
+#### Returns
+
+| Type         | Description                          |
+|--------------|--------------------------------------|
+| [str](`str`) | The path to the generated HTML file. |
+
+### show { #htmltools.TagList.show }
+
+`TagList.show(renderer='auto')`
+
+Preview as a complete HTML document.
+
+#### Parameters
+
+<code><span class="parameter-name">renderer</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Literal](`typing.Literal`)\['auto', 'ipython', 'browser'\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'auto'</span></code>
+
+:   The renderer to use.
+
+### tagify { #htmltools.TagList.tagify }
+
+`TagList.tagify()`
+
+Convert any tagifiable children to Tag/TagList objects.

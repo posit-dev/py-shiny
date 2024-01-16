@@ -1,0 +1,109 @@
+# ui.output_image { #shiny.ui.output_image }
+
+`ui.output_image(id, width='100%', height='400px', *, inline=False, click=False, dblclick=False, hover=False, brush=False, fill=False)`
+
+Create a output container for a static image.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An output id.
+
+<code><span class="parameter-name">width</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`) \| [float](`float`) \| [int](`int`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'100%'</span></code>
+
+:   The CSS width, e.g. '400px', or '100%'.
+
+<code><span class="parameter-name">height</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`) \| [float](`float`) \| [int](`int`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'400px'</span></code>
+
+:   The CSS height, e.g. '100%' or '600px'.
+
+<code><span class="parameter-name">inline</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   If ``True``, the result is displayed inline.
+
+<code><span class="parameter-name">click</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`) \| [ClickOpts](`shiny.ui._plot_output_opts.ClickOpts`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   This can be a boolean or an object created by [](:func:`~shiny.ui.click_opts`). The
+    default is `False`, but if you use `True` (or equivalently, `click_opts()`), the
+    plot will send coordinates to the server whenever it is clicked, and the value
+    will be accessible via `input.xx_click()`, where `xx` is replaced with the ID of
+    this plot. The input value will be a dictionary with `x` and `y` elements
+    indicating the mouse position.
+
+<code><span class="parameter-name">dblclick</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`) \| [DblClickOpts](`shiny.ui._plot_output_opts.DblClickOpts`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   This is just like the `click` parameter, but for double-click events.
+
+<code><span class="parameter-name">hover</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`) \| [HoverOpts](`shiny.ui._plot_output_opts.HoverOpts`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Similar to the `click` argument, this can be a boolean or an object created by
+    [](:func:`~shiny.ui.hover_opts`). The default is `False`, but if you use `True` (or
+    equivalently, `hover_opts()`), the plot will send coordinates to the server
+    whenever it is clicked, and the value will be accessible via `input.xx_hover()`,
+    where `xx` is replaced with the ID of this plot. The input value will be a
+    dictionary with `x` and `y` elements indicating the mouse position. To control
+    the hover time or hover delay type, use [](:func:`~shiny.ui.hover_opts`).
+
+<code><span class="parameter-name">brush</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`) \| [BrushOpts](`shiny.ui._plot_output_opts.BrushOpts`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Similar to the `click` argument, this can be a boolean or an object created by
+    [](:func:`~shiny.ui.brush_opts`). The default is `False`, but if you use `True` (or
+    equivalently, `brush_opts()`), the plot will allow the user to "brush" in the
+    plotting area, and will send information about the brushed area to the server,
+    and the value will be accessible via `input.plot_brush()`. Brushing means that
+    the user will be able to draw a rectangle in the plotting area and drag it
+    around. The value will be a named list with `xmin`, `xmax`, `ymin`, and `ymax`
+    elements indicating the brush area. To control the brush behavior, use
+    [](:func:`~shiny.ui.brush_opts`). Multiple `output_image`/`output_plot` calls may
+    share the same `id` value; brushing one image or plot will cause any other
+    brushes with the same `id` to disappear.
+
+<code><span class="parameter-name">fill</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Whether or not to allow the image output to grow/shrink to fit a fillable
+    container with an opinionated height (e.g., [](:func:`~shiny.ui.page_fillable`)).
+
+## Returns
+
+| Type                   | Description   |
+|------------------------|---------------|
+| [Tag](`htmltools.Tag`) | A UI element  |
+
+## See Also
+
+* [](:func:`~shiny.render.image`)
+* [](:func:`~shiny.ui.output_plot`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny.types import ImgData
+
+app_ui = ui.page_fluid(ui.output_image("image"))
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.image
+    def image():
+        from pathlib import Path
+
+        dir = Path(__file__).resolve().parent
+        img: ImgData = {"src": str(dir / "posit-logo.png"), "width": "100px"}
+        return img
+
+
+app = App(app_ui, server)
+
+## file: posit-logo.png
+## type: binary
+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
+```
+

@@ -1,0 +1,58 @@
+# ui.navset_pill_list { #shiny.ui.navset_pill_list }
+
+`ui.navset_pill_list(*args, id=None, selected=None, header=None, footer=None, well=True, widths=(4, 8))`
+
+Render nav items as a vertical pillset.
+
+## Parameters
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[NavSetArg](`shiny.types.NavSetArg`) \| [MetadataNode](`htmltools.MetadataNode`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   A collection of nav items (e.g., [](:func:`shiny.ui.nav_panel`)).
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   If provided, will create an input value that holds the currently selected nav
+    item.
+
+<code><span class="parameter-name">selected</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Choose a particular nav item to select by default value (should match its
+    ``value``).
+
+<code><span class="parameter-name">header</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   UI to display above the selected content.
+
+<code><span class="parameter-name">footer</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   UI to display below the selected content.
+
+<code><span class="parameter-name">well</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   ``True`` to place a well (gray rounded rectangle) around the navigation list.
+
+<code><span class="parameter-name">widths</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[tuple](`tuple`)\[[int](`int`), [int](`int`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">(4, 8)</span></code>
+
+:   Column widths of the navigation list and tabset content areas respectively.
+
+## See Also
+
+* [](:func:`~shiny.ui.nav_panel`)
+* [](:func:`~shiny.ui.nav_menu`)
+* [](:func:`~shiny.ui.nav_control`)
+* [](:func:`~shiny.ui.nav_spacer`)
+* [](:func:`~shiny.ui.navset_bar`)
+* [](:func:`~shiny.ui.navset_tab`)
+* [](:func:`~shiny.ui.navset_pill`)
+* [](:func:`~shiny.ui.navset_underline`)
+* [](:func:`~shiny.ui.navset_card_tab`)
+* [](:func:`~shiny.ui.navset_card_pill`)
+* [](:func:`~shiny.ui.navset_card_underline`)
+* [](:func:`~shiny.ui.navset_hidden`)
+
+
+
+## Example
+
+See [](:func:`~shiny.ui.nav_panel`)

@@ -1,0 +1,29 @@
+# ui.panel_well { #shiny.ui.panel_well }
+
+`ui.panel_well(*args, **kwargs)`
+
+Create a well panel.
+
+Creates a panel with a slightly inset border and gray background. Equivalent to
+Bootstrap&#x27;s ``well`` CSS class.
+
+## Parameters
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`) \| [TagAttrs](`htmltools.TagAttrs`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   UI elements to include inside the panel.
+
+<code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagAttrValue](`htmltools.TagAttrValue`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
+
+:   Attributes to place on the panel tag.
+
+## Returns
+
+| Type                   | Description   |
+|------------------------|---------------|
+| [Tag](`htmltools.Tag`) | A UI element. |
+
+## See Also
+
+[](:func:`~shiny.ui.panel_sidebar`)
+[](:func:`~shiny.ui.panel_main`)

@@ -1,0 +1,9 @@
+# reactive.lock { #shiny.reactive.lock }
+
+`reactive.lock()`
+
+A lock that should be held whenever manipulating the reactive graph.
+
+For example, [](:func:`~shiny.reactive.lock`) makes it safe to set a [](:class:`~reactive.Value`) and call
+[](:func:`~shiny.reactive.flush`) from a different [](:class:`~asyncio.Task`) than the one that
+is running the Shiny [](:class:`~shiny.Session`).

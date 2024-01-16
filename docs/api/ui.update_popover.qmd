@@ -1,0 +1,79 @@
+# ui.update_popover { #shiny.ui.update_popover }
+
+`ui.update_popover(id, *args, title=None, show=None, session=None)`
+
+Update the contents or title of a popover.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   The id of the popover DOM element to update.
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   The new contents of the popover.
+
+<code><span class="parameter-name">title</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[TagChild](`htmltools.TagChild`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The new title of the popover.
+
+<code><span class="parameter-name">show</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[bool](`bool`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Opens (`True`) or closes (`False`) the popover.
+
+<code><span class="parameter-name">session</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Session](`shiny.session.Session`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A Shiny session object (the default should almost always be used).
+
+## See Also
+
+* [](:func:`~shiny.ui.popover`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, reactive, req, ui
+
+app_ui = ui.page_fluid(
+    ui.input_action_button("btn_show", "Show popover", class_="mt-3 me-3"),
+    ui.input_action_button("btn_close", "Close popover", class_="mt-3 me-3"),
+    ui.br(),
+    ui.br(),
+    ui.popover(
+        ui.input_action_button("btn_w_popover", "A button w/ a popover", class_="mt-3"),
+        "A message",
+        id="popover_id",
+    ),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.Effect
+    def _():
+        req(input.btn_show())
+
+        ui.update_popover("popover_id", show=True)
+
+    @reactive.Effect
+    def _():
+        req(input.btn_close())
+
+        ui.update_popover("popover_id", show=False)
+
+    @reactive.Effect
+    def _():
+        req(input.btn_w_popover())
+        ui.notification_show("Button clicked!", duration=3, type="message")
+
+
+app = App(app_ui, server=server)
+
+```
+

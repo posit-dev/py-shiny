@@ -1,0 +1,99 @@
+# run_app { #shiny.run_app }
+
+`run_app(app='app:app', host='127.0.0.1', port=8000, *, autoreload_port=0, reload=False, reload_dirs=None, reload_includes=RELOAD_INCLUDES_DEFAULT, reload_excludes=RELOAD_EXCLUDES_DEFAULT, ws_max_size=16777216, log_level=None, app_dir='.', factory=False, launch_browser=False, **kwargs)`
+
+Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop the app.
+
+## Parameters
+
+<code><span class="parameter-name">app</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`) \| [shiny](`shiny`).[App](`shiny.App`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'app:app'</span></code>
+
+:   The app to run. The default, ``app:app``, represents the "usual" case where the
+    application is named ``app`` inside a ``app.py`` file within the current working
+    directory. In other cases, the app location can be specified as a
+    ``<module>:<attribute>`` string where the ``:<attribute>`` is only necessary if
+    the application is named something other than ``app``. Note that ``<module>``
+    can be a relative path to a ``.py`` file or a directory (with an ``app.py`` file
+    inside of it); and in this case, the relative path is resolved relative to the
+    ``app_dir`` directory.
+
+<code><span class="parameter-name">host</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'127.0.0.1'</span></code>
+
+:   The address that the app should listen on.
+
+<code><span class="parameter-name">port</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[int](`int`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">8000</span></code>
+
+:   The port that the app should listen on. Set to 0 to use a random port.
+
+<code><span class="parameter-name">autoreload_port</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[int](`int`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">0</span></code>
+
+:   The port that should be used for an additional websocket that is used to support
+    hot-reload. Set to 0 to use a random port.
+
+<code><span class="parameter-name">reload</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Enable auto-reload.
+
+<code><span class="parameter-name">reload_dirs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[list](`list`)\[[str](`str`)\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A list of directories (in addition to the app directory) to watch for changes that
+    will trigger an app reload.
+
+<code><span class="parameter-name">reload_includes</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[list](`list`)\[[str](`str`)\] \| [tuple](`tuple`)\[[str](`str`), ...\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">RELOAD_INCLUDES_DEFAULT</span></code>
+
+:   List or tuple of file globs to indicate which files should be monitored for
+    changes. Can be combined with `reload_excludes`.
+
+<code><span class="parameter-name">reload_excludes</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[list](`list`)\[[str](`str`)\] \| [tuple](`tuple`)\[[str](`str`), ...\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">RELOAD_EXCLUDES_DEFAULT</span></code>
+
+:   List or tuple of file globs to indicate which files should be excluded from
+    reload monitoring. Can be combined with `reload_includes`
+
+<code><span class="parameter-name">ws_max_size</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[int](`int`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">16777216</span></code>
+
+:   WebSocket max size message in bytes.
+
+<code><span class="parameter-name">log_level</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Log level.
+
+<code><span class="parameter-name">app_dir</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'.'</span></code>
+
+:   The directory to look for ``app`` under (by adding this to the ``PYTHONPATH``).
+
+<code><span class="parameter-name">factory</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
+
+<code><span class="parameter-name">launch_browser</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Launch app browser after app starts, using the Python webbrowser module.
+
+<code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[object](`object`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
+
+:   Additional keyword arguments which are passed to ``uvicorn.run``. For more
+    information see [Uvicorn documentation](https://www.uvicorn.org/).
+
+## Tip
+
+The ``shiny run`` command-line interface (which comes installed with Shiny) provides
+the same functionality as [](:func:`~shiny.run_app`).
+
+## Examples
+
+```{python}
+#|eval: false
+from shiny import run_app
+
+# Run ``app`` inside ``./app.py``
+run_app()
+
+# Run ``app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
+run_app("myapp")
+
+# Run ``my_app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
+run_app("myapp:my_app")
+
+# Run ``my_app`` inside ``../myapp.py`` (or ``../myapp/app.py``)
+run_app("myapp:my_app", app_dir="..")
+```

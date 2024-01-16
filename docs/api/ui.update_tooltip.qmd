@@ -1,0 +1,84 @@
+# ui.update_tooltip { #shiny.ui.update_tooltip }
+
+`ui.update_tooltip(id, *args, show=None, session=None)`
+
+Update tooltip contents.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   A character string that matches an existing tooltip id.
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   Contents to the tooltip's body.
+
+<code><span class="parameter-name">show</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[bool](`bool`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Opens (`True`) or closes (`False`) the tooltip.
+
+<code><span class="parameter-name">session</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Session](`shiny.session.Session`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A Shiny session object (the default should almost always be used).
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, reactive, req, ui
+
+app_ui = ui.page_fluid(
+    ui.input_action_button("btn_show", "Show tooltip", class_="mt-3 me-3"),
+    ui.input_action_button("btn_close", "Close tooltip", class_="mt-3 me-3"),
+    ui.br(),
+    ui.input_action_button(
+        "btn_update", "Update tooltip phrase (and show tooltip)", class_="mt-3 me-3"
+    ),
+    ui.br(),
+    ui.br(),
+    ui.tooltip(
+        ui.input_action_button("btn_w_tooltip", "A button w/ a tooltip", class_="mt-3"),
+        "A message",
+        id="tooltip_id",
+    ),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.Effect
+    def _():
+        req(input.btn_show())
+
+        ui.update_tooltip("tooltip_id", show=True)
+
+    @reactive.Effect
+    def _():
+        req(input.btn_close())
+
+        ui.update_tooltip("tooltip_id", show=False)
+
+    @reactive.Effect
+    @reactive.event(input.btn_update)
+    def _():
+        content = (
+            "A " + " ".join(["NEW" for _ in range(input.btn_update())]) + " message"
+        )
+
+        ui.update_tooltip("tooltip_id", content, show=True)
+
+    @reactive.Effect
+    def _():
+        req(input.btn_w_tooltip())
+        ui.notification_show("Button clicked!", duration=3, type="message")
+
+
+app = App(app_ui, server=server)
+
+```
+

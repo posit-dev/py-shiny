@@ -1,0 +1,22 @@
+# ui.output_data_frame { #shiny.ui.output_data_frame }
+
+`ui.output_data_frame(id)`
+
+Create an output container for an interactive table or grid. Features fast
+virtualized scrolling, sorting, filtering, and row selection (single or multiple).
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An output id.
+
+## Returns
+
+| Type                   | Description   |
+|------------------------|---------------|
+| [Tag](`htmltools.Tag`) | A UI element. |
+
+## See Also
+
+[](:func:`~shiny.render.data_frame`)

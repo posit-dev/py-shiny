@@ -1,0 +1,40 @@
+# ui.value_box_theme { #shiny.ui.value_box_theme }
+
+`ui.value_box_theme(name=None, *, fg=None, bg=None)`
+
+Value box theme
+
+A theme for a [](:func:`~shiny.ui.value_box`). Themes provide a convenient way to use
+your app&#x27;s Bootstrap theme colors as the foreground or background colors of the
+value box. For more control, you can create your own theme with
+[](:func:`~shiny.ui.value_box_theme`) where you can pass foreground and background
+value.
+
+See
+[rstudio/bslib#themes](https://rstudio.github.io/bslib/reference/value_box.html#themes)
+for more examples.
+
+## Parameters
+
+<code><span class="parameter-name">name</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The name of the theme, e.g. `"primary"`, `"danger"`, `"purple"`.  `name` can
+    also be a Bootstrap-supported color: `"blue"`, `"purple"`, `"pink"`, `"red"`,
+    `"orange"`, `"yellow"`, `"green"`, `"teal"`, and `"cyan"`. These colors can be
+    used with `bg-NAME`, `text-NAME`, and `bg-gradient-NAME1-NAME2`. If a `name`
+    does not start with `text-` or `bg-`, it will be auto-prefixed with `bg-`.
+
+<code><span class="parameter-name">fg</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The background and foreground colors for the theme.
+
+## Returns
+
+| Type                                                | Description                        |
+|-----------------------------------------------------|------------------------------------|
+| [ValueBoxTheme](`shiny.ui._valuebox.ValueBoxTheme`) | A [](:class:`~shiny.ui.ValueBoxTheme`) |
+
+## See Also
+
+* [](:func:`~shiny.ui.value_box`)
+* [](:class:`~shiny.ui.ValueBoxTheme`)

@@ -1,0 +1,17 @@
+# ui.css.as_css_unit { #shiny.ui.css.as_css_unit }
+
+`ui.css.as_css_unit(value)`
+
+Convert a value into a CSS unit.
+
+## Parameters
+
+<code><span class="parameter-name">value</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">None \| [CssUnit](`shiny.ui.css._css_unit.CssUnit`)</span></code>
+
+:   A value to convert into a CSS unit.
+
+## Returns
+
+| Type                 | Description                                                                                                                                                    |
+|----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| None \| [str](`str`) | If the `value` is `None`, then `None`. If the value is `0`, then `"0"`. If the `value` is numeric, then a formatted pixel value. Otherwise, the `value` as-is. |

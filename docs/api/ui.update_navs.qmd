@@ -1,0 +1,87 @@
+# ui.update_navs { #shiny.ui.update_navs }
+
+`ui.update_navs(id, selected=None, session=None)`
+
+Change the value of a navs container on the client.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An input id.
+
+<code><span class="parameter-name">selected</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   The values that should be initially selected, if any.
+
+<code><span class="parameter-name">session</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Session](`shiny.session.Session`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A [](:class:`~shiny.Session`) instance. If not provided, it is inferred via
+    [](:func:`~shiny.session.get_current_session`).
+
+## Note
+
+
+The input updater functions send a message to the client, telling it to change the
+settings of an input object. The messages are collected and sent after all the
+observers (including outputs) have finished running.
+
+The syntax of these functions is similar to the functions that created the inputs in
+the first place. For example, [](:func:`~shiny.ui.input_numeric`) and
+[](:func:`~shiny.ui.update_numeric`) take a similar set of arguments.
+
+Any arguments with ``None`` values will be ignored; they will not result in any
+changes to the input object on the client.
+
+For [](:func:`~update_radio_buttons`), [](:func:`~update_checkbox_group`), and
+[](:func:`~update_select`), the set of choices can be cleared by using ``choices=[]``.
+Similarly, for these inputs, the selected item can be cleared by using
+`selected=[]`.
+
+
+
+
+## See Also
+
+[](:func:`~shiny.ui.navset_tab`)
+[](:func:`~shiny.ui.navset_pill`)
+[](:func:`~shiny.ui.page_navbar`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, reactive, ui
+
+app_ui = ui.page_fixed(
+    ui.layout_sidebar(
+        ui.panel_sidebar(
+            ui.input_slider("controller", "Controller", min=1, max=3, value=1)
+        ),
+        ui.panel_main(
+            ui.navset_card_tab(
+                ui.nav_panel("Panel 1", "Panel 1 content", value="panel1"),
+                ui.nav_panel("Panel 2", "Panel 2 content", value="panel2"),
+                ui.nav_panel("Panel 3", "Panel 3 content", value="panel3"),
+                id="inTabset",
+            ),
+        ),
+    )
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.Effect
+    def _():
+        ui.update_navs("inTabset", selected="panel" + str(input.controller()))
+
+
+app = App(app_ui, server)
+
+```
+

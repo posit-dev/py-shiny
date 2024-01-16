@@ -1,0 +1,298 @@
+# Function reference {.doc .doc-index}
+
+## Page containers
+
+Create a user interface page container.
+
+| | |
+| --- | --- |
+| [ui.page_sidebar](ui.page_sidebar.qmd#shiny.ui.page_sidebar) | Create a page with a sidebar and a title. |
+| [ui.page_navbar](ui.page_navbar.qmd#shiny.ui.page_navbar) | Create a page with a navbar and a title. |
+| [ui.page_sidebar](ui.page_sidebar.qmd#shiny.ui.page_sidebar) | Create a page with a sidebar and a title. |
+| [ui.page_fillable](ui.page_fillable.qmd#shiny.ui.page_fillable) | Create a fillable page. |
+| [ui.page_fluid](ui.page_fluid.qmd#shiny.ui.page_fluid) | Create a fluid page. |
+| [ui.page_fixed](ui.page_fixed.qmd#shiny.ui.page_fixed) | Create a fixed page. |
+| [ui.page_bootstrap](ui.page_bootstrap.qmd#shiny.ui.page_bootstrap) | Create a Bootstrap UI page container. |
+| [ui.page_auto](ui.page_auto.qmd#shiny.ui.page_auto) | A page container which automatically decides which page function to use.  If there is a top-level nav, this will use :func:`~shiny.ui.page_navbar`. If not, and there is a top-level sidebar, this will use :func:`~shiny.ui.page_sidebar`.  If there are neither top-level navs nor sidebars, this will use the ``fillable`` and ``full_width`` arguments to determine which page function to use. |
+| [ui.page_output](ui.page_output.qmd#shiny.ui.page_output) | Create a page container where the entire body is a UI output. |
+
+## UI Layouts
+
+Control the layout of multiple UI components.
+
+| | |
+| --- | --- |
+| [ui.sidebar](ui.sidebar.qmd#shiny.ui.sidebar) | Sidebar element  Create a collapsing sidebar layout by providing a `sidebar()` object to the `sidebar=` argument of:  * :func:`~shiny.ui.layout_sidebar`   * Creates a sidebar layout component which can be dropped inside any Shiny UI page method (e.g. :func:`~shiny.ui.page_fillable`) or :func:`~shiny.ui.card` context. * :func:`~shiny.ui.navset_bar`, :func:`~shiny.ui.navset_card_tab`, and :func:`~shiny.ui.navset_card_pill`   * Creates a multi page/tab UI with a singular `sidebar()` (which is     shown on every page/tab). |
+| [ui.layout_sidebar](ui.layout_sidebar.qmd#shiny.ui.layout_sidebar) | Sidebar layout  Create a sidebar layout component which can be dropped inside any Shiny UI page method (e.g. :func:`~shiny.shiny.ui.page_fillable`) or :func:`~shiny.ui.card` context. |
+| [ui.layout_columns](ui.layout_columns.qmd#shiny.ui.layout_columns) | Create responsive, column-based grid layouts, based on a 12-column grid. |
+| [ui.layout_column_wrap](ui.layout_column_wrap.qmd#shiny.ui.layout_column_wrap) | A grid-like, column-first layout  Wraps a 1d sequence of UI elements into a 2d grid. The number of columns (and rows) in the grid depends on the column width and the size of the display. |
+| [ui.card](ui.card.qmd#shiny.ui.card) | A Bootstrap card component  A general purpose container for grouping related UI elements together with a border and optional padding. To learn more about `card()`s, see [this article](https://rstudio.github.io/bslib/articles/cards.html). |
+| [ui.card_header](ui.card_header.qmd#shiny.ui.card_header) | Card header container  A general container for the "header" of a :func:`~shiny.ui.card`. This component is designed to be provided as a direct child to :func:`~shiny.ui.card`.  The header has a different background color and border than the rest of the card. |
+| [ui.card_footer](ui.card_footer.qmd#shiny.ui.card_footer) | Card footer container  A general container for the "footer" of a :func:`~shiny.ui.card`. This component is designed to be provided as a direct child to :func:`~shiny.ui.card`.  The footer has a different background color and border than the rest of the card. |
+| [ui.popover](ui.popover.qmd#shiny.ui.popover) | Add a popover to a UI element.  Display additional information when clicking on a UI element (typically a button). |
+| [ui.tooltip](ui.tooltip.qmd#shiny.ui.tooltip) | Add a tooltip to a UI element.  Display additional information when focusing (or hovering over) a UI element. |
+| [ui.accordion](ui.accordion.qmd#shiny.ui.accordion) | Create a vertically collapsing accordion. |
+| [ui.accordion_panel](ui.accordion_panel.qmd#shiny.ui.accordion_panel) | Single accordion panel. |
+| [ui.column](ui.column.qmd#shiny.ui.column) | Responsive row-column based layout  See :func:`~shiny.ui.row` for more information. |
+| [ui.row](ui.row.qmd#shiny.ui.row) | Responsive row-column based layout  Layout UI components using Bootstrap's grid layout system. Use ``row()`` to group elements that should appear on the same line (if the browser has adequate width) and :func:`~shiny.ui.column` to define how much horizontal space within a 12-unit wide grid each on of these elements should occupy. See the [layout guide](https://shiny.posit.co/articles/layout-guide.html) for more context and examples. (The article is about Shiny for R, but the general principles are the same.) |
+
+## UI Inputs
+
+Create UI that prompts the user for input values or interaction.
+
+| | |
+| --- | --- |
+| [ui.input_select](ui.input_select.qmd#shiny.ui.input_select) | Create a select list that can be used to choose a single or multiple items from a list of values. |
+| [ui.input_selectize](ui.input_selectize.qmd#shiny.ui.input_selectize) | Create a select list that can be used to choose a single or multiple items from a list of values. |
+| [ui.input_slider](ui.input_slider.qmd#shiny.ui.input_slider) | Constructs a slider widget to select a number, date, or date-time from a range. |
+| [ui.input_date](ui.input_date.qmd#shiny.ui.input_date) | Creates a text input which, when clicked on, brings up a calendar that the user can click on to select dates. |
+| [ui.input_date_range](ui.input_date_range.qmd#shiny.ui.input_date_range) | Creates a pair of text inputs which, when clicked on, bring up calendars that the user can click on to select dates. |
+| [ui.input_checkbox](ui.input_checkbox.qmd#shiny.ui.input_checkbox) | Create a checkbox that can be used to specify logical values. |
+| [ui.input_checkbox_group](ui.input_checkbox_group.qmd#shiny.ui.input_checkbox_group) | Create a group of checkboxes that can be used to toggle multiple choices independently. |
+| [ui.input_switch](ui.input_switch.qmd#shiny.ui.input_switch) | Create a switch that can be used to specify logical values. Similar to :func:`~shiny.ui.input_checkbox`, but implies to the user that the change will take effect immediately. |
+| [ui.input_radio_buttons](ui.input_radio_buttons.qmd#shiny.ui.input_radio_buttons) | Create a set of radio buttons used to select an item from a list. |
+| [ui.input_numeric](ui.input_numeric.qmd#shiny.ui.input_numeric) | Create an input control for entry of numeric values. |
+| [ui.input_text](ui.input_text.qmd#shiny.ui.input_text) | Create an input control for entry of text values. |
+| [ui.input_text_area](ui.input_text_area.qmd#shiny.ui.input_text_area) | Create a textarea input control for entry of unstructured text values. |
+| [ui.input_password](ui.input_password.qmd#shiny.ui.input_password) | Create an password control for entry of passwords. |
+| [ui.input_action_button](ui.input_action_button.qmd#shiny.ui.input_action_button) | Creates an action button whose value is initially zero, and increments by one each time it is pressed. |
+| [ui.input_action_link](ui.input_action_link.qmd#shiny.ui.input_action_link) | Creates a link whose value is initially zero, and increments by one each time it is pressed. |
+
+## Value boxes
+
+Prominently display a value and label in a box that can be expanded to show more information.
+
+| | |
+| --- | --- |
+| [ui.value_box](ui.value_box.qmd#shiny.ui.value_box) | Value box  An opinionated (:func:`~shiny.ui.card`-powered) box, designed for displaying a `value` and `title`. Optionally, a `showcase` can provide context for what the `value` represents (for example, it could hold an icon, or even a :func:`~shiny.ui.output_plot`). |
+| [ui.value_box_theme](ui.value_box_theme.qmd#shiny.ui.value_box_theme) | Value box theme  A theme for a :func:`~shiny.ui.value_box`. Themes provide a convenient way to use your app's Bootstrap theme colors as the foreground or background colors of the value box. For more control, you can create your own theme with :func:`~shiny.ui.value_box_theme` where you can pass foreground and background value.  See [rstudio/bslib#themes](https://rstudio.github.io/bslib/reference/value_box.html#themes) for more examples. |
+| [ui.showcase_bottom](ui.showcase_bottom.qmd#shiny.ui.showcase_bottom) | Showcase bottom  A :func:`~shiny.ui.showcase_bottom` is a :class:`~shiny.ui.ShowcaseLayout` with the following default properties:  * `width` is `"100%"` * `width_full_screen` is `None` * `height` is `"auto"` * `height_full_screen` is `"2fr"` * `max_height` is `"100px"` * `max_height_full_screen` is `None`  See Also -------- * :func:`~shiny.ui.showcase_left_center` * :func:`~shiny.ui.showcase_top_right` * :func:`~shiny.ui.value_box` |
+| [ui.showcase_left_center](ui.showcase_left_center.qmd#shiny.ui.showcase_left_center) | Showcase left center  A :func:`~shiny.ui.showcase_left_center` is a :class:`~shiny.ui.ShowcaseLayout` with the following default properties:  * `width` is `"30%"` * `width_full_screen` is `"1fr"` * `max_height` is `"100px"` * `max_height_full_screen` is `"67%"`  See Also -------- * :func:`~shiny.ui.showcase_top_right` * :func:`~shiny.ui.showcase_bottom` * :func:`~shiny.ui.value_box` |
+| [ui.showcase_top_right](ui.showcase_top_right.qmd#shiny.ui.showcase_top_right) | Showcase top right  A :func:`~shiny.ui.showcase_top_right` is a :class:`~shiny.ui.ShowcaseLayout` with the following default properties:  * `width` is `"40%"` * `width_full_screen` is `"1fr"` * `max_height` is `"75px"` * `max_height_full_screen` is `"67%"`  See Also -------- * :func:`~shiny.ui.showcase_left_center` * :func:`~shiny.ui.showcase_bottom` * :func:`~shiny.ui.value_box` |
+| [ui.ValueBoxTheme](ui.ValueBoxTheme.qmd#shiny.ui.ValueBoxTheme) |  |
+| [ui.ShowcaseLayout](ui.ShowcaseLayout.qmd#shiny.ui.ShowcaseLayout) | Showcase layout  Base layout information utilized to display :func:`~shiny.ui.value_box`'s `showcase` value.  See Also -------- * :func:`~shiny.ui.showcase_left_center` * :func:`~shiny.ui.showcase_top_right` * :func:`~shiny.ui.showcase_bottom` * :func:`~shiny.ui.value_box` |
+
+## Navigation (tab) panels
+
+Create segments of UI content.
+
+| | |
+| --- | --- |
+| [ui.nav_panel](ui.nav_panel.qmd#shiny.ui.nav_panel) | Create a nav item pointing to some internal content. |
+| [ui.nav_spacer](ui.nav_spacer.qmd#shiny.ui.nav_spacer) | Create space between nav items.  See Also -------- * ~shiny.ui.nav_panel * ~shiny.ui.nav_menu * ~shiny.ui.nav_control * ~shiny.ui.navset_bar * ~shiny.ui.navset_tab * ~shiny.ui.navset_pill * ~shiny.ui.navset_underline * ~shiny.ui.navset_card_tab * ~shiny.ui.navset_card_pill * ~shiny.ui.navset_card_underline * ~shiny.ui.navset_pill_list * ~shiny.ui.navset_hidden  Example ------- See :func:`~shiny.ui.nav_panel` |
+| [ui.nav_menu](ui.nav_menu.qmd#shiny.ui.nav_menu) | Create a menu of nav items. |
+| [ui.nav_control](ui.nav_control.qmd#shiny.ui.nav_control) | Place a control in the navigation container. |
+| [ui.navset_bar](ui.navset_bar.qmd#shiny.ui.navset_bar) | Render nav items as a navbar. |
+| [ui.navset_tab](ui.navset_tab.qmd#shiny.ui.navset_tab) | Render nav items as a tabset. |
+| [ui.navset_pill](ui.navset_pill.qmd#shiny.ui.navset_pill) | Render nav items as a pillset. |
+| [ui.navset_underline](ui.navset_underline.qmd#shiny.ui.navset_underline) | Render nav items whose active/focused navigation links are styled with an underline. |
+| [ui.navset_card_tab](ui.navset_card_tab.qmd#shiny.ui.navset_card_tab) | Render nav items as a tabset inside a card container. |
+| [ui.navset_card_pill](ui.navset_card_pill.qmd#shiny.ui.navset_card_pill) | Render nav items as a pillset inside a card container. |
+| [ui.navset_card_underline](ui.navset_card_underline.qmd#shiny.ui.navset_card_underline) | Render nav items inside a card container. Active/focused navigation links are styled with an underline. |
+| [ui.navset_pill_list](ui.navset_pill_list.qmd#shiny.ui.navset_pill_list) | Render nav items as a vertical pillset. |
+| [ui.navset_hidden](ui.navset_hidden.qmd#shiny.ui.navset_hidden) | Render nav contents without the nav items. |
+
+## UI panels
+
+Visually group together a section of UI components.
+
+| | |
+| --- | --- |
+| [ui.panel_absolute](ui.panel_absolute.qmd#shiny.ui.panel_absolute) | Create a panel of absolutely positioned content.  Creates a `<div>` tag whose CSS position is set to absolute (or fixed if ``fixed = True``). In HTML, absolute coordinates are specified relative to an element's nearest parent element whose position is not set to static (the default). If no such parent is found, the coordinates are relative to the page borders. If you're not sure what that means, just keep in mind that you may get strange results if you use this function from inside of certain types of panels. |
+| [ui.panel_fixed](ui.panel_fixed.qmd#shiny.ui.panel_fixed) | Create a panel of absolutely positioned content.  This function is equivalent to calling :func:`~shiny.ui.panel_absolute` with ``fixed=True`` (i.e., the panel does not scroll with the rest of the page). See :func:`~shiny.ui.panel_absolute` for more information. |
+| [ui.panel_conditional](ui.panel_conditional.qmd#shiny.ui.panel_conditional) | Create a conditional panel.  Show UI elements only if a ``JavaScript`` condition is ``true``. |
+| [ui.panel_title](ui.panel_title.qmd#shiny.ui.panel_title) | Create title(s) for the application. |
+| [ui.panel_well](ui.panel_well.qmd#shiny.ui.panel_well) | Create a well panel.  Creates a panel with a slightly inset border and gray background. Equivalent to Bootstrap's ``well`` CSS class. |
+
+## Uploads & downloads
+
+Allow users to upload and download files.
+
+| | |
+| --- | --- |
+| [ui.input_file](ui.input_file.qmd#shiny.ui.input_file) | Create a file upload control that can be used to upload one or more files. |
+| [ui.download_button](ui.download_button.qmd#shiny.ui.download_button) | Create a download button |
+
+## Custom UI
+
+Lower-level UI functions for creating custom HTML/CSS/JS
+
+| | |
+| --- | --- |
+| [ui.HTML](ui.HTML.qmd#shiny.ui.HTML) | Mark a string as raw HTML. This will prevent the string from being escaped when rendered inside an HTML tag. |
+| [ui.TagList](ui.TagList.qmd#shiny.ui.TagList) | Create an HTML tag list (i.e., a fragment of HTML) |
+| [ui.tags](ui.tags.qmd#shiny.ui.tags) | Functions for creating HTML tags. |
+| [ui.markdown](ui.markdown.qmd#shiny.ui.markdown) | Convert a string of markdown to :func:`ui.HTML`. |
+| [ui.include_css](ui.include_css.qmd#shiny.ui.include_css) | Include a CSS file. |
+| [ui.include_js](ui.include_js.qmd#shiny.ui.include_js) | Include a JavaScript file. |
+| [ui.insert_ui](ui.insert_ui.qmd#shiny.ui.insert_ui) | Insert UI objects. |
+| [ui.remove_ui](ui.remove_ui.qmd#shiny.ui.remove_ui) | Remove UI objects. |
+| [ui.fill.as_fillable_container](ui.fill.as_fillable_container.qmd#shiny.ui.fill.as_fillable_container) |  |
+| [ui.fill.as_fill_item](ui.fill.as_fill_item.qmd#shiny.ui.fill.as_fill_item) | Coerce a tag to a fill item.  Filling layouts are built on the foundation of _fillable containers_ and _fill items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is why most UI components (e.g., :func:`~shiny.ui.card`, :func:`~shiny.ui.layout_sidebar`) possess both `fillable` and `fill` arguments (to control their fill behavior). However, sometimes it's useful to add, remove, and/or test fillable/fill properties on arbitrary :class:`~htmltools.Tag`, which these functions are designed to do. |
+| [ui.fill.remove_all_fill](ui.fill.remove_all_fill.qmd#shiny.ui.fill.remove_all_fill) | Remove any filling layouts from a tag.  Filling layouts are built on the foundation of _fillable containers_ and _fill items_ (_fill carriers_ are both _fillable containers_ and _fill items_). This is why most UI components (e.g., :func:`~shiny.ui.card`, :func:`~shiny.ui.layout_sidebar`) possess both `fillable` and `fill` arguments (to control their fill behavior). However, sometimes it's useful to add, remove, and/or test fillable/fill properties on arbitrary :class:`~htmltools.Tag`, which these functions are designed to do. |
+| [ui.css.as_css_unit](ui.css.as_css_unit.qmd#shiny.ui.css.as_css_unit) | Convert a value into a CSS unit. |
+| [ui.css.as_css_padding](ui.css.as_css_padding.qmd#shiny.ui.css.as_css_padding) | Convert a CSS unit or list of CSS units into a CSS padding value. |
+
+## Update inputs
+
+Programmatically update input values.
+
+| | |
+| --- | --- |
+| [ui.update_select](ui.update_select.qmd#shiny.ui.update_select) | Change the value of a select input on the client. |
+| [ui.update_selectize](ui.update_selectize.qmd#shiny.ui.update_selectize) | Change the value of a selectize.js powered input on the client. |
+| [ui.update_slider](ui.update_slider.qmd#shiny.ui.update_slider) | Change the value of a slider input on the client. |
+| [ui.update_date](ui.update_date.qmd#shiny.ui.update_date) | Change the value of a date input on the client. |
+| [ui.update_date_range](ui.update_date_range.qmd#shiny.ui.update_date_range) | Change the start and end values of a date range input on the client. |
+| [ui.update_checkbox](ui.update_checkbox.qmd#shiny.ui.update_checkbox) | Change the value of a checkbox input on the client. |
+| [ui.update_checkbox_group](ui.update_checkbox_group.qmd#shiny.ui.update_checkbox_group) | Change the value of a checkbox group input on the client. |
+| [ui.update_switch](ui.update_switch.qmd#shiny.ui.update_switch) | Change the value of a switch input on the client. |
+| [ui.update_radio_buttons](ui.update_radio_buttons.qmd#shiny.ui.update_radio_buttons) | Change the value of a radio input on the client. |
+| [ui.update_numeric](ui.update_numeric.qmd#shiny.ui.update_numeric) | Change the value of a number input on the client. |
+| [ui.update_text](ui.update_text.qmd#shiny.ui.update_text) | Change the value of a text input on the client. |
+| [ui.update_text_area](ui.update_text_area.qmd#shiny.ui.update_text_area) | Change the value of a text input on the client. |
+| [ui.update_navs](ui.update_navs.qmd#shiny.ui.update_navs) | Change the value of a navs container on the client. |
+
+## Update UI Layouts
+
+
+
+| | |
+| --- | --- |
+| [ui.update_sidebar](ui.update_sidebar.qmd#shiny.ui.update_sidebar) | Update a sidebar's visibility.  Set a :func:`~shiny.ui.sidebar` state during an active Shiny user session. |
+| [ui.update_tooltip](ui.update_tooltip.qmd#shiny.ui.update_tooltip) | Update tooltip contents. |
+| [ui.update_popover](ui.update_popover.qmd#shiny.ui.update_popover) | Update the contents or title of a popover. |
+| [ui.update_accordion](ui.update_accordion.qmd#shiny.ui.update_accordion) | Dynamically set accordions' states.  Dynamically (i.e., programmatically) update/modify :func:`~shiny.ui.accordion`s in a Shiny app. These functions require an `id` to be provided to the :func:`~shiny.ui.accordion` and must also be called within an active Shiny session. |
+| [ui.update_accordion_panel](ui.update_accordion_panel.qmd#shiny.ui.update_accordion_panel) | Dynamically update accordion panel contents.  Dynamically (i.e., programmatically) update/modify :func:`~shiny.ui.accordion` panels in a Shiny app. These functions require an `id` to be provided to the :func:`~shiny.ui.accordion` and must also be called within an active Shiny session. |
+| [ui.insert_accordion_panel](ui.insert_accordion_panel.qmd#shiny.ui.insert_accordion_panel) | Insert an :func:`~shiny.ui.accordion_panel`. |
+| [ui.remove_accordion_panel](ui.remove_accordion_panel.qmd#shiny.ui.remove_accordion_panel) | Remove an :func:`~shiny.ui.accordion_panel`. |
+
+## Rendering outputs
+
+UI (output_*()) and server (render)ing functions for generating content server-side.
+
+| | |
+| --- | --- |
+| [ui.output_plot](ui.output_plot.qmd#shiny.ui.output_plot) | Create a output container for a static plot.  Place a :func:`~shiny.render.plot` result in the user interface. See :func:`~shiny.render.plot` for more details on what types of plots are supported. |
+| [ui.output_image](ui.output_image.qmd#shiny.ui.output_image) | Create a output container for a static image. |
+| [ui.output_table](ui.output_table.qmd#shiny.ui.output_table) | Create a output container for a table. |
+| [ui.output_data_frame](ui.output_data_frame.qmd#shiny.ui.output_data_frame) | Create an output container for an interactive table or grid. Features fast virtualized scrolling, sorting, filtering, and row selection (single or multiple). |
+| [ui.output_text](ui.output_text.qmd#shiny.ui.output_text) | Create a output container for some text. |
+| [ui.output_text_verbatim](ui.output_text_verbatim.qmd#shiny.ui.output_text_verbatim) | Create a output container for some text.  Place a :func:`~shiny.render.text` result in the user interface. Differs from :func:`~shiny.ui.output_text` in that it wraps the text in a fixed-width container with a gray-ish background color and border. |
+| [ui.output_ui](ui.output_ui.qmd#shiny.ui.output_ui) | Create a output container for a UI (i.e., HTML) element. |
+| [render.plot](render.plot.qmd#shiny.render.plot) | Reactively render a plot object as an HTML image. |
+| [render.image](render.image.qmd#shiny.render.image) | Reactively render a image file as an HTML image. |
+| [render.table](render.table.qmd#shiny.render.table) | Reactively render a pandas ``DataFrame`` object (or similar) as a basic HTML table.  Consider using :func:`~shiny.render.data_frame` instead of this renderer, as it provides high performance virtual scrolling, built-in filtering and sorting, and a better default appearance. This renderer may still be helpful if you use pandas styling features that are not currently supported by :func:`~shiny.render.data_frame`. |
+| [render.text](render.text.qmd#shiny.render.text) | Reactively render text. |
+| [render.ui](render.ui.qmd#shiny.render.ui) | Reactively render HTML content. |
+| [render.data_frame](render.data_frame.qmd#shiny.render.data_frame) | Decorator for a function that returns a pandas `DataFrame` object (or similar) to render as an interactive table or grid. Features fast virtualized scrolling, sorting, filtering, and row selection (single or multiple). |
+| [render.DataGrid](render.DataGrid.qmd#shiny.render.DataGrid) | Holds the data and options for a ``shiny.render.data_frame`` output, for a spreadsheet-like view. |
+| [render.DataTable](render.DataTable.qmd#shiny.render.DataTable) | Holds the data and options for a ``shiny.render.data_frame`` output, for a spreadsheet-like view. |
+| [Create rendering outputs](OutputRender.qmd) |  |
+
+## Reactive programming
+
+
+
+| | |
+| --- | --- |
+| [reactive.calc](reactive.calc.qmd#shiny.reactive.calc) | Mark a function as a reactive calculation.  A reactive calculation is a function whose return value depends on other reactive value(s) (i.e., :class:`~shiny.Inputs`, :class:`~shiny.reactive.Value`s, and other reactive calculations). Whenever a reactive value changes, any reactive calculations that depend on it are "invalidated" and automatically re-execute if called while invalid. If a reactive calculation is marked as invalidated, any other reactive calculations that recently called it are also marked as invalidated. In this way, invalidations ripple through reactive calculations that depend on each other. |
+| [reactive.effect](reactive.effect.qmd#shiny.reactive.effect) | Mark a function as a reactive side effect.  A reactive effect is like a reactive calculation (:func:`~shiny.reactive.calc`) in that it can read reactive values and call reactive calculations, and will automatically re-execute when those dependencies change. But unlike reactive calculations, it doesn't return a result and can't be used as an input to other reactive expressions. Thus, reactive effects are only useful for their side effects (for example, performing I/O).  Another contrast between reactive calculations and effects is their execution strategy. Reactive calculations use lazy evaluation; that is, when their dependencies change, they don't re-execute right away but rather wait until they are called by someone else. Indeed, if they are not called, then they will never re-execute. In contrast, effects use eager evaluation; as soon as their dependencies change, they schedule themselves to re-execute. |
+| [reactive.value](reactive.value.qmd#shiny.reactive.value) |  |
+| [reactive.Calc](reactive.Calc.qmd#shiny.reactive.Calc) |  |
+| [reactive.Effect](reactive.Effect.qmd#shiny.reactive.Effect) |  |
+| [reactive.Value](reactive.Value.qmd#shiny.reactive.Value) | Create a reactive value.  Reactive values are the source of reactivity in Shiny. Changes to reactive values invalidate downstream reactive functions (:func:`~shiny.reactive.calc`, :func:`~shiny.reactive.effect`, and `render` functions decorated with `@output`). When these functions are invalidated, they get scheduled to re-execute.  Shiny input values are read-only reactive values. For example, `input.x` is a reactive value object, and to get the current value, you can call `input.x()` or `input.x.get()`. When you do that inside of a reactive function, the function takes a dependency on the reactive value. |
+| [reactive.event](reactive.event.qmd#shiny.reactive.event) | Mark a function to react only when an "event" occurs.  Shiny's reactive programming framework is primarily designed for calculated values (:func:`~shiny.reactive.calc`) and side-effect-causing actions (:func:`~shiny.reactive.effect`) that respond to **any** of their inputs changing. That's often what is desired in Shiny apps, but not always: sometimes you want to wait for a specific action to be taken from the user, like clicking an :func:`~shiny.ui.input_action_button`, before calculating or taking an action. You do not want the calculation or action to be prematurely triggered if other reactive values that it calls are invalidated. The reactive value (or function) which triggers other calculations or actions in this way is called an event.  These situations demand a more imperative, "event handling" style of programming, which ``@reactive.event()`` provides. It does this by using the :func:`~shiny.reactive.isolate` primitive under-the-hood to essentially "limit" the set of reactive dependencies to those in ``args``. In other words, the event can call as many reactive values as it likes in its code body without taking a reactive dependency on them; it will be invalidated only when a dependency listed in args is invalidated. |
+| [reactive.isolate](reactive.isolate.qmd#shiny.reactive.isolate) | Create a non-reactive scope within a reactive scope.  Ordinarily, the simple act of reading a reactive value causes a relationship to be established between the caller and the reactive value, where a change to the reactive value will cause the caller to re-execute. (The same applies for the act of getting a reactive calculation's value.) `with isolate()` lets you read a reactive value or calculation without establishing this relationship.  ``with isolate()`` can also be useful for calling reactive calculations at the console, which can be useful for debugging. To do so, wrap the calls to the reactive calculation with ``with isolate()``. |
+| [reactive.invalidate_later](reactive.invalidate_later.qmd#shiny.reactive.invalidate_later) | Scheduled Invalidation  When called from within a reactive context, :func:`~shiny.reactive.invalidate_later` schedules the reactive context to be invalidated in the given number of seconds. |
+| [reactive.flush](reactive.flush.qmd#shiny.reactive.flush) | Run any pending invalidations (i.e., flush the reactive environment).  Warning ------- You shouldn't ever need to call this function inside of a Shiny app. It's only useful for testing and running reactive code interactively in the console. |
+| [reactive.poll](reactive.poll.qmd#shiny.reactive.poll) | Create a reactive polling object.  Polling is a technique that approximates "real-time" or streaming updates, as if a data source were pushing notifications each time it is updated. The data source does not actually push notifications; a polling object repeatedly checks for changes in an efficient way at specified intervals. If a change is detected, the polling object runs a function to re-read the data source.  A reactive polling object is constructed using two functions: a polling function, which is a fast-running, inexpensive function that is used to determine whether some data source has changed (such as the timestamp of a file, or a `SELECT MAX(updated) FROM table` query); and a slower-running reading function that actually loads and returns the data that is desired. The `poll()` function is intended to be used as a decorator: the poll function is passed as the `poll_func` arg to `@poll()`, while the data reading function is the target of the decorator.  Reactive consumers can invoke the resulting polling object to get the current data, and will automatically invalidate when the polling function detects a change. Polling objects also cache the results of the read function; for this reason, apps where all sessions depend on the same data source may want to declare the polling object at the top level of app.py (outside of the server function).  Both `poll_func` and the decorated (data reading) function can read reactive values and :class:`~shiny.reactive.calc` objects. Any invalidations triggered by reactive dependencies will apply to the reactive polling object immediately (not waiting for the `interval_secs` delay to expire). |
+| [reactive.file_reader](reactive.file_reader.qmd#shiny.reactive.file_reader) | Create a reactive file reader.  This is a decorator, meant to be applied to a no-argument function that reads data from a file on disk. Whenever the file changes (or to be precise, the file size or last modified time changes), past readers of the data are reactively invalidated. This makes it incredibly easy to write apps that automatically update all of their outputs as soon as files on disk change.  Note that `file_reader` works only on single files, not directories of files.  Both the `filepath` function and the decorated (file reading) function can read reactive values and :class:`~shiny.reactive.calc` objects. Any invalidations triggered by reactive dependencies will apply to the reactive file reader object immediately (not waiting for the `interval_secs` delay to expire). |
+| [reactive.lock](reactive.lock.qmd#shiny.reactive.lock) | A lock that should be held whenever manipulating the reactive graph.  For example, :func:`~shiny.reactive.lock` makes it safe to set a :class:`~reactive.Value` and call :func:`~shiny.reactive.flush` from a different :class:`~asyncio.Task` than the one that is running the Shiny :class:`~shiny.Session`. |
+| [req](req.qmd#shiny.req) | Throw a silent exception for falsy values.  This is a convenient shorthand for throwing :func:`~shiny.types.SilentException` / :func:`~shiny.types.SilentCancelOutputException` if any of the arguments are falsy.  The term "falsy" generally indicates that a value is considered `False` when encountered in a logical context. We use the term a little loosely here; our usage tries to match the intuitive notions of "Is this value missing or available?", or "Has the user provided an answer?", or in the case of action buttons, "Has the button been clicked?". So `False`, `None`, `0`, and `""` would be examples of Falsy values. |
+
+## Create and run applications
+
+
+
+| | |
+| --- | --- |
+| [run_app](run_app.qmd#shiny.run_app) | Starts a Shiny app. Press ``Ctrl+C`` (or ``Ctrl+Break`` on Windows) to stop the app. |
+| [App](App.qmd#shiny.App) | Create a Shiny app instance. |
+| [Inputs](Inputs.qmd#shiny.Inputs) | A class representing Shiny input values.  This class provides access to a :class:`~shiny.Session`'s input values. The input values are reactive :class:`~shiny.reactive.Value`s, and can be accessed with the ``[]`` operator, or with ``.``. For example, if there is an input named ``x``, it can be accessed via `input["x"]()` or ``input.x()``. |
+| [Outputs](Outputs.qmd#shiny.Outputs) | A class representing Shiny output definitions. |
+| [Session](Session.qmd#shiny.Session) | A class representing a user session. |
+
+## Display messages
+
+
+
+| | |
+| --- | --- |
+| [ui.help_text](ui.help_text.qmd#shiny.ui.help_text) | Create a help text element  Help text is stylized text which can be added to the user interface to provide additional explanation or context. Text passed to :func:`~shiny.ui.help_text` receives the Bootstrap `help-block` class. |
+| [ui.notification_show](ui.notification_show.qmd#shiny.ui.notification_show) | Show a notification to the user.  A notification is a message that appears near the bottom corner of the app. Notifications normally disappear after a short period of time, and should multiple notifications appear together, they will stack on top of one another. |
+| [ui.notification_remove](ui.notification_remove.qmd#shiny.ui.notification_remove) | Remove a notification.  :func:`~shiny.ui.notification_remove` provides a way to remove a notification programatically. Notifications can also be removed manually by the user, or automatically after a specififed amont of time passes. |
+| [ui.modal](ui.modal.qmd#shiny.ui.modal) | Creates the UI for a modal dialog, using Bootstrap's modal class.  A modal is a dialog box that appears in front of the app. Modals are typically used for showing important messages, or for presenting UI that requires input from the user, such as a user name and/or password input. |
+| [ui.modal_show](ui.modal_show.qmd#shiny.ui.modal_show) | Show a modal dialog.  :func:`~shiny.ui.modal_show` is used to display a modal that has been created with :func:`~shiny.ui.modal`. |
+| [ui.modal_remove](ui.modal_remove.qmd#shiny.ui.modal_remove) | Remove a modal dialog box.  :func:`~shiny.ui.modal_remove` provides a way to remove a modal programatically. Modals can also be removed manually by the user if a :func:`~shiny.ui.modal_button` is provided, or if the modal is created with `easy_close=True`. |
+| [ui.modal_button](ui.modal_button.qmd#shiny.ui.modal_button) | Creates a button that will dismiss a :func:`modal`. :func:`~shiny.ui.modal_button` is usually passed to the `footer` of a :func:`~shiny.ui.modal` to add a button to the footer that will close the :func:`~shiny.ui.modal`. |
+| [ui.Progress](ui.Progress.qmd#shiny.ui.Progress) | Initialize a progress bar.  :func:`~shiny.ui.Progress` creates a computation manager that can be used with `with` to run a block of code. Shiny will display a progress bar while the code runs, which you can update by calling the `set()` and `message()` methods of the computation manager at strategic points in the code block. |
+
+## Modules
+
+
+
+| | |
+| --- | --- |
+| [module.ui](module.ui.qmd#shiny.module.ui) |  |
+| [module.server](module.server.qmd#shiny.module.server) |  |
+
+## Developer facing tools
+
+
+
+| | |
+| --- | --- |
+| [session.get_current_session](session.get_current_session.qmd#shiny.session.get_current_session) | Get the current user session. |
+| [session.require_active_session](session.require_active_session.qmd#shiny.session.require_active_session) | Raise an exception if no Shiny session is currently active. |
+| [session.session_context](session.session_context.qmd#shiny.session.session_context) | A context manager for current session. |
+| [reactive.get_current_context](reactive.get_current_context.qmd#shiny.reactive.get_current_context) | Get the current reactive context. |
+| [input_handler.input_handlers](input_handler.input_handlers.qmd#shiny.input_handler.input_handlers) | Manage Shiny input handlers.  Add and/or remove input handlers of a given ``type``. Shiny uses these handlers to pre-process input values from the client (after being deserialized) before passing them to the ``input`` argument of an :func:`~shiny.App`'s ``server`` function.  The ``type`` is based on the ``getType()`` JavaScript method on the relevant Shiny input binding. See `this article <https://shiny.posit.co/articles/js-custom-input.html>`_ for more information on how to create custom input bindings. (The article is about Shiny for R, but the JavaScript and general principles are the same.)  Methods -------- add(type: str, force: bool = False) -> Callable[[InputHandlerType], None]     Register an input handler. This method returns a decorator that registers the     decorated function as the handler for the given ``type``. This handler should     accept three arguments:     - the input ``value``     - the input ``name``     - the :class:`~shiny.Session` object remove(type: str)     Unregister an input handler.  Note ---- ``add()`` ing an input handler will make it persist for the duration of the Python process (unless Shiny is explicitly reloaded). For that reason, verbose naming is encouraged to minimize the risk of colliding with other Shiny input binding(s) which happen to use the same ``type`` (if the binding is bundled with a package, we recommend the format of "packageName.widgetName").  Example ------- ```{python} #\| eval: false from shiny.input_handler import input_handlers @input_handlers.add("mypackage.intify") def _(value, name, session):     return int(value) ```  On the Javascript side, the associated input binding must have a corresponding ``getType`` method:  ```{python} #\| eval: false getType: function(el) {     return "mypackage.intify"; } ``` |
+
+## Types
+
+
+
+| | |
+| --- | --- |
+| [Miscellaneous types](MiscTypes.qmd) |  |
+| [Tag types](TagTypes.qmd) |  |
+| [Exception types](ExceptionTypes.qmd) |  |
+
+## Shiny Express
+
+Functions for Shiny Express applications
+
+| | |
+| --- | --- |
+| [Context manager components](ContextManagerComponents.qmd) |  |
+| [Page functions](PageFunctions.qmd) |  |
+
+## Deprecated
+
+
+
+| | |
+| --- | --- |
+| [ui.panel_main](ui.panel_main.qmd#shiny.ui.panel_main) | Deprecated. Please supply the `*args` of :func:`~shiny.ui.panel_main` directly to :func:`~shiny.ui.layout_sidebar`. |
+| [ui.panel_sidebar](ui.panel_sidebar.qmd#shiny.ui.panel_sidebar) | Deprecated. Please use :func:`~shiny.ui.sidebar` instead. |
+| [ui.nav](ui.nav.qmd#shiny.ui.nav) | Deprecated. Please use `nav_panel()` instead of `nav()`. |
+| [render.transformer.resolve_value_fn](render.transformer.resolve_value_fn.qmd#shiny.render.transformer.resolve_value_fn) | Resolve the value function  This function is used to resolve the value function (`value_fn`) to an object of type `IT`. If the value function is asynchronous, it will be awaited. If the value function is synchronous, it will be called.  While always using an async method within an output transform function is not appropriate, this method may be safely used to avoid boilerplate.  Replace this: ```python if is_async_callable(_fn):     x = await _fn() else:     x = cast(ValueFnSync[IT], _fn)() ```  With this: ```python x = await resolve_value_fn(_fn) ``` |
+
+## Experimental
+
+These methods are under consideration and are considered unstable. However, if there is a method you are excited about, please let us know!
+
+| | |
+| --- | --- |
+| [Card](ExCard.qmd) | Cards are a common organizing unit for modern user interfaces (UI). At their core, they're just rectangular containers with borders and padding. However, when utilized properly to group related information, they help users better digest, engage, and navigate through content. |

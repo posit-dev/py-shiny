@@ -1,0 +1,164 @@
+# ui.sidebar { #shiny.ui.sidebar }
+
+`ui.sidebar(*args, width=250, position='left', open='desktop', id=None, title=None, bg=None, fg=None, class_=None, max_height_mobile=None, gap=None, padding=None)`
+
+Sidebar element
+
+Create a collapsing sidebar layout by providing a `sidebar()` object to the
+`sidebar=` argument of:
+
+* [](:func:`~shiny.ui.layout_sidebar`)
+  * Creates a sidebar layout component which can be dropped inside any Shiny UI page method (e.g. [](:func:`~shiny.ui.page_fillable`)) or [](:func:`~shiny.ui.card`) context.
+* [](:func:`~shiny.ui.navset_bar`), [](:func:`~shiny.ui.navset_card_tab`), and [](:func:`~shiny.ui.navset_card_pill`)
+  * Creates a multi page/tab UI with a singular `sidebar()` (which is
+    shown on every page/tab).
+
+## Parameters
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`) \| [TagAttrs](`htmltools.TagAttrs`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   Contents to the sidebar. Or tag attributes that are supplied to the
+    resolved [](:class:`~htmltools.Tag`) object.
+
+<code><span class="parameter-name">width</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[CssUnit](`shiny.ui.css.CssUnit`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">250</span></code>
+
+:   A valid CSS unit used for the width of the sidebar.
+
+<code><span class="parameter-name">position</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Literal](`typing.Literal`)\['left', 'right'\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'left'</span></code>
+
+:   Where the sidebar should appear relative to the main content.
+
+<code><span class="parameter-name">open</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Literal](`typing.Literal`)\['desktop', 'open', 'closed', 'always'\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'desktop'</span></code>
+
+:   The initial state of the sidebar.
+
+    * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
+    * `"open"` or `True`: the sidebar starts open
+    * `"closed"` or `False`: the sidebar starts closed
+    * `"always"` or `None`: the sidebar is always open and cannot be closed
+
+    In [](:func:`~shiny.ui.update_sidebar`), `open` indicates the desired state of the
+    sidebar. Note that [](:func:`~shiny.ui.update_sidebar`) can only open or close the
+    sidebar, so it does not support the `"desktop"` and `"always"` options.
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A character string. Required if wanting to re-actively read (or update) the
+    `collapsible` state in a Shiny app.
+
+<code><span class="parameter-name">title</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`) \| [str](`str`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A character title to be used as the sidebar title, which will be wrapped in a
+    `<div>` element with class `sidebar-title`. You can also provide a custom
+    [](:class:`~htmltools.Tag`) for the title element, in which case you'll
+    likely want to give this element `class = "sidebar-title"`.
+
+<code><span class="parameter-name">bg</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A background or foreground color.
+
+<code><span class="parameter-name">class_</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   CSS classes for the sidebar container element, in addition to the fixed
+    `.sidebar` class.
+
+<code><span class="parameter-name">max_height_mobile</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`) \| [float](`float`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A CSS length unit (passed through [](:func:`~shiny.ui.css.as_css_unit`)) defining
+    the maximum height of the horizontal sidebar when viewed on mobile devices. Only
+    applies to always-open sidebars that use `open = "always"`, where by default the
+    sidebar container is placed below the main content container on mobile devices.
+
+<code><span class="parameter-name">gap</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[CssUnit](`shiny.ui.css.CssUnit`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
+    provided to `*args`.
+
+<code><span class="parameter-name">padding</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[CssUnit](`shiny.ui.css.CssUnit`) \| [list](`list`)\[[CssUnit](`shiny.ui.css.CssUnit`)\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Padding within the sidebar itself. This can be a numeric vector (which will be
+    interpreted as pixels) or a character vector with valid CSS lengths. `padding`
+    may be one to four values.
+
+    * If a single value, then that value will be used for all four sides.
+    * If two, then the first value will be used for the top and bottom, while
+      the second value will be used for left and right.
+    * If three values, then the first will be used for top, the second will be left
+      and right, and the third will be bottom.
+    * If four, then the values will be interpreted as top, right, bottom, and left
+      respectively.
+
+## Returns
+
+| Type                                   | Description                          |
+|----------------------------------------|--------------------------------------|
+| [Sidebar](`shiny.ui._sidebar.Sidebar`) | A [](:class:`~shiny.ui.Sidebar`) object. |
+
+## See Also
+
+* [](:func:`~shiny.ui.layout_sidebar`)
+* [](:func:`~shiny.ui.navset_bar`)
+* [](:func:`~shiny.ui.navset_card_tab`)
+* [](:func:`~shiny.ui.navset_card_pill`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, render, ui
+
+app_ui = ui.page_fluid(
+    ui.card(
+        ui.layout_sidebar(
+            ui.sidebar("Left sidebar content", id="sidebar_left"),
+            ui.output_text_verbatim("state_left"),
+        )
+    ),
+    ui.card(
+        ui.layout_sidebar(
+            ui.sidebar("Right sidebar content", id="sidebar_right", position="right"),
+            ui.output_text_verbatim("state_right"),
+        ),
+    ),
+    ui.card(
+        ui.layout_sidebar(
+            ui.sidebar("Closed sidebar content", id="sidebar_closed", open="closed"),
+            ui.output_text_verbatim("state_closed"),
+        )
+    ),
+    ui.card(
+        ui.layout_sidebar(
+            ui.sidebar("Always sidebar content", id="sidebar_always", open="always"),
+            ui.output_text_verbatim("state_always"),
+        )
+    ),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.text
+    def state_left():
+        return f"input.sidebar_left(): {input.sidebar_left()}"
+
+    @render.text
+    def state_right():
+        return f"input.sidebar_right(): {input.sidebar_right()}"
+
+    @render.text
+    def state_closed():
+        return f"input.sidebar_closed(): {input.sidebar_closed()}"
+
+    @render.text
+    def state_always():
+        return f"input.sidebar_always(): {input.sidebar_always()}"
+
+
+app = App(app_ui, server)
+
+```
+

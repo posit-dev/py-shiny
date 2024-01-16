@@ -1,0 +1,135 @@
+# ui.accordion { #shiny.ui.accordion }
+
+`ui.accordion(*args, id=None, open=None, multiple=True, class_=None, width=None, height=None, **kwargs)`
+
+Create a vertically collapsing accordion.
+
+## Parameters
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[AccordionPanel](`shiny.ui._accordion.AccordionPanel`) \| [TagAttrs](`htmltools.TagAttrs`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   [](:class:`~shiny.ui.AccordionPanel`) objects returned from
+    [](:func:`~shiny.ui.accordion_panel`). Or tag attributes that are
+    supplied to the returned [](:class:`~htmltools.Tag`) object.
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   If provided, you can use `input.id()` in your server logic to determine which of
+    the [](:func:`~shiny.ui.accordion_panel`)s are currently active. The
+    value will correspond to the [](:func:`~shiny.ui.accordion_panel`)'s
+    `value` argument.
+
+<code><span class="parameter-name">open</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[bool](`bool`) \| [str](`str`) \| [list](`list`)\[[str](`str`)\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A list of [](:func:`~shiny.ui.accordion_panel`) values to open (i.e.,
+    show) by default. The default value of `None` will open the first
+    [](:func:`~shiny.ui.accordion_panel`). Use a value of `True` to open
+    all (or `False` to open none) of the items. It's only possible to open more than
+    one panel when `multiple=True`.
+
+<code><span class="parameter-name">multiple</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   Whether multiple [](:func:`~shiny.ui.accordion_panel`) can be open at
+    once.
+
+<code><span class="parameter-name">class_</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Additional CSS classes to include on the accordion div.
+
+<code><span class="parameter-name">width</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[CssUnit](`shiny.ui.css._css_unit.CssUnit`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Any valid CSS unit; for example, height="100%".
+
+<code><span class="parameter-name">height</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[CssUnit](`shiny.ui.css._css_unit.CssUnit`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Any valid CSS unit; for example, height="100%".
+
+<code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagAttrValue](`htmltools.TagAttrValue`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
+
+:   Attributes to this tag.
+
+## Returns
+
+| Type                   | Description                 |
+|------------------------|-----------------------------|
+| [Tag](`htmltools.Tag`) | Accordion panel Tag object. |
+
+
+
+
+## References
+
+[Bootstrap Accordion](https://getbootstrap.com/docs/5.3/components/accordion/)
+
+
+
+## See Also
+
+* [](:func:`~shiny.ui.accordion_panel`)
+* [](:func:`~shiny.ui.update_accordion`)
+* [](:func:`~shiny.ui.insert_accordion_panel`)
+* [](:func:`~shiny.ui.remove_accordion_panel`)
+* [](:func:`~shiny.ui.update_accordion_panel`)
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+
+
+def make_items():
+    return [
+        ui.accordion_panel(f"Section {letter}", f"Some narrative for section {letter}")
+        for letter in "ABCDE"
+    ]
+
+
+# # First shown by default
+# ui.accordion(*make_items())
+
+# # Nothing shown by default
+# ui.accordion(*make_items(), open=False)
+# # Everything shown by default
+# ui.accordion(*make_items(), open=True)
+
+# # Show particular sections
+# ui.accordion(*make_items(), open="Section B")
+# ui.accordion(*make_items(), open=["Section A", "Section B"])
+
+
+app_ui = ui.page_fluid(
+    ui.markdown("#### Accordion: (`multiple=False`)"),
+    # Provide an id to create a shiny input binding
+    ui.accordion(*make_items(), id="acc_single", multiple=False),
+    ui.output_text_verbatim("acc_single_val", placeholder=True),
+    ui.tags.br(),
+    ui.markdown("#### Accordion: (`multiple=True`)"),
+    ui.accordion(*make_items(), id="acc_multiple"),
+    ui.output_text_verbatim("acc_multiple_val", placeholder=True),
+)
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.Effect
+    def _():
+        print(input.acc())
+
+    @render.text
+    def acc_multiple_val():
+        return "input.acc_multiple(): " + str(input.acc_multiple())
+
+    @render.text
+    def acc_single_val():
+        return "input.acc_single(): " + str(input.acc_single())
+
+
+app = App(app_ui, server)
+
+```
+

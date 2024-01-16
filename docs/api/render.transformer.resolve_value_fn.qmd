@@ -1,0 +1,38 @@
+# render.transformer.resolve_value_fn { #shiny.render.transformer.resolve_value_fn }
+
+`render.transformer.resolve_value_fn(value_fn)`
+
+Resolve the value function
+
+This function is used to resolve the value function (`value_fn`) to an object of
+type `IT`. If the value function is asynchronous, it will be awaited. If the value
+function is synchronous, it will be called.
+
+While always using an async method within an output transform function is not
+appropriate, this method may be safely used to avoid boilerplate.
+
+Replace this:
+```python
+if is_async_callable(_fn):
+    x = await _fn()
+else:
+    x = cast(ValueFnSync[IT], _fn)()
+```
+
+With this:
+```python
+x = await resolve_value_fn(_fn)
+```
+
+## Parameters
+
+<code><span class="parameter-name">value_fn</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[ValueFn](`shiny.render.transformer._transformer.ValueFn`)\[[IT](`shiny.render.transformer._transformer.IT`)\]</span></code>
+
+:   App-supplied output value function which returns type `IT`. This function can be
+    synchronous or asynchronous.
+
+## Returns
+
+| Type                                             | Description                         |
+|--------------------------------------------------|-------------------------------------|
+| [IT](`shiny.render.transformer._transformer.IT`) | The resolved value from `value_fn`. |

@@ -1,0 +1,115 @@
+# ui.layout_column_wrap { #shiny.ui.layout_column_wrap }
+
+`ui.layout_column_wrap(*args, width=MISSING, fixed_width=False, heights_equal='all', fill=True, fillable=True, height=None, height_mobile=None, gap=None, class_=None, **kwargs)`
+
+A grid-like, column-first layout
+
+Wraps a 1d sequence of UI elements into a 2d grid. The number of columns
+(and rows) in the grid depends on the column width and the size of the display.
+
+## Parameters
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`) \| [TagAttrs](`htmltools.TagAttrs`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   Unnamed arguments should be UI elements (e.g.,
+    [](:func:`~shiny.ui.card`)). Named arguments become attributes on the
+    containing [](:class:`~htmltools.Tag`) element.
+
+<code><span class="parameter-name">width</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[CssUnit](`shiny.ui.css.CssUnit`) \| None \| [MISSING_TYPE](`shiny.types.MISSING_TYPE`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">MISSING</span></code>
+
+:   The desired width of each card. It can be one of the following:
+
+    * A (unit-less) number between 0 and 1, specified as `1/num`, where `num`
+      represents the number of desired columns.
+    * A CSS length unit representing either the minimum (when `fixed_width=False`)
+      or fixed width (`fixed_width=True`).
+    * `None`, which allows power users to set the `grid-template-columns` CSS
+      property manually, either via a `style` attribute or a CSS stylesheet.
+    * If missing, a value of `200px` will be used.
+
+<code><span class="parameter-name">fixed_width</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   When `width` is greater than 1 or is a CSS length unit, e.g., `"200px"`,
+    `fixed_width` indicates whether that `width` value represents the absolute size
+    of each column (`fixed_width=TRUE`) or the minimum size of a column
+    (`fixed_width=FALSE`).
+
+    When `fixed_width=FALSE`, new columns are added to a row when `width` space is
+    available and columns will never exceed the container or viewport size.
+
+    When `fixed_width=TRUE`, all columns will be exactly `width` wide, which may
+    result in columns overflowing the parent container.
+
+<code><span class="parameter-name">heights_equal</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Literal](`typing.Literal`)\['all', 'row'\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'all'</span></code>
+
+:   If `"all"` (the default), every card in every row of the grid will have the same
+    height. If `"row"`, then every card in _each_ row of the grid will have the same
+    height, but heights may vary between rows.
+
+<code><span class="parameter-name">fill</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   Whether or not to allow the layout to grow/shrink to fit a fillable container
+    with an opinionated height (e.g., [](:func:`~shiny.ui.page_fillable`)).
+
+<code><span class="parameter-name">fillable</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   Whether or not each element is wrapped in a fillable container.
+
+<code><span class="parameter-name">height</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[CssUnit](`shiny.ui.css.CssUnit`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Any valid CSS unit to use for the height.
+
+<code><span class="parameter-name">height_mobile</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[CssUnit](`shiny.ui.css.CssUnit`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Any valid CSS unit to use for the height when on mobile devices (or narrow
+    windows).
+
+<code><span class="parameter-name">gap</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[CssUnit](`shiny.ui.css.CssUnit`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Any valid CSS unit to use for the gap between columns.
+
+<code><span class="parameter-name">class_</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A CSS class to apply to the containing element.
+
+<code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagAttrValue](`htmltools.TagAttrValue`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
+
+:   Additional attributes to apply to the containing element.
+
+## Returns
+
+| Type                   | Description                        |
+|------------------------|------------------------------------|
+| [Tag](`htmltools.Tag`) | A [](:class:`~htmltools.Tag`) element. |
+
+## See Also
+
+* [](:func:`~shiny.ui.layout_columns`) for laying out elements into a responsive
+  12-column grid.
+
+## Examples
+
+
+```{shinylive-python}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+## file: app.py
+from shiny import App, ui
+
+y = ui.card("A simple card")
+
+app_ui = ui.page_fluid(
+    # Always has 2 columns (on non-mobile)
+    ui.layout_column_wrap(y, y, y, width=1 / 2),
+    ui.hr(),
+    # Has three columns when viewport is wider than 750px
+    ui.layout_column_wrap(y, y, y, width="250px"),
+)
+
+
+app = App(app_ui, server=None)
+
+```
+

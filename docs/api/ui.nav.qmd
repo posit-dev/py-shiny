@@ -1,0 +1,5 @@
+# ui.nav { #shiny.ui.nav }
+
+`ui.nav(title, *args, value=None, icon=None)`
+
+Deprecated. Please use `nav_panel()` instead of `nav()`.

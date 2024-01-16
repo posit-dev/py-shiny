@@ -1,0 +1,50 @@
+# ui.update_switch { #shiny.ui.update_switch }
+
+`ui.update_switch(id, *, label=None, value=None, session=None)`
+
+Change the value of a switch input on the client.
+
+## Parameters
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[str](`str`)</span></code>
+
+:   An input id.
+
+<code><span class="parameter-name">label</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   An input label.
+
+<code><span class="parameter-name">value</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[bool](`bool`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A new value.
+
+<code><span class="parameter-name">session</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Session](`shiny.session.Session`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A [](:class:`~shiny.Session`) instance. If not provided, it is inferred via
+    [](:func:`~shiny.session.get_current_session`).
+
+## Note
+
+
+The input updater functions send a message to the client, telling it to change the
+settings of an input object. The messages are collected and sent after all the
+observers (including outputs) have finished running.
+
+The syntax of these functions is similar to the functions that created the inputs in
+the first place. For example, [](:func:`~shiny.ui.input_numeric`) and
+[](:func:`~shiny.ui.update_numeric`) take a similar set of arguments.
+
+Any arguments with ``None`` values will be ignored; they will not result in any
+changes to the input object on the client.
+
+For [](:func:`~update_radio_buttons`), [](:func:`~update_checkbox_group`), and
+[](:func:`~update_select`), the set of choices can be cleared by using ``choices=[]``.
+Similarly, for these inputs, the selected item can be cleared by using
+`selected=[]`.
+
+
+
+
+## See Also
+
+[](:func:`~shiny.ui.input_switch`)

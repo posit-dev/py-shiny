@@ -1,0 +1,5 @@
+# Outputs { #shiny.Outputs }
+
+`Outputs(self, session, ns, effects, suspend_when_hidden)`
+
+A class representing Shiny output definitions.

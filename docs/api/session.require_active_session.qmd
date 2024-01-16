@@ -1,0 +1,34 @@
+# session.require_active_session { #shiny.session.require_active_session }
+
+`session.require_active_session(session)`
+
+Raise an exception if no Shiny session is currently active.
+
+## Parameters
+
+<code><span class="parameter-name">session</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Session](`shiny.session._session.Session`)\]</span></code>
+
+:   A [](:class:`~shiny.Session`) instance. If not provided, the session is inferred via
+    [](:func:`~shiny.session.get_current_session`).
+
+## Returns
+
+| Type                                        | Description   |
+|---------------------------------------------|---------------|
+| [Session](`shiny.session._session.Session`) | The session.  |
+
+## Note
+
+Shiny apps should not need to call this function directly. Instead, it is intended to
+be used by Shiny developers who wish to create new functions that should only be
+called from within an active Shiny session.
+
+## Raises
+
+| Type                       | Description               |
+|----------------------------|---------------------------|
+| [ValueError](`ValueError`) | If session is not active. |
+
+## See Also
+
+[](:func:`~get_current_session`)

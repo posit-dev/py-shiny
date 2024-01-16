@@ -1,0 +1,106 @@
+# ui.navset_bar { #shiny.ui.navset_bar }
+
+`ui.navset_bar(*args, title, id=None, selected=None, sidebar=None, fillable=True, gap=None, padding=None, position='static-top', header=None, footer=None, bg=None, inverse=False, underline=True, collapsible=True, fluid=True)`
+
+Render nav items as a navbar.
+
+## Parameters
+
+<code><span class="parameter-name">*args</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[NavSetArg](`shiny.types.NavSetArg`) \| [MetadataNode](`htmltools.MetadataNode`) \| [Sequence](`typing.Sequence`)\[[MetadataNode](`htmltools.MetadataNode`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">()</span></code>
+
+:   A collection of nav items (e.g., [](:func:`shiny.ui.nav_panel`)).
+
+<code><span class="parameter-name">title</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span></code>
+
+:   Title to display in the navbar.
+
+<code><span class="parameter-name">id</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   If provided, will create an input value that holds the currently selected nav
+    item.
+
+<code><span class="parameter-name">selected</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Choose a particular nav item to select by default value (should match it's
+    ``value``).
+
+<code><span class="parameter-name">sidebar</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[Sidebar](`shiny.ui._sidebar.Sidebar`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A [](:class:`~shiny.ui.Sidebar`) component to display on every [](:func:`~shiny.ui.nav_panel`) page.
+
+<code><span class="parameter-name">fillable</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`) \| [list](`list`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   Whether or not to allow fill items to grow/shrink to fit the browser window. If
+    `True`, all `nav()` pages are fillable. A character vector, matching the value
+    of `nav()`s to be filled, may also be provided. Note that, if a `sidebar` is
+    provided, `fillable` makes the main content portion fillable.
+
+<code><span class="parameter-name">gap</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[CssUnit](`shiny.ui.css.CssUnit`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   A CSS length unit defining the gap (i.e., spacing) between elements provided to
+    `*args`.
+
+<code><span class="parameter-name">padding</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[CssUnit](`shiny.ui.css.CssUnit`) \| [list](`list`)\[[CssUnit](`shiny.ui.css.CssUnit`)\]\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Padding to use for the body. This can be a numeric vector (which will be
+    interpreted as pixels) or a character vector with valid CSS lengths. The length
+    can be between one and four. If one, then that value will be used for all four
+    sides. If two, then the first value will be used for the top and bottom, while
+    the second value will be used for left and right. If three, then the first will
+    be used for top, the second will be left and right, and the third will be
+    bottom. If four, then the values will be interpreted as top, right, bottom, and
+    left respectively.
+
+<code><span class="parameter-name">position</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Literal](`typing.Literal`)\['static-top', 'fixed-top', 'fixed-bottom', 'sticky-top'\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">'static-top'</span></code>
+
+:   Determines whether the navbar should be displayed at the top of the page with
+    normal scrolling behavior ("static-top"), pinned at the top ("fixed-top"), or
+    pinned at the bottom ("fixed-bottom"). Note that using "fixed-top" or
+    "fixed-bottom" will cause the navbar to overlay your body content, unless you
+    add padding (e.g., ``tags.style("body {padding-top: 70px;}")``).
+
+<code><span class="parameter-name">header</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   UI to display above the selected content.
+
+<code><span class="parameter-name">footer</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   UI to display below the selected content.
+
+<code><span class="parameter-name">bg</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[Optional](`typing.Optional`)\[[str](`str`)\]</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
+
+:   Background color of the navbar (a CSS color).
+
+<code><span class="parameter-name">inverse</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   Either ``True`` for a light text color or ``False`` for a dark text color.
+
+<code><span class="parameter-name">collapsible</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   ``True`` to automatically collapse the navigation elements into an expandable menu on mobile devices or narrow window widths.
+
+<code><span class="parameter-name">fluid</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">True</span></code>
+
+:   ``True`` to use fluid layout; ``False`` to use fixed layout.
+
+## See Also
+
+* [](:func:`~shiny.ui.page_navbar`)
+* [](:func:`~shiny.ui.nav_panel`)
+* [](:func:`~shiny.ui.nav_menu`)
+* [](:func:`~shiny.ui.nav_control`)
+* [](:func:`~shiny.ui.nav_spacer`)
+* [](:func:`~shiny.ui.navset_tab`)
+* [](:func:`~shiny.ui.navset_pill`)
+* [](:func:`~shiny.ui.navset_underline`)
+* [](:func:`~shiny.ui.navset_card_tab`)
+* [](:func:`~shiny.ui.navset_card_pill`)
+* [](:func:`~shiny.ui.navset_card_underline`)
+* [](:func:`~shiny.ui.navset_pill_list`)
+* [](:func:`~shiny.ui.navset_hidden`)
+
+
+
+## Example
+
+See [](:func:`~shiny.ui.nav_panel`).
