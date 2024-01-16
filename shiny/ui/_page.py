@@ -11,7 +11,7 @@ __all__ = (
     "page_output",
 )
 
-from typing import Callable, Literal, Optional, Sequence, cast
+from typing import Any, Callable, Literal, Optional, Sequence, cast
 
 from htmltools import (
     MetadataNode,
@@ -29,6 +29,7 @@ from htmltools import (
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
+from ._bootstrap import panel_title
 from ._html_deps_external import bootstrap_deps
 from ._html_deps_py_shiny import page_output_dependency
 from ._html_deps_shinyverse import components_dependency
@@ -513,11 +514,17 @@ def page_auto(
                     fillable = False
 
                 if fillable:
-                    page_fn = page_fillable  # pyright: ignore[reportGeneralTypeIssues]
+                    page_fn = (
+                        page_auto_fillable  # pyright: ignore[reportGeneralTypeIssues]
+                    )
                 elif full_width:
-                    page_fn = page_fluid  # pyright: ignore[reportGeneralTypeIssues]
+                    page_fn = (
+                        page_auto_fluid  # pyright: ignore[reportGeneralTypeIssues]
+                    )
                 else:
-                    page_fn = page_fixed  # pyright: ignore[reportGeneralTypeIssues]
+                    page_fn = (
+                        page_auto_fixed  # pyright: ignore[reportGeneralTypeIssues]
+                    )
 
             elif nSidebars == 1:
                 if not isinstance(fillable, MISSING_TYPE):
@@ -558,6 +565,31 @@ def page_auto(
     # If we got here, _page_fn is not None, but the type checker needs a little help.
     page_fn = cast(Callable[..., Tag], page_fn)
     return page_fn(*args, **kwargs)
+
+
+# The title arg for these pages only adds a window title, not a page title
+# For consistency, in a page_auto() (i.e., express) context, we upgrade title
+# to be a panel_title()
+def page_auto_fillable(
+    *args: TagChild | TagAttrs, title: str | None = None, **kwargs: Any
+) -> Tag:
+    return page_fillable(None if title is None else panel_title(title), *args, **kwargs)
+
+
+def page_auto_fluid(
+    *args: TagChild | TagAttrs,
+    title: str | None = None,
+    **kwargs: str,
+) -> Tag:
+    return page_fluid(None if title is None else panel_title(title), *args, **kwargs)
+
+
+def page_auto_fixed(
+    *args: TagChild | TagAttrs,
+    title: str | None = None,
+    **kwargs: str,
+) -> Tag:
+    return page_fixed(None if title is None else panel_title(title), *args, **kwargs)
 
 
 def page_output(id: str) -> Tag:
