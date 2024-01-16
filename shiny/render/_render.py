@@ -269,17 +269,14 @@ class plot(Renderer[object]):
     ~shiny.ui.output_plot ~shiny.render.image
     """
 
-    def default_ui(
-        self,
-        id: str,
-        *,
-        width: str | float | int | MISSING_TYPE = MISSING,
-        height: str | float | int | MISSING_TYPE = MISSING,
-        **kwargs: object,
-    ) -> Tag:
-        # Only set the arg if it is available. (Prevents duplicating default values)
-        set_kwargs_value(kwargs, "width", width, self.width)
-        set_kwargs_value(kwargs, "height", height, self.height)
+    def default_ui(self, id: str) -> Tag:
+        kwargs: dict[str, object] = {}
+        # Only set the arg if it is available
+        if not isinstance(self.width, MISSING_TYPE):
+            kwargs["width"] = self.width
+        if not isinstance(self.height, MISSING_TYPE):
+            kwargs["height"] = self.height
+
         return _ui.output_plot(
             id,
             inline=self.inline,
@@ -288,10 +285,9 @@ class plot(Renderer[object]):
             hover=self.hover,
             brush=self.brush,
             fill=self.fill,
-            # (possibly) contains `width` and `height` keys!
             **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
         )
-        # TODO: Deal with kwargs and width/height
+        # TODO: Deal with output width/height separately from render width/height?
 
     def __init__(
         self,
@@ -441,6 +437,14 @@ class image(Renderer[ImgData]):
     ----------
     delete_file
         If ``True``, the image file will be deleted after rendering.
+    width
+        (Express only) The CSS width, e.g. '400px', or '100%'. Note that this only
+        affects the output HTML element on the web page, not the actual image data sent
+        to the browser.
+    height
+        (Express only) The CSS height, e.g. '100%' or '600px'. Note that this only
+        affects the output HTML element on the web page, not the actual image data sent
+        to the browser.
     inline
         (Express only) If ``True``, the result is displayed inline.
     click
@@ -492,14 +496,14 @@ class image(Renderer[ImgData]):
 
     See Also
     --------
-    ~shiny.ui.output_image
-    ~shiny.types.ImgData
-    ~shiny.render.plot
+    ~shiny.ui.output_image ~shiny.types.ImgData ~shiny.render.plot
     """
 
     def default_ui(self, id: str):
         return _ui.output_image(
             id,
+            width=self.width,
+            height=self.height,
             inline=self.inline,
             click=self.click,
             dblclick=self.dblclick,
@@ -507,13 +511,15 @@ class image(Renderer[ImgData]):
             brush=self.brush,
             fill=self.fill,
         )
-        # TODO: Deal with width/height
+        # TODO: Make width/height handling consistent with render_plot
 
     def __init__(
         self,
         _fn: Optional[ValueFn[ImgData]] = None,
         *,
         delete_file: bool = False,
+        width: str | float | int = "100%",
+        height: str | float | int = "400px",
         inline: bool = False,
         click: bool | ClickOpts = False,
         dblclick: bool | DblClickOpts = False,
@@ -524,6 +530,8 @@ class image(Renderer[ImgData]):
         super().__init__(_fn)
 
         self.delete_file = delete_file
+        self.width = width
+        self.height = height
         self.inline = inline
         self.click = click
         self.dblclick = dblclick
