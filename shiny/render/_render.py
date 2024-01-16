@@ -39,11 +39,7 @@ from ._try_render_plot import (
     try_render_plotnine,
 )
 from .renderer import Jsonifiable, Renderer, ValueFn
-from .renderer._utils import (
-    imgdata_to_jsonifiable,
-    rendered_deps_to_jsonifiable,
-    set_kwargs_value,
-)
+from .renderer._utils import imgdata_to_jsonifiable, rendered_deps_to_jsonifiable
 
 __all__ = (
     "text",
@@ -91,7 +87,7 @@ class text(Renderer[str]):
     ~shiny.ui.output_text
     """
 
-    def default_ui(self, id: str) -> Tag:
+    def auto_output_ui(self, id: str) -> Tag:
         return _ui.output_text(
             id,
             inline=self.inline,
@@ -152,7 +148,7 @@ class code(Renderer[str]):
     ~shiny.ui.output_code
     """
 
-    def default_ui(self, id: str) -> Tag:
+    def auto_output_ui(self, id: str) -> Tag:
         return _ui.output_code(id, placeholder=self.placeholder)
 
     def __init__(
@@ -269,7 +265,7 @@ class plot(Renderer[object]):
     ~shiny.ui.output_plot ~shiny.render.image
     """
 
-    def default_ui(self, id: str) -> Tag:
+    def auto_output_ui(self, id: str) -> Tag:
         kwargs: dict[str, object] = {}
         # Only set the arg if it is available
         if not isinstance(self.width, MISSING_TYPE):
@@ -499,7 +495,7 @@ class image(Renderer[ImgData]):
     ~shiny.ui.output_image ~shiny.types.ImgData ~shiny.render.plot
     """
 
-    def default_ui(self, id: str):
+    def auto_output_ui(self, id: str):
         return _ui.output_image(
             id,
             width=self.width,
@@ -615,7 +611,7 @@ class table(Renderer[TableResult]):
     ~shiny.ui.output_table for the corresponding UI component to this render function.
     """
 
-    def default_ui(self, id: str, **kwargs: TagAttrValue) -> Tag:
+    def auto_output_ui(self, id: str, **kwargs: TagAttrValue) -> Tag:
         return _ui.output_table(id, **kwargs)
         # TODO: Deal with kwargs
 
@@ -710,7 +706,7 @@ class ui(Renderer[TagChild]):
     ~shiny.ui.output_ui
     """
 
-    def default_ui(self, id: str) -> Tag:
+    def auto_output_ui(self, id: str) -> Tag:
         return _ui.output_ui(
             id,
             inline=self.inline,
@@ -782,7 +778,7 @@ class download(Renderer[str]):
     ~shiny.ui.download_button
     """
 
-    def default_ui(self, id: str) -> Tag:
+    def auto_output_ui(self, id: str) -> Tag:
         return _ui.download_button(
             id,
             label=self.label,

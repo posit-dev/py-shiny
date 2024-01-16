@@ -256,7 +256,7 @@ class data_frame(Renderer[DataFrameResult]):
       objects you can return from the rendering function to specify options.
     """
 
-    def default_ui(self, id: str) -> Tag:
+    def auto_output_ui(self, id: str) -> Tag:
         return ui.output_data_frame(id=id)
 
     async def transform(self, value: DataFrameResult) -> Jsonifiable:

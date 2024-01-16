@@ -37,8 +37,8 @@ def output_args(
                 "\nIf you are trying to set default UI arguments for a `Renderer`, use"
                 " `@ui_kwargs` instead."
             )
-        renderer._default_ui_args = args
-        renderer._default_ui_kwargs = kwargs
+        renderer._auto_output_ui_args = args
+        renderer._auto_output_ui_kwargs = kwargs
 
         return renderer
 
@@ -100,7 +100,7 @@ def suspend_display(
     # display yourself"
     if isinstance(fn, RendererBase):
         # By setting the class value, the `self` arg will be auto added.
-        fn.default_ui = null_ui
+        fn.auto_output_ui = null_ui
         return fn
 
     return suspend_display_ctxmgr()(fn)
