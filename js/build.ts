@@ -61,6 +61,11 @@ const opts: Array<BuildOptions> = [
     minify: false,
     sourcemap: false,
   },
+  {
+    entryPoints: { "spin/spin": "spin/spin.scss" },
+    plugins: [sassPlugin({ type: "css", sourceMap: false })],
+    metafile: true,
+  },
 ];
 
 // Run function to avoid top level await
