@@ -48,6 +48,8 @@ def test_template_examples(page: Page, ex_app_path: str) -> None:
     validate_example(page, ex_app_path)
 
 
+@pytest.mark.examples
+@pytest.mark.flaky(reruns=reruns, reruns_delay=1)
 @pytest.mark.parametrize("app_template", ["basic-app", "dashboard", "multi-page"])
 def test_create_core(app_template: str, page: Page):
     with tempfile.TemporaryDirectory("example_apps") as tmpdir:
@@ -55,6 +57,8 @@ def test_create_core(app_template: str, page: Page):
         validate_example(page, f"{tmpdir}/app.py")
 
 
+@pytest.mark.examples
+@pytest.mark.flaky(reruns=reruns, reruns_delay=1)
 @pytest.mark.parametrize("app_template", ["basic-app"])
 def test_create_express(app_template: str, page: Page):
     with tempfile.TemporaryDirectory("example_apps") as tmpdir:
@@ -62,6 +66,8 @@ def test_create_express(app_template: str, page: Page):
         validate_example(page, f"{tmpdir}/app.py")
 
 
+@pytest.mark.examples
+@pytest.mark.flaky(reruns=reruns, reruns_delay=1)
 @pytest.mark.parametrize("app_template", ["js-input", "js-output", "js-react"])
 def test_create_js(app_template: str):
     with tempfile.TemporaryDirectory("example_apps") as tmpdir:
