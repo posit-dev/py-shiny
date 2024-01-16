@@ -225,7 +225,7 @@ class AsyncValueFn(Generic[IT]):
 
     def __init__(self, fn: Callable[[], IT] | Callable[[], Awaitable[IT]]):
         if isinstance(fn, AsyncValueFn):
-            return cast(AsyncValueFn[IT], fn)
+            return
         self._is_async = is_async_callable(fn)
         self._fn = wrap_async(fn)
         self._orig_fn = fn
