@@ -8,7 +8,7 @@ import os
 import secrets
 import threading
 import webbrowser
-from typing import Callable, Optional
+from typing import Callable, Optional, cast
 
 from asgiref.typing import (
     ASGI3Application,
@@ -16,8 +16,9 @@ from asgiref.typing import (
     ASGISendCallable,
     ASGISendEvent,
     HTTPResponseStartEvent,
-    Scope,
 )
+from asgiref.typing import Scope as ASGIScope
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from ._hostenv import get_proxy_url
 
@@ -90,8 +91,12 @@ class InjectAutoreloadMiddleware:
     because we want autoreload to be effective even when displaying an error page.
     """
 
-    def __init__(self, app: ASGI3Application):
-        self.app = app
+    def __init__(self, app: ASGIApp, *args: object, **kwargs: object):
+        if len(args) > 0 or len(kwargs) > 0:
+            raise TypeError(
+                f"InjectAutoreloadMiddleware does not support positional or keyword arguments, received {args}, {kwargs}"
+            )
+        self.app = cast(ASGI3Application, app)
         ws_url = autoreload_url()
         self.script = (
             f"""  <script src="__shared/shiny-autoreload.js" data-ws-url="{html.escape(ws_url)}"></script>
@@ -103,10 +108,18 @@ class InjectAutoreloadMiddleware:
         )
 
     async def __call__(
-        self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable
+        self,
+        scope: Scope,
+        receive: Receive,
+        send: Send,
     ) -> None:
-        if scope["type"] != "http" or scope["path"] != "/" or len(self.script) == 0:
-            return await self.app(scope, receive, send)
+        scope_casted = cast(ASGIScope, scope)
+        receive_casted = cast(ASGIReceiveCallable, receive)
+        send_casted = cast(ASGISendCallable, send)
+        if scope["type"] != "http":
+            return await self.app(scope_casted, receive_casted, send_casted)
+        if scope["path"] != "/" or len(self.script) == 0:
+            return await self.app(scope_casted, receive_casted, send_casted)
 
         def mangle_callback(body: bytes) -> tuple[bytes, bool]:
             if b"</head>" in body:
@@ -114,8 +127,8 @@ class InjectAutoreloadMiddleware:
             else:
                 return (body, False)
 
-        mangler = ResponseMangler(send, mangle_callback)
-        await self.app(scope, receive, mangler.send)
+        mangler = ResponseMangler(send_casted, mangle_callback)
+        await self.app(scope_casted, receive_casted, mangler.send)
 
 
 # PARENT PROCESS ------------------------------------------------------------
