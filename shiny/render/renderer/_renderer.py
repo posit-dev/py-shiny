@@ -135,7 +135,12 @@ class RendererBase(ABC):
         """
         self.output_id = output_name
 
-    def auto_output_ui(self, id: str) -> DefaultUIFnResultOrNone:
+    def auto_output_ui(
+        self,
+        id: str,
+        # *args: object,
+        # **kwargs: object,
+    ) -> DefaultUIFnResultOrNone:
         return None
 
     @abstractmethod
@@ -150,19 +155,26 @@ class RendererBase(ABC):
     # Tagify-like methods
     # ######
     def _repr_html_(self) -> str | None:
-        rendered_ui = self.auto_output_ui(self.__name__)
+        rendered_ui = self._render_auto_output_ui()
         if rendered_ui is None:
             return None
         return TagList(rendered_ui)._repr_html_()
 
     def tagify(self) -> DefaultUIFnResult:
-        rendered_ui = self.auto_output_ui(self.__name__)
+        rendered_ui = self._render_auto_output_ui()
         if rendered_ui is None:
             raise TypeError(
                 "No default UI exists for this type of render function: ",
                 self.__class__.__name__,
             )
         return rendered_ui
+
+    def _render_auto_output_ui(self) -> DefaultUIFnResultOrNone:
+        return self.auto_output_ui(
+            self.__name__,
+            # Pass the `@ui_kwargs(foo="bar")` kwargs through to the default_ui function.
+            **self._auto_output_ui_kwargs,
+        )
 
     # ######
     # Auto registering output
