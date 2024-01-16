@@ -21,17 +21,19 @@ __all__ = (
 import json
 import re
 from datetime import date
-from typing import Literal, Mapping, Optional, overload
+from typing import Literal, Mapping, Optional, cast, overload
 
 from htmltools import TagChild, TagList
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from .._docstring import add_example, doc_format, no_example
-from .._namespaces import resolve_id
+from .._namespaces import ResolvedId, resolve_id
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import drop_none
+from ..input_handler import input_handlers
 from ..session import Session, require_active_session, session_context
+from ..types import ActionButtonValue
 from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
 from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
@@ -102,6 +104,68 @@ def update_action_button(
 
 update_action_link = update_action_button
 update_action_link.__doc__ = update_action_button.__doc__
+
+
+# -----------------------------------------------------------------------------
+# input_task_button.py
+# -----------------------------------------------------------------------------
+@add_example()
+def update_task_button(
+    id: str,
+    *,
+    state: Optional[str] = None,
+    session: Optional[Session] = None,
+) -> None:
+    """
+    Change the state of a task button on the client.
+
+    When a task button is clicked, it automatically changes to the "busy" state. This
+    function can be used to change the state back to "ready" when the task is complete.
+
+    You can also use this function to change the state to "busy" manually, which will
+    prevent the button from automatically resetting to "ready" after a click.
+
+    Parameters
+    ----------
+    id
+        An input id.
+    state
+        The new state of the button. One of "ready", "busy", or a custom state name
+        added via :func:`~shiny.ui.input_task_button`.
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        :func:`~shiny.session.get_current_session`.
+    """
+
+    session = require_active_session(session)
+
+    if state is not None:
+        resolved_id = session.ns(id)
+        if state != "ready":
+            manual_task_reset_buttons.add(resolved_id)
+        else:
+            manual_task_reset_buttons.discard(resolved_id)
+
+    msg = {"state": state}
+    session.send_input_message(id, drop_none(msg))
+
+
+manual_task_reset_buttons: set[ResolvedId] = set()
+
+
+@input_handlers.add("bslib.taskbutton")
+def _(value: dict[str, object], name: str, session: Session) -> ActionButtonValue:
+    if value["autoReset"]:
+
+        @session.on_flush
+        def callback() -> None:
+            # This is input_task_button's auto-reset feature: unless the button has
+            # opted out using set_task_button_manual_reset(), we should reset after a
+            # flush cycle where a bslib.taskbutton value is seen.
+            if ResolvedId(name) not in manual_task_reset_buttons:
+                update_task_button(name, state="ready", session=session)
+
+    return ActionButtonValue(cast(int, value["value"]))
 
 
 # -----------------------------------------------------------------------------
