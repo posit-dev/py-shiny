@@ -24,11 +24,27 @@ def output_args(
     **kwargs: object,
 ) -> Callable[[OutputRenderer[OT]], OutputRenderer[OT]]:
     """
-    Deprecated. Sets default UI arguments for a Shiny rendering function.
+    Sets default UI arguments for a Shiny rendering function.
+
+    Each Shiny render function (like :func:`~shiny.render.plot`) can display itself when
+    declared within a Shiny inline-style application. In the case of
+    :func:`~shiny.render.plot`, the :func:`~shiny.ui.output_plot` function is called
+    implicitly to display the plot. Use the `@output_args` decorator to specify
+    arguments to be passed to `output_plot` (or whatever the corresponding UI function
+    is) when the render function displays itself.
+
+    Parameters
+    ----------
+    *args
+        Positional arguments to be passed to the UI function.
+    **kwargs
+        Keyword arguments to be passed to the UI function.
+
+    Returns
+    -------
+    :
+        A decorator that sets the default UI arguments for a Shiny rendering function.
     """
-    warn_deprecated(
-        "`shiny.express.output_args()` is deprecated and will be removed in a future version of shiny."
-    )
 
     def wrapper(renderer: OutputRenderer[OT]) -> OutputRenderer[OT]:
         if not isinstance(renderer, OutputRenderer):
