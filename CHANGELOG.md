@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added `shiny.ui.input_task_button()` for creating buttons that launch longer-running tasks than `shiny.ui.input_action_button()` was designed for. Task buttons give visual feedback that the task is running, and cannot be clicked again until the task is complete. (#907)
+
+* Added `@extended_task` decorator for creating long-running tasks that can be cancelled. (#907)
+
 * Added `@render.download` as a replacement for `@session.download`, which is now deprecated. (#977)
 
 * Added `ui.output_code()`, which is currently an alias for `ui.output_text_verbatim()`. (#997)
