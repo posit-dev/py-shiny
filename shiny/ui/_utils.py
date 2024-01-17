@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import Optional, overload
+from typing import Any, Dict, Optional, Tuple, Union, overload
 
 from htmltools import (
+    HTML,
+    JS,
     HTMLDependency,
     Tag,
     TagChild,
@@ -92,3 +94,35 @@ def css_no_sub(**kwargs: str | float | None) -> Optional[str]:
         v = " ".join(v) if isinstance(v, list) else str(v)
         res += k + ":" + v + ";"
     return None if res == "" else res
+
+
+def extract_js_html(
+    options: Dict[str, Any]
+) -> Tuple[Dict[str, Union[HTML, JS, Dict[str, Any]]], Dict[str, Any]]:
+    """
+    This function extracts JavaScript (JS) and HTML objects from the provided dictionary.
+    This is used to send to send JavaScript options to front-end libraries like selectize.
+
+    Parameters:
+    options (Dict[str, Any]): A dictionary containing various options. The options can be of any type,
+    but the function specifically looks for HTML, JS, and dictionary types.
+
+    Returns:
+    A Tuple of two dictionaries. One contains all of the HTML and JS options, while the
+    other contains all of the other options. The original dictionary structure is preserved
+    for both dictionaries.
+    """
+    js_html_options = {}
+    other_options = {}
+    for key, value in options.items():
+        if isinstance(value, (HTML, JS)):
+            js_html_options[key] = value
+        elif isinstance(value, dict):
+            sub_js_html_options, sub_other_options = extract_js_html(value)
+            if sub_js_html_options:
+                js_html_options[key] = sub_js_html_options
+            if sub_other_options:
+                other_options[key] = sub_other_options
+        else:
+            other_options[key] = value
+    return js_html_options, other_options

@@ -1,25 +1,23 @@
 from shiny import App, Inputs, Outputs, Session, render, ui
 
+states = {
+    "East Coast": {"NY": "New York", "NJ": "New Jersey", "CT": "Connecticut"},
+    "West Coast": {"WA": "Washington", "OR": "Oregon", "CA": "California"},
+    "Midwest": {"MN": "Minnesota", "WI": "Wisconsin", "IA": "Iowa"},
+}
+
 app_ui = ui.page_fluid(
     ui.input_selectize(
         "state",
         "Choose a state:",
-        {
-            "East Coast": {"NY": "New York", "NJ": "New Jersey", "CT": "Connecticut"},
-            "West Coast": {"WA": "Washington", "OR": "Oregon", "CA": "California"},
-            "Midwest": {"MN": "Minnesota", "WI": "Wisconsin", "IA": "Iowa"},
-        },
+        states,
         multiple=True,
     ),
     ui.output_text("value"),
     ui.input_selectize(
         "state",
         "Selectize Options",
-        {
-            "East Coast": {"NY": "New York", "NJ": "New Jersey", "CT": "Connecticut"},
-            "West Coast": {"WA": "Washington", "OR": "Oregon", "CA": "California"},
-            "Midwest": {"MN": "Minnesota", "WI": "Wisconsin", "IA": "Iowa"},
-        },
+        states,
         multiple=True,
         options=(
             {
@@ -30,6 +28,13 @@ app_ui = ui.page_fluid(
                 "create": True,
             }
         ),
+    ),
+    ui.input_selectize(
+        "state",
+        "Selectize plugins",
+        states,
+        multiple=True,
+        options={"plugins": ["clear_button", "remove_button"]},
     ),
 )
 

@@ -15,7 +15,7 @@ from htmltools import HTML, JS, Tag, TagChild, TagList, css, div, tags
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from ._html_deps_external import selectize_deps
-from ._utils import shiny_input_label
+from ._utils import shiny_input_label, extract_js_html
 
 _Choices = Mapping[str, TagChild]
 _OptGrpChoices = Mapping[str, _Choices]
@@ -189,7 +189,7 @@ def input_select(
     if options is None:
         options = {}
 
-    js_keys = [key for key, value in options.items() if isinstance(value, (HTML, JS))]
+    js_opts, opts = extract_js_html(options)
     choices_tags = _render_choices(choices_, selected)
 
     resolved_id = resolve_id(id)
@@ -208,10 +208,10 @@ def input_select(
             (
                 TagList(
                     tags.script(
-                        dumps(options),
+                        dumps(opts),
                         type="application/json",
                         data_for=id,
-                        data_eval=dumps(js_keys),
+                        data_eval=dumps(js_opts),
                     ),
                     selectize_deps(),
                 )
