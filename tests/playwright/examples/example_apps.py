@@ -41,6 +41,7 @@ app_hard_wait: typing.Dict[str, int] = {
 }
 output_transformer_errors = [
     "ShinyDeprecationWarning: `shiny.render.transformer.output_transformer()`",
+    "  super().__init__(",
     "  return OutputRenderer",
     # brownian example app
     "ShinyDeprecationWarning:",

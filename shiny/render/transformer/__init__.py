@@ -9,6 +9,8 @@ from ._transformer import (  # noqa: F401
     ValueFnAsync,  # pyright: ignore[reportUnusedImport]
     TransformFn,  # pyright: ignore[reportUnusedImport]
     OutputTransformer,  # pyright: ignore[reportUnusedImport]
+    OutputRendererSync,  # pyright: ignore[reportUnusedImport]
+    OutputRendererAsync,  # pyright: ignore[reportUnusedImport]
     resolve_value_fn,  # pyright: ignore[reportUnusedImport]
 )
 
