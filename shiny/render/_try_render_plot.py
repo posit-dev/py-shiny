@@ -159,16 +159,27 @@ def try_render_matplotlib(
         )
         fig.set_dpi(ppi_out * pixelratio)
 
-        # Suppress the message `UserWarning: The figure layout has changed to tight`
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                action="ignore",
-                category=UserWarning,
-                message="The figure layout has changed to tight",
+        # Calculating accurate coordinate mappings requires that the layout engine
+        # (if there is one) adjusts the figure's subplot parameters.
+        # e.g. "tight" layout.
+        # When there is no layout engine, "tight" layout is often helpful
+        layout_engine = fig.get_layout_engine()
+        if layout_engine:
+            if not layout_engine.adjust_compatible:
+                # In most cases, this branch will override the constained layout.
+                # which is usually a very deliberate choice by the user
+                fig.set_layout_engine(  # pyright: ignore[reportUnknownMemberType]
+                    layout="tight"
+                )
+                warnings.warn(
+                    f"'{type(layout_engine)}' layout engine is not compatible with shiny. "
+                    "The figure layout has been changed to tight.",
+                    stacklevel=1,
+                )
+        else:
+            fig.set_layout_engine(  # pyright: ignore[reportUnknownMemberType]
+                layout="tight"
             )
-            plt.tight_layout()  # pyright: ignore[reportUnknownMemberType]
-
-        coordmap = get_coordmap(fig)
 
         with io.BytesIO() as buf:
             fig.savefig(  # pyright: ignore[reportUnknownMemberType]
@@ -180,6 +191,10 @@ def try_render_matplotlib(
             buf.seek(0)
             data = base64.b64encode(buf.read())
             data_str = data.decode("utf-8")
+
+        # Calculating accurate coordinate mappings requires the figure to be
+        # drawn/saved first, which runs the layout engine.
+        coordmap = get_coordmap(fig)
 
         res: ImgData = {
             "src": "data:image/png;base64," + data_str,
@@ -343,16 +358,19 @@ def try_render_plotnine(
             verbose=False,
             **kwargs,
         )
-        coordmap = get_coordmap_plotnine(
-            x,
-            res.figure,  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportGeneralTypeIssues]
-        )
         res.figure.savefig(  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
             **res.kwargs  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
         )
         buf.seek(0)
         data = base64.b64encode(buf.read())
         data_str = data.decode("utf-8")
+
+    # Calculating accurate coordinate mappings requires the figure to be
+    # drawn/saved first, which runs the layout engine.
+    coordmap = get_coordmap_plotnine(
+        x,
+        res.figure,  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportGeneralTypeIssues]
+    )
 
     res: ImgData = {
         "src": "data:image/png;base64," + data_str,
