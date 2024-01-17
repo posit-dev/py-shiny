@@ -31,7 +31,7 @@ from typing import (
     overload,
 )
 
-from ..renderer import AsyncValueFn, Jsonifiable, RendererBase
+from ..renderer import Jsonifiable, RendererBase
 from ..renderer._renderer import DefaultUIFn, DefaultUIFnResultOrNone
 
 if TYPE_CHECKING:
@@ -255,13 +255,16 @@ class OutputRenderer(RendererBase, Generic[OT]):
                 " Ex `async def my_transformer(....`"
             )
 
-        # Upgrade value function to be async;
-        # Calling an async function has a ~35ns overhead (barret's machine)
-        # Checking if a function is async has a 180+ns overhead (barret's machine)
-        # -> It is faster to always call an async function than to always check if it is async
-        # Always being async simplifies the execution
-        self._fn = AsyncValueFn(value_fn)
-        self._value_fn_is_async = self._fn.is_async()  # legacy key
+        # # Upgrade value function to be async;
+        # # Calling an async function has a ~35ns overhead (barret's machine)
+        # # Checking if a function is async has a 180+ns overhead (barret's machine)
+        # # -> It is faster to always call an async function than to always check if it is async
+        # # Always being async simplifies the execution
+        # # Not used
+        # self._fn = AsyncValueFn(value_fn)
+
+        self._value_fn = value_fn
+        self._value_fn_is_async = is_async_callable(value_fn)  # legacy key
         self.__name__ = value_fn.__name__
 
         self._transformer = transform_fn
@@ -302,14 +305,11 @@ class OutputRenderer(RendererBase, Generic[OT]):
         `*args` is required to use with `**kwargs` when using
         `typing.ParamSpec`.
         """
-        value_fn = (
-            self._fn.get_async_fn() if self._fn.is_async() else self._fn.get_sync_fn()
-        )
         ret = await self._transformer(
             # TransformerMetadata
             self._meta(),
             # Callable[[], IT] | Callable[[], Awaitable[IT]]
-            value_fn,
+            self._value_fn,
             # P
             *self._params.args,
             **self._params.kwargs,
