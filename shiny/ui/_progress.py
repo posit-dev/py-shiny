@@ -158,6 +158,8 @@ class Progress:
         Note
         ----
         Removes the progress panel. Future calls to set and close will be ignored.
+
+        .. quartodoc-no-examples
         """
         if self._closed:
             warn("Attempting to close progress, but progress already closed.")

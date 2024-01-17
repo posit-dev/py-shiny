@@ -91,6 +91,7 @@ class ShowcaseLayout:
         self.max_height_full_screen = as_css_unit(max_height_full_screen)
 
 
+@add_example()
 def showcase_left_center(
     *,
     width: CssUnit = "30%",
@@ -124,6 +125,7 @@ def showcase_left_center(
     )
 
 
+@add_example()
 def showcase_top_right(
     *,
     width: CssUnit = "40%",
@@ -158,6 +160,7 @@ def showcase_top_right(
     )
 
 
+@add_example()
 def showcase_bottom(
     *,
     width: CssUnit = "100%",

@@ -38,6 +38,7 @@ __all__ = (
 )
 
 
+@add_example()
 class Sidebar:
     """
     A sidebar object

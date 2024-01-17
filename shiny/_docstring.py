@@ -1,10 +1,30 @@
 from __future__ import annotations
 
-import json
 import os
-from typing import Any, Callable, Literal, TypeVar
+import re
+import sys
+from typing import Any, Callable, Optional, TypeVar
 
-ex_dir: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "api-examples")
+
+def find_api_examples_dir(start_dir: str) -> Optional[str]:
+    current_dir = os.path.abspath(start_dir)
+    while True:
+        api_examples_dir = os.path.join(current_dir, "api-examples")
+        if os.path.isdir(api_examples_dir):
+            return api_examples_dir
+        if "setup.cfg" in os.listdir(current_dir) or "pyproject.toml" in os.listdir(
+            current_dir
+        ):
+            break
+        if current_dir == os.path.dirname(current_dir):
+            break  # Reached the root directory
+        current_dir = os.path.dirname(current_dir)
+    return None
+
+
+def ex_dir() -> str:
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "api-examples")
+
 
 FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
@@ -18,15 +38,32 @@ class DocStringWithExample(str):
     ...
 
 
+class ExampleWriterRegistry:
+    def __init__(self):
+        self._writer = None
+
+    def set_writer(self, func: F) -> F:
+        self._writer = func
+        return func
+
+    def write_example(self, app_files: list[str], **kwargs: dict[str, Any]) -> str:
+        if self._writer is None:
+            return self.default_writer(app_files)
+        return self._writer(app_files, **kwargs)
+
+    def default_writer(self, app_files: list[str]) -> str:
+        app_file = app_files[0]
+        with open(app_file) as f:
+            code = f.read()
+
+        return f"```.python\n{code.strip()}\n```\n"
+
+
+example_writer = ExampleWriterRegistry()
+
+
 def add_example(
-    directive: Literal[
-        "shinyapp::",
-        "shinylive-editor::",
-        "code-block:: python",
-        "cell::",
-        "terminal::",
-    ] = "shinylive-editor::",
-    **options: object,
+    app_file: str = "app.py",
 ) -> Callable[[F], F]:
     """
     Add an example to the docstring of a function, method, or class.
@@ -44,9 +81,21 @@ def add_example(
             - ``shinylive-editor``: A live shiny app with editor (statically served via wasm).
             - ``cell``: A executable Python cell.
             - ``terminal``: A minimal Python IDE
+    app_file:
+        The primary app file to use for the example. This allows you to have multiple
+        example files for a single function or to use a different file name than
+        ``app.py``. Support files _cannot_ be named ``app.py`` or start with ``app-``, as these files will never be included in the example.
     **options
         Options for the directive. See docs/source/sphinxext/pyshinyapp.py for details.
     """
+
+    def get_decorated_source_directory(func: F) -> str:
+        if hasattr(func, "__module__"):
+            path = os.path.abspath(str(sys.modules[func.__module__].__file__))
+        else:
+            path = os.path.abspath(func.__code__.co_filename)
+
+        return os.path.dirname(path)
 
     def _(func: F) -> F:
         # To avoid a performance hit on `import shiny`, we only add examples to the
@@ -56,60 +105,55 @@ def add_example(
                 func.__doc__ = DocStringWithExample(func.__doc__)
             return func
 
+        func_dir = get_decorated_source_directory(func)
+        ex_dir = find_api_examples_dir(func_dir)
+
+        if ex_dir is None:
+            raise ValueError(
+                f"No example directory found for {func.__name__} in {func_dir} or its parent directories."
+            )
+
         fn_name = func.__name__
         example_dir = os.path.join(ex_dir, fn_name)
-        example_file = os.path.join(example_dir, "app.py")
+        example_file = os.path.join(example_dir, app_file)
         if not os.path.exists(example_file):
             raise ValueError(f"No example for {fn_name}")
 
         other_files: list[str] = []
         for f in os.listdir(example_dir):
             abs_f = os.path.join(example_dir, f)
-            if os.path.isfile(abs_f) and f != "app.py":
+            is_support_file = (
+                os.path.isfile(abs_f)
+                and f != app_file
+                and f != "app.py"
+                and not f.startswith("app-")
+                and not f.startswith("__")
+            )
+            if is_support_file:
                 other_files.append(abs_f)
-
-        if "files" not in options:
-            options["files"] = json.dumps(other_files)
 
         if func.__doc__ is None:
             func.__doc__ = ""
 
+        example = example_writer.write_example([example_file, *other_files])
+        example_lines = example.split("\n")
+
         # How many leading spaces does the docstring start with?
         doc = func.__doc__.replace("\n", "")
         indent = " " * (len(doc) - len(doc.lstrip()))
+        nl_indent = "\n" + indent
 
-        with open(example_file) as f:
-            example = indent.join([" " * 4 + x for x in f.readlines()])
+        # if func.__name__ == "page_sidebar":
+        #     import pdb
 
-        # When rendering a standalone app, put the code above it (maybe this should be
-        # handled by the directive itself?)
-        example_prefix: list[str] = []
-        if directive == "shinyapp::":
-            example_prefix.extend(
-                [
-                    ".. code-block:: python",
-                    "",
-                    example,
-                    "",
-                ]
-            )
+        #     pdb.set_trace()
 
-        example_section = ("\n" + indent).join(
-            [
-                "",
-                "",
-                "Example",
-                "-------",
-                "",
-                *example_prefix,
-                f".. {directive}",
-                *[f"    :{k}: {v}" for k, v in options.items()],
-                "",
-                example,
-            ]
-        )
+        if not re.search(r"(^|\n)Examples\n\s*-{3,}", func.__doc__):
+            func.__doc__ += nl_indent + "Examples"
+            func.__doc__ += nl_indent + "--------"
 
-        func.__doc__ += example_section
+        func.__doc__ += nl_indent * 2
+        func.__doc__ += nl_indent.join(example_lines)
         func.__doc__ = DocStringWithExample(func.__doc__)
         return func
 
@@ -127,3 +171,38 @@ def doc_format(**kwargs: str) -> Callable[[F], F]:
         return func
 
     return _
+
+
+if os.environ.get("IN_QUARTODOC") == "true":
+    try:
+        import shinylive
+
+        shinylive.__version__
+    except ModuleNotFoundError:
+        import warnings
+
+        warnings.warn("shinylive not installed, cannot add shinylive examples.")
+        pass
+
+    SHINYLIVE_CODE_TEMPLATE = """
+```{{shinylive-python}}
+#| standalone: true
+#| components: [editor, viewer]
+#| layout: vertical
+#| viewerHeight: 400
+
+{0}
+```
+"""
+
+    @example_writer.set_writer
+    def write_shinylive_example(app_files: list[str]) -> str:
+        import shinylive
+
+        app_file = app_files.pop(0)
+        bundle = shinylive._url.create_shinylive_bundle_file(
+            app_file, app_files, language="py"
+        )
+        code = shinylive._url.create_shinylive_chunk_contents(bundle)
+
+        return SHINYLIVE_CODE_TEMPLATE.format(code.strip())

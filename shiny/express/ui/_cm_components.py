@@ -7,6 +7,7 @@ from typing import Literal, Optional
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagList
 
 from ... import ui
+from ..._docstring import add_example
 from ...types import MISSING, MISSING_TYPE
 from ...ui._accordion import AccordionPanel
 from ...ui._card import CardItem
@@ -127,6 +128,7 @@ def sidebar(
 
 
 # TODO: Figure out sidebar arg for ui.layout_sidebar
+@add_example(app_file="app-express.py")
 def layout_sidebar(
     *,
     fillable: bool = True,

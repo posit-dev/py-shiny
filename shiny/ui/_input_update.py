@@ -951,7 +951,7 @@ def update_tooltip(
 # -----------------------------------------------------------------------------
 
 
-# @add_example()
+@add_example()
 def update_popover(
     id: str,
     *args: TagChild,

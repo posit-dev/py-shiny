@@ -20,23 +20,6 @@ from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
 
 SHINY_PATH = Path(files("shiny").joinpath())
 
-SHINYLIVE_CODE_TEMPLATE = """
-```{{shinylive-python}}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400{0}
-```
-"""
-
-DOCSTRING_TEMPLATE = """\
-{rendered}
-
-{header} Examples
-
-{examples}
-"""
-
 
 # This is the same as the FileContentJson type in TypeScript.
 class FileContentJson(TypedDict):
@@ -68,37 +51,7 @@ class Renderer(MdRenderer):
 
         converted = convert_rst_link_to_md(rendered)
 
-        if isinstance(el, dc.Alias) and "experimental" in el.target_path:
-            p_example_dir = SHINY_PATH / "experimental" / "api-examples" / el.name
-        else:
-            p_example_dir = SHINY_PATH / "api-examples" / el.name
-
-        if (p_example_dir / "app.py").exists():
-            example = ""
-
-            files = list(p_example_dir.glob("**/*"))
-
-            # Sort, and then move app.py to first position.
-            files.sort()
-            app_py_idx = files.index(p_example_dir / "app.py")
-            files = [files[app_py_idx]] + files[:app_py_idx] + files[app_py_idx + 1 :]
-
-            for f in files:
-                if f.is_dir():
-                    continue
-                file_info = read_file(f, p_example_dir)
-                if file_info["type"] == "text":
-                    example += f"\n## file: {file_info['name']}\n{file_info['content']}"
-                else:
-                    example += f"\n## file: {file_info['name']}\n## type: binary\n{file_info['content']}"
-
-            example = SHINYLIVE_CODE_TEMPLATE.format(example)
-
-            return DOCSTRING_TEMPLATE.format(
-                rendered=converted,
-                examples=example,
-                header="#" * (self.crnt_header_level + 1),
-            )
+        check_if_has_auto_example(el, converted)
 
         return converted
 
@@ -282,3 +235,29 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
         "content": file_content,
         "type": type,
     }
+
+
+def check_if_has_auto_example(el, converted):
+    if re.search(r"(^|\n)(#{2,6} Examples\n\n|Examples\n------)", converted):
+        return
+
+    if "\n.. quartodoc-no-examples" in converted:
+        return
+
+    if isinstance(el, dc.Alias) and "experimental" in el.target_path:
+        p_example_dir = SHINY_PATH / "experimental" / "api-examples" / el.name
+        return
+    elif isinstance(el, dc.Alias) and "express" in el.target_path:
+        p_example_dir = SHINY_PATH / "express" / "api-examples" / el.name
+    elif isinstance(el, dc.Alias) and el.target_path.startswith("htmltools"):
+        return
+    else:
+        p_example_dir = SHINY_PATH / "api-examples" / el.name
+
+    if (p_example_dir / "app.py").exists():
+        # import pdb
+
+        # pdb.set_trace()
+        raise RuntimeError(
+            f"An example exists for {p_example_dir} but is not included in the documentation in {el.target_path}. Decorate `{el.name}()` with `@add_example()` to add the example."
+        )

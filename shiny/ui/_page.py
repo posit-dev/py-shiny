@@ -26,7 +26,7 @@ from htmltools import (
     tags,
 )
 
-from .._docstring import add_example
+from .._docstring import add_example, doc_format
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._html_deps_external import bootstrap_deps
@@ -40,6 +40,8 @@ from .css import CssUnit, as_css_padding, as_css_unit
 from .fill._fill import as_fillable_container
 
 
+@add_example()
+@add_example(app_file="app-express.py")
 def page_sidebar(
     sidebar: Sidebar,
     *args: TagChild | TagAttrs,

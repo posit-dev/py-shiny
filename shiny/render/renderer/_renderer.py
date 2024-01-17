@@ -17,6 +17,7 @@ from typing import (
 
 from htmltools import MetadataNode, Tag, TagList
 
+from ..._docstring import add_example
 from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
 
@@ -279,6 +280,7 @@ class AsyncValueFn(Generic[IT]):
         return sync_fn
 
 
+@add_example()
 class Renderer(RendererBase, Generic[IT]):
     """
     Renderer cls docs here
