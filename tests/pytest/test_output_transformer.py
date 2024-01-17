@@ -218,8 +218,9 @@ async def test_renderer_handler_or_transform_fn_can_be_async():
         _meta: TransformerMetadata,
         _fn: ValueFn[str],
     ) -> str:
-        # Actually sleep to test that the handler is truly async
-        await asyncio.sleep(0)
+        if is_async_callable(_fn):
+            # Conditionally sleep to test that the handler is truly async
+            await asyncio.sleep(0)
         ret = await resolve_value_fn(_fn)
         return ret
 
@@ -253,10 +254,10 @@ async def test_renderer_handler_or_transform_fn_can_be_async():
         output_name="renderer_sync",
     )
     # All renderers are async in execution.
-    assert is_async_callable(renderer_sync)
+    assert not is_async_callable(renderer_sync)
 
     with session_context(test_session):
-        val = await renderer_sync()
+        val = renderer_sync()
         assert val == test_val
 
     # ## Test Async: √ =============================================
