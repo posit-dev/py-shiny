@@ -26,7 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * has added a `-d`/`--dir` flag for saving to a specific output directory
   * will raise an error if if will overwrite existing files
   * prompt users to install `requirements.txt`
+
 * Fixed `js-react` template build error. (#965)
+
+* Fixed #1007: Plot interaction with plotnine provided incorrect values. (#999)
 
 ### Developer features
 
