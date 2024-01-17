@@ -103,7 +103,7 @@ class text(Renderer[str]):
 
     def __init__(
         self,
-        _fn: Optional[ValueFn[str]] = None,
+        _fn: Optional[ValueFn[str | None]] = None,
         *,
         inline: bool = False,
     ) -> None:
@@ -163,7 +163,7 @@ class code(Renderer[str]):
 
     def __init__(
         self,
-        _fn: Optional[ValueFn[str]] = None,
+        _fn: Optional[ValueFn[str | None]] = None,
         *,
         placeholder: bool = True,
     ) -> None:
