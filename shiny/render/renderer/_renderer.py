@@ -82,9 +82,12 @@ DefaultUIFnResult = Union[TagList, Tag, MetadataNode, str]
 DefaultUIFnResultOrNone = Union[DefaultUIFnResult, None]
 DefaultUIFn = Callable[[str], DefaultUIFnResultOrNone]
 
+# Requiring `None` type throughout the value functions as `return` returns `None` type.
+# This is typically paired with `req(False)` to exit quickly.
+# If package authors want to NOT allow `None` type, they can capture it in a custom render method with a runtime error. (Or make a new RendererThatCantBeNone class)
 ValueFn = Union[
-    Callable[[], IT],
-    Callable[[], Awaitable[IT]],
+    Callable[[], Union[IT, None]],
+    Callable[[], Awaitable[Union[IT, None]]],
 ]
 """
 App-supplied output value function which returns type `IT`. This function can be
@@ -223,7 +226,10 @@ class AsyncValueFn(Generic[IT]):
     Type definition: `Callable[[], Awaitable[IT]]`
     """
 
-    def __init__(self, fn: Callable[[], IT] | Callable[[], Awaitable[IT]]):
+    def __init__(
+        self,
+        fn: Callable[[], IT | None] | Callable[[], Awaitable[IT | None]],
+    ):
         if isinstance(fn, AsyncValueFn):
             raise TypeError(
                 "Must not call `AsyncValueFn.__init__` with an object of class `AsyncValueFn`"
@@ -232,7 +238,7 @@ class AsyncValueFn(Generic[IT]):
         self._fn = wrap_async(fn)
         self._orig_fn = fn
 
-    async def __call__(self) -> IT:
+    async def __call__(self) -> IT | None:
         """
         Call the asynchronous function.
         """
@@ -249,7 +255,7 @@ class AsyncValueFn(Generic[IT]):
         """
         return self._is_async
 
-    def get_async_fn(self) -> Callable[[], Awaitable[IT]]:
+    def get_async_fn(self) -> Callable[[], Awaitable[IT | None]]:
         """
         Return the async value function.
 
@@ -260,7 +266,7 @@ class AsyncValueFn(Generic[IT]):
         """
         return self._fn
 
-    def get_sync_fn(self) -> Callable[[], IT]:
+    def get_sync_fn(self) -> Callable[[], IT | None]:
         """
         Retrieve the original, synchronous value function function.
 
@@ -286,14 +292,14 @@ class Renderer(RendererBase, Generic[IT]):
     TODO-barret-docs
     """
 
-    fn: AsyncValueFn[IT | None]
+    fn: AsyncValueFn[IT]
     """
     App-supplied output value function which returns type `IT`. This function is always
     asyncronous as the original app-supplied function possibly wrapped to execute
     asynchonously.
     """
 
-    def __call__(self, _fn: ValueFn[IT | None]) -> Self:
+    def __call__(self, _fn: ValueFn[IT]) -> Self:
         """
         Renderer __call__ docs here; Sets app's value function
 
@@ -308,7 +314,7 @@ class Renderer(RendererBase, Generic[IT]):
         self.__name__: str = _fn.__name__
 
         # Set value function with extra meta information
-        self.fn: AsyncValueFn[IT | None] = AsyncValueFn(_fn)
+        self.fn: AsyncValueFn[IT] = AsyncValueFn(_fn)
 
         # Allow for App authors to not require `@output`
         self._auto_register()
@@ -317,7 +323,7 @@ class Renderer(RendererBase, Generic[IT]):
 
     def __init__(
         self,
-        _fn: Optional[ValueFn[IT | None]] = None,
+        _fn: Optional[ValueFn[IT]] = None,
     ):
         # Do not display docs here. If docs are present, it could highjack the docs of
         # the subclass's `__init__` method.
