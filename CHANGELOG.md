@@ -34,10 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Developer features
 
 * Output renderers should now be created with the `shiny.render.renderer.Renderer` class. This class should contain either a `.transform(self, value)` method (common) or a `.render(self)` (rare). These two methods should return something can be converted to JSON. In addition, `.default_ui(self, id)` should be implemented by returning `htmltools.Tag`-like content for use within Shiny Express. To make your own output renderer, please inherit from the `Renderer[IT]` class where `IT` is the type (excluding `None`) required to be returned from the App author. (#964)
+  * Legacy renderers that will be removed in the near future:
+    * `shiny.render.RenderFunction`
+    * `shiny.render.RenderFunctionAsync`
+    * `shiny.render.transformer.OutputRenderer`
+    * `shiny.render.transformer.OutputRendererSync`
+    * `shiny.render.transformer.OutputRendererAsync`
 
-* `shiny.render.RenderFunction` and `shiny.render.RenderFunctionAsync` have been removed. They were deprecated in v0.6.0. Instead, please use `shiny.render.renderer.Renderer`. (#964)
-
-* `shiny.render.OutputRendererSync` and `shiny.render.OutputRendererAsync` helper classes have been removed in favor of an updated `shiny.render.OutputRenderer` class. Now, the app's output value function will be transformed into an asynchronous function for simplified, consistent execution behavior. If redesigning your code, instead please create a new renderer that inherits from `shiny.render.renderer.Renderer`. `shiny.render.*` will be removed in the near future. (#964)
 
 ### Other changes
 

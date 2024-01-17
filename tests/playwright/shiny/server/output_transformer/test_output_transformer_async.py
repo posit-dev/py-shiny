@@ -3,7 +3,7 @@ from controls import OutputTextVerbatim
 from playwright.sync_api import Page
 
 
-def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:
+def test_output_transformer(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
     OutputTextVerbatim(page, "t1").expect_value("t1; no call; sync")
