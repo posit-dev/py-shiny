@@ -32,7 +32,7 @@ from typing import (
     overload,
 )
 
-from ..renderer import AsyncValueFn, Jsonifiable, RendererBase
+from ..renderer import Jsonifiable, RendererBase
 from ..renderer._renderer import DefaultUIFn, DefaultUIFnResultOrNone
 
 if TYPE_CHECKING:
@@ -268,22 +268,25 @@ class OutputRenderer(RendererBase, ABC, Generic[OT]):
                 " Ex `async def my_transformer(....`"
             )
 
-        # Upgrade value function to be async;
-        # Calling an async function has a ~35ns overhead (barret's machine)
-        # Checking if a function is async has a 180+ns overhead (barret's machine)
-        # -> It is faster to always call an async function than to always check if it is async
-        # Always being async simplifies the execution
-        self._fn = AsyncValueFn(value_fn)
-        self._value_fn_is_async = self._fn.is_async()  # legacy key
+        # # Upgrade value function to be async;
+        # # Calling an async function has a ~35ns overhead (barret's machine)
+        # # Checking if a function is async has a 180+ns overhead (barret's machine)
+        # # -> It is faster to always call an async function than to always check if it is async
+        # # Always being async simplifies the execution
+        # # Not used
+        # self._fn = AsyncValueFn(value_fn)
+
+        self._value_fn = value_fn
+        self._value_fn_is_async = is_async_callable(value_fn)  # legacy key
         self.__name__ = value_fn.__name__
 
         self._transformer = transform_fn
         self._params = params
-        self._auto_output_ui = default_ui
-        self._auto_output_ui_passthrough_args = default_ui_passthrough_args
+        self._default_ui = default_ui
+        self._default_ui_passthrough_args = default_ui_passthrough_args
 
-        self._auto_output_ui_args: tuple[object, ...] = tuple()
-        self._auto_output_ui_kwargs: dict[str, object] = dict()
+        self._default_ui_args: tuple[object, ...] = tuple()
+        self._default_ui_kwargs: dict[str, object] = dict()
 
         # Allow for App authors to not require `@output`
         self._auto_register()
@@ -315,14 +318,11 @@ class OutputRenderer(RendererBase, ABC, Generic[OT]):
         `*args` is required to use with `**kwargs` when using
         `typing.ParamSpec`.
         """
-        value_fn = (
-            self._fn.get_async_fn() if self._fn.is_async() else self._fn.get_sync_fn()
-        )
         ret = await self._transformer(
             # TransformerMetadata
             self._meta(),
             # Callable[[], IT] | Callable[[], Awaitable[IT]]
-            value_fn,
+            self._value_fn,
             # P
             *self._params.args,
             **self._params.kwargs,
@@ -336,19 +336,19 @@ class OutputRenderer(RendererBase, ABC, Generic[OT]):
         id: str,
         **kwargs: object,
     ) -> DefaultUIFnResultOrNone:
-        if self._auto_output_ui is None:
+        if self._default_ui is None:
             return None
 
-        if self._auto_output_ui_passthrough_args is not None:
+        if self._default_ui_passthrough_args is not None:
             kwargs.update(
                 {
                     k: v
                     for k, v in self._params.kwargs.items()
-                    if k in self._auto_output_ui_passthrough_args and v is not MISSING
+                    if k in self._default_ui_passthrough_args and v is not MISSING
                 }
             )
 
-        return self._auto_output_ui(id, *self._auto_output_ui_args, **kwargs)
+        return self._default_ui(id, *self._default_ui_args, **kwargs)
 
     async def render(self) -> Jsonifiable:
         ret = await self._run()
