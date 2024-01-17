@@ -76,12 +76,12 @@ A list of dictionaries (one for each file upload) with the following keys:
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 import pandas as pd
 
@@ -138,6 +138,4 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-
 ```
-

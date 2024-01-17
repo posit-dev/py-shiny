@@ -12,12 +12,12 @@ TODO-barret-docs
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from __future__ import annotations
 
@@ -70,6 +70,7 @@ class render_capitalize(Renderer[str]):
 
         It is a good idea to talk about parameters here!
 
+
         Parameters
         ----------
         to_case
@@ -82,30 +83,30 @@ class render_capitalize(Renderer[str]):
 
         placeholder
             Whether to render a placeholder value. (`True`)
-        """
+        &quot;&quot;&quot;
         # Do not pass params
         super().__init__(_fn)
         self.widget = None
         self.to_case = to_case
 
-    async def render(self) -> str | None:
+    async def render(self) -&gt; str | None:
         value = await self.fn()
         if value is None:
             # If `None` is returned, then do not render anything.
             return None
 
         ret = str(value)
-        if self.to_case == "upper":
+        if self.to_case == &quot;upper&quot;:
             return ret.upper()
-        if self.to_case == "lower":
+        if self.to_case == &quot;lower&quot;:
             return ret.lower()
-        if self.to_case == "ignore":
+        if self.to_case == &quot;ignore&quot;:
             return ret
-        raise ValueError(f"Invalid value for `to_case`: {self.to_case}")
+        raise ValueError(f&quot;Invalid value for `to_case`: {self.to_case}&quot;)
 
 
 class render_upper(Renderer[str]):
-    """
+    &quot;&quot;&quot;
     Minimal capitalize string transformation renderer.
 
     No parameters are supplied to this renderer. This allows us to skip the `__init__()`
@@ -113,16 +114,16 @@ class render_upper(Renderer[str]):
     without parenthesis, you will see this documentation in both situations.
 
     Note: This renderer is equivalent to `render_capitalize(to="upper")`.
-    """
+    &quot;&quot;&quot;
 
     def default_ui(self, id: str):
-        """
+        &quot;&quot;&quot;
         Express UI for the renderer
-        """
+        &quot;&quot;&quot;
         return ui.output_text_verbatim(id, placeholder=True)
 
-    async def transform(self, value: str) -> str:
-        """
+    async def transform(self, value: str) -&gt; str:
+        &quot;&quot;&quot;
         Transform the value to upper case.
 
         This method is shorthand for the default `render()` method. It is useful to
@@ -138,7 +139,7 @@ class render_upper(Renderer[str]):
         -------
         str
             The transformed value. (Must be a subset of `Jsonifiable`.)
-        """
+        &quot;&quot;&quot;
 
         return str(value).upper()
 
@@ -155,24 +156,24 @@ class render_upper(Renderer[str]):
 
 def text_row(id: str, label: str):
     return ui.tags.tr(
-        ui.tags.td(f"{label}:"),
+        ui.tags.td(f&quot;{label}:&quot;),
         ui.tags.td(ui.output_text_verbatim(id, placeholder=True)),
     )
     return ui.row(
-        ui.column(6, f"{id}:"),
+        ui.column(6, f&quot;{id}:&quot;),
         ui.column(6, ui.output_text_verbatim(id, placeholder=True)),
     )
 
 
 app_ui = ui.page_fluid(
-    ui.h1("Capitalization renderer"),
-    ui.input_text("caption", "Caption:", "Data summary"),
+    ui.h1(&quot;Capitalization renderer&quot;),
+    ui.input_text(&quot;caption&quot;, &quot;Caption:&quot;, &quot;Data summary&quot;),
     ui.tags.table(
-        text_row("upper", "@render_upper"),
-        text_row("upper_with_paren", "@render_upper()"),
+        text_row(&quot;upper&quot;, &quot;@render_upper&quot;),
+        text_row(&quot;upper_with_paren&quot;, &quot;@render_upper()&quot;),
         #
-        text_row("cap_upper", "@render_capitalize"),
-        text_row("cap_lower", "@render_capitalize(to='lower')"),
+        text_row(&quot;cap_upper&quot;, &quot;@render_capitalize&quot;),
+        text_row(&quot;cap_lower&quot;, &quot;@render_capitalize(to=&#x27;lower&#x27;)&quot;),
     ),
 )
 
@@ -195,22 +196,19 @@ def server(input: Inputs, output: Outputs, session: Session):
         return input.caption()
 
     # Hovering over `@render_capitalize` will display the `__init__()` documentation
-    @render_capitalize(to_case="lower")
+    @render_capitalize(to_case=&quot;lower&quot;)
     def cap_lower():
         return input.caption()
 
 
 app = App(app_ui, server)
-
 ```
-
-
 
 ## Attributes
 
 | Name | Description |
 | --- | --- |
-| [fn](#shiny.render.renderer.Renderer.fn) | App-supplied output value function which returns type `IT`. This function is always asyncronous as the original app-supplied function possibly wrapped to execute asynchonously. |
+| [fn](#shiny.render.renderer._renderer.Renderer.fn) | App-supplied output value function which returns type `IT`. This function is always asyncronous as the original app-supplied function possibly wrapped to execute asynchonously. |
 
 ## Methods
 
@@ -247,7 +245,7 @@ TODO-barret-docs
 
 | Name | Description |
 | --- | --- |
-| [output_id](#shiny.render.renderer.RendererBase.output_id) | Output function name or ID (provided to `@output(id=)`). This value will contain any module prefix.  Set when the output is registered with the session. |
+| [output_id](#shiny.render.renderer._renderer.RendererBase.output_id) | Output function name or ID (provided to `@output(id=)`). This value will contain any module prefix.  Set when the output is registered with the session. |
 
 # render.renderer.Jsonifiable { #shiny.render.renderer.Jsonifiable }
 

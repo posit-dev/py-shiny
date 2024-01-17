@@ -89,12 +89,12 @@ Wraps a 1d sequence of UI elements into a 2d grid. The number of columns
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from shiny import App, ui
 
@@ -110,6 +110,4 @@ app_ui = ui.page_fluid(
 
 
 app = App(app_ui, server=None)
-
 ```
-

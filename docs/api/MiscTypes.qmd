@@ -172,12 +172,12 @@ class directly. Instead, supply the [](:func:`~shiny.ui.sidebar`) object to
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from shiny import App, Inputs, Outputs, Session, render, ui
 
@@ -228,10 +228,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-
 ```
-
-
 
 ## Methods
 
@@ -388,7 +385,47 @@ Possible python types that can be converted into a CSS unit. Numeric values will
 
 `ui._input_slider.SliderValueArg`
 
+Type variable.
 
+Usage::
+
+  T = TypeVar(&#x27;T&#x27;)  # Can be anything
+  A = TypeVar(&#x27;A&#x27;, str, bytes)  # Must be str or bytes
+
+Type variables exist primarily for the benefit of static type
+checkers.  They serve as the parameters for generic types as well
+as for generic function definitions.  See class Generic for more
+information on generic types.  Generic functions work as follows:
+
+  def repeat(x: T, n: int) -&gt; List[T]:
+      &#x27;&#x27;&#x27;Return a list containing n references to x.&#x27;&#x27;&#x27;
+      return [x]*n
+
+  def longest(x: A, y: A) -&gt; A:
+      &#x27;&#x27;&#x27;Return the longest of two strings.&#x27;&#x27;&#x27;
+      return x if len(x) &gt;= len(y) else y
+
+The latter example&#x27;s signature is essentially the overloading
+of (str, str) -&gt; str and (bytes, bytes) -&gt; bytes.  Also note
+that if the arguments are instances of some subclass of str,
+the return type is still plain str.
+
+At runtime, isinstance(x, T) and issubclass(C, T) will raise TypeError.
+
+Type variables defined with covariant=True or contravariant=True
+can be used to declare covariant or contravariant generic types.
+See PEP 484 for more details. By default generic types are invariant
+in all type variables.
+
+Type variables can be introspected. e.g.:
+
+  T.__name__ == &#x27;T&#x27;
+  T.__constraints__ == ()
+  T.__covariant__ == False
+  T.__contravariant__ = False
+  A.__constraints__ == (str, bytes)
+
+Note that only type variables defined in global scope can be pickled.
 
 # ui._input_slider.SliderStepArg { #shiny.ui._input_slider.SliderStepArg }
 

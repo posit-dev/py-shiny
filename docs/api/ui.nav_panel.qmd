@@ -43,92 +43,13 @@ Create a nav item pointing to some internal content.
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
-from typing import List
-
-from shiny import App, Inputs, Outputs, Session, reactive, ui
-from shiny.types import NavSetArg
-
-
-def nav_controls(prefix: str) -> List[NavSetArg]:
-    return [
-        ui.nav_panel("a", prefix + ": tab a content"),
-        ui.nav_panel("b", prefix + ": tab b content"),
-        ui.nav_panel("c", prefix + ": tab c content"),
-        ui.nav_spacer(),
-        ui.nav_menu(
-            "Links",
-            ui.nav_control(
-                ui.a(
-                    "Shiny",
-                    href="https://shiny.posit.co/py/",
-                    target="_blank",
-                )
-            ),
-            "----",
-            "Plain text",
-            "----",
-            ui.nav_control(
-                ui.a(
-                    "Posit",
-                    href="https://posit.co",
-                    target="_blank",
-                )
-            ),
-            align="right",
-        ),
-    ]
-
-
-app_ui = ui.page_navbar(
-    *nav_controls("page_navbar"),
-    title="page_navbar()",
-    id="navbar_id",
-    footer=ui.div(
-        {"style": "width:80%;margin: 0 auto"},
-        ui.tags.style(
-            """
-            h4 {
-                margin-top: 3em;
-            }
-            """
-        ),
-        ui.h4("navset_tab()"),
-        ui.navset_tab(*nav_controls("navset_tab()")),
-        ui.h4("navset_pill()"),
-        ui.navset_pill(*nav_controls("navset_pill()")),
-        ui.h4("navset_underline()"),
-        ui.navset_underline(*nav_controls("navset_underline()")),
-        ui.h4("navset_card_tab()"),
-        ui.navset_card_tab(*nav_controls("navset_card_tab()")),
-        ui.h4("navset_card_pill()"),
-        ui.navset_card_pill(*nav_controls("navset_card_pill()")),
-        ui.h4("navset_card_underline()"),
-        ui.navset_card_underline(*nav_controls("navset_card_underline()")),
-        ui.h4("navset_pill_list()"),
-        ui.navset_pill_list(*nav_controls("navset_pill_list()")),
-    )
-)
-
-
-def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
-    def _():
-        print("Current navbar page: ", input.navbar_id())
-
-
-app = App(app_ui, server)
-
-## file: __pycache__/app-basic.cpython-311.pyc
-## type: binary
-pw0NCgAAAAB74qZlKQEAAOMAAAAAAAAAAAAAAAAKAAAAAAAAAPPWAAAAlwBkAGQBbABtAVoBbQJaAm0DWgMBAAIAZQNqBAAAAAAAAAAAAgBlA2oFAAAAAAAAAABkAqYBAACrAQAAAAAAAAAAAgBlA2oGAAAAAAAAAAACAGUDagcAAAAAAAAAAGQDZASmAgAAqwIAAAAAAAAAAAIAZQNqBwAAAAAAAAAAZAVkBqYCAACrAgAAAAAAAAAApgIAAKsCAAAAAAAAAACmAgAAqwIAAAAAAAAAAFoIZAdlAmYCZAiEBFoJAgBlAWUIZQmmAgAAqwIAAAAAAAAAAFoKZAlTACkK6QAAAAApA9oDQXBw2gZJbnB1dHPaAnVpehFCYXNpYyBOYXYgRXhhbXBsZdoDT25lehJGaXJzdCB0YWIgY29udGVudC7aA1R3b3oTU2Vjb25kIHRhYiBjb250ZW50LtoFaW5wdXRjAQAAAAAAAAAAAAAAAQAAAAMAAADzBgAAAJcAZABTACkBTqkAKQFyCAAAAHMBAAAAIPpuL1VzZXJzL2dhcnJpY2svd29yay9wb3NpdC1kZXYvcHktc2hpbnkud29ya3RyZWVzL2V4cHJlc3MvcGFuZWwtdGl0bGUvc2hpbnkvYXBpLWV4YW1wbGVzL25hdl9wYW5lbC9hcHAtYmFzaWMucHnaBnNlcnZlcnIMAAAADAAAAHMHAAAAgADYBAiARPMAAAAATikL2gVzaGlueXIDAAAAcgQAAAByBQAAANoKcGFnZV9maXhlZNoLcGFuZWxfdGl0bGXaCm5hdnNldF90YWLaCW5hdl9wYW5lbNoGYXBwX3VpcgwAAADaA2FwcHIKAAAAcg0AAAByCwAAAPoIPG1vZHVsZT5yFQAAAAEAAABzrQAAAPADAQEB2AAh0AAh0AAh0AAh0AAh0AAh0AAh0AAh0AAh0AAh4AkWiBKMHdgEEoBChE7QEybRBCfUBCfYBBGAQoRN2AgUiAKMDJBV0Bww0Qgx1Agx2AgUiAKMDJBV0Bwx0Qgy1Agy8QUDBQb0AAMFBvEFBgoC9AAGCgKABvASAQEJkCbwAAEBCfAAAQEJ8AABAQnwAAEBCfAIAAcKgGOIJpAm0QYZ1AYZgAOAA4ADcg0AAAA=
-## file: app-basic.py
 from shiny import App, Inputs, ui
 
 app_ui = ui.page_fixed(
@@ -145,6 +66,4 @@ def server(input: Inputs):
 
 
 app = App(app_ui, server)
-
 ```
-

@@ -95,12 +95,12 @@ Create responsive, column-based grid layouts, based on a 12-column grid.
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from model_plots import *  # model plots and cards
 
@@ -135,6 +135,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
+
 
 ## file: model_plots.py
 import matplotlib.pyplot as plt
@@ -193,6 +194,4 @@ card_feat = ui.card(
     ui.output_plot("feature_importance"),
     full_screen=True,
 )
-
 ```
-

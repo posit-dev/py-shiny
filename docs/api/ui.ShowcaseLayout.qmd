@@ -19,10 +19,10 @@ Base layout information utilized to display [](:func:`~shiny.ui.value_box`)&#x27
 
 | Name | Description |
 | --- | --- |
-| [class_](#shiny.ui.ShowcaseLayout.class_) | CSS class to set on the layout |
-| [height](#shiny.ui.ShowcaseLayout.height) | Height of the showcase area |
-| [height_full_screen](#shiny.ui.ShowcaseLayout.height_full_screen) | Height of the showcase area when the value box is full screen |
-| [max_height](#shiny.ui.ShowcaseLayout.max_height) | Maximum height of the showcase area |
-| [max_height_full_screen](#shiny.ui.ShowcaseLayout.max_height_full_screen) | Maximum height of the showcase area when the value box is full screen |
-| [width](#shiny.ui.ShowcaseLayout.width) | Width of the showcase area |
-| [width_full_screen](#shiny.ui.ShowcaseLayout.width_full_screen) | Width of the showcase area when the value box is full screen |
+| [class_](#shiny.ui._valuebox.ShowcaseLayout.class_) | CSS class to set on the layout |
+| [height](#shiny.ui._valuebox.ShowcaseLayout.height) | Height of the showcase area |
+| [height_full_screen](#shiny.ui._valuebox.ShowcaseLayout.height_full_screen) | Height of the showcase area when the value box is full screen |
+| [max_height](#shiny.ui._valuebox.ShowcaseLayout.max_height) | Maximum height of the showcase area |
+| [max_height_full_screen](#shiny.ui._valuebox.ShowcaseLayout.max_height_full_screen) | Maximum height of the showcase area when the value box is full screen |
+| [width](#shiny.ui._valuebox.ShowcaseLayout.width) | Width of the showcase area |
+| [width_full_screen](#shiny.ui._valuebox.ShowcaseLayout.width_full_screen) | Width of the showcase area when the value box is full screen |

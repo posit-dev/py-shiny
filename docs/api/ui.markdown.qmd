@@ -40,12 +40,12 @@ other files) in the markdown.
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from shiny import App, Inputs, Outputs, Session, ui
 
@@ -69,6 +69,4 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(ui_app, server)
-
 ```
-

@@ -80,69 +80,6 @@ This function wraps [](:func:`~shiny.ui.sidebar`).
     * If four, then the values will be interpreted as top, right, bottom, and left
       respectively.
 
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-from shiny import App, Inputs, Outputs, Session, render, ui
-
-app_ui = ui.page_fluid(
-    ui.card(
-        ui.layout_sidebar(
-            ui.sidebar("Left sidebar content", id="sidebar_left"),
-            ui.output_text_verbatim("state_left"),
-        )
-    ),
-    ui.card(
-        ui.layout_sidebar(
-            ui.sidebar("Right sidebar content", id="sidebar_right", position="right"),
-            ui.output_text_verbatim("state_right"),
-        ),
-    ),
-    ui.card(
-        ui.layout_sidebar(
-            ui.sidebar("Closed sidebar content", id="sidebar_closed", open="closed"),
-            ui.output_text_verbatim("state_closed"),
-        )
-    ),
-    ui.card(
-        ui.layout_sidebar(
-            ui.sidebar("Always sidebar content", id="sidebar_always", open="always"),
-            ui.output_text_verbatim("state_always"),
-        )
-    ),
-)
-
-
-def server(input: Inputs, output: Outputs, session: Session):
-    @render.text
-    def state_left():
-        return f"input.sidebar_left(): {input.sidebar_left()}"
-
-    @render.text
-    def state_right():
-        return f"input.sidebar_right(): {input.sidebar_right()}"
-
-    @render.text
-    def state_closed():
-        return f"input.sidebar_closed(): {input.sidebar_closed()}"
-
-    @render.text
-    def state_always():
-        return f"input.sidebar_always(): {input.sidebar_always()}"
-
-
-app = App(app_ui, server)
-
-```
-
-
-
 # express.ui.layout_sidebar { #shiny.express.ui.layout_sidebar }
 
 `express.ui.layout_sidebar(fillable=True, fill=True, bg=None, fg=None, border=None, border_radius=None, border_color=None, gap=None, padding=None, height=None, **kwargs)`
@@ -210,13 +147,14 @@ to the main content area. Or tag attributes that are supplied to the resolved
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
+# TODO: Rewrite as Express App
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -244,10 +182,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-
 ```
-
-
 
 # express.ui.layout_column_wrap { #shiny.express.ui.layout_column_wrap }
 
@@ -322,34 +257,6 @@ in the grid dependent on the column `width` as well as the size of the display.
 <code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagAttrValue](`htmltools.TagAttrValue`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
 
 :   Additional attributes to apply to the containing element.
-
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-from shiny import App, ui
-
-y = ui.card("A simple card")
-
-app_ui = ui.page_fluid(
-    # Always has 2 columns (on non-mobile)
-    ui.layout_column_wrap(y, y, y, width=1 / 2),
-    ui.hr(),
-    # Has three columns when viewport is wider than 750px
-    ui.layout_column_wrap(y, y, y, width="250px"),
-)
-
-
-app = App(app_ui, server=None)
-
-```
-
-
 
 # express.ui.layout_columns { #shiny.express.ui.layout_columns }
 
@@ -446,111 +353,6 @@ This function wraps [](:func:`~shiny.ui.layout_columns`).
 * [Bootstrap CSS Grid](https://getbootstrap.com/docs/5.3/layout/grid/)
 * [Bootstrap Breakpoints](https://getbootstrap.com/docs/5.3/layout/breakpoints/)
 
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-from model_plots import *  # model plots and cards
-
-from shiny import App, Inputs, Outputs, Session, render, ui
-
-app_ui = ui.page_fluid(
-    ui.panel_title(ui.h2("Model Dashboard")),
-    ui.markdown("Using `ui.layout_columns()` for the layout."),
-    ui.layout_columns(
-        card_loss,
-        card_acc,
-        card_feat,
-        col_widths={"sm": (5, 7, 12)},
-        # row_heights=(2, 3),
-        # height="700px",
-    ),
-)
-
-
-def server(input: Inputs, output: Outputs, session: Session):
-    @render.plot
-    def loss_over_time():
-        return plot_loss_over_time()
-
-    @render.plot
-    def accuracy_over_time():
-        return plot_accuracy_over_time()
-
-    @render.plot
-    def feature_importance():
-        return plot_feature_importance()
-
-
-app = App(app_ui, server)
-
-## file: model_plots.py
-import matplotlib.pyplot as plt
-import numpy as np
-
-from shiny import ui
-
-
-def plot_loss_over_time():
-    epochs = np.arange(1, 101)
-    loss = 1000 / np.sqrt(epochs) + np.random.rand(100) * 25
-
-    fig = plt.figure(figsize=(10, 6))
-    plt.plot(epochs, loss)
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    return fig
-
-
-def plot_accuracy_over_time():
-    epochs = np.arange(1, 101)
-    accuracy = np.sqrt(epochs) / 12 + np.random.rand(100) * 0.15
-    accuracy = [np.min([np.max(accuracy[:i]), 1]) for i in range(1, 101)]
-
-    fig = plt.figure(figsize=(10, 6))
-    plt.plot(epochs, accuracy)
-    plt.xlabel("Epochs")
-    plt.ylabel("Accuracy")
-    return fig
-
-
-def plot_feature_importance():
-    features = ["Product Category", "Price", "Brand", "Rating", "Number of Reviews"]
-    importance = np.random.rand(5)
-
-    fig = plt.figure(figsize=(10, 6))
-    plt.barh(features, importance)
-    plt.xlabel("Importance")
-    return fig
-
-
-card_loss = ui.card(
-    ui.card_header("Loss Over Time"),
-    ui.output_plot("loss_over_time"),
-    full_screen=True,
-)
-
-card_acc = ui.card(
-    ui.card_header("Accuracy Over Time"),
-    ui.output_plot("accuracy_over_time"),
-    full_screen=True,
-)
-
-card_feat = ui.card(
-    ui.card_header("Feature Importance"),
-    ui.output_plot("feature_importance"),
-    full_screen=True,
-)
-
-```
-
-
-
 # express.ui.card { #shiny.express.ui.card }
 
 `express.ui.card(full_screen=False, height=None, max_height=None, min_height=None, fill=True, class_=None, **kwargs)`
@@ -588,34 +390,6 @@ article](https://rstudio.github.io/bslib/articles/cards.html).
 <code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagAttrValue](`htmltools.TagAttrValue`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
 
 :   HTML attributes on the returned Tag.
-
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-from shiny import App, ui
-
-app_ui = ui.page_fluid(
-    ui.card(
-        ui.card_header("This is the header"),
-        ui.p("This is the body."),
-        ui.p("This is still the body."),
-        ui.card_footer("This is the footer"),
-        full_screen=True,
-    ),
-)
-
-
-app = App(app_ui, server=None)
-
-```
-
-
 
 # express.ui.accordion { #shiny.express.ui.accordion }
 
@@ -663,70 +437,6 @@ This function wraps [](:func:`~shiny.ui.accordion`).
 
 :   Attributes to this tag.
 
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
-
-
-def make_items():
-    return [
-        ui.accordion_panel(f"Section {letter}", f"Some narrative for section {letter}")
-        for letter in "ABCDE"
-    ]
-
-
-# # First shown by default
-# ui.accordion(*make_items())
-
-# # Nothing shown by default
-# ui.accordion(*make_items(), open=False)
-# # Everything shown by default
-# ui.accordion(*make_items(), open=True)
-
-# # Show particular sections
-# ui.accordion(*make_items(), open="Section B")
-# ui.accordion(*make_items(), open=["Section A", "Section B"])
-
-
-app_ui = ui.page_fluid(
-    ui.markdown("#### Accordion: (`multiple=False`)"),
-    # Provide an id to create a shiny input binding
-    ui.accordion(*make_items(), id="acc_single", multiple=False),
-    ui.output_text_verbatim("acc_single_val", placeholder=True),
-    ui.tags.br(),
-    ui.markdown("#### Accordion: (`multiple=True`)"),
-    ui.accordion(*make_items(), id="acc_multiple"),
-    ui.output_text_verbatim("acc_multiple_val", placeholder=True),
-)
-
-
-def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
-    def _():
-        print(input.acc())
-
-    @render.text
-    def acc_multiple_val():
-        return "input.acc_multiple(): " + str(input.acc_multiple())
-
-    @render.text
-    def acc_single_val():
-        return "input.acc_single(): " + str(input.acc_single())
-
-
-app = App(app_ui, server)
-
-```
-
-
-
 # express.ui.accordion_panel { #shiny.express.ui.accordion_panel }
 
 `express.ui.accordion_panel(title, *, value=MISSING, icon=None, **kwargs)`
@@ -754,46 +464,6 @@ This function wraps [](:func:`~shiny.ui.accordion_panel`).
 
 :   Tag attributes to the `accordion-body` div Tag.
 
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
-
-items = [
-    ui.accordion_panel(f"Section {letter}", f"Some narrative for section {letter}")
-    for letter in "ABCDE"
-]
-
-app_ui = ui.page_fluid(
-    # Provide an id to create a shiny input binding
-    ui.accordion(*items, id="acc"),
-    ui.h4("Accordion:"),
-    ui.output_text_verbatim("acc_val", placeholder=True),
-)
-
-
-def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
-    def _():
-        print(input.acc())
-
-    @render.text
-    def acc_val():
-        return "input.acc(): " + str(input.acc())
-
-
-app = App(app_ui, server)
-
-```
-
-
-
 # express.ui.nav_panel { #shiny.express.ui.nav_panel }
 
 `express.ui.nav_panel(title, *, value=None, icon=None)`
@@ -819,115 +489,6 @@ This function wraps [](:func:`~shiny.ui.nav`).
 <code><span class="parameter-name">icon</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagChild](`htmltools.TagChild`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">None</span></code>
 
 :   An icon to appear inline with the button/link.
-
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-from typing import List
-
-from shiny import App, Inputs, Outputs, Session, reactive, ui
-from shiny.types import NavSetArg
-
-
-def nav_controls(prefix: str) -> List[NavSetArg]:
-    return [
-        ui.nav_panel("a", prefix + ": tab a content"),
-        ui.nav_panel("b", prefix + ": tab b content"),
-        ui.nav_panel("c", prefix + ": tab c content"),
-        ui.nav_spacer(),
-        ui.nav_menu(
-            "Links",
-            ui.nav_control(
-                ui.a(
-                    "Shiny",
-                    href="https://shiny.posit.co/py/",
-                    target="_blank",
-                )
-            ),
-            "----",
-            "Plain text",
-            "----",
-            ui.nav_control(
-                ui.a(
-                    "Posit",
-                    href="https://posit.co",
-                    target="_blank",
-                )
-            ),
-            align="right",
-        ),
-    ]
-
-
-app_ui = ui.page_navbar(
-    *nav_controls("page_navbar"),
-    title="page_navbar()",
-    id="navbar_id",
-    footer=ui.div(
-        {"style": "width:80%;margin: 0 auto"},
-        ui.tags.style(
-            """
-            h4 {
-                margin-top: 3em;
-            }
-            """
-        ),
-        ui.h4("navset_tab()"),
-        ui.navset_tab(*nav_controls("navset_tab()")),
-        ui.h4("navset_pill()"),
-        ui.navset_pill(*nav_controls("navset_pill()")),
-        ui.h4("navset_underline()"),
-        ui.navset_underline(*nav_controls("navset_underline()")),
-        ui.h4("navset_card_tab()"),
-        ui.navset_card_tab(*nav_controls("navset_card_tab()")),
-        ui.h4("navset_card_pill()"),
-        ui.navset_card_pill(*nav_controls("navset_card_pill()")),
-        ui.h4("navset_card_underline()"),
-        ui.navset_card_underline(*nav_controls("navset_card_underline()")),
-        ui.h4("navset_pill_list()"),
-        ui.navset_pill_list(*nav_controls("navset_pill_list()")),
-    )
-)
-
-
-def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
-    def _():
-        print("Current navbar page: ", input.navbar_id())
-
-
-app = App(app_ui, server)
-
-## file: __pycache__/app-basic.cpython-311.pyc
-## type: binary
-pw0NCgAAAAB74qZlKQEAAOMAAAAAAAAAAAAAAAAKAAAAAAAAAPPWAAAAlwBkAGQBbABtAVoBbQJaAm0DWgMBAAIAZQNqBAAAAAAAAAAAAgBlA2oFAAAAAAAAAABkAqYBAACrAQAAAAAAAAAAAgBlA2oGAAAAAAAAAAACAGUDagcAAAAAAAAAAGQDZASmAgAAqwIAAAAAAAAAAAIAZQNqBwAAAAAAAAAAZAVkBqYCAACrAgAAAAAAAAAApgIAAKsCAAAAAAAAAACmAgAAqwIAAAAAAAAAAFoIZAdlAmYCZAiEBFoJAgBlAWUIZQmmAgAAqwIAAAAAAAAAAFoKZAlTACkK6QAAAAApA9oDQXBw2gZJbnB1dHPaAnVpehFCYXNpYyBOYXYgRXhhbXBsZdoDT25lehJGaXJzdCB0YWIgY29udGVudC7aA1R3b3oTU2Vjb25kIHRhYiBjb250ZW50LtoFaW5wdXRjAQAAAAAAAAAAAAAAAQAAAAMAAADzBgAAAJcAZABTACkBTqkAKQFyCAAAAHMBAAAAIPpuL1VzZXJzL2dhcnJpY2svd29yay9wb3NpdC1kZXYvcHktc2hpbnkud29ya3RyZWVzL2V4cHJlc3MvcGFuZWwtdGl0bGUvc2hpbnkvYXBpLWV4YW1wbGVzL25hdl9wYW5lbC9hcHAtYmFzaWMucHnaBnNlcnZlcnIMAAAADAAAAHMHAAAAgADYBAiARPMAAAAATikL2gVzaGlueXIDAAAAcgQAAAByBQAAANoKcGFnZV9maXhlZNoLcGFuZWxfdGl0bGXaCm5hdnNldF90YWLaCW5hdl9wYW5lbNoGYXBwX3VpcgwAAADaA2FwcHIKAAAAcg0AAAByCwAAAPoIPG1vZHVsZT5yFQAAAAEAAABzrQAAAPADAQEB2AAh0AAh0AAh0AAh0AAh0AAh0AAh0AAh0AAh0AAh4AkWiBKMHdgEEoBChE7QEybRBCfUBCfYBBGAQoRN2AgUiAKMDJBV0Bww0Qgx1Agx2AgUiAKMDJBV0Bwx0Qgy1Agy8QUDBQb0AAMFBvEFBgoC9AAGCgKABvASAQEJkCbwAAEBCfAAAQEJ8AABAQnwAAEBCfAIAAcKgGOIJpAm0QYZ1AYZgAOAA4ADcg0AAAA=
-## file: app-basic.py
-from shiny import App, Inputs, ui
-
-app_ui = ui.page_fixed(
-    ui.panel_title("Basic Nav Example"),
-    ui.navset_tab(
-        ui.nav_panel("One", "First tab content."),
-        ui.nav_panel("Two", "Second tab content."),
-    ),
-)
-
-
-def server(input: Inputs):
-    pass
-
-
-app = App(app_ui, server)
-
-```
-
-
 
 # express.ui.nav_control { #shiny.express.ui.nav_control }
 
@@ -1180,49 +741,6 @@ This function wraps [](:func:`~shiny.ui.navset_hidden`).
 
 :   UI to display below the selected content.
 
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-from shiny import App, Inputs, Outputs, Session, reactive, ui
-
-app_ui = ui.page_fluid(
-    ui.layout_sidebar(
-        ui.panel_sidebar(
-            ui.input_radio_buttons(
-                "controller", "Controller", ["1", "2", "3"], selected="1"
-            )
-        ),
-        ui.panel_main(
-            ui.navset_hidden(
-                ui.nav_panel(None, "Panel 1 content", value="panel1"),
-                ui.nav_panel(None, "Panel 2 content", value="panel2"),
-                ui.nav_panel(None, "Panel 3 content", value="panel3"),
-                id="hidden_tabs",
-            ),
-        ),
-    )
-)
-
-
-def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
-    @reactive.event(input.controller)
-    def _():
-        ui.update_navs("hidden_tabs", selected="panel" + str(input.controller()))
-
-
-app = App(app_ui, server)
-
-```
-
-
-
 # express.ui.navset_pill { #shiny.express.ui.navset_pill }
 
 `express.ui.navset_pill(id=None, selected=None, header=None, footer=None)`
@@ -1413,64 +931,6 @@ represents (for example, it could hold an icon, or even a
 
 :   Additional attributes to pass to [](:func:`~shiny.ui.card`).
 
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-from icons import piggy_bank
-
-from shiny import App, ui
-
-app_ui = ui.page_fluid(
-    ui.layout_column_wrap(
-        ui.value_box(
-            "KPI Title",
-            "$1 Billion Dollars",
-            "Up 30% VS PREVIOUS 30 DAYS",
-            showcase=piggy_bank,
-            theme="bg-gradient-orange-cyan",
-            full_screen=True,
-        ),
-        ui.value_box(
-            "KPI Title",
-            "$1 Billion Dollars",
-            "Up 30% VS PREVIOUS 30 DAYS",
-            showcase=piggy_bank,
-            theme="text-green",
-            showcase_layout="top right",
-            full_screen=True,
-        ),
-        ui.value_box(
-            "KPI Title",
-            "$1 Billion Dollars",
-            "Up 30% VS PREVIOUS 30 DAYS",
-            showcase=piggy_bank,
-            theme="purple",
-            showcase_layout="bottom",
-            full_screen=True,
-        ),
-    )
-)
-
-
-app = App(app_ui, server=None)
-
-## file: icons.py
-from shiny import ui
-
-piggy_bank = ui.HTML(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-piggy-bank " style="fill:currentColor;height:100%;" aria-hidden="true" role="img" ><path d="M5 6.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm1.138-1.496A6.613 6.613 0 0 1 7.964 4.5c.666 0 1.303.097 1.893.273a.5.5 0 0 0 .286-.958A7.602 7.602 0 0 0 7.964 3.5c-.734 0-1.441.103-2.102.292a.5.5 0 1 0 .276.962z"></path>\n<path fill-rule="evenodd" d="M7.964 1.527c-2.977 0-5.571 1.704-6.32 4.125h-.55A1 1 0 0 0 .11 6.824l.254 1.46a1.5 1.5 0 0 0 1.478 1.243h.263c.3.513.688.978 1.145 1.382l-.729 2.477a.5.5 0 0 0 .48.641h2a.5.5 0 0 0 .471-.332l.482-1.351c.635.173 1.31.267 2.011.267.707 0 1.388-.095 2.028-.272l.543 1.372a.5.5 0 0 0 .465.316h2a.5.5 0 0 0 .478-.645l-.761-2.506C13.81 9.895 14.5 8.559 14.5 7.069c0-.145-.007-.29-.02-.431.261-.11.508-.266.705-.444.315.306.815.306.815-.417 0 .223-.5.223-.461-.026a.95.95 0 0 0 .09-.255.7.7 0 0 0-.202-.645.58.58 0 0 0-.707-.098.735.735 0 0 0-.375.562c-.024.243.082.48.32.654a2.112 2.112 0 0 1-.259.153c-.534-2.664-3.284-4.595-6.442-4.595zM2.516 6.26c.455-2.066 2.667-3.733 5.448-3.733 3.146 0 5.536 2.114 5.536 4.542 0 1.254-.624 2.41-1.67 3.248a.5.5 0 0 0-.165.535l.66 2.175h-.985l-.59-1.487a.5.5 0 0 0-.629-.288c-.661.23-1.39.359-2.157.359a6.558 6.558 0 0 1-2.157-.359.5.5 0 0 0-.635.304l-.525 1.471h-.979l.633-2.15a.5.5 0 0 0-.17-.534 4.649 4.649 0 0 1-1.284-1.541.5.5 0 0 0-.446-.275h-.56a.5.5 0 0 1-.492-.414l-.254-1.46h.933a.5.5 0 0 0 .488-.393zm12.621-.857a.565.565 0 0 1-.098.21.704.704 0 0 1-.044-.025c-.146-.09-.157-.175-.152-.223a.236.236 0 0 1 .117-.173c.049-.027.08-.021.113.012a.202.202 0 0 1 .064.199z"></path></svg>'
-)
-
-```
-
-
-
 # express.ui.panel_well { #shiny.express.ui.panel_well }
 
 `express.ui.panel_well(**kwargs)`
@@ -1521,43 +981,6 @@ value.
 
 A more powerful (but slower) way to conditionally show UI content is to use
 [](:func:`~shiny.render.ui`).
-
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-from shiny import App, Inputs, Outputs, Session, ui
-
-app_ui = ui.page_fluid(
-    ui.input_checkbox("show", "Show radio buttons", False),
-    ui.panel_conditional(
-        "input.show", ui.input_radio_buttons("radio", "Choose ", ["slider", "select"])
-    ),
-    ui.panel_conditional(
-        "input.show && input.radio === 'slider'",
-        ui.input_slider("slider", None, min=0, max=100, value=50),
-    ),
-    ui.panel_conditional(
-        "input.show && input.radio === 'select'",
-        ui.input_select("slider", None, ["A", "B", "C"]),
-    ),
-)
-
-
-def server(input: Inputs, output: Outputs, session: Session):
-    pass
-
-
-app = App(app_ui, server)
-
-```
-
-
 
 # express.ui.panel_fixed { #shiny.express.ui.panel_fixed }
 
@@ -1661,37 +1084,3 @@ a number (interpreted as pixels) or a valid CSS size string, such as ``&quot;100
 For arcane HTML reasons, to have the panel fill the page or parent you should
 specify 0 for ``top``, ``left``, ``right``, and ``bottom`` rather than the more
 obvious ``width = &quot;100%&quot;`` and ``height = &quot;100%&quot;``.
-
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-from shiny import App, Inputs, Outputs, Session, ui
-
-app_ui = ui.page_fluid(
-    ui.panel_title("A basic absolute panel example", "Demo"),
-    ui.panel_absolute(
-        ui.panel_well(
-            "Drag me around!", ui.input_slider("n", "N", min=0, max=100, value=20)
-        ),
-        draggable=True,
-        width="300px",
-        right="50px",
-        top="50%",
-    ),
-)
-
-
-def server(input: Inputs, output: Outputs, session: Session):
-    pass
-
-
-app = App(app_ui, server)
-
-```
-

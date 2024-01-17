@@ -83,12 +83,12 @@ the `interval_secs` delay to expire).
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 import asyncio
 import random
@@ -217,6 +217,4 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
 
 
 app = App(app_ui, server)
-
 ```
-

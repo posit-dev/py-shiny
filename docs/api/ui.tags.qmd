@@ -2591,47 +2591,6 @@ The &lt;progress&gt; HTML element displays an indicator showing the completion p
 
 [](:func:`~htmltools.Tag`)
 
-#### Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-import asyncio
-
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
-
-app_ui = ui.page_fluid(
-    ui.input_action_button("button", "Compute"),
-    ui.output_text("compute"),
-)
-
-
-def server(input: Inputs, output: Outputs, session: Session):
-    @render.text
-    @reactive.event(input.button)
-    async def compute():
-        with ui.Progress(min=1, max=15) as p:
-            p.set(message="Calculation in progress", detail="This may take a while...")
-
-            for i in range(1, 15):
-                p.set(i, message="Computing")
-                await asyncio.sleep(0.1)
-                # Normally use time.sleep() instead, but it doesn't yet work in Pyodide.
-                # https://github.com/pyodide/pyodide/issues/2354
-
-        return "Done computing!"
-
-
-app = App(app_ui, server)
-
-```
-
-
-
 ### q { #shiny.ui.tags.q }
 
 `ui.tags.q(*args, _add_ws=False, **kwargs)`
@@ -3371,36 +3330,6 @@ The &lt;template&gt; HTML element is a mechanism for holding HTML that is not to
 #### See Also
 
 [](:func:`~htmltools.Tag`)
-
-#### Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-from shiny import App, render, ui
-
-app_ui = ui.page_fluid(
-    ui.panel_title("Hello Shiny!"),
-    ui.input_slider("n", "N", 0, 100, 20),
-    ui.output_text_verbatim("txt"),
-)
-
-
-def server(input, output, session):
-    @render.text
-    def txt():
-        return f"n*2 is {input.n() * 2}"
-
-
-app = App(app_ui, server)
-
-```
-
-
 
 ### textarea { #shiny.ui.tags.textarea }
 

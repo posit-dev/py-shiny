@@ -68,12 +68,12 @@ ui.page_fluid(
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from pathlib import Path
 
@@ -92,12 +92,4 @@ app_ui = ui.page_fluid(
 )
 
 app = App(app_ui, None)
-
-## file: css/styles.css
-body {
-  font-size: 3rem;
-  background-color: pink
-}
-
 ```
-

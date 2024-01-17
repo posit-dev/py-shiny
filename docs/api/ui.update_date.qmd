@@ -34,7 +34,23 @@ Change the value of a date input on the client.
 
 ## Note
 
-{note}
+
+The input updater functions send a message to the client, telling it to change the
+settings of an input object. The messages are collected and sent after all the
+observers (including outputs) have finished running.
+
+The syntax of these functions is similar to the functions that created the inputs in
+the first place. For example, [](:func:`~shiny.ui.input_numeric`) and
+[](:func:`~shiny.ui.update_numeric`) take a similar set of arguments.
+
+Any arguments with ``None`` values will be ignored; they will not result in any
+changes to the input object on the client.
+
+For [](:func:`~update_radio_buttons`), [](:func:`~update_checkbox_group`), and
+[](:func:`~update_select`), the set of choices can be cleared by using ``choices=[]``.
+Similarly, for these inputs, the selected item can be cleared by using
+`selected=[]`.
+
 
 
 
@@ -44,12 +60,12 @@ Change the value of a date input on the client.
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from datetime import date, timedelta
 
@@ -75,6 +91,4 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-
 ```
-

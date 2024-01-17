@@ -1,17 +1,54 @@
 # reactive.Calc { #shiny.reactive.Calc }
 
-`reactive.Calc`
+`reactive.Calc(fn=None, *, session=MISSING)`
+
+Mark a function as a reactive calculation.
+
+A reactive calculation is a function whose return value depends on other
+reactive value(s) (i.e., [](:class:`~shiny.Inputs`), [](:class:`~shiny.reactive.Value`)s,
+and other reactive calculations). Whenever a reactive value changes, any reactive
+calculations that depend on it are &quot;invalidated&quot; and automatically re-execute if called while invalid. If a reactive calculation is marked as invalidated, any other reactive
+calculations that recently called it are also marked as invalidated. In this way,
+invalidations ripple through reactive calculations that depend on each other.
+
+## Parameters
+
+<code><span class="parameter-name">session</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">'MISSING_TYPE \| Session \| None'</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">MISSING</span></code>
+
+:   A [](:class:`~shiny.Session`) instance. If not provided, the session is inferred via
+    [](:func:`~shiny.session.get_current_session`).
+
+## Returns
+
+| Type                                                                                                                                                                                                                                                                                                      | Description                                                  |
+|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------|
+| [Calc_](`shiny.reactive._reactives.Calc_`)\[[T](`shiny.reactive._reactives.T`)\] \| [Callable](`typing.Callable`)\[\[[CalcFunction](`shiny.reactive._reactives.CalcFunction`)\[[T](`shiny.reactive._reactives.T`)\]\], [Calc_](`shiny.reactive._reactives.Calc_`)\[[T](`shiny.reactive._reactives.T`)\]\] | A decorator that marks a function as a reactive calculation. |
+
+## Tip
+
+Reactive calculations should not produce any side effects; to reactively produce
+side effects, use [](:func:`~shiny.reactive.effect`) instead.
+
+Reactive calculations are analagous to reactive expressions in Shiny for R.
 
 
+
+## See Also
+
+[](:func:`~shiny.Inputs`)
+[](:func:`~shiny.reactive.Value`)
+[](:func:`~shiny.reactive.effect`)
+[](:func:`~shiny.reactive.invalidate_later`)
+[](:func:`~shiny.reactive.event`)
 
 ## Examples
-
 
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 import random
 import time
@@ -49,6 +86,4 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-
 ```
-

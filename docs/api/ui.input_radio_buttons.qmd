@@ -54,12 +54,12 @@ A string with the selected value.
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from shiny import App, Inputs, Outputs, Session, render, ui
 
@@ -83,6 +83,4 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-
 ```
-

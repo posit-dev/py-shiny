@@ -40,12 +40,12 @@ container (see [](:func:`~shiny.ui.output_table`) for example usage).
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 import pandas  # noqa: F401 (this line needed for Shinylive to load plotly.express)
 import plotly.express as px
@@ -179,6 +179,4 @@ def synchronize_size(output_id):
 
 
 app = App(app_ui, server)
-
 ```
-

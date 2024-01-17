@@ -2,9 +2,8 @@
 
 `ui.fill.as_fillable_container(tag)`
 
-
-
 ## Examples
+
 
 
 ```{shinylive-python}
@@ -12,6 +11,7 @@
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from __future__ import annotations
 
@@ -78,6 +78,4 @@ app_ui = ui.page_fluid(
 
 
 app = App(app_ui, server=None)
-
 ```
-

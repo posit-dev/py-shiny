@@ -67,12 +67,12 @@ Similarly, for these inputs, the selected item can be cleared by using
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from datetime import date, timedelta
 
@@ -99,6 +99,4 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-
 ```
-

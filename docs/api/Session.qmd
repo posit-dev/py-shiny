@@ -25,12 +25,12 @@ Close the session.
 
 #### Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from datetime import datetime
 
@@ -60,10 +60,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-
 ```
-
-
 
 ### download { #shiny.Session.download }
 
@@ -97,12 +94,12 @@ Deprecated. Please use [](:class:`~shiny.render.download`) instead.
 
 #### Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 import asyncio
 import io
@@ -231,6 +228,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 app = App(app_ui, server)
 
+
 ## file: mtcars.csv
 mpg,cyl,disp,hp,drat,wt,qsec,vs,am,gear,carb
 21,6,160,110,3.9,2.62,16.46,0,1,4,4
@@ -265,10 +263,7 @@ mpg,cyl,disp,hp,drat,wt,qsec,vs,am,gear,carb
 19.7,6,145,175,3.62,2.77,15.5,0,1,5,6
 15,8,301,335,3.54,3.57,14.6,0,1,5,8
 21.4,4,121,109,4.11,2.78,18.6,1,1,4,2
-
 ```
-
-
 
 ### dynamic_route { #shiny.Session.dynamic_route }
 
@@ -300,12 +295,12 @@ clients/applications to consume.
 
 #### Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -341,10 +336,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-
 ```
-
-
 
 ### on_ended { #shiny.Session.on_ended }
 
@@ -366,12 +358,12 @@ Registers a function to be called after the client has disconnected.
 
 #### Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from datetime import datetime
 
@@ -395,10 +387,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-
 ```
-
-
 
 ### on_flush { #shiny.Session.on_flush }
 
@@ -424,12 +413,12 @@ Register a function to call before the next reactive flush.
 
 #### Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from datetime import datetime
 
@@ -459,10 +448,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-
 ```
-
-
 
 ### on_flushed { #shiny.Session.on_flushed }
 
@@ -488,12 +474,12 @@ Register a function to call after the next reactive flush.
 
 #### Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from datetime import datetime
 
@@ -523,10 +509,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-
 ```
-
-
 
 ### send_custom_message { #shiny.Session.send_custom_message }
 
@@ -553,12 +536,12 @@ is called on the server.
 
 #### Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from shiny import App, Inputs, Outputs, Session, reactive, ui
 
@@ -588,10 +571,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server, debug=True)
-
 ```
-
-
 
 ### send_input_message { #shiny.Session.send_input_message }
 

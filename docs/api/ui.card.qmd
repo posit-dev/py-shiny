@@ -50,12 +50,12 @@ article](https://rstudio.github.io/bslib/articles/cards.html).
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from shiny import App, ui
 
@@ -71,6 +71,4 @@ app_ui = ui.page_fluid(
 
 
 app = App(app_ui, server=None)
-
 ```
-

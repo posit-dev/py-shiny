@@ -76,45 +76,6 @@ to be provided as direct children to [](:func:`~shiny.ui.card`).
 * [](:func:`~shiny.ui.card_title`) for creating a title within the card body.
 * [](:func:`~shiny.ui.card_footer`) for creating a footer within the card.
 
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-import shiny.experimental as x
-from shiny import App, ui
-
-app_ui = ui.page_fluid(
-    x.ui.card(
-        x.ui.card_header("This is the header"),
-        x.ui.card_body(
-            x.ui.card_title("This is the title"),
-            ui.p("This is the body."),
-            ui.p("This is still the body."),
-        ),
-        x.ui.card_footer("This is the footer"),
-        full_screen=True,
-    ),
-    x.ui.card(
-        ui.p("These first two elements will be wrapped in `card_body()` together."),
-        ui.p("These first two elements will be wrapped in `card_body()` together."),
-        x.ui.card_body(ui.p("A card body.")),
-        ui.p("These last two elements will be wrapped in `card_body()` together."),
-        ui.p("These last two elements will be wrapped in `card_body()` together."),
-    ),
-)
-
-
-app = App(app_ui, server=None)
-
-```
-
-
-
 # experimental.ui.card_title { #shiny.experimental.ui.card_title }
 
 `experimental.ui.card_title(*args, container=tags.h5, **kwargs)`
@@ -154,38 +115,6 @@ to be provided as a direct child to [](:func:`~shiny.ui.card`).
 * [](:func:`~shiny.experimental.ui.card_body`) for putting content inside a card.
 * [](:func:`~shiny.ui.card_footer`) for creating a footer within a card.
 * [](:func:`~shiny.experimental.ui.card_image`) for adding an image to a card.
-
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-import shiny.experimental as x
-from shiny import App, ui
-
-app_ui = ui.page_fluid(
-    x.ui.card(
-        x.ui.card_header("This is the header"),
-        x.ui.card_body(
-            x.ui.card_title("This is the title"),
-            ui.p("This is the body."),
-            ui.p("This is still the body."),
-        ),
-        x.ui.card_footer("This is the footer"),
-        full_screen=True,
-    )
-)
-
-
-app = App(app_ui, server=None)
-
-```
-
-
 
 # experimental.ui.card_image { #shiny.experimental.ui.card_image }
 
@@ -254,59 +183,6 @@ provided as a direct child to [](:func:`~shiny.ui.card`).
 <code><span class="parameter-name">**kwargs</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[TagAttrValue](`htmltools.TagAttrValue`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">{}</span></code>
 
 :   Additional HTML attributes for the resolved [](:class:`~htmltools.Tag`).
-
-## Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-import shiny.experimental as x
-from shiny import App, ui
-
-app_ui = ui.page_fluid(
-    ui.tags.style(
-        """
-        .card-body {
-            border: 1px dashed red;
-        }
-        """
-    ),
-    x.ui.card(
-        x.ui.card_header(
-            "These two images are in their own individual card_body() container"
-        ),
-        x.ui.card_image(
-            file=None,
-            src="https://posit.co/wp-content/uploads/2022/10/Posit-logo-h-full-color-RGB-TM.svg",
-        ),
-        x.ui.card_image(
-            file=None,
-            src="https://posit.co/wp-content/uploads/2022/10/Posit-logo-h-full-color-RGB-TM.svg",
-        ),
-        x.ui.card_header("These two images are in the same card_body() container"),
-        x.ui.card_image(
-            file=None,
-            src="https://posit.co/wp-content/uploads/2022/10/Posit-logo-h-full-color-RGB-TM.svg",
-            container=ui.tags.span,
-        ),
-        x.ui.card_image(
-            file=None,
-            src="https://posit.co/wp-content/uploads/2022/10/Posit-logo-h-full-color-RGB-TM.svg",
-            container=ui.tags.span,
-        ),
-    ),
-)
-
-
-app = App(app_ui, server=None)
-
-```
-
-
 
 # experimental.ui.ImgContainer { #shiny.experimental.ui.ImgContainer }
 

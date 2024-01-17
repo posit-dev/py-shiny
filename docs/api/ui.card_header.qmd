@@ -37,12 +37,12 @@ The header has a different background color and border than the rest of the card
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 from shiny import App, ui
 
@@ -58,6 +58,4 @@ app_ui = ui.page_fluid(
 
 
 app = App(app_ui, server=None)
-
 ```
-

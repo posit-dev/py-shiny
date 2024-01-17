@@ -28,12 +28,12 @@ manager at strategic points in the code block.
 
 ## Examples
 
-
 ```{shinylive-python}
 #| standalone: true
 #| components: [editor, viewer]
 #| layout: vertical
 #| viewerHeight: 400
+
 ## file: app.py
 import asyncio
 
@@ -62,10 +62,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server)
-
 ```
-
-
 
 ## Methods
 
@@ -92,47 +89,7 @@ manager, which will cause the progress bar to close on exit.
 
 Removes the progress panel. Future calls to set and close will be ignored.
 
-#### Examples
-
-
-```{shinylive-python}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-## file: app.py
-from datetime import datetime
-
-from shiny import App, Inputs, Outputs, Session, reactive, ui
-
-app_ui = ui.page_fluid(
-    ui.input_action_button("close", "Close the session"),
-    ui.p(
-        """If this example is running on the browser (i.e., via shinylive),
-        closing the session will log a message to the JavaScript console
-        (open the browser's developer tools to see it).
-        """
-    ),
-)
-
-
-def server(input: Inputs, output: Outputs, session: Session):
-    def log():
-        print("Session ended at: " + datetime.now().strftime("%H:%M:%S"))
-
-    session.on_ended(log)
-
-    @reactive.Effect
-    @reactive.event(input.close)
-    async def _():
-        await session.close()
-
-
-app = App(app_ui, server)
-
-```
-
-
+.. quartodoc-no-examples
 
 ### inc { #shiny.ui.Progress.inc }
 
