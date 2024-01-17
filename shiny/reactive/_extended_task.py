@@ -48,10 +48,6 @@ class DenialContext(Context):
 
 
 class ExtendedTask(Generic[P, R]):
-    # TODO: What to do when __call__ is called while a previous computation is still
-    # running? Should we cancel the previous one? Should we queue up the new one? Should
-    # we throw an error?
-
     def __init__(self, func: Callable[P, Awaitable[R]]):
         if not is_async_callable(func):
             raise TypeError("ExtendedTask can only be used with async functions")

@@ -102,7 +102,8 @@ def input_task_button(
     Notes
     ------
     ::: {.callout-note title="Server value"}
-    An integer representing the number of clicks. :::
+    An integer representing the number of clicks.
+    :::
 
     See Also
     -------
