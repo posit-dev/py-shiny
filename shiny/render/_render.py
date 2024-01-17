@@ -87,7 +87,8 @@ class text(Renderer[str]):
 
     See Also
     --------
-    ~shiny.render.code ~shiny.ui.output_text
+    * ~shiny.render.code
+    * ~shiny.ui.output_text
     """
 
     def auto_output_ui(
@@ -108,7 +109,7 @@ class text(Renderer[str]):
         inline: bool = False,
     ) -> None:
         super().__init__(_fn)
-        self.inline = inline
+        self.inline: bool = inline
 
     async def transform(self, value: str) -> Jsonifiable:
         return str(value)
@@ -148,7 +149,8 @@ class code(Renderer[str]):
 
     See Also
     --------
-    ~shiny.render.code ~shiny.ui.output_code
+    * ~shiny.render.code
+    * ~shiny.ui.output_code
     """
 
     def auto_output_ui(
@@ -235,7 +237,8 @@ class plot(Renderer[object]):
 
     See Also
     --------
-    ~shiny.ui.output_plot ~shiny.render.image
+    * ~shiny.ui.output_plot
+    * ~shiny.render.image
     """
 
     def auto_output_ui(
@@ -405,9 +408,9 @@ class image(Renderer[ImgData]):
 
     See Also
     --------
-    ~shiny.ui.output_image
-    ~shiny.types.ImgData
-    ~shiny.render.plot
+    * ~shiny.ui.output_image
+    * ~shiny.types.ImgData
+    * ~shiny.render.plot
     """
 
     def default_ui(self, id: str, **kwargs: object):
@@ -500,7 +503,7 @@ class table(Renderer[TableResult]):
 
     See Also
     --------
-    ~shiny.ui.output_table for the corresponding UI component to this render function.
+    * ~shiny.ui.output_table for the corresponding UI component to this render function.
     """
 
     def auto_output_ui(self, id: str, **kwargs: TagAttrValue) -> Tag:
@@ -579,7 +582,7 @@ class ui(Renderer[TagChild]):
 
     See Also
     --------
-    ~shiny.ui.output_ui
+    * ~shiny.ui.output_ui
     """
 
     def auto_output_ui(self, id: str) -> Tag:
@@ -609,12 +612,6 @@ class download(Renderer[str]):
         The encoding of the download.
     label
         (Express only) A label for the button. Defaults to "Download".
-    icon
-        (Express only) An icon to display on the button.
-    width
-        (Express only) The width of the button.
-    **kwargs
-        (Express only) Additional attributes for the button.
 
     Returns
     -------
@@ -623,16 +620,13 @@ class download(Renderer[str]):
 
     See Also
     --------
-    ~shiny.ui.download_button
+    * ~shiny.ui.download_button
     """
 
     def auto_output_ui(self, id: str) -> Tag:
         return _ui.download_button(
             id,
             label=self.label,
-            icon=self.icon,
-            width=self.width,
-            **self.kwargs,
         )
 
     def __init__(
@@ -643,9 +637,6 @@ class download(Renderer[str]):
         media_type: None | str | Callable[[], str] = None,
         encoding: str = "utf-8",
         label: TagChild = "Download",
-        icon: TagChild = None,
-        width: Optional[str] = None,
-        **kwargs: TagAttrValue,
     ) -> None:
         super().__init__()
 
@@ -653,9 +644,6 @@ class download(Renderer[str]):
         self.media_type = media_type
         self.encoding = encoding
         self.label = label
-        self.icon = icon
-        self.width = width
-        self.kwargs = kwargs
 
         if fn is not None:
             self(fn)

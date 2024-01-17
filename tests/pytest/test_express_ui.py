@@ -3,8 +3,10 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from shiny import render, ui
-from shiny.express import suspend_display
+from shiny.express import output_args, suspend_display
 from shiny.express._run import run_express
 
 
@@ -58,14 +60,22 @@ def test_render_output_controls():
 
     assert ui.TagList(text2.tagify()).get_html_string() == ""
 
-    @render.code(placeholder=True)
-    def code1():
+    # @render.code(placeholder=True)
+    # def code1():
+    #     return "text"
+
+    # assert (
+    #     ui.TagList(code1.tagify()).get_html_string()
+    #     == ui.output_code("code1", placeholder=True).get_html_string()
+    # )
+
+    @output_args(width=100)
+    @render.code
+    def code2():
         return "text"
 
-    assert (
-        ui.TagList(code1.tagify()).get_html_string()
-        == ui.output_code("code1", placeholder=True).get_html_string()
-    )
+    with pytest.raises(TypeError, match="width"):
+        code2.tagify()
 
 
 def test_suspend_display():
