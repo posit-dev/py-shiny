@@ -172,7 +172,7 @@ class RendererBase(ABC):
     def _render_auto_output_ui(self) -> DefaultUIFnResultOrNone:
         return self.auto_output_ui(
             self.__name__,
-            # Pass the `@ui_kwargs(foo="bar")` kwargs through to the default_ui function.
+            # Pass the `@output_args(foo="bar")` kwargs through to the auto_output_ui function.
             **self._auto_output_ui_kwargs,
         )
 

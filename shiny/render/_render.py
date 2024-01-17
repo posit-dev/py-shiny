@@ -413,7 +413,7 @@ class image(Renderer[ImgData]):
     * ~shiny.render.plot
     """
 
-    def default_ui(self, id: str, **kwargs: object):
+    def auto_output_ui(self, id: str, **kwargs: object):
         return _ui.output_image(
             id,
             **kwargs,  # pyright: ignore[reportGeneralTypeIssues]

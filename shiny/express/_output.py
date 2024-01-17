@@ -42,7 +42,6 @@ def output_args(
     """
 
     def wrapper(renderer: RendererBaseT) -> RendererBaseT:
-        # renderer._default_ui_args = args
         renderer._auto_output_ui_kwargs = kwargs
         return renderer
 

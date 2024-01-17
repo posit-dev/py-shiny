@@ -220,8 +220,8 @@ class OutputRenderer(RendererBase, Generic[OT]):
         value_fn: ValueFn[IT],
         transform_fn: TransformFn[IT, P, OT],
         params: TransformerParams[P],
-        auto_output_ui: Optional[DefaultUIFn] = None,
-        auto_output_ui_passthrough_args: Optional[tuple[str, ...]] = None,
+        default_ui: Optional[DefaultUIFn] = None,
+        default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
     ) -> None:
         """
         Parameters
@@ -233,7 +233,7 @@ class OutputRenderer(RendererBase, Generic[OT]):
             `OT`. The `params` will used as variadic keyword arguments.
         params
             App-provided parameters for the transform function (`transform_fn`).
-        auto_output_ui
+        default_ui
             Optional function that takes an `output_id` string and returns a Shiny UI
             object that can be used to display the output. This allows render functions
             to respond to `_repr_html_` method calls in environments like Jupyter.
@@ -266,8 +266,8 @@ class OutputRenderer(RendererBase, Generic[OT]):
 
         self._transformer = transform_fn
         self._params = params
-        self._auto_output_ui = auto_output_ui
-        self._auto_output_ui_passthrough_args = auto_output_ui_passthrough_args
+        self._auto_output_ui = default_ui
+        self._auto_output_ui_passthrough_args = default_ui_passthrough_args
 
         self._auto_output_ui_args: tuple[object, ...] = tuple()
         self._auto_output_ui_kwargs: dict[str, object] = dict()
@@ -507,8 +507,8 @@ class OutputTransformer(Generic[IT, OT, P]):
 @overload
 def output_transformer(
     *,
-    auto_output_ui: Optional[DefaultUIFn] = None,
-    auto_output_ui_passthrough_args: Optional[tuple[str, ...]] = None,
+    default_ui: Optional[DefaultUIFn] = None,
+    default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
 ) -> Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]:
     ...
 
@@ -524,8 +524,8 @@ def output_transformer(
 def output_transformer(
     transform_fn: TransformFn[IT, P, OT] | None = None,
     *,
-    auto_output_ui: Optional[DefaultUIFn] = None,
-    auto_output_ui_passthrough_args: Optional[tuple[str, ...]] = None,
+    default_ui: Optional[DefaultUIFn] = None,
+    default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
 ) -> (
     OutputTransformer[IT, OT, P]
     | Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]
@@ -588,7 +588,7 @@ def output_transformer(
         Asynchronous function used to determine the app-supplied output value function
         return type (`IT`), the transformed type (`OT`), and the keyword arguments (`P`)
         app authors can supply to the renderer decorator.
-    auto_output_ui
+    default_ui
         Optional function that takes an `output_id` string and returns a Shiny UI object
         that can be used to display the output. This allows render functions to respond
         to `_repr_html_` method calls in environments like Jupyter.
@@ -602,8 +602,8 @@ def output_transformer(
         called with parentheses.
     """
 
-    # If auto_output_ui_passthrough_args was used, modify the auto_output_ui function so
-    # it is ready to mix in extra arguments from the decorator.
+    # If default_ui_passthrough_args was used, modify the default_ui function so it is
+    # ready to mix in extra arguments from the decorator.
     def output_transformer_impl(
         transform_fn: TransformFn[IT, P, OT],
     ) -> OutputTransformer[IT, OT, P]:
@@ -620,8 +620,8 @@ def output_transformer(
                     value_fn=fn,
                     transform_fn=transform_fn,
                     params=params,
-                    auto_output_ui=auto_output_ui,
-                    auto_output_ui_passthrough_args=auto_output_ui_passthrough_args,
+                    default_ui=default_ui,
+                    default_ui_passthrough_args=default_ui_passthrough_args,
                 )
 
             if value_fn is None:
