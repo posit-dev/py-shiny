@@ -165,7 +165,7 @@ def test_annotations():
 def test_implicit_output():
     @display_body()
     def has_implicit_outputs():
-        @render.text
+        @render.code
         def foo():
             return "hello"
 
@@ -173,7 +173,7 @@ def test_implicit_output():
         has_implicit_outputs()
         assert len(d) == 1
         d0 = cast(Tagifiable, d[0])
-        assert d0.tagify() == ui.output_text_verbatim("foo")
+        assert d0.tagify() == ui.output_code("foo")
 
 
 def test_no_nested_transform_unless_explicit():

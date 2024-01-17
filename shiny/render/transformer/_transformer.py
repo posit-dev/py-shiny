@@ -266,11 +266,11 @@ class OutputRenderer(RendererBase, Generic[OT]):
 
         self._transformer = transform_fn
         self._params = params
-        self._default_ui = default_ui
-        self._default_ui_passthrough_args = default_ui_passthrough_args
+        self._auto_output_ui = default_ui
+        self._auto_output_ui_passthrough_args = default_ui_passthrough_args
 
-        self._default_ui_args: tuple[object, ...] = tuple()
-        self._default_ui_kwargs: dict[str, object] = dict()
+        self._auto_output_ui_args: tuple[object, ...] = tuple()
+        self._auto_output_ui_kwargs: dict[str, object] = dict()
 
         # Allow for App authors to not require `@output`
         self._auto_register()
@@ -318,24 +318,24 @@ class OutputRenderer(RendererBase, Generic[OT]):
 
     # # Shims for Renderer class #############################
 
-    def default_ui(
+    def auto_output_ui(
         self,
         id: str,
         **kwargs: object,
     ) -> DefaultUIFnResultOrNone:
-        if self._default_ui is None:
+        if self._auto_output_ui is None:
             return None
 
-        if self._default_ui_passthrough_args is not None:
+        if self._auto_output_ui_passthrough_args is not None:
             kwargs.update(
                 {
                     k: v
                     for k, v in self._params.kwargs.items()
-                    if k in self._default_ui_passthrough_args and v is not MISSING
+                    if k in self._auto_output_ui_passthrough_args and v is not MISSING
                 }
             )
 
-        return self._default_ui(id, *self._default_ui_args, **kwargs)
+        return self._auto_output_ui(id, *self._auto_output_ui_args, **kwargs)
 
     async def render(self) -> Jsonifiable:
         ret = await self._run()

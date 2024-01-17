@@ -102,8 +102,8 @@ class RendererBase(ABC):
     # Q: Could we do this with typing without putting `P` in the Generic?
     # A: No. Even if we had a `P` in the Generic, the calling decorator would not have access to it.
     # Idea: Possibly use a chained method of `.ui_kwargs()`? https://github.com/posit-dev/py-shiny/issues/971
-    _default_ui_kwargs: dict[str, Any] = dict()
-    # _default_ui_args: tuple[Any, ...] = tuple()
+    _auto_output_ui_kwargs: dict[str, Any] = dict()
+    # _auto_output_ui_args: tuple[Any, ...] = tuple()
 
     __name__: str
     """
@@ -135,7 +135,7 @@ class RendererBase(ABC):
         """
         self.output_id = output_name
 
-    def default_ui(
+    def auto_output_ui(
         self,
         id: str,
         # *args: object,
@@ -155,13 +155,13 @@ class RendererBase(ABC):
     # Tagify-like methods
     # ######
     def _repr_html_(self) -> str | None:
-        rendered_ui = self._render_default_ui()
+        rendered_ui = self._render_auto_output_ui()
         if rendered_ui is None:
             return None
         return TagList(rendered_ui)._repr_html_()
 
     def tagify(self) -> DefaultUIFnResult:
-        rendered_ui = self._render_default_ui()
+        rendered_ui = self._render_auto_output_ui()
         if rendered_ui is None:
             raise TypeError(
                 "No default UI exists for this type of render function: ",
@@ -169,11 +169,11 @@ class RendererBase(ABC):
             )
         return rendered_ui
 
-    def _render_default_ui(self) -> DefaultUIFnResultOrNone:
-        return self.default_ui(
+    def _render_auto_output_ui(self) -> DefaultUIFnResultOrNone:
+        return self.auto_output_ui(
             self.__name__,
-            # Pass the `@ui_kwargs(foo="bar")` kwargs through to the default_ui function.
-            **self._default_ui_kwargs,
+            # Pass the `@output_args(foo="bar")` kwargs through to the auto_output_ui function.
+            **self._auto_output_ui_kwargs,
         )
 
     # ######

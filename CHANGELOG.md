@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `@render.download` as a replacement for `@session.download`, which is now deprecated. (#977)
 
+* Added `ui.output_code()`, which is currently an alias for `ui.output_text_verbatim()`. (#997)
+
+* Added `@render.code`, which is an alias for `@render.text`, but in Express mode, it displays the result using `ui.output_code()`. (#997)
+
 ### Bug fixes
 
 * CLI command `shiny create`... (#965)

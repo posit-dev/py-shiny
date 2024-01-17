@@ -15,6 +15,7 @@ from ._display import (
     display,
 )
 from ._render import (
+    code,
     image,
     plot,
     table,
@@ -28,6 +29,7 @@ __all__ = (
     "data_frame",
     "display",
     "text",
+    "code",
     "plot",
     "image",
     "table",
