@@ -32,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shiny.render.OutputRendererSync` and `shiny.render.OutputRendererAsync` helper classes have been removed in favor of an updated `shiny.render.OutputRenderer` class. Now, the app's output value function will be transformed into an asynchronous function for simplified, consistent execution behavior. If redesigning your code, instead please create a new renderer that inherits from `shiny.render.renderer.Renderer`. `shiny.render.*` will be removed in the near future. (#964)
 
+### Other changes
+
+* Pinned Starlette to version <0.35.0; versions 0.35.0 and 0.35.1 caused problems when deploying on Posit Connect. (#1009
+)
 
 ## [0.6.1.1] - 2023-12-22
 
