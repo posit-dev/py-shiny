@@ -3,8 +3,6 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 from shiny import render, ui
 from shiny.express import suspend_display
 from shiny.express._run import run_express

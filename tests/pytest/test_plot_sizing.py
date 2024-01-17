@@ -1,5 +1,6 @@
 from shiny import render, ui
-from shiny.types import MISSING
+
+# from shiny.types import MISSING
 
 
 def test_decorator_plot_sizing():
