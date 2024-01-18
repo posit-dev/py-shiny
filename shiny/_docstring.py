@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import re
 import sys
 from typing import Any, Callable, Optional, TypeVar
 
@@ -12,12 +11,12 @@ def find_api_examples_dir(start_dir: str) -> Optional[str]:
         api_examples_dir = os.path.join(current_dir, "api-examples")
         if os.path.isdir(api_examples_dir):
             return api_examples_dir
-        if "setup.cfg" in os.listdir(current_dir) or "pyproject.toml" in os.listdir(
-            current_dir
-        ):
-            break
+        root_files = ["setup.cfg", "pyproject.toml"]
+        dir_files = os.listdir(current_dir)
+        if any(rf in dir_files for rf in root_files):
+            break  # Reached the package root directory
         if current_dir == os.path.dirname(current_dir):
-            break  # Reached the root directory
+            break  # Reached the global root directory
         current_dir = os.path.dirname(current_dir)
     return None
 
@@ -64,54 +63,47 @@ example_writer = ExampleWriterRegistry()
 
 def add_example(
     app_file: str = "app.py",
+    ex_dir: Optional[str] = None,
 ) -> Callable[[F], F]:
     """
     Add an example to the docstring of a function, method, or class.
 
     This decorator must, at the moment, be used on a function, method, or class whose
-    ``__name__`` matches the name of directory under ``shiny/api-examples/``, and must
-    also contain a ``app.py`` file in that directory.
+    ``__name__`` matches the name of directory under a ``api-examples/`` directory in
+    the current or any parent directory.
 
     Parameters
     ----------
-    directive
-        A directive for rendering the example. This can be one of:
-            - ``shinyapp``: A live shiny app (statically served via wasm).
-            - ``code``: A python code snippet.
-            - ``shinylive-editor``: A live shiny app with editor (statically served via wasm).
-            - ``cell``: A executable Python cell.
-            - ``terminal``: A minimal Python IDE
     app_file:
         The primary app file to use for the example. This allows you to have multiple
         example files for a single function or to use a different file name than
-        ``app.py``. Support files _cannot_ be named ``app.py`` or start with ``app-``, as these files will never be included in the example.
-    **options
-        Options for the directive. See docs/source/sphinxext/pyshinyapp.py for details.
+        ``app.py``. Support files _cannot_ be named ``app.py`` or start with ``app-``,
+        as these files will never be included in the example.
+    ex_dir:
+        The directory containing the example. If not specified, ``add_example()`` will
+        find a directory named after the current function in the first ``api-examples/``
+        directory it finds in the current directory or its parent directories.
     """
-
-    def get_decorated_source_directory(func: F) -> str:
-        if hasattr(func, "__module__"):
-            path = os.path.abspath(str(sys.modules[func.__module__].__file__))
-        else:
-            path = os.path.abspath(func.__code__.co_filename)
-
-        return os.path.dirname(path)
 
     def _(func: F) -> F:
         # To avoid a performance hit on `import shiny`, we only add examples to the
-        # docstrings if this env variable is set (as it is in docs/source/conf.py).
+        # docstrings if this env variable is set (as it is in `make quartodoc`).
         if os.getenv("SHINY_ADD_EXAMPLES") != "true":
             if func.__doc__ is not None:
                 func.__doc__ = DocStringWithExample(func.__doc__)
             return func
 
-        func_dir = get_decorated_source_directory(func)
-        ex_dir = find_api_examples_dir(func_dir)
+        nonlocal app_file
+        nonlocal ex_dir
 
         if ex_dir is None:
-            raise ValueError(
-                f"No example directory found for {func.__name__} in {func_dir} or its parent directories."
-            )
+            func_dir = get_decorated_source_directory(func)
+            ex_dir = find_api_examples_dir(func_dir)
+
+            if ex_dir is None:
+                raise ValueError(
+                    f"No example directory found for {func.__name__} in {func_dir} or its parent directories."
+                )
 
         fn_name = func.__name__
         example_dir = os.path.join(ex_dir, fn_name)
@@ -160,6 +152,15 @@ def add_example(
     return _
 
 
+def get_decorated_source_directory(func: F) -> str:
+    if hasattr(func, "__module__"):
+        path = os.path.abspath(str(sys.modules[func.__module__].__file__))
+    else:
+        path = os.path.abspath(func.__code__.co_filename)
+
+    return os.path.dirname(path)
+
+
 def doc_format(**kwargs: str) -> Callable[[F], F]:
     def _(func: F) -> F:
         if isinstance(func.__doc__, DocStringWithExample):
@@ -181,7 +182,9 @@ if os.environ.get("IN_QUARTODOC") == "true":
     except ModuleNotFoundError:
         import warnings
 
-        warnings.warn("shinylive not installed, cannot add shinylive examples.")
+        warnings.warn(
+            "shinylive not installed, cannot add shinylive examples.", stacklevel=2
+        )
         pass
 
     SHINYLIVE_CODE_TEMPLATE = """
