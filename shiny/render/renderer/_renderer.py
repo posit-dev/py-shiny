@@ -100,7 +100,7 @@ class RendererBase(ABC):
     """
     Base class for all renderers.
 
-    TODO-barret-docs
+    .. TODO-barret-docs
     """
 
     # Q: Could we do this with typing without putting `P` in the Generic?
@@ -291,7 +291,7 @@ class Renderer(RendererBase, Generic[IT]):
     """
     Renderer cls docs here
 
-    TODO-barret-docs
+    .. TODO-barret-docs
     """
 
     fn: AsyncValueFn[IT]
@@ -305,7 +305,7 @@ class Renderer(RendererBase, Generic[IT]):
         """
         Renderer __call__ docs here; Sets app's value function
 
-        TODO-barret-docs
+        .. TODO-barret-docs
         """
 
         if not callable(_fn):
@@ -341,7 +341,7 @@ class Renderer(RendererBase, Generic[IT]):
         """
         Renderer - transform docs here
 
-        TODO-barret-docs
+        .. TODO-barret-docs
         """
         raise NotImplementedError(
             "Please implement either the `transform(self, value: IT)` or `render(self)` method.\n"
@@ -354,7 +354,7 @@ class Renderer(RendererBase, Generic[IT]):
         """
         Renderer - render docs here
 
-        TODO-barret-docs
+        .. TODO-barret-docs
         """
         value = await self.fn()
         if value is None:

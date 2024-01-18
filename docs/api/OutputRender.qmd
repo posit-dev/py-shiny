@@ -8,7 +8,6 @@
 
 Renderer cls docs here
 
-TODO-barret-docs
 
 ## Examples
 
@@ -214,8 +213,8 @@ app = App(app_ui, server)
 
 | Name | Description |
 | --- | --- |
-| [render](#shiny.render.renderer.Renderer.render) | Renderer - render docs here  TODO-barret-docs |
-| [transform](#shiny.render.renderer.Renderer.transform) | Renderer - transform docs here  TODO-barret-docs |
+| [render](#shiny.render.renderer.Renderer.render) | Renderer - render docs here  .. TODO-barret-docs |
+| [transform](#shiny.render.renderer.Renderer.transform) | Renderer - transform docs here  .. TODO-barret-docs |
 
 ### render { #shiny.render.renderer.Renderer.render }
 
@@ -223,7 +222,7 @@ app = App(app_ui, server)
 
 Renderer - render docs here
 
-TODO-barret-docs
+
 
 ### transform { #shiny.render.renderer.Renderer.transform }
 
@@ -231,7 +230,7 @@ TODO-barret-docs
 
 Renderer - transform docs here
 
-TODO-barret-docs
+
 
 # render.renderer.RendererBase { #shiny.render.renderer.RendererBase }
 
@@ -239,7 +238,7 @@ TODO-barret-docs
 
 Base class for all renderers.
 
-TODO-barret-docs
+
 
 ## Attributes
 
