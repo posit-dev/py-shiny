@@ -152,7 +152,7 @@ def add_example(
     return _
 
 
-def get_decorated_source_directory(func: F) -> str:
+def get_decorated_source_directory(func: FuncType) -> str:
     if hasattr(func, "__module__"):
         path = os.path.abspath(str(sys.modules[func.__module__].__file__))
     else:
