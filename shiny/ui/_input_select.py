@@ -7,15 +7,16 @@ __all__ = (
     "input_selectize",
 )
 
+import copy
 from json import dumps
-from typing import Mapping, Optional, Union, cast
+from typing import Dict, Mapping, Optional, Union, cast
 
 from htmltools import HTML, JS, Tag, TagChild, TagList, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from ._html_deps_external import selectize_deps
-from ._utils import shiny_input_label, extract_js_html
+from ._utils import extract_js_html, shiny_input_label
 
 _Choices = Mapping[str, TagChild]
 _OptGrpChoices = Mapping[str, _Choices]
@@ -55,6 +56,7 @@ def input_selectize(
     selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
+    remove_button: bool = True,
     options: Optional[dict[str, str | float | HTML | JS]] = None,
 ) -> Tag:
     """
@@ -110,6 +112,7 @@ def input_selectize(
         multiple=multiple,
         selectize=True,
         width=width,
+        remove_button=remove_button,
         options=options,
     )
 
@@ -127,6 +130,7 @@ def input_select(
     selectize: bool = False,
     width: Optional[str] = None,
     size: Optional[str] = None,
+    remove_button: bool = True,
     options: Optional[dict[str, str | float | HTML]] = None,
 ) -> Tag:
     """
@@ -189,7 +193,9 @@ def input_select(
     if options is None:
         options = {}
 
-    js_opts, opts = extract_js_html(options)
+    opts = _update_options(options, remove_button, multiple)
+
+    js_opts, opts = extract_js_html(opts)
     choices_tags = _render_choices(choices_, selected)
 
     resolved_id = resolve_id(id)
@@ -222,6 +228,28 @@ def input_select(
         class_="form-group shiny-input-container",
         style=css(width=width),
     )
+
+
+def _update_options(
+    options: dict[str, any], remove_button: bool, multiple: bool
+) -> dict[str, any]:
+    opts = copy.deepcopy(options)
+    plugins = opts.get("plugins", [])
+
+    if remove_button:
+        if multiple:
+            to_add = "remove_button"
+        else:
+            to_add = "clear_button"
+
+        if to_add not in plugins:
+            plugins.append(to_add)
+
+    if not plugins:
+        return options
+
+    opts["plugins"] = plugins
+    return opts
 
 
 def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
