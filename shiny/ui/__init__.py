@@ -3,40 +3,39 @@ Tools for creating user interfaces including: custom components, HTML components
 layout helpers, page-level containers, and more.
 """
 
-from ._bootstrap import (
-    row,
-    column,
-    panel_well,
-    panel_conditional,
-    panel_title,
-    panel_fixed,
-    panel_absolute,
-    help_text,
+from htmltools import (
+    HTML,
+    Tag,
+    TagAttrs,
+    TagAttrValue,
+    TagChild,
+    TagList,
+    a,
+    br,
+    code,
+    div,
+    em,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    head_content,
+    hr,
+    img,
+    p,
+    pre,
+    span,
+    strong,
+    tags,
 )
-from ._sidebar import (
-    Sidebar,
-    sidebar,
-    layout_sidebar,
-    update_sidebar,
-    panel_sidebar,
-    panel_main,
-)
-
-from ._layout import layout_column_wrap
-from ._layout_columns import layout_columns
-
 
 # Expose the following modules for extended usage: ex: ui.fill.as_fill_item(x)
-from . import css  # noqa: F401  # pyright: ignore[reportUnusedImport]
-from . import fill  # noqa: F401  # pyright: ignore[reportUnusedImport]
-
-from ._card import (
-    card,
-    CardItem,
-    card_header,
-    card_footer,
+from . import (
+    css,  # noqa: F401  # pyright: ignore[reportUnusedImport]
+    fill,  # noqa: F401  # pyright: ignore[reportUnusedImport]
 )
-
 from ._accordion import (
     AccordionPanel,
     accordion,
@@ -46,130 +45,123 @@ from ._accordion import (
     update_accordion,
     update_accordion_panel,
 )
-
+from ._bootstrap import (
+    column,
+    help_text,
+    panel_absolute,
+    panel_conditional,
+    panel_fixed,
+    panel_title,
+    panel_well,
+    row,
+)
+from ._card import (
+    CardItem,
+    card,
+    card_footer,
+    card_header,
+)
 from ._download_button import download_button, download_link
-from ._plot_output_opts import brush_opts, click_opts, dblclick_opts, hover_opts
 from ._include_helpers import include_css, include_js
 from ._input_action_button import input_action_button, input_action_link
 from ._input_check_radio import (
     input_checkbox,
     input_checkbox_group,
-    input_switch,
     input_radio_buttons,
+    input_switch,
 )
 from ._input_date import input_date, input_date_range
 from ._input_file import input_file
 from ._input_numeric import input_numeric
 from ._input_password import input_password
 from ._input_select import input_select, input_selectize
-from ._input_slider import input_slider, SliderValueArg, SliderStepArg, AnimationOptions
+from ._input_slider import AnimationOptions, SliderStepArg, SliderValueArg, input_slider
 from ._input_text import input_text, input_text_area
 from ._input_update import (
     update_action_button,
     update_action_link,
     update_checkbox,
-    update_switch,
     update_checkbox_group,
-    update_radio_buttons,
     update_date,
     update_date_range,
+    update_navs,
     update_numeric,
+    update_popover,
+    update_radio_buttons,
     update_select,
     update_selectize,
     update_slider,
+    update_switch,
     update_text,
     update_text_area,
-    update_navs,
     update_tooltip,
-    update_popover,
 )
 from ._insert import insert_ui, remove_ui
+from ._layout import layout_column_wrap
+from ._layout_columns import layout_columns
 from ._markdown import markdown
-from ._modal import modal_button, modal, modal_show, modal_remove
+from ._modal import modal, modal_button, modal_remove, modal_show
 from ._navs import (
-    nav_panel,
-    nav_menu,
+    nav,
     nav_control,
+    nav_menu,
+    nav_panel,
     nav_spacer,
-    navset_tab,
-    navset_pill,
-    navset_underline,
-    navset_card_pill,
-    navset_card_underline,
-    navset_card_tab,
-    navset_pill_list,
-    navset_hidden,
     navset_bar,
+    navset_card_pill,
+    navset_card_tab,
+    navset_card_underline,
+    navset_hidden,
+    navset_pill,
     # Deprecated
     navset_pill_card,
+    navset_pill_list,
+    navset_tab,
     navset_tab_card,
-    nav,
+    navset_underline,
 )
-from ._notification import notification_show, notification_remove
+from ._notification import notification_remove, notification_show
 from ._output import (
-    output_plot,
     output_image,
+    output_plot,
+    output_table,
     output_text,
     output_text_verbatim,
-    output_table,
     output_ui,
 )
 from ._page import (
-    page_sidebar,
-    page_navbar,
-    page_fillable,
-    page_fluid,
-    page_fixed,
-    page_bootstrap,
     page_auto,
+    page_bootstrap,
+    page_fillable,
+    page_fixed,
+    page_fluid,
+    page_navbar,
     page_output,
+    page_sidebar,
 )
-from ._progress import Progress
-
-from .dataframe import output_data_frame
-
+from ._plot_output_opts import brush_opts, click_opts, dblclick_opts, hover_opts
 from ._popover import popover
+from ._progress import Progress
+from ._sidebar import (
+    Sidebar,
+    layout_sidebar,
+    panel_main,
+    panel_sidebar,
+    sidebar,
+    update_sidebar,
+)
+from ._tooltip import tooltip
+from ._utils import js_eval
 from ._valuebox import (
-    value_box,
-    value_box_theme,
+    ShowcaseLayout,
+    ValueBoxTheme,
     showcase_bottom,
     showcase_left_center,
     showcase_top_right,
-    ValueBoxTheme,
-    ShowcaseLayout,
+    value_box,
+    value_box_theme,
 )
-from ._tooltip import tooltip
-
-
-from htmltools import (
-    TagList,
-    Tag,
-    TagChild,
-    TagAttrs,
-    TagAttrValue,
-    tags,
-    HTML,
-    JS,
-    head_content,
-    p,
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6,
-    a,
-    br,
-    div,
-    span,
-    pre,
-    code,
-    img,
-    strong,
-    em,
-    hr,
-)
-
+from .dataframe import output_data_frame
 
 __all__ = (
     # _bootstrap
@@ -331,7 +323,6 @@ __all__ = (
     "TagAttrValue",
     "tags",
     "HTML",
-    "JS",
     "head_content",
     "p",
     "h1",
@@ -350,4 +341,6 @@ __all__ = (
     "strong",
     "em",
     "hr",
+    # utils
+    "js_eval",
 )

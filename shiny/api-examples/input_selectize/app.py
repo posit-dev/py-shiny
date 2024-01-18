@@ -1,3 +1,5 @@
+from html import escape
+
 from shiny import App, Inputs, Outputs, Session, render, ui
 
 states = {
@@ -22,8 +24,8 @@ app_ui = ui.page_fluid(
         options=(
             {
                 "placeholder": "Enter text",
-                "render": ui.JS(
-                    '{option: function(item, escape) {return "<div><strong>Select " + htmltools.html_escape(item.label) + "</strong></div>";}}'
+                "render": ui.js_eval(
+                    '{option: function(item, escape) {return "<div><strong>Select " + escape(item.label) + "</strong></div>";}}'
                 ),
                 "create": True,
             }
@@ -34,7 +36,7 @@ app_ui = ui.page_fluid(
         "Selectize plugins",
         states,
         multiple=True,
-        options={"plugins": ["clear_button", "remove_button"]},
+        options={"plugins": ["clear_button"]},
     ),
 )
 

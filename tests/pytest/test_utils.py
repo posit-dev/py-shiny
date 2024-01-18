@@ -5,7 +5,7 @@ from typing import List, Set
 import pytest
 
 from shiny._utils import AsyncCallbacks, Callbacks, private_seed, random_port
-from shiny.ui._utils import extract_js_keys
+from shiny.ui._utils import extract_js_keys, js_eval
 
 
 def test_randomness():
@@ -198,16 +198,14 @@ def test_random_port_starvation():
 
 
 def test_extract_js_keys():
-    from htmltools import HTML, JS
-
     options = {
         "key1": "value1",
-        "key2": HTML("<h1>Hello, world!</h1>"),
+        "key2": js_eval("<h1>Hello, world!</h1>"),
         "key3": {
-            "subkey1": JS("console.log('Hello, world!');"),
+            "subkey1": js_eval("console.log('Hello, world!');"),
             "subkey2": "value2",
             "subkey3": {
-                "subsubkey1": HTML("<p>This is a paragraph.</p>"),
+                "subsubkey1": js_eval("<p>This is a paragraph.</p>"),
                 "subsubkey2": "value3",
             },
         },
