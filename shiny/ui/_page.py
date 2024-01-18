@@ -26,7 +26,7 @@ from htmltools import (
     tags,
 )
 
-from .._docstring import add_example, doc_format
+from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._html_deps_external import bootstrap_deps
