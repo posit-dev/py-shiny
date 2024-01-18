@@ -9,7 +9,7 @@ __all__ = (
 
 import copy
 from json import dumps
-from typing import Dict, Mapping, Optional, Union, cast
+from typing import Any, Mapping, Optional, Union, cast
 
 from htmltools import HTML, JS, Tag, TagChild, TagList, css, div, tags
 
@@ -198,7 +198,6 @@ def input_select(
 
     opts = _update_options(options, remove_button, multiple)
 
-    js_opts, opts = extract_js_html(opts)
     choices_tags = _render_choices(choices_, selected)
 
     resolved_id = resolve_id(id)
@@ -234,8 +233,8 @@ def input_select(
 
 
 def _update_options(
-    options: dict[str, any], remove_button: bool, multiple: bool
-) -> dict[str, any]:
+    options: dict[str, Any], remove_button: bool, multiple: bool
+) -> dict[str, Any]:
     opts = copy.deepcopy(options)
     plugins = opts.get("plugins", [])
 
