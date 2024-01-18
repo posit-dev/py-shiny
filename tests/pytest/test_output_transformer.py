@@ -244,15 +244,12 @@ async def test_renderer_handler_or_transform_fn_can_be_async():
 
     test_val = "Test: Hello World!"
 
-    def app_render_fn() -> str:
-        return test_val
-
     # ## Test Sync: X =============================================
 
-    renderer_sync = async_renderer(app_render_fn)
-    renderer_sync._set_output_metadata(
-        output_name="renderer_sync",
-    )
+    @async_renderer
+    def renderer_sync() -> str:
+        return test_val
+
     # All renderers are async in execution.
     assert not is_async_callable(renderer_sync)
 
@@ -264,14 +261,11 @@ async def test_renderer_handler_or_transform_fn_can_be_async():
 
     async_test_val = "Async: Hello World!"
 
-    async def async_app_render_fn() -> str:
+    @async_renderer
+    async def renderer_async() -> str:
         await asyncio.sleep(0)
         return async_test_val
 
-    renderer_async = async_renderer(async_app_render_fn)
-    renderer_async._set_output_metadata(
-        output_name="renderer_async",
-    )
     if not is_async_callable(renderer_async):
         raise RuntimeError("Expected `renderer_async` to be a coro function")
 
