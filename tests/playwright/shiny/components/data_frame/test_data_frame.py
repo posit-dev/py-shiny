@@ -59,6 +59,9 @@ def test_summary_navigation(
     grid_container: Locator,
     summary: Locator,
 ):
+    # Update the page size to be big
+    page.set_viewport_size({"width": 2000, "height": 2000})
+
     page.goto(data_frame_app.url)
 
     # Check that summary responds to navigation
