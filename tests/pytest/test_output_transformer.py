@@ -251,10 +251,10 @@ async def test_renderer_handler_or_transform_fn_can_be_async():
         return test_val
 
     # All renderers are async in execution.
-    assert not is_async_callable(renderer_sync)
+    assert not is_async_callable(renderer_sync._value_fn)
 
     with session_context(test_session):
-        val = renderer_sync()
+        val = await renderer_sync._run()
         assert val == test_val
 
     # ## Test Async: √ =============================================
@@ -266,11 +266,11 @@ async def test_renderer_handler_or_transform_fn_can_be_async():
         await asyncio.sleep(0)
         return async_test_val
 
-    if not is_async_callable(renderer_async):
+    if not is_async_callable(renderer_async._value_fn):
         raise RuntimeError("Expected `renderer_async` to be a coro function")
 
     with session_context(test_session):
-        ret = await renderer_async()
+        ret = await renderer_async._run()
         assert ret == async_test_val
 
 
