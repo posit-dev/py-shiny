@@ -256,10 +256,6 @@ class OutputRenderer(RendererBase, ABC, Generic[OT]):
             "`shiny.render.transformer.output_transformer()` and `shiny.render.transformer.OutputRenderer()` output render function utilities have been superseded by `shiny.render.renderer.Renderer` and will be removed in the near future."
         )
 
-        # Copy over function name as it is consistent with how Session and Output
-        # retrieve function names
-        self.__name__ = value_fn.__name__
-
         if not is_async_callable(transform_fn):
             raise TypeError(
                 self.__class__.__name__
@@ -278,7 +274,11 @@ class OutputRenderer(RendererBase, ABC, Generic[OT]):
 
         self._value_fn = value_fn
         self._value_fn_is_async = is_async_callable(value_fn)  # legacy key
+        # Copy over function name as it is consistent with how Session and Output
+        # retrieve function names
         self.__name__ = value_fn.__name__
+        # Initial value for output_id until it is set by the Session
+        self.output_id = value_fn.__name__
 
         self._transformer = transform_fn
         self._params = params
@@ -333,7 +333,6 @@ class OutputRenderer(RendererBase, ABC, Generic[OT]):
 
     def auto_output_ui(
         self,
-        id: str,
         **kwargs: object,
     ) -> DefaultUIFnResultOrNone:
         if self._default_ui is None:
@@ -348,7 +347,7 @@ class OutputRenderer(RendererBase, ABC, Generic[OT]):
                 }
             )
 
-        return self._default_ui(id, *self._default_ui_args, **kwargs)
+        return self._default_ui(self.output_id, *self._default_ui_args, **kwargs)
 
     async def render(self) -> Jsonifiable:
         ret = await self._run()
