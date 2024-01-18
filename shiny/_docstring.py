@@ -134,10 +134,18 @@ def add_example(
         if not isinstance(func.__doc__, DocStringWithExample):
             func.__doc__ += nl_indent + "Examples"
             func.__doc__ += nl_indent + "--------"
+            after = None
+        else:
+            ex_header = "Examples" + nl_indent + "--------"
+            before, after = func.__doc__.split(ex_header, 1)
+            func.__doc__ = before + ex_header
 
-        # Add the example to the docstring
+        # Insert the example under the Examples heading
         func.__doc__ += nl_indent * 2
         func.__doc__ += nl_indent.join(example_lines)
+        if after is not None:
+            func.__doc__ += after
+
         func.__doc__ = DocStringWithExample(func.__doc__)
         return func
 
