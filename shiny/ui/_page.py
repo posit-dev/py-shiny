@@ -26,6 +26,7 @@ from htmltools import (
     tags,
 )
 
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
@@ -41,7 +42,6 @@ from .fill._fill import as_fillable_container
 
 
 def page_sidebar(
-    sidebar: Sidebar,
     *args: TagChild | TagAttrs,
     title: Optional[str | Tag | TagList] = None,
     fillable: bool = False,
@@ -55,10 +55,8 @@ def page_sidebar(
 
     Parameters
     ----------
-    sidebar
-        Content to display in the sidebar.
     *args
-        UI elements.
+        UI elements. One of the elements must be a sidebar.
     title
         A title to display at the top of the page.
     fillable
@@ -84,6 +82,19 @@ def page_sidebar(
 
     if isinstance(title, str):
         title = tags.h1(title, class_="bslib-page-title")
+
+    # Extract sidebar from args
+    sidebars = [x for x in args if isinstance(x, Sidebar)]
+    if len(sidebars) == 0:
+        raise ValueError(
+            "page_sidebar() requires one sidebar, but no sidebars were found in args. Use `ui.sidebar(...)` to create one."
+        )
+    elif len(sidebars) > 1:
+        raise ValueError(
+            "page_sidebar() requires exactly one sidebar, but more sidebars were found in args."
+        )
+    sidebar = sidebars[0]
+    args = tuple([x for x in args if x not in sidebars])
 
     attrs, children = consolidate_attrs(*args, **kwargs)
 
@@ -137,7 +148,7 @@ def page_navbar(
     Parameters
     ----------
     *args
-        UI elements.
+        UI elements. One of these may be a :func:`~shiny.ui.sidebar` object.
     title
         The browser window title (defaults to the host URL of the page). Can also be set
         as a side effect via :func:`~shiny.ui.panel_title`.
@@ -148,10 +159,11 @@ def page_navbar(
         Choose a particular nav item to select by default value (should match its
         ``value``).
     sidebar
-        A :func:`~shiny.ui.sidebar` component to display on every page.
+        Deprecated. If you want to add a sidebar, simply pass it as one of the
+        ``*args``.
     fillable
-        Whether or not the main content area should be considered a fillable
-        (i.e., flexbox) container.
+        Whether or not the main content area should be considered a fillable (i.e.,
+        flexbox) container.
     fillable_mobile
         Whether or not ``fillable`` should apply on mobile devices.
     position
@@ -169,7 +181,8 @@ def page_navbar(
     inverse
         Either ``True`` for a light text color or ``False`` for a dark text color.
     collapsible
-        ``True`` to automatically collapse the elements into an expandable menu on mobile devices or narrow window widths.
+        ``True`` to automatically collapse the elements into an expandable menu on
+        mobile devices or narrow window widths.
     fluid
         ``True`` to use fluid layout; ``False`` to use fixed layout.
     window_title
@@ -196,9 +209,22 @@ def page_navbar(
     -------
     See :func:`~shiny.ui.nav`.
     """
-    if sidebar is not None and not isinstance(sidebar, Sidebar):
-        raise TypeError(
-            "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
+    if sidebar is None:
+        # Extract sidebar from args
+        sidebars = [x for x in args if isinstance(x, Sidebar)]
+        if len(sidebars) == 1:
+            sidebar = sidebars[0]
+            args = tuple([x for x in args if x not in sidebars])
+        elif len(sidebars) > 1:
+            raise ValueError(
+                "page_navbar() can have up to one sidebar, but more sidebars were found in args."
+            )
+
+    else:
+        # Deprecated after Shiny 0.6.1
+        warn_deprecated(
+            "The `sidebar` argument to `page_navbar()` is deprecated. Instead of using "
+            "`sidebar=...`, just pass the sidebar object as an unnamed argument."
         )
 
     pageClass = "bslib-page-navbar"
@@ -522,12 +548,7 @@ def page_auto(
             elif nSidebars == 1:
                 if not isinstance(fillable, MISSING_TYPE):
                     kwargs["fillable"] = fillable
-
-                # page_sidebar() needs sidebar to be the first arg
-                # TODO: Change page_sidebar() to remove `sidebar` and accept a sidebar as a
-                # *arg.
                 page_fn = page_sidebar  # pyright: ignore[reportGeneralTypeIssues]
-                args = tuple(sidebars + [x for x in args if x not in sidebars])
 
             else:
                 raise NotImplementedError(
@@ -544,11 +565,7 @@ def page_auto(
                 page_fn = page_navbar  # pyright: ignore[reportGeneralTypeIssues]
 
             elif nSidebars == 1:
-                # TODO: change page_navbar() to remove `sidebar` and accept a sidebar as a
-                # *arg.
                 page_fn = page_navbar  # pyright: ignore[reportGeneralTypeIssues]
-                args = tuple([x for x in args if x not in sidebars])
-                kwargs["sidebar"] = sidebars[0]
 
             else:
                 raise NotImplementedError(
