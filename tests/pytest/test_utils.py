@@ -5,7 +5,7 @@ from typing import List, Set
 import pytest
 
 from shiny._utils import AsyncCallbacks, Callbacks, private_seed, random_port
-from shiny.ui._utils import extract_js_html
+from shiny.ui._utils import extract_js_keys
 
 
 def test_randomness():
@@ -197,7 +197,7 @@ def test_random_port_starvation():
             random_port(9000, 9000)
 
 
-def test_extract_js_html():
+def test_extract_js_keys():
     from htmltools import HTML, JS
 
     options = {
@@ -214,23 +214,8 @@ def test_extract_js_html():
         "key4": "value4",
     }
 
-    js_fixture = {
-        "key2": HTML("<h1>Hello, world!</h1>"),
-        "key3": {
-            "subkey1": JS("console.log('Hello, world!');"),
-            "subkey3": {
-                "subsubkey1": HTML("<p>This is a paragraph.</p>"),
-            },
-        },
-    }
-
-    non_js_fixture = {
-        "key1": "value1",
-        "key3": {"subkey2": "value2", "subkey3": {"subsubkey2": "value3"}},
-        "key4": "value4",
-    }
-
-    js_opts, non_js_opts = extract_js_html(options)
-
-    assert js_opts == js_fixture
-    assert non_js_opts == non_js_fixture
+    assert extract_js_keys(options) == [
+        "key2",
+        "key3.subkey1",
+        "key3.subkey3.subsubkey1",
+    ]

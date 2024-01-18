@@ -16,7 +16,7 @@ from htmltools import HTML, JS, Tag, TagChild, TagList, css, div, tags
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from ._html_deps_external import selectize_deps
-from ._utils import extract_js_html, shiny_input_label
+from ._utils import extract_js_keys, shiny_input_label
 
 _Choices = Mapping[str, TagChild]
 _OptGrpChoices = Mapping[str, _Choices]
@@ -81,6 +81,9 @@ def input_selectize(
         Is selection of multiple items allowed?
     width
         The CSS width, e.g. '400px', or '100%'
+    remove_button
+        Whether to add a remove button. This uses the `clear_button` and `remove_button`
+        selectize plugins which can also be supplied as options.
     options
         A dictionary of options. See the documentation of selectize.js for possible options.
         If you want to pass a JavaScript function, wrap the string in `ui.JS`.
@@ -217,7 +220,7 @@ def input_select(
                         dumps(opts),
                         type="application/json",
                         data_for=id,
-                        data_eval=dumps(js_opts),
+                        data_eval=dumps(extract_js_keys(opts)),
                     ),
                     selectize_deps(),
                 )

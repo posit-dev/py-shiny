@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple, Union, overload
+from typing import Any, Dict, List, Optional, overload
 
 from htmltools import (
     HTML,
@@ -96,33 +96,23 @@ def css_no_sub(**kwargs: str | float | None) -> Optional[str]:
     return None if res == "" else res
 
 
-def extract_js_html(
-    options: Dict[str, Any]
-) -> Tuple[Dict[str, Union[HTML, JS, Dict[str, Any]]], Dict[str, Any]]:
+def extract_js_keys(options: Dict[str, Any], parent_key: str = "") -> List[str]:
     """
     This function extracts JavaScript (JS) and HTML objects from the provided dictionary.
-    This is used to send to send JavaScript options to front-end libraries like selectize.
+    This is used to identify which options should be evaluated by the client.
 
     Parameters:
     options (Dict[str, Any]): A dictionary containing various options. The options can be of any type,
     but the function specifically looks for HTML, JS, and dictionary types.
 
     Returns:
-    A Tuple of two dictionaries. One contains all of the HTML and JS options, while the
-    other contains all of the other options. The original dictionary structure is preserved
-    for both dictionaries.
+    A list of keys which identify the JS or HTML options
     """
-    js_html_options = {}
-    other_options = {}
+    js_html_keys = []
     for key, value in options.items():
+        full_key = f"{parent_key}.{key}" if parent_key else key
         if isinstance(value, (HTML, JS)):
-            js_html_options[key] = value
+            js_html_keys.append(full_key)
         elif isinstance(value, dict):
-            sub_js_html_options, sub_other_options = extract_js_html(value)
-            if sub_js_html_options:
-                js_html_options[key] = sub_js_html_options
-            if sub_other_options:
-                other_options[key] = sub_other_options
-        else:
-            other_options[key] = value
-    return js_html_options, other_options
+            js_html_keys.extend(extract_js_keys(value, full_key))
+    return js_html_keys
