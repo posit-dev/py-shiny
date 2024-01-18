@@ -35,6 +35,7 @@ __all__ = (
     "Jsonifiable",
     "ValueFn",
     "AsyncValueFn",
+    "RendererBaseT",
 )
 
 RendererBaseT = TypeVar("RendererBaseT", bound="RendererBase")
@@ -106,13 +107,12 @@ class RendererBase(ABC):
     # A: No. Even if we had a `P` in the Generic, the calling decorator would not have access to it.
     # Idea: Possibly use a chained method of `.ui_kwargs()`? https://github.com/posit-dev/py-shiny/issues/971
     _auto_output_ui_kwargs: dict[str, Any] = dict()
-    # _auto_output_ui_args: tuple[Any, ...] = tuple()
 
     __name__: str
     """
     Name of output function supplied. (The value will not contain any module prefix.)
 
-    Set within `.__call__()` method.
+    Set within `Renderer.__call__()` method.
     """
 
     # Meta
@@ -212,11 +212,8 @@ class RendererBase(ABC):
 
             s = get_current_session()
             if s is not None:
-                from ._renderer import RendererBase
-
-                # Cast to avoid circular import as this mixin is ONLY used within RendererBase
-                renderer_self = cast(RendererBase, self)
-                s.output(renderer_self)
+                # Register output on reactive graph
+                s.output(self)
                 # We mark the fact that we're auto-registered so that, if an explicit
                 # registration now occurs, we can undo this auto-registration.
                 self._auto_registered = True
