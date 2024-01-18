@@ -2174,6 +2174,7 @@ class OutputText(_OutputInlineContainerM, _OutputTextValue):
         super().__init__(page, id=id, loc=f"#{id}.shiny-text-output")
 
 
+# TODO-Karan: Add OutputCode class
 class OutputTextVerbatim(_OutputTextValue):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")

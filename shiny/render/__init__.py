@@ -15,6 +15,7 @@ from ._display import (
     display,
 )
 from ._render import (
+    code,
     image,
     plot,
     table,
@@ -22,12 +23,17 @@ from ._render import (
     ui,
     download,
 )
+from ._deprecated import (  # noqa: F401
+    RenderFunction,  # pyright: ignore[reportUnusedImport]
+    RenderFunctionAsync,  # pyright: ignore[reportUnusedImport]
+)
 
 __all__ = (
     # TODO-future: Document which variables are exposed via different import approaches
     "data_frame",
     "display",
     "text",
+    "code",
     "plot",
     "image",
     "table",

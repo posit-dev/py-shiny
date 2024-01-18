@@ -18,7 +18,7 @@ from .renderer._utils import (
 
 
 class display(Renderer[None]):
-    def default_ui(
+    def auto_output_ui(
         self,
         id: str,
         *,

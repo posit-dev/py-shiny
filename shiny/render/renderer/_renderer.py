@@ -83,9 +83,12 @@ DefaultUIFnResult = Union[TagList, Tag, MetadataNode, str]
 DefaultUIFnResultOrNone = Union[DefaultUIFnResult, None]
 DefaultUIFn = Callable[[str], DefaultUIFnResultOrNone]
 
+# Requiring `None` type throughout the value functions as `return` returns `None` type.
+# This is typically paired with `req(False)` to exit quickly.
+# If package authors want to NOT allow `None` type, they can capture it in a custom render method with a runtime error. (Or make a new RendererThatCantBeNone class)
 ValueFn = Union[
-    Callable[[], IT],
-    Callable[[], Awaitable[IT]],
+    Callable[[], Union[IT, None]],
+    Callable[[], Awaitable[Union[IT, None]]],
 ]
 """
 App-supplied output value function which returns type `IT`. This function can be
@@ -103,8 +106,8 @@ class RendererBase(ABC):
     # Q: Could we do this with typing without putting `P` in the Generic?
     # A: No. Even if we had a `P` in the Generic, the calling decorator would not have access to it.
     # Idea: Possibly use a chained method of `.ui_kwargs()`? https://github.com/posit-dev/py-shiny/issues/971
-    _default_ui_kwargs: dict[str, Any] = dict()
-    # _default_ui_args: tuple[Any, ...] = tuple()
+    _auto_output_ui_kwargs: dict[str, Any] = dict()
+    # _auto_output_ui_args: tuple[Any, ...] = tuple()
 
     __name__: str
     """
@@ -136,7 +139,7 @@ class RendererBase(ABC):
         """
         self.output_id = output_name
 
-    def default_ui(
+    def auto_output_ui(
         self,
         id: str,
         # *args: object,
@@ -156,13 +159,13 @@ class RendererBase(ABC):
     # Tagify-like methods
     # ######
     def _repr_html_(self) -> str | None:
-        rendered_ui = self._render_default_ui()
+        rendered_ui = self._render_auto_output_ui()
         if rendered_ui is None:
             return None
         return TagList(rendered_ui)._repr_html_()
 
     def tagify(self) -> DefaultUIFnResult:
-        rendered_ui = self._render_default_ui()
+        rendered_ui = self._render_auto_output_ui()
         if rendered_ui is None:
             raise TypeError(
                 "No default UI exists for this type of render function: ",
@@ -170,11 +173,11 @@ class RendererBase(ABC):
             )
         return rendered_ui
 
-    def _render_default_ui(self) -> DefaultUIFnResultOrNone:
-        return self.default_ui(
+    def _render_auto_output_ui(self) -> DefaultUIFnResultOrNone:
+        return self.auto_output_ui(
             self.__name__,
-            # Pass the `@ui_kwargs(foo="bar")` kwargs through to the default_ui function.
-            **self._default_ui_kwargs,
+            # Pass the `@output_args(foo="bar")` kwargs through to the auto_output_ui function.
+            **self._auto_output_ui_kwargs,
         )
 
     # ######
@@ -224,7 +227,10 @@ class AsyncValueFn(Generic[IT]):
     Type definition: `Callable[[], Awaitable[IT]]`
     """
 
-    def __init__(self, fn: Callable[[], IT] | Callable[[], Awaitable[IT]]):
+    def __init__(
+        self,
+        fn: Callable[[], IT | None] | Callable[[], Awaitable[IT | None]],
+    ):
         if isinstance(fn, AsyncValueFn):
             raise TypeError(
                 "Must not call `AsyncValueFn.__init__` with an object of class `AsyncValueFn`"
@@ -233,7 +239,7 @@ class AsyncValueFn(Generic[IT]):
         self._fn = wrap_async(fn)
         self._orig_fn = fn
 
-    async def __call__(self) -> IT:
+    async def __call__(self) -> IT | None:
         """
         Call the asynchronous function.
         """
@@ -250,7 +256,7 @@ class AsyncValueFn(Generic[IT]):
         """
         return self._is_async
 
-    def get_async_fn(self) -> Callable[[], Awaitable[IT]]:
+    def get_async_fn(self) -> Callable[[], Awaitable[IT | None]]:
         """
         Return the async value function.
 
@@ -261,7 +267,7 @@ class AsyncValueFn(Generic[IT]):
         """
         return self._fn
 
-    def get_sync_fn(self) -> Callable[[], IT]:
+    def get_sync_fn(self) -> Callable[[], IT | None]:
         """
         Retrieve the original, synchronous value function function.
 
@@ -288,14 +294,14 @@ class Renderer(RendererBase, Generic[IT]):
     TODO-barret-docs
     """
 
-    fn: AsyncValueFn[IT | None]
+    fn: AsyncValueFn[IT]
     """
     App-supplied output value function which returns type `IT`. This function is always
     asyncronous as the original app-supplied function possibly wrapped to execute
     asynchonously.
     """
 
-    def __call__(self, _fn: ValueFn[IT | None]) -> Self:
+    def __call__(self, _fn: ValueFn[IT]) -> Self:
         """
         Renderer __call__ docs here; Sets app's value function
 
@@ -310,7 +316,7 @@ class Renderer(RendererBase, Generic[IT]):
         self.__name__: str = _fn.__name__
 
         # Set value function with extra meta information
-        self.fn: AsyncValueFn[IT | None] = AsyncValueFn(_fn)
+        self.fn: AsyncValueFn[IT] = AsyncValueFn(_fn)
 
         # Allow for App authors to not require `@output`
         self._auto_register()
@@ -319,7 +325,7 @@ class Renderer(RendererBase, Generic[IT]):
 
     def __init__(
         self,
-        _fn: Optional[ValueFn[IT | None]] = None,
+        _fn: Optional[ValueFn[IT]] = None,
     ):
         # Do not display docs here. If docs are present, it could highjack the docs of
         # the subclass's `__init__` method.

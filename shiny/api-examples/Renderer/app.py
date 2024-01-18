@@ -28,7 +28,7 @@ class render_capitalize(Renderer[str]):
     Whether to render a placeholder value. (Defaults to `True`)
     """
 
-    def default_ui(self, id: str):
+    def auto_output_ui(self, id: str):
         """
         Express UI for the renderer
         """
@@ -94,7 +94,7 @@ class render_upper(Renderer[str]):
     Note: This renderer is equivalent to `render_capitalize(to="upper")`.
     """
 
-    def default_ui(self, id: str):
+    def auto_output_ui(self, id: str):
         """
         Express UI for the renderer
         """

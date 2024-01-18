@@ -4,6 +4,7 @@ from typing import Optional
 
 import pytest
 
+from shiny import reactive, render
 from shiny.render.renderer import Renderer, ValueFn
 
 
@@ -53,3 +54,12 @@ async def test_renderer_works_with_args():
     assert val == "42 42"
     val = await txt4.render()
     assert val == "42 42 42 42"
+
+
+def test_effect():
+    with pytest.raises(TypeError):
+
+        @reactive.effect  # pyright: ignore[reportGeneralTypeIssues]
+        @render.text
+        def my_output():
+            return "42"

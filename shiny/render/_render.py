@@ -9,6 +9,7 @@ import typing
 # Can use `dict` in python >= 3.9
 from typing import (
     TYPE_CHECKING,
+    Any,
     Callable,
     Literal,
     Optional,
@@ -46,6 +47,7 @@ from .renderer._utils import (
 
 __all__ = (
     "text",
+    "code",
     "plot",
     "image",
     "table",
@@ -61,6 +63,17 @@ class text(Renderer[str]):
     """
     Reactively render text.
 
+    When used in Shiny Express applications, this defaults to displaying the text as
+    normal text on the web page. When used in Shiny Core applications, this should be
+    paired with :func:`~shiny.ui.output_text` in the UI.
+
+
+    Parameters
+    ----------
+    inline
+        (Express only). If ``True``, the result is displayed inline. (This argument is
+        passed to :func:`~shiny.ui.output_text`.)
+
     Returns
     -------
     :
@@ -74,13 +87,90 @@ class text(Renderer[str]):
 
     See Also
     --------
-    ~shiny.ui.output_text
+    * ~shiny.render.code
+    * ~shiny.ui.output_text
     """
 
-    def default_ui(self, id: str, placeholder: bool | MISSING_TYPE = MISSING) -> Tag:
+    def auto_output_ui(
+        self,
+        id: str,
+        *,
+        inline: bool | MISSING_TYPE = MISSING,
+    ) -> Tag:
+        kwargs: dict[str, Any] = {}
+        set_kwargs_value(kwargs, "inline", inline, self.inline)
+
+        return _ui.output_text(id, **kwargs)
+
+    def __init__(
+        self,
+        _fn: Optional[ValueFn[str]] = None,
+        *,
+        inline: bool = False,
+    ) -> None:
+        super().__init__(_fn)
+        self.inline: bool = inline
+
+    async def transform(self, value: str) -> Jsonifiable:
+        return str(value)
+
+
+# ======================================================================================
+# RenderCode
+# ======================================================================================
+
+
+class code(Renderer[str]):
+    """
+    Reactively render text as code (monospaced).
+
+    When used in Shiny Express applications, this defaults to displaying the text in a
+    monospace font in a code block. When used in Shiny Core applications, this should be
+    paired with :func:`~shiny.ui.output_code` in the UI.
+
+    Parameters
+    ----------
+    placeholder
+        (Express only) If the output is empty or ``None``, should an empty rectangle be
+        displayed to serve as a placeholder? This does not affect behavior when the
+        output is nonempty. (This argument is passed to :func:`~shiny.ui.output_code`.)
+
+
+    Returns
+    -------
+    :
+        A decorator for a function that returns a string.
+
+    Tip
+    ----
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_code` container (see :func:`~shiny.ui.output_code` for
+    example usage).
+
+    See Also
+    --------
+    * ~shiny.render.code
+    * ~shiny.ui.output_code
+    """
+
+    def auto_output_ui(
+        self,
+        id: str,
+        *,
+        placeholder: bool | MISSING_TYPE = MISSING,
+    ) -> Tag:
         kwargs: dict[str, bool] = {}
-        set_kwargs_value(kwargs, "placeholder", placeholder, None)
-        return _ui.output_text_verbatim(id, **kwargs)
+        set_kwargs_value(kwargs, "placeholder", placeholder, self.placeholder)
+        return _ui.output_code(id, **kwargs)
+
+    def __init__(
+        self,
+        _fn: Optional[ValueFn[str]] = None,
+        *,
+        placeholder: bool = True,
+    ) -> None:
+        super().__init__(_fn)
+        self.placeholder = placeholder
 
     async def transform(self, value: str) -> Jsonifiable:
         return str(value)
@@ -147,10 +237,11 @@ class plot(Renderer[object]):
 
     See Also
     --------
-    ~shiny.ui.output_plot ~shiny.render.image
+    * ~shiny.ui.output_plot
+    * ~shiny.render.image
     """
 
-    def default_ui(
+    def auto_output_ui(
         self,
         id: str,
         *,
@@ -166,6 +257,7 @@ class plot(Renderer[object]):
             # (possibly) contains `width` and `height` keys!
             **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
         )
+        # TODO: Deal with output width/height separately from render width/height?
 
     def __init__(
         self,
@@ -316,16 +408,17 @@ class image(Renderer[ImgData]):
 
     See Also
     --------
-    ~shiny.ui.output_image
-    ~shiny.types.ImgData
-    ~shiny.render.plot
+    * ~shiny.ui.output_image
+    * ~shiny.types.ImgData
+    * ~shiny.render.plot
     """
 
-    def default_ui(self, id: str, **kwargs: object):
+    def auto_output_ui(self, id: str, **kwargs: object):
         return _ui.output_image(
             id,
             **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
         )
+        # TODO: Make width/height handling consistent with render_plot
 
     def __init__(
         self,
@@ -334,7 +427,8 @@ class image(Renderer[ImgData]):
         delete_file: bool = False,
     ) -> None:
         super().__init__(_fn)
-        self.delete_file: bool = delete_file
+
+        self.delete_file = delete_file
 
     async def transform(self, value: ImgData) -> dict[str, Jsonifiable] | None:
         src: str = value.get("src")
@@ -409,11 +503,12 @@ class table(Renderer[TableResult]):
 
     See Also
     --------
-    ~shiny.ui.output_table for the corresponding UI component to this render function.
+    * ~shiny.ui.output_table for the corresponding UI component to this render function.
     """
 
-    def default_ui(self, id: str, **kwargs: TagAttrValue) -> Tag:
+    def auto_output_ui(self, id: str, **kwargs: TagAttrValue) -> Tag:
         return _ui.output_table(id, **kwargs)
+        # TODO: Deal with kwargs
 
     def __init__(
         self,
@@ -429,6 +524,8 @@ class table(Renderer[TableResult]):
         self.classes: str = classes
         self.border: int = border
         self.kwargs: dict[str, object] = kwargs
+
+        # TODO: deal with kwargs collision with output_table
 
     async def transform(self, value: TableResult) -> dict[str, Jsonifiable]:
         import pandas
@@ -485,10 +582,10 @@ class ui(Renderer[TagChild]):
 
     See Also
     --------
-    ~shiny.ui.output_ui
+    * ~shiny.ui.output_ui
     """
 
-    def default_ui(self, id: str) -> Tag:
+    def auto_output_ui(self, id: str) -> Tag:
         return _ui.output_ui(id)
 
     async def transform(self, value: TagChild) -> Jsonifiable:
@@ -509,12 +606,12 @@ class download(Renderer[str]):
     ----------
     filename
         The filename of the download.
-    label
-        A label for the button, when used in Express mode. Defaults to "Download".
     media_type
         The media type of the download.
     encoding
         The encoding of the download.
+    label
+        (Express only) A label for the button. Defaults to "Download".
 
     Returns
     -------
@@ -523,27 +620,30 @@ class download(Renderer[str]):
 
     See Also
     --------
-    ~shiny.ui.download_button
+    * ~shiny.ui.download_button
     """
 
-    def default_ui(self, id: str) -> Tag:
-        return _ui.download_button(id, label=self.label)
+    def auto_output_ui(self, id: str) -> Tag:
+        return _ui.download_button(
+            id,
+            label=self.label,
+        )
 
     def __init__(
         self,
         fn: Optional[DownloadHandler] = None,
         *,
         filename: Optional[str | Callable[[], str]] = None,
-        label: TagChild = "Download",
         media_type: None | str | Callable[[], str] = None,
         encoding: str = "utf-8",
+        label: TagChild = "Download",
     ) -> None:
         super().__init__()
 
-        self.label = label
         self.filename = filename
         self.media_type = media_type
         self.encoding = encoding
+        self.label = label
 
         if fn is not None:
             self(fn)

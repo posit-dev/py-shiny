@@ -5,7 +5,7 @@ with ui.card(id="card"):
     ui.input_slider("s1", "A", 1, 100, 20)
 
     @suspend_display
-    @render.text
+    @render.code
     def hidden():
         return input.s1()
 
@@ -14,7 +14,7 @@ with ui.card(id="card"):
     # from shiny.express import ui_kwargs
     # @ui_kwargs(placeholder=False)
     # @ui_kwargs(placeholder=True)
-    @render.text()
+    @render.code()
     def visible():
         # from shiny import req
 
