@@ -120,8 +120,6 @@ def suspend_display_ctxmgr() -> Generator[None, None, None]:
 
 
 def null_ui(
-    id: str,
-    *args: object,
     **kwargs: object,
 ) -> ui.TagList:
     return ui.TagList()
