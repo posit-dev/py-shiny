@@ -23,7 +23,7 @@ app_ui = ui.page_fluid(
             {
                 "placeholder": "Enter text",
                 "render": ui.JS(
-                    '{option: function(item, escape) {return "<div><strong>Select " + item.label + "</strong></div>";}}'
+                    '{option: function(item, escape) {return "<div><strong>Select " + htmltools.html_escape(item.label) + "</strong></div>";}}'
                 ),
                 "create": True,
             }
