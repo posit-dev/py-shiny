@@ -53,7 +53,7 @@ class Renderer(MdRenderer):
 
         check_if_missing_expected_example(el, converted)
 
-        return converted
+        return remove_sphinx_comments(converted)
 
     @dispatch
     def render(self, el: ds.DocstringSectionText):
@@ -244,7 +244,7 @@ def check_if_missing_expected_example(el, converted):
     if "\n.. quartodoc-disable-example-check" in converted:
         # Automatic example detection sometimes has false positives,
         # e.g. `close()` from `Session.close` or `Progress.close`.
-        # Add `.. quartodoc-no-examples` to the docstring to disable this check
+        # Add the magic comment to the docstring to disable this check.
         return
 
     if isinstance(el, dc.Alias) and "experimental" in el.target_path:
@@ -264,3 +264,11 @@ def check_if_missing_expected_example(el, converted):
         raise RuntimeError(
             f"An example exists for {p_example_dir} but is not included in the documentation in {el.target_path}. Decorate `{el.name}()` with `@add_example()` to add the example."
         )
+
+
+def remove_sphinx_comments(converted: str) -> str:
+    """
+    Sphinx allows `..`-prefixed comments in docstrings, which are not valid markdown.
+    This function removes them.
+    """
+    return re.sub(r"\n[.]{2} .+(\n|$)", "\n", converted)
