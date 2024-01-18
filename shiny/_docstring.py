@@ -41,20 +41,8 @@ class DocStringWithExample(str):
     ...
 
 
-class ExampleWriterRegistry:
-    def __init__(self):
-        self._writer = None
-
-    def set_writer(self, func: F) -> F:
-        self._writer = func
-        return func
-
-    def write_example(self, app_files: list[str], **kwargs: dict[str, Any]) -> str:
-        if self._writer is None:
-            return self.default_writer(app_files)
-        return self._writer(app_files, **kwargs)
-
-    def default_writer(self, app_files: list[str]) -> str:
+class ExampleWriter:
+    def write_example(self, app_files: list[str]) -> str:
         app_file = app_files[0]
         with open(app_file) as f:
             code = f.read()
@@ -62,7 +50,7 @@ class ExampleWriterRegistry:
         return f"```.python\n{code.strip()}\n```\n"
 
 
-example_writer = ExampleWriterRegistry()
+example_writer = ExampleWriter()
 
 
 def add_example(
@@ -179,20 +167,13 @@ def doc_format(**kwargs: str) -> Callable[[F], F]:
 
 
 if not TYPE_CHECKING and os.environ.get("IN_QUARTODOC") == "true":
-    # When running in quartdoc, we use shinylive to embed the examples in the docs. This
-    # part is hidden from the typechecker because shinylive is not a direct dependency
-    # of shiny and we only need this section when building the docs.
+    # When running in quartodoc, we use shinylive to embed the examples in the docs.
+    # This part is hidden from the typechecker because shinylive is not a direct
+    # dependency of shiny and we only need this section when building the docs.
     try:
         import shinylive
-
-        shinylive.__version__
     except ModuleNotFoundError:
-        import warnings
-
-        warnings.warn(
-            "shinylive not installed, cannot add shinylive examples.", stacklevel=2
-        )
-        pass
+        raise RuntimeError("Please install shinylive to build the docs.")
 
     SHINYLIVE_CODE_TEMPLATE = """
 ```{{shinylive-python}}
@@ -205,12 +186,14 @@ if not TYPE_CHECKING and os.environ.get("IN_QUARTODOC") == "true":
 ```
 """
 
-    @example_writer.set_writer
-    def write_shinylive_example(app_files: list[str]) -> str:
-        app_file = app_files.pop(0)
-        bundle = shinylive._url.create_shinylive_bundle_file(
-            app_file, app_files, language="py"
-        )
-        code = shinylive._url.create_shinylive_chunk_contents(bundle)
+    class ShinyliveExampleWriter(ExampleWriter):
+        def write_example(self, app_files: list[str]) -> str:
+            app_file = app_files.pop(0)
+            bundle = shinylive._url.create_shinylive_bundle_file(
+                app_file, app_files, language="py"
+            )
+            code = shinylive._url.create_shinylive_chunk_contents(bundle)
 
-        return SHINYLIVE_CODE_TEMPLATE.format(code.strip())
+            return SHINYLIVE_CODE_TEMPLATE.format(code.strip())
+
+    example_writer = ShinyliveExampleWriter()
