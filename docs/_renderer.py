@@ -51,7 +51,7 @@ class Renderer(MdRenderer):
 
         converted = convert_rst_link_to_md(rendered)
 
-        check_if_has_auto_example(el, converted)
+        check_if_missing_expected_example(el, converted)
 
         return converted
 
@@ -237,7 +237,7 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
     }
 
 
-def check_if_has_auto_example(el, converted):
+def check_if_missing_expected_example(el, converted):
     if re.search(r"(^|\n)(#{2,6} Examples\n\n|Examples\n------)", converted):
         return
 
