@@ -241,7 +241,10 @@ def check_if_has_auto_example(el, converted):
     if re.search(r"(^|\n)(#{2,6} Examples\n\n|Examples\n------)", converted):
         return
 
-    if "\n.. quartodoc-no-examples" in converted:
+    if "\n.. quartodoc-disable-example-check" in converted:
+        # Automatic example detection sometimes has false positives,
+        # e.g. `close()` from `Session.close` or `Progress.close`.
+        # Add `.. quartodoc-no-examples` to the docstring to disable this check
         return
 
     if isinstance(el, dc.Alias) and "experimental" in el.target_path:
