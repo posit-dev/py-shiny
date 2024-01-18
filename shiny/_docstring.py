@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Any, Callable, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 
 
 def find_api_examples_dir(start_dir: str) -> Optional[str]:
@@ -178,7 +178,10 @@ def doc_format(**kwargs: str) -> Callable[[F], F]:
     return _
 
 
-if os.environ.get("IN_QUARTODOC") == "true":
+if not TYPE_CHECKING and os.environ.get("IN_QUARTODOC") == "true":
+    # When running in quartdoc, we use shinylive to embed the examples in the docs. This
+    # part is hidden from the typechecker because shinylive is not a direct dependency
+    # of shiny and we only need this section when building the docs.
     try:
         import shinylive
 
@@ -204,8 +207,6 @@ if os.environ.get("IN_QUARTODOC") == "true":
 
     @example_writer.set_writer
     def write_shinylive_example(app_files: list[str]) -> str:
-        import shinylive
-
         app_file = app_files.pop(0)
         bundle = shinylive._url.create_shinylive_bundle_file(
             app_file, app_files, language="py"
