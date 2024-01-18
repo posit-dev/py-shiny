@@ -125,6 +125,7 @@ website:
       - api/ui.output_table.qmd
       - api/ui.output_data_frame.qmd
       - api/ui.output_text.qmd
+      - api/ui.output_code.qmd
       - api/ui.output_text_verbatim.qmd
       - api/ui.output_ui.qmd
       - api/render.plot.qmd

@@ -20,4 +20,4 @@ example usage).
 
 ## See Also
 
-[](:func:`~shiny.ui.output_ui`)
+* [](:func:`~shiny.ui.output_ui`)

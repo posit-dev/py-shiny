@@ -1,8 +1,19 @@
 # render.text { #shiny.render.text }
 
-`render.text()`
+`render.text(self, _fn=None, *, inline=False)`
 
 Reactively render text.
+
+When used in Shiny Express applications, this defaults to displaying the text as
+normal text on the web page. When used in Shiny Core applications, this should be
+paired with [](:func:`~shiny.ui.output_text`) in the UI.
+
+## Parameters
+
+<code><span class="parameter-name">inline</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[bool](`bool`)</span> <span class="parameter-default-sep">=</span> <span class="parameter-default">False</span></code>
+
+:   (Express only). If ``True``, the result is displayed inline. (This argument is
+    passed to [](:func:`~shiny.ui.output_text`).)
 
 ## Returns
 
@@ -20,4 +31,5 @@ example usage).
 
 ## See Also
 
-[](:func:`~shiny.ui.output_text`)
+* [](:func:`~shiny.render.code`)
+* [](:func:`~shiny.ui.output_text`)

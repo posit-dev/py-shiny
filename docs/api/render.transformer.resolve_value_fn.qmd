@@ -24,6 +24,11 @@ With this:
 x = await resolve_value_fn(_fn)
 ```
 
+This code substitution is safe as the implementation does not _actually_
+asynchronously yield to another process if the `value_fn` is synchronous. The
+`__call__` method of the [](:class:`~shiny.render.transformer.OutputRendererSync`) is
+built to execute asynchronously defined methods that execute synchronously.
+
 ## Parameters
 
 <code><span class="parameter-name">value_fn</span><span class="parameter-annotation-sep">:</span> <span class="parameter-annotation">[ValueFn](`shiny.render.transformer._transformer.ValueFn`)\[[IT](`shiny.render.transformer._transformer.IT`)\]</span></code>

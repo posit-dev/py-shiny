@@ -26,6 +26,6 @@ for example usage).
 
 ## See Also
 
-[](:func:`~shiny.ui.output_image`)
-[](:func:`~shiny.types.ImgData`)
-[](:func:`~shiny.render.plot`)
+* [](:func:`~shiny.ui.output_image`)
+* [](:func:`~shiny.types.ImgData`)
+* [](:func:`~shiny.render.plot`)

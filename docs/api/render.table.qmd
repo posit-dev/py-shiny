@@ -47,4 +47,4 @@ for example usage).
 
 ## See Also
 
-[](:func:`~shiny.ui.output_table`) for the corresponding UI component to this render function.
+* [](:func:`~shiny.ui.output_table`) for the corresponding UI component to this render function.

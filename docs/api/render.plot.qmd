@@ -52,4 +52,5 @@ example usage).
 
 ## See Also
 
-[](:func:`~shiny.ui.output_plot`) [](:func:`~shiny.render.image`)
+* [](:func:`~shiny.ui.output_plot`)
+* [](:func:`~shiny.render.image`)

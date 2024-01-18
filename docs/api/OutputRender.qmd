@@ -49,7 +49,7 @@ class render_capitalize(Renderer[str]):
     Whether to render a placeholder value. (Defaults to `True`)
     """
 
-    def default_ui(self, id: str):
+    def auto_output_ui(self, id: str):
         """
         Express UI for the renderer
         """
@@ -116,7 +116,7 @@ class render_upper(Renderer[str]):
     Note: This renderer is equivalent to `render_capitalize(to="upper")`.
     &quot;&quot;&quot;
 
-    def default_ui(self, id: str):
+    def auto_output_ui(self, id: str):
         &quot;&quot;&quot;
         Express UI for the renderer
         &quot;&quot;&quot;
@@ -285,9 +285,9 @@ Return the async value function.
 
 #### Returns
 
-| Type                                                                                                                 | Description                                                              |
-|----------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
-| [Callable](`typing.Callable`)\[\[\], [Awaitable](`typing.Awaitable`)\[[IT](`shiny.render.renderer._renderer.IT`)\]\] | Async wrapped value function supplied to the `AsyncValueFn` constructor. |
+| Type                                                                                                                         | Description                                                              |
+|------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| [Callable](`typing.Callable`)\[\[\], [Awaitable](`typing.Awaitable`)\[[IT](`shiny.render.renderer._renderer.IT`) \| None\]\] | Async wrapped value function supplied to the `AsyncValueFn` constructor. |
 
 ### get_sync_fn { #shiny.render.renderer.AsyncValueFn.get_sync_fn }
 
@@ -299,9 +299,9 @@ If the original function was asynchronous, a runtime error will be thrown.
 
 #### Returns
 
-| Type                                                                              | Description                                                                |
-|-----------------------------------------------------------------------------------|----------------------------------------------------------------------------|
-| [Callable](`typing.Callable`)\[\[\], [IT](`shiny.render.renderer._renderer.IT`)\] | Original, synchronous function supplied to the `AsyncValueFn` constructor. |
+| Type                                                                                      | Description                                                                |
+|-------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| [Callable](`typing.Callable`)\[\[\], [IT](`shiny.render.renderer._renderer.IT`) \| None\] | Original, synchronous function supplied to the `AsyncValueFn` constructor. |
 
 ### is_async { #shiny.render.renderer.AsyncValueFn.is_async }
 
