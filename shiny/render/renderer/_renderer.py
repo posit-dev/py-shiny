@@ -118,25 +118,31 @@ class RendererBase(ABC):
     # Meta
     output_id: str
     """
-    Output function name or ID (provided to `@output(id=)`). This value will contain any module prefix.
+    Output function name or ID (provided to `@output(id=)`).
 
-    Set when the output is registered with the session.
+    This value **will not** contain a module prefix (or session name-spacing). To get
+    the fully resolved ID, call
+    `shiny.session.require_active_session(None).ns(self.output_id)`.
+
+    An initial value of `.__name__` (set within `Renderer.__call__(_fn)`) will be used until the
+    output renderer is registered within the session.
     """
 
     def _set_output_metadata(
         self,
         *,
-        output_name: str,
+        output_id: str,
     ) -> None:
         """
         Method to be called within `@output` to set the renderer's metadata.
 
         Parameters
         ----------
-        output_name : str
-            Output function name or ID (provided to `@output(id=)`). This value will contain any module prefix.
+        output_id : str
+            Output function name or ID (provided to `@output(id=)`). This value **will
+            not** contain a module prefix (or session name-spacing).
         """
-        self.output_id = output_name
+        self.output_id = output_id
 
     def auto_output_ui(
         self,
@@ -309,16 +315,22 @@ class Renderer(RendererBase, Generic[IT]):
         if not callable(_fn):
             raise TypeError("Value function must be callable")
 
+        # Set value function with extra meta information
+        self.fn = AsyncValueFn(_fn)
+
         # Copy over function name as it is consistent with how Session and Output
         # retrieve function names
-        self.__name__: str = _fn.__name__
+        self.__name__ = _fn.__name__
 
-        # Set value function with extra meta information
-        self.fn: AsyncValueFn[IT] = AsyncValueFn(_fn)
+        # Set the value of `output_id` to the function name.
+        # This helps with testing and other situations where no session is present
+        # for auto-registration to occur.
+        self.output_id = self.__name__
 
         # Allow for App authors to not require `@output`
         self._auto_register()
 
+        # Return self for possible chaining of methods!
         return self
 
     def __init__(
