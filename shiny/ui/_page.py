@@ -41,7 +41,6 @@ from .fill._fill import as_fillable_container
 
 
 @add_example()
-@add_example(app_file="app-express.py")
 def page_sidebar(
     sidebar: Sidebar,
     *args: TagChild | TagAttrs,
