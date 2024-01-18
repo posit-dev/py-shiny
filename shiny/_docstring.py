@@ -143,15 +143,15 @@ def add_example(
         indent = " " * (len(doc) - len(doc.lstrip()))
         nl_indent = "\n" + indent
 
-        # if func.__name__ == "page_sidebar":
-        #     import pdb
-
-        #     pdb.set_trace()
-
-        if not re.search(r"(^|\n)Examples\n\s*-{3,}", func.__doc__):
+        # Add example header if not already present
+        # WARNING: All `add_example()` calls must be coalesced.
+        # Note that we're using numpydoc-style headers here, quartodoc will handle
+        # converting them to markdown headers.
+        if not isinstance(func.__doc__, DocStringWithExample):
             func.__doc__ += nl_indent + "Examples"
             func.__doc__ += nl_indent + "--------"
 
+        # Add the example to the docstring
         func.__doc__ += nl_indent * 2
         func.__doc__ += nl_indent.join(example_lines)
         func.__doc__ = DocStringWithExample(func.__doc__)
