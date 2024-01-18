@@ -47,7 +47,8 @@ deps: $(PYBIN)  ## Install build dependencies
 	$(PYBIN)/pip install -e ..[doc]
 
 quartodoc: $(PYBIN) ## Build qmd files for API docs
-	SHINY_ADD_EXAMPLES=true IN_QUARTODOC=true \
+	$(eval export SHINY_ADD_EXAMPLES=true)
+	$(eval export IN_QUARTODOC=true)
 	. $(PYBIN)/activate \
 	  && quartodoc interlinks \
 	  && quartodoc build --config _quartodoc.yml --verbose
