@@ -89,8 +89,6 @@ manager, which will cause the progress bar to close on exit.
 
 Removes the progress panel. Future calls to set and close will be ignored.
 
-
-
 ### inc { #shiny.ui.Progress.inc }
 
 `ui.Progress.inc(amount=0.1, message=None, detail=None)`

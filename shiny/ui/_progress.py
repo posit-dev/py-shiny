@@ -6,7 +6,7 @@ from types import TracebackType
 from typing import Optional, Type
 from warnings import warn
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._utils import rand_hex
 from ..session import Session, require_active_session
 
@@ -145,6 +145,7 @@ class Progress:
         value = min(self.value + amount, self.max)
         self.set(value, message, detail)
 
+    @no_example
     def close(self) -> None:
         """
         Close the progress bar. You can also use the Progress object as a context
@@ -158,8 +159,6 @@ class Progress:
         Note
         ----
         Removes the progress panel. Future calls to set and close will be ignored.
-
-        .. quartodoc-disable-example-check
         """
         if self._closed:
             warn("Attempting to close progress, but progress already closed.")

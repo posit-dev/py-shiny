@@ -241,10 +241,12 @@ def check_if_missing_expected_example(el, converted):
     if re.search(r"(^|\n)(#{2,6} Examples\n\n|Examples\n------)", converted):
         return
 
-    if "\n.. quartodoc-disable-example-check" in converted:
+    if hasattr(el, "decorators") and "no_example" in [
+        d.value.canonical_name for d in el.decorators
+    ]:
         # Automatic example detection sometimes has false positives,
         # e.g. `close()` from `Session.close` or `Progress.close`.
-        # Add the magic comment to the docstring to disable this check.
+        # Add the magic @no_example decorator to suppress the warning.
         return
 
     if isinstance(el, dc.Alias) and "experimental" in el.target_path:

@@ -29,6 +29,10 @@ FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
 
 
+def no_example(func: F) -> F:
+    return func
+
+
 # This class is used to mark docstrings when @add_example() is used, so that an error
 # will be thrown if @doc_format() is used afterward. This is to avoid an error when
 # the example contains curly braces -- the @doc_format() decorator will try to evaluate

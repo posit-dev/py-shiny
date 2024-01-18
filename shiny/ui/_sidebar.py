@@ -17,7 +17,7 @@ from htmltools import (
 )
 
 from .._deprecated import warn_deprecated
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
 from ..session import Session, require_active_session
 from ._card import CardItem
@@ -38,7 +38,7 @@ __all__ = (
 )
 
 
-@add_example()
+@no_example
 class Sidebar:
     """
     A sidebar object
@@ -90,8 +90,6 @@ class Sidebar:
         A foreground color.
     color_bg
         A background color.
-
-
     """
 
     def __init__(
