@@ -11,7 +11,7 @@ __all__ = (
     "page_output",
 )
 
-from typing import Callable, Literal, Optional, Sequence, cast
+from typing import Any, Callable, Literal, Optional, Sequence, cast
 
 from htmltools import (
     MetadataNode,
@@ -29,6 +29,7 @@ from htmltools import (
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
+from ._bootstrap import panel_title
 from ._html_deps_external import bootstrap_deps
 from ._html_deps_py_shiny import page_output_dependency
 from ._html_deps_shinyverse import components_dependency
@@ -447,6 +448,7 @@ def page_bootstrap(
 def page_auto(
     *args: TagChild | TagAttrs,
     title: str | MISSING_TYPE = MISSING,
+    window_title: str | MISSING_TYPE = MISSING,
     lang: str | MISSING_TYPE = MISSING,
     fillable: bool | MISSING_TYPE = MISSING,
     full_width: bool = False,
@@ -468,7 +470,10 @@ def page_auto(
         UI elements. These are used to determine which page function to use, and they
         are also passed along to that page function.
     title
-        The browser window title (defaults to the host URL of the page).
+        A title shown on the page.
+    window_title
+        The browser window title. If no value is provided, this will use the value of
+        ``title``.
     lang
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
@@ -497,6 +502,8 @@ def page_auto(
     """
     if not isinstance(title, MISSING_TYPE):
         kwargs["title"] = title
+    if not isinstance(window_title, MISSING_TYPE):
+        kwargs["window_title"] = window_title
     if not isinstance(lang, MISSING_TYPE):
         kwargs["lang"] = lang
 
@@ -513,11 +520,11 @@ def page_auto(
                     fillable = False
 
                 if fillable:
-                    page_fn = page_fillable  # pyright: ignore[reportGeneralTypeIssues]
+                    page_fn = _page_auto_fillable
                 elif full_width:
-                    page_fn = page_fluid  # pyright: ignore[reportGeneralTypeIssues]
+                    page_fn = _page_auto_fluid
                 else:
-                    page_fn = page_fixed  # pyright: ignore[reportGeneralTypeIssues]
+                    page_fn = _page_auto_fixed
 
             elif nSidebars == 1:
                 if not isinstance(fillable, MISSING_TYPE):
@@ -526,7 +533,7 @@ def page_auto(
                 # page_sidebar() needs sidebar to be the first arg
                 # TODO: Change page_sidebar() to remove `sidebar` and accept a sidebar as a
                 # *arg.
-                page_fn = page_sidebar  # pyright: ignore[reportGeneralTypeIssues]
+                page_fn = page_sidebar
                 args = tuple(sidebars + [x for x in args if x not in sidebars])
 
             else:
@@ -541,12 +548,12 @@ def page_auto(
 
             if nSidebars == 0:
                 # TODO: what do we do when nArgs != nNavs? Just let page_navbar handle it (i.e. error)?
-                page_fn = page_navbar  # pyright: ignore[reportGeneralTypeIssues]
+                page_fn = page_navbar
 
             elif nSidebars == 1:
                 # TODO: change page_navbar() to remove `sidebar` and accept a sidebar as a
                 # *arg.
-                page_fn = page_navbar  # pyright: ignore[reportGeneralTypeIssues]
+                page_fn = page_navbar
                 args = tuple([x for x in args if x not in sidebars])
                 kwargs["sidebar"] = sidebars[0]
 
@@ -558,6 +565,67 @@ def page_auto(
     # If we got here, _page_fn is not None, but the type checker needs a little help.
     page_fn = cast(Callable[..., Tag], page_fn)
     return page_fn(*args, **kwargs)
+
+
+# For `page_fillable`, `page_fluid`, and `page_fixed`, the `title` arg sets the window
+# title, but doesn't add anything visible on the page.
+#
+# In contrast, for `page_auto`, the `title` arg adds a title panel to the page, and the
+# `window_title` arg sets the window title.
+#
+# The wrapper functions below provide the `page_auto` interface, where `title` to add a
+# title panel to the page, and `window_title` to set the title of the window. If `title`
+# is provided but `window_title` is not, then `window_title` is set to the value of
+# `title`.
+def _page_auto_fillable(
+    *args: TagChild | TagAttrs,
+    title: str | None = None,
+    window_title: str | None = None,
+    **kwargs: Any,
+) -> Tag:
+    if window_title is None and title is not None:
+        window_title = title
+
+    return page_fillable(
+        None if title is None else panel_title(title),
+        *args,
+        title=window_title,
+        **kwargs,
+    )
+
+
+def _page_auto_fluid(
+    *args: TagChild | TagAttrs,
+    title: str | None = None,
+    window_title: str | None = None,
+    **kwargs: str,
+) -> Tag:
+    if window_title is None and title is not None:
+        window_title = title
+
+    return page_fluid(
+        None if title is None else panel_title(title),
+        *args,
+        title=window_title,
+        **kwargs,
+    )
+
+
+def _page_auto_fixed(
+    *args: TagChild | TagAttrs,
+    title: str | None = None,
+    window_title: str | None = None,
+    **kwargs: Any,
+) -> Tag:
+    if window_title is None and title is not None:
+        window_title = title
+
+    return page_fixed(
+        None if title is None else panel_title(title),
+        *args,
+        title=window_title,
+        **kwargs,
+    )
 
 
 def page_output(id: str) -> Tag:

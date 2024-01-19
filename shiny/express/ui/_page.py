@@ -19,6 +19,7 @@ def page_auto_cm() -> RecallContextManager[Tag]:
 def page_opts(
     *,
     title: str | MISSING_TYPE = MISSING,
+    window_title: str | MISSING_TYPE = MISSING,
     lang: str | MISSING_TYPE = MISSING,
     page_fn: Callable[..., Tag] | None | MISSING_TYPE = MISSING,
     fillable: bool | MISSING_TYPE = MISSING,
@@ -32,7 +33,10 @@ def page_opts(
     Parameters
     ----------
     title
-        The browser window title (defaults to the host URL of the page).
+        A title shown on the page.
+    window_title
+        The browser window title. If no value is provided, this will use the value of
+        ``title``.
     lang
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
@@ -56,6 +60,8 @@ def page_opts(
 
     if not isinstance(title, MISSING_TYPE):
         cm.kwargs["title"] = title
+    if not isinstance(window_title, MISSING_TYPE):
+        cm.kwargs["window_title"] = window_title
     if not isinstance(lang, MISSING_TYPE):
         cm.kwargs["lang"] = lang
     if not isinstance(page_fn, MISSING_TYPE):
