@@ -3,23 +3,20 @@ from __future__ import annotations
 import contextlib
 import sys
 from contextlib import AbstractContextManager
-from typing import Callable, Generator, TypeVar, overload
+from typing import Callable, Generator, TypeVar, cast, overload
 
 from .. import ui
-from .._typing_extensions import ParamSpec
-from ..render.renderer import RendererBase, RendererBaseT
+from ..render.renderer import Renderer, RendererT
 
 __all__ = ("suspend_display",)
 
-P = ParamSpec("P")
-R = TypeVar("R")
 CallableT = TypeVar("CallableT", bound=Callable[..., object])
 
 
 # TODO-barret-future; quartodoc entry?
 def output_args(
     **kwargs: object,
-) -> Callable[[RendererBaseT], RendererBaseT]:
+) -> Callable[[RendererT], RendererT]:
     """
     Sets default UI arguments for a Shiny rendering function.
 
@@ -41,7 +38,7 @@ def output_args(
         A decorator that sets the default UI arguments for a Shiny rendering function.
     """
 
-    def wrapper(renderer: RendererBaseT) -> RendererBaseT:
+    def wrapper(renderer: RendererT) -> RendererT:
         renderer._auto_output_ui_kwargs = kwargs
         return renderer
 
@@ -49,12 +46,12 @@ def output_args(
 
 
 @overload
-def suspend_display(fn: CallableT) -> CallableT:
+def suspend_display(fn: RendererT) -> RendererT:
     ...
 
 
 @overload
-def suspend_display(fn: RendererBaseT) -> RendererBaseT:
+def suspend_display(fn: CallableT) -> CallableT:
     ...
 
 
@@ -64,8 +61,8 @@ def suspend_display() -> AbstractContextManager[None]:
 
 
 def suspend_display(
-    fn: Callable[P, R] | RendererBaseT | None = None
-) -> Callable[P, R] | RendererBaseT | AbstractContextManager[None]:
+    fn: RendererT | CallableT | None = None,
+) -> RendererT | CallableT | AbstractContextManager[None]:
     """Suppresses the display of UI elements in various ways.
 
     If used as a context manager (`with suspend_display():`), it suppresses the display
@@ -99,12 +96,12 @@ def suspend_display(
     if fn is None:
         return suspend_display_ctxmgr()
 
-    # Special case for RendererBase; when we decorate those, we just mean "don't
+    # Special case for Renderer; when we decorate those, we just mean "don't
     # display yourself"
-    if isinstance(fn, RendererBase):
+    if isinstance(fn, Renderer):
         # By setting the class value, the `self` arg will be auto added.
         fn.auto_output_ui = null_ui
-        return fn
+        return cast(RendererT, fn)
 
     return suspend_display_ctxmgr()(fn)
 
