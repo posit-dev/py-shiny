@@ -21,7 +21,7 @@ with ui.card(id="card"):
 
     @render.express
     def folium_map():
-        "Map inside of render display call"
+        "Map inside of render express call"
         folium.Map(  # pyright: ignore[reportUnknownMemberType,reportGeneralTypeIssues]
             location=locations_coords[input.location()],
             tiles="cartodb positron",

@@ -99,12 +99,12 @@ def verify_express_dataframe(page: Page) -> None:
 
 def verify_express_folium_render(page: Page) -> None:
     expect(page.get_by_text("Static Map")).to_have_count(1)
-    expect(page.get_by_text("Map inside of render display call")).to_have_count(1)
-    # map inside the @render.display
+    expect(page.get_by_text("Map inside of render express call")).to_have_count(1)
+    # map inside the @render.express
     expect(
         page.frame_locator("iframe").nth(1).get_by_role("link", name="OpenStreetMap")
     ).to_have_count(1)
-    # map outside of the @render.display at the top level
+    # map outside of the @render.express at the top level
     expect(
         page.frame_locator("iframe")
         .nth(0)
