@@ -51,7 +51,7 @@ def suspend_display(
     fn: Callable[P, R] | RendererBaseT | None = None
 ) -> Callable[P, R] | RendererBaseT | AbstractContextManager[None]:
     warn_deprecated(
-        "`express.suspend_display` is deprecated. Please use `express.ui.hide` instead. "
+        "`express.suspend_display()` is deprecated. Please use `express.ui.hold()` instead. "
         "It has a new name, but the exact same functionality."
     )
     return hold(fn)  # type: ignore
