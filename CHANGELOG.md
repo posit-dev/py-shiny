@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `@render.code`, which is an alias for `@render.text`, but in Express mode, it displays the result using `ui.output_code()`. (#997)
 
+* Added `App.on_shutdown` method for registering a callback to be called when the app is shutting down. (#907)
+
 ### Bug fixes
 
 * CLI command `shiny create`... (#965)
