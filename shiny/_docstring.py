@@ -21,8 +21,6 @@ def find_api_examples_dir(start_dir: str) -> Optional[str]:
     return None
 
 
-
-
 FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
 

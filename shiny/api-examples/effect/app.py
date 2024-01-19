@@ -10,7 +10,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         ui.insert_ui(
             ui.p("Number of clicks: ", input.btn()),
             selector="#btn",
-             where="afterEnd",
+            where="afterEnd",
         )
 
 
