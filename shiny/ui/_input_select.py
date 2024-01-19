@@ -56,7 +56,7 @@ def input_selectize(
     selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
-    remove_button: bool = None,
+    remove_button: Optional[bool] = None,
     options: Optional[dict[str, str | float | JSEval]] = None,
 ) -> Tag:
     """
@@ -134,7 +134,7 @@ def input_select(
     selectize: bool = False,
     width: Optional[str] = None,
     size: Optional[str] = None,
-    remove_button: bool = None,
+    remove_button: Optional[bool] = None,
     options: Optional[dict[str, str | float | JSEval]] = None,
 ) -> Tag:
     """
