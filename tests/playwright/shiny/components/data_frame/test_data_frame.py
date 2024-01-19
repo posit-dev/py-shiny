@@ -54,10 +54,7 @@ def test_grid_mode(
 
 @pytest.mark.flaky(reruns=RERUNS)
 def test_summary_navigation(
-    page: Page,
-    data_frame_app: ShinyAppProc,
-    grid_container: Locator,
-    summary: Locator,
+    page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, summary: Locator
 ):
     page.goto(data_frame_app.url)
 
@@ -65,8 +62,8 @@ def test_summary_navigation(
     expect(summary).to_have_text(re.compile("^Viewing rows 1 through \\d+ of 20$"))
     # Put focus in the table and hit End keystroke
     grid_container.locator("tbody tr:first-child td:first-child").click()
-    page.keyboard.press("End")
-
+    with expect_to_change(lambda: summary.inner_text()):
+        page.keyboard.press("End")
     # Ensure that summary updated
     expect(summary).to_have_text(re.compile("^Viewing rows \\d+ through 20 of 20$"))
 
