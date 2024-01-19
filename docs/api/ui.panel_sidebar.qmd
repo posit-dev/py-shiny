@@ -1,5 +1,0 @@
-# ui.panel_sidebar { #shiny.ui.panel_sidebar }
-
-`ui.panel_sidebar(*args, width=4, **kwargs)`
-
-Deprecated. Please use [](:func:`~shiny.ui.sidebar`) instead.

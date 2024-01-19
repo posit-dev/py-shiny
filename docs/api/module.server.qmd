@@ -1,4 +1,0 @@
-# module.server { #shiny.module.server }
-
-`module.server(fn)`
-

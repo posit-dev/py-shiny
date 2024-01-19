@@ -1,5 +1,0 @@
-# ui.ValueBoxTheme { #shiny.ui.ValueBoxTheme }
-
-`ui.ValueBoxTheme(class_, fg, bg)`
-
-ValueBoxTheme(class_: &#x27;str | None&#x27;, fg: &#x27;str | None&#x27;, bg: &#x27;str | None&#x27;)
