@@ -16,7 +16,7 @@ from htmltools import Tag, TagChild, TagList, css, div, tags
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from ._html_deps_external import selectize_deps
-from ._utils import extract_js_keys, shiny_input_label
+from ._utils import JSEval, extract_js_keys, shiny_input_label
 
 _Choices = Mapping[str, TagChild]
 _OptGrpChoices = Mapping[str, _Choices]
@@ -57,7 +57,7 @@ def input_selectize(
     multiple: bool = False,
     width: Optional[str] = None,
     remove_button: bool = True,
-    options: Optional[dict[str, str | float | HTML | JS]] = None,
+    options: Optional[dict[str, str | float | JSEval]] = None,
 ) -> Tag:
     """
     Create a select list that can be used to choose a single or multiple items from a
@@ -134,7 +134,7 @@ def input_select(
     width: Optional[str] = None,
     size: Optional[str] = None,
     remove_button: bool = True,
-    options: Optional[dict[str, str | float | HTML]] = None,
+    options: Optional[dict[str, str | float | JSEval]] = None,
 ) -> Tag:
     """
     Create a select list that can be used to choose a single or multiple items from a

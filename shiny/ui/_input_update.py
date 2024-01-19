@@ -23,7 +23,7 @@ import re
 from datetime import date
 from typing import Literal, Mapping, Optional, overload
 
-from htmltools import HTML, JS, TagChild, TagList, tags
+from htmltools import HTML, TagChild, TagList, tags
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
@@ -36,7 +36,7 @@ from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
 from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
-from ._utils import _session_on_flush_send_msg
+from ._utils import JSEval, _session_on_flush_send_msg, extract_js_keys
 
 _note = """
     The input updater functions send a message to the client, telling it to change the
@@ -560,7 +560,7 @@ def update_selectize(
     label: Optional[str] = None,
     choices: Optional[SelectChoicesArg] = None,
     selected: Optional[str | list[str]] = None,
-    options: Optional[dict[str, str | float | HTML | JS]] = None,
+    options: Optional[dict[str, str | float | JSEval]] = None,
     server: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -606,15 +606,12 @@ def update_selectize(
         )
 
     if options is not None:
-        js_keys = [
-            key for key, value in options.items() if isinstance(value, (HTML, JS))
-        ]
         cfg = TagList(
             tags.script(
                 json.dumps(options),
                 type="application/json",
                 data_for=id,
-                data_eval=json.dumps(js_keys),
+                data_eval=json.dumps(extract_js_keys(options)),
             )
         )
         session.send_input_message(id, drop_none({"config": cfg.get_html_string()}))
