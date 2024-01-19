@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from shiny import render, ui
-from shiny.express import output_args, suspend_display
+from shiny.express import hide, output_args
 from shiny.express._run import run_express
 
 
@@ -53,7 +53,7 @@ def test_render_output_controls():
         == ui.output_text("text1").get_html_string()
     )
 
-    @suspend_display
+    @hide
     @render.text
     def text2():
         return "text"
@@ -79,7 +79,7 @@ def test_render_output_controls():
         code2.tagify()
 
 
-def test_suspend_display():
+def test_hide():
     old_displayhook = sys.displayhook
     try:
         called = False
@@ -90,11 +90,11 @@ def test_suspend_display():
 
         sys.displayhook = display_hook_spy
 
-        with suspend_display():
+        with hide():
             sys.displayhook("foo")
-        suspend_display(lambda: sys.displayhook("bar"))()
+        hide(lambda: sys.displayhook("bar"))()
 
-        @suspend_display
+        @hide
         def whatever(x: Any):
             sys.displayhook(x)
 

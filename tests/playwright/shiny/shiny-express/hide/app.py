@@ -1,10 +1,10 @@
 from shiny import render, ui
-from shiny.express import input, suspend_display
+from shiny.express import hide, input
 
 with ui.card(id="card"):
     ui.input_slider("s1", "A", 1, 100, 20)
 
-    @suspend_display
+    @hide
     @render.code
     def hidden():
         return input.s1()
