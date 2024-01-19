@@ -109,7 +109,7 @@ update_action_link.__doc__ = update_action_button.__doc__
 # -----------------------------------------------------------------------------
 # input_task_button.py
 # -----------------------------------------------------------------------------
-@add_example()
+@no_example
 def update_task_button(
     id: str,
     *,

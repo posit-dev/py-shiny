@@ -25,7 +25,7 @@ spinner_icon = """<svg class="py-shiny-spin" viewBox="0 0 512 512" preserveAspec
 </svg>"""
 
 
-@add_example()
+@add_example(ex_dir="../api-examples/extended_task")
 def input_task_button(
     id: str,
     label: TagChild,
