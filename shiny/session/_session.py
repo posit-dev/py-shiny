@@ -23,6 +23,7 @@ from typing import (
     Awaitable,
     Callable,
     Iterable,
+    Literal,
     Optional,
     Union,
     cast,
@@ -33,6 +34,8 @@ from htmltools import TagChild, TagList
 from starlette.requests import HTTPConnection, Request
 from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 from starlette.types import ASGIApp
+
+from .._typing_extensions import NotRequired
 
 if TYPE_CHECKING:
     from .._app import App
@@ -49,8 +52,13 @@ from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
-from ..render.renderer import Jsonifiable, Renderer, RendererT
-from ..types import SafeException, SilentCancelOutputException, SilentException
+from ..render.renderer import Renderer, RendererT
+from ..types import (
+    SafeException,
+    SilentCancelOutputException,
+    SilentException,
+    SilentOperationInProgressException,
+)
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
 
@@ -121,14 +129,26 @@ class DownloadInfo:
     encoding: str
 
 
-class OutBoundMessageQueues(TypedDict):
-    values: list[dict[str, Any]]
-    input_messages: list[dict[str, Any]]
-    errors: list[dict[str, Any]]
+class OutBoundMessageQueues:
+    def __init__(self):
+        self.values: dict[str, Any] = {}
+        self.errors: dict[str, Any] = {}
+        self.input_messages: list[dict[str, Any]] = []
 
+    def set_value(self, id: str, value: Any) -> None:
+        self.values[id] = value
+        # remove from self.errors
+        if id in self.errors:
+            del self.errors[id]
 
-def empty_outbound_message_queues() -> OutBoundMessageQueues:
-    return {"values": [], "input_messages": [], "errors": []}
+    def set_error(self, id: str, error: Any) -> None:
+        self.errors[id] = error
+        # remove from self.values
+        if id in self.values:
+            del self.values[id]
+
+    def add_input_message(self, id: str, message: dict[str, Any]) -> None:
+        self.input_messages.append({"id": id, "message": message})
 
 
 # Makes isinstance(x, Session) also return True when x is a SessionProxy (i.e., a module
@@ -191,7 +211,7 @@ class Session(object, metaclass=SessionMeta):
             except Exception as e:
                 print("Error parsing credentials header: " + str(e))
 
-        self._outbound_message_queues = empty_outbound_message_queues()
+        self._outbound_message_queues = OutBoundMessageQueues()
 
         self._message_handlers: dict[
             str, Callable[..., Awaitable[object]]
@@ -562,8 +582,7 @@ class Session(object, metaclass=SessionMeta):
         message
             The message to send.
         """
-        msg: dict[str, object] = {"id": id, "message": message}
-        self._outbound_message_queues["input_messages"].append(msg)
+        self._outbound_message_queues.add_input_message(id, message)
         self._request_flush()
 
     def _send_insert_ui(
@@ -580,6 +599,30 @@ class Session(object, metaclass=SessionMeta):
     def _send_remove_ui(self, selector: str, multiple: bool) -> None:
         msg = {"selector": selector, "multiple": multiple}
         self._send_message_sync({"shiny-remove-ui": msg})
+
+    @overload
+    def _send_progress(
+        self, type: Literal["binding"], message: BindingProgressMessage
+    ) -> None:
+        ...
+
+    @overload
+    def _send_progress(
+        self, type: Literal["open"], message: OpenProgressMessage
+    ) -> None:
+        ...
+
+    @overload
+    def _send_progress(
+        self, type: Literal["close"], message: CloseProgressMessage
+    ) -> None:
+        ...
+
+    @overload
+    def _send_progress(
+        self, type: Literal["update"], message: UpdateProgressMessage
+    ) -> None:
+        ...
 
     def _send_progress(self, type: str, message: object) -> None:
         msg: dict[str, object] = {"progress": {"type": type, "message": message}}
@@ -689,24 +732,16 @@ class Session(object, metaclass=SessionMeta):
         try:
             omq = self._outbound_message_queues
 
-            values: dict[str, object] = {}
-            for v in omq["values"]:
-                values.update(v)
-
-            errors: dict[str, object] = {}
-            for err in omq["errors"]:
-                errors.update(err)
-
             message: dict[str, object] = {
-                "values": values,
-                "inputMessages": omq["input_messages"],
-                "errors": errors,
+                "values": omq.values,
+                "inputMessages": omq.input_messages,
+                "errors": omq.errors,
             }
 
             try:
                 await self._send_message(message)
             finally:
-                self._outbound_message_queues = empty_outbound_message_queues()
+                self._outbound_message_queues = OutBoundMessageQueues()
         finally:
             with session_context(self):
                 await self._flushed_callbacks.invoke()
@@ -837,6 +872,29 @@ class Session(object, metaclass=SessionMeta):
 
     def root_scope(self) -> Session:
         return self
+
+
+class BindingProgressMessage(TypedDict):
+    id: ResolvedId
+    persistent: NotRequired[bool]
+
+
+class OpenProgressMessage(TypedDict):
+    id: ResolvedId
+    style: str
+
+
+class CloseProgressMessage(TypedDict):
+    id: ResolvedId
+    style: str
+
+
+class UpdateProgressMessage(TypedDict):
+    id: ResolvedId
+    message: NotRequired[str | None]
+    detail: NotRequired[str | None]
+    value: NotRequired[float | int | None]
+    style: str
 
 
 class SessionProxy:
@@ -1024,13 +1082,18 @@ class Outputs:
                     {"recalculating": {"name": output_name, "status": "recalculating"}}
                 )
 
-                message: dict[str, Jsonifiable] = {}
                 try:
-                    message[output_name] = await renderer.render()
+                    value = await renderer.render()
+                    self._session._outbound_message_queues.set_value(output_name, value)
+                except SilentOperationInProgressException:
+                    self._session._send_progress(
+                        "binding", {"id": output_name, "persistent": True}
+                    )
+                    return
                 except SilentCancelOutputException:
                     return
                 except SilentException:
-                    message[output_name] = None
+                    self._session._outbound_message_queues.set_value(output_name, None)
                 except Exception as e:
                     # Print traceback to the console
                     traceback.print_exc()
@@ -1043,21 +1106,25 @@ class Outputs:
                         err_msg = str(e)
                     # Register the outbound error message
                     err_message = {
-                        str(output_name): {
-                            "message": err_msg,
-                            # TODO: is it possible to get the call?
-                            "call": None,
-                            # TODO: I don't think we actually use this for anything client-side
-                            "type": None,
-                        }
+                        "message": err_msg,
+                        # TODO: is it possible to get the call?
+                        "call": None,
+                        # TODO: I don't think we actually use this for anything client-side
+                        "type": None,
                     }
-                    self._session._outbound_message_queues["errors"].append(err_message)
-
-                self._session._outbound_message_queues["values"].append(message)
-
-                await self._session._send_message(
-                    {"recalculating": {"name": output_name, "status": "recalculated"}}
-                )
+                    self._session._outbound_message_queues.set_error(
+                        output_name, err_message
+                    )
+                    return
+                finally:
+                    await self._session._send_message(
+                        {
+                            "recalculating": {
+                                "name": output_name,
+                                "status": "recalculated",
+                            }
+                        }
+                    )
 
             output_obs.on_invalidate(
                 lambda: self._session._send_progress("binding", {"id": output_name})

@@ -1,4 +1,5 @@
 from ._core import (  # noqa: F401
+    Context,
     isolate,
     invalidate_later,
     flush,
@@ -19,9 +20,11 @@ from ._reactives import (  # noqa: F401
     Effect_,  # pyright: ignore[reportUnusedImport]
     event,
 )
+from ._extended_task import ExtendedTask, extended_task
 
 
 __all__ = (
+    "Context",
     "isolate",
     "invalidate_later",
     "flush",
@@ -36,4 +39,6 @@ __all__ = (
     "effect",
     "Effect",
     "event",
+    "ExtendedTask",
+    "extended_task",
 )
