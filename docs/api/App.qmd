@@ -30,8 +30,7 @@ Create a Shiny app instance.
 
 :   Whether to enable debug mode.
 
-## Example
-
+## Examples
 
 ```{python}
 #| eval: false

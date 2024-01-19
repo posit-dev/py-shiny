@@ -15,3 +15,17 @@ Convert a value into a CSS unit.
 | Type                 | Description                                                                                                                                                    |
 |----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | None \| [str](`str`) | If the `value` is `None`, then `None`. If the value is `0`, then `"0"`. If the `value` is numeric, then a formatted pixel value. Otherwise, the `value` as-is. |
+
+## Examples
+
+```{python}
+from shiny.ui.css import as_css_unit
+
+as_css_unit(0)
+```
+```{python}
+as_css_unit(300)
+```
+```{python}
+as_css_unit("1em")
+```

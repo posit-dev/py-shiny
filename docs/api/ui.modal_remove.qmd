@@ -20,8 +20,6 @@ is provided, or if the modal is created with `easy_close=True`.
 [](:func:`~shiny.ui.modal_show`)
 [](:func:`~shiny.ui.modal`)
 
-
-
-## Example
+## Examples
 
 See [](:func:`modal`).

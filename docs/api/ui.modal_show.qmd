@@ -23,8 +23,6 @@ created with [](:func:`~shiny.ui.modal`).
 [](:func:`~shiny.ui.modal_remove`)
 [](:func:`~shiny.ui.modal`)
 
-
-
-## Example
+## Examples
 
 See [](:func:`modal`).

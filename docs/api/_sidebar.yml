@@ -51,8 +51,6 @@ website:
       - api/ui.showcase_bottom.qmd
       - api/ui.showcase_left_center.qmd
       - api/ui.showcase_top_right.qmd
-      - api/ui.ValueBoxTheme.qmd
-      - api/ui.ShowcaseLayout.qmd
       section: Value boxes
     - contents:
       - api/ui.nav_panel.qmd

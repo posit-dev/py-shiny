@@ -32,8 +32,6 @@ the [](:func:`~shiny.ui.modal`).
 [](:func:`~shiny.ui.modal_show`)
 [](:func:`~shiny.ui.modal_remove`)
 
-
-
-## Example
+## Examples
 
 See [](:func:`modal`).
