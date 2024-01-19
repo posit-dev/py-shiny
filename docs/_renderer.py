@@ -20,23 +20,6 @@ from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
 
 SHINY_PATH = Path(files("shiny").joinpath())
 
-SHINYLIVE_CODE_TEMPLATE = """
-```{{shinylive-python}}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400{0}
-```
-"""
-
-DOCSTRING_TEMPLATE = """\
-{rendered}
-
-{header} Examples
-
-{examples}
-"""
-
 
 # This is the same as the FileContentJson type in TypeScript.
 class FileContentJson(TypedDict):
@@ -68,37 +51,9 @@ class Renderer(MdRenderer):
 
         converted = convert_rst_link_to_md(rendered)
 
-        if isinstance(el, dc.Alias) and "experimental" in el.target_path:
-            p_example_dir = SHINY_PATH / "experimental" / "api-examples" / el.name
-        else:
-            p_example_dir = SHINY_PATH / "api-examples" / el.name
+        check_if_missing_expected_example(el, converted)
 
-        if (p_example_dir / "app.py").exists():
-            example = ""
-
-            files = list(p_example_dir.glob("**/*"))
-
-            # Sort, and then move app.py to first position.
-            files.sort()
-            app_py_idx = files.index(p_example_dir / "app.py")
-            files = [files[app_py_idx]] + files[:app_py_idx] + files[app_py_idx + 1 :]
-
-            for f in files:
-                if f.is_dir():
-                    continue
-                file_info = read_file(f, p_example_dir)
-                if file_info["type"] == "text":
-                    example += f"\n## file: {file_info['name']}\n{file_info['content']}"
-                else:
-                    example += f"\n## file: {file_info['name']}\n## type: binary\n{file_info['content']}"
-
-            example = SHINYLIVE_CODE_TEMPLATE.format(example)
-
-            return DOCSTRING_TEMPLATE.format(
-                rendered=converted,
-                examples=example,
-                header="#" * (self.crnt_header_level + 1),
-            )
+        assert_no_sphinx_comments(el, converted)
 
         return converted
 
@@ -282,3 +237,59 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
         "content": file_content,
         "type": type,
     }
+
+
+def check_if_missing_expected_example(el, converted):
+    if re.search(r"(^|\n)#{2,6} Examples\n", converted):
+        # Manually added examples are fine
+        return
+
+    if not el.canonical_path.startswith("shiny"):
+        # Only check Shiny objects for examples
+        return
+
+    if hasattr(el, "decorators") and "no_example" in [
+        d.value.canonical_name for d in el.decorators
+    ]:
+        # When an example is intentionally omitted, we mark the fn with `@no_example`
+        return
+
+    if not el.is_function:
+        # Don't throw for things that can't be decorated
+        return
+
+    if not el.is_explicitely_exported:
+        # Don't require examples on "implicitly exported" functions
+        # In practice, this covers methods of exported classes (class still needs ex)
+        return
+
+    # TODO: Remove shiny.express from no_req_examples when we have examples ready
+    no_req_examples = ["shiny.express", "shiny.experimental"]
+    if any([el.target_path.startswith(mod) for mod in no_req_examples]):
+        return
+
+    raise RuntimeError(
+        f"{el.name} needs an example, use `@add_example()` or manually add `Examples` section:\n"
+        + (f"> file     : {el.filepath}\n" if hasattr(el, "filepath") else "")
+        + (f"> target   : {el.target_path}\n" if hasattr(el, "target_path") else "")
+        + (f"> canonical: {el.canonical_path}" if hasattr(el, "canonical_path") else "")
+    )
+
+
+def assert_no_sphinx_comments(el, converted: str) -> None:
+    """
+    Sphinx allows `..`-prefixed comments in docstrings, which are not valid markdown.
+    We don't allow Sphinx comments or directives, sorry!
+    """
+    pattern = r"\n[.]{2} .+(\n|$)"
+    if re.search(pattern, converted):
+        raise RuntimeError(
+            f"{el.name} includes Sphinx-styled comments or directives, please remove.\n"
+            + (f"> file     : {el.filepath}\n" if hasattr(el, "filepath") else "")
+            + (f"> target   : {el.target_path}\n" if hasattr(el, "target_path") else "")
+            + (
+                f"> canonical: {el.canonical_path}"
+                if hasattr(el, "canonical_path")
+                else ""
+            )
+        )

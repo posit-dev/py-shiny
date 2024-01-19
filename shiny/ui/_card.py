@@ -261,7 +261,7 @@ def _wrap_children_in_card(
     return tag_children
 
 
-# TODO-maindocs; @add_example()
+@add_example()
 def card_body(
     *args: TagChild | TagAttrs,
     fillable: bool = True,

@@ -224,6 +224,7 @@ class Session(object, metaclass=SessionMeta):
         finally:
             self.app._remove_session(self)
 
+    @add_example()
     async def close(self, code: int = 1001) -> None:
         """
         Close the session.

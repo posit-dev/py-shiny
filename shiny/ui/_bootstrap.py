@@ -27,7 +27,7 @@ from htmltools import (
     tags,
 )
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from ..module import current_namespace
 from ..types import MISSING, MISSING_TYPE
 from ._html_deps_external import jqui_deps
@@ -67,6 +67,7 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     return div({"class": "row"}, *args, **kwargs)
 
 
+@add_example(ex_dir="../api-examples/row")
 def column(
     width: int, *args: TagChild | TagAttrs, offset: int = 0, **kwargs: TagAttrValue
 ) -> Tag:
@@ -108,6 +109,7 @@ def column(
     return div({"class": cls}, *args, **kwargs)
 
 
+@no_example
 def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Create a well panel.
@@ -231,6 +233,7 @@ def panel_title(
     return TagList(get_window_title(title, window_title), title)
 
 
+@no_example
 def panel_fixed(
     *args: TagChild | TagAttrs,
     top: Optional[str] = None,
@@ -382,6 +385,7 @@ def panel_absolute(
     return TagList(deps, divTag, tags.script(f'$(".draggable").draggable({dragOpts});'))
 
 
+@no_example
 def help_text(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Create a help text element
