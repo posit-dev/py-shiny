@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, overload
+from typing import Any, Dict, List, Optional, cast, overload
 
 from htmltools import (
     HTMLDependency,
@@ -119,7 +119,7 @@ def extract_js_keys(options: Dict[str, Any], parent_key: str = "") -> List[str]:
     of those options which are of type JSEval.
 
     Returns:
-    A list of keys which identify the JS or HTML options
+    A list of keys which identify the JSEval options
     """
 
     # TODO This only works on nested dictionaries, and we may need to extend it to
@@ -130,5 +130,6 @@ def extract_js_keys(options: Dict[str, Any], parent_key: str = "") -> List[str]:
         if isinstance(value, JSEval):
             js_html_keys.append(full_key)
         elif isinstance(value, dict):
+            value = cast(Dict[str, Any], value)
             js_html_keys.extend(extract_js_keys(value, full_key))
     return js_html_keys
