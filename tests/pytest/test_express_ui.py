@@ -6,7 +6,8 @@ from typing import Any
 import pytest
 
 from shiny import render, ui
-from shiny.express import hide, output_args
+from shiny.express import output_args
+from shiny.express import ui as xui
 from shiny.express._run import run_express
 
 
@@ -16,9 +17,6 @@ def test_express_ui_is_complete():
     the item in `_known_missing`.
     These entries are in `_known_missing` in shiny/express/ui/__init__.py
     """
-
-    from shiny import ui
-    from shiny.express import ui as xui
 
     ui_all = set(ui.__all__)
     xui_all = set(xui.__all__)
@@ -53,7 +51,7 @@ def test_render_output_controls():
         == ui.output_text("text1").get_html_string()
     )
 
-    @hide
+    @xui.hold
     @render.text
     def text2():
         return "text"
@@ -90,11 +88,11 @@ def test_hide():
 
         sys.displayhook = display_hook_spy
 
-        with hide():
+        with xui.hold():
             sys.displayhook("foo")
-        hide(lambda: sys.displayhook("bar"))()
+        xui.hold(lambda: sys.displayhook("bar"))()
 
-        @hide
+        @xui.hold
         def whatever(x: Any):
             sys.displayhook(x)
 

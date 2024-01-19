@@ -132,6 +132,10 @@ from ._page import (
     page_opts,
 )
 
+from ._hold import (
+    hold,
+)
+
 __all__ = (
     # Imports from htmltools
     "TagList",
@@ -257,6 +261,8 @@ __all__ = (
     "tooltip",
     # Imports from ._page
     "page_opts",
+    # Imports from ._hold
+    "hold",
 )
 
 
@@ -296,5 +302,8 @@ _known_missing = {
         "output_data_frame",
     ),
     # Items from shiny.express.ui that don't have a counterpart in shiny.ui
-    "shiny.express.ui": ("page_opts",),
+    "shiny.express.ui": (
+        "page_opts",
+        "hold",
+    ),
 }

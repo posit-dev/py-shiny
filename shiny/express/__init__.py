@@ -8,7 +8,6 @@ from .. import render
 from . import ui
 from ._is_express import is_express_app
 from ._output import (  # noqa: F401
-    hide,
     output_args,  # pyright: ignore[reportUnusedImport]
     suspend_display,  # pyright: ignore[reportUnusedImport] - Deprecated
 )
@@ -23,7 +22,6 @@ __all__ = (
     "session",
     "is_express_app",
     "suspend_display",
-    "hide",
     "wrap_express_app",
     "ui",
     "display_body",
