@@ -280,10 +280,10 @@ class Renderer(Generic[IT]):
         Renders the output value function.
 
         This method is called when the renderer is requested to render its output. It
-        should resolve the value function `.fn` and return a (most likely) transformed
+        should execute the value function `.fn` and return a (most likely) transformed
         value.
 
-        The current implementation is to resolve the value function. If the value is
+        The default implementation is to resolve the value function. If the value is
         `None`, `None` will be returned. If the value is not `None`, the `.transform()`
         method will be called to transform the value into a JSON-serializable object.
         """
