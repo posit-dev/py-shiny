@@ -203,6 +203,13 @@ def create_doc_example_fixture(example_name: str, scope: str = "module"):
     )
 
 
+def create_deploys_fixture(app: Union[PurePath, str], scope: str = "module"):
+    """Used to create app fixtures from apps in tests/playwright/deploys/apps"""
+    return create_app_fixture(
+        here_root / "tests/playwright/deploys/apps" / app / "app.py", scope
+    )
+
+
 def x_create_doc_example_fixture(example_name: str, scope: str = "module"):
     """Used to create app fixtures from apps in py-shiny/shiny/examples"""
     return create_app_fixture(
