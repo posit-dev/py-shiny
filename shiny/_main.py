@@ -19,6 +19,7 @@ import uvicorn.config
 import shiny
 
 from . import _autoreload, _hostenv, _static, _utils
+from ._docstring import no_example
 from ._typing_extensions import NotRequired, TypedDict
 from .express import is_express_app
 from .express._utils import escape_to_var_name
@@ -142,6 +143,7 @@ any of the following will work:
     help="Launch app browser after app starts, using the Python webbrowser module.",
     show_default=True,
 )
+@no_example
 def run(
     app: str | shiny.App,
     host: str,

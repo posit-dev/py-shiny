@@ -4,11 +4,13 @@ __all__ = ("output_data_frame",)
 
 from htmltools import Tag
 
+from ..._docstring import add_example
 from ..._namespaces import resolve_id
 from .._html_deps_py_shiny import data_frame_deps
 from ..fill import as_fill_item, as_fillable_container
 
 
+@add_example(ex_dir="../../api-examples/data_frame")
 def output_data_frame(id: str) -> Tag:
     """
     Create an output container for an interactive table or grid. Features fast
