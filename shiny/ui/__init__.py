@@ -32,10 +32,7 @@ from htmltools import (
 )
 
 # Expose the following modules for extended usage: ex: ui.fill.as_fill_item(x)
-from . import (
-    css,  # noqa: F401  # pyright: ignore[reportUnusedImport]
-    fill,  # noqa: F401  # pyright: ignore[reportUnusedImport]
-)
+from . import css, fill  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from ._accordion import (
     AccordionPanel,
     accordion,
@@ -122,11 +119,11 @@ from ._navs import (
 )
 from ._notification import notification_remove, notification_show
 from ._output import (
+    output_code,
     output_image,
     output_plot,
     output_table,
     output_text,
-    output_code,
     output_text_verbatim,
     output_ui,
 )
