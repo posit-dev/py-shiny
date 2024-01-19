@@ -238,15 +238,12 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
 
 
 def check_if_missing_expected_example(el, converted):
-    if re.search(r"(^|\n)(#{2,6} Examples\n\n|Examples\n------)", converted):
+    if re.search(r"(^|\n)(#{2,6} Examples\n|Examples\n------)", converted):
+        # Manually added examples are fine
         return
 
     if not el.canonical_path.startswith("shiny"):
         # Only check Shiny objects for examples
-        return
-
-    if "## Examples" in converted:
-        # Manually added examples are fine
         return
 
     if hasattr(el, "decorators") and "no_example" in [
