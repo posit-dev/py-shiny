@@ -238,7 +238,7 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
 
 
 def check_if_missing_expected_example(el, converted):
-    if re.search(r"(^|\n)(#{2,6} Examples\n|Examples\n------)", converted):
+    if re.search(r"(^|\n)#{2,6} Examples\n", converted):
         # Manually added examples are fine
         return
 
@@ -277,6 +277,8 @@ def check_if_missing_expected_example(el, converted):
 def remove_sphinx_comments(converted: str) -> str:
     """
     Sphinx allows `..`-prefixed comments in docstrings, which are not valid markdown.
-    This function removes them.
+    This can be useful when we want to include comments that shouldn't appear in the
+    hover card or in the rendered docs. This function removes sphinx comments, but it
+    does not cover sphinx directives (don't use those!).
     """
     return re.sub(r"\n[.]{2} .+(\n|$)", "\n", converted)

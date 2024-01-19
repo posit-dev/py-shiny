@@ -386,7 +386,7 @@ class plot(Renderer[object]):
 # ======================================================================================
 # RenderImage
 # ======================================================================================
-@add_example(ex_dir="../api-examples/render_image")
+@add_example(ex_dir="../api-examples/output_image")
 class image(Renderer[ImgData]):
     """
     Reactively render a image file as an HTML image.

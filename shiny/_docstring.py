@@ -21,8 +21,6 @@ def find_api_examples_dir(start_dir: str) -> Optional[str]:
     return None
 
 
-def ex_dir() -> str:
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "api-examples")
 
 
 FuncType = Callable[..., Any]
@@ -136,14 +134,14 @@ def add_example(
         # WARNING: All `add_example()` calls must be coalesced.
         # Note that we're using numpydoc-style headers here, quartodoc will handle
         # converting them to markdown headers.
-        if not isinstance(func.__doc__, DocStringWithExample):
-            func.__doc__ += nl_indent + "Examples"
-            func.__doc__ += nl_indent + "--------"
-            after = None
-        else:
+        if isinstance(func.__doc__, DocStringWithExample):
             ex_header = "Examples" + nl_indent + "--------"
             before, after = func.__doc__.split(ex_header, 1)
             func.__doc__ = before + ex_header
+        else:
+            func.__doc__ += nl_indent + "Examples"
+            func.__doc__ += nl_indent + "--------"
+            after = None
 
         # Insert the example under the Examples heading
         func.__doc__ += nl_indent * 2

@@ -8,7 +8,9 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.event(input.btn)
     def _():
         ui.insert_ui(
-            ui.p("Number of clicks: ", input.btn()), selector="#btn", where="afterEnd"
+            ui.p("Number of clicks: ", input.btn()),
+            selector="#btn",
+             where="afterEnd",
         )
 
 
