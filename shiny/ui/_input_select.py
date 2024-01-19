@@ -11,7 +11,7 @@ import copy
 from json import dumps
 from typing import Any, Mapping, Optional, Union, cast
 
-from htmltools import HTML, JS, Tag, TagChild, TagList, css, div, tags
+from htmltools import Tag, TagChild, TagList, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id

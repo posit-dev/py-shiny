@@ -1,4 +1,4 @@
-from html import escape
+from html import escape  # noqa: F401
 
 from shiny import App, Inputs, Outputs, Session, render, ui
 
