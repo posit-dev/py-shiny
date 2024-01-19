@@ -581,6 +581,8 @@ def update_selectize(
         ``<optgroup>`` labels.
     selected
         The values that should be initially selected, if any.
+    options
+        Options to send to update, see `input_selectize` for details.
     server
         Whether to store choices on the server side, and load the select options
         dynamically on searching, instead of writing all choices into the page at once
