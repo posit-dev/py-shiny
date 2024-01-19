@@ -81,20 +81,17 @@ def add_example(
                 func.__doc__ = DocStringWithExample(func.__doc__)
             return func
 
-        nonlocal app_file
-        nonlocal ex_dir
-
         func_dir = get_decorated_source_directory(func)
         fn_name = func.__name__
 
         if ex_dir is None:
-            ex_dir = find_api_examples_dir(func_dir)
+            ex_dir_found = find_api_examples_dir(func_dir)
 
-            if ex_dir is None:
+            if ex_dir_found is None:
                 raise ValueError(
                     f"No example directory found for {fn_name} in {func_dir} or its parent directories."
                 )
-            example_dir = os.path.join(ex_dir, fn_name)
+            example_dir = os.path.join(ex_dir_found, fn_name)
         else:
             example_dir = os.path.join(func_dir, ex_dir)
 
