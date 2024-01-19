@@ -123,6 +123,7 @@ from ._cm_components import (
     navset_tab,
     navset_underline,
     value_box,
+    panel_title,
     panel_well,
     panel_conditional,
     panel_fixed,
@@ -255,6 +256,7 @@ __all__ = (
     "navset_tab",
     "navset_underline",
     "value_box",
+    "panel_title",
     "panel_well",
     "panel_conditional",
     "panel_fixed",
@@ -285,7 +287,6 @@ _known_missing = {
         "page_output",
         "panel_main",  # Deprecated
         "panel_sidebar",  # Deprecated
-        "panel_title",
         "showcase_bottom",
         "showcase_left_center",
         "showcase_top_right",
