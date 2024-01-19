@@ -51,13 +51,6 @@ def test_render_output_controls():
         == ui.output_text("text1").get_html_string()
     )
 
-    @xui.hold
-    @render.text
-    def text2():
-        return "text"
-
-    assert ui.TagList(text2.tagify()).get_html_string() == ""
-
     @output_args(placeholder=False)
     @render.code
     def code1():
@@ -90,17 +83,17 @@ def test_hold():
 
         with xui.hold():
             sys.displayhook("foo")
-        xui.hold(lambda: sys.displayhook("bar"))()
-
-        @xui.hold
-        def whatever(x: Any):
-            sys.displayhook(x)
-
-        whatever(100)
 
         assert not called
 
         sys.displayhook("baz")
+        assert called
+
+        called = False
+        with xui.hold() as held:
+            sys.displayhook("foo")
+        assert not called
+        sys.displayhook(held)
         assert called
 
     finally:
