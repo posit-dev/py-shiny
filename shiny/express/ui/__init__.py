@@ -95,6 +95,7 @@ from ...ui import (
     nav_spacer,
     Progress,
     value_box_theme,
+    js_eval,
 )
 
 from ._cm_components import (
@@ -257,6 +258,7 @@ __all__ = (
     "tooltip",
     # Imports from ._page
     "page_opts",
+    "js_eval",
 )
 
 
