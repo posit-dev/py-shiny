@@ -68,6 +68,4 @@ class HoldContextManager:
         traceback: Optional[TracebackType],
     ) -> bool:
         sys.displayhook = self.prev_displayhook
-        if exc_type:
-            print(f"An exception occurred: {exc_value}")
         return False
