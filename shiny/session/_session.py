@@ -11,6 +11,7 @@ import functools
 import json
 import os
 import re
+import textwrap
 import traceback
 import typing
 import urllib.parse
@@ -1157,3 +1158,41 @@ class Outputs:
 
     def _should_suspend(self, name: str) -> bool:
         return self._suspend_when_hidden[name] and self._session._is_hidden(name)
+
+
+# A bare-bones mock session class that is used only in shiny.express.
+class MockSession:
+    ns: ResolvedId = Root
+
+    def __init__(self):
+        from typing import cast
+
+        self.input = Inputs({})
+        self.output = Outputs(cast(Session, self), Root, {}, {})
+
+    # Needed so that Outputs don't throw an error.
+    def _is_hidden(self, name: str) -> bool:
+        return False
+
+    # Needed so that observers don't throw an error.
+    def on_ended(self, *args: object, **kwargs: object) -> None:
+        pass
+
+    def __bool__(self) -> bool:
+        return False
+
+    def __getattr__(self, name: str):
+        raise AttributeError(
+            textwrap.dedent(
+                f"""
+            The session attribute `{name}` is not yet available for use.
+            Since this code will run again when the session is initialized,
+            you can use `if session:` to only run this code when the session is
+            established.
+        """
+            )
+        )
+
+
+# Express code gets evaluated twice: once with a MockSession, and once with a real one
+ExpressSession = MockSession | Session

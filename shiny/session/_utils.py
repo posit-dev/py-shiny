@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 from .._docstring import no_example
 from .._namespaces import namespace_context
 from .._typing_extensions import TypedDict
+from .._validation import req
+from ..reactive import get_current_context
 
 
 class RenderedDeps(TypedDict):
@@ -31,7 +33,6 @@ class RenderedDeps(TypedDict):
 _current_session: ContextVar[Optional[Session]] = ContextVar(
     "current_session", default=None
 )
-_default_session: Optional[Session] = None
 
 
 @no_example
@@ -54,7 +55,7 @@ def get_current_session() -> Optional[Session]:
     -------
     ~require_active_session
     """
-    return _current_session.get() or _default_session
+    return _current_session.get()
 
 
 @contextmanager
@@ -130,6 +131,12 @@ def require_active_session(session: Optional[Session]) -> Session:
         raise RuntimeError(
             f"{calling_fn_name}() must be called from within an active Shiny session."
         )
+
+    # If session is falsy (i.e., it's a MockSession) and there's a context,
+    # throw a silent exception since this code will run again with an actual session.
+    if not session and has_current_context():
+        req(False)
+
     return session
 
 
@@ -153,3 +160,11 @@ def read_thunk_opt(thunk: Optional[Callable[[], T] | T]) -> Optional[T]:
         return thunk()
     else:
         return thunk
+
+
+def has_current_context() -> bool:
+    try:
+        get_current_context()
+        return True
+    except RuntimeError:
+        return False

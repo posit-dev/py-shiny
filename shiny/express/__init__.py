@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from typing import cast
+
 # Import these with underscore names so they won't show in autocomplete from the Python
 # console.
-from ..session import Inputs as _Inputs, Outputs as _Outputs, Session as _Session
-from ..session import _utils as _session_utils
+from ..session import Inputs as _Inputs, Outputs as _Outputs
+from ..session._session import ExpressSession as _ExpressSession
+from ..session._utils import get_current_session
 from .. import render
 from . import ui
 from ._is_express import is_express_app
@@ -29,7 +32,7 @@ __all__ = (
 # Add types to help type checkers
 input: _Inputs
 output: _Outputs
-session: _Session
+session: _ExpressSession
 
 
 # Note that users should use `from shiny.express import input` instead of `from shiny
@@ -39,42 +42,15 @@ session: _Session
 # cases, but when it fails, it will be very confusing.
 def __getattr__(name: str) -> object:
     if name == "input":
-        return _get_current_session_or_mock().input
+        return get_express_session().input
     elif name == "output":
-        return _get_current_session_or_mock().output
+        return get_express_session().output
     elif name == "session":
-        return _get_current_session_or_mock()
+        return get_express_session()
 
     raise AttributeError(f"Module 'shiny.express' has no attribute '{name}'")
 
 
-# A very bare-bones mock session class that is used only in shiny.express.
-class _MockSession:
-    def __init__(self):
-        from typing import cast
-
-        from .._namespaces import Root
-
-        self.input = _Inputs({})
-        self.output = _Outputs(cast(_Session, self), Root, {}, {})
-
-    # This is needed so that Outputs don't throw an error.
-    def _is_hidden(self, name: str) -> bool:
-        return False
-
-
-_current_mock_session: _MockSession | None = None
-
-
-def _get_current_session_or_mock() -> _Session:
-    from typing import cast
-
-    session = _session_utils.get_current_session()
-    if session is None:
-        global _current_mock_session
-        if _current_mock_session is None:
-            _current_mock_session = _MockSession()
-        return cast(_Session, _current_mock_session)
-
-    else:
-        return session
+# Express code gets executed twice: once with a MockSession and once with a real session.
+def get_express_session() -> _ExpressSession:
+    return cast(_ExpressSession, get_current_session())
