@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from typing import (
     Any,
     Awaitable,
@@ -31,18 +30,17 @@ from ..._utils import is_async_callable, wrap_async
 
 __all__ = (
     "Renderer",
-    "RendererBase",
     "Jsonifiable",
     "ValueFn",
     "AsyncValueFn",
-    "RendererBaseT",
+    "RendererT",
 )
 
-RendererBaseT = TypeVar("RendererBaseT", bound="RendererBase")
+RendererT = TypeVar("RendererT", bound="Renderer[Any]")
 """
 Generic class to pass the Renderer class through a decorator.
 
-When accepting and returning a `RendererBase` class, utilize this TypeVar as to not reduce the variable type to `RendererBase`
+When accepting and returning a `Renderer` class, utilize this TypeVar as to not reduce the variable type to `Renderer[Any]`
 """
 
 # Input type for the user-spplied function that is passed to a render.xx
@@ -96,9 +94,9 @@ synchronous or asynchronous.
 """
 
 
-class RendererBase(ABC):
+class Renderer(Generic[IT]):
     """
-    Base class for all renderers.
+    Output renderer class
 
     TODO-barret-docs
     """
@@ -112,10 +110,9 @@ class RendererBase(ABC):
     """
     Name of output function supplied. (The value will not contain any module prefix.)
 
-    Set within `Renderer.__call__()` method.
+    Set within `.__call__()` method.
     """
 
-    # Meta
     output_id: str
     """
     Output function name or ID (provided to `@output(id=)`).
@@ -127,6 +124,41 @@ class RendererBase(ABC):
     An initial value of `.__name__` (set within `Renderer.__call__(_fn)`) will be used until the
     output renderer is registered within the session.
     """
+
+    fn: AsyncValueFn[IT]
+    """
+    App-supplied output value function which returns type `IT`. This function is always
+    asyncronous as the original app-supplied function possibly wrapped to execute
+    asynchonously.
+    """
+
+    def __call__(self, _fn: ValueFn[IT]) -> Self:
+        """
+        Renderer __call__ docs here; Sets app's value function
+
+        TODO-barret-docs
+        """
+
+        if not callable(_fn):
+            raise TypeError("Value function must be callable")
+
+        # Set value function with extra meta information
+        self.fn = AsyncValueFn(_fn)
+
+        # Copy over function name as it is consistent with how Session and Output
+        # retrieve function names
+        self.__name__ = _fn.__name__
+
+        # Set the value of `output_id` to the function name.
+        # This helps with testing and other situations where no session is present
+        # for auto-registration to occur.
+        self.output_id = self.__name__
+
+        # Allow for App authors to not require `@output`
+        self._auto_register()
+
+        # Return self for possible chaining of methods!
+        return self
 
     def _set_output_metadata(
         self,
@@ -151,13 +183,49 @@ class RendererBase(ABC):
     ) -> DefaultUIFnResultOrNone:
         return None
 
-    @abstractmethod
-    async def render(self) -> Jsonifiable:
-        ...
-
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        _fn: Optional[ValueFn[IT]] = None,
+    ) -> None:
+        # Do not display docs here. If docs are present, it could highjack the docs of
+        # the subclass's `__init__` method.
+        # """
+        # Renderer - init docs here
+        # """
         super().__init__()
+
         self._auto_registered: bool = False
+
+        # Must be done last
+        if callable(_fn):
+            # Register the value function
+            self(_fn)
+
+    async def transform(self, value: IT) -> Jsonifiable:
+        """
+        Renderer - transform docs here
+
+        TODO-barret-docs
+        """
+        raise NotImplementedError(
+            "Please implement either the `transform(self, value: IT)` or `render(self)` method.\n"
+            "* `transform(self, value: IT)` should transform the `value` (of type `IT`) into Jsonifiable object. Ex: `dict`, `None`, `str`. (standard)\n"
+            "* `render(self)` method has full control of how an App author's value is retrieved (`self._fn()`) and utilized. (rare)\n"
+            "By default, the `render` retrieves the value and then calls `transform` method on non-`None` values."
+        )
+
+    async def render(self) -> Jsonifiable:
+        """
+        Renderer - render docs here
+
+        TODO-barret-docs
+        """
+        value = await self.fn()
+        if value is None:
+            return None
+
+        rendered = await self.transform(value)
+        return rendered
 
     # ######
     # Tagify-like methods
@@ -284,86 +352,3 @@ class AsyncValueFn(Generic[IT]):
             )
         sync_fn = cast(Callable[[], IT], self._orig_fn)
         return sync_fn
-
-
-class Renderer(RendererBase, Generic[IT]):
-    """
-    Renderer cls docs here
-
-    TODO-barret-docs
-    """
-
-    fn: AsyncValueFn[IT]
-    """
-    App-supplied output value function which returns type `IT`. This function is always
-    asyncronous as the original app-supplied function possibly wrapped to execute
-    asynchonously.
-    """
-
-    def __call__(self, _fn: ValueFn[IT]) -> Self:
-        """
-        Renderer __call__ docs here; Sets app's value function
-
-        TODO-barret-docs
-        """
-
-        if not callable(_fn):
-            raise TypeError("Value function must be callable")
-
-        # Set value function with extra meta information
-        self.fn = AsyncValueFn(_fn)
-
-        # Copy over function name as it is consistent with how Session and Output
-        # retrieve function names
-        self.__name__ = _fn.__name__
-
-        # Set the value of `output_id` to the function name.
-        # This helps with testing and other situations where no session is present
-        # for auto-registration to occur.
-        self.output_id = self.__name__
-
-        # Allow for App authors to not require `@output`
-        self._auto_register()
-
-        # Return self for possible chaining of methods!
-        return self
-
-    def __init__(
-        self,
-        _fn: Optional[ValueFn[IT]] = None,
-    ):
-        # Do not display docs here. If docs are present, it could highjack the docs of
-        # the subclass's `__init__` method.
-        # """
-        # Renderer - init docs here
-        # """
-        super().__init__()
-        if callable(_fn):
-            # Register the value function
-            self(_fn)
-
-    async def transform(self, value: IT) -> Jsonifiable:
-        """
-        Renderer - transform docs here
-
-        TODO-barret-docs
-        """
-        raise NotImplementedError(
-            "Please implement either the `transform(self, value: IT)` or `render(self)` method.\n"
-            "* `transform(self, value: IT)` should transform the `value` (of type `IT`) into Jsonifiable object. Ex: `dict`, `None`, `str`. (standard)\n"
-            "* `render(self)` method has full control of how an App author's value is retrieved (`self._fn()`) and utilized. (rare)\n"
-            "By default, the `render` retrieves the value and then calls `transform` method on non-`None` values."
-        )
-
-    async def render(self) -> Jsonifiable:
-        """
-        Renderer - render docs here
-
-        TODO-barret-docs
-        """
-        value = await self.fn()
-        if value is None:
-            return None
-
-        rendered = await self.transform(value)
-        return rendered

@@ -166,7 +166,7 @@ def test_random_port():
             # Port `port + j` is busy,
             # Shift the test range and try again
             port += j + 1
-            print(port)
+            print("Trying port: ", port)
     # If no port is available, throw an error
     # `attempts` should be << n
     if attempts == n:
@@ -192,9 +192,22 @@ def test_random_port_unusable():
 
 
 def test_random_port_starvation():
-    with socketserver.TCPServer(("127.0.0.1", 9000), socketserver.BaseRequestHandler):
-        with pytest.raises(RuntimeError, match="Failed to find a usable random port"):
-            random_port(9000, 9000)
+    port = 9000
+    for _ in range(100):
+        try:
+            with socketserver.TCPServer(
+                ("127.0.0.1", port),
+                socketserver.BaseRequestHandler,
+            ):
+                with pytest.raises(
+                    RuntimeError, match="Failed to find a usable random port"
+                ):
+                    random_port(port, port)
+        except OSError as e:
+            print(e)
+            # Port is busy, bump the port number
+            port += 1
+            print("Trying port: ", port)
 
 
 def test_extract_js_keys():
