@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import contextlib
 import sys
-from contextlib import AbstractContextManager
-from typing import Callable, Generator, TypeVar, overload
+from contextlib import ContextDecorator
+from types import TracebackType
+from typing import Callable, Optional, Type, TypeVar, overload
 
 from ... import ui
 from ..._typing_extensions import ParamSpec
@@ -27,13 +27,13 @@ def hold(fn: RendererBaseT) -> RendererBaseT:
 
 
 @overload
-def hold() -> AbstractContextManager[None]:
+def hold() -> HideContextManager:
     ...
 
 
 def hold(
     fn: Callable[P, R] | RendererBaseT | None = None
-) -> Callable[P, R] | RendererBaseT | AbstractContextManager[None]:
+) -> Callable[P, R] | RendererBaseT | HideContextManager:
     """Prevent the display of UI elements in various ways.
 
     If used as a context manager (`with hide():`), it prevents the display of all UI
@@ -65,7 +65,7 @@ def hold(
     """
 
     if fn is None:
-        return hide_ctxmgr()
+        return HideContextManager()
 
     # Special case for RendererBase; when we decorate those, we just mean "don't
     # display yourself"
@@ -74,17 +74,32 @@ def hold(
         fn.auto_output_ui = null_ui
         return fn
 
-    return hide_ctxmgr()(fn)
+    return HideContextManager()(fn)
 
 
-@contextlib.contextmanager
-def hide_ctxmgr() -> Generator[None, None, None]:
-    oldhook = sys.displayhook
-    sys.displayhook = null_displayhook
-    try:
-        yield
-    finally:
-        sys.displayhook = oldhook
+class HideContextManager(ContextDecorator):
+    def __init__(self):
+        self.content = ui.TagList()
+
+    def __enter__(self) -> ui.TagList:
+        from htmltools import wrap_displayhook_handler
+
+        self.prev_displayhook = sys.displayhook
+        sys.displayhook = wrap_displayhook_handler(
+            self.content.append  # pyright: ignore[reportGeneralTypeIssues]
+        )
+        return self.content
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> bool:
+        sys.displayhook = self.prev_displayhook
+        if exc_type:
+            print(f"An exception occurred: {exc_value}")
+        return False
 
 
 def null_ui(
