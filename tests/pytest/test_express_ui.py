@@ -77,7 +77,7 @@ def test_render_output_controls():
         code2.tagify()
 
 
-def test_hide():
+def test_hold():
     old_displayhook = sys.displayhook
     try:
         called = False
