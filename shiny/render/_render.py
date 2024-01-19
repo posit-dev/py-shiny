@@ -274,7 +274,7 @@ class plot(Renderer[object]):
     async def render(self) -> dict[str, Jsonifiable] | Jsonifiable | None:
         is_userfn_async = self.fn.is_async()
         name = self.output_id
-        session = require_active_session(None)
+        session = require_active_session()
         width = self.width
         height = self.height
         alt = self.alt
@@ -586,7 +586,7 @@ class ui(Renderer[TagChild]):
         return _ui.output_ui(self.output_id)
 
     async def transform(self, value: TagChild) -> Jsonifiable:
-        session = require_active_session(None)
+        session = require_active_session()
         return rendered_deps_to_jsonifiable(
             session._process_ui(value),
         )
@@ -664,7 +664,7 @@ class download(Renderer[str]):
         def url() -> str:
             from urllib.parse import quote
 
-            session = require_active_session(None)
+            session = require_active_session()
             return f"session/{quote(session.id)}/download/{quote(self.output_id)}?w="
 
         # Unlike most value functions, this one's name is `url`. But we want to get the

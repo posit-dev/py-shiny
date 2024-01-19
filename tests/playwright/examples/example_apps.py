@@ -47,6 +47,11 @@ output_transformer_errors = [
     "ShinyDeprecationWarning:",
     "shiny.render.transformer.output_transformer()",
 ]
+session_warnings = [
+    # shinywidgets.register_widget() uses `session` when registering widget
+    "ShinyDeprecationWarning: `session=` is deprecated",
+    "session_type_warning()",  # continutation of line above
+]
 express_warnings = ["Detected Shiny Express app. "]
 app_allow_shiny_errors: typing.Dict[
     str, typing.Union[Literal[True], typing.List[str]]
@@ -60,8 +65,8 @@ app_allow_shiny_errors: typing.Dict[
         "UserWarning: This figure includes Axes that are not compatible with tight_layout",
     ],
     # Remove after shinywidgets accepts `Renderer` PR
-    "airmass": [*output_transformer_errors],
-    "brownian": [*output_transformer_errors],
+    "airmass": [*output_transformer_errors, *session_warnings],
+    "brownian": [*output_transformer_errors, *session_warnings],
     "multi-page": [*output_transformer_errors],
     "model-score": [*output_transformer_errors],
     "data_frame": [*output_transformer_errors],
