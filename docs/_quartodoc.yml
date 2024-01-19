@@ -176,12 +176,13 @@ quartodoc:
             desc: ""
           contents:
             - render.renderer.Renderer
-            - render.renderer.RendererBase
             - name: render.renderer.Jsonifiable
               dynamic: false
             - name: render.renderer.ValueFn
               dynamic: false
             - name: render.renderer.AsyncValueFn
+              dynamic: false
+            - name: render.renderer.RendererT
               dynamic: false
     - title: Reactive programming
       desc: ""

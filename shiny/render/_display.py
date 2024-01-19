@@ -93,7 +93,7 @@ class display(Renderer[None]):
             ret = sync_value_fn()
             if ret is not None:
                 raise RuntimeError(
-                    "@render.display functions should not return values. (`None` is allowed)."
+                    "@render.display functions should not return values. Instead, @render.display dynamically renders every printable line within the function body. (`None` is a valid return value.)"
                 )
         finally:
             sys.displayhook = orig_displayhook
