@@ -140,7 +140,7 @@ def server(input: Inputs):
                     combined_data = combined_data[:, -MAX_SAMPLES:]
                 cpu_history.set(combined_data)
 
-    @reactive.Effect(priority=100)
+    @reactive.effect(priority=100)
     @reactive.event(input.reset)
     def reset_history():
         cpu_history.set(None)

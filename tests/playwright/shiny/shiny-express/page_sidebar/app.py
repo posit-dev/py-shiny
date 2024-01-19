@@ -9,6 +9,6 @@ with ui.sidebar(id="sidebar", title="SidebarTitle"):
 with ui.card(id="card"):
     ui.input_slider("a", "A", 1, 100, 50)
 
-    @render.text
+    @render.code
     def txt():
         return input.a()

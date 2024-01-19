@@ -1,10 +1,13 @@
 import sys
+import tempfile
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from shiny import render, ui
-from shiny.express import suspend_display, ui_kwargs
+from shiny.express import output_args, suspend_display
+from shiny.express._run import run_express
 
 
 def test_express_ui_is_complete():
@@ -47,7 +50,7 @@ def test_render_output_controls():
 
     assert (
         ui.TagList(text1.tagify()).get_html_string()
-        == ui.output_text_verbatim("text1").get_html_string()
+        == ui.output_text("text1").get_html_string()
     )
 
     @suspend_display
@@ -57,23 +60,23 @@ def test_render_output_controls():
 
     assert ui.TagList(text2.tagify()).get_html_string() == ""
 
-    @ui_kwargs(placeholder=True)
-    @render.text
-    def text3():
+    @output_args(placeholder=False)
+    @render.code
+    def code1():
         return "text"
 
     assert (
-        ui.TagList(text3.tagify()).get_html_string()
-        == ui.output_text_verbatim("text3", placeholder=True).get_html_string()
+        ui.TagList(code1.tagify()).get_html_string()
+        == ui.output_code("code1", placeholder=False).get_html_string()
     )
 
-    @ui_kwargs(width=100)
-    @render.text
-    def text4():
+    @output_args(width=100)
+    @render.code
+    def code2():
         return "text"
 
     with pytest.raises(TypeError, match="width"):
-        text4.tagify()
+        code2.tagify()
 
 
 def test_suspend_display():
@@ -104,3 +107,33 @@ def test_suspend_display():
 
     finally:
         sys.displayhook = old_displayhook
+
+
+def test_recall_context_manager():
+    # A Shiny Express app that uses a RecallContextManager (ui.card_header()) without
+    # `with`. It is used within another RecallContextManager (ui.card()), but that one
+    # is used with `with`. This test makes sure that the non-with RecallContextManager
+    # will invoke the wrapped function and its result will be passed to the parent.
+
+    card_app_express_text = """\
+from shiny.express import ui
+
+with ui.card():
+    ui.card_header("Header")
+    "Body"
+"""
+
+    # The same UI, written in the Shiny Core style.
+    card_app_core = ui.page_fixed(
+        ui.card(
+            ui.card_header("Header"),
+            "Body",
+        )
+    )
+
+    with tempfile.NamedTemporaryFile(mode="w+t") as temp_file:
+        temp_file.write(card_app_express_text)
+        temp_file.flush()
+        res = run_express(Path(temp_file.name)).tagify()
+
+    assert str(res) == str(card_app_core)

@@ -39,6 +39,7 @@ if TYPE_CHECKING:
 
 from .. import _utils, reactive, render
 from .._connection import Connection, ConnectionClosed
+from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from .._namespaces import Id, ResolvedId, Root
@@ -48,7 +49,7 @@ from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
-from ..render.renderer import Jsonifiable, RendererBase, RendererBaseT
+from ..render.renderer import Jsonifiable, Renderer, RendererT
 from ..types import SafeException, SilentCancelOutputException, SilentException
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
@@ -456,7 +457,7 @@ class Session(object, metaclass=SessionMeta):
                                 warnings.warn(
                                     "Unable to infer a filename for the "
                                     f"'{download_id}' download handler; please use "
-                                    "@session.download(filename=) to specify one "
+                                    "@render.download(filename=) to specify one "
                                     "manually",
                                     SessionWarning,
                                     stacklevel=2,
@@ -748,7 +749,7 @@ class Session(object, metaclass=SessionMeta):
         encoding: str = "utf-8",
     ) -> Callable[[DownloadHandler], None]:
         """
-        Decorator to register a function to handle a download.
+        Deprecated. Please use :class:`~shiny.render.download` instead.
 
         Parameters
         ----------
@@ -766,6 +767,10 @@ class Session(object, metaclass=SessionMeta):
         :
             The decorated function.
         """
+
+        warn_deprecated(
+            "session.download() is deprecated. Please use render.download() instead."
+        )
 
         def wrapper(fn: DownloadHandler):
             effective_name = id or fn.__name__
@@ -968,7 +973,7 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    def __call__(self, renderer: RendererBaseT) -> RendererBaseT:
+    def __call__(self, renderer: RendererT) -> RendererT:
         ...
 
     @overload
@@ -978,29 +983,30 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-    ) -> Callable[[RendererBaseT], RendererBaseT]:
+    ) -> Callable[[RendererT], RendererT]:
         ...
 
     def __call__(
         self,
-        renderer: Optional[RendererBaseT] = None,
+        renderer: Optional[RendererT] = None,
         *,
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-    ) -> RendererBaseT | Callable[[RendererBaseT], RendererBaseT]:
-        def set_renderer(renderer: RendererBaseT) -> RendererBaseT:
-            if not isinstance(renderer, RendererBase):
+    ) -> RendererT | Callable[[RendererT], RendererT]:
+        def set_renderer(renderer: RendererT) -> RendererT:
+            if not isinstance(renderer, Renderer):
                 raise TypeError(
                     "`@output` must be applied to a `@render.xx` function.\n"
                     + "In other words, `@output` must be above `@render.xx`."
                 )
 
             # Get the (possibly namespaced) output id
-            output_name = self._ns(id or renderer.__name__)
+            output_id = id or renderer.__name__
+            output_name = self._ns(output_id)
 
             # renderer is a Renderer object. Give it a bit of metadata.
-            renderer._set_output_metadata(output_name=output_name)
+            renderer._set_output_metadata(output_id=output_name)
 
             renderer._on_register()
 

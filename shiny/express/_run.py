@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import logging
 import sys
 from pathlib import Path
 from typing import cast
@@ -33,11 +32,6 @@ def wrap_express_app(file: Path) -> App:
     :
         A `shiny.App` object.
     """
-    logging.getLogger("uvicorn.error").warning(
-        "Detected Shiny Express app. Please note that Shiny Express is still in "
-        "development and the API is subject to change!"
-    )
-
     try:
         # We tagify here, instead of waiting for the App object to do it when it wraps
         # the UI in a HTMLDocument and calls render() on it. This is because
@@ -90,6 +84,7 @@ def run_express(file: Path) -> Tag | TagList:
         var_context: dict[str, object] = {
             "__file__": file_path,
             display_decorator_func_name: _display_decorator_function_def,
+            "input": InputNotImportedShim(),
         }
 
         # Execute each top-level node in the AST
@@ -150,3 +145,16 @@ def reset_top_level_recall_context_manager() -> None:
 
 def get_top_level_recall_context_manager() -> RecallContextManager[Tag]:
     return _top_level_recall_context_manager
+
+
+class InputNotImportedShim:
+    # This is a dummy class that is used to provide a helpful error message when the
+    # user tries to access `input.x` but forgot to import `input`. If they do that, then
+    # it would get the builtin `input` function, and print an unhelpful error message:
+    #   RuntimeError: 'builtin_function_or_method' object has no attribute 'x'
+    # This class provides an error message that is more helpful.
+    def __getattr__(self, name: str):
+        raise AttributeError(
+            "Tried to access `input`, but it was not imported. "
+            "Perhaps you need `from shiny.express import input`?"
+        )

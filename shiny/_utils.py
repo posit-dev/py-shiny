@@ -393,7 +393,7 @@ def run_coro_hybrid(coro: Awaitable[R]) -> "asyncio.Future[R]":
             assert fut.done()
             try:
                 fut.result()
-            except BaseException as e:
+            except BaseException as e:  # noqa: B036
                 exc = e
 
         if result_future.cancelled():
@@ -419,7 +419,7 @@ def run_coro_hybrid(coro: Awaitable[R]) -> "asyncio.Future[R]":
         except (KeyboardInterrupt, SystemExit) as e:
             result_future.set_exception(e)
             raise
-        except BaseException as e:
+        except BaseException as e:  # noqa: B036
             result_future.set_exception(e)
         else:
             # If we get here, the coro didn't finish. Schedule it for completion.

@@ -1,9 +1,8 @@
 import asyncio
+import random
 from datetime import date
 
-import numpy as np
-
-from shiny import App, Inputs, Outputs, Session, ui
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
     ui.download_button("downloadData", "Download"),
@@ -11,8 +10,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @session.download(
-        filename=lambda: f"新型-{date.today().isoformat()}-{np.random.randint(100,999)}.csv"
+    @render.download(
+        filename=lambda: f"新型-{date.today().isoformat()}-{random.randint(100,999)}.csv"
     )
     async def downloadData():
         await asyncio.sleep(0.25)

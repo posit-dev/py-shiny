@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Optional
 
 from shiny import App, Inputs, Outputs, Session, ui
 from shiny.render.renderer import Renderer, ValueFn
@@ -28,15 +28,15 @@ class render_capitalize(Renderer[str]):
     Whether to render a placeholder value. (Defaults to `True`)
     """
 
-    def default_ui(self, id: str):
+    def auto_output_ui(self):
         """
         Express UI for the renderer
         """
-        return ui.output_text_verbatim(id, placeholder=self.placeholder)
+        return ui.output_text_verbatim(self.output_name, placeholder=self.placeholder)
 
     def __init__(
         self,
-        _fn: ValueFn[str | None] | None = None,
+        _fn: Optional[ValueFn[str]] | None = None,
         *,
         to_case: Literal["upper", "lower", "ignore"] = "upper",
         placeholder: bool = True,
@@ -68,7 +68,7 @@ class render_capitalize(Renderer[str]):
         self.to_case = to_case
 
     async def render(self) -> str | None:
-        value = await self.value_fn()
+        value = await self.fn()
         if value is None:
             # If `None` is returned, then do not render anything.
             return None
@@ -94,11 +94,11 @@ class render_upper(Renderer[str]):
     Note: This renderer is equivalent to `render_capitalize(to="upper")`.
     """
 
-    def default_ui(self, id: str):
+    def auto_output_ui(self):
         """
         Express UI for the renderer
         """
-        return ui.output_text_verbatim(id, placeholder=True)
+        return ui.output_text_verbatim(self.output_name, placeholder=True)
 
     async def transform(self, value: str) -> str:
         """

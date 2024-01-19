@@ -109,7 +109,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         df = df.loc[df["annotation"] != ""]
         return df
 
-    @session.download(filename="data.csv")
+    @render.download(filename="data.csv")
     def download():
         yield annotated_data().to_csv()
 

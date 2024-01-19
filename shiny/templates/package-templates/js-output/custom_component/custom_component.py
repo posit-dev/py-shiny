@@ -1,5 +1,6 @@
 # from pathlib import Path
 from pathlib import PurePath
+from typing import Optional
 
 from htmltools import HTMLDependency, Tag
 
@@ -26,13 +27,13 @@ class render_custom_component(Renderer[int]):
     """
 
     # The UI used within Shiny Express mode
-    def default_ui(self, id: str) -> Tag:
-        return custom_component(id, height=self.height)
+    def auto_output_ui(self) -> Tag:
+        return custom_component(self.output_id, height=self.height)
 
     # The init method is used to set up the renderer's parameters.
     # If no parameters are needed, then the `__init__()` method can be omitted.
-    def __init__(self, _value_fn: ValueFn[int] = None, *, height: str = "200px"):
-        super().__init__(_value_fn)
+    def __init__(self, _fn: Optional[ValueFn[int]] = None, *, height: str = "200px"):
+        super().__init__(_fn)
         self.height: str = height
 
     # Transforms non-`None` values into a `Jsonifiable` object.

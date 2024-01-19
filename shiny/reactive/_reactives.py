@@ -480,6 +480,14 @@ class Effect_:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
 
+        from ..render.renderer import Renderer
+
+        if isinstance(fn, Renderer):
+            raise TypeError(
+                "`@reactive.effect` can not be combined with `@render.xx`.\n"
+                + "Please remove your call of `@reactive.effect`."
+            )
+
         # The EffectAsync subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
@@ -811,9 +819,9 @@ def event(
 
         # This is here instead of at the top of the .py file in order to avoid a
         # circular dependency.
-        from ..render.renderer import RendererBase
+        from ..render.renderer import Renderer
 
-        if isinstance(user_fn, RendererBase):
+        if isinstance(user_fn, Renderer):
             # At some point in the future, we may allow this condition, if we find an
             # use case. For now we'll disallow it, for simplicity.
             raise TypeError(

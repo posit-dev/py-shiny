@@ -3,76 +3,32 @@ from __future__ import annotations
 import contextlib
 import sys
 from contextlib import AbstractContextManager
-from typing import Callable, Generator, TypeVar, overload
+from typing import Callable, Generator, TypeVar, cast, overload
 
 from .. import ui
-from .._typing_extensions import ParamSpec
-from ..render.renderer import RendererBase, RendererBaseT
-from ..render.transformer import OutputRenderer
-from ..render.transformer._transformer import OT
+from ..render.renderer import Renderer, RendererT
 
-__all__ = (
-    "ui_kwargs",
-    "suspend_display",
-)
+__all__ = ("suspend_display",)
 
-P = ParamSpec("P")
-R = TypeVar("R")
 CallableT = TypeVar("CallableT", bound=Callable[..., object])
 
 
 # TODO-barret-future; quartodoc entry?
-def ui_kwargs(
-    **kwargs: object,
-) -> Callable[[RendererBaseT], RendererBaseT]:
-    """
-    Sets default UI arguments for a Shiny rendering function.
-
-    Each Shiny render function (like :func:`~shiny.render.plot`) can display itself when
-    declared within a Shiny inline-style application. In the case of
-    :func:`~shiny.render.plot`, the :func:`~shiny.ui.output_plot` function is called
-    implicitly to display the plot. Use the `@ui_kwargs` decorator to specify
-    arguments to be passed to `output_plot` (or whatever the corresponding UI function
-    is) when the render function displays itself.
-
-    Parameters
-    ----------
-    **kwargs
-        Keyword arguments to be passed to the UI function.
-
-    Returns
-    -------
-    :
-        A decorator that sets the default UI arguments for a Shiny rendering function.
-    """
-
-    def wrapper(renderer: RendererBaseT) -> RendererBaseT:
-        # renderer._default_ui_args = args
-        renderer._default_ui_kwargs = kwargs
-        return renderer
-
-    return wrapper
-
-
 def output_args(
-    *args: object,
     **kwargs: object,
-) -> Callable[[OutputRenderer[OT]], OutputRenderer[OT]]:
+) -> Callable[[RendererT], RendererT]:
     """
     Sets default UI arguments for a Shiny rendering function.
 
     Each Shiny render function (like :func:`~shiny.render.plot`) can display itself when
     declared within a Shiny inline-style application. In the case of
     :func:`~shiny.render.plot`, the :func:`~shiny.ui.output_plot` function is called
-    implicitly to display the plot. Use the `@output_args` decorator to specify
-    arguments to be passed to `output_plot` (or whatever the corresponding UI function
-    is) when the render function displays itself.
-
+    implicitly to display the plot. Use the `@ui_kwargs` decorator to specify arguments
+    to be passed to `output_plot` (or whatever the corresponding UI function is) when
+    the render function displays itself.
 
     Parameters
     ----------
-    *args
-        Positional arguments to be passed to the UI function.
     **kwargs
         Keyword arguments to be passed to the UI function.
 
@@ -82,28 +38,20 @@ def output_args(
         A decorator that sets the default UI arguments for a Shiny rendering function.
     """
 
-    def wrapper(renderer: OutputRenderer[OT]) -> OutputRenderer[OT]:
-        if not isinstance(renderer, OutputRenderer):
-            raise TypeError(
-                f"Expected an OutputRenderer, but got {type(renderer).__name__}."
-                "\nIf you are trying to set default UI arguments for a `Renderer`, use"
-                " `@ui_kwargs` instead."
-            )
-        renderer._default_ui_args = args
-        renderer._default_ui_kwargs = kwargs
-
+    def wrapper(renderer: RendererT) -> RendererT:
+        renderer._auto_output_ui_kwargs = kwargs
         return renderer
 
     return wrapper
 
 
 @overload
-def suspend_display(fn: CallableT) -> CallableT:
+def suspend_display(fn: RendererT) -> RendererT:
     ...
 
 
 @overload
-def suspend_display(fn: RendererBaseT) -> RendererBaseT:
+def suspend_display(fn: CallableT) -> CallableT:
     ...
 
 
@@ -113,8 +61,8 @@ def suspend_display() -> AbstractContextManager[None]:
 
 
 def suspend_display(
-    fn: Callable[P, R] | RendererBaseT | None = None
-) -> Callable[P, R] | RendererBaseT | AbstractContextManager[None]:
+    fn: RendererT | CallableT | None = None,
+) -> RendererT | CallableT | AbstractContextManager[None]:
     """Suppresses the display of UI elements in various ways.
 
     If used as a context manager (`with suspend_display():`), it suppresses the display
@@ -148,12 +96,12 @@ def suspend_display(
     if fn is None:
         return suspend_display_ctxmgr()
 
-    # Special case for RendererBase; when we decorate those, we just mean "don't
+    # Special case for Renderer; when we decorate those, we just mean "don't
     # display yourself"
-    if isinstance(fn, RendererBase):
+    if isinstance(fn, Renderer):
         # By setting the class value, the `self` arg will be auto added.
-        fn.default_ui = null_ui
-        return fn
+        fn.auto_output_ui = null_ui
+        return cast(RendererT, fn)
 
     return suspend_display_ctxmgr()(fn)
 
@@ -169,8 +117,6 @@ def suspend_display_ctxmgr() -> Generator[None, None, None]:
 
 
 def null_ui(
-    id: str,
-    *args: object,
     **kwargs: object,
 ) -> ui.TagList:
     return ui.TagList()

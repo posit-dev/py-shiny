@@ -18,9 +18,8 @@ from .renderer._utils import (
 
 
 class display(Renderer[None]):
-    def default_ui(
+    def auto_output_ui(
         self,
-        id: str,
         *,
         inline: bool | MISSING_TYPE = MISSING,
         container: TagFunction | MISSING_TYPE = MISSING,
@@ -35,13 +34,13 @@ class display(Renderer[None]):
         set_kwargs_value(kwargs, "fillable", fillable, self.fillable)
 
         return _ui.output_ui(
-            id,
+            self.output_id,
             # (possibly) contains `inline`, `container`, `fill`, and `fillable` keys!
             **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
         )
 
     def __call__(self, fn: ValueFn[None]) -> Self:
-        if fn is None:
+        if fn is None:  # pyright: ignore[reportUnnecessaryComparison]
             raise TypeError("@render.display requires a function when called")
 
         async_fn = AsyncValueFn(fn)
@@ -63,7 +62,7 @@ class display(Renderer[None]):
 
     def __init__(
         self,
-        _fn: ValueFn[None] = None,
+        _fn: Optional[ValueFn[None]] = None,
         *,
         inline: bool = False,
         container: Optional[TagFunction] = None,
@@ -83,18 +82,18 @@ class display(Renderer[None]):
         orig_displayhook = sys.displayhook
         sys.displayhook = wrap_displayhook_handler(results.append)
 
-        if self.value_fn.is_async():
+        if self.fn.is_async():
             raise TypeError(
                 "@render.display does not support async functions. Use @render.ui instead."
             )
 
         try:
             # Run synchronously
-            sync_value_fn = self.value_fn.get_sync_fn()
+            sync_value_fn = self.fn.get_sync_fn()
             ret = sync_value_fn()
             if ret is not None:
                 raise RuntimeError(
-                    "@render.display functions should not return values. (`None` is allowed)."
+                    "@render.display functions should not return values. Instead, @render.display dynamically renders every printable line within the function body. (`None` is a valid return value.)"
                 )
         finally:
             sys.displayhook = orig_displayhook
