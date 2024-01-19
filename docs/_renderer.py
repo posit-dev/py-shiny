@@ -53,7 +53,9 @@ class Renderer(MdRenderer):
 
         check_if_missing_expected_example(el, converted)
 
-        return remove_sphinx_comments(converted)
+        assert_no_sphinx_comments(el, converted)
+
+        return converted
 
     @dispatch
     def render(self, el: ds.DocstringSectionText):
@@ -274,11 +276,20 @@ def check_if_missing_expected_example(el, converted):
     )
 
 
-def remove_sphinx_comments(converted: str) -> str:
+def assert_no_sphinx_comments(el, converted: str) -> None:
     """
     Sphinx allows `..`-prefixed comments in docstrings, which are not valid markdown.
-    This can be useful when we want to include comments that shouldn't appear in the
-    hover card or in the rendered docs. This function removes sphinx comments, but it
-    does not cover sphinx directives (don't use those!).
+    We don't allow Sphinx comments or directives, sorry!
     """
-    return re.sub(r"\n[.]{2} .+(\n|$)", "\n", converted)
+    pattern = r"\n[.]{2} .+(\n|$)"
+    if re.search(pattern, converted):
+        raise RuntimeError(
+            f"{el.name} includes Sphinx-styled comments or directives, please remove.\n"
+            + (f"> file     : {el.filepath}\n" if hasattr(el, "filepath") else "")
+            + (f"> target   : {el.target_path}\n" if hasattr(el, "target_path") else "")
+            + (
+                f"> canonical: {el.canonical_path}"
+                if hasattr(el, "canonical_path")
+                else ""
+            )
+        )
