@@ -170,11 +170,11 @@ quartodoc:
         - render.DataGrid
         - render.DataTable
         - kind: page
-          path: OutputRender
+          path: Renderer
           flatten: true
           summary:
-            name: "Create rendering outputs"
-            desc: ""
+            name: "Create output renderers"
+            desc: "Package author methods for creating new output renderers."
           contents:
             - render.renderer.Renderer
             - render.renderer.Jsonifiable

@@ -36,7 +36,7 @@ class render_capitalize(Renderer[str]):
 
     def __init__(
         self,
-        _fn: Optional[ValueFn[str]] | None = None,
+        _fn: Optional[ValueFn[str]] = None,
         *,
         to_case: Literal["upper", "lower", "ignore"] = "upper",
         placeholder: bool = True,
@@ -64,7 +64,6 @@ class render_capitalize(Renderer[str]):
         """
         # Do not pass params
         super().__init__(_fn)
-        self.widget = None
         self.to_case = to_case
 
     async def render(self) -> str | None:

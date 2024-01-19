@@ -16,15 +16,14 @@ from typing import (
 
 from htmltools import MetadataNode, Tag, TagList
 
+from ..._docstring import add_example
 from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
 
-# TODO-barret; POST-merge; Update shinywidgets
-
-
-# TODO-future: docs; missing first paragraph from some classes: Example: TransformerMetadata.
+# TODO-barret-future: Double check docs are rendererd
+# Missing first paragraph from some classes: Example: TransformerMetadata.
 # No init method for TransformerParams. This is because the `DocClass` object does not
-# display methods that start with `_`. THerefore no `__init__` or `__call__` methods are
+# display methods that start with `_`. Therefore no `__init__` or `__call__` methods are
 # displayed. Even if they have docs.
 
 
@@ -32,19 +31,25 @@ __all__ = (
     "Renderer",
     "Jsonifiable",
     "ValueFn",
+    "Jsonifiable",
     "AsyncValueFn",
     "RendererT",
 )
 
+
 RendererT = TypeVar("RendererT", bound="Renderer[Any]")
 """
-Generic class to pass the Renderer class through a decorator.
+Generic output renderer class to pass the original Renderer subclass through a decorator
+function.
 
-When accepting and returning a `Renderer` class, utilize this TypeVar as to not reduce the variable type to `Renderer[Any]`
+When accepting and returning a `Renderer` class, utilize this TypeVar as to not reduce
+the variable type to `Renderer[Any]`
 """
 
-# Input type for the user-spplied function that is passed to a render.xx
 IT = TypeVar("IT")
+"""
+Return type from the user-supplied value function passed into the renderer.
+"""
 
 
 # https://github.com/python/cpython/blob/df1eec3dae3b1eddff819fd70f58b03b3fbd0eda/Lib/json/encoder.py#L77-L95
@@ -83,22 +88,46 @@ DefaultUIFn = Callable[[str], DefaultUIFnResultOrNone]
 
 # Requiring `None` type throughout the value functions as `return` returns `None` type.
 # This is typically paired with `req(False)` to exit quickly.
-# If package authors want to NOT allow `None` type, they can capture it in a custom render method with a runtime error. (Or make a new RendererThatCantBeNone class)
+# If package authors want to NOT allow `None` type, they can capture it in a custom
+#   render method with a runtime error. (Or make a new RendererThatCantBeNone class)
 ValueFn = Union[
     Callable[[], Union[IT, None]],
     Callable[[], Awaitable[Union[IT, None]]],
 ]
 """
-App-supplied output value function which returns type `IT`. This function can be
-synchronous or asynchronous.
+App-supplied output value function which returns type `IT` or `None`. This function can
+be synchronous or asynchronous.
 """
 
 
+@add_example()
 class Renderer(Generic[IT]):
     """
     Output renderer class
 
-    TODO-barret-docs
+    An output renderer is a class that will take in a callable function (value
+    function), transform the returned value into a JSON-serializable object, and send
+    the result to the browser.
+
+    When the value function is received, it the renderer will be auto registered with
+    the current session's `Output` class, hookinng it into Shiny's reactive graph. By
+    auto registering as an `Output`, it allows for App authors to skip adding `@output`
+    above the renderer. (If progromatic `id` is needed, `@output(id="foo")` can still be
+    used!)
+
+    There are two methods that must be implemented by the subclasses: `.render(self)`
+    and `.auto_output_ui(self, id: str)`.
+
+    * The `render` method is responsible for retrieving the value from the value
+      function and performing any transformations to be the return value
+      JSON-serializable. (`None` is a valid return value.)
+    * In Express mode, the output renderer will automatically render its UI via
+      `.auto_output_ui(self, id: str)`. This helper method allows App authors to skip
+      adding a `ui.output_*` function to their UI, making Express mode even more
+      concise. If more control is needed over the UI, `@suspend_display` can be used to
+      suppress the auto rendering of the UI. When using `@suspend_display` on a
+      renderer, the renderer's UI will need to be added to the app to connect the
+      rendered output to Shiny's reactive graph.
     """
 
     # Q: Could we do this with typing without putting `P` in the Generic?
@@ -108,7 +137,7 @@ class Renderer(Generic[IT]):
 
     __name__: str
     """
-    Name of output function supplied. (The value will not contain any module prefix.)
+    Name of output function supplied. (The value **will not** contain a module prefix.)
 
     Set within `.__call__()` method.
     """
@@ -121,8 +150,8 @@ class Renderer(Generic[IT]):
     the fully resolved ID, call
     `shiny.session.require_active_session(None).ns(self.output_id)`.
 
-    An initial value of `.__name__` (set within `Renderer.__call__(_fn)`) will be used until the
-    output renderer is registered within the session.
+    An initial value of `.__name__` (set within `Renderer.__call__(_fn)`) will be used
+    until the output renderer is registered within the session.
     """
 
     fn: AsyncValueFn[IT]
@@ -134,9 +163,23 @@ class Renderer(Generic[IT]):
 
     def __call__(self, _fn: ValueFn[IT]) -> Self:
         """
-        Renderer __call__ docs here; Sets app's value function
+        Add the value function to the renderer.
 
-        TODO-barret-docs
+        Addition actions performed:
+        * Store the value function name.
+        * Set the Renderer's `output_id` to the function name.
+        * Auto register (given a `Session` exists) the Renderer
+
+        Parameters
+        ----------
+        _fn
+            Value function supplied by the App author. This function can be synchronous
+            or asynchronous.
+
+        Returns
+        -------
+        :
+            Original renderer instance.
         """
 
         if not callable(_fn):
@@ -181,6 +224,15 @@ class Renderer(Generic[IT]):
         # *
         # **kwargs: object,
     ) -> DefaultUIFnResultOrNone:
+        """
+        Express mode method that automatically generates the output's UI.
+
+        Parameters
+        ----------
+        id
+            Output function name or ID (provided to `@output(id=)`). This value will
+            contain any module prefix.
+        """
         return None
 
     def __init__(
@@ -203,23 +255,39 @@ class Renderer(Generic[IT]):
 
     async def transform(self, value: IT) -> Jsonifiable:
         """
-        Renderer - transform docs here
+        Transform an non-`None` output value into a JSON-serializable object.
 
-        TODO-barret-docs
+        If an `.render()` method is not implemented, this method **must** be
+        implemented. When requested, the `.render()` method's default behavior will
+        resolve the output value function, return `None` if the value is `None`, and
+        call this method to transform the value into a JSON-serializable object. Note,
+        only one of `.transform()` or `.render()` should be implemented. If both are
+        implemented, `.render()` will be used.
         """
         raise NotImplementedError(
-            "Please implement either the `transform(self, value: IT)` or `render(self)` method.\n"
-            "* `transform(self, value: IT)` should transform the `value` (of type `IT`) into Jsonifiable object. Ex: `dict`, `None`, `str`. (standard)\n"
-            "* `render(self)` method has full control of how an App author's value is retrieved (`self._fn()`) and utilized. (rare)\n"
-            "By default, the `render` retrieves the value and then calls `transform` method on non-`None` values."
+            "Please implement either the `transform(self, value: IT)`"
+            " or `render(self)` method.\n"
+            "* `transform(self, value: IT)` should transform the `value` (of type `IT`)"
+            " into Jsonifiable object. Ex: `dict`, `None`, `str`. (common)\n"
+            "* `render(self)` method has full control of how an App author's value is"
+            " retrieved (`self._fn()`) and processed. (rare)\n"
+            "By default, the `render` retrieves the value and then calls `transform`"
+            " method on non-`None` values."
         )
 
     async def render(self) -> Jsonifiable:
         """
-        Renderer - render docs here
+        Renders the output value function.
 
-        TODO-barret-docs
+        This method is called when the renderer is requested to render its output. It
+        should resolve the value function `.fn` and return a (most likely) transformed
+        value.
+
+        The current implementation is to resolve the value function. If the value is
+        `None`, `None` will be returned. If the value is not `None`, the `.transform()`
+        method will be called to transform the value into a JSON-serializable object.
         """
+
         value = await self.fn()
         if value is None:
             return None
@@ -254,11 +322,6 @@ class Renderer(Generic[IT]):
     # ######
     # Auto registering output
     # ######
-    """
-    Auto registers the rendering method then the renderer is called.
-
-    When `@output` is called on the renderer, the renderer is automatically un-registered via `._on_register()`.
-    """
 
     def _on_register(self) -> None:
         if self._auto_registered:
@@ -272,6 +335,13 @@ class Renderer(Generic[IT]):
             self._auto_registered = False
 
     def _auto_register(self) -> None:
+        """
+        Auto registers the rendering method to the session output then the renderer is
+        called.
+
+        When `@output` is called on the renderer, the renderer is automatically
+        un-registered via `._on_register()`.
+        """
         # If in Express mode, register the output
         if not self._auto_registered:
             from ...session import get_current_session
@@ -285,8 +355,9 @@ class Renderer(Generic[IT]):
                 self._auto_registered = True
 
 
-# Not inheriting from `WrapAsync[[], IT]` as python 3.8 needs typing extensions that doesn't support `[]` for a ParamSpec definition. :-(
-# Would be minimal/clean if we could do `class AsyncValueFn(WrapAsync[[], IT]):`
+# Not inheriting from `WrapAsync[[], IT]` as python 3.8 needs typing extensions that
+# doesn't support `[]` for a ParamSpec definition. :-( Would be minimal/clean if we
+# could do `class AsyncValueFn(WrapAsync[[], IT]):`
 class AsyncValueFn(Generic[IT]):
     """
     App-supplied output value function which returns type `IT`.
