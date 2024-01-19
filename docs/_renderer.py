@@ -245,20 +245,18 @@ def check_if_missing_expected_example(el, converted):
         # Only check Shiny objects for examples
         return
 
-    if hasattr(el, "decorators") and "no_example" in [
-        d.value.canonical_name for d in el.decorators
-    ]:
-        # Automatic example detection sometimes has false positives,
-        # e.g. `close()` from `Session.close` or `Progress.close`.
-        # Add the magic @no_example decorator to suppress the warning.
-        return
-
     if "## Examples" in converted:
         # Manually added examples are fine
         return
 
+    if hasattr(el, "decorators") and "no_example" in [
+        d.value.canonical_name for d in el.decorators
+    ]:
+        # When an example is intentionally omitted, we mark the fn with `@no_example`
+        return
+
     if not el.is_function:
-        # Don't check things that can't be decorated
+        # Don't throw for things that can't be decorated
         return
 
     if not el.is_explicitely_exported:
