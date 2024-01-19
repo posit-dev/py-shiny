@@ -5,69 +5,33 @@ import sys
 from contextlib import AbstractContextManager
 from typing import Callable, Generator, TypeVar, overload
 
-from .. import ui
-from .._deprecated import warn_deprecated
-from .._typing_extensions import ParamSpec
-from ..render.renderer import RendererBase, RendererBaseT
+from ... import ui
+from ..._typing_extensions import ParamSpec
+from ...render.renderer import RendererBase, RendererBaseT
 
-__all__ = (
-    "hide",
-    "suspend_display",
-)
+__all__ = ("hold",)
 
 P = ParamSpec("P")
 R = TypeVar("R")
 CallableT = TypeVar("CallableT", bound=Callable[..., object])
 
 
-# TODO-barret-future; quartodoc entry?
-def output_args(
-    **kwargs: object,
-) -> Callable[[RendererBaseT], RendererBaseT]:
-    """
-    Sets default UI arguments for a Shiny rendering function.
-
-    Each Shiny render function (like :func:`~shiny.render.plot`) can display itself when
-    declared within a Shiny inline-style application. In the case of
-    :func:`~shiny.render.plot`, the :func:`~shiny.ui.output_plot` function is called
-    implicitly to display the plot. Use the `@ui_kwargs` decorator to specify arguments
-    to be passed to `output_plot` (or whatever the corresponding UI function is) when
-    the render function displays itself.
-
-    Parameters
-    ----------
-    **kwargs
-        Keyword arguments to be passed to the UI function.
-
-    Returns
-    -------
-    :
-        A decorator that sets the default UI arguments for a Shiny rendering function.
-    """
-
-    def wrapper(renderer: RendererBaseT) -> RendererBaseT:
-        renderer._auto_output_ui_kwargs = kwargs
-        return renderer
-
-    return wrapper
-
-
 @overload
-def hide(fn: CallableT) -> CallableT:
+def hold(fn: CallableT) -> CallableT:
     ...
 
 
 @overload
-def hide(fn: RendererBaseT) -> RendererBaseT:
+def hold(fn: RendererBaseT) -> RendererBaseT:
     ...
 
 
 @overload
-def hide() -> AbstractContextManager[None]:
+def hold() -> AbstractContextManager[None]:
     ...
 
 
-def hide(
+def hold(
     fn: Callable[P, R] | RendererBaseT | None = None
 ) -> Callable[P, R] | RendererBaseT | AbstractContextManager[None]:
     """Prevent the display of UI elements in various ways.
@@ -111,16 +75,6 @@ def hide(
         return fn
 
     return hide_ctxmgr()(fn)
-
-
-def suspend_display(
-    fn: Callable[P, R] | RendererBaseT | None = None
-) -> Callable[P, R] | RendererBaseT | AbstractContextManager[None]:
-    warn_deprecated(
-        "`suspend_display` is deprecated. Please use `hide` instead. "
-        "It has a new name, but the exact same functionality."
-    )
-    return hide(fn)  # type: ignore
 
 
 @contextlib.contextmanager
