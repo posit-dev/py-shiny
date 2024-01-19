@@ -4,6 +4,7 @@ __all__ = (
     "output_plot",
     "output_image",
     "output_text",
+    "output_code",
     "output_text_verbatim",
     "output_table",
     "output_ui",
@@ -268,6 +269,47 @@ def output_text(
     if not container:
         container = tags.span if inline else tags.div
     return container(id=resolve_id(id), class_="shiny-text-output")
+
+
+def output_code(id: str, placeholder: bool = True) -> Tag:
+    """
+    Create a output container for code (monospaced text).
+
+    This is similar to :func:`~shiny.ui.output_text`, except that it displays the text
+    in a fixed-width container with a gray-ish background color and border.
+
+    Parameters
+    ----------
+    id
+        An output id.
+    placeholder
+        If the output is empty or ``None``, should an empty rectangle be displayed to
+        serve as a placeholder? (This does not affect behavior when the output is
+        nonempty.)
+
+    Returns
+    -------
+    :
+        A UI element
+
+    Note
+    ----
+    This function is currently the same as :func:`~shiny.ui.output_text_verbatim`, but
+    this may change in future versions of Shiny.
+
+    See Also
+    --------
+    * :func:`~shiny.render.text`
+    * :func:`~shiny.ui.output_text`
+    * :func:`~shiny.ui.output_text_verbatim`
+
+    Example
+    -------
+    See :func:`~shiny.ui.output_text`
+    """
+
+    cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
+    return tags.pre(id=resolve_id(id), class_=cls)
 
 
 def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:

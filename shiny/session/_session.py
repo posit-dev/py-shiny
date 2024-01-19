@@ -1002,10 +1002,11 @@ class Outputs:
                 )
 
             # Get the (possibly namespaced) output id
-            output_name = self._ns(id or renderer.__name__)
+            output_id = id or renderer.__name__
+            output_name = self._ns(output_id)
 
             # renderer is a Renderer object. Give it a bit of metadata.
-            renderer._set_output_metadata(output_name=output_name)
+            renderer._set_output_metadata(output_id=output_name)
 
             renderer._on_register()
 

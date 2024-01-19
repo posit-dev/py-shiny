@@ -126,6 +126,7 @@ from ._output import (
     output_plot,
     output_table,
     output_text,
+    output_code,
     output_text_verbatim,
     output_ui,
 )
@@ -289,6 +290,7 @@ __all__ = (
     "output_plot",
     "output_image",
     "output_text",
+    "output_code",
     "output_text_verbatim",
     "output_table",
     "output_ui",

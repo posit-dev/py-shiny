@@ -1,5 +1,5 @@
 from shiny import render, ui
-from shiny.express import ui_kwargs
+from shiny.express import output_args
 from shiny.types import MISSING
 
 
@@ -27,10 +27,10 @@ def test_decorator_plot_default():
     assert rendered == str(ui.output_plot("foo"))
 
 
-def test_decorator_ui_kwargs():
-    """@ui_kwargs is respected"""
+def test_decorator_output_args():
+    """@output_args is respected"""
 
-    @ui_kwargs(width="640px", height="480px")
+    @output_args(width="640px", height="480px")
     @render.plot()
     def foo():
         ...
@@ -39,10 +39,10 @@ def test_decorator_ui_kwargs():
     assert rendered == str(ui.output_plot("foo", width="640px", height="480px"))
 
 
-def test_decorator_ui_kwargs_priority():
-    """@ui_kwargs should override render.plot width/height"""
+def test_decorator_output_args_priority():
+    """@output_args should override render.plot width/height"""
 
-    @ui_kwargs(width="640px", height=480)
+    @output_args(width="640px", height=480)
     @render.plot(width=1280, height=960)
     def foo():
         ...
@@ -52,10 +52,10 @@ def test_decorator_ui_kwargs_priority():
     assert rendered == str(ui.output_plot("foo", width=640, height="480px"))
 
 
-def test_decorator_ui_kwargs_MISSING():
+def test_decorator_output_args_MISSING():
     """Not saying we support this, but test how MISSING interacts"""
 
-    @ui_kwargs(width=MISSING)
+    @output_args(width=MISSING)
     @render.plot(width=1280, height=MISSING)
     def foo():
         ...
