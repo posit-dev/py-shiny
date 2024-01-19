@@ -115,12 +115,10 @@ class Renderer(Generic[IT]):
     above the renderer. (If programmatic `id` is needed, `@output(id="foo")` can still be
     used!)
 
-    There are two methods that must be implemented by the subclasses: `.render(self)`
-    and `.auto_output_ui(self, id: str)`.
+    There are two methods that must be implemented by the subclasses:
+    `.auto_output_ui(self, id: str)` and either `.transform(self, value: IT)` or
+    `.render(self)`.
 
-    * The `render` method is responsible for retrieving the value from the value
-      function and performing any transformations to be the return value
-      JSON-serializable. (`None` is a valid return value.)
     * In Express mode, the output renderer will automatically render its UI via
       `.auto_output_ui(self, id: str)`. This helper method allows App authors to skip
       adding a `ui.output_*` function to their UI, making Express mode even more
@@ -128,6 +126,12 @@ class Renderer(Generic[IT]):
       suppress the auto rendering of the UI. When using `@suspend_display` on a
       renderer, the renderer's UI will need to be added to the app to connect the
       rendered output to Shiny's reactive graph.
+    * The `render` method is responsible for executing the value function and performing
+      any transformations for the output value to be JSON-serializable (`None` is a
+      valid value!). To avoid the boilerplate of resolving the value function and
+      returning early if `None` is received, package authors may implement the
+      `.transform(self, value: IT)` method. The `transform` method's sole job is to
+      _transform_ non-`None` values into an object that is JSON-serializable.
     """
 
     # Q: Could we do this with typing without putting `P` in the Generic?
@@ -257,35 +261,42 @@ class Renderer(Generic[IT]):
         """
         Transform an output value into a JSON-serializable object.
 
-        If a `.render()` method is not implemented, this method **must** be
-        implemented. When requested, the `.render()` method's default behavior will
-        resolve the output value function, return `None` if the value is `None`, and
-        call this method to transform the value into a JSON-serializable object. Note,
-        only one of `.transform()` or `.render()` should be implemented. If both are
-        implemented, `.render()` will be used.
+        When subclassing `Renderer`, this method can be implemented to transform
+        non-`None` values into a JSON-serializable object.
+
+        If a `.render()` method is not implemented, this method **must** be implemented.
+        When the output is requested, the `Renderer`'s `.render()` method will execute
+        the output value function, return `None` if the value is `None`, and call this
+        method to transform the value into a JSON-serializable object.
+
+        Note, only one of `.transform()` or `.render()` should be implemented.
         """
         raise NotImplementedError(
             "Please implement either the `transform(self, value: IT)`"
             " or `render(self)` method.\n"
-            "* `transform(self, value: IT)` should transform the `value` (of type `IT`)"
-            " into Jsonifiable object. Ex: `dict`, `None`, `str`. (common)\n"
+            "* `transform(self, value: IT)` should transform the non-`None` `value`"
+            " (of type `IT`) into a JSON-serializable object."
+            " Ex: `dict`, `None`, `str`. (common)\n"
             "* `render(self)` method has full control of how an App author's value is"
-            " retrieved (`self._fn()`) and processed. (rare)\n"
-            "By default, the `render` retrieves the value and then calls `transform`"
-            " method on non-`None` values."
+            " retrieved (`self._fn()`) and processed. (rare)"
         )
 
     async def render(self) -> Jsonifiable:
         """
         Renders the output value function.
 
-        This method is called when the renderer is requested to render its output. It
-        should resolve the value function `.fn` and return a (most likely) transformed
-        value.
+        This method is called when the renderer is requested to render its output.
 
-        The current implementation is to resolve the value function. If the value is
-        `None`, `None` will be returned. If the value is not `None`, the `.transform()`
-        method will be called to transform the value into a JSON-serializable object.
+        The `Renderer`'s `render` method goes as follows:
+
+        * Execute the value function supplied to the renderer.
+        * If the output value is `None`, `None` will be returned.
+        * If the output value is not `None`, the `.transform()` method will be called to
+          transform the value into a JSON-serializable object.
+
+        When overwriting this method in a subclass, the implementation should execute
+        the value function `.fn` and return the transformed value (which is
+        JSON-serializable).
         """
 
         value = await self.fn()
@@ -308,7 +319,7 @@ class Renderer(Generic[IT]):
         rendered_ui = self._render_auto_output_ui()
         if rendered_ui is None:
             raise TypeError(
-                "No default UI exists for this type of render function: ",
+                "No output UI exists for this type of render function: ",
                 self.__class__.__name__,
             )
         return rendered_ui
