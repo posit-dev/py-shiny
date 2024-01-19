@@ -66,7 +66,7 @@ app_allow_shiny_errors: typing.Dict[
     "model-score": [*output_transformer_errors],
     "data_frame": [*output_transformer_errors],
     "output_transformer": [*output_transformer_errors],
-    "render_display": [*express_warnings],
+    "render_express": [*express_warnings],
 }
 app_allow_external_errors: typing.List[str] = [
     # if shiny express app detected

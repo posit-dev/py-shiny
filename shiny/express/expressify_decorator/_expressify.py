@@ -6,22 +6,30 @@ import inspect
 import linecache
 import sys
 import types
-from typing import Any, Callable, Dict, Protocol, TypeVar, cast, runtime_checkable
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Protocol,
+    TypeVar,
+    cast,
+    overload,
+    runtime_checkable,
+)
 
-from ._func_displayhook import _display_decorator_function_def
+from ._func_displayhook import _expressify_decorator_function_def
 from ._helpers import find_code_for_func
 from ._node_transformers import (
     DisplayFuncsTransformer,
     FuncBodyDisplayHookTransformer,
     TargetFunctionTransformer,
-    display_decorator_func_name,
+    expressify_decorator_func_name,
     sys_alias,
 )
 
-# It's quite expensive to decorate with display_body, and it could be done to
-# inner functions where the outer function is called a lot. Use a cache to save
-# us from having to do the expensive stuff (parsing, transforming, compiling)
-# more than once.
+# It's quite expensive to decorate with expressify, and it could be done to inner
+# functions where the outer function is called a lot. Use a cache to save us from having
+# to do the expensive stuff (parsing, transforming, compiling) more than once.
 code_cache: Dict[types.CodeType, types.CodeType] = {}
 
 T = TypeVar("T")
@@ -45,12 +53,12 @@ def unwrap(fn: TFunc) -> TFunc:
     return fn
 
 
-display_body_attr = "__display_body__"
+expressify_attr = "__expressify__"
 
 
-def display_body_unwrap_inplace() -> Callable[[TFunc], TFunc]:
+def expressify_unwrap_inplace() -> Callable[[TFunc], TFunc]:
     """
-    Like `display_body`, but far more violent. This will attempt to traverse any
+    Like `expressify`, but far more violent. This will attempt to traverse any
     decorators between this one and the function, and then modify the function _in
     place_. It will then return the function that was passed in.
     """
@@ -59,7 +67,7 @@ def display_body_unwrap_inplace() -> Callable[[TFunc], TFunc]:
         unwrapped_fn = unwrap(fn)
 
         # Check if we've already done this
-        if hasattr(unwrapped_fn, display_body_attr):
+        if hasattr(unwrapped_fn, expressify_attr):
             return fn
 
         if unwrapped_fn.__code__ in code_cache:
@@ -70,13 +78,23 @@ def display_body_unwrap_inplace() -> Callable[[TFunc], TFunc]:
             code_cache[unwrapped_fn.__code__] = fcode
 
         unwrapped_fn.__code__ = fcode
-        setattr(unwrapped_fn, display_body_attr, True)
+        setattr(unwrapped_fn, expressify_attr, True)
         return fn
 
     return decorator
 
 
-def display_body() -> Callable[[TFunc], TFunc]:
+@overload
+def expressify(fn: TFunc) -> TFunc:
+    ...
+
+
+@overload
+def expressify() -> Callable[[TFunc], TFunc]:
+    ...
+
+
+def expressify(fn: TFunc | None = None) -> TFunc | Callable[[TFunc], TFunc]:
     def decorator(fn: TFunc) -> TFunc:
         if fn.__code__ in code_cache:
             fcode = code_cache[fn.__code__]
@@ -93,7 +111,7 @@ def display_body() -> Callable[[TFunc], TFunc]:
             # have a different `sys` alias in scope.
             globals={
                 sys_alias: auto_displayhook,
-                display_decorator_func_name: _display_decorator_function_def,
+                expressify_decorator_func_name: _expressify_decorator_function_def,
                 **fn.__globals__,
             },
             name=fn.__name__,
@@ -105,6 +123,9 @@ def display_body() -> Callable[[TFunc], TFunc]:
         new_func.__kwdefaults__ = fn.__kwdefaults__
         new_func.__dict__.update(fn.__dict__)
         return cast(TFunc, functools.wraps(fn)(new_func))
+
+    if fn is not None:
+        return decorator(fn)
 
     return decorator
 
@@ -219,4 +240,4 @@ def compare_decorated_code_objects(
 
 
 __builtins__[sys_alias] = auto_displayhook
-__builtins__[display_decorator_func_name] = _display_decorator_function_def
+__builtins__[expressify_decorator_func_name] = _expressify_decorator_function_def
