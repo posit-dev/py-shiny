@@ -7,7 +7,6 @@ from typing import Literal, Optional
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagList
 
 from ... import ui
-from ..._docstring import add_example
 from ...types import MISSING, MISSING_TYPE
 from ...ui._accordion import AccordionPanel
 from ...ui._card import CardItem
