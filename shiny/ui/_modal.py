@@ -16,6 +16,7 @@ from ..session import Session, require_active_session
 from ..types import MISSING, MISSING_TYPE
 
 
+@add_example(ex_dir="../api-examples/modal")
 def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue) -> Tag:
     """
     Creates a button that will dismiss a :func:`modal`. :func:`~shiny.ui.modal_button` is usually
@@ -41,10 +42,6 @@ def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue)
     ~shiny.ui.modal
     ~shiny.ui.modal_show
     ~shiny.ui.modal_remove
-
-    Examples
-    --------
-    See :func:`modal`.
     """
     return tags.button(
         icon,
@@ -156,6 +153,7 @@ def modal(
     )
 
 
+@add_example(ex_dir="../api-examples/modal")
 def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     """
     Show a modal dialog.
@@ -175,16 +173,13 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     -------
     ~shiny.ui.modal_remove
     ~shiny.ui.modal
-
-    Examples
-    --------
-    See :func:`modal`.
     """
     session = require_active_session(session)
     msg = session._process_ui(modal)
     session._send_message_sync({"modal": {"type": "show", "message": msg}})
 
 
+@add_example(ex_dir="../api-examples/modal")
 def modal_remove(session: Optional[Session] = None) -> None:
     """
     Remove a modal dialog box.
@@ -203,10 +198,6 @@ def modal_remove(session: Optional[Session] = None) -> None:
     -------
     ~shiny.ui.modal_show
     ~shiny.ui.modal
-
-    Examples
-    --------
-    See :func:`modal`.
     """
     session = require_active_session(session)
     session._send_message_sync({"modal": {"type": "remove", "message": None}})
