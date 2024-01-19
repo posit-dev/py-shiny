@@ -17,7 +17,7 @@ from .renderer._utils import (
 )
 
 
-class display(Renderer[None]):
+class express(Renderer[None]):
     def auto_output_ui(
         self,
         *,
@@ -41,15 +41,15 @@ class display(Renderer[None]):
 
     def __call__(self, fn: ValueFn[None]) -> Self:
         if fn is None:  # pyright: ignore[reportUnnecessaryComparison]
-            raise TypeError("@render.display requires a function when called")
+            raise TypeError("@render.express requires a function when called")
 
         async_fn = AsyncValueFn(fn)
         if async_fn.is_async():
             raise TypeError(
-                "@render.display does not support async functions. Use @render.ui instead."
+                "@render.express does not support async functions. Use @render.ui instead."
             )
 
-        from shiny.express.display_decorator._display_body import (
+        from ..express.display_decorator._display_body import (
             display_body_unwrap_inplace,
         )
 
@@ -84,7 +84,7 @@ class display(Renderer[None]):
 
         if self.fn.is_async():
             raise TypeError(
-                "@render.display does not support async functions. Use @render.ui instead."
+                "@render.express does not support async functions. Use @render.ui instead."
             )
 
         try:
@@ -93,7 +93,7 @@ class display(Renderer[None]):
             ret = sync_value_fn()
             if ret is not None:
                 raise RuntimeError(
-                    "@render.display functions should not return values. (`None` is allowed)."
+                    "@render.express functions should not return values. (`None` is allowed)."
                 )
         finally:
             sys.displayhook = orig_displayhook

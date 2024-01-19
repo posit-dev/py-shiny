@@ -1,19 +1,18 @@
 import datetime
 
-from shiny import render, ui
-from shiny.express import input, layout
+from shiny.express import input, render, ui
 
-with layout.card(id="card"):
+with ui.card(id="card"):
     ui.input_slider("val", "slider", 0, 100, 50)
-    "Text outside of render display call"
+    "Text outside of render express call"
     ui.tags.br()
     f"Rendered time: {str(datetime.datetime.now())}"
 
-    @render.display
-    def render_display():
-        "Text inside of render display call"
+    @render.express
+    def render_express():
+        "Text inside of render express call"
         ui.tags.br()
         "Dynamic slider value: "
         input.val()
         ui.tags.br()
-        f"Display's rendered time: {str(datetime.datetime.now())}"
+        f"Rendered time: {str(datetime.datetime.now())}"

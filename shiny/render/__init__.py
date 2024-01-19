@@ -11,8 +11,8 @@ from ._dataframe import (
     DataTable,
     data_frame,
 )
-from ._display import (
-    display,
+from ._express import (
+    express,
 )
 from ._render import (
     code,
@@ -31,7 +31,7 @@ from ._deprecated import (  # noqa: F401
 __all__ = (
     # TODO-future: Document which variables are exposed via different import approaches
     "data_frame",
-    "display",
+    "express",
     "text",
     "code",
     "plot",

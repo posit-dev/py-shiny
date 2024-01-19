@@ -19,7 +19,7 @@ with ui.card(id="card"):
         "location", "Location", ["San Francisco", "New York", "Los Angeles"]
     )
 
-    @render.display
+    @render.express
     def folium_map():
         "Map inside of render display call"
         folium.Map(
