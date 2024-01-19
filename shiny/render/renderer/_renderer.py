@@ -109,10 +109,10 @@ class Renderer(Generic[IT]):
     function), transform the returned value into a JSON-serializable object, and send
     the result to the browser.
 
-    When the value function is received, it the renderer will be auto registered with
-    the current session's `Output` class, hookinng it into Shiny's reactive graph. By
+    When the value function is received, the renderer will be auto registered with
+    the current session's `Output` class, hooking it into Shiny's reactive graph. By
     auto registering as an `Output`, it allows for App authors to skip adding `@output`
-    above the renderer. (If progromatic `id` is needed, `@output(id="foo")` can still be
+    above the renderer. (If programmatic `id` is needed, `@output(id="foo")` can still be
     used!)
 
     There are two methods that must be implemented by the subclasses: `.render(self)`
@@ -255,9 +255,9 @@ class Renderer(Generic[IT]):
 
     async def transform(self, value: IT) -> Jsonifiable:
         """
-        Transform an non-`None` output value into a JSON-serializable object.
+        Transform an output value into a JSON-serializable object.
 
-        If an `.render()` method is not implemented, this method **must** be
+        If a `.render()` method is not implemented, this method **must** be
         implemented. When requested, the `.render()` method's default behavior will
         resolve the output value function, return `None` if the value is `None`, and
         call this method to transform the value into a JSON-serializable object. Note,
