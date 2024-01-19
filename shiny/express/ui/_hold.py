@@ -5,9 +5,10 @@ from contextlib import ContextDecorator
 from types import TracebackType
 from typing import Callable, Optional, Type, TypeVar, overload
 
+from htmltools import wrap_displayhook_handler
+
 from ... import ui
 from ..._typing_extensions import ParamSpec
-from ...render.renderer import RendererBase, RendererBaseT
 
 __all__ = ("hold",)
 
@@ -16,24 +17,7 @@ R = TypeVar("R")
 CallableT = TypeVar("CallableT", bound=Callable[..., object])
 
 
-@overload
-def hold(fn: CallableT) -> CallableT:
-    ...
-
-
-@overload
-def hold(fn: RendererBaseT) -> RendererBaseT:
-    ...
-
-
-@overload
-def hold() -> HideContextManager:
-    ...
-
-
-def hold(
-    fn: Callable[P, R] | RendererBaseT | None = None
-) -> Callable[P, R] | RendererBaseT | HideContextManager:
+def hold() -> HoldContextManager:
     """Prevent the display of UI elements in various ways.
 
     If used as a context manager (`with hide():`), it prevents the display of all UI
@@ -64,26 +48,14 @@ def hold(
         `fn`.
     """
 
-    if fn is None:
-        return HideContextManager()
-
-    # Special case for RendererBase; when we decorate those, we just mean "don't
-    # display yourself"
-    if isinstance(fn, RendererBase):
-        # By setting the class value, the `self` arg will be auto added.
-        fn.auto_output_ui = null_ui
-        return fn
-
-    return HideContextManager()(fn)
+    return HoldContextManager()
 
 
-class HideContextManager(ContextDecorator):
+class HoldContextManager:
     def __init__(self):
         self.content = ui.TagList()
 
     def __enter__(self) -> ui.TagList:
-        from htmltools import wrap_displayhook_handler
-
         self.prev_displayhook = sys.displayhook
         sys.displayhook = wrap_displayhook_handler(
             self.content.append  # pyright: ignore[reportGeneralTypeIssues]
@@ -100,13 +72,3 @@ class HideContextManager(ContextDecorator):
         if exc_type:
             print(f"An exception occurred: {exc_value}")
         return False
-
-
-def null_ui(
-    **kwargs: object,
-) -> ui.TagList:
-    return ui.TagList()
-
-
-def null_displayhook(x: object) -> None:
-    pass
