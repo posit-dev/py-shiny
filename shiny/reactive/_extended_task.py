@@ -13,12 +13,11 @@ from typing import (
 )
 
 from .._docstring import add_example
-from .._namespaces import resolve_id
 from .._typing_extensions import ParamSpec
 from .._utils import is_async_callable
 from .._validation import req
 from ._core import Context, flush, lock
-from ._reactives import Value, effect, isolate
+from ._reactives import Value, isolate
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -196,52 +195,6 @@ class ExtendedTask(Generic[P, R]):
             req(False)
             # Will never get here, but make type checker happy
             return self.value.get()
-
-    def bind_task_button(self, id: str) -> None:
-        """
-        Bind the extended task to the :func:`~shiny.ui.input_task_button` with the given
-        ID, so that the button will go into a "busy" state for as long as the task is
-        running.
-
-        Please note the following:
-
-        * This method does not actually create a button. It only binds the task to a
-          task button that already exists in the app.
-
-        * This method does not automatically cause button presses to invoke the extended
-          task; you still need to use a :func:`~shiny.reactive.effect` (and probably
-          :func:`~shiny.reactive.event` as well) to invoke the task when the button is
-          pressed.
-
-        * You cannot bind the same task button to multiple extended tasks. If you
-          attempt to do so, any bound task that completes first will cause the button to
-          return to the "ready" state, even if the other task is still running. (You
-          can, however, bind multiple task buttons to the same extended task if you
-          choose to.)
-
-        Parameters
-        ----------
-        id
-            ID of the task button to bind to.
-        """
-
-        # These imports have to go here, in order to avoid a circular dependency
-        from ..session import get_current_session
-        from ..ui import update_task_button
-
-        session = get_current_session()
-        if session is None:
-            # We may be in Shiny Express UI rendering mode, where there is no session
-            return
-
-        id = resolve_id(id)
-
-        @effect(priority=1000)
-        def effect_sync_button():
-            if self.status() == "running":
-                update_task_button(id, state="busy")
-            else:
-                update_task_button(id, state="ready")
 
 
 @overload

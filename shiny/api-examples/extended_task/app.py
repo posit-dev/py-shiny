@@ -17,6 +17,7 @@ with ui.p():
     "Notice that the time above updates every second, even if you click the button below."
 
 
+@ui.bind_task_button(button_id="btn")
 @reactive.extended_task
 async def slow_compute(a: int, b: int) -> int:
     await asyncio.sleep(3)
@@ -29,8 +30,6 @@ with ui.layout_sidebar():
         ui.input_numeric("y", "y", 2)
         ui.input_task_button("btn", "Compute, slowly")
         ui.input_action_button("btn_cancel", "Cancel")
-
-    slow_compute.bind_task_button("btn")
 
     @reactive.Effect
     @reactive.event(input.btn, ignore_none=False)
