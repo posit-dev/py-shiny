@@ -88,6 +88,7 @@ app_allow_external_errors: typing.List[str] = [
     "pd.option_context('mode.use_inf_as_na",  # continutation of line above
 ]
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
+    "airmass": ["Failed to load resource: the server responded with a status of 404"],
     "brownian": ["Failed to acquire camera feed:"],
 }
 
