@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import sys
-from contextlib import ContextDecorator
 from types import TracebackType
-from typing import Callable, Optional, Type, TypeVar, overload
+from typing import Callable, Optional, Type, TypeVar
 
 from htmltools import wrap_displayhook_handler
 
