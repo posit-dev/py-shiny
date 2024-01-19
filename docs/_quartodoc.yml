@@ -64,8 +64,6 @@ quartodoc:
         - ui.showcase_bottom
         - ui.showcase_left_center
         - ui.showcase_top_right
-        - ui.ValueBoxTheme
-        - ui.ShowcaseLayout
     - title: Navigation (tab) panels
       desc: Create segments of UI content.
       contents:

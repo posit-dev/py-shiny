@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, cast, runtime_c
 from htmltools import Tag
 
 from .. import ui
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from ._dataframe_unsafe import serialize_numpy_dtypes
 from .renderer import Jsonifiable, Renderer
 
@@ -21,6 +21,7 @@ class AbstractTabularData(abc.ABC):
         ...
 
 
+@add_example(ex_dir="../api-examples/data_frame")
 class DataGrid(AbstractTabularData):
     """
     Holds the data and options for a ``shiny.render.data_frame`` output, for a
@@ -107,6 +108,7 @@ class DataGrid(AbstractTabularData):
         return res
 
 
+@no_example
 class DataTable(AbstractTabularData):
     """
     Holds the data and options for a ``shiny.render.data_frame`` output, for a

@@ -576,6 +576,7 @@ def _sidebar_init_js() -> Tag:
 
 # Deprecated 2023-06-13
 # Includes: DeprecatedPanelSidebar
+@no_example
 def panel_sidebar(
     *args: TagChild | TagAttrs,
     width: int = 4,
@@ -598,6 +599,7 @@ def panel_sidebar(
 
 # Deprecated 2023-06-13
 # Includes: DeprecatedPanelMain
+@no_example
 def panel_main(
     *args: TagChild | TagAttrs,
     width: int = 8,

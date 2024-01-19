@@ -27,7 +27,7 @@ from typing import Any, Literal, Optional, Sequence, cast
 from htmltools import MetadataNode, Tag, TagAttrs, TagChild, TagList, css, div, tags
 
 from .._deprecated import warn_deprecated
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
 from .._utils import private_random_int
 from ..types import NavSetArg
@@ -157,6 +157,7 @@ def nav_panel(
     )
 
 
+@no_example
 def nav_control(*args: TagChild) -> NavPanel:
     """
     Place a control in the navigation container.
@@ -188,6 +189,7 @@ def nav_control(*args: TagChild) -> NavPanel:
     return NavPanel(tags.li(*args))
 
 
+@no_example
 def nav_spacer() -> NavPanel:
     """
     Create space between nav items.
@@ -294,6 +296,7 @@ def menu_string_as_nav(x: str | NavSetArg) -> NavSetArg:
     return NavPanel(nav)
 
 
+@no_example
 def nav_menu(
     title: TagChild,
     *args: NavPanel | str,
@@ -401,6 +404,7 @@ class NavSet:
 # -----------------------------------------------------------------------------
 # Navigation containers
 # -----------------------------------------------------------------------------
+@no_example
 def navset_tab(
     *args: NavSetArg,
     id: Optional[str] = None,
@@ -457,6 +461,7 @@ def navset_tab(
     )
 
 
+@no_example
 def navset_pill(
     *args: NavSetArg,
     id: Optional[str] = None,
@@ -512,6 +517,7 @@ def navset_pill(
     )
 
 
+@no_example
 def navset_underline(
     *args: NavSetArg,
     id: Optional[str] = None,
@@ -678,6 +684,7 @@ class NavSetCard(NavSet):
         )
 
 
+@no_example
 def navset_card_tab(
     *args: NavSetArg,
     id: Optional[str] = None,
@@ -740,6 +747,7 @@ def navset_card_tab(
     )
 
 
+@no_example
 def navset_card_pill(
     *args: NavSetArg,
     id: Optional[str] = None,
@@ -805,6 +813,7 @@ def navset_card_pill(
     )
 
 
+@no_example
 def navset_card_underline(
     *args: NavSetArg,
     id: Optional[str] = None,
@@ -903,6 +912,7 @@ class NavSetPillList(NavSet):
         )
 
 
+@no_example
 def navset_pill_list(
     *args: NavSetArg | MetadataNode,
     id: Optional[str] = None,
@@ -1138,6 +1148,7 @@ def _make_tabs_fillable(
 
 
 # TODO-future; Content should not be indented unless when called from `page_navbar()`
+@no_example
 def navset_bar(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     title: TagChild,
@@ -1382,6 +1393,7 @@ def navset_tab_card(
 
 
 # Deprecated 2023-12-07
+@no_example
 def nav(
     title: TagChild,
     *args: TagChild,

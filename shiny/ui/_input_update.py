@@ -27,7 +27,7 @@ from htmltools import TagChild, TagList
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from .._docstring import add_example, doc_format
+from .._docstring import add_example, doc_format, no_example
 from .._namespaces import resolve_id
 from .._typing_extensions import NotRequired, TypedDict
 from .._utils import drop_none
@@ -145,6 +145,7 @@ def update_checkbox(
     session.send_input_message(id, drop_none(msg))
 
 
+@no_example
 @doc_format(note=_note)
 def update_switch(
     id: str,

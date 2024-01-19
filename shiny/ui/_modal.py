@@ -42,8 +42,8 @@ def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue)
     ~shiny.ui.modal_show
     ~shiny.ui.modal_remove
 
-    Example
-    -------
+    Examples
+    --------
     See :func:`modal`.
     """
     return tags.button(
@@ -176,8 +176,8 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     ~shiny.ui.modal_remove
     ~shiny.ui.modal
 
-    Example
-    -------
+    Examples
+    --------
     See :func:`modal`.
     """
     session = require_active_session(session)
@@ -204,8 +204,8 @@ def modal_remove(session: Optional[Session] = None) -> None:
     ~shiny.ui.modal_show
     ~shiny.ui.modal
 
-    Example
-    -------
+    Examples
+    --------
     See :func:`modal`.
     """
     session = require_active_session(session)

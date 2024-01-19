@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 from .. import _utils
 from .. import ui as _ui
+from .._docstring import add_example
 from .._namespaces import ResolvedId
 from .._typing_extensions import Self
 from ..session import get_current_session, require_active_session
@@ -59,6 +60,7 @@ __all__ = (
 # ======================================================================================
 
 
+@add_example(ex_dir="../api-examples/output_text")
 class text(Renderer[str]):
     """
     Reactively render text.
@@ -187,6 +189,7 @@ class code(Renderer[str]):
 # a nontrivial amount of overhead. So for now, we're just using `object`.
 
 
+@add_example(ex_dir="../api-examples/output_plot")
 class plot(Renderer[object]):
     """
     Reactively render a plot object as an HTML image.
@@ -386,6 +389,7 @@ class plot(Renderer[object]):
 # ======================================================================================
 # RenderImage
 # ======================================================================================
+@add_example(ex_dir="../api-examples/render_image")
 class image(Renderer[ImgData]):
     """
     Reactively render a image file as an HTML image.
@@ -459,6 +463,7 @@ class PandasCompatible(Protocol):
 TableResult = Union["pd.DataFrame", PandasCompatible, None]
 
 
+@add_example(ex_dir="../api-examples/output_table")
 class table(Renderer[TableResult]):
     """
     Reactively render a pandas ``DataFrame`` object (or similar) as a basic HTML
@@ -564,6 +569,7 @@ class table(Renderer[TableResult]):
 # ======================================================================================
 # RenderUI
 # ======================================================================================
+@add_example(ex_dir="../api-examples/output_ui")
 class ui(Renderer[TagChild]):
     """
     Reactively render HTML content.

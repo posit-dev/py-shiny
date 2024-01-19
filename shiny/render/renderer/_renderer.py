@@ -17,7 +17,7 @@ from typing import (
 
 from htmltools import MetadataNode, Tag, TagList
 
-from ..._docstring import add_example
+from ..._docstring import add_example, no_example
 from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
 
@@ -96,6 +96,7 @@ synchronous or asynchronous.
 """
 
 
+@no_example
 class RendererBase(ABC):
     """
     Base class for all renderers.
@@ -219,6 +220,7 @@ class RendererBase(ABC):
 
 # Not inheriting from `WrapAsync[[], IT]` as python 3.8 needs typing extensions that doesn't support `[]` for a ParamSpec definition. :-(
 # Would be minimal/clean if we could do `class AsyncValueFn(WrapAsync[[], IT]):`
+@no_example
 class AsyncValueFn(Generic[IT]):
     """
     App-supplied output value function which returns type `IT`.

@@ -241,6 +241,10 @@ def check_if_missing_expected_example(el, converted):
     if re.search(r"(^|\n)(#{2,6} Examples\n\n|Examples\n------)", converted):
         return
 
+    if not el.canonical_path.startswith("shiny"):
+        # Only check Shiny objects for examples
+        return
+
     if hasattr(el, "decorators") and "no_example" in [
         d.value.canonical_name for d in el.decorators
     ]:
@@ -249,23 +253,30 @@ def check_if_missing_expected_example(el, converted):
         # Add the magic @no_example decorator to suppress the warning.
         return
 
-    if isinstance(el, dc.Alias) and "experimental" in el.target_path:
-        p_example_dir = SHINY_PATH / "experimental" / "api-examples" / el.name
+    if "## Examples" in converted:
+        # Manually added examples are fine
         return
-    elif isinstance(el, dc.Alias) and "express" in el.target_path:
-        p_example_dir = SHINY_PATH / "express" / "api-examples" / el.name
-    elif isinstance(el, dc.Alias) and el.target_path.startswith("htmltools"):
+
+    if not el.is_function:
+        # Don't check things that can't be decorated
         return
-    else:
-        p_example_dir = SHINY_PATH / "api-examples" / el.name
 
-    if (p_example_dir / "app.py").exists():
-        # import pdb
+    if not el.is_explicitely_exported:
+        # Don't require examples on "implicitly exported" functions
+        # In practice, this covers methods of exported classes (class still needs ex)
+        return
 
-        # pdb.set_trace()
-        raise RuntimeError(
-            f"An example exists for {p_example_dir} but is not included in the documentation in {el.target_path}. Decorate `{el.name}()` with `@add_example()` to add the example."
-        )
+    # TODO: Remove shiny.express from no_req_examples when we have examples ready
+    no_req_examples = ["shiny.express", "shiny.experimental"]
+    if any([el.target_path.startswith(mod) for mod in no_req_examples]):
+        return
+
+    raise RuntimeError(
+        f"{el.name} needs an example, use `@add_example()` or manually add `Examples` section:\n"
+        + (f"> file     : {el.filepath}\n" if hasattr(el, "filepath") else "")
+        + (f"> target   : {el.target_path}\n" if hasattr(el, "target_path") else "")
+        + (f"> canonical: {el.canonical_path}" if hasattr(el, "canonical_path") else "")
+    )
 
 
 def remove_sphinx_comments(converted: str) -> str:

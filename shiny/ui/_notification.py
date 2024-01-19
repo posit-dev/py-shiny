@@ -6,7 +6,7 @@ from typing import Any, Literal, Optional
 
 from htmltools import TagChild
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._utils import rand_hex
 from ..session import Session, require_active_session
 
@@ -90,6 +90,7 @@ def notification_show(
     return id
 
 
+@no_example
 def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
     """
     Remove a notification.

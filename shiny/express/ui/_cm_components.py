@@ -128,7 +128,7 @@ def sidebar(
 
 
 # TODO: Figure out sidebar arg for ui.layout_sidebar
-@add_example(app_file="app-express.py")
+@add_example("app-express.py")
 def layout_sidebar(
     *,
     fillable: bool = True,

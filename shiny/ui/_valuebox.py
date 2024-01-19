@@ -14,7 +14,7 @@ from htmltools import (
     tags,
 )
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from ._card import CardItem, card, card_body
 from ._tag import consolidate_attrs
 from ._utils import css_no_sub
@@ -227,6 +227,7 @@ class ValueBoxTheme:
     bg: str | None
 
 
+@no_example
 def value_box_theme(
     name: Optional[str] = None,
     *,
