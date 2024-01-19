@@ -95,7 +95,7 @@ def page_sidebar(
             sidebar,
             *children,
             # Make the main area background white instead of the default gray.
-            {"style": "--bslib-shiny-preset-main-bg: white"},
+            {"style": "--bslib-shiny-preset-main-bg: white;"},
             attrs,
             fillable=fillable,
             border=False,

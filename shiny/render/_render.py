@@ -95,14 +95,13 @@ class text(Renderer[str]):
 
     def auto_output_ui(
         self,
-        id: str,
         *,
         inline: bool | MISSING_TYPE = MISSING,
     ) -> Tag:
         kwargs: dict[str, Any] = {}
         set_kwargs_value(kwargs, "inline", inline, self.inline)
 
-        return _ui.output_text(id, **kwargs)
+        return _ui.output_text(self.output_id, **kwargs)
 
     def __init__(
         self,
@@ -157,13 +156,12 @@ class code(Renderer[str]):
 
     def auto_output_ui(
         self,
-        id: str,
         *,
         placeholder: bool | MISSING_TYPE = MISSING,
     ) -> Tag:
         kwargs: dict[str, bool] = {}
         set_kwargs_value(kwargs, "placeholder", placeholder, self.placeholder)
-        return _ui.output_code(id, **kwargs)
+        return _ui.output_code(self.output_id, **kwargs)
 
     def __init__(
         self,
@@ -246,7 +244,6 @@ class plot(Renderer[object]):
 
     def auto_output_ui(
         self,
-        id: str,
         *,
         width: str | float | int | MISSING_TYPE = MISSING,
         height: str | float | int | MISSING_TYPE = MISSING,
@@ -256,7 +253,7 @@ class plot(Renderer[object]):
         set_kwargs_value(kwargs, "width", width, self.width)
         set_kwargs_value(kwargs, "height", height, self.height)
         return _ui.output_plot(
-            id,
+            self.output_id,
             # (possibly) contains `width` and `height` keys!
             **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
         )
@@ -417,9 +414,9 @@ class image(Renderer[ImgData]):
     * ~shiny.render.plot
     """
 
-    def auto_output_ui(self, id: str, **kwargs: object):
+    def auto_output_ui(self, **kwargs: object):
         return _ui.output_image(
-            id,
+            self.output_id,
             **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
         )
         # TODO: Make width/height handling consistent with render_plot
@@ -511,8 +508,8 @@ class table(Renderer[TableResult]):
     * ~shiny.ui.output_table for the corresponding UI component to this render function.
     """
 
-    def auto_output_ui(self, id: str, **kwargs: TagAttrValue) -> Tag:
-        return _ui.output_table(id, **kwargs)
+    def auto_output_ui(self, **kwargs: TagAttrValue) -> Tag:
+        return _ui.output_table(self.output_id, **kwargs)
         # TODO: Deal with kwargs
 
     def __init__(
@@ -591,8 +588,8 @@ class ui(Renderer[TagChild]):
     * ~shiny.ui.output_ui
     """
 
-    def auto_output_ui(self, id: str) -> Tag:
-        return _ui.output_ui(id)
+    def auto_output_ui(self) -> Tag:
+        return _ui.output_ui(self.output_id)
 
     async def transform(self, value: TagChild) -> Jsonifiable:
         session = require_active_session(None)
@@ -629,9 +626,9 @@ class download(Renderer[str]):
     * ~shiny.ui.download_button
     """
 
-    def auto_output_ui(self, id: str) -> Tag:
+    def auto_output_ui(self) -> Tag:
         return _ui.download_button(
-            id,
+            self.output_id,
             label=self.label,
         )
 

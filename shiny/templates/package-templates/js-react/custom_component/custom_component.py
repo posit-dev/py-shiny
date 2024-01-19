@@ -39,8 +39,8 @@ class render_custom_component(Renderer[str]):
     """
 
     # The UI used within Shiny Express mode
-    def auto_output_ui(self, id: str) -> Tag:
-        return output_custom_component(id)
+    def auto_output_ui(self) -> Tag:
+        return output_custom_component(self.output_id)
 
     # # There are no parameters being supplied to the `output_custom_component` rendering function.
     # # Therefore, we can omit the `__init__()` method.
