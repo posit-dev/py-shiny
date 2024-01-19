@@ -448,6 +448,7 @@ def page_bootstrap(
 def page_auto(
     *args: TagChild | TagAttrs,
     title: str | MISSING_TYPE = MISSING,
+    window_title: str | MISSING_TYPE = MISSING,
     lang: str | MISSING_TYPE = MISSING,
     fillable: bool | MISSING_TYPE = MISSING,
     full_width: bool = False,
@@ -469,7 +470,10 @@ def page_auto(
         UI elements. These are used to determine which page function to use, and they
         are also passed along to that page function.
     title
-        The browser window title (defaults to the host URL of the page).
+        A title shown on the page.
+    window_title
+        The browser window title. If no value is provided, this will use the value of
+        ``title``.
     lang
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
@@ -498,6 +502,8 @@ def page_auto(
     """
     if not isinstance(title, MISSING_TYPE):
         kwargs["title"] = title
+    if not isinstance(window_title, MISSING_TYPE):
+        kwargs["window_title"] = window_title
     if not isinstance(lang, MISSING_TYPE):
         kwargs["lang"] = lang
 
@@ -514,11 +520,11 @@ def page_auto(
                     fillable = False
 
                 if fillable:
-                    page_fn = page_auto_fillable
+                    page_fn = _page_auto_fillable
                 elif full_width:
-                    page_fn = page_auto_fluid
+                    page_fn = _page_auto_fluid
                 else:
-                    page_fn = page_auto_fixed
+                    page_fn = _page_auto_fixed
 
             elif nSidebars == 1:
                 if not isinstance(fillable, MISSING_TYPE):
@@ -561,31 +567,65 @@ def page_auto(
     return page_fn(*args, **kwargs)
 
 
-# The title arg for these pages only adds a window title, not a page title
-# For consistency, in a page_auto() (i.e., express) context, we upgrade title
-# to be a panel_title()
-def page_auto_fillable(
+# For `page_fillable`, `page_fluid`, and `page_fixed`, the `title` arg sets the window
+# title, but doesn't add anything visible on the page.
+#
+# In contrast, for `page_auto`, the `title` arg adds a title panel to the page, and the
+# `window_title` arg sets the window title.
+#
+# The wrapper functions below provide the `page_auto` interface, where `title` to add a
+# title panel to the page, and `window_title` to set the title of the window. If `title`
+# is provided but `window_title` is not, then `window_title` is set to the value of
+# `title`.
+def _page_auto_fillable(
     *args: TagChild | TagAttrs,
     title: str | None = None,
+    window_title: str | None = None,
     **kwargs: Any,
 ) -> Tag:
-    return page_fillable(None if title is None else panel_title(title), *args, **kwargs)
+    if window_title is None and title is not None:
+        window_title = title
+
+    return page_fillable(
+        None if title is None else panel_title(title),
+        *args,
+        title=window_title,
+        **kwargs,
+    )
 
 
-def page_auto_fluid(
+def _page_auto_fluid(
     *args: TagChild | TagAttrs,
     title: str | None = None,
+    window_title: str | None = None,
     **kwargs: str,
 ) -> Tag:
-    return page_fluid(None if title is None else panel_title(title), *args, **kwargs)
+    if window_title is None and title is not None:
+        window_title = title
+
+    return page_fluid(
+        None if title is None else panel_title(title),
+        *args,
+        title=window_title,
+        **kwargs,
+    )
 
 
-def page_auto_fixed(
+def _page_auto_fixed(
     *args: TagChild | TagAttrs,
     title: str | None = None,
-    **kwargs: str,
+    window_title: str | None = None,
+    **kwargs: Any,
 ) -> Tag:
-    return page_fixed(None if title is None else panel_title(title), *args, **kwargs)
+    if window_title is None and title is not None:
+        window_title = title
+
+    return page_fixed(
+        None if title is None else panel_title(title),
+        *args,
+        title=window_title,
+        **kwargs,
+    )
 
 
 def page_output(id: str) -> Tag:
