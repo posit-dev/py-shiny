@@ -35,6 +35,7 @@ __all__ = (
     "Jsonifiable",
     "ValueFn",
     "AsyncValueFn",
+    "RendererBaseT",
 )
 
 RendererBaseT = TypeVar("RendererBaseT", bound="RendererBase")
@@ -106,42 +107,46 @@ class RendererBase(ABC):
     # A: No. Even if we had a `P` in the Generic, the calling decorator would not have access to it.
     # Idea: Possibly use a chained method of `.ui_kwargs()`? https://github.com/posit-dev/py-shiny/issues/971
     _auto_output_ui_kwargs: dict[str, Any] = dict()
-    # _auto_output_ui_args: tuple[Any, ...] = tuple()
 
     __name__: str
     """
     Name of output function supplied. (The value will not contain any module prefix.)
 
-    Set within `.__call__()` method.
+    Set within `Renderer.__call__()` method.
     """
 
     # Meta
     output_id: str
     """
-    Output function name or ID (provided to `@output(id=)`). This value will contain any module prefix.
+    Output function name or ID (provided to `@output(id=)`).
 
-    Set when the output is registered with the session.
+    This value **will not** contain a module prefix (or session name-spacing). To get
+    the fully resolved ID, call
+    `shiny.session.require_active_session(None).ns(self.output_id)`.
+
+    An initial value of `.__name__` (set within `Renderer.__call__(_fn)`) will be used until the
+    output renderer is registered within the session.
     """
 
     def _set_output_metadata(
         self,
         *,
-        output_name: str,
+        output_id: str,
     ) -> None:
         """
         Method to be called within `@output` to set the renderer's metadata.
 
         Parameters
         ----------
-        output_name : str
-            Output function name or ID (provided to `@output(id=)`). This value will contain any module prefix.
+        output_id : str
+            Output function name or ID (provided to `@output(id=)`). This value **will
+            not** contain a module prefix (or session name-spacing).
         """
-        self.output_id = output_name
+        self.output_id = output_id
 
     def auto_output_ui(
         self,
-        id: str,
-        # *args: object,
+        # *
         # **kwargs: object,
     ) -> DefaultUIFnResultOrNone:
         return None
@@ -174,7 +179,6 @@ class RendererBase(ABC):
 
     def _render_auto_output_ui(self) -> DefaultUIFnResultOrNone:
         return self.auto_output_ui(
-            self.__name__,
             # Pass the `@output_args(foo="bar")` kwargs through to the auto_output_ui function.
             **self._auto_output_ui_kwargs,
         )
@@ -206,11 +210,8 @@ class RendererBase(ABC):
 
             s = get_current_session()
             if s is not None:
-                from ._renderer import RendererBase
-
-                # Cast to avoid circular import as this mixin is ONLY used within RendererBase
-                renderer_self = cast(RendererBase, self)
-                s.output(renderer_self)
+                # Register output on reactive graph
+                s.output(self)
                 # We mark the fact that we're auto-registered so that, if an explicit
                 # registration now occurs, we can undo this auto-registration.
                 self._auto_registered = True
@@ -309,16 +310,22 @@ class Renderer(RendererBase, Generic[IT]):
         if not callable(_fn):
             raise TypeError("Value function must be callable")
 
+        # Set value function with extra meta information
+        self.fn = AsyncValueFn(_fn)
+
         # Copy over function name as it is consistent with how Session and Output
         # retrieve function names
-        self.__name__: str = _fn.__name__
+        self.__name__ = _fn.__name__
 
-        # Set value function with extra meta information
-        self.fn: AsyncValueFn[IT] = AsyncValueFn(_fn)
+        # Set the value of `output_id` to the function name.
+        # This helps with testing and other situations where no session is present
+        # for auto-registration to occur.
+        self.output_id = self.__name__
 
         # Allow for App authors to not require `@output`
         self._auto_register()
 
+        # Return self for possible chaining of methods!
         return self
 
     def __init__(
