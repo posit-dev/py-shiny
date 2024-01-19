@@ -56,7 +56,7 @@ def input_selectize(
     selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
-    remove_button: bool = True,
+    remove_button: bool = None,
     options: Optional[dict[str, str | float | JSEval]] = None,
 ) -> Tag:
     """
@@ -83,7 +83,8 @@ def input_selectize(
         The CSS width, e.g. '400px', or '100%'
     remove_button
         Whether to add a remove button. This uses the `clear_button` and `remove_button`
-        selectize plugins which can also be supplied as options.
+        selectize plugins which can also be supplied as options. By default it will apply a
+        remove button to multiple selections, but not single selections.
     options
         A dictionary of options. See the documentation of selectize.js for possible options.
         If you want to pass a JavaScript function, wrap the string in `ui.JS`.
@@ -133,7 +134,7 @@ def input_select(
     selectize: bool = False,
     width: Optional[str] = None,
     size: Optional[str] = None,
-    remove_button: bool = True,
+    remove_button: bool = None,
     options: Optional[dict[str, str | float | JSEval]] = None,
 ) -> Tag:
     """
@@ -189,6 +190,8 @@ def input_select(
     if options is not None and selectize is False:
         raise Exception("Options can only be set when selectize is `True`.")
 
+    remove_button = _resolve_remove_button(remove_button, multiple)
+
     choices_ = _normalize_choices(choices)
     if selected is None and not multiple:
         selected = _find_first_option(choices_)
@@ -230,6 +233,15 @@ def input_select(
         class_="form-group shiny-input-container",
         style=css(width=width),
     )
+
+
+def _resolve_remove_button(remove_button: Optional[bool], multiple: bool) -> bool:
+    if remove_button is None:
+        if multiple:
+            return True
+        else:
+            return False
+    return remove_button
 
 
 def _update_options(
