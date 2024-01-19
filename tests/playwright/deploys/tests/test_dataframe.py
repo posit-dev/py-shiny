@@ -21,3 +21,6 @@ def test_express_dataframe(page: Page, location: str) -> None:
     page_url = deploy(location, APP_NAME, app_file_path)
     page.goto(page_url, timeout=PAGE_TIMEOUT)
     verify_express_dataframe(page)
+
+
+# TODO-Karan: Add a way to run the deploy tests locally without deploys for the playwright-shiny cmd

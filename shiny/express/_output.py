@@ -5,7 +5,7 @@ from typing import Callable, TypeVar
 
 from .._deprecated import warn_deprecated
 from .._typing_extensions import ParamSpec
-from ..render.renderer import RendererBaseT
+from ..render.renderer import RendererT
 from .ui import hold
 
 __all__ = ("suspend_display",)
@@ -18,7 +18,7 @@ CallableT = TypeVar("CallableT", bound=Callable[..., object])
 # TODO-barret-future; quartodoc entry?
 def output_args(
     **kwargs: object,
-) -> Callable[[RendererBaseT], RendererBaseT]:
+) -> Callable[[RendererT], RendererT]:
     """
     Sets default UI arguments for a Shiny rendering function.
 
@@ -40,7 +40,7 @@ def output_args(
         A decorator that sets the default UI arguments for a Shiny rendering function.
     """
 
-    def wrapper(renderer: RendererBaseT) -> RendererBaseT:
+    def wrapper(renderer: RendererT) -> RendererT:
         renderer._auto_output_ui_kwargs = kwargs
         return renderer
 
@@ -48,8 +48,8 @@ def output_args(
 
 
 def suspend_display(
-    fn: Callable[P, R] | RendererBaseT | None = None
-) -> Callable[P, R] | RendererBaseT | AbstractContextManager[None]:
+    fn: Callable[P, R] | RendererT | None = None
+) -> Callable[P, R] | RendererT | AbstractContextManager[None]:
     warn_deprecated(
         "`suspend_display` is deprecated. Please use `ui.hold` instead. "
         "It has a new name, but the exact same functionality."

@@ -1,4 +1,5 @@
 # App altered from: https://github.com/rstudio/py-shiny/blob/main/shiny/api-examples/data_frame/app.py
+import pandas  # noqa: F401 (this line needed for Shinylive to load plotly.express)
 import plotly.express as px
 import plotly.graph_objs as go
 from shinywidgets import output_widget, render_widget
@@ -31,19 +32,19 @@ app_ui = ui.page_fillable(
         " Select one or more countries in the table below to see more information.",
     ),
     ui.layout_column_wrap(
-        1,
         ui.card(
             ui.output_data_frame("summary_data"),
         ),
         ui.layout_column_wrap(
-            1 / 2,
             ui.card(
                 output_widget("country_detail_pop", height="100%"),
             ),
             ui.card(
                 output_widget("country_detail_percap", height="100%"),
             ),
+            width=1 / 2,
         ),
+        width=1,
     ),
 )
 
@@ -60,8 +61,10 @@ def server(input, output, session):
 
     @reactive.calc
     def filtered_df():
+        # input.summary_data_selected_rows() is a tuple, so we must convert it to list,
+        # as that's what Pandas requires for indexing.
         selected_idx = list(req(input.summary_data_selected_rows()))
-        countries = summary_df["country"][selected_idx]
+        countries = summary_df.iloc[selected_idx]["country"]
         # Filter data for selected countries
         return df[df["country"].isin(countries)]
 

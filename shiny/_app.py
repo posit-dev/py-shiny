@@ -62,8 +62,8 @@ class App:
     debug
         Whether to enable debug mode.
 
-    Example
-    -------
+    Examples
+    --------
 
     ```{python}
     #| eval: false
