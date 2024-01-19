@@ -10,10 +10,10 @@ from htmltools import Tag, TagList
 from .._app import App
 from ..session import Inputs, Outputs, Session
 from ._recall_context import RecallContextManager
-from .display_decorator._func_displayhook import _display_decorator_function_def
-from .display_decorator._node_transformers import (
+from .expressify_decorator._func_displayhook import _expressify_decorator_function_def
+from .expressify_decorator._node_transformers import (
     DisplayFuncsTransformer,
-    display_decorator_func_name,
+    expressify_decorator_func_name,
 )
 
 __all__ = ("wrap_express_app",)
@@ -83,7 +83,7 @@ def run_express(file: Path) -> Tag | TagList:
 
         var_context: dict[str, object] = {
             "__file__": file_path,
-            display_decorator_func_name: _display_decorator_function_def,
+            expressify_decorator_func_name: _expressify_decorator_function_def,
             "input": InputNotImportedShim(),
         }
 

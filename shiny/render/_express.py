@@ -49,11 +49,9 @@ class express(Renderer[None]):
                 "@render.express does not support async functions. Use @render.ui instead."
             )
 
-        from ..express.display_decorator._display_body import (
-            display_body_unwrap_inplace,
-        )
+        from ..express.expressify_decorator._expressify import expressify_unwrap_inplace
 
-        fn = display_body_unwrap_inplace()(fn)
+        fn = expressify_unwrap_inplace()(fn)
 
         # Call the superclass method with upgraded `fn` value
         super().__call__(fn)
