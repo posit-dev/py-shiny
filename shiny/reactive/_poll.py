@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, TypeVar, c
 
 from .. import _utils, reactive
 from .._docstring import add_example
-from ..types import MISSING, MISSING_TYPE
+from ..types import MISSING, MISSING_TYPE, SilentException
 
 if TYPE_CHECKING:
     from ..session import Session
@@ -99,7 +99,9 @@ def poll(
 
     with reactive.isolate():
         last_value: reactive.Value[Any] = reactive.Value(poll_func())
-        last_error: reactive.Value[Optional[Exception]] = reactive.Value(None)
+        last_error: reactive.Value[Optional[Exception | MISSING_TYPE]] = reactive.Value(
+            None
+        )
 
     @reactive.effect(priority=priority, session=session)
     async def _():
@@ -166,7 +168,9 @@ def poll(
             async def result_async() -> T:
                 # If an error occurred, raise it
                 err = last_error.get()
-                if err is not None:
+                if isinstance(err, MISSING_TYPE):
+                    raise SilentException
+                elif err is not None:
                     raise err
 
                 # Take dependency on polling result
@@ -189,7 +193,9 @@ def poll(
             def result_sync() -> T:
                 # If an error occurred, raise it
                 err = last_error.get()
-                if err is not None:
+                if isinstance(err, MISSING_TYPE):
+                    raise SilentException
+                elif err is not None:
                     raise err
 
                 # Take dependency on polling result
