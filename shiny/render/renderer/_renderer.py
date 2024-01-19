@@ -287,7 +287,7 @@ class Renderer(Generic[IT]):
 
         This method is called when the renderer is requested to render its output.
 
-        The `Renderer`'s `render` method goes as follows:
+        The `Renderer`'s `render()` implementation goes as follows:
 
         * Execute the value function supplied to the renderer.
         * If the output value is `None`, `None` will be returned.
