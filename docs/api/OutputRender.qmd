@@ -48,11 +48,11 @@ class render_capitalize(Renderer[str]):
     Whether to render a placeholder value. (Defaults to `True`)
     """
 
-    def auto_output_ui(self, id: str):
+    def auto_output_ui(self):
         """
         Express UI for the renderer
         """
-        return ui.output_text_verbatim(id, placeholder=self.placeholder)
+        return ui.output_text_verbatim(self.output_name, placeholder=self.placeholder)
 
     def __init__(
         self,
@@ -115,11 +115,11 @@ class render_upper(Renderer[str]):
     Note: This renderer is equivalent to `render_capitalize(to="upper")`.
     &quot;&quot;&quot;
 
-    def auto_output_ui(self, id: str):
+    def auto_output_ui(self):
         &quot;&quot;&quot;
         Express UI for the renderer
         &quot;&quot;&quot;
-        return ui.output_text_verbatim(id, placeholder=True)
+        return ui.output_text_verbatim(self.output_name, placeholder=True)
 
     async def transform(self, value: str) -&gt; str:
         &quot;&quot;&quot;
@@ -244,7 +244,7 @@ Base class for all renderers.
 
 | Name | Description |
 | --- | --- |
-| [output_id](#shiny.render.renderer._renderer.RendererBase.output_id) | Output function name or ID (provided to `@output(id=)`). This value will contain any module prefix.  Set when the output is registered with the session. |
+| [output_id](#shiny.render.renderer._renderer.RendererBase.output_id) | Output function name or ID (provided to `@output(id=)`).  This value **will not** contain a module prefix (or session name-spacing). To get the fully resolved ID, call `shiny.session.require_active_session(None).ns(self.output_id)`.  An initial value of `.__name__` (set within `Renderer.__call__(_fn)`) will be used until the output renderer is registered within the session. |
 
 # render.renderer.Jsonifiable { #shiny.render.renderer.Jsonifiable }
 
