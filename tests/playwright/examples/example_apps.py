@@ -211,6 +211,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
                 and not any([error_txt in line for error_txt in app_allowable_errors])
             ]
             if len(error_lines) > 0:
+                print("\napp_name: " + app_name)
                 print("\napp_allowable_errors :")
                 print("\n".join(app_allowable_errors))
                 print("\nError lines remaining:")

@@ -24,10 +24,14 @@ class PriorityQueueFIFO(Generic[T]):
         """
         Add an item to the queue.
 
-        Parameters:
-           priority (int): The priority of the item. Higher priority items will
-                           come out of the queue before lower priority items.
-           item (T): The item to put in the queue.
+        Parameters
+        ----------
+        priority
+            The priority of the item. Higher priority items will come out of the queue
+            before lower priority items.
+
+        item
+            The item to put in the queue.
         """
         self._counter += 1
         self._pq.put((-priority, self._counter, item))
