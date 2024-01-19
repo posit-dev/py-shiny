@@ -514,17 +514,11 @@ def page_auto(
                     fillable = False
 
                 if fillable:
-                    page_fn = (
-                        page_auto_fillable  # pyright: ignore[reportGeneralTypeIssues]
-                    )
+                    page_fn = page_auto_fillable
                 elif full_width:
-                    page_fn = (
-                        page_auto_fluid  # pyright: ignore[reportGeneralTypeIssues]
-                    )
+                    page_fn = page_auto_fluid
                 else:
-                    page_fn = (
-                        page_auto_fixed  # pyright: ignore[reportGeneralTypeIssues]
-                    )
+                    page_fn = page_auto_fixed
 
             elif nSidebars == 1:
                 if not isinstance(fillable, MISSING_TYPE):
@@ -533,7 +527,7 @@ def page_auto(
                 # page_sidebar() needs sidebar to be the first arg
                 # TODO: Change page_sidebar() to remove `sidebar` and accept a sidebar as a
                 # *arg.
-                page_fn = page_sidebar  # pyright: ignore[reportGeneralTypeIssues]
+                page_fn = page_sidebar
                 args = tuple(sidebars + [x for x in args if x not in sidebars])
 
             else:
@@ -548,12 +542,12 @@ def page_auto(
 
             if nSidebars == 0:
                 # TODO: what do we do when nArgs != nNavs? Just let page_navbar handle it (i.e. error)?
-                page_fn = page_navbar  # pyright: ignore[reportGeneralTypeIssues]
+                page_fn = page_navbar
 
             elif nSidebars == 1:
                 # TODO: change page_navbar() to remove `sidebar` and accept a sidebar as a
                 # *arg.
-                page_fn = page_navbar  # pyright: ignore[reportGeneralTypeIssues]
+                page_fn = page_navbar
                 args = tuple([x for x in args if x not in sidebars])
                 kwargs["sidebar"] = sidebars[0]
 
@@ -571,7 +565,9 @@ def page_auto(
 # For consistency, in a page_auto() (i.e., express) context, we upgrade title
 # to be a panel_title()
 def page_auto_fillable(
-    *args: TagChild | TagAttrs, title: str | None = None, **kwargs: Any
+    *args: TagChild | TagAttrs,
+    title: str | None = None,
+    **kwargs: Any,
 ) -> Tag:
     return page_fillable(None if title is None else panel_title(title), *args, **kwargs)
 
