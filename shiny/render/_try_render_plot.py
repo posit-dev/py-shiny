@@ -163,23 +163,38 @@ def try_render_matplotlib(
         # (if there is one) adjusts the figure's subplot parameters.
         # e.g. "tight" layout.
         # When there is no layout engine, "tight" layout is often helpful
-        layout_engine = fig.get_layout_engine()
-        if layout_engine:
-            if not layout_engine.adjust_compatible:
-                # In most cases, this branch will override the constained layout.
-                # which is usually a very deliberate choice by the user
+        layout_engine = None
+        # get_layout_engine was added in matplotlib 3.6
+        if hasattr(fig, "get_layout_engine"):
+            layout_engine = fig.get_layout_engine()
+            if layout_engine:
+                if not layout_engine.adjust_compatible:
+                    # In most cases, this branch will override the constained layout.
+                    # which is usually a very deliberate choice by the user
+                    fig.set_layout_engine(  # pyright: ignore[reportUnknownMemberType]
+                        layout="tight"
+                    )
+                    warnings.warn(
+                        f"'{type(layout_engine)}' layout engine is not compatible with shiny. "
+                        "The figure layout has been changed to tight.",
+                        stacklevel=1,
+                    )
+            else:
                 fig.set_layout_engine(  # pyright: ignore[reportUnknownMemberType]
                     layout="tight"
                 )
-                warnings.warn(
-                    f"'{type(layout_engine)}' layout engine is not compatible with shiny. "
-                    "The figure layout has been changed to tight.",
-                    stacklevel=1,
-                )
         else:
-            fig.set_layout_engine(  # pyright: ignore[reportUnknownMemberType]
-                layout="tight"
-            )
+            # This branch needed for matplotlib <3.6. Eventually we will be able to
+            # remove this code path.
+
+            # Suppress the message `UserWarning: The figure layout has changed to tight`
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    action="ignore",
+                    category=UserWarning,
+                    message="The figure layout has changed to tight",
+                )
+            plt.tight_layout()  # pyright: ignore[reportUnknownMemberType]
 
         with io.BytesIO() as buf:
             fig.savefig(  # pyright: ignore[reportUnknownMemberType]
