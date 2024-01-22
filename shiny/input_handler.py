@@ -97,9 +97,8 @@ getType: function(el) {
 def _(value: str | list[str], name: str, session: Session) -> date | tuple[date, date]:
     if isinstance(value, str):
         return datetime.strptime(value, "%Y-%m-%d").date()
-    return tuple(
-        datetime.strptime(v, "%Y-%m-%d").date()
-        for v in value  # pyright: ignore[reportGeneralTypeIssues]
+    return tuple(  # pyright: ignore[reportReturnType]
+        datetime.strptime(v, "%Y-%m-%d").date() for v in value
     )
 
 
@@ -110,8 +109,7 @@ def _(
     if isinstance(value, (int, float)):
         return datetime.utcfromtimestamp(value)
     return tuple(
-        datetime.utcfromtimestamp(v)
-        for v in value  # pyright: ignore[reportGeneralTypeIssues]
+        datetime.utcfromtimestamp(v) for v in value  # pyright: ignore[reportReturnType]
     )
 
 

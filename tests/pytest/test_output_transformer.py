@@ -127,7 +127,7 @@ def test_output_transformer_with_pass_through_kwargs():
 def test_output_transformer_pos_args():
     try:
 
-        @output_transformer  # pyright: ignore[reportGeneralTypeIssues]
+        @output_transformer  # pyright: ignore[reportArgumentType]
         async def TestTransformer(
             _meta: TransformerMetadata,
         ):
@@ -204,7 +204,7 @@ def test_output_transformer_result_does_not_allow_args():
     try:
         TestTransformer(
             render_fn_sync,
-            "X",  # pyright: ignore[reportGeneralTypeIssues]
+            "X",  # pyright: ignore[reportArgumentType]
         )
         raise RuntimeError()
     except TypeError as e:
