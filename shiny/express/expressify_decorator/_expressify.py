@@ -215,6 +215,7 @@ def read_ast(filename: str) -> ast.Module | None:
     # with open(filename) as fd:
     #     return ast.parse(fd.read(), filename=filename)
 
+    linecache.checkcache(filename)
     lines = linecache.getlines(filename)
     if len(lines) == 0:
         return None
