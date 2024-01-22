@@ -17,7 +17,7 @@ from .renderer._utils import (
 )
 
 
-class display(Renderer[None]):
+class express(Renderer[None]):
     def auto_output_ui(
         self,
         *,
@@ -41,19 +41,17 @@ class display(Renderer[None]):
 
     def __call__(self, fn: ValueFn[None]) -> Self:
         if fn is None:  # pyright: ignore[reportUnnecessaryComparison]
-            raise TypeError("@render.display requires a function when called")
+            raise TypeError("@render.express requires a function when called")
 
         async_fn = AsyncValueFn(fn)
         if async_fn.is_async():
             raise TypeError(
-                "@render.display does not support async functions. Use @render.ui instead."
+                "@render.express does not support async functions. Use @render.ui instead."
             )
 
-        from shiny.express.display_decorator._display_body import (
-            display_body_unwrap_inplace,
-        )
+        from ..express.expressify_decorator._expressify import expressify_unwrap_inplace
 
-        fn = display_body_unwrap_inplace()(fn)
+        fn = expressify_unwrap_inplace()(fn)
 
         # Call the superclass method with upgraded `fn` value
         super().__call__(fn)
@@ -84,7 +82,7 @@ class display(Renderer[None]):
 
         if self.fn.is_async():
             raise TypeError(
-                "@render.display does not support async functions. Use @render.ui instead."
+                "@render.express does not support async functions. Use @render.ui instead."
             )
 
         try:
@@ -93,7 +91,9 @@ class display(Renderer[None]):
             ret = sync_value_fn()
             if ret is not None:
                 raise RuntimeError(
-                    "@render.display functions should not return values. Instead, @render.display dynamically renders every printable line within the function body. (`None` is a valid return value.)"
+                    "@render.express functions should not return values. "
+                    "Instead, @render.express dynamically renders every printable line "
+                    "within the function body. (`None` is a valid return value.)"
                 )
         finally:
             sys.displayhook = orig_displayhook

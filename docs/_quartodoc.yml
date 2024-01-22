@@ -5,6 +5,7 @@ quartodoc:
   package: shiny
   rewrite_all_pages: false
   sidebar: api/_sidebar.yml
+  dynamic: true
   renderer:
     style: _renderer.py
     show_signature_annotations: false
@@ -63,8 +64,6 @@ quartodoc:
         - ui.showcase_bottom
         - ui.showcase_left_center
         - ui.showcase_top_right
-        - ui.ValueBoxTheme
-        - ui.ShowcaseLayout
     - title: Navigation (tab) panels
       desc: Create segments of UI content.
       contents:
@@ -170,17 +169,21 @@ quartodoc:
         - render.DataGrid
         - render.DataTable
         - kind: page
-          path: OutputRender
+          path: Renderer
           flatten: true
           summary:
-            name: "Create rendering outputs"
-            desc: ""
+            name: "Create output renderers"
+            desc: "Package author methods for creating new output renderers."
           contents:
             - render.renderer.Renderer
-            - render.renderer.Jsonifiable
-            - render.renderer.ValueFn
-            - render.renderer.AsyncValueFn
-            - render.renderer.RendererT
+            - name: render.renderer.Jsonifiable
+              dynamic: false
+            - name: render.renderer.ValueFn
+              dynamic: false
+            - name: render.renderer.AsyncValueFn
+              dynamic: false
+            - name: render.renderer.RendererT
+              dynamic: false
     - title: Reactive programming
       desc: ""
       contents:
@@ -251,7 +254,8 @@ quartodoc:
             - ui.Sidebar
             - ui.CardItem
             - ui.AccordionPanel
-            - ui.css.CssUnit
+            - name: ui.css.CssUnit
+              dynamic: false
             - ui._input_slider.SliderValueArg
             - ui._input_slider.SliderStepArg
         - kind: page
@@ -262,11 +266,16 @@ quartodoc:
           flatten: true
           package: null
           contents:
-            - htmltools.Tag
-            - htmltools.TagAttrs
-            - htmltools.TagAttrValue
-            - htmltools.TagChild
-            - htmltools.TagList
+            - name: htmltools.Tag
+              dynamic: false
+            - name: htmltools.TagAttrs
+              dynamic: false
+            - name: htmltools.TagAttrValue
+              dynamic: false
+            - name: htmltools.TagChild
+              dynamic: false
+            - name: htmltools.TagList
+              dynamic: false
         - kind: page
           path: ExceptionTypes
           summary:
@@ -336,8 +345,13 @@ quartodoc:
             desc: "Cards are a common organizing unit for modern user interfaces (UI). At their core, they're just rectangular containers with borders and padding. However, when utilized properly to group related information, they help users better digest, engage, and navigate through content."
           flatten: true
           contents:
-            - experimental.ui.card_body
-            - experimental.ui.card_title
-            - experimental.ui.card_image
-            - experimental.ui.ImgContainer
-            - experimental.ui.WrapperCallable
+            - name: experimental.ui.card_body
+              dynamic: false
+            - name: experimental.ui.card_title
+              dynamic: false
+            - name: experimental.ui.card_image
+              dynamic: false
+            - name: experimental.ui.ImgContainer
+              dynamic: false
+            - name: experimental.ui.WrapperCallable
+              dynamic: false

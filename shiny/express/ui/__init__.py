@@ -59,6 +59,8 @@ from ...ui import (
     input_select,
     input_selectize,
     input_slider,
+    bind_task_button,
+    input_task_button,
     input_text,
     input_text_area,
     insert_accordion_panel,
@@ -78,6 +80,7 @@ from ...ui import (
     update_select,
     update_selectize,
     update_slider,
+    update_task_button,
     update_text,
     update_text_area,
     update_navs,
@@ -131,6 +134,10 @@ from ._cm_components import (
 
 from ._page import (
     page_opts,
+)
+
+from ._hold import (
+    hold,
 )
 
 __all__ = (
@@ -191,6 +198,8 @@ __all__ = (
     "input_select",
     "input_selectize",
     "input_slider",
+    "bind_task_button",
+    "input_task_button",
     "input_text",
     "input_text_area",
     "insert_accordion_panel",
@@ -210,6 +219,7 @@ __all__ = (
     "update_select",
     "update_selectize",
     "update_slider",
+    "update_task_button",
     "update_text",
     "update_text_area",
     "update_navs",
@@ -258,6 +268,8 @@ __all__ = (
     "tooltip",
     # Imports from ._page
     "page_opts",
+    # Imports from ._hold
+    "hold",
     "js_eval",
 )
 
@@ -298,5 +310,8 @@ _known_missing = {
         "output_data_frame",
     ),
     # Items from shiny.express.ui that don't have a counterpart in shiny.ui
-    "shiny.express.ui": ("page_opts",),
+    "shiny.express.ui": (
+        "page_opts",
+        "hold",
+    ),
 }

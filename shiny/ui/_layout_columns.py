@@ -6,6 +6,7 @@ from warnings import warn
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css
 
+from .._docstring import add_example
 from ._html_deps_shinyverse import web_component_dependency
 from ._layout import wrap_all_in_gap_spaced_container
 from ._tag import consolidate_attrs
@@ -32,6 +33,7 @@ BreakpointsComplete = Dict[Breakpoint, Iterable[T]]
 BreakpointsUser = Union[BreakpointsSoft[T], Iterable[T], T, None]
 
 
+@add_example()
 def layout_columns(
     *args: TagChild | TagAttrs,
     col_widths: BreakpointsUser[int] = None,

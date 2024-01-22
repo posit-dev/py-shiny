@@ -5,7 +5,7 @@ from typing import TypeVar
 
 from htmltools import Tag, TagAttrs
 
-from ..._docstring import add_example
+from ..._docstring import add_example, no_example
 from .._html_deps_shinyverse import fill_dependency
 
 __all__ = (
@@ -77,6 +77,7 @@ def as_fill_item(
     return res
 
 
+@no_example
 def remove_all_fill(
     tag: TagT,
 ) -> TagT:

@@ -35,6 +35,15 @@ def scroll_to_end(page: Page, grid_container: Locator) -> Callable[[], None]:
         grid_container.locator("tbody tr:first-child td:first-child").click()
         page.keyboard.press("End")
 
+        # Starting some time around January 19, 2024, Firefox doesn't scroll to the end
+        # of the table when the End button is pressed. Repros on real Firefox 121.0.1
+        # (64-bit) on macOS. This is a workaround to get the test suite to pass.
+        if page.context.browser and page.context.browser.browser_type.name == "firefox":
+            time.sleep(0.1)
+            page.keyboard.press("End")
+            time.sleep(0.1)
+            page.keyboard.press("End")
+
     return do
 
 
@@ -54,7 +63,11 @@ def test_grid_mode(
 
 @pytest.mark.flaky(reruns=RERUNS)
 def test_summary_navigation(
-    page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, summary: Locator
+    page: Page,
+    data_frame_app: ShinyAppProc,
+    grid_container: Locator,
+    summary: Locator,
+    scroll_to_end: Callable[[], None],
 ):
     page.goto(data_frame_app.url)
 
@@ -63,7 +76,7 @@ def test_summary_navigation(
     # Put focus in the table and hit End keystroke
     grid_container.locator("tbody tr:first-child td:first-child").click()
     with expect_to_change(lambda: summary.inner_text()):
-        page.keyboard.press("End")
+        scroll_to_end()
     # Ensure that summary updated
     expect(summary).to_have_text(re.compile("^Viewing rows \\d+ through 20 of 20$"))
 

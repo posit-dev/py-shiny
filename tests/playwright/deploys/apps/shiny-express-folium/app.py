@@ -12,17 +12,17 @@ ui.page_opts(full_width=False)
 
 with ui.card(id="card"):
     "Static Map"
-    folium.Map(
+    folium.Map(  # pyright: ignore[reportUnknownMemberType,reportGeneralTypeIssues]
         location=locations_coords["San Francisco"], tiles="USGS.USTopo", zoom_start=12
     )
     ui.input_radio_buttons(
         "location", "Location", ["San Francisco", "New York", "Los Angeles"]
     )
 
-    @render.display
+    @render.express
     def folium_map():
-        "Map inside of render display call"
-        folium.Map(
+        "Map inside of render express call"
+        folium.Map(  # pyright: ignore[reportUnknownMemberType,reportGeneralTypeIssues]
             location=locations_coords[input.location()],
             tiles="cartodb positron",
             zoom_start=12,

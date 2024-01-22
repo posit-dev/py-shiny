@@ -138,6 +138,16 @@ class SilentCancelOutputException(Exception):
     pass
 
 
+class SilentOperationInProgressException(SilentException):
+    # Throw a silent exception to indicate that an operation is in progress
+
+    # Similar to :class:`~SilentException`, but if thrown in an output context, existing
+    # output isn't cleared and stays in recalculating mode until the next time it is
+    # invalidated.
+
+    pass
+
+
 class ActionButtonValue(int):
     pass
 

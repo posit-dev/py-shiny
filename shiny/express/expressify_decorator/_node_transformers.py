@@ -7,7 +7,7 @@ from typing import Any, Callable, cast
 from ._helpers import ast_matches_func
 
 sys_alias = "__auto_displayhook_sys__"
-display_decorator_func_name = "_display_decorator_function_def"
+expressify_decorator_func_name = "_expressify_decorator_function_def"
 
 
 class TopLevelTransformer(ast.NodeTransformer):
@@ -116,12 +116,12 @@ class DisplayFuncsTransformer(TopLevelTransformer):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
         node.decorator_list.insert(
-            0, ast.Name(id=display_decorator_func_name, ctx=ast.Load())
+            0, ast.Name(id=expressify_decorator_func_name, ctx=ast.Load())
         )
         return node
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> object:
         node.decorator_list.insert(
-            0, ast.Name(id=display_decorator_func_name, ctx=ast.Load())
+            0, ast.Name(id=expressify_decorator_func_name, ctx=ast.Load())
         )
         return node

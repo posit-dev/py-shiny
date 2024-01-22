@@ -9,6 +9,7 @@ from warnings import warn
 from .._docstring import add_example
 from .._utils import rand_hex
 from ..session import Session, require_active_session
+from ..session._session import UpdateProgressMessage
 
 
 @add_example()
@@ -46,12 +47,11 @@ class Progress:
         self.min = min
         self.max = max
         self.value = None
-        self._id = rand_hex(8)
         self._closed = False
         self._session = require_active_session(session)
+        self._id = self._session.ns(rand_hex(8))
 
-        msg = {"id": self._id, "style": self._style}
-        self._session._send_progress("open", msg)
+        self._session._send_progress("open", {"id": self._id, "style": self._style})
 
     def __enter__(self) -> "Progress":
         return self
@@ -100,17 +100,18 @@ class Progress:
             # Normalize value to number between 0 and 1
             value = min(1, max(0, (value - self.min) / (self.max - self.min)))
 
-        msg = {
+        msg: UpdateProgressMessage = {
             "id": self._id,
-            "message": message,
-            "detail": detail,
-            "value": value,
             "style": self._style,
         }
+        if message is not None:
+            msg["message"] = message
+        if detail is not None:
+            msg["detail"] = detail
+        if value is not None:
+            msg["value"] = value
 
-        self._session._send_progress(
-            "update", {k: v for k, v in msg.items() if v is not None}
-        )
+        self._session._send_progress("update", msg)
 
     def inc(
         self,

@@ -5,6 +5,7 @@ from typing import Iterable, Literal, Optional, cast
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 
 from .._deprecated import warn_deprecated
+from .._docstring import add_example
 from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import components_dependency
 from ._tag import consolidate_attrs
@@ -14,6 +15,7 @@ from .css._css_unit import isinstance_cssunit
 from .fill import as_fill_item, as_fillable_container
 
 
+@add_example()
 def layout_column_wrap(
     *args: TagChild | TagAttrs,
     width: CssUnit | None | MISSING_TYPE = MISSING,

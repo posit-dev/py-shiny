@@ -26,7 +26,7 @@ from htmltools import (
     tags,
 )
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._bootstrap import panel_title
@@ -41,6 +41,7 @@ from .css import CssUnit, as_css_padding, as_css_unit
 from .fill._fill import as_fillable_container
 
 
+@add_example()
 def page_sidebar(
     sidebar: Sidebar,
     *args: TagChild | TagAttrs,
@@ -109,6 +110,7 @@ def page_sidebar(
     )
 
 
+@no_example
 def page_navbar(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     title: Optional[str | Tag | TagList] = None,
@@ -253,6 +255,7 @@ def page_navbar(
         )
 
 
+@no_example
 def page_fillable(
     *args: TagChild | TagAttrs,
     padding: Optional[CssUnit | list[CssUnit]] = None,
@@ -404,6 +407,7 @@ def page_fixed(
 
 
 # TODO: implement theme (just Bootswatch for now?)
+@no_example
 def page_bootstrap(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
@@ -445,6 +449,7 @@ def page_bootstrap(
     )
 
 
+@no_example
 def page_auto(
     *args: TagChild | TagAttrs,
     title: str | MISSING_TYPE = MISSING,
@@ -628,6 +633,7 @@ def _page_auto_fixed(
     )
 
 
+@no_example
 def page_output(id: str) -> Tag:
     """
     Create a page container where the entire body is a UI output.

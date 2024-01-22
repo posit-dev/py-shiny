@@ -23,7 +23,9 @@ from ._tooltip import tooltip
 from .css._css_unit import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
-# TODO-barret-future; Update header to return CardHeader class. Same for footer. Then we can check `*args` for a CardHeader class and move it to the top. And footer to the bottom. Can throw error if multiple headers/footers are provided or could concatenate.
+# TODO-barret-future; Update header to return CardHeader class. Same for footer. Then we
+# can check `*args` for a CardHeader class and move it to the top. And footer to the
+# bottom. Can throw error if multiple headers/footers are provided or could concatenate.
 
 
 __all__ = (
@@ -259,7 +261,7 @@ def _wrap_children_in_card(
     return tag_children
 
 
-# TODO-maindocs; @add_example()
+@add_example()
 def card_body(
     *args: TagChild | TagAttrs,
     fillable: bool = True,
