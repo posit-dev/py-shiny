@@ -71,6 +71,13 @@ app_allow_shiny_errors: typing.Dict[
 app_allow_external_errors: typing.List[str] = [
     # if shiny express app detected
     "Detected Shiny Express app",
+    # pandas >= 2.2.0
+    # https://github.com/pandas-dev/pandas/blame/5740667a55aabffc660936079268cee2f2800225/pandas/core/groupby/groupby.py#L1129
+    "FutureWarning: When grouping with a length-1 list-like",
+    "sf: grouped.get_group",  # continutation of line above
+    "FutureWarning:",
+    "When grouping with a length-1 list-like",  # continutation of line above
+    "data_subset = grouped_data.get_group(pd_key)",  # continutation of line above
     # plotnine: https://github.com/has2k1/plotnine/issues/713
     # mizani: https://github.com/has2k1/mizani/issues/34
     # seaborn: https://github.com/mwaskom/seaborn/issues/3457

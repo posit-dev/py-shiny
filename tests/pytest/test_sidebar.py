@@ -24,7 +24,7 @@ def test_panel_main_and_panel_sidebar():
         assert "multiple `sidebar()` objects" in str(e)
 
     try:
-        ui.layout_sidebar(None, _ps)  # pyright: ignore[reportGeneralTypeIssues]
+        ui.layout_sidebar(None, _ps)  # pyright: ignore[reportArgumentType]
         raise AssertionError("Should have raised ValueError")
     except ValueError as e:
         assert "not being supplied with a `sidebar()` object." in str(e)
