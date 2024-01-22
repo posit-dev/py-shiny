@@ -10,15 +10,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Extract node version from .nvmrc
         id: nvm
-        run: echo "::set-output name=version::$(cat .nvmrc)"
         working-directory: js
+        run: |
+          echo "version=$(cat .nvmrc)" >> $GITHUB_OUTPUT
 
       - name: Use Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: "${{ steps.nvm.outputs.version }}"
 
