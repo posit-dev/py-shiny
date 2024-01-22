@@ -78,7 +78,7 @@ def expressify_unwrap_inplace() -> Callable[[TFunc], TFunc]:
             fcode = _transform_body(cast(types.FunctionType, unwrapped_fn))
         else:
             if unwrapped_fn.__code__ in code_cache:
-                fcode = code_cache[fn.__code__]
+                fcode = code_cache[unwrapped_fn.__code__]
             else:
                 # Save for next time
                 fcode = _transform_body(cast(types.FunctionType, unwrapped_fn))
