@@ -77,6 +77,7 @@ app_allow_external_errors: typing.List[str] = [
     "sf: grouped.get_group",  # continutation of line above
     "FutureWarning:",
     "When grouping with a length-1 list-like",  # continutation of line above
+    "data_subset = grouped_data.get_group(pd_key)",  # continutation of line above
     # plotnine: https://github.com/has2k1/plotnine/issues/713
     # mizani: https://github.com/has2k1/mizani/issues/34
     # seaborn: https://github.com/mwaskom/seaborn/issues/3457
