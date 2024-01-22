@@ -72,7 +72,7 @@ from ._input_file import input_file
 from ._input_numeric import input_numeric
 from ._input_password import input_password
 from ._input_select import input_select, input_selectize
-from ._input_slider import input_slider, SliderValueArg, SliderStepArg, AnimationOptions
+from ._input_slider import AnimationOptions, SliderStepArg, SliderValueArg, input_slider
 from ._input_task_button import bind_task_button, input_task_button
 from ._input_text import input_text, input_text_area
 from ._input_update import (
@@ -89,6 +89,7 @@ from ._input_update import (
     update_select,
     update_selectize,
     update_slider,
+    update_switch,
     update_task_button,
     update_text,
     update_text_area,
