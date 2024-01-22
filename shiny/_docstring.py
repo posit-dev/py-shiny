@@ -181,25 +181,11 @@ if not TYPE_CHECKING and os.environ.get("IN_QUARTODOC") == "true":
     except ModuleNotFoundError:
         raise RuntimeError("Please install shinylive to build the docs.")
 
-    SHINYLIVE_CODE_TEMPLATE = """
-```{{shinylive-python}}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400
-
-{0}
-```
-"""
-
     class ShinyliveExampleWriter(ExampleWriter):
         def write_example(self, app_files: list[str]) -> str:
             app_file = app_files.pop(0)
-            bundle = shinylive._url.create_shinylive_bundle_file(
-                app_file, app_files, language="py"
-            )
-            code = shinylive._url.create_shinylive_chunk_contents(bundle)
+            app = shinylive.url_encode(app_file, app_files, language="py")
 
-            return SHINYLIVE_CODE_TEMPLATE.format(code.strip())
+            return app.chunk(layout="vertical", viewerHeight=400)
 
     example_writer = ShinyliveExampleWriter()
