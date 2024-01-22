@@ -36,7 +36,7 @@ class express(Renderer[None]):
         return _ui.output_ui(
             self.output_id,
             # (possibly) contains `inline`, `container`, `fill`, and `fillable` keys!
-            **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+            **kwargs,  # pyright: ignore[reportArgumentType]
         )
 
     def __call__(self, fn: ValueFn[None]) -> Self:
@@ -103,6 +103,6 @@ class express(Renderer[None]):
         session = require_active_session(None)
         return rendered_deps_to_jsonifiable(
             session._process_ui(
-                TagList(*results)  # pyright: ignore[reportGeneralTypeIssues]
+                TagList(*results)  # pyright: ignore[reportArgumentType]
             )
         )

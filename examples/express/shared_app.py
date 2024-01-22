@@ -33,3 +33,9 @@ def rv_value():
 @render.text
 def text_data():
     return "shared.data = " + str(shared.data)
+
+
+# If another session changes the slider, make sure the slider also reflects that change.
+@reactive.effect
+def _():
+    ui.update_slider("n", value=shared.rv())

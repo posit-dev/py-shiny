@@ -938,7 +938,7 @@ class SessionProxy:
         def wrapper(fn: DownloadHandler):
             id_ = self.ns(id or fn.__name__)
             return self._parent.download(
-                id=id_, **kwargs  # pyright: ignore[reportGeneralTypeIssues]
+                id=id_, **kwargs  # pyright: ignore[reportArgumentType]
             )(fn)
 
         return wrapper
