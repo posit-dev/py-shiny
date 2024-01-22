@@ -669,7 +669,7 @@ class DeprecatedPanelSidebar(
             *args,
             width=f"{int(width / 12 * 100)}%",
             open="always",
-            **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+            **kwargs,  # pyright: ignore[reportArgumentType]
         )
 
     # Hopefully this is never used. But wanted to try to be safe

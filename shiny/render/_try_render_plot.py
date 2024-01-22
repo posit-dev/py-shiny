@@ -201,7 +201,7 @@ def try_render_matplotlib(
                 buf,
                 format="png",
                 dpi=ppi_out * pixelratio,
-                **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+                **kwargs,  # pyright: ignore[reportArgumentType]
             )
             buf.seek(0)
             data = base64.b64encode(buf.read())
@@ -301,7 +301,7 @@ def try_render_pil(
         return (False, None)
 
     with io.BytesIO() as buf:
-        x.save(buf, format="PNG", **kwargs)  # pyright: ignore[reportGeneralTypeIssues]
+        x.save(buf, format="PNG", **kwargs)  # pyright: ignore[reportArgumentType]
         buf.seek(0)
         data = base64.b64encode(buf.read())
         data_str = data.decode("utf-8")
@@ -363,7 +363,7 @@ def try_render_plotnine(
             raise RuntimeError(
                 "plotnine>=0.10.1 is required to render plotnine plots in Shiny"
             )
-        res = x.save_helper(  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues, reportUnknownVariableType]
+        res = x.save_helper(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUnknownVariableType]
             filename=buf,
             format="png",
             units="in",
@@ -373,8 +373,8 @@ def try_render_plotnine(
             verbose=False,
             **kwargs,
         )
-        res.figure.savefig(  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
-            **res.kwargs  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
+        res.figure.savefig(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
+            **res.kwargs  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
         )
         buf.seek(0)
         data = base64.b64encode(buf.read())
@@ -384,7 +384,7 @@ def try_render_plotnine(
     # drawn/saved first, which runs the layout engine.
     coordmap = get_coordmap_plotnine(
         x,
-        res.figure,  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportGeneralTypeIssues]
+        res.figure,  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportAttributeAccessIssue]
     )
 
     res: ImgData = {
