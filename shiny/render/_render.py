@@ -255,7 +255,7 @@ class plot(Renderer[object]):
         return _ui.output_plot(
             self.output_id,
             # (possibly) contains `width` and `height` keys!
-            **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+            **kwargs,  # pyright: ignore[reportArgumentType]
         )
         # TODO: Deal with output width/height separately from render width/height?
 
@@ -417,7 +417,7 @@ class image(Renderer[ImgData]):
     def auto_output_ui(self, **kwargs: object):
         return _ui.output_image(
             self.output_id,
-            **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+            **kwargs,  # pyright: ignore[reportArgumentType]
         )
         # TODO: Make width/height handling consistent with render_plot
 
@@ -555,7 +555,7 @@ class table(Renderer[TableResult]):
                     index=self.index,
                     classes=self.classes,
                     border=self.border,
-                    **self.kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+                    **self.kwargs,  # pyright: ignore[reportArgumentType]
                 ),
             )
         # Use typing to make sure the return shape matches

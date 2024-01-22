@@ -59,7 +59,7 @@ async def test_renderer_works_with_args():
 def test_effect():
     with pytest.raises(TypeError):
 
-        @reactive.effect  # pyright: ignore[reportGeneralTypeIssues]
+        @reactive.effect  # pyright: ignore[reportArgumentType]
         @render.text
         def my_output():
             return "42"

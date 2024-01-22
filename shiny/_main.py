@@ -347,7 +347,7 @@ def run_app(
         app_dir=app_dir,
         factory=factory,
         lifespan="on",
-        **reload_args,  # pyright: ignore[reportGeneralTypeIssues]
+        **reload_args,  # pyright: ignore[reportArgumentType]
         **kwargs,
     )
 
