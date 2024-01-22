@@ -12,9 +12,10 @@ runs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
-          cache: 'pip'
-          cache-dependency-path: |
-            setup.cfg
+          # # Caching with pip only saves ~15 seconds. Not work risks of confusion.
+          # cache: 'pip'
+          # cache-dependency-path: |
+          #   setup.cfg
 
       - name: Upgrade pip
         shell: bash
