@@ -101,7 +101,7 @@ playwright-shiny: install-playwright ## end-to-end tests with playwright
 	pytest tests/playwright/shiny/$(SUB_FILE)
 
 playwright-examples: install-playwright ## end-to-end tests on examples with playwright
-	pytest tests/playwright/examples
+	pytest tests/playwright/examples/$(SUB_FILE)
 
 playwright-deploys: install-playwright install-rsconnect ## end-to-end tests on deploys with playwright
 	pytest tests/playwright/deploys/$(SUB_FILE) -s
