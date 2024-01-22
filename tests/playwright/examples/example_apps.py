@@ -63,7 +63,15 @@ app_allow_shiny_errors: typing.Dict[
     "airmass": [*output_transformer_errors],
     "brownian": [*output_transformer_errors],
     "multi-page": [*output_transformer_errors],
-    "model-score": [*output_transformer_errors],
+    "model-score": [
+        *output_transformer_errors,
+        # pandas >= 2.2.0
+        # https://github.com/pandas-dev/pandas/blame/5740667a55aabffc660936079268cee2f2800225/pandas/core/groupby/groupby.py#L1129
+        "FutureWarning: When grouping with a length-1 list-like",
+        "sf: grouped.get_group",  # continutation of line above
+        "FutureWarning:",
+        "When grouping with a length-1 list-like",  # continutation of line above
+    ],
     "data_frame": [*output_transformer_errors],
     "output_transformer": [*output_transformer_errors],
     "render_express": [*express_warnings],
