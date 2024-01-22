@@ -17,6 +17,7 @@ from typing import (
     runtime_checkable,
 )
 
+from ..._shinyenv import is_pyodide
 from ._func_displayhook import _expressify_decorator_function_def
 from ._helpers import find_code_for_func
 from ._node_transformers import (
@@ -70,12 +71,18 @@ def expressify_unwrap_inplace() -> Callable[[TFunc], TFunc]:
         if hasattr(unwrapped_fn, expressify_attr):
             return fn
 
-        if unwrapped_fn.__code__ in code_cache:
-            fcode = code_cache[fn.__code__]
-        else:
-            # Save for next time
+        if is_pyodide:
+            # Disable code caching on Pyodide due to bug in hashing bytecode in 0.22.1.
+            # When Pyodide is updated to a newer version, this will be not be needed.
+            # https://github.com/posit-dev/py-shiny/issues/1042#issuecomment-1901945787
             fcode = _transform_body(cast(types.FunctionType, unwrapped_fn))
-            code_cache[unwrapped_fn.__code__] = fcode
+        else:
+            if unwrapped_fn.__code__ in code_cache:
+                fcode = code_cache[fn.__code__]
+            else:
+                # Save for next time
+                fcode = _transform_body(cast(types.FunctionType, unwrapped_fn))
+                code_cache[unwrapped_fn.__code__] = fcode
 
         unwrapped_fn.__code__ = fcode
         setattr(unwrapped_fn, expressify_attr, True)
@@ -96,12 +103,18 @@ def expressify() -> Callable[[TFunc], TFunc]:
 
 def expressify(fn: TFunc | None = None) -> TFunc | Callable[[TFunc], TFunc]:
     def decorator(fn: TFunc) -> TFunc:
-        if fn.__code__ in code_cache:
-            fcode = code_cache[fn.__code__]
-        else:
-            # Save for next time
+        if is_pyodide:
+            # Disable code caching on Pyodide due to bug in hashing bytecode in 0.22.1.
+            # When Pyodide is updated to a newer version, this will be not be needed.
+            # https://github.com/posit-dev/py-shiny/issues/1042#issuecomment-1901945787
             fcode = _transform_body(cast(types.FunctionType, fn))
-            code_cache[fn.__code__] = fcode
+        else:
+            if fn.__code__ in code_cache:
+                fcode = code_cache[fn.__code__]
+            else:
+                # Save for next time
+                fcode = _transform_body(cast(types.FunctionType, fn))
+                code_cache[fn.__code__] = fcode
 
         # Create a new function from the code object
         new_func = types.FunctionType(
