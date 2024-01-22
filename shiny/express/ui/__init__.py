@@ -98,6 +98,7 @@ from ...ui import (
     nav_spacer,
     Progress,
     value_box_theme,
+    js_eval,
 )
 
 from ._cm_components import (
@@ -269,6 +270,7 @@ __all__ = (
     "page_opts",
     # Imports from ._hold
     "hold",
+    "js_eval",
 )
 
 

@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `App.on_shutdown` method for registering a callback to be called when the app is shutting down. (#907)
 
+* You can now pass options to `ui.input_selectize` see the [selectize.js](https://selectize.dev/docs/API/selectize) docs for available options. (#914, #158)
+
+* `ui.input_selectize` gains the `remove_button` argument which allows you to control the visibility of the remove button.
+
 ### Bug fixes
 
 * CLI command `shiny create`... (#965)

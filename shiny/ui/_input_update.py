@@ -23,7 +23,7 @@ import re
 from datetime import date
 from typing import Literal, Mapping, Optional, cast, overload
 
-from htmltools import TagChild, TagList
+from htmltools import TagChild, TagList, tags
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
@@ -38,7 +38,7 @@ from ._input_check_radio import ChoicesArg, _generate_options
 from ._input_date import _as_date_attr
 from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
-from ._utils import _session_on_flush_send_msg
+from ._utils import JSEval, _session_on_flush_send_msg, extract_js_keys
 
 _note = """
     The input updater functions send a message to the client, telling it to change the
@@ -625,8 +625,7 @@ def update_selectize(
     label: Optional[str] = None,
     choices: Optional[SelectChoicesArg] = None,
     selected: Optional[str | list[str]] = None,
-    # TODO: we need the equivalent of base::I()/htmlwidgets::JS() for marking strings as strings to be evaluated
-    # options: Optional[Dict[str, str]] = None,
+    options: Optional[dict[str, str | float | JSEval]] = None,
     server: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -647,6 +646,8 @@ def update_selectize(
         ``<optgroup>`` labels.
     selected
         The values that should be initially selected, if any.
+    options
+        Options to send to update, see `input_selectize` for details.
     server
         Whether to store choices on the server side, and load the select options
         dynamically on searching, instead of writing all choices into the page at once
@@ -670,6 +671,17 @@ def update_selectize(
         return update_select(
             id, label=label, choices=choices, selected=selected, session=session
         )
+
+    if options is not None:
+        cfg = TagList(
+            tags.script(
+                json.dumps(options),
+                type="application/json",
+                data_for=id,
+                data_eval=json.dumps(extract_js_keys(options)),
+            )
+        )
+        session.send_input_message(id, drop_none({"config": cfg.get_html_string()}))
 
     # Transform choices to a list of dicts (this is the form the client wants)
     # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]

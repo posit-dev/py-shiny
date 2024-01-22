@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, overload
+from typing import Any, Dict, List, Optional, cast, overload
 
 from htmltools import (
     HTMLDependency,
@@ -92,3 +92,44 @@ def css_no_sub(**kwargs: str | float | None) -> Optional[str]:
         v = " ".join(v) if isinstance(v, list) else str(v)
         res += k + ":" + v + ";"
     return None if res == "" else res
+
+
+class JSEval(str):
+    pass
+
+
+def js_eval(x: str) -> JSEval:
+    """
+    Mark a function as a JavaScript evaluation.
+    Some components like `input_selectize` allow you to send JavaScript functions
+    to the client.
+    This function marks a string as a JavaScript evaluation so that it can be properly
+    sent to the client library.
+    """
+    return JSEval(x)
+
+
+def extract_js_keys(options: Dict[str, Any], parent_key: str = "") -> List[str]:
+    """
+    This function extracts JavaScript (JS) and HTML objects from the provided dictionary.
+    This is used to identify which options should be evaluated by the client.
+
+    Parameters:
+    options (Dict[str, Any]): A dictionary containing various options and pulls out the keys
+    of those options which are of type JSEval.
+
+    Returns:
+    A list of keys which identify the JSEval options
+    """
+
+    # TODO This only works on nested dictionaries, and we may need to extend it to
+    # recurse through lists as well.
+    js_html_keys: List[str] = []
+    for key, value in options.items():
+        full_key = f"{parent_key}.{key}" if parent_key else key
+        if isinstance(value, JSEval):
+            js_html_keys.append(full_key)
+        elif isinstance(value, dict):
+            value = cast(Dict[str, Any], value)
+            js_html_keys.extend(extract_js_keys(value, full_key))
+    return js_html_keys
