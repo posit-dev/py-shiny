@@ -74,7 +74,7 @@ def reload_end():
         }
         try:
             async with websockets.connect(
-                url, **options  # pyright: ignore[reportGeneralTypeIssues]
+                url, **options  # pyright: ignore[reportArgumentType]
             ) as websocket:
                 await websocket.send("reload_end")
         except websockets.exceptions.ConnectionClosed:

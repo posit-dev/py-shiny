@@ -106,13 +106,13 @@ def test_duplicate_func_names_ok():
     x = "hello"
 
     @expressify()
-    def inner():  # pyright: ignore[reportGeneralTypeIssues]
+    def inner():  # pyright: ignore[reportRedeclaration]
         x + " world"
 
     inner_old = inner
 
     @expressify()
-    def inner():  # pyright: ignore[reportGeneralTypeIssues]
+    def inner():  # pyright: ignore[reportRedeclaration]
         x + " universe"
 
     with capture_display() as d:

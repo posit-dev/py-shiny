@@ -57,7 +57,7 @@ class HoldContextManager:
     def __enter__(self) -> ui.TagList:
         self.prev_displayhook = sys.displayhook
         sys.displayhook = wrap_displayhook_handler(
-            self.content.append  # pyright: ignore[reportGeneralTypeIssues]
+            self.content.append  # pyright: ignore[reportArgumentType]
         )
         return self.content
 
