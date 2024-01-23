@@ -3,7 +3,9 @@ import os
 import subprocess
 import typing
 
+import pytest
 import requests
+from playwright.sync_api import Page
 
 __all__ = ("deploy",)
 
@@ -113,3 +115,26 @@ def write_requirements_txt(app_file_path: str) -> None:
     with open(requirements_file_path, "w") as f:
         f.write(f"{requirements}\n")
         f.write(f"git+https://github.com/posit-dev/py-shiny.git@{git_hash}\n")
+
+
+def prepare_deploy_and_open_url(
+    page: Page,
+    app_file_path: str,
+    location: str,
+    app_name: str,
+    timeout: int = 120 * 1000,
+) -> None:
+    run_on_ci = os.environ.get("CI", "False") == "true"
+    repo = os.environ.get("GITHUB_REPOSITORY", "unknown")
+    branch_name = os.environ.get("GITHUB_HEAD_REF", "unknown")
+
+    if (
+        not run_on_ci
+        or repo != "posit-dev/py-shiny"
+        or not (branch_name.startswith("deploy") or branch_name == "main")
+    ):
+        pytest.skip("Not on CI or posit-dev/py-shiny repo or deploy* or main branch")
+    else:
+        write_requirements_txt(app_file_path)
+        page_url = deploy(location, app_name, app_file_path)
+        page.goto(page_url, timeout=timeout)

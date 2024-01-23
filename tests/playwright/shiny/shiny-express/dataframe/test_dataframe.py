@@ -1,10 +1,23 @@
-from conftest import ShinyAppProc, create_deploys_fixture
+import os
+
+import pytest
+from conftest import ShinyAppProc
+from controls import OutputDataFrame
 from playwright.sync_api import Page
-from utils.express_utils import verify_express_dataframe
+from utils.deploy_utils import prepare_deploy_and_open_url
 
-app = create_deploys_fixture("shiny-express-dataframe")
+APP_NAME = "shiny-express-dataframe"
+app_file_path = os.path.dirname(os.path.abspath(__file__))
 
 
-def test_page_default(page: Page, app: ShinyAppProc) -> None:
-    page.goto(app.url)
-    verify_express_dataframe(page)
+@pytest.mark.only_browser("chromium")
+@pytest.mark.parametrize("location", ["connect", "shinyapps", "local"])
+def test_express_dataframe_deploys(
+    page: Page, location: str, local_app: ShinyAppProc
+) -> None:
+    if location == "local":
+        page.goto(local_app.url)
+    else:
+        prepare_deploy_and_open_url(page, app_file_path, location, APP_NAME)
+    dataframe = OutputDataFrame(page, "sample_data_frame")
+    dataframe.expect_n_row(6)

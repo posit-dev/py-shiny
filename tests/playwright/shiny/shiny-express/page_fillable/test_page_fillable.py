@@ -1,10 +1,27 @@
-from conftest import ShinyAppProc, create_deploys_fixture
+import os
+
+import pytest
+from conftest import ShinyAppProc
+from controls import Card, OutputTextVerbatim
 from playwright.sync_api import Page
-from utils.express_utils import verify_express_page_fillable
+from utils.deploy_utils import prepare_deploy_and_open_url
 
-app = create_deploys_fixture("shiny-express-page-fillable")
+APP_NAME = "express_page_fillable"
+app_file_path = os.path.dirname(os.path.abspath(__file__))
 
 
-def test_express_page_fillable(page: Page, app: ShinyAppProc) -> None:
-    page.goto(app.url)
-    verify_express_page_fillable(page)
+@pytest.mark.only_browser("chromium")
+@pytest.mark.parametrize("location", ["connect", "shinyapps", "local"])
+def test_express_page_fillable(
+    page: Page, location: str, local_app: ShinyAppProc
+) -> None:
+    if location == "local":
+        page.goto(local_app.url)
+    else:
+        prepare_deploy_and_open_url(page, app_file_path, location, APP_NAME)
+    card = Card(page, "card")
+    output_txt = OutputTextVerbatim(page, "txt")
+    output_txt.expect_value("50")
+    bounding_box = card.loc.bounding_box()
+    assert bounding_box is not None
+    assert bounding_box["height"] > 300

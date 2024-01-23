@@ -2170,7 +2170,21 @@ class OutputText(_OutputInlineContainerM, _OutputTextValue):
         super().__init__(page, id=id, loc=f"#{id}.shiny-text-output")
 
 
-# TODO-Karan: Add OutputCode class
+class OutputCode(_OutputTextValue):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
+
+    def expect_has_placeholder(
+        self, placeholder: bool = False, *, timeout: Timeout = None
+    ) -> None:
+        _expect_class_value(
+            self.loc,
+            cls="noplaceholder",
+            has_class=not placeholder,
+            timeout=timeout,
+        )
+
+
 class OutputTextVerbatim(_OutputTextValue):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
