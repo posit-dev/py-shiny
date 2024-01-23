@@ -1,10 +1,10 @@
 quartodoc:
   style: pkgdown
-  dir: api
+  dir: api/core
   out_index: index.qmd
   package: shiny
   rewrite_all_pages: false
-  sidebar: api/_sidebar.yml
+  sidebar: api/core/_sidebar.yml
   dynamic: true
   renderer:
     style: _renderer.py
@@ -286,49 +286,6 @@ quartodoc:
             - types.SilentException
             - types.SilentCancelOutputException
             - types.SafeException
-    - title: Shiny Express
-      desc: Functions for Shiny Express applications
-      contents:
-        - kind: page
-          path: ContextManagerComponents
-          summary:
-            name: "Context manager components"
-            desc: ""
-          flatten: true
-          contents:
-            - express.ui.sidebar
-            - express.ui.layout_sidebar
-            - express.ui.layout_column_wrap
-            - express.ui.layout_columns
-            - express.ui.card
-            - express.ui.accordion
-            - express.ui.accordion_panel
-            - express.ui.nav_panel
-            - express.ui.nav_control
-            - express.ui.nav_menu
-            - express.ui.navset_bar
-            - express.ui.navset_card_pill
-            - express.ui.navset_card_tab
-            - express.ui.navset_card_underline
-            - express.ui.navset_hidden
-            - express.ui.navset_pill
-            - express.ui.navset_pill_list
-            - express.ui.navset_tab
-            - express.ui.navset_underline
-            - express.ui.value_box
-            - express.ui.panel_title
-            - express.ui.panel_well
-            - express.ui.panel_conditional
-            - express.ui.panel_fixed
-            - express.ui.panel_absolute
-        - kind: page
-          path: PageFunctions
-          summary:
-            name: "Page functions"
-            desc: ""
-          flatten: true
-          contents:
-            - express.ui.page_opts
     - title: Deprecated
       desc: ""
       contents:

@@ -18,8 +18,10 @@ website:
     pinned: true
     search: true
     left:
-      - text: "API"
-        file: api/index.qmd
+      - text: "API (Express)"
+        file: api-express/index.qmd
+      - text: "API (Core)"
+        file: api-core/index.qmd
     right:
       - icon: github
         href: https://github.com/posit-dev/py-shiny
