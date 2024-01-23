@@ -8,7 +8,8 @@ from typing import cast
 from htmltools import Tag, TagList
 
 from .._app import App
-from ..session import Inputs, Outputs, Session
+from ..session import Inputs, Outputs, Session, session_context
+from ._mock_session import MockSession
 from ._recall_context import RecallContextManager
 from .expressify_decorator._func_displayhook import _expressify_decorator_function_def
 from .expressify_decorator._node_transformers import (
@@ -33,13 +34,15 @@ def wrap_express_app(file: Path) -> App:
         A `shiny.App` object.
     """
     try:
-        # We tagify here, instead of waiting for the App object to do it when it wraps
-        # the UI in a HTMLDocument and calls render() on it. This is because
-        # AttributeErrors can be thrown during the tagification process, and we need to
-        # catch them here and convert them to a different type of error, because uvicorn
-        # specifically catches AttributeErrors and prints an error message that is
-        # misleading for Shiny Express. https://github.com/posit-dev/py-shiny/issues/937
-        app_ui = run_express(file).tagify()
+        with session_context(cast(Session, MockSession())):
+            # We tagify here, instead of waiting for the App object to do it when it wraps
+            # the UI in a HTMLDocument and calls render() on it. This is because
+            # AttributeErrors can be thrown during the tagification process, and we need to
+            # catch them here and convert them to a different type of error, because uvicorn
+            # specifically catches AttributeErrors and prints an error message that is
+            # misleading for Shiny Express. https://github.com/posit-dev/py-shiny/issues/937
+            app_ui = run_express(file).tagify()
+
     except AttributeError as e:
         raise RuntimeError(e) from e
 
