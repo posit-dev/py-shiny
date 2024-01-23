@@ -28,7 +28,6 @@ __all__ = (
     "nav_panel",
     "nav_control",
     "nav_menu",
-    "panel_title",
     "panel_well",
     "panel_conditional",
     "panel_fixed",
@@ -1198,40 +1197,6 @@ def value_box(
 # ======================================================================================
 # Panels
 # ======================================================================================
-
-
-def panel_title(
-    *,
-    title: str | Tag | TagList,
-    window_title: str | MISSING_TYPE = MISSING,
-) -> RecallContextManager[TagList]:
-    """
-    Context manager for a panel title
-
-    This function wraps :func:`~shiny.ui.panel_title`.
-
-
-    Parameters
-    ----------
-    title
-        A title to display in the app's UI.
-    window_title
-        A title to display on the browser tab.
-
-    Note
-    ----
-    This result of this function causes a side effect of adding a title tag to the head
-    of the document (this is necessary for the browser to display the title in the
-    browser window). You can also specify a page title explicitly using the title
-    parameter of the top-level page function (e.g., :func:`~shiny.ui.page_fluid`).
-    """
-    return RecallContextManager(
-        ui.panel_title,
-        kwargs=dict(
-            title=title,
-            window_title=window_title,
-        ),
-    )
 
 
 def panel_well(**kwargs: TagAttrValue) -> RecallContextManager[Tag]:
