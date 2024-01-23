@@ -177,15 +177,19 @@ if not TYPE_CHECKING and os.environ.get("IN_QUARTODOC") == "true":
     # This part is hidden from the typechecker because shinylive is not a direct
     # dependency of shiny and we only need this section when building the docs.
     try:
-        import shinylive
+        from shinylive import ShinyliveApp
+    except ImportError:
+        raise RuntimeError(
+            "Please install the latest version of shinylive to build the docs."
+        )
     except ModuleNotFoundError:
         raise RuntimeError("Please install shinylive to build the docs.")
 
     class ShinyliveExampleWriter(ExampleWriter):
         def write_example(self, app_files: list[str]) -> str:
             app_file = app_files.pop(0)
-            app = shinylive.url_encode(app_file, app_files, language="py")
+            app = ShinyliveApp.from_local(app_file, app_files, language="py")
 
-            return app.chunk(layout="vertical", viewerHeight=400)
+            return app.chunk(layout="vertical", viewer_height=400)
 
     example_writer = ShinyliveExampleWriter()
