@@ -2,12 +2,13 @@ import os
 
 import pytest
 from conftest import ShinyAppProc
+from controls import LayoutNavsetTab
 from playwright.sync_api import Page
 from utils.deploy_utils import prepare_deploy_and_open_url
-from controls import LayoutNavsetTab
 
 APP_NAME = "shiny-express-folium"
 app_file_path = os.path.dirname(os.path.abspath(__file__))
+
 
 @pytest.mark.only_browser("chromium")
 @pytest.mark.parametrize("location", ["connect", "shinyapps", "local"])

@@ -59,7 +59,7 @@ def server(input, output, session):
             height="100%",
         )
 
-    @reactive.calc
+    @reactive.Calc
     def filtered_df():
         # input.summary_data_selected_rows() is a tuple, so we must convert it to list,
         # as that's what Pandas requires for indexing.
@@ -114,7 +114,7 @@ def synchronize_size(output_id):
     def wrapper(func):
         input = session.get_current_session().input
 
-        @reactive.effect
+        @reactive.Effect
         def size_updater():
             func(
                 input[f".clientdata_output_{output_id}_width"](),
