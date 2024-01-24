@@ -34,5 +34,9 @@ filters:
 
 interlinks:
   sources:
+    PIL:
+      url: https://pillow.readthedocs.io/en/stable/
+    matplotlib:
+      url: https://matplotlib.org/stable/
     python:
       url: https://docs.python.org/3/
