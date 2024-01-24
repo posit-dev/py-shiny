@@ -21,4 +21,4 @@ ui.input_date(
     "Date:",
     value="2016-02-29",
     datesdisabled=["2016-03-01", "2016-03-02"],
-),
+)

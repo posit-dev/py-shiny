@@ -3,7 +3,7 @@ import numpy as np
 
 from shiny.express import input, render, ui
 
-ui.input_slider("obs", "Number of bins:", min=10, max=100, value=30),
+ui.input_slider("obs", "Number of bins:", min=10, max=100, value=30)
 
 
 @render.plot
