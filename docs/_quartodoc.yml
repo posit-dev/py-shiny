@@ -93,6 +93,7 @@ quartodoc:
       contents:
         - ui.input_file
         - ui.download_button
+        - ui.download_link
     - title: Custom UI
       desc: Lower-level UI functions for creating custom HTML/CSS/JS
       contents:
@@ -164,7 +165,9 @@ quartodoc:
         - render.image
         - render.table
         - render.text
+        - render.code
         - render.ui
+        - render.download
         - render.data_frame
         - render.DataGrid
         - render.DataTable
