@@ -4,6 +4,8 @@ from playwright.sync_api import Page
 
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=1)
-@pytest.mark.parametrize("ex_app_path", get_apps("tests/playwright/deploys"))
+@pytest.mark.parametrize(
+    "ex_app_path", get_apps("tests/playwright/shiny/deploys/shiny-express")
+)
 def test_deploy_examples(page: Page, ex_app_path: str) -> None:
     validate_example(page, ex_app_path)
