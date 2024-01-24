@@ -190,6 +190,6 @@ if not TYPE_CHECKING and os.environ.get("IN_QUARTODOC") == "true":
             app_file = app_files.pop(0)
             app = ShinyliveApp.from_local(app_file, app_files, language="py")
 
-            return app.chunk(layout="vertical", viewer_height=400)
+            return app.to_chunk(layout="vertical", viewer_height=400)
 
     example_writer = ShinyliveExampleWriter()
