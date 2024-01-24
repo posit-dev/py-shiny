@@ -31,7 +31,7 @@ example_apps: typing.List[str] = [
     *get_apps("examples"),
     *get_apps("shiny/api-examples"),
     *get_apps("shiny/templates/app-templates"),
-    *get_apps("tests/playwright/deploys"),
+    *get_apps("tests/playwright/shiny/deploys/shiny-express"),
 ]
 
 app_idle_wait = {"duration": 300, "timeout": 5 * 1000}
