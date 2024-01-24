@@ -61,8 +61,8 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.column`
+    --------
+    * :func:`~shiny.ui.column`
     """
     return div({"class": "row"}, *args, **kwargs)
 
@@ -93,8 +93,8 @@ def column(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.row`
+    --------
+    * :func:`~shiny.ui.row`
     """
 
     if width < 1 or width > 12:
@@ -130,9 +130,9 @@ def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.panel_sidebar`
-    :func:`~shiny.ui.panel_main`
+    --------
+    * :func:`~shiny.ui.panel_sidebar`
+    * :func:`~shiny.ui.panel_main`
     """
     return div({"class": "well"}, *args, **kwargs)
 
@@ -187,7 +187,7 @@ def panel_conditional(
     :class:`~shiny.render.ui`.
 
     See Also
-    -------
+    --------
     * :class:`~shiny.render.ui`
     * :func:`~shiny.ui.output_ui`
     """
@@ -266,8 +266,8 @@ def panel_fixed(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.panel_absolute`
+    --------
+    * :func:`~shiny.ui.panel_absolute`
     """
     return panel_absolute(
         *args,

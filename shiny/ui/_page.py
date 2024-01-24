@@ -189,7 +189,7 @@ def page_navbar(
         A UI element.
 
     See Also
-    -------
+    --------
     * :func:`~shiny.ui.nav`
     * :func:`~shiny.ui.nav_menu`
     * :func:`~shiny.ui.navset_bar`
@@ -295,7 +295,7 @@ def page_fillable(
         A UI element.
 
     See Also
-    -------
+    --------
     * :func:`~shiny.ui.page_fluid`
     * :func:`~shiny.ui.page_fixed`
     """
@@ -354,10 +354,10 @@ def page_fluid(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.page_fixed`
-    :func:`~shiny.ui.page_bootstrap`
-    :func:`~shiny.ui.page_navbar`
+    --------
+    * :func:`~shiny.ui.page_fixed`
+    * :func:`~shiny.ui.page_bootstrap`
+    * :func:`~shiny.ui.page_navbar`
     """
 
     return page_bootstrap(
@@ -395,10 +395,10 @@ def page_fixed(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.page_fluid`
-    :func:`~shiny.ui.page_bootstrap`
-    :func:`~shiny.ui.page_navbar`
+    --------
+    * :func:`~shiny.ui.page_fluid`
+    * :func:`~shiny.ui.page_bootstrap`
+    * :func:`~shiny.ui.page_navbar`
     """
 
     return page_bootstrap(
@@ -437,9 +437,9 @@ def page_bootstrap(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.page_fluid`
-    :func:`~shiny.ui.page_navbar`
+    --------
+    * :func:`~shiny.ui.page_fluid`
+    * :func:`~shiny.ui.page_navbar`
     """
     head = tags.title(title) if title else None
     return tags.html(

@@ -623,7 +623,7 @@ class download(Renderer[str]):
 
     See Also
     --------
-    * ~shiny.ui.download_button
+    * :func:`~shiny.ui.download_button`
     """
 
     def auto_output_ui(self) -> Tag:

@@ -1286,8 +1286,8 @@ def panel_fixed(
         Arguments passed along to :func:`~shiny.ui.panel_absolute`.
 
     See Also
-    -------
-    :func:`~shiny.ui.panel_absolute`
+    --------
+    * :func:`~shiny.ui.panel_absolute`
     """
     return RecallContextManager(
         ui.panel_fixed,

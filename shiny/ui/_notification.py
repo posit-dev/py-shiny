@@ -64,9 +64,9 @@ def notification_show(
         The notification's ``id``.
 
     See Also
-    -------
-    ~shiny.ui.notification_remove
-    ~shiny.ui.modal
+    --------
+    * :func:`~shiny.ui.notification_remove`
+    * :func:`~shiny.ui.modal`
     """
 
     session = require_active_session(session)
@@ -116,9 +116,9 @@ def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
         The notification's ``id``.
 
     See Also
-    -------
-    ~shiny.ui.notification_show
-    ~shiny.ui.modal
+    --------
+    * :func:`~shiny.ui.notification_show`
+    * :func:`~shiny.ui.modal`
 
     Example
     -------

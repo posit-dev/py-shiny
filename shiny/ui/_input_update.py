@@ -95,7 +95,7 @@ def update_action_button(
     {note}
 
     See Also
-    -------
+    --------
     * :func:`~shiny.input_action_button`
     """
 
@@ -204,8 +204,8 @@ def update_checkbox(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_checkbox
+    --------
+    * :func:`~shiny.ui.input_checkbox`
     """
 
     session = require_active_session(session)
@@ -242,8 +242,8 @@ def update_switch(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_switch
+    --------
+    * :func:`~shiny.ui.input_switch`
     """
 
     session = require_active_session(session)
@@ -288,8 +288,8 @@ def update_checkbox_group(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_checkbox_group
+    --------
+    * :func:`~shiny.ui.input_checkbox_group`
     """
 
     _update_choice_input(
@@ -340,8 +340,8 @@ def update_radio_buttons(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_radio_buttons
+    --------
+    * :func:`~shiny.ui.input_radio_buttons`
     """
 
     _update_choice_input(
@@ -423,8 +423,8 @@ def update_date(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_date
+    --------
+    * :func:`~shiny.ui.input_date`
     """
 
     session = require_active_session(session)
@@ -479,8 +479,8 @@ def update_date_range(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_date_range
+    --------
+    * :func:`~shiny.ui.input_date_range`
     """
 
     session = require_active_session(session)
@@ -534,8 +534,8 @@ def update_numeric(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_numeric
+    --------
+    * :func:`~shiny.ui.input_numeric`
     """
 
     session = require_active_session(session)
@@ -588,9 +588,9 @@ def update_select(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_select
-    ~shiny.ui.update_selectize
+    --------
+    * :func:`~shiny.ui.input_select`
+    * :func:`~shiny.ui.update_selectize`
     """
 
     session = require_active_session(session)
@@ -665,8 +665,8 @@ def update_selectize(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_selectize
+    --------
+    * :func:`~shiny.ui.input_selectize`
     """
 
     session = require_active_session(session)
@@ -854,8 +854,8 @@ def update_slider(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_slider
+    --------
+    * :func:`~shiny.ui.input_slider`
     """
 
     session = require_active_session(session)
@@ -926,8 +926,8 @@ def update_text(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.input_text
+    --------
+    * :func:`~shiny.ui.input_text`
     """
 
     session = require_active_session(session)
@@ -968,10 +968,10 @@ def update_navs(
     {note}
 
     See Also
-    -------
-    ~shiny.ui.navset_tab
-    ~shiny.ui.navset_pill
-    ~shiny.ui.page_navbar
+    --------
+    * :func:`~shiny.ui.navset_tab`
+    * :func:`~shiny.ui.navset_pill`
+    * :func:`~shiny.ui.page_navbar`
     """
 
     session = require_active_session(session)

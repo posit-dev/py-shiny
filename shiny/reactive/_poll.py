@@ -94,7 +94,7 @@ def poll(
 
     See Also
     --------
-    ~shiny.reactive.file_reader
+    * :func:`~shiny.reactive.file_reader`
     """
 
     with reactive.isolate():
@@ -268,7 +268,7 @@ def file_reader(
 
     See Also
     --------
-    ~shiny.reactive.poll
+    * :func:`~shiny.reactive.poll`
     """
 
     if isinstance(filepath, str):

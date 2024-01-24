@@ -64,9 +64,9 @@ class DataGrid(AbstractTabularData):
 
     See Also
     --------
-    :func:`~shiny.ui.output_data_frame`
-    :class:`~shiny.render.data_frame`
-    :class:`~shiny.render.DataTable`
+    * :func:`~shiny.ui.output_data_frame`
+    * :class:`~shiny.render.data_frame`
+    * :class:`~shiny.render.DataTable`
     """
 
     def __init__(
@@ -151,9 +151,9 @@ class DataTable(AbstractTabularData):
 
     See Also
     --------
-    :func:`~shiny.ui.output_data_frame`
-    :class:`~shiny.render.data_frame`
-    :class:`~shiny.render.DataGrid`
+    * :func:`~shiny.ui.output_data_frame`
+    * :class:`~shiny.render.data_frame`
+    * :class:`~shiny.render.DataGrid`
     """
 
     def __init__(

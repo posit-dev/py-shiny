@@ -319,7 +319,7 @@ class App:
 
         See Also
         --------
-        ~shiny.Session.close
+        * :func:`~shiny.Session.close`
         """
         # convert to list to avoid modifying the dict while iterating over it, which
         # throws an error

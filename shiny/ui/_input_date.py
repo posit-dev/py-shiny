@@ -105,9 +105,9 @@ def input_date(
     :::
 
     See Also
-    -------
-    ~shiny.ui.update_date
-    ~shiny.ui.input_date_range
+    --------
+    * :func:`~shiny.ui.update_date`
+    * :func:`~shiny.ui.input_date_range`
     """
 
     resolved_id = resolve_id(id)
@@ -224,9 +224,9 @@ def input_date_range(
     :::
 
     See Also
-    -------
-    ~shiny.ui.update_date_range
-    ~shiny.ui.input_date
+    --------
+    * :func:`~shiny.ui.update_date_range`
+    * :func:`~shiny.ui.input_date`
     """
 
     resolved_id = resolve_id(id)
