@@ -31,21 +31,21 @@ def filtered_df() -> pd.DataFrame:
 
 with ui.layout_columns():
     with ui.value_box(theme="primary"):
-        "Adelie",
+        "Adelie"
 
         @render.text
         def adelie_count():
             return count_species(filtered_df(), "Adelie")
 
     with ui.value_box(theme="primary"):
-        "Gentoo",
+        "Gentoo"
 
         @render.text
         def gentoo_count():
             return count_species(filtered_df(), "Gentoo")
 
     with ui.value_box(theme="primary"):
-        "Chinstrap",
+        "Chinstrap"
 
         @render.text
         def chinstrap_count():
