@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 import subprocess
 import typing
 
@@ -16,6 +17,12 @@ api_key = os.environ.get("DEPLOY_CONNECT_SERVER_API_KEY")
 name = os.environ.get("DEPLOY_SHINYAPPS_NAME")
 token = os.environ.get("DEPLOY_SHINYAPPS_TOKEN")
 secret = os.environ.get("DEPLOY_SHINYAPPS_SECRET")
+
+
+skip_if_not_python_310 = pytest.mark.skipif(
+    platform.python_version_tuple()[:2] != ("3", "10"),
+    reason="Test requires Python 3.10",
+)
 
 
 def exception_swallower(

@@ -4,12 +4,13 @@ import pytest
 from conftest import ShinyAppProc
 from controls import Card, OutputTextVerbatim
 from playwright.sync_api import Page
-from utils.deploy_utils import prepare_deploy_and_open_url
+from utils.deploy_utils import prepare_deploy_and_open_url, skip_if_not_python_310
 
 APP_NAME = "express_page_fluid"
 app_file_path = os.path.dirname(os.path.abspath(__file__))
 
 
+@skip_if_not_python_310
 @pytest.mark.only_browser("chromium")
 @pytest.mark.parametrize("location", ["connect", "shinyapps", "local"])
 def test_express_page_fluid(page: Page, location: str, local_app: ShinyAppProc) -> None:

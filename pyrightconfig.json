@@ -8,7 +8,7 @@
     "sandbox",
     "_dev",
     "docs",
-    "tests/playwright/deploys/apps",
+    "tests/playwright/shiny/deploys",
     "shiny/templates"
   ],
   "typeCheckingMode": "strict",

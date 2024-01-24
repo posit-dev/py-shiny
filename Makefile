@@ -86,8 +86,6 @@ test: ## run tests quickly with the default Python
 # Default `SUB_FILE` to empty
 SUB_FILE:=
 
-DEPLOYS_FILE:=tests/playwright/deploys
-
 install-playwright:
 	playwright install --with-deps
 

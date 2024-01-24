@@ -107,35 +107,6 @@ jobs:
         run: |
           make playwright-examples
 
-  playwright-deploys:
-    # Only allow one `playwright-deploys` job to run at a time. (Independent of branch / PR)
-    concurrency: playwright-deploys
-    runs-on: ${{ matrix.os }}
-    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'deploy')) }}
-    strategy:
-      matrix:
-        python-version: ["3.10"]
-        os: [ubuntu-latest]
-      fail-fast: false
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup py-shiny
-        uses: ./.github/py-shiny/setup
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Run tests for deploys
-        env:
-          DEPLOY_CONNECT_SERVER_URL: "https://rsc.radixu.com/"
-          DEPLOY_CONNECT_SERVER_API_KEY: "${{ secrets.DEPLOY_CONNECT_SERVER_API_KEY }}"
-          DEPLOY_SHINYAPPS_NAME: "${{ secrets.DEPLOY_SHINYAPPS_NAME }}"
-          DEPLOY_SHINYAPPS_TOKEN: "${{ secrets.DEPLOY_SHINYAPPS_TOKEN }}"
-          DEPLOY_SHINYAPPS_SECRET: "${{ secrets.DEPLOY_SHINYAPPS_SECRET }}"
-        timeout-minutes: 30
-        run: |
-          make playwright-deploys
-
   pypi:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest

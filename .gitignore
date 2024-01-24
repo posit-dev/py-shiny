@@ -113,5 +113,4 @@ docs/source/reference/
 
 # Developer scratch area
 _dev/
-tests/playwright/shiny/shiny-express/*/requirements.txt
-tests/playwright/shiny/plotly/*/requirements.txt
+tests/playwright/shiny/deploys/shiny-express/*/requirements.txt

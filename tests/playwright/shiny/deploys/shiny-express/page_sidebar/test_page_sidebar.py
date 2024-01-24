@@ -4,7 +4,7 @@ import pytest
 from conftest import ShinyAppProc
 from controls import OutputTextVerbatim, Sidebar
 from playwright.sync_api import Page
-from utils.deploy_utils import prepare_deploy_and_open_url
+from utils.deploy_utils import prepare_deploy_and_open_url, skip_if_not_python_310
 from utils.express_utils import compare_annotations
 
 from shiny import ui
@@ -14,6 +14,7 @@ APP_NAME = "express_page_sidebar"
 app_file_path = os.path.dirname(os.path.abspath(__file__))
 
 
+@skip_if_not_python_310
 @pytest.mark.only_browser("chromium")
 @pytest.mark.parametrize("location", ["connect", "shinyapps", "local"])
 def test_express_page_sidebar(
