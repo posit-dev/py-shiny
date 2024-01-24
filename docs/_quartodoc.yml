@@ -257,6 +257,7 @@ quartodoc:
             - ui.Sidebar
             - ui.CardItem
             - ui.AccordionPanel
+            - reactive.Context
             - name: ui.css.CssUnit
               dynamic: false
             - ui._input_slider.SliderValueArg
@@ -278,6 +279,12 @@ quartodoc:
             - name: htmltools.TagChild
               dynamic: false
             - name: htmltools.TagList
+              dynamic: false
+            - name: htmltools.TagFunction
+              dynamic: false
+            - name: htmltools.Tagifiable
+              dynamic: false
+            - name: htmltools.MetadataNode
               dynamic: false
         - kind: page
           path: ExceptionTypes
