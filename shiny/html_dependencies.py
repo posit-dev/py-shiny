@@ -1,14 +1,28 @@
+import os
+
 from htmltools import HTMLDependency
 
 
-def shiny_deps() -> HTMLDependency:
-    return HTMLDependency(
-        name="shiny",
-        version="0.0.1",
-        source={"package": "shiny", "subdir": "www/shared/"},
-        script={"src": "shiny.js"},
-        stylesheet={"href": "shiny.min.css"},
-    )
+def shiny_deps() -> list[HTMLDependency]:
+    deps = [
+        HTMLDependency(
+            name="shiny",
+            version="0.0.1",
+            source={"package": "shiny", "subdir": "www/shared/"},
+            script={"src": "shiny.js"},
+            stylesheet={"href": "shiny.min.css"},
+        )
+    ]
+    if os.getenv("SHINY_DEV_MODE") == "1":
+        deps.append(
+            HTMLDependency(
+                "shiny-devmode",
+                version="0.0.1",
+                head="<script>window.__SHINY_DEV_MODE__ = true;</script>",
+            )
+        )
+
+    return deps
 
 
 def jquery_deps() -> HTMLDependency:

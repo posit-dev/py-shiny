@@ -143,6 +143,13 @@ any of the following will work:
     help="Launch app browser after app starts, using the Python webbrowser module.",
     show_default=True,
 )
+@click.option(
+    "--dev-mode/--no-dev-mode",
+    is_flag=True,
+    default=True,
+    help="Dev mode",
+    show_default=True,
+)
 @no_example
 def run(
     app: str | shiny.App,
@@ -159,6 +166,7 @@ def run(
     app_dir: str,
     factory: bool,
     launch_browser: bool,
+    dev_mode: bool,
     **kwargs: object,
 ) -> None:
     reload_includes_list = reload_includes.split(",")
@@ -177,6 +185,7 @@ def run(
         app_dir=app_dir,
         factory=factory,
         launch_browser=launch_browser,
+        dev_mode=dev_mode,
         **kwargs,
     )
 
@@ -196,6 +205,7 @@ def run_app(
     app_dir: Optional[str] = ".",
     factory: bool = False,
     launch_browser: bool = False,
+    dev_mode: bool = True,
     **kwargs: object,
 ) -> None:
     """
@@ -276,6 +286,8 @@ def run_app(
 
     os.environ["SHINY_HOST"] = host
     os.environ["SHINY_PORT"] = str(port)
+    if dev_mode:
+        os.environ["SHINY_DEV_MODE"] = "1"
 
     if isinstance(app, str):
         # Remove ":app" suffix if present. Normally users would just pass in the
