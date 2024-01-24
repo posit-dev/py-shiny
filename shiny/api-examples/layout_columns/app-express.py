@@ -1,7 +1,6 @@
 from model_plots import *  # model plots and cards
 
-from shiny import render
-from shiny.express import input, ui
+from shiny.express import input, render, ui
 
 ui.page_opts(title="Model Dashboard")
 
