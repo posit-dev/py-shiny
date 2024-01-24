@@ -32,7 +32,7 @@ from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
 from .http_staticfiles import FileResponse, StaticFiles
-from .session import Inputs, Outputs, Session, session_context
+from .session._session import Inputs, Outputs, Session, session_context
 
 T = TypeVar("T")
 

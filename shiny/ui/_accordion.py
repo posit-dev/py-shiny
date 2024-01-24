@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import random
-from typing import Literal, Optional, TypeVar
+from typing import TYPE_CHECKING, Literal, Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
 from .._utils import drop_none
-from ..session import Session, require_active_session
+from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import components_dependency
 from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit
+
+if TYPE_CHECKING:
+    from .. import Session
 
 __all__ = (
     "accordion",

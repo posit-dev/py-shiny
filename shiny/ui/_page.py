@@ -273,13 +273,13 @@ def page_fillable(
     *args
         UI elements.
     padding
-        Padding to use for the body. See :func:`~shiny.ui.css_unit.as_css_padding`
+        Padding to use for the body. See :func:`~shiny.ui.css.as_css_padding`
         for more details.
     fillable_mobile
         Whether or not the page should fill the viewport's height on mobile devices
         (i.e., narrow windows).
     gap
-        A CSS length unit passed through :func:`~shiny.ui.css_unit.as_css_unit`
+        A CSS length unit passed through :func:`~shiny.ui.css.as_css_unit`
         defining the `gap` (i.e., spacing) between elements provided to `*args`.
     title
         The browser window title (defaults to the host URL of the page). Can also be set

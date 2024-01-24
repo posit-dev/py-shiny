@@ -184,12 +184,12 @@ def panel_conditional(
     Tip
     ---
     A more powerful (but slower) way to conditionally show UI content is to use
-    :func:`~shiny.render.ui`.
+    :class:`~shiny.render.ui`.
 
     See Also
     -------
-    ~shiny.render.ui
-    ~shiny.ui.output_ui
+    * :class:`~shiny.render.ui`
+    * :func:`~shiny.ui.output_ui`
     """
 
     ns_prefix = current_namespace()

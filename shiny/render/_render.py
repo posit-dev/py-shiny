@@ -89,8 +89,8 @@ class text(Renderer[str]):
 
     See Also
     --------
-    * ~shiny.render.code
-    * ~shiny.ui.output_text
+    * :class:`~shiny.render.code`
+    * :func:`~shiny.ui.output_text`
     """
 
     def auto_output_ui(
@@ -150,8 +150,8 @@ class code(Renderer[str]):
 
     See Also
     --------
-    * ~shiny.render.code
-    * ~shiny.ui.output_code
+    * :class:`~shiny.render.code`
+    * :func:`~shiny.ui.output_code`
     """
 
     def auto_output_ui(
@@ -238,8 +238,8 @@ class plot(Renderer[object]):
 
     See Also
     --------
-    * ~shiny.ui.output_plot
-    * ~shiny.render.image
+    * :func:`~shiny.ui.output_plot`
+    * :class:`~shiny.render.image`
     """
 
     def auto_output_ui(
@@ -409,9 +409,9 @@ class image(Renderer[ImgData]):
 
     See Also
     --------
-    * ~shiny.ui.output_image
-    * ~shiny.types.ImgData
-    * ~shiny.render.plot
+    * :func:`~shiny.ui.output_image`
+    * :class:`~shiny.types.ImgData`
+    * :class:`~shiny.render.plot`
     """
 
     def auto_output_ui(self, **kwargs: object):
@@ -466,21 +466,21 @@ class table(Renderer[TableResult]):
     Reactively render a pandas ``DataFrame`` object (or similar) as a basic HTML
     table.
 
-    Consider using :func:`~shiny.render.data_frame` instead of this renderer, as
+    Consider using :class:`~shiny.render.data_frame` instead of this renderer, as
     it provides high performance virtual scrolling, built-in filtering and sorting,
     and a better default appearance. This renderer may still be helpful if you
     use pandas styling features that are not currently supported by
-    :func:`~shiny.render.data_frame`.
+    :class:`~shiny.render.data_frame`.
 
     Parameters
     ----------
     index
-        Whether to print index (row) labels. (Ignored for pandas :class:`Styler`
+        Whether to print index (row) labels. (Ignored for pandas :class:`~pandas.io.formats.style.Styler`
         objects; call ``style.hide(axis="index")`` from user code instead.)
     classes
         CSS classes (space separated) to apply to the resulting table. By default, we
         use `table shiny-table w-auto` which is designed to look reasonable with
-        Bootstrap 5. (Ignored for pandas :class:`Styler` objects; call
+        Bootstrap 5. (Ignored for pandas :class:`~pandas.io.formats.style.Styler` objects; call
         ``style.set_table_attributes('class="dataframe table shiny-table w-auto"')``
         from user code instead.)
     **kwargs
@@ -492,8 +492,8 @@ class table(Renderer[TableResult]):
     :
         A decorator for a function that returns any of the following:
 
-        1. A pandas :class:`DataFrame` object.
-        2. A pandas :class:`Styler` object.
+        1. A pandas :class:`~pandas.DataFrame` object.
+        2. A pandas :class:`~pandas.io.formats.style.Styler` object.
         3. Any object that has a `.to_pandas()` method (e.g., a Polars data frame or
            Arrow table).
 
@@ -505,7 +505,7 @@ class table(Renderer[TableResult]):
 
     See Also
     --------
-    * ~shiny.ui.output_table for the corresponding UI component to this render function.
+    * :func:`~shiny.ui.output_table` for the corresponding UI component to this render function.
     """
 
     def auto_output_ui(self, **kwargs: TagAttrValue) -> Tag:
@@ -575,9 +575,9 @@ class ui(Renderer[TagChild]):
     -------
     :
         A decorator for a function that returns an object of type
-        :class:`~shiny.ui.TagChild`.
+        :class:`~htmltools.TagChild`.
 
-    Tip
+    Tips
     ----
     The name of the decorated function (or ``@output(id=...)``) should match the ``id``
     of a :func:`~shiny.ui.output_ui` container (see :func:`~shiny.ui.output_ui` for
@@ -585,7 +585,7 @@ class ui(Renderer[TagChild]):
 
     See Also
     --------
-    * ~shiny.ui.output_ui
+    * :func:`~shiny.ui.output_ui`
     """
 
     def auto_output_ui(self) -> Tag:

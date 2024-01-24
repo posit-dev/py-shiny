@@ -102,7 +102,7 @@ def showcase_left_center(
     """
     Showcase left center
 
-    A :func:`~shiny.ui.showcase_left_center` is a :class:`~shiny.ui.ShowcaseLayout` with
+    A :func:`~shiny.ui.showcase_left_center` is a `ShowcaseLayout` with
     the following default properties:
 
     * `width` is `"30%"`
@@ -136,7 +136,7 @@ def showcase_top_right(
     """
     Showcase top right
 
-    A :func:`~shiny.ui.showcase_top_right` is a :class:`~shiny.ui.ShowcaseLayout` with
+    A :func:`~shiny.ui.showcase_top_right` is a `ShowcaseLayout` with
     the following default properties:
 
     * `width` is `"40%"`
@@ -173,7 +173,7 @@ def showcase_bottom(
     """
     Showcase bottom
 
-    A :func:`~shiny.ui.showcase_bottom` is a :class:`~shiny.ui.ShowcaseLayout` with
+    A :func:`~shiny.ui.showcase_bottom` is a `ShowcaseLayout` with
     the following default properties:
 
     * `width` is `"100%"`
@@ -262,12 +262,11 @@ def value_box_theme(
     Returns
     -------
     :
-        A :class:`~shiny.ui.ValueBoxTheme`
+        A `ValueBoxTheme`
 
     See Also
     --------
     * :func:`~shiny.ui.value_box`
-    * :class:`~shiny.ui.ValueBoxTheme`
     """
     # bg
     #     If only `bg` is provided,
@@ -382,8 +381,6 @@ def value_box(
     * :func:`~shiny.ui.showcase_bottom`
     * :func:`~shiny.ui.showcase_left_center`
     * :func:`~shiny.ui.showcase_top_right`
-    * :class:`~shiny.ui.ShowcaseLayout`
-    * :class:`~shiny.ui.ValueBoxTheme`
     * :func:`~shiny.ui.card`
     """
 
