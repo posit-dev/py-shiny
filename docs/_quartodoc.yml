@@ -316,6 +316,7 @@ quartodoc:
             - express.ui.navset_tab
             - express.ui.navset_underline
             - express.ui.value_box
+            - express.ui.panel_title
             - express.ui.panel_well
             - express.ui.panel_conditional
             - express.ui.panel_fixed

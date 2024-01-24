@@ -480,6 +480,7 @@ class Effect_:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
 
+        from ..express._mock_session import MockSession
         from ..render.renderer import Renderer
 
         if isinstance(fn, Renderer):
@@ -514,6 +515,12 @@ class Effect_:
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
             session = get_current_session()
+
+        if isinstance(session, MockSession):
+            # If we're in a MockSession, then don't actually set up this Effect -- we
+            # don't want it to try to run later.
+            return
+
         self._session = session
 
         if self._session is not None:

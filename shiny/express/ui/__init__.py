@@ -63,6 +63,7 @@ from ...ui import (
     input_task_button,
     input_text,
     input_text_area,
+    panel_title,
     insert_accordion_panel,
     remove_accordion_panel,
     update_accordion,
@@ -201,6 +202,7 @@ __all__ = (
     "bind_task_button",
     "input_task_button",
     "input_text",
+    "panel_title",
     "input_text_area",
     "insert_accordion_panel",
     "remove_accordion_panel",
@@ -293,7 +295,6 @@ _known_missing = {
         "page_output",
         "panel_main",  # Deprecated
         "panel_sidebar",  # Deprecated
-        "panel_title",
         "showcase_bottom",
         "showcase_left_center",
         "showcase_top_right",
