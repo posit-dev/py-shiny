@@ -8,6 +8,7 @@ from shiny.express import input, render, ui
 
 sns.set_theme(style="white")
 df = pd.read_csv(Path(__file__).parent / "penguins.csv", na_values="NA")
+species = ["Adelie", "Gentoo", "Chinstrap"]
 
 ui.page_opts(fillable=True)
 
