@@ -1,4 +1,4 @@
-from shiny.express import input, ui
+from shiny.express import ui
 
 ui.input_checkbox("show", "Show radio buttons", False)
 
