@@ -4,8 +4,8 @@ import numpy as np
 from shiny import reactive
 from shiny.express import input, render, ui
 
-ui.input_slider("n", "Number of observations", min=0, max=1000, value=500),
-ui.input_action_link("go", "Go!"),
+ui.input_slider("n", "Number of observations", min=0, max=1000, value=500)
+ui.input_action_link("go", "Go!")
 
 
 @render.plot(alt="A histogram")
