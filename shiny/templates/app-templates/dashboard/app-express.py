@@ -19,7 +19,7 @@ def count_species(df, species):
 
 with ui.sidebar():
     ui.input_slider("mass", "Mass", 2000, 6000, 3400)
-    ui.input_checkbox_group("species", "Filter by species", species, selected=species),
+    ui.input_checkbox_group("species", "Filter by species", species, selected=species)
 
 
 @reactive.Calc
