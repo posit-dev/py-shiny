@@ -31,8 +31,12 @@ from htmltools import (
     tags,
 )
 
-# Expose the following modules for extended usage: ex: ui.fill.as_fill_item(x)
-from . import css, fill  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from . import (
+    # The css module is for internal use, so we won't re-export it.
+    css,  # noqa: F401  # pyright: ignore[reportUnusedImport]
+    # Expose the fill module for extended usage: ex: ui.fill.as_fill_item(x).
+    fill,
+)
 from ._accordion import (
     AccordionPanel,
     accordion,
@@ -346,6 +350,8 @@ __all__ = (
     "strong",
     "em",
     "hr",
+    # Submodules
+    "fill",
     # utils
     "js_eval",
 )
