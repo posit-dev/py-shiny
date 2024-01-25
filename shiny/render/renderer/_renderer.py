@@ -230,12 +230,6 @@ class Renderer(Generic[IT]):
     ) -> DefaultUIFnResultOrNone:
         """
         Express mode method that automatically generates the output's UI.
-
-        Parameters
-        ----------
-        id
-            Output function name or ID (provided to `@output(id=)`). This value will
-            contain any module prefix.
         """
         return None
 

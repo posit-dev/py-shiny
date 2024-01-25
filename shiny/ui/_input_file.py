@@ -76,7 +76,7 @@ def input_file(
 
     See Also
     --------
-    ~shiny.ui.download_button
+    * :func:`~shiny.ui.download_button`
     """
 
     if isinstance(accept, str):

@@ -59,11 +59,11 @@ def input_checkbox(
     :::
 
     See Also
-    -------
-    ~shiny.ui.input_switch
-    ~shiny.ui.update_checkbox
-    ~shiny.ui.input_checkbox_group
-    ~shiny.ui.input_radio_buttons
+    --------
+    * :func:`~shiny.ui.input_switch`
+    * :func:`~shiny.ui.update_checkbox`
+    * :func:`~shiny.ui.input_checkbox_group`
+    * :func:`~shiny.ui.input_radio_buttons`
     """
 
     return div(
@@ -117,11 +117,11 @@ def input_switch(
     :::
 
     See Also
-    -------
-    ~shiny.ui.input_checkbox
-    ~shiny.ui.update_switch
-    ~shiny.ui.input_checkbox_group
-    ~shiny.ui.input_radio_buttons
+    --------
+    * :func:`~shiny.ui.input_checkbox`
+    * :func:`~shiny.ui.update_switch`
+    * :func:`~shiny.ui.input_checkbox_group`
+    * :func:`~shiny.ui.input_radio_buttons`
     """
 
     return _bslib_input_checkbox(
@@ -209,10 +209,10 @@ def input_checkbox_group(
     :::
 
     See Also
-    -------
-    ~shiny.ui.update_checkbox_group
-    ~shiny.ui.input_checkbox
-    ~shiny.ui.input_radio_buttons
+    --------
+    * :func:`~shiny.ui.update_checkbox_group`
+    * :func:`~shiny.ui.input_checkbox`
+    * :func:`~shiny.ui.input_radio_buttons`
     """
 
     resolved_id = resolve_id(id)
@@ -279,10 +279,10 @@ def input_radio_buttons(
     :::
 
     See Also
-    -------
-    ~shiny.ui.update_radio_buttons
-    ~shiny.ui.input_checkbox_group
-    ~shiny.ui.input_checkbox
+    --------
+    * :func:`~shiny.ui.update_radio_buttons`
+    * :func:`~shiny.ui.input_checkbox_group`
+    * :func:`~shiny.ui.input_checkbox`
     """
 
     resolved_id = resolve_id(id)

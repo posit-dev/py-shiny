@@ -29,21 +29,17 @@ app_ui = ui.page_sidebar(
             "species", "Filter by species", species, selected=species
         ),
     ),
-    ui.row(
-        ui.layout_columns(
-            *[make_value_box(penguin) for penguin in species],
-        )
+    ui.layout_columns(
+        *[make_value_box(penguin) for penguin in species],
     ),
-    ui.row(
-        ui.layout_columns(
-            ui.card(
-                ui.card_header("Summary statistics"),
-                ui.output_data_frame("summary_statistics"),
-            ),
-            ui.card(
-                ui.card_header("Penguin bills"),
-                ui.output_plot("length_depth"),
-            ),
+    ui.layout_columns(
+        ui.card(
+            ui.card_header("Summary statistics"),
+            ui.output_data_frame("summary_statistics"),
+        ),
+        ui.card(
+            ui.card_header("Penguin bills"),
+            ui.output_plot("length_depth"),
         ),
     ),
 )

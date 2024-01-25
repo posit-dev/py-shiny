@@ -30,6 +30,7 @@ class FileContentJson(TypedDict):
 
 class Renderer(MdRenderer):
     style = "shiny"
+    express_api = False
 
     @dispatch
     def render(self, el: qast.DocstringSectionSeeAlso):
@@ -50,6 +51,24 @@ class Renderer(MdRenderer):
         rendered = super().render(el)
 
         converted = convert_rst_link_to_md(rendered)
+
+        # If we're rendering the API reference for Express, try our best to
+        # keep you in the Express site. For example, something like shiny.ui.input_text()
+        # simply gets re-exported as shiny.express.ui.input_text(), but it's docstrings
+        # will link to shiny.ui, not shiny.express.ui. This fixes that.
+        if self.express_api:
+            converted = converted.replace("shiny.ui.", "shiny.express.ui.")
+            # If this el happens to point to itself, it's probably intentionally
+            # pointing to Core (i.e., express context managers mention that they
+            # wrap Core functions), so don't change that.
+            # TODO: we want to be more agressive about context managers always
+            # pointing to the Core docs?
+            if f"shiny.express.ui.{el.name}" in converted:
+                print(f"Changing Express link to Core for: {el.name}")
+                converted = converted.replace(
+                    f"shiny.express.ui.{el.name}", f"shiny.ui.{el.name}"
+                )
+            converted = converted.replace("shiny.render.", "shiny.express.render.")
 
         check_if_missing_expected_example(el, converted)
 

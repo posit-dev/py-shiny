@@ -46,8 +46,8 @@ def input_password(
     :::
 
     See Also
-    -------
-    ~shiny.ui.update_text
+    --------
+    * :func:`~shiny.ui.update_text`
     """
     resolved_id = resolve_id(id)
     return div(

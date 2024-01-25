@@ -295,7 +295,7 @@ def card_body(
     height
         Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
         `full_screen` (in this case, consider setting a `height` in
-        :func:`~shiny.ui.card_body`).
+        `card_body()`).
     padding
         Padding to use for the body. This can be a numeric vector
         (which will be interpreted as pixels) or a character vector with valid CSS
@@ -326,7 +326,7 @@ def card_body(
         (or multiple columns inside a card).
     * :func:`~shiny.ui.card` for creating a card component.
     * :func:`~shiny.ui.card_header` for creating a header within the card.
-    * :func:`~shiny.ui.card_title` for creating a title within the card body.
+    * :func:`~shiny.experimental.ui.card_title` for creating a title within the card body.
     * :func:`~shiny.ui.card_footer` for creating a footer within the card.
     """
     if isinstance(max_height_full_screen, MISSING_TYPE):
@@ -371,7 +371,7 @@ class CardItem:
     """
     A wrapper around a :class:`~htmltools.Tag` object that represents the content of a
     card item (e.g., :func:`~shiny.ui.card_header` or
-    :func:`~shiny.card_footer`).
+    :func:`~shiny.ui.card_footer`).
 
     This class is used to allow for consecutive non-card items to be bundled into a
     single group within :func:`~shiny.ui.card`.
@@ -381,7 +381,7 @@ class CardItem:
     item
         A :class:`~htmltools.Tag` object that represents the content of a card item
         (e.g., :func:`~shiny.ui.card_header` or
-        :func:`~shiny.card_footer`).
+        :func:`~shiny.ui.card_footer`).
 
     See Also
     --------

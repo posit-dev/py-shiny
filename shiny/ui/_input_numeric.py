@@ -52,8 +52,8 @@ def input_numeric(
     :::
 
     See Also
-    -------
-    ~shiny.ui.update_numeric
+    --------
+    * :func:`~shiny.ui.update_numeric`
     """
 
     resolved_id = resolve_id(id)

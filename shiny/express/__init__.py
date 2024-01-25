@@ -42,11 +42,39 @@ session: _Session
 # returns the input for the current session. This will work in the vast majority of
 # cases, but when it fails, it will be very confusing.
 def __getattr__(name: str) -> object:
+    session = _get_current_session()
+
     if name == "input":
-        return _get_current_session().input  # pyright: ignore
+        if session is None:
+            return _ExpressOnlyPlaceholder("input")
+        else:
+            return session.input  # pyright: ignore
     elif name == "output":
-        return _get_current_session().output  # pyright: ignore
+        if session is None:
+            return _ExpressOnlyPlaceholder("output")
+        else:
+            return session.output  # pyright: ignore
     elif name == "session":
-        return _get_current_session()
+        if session is None:
+            return _ExpressOnlyPlaceholder("session")
+        else:
+            return session
 
     raise AttributeError(f"Module 'shiny.express' has no attribute '{name}'")
+
+
+class _ExpressOnlyPlaceholder:
+    """Placeholder class for objects that can only be used in a Shiny Express app."""
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def __getattr__(self, name: str) -> None:
+        raise RuntimeError(
+            f"shiny.express.{self.name} can only be used inside of a Shiny Express app."
+        )
+
+    def __call__(self, *args: object, **kwargs: object) -> None:
+        raise RuntimeError(
+            f"shiny.express.{self.name} can only be used inside of a Shiny Express app."
+        )

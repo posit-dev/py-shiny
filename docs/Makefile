@@ -51,7 +51,8 @@ quartodoc: $(PYBIN) ## Build qmd files for API docs
 	$(eval export IN_QUARTODOC=true)
 	. $(PYBIN)/activate \
 	  && quartodoc interlinks \
-	  && quartodoc build --config _quartodoc.yml --verbose
+	  && SHINY_MODE="core" quartodoc build --config _quartodoc-core.yml --verbose \
+	  && SHINY_MODE="express" quartodoc build --config _quartodoc-express.yml --verbose
 
 site:  ## Build website
 	. $(PYBIN)/activate \
