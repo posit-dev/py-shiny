@@ -95,8 +95,11 @@ install-trcli:
 install-rsconnect: ## install the main version of rsconnect till pypi version supports shiny express
 	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
 
-playwright-shiny: install-playwright install-rsconnect ## end-to-end tests with playwright
+playwright-shiny: install-playwright ## end-to-end tests with playwright
 	pytest tests/playwright/shiny/$(SUB_FILE)
+
+playwright-deploys: install-playwright install-rsconnect ## end-to-end tests on examples with playwright
+	pytest tests/playwright/deploys/$(SUB_FILE)
 
 playwright-examples: install-playwright ## end-to-end tests on examples with playwright
 	pytest tests/playwright/examples/$(SUB_FILE)
