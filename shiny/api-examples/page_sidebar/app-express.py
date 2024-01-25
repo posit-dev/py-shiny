@@ -3,8 +3,6 @@ import numpy as np
 
 from shiny.express import input, render, ui
 
-ui.page_opts(page_fn=page_fixed)
-
 with ui.sidebar():
     ui.input_slider("n", "N", min=0, max=100, value=20)
 

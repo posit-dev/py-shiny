@@ -1,6 +1,10 @@
-from model_plots import *  # model plots and cards
+from model_plots import (
+    plot_accuracy_over_time,
+    plot_feature_importance,
+    plot_loss_over_time,
+)
 
-from shiny.express import input, render, ui
+from shiny.express import render, ui
 
 ui.page_opts(title="Model Dashboard")
 
