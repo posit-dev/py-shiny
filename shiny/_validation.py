@@ -27,8 +27,8 @@ def req(*args: T, cancel_output: bool | Literal["progress"] = False) -> T | None
     """
     Throw a silent exception for falsy values.
 
-    This is a convenient shorthand for throwing :func:`~shiny.types.SilentException` /
-    :func:`~shiny.types.SilentCancelOutputException` if any of the arguments are falsy.
+    This is a convenient shorthand for throwing :class:`~shiny.types.SilentException` /
+    :class:`~shiny.types.SilentCancelOutputException` if any of the arguments are falsy.
 
     The term "falsy" generally indicates that a value is considered `False` when
     encountered in a logical context. We use the term a little loosely here; our usage
@@ -42,8 +42,8 @@ def req(*args: T, cancel_output: bool | Literal["progress"] = False) -> T | None
     *args
         Any number of arguments to check.
     cancel_output
-        If ``True``, throw :func:`~shiny.types.SilentCancelOutputException` instead of
-        :func:`~shiny.types.SilentException`.
+        If ``True``, throw :class:`~shiny.types.SilentCancelOutputException` instead of
+        :class:`~shiny.types.SilentException`.
 
     Returns
     -------

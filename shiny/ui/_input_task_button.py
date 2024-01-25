@@ -113,8 +113,10 @@ def input_task_button(
     :::
 
     See Also
-    -------
-    ~shiny.ui.update_task_button ~shiny.ui.input_action_button ~shiny.reactive.event
+    --------
+    * :func:`~shiny.ui.update_task_button`
+    * :func:`~shiny.ui.input_action_button`
+    * :func:`~shiny.reactive.event`
     """
 
     if "_add_ws" not in kwargs:

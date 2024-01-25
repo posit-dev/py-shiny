@@ -33,13 +33,13 @@ def popover(
     trigger
         The UI element to serve as the popover trigger (typically a
         :func:`~shiny.ui.input_action_button` or similar). If `trigger` renders as
-        multiple HTML elements (e.g., it's a :func:`~shiny.ui.tags.TagList`), the last
+        multiple HTML elements (e.g., it's a :class:`~shiny.ui.TagList`), the last
         HTML element is used for the trigger. If the `trigger` should contain all of
         those elements, wrap the object in a :func:`~shiny.ui.tags.div` or
         :func:`~shiny.ui.tags.span`.
     *args
         UI elements for the popover's body. Character strings are
-        automatically escaped unless marked as :func:`~shiny.html`.
+        automatically escaped unless marked as :class:`~shiny.ui.HTML`.
     title
         A title (header) for the popover.
     id

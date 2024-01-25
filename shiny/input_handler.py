@@ -44,7 +44,7 @@ Manage Shiny input handlers.
 
 Add and/or remove input handlers of a given ``type``. Shiny uses these handlers to
 pre-process input values from the client (after being deserialized) before passing them
-to the ``input`` argument of an :func:`~shiny.App`'s ``server`` function.
+to the ``input`` argument of an :class:`~shiny.App`'s ``server`` function.
 
 The ``type`` is based on the ``getType()`` JavaScript method on the relevant Shiny
 input binding. See `this article <https://shiny.posit.co/articles/js-custom-input.html>`_

@@ -147,7 +147,7 @@ def layout_sidebar(
     This function wraps :func:`~shiny.ui.layout_sidebar`.
 
     Create a sidebar layout component which can be dropped inside any Shiny UI page
-    method (e.g. :func:`~shiny.shiny.ui.page_fillable`) or :func:`~shiny.ui.card`
+    method (e.g. :func:`~shiny.ui.page_fillable`) or :func:`~shiny.ui.card`
     context.
 
     The first child needs to be of class :class:`~shiny.ui.Sidebar` object created by
@@ -159,10 +159,10 @@ def layout_sidebar(
     ----------
     fillable
         Whether or not the main content area should be wrapped in a fillable container.
-        See :func:`~shiny.ui.as_fillable_container` for details.
+        See :func:`~shiny.ui.fill.as_fillable_container` for details.
     fill
         Whether or not the sidebar layout should be wrapped in a fillable container. See
-        :func:`~shiny.ui.as_fill_item` for details.
+        :func:`~shiny.ui.fill.as_fill_item` for details.
     bg,fg
         A background or foreground color.
     border
@@ -370,7 +370,7 @@ def layout_columns(
 
     See Also
     --------
-    * :func:`~shiny.express.layout.layout_column_wrap` for laying out elements into a
+    * :func:`~shiny.express.ui.layout_column_wrap` for laying out elements into a
       uniform grid.
 
     Reference
@@ -1250,7 +1250,7 @@ def panel_conditional(
     Tip
     ---
     A more powerful (but slower) way to conditionally show UI content is to use
-    :func:`~shiny.render.ui`.
+    :class:`~shiny.render.ui`.
     """
     return RecallContextManager(
         ui.panel_conditional,
@@ -1286,8 +1286,8 @@ def panel_fixed(
         Arguments passed along to :func:`~shiny.ui.panel_absolute`.
 
     See Also
-    -------
-    :func:`~shiny.ui.panel_absolute`
+    --------
+    * :func:`~shiny.ui.panel_absolute`
     """
     return RecallContextManager(
         ui.panel_fixed,
