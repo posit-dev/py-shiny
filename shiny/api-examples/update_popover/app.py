@@ -1,15 +1,17 @@
 from shiny import App, Inputs, Outputs, Session, reactive, req, ui
 
-app_ui = ui.page_fluid(
-    ui.input_action_button("btn_show", "Show popover", class_="mt-3 me-3"),
-    ui.input_action_button("btn_close", "Close popover", class_="mt-3 me-3"),
-    ui.br(),
-    ui.br(),
-    ui.popover(
-        ui.input_action_button("btn_w_popover", "A button w/ a popover", class_="mt-3"),
-        "A message",
-        id="popover_id",
-    ),
+app_ui = ui.page_sidebar(
+    ui.sidebar(
+        ui.input_action_button("btn_show", "Show popover", class_="mt-3 me-3"),
+        ui.input_action_button("btn_close", "Close popover", class_="mt-3 me-3"),
+        ui.popover(
+            ui.input_action_button(
+                "btn_w_popover", "A button w/ a popover", class_="mt-3"
+            ),
+            "A message",
+            id="popover_id",
+        ),
+    )
 )
 
 

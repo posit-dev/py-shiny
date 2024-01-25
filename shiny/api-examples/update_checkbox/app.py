@@ -1,7 +1,8 @@
 from shiny import App, Inputs, Outputs, Session, reactive, ui
 
 app_ui = ui.page_fluid(
-    ui.input_slider("controller", "Controller", min=0, max=1, value=0, step=1),
+    ui.p("Checkbox will be checked when slider is an odd number."),
+    ui.input_slider("controller", "Controller", min=0, max=10, value=0, step=1),
     ui.input_checkbox("inCheckbox", "Input checkbox"),
 )
 

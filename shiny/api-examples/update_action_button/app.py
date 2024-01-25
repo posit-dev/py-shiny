@@ -1,15 +1,13 @@
 from shiny import App, Inputs, Outputs, Session, reactive, req, ui
 
-app_ui = ui.page_fluid(
-    ui.input_action_button("update", "Update other buttons and link"),
-    ui.br(),
-    ui.input_action_button("goButton", "Go"),
-    ui.br(),
-    ui.input_action_button("goButton2", "Go 2", icon="🤩"),
-    ui.br(),
-    ui.input_action_button("goButton3", "Go 3"),
-    ui.br(),
-    ui.input_action_link("goLink", "Go Link"),
+app_ui = ui.page_sidebar(
+    ui.sidebar(
+        ui.input_action_button("update", "Update other buttons and link"),
+        ui.input_action_button("goButton", "Go"),
+        ui.input_action_button("goButton2", "Go 2", icon="🤩"),
+        ui.input_action_button("goButton3", "Go 3"),
+        ui.input_action_link("goLink", "Go Link"),
+    )
 )
 
 
