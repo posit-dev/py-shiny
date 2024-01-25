@@ -6,7 +6,7 @@ with ui.sidebar():
     ui.input_action_button("btn_close", "Close tooltip", class_="mt-3 me-3")
     ui.input_action_button(
         "btn_update", "Update tooltip phrase (and show tooltip)", class_="mt-3 me-3"
-    ),
+    )
     with ui.tooltip(id="tooltip_id"):
         ui.input_action_button("btn_w_tooltip", "A button w/ a tooltip", class_="mt-3")
         "A message"
