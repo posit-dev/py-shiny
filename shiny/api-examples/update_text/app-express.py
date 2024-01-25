@@ -1,4 +1,4 @@
-from shiny import reactive, ui
+from shiny import reactive
 from shiny.express import input, ui
 
 ui.input_slider("controller", "Controller", min=0, max=20, value=10)

@@ -1,5 +1,5 @@
-from shiny import reactive, ui
-from shiny.express import input
+from shiny import reactive
+from shiny.express import ui
 
 ui.input_selectize("x", "Server side selectize", choices=[], multiple=True)
 
