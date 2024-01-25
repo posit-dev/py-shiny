@@ -167,6 +167,7 @@ quartodoc:
         - render.text
         - render.code
         - render.ui
+        - render.express
         - render.download
         - render.data_frame
         - render.DataGrid
@@ -358,6 +359,15 @@ quartodoc:
           flatten: true
           contents:
             - express.ui.page_opts
+        - kind: page
+          path: DisplayFunctions
+          summary:
+            name: "Display functions"
+            desc: ""
+          flatten: true
+          contents:
+            - express.ui.hold
+            - express.expressify
     - title: Deprecated
       desc: ""
       contents:
