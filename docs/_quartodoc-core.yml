@@ -7,7 +7,7 @@ quartodoc:
   sidebar: api/core/_sidebar.yml
   dynamic: true
   renderer:
-    style: _renderer.py
+    style: _renderer_core.py
     show_signature_annotations: false
   sections:
     - title: Page containers
