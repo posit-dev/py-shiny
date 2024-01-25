@@ -37,7 +37,7 @@ class express(Renderer[None]):
     * ~shiny.render.ui
     * ~shiny.ui.output_ui
     * ~shiny.express.expressify
-    * ~shiny.express.hold
+    * ~shiny.express.ui.hold
     """
 
     def auto_output_ui(

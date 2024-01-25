@@ -125,7 +125,7 @@ def expressify(fn: TFunc | None = None) -> TFunc | Callable[[TFunc], TFunc]:
     See Also
     --------
     * ~shiny.render.express
-    * ~shiny.express.hold
+    * ~shiny.express.ui.hold
     """
 
     def decorator(fn: TFunc) -> TFunc:
