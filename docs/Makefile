@@ -46,13 +46,23 @@ deps: $(PYBIN)  ## Install build dependencies
 	$(PYBIN)/pip install pip --upgrade
 	$(PYBIN)/pip install -e ..[doc]
 
-quartodoc: $(PYBIN) ## Build qmd files for API docs
+
+# `quartodoc interlinks` creates links in `_inv`
+quartodoc_impl: $(PYBIN) ## Build qmd files for API docs
 	$(eval export SHINY_ADD_EXAMPLES=true)
 	$(eval export IN_QUARTODOC=true)
 	. $(PYBIN)/activate \
 	  && quartodoc interlinks \
 	  && SHINY_MODE="core" quartodoc build --config _quartodoc-core.yml --verbose \
-	  && SHINY_MODE="express" quartodoc build --config _quartodoc-express.yml --verbose
+	  && mv objects.json _objects_core.json \
+	  && SHINY_MODE="express" quartodoc build --config _quartodoc-express.yml --verbose \
+	  && mv objects.json _objects_express.json
+
+quartodoc_post: $(PYBIN)  ## Post-process qmd files for API docs
+	. $(PYBIN)/activate \
+	  && python _combine_objects_json.py
+
+quartodoc: quartodoc_impl quartodoc_post
 
 site:  ## Build website
 	. $(PYBIN)/activate \
