@@ -17,7 +17,7 @@ app_ui = ui.page_fluid(
     ),
     ui.output_text("value"),
     ui.input_selectize(
-        "state",
+        "state2",
         "Selectize Options",
         states,
         multiple=True,
@@ -32,7 +32,7 @@ app_ui = ui.page_fluid(
         ),
     ),
     ui.input_selectize(
-        "state",
+        "state3",
         "Selectize plugins",
         states,
         multiple=True,

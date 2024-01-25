@@ -14,7 +14,6 @@ app_ui = ui.page_sidebar(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @output
     @render.plot(alt="A histogram")
     def plot() -> object:
         np.random.seed(19680801)
