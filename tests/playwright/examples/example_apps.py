@@ -84,7 +84,7 @@ app_allow_external_errors: typing.List[str] = [
     "pd.option_context('mode.use_inf_as_na",  # continutation of line above
 ]
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
-    "brownian": ["Failed to acquire camera feed:"],
+    "examples/brownian": ["Failed to acquire camera feed:"],
 }
 
 
