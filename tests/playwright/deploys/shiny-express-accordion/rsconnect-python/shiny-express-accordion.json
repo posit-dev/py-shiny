@@ -1,7 +1,6 @@
 {
     "https://api.shinyapps.io": {
         "server_url": "https://api.shinyapps.io",
-        "filename": "/Users/karangathani/Documents/GitHub/py-shiny/tests/playwright/shiny/deploys/shiny-express/accordion",
         "app_url": "https://testing-apps.shinyapps.io/shiny_express_accordion/",
         "app_id": 10800240,
         "app_guid": null,
