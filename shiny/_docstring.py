@@ -50,7 +50,7 @@ example_writer = ExampleWriter()
 
 
 def add_example(
-    app_file: str = "app.py",
+    app_file: Optional[str] = None,
     ex_dir: Optional[str] = None,
 ) -> Callable[[F], F]:
     """
@@ -59,6 +59,14 @@ def add_example(
     This decorator must, at the moment, be used on a function, method, or class whose
     ``__name__`` matches the name of directory under a ``api-examples/`` directory in
     the current or any parent directory.
+
+    * Examples for the ``shiny`` package are in ``shiny/api-examples/``.
+    * Examples for the ``shiny.express`` subpackage are in ``shiny/express/api-examples/``.
+
+    Functions that can be used in Express or Core and whose canonical implementation is
+    in the ``shiny`` package should have examples in ``shiny/api-examples``. In this
+    case, the express variant should include an ``-express`` suffix and the core
+    variation can be named with a ``-core`` suffix or ``app.py``.
 
     Parameters
     ----------
@@ -88,25 +96,29 @@ def add_example(
             ex_dir_found = find_api_examples_dir(func_dir)
 
             if ex_dir_found is None:
-                raise ValueError(
+                raise FileNotFoundError(
                     f"No example directory found for {fn_name} in {func_dir} or its parent directories."
                 )
             example_dir = os.path.join(ex_dir_found, fn_name)
         else:
-            example_dir = os.path.join(func_dir, ex_dir)
+            example_dir = os.path.abspath(os.path.join(func_dir, ex_dir))
 
-        example_file = os.path.join(example_dir, app_file)
-        if not os.path.exists(example_file):
-            raise ValueError(
-                f"No example for {fn_name} found in '{os.path.abspath(example_dir)}'."
-            )
+            if not os.path.exists(example_dir):
+                raise FileNotFoundError(
+                    f"Example directory '{example_dir}' does not exist for {fn_name}."
+                )
+
+        app_file_name = app_file or "app.py"
+        example_file = app_choose_core_or_express(
+            os.path.join(example_dir, app_file_name)
+        )
 
         other_files: list[str] = []
         for f in os.listdir(example_dir):
             abs_f = os.path.join(example_dir, f)
             is_support_file = (
                 os.path.isfile(abs_f)
-                and f != app_file
+                and f != app_file_name
                 and f != "app.py"
                 and not f.startswith("app-")
                 and not f.startswith("__")
@@ -148,6 +160,53 @@ def add_example(
         return func
 
     return _
+
+
+def is_express_app(app_path: str) -> bool:
+    # We can't use .shiny.express._is_express.is_express_app() here because that would
+    # create a circular import.
+    if not os.path.exists(app_path):
+        return False
+
+    with open(app_path) as f:
+        for line in f:
+            if "from shiny.express" in line:
+                return True
+            elif "import shiny.express" in line:
+                return True
+    return False
+
+
+def app_choose_core_or_express(app_path: Optional[str] = None) -> str:
+    app_path = app_path or "app.py"
+
+    if os.environ.get("SHINY_MODE") == "express":
+        if is_express_app(app_path):
+            return app_path
+
+        app_path = app_path.replace("-core.py", ".py")
+
+        path, ext = os.path.splitext(app_path)
+        app_path_express = f"{path}-express{ext}"
+
+        if not is_express_app(app_path_express):
+            raise FileNotFoundError(
+                f"Could not find an Express app file named either '{os.path.basename(app_path)}' "
+                + f"or '{os.path.basename(app_path_express)}' in {os.path.dirname(app_path)}."
+            )
+
+        return app_path_express
+
+    if os.path.basename(app_path) == "app.py" and not os.path.exists(app_path):
+        app_path = app_path.replace("app.py", "app-core.py")
+
+    if not os.path.exists(app_path):
+        raise FileNotFoundError(
+            f"Could not find an example app file named '{os.path.basename(app_path)}' "
+            + f"in {os.path.dirname(app_path)}."
+        )
+
+    return app_path
 
 
 def get_decorated_source_directory(func: FuncType) -> str:
