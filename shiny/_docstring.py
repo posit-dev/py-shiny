@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
+from functools import wraps
+from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, TypeVar
 
 
 def find_api_examples_dir(start_dir: str) -> Optional[str]:
@@ -27,6 +28,25 @@ F = TypeVar("F", bound=FuncType)
 
 def no_example(func: F) -> F:
     return func
+
+
+def no_example_express(decorator: Callable[..., F]) -> F | Callable[..., F]:
+    """
+    Prevent ``@add_example()`` from throwing an error about missing Express examples.
+    """
+
+    @wraps(decorator)
+    def wrapper_decorator(*args: Any, **kwargs: Any) -> F:
+        try:
+            # Apply the potentially problematic decorator
+            return decorator(*args, **kwargs)
+        except ExpressExampleNotFoundException:
+            # If an error occurs, return the original function
+            if args and callable(args[0]):
+                return args[0]
+            raise
+
+    return wrapper_decorator
 
 
 # This class is used to mark docstrings when @add_example() is used, so that an error
@@ -177,6 +197,39 @@ def is_express_app(app_path: str) -> bool:
     return False
 
 
+class ExampleNotFoundException(FileNotFoundError):
+    def __init__(
+        self,
+        file_names: list[str] | str,
+        dir: str,
+        type: Optional[Literal["core", "express"]] = None,
+    ) -> None:
+        self.type = type or os.environ.get("SHINY_MODE") or "core"
+        self.file_names = [file_names] if isinstance(file_names, str) else file_names
+        self.dir = dir
+
+    def __str__(self):
+        if self.type in ("core", "express"):
+            ## Capitalize first letter
+            type = "a Shiny Express" if self.type == "express" else "a Shiny Core"
+        else:
+            type = "an"
+
+        return (
+            f"Could not find {type} example file named "
+            + f"{' or '.join(self.file_names)} in {self.dir}."
+        )
+
+
+class ExpressExampleNotFoundException(ExampleNotFoundException):
+    def __init__(
+        self,
+        file_names: list[str] | str,
+        dir: str,
+    ) -> None:
+        super().__init__(file_names, dir, "express")
+
+
 def app_choose_core_or_express(app_path: Optional[str] = None) -> str:
     app_path = app_path or "app.py"
 
@@ -190,9 +243,9 @@ def app_choose_core_or_express(app_path: Optional[str] = None) -> str:
         app_path_express = f"{path}-express{ext}"
 
         if not is_express_app(app_path_express):
-            raise FileNotFoundError(
-                f"Could not find an Express app file named either '{os.path.basename(app_path)}' "
-                + f"or '{os.path.basename(app_path_express)}' in {os.path.dirname(app_path)}."
+            raise ExpressExampleNotFoundException(
+                [os.path.basename(app_path), os.path.basename(app_path_express)],
+                os.path.dirname(app_path),
             )
 
         return app_path_express
@@ -201,9 +254,9 @@ def app_choose_core_or_express(app_path: Optional[str] = None) -> str:
         app_path = app_path.replace("app.py", "app-core.py")
 
     if not os.path.exists(app_path):
-        raise FileNotFoundError(
-            f"Could not find an example app file named '{os.path.basename(app_path)}' "
-            + f"in {os.path.dirname(app_path)}."
+        raise ExampleNotFoundException(
+            os.path.basename(app_path),
+            os.path.dirname(app_path),
         )
 
     return app_path
