@@ -3,7 +3,7 @@ from icons import piggy_bank
 from shiny import App, ui
 
 app_ui = ui.page_fluid(
-    ui.layout_column_wrap(
+    ui.layout_columns(
         ui.value_box(
             "KPI Title",
             "$1 Billion Dollars",
