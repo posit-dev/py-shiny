@@ -1,9 +1,12 @@
 import os
 
 import pytest
-from conftest import ShinyAppProc
 from playwright.sync_api import Page, expect
-from utils.deploy_utils import prepare_deploy_and_open_url, skip_if_not_python_310
+from utils.deploy_utils import (
+    deploy_locations,
+    prepare_deploy_and_open_url,
+    skip_if_not_python_310,
+)
 
 COUNTRY = "Afghanistan"
 APP_NAME = "example_deploy_app_A"
@@ -13,12 +16,9 @@ EXPECT_TIMEOUT = 120 * 1000
 
 @skip_if_not_python_310
 @pytest.mark.only_browser("chromium")
-@pytest.mark.parametrize("location", ["connect", "shinyapps", "local"])
-def test_deploys(page: Page, location: str, local_app: ShinyAppProc) -> None:
-    if location == "local":
-        page.goto(local_app.url)
-    else:
-        prepare_deploy_and_open_url(page, app_file_path, location, APP_NAME)
+@pytest.mark.parametrize("location", deploy_locations)
+def test_deploys(page: Page, location: str) -> None:
+    prepare_deploy_and_open_url(page, app_file_path, location, APP_NAME)
 
     expect(page.get_by_text(COUNTRY)).to_have_count(1, timeout=EXPECT_TIMEOUT)
     page.get_by_role("cell", name=COUNTRY).click(timeout=EXPECT_TIMEOUT)

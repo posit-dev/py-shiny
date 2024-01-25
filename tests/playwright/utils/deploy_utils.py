@@ -24,6 +24,8 @@ skip_if_not_python_310 = pytest.mark.skipif(
     reason="Test requires Python 3.10",
 )
 
+deploy_locations = ["connect", "shinyapps"]
+
 
 def exception_swallower(
     function: typing.Callable[[str, str], str]
