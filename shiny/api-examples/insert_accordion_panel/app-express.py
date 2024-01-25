@@ -3,7 +3,6 @@ import random
 from shiny import reactive
 from shiny.express import expressify, input, ui
 
-
 with ui.sidebar():
     ui.input_action_button("add_panel", "Add random panel", class_="mt-3 mb-3"),
 
