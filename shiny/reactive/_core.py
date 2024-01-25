@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Generator, Optional, Type
 
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
-from .._docstring import add_example, no_example
+from .._docstring import add_example, no_example, no_example_express
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
@@ -199,7 +199,7 @@ class ReactiveEnvironment:
 _reactive_environment = ReactiveEnvironment()
 
 
-@add_example()
+@no_example_express(add_example())
 @contextlib.contextmanager
 def isolate() -> Generator[None, None, None]:
     """

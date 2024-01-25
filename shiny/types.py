@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, BinaryIO, Literal, NamedTuple, Optional, 
 
 from htmltools import TagChild
 
-from ._docstring import add_example
+from ._docstring import add_example, no_example_express
 from ._typing_extensions import NotRequired, TypedDict
 
 if TYPE_CHECKING:
@@ -55,7 +55,7 @@ class FileInfo(TypedDict):
     """The path to the file on the server."""
 
 
-@add_example(ex_dir="./api-examples/output_image")
+@no_example_express(add_example(ex_dir="./api-examples/output_image"))
 class ImgData(TypedDict):
     """
     Return type for :class:`~shiny.render.image`.
@@ -79,7 +79,7 @@ class ImgData(TypedDict):
     """TODO """
 
 
-@add_example()
+@no_example_express(add_example())
 class SafeException(Exception):
     """
     Throw a safe exception.
@@ -93,7 +93,7 @@ class SafeException(Exception):
     pass
 
 
-@add_example()
+@no_example_express(add_example())
 class SilentException(Exception):
     """
     Throw a silent exception.
@@ -116,7 +116,7 @@ class SilentException(Exception):
     pass
 
 
-@add_example()
+@no_example_express(add_example())
 class SilentCancelOutputException(Exception):
     """
     Throw a silent exception and don't clear output
