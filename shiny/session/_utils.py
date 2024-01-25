@@ -51,8 +51,8 @@ def get_current_session() -> Optional[Session]:
     called from within an active Shiny session.
 
     See Also
-    -------
-    ~require_active_session
+    --------
+    * :func:`~shiny.session.require_active_session`
     """
     return _current_session.get() or _default_session
 
@@ -104,8 +104,8 @@ def require_active_session(session: Optional[Session]) -> Session:
         If session is not active.
 
     See Also
-    -------
-    ~get_current_session
+    --------
+    * :func:`~shiny.session.get_current_session`
     """
 
     if session is None:

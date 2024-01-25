@@ -93,6 +93,7 @@ quartodoc:
       contents:
         - ui.input_file
         - ui.download_button
+        - ui.download_link
     - title: Custom UI
       desc: Lower-level UI functions for creating custom HTML/CSS/JS
       contents:
@@ -164,27 +165,13 @@ quartodoc:
         - render.image
         - render.table
         - render.text
+        - render.code
         - render.ui
         - render.express
+        - render.download
         - render.data_frame
         - render.DataGrid
         - render.DataTable
-        - kind: page
-          path: Renderer
-          flatten: true
-          summary:
-            name: "Create output renderers"
-            desc: "Package author methods for creating new output renderers."
-          contents:
-            - render.renderer.Renderer
-            - name: render.renderer.Jsonifiable
-              dynamic: false
-            - name: render.renderer.ValueFn
-              dynamic: false
-            - name: render.renderer.AsyncValueFn
-              dynamic: false
-            - name: render.renderer.RendererT
-              dynamic: false
     - title: Reactive programming
       desc: ""
       contents:
@@ -231,12 +218,47 @@ quartodoc:
     - title: Developer facing tools
       desc: ""
       contents:
-        - session.get_current_session
-        - session.require_active_session
-        - session.session_context
-        - reactive.get_current_context
-        - name: input_handler.input_handlers
-          dynamic: true
+        - kind: page
+          path: Session
+          summary:
+            name: "Session"
+            desc: ""
+          flatten: true
+          contents:
+            - session.get_current_session
+            - session.require_active_session
+            - session.session_context
+            - reactive.get_current_context
+            - name: input_handler.input_handlers
+              dynamic: true
+        - kind: page
+          path: Renderer
+          flatten: true
+          summary:
+            name: "Create output renderers"
+            desc: "Package author methods for creating new output renderers."
+          contents:
+            - render.renderer.Renderer
+            - name: render.renderer.Jsonifiable
+              dynamic: false
+            - name: render.renderer.ValueFn
+              dynamic: false
+            - name: render.renderer.AsyncValueFn
+              dynamic: false
+            - name: render.renderer.RendererT
+              dynamic: false
+        - kind: page
+          path: Htmltools
+          flatten: true
+          package: null
+          summary:
+            name: "htmltools methods"
+            desc: ""
+          contents:
+            - name: htmltools.HTMLDependency
+              dynamic: false
+            - name: htmltools.css
+              dynamic: false
     - title: Types
       desc: ""
       contents:
@@ -255,6 +277,7 @@ quartodoc:
             - ui.Sidebar
             - ui.CardItem
             - ui.AccordionPanel
+            - reactive.Context
             - name: ui.css.CssUnit
               dynamic: false
             - ui._input_slider.SliderValueArg
@@ -276,6 +299,12 @@ quartodoc:
             - name: htmltools.TagChild
               dynamic: false
             - name: htmltools.TagList
+              dynamic: false
+            - name: htmltools.TagFunction
+              dynamic: false
+            - name: htmltools.Tagifiable
+              dynamic: false
+            - name: htmltools.MetadataNode
               dynamic: false
         - kind: page
           path: ExceptionTypes

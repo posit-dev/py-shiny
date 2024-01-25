@@ -59,8 +59,8 @@ def input_text(
     :::
 
     See Also
-    -------
-    :func:`~shiny.ui.input_text_area`
+    --------
+    * :func:`~shiny.ui.input_text_area`
     """
 
     resolved_id = resolve_id(id)
@@ -153,7 +153,7 @@ def input_text_area(
 
     See Also
     --------
-    :func:`~shiny.ui.input_text`
+    * :func:`~shiny.ui.input_text`
     """
 
     if resize and resize not in ["none", "both", "horizontal", "vertical"]:

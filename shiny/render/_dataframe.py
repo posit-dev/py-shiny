@@ -24,7 +24,7 @@ class AbstractTabularData(abc.ABC):
 @add_example(ex_dir="../api-examples/data_frame")
 class DataGrid(AbstractTabularData):
     """
-    Holds the data and options for a ``shiny.render.data_frame`` output, for a
+    Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
 
     Parameters
@@ -64,9 +64,9 @@ class DataGrid(AbstractTabularData):
 
     See Also
     --------
-    :func:`~shiny.ui.output_data_frame`
-    :func:`~shiny.render.data_frame`
-    :class:`~shiny.render.DataTable`
+    * :func:`~shiny.ui.output_data_frame`
+    * :class:`~shiny.render.data_frame`
+    * :class:`~shiny.render.DataTable`
     """
 
     def __init__(
@@ -111,7 +111,7 @@ class DataGrid(AbstractTabularData):
 @no_example
 class DataTable(AbstractTabularData):
     """
-    Holds the data and options for a ``shiny.render.data_frame`` output, for a
+    Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
 
     Parameters
@@ -151,9 +151,9 @@ class DataTable(AbstractTabularData):
 
     See Also
     --------
-    :func:`~shiny.ui.output_data_frame`
-    :func:`~shiny.render.data_frame`
-    :class:`~shiny.render.DataGrid`
+    * :func:`~shiny.ui.output_data_frame`
+    * :class:`~shiny.render.data_frame`
+    * :class:`~shiny.render.DataGrid`
     """
 
     def __init__(
@@ -230,7 +230,7 @@ class data_frame(Renderer[DataFrameResult]):
         1. A :class:`~shiny.render.DataGrid` or :class:`~shiny.render.DataTable` object,
            which can be used to customize the appearance and behavior of the data frame
            output.
-        2. A pandas :class:`DataFrame` object. (Equivalent to
+        2. A pandas `DataFrame` object. (Equivalent to
            `shiny.render.DataGrid(df)`.)
         3. Any object that has a `.to_pandas()` method (e.g., a Polars data frame or
            Arrow table). (Equivalent to `shiny.render.DataGrid(df.to_pandas())`.)

@@ -5,9 +5,8 @@ import textwrap
 import warnings
 from typing import Callable, Literal, Optional
 
-from htmltools import HTML
-
 from .._docstring import add_example
+from . import HTML
 
 
 @add_example()
@@ -24,7 +23,7 @@ def markdown(
     render_func
         A function (with at least 1 argument) which accepts a string of markdown and
         returns a string of HTML. By default, a customized instance of the
-        :class:`MarkdownIt` class (which supports Github-flavored markdown) from the
+        `markdown_id.main.MarkdownIt` class (which supports Github-flavored markdown) from the
         ``markdown-it`` package is used.
     **kwargs
         Additional keyword arguments passed to the ``render_func``.
@@ -32,16 +31,7 @@ def markdown(
     Returns
     -------
     :
-        An :func:`ui.HTML` string of the rendered markdown.
-
-    Note
-    ----
-    Use :func:`ui.include_markdown` instead if you want to include local images (or
-    other files) in the markdown.
-
-    See Also
-    --------
-    :func:`ui.include_markdown`
+        An :class:`~shiny.ui.HTML` string of the rendered markdown.
     """
 
     if render_func is None:

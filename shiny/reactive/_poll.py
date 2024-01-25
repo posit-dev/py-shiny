@@ -10,7 +10,7 @@ from .._docstring import add_example
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
-    from ..session import Session
+    from .. import Session
 
 __all__ = ("poll", "file_reader")
 
@@ -50,7 +50,7 @@ def poll(
     object at the top level of app.py (outside of the server function).
 
     Both `poll_func` and the decorated (data reading) function can read reactive values
-    and :class:`~shiny.reactive.calc` objects. Any invalidations triggered by reactive
+    and :func:`~shiny.reactive.calc` objects. Any invalidations triggered by reactive
     dependencies will apply to the reactive polling object immediately (not waiting for
     the `interval_secs` delay to expire).
 
@@ -73,7 +73,7 @@ def poll(
         The function that will be used to compare each `poll_func` return value with its
         immediate predecessor.
     priority
-        Reactive polling is implemented using an :class:`~shiny.reactive.effect` to call
+        Reactive polling is implemented using an :func:`~shiny.reactive.effect` to call
         `poll_func` on a timer; use the `priority` argument to control the order of this
         Effect's execution versus other Effects in your app. See
         :func:`~shiny.reactive.effect` for more details.
@@ -89,12 +89,12 @@ def poll(
         A decorator that should be applied to a no-argument function that (expensively)
     reads whatever data is desired. (This function may be a regular function or a
     co-routine function.) The result of the decorator is a reactive
-    :class:`~shiny.reactive.calc` that always returns up-to-date data, and invalidates
+    :func:`~shiny.reactive.calc` that always returns up-to-date data, and invalidates
     callers when changes are detected via polling.
 
     See Also
     --------
-    ~shiny.reactive.file_reader
+    * :func:`~shiny.reactive.file_reader`
     """
 
     with reactive.isolate():
@@ -226,7 +226,7 @@ def file_reader(
     Note that `file_reader` works only on single files, not directories of files.
 
     Both the `filepath` function and the decorated (file reading) function can read
-    reactive values and :class:`~shiny.reactive.calc` objects. Any invalidations
+    reactive values and :func:`~shiny.reactive.calc` objects. Any invalidations
     triggered by reactive dependencies will apply to the reactive file reader object
     immediately (not waiting for the `interval_secs` delay to expire).
 
@@ -247,7 +247,7 @@ def file_reader(
         Note: depending on what other tasks are executing, the actual wait time may far
         exceed this value.
     priority
-        Reactive polling is implemented using an :class:`~shiny.reactive.effect` to call
+        Reactive polling is implemented using an :func:`~shiny.reactive.effect` to call
         `poll_func` on a timer; use the `priority` argument to control the order of this
         Effect's execution versus other Effects in your app. See
         :func:`~shiny.reactive.effect` for more details.
@@ -263,12 +263,12 @@ def file_reader(
         A decorator that should be applied to a no-argument function that (expensively)
     reads whatever data is desired. (This function may be a regular function or a
     co-routine function.) The result of the decorator is a reactive
-    :class:`~shiny.reactive.calc` that always returns up-to-date data, and invalidates
+    :func:`~shiny.reactive.calc` that always returns up-to-date data, and invalidates
     callers when changes are detected via polling.
 
     See Also
     --------
-    ~shiny.reactive.poll
+    * :func:`~shiny.reactive.poll`
     """
 
     if isinstance(filepath, str):
