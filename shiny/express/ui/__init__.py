@@ -30,6 +30,10 @@ from htmltools import (
 )
 
 from ...ui import (
+    fill,
+)
+
+from ...ui import (
     AccordionPanel,
     AnimationOptions,
     CardItem,
@@ -169,6 +173,8 @@ __all__ = (
     "span",
     "strong",
     "tags",
+    # Submodules
+    "fill",
     # Imports from ...ui
     "AccordionPanel",
     "AnimationOptions",
