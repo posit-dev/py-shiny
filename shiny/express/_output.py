@@ -22,9 +22,9 @@ def output_args(
     """
     Sets default UI arguments for a Shiny rendering function.
 
-    Each Shiny render function (like :func:`~shiny.render.plot`) can display itself when
+    Each Shiny render function (like :class:`~shiny.render.plot`) can display itself when
     declared within a Shiny inline-style application. In the case of
-    :func:`~shiny.render.plot`, the :func:`~shiny.ui.output_plot` function is called
+    :class:`~shiny.render.plot`, the :func:`~shiny.ui.output_plot` function is called
     implicitly to display the plot. Use the `@ui_kwargs` decorator to specify arguments
     to be passed to `output_plot` (or whatever the corresponding UI function is) when
     the render function displays itself.

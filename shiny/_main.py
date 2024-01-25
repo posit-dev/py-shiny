@@ -247,7 +247,7 @@ def run_app(
     Tip
     ---
     The ``shiny run`` command-line interface (which comes installed with Shiny) provides
-    the same functionality as :func:`~shiny.run_app`.
+    the same functionality as `shiny.run_app()`.
 
     Examples
     --------

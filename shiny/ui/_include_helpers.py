@@ -36,7 +36,7 @@ def include_js(
     method
         One of the following:
 
-        * ``"link"`` is the link to the CSS file via a :func:`~ui.tags.link` tag. This
+        * ``"link"`` is the link to the CSS file via a :func:`~shiny.ui.tags.link` tag. This
           method is generally preferable to ``"inline"`` since it allows the browser to
           cache the file.
         * ``"link_files"`` is the same as ``"link"``, but also allow for the CSS file to
@@ -49,20 +49,20 @@ def include_js(
           should be somewhere like ``/app/css/custom.css`` (and all the other relevant
           accompanying 'safe' files should be located under ``/app/css/``).
         * ``"inline"`` is the inline the CSS file contents within a
-          :func:`~ui.tags.style` tag.
+          :func:`~shiny.ui.tags.style` tag.
     **kwargs
-        Attributes which are passed on to `~ui.tags.script`.
+        Attributes which are passed on to `~shiny.ui.tags.script`.
 
 
     Returns
     -------
     :
-        A :func:`~ui.tags.script` tag.
+        A :func:`~shiny.ui.tags.script` tag.
 
     Note
     ----
-    This places a :func:`~ui.tags.script` tag in the :func:`~ui.tags.body` of the
-    document. If you want to place the tag in the :func:`~ui.tags.head` of the
+    This places a :func:`~shiny.ui.tags.script` tag in the :func:`~shiny.ui.tags.body` of the
+    document. If you want to place the tag in the :func:`~shiny.ui.tags.head` of the
     document instead, you can wrap it in ``head_content`` (in this case, just
     make sure you're aware that the DOM probably won't be ready when the script
     is executed).
@@ -81,8 +81,8 @@ def include_js(
 
     See Also
     --------
-    ~ui.tags.script
-    ~include_css
+    * :func:`~shiny.ui.tags.script`
+    * :func:`~shiny.ui.include_css`
     """
     file_path = check_path(path)
 
@@ -111,7 +111,7 @@ def include_css(
     method
         One of the following:
 
-        * ``"link"`` is the link to the CSS file via a :func:`~ui.tags.link` tag. This
+        * ``"link"`` is the link to the CSS file via a :func:`~shiny.ui.tags.link` tag. This
           method is generally preferable to ``"inline"`` since it allows the browser to
           cache the file.
         * ``"link_files"`` is the same as ``"link"``, but also allow for the CSS file to
@@ -124,22 +124,22 @@ def include_css(
           should be somewhere like ``/app/css/custom.css`` (and all the other relevant
           accompanying 'safe' files should be located under ``/app/css/``).
         * ``"inline"`` is the inline the CSS file contents within a
-          :func:`~ui.tags.style` tag.
+          :func:`~shiny.ui.tags.style` tag.
 
 
     Returns
     -------
     :
 
-        If ``method="inline"``, returns a :func:`~ui.tags.style` tag; otherwise, returns a
-        :func:`~ui.tags.link` tag.
+        If ``method="inline"``, returns a :func:`~shiny.ui.tags.style` tag; otherwise, returns a
+        :func:`~shiny.ui.tags.link` tag.
 
     Note
     ----
-    By default this places a :func:`~ui.tags.link` (or :func:`~ui.tags.style`) tag in
-    the :func:`~ui.tags.body` of the document, which isn't optimal for performance, and
+    By default this places a :func:`~shiny.ui.tags.link` (or :func:`~shiny.ui.tags.style`) tag in
+    the :func:`~shiny.ui.tags.body` of the document, which isn't optimal for performance, and
     may result in a Flash of Unstyled Content (FOUC). To instead place the CSS in the
-    :func:`~ui.tags.head` of the document, you can wrap it in ``head_content``:
+    :func:`~shiny.ui.tags.head` of the document, you can wrap it in ``head_content``:
 
     ```{python}
     #| eval: false
@@ -159,9 +159,9 @@ def include_css(
 
     See Also
     --------
-    ~ui.tags.style
-    ~ui.tags.link
-    ~include_js
+    * :func:`~shiny.ui.tags.style`
+    * :func:`~shiny.ui.tags.link`
+    * :func:`~shiny.ui.include_js`
     """
 
     file_path = check_path(path)

@@ -161,7 +161,7 @@ class ReactiveEnvironment:
             self._current_context.reset(old)
 
     def current_context(self) -> Context:
-        """Return the current Context object"""
+        """Return the current `Context` object"""
         ctx = self._current_context.get()
         if ctx is None:
             raise RuntimeError("No current reactive context")
@@ -224,7 +224,7 @@ def isolate() -> Generator[None, None, None]:
 
     See Also
     --------
-    ~shiny.reactive.event
+    * :func:`~shiny.reactive.event`
     """
     with _reactive_environment.isolate():
         yield
@@ -237,7 +237,7 @@ def get_current_context() -> Context:
     Returns
     -------
     :
-        A :class:`~Context`.
+        A `~shiny.reactive.Context` class.
 
     Raises
     ------
@@ -282,7 +282,7 @@ def on_flushed(
 
     See Also
     --------
-    flush
+    * :func:`~shiny.reactive.flush`
     """
 
     return _reactive_environment.on_flushed(func, once)
@@ -317,12 +317,13 @@ def invalidate_later(
 
     Note
     ----
-    When called within a reactive function (i.e., :func:`~reactive.effect`, :func:`~reactive.calc`,
-    :func:`render.ui`, etc.), that reactive context is invalidated (and re-executes)
-    after the interval has passed. The re-execution will reset the invalidation flag, so
-    in a typical use case, the object will keep re-executing and waiting for the
-    specified interval. It's possible to stop this cycle by adding conditional logic
-    that prevents the ``invalidate_later`` from being run.
+    When called within a reactive function (i.e., :func:`~shiny.reactive.effect`,
+    :func:`~shiny.reactive.calc`, :class:`shiny.render.ui`, etc.), that reactive context
+    is invalidated (and re-executes) after the interval has passed. The re-execution
+    will reset the invalidation flag, so in a typical use case, the object will keep
+    re-executing and waiting for the specified interval. It's possible to stop this
+    cycle by adding conditional logic that prevents the ``invalidate_later`` from being
+    run.
     """
 
     if isinstance(session, MISSING_TYPE):

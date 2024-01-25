@@ -31,7 +31,7 @@ def wrap_express_app(file: Path) -> App:
     Returns
     -------
     :
-        A `shiny.App` object.
+        A :class:`shiny.App` object.
     """
     try:
         with session_context(cast(Session, MockSession())):

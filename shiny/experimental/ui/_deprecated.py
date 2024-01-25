@@ -595,7 +595,7 @@ def panel_main(
 # Deprecated 2023-09-12
 CssUnit = MainCssUnit
 """
-Deprecated. Please use `shiny.ui.css_unit.CssUnit` instead.
+Deprecated. Please use `shiny.ui.css.CssUnit` instead.
 """
 
 
@@ -612,12 +612,12 @@ def as_css_unit(value: CssUnit) -> str:
 # Deprecated 2023-09-12
 def as_css_unit(value: None | CssUnit) -> None | str:
     """
-    Deprecated. Please use :func:`~shiny.ui.css_unit.as_css_unit()` instead.
+    Deprecated. Please use :func:`~shiny.ui.css.as_css_unit()` instead.
     """
     warn_deprecated(
         "`shiny.experimental.ui.as_css_unit()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.css_unit.as_css_unit()` instead."
+        "please use `shiny.ui.css.as_css_unit()` instead."
     )
     return main_as_css_unit(value)
 
@@ -635,12 +635,12 @@ def as_css_padding(padding: None) -> None:
 # Deprecated 2023-09-12
 def as_css_padding(padding: CssUnit | list[CssUnit] | None) -> str | None:
     """
-    Deprecated. Please use :func:`~shiny.ui.css_unit.as_css_padding()` instead.
+    Deprecated. Please use :func:`~shiny.ui.css.as_css_padding()` instead.
     """
     warn_deprecated(
         "`shiny.experimental.ui.as_css_padding()` is deprecated. "
         "This method will be removed in a future version, "
-        "please use `shiny.ui.css_unit.as_css_padding()` instead."
+        "please use `shiny.ui.css.as_css_padding()` instead."
     )
     return main_as_css_padding(padding)
 
