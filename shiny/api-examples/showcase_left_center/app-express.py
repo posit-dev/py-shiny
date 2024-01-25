@@ -16,15 +16,12 @@ with ui.layout_columns():
         showcase_layout="top right",
         full_screen=True,
     ):
-        "KPI Title",
-        "$1 Billion Dollars",
-        "Up 30% VS PREVIOUS 30 DAYS",
+        "KPI Title"
+        "$1 Billion Dollars"
+        "Up 30% VS PREVIOUS 30 DAYS"
 
     with ui.value_box(
-        showcase=piggy_bank,
-        theme="purple",
-        showcase_layout="bottom",
-        full_screen=True,
+        showcase=piggy_bank, theme="purple", showcase_layout="bottom", full_screen=True
     ):
         "KPI Title"
         "$1 Billion Dollars"
