@@ -1,19 +1,20 @@
 from shiny import App, Inputs, Outputs, Session, reactive, req, ui
 
-app_ui = ui.page_fluid(
-    ui.input_action_button("btn_show", "Show tooltip", class_="mt-3 me-3"),
-    ui.input_action_button("btn_close", "Close tooltip", class_="mt-3 me-3"),
-    ui.br(),
-    ui.input_action_button(
-        "btn_update", "Update tooltip phrase (and show tooltip)", class_="mt-3 me-3"
-    ),
-    ui.br(),
-    ui.br(),
-    ui.tooltip(
-        ui.input_action_button("btn_w_tooltip", "A button w/ a tooltip", class_="mt-3"),
-        "A message",
-        id="tooltip_id",
-    ),
+app_ui = ui.page_sidebar(
+    ui.sidebar(
+        ui.input_action_button("btn_show", "Show tooltip", class_="mt-3 me-3"),
+        ui.input_action_button("btn_close", "Close tooltip", class_="mt-3 me-3"),
+        ui.input_action_button(
+            "btn_update", "Update tooltip phrase (and show tooltip)", class_="mt-3 me-3"
+        ),
+        ui.tooltip(
+            ui.input_action_button(
+                "btn_w_tooltip", "A button w/ a tooltip", class_="mt-3"
+            ),
+            "A message",
+            id="tooltip_id",
+        ),
+    )
 )
 
 

@@ -2,10 +2,10 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_sidebar(
     ui.sidebar("Sidebar content", id="sidebar"),
-    ui.input_action_button("open_sidebar", label="Open sidebar", class_="me-3"),
-    ui.input_action_button("close_sidebar", label="Close sidebar", class_="me-3"),
-    ui.br(),
-    ui.br(),
+    ui.layout_columns(
+        ui.input_action_button("open_sidebar", label="Open sidebar", class_="me-3"),
+        ui.input_action_button("close_sidebar", label="Close sidebar", class_="me-3"),
+    ),
     ui.output_text_verbatim("state"),
     fillable=False,
 )
