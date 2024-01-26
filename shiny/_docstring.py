@@ -134,13 +134,13 @@ def add_example(
                 os.path.join(example_dir, app_file_name)
             )
         except ExampleNotFoundException as e:
-            func_dir = get_decorated_source_directory(func).split("py-shiny/")[1]
+            file = "shiny/" + func_dir.split("shiny/")[1]
             if "__code__" in dir(func):
                 print(
-                    f"::warning file={func_dir},line={func.__code__.co_firstlineno}::{e}"
+                    f"::warning file={file},line={func.__code__.co_firstlineno}::{e}"
                 )
             else:
-                print(f"::warning file={func_dir}::{e}")
+                print(f"::warning file={file}::{e}")
 
             return func
 
@@ -215,7 +215,7 @@ class ExampleNotFoundException(FileNotFoundError):
         dir: str,
         type: Optional[Literal["core", "express"]] = None,
     ) -> None:
-        self.type = type or os.environ.get("SHINY_MODE") or "core"
+        self.type = type or os.environ.get("SHINY_MODE", "core")
         self.file_names = [file_names] if isinstance(file_names, str) else file_names
         self.dir = dir
 

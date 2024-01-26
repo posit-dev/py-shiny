@@ -37,7 +37,7 @@ def write_objects_file(objects: QuartodocObject, path: str) -> None:
         json.dump(objects, file, indent=4, default=lambda dc: dc.__dict__)
 
 
-print("\nCombinging objects json files...")
+print("\nCombining objects json files...")
 objects_core = read_objects_file("_objects_core.json")
 objects_express = read_objects_file("_objects_express.json")
 
