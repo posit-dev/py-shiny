@@ -52,11 +52,17 @@ quartodoc_impl: $(PYBIN) ## Build qmd files for API docs
 	$(eval export SHINY_ADD_EXAMPLES=true)
 	$(eval export IN_QUARTODOC=true)
 	. $(PYBIN)/activate \
+	  && echo "::group::quartodoc interlinks" \
 	  && quartodoc interlinks \
+	  && echo "::endgroup::" \
+		&& echo "::group::quartodoc build core docs" \
 	  && SHINY_MODE="core" quartodoc build --config _quartodoc-core.yml --verbose \
 	  && mv objects.json _objects_core.json \
+	  && echo "::endgroup::" \
+		&& echo "::group::quartodoc build express docs" \
 	  && SHINY_MODE="express" quartodoc build --config _quartodoc-express.yml --verbose \
-	  && mv objects.json _objects_express.json
+	  && mv objects.json _objects_express.json \
+	  && echo "::endgroup::"
 
 quartodoc_post: $(PYBIN)  ## Post-process qmd files for API docs
 	. $(PYBIN)/activate \

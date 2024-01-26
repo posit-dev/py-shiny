@@ -129,9 +129,20 @@ def add_example(
                 )
 
         app_file_name = app_file or "app.py"
-        example_file = app_choose_core_or_express(
-            os.path.join(example_dir, app_file_name)
-        )
+        try:
+            example_file = app_choose_core_or_express(
+                os.path.join(example_dir, app_file_name)
+            )
+        except ExampleNotFoundException as e:
+            func_dir = get_decorated_source_directory(func).split("py-shiny/")[1]
+            if "__code__" in dir(func):
+                print(
+                    f"::warning file={func_dir},line={func.__code__.co_firstlineno}::{e}"
+                )
+            else:
+                print(f"::warning file={func_dir}::{e}")
+
+            return func
 
         other_files: list[str] = []
         for f in os.listdir(example_dir):
