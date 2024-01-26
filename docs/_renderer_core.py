@@ -135,19 +135,30 @@ class Renderer(MdRenderer):
         ):
             description = docstring_parts[0].value
 
-            # ## Approach: Always return the full description!
-            return description
+            # # ## Approach: Always return the full description!
+            # return description
 
-            # ## Alternative: Add ellipsis if the lines are cut off
+            parts = description.split("\n")
 
+            # # Alternative: Add ellipsis if the lines are cut off
             # # If the description is more than one line, only show the first line.
             # # Add `...` to indicate the description was truncated
-            # parts = description.split("\n")
             # short = parts[0]
-            # if len(parts) > 1:
+            # if len(parts) > 1 and parts[1].strip() != "":
             #     short += "&hellip;"
 
-            # return short
+            # Alternative: Add take the first paragraph as the description summary
+            short_parts: list[str] = []
+            # Capture the first paragraph (lines until first empty line)
+            for part in parts:
+                if part.strip() == "":
+                    break
+                short_parts.append(part)
+
+            short = " ".join(short_parts)
+            short = convert_rst_link_to_md(short)
+
+            return short
 
         return ""
 
