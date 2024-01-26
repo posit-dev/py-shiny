@@ -1,8 +1,8 @@
-from conftest import ShinyAppProc, create_doc_example_fixture
+from conftest import ShinyAppProc, create_doc_example_core_fixture
 from controls import InputText, OutputText, OutputTextVerbatim
 from playwright.sync_api import Page
 
-app = create_doc_example_fixture("output_text")
+app = create_doc_example_core_fixture("output_text")
 
 
 def test_output_text_kitchen(page: Page, app: ShinyAppProc) -> None:
