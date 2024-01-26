@@ -272,7 +272,7 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
 
 def check_if_missing_expected_example(el, converted):
     if os.environ.get("SHINY_MODE", "core") == "express":
-        # We aren't done with all of the express examples yet
+        # TODO: remove once we are done porting express examples
         return
 
     if re.search(r"(^|\n)#{2,6} Examples\n", converted):
