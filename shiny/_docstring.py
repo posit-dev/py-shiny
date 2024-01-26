@@ -73,8 +73,10 @@ def add_example(
     ``__name__`` matches the name of directory under a ``api-examples/`` directory in
     the current or any parent directory.
 
-    * Examples for the ``shiny`` package are in ``shiny/api-examples/``.
-    * Examples for the ``shiny.express`` subpackage are in ``shiny/express/api-examples/``.
+    * Examples for the ``shiny`` package are in ``shiny/api-examples/``. We also place
+      Express examples in this directory adjacent to their Core counterparts.
+    * Examples for the ``shiny.experimental`` subpackage are in
+      ``shiny/experimental/api-examples/``.
 
     Functions that can be used in Express or Core and whose canonical implementation is
     in the ``shiny`` package should have examples in ``shiny/api-examples``. In this
