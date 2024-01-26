@@ -7,7 +7,7 @@ quartodoc:
   sidebar: api/express/_sidebar.yml
   dynamic: true
   renderer:
-    style: _renderer_express.py
+    style: _renderer.py
     show_signature_annotations: false
   sections:
     - title: Input components

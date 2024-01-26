@@ -31,7 +31,7 @@ class FileContentJson(TypedDict):
 
 class Renderer(MdRenderer):
     style = "shiny"
-    express_api = False
+    express_api = os.environ.get("SHINY_MODE", "core") == "express"
 
     @dispatch
     def render(self, el: qast.DocstringSectionSeeAlso):
@@ -62,7 +62,7 @@ class Renderer(MdRenderer):
             # If this el happens to point to itself, it's probably intentionally
             # pointing to Core (i.e., express context managers mention that they
             # wrap Core functions), so don't change that.
-            # TODO: we want to be more agressive about context managers always
+            # TODO: we want to be more aggressive about context managers always
             # pointing to the Core docs?
             if f"shiny.express.ui.{el.name}" in converted:
                 print(f"Changing Express link to Core for: {el.name}")
