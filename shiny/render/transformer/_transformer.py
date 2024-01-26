@@ -590,7 +590,9 @@ def output_transformer(
     | Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]
 ):
     """
-    Output transformer decorator
+    Deprecated. Please use :class:`~shiny.render.renderer.Renderer` instead.
+
+    Output transformer decorator.
 
     This decorator method is a convenience method to generate the appropriate types and
     internal implementation for an overloaded renderer method. This method will provide
