@@ -4,16 +4,18 @@ import time
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
-    ui.input_action_button("first", "Invalidate first (slow) computation"),
-    " ",
-    ui.input_action_button("second", "Invalidate second (fast) computation"),
-    ui.br(),
-    ui.output_ui("result"),
+    ui.card(
+        ui.layout_columns(
+            ui.input_action_button("first", "Invalidate first (slow) computation"),
+            ui.input_action_button("second", "Invalidate second (fast) computation"),
+        ),
+        ui.output_text_verbatim("result"),
+    )
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Calc
+    @reactive.calc
     def first():
         input.first()
         p = ui.Progress()
@@ -23,12 +25,12 @@ def server(input: Inputs, output: Outputs, session: Session):
         p.close()
         return random.randint(1, 1000)
 
-    @reactive.Calc
+    @reactive.calc
     def second():
         input.second()
         return random.randint(1, 1000)
 
-    @render.ui
+    @render.text
     def result():
         return first() + second()
 
