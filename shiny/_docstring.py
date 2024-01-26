@@ -25,17 +25,25 @@ FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
 
 
-def no_example(type: Optional[Literal["express", "core"]] = None) -> Callable[[F], F]:
+def no_example(mode: Optional[Literal["express", "core"]] = None) -> Callable[[F], F]:
     """
     Prevent ``@add_example()`` from throwing an error about missing examples.
+
+    Parameters
+    ----------
+    mode:
+        If ``"express"``, ``@add_example()`` will not throw an error if the current
+        mode is Express. If ``"core"``, ``@add_example()`` will not throw an error if
+        the current mode is Core. If ``None``, ``@add_example()`` will not throw an
+        error in either mode.
     """
 
     def decorator(func: F) -> F:
         current = getattr(func, "__no_example", [])
-        if type is None:
+        if mode is None:
             current.extend(["express", "core"])
         else:
-            current.append(type)
+            current.append(mode)
         setattr(func, "__no_example", current)  # noqa: B010
         return func
 
