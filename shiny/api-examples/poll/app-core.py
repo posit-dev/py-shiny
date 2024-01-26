@@ -89,23 +89,20 @@ def stock_quotes() -> pd.DataFrame:
 # === Define the Shiny UI and server ===============================
 
 app_ui = ui.page_fluid(
-    ui.layout_columns(
-        ui.card(
-            ui.markdown(
-                """
-                # `shiny.reactive.poll` demo
+    ui.card(
+        ui.markdown(
+            """
+            # `shiny.reactive.poll` demo
 
-                This example app shows how to stream results from a database (in this
-                case, an in-memory sqlite3) with the help of `shiny.reactive.poll`.
-                """
-            ),
-            ui.input_selectize(
-                "symbols", "Filter by symbol", [""] + SYMBOLS, multiple=True
-            ),
-            ui.output_data_frame("table"),
-            fill=False,
+            This example app shows how to stream results from a database (in this
+            case, an in-memory sqlite3) with the help of `shiny.reactive.poll`.
+            """
         ),
-        col_widths=[8, 4],
+        ui.input_selectize(
+            "symbols", "Filter by symbol", [""] + SYMBOLS, multiple=True
+        ),
+        ui.output_data_frame("table"),
+        fill=False,
     )
 )
 
