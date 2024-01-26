@@ -3,7 +3,7 @@ import asyncio
 from shiny import reactive
 from shiny.express import input, render, ui
 
-ui.input_action_button("button", "Compute"),
+ui.input_action_button("button", "Compute")
 
 
 @render.text
