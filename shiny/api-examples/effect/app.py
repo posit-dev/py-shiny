@@ -1,17 +1,20 @@
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, reactive, ui
 
-app_ui = ui.page_fluid(ui.input_action_button("btn", "Press me!"))
+app_ui = ui.page_fixed(
+    ui.input_action_button("show", "Show modal dialog"),
+)
 
 
-def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
-    @reactive.event(input.btn)
+def server(input, output, session):
+    @reactive.effect
+    @reactive.event(input.show)
     def _():
-        ui.insert_ui(
-            ui.p("Number of clicks: ", input.btn()),
-            selector="#btn",
-            where="afterEnd",
+        m = ui.modal(
+            "This is a somewhat important message.",
+            title="Somewhat important message",
+            easy_close=True,
         )
+        ui.modal_show(m)
 
 
 app = App(app_ui, server)
