@@ -46,17 +46,15 @@ deps: $(PYBIN)  ## Install build dependencies
 	$(PYBIN)/pip install pip --upgrade
 	$(PYBIN)/pip install -e ..[doc]
 
-quartodoc_post: $(PYBIN)  ## Post-process qmd files for API docs
-	. $(PYBIN)/activate \
-	  && python _combine_objects_json.py
+quartodoc: quartodoc_build_core quartodoc_build_express quartodoc_post ## Build quartodocs for express and core
 
-quartodoc: quartodoc_build_core quartodoc_build_express quartodoc_post
-
-quartodoc_interlinks: $(PYBIN)  ## Create interlinks for API docs
+## Build interlinks for API docs
+quartodoc_interlinks: $(PYBIN)
 	. $(PYBIN)/activate \
 	  && quartodoc interlinks
 
-quartodoc_build_core: $(PYBIN) quartodoc_interlinks ## Build core API docs
+## Build core API docs
+quartodoc_build_core: $(PYBIN) quartodoc_interlinks
 	$(eval export SHINY_ADD_EXAMPLES=true)
 	$(eval export IN_QUARTODOC=true)
 	$(eval export SHINY_MODE=core)
@@ -66,7 +64,8 @@ quartodoc_build_core: $(PYBIN) quartodoc_interlinks ## Build core API docs
 	  && mv objects.json _objects_core.json \
 	  && echo "::endgroup::"
 
-quartodoc_build_express: $(PYBIN) quartodoc_interlinks ## Build express API docs
+## Build express API docs
+quartodoc_build_express: $(PYBIN) quartodoc_interlinks
 	$(eval export SHINY_ADD_EXAMPLES=true)
 	$(eval export IN_QUARTODOC=true)
 	$(eval export SHINY_MODE=express)
@@ -75,6 +74,11 @@ quartodoc_build_express: $(PYBIN) quartodoc_interlinks ## Build express API docs
 	  && quartodoc build --config _quartodoc-express.yml --verbose \
 	  && mv objects.json _objects_express.json \
 	  && echo "::endgroup::"
+
+## Clean up after quartodoc build
+quartodoc_post: $(PYBIN)
+	. $(PYBIN)/activate \
+	  && python _combine_objects_json.py
 
 site:  ## Build website
 	. $(PYBIN)/activate \
