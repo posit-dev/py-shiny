@@ -109,7 +109,7 @@ def column(
     return div({"class": cls}, *args, **kwargs)
 
 
-@no_example
+@no_example()
 def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Create a well panel.
@@ -233,7 +233,7 @@ def panel_title(
     return TagList(get_window_title(title, window_title), title)
 
 
-@no_example
+@no_example()
 def panel_fixed(
     *args: TagChild | TagAttrs,
     top: Optional[str] = None,
@@ -385,7 +385,7 @@ def panel_absolute(
     return TagList(deps, divTag, tags.script(f'$(".draggable").draggable({dragOpts});'))
 
 
-@no_example
+@no_example()
 def help_text(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Create a help text element

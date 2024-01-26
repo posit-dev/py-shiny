@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 from .. import _utils
 from .. import ui as _ui
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._namespaces import ResolvedId
 from .._typing_extensions import Self
 from ..session import get_current_session, require_active_session
@@ -61,6 +61,7 @@ __all__ = (
 
 
 @add_example(ex_dir="../api-examples/output_text")
+@no_example("express")
 class text(Renderer[str]):
     """
     Reactively render text.
@@ -188,6 +189,7 @@ class code(Renderer[str]):
 
 
 @add_example(ex_dir="../api-examples/output_plot")
+@no_example("express")
 class plot(Renderer[object]):
     """
     Reactively render a plot object as an HTML image.

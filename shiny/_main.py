@@ -143,7 +143,7 @@ any of the following will work:
     help="Launch app browser after app starts, using the Python webbrowser module.",
     show_default=True,
 )
-@no_example
+@no_example()
 def run(
     app: str | shiny.App,
     host: str,

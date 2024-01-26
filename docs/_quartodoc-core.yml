@@ -1,10 +1,10 @@
 quartodoc:
   style: pkgdown
-  dir: api
+  dir: api/core
   out_index: index.qmd
   package: shiny
   rewrite_all_pages: false
-  sidebar: api/_sidebar.yml
+  sidebar: api/core/_sidebar.yml
   dynamic: true
   renderer:
     style: _renderer.py
@@ -374,6 +374,7 @@ quartodoc:
         - ui.panel_main
         - ui.panel_sidebar
         - ui.nav
+        - render.transformer.output_transformer
         - render.transformer.resolve_value_fn
     - title: Experimental
       desc: "These methods are under consideration and are considered unstable. However, if there is a method you are excited about, please let us know!"

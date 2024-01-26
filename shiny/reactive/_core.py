@@ -200,6 +200,7 @@ _reactive_environment = ReactiveEnvironment()
 
 
 @add_example()
+@no_example("express")
 @contextlib.contextmanager
 def isolate() -> Generator[None, None, None]:
     """
@@ -247,7 +248,7 @@ def get_current_context() -> Context:
     return _reactive_environment.current_context()
 
 
-@no_example
+@no_example()
 async def flush() -> None:
     """
     Run any pending invalidations (i.e., flush the reactive environment).
@@ -260,7 +261,7 @@ async def flush() -> None:
     await _reactive_environment.flush()
 
 
-@no_example
+@no_example()
 def on_flushed(
     func: Callable[[], Awaitable[None]], once: bool = False
 ) -> Callable[[], None]:
@@ -288,7 +289,7 @@ def on_flushed(
     return _reactive_environment.on_flushed(func, once)
 
 
-@no_example
+@no_example()
 def lock() -> asyncio.Lock:
     """
     A lock that should be held whenever manipulating the reactive graph.

@@ -1,10 +1,10 @@
 import re
 
-from conftest import ShinyAppProc, create_doc_example_fixture
+from conftest import ShinyAppProc, create_doc_example_core_fixture
 from controls import InputTextArea, OutputTextVerbatim
 from playwright.sync_api import Locator, Page, expect
 
-app = create_doc_example_fixture("input_text_area")
+app = create_doc_example_core_fixture("input_text_area")
 
 default_txt = "Data summary\nwith\nmultiple\nlines"
 

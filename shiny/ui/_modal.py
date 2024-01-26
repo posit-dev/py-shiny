@@ -20,7 +20,9 @@ from ..types import MISSING, MISSING_TYPE
 @add_example(ex_dir="../api-examples/modal")
 def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue) -> Tag:
     """
-    Creates a button that will dismiss a :func:`~shiny.ui.modal`. :func:`~shiny.ui.modal_button` is usually
+    Creates a button that will dismiss a :func:`~shiny.ui.modal`.
+
+    :func:`~shiny.ui.modal_button` is usually
     passed to the `footer` of a :func:`~shiny.ui.modal` to add a button to the footer that will close
     the :func:`~shiny.ui.modal`.
 

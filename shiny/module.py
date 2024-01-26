@@ -15,7 +15,7 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-@no_example
+@no_example()
 def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     def wrapper(id: Id, *args: P.args, **kwargs: P.kwargs) -> R:
         with namespace_context(id):
@@ -24,7 +24,7 @@ def ui(fn: Callable[P, R]) -> Callable[Concatenate[str, P], R]:
     return wrapper
 
 
-@no_example
+@no_example()
 def server(
     fn: Callable[Concatenate[Inputs, Outputs, Session, P], R]
 ) -> Callable[Concatenate[str, P], R]:

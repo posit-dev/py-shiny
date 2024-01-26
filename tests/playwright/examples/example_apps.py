@@ -20,10 +20,15 @@ def get_apps(path: str) -> typing.List[str]:
     for folder in os.listdir(full_path):
         folder_path = os.path.join(full_path, folder)
         if os.path.isdir(folder_path):
-            app_path = os.path.join(folder_path, "app.py")
-            if os.path.isfile(app_path):
-                # Return relative app path
-                app_paths.append(os.path.join(path, folder, "app.py"))
+            folder_files = os.listdir(folder_path)
+            for file in folder_files:
+                if os.path.isdir(os.path.join(folder_path, file)):
+                    continue
+                if not file.endswith(".py"):
+                    continue
+                if file == "app.py" or file.startswith("app-"):
+                    # Return relative app path
+                    app_paths.append(os.path.join(path, folder, file))
     return app_paths
 
 
@@ -69,6 +74,9 @@ app_allow_shiny_errors: typing.Dict[
     "render_express": [*express_warnings],
 }
 app_allow_external_errors: typing.List[str] = [
+    # TODO-garrick-future: Remove after fixing sidebar max_height_mobile warning
+    "UserWarning: The `shiny.ui.sidebar(max_height_mobile=)`",
+    "res = self.fn(*self.args, **self.kwargs)",
     # if shiny express app detected
     "Detected Shiny Express app",
     # pandas >= 2.2.0

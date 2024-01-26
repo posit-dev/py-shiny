@@ -20,7 +20,7 @@ import shiny._utils
 __all__ = (
     "ShinyAppProc",
     "create_app_fixture",
-    "create_doc_example_fixture",
+    "create_doc_example_core_fixture",
     "create_example_fixture",
     "local_app",
     "run_shiny_app",
@@ -191,16 +191,42 @@ def create_app_fixture(app: Union[PurePath, str], scope: str = "module"):
     )(fixture_func)
 
 
-def create_example_fixture(example_name: str, scope: str = "module"):
+def create_example_fixture(
+    example_name: str,
+    example_file: str = "app.py",
+    scope: str = "module",
+):
     """Used to create app fixtures from apps in py-shiny/examples"""
-    return create_app_fixture(here_root / "examples" / example_name / "app.py", scope)
+    return create_app_fixture(
+        here_root / "examples" / example_name / example_file, scope
+    )
 
 
-def create_doc_example_fixture(example_name: str, scope: str = "module"):
+def create_doc_example_fixture(
+    example_name: str,
+    example_file: str = "app.py",
+    scope: str = "module",
+):
     """Used to create app fixtures from apps in py-shiny/shiny/api-examples"""
     return create_app_fixture(
-        here_root / "shiny/api-examples" / example_name / "app.py", scope
+        here_root / "shiny/api-examples" / example_name / example_file, scope
     )
+
+
+def create_doc_example_core_fixture(
+    example_name: str,
+    scope: str = "module",
+):
+    """Used to create app fixtures from ``app-core.py`` example apps in py-shiny/shiny/api-examples"""
+    return create_doc_example_fixture(example_name, "app-core.py", scope)
+
+
+def create_doc_example_express_fixture(
+    example_name: str,
+    scope: str = "module",
+):
+    """Used to create app fixtures from ``app-express.py`` example apps in py-shiny/shiny/api-examples"""
+    return create_doc_example_fixture(example_name, "app-express.py", scope)
 
 
 def create_deploys_fixture(app: Union[PurePath, str], scope: str = "module"):
