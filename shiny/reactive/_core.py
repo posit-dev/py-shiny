@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Generator, Optional, Type
 
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
-from .._docstring import add_example, no_example, no_example_express
+from .._docstring import add_example, no_example
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
@@ -199,7 +199,8 @@ class ReactiveEnvironment:
 _reactive_environment = ReactiveEnvironment()
 
 
-@no_example_express(add_example())
+@add_example()
+@no_example("express")
 @contextlib.contextmanager
 def isolate() -> Generator[None, None, None]:
     """
@@ -247,7 +248,7 @@ def get_current_context() -> Context:
     return _reactive_environment.current_context()
 
 
-@no_example
+@no_example()
 async def flush() -> None:
     """
     Run any pending invalidations (i.e., flush the reactive environment).
@@ -260,7 +261,7 @@ async def flush() -> None:
     await _reactive_environment.flush()
 
 
-@no_example
+@no_example()
 def on_flushed(
     func: Callable[[], Awaitable[None]], once: bool = False
 ) -> Callable[[], None]:
@@ -288,7 +289,7 @@ def on_flushed(
     return _reactive_environment.on_flushed(func, once)
 
 
-@no_example
+@no_example()
 def lock() -> asyncio.Lock:
     """
     A lock that should be held whenever manipulating the reactive graph.

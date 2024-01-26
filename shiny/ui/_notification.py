@@ -93,7 +93,7 @@ def notification_show(
     return id
 
 
-@no_example
+@no_example()
 def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
     """
     Remove a notification.

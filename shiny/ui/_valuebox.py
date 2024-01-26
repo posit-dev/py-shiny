@@ -227,7 +227,7 @@ class ValueBoxTheme:
     bg: str | None
 
 
-@no_example
+@no_example()
 def value_box_theme(
     name: Optional[str] = None,
     *,

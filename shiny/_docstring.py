@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import sys
-from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, TypeVar
 
 
@@ -26,27 +25,21 @@ FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
 
 
-def no_example(func: F) -> F:
-    return func
-
-
-def no_example_express(decorator: Callable[..., F]) -> F | Callable[..., F]:
+def no_example(type: Optional[Literal["express", "core"]] = None) -> Callable[[F], F]:
     """
-    Prevent ``@add_example()`` from throwing an error about missing Express examples.
+    Prevent ``@add_example()`` from throwing an error about missing examples.
     """
 
-    @wraps(decorator)
-    def wrapper_decorator(*args: Any, **kwargs: Any) -> F:
-        try:
-            # Apply the potentially problematic decorator
-            return decorator(*args, **kwargs)
-        except ExpressExampleNotFoundException:
-            # If an error occurs, return the original function
-            if args and callable(args[0]):
-                return args[0]
-            raise
+    def decorator(func: F) -> F:
+        current = getattr(func, "__no_example", [])
+        if type is None:
+            current.extend(["express", "core"])
+        else:
+            current.append(type)
+        setattr(func, "__no_example", current)  # noqa: B010
+        return func
 
-    return wrapper_decorator
+    return decorator
 
 
 # This class is used to mark docstrings when @add_example() is used, so that an error
@@ -109,6 +102,10 @@ def add_example(
                 func.__doc__ = DocStringWithExample(func.__doc__)
             return func
 
+        current_mode = os.getenv("SHINY_MODE", "core")
+        if current_mode in getattr(func, "__no_example", []):
+            return func
+
         func_dir = get_decorated_source_directory(func)
         fn_name = func.__name__
 
@@ -137,10 +134,10 @@ def add_example(
             file = "shiny/" + func_dir.split("shiny/")[1]
             if "__code__" in dir(func):
                 print(
-                    f"::warning file={file},line={func.__code__.co_firstlineno}::{e}"
+                    f"::warning file={file},line={func.__code__.co_firstlineno}::{fn_name} - {e}"
                 )
             else:
-                print(f"::warning file={file}::{e}")
+                print(f"::warning file={file}::{fn_name} - {e}")
 
             return func
 

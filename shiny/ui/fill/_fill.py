@@ -104,7 +104,7 @@ def as_fill_item(
     return res
 
 
-@no_example
+@no_example()
 def remove_all_fill(
     tag: TagT,
 ) -> TagT:

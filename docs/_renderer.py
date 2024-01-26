@@ -271,8 +271,8 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
 
 
 def check_if_missing_expected_example(el, converted):
-    if os.environ.get("SHINY_MODE") == "express":
-        # These errors are thrown much earlier by @add_example()
+    if os.environ.get("SHINY_MODE", "core") == "express":
+        # We aren't done with all of the express examples yet
         return
 
     if re.search(r"(^|\n)#{2,6} Examples\n", converted):
@@ -283,9 +283,15 @@ def check_if_missing_expected_example(el, converted):
         # Only check Shiny objects for examples
         return
 
-    if hasattr(el, "decorators") and "no_example" in [
-        d.value.canonical_name for d in el.decorators
-    ]:
+    def is_no_ex_decorator(x):
+        if x == "no_example()":
+            return True
+
+        return x == f'no_example("{os.environ.get("SHINY_MODE", "core")}")'
+
+    if hasattr(el, "decorators") and any(
+        [is_no_ex_decorator(d.value.canonical_name) for d in el.decorators]
+    ):
         # When an example is intentionally omitted, we mark the fn with `@no_example`
         return
 

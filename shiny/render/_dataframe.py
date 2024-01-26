@@ -108,7 +108,7 @@ class DataGrid(AbstractTabularData):
         return res
 
 
-@no_example
+@no_example()
 class DataTable(AbstractTabularData):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
