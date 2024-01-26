@@ -97,7 +97,7 @@ class NavPanel:
         )
 
 
-@add_example(app_file="app-basic.py")
+@add_example()
 def nav_panel(
     title: TagChild,
     *args: TagChild,
