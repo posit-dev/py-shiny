@@ -89,9 +89,8 @@ def stock_quotes() -> pd.DataFrame:
 # === Define the Shiny UI and server ===============================
 
 app_ui = ui.page_fluid(
-    ui.row(
-        ui.column(
-            8,
+    ui.layout_columns(
+        ui.card(
             ui.markdown(
                 """
                 # `shiny.reactive.poll` demo
@@ -100,11 +99,14 @@ app_ui = ui.page_fluid(
                 case, an in-memory sqlite3) with the help of `shiny.reactive.poll`.
                 """
             ),
-            class_="mb-3",
+            ui.input_selectize(
+                "symbols", "Filter by symbol", [""] + SYMBOLS, multiple=True
+            ),
+            ui.output_data_frame("table"),
+            fill=False,
         ),
-    ),
-    ui.input_selectize("symbols", "Filter by symbol", [""] + SYMBOLS, multiple=True),
-    ui.output_ui("table"),
+        col_widths=[8, 4],
+    )
 )
 
 
@@ -115,13 +117,9 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             df = df[df["symbol"].isin(input.symbols())]
         return df
 
-    @render.ui
+    @render.data_frame
     def table():
-        return ui.HTML(
-            filtered_quotes().to_html(
-                index=False, classes="table font-monospace w-auto"
-            )
-        )
+        return filtered_quotes()
 
 
 app = App(app_ui, server)
