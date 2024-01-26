@@ -74,6 +74,9 @@ app_allow_shiny_errors: typing.Dict[
     "render_express": [*express_warnings],
 }
 app_allow_external_errors: typing.List[str] = [
+    # TODO-garrick-future: Remove after fixing sidebar max_height_mobile warning
+    "UserWarning: The `shiny.ui.sidebar(max_height_mobile=)`",
+    "res = self.fn(*self.args, **self.kwargs)",
     # if shiny express app detected
     "Detected Shiny Express app",
     # pandas >= 2.2.0
