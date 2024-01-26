@@ -221,7 +221,7 @@ class ExampleNotFoundException(FileNotFoundError):
 
     def __str__(self):
         if self.type in ("core", "express"):
-            ## Capitalize first letter
+            # Capitalize first letter
             type = "a Shiny Express" if self.type == "express" else "a Shiny Core"
         else:
             type = "an"
