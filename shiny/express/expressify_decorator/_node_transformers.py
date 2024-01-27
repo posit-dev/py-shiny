@@ -8,6 +8,7 @@ from ._helpers import ast_matches_func
 
 sys_alias = "__auto_displayhook_sys__"
 expressify_decorator_func_name = "_expressify_decorator_function_def"
+session_context_func_name = "__shiny_session_context__"
 
 
 class TopLevelTransformer(ast.NodeTransformer):
@@ -125,3 +126,33 @@ class DisplayFuncsTransformer(TopLevelTransformer):
             0, ast.Name(id=expressify_decorator_func_name, ctx=ast.Load())
         )
         return node
+
+
+class ImportSharedSessionContextTransformer(TopLevelTransformer):
+    def __init__(self, module_name: str):
+        self.module_name = module_name
+
+    def visit_Import(self, node: ast.Import) -> ast.AST:
+        if any(alias.name == self.module_name for alias in node.names):
+            return self._create_with_block(node)
+        return node
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.AST:
+        if node.module == self.module_name:
+            return self._create_with_block(node)
+        return node
+
+    def _create_with_block(self, original_node: ast.Import | ast.ImportFrom):
+        with_node = ast.With()
+        with_node.items = [
+            ast.withitem(
+                context_expr=ast.Call(
+                    func=ast.Name(id=session_context_func_name, ctx=ast.Load()),
+                    args=[ast.Constant(value=None)],
+                    keywords=[],
+                ),
+                optional_vars=None,
+            )
+        ]
+        with_node.body = [original_node]
+        return with_node
