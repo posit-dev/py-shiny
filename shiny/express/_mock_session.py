@@ -17,6 +17,9 @@ class MockSession:
         self.input = Inputs({})
         self.output = Outputs(cast(Session, self), self.ns, {}, {})
 
+    def __bool__(self) -> bool:
+        return False
+
     # This is needed so that Outputs don't throw an error.
     def _is_hidden(self, name: str) -> bool:
         return False

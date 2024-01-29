@@ -688,7 +688,7 @@ class download(Renderer[str]):
         # not being None is because in Express, when the UI is rendered, this function
         # `render.download()()`  called once before any sessions have been started.
         session = get_current_session()
-        if session is not None:
+        if session:
             session._downloads[self.output_id] = DownloadInfo(
                 filename=self.filename,
                 content_type=self.media_type,
