@@ -177,7 +177,8 @@ def create_deploys_app_url_fixture(
 
         if deploy_location == LOCAL_LOCATION:
             shinyapp_proc_gen = local_app_fixture_gen(app_file)
-            yield next(shinyapp_proc_gen)
+            # Return the `url`
+            yield next(shinyapp_proc_gen).url
         elif deploy_location in deploy_locations:
             app_url = deploy_app(
                 app_file,
