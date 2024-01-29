@@ -1,23 +1,16 @@
-import os
-
-import pytest
 from controls import Accordion
 from playwright.sync_api import Page
 from utils.deploy_utils import (
-    deploy_locations,
-    prepare_deploy_and_open_url,
-    skip_if_not_python_310,
+    create_deploys_app_url_fixture,
+    skip_if_not_python_310_or_chrome,
 )
 
-APP_NAME = "shiny_express_accordion"
-app_file_path = os.path.dirname(os.path.abspath(__file__))
+app_url = create_deploys_app_url_fixture(__file__, "shiny_express_accordion")
 
 
-@skip_if_not_python_310
-@pytest.mark.only_browser("chromium")
-@pytest.mark.parametrize("location", deploy_locations)
-def test_express_accordion(page: Page, location: str) -> None:
-    prepare_deploy_and_open_url(page, app_file_path, location, APP_NAME)
+@skip_if_not_python_310_or_chrome
+def test_express_accordion(page: Page, app_url: str) -> None:
+    page.goto(app_url)
 
     acc = Accordion(page, "express_accordion")
     acc_panel_2 = acc.accordion_panel("Panel 2")

@@ -1,22 +1,15 @@
-import os
-
-import pytest
 from playwright.sync_api import Page, expect
 from utils.deploy_utils import (
-    deploy_locations,
-    prepare_deploy_and_open_url,
-    skip_if_not_python_310,
+    create_deploys_app_url_fixture,
+    skip_if_not_python_310_or_chrome,
 )
 
-APP_NAME = "shiny-express-folium"
-app_file_path = os.path.dirname(os.path.abspath(__file__))
+app_url = create_deploys_app_url_fixture(__file__, "shiny-express-folium")
 
 
-@skip_if_not_python_310
-@pytest.mark.only_browser("chromium")
-@pytest.mark.parametrize("location", deploy_locations)
-def test_folium_map(page: Page, location: str) -> None:
-    prepare_deploy_and_open_url(page, app_file_path, location, APP_NAME)
+@skip_if_not_python_310_or_chrome
+def test_folium_map(page: Page, app_url: str) -> None:
+    page.goto(app_url)
 
     expect(page.get_by_text("Static Map")).to_have_count(1)
     expect(page.get_by_text("Map inside of render express call")).to_have_count(1)
