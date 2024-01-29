@@ -11,7 +11,18 @@ from contextlib import contextmanager
 from pathlib import PurePath
 from time import sleep
 from types import TracebackType
-from typing import IO, Any, Callable, Generator, List, Optional, TextIO, Type, Union
+from typing import (
+    IO,
+    Any,
+    Callable,
+    Generator,
+    List,
+    Literal,
+    Optional,
+    TextIO,
+    Type,
+    Union,
+)
 
 import pytest
 
@@ -176,41 +187,46 @@ def run_shiny_app(
     return sa
 
 
-def create_app_fixture(app: Union[PurePath, str], scope: str = "module"):
+def local_app_fixture_gen(app: PurePath | str):
+    sa = run_shiny_app(app, wait_for_start=False)
+    try:
+        with sa:
+            sa.wait_until_ready(30)
+            yield sa
+    finally:
+        logging.warning("Application output:\n" + str(sa.stderr))
+
+
+ScopeName = Literal["session", "package", "module", "class", "function"]
+
+
+def create_app_fixture(
+    app: Union[PurePath, str],
+    scope: ScopeName = "module",
+):
+    @pytest.fixture(scope=scope)
     def fixture_func():
-        sa = run_shiny_app(app, wait_for_start=False)
-        try:
-            with sa:
-                sa.wait_until_ready(30)
-                yield sa
-        finally:
-            logging.warning("Application output:\n" + str(sa.stderr))
+        # Pass through `yield` via `next(...)` call
+        # (`yield` must be on same line as `next`!)
+        app_gen = local_app_fixture_gen(app)
+        yield next(app_gen)
 
-    return pytest.fixture(
-        scope=scope,  # type: ignore
-    )(fixture_func)
+    return fixture_func
 
 
-def create_example_fixture(example_name: str, scope: str = "module"):
+def create_example_fixture(example_name: str, scope: ScopeName = "module"):
     """Used to create app fixtures from apps in py-shiny/examples"""
     return create_app_fixture(here_root / "examples" / example_name / "app.py", scope)
 
 
-def create_doc_example_fixture(example_name: str, scope: str = "module"):
+def create_doc_example_fixture(example_name: str, scope: ScopeName = "module"):
     """Used to create app fixtures from apps in py-shiny/shiny/api-examples"""
     return create_app_fixture(
         here_root / "shiny/api-examples" / example_name / "app.py", scope
     )
 
 
-def create_deploys_fixture(app: Union[PurePath, str], scope: str = "module"):
-    """Used to create app fixtures from apps in tests/playwright/deploys/apps"""
-    return create_app_fixture(
-        here_root / "tests/playwright/deploys/apps" / app / "app.py", scope
-    )
-
-
-def x_create_doc_example_fixture(example_name: str, scope: str = "module"):
+def x_create_doc_example_fixture(example_name: str, scope: ScopeName = "module"):
     """Used to create app fixtures from apps in py-shiny/shiny/examples"""
     return create_app_fixture(
         here_root / "shiny/experimental/api-examples" / example_name / "app.py", scope
@@ -219,13 +235,8 @@ def x_create_doc_example_fixture(example_name: str, scope: str = "module"):
 
 @pytest.fixture(scope="module")
 def local_app(request: pytest.FixtureRequest) -> Generator[ShinyAppProc, None, None]:
-    sa = run_shiny_app(PurePath(request.path).parent / "app.py", wait_for_start=False)
-    try:
-        with sa:
-            sa.wait_until_ready(30)
-            yield sa
-    finally:
-        logging.warning("Application output:\n" + str(sa.stderr))
+    app_gen = local_app_fixture_gen(PurePath(request.path).parent / "app.py")
+    yield next(app_gen)
 
 
 @contextmanager
