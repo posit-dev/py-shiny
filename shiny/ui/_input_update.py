@@ -113,7 +113,7 @@ update_action_link.__doc__ = update_action_button.__doc__
 # -----------------------------------------------------------------------------
 # input_task_button.py
 # -----------------------------------------------------------------------------
-@no_example
+@no_example()
 def update_task_button(
     id: str,
     *,
@@ -213,7 +213,7 @@ def update_checkbox(
     session.send_input_message(id, drop_none(msg))
 
 
-@no_example
+@no_example()
 @doc_format(note=_note)
 def update_switch(
     id: str,

@@ -1,7 +1,7 @@
-from conftest import ShinyAppProc, create_doc_example_fixture
+from conftest import ShinyAppProc, create_doc_example_core_fixture
 from playwright.sync_api import Page, expect
 
-app = create_doc_example_fixture("render_express")
+app = create_doc_example_core_fixture("render_express")
 
 EXPECT_TIMEOUT = 30 * 1000
 

@@ -34,7 +34,7 @@ _current_session: ContextVar[Optional[Session]] = ContextVar(
 _default_session: Optional[Session] = None
 
 
-@no_example
+@no_example()
 def get_current_session() -> Optional[Session]:
     """
     Get the current user session.
@@ -76,7 +76,7 @@ def session_context(session: Optional[Session]):
         _current_session.reset(token)
 
 
-@no_example
+@no_example()
 def require_active_session(session: Optional[Session]) -> Session:
     """
     Raise an exception if no Shiny session is currently active.

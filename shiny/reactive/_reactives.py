@@ -30,7 +30,7 @@ from typing import (
 )
 
 from .. import _utils
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
 from ..types import MISSING, MISSING_TYPE, ActionButtonValue, SilentException
@@ -679,6 +679,7 @@ def effect(
 
 
 @add_example()
+@no_example("express")
 def effect(
     fn: Optional[EffectFunction | EffectFunctionAsync] = None,
     *,

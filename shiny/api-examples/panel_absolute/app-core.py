@@ -9,7 +9,7 @@ app_ui = ui.page_fluid(
         draggable=True,
         width="300px",
         right="50px",
-        top="50%",
+        top="25%",
     ),
 )
 

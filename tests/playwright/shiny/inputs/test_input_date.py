@@ -4,11 +4,11 @@ import datetime
 import typing
 from typing import Literal
 
-from conftest import ShinyAppProc, create_doc_example_fixture
+from conftest import ShinyAppProc, create_doc_example_core_fixture
 from controls import InputDate
 from playwright.sync_api import Page, expect
 
-app = create_doc_example_fixture("input_date")
+app = create_doc_example_core_fixture("input_date")
 
 
 def expect_date(

@@ -271,7 +271,7 @@ def output_text(
     return container(id=resolve_id(id), class_="shiny-text-output")
 
 
-@no_example
+@no_example()
 def output_code(id: str, placeholder: bool = True) -> Tag:
     """
     Create a output container for code (monospaced text).
