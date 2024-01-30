@@ -136,8 +136,10 @@ jobs:
           DEPLOY_SHINYAPPS_TOKEN: "${{ secrets.DEPLOY_SHINYAPPS_TOKEN }}"
           DEPLOY_SHINYAPPS_SECRET: "${{ secrets.DEPLOY_SHINYAPPS_SECRET }}"
         timeout-minutes: 30
+        # Given we are waiting for external servers to finish,
+        # we can have many local processes waiting for deployment to finish
         run: |
-          make playwright-deploys SUB_FILE=". -vv"
+          make playwright-deploys SUB_FILE=". -vv --numprocesses 12"
 
   pypi:
     name: "Deploy to PyPI"
