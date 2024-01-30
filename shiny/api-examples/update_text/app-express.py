@@ -1,5 +1,5 @@
 from shiny import reactive
-from shiny.express import input, render, ui
+from shiny.express import input, ui
 
 with ui.layout_column_wrap(width=1 / 2):
     ui.input_radio_buttons("pet_type", "Pet type", ["Dog", "Cat", "Bird"], inline=True)

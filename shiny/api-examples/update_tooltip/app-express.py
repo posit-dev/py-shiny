@@ -1,4 +1,4 @@
-from shiny import reactive, req
+from shiny import reactive
 from shiny.express import input, ui
 
 ui.input_action_button("btn_show", "Show tooltip", class_="mt-3 me-3")

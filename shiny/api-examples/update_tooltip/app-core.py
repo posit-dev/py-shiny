@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, reactive, req, ui
+from shiny import App, Inputs, Outputs, Session, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.input_action_button("btn_show", "Show tooltip", class_="mt-3 me-3"),
