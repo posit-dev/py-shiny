@@ -163,17 +163,12 @@ def deploy_app(
 
 
 def create_deploys_app_url_fixture(
-    test_file_path: str,  # __file__
     app_name: str,
     scope: ScopeName = "module",
 ):
-    app_file = os.path.join(
-        os.path.dirname(os.path.abspath(test_file_path)),
-        "app.py",
-    )
-
     @pytest.fixture(scope=scope, params=[*deploy_locations, LOCAL_LOCATION])
     def fix_fn(request: pytest.FixtureRequest):
+        app_file = os.path.join(os.path.dirname(request.path), "app.py")
         deploy_location = request.param
 
         if deploy_location == LOCAL_LOCATION:

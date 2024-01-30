@@ -2,7 +2,7 @@ from controls import Accordion
 from playwright.sync_api import Page
 from utils.deploy_utils import create_deploys_app_url_fixture, skip_if_not_chrome
 
-app_url = create_deploys_app_url_fixture(__file__, "shiny_express_accordion")
+app_url = create_deploys_app_url_fixture("shiny_express_accordion")
 
 
 @skip_if_not_chrome

@@ -6,7 +6,7 @@ from utils.express_utils import compare_annotations
 from shiny import ui
 from shiny.express import ui as xui
 
-app_url = create_deploys_app_url_fixture(__file__, "express_page_sidebar")
+app_url = create_deploys_app_url_fixture("express_page_sidebar")
 
 
 @skip_if_not_chrome

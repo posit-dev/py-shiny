@@ -2,7 +2,7 @@ from playwright.sync_api import Page, expect
 from utils.deploy_utils import create_deploys_app_url_fixture, skip_if_not_chrome
 
 TIMEOUT = 2 * 60 * 1000
-app_url = create_deploys_app_url_fixture(__file__, "example_deploy_app_A")
+app_url = create_deploys_app_url_fixture("example_deploy_app_A")
 
 
 @skip_if_not_chrome
