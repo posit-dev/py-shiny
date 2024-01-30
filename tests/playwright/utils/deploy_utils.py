@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import platform
 import subprocess
 from typing import Any, Callable, TypeVar
 
@@ -14,7 +13,7 @@ LOCAL_LOCATION = "local"
 
 __all__ = (
     "create_deploys_app_url_fixture",
-    "skip_if_not_python_310_or_chrome",
+    "skip_if_not_chrome",
 )
 
 # connect
@@ -31,11 +30,13 @@ deploy_locations = ["connect", "shinyapps"]
 CallableT = TypeVar("CallableT", bound=Callable[..., Any])
 
 
-def skip_if_not_python_310_or_chrome(fn: CallableT) -> CallableT:
-    fn = pytest.mark.skipif(
-        platform.python_version_tuple()[:2] != ("3", "10"),
-        reason="Test requires Python 3.10",
-    )(fn)
+def skip_if_not_chrome(fn: CallableT) -> CallableT:
+    # # Keeping commented to allow for easier local debugging
+    # import platform
+    # fn = pytest.mark.skipif(
+    #     platform.python_version_tuple()[:2] != ("3", "10"),
+    #     reason="Test requires Python 3.10",
+    # )(fn)
     fn = pytest.mark.only_browser("chromium")(fn)
 
     return fn

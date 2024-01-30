@@ -1,9 +1,6 @@
 from controls import OutputTextVerbatim, Sidebar
 from playwright.sync_api import Page
-from utils.deploy_utils import (
-    create_deploys_app_url_fixture,
-    skip_if_not_python_310_or_chrome,
-)
+from utils.deploy_utils import create_deploys_app_url_fixture, skip_if_not_chrome
 from utils.express_utils import compare_annotations
 
 from shiny import ui
@@ -12,7 +9,7 @@ from shiny.express import ui as xui
 app_url = create_deploys_app_url_fixture(__file__, "express_page_sidebar")
 
 
-@skip_if_not_python_310_or_chrome
+@skip_if_not_chrome
 def test_express_page_sidebar(page: Page, app_url: str) -> None:
     page.goto(app_url)
 

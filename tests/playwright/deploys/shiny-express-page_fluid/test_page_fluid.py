@@ -1,14 +1,11 @@
 from controls import Card, OutputTextVerbatim
 from playwright.sync_api import Page
-from utils.deploy_utils import (
-    create_deploys_app_url_fixture,
-    skip_if_not_python_310_or_chrome,
-)
+from utils.deploy_utils import create_deploys_app_url_fixture, skip_if_not_chrome
 
 app_url = create_deploys_app_url_fixture(__file__, "express_page_fluid")
 
 
-@skip_if_not_python_310_or_chrome
+@skip_if_not_chrome
 def test_express_page_fluid(page: Page, app_url: str) -> None:
     page.goto(app_url)
 

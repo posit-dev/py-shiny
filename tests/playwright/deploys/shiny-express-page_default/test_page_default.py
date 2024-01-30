@@ -1,16 +1,13 @@
 from controls import LayoutNavsetTab
 from playwright.sync_api import Page
-from utils.deploy_utils import (
-    create_deploys_app_url_fixture,
-    skip_if_not_python_310_or_chrome,
-)
+from utils.deploy_utils import create_deploys_app_url_fixture, skip_if_not_chrome
 
 TIMEOUT = 2 * 60 * 1000
 
 app_url = create_deploys_app_url_fixture(__file__, "shiny-express-folium")
 
 
-@skip_if_not_python_310_or_chrome
+@skip_if_not_chrome
 def test_page_default(page: Page, app_url: str) -> None:
     page.goto(app_url)
 
