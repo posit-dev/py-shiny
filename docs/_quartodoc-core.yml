@@ -184,6 +184,7 @@ quartodoc:
         - reactive.event
         - reactive.isolate
         - reactive.invalidate_later
+        - reactive.extended_task
         - reactive.flush
         - reactive.poll
         - reactive.file_reader
