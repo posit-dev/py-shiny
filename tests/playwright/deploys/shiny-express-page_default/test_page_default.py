@@ -5,6 +5,8 @@ from utils.deploy_utils import (
     skip_if_not_python_310_or_chrome,
 )
 
+TIMEOUT = 2 * 60 * 1000
+
 app_url = create_deploys_app_url_fixture(__file__, "shiny-express-folium")
 
 
@@ -13,7 +15,7 @@ def test_page_default(page: Page, app_url: str) -> None:
     page.goto(app_url)
 
     nav_html = LayoutNavsetTab(page, "express_navset_tab")
-    nav_html.expect_content("pre 0pre 1pre 2")
+    nav_html.expect_content("pre 0pre 1pre 2", timeout=TIMEOUT)
     nav_html.set("div")
     nav_html.expect_content("div 0\ndiv 1\ndiv 2")
     nav_html.set("span")
