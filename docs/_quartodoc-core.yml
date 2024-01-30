@@ -264,8 +264,8 @@ quartodoc:
           path: ExtendedTask
           flatten: true
           summary:
-            name: "Create an extended task"
-            desc: ""
+            name: "ExtendedTask"
+            desc: "Supervise an extended, long-running task"
           contents:
             - reactive.ExtendedTask
             - reactive.ExtendedTask.invoke
