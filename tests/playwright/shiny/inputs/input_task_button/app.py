@@ -7,7 +7,7 @@ from shiny.express import input, ui
 ui.h5("Current time")
 
 
-@render.text
+@render.text()
 def current_time():
     reactive.invalidate_later(1)
     return datetime.now().strftime("%H:%M:%S")
@@ -35,7 +35,7 @@ with ui.layout_sidebar():
         ui.input_numeric("x", "x", 1)
         ui.input_numeric("y", "y", 2)
         ui.input_task_button("btn", "Compute, slowly")
-        ui.input_task_button("btn2", "Compute 2 slowly")
+        ui.input_task_button("btn2", "Compute 2 slowly", label_busy="Blocking...")
         ui.input_action_button("btn_cancel", "Cancel")
 
     @reactive.Effect
@@ -49,7 +49,6 @@ with ui.layout_sidebar():
     async def handle_click2():
         # slow_compute.cancel()
         val = await slow_input_compute(input.x(), input.y())
-        print(val)
 
     @reactive.Effect
     @reactive.event(input.btn_cancel)
