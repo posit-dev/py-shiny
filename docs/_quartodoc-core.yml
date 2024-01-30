@@ -260,6 +260,17 @@ quartodoc:
               dynamic: false
             - name: htmltools.css
               dynamic: false
+        - kind: page
+          path: ExtendedTask
+          flatten: true
+          summary:
+            name: "Create an extended task"
+            desc: ""
+          contents:
+            - reactive.ExtendedTask
+            - reactive.ExtendedTask.invoke
+            - reactive.ExtendedTask.result
+            - reactive.ExtendedTask.cancel
     - title: Types
       desc: ""
       contents:
