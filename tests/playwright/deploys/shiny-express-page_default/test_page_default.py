@@ -4,7 +4,7 @@ from utils.deploy_utils import create_deploys_app_url_fixture, skip_if_not_chrom
 
 TIMEOUT = 2 * 60 * 1000
 
-app_url = create_deploys_app_url_fixture("shiny-express-folium")
+app_url = create_deploys_app_url_fixture("shiny_express_page_default")
 
 
 @skip_if_not_chrome
