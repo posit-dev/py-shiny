@@ -52,7 +52,7 @@ def get_coordmap(fig: Figure) -> Coordmap | None:
 def get_coordmap_panel(axes: Axes, panel_num: int, height: float) -> CoordmapPanel:
     spspec = cast(
         "SubplotSpec",
-        axes.get_subplotspec(),  # pyright: ignore[reportGeneralTypeIssues]
+        axes.get_subplotspec(),  # pyright: ignore[reportAttributeAccessIssue]
     )
 
     domain_xlim = axes.get_xlim()
@@ -132,7 +132,7 @@ def get_coordmap_plotnine(p: PlotnineFigure, fig: Figure) -> Coordmap | None:
         return None
 
     p = deepcopy(p)
-    p._build()  # pyright: ignore[reportGeneralTypeIssues]
+    p._build()  # pyright: ignore[reportAttributeAccessIssue]
 
     # Plotnine/ggplot figures can contain some information that is not in the matplotlib
     # Figure object that is generated.

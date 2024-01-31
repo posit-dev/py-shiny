@@ -86,8 +86,6 @@ test: ## run tests quickly with the default Python
 # Default `SUB_FILE` to empty
 SUB_FILE:=
 
-DEPLOYS_FILE:=tests/playwright/deploys
-
 install-playwright:
 	playwright install --with-deps
 
@@ -100,11 +98,11 @@ install-rsconnect: ## install the main version of rsconnect till pypi version su
 playwright-shiny: install-playwright ## end-to-end tests with playwright
 	pytest tests/playwright/shiny/$(SUB_FILE)
 
-playwright-examples: install-playwright ## end-to-end tests on examples with playwright
-	pytest tests/playwright/examples
+playwright-deploys: install-playwright install-rsconnect ## end-to-end tests on examples with playwright
+	pytest tests/playwright/deploys/$(SUB_FILE)
 
-playwright-deploys: install-playwright install-rsconnect ## end-to-end tests on deploys with playwright
-	pytest tests/playwright/deploys/$(SUB_FILE) -s
+playwright-examples: install-playwright ## end-to-end tests on examples with playwright
+	pytest tests/playwright/examples/$(SUB_FILE)
 
 testrail-junit: install-playwright install-trcli ## end-to-end tests with playwright and generate junit report
 	pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml
@@ -131,7 +129,7 @@ install: dist
 	python3 -m pip install dist/shiny*.whl
 
 install-deps: ## install dependencies
-	pip install -e ".[dev,test]"
+	pip install -e ".[dev,test]" --upgrade
 
 # ## If caching is ever used, we could run:
 # install-deps: ## install latest dependencies

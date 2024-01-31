@@ -8,12 +8,13 @@ from typing import cast
 from htmltools import Tag, TagList
 
 from .._app import App
-from ..session import Inputs, Outputs, Session
+from ..session import Inputs, Outputs, Session, session_context
+from ._mock_session import MockSession
 from ._recall_context import RecallContextManager
-from .display_decorator._func_displayhook import _display_decorator_function_def
-from .display_decorator._node_transformers import (
+from .expressify_decorator._func_displayhook import _expressify_decorator_function_def
+from .expressify_decorator._node_transformers import (
     DisplayFuncsTransformer,
-    display_decorator_func_name,
+    expressify_decorator_func_name,
 )
 
 __all__ = ("wrap_express_app",)
@@ -30,16 +31,18 @@ def wrap_express_app(file: Path) -> App:
     Returns
     -------
     :
-        A `shiny.App` object.
+        A :class:`shiny.App` object.
     """
     try:
-        # We tagify here, instead of waiting for the App object to do it when it wraps
-        # the UI in a HTMLDocument and calls render() on it. This is because
-        # AttributeErrors can be thrown during the tagification process, and we need to
-        # catch them here and convert them to a different type of error, because uvicorn
-        # specifically catches AttributeErrors and prints an error message that is
-        # misleading for Shiny Express. https://github.com/posit-dev/py-shiny/issues/937
-        app_ui = run_express(file).tagify()
+        with session_context(cast(Session, MockSession())):
+            # We tagify here, instead of waiting for the App object to do it when it wraps
+            # the UI in a HTMLDocument and calls render() on it. This is because
+            # AttributeErrors can be thrown during the tagification process, and we need to
+            # catch them here and convert them to a different type of error, because uvicorn
+            # specifically catches AttributeErrors and prints an error message that is
+            # misleading for Shiny Express. https://github.com/posit-dev/py-shiny/issues/937
+            app_ui = run_express(file).tagify()
+
     except AttributeError as e:
         raise RuntimeError(e) from e
 
@@ -83,7 +86,7 @@ def run_express(file: Path) -> Tag | TagList:
 
         var_context: dict[str, object] = {
             "__file__": file_path,
-            display_decorator_func_name: _display_decorator_function_def,
+            expressify_decorator_func_name: _expressify_decorator_function_def,
             "input": InputNotImportedShim(),
         }
 

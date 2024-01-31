@@ -7,14 +7,16 @@ __all__ = (
     "input_selectize",
 )
 
-from typing import Mapping, Optional, Union, cast
+import copy
+from json import dumps
+from typing import Any, Mapping, Optional, Union, cast
 
 from htmltools import Tag, TagChild, TagList, css, div, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from ._html_deps_external import selectize_deps
-from ._utils import shiny_input_label
+from ._utils import JSEval, extract_js_keys, shiny_input_label
 
 _Choices = Mapping[str, TagChild]
 _OptGrpChoices = Mapping[str, _Choices]
@@ -54,6 +56,8 @@ def input_selectize(
     selected: Optional[str | list[str]] = None,
     multiple: bool = False,
     width: Optional[str] = None,
+    remove_button: Optional[bool] = None,
+    options: Optional[dict[str, str | float | JSEval]] = None,
 ) -> Tag:
     """
     Create a select list that can be used to choose a single or multiple items from a
@@ -77,6 +81,13 @@ def input_selectize(
         Is selection of multiple items allowed?
     width
         The CSS width, e.g. '400px', or '100%'
+    remove_button
+        Whether to add a remove button. This uses the `clear_button` and `remove_button`
+        selectize plugins which can also be supplied as options. By default it will apply a
+        remove button to multiple selections, but not single selections.
+    options
+        A dictionary of options. See the documentation of selectize.js for possible options.
+        If you want to pass a JavaScript function, wrap the string in `ui.JS`.
 
     Returns
     -------
@@ -93,11 +104,13 @@ def input_selectize(
     :::
 
     See Also
-    -------
-    ~shiny.ui.input_select ~shiny.ui.input_radio_buttons ~shiny.ui.input_checkbox_group
+    --------
+    * :func:`~shiny.ui.input_select`
+    * :func:`~shiny.ui.input_radio_buttons`
+    * :func:`~shiny.ui.input_checkbox_group`
     """
 
-    return input_select(
+    x = input_select(
         id,
         label,
         choices,
@@ -105,7 +118,11 @@ def input_selectize(
         multiple=multiple,
         selectize=True,
         width=width,
+        remove_button=remove_button,
+        options=options,
     )
+
+    return x
 
 
 @add_example()
@@ -119,6 +136,8 @@ def input_select(
     selectize: bool = False,
     width: Optional[str] = None,
     size: Optional[str] = None,
+    remove_button: Optional[bool] = None,
+    options: Optional[dict[str, str | float | JSEval]] = None,
 ) -> Tag:
     """
     Create a select list that can be used to choose a single or multiple items from a
@@ -164,16 +183,25 @@ def input_select(
     :::
 
     See Also
-    -------
-    ~shiny.ui.input_selectize
-    ~shiny.ui.update_select
-    ~shiny.ui.input_radio_buttons
-    ~shiny.ui.input_checkbox_group
+    --------
+    * :func:`~shiny.ui.input_selectize`
+    * :func:`~shiny.ui.update_select`
+    * :func:`~shiny.ui.input_radio_buttons`
+    * :func:`~shiny.ui.input_checkbox_group`
     """
+    if options is not None and selectize is False:
+        raise Exception("Options can only be set when selectize is `True`.")
+
+    remove_button = _resolve_remove_button(remove_button, multiple)
 
     choices_ = _normalize_choices(choices)
     if selected is None and not multiple:
         selected = _find_first_option(choices_)
+
+    if options is None:
+        options = {}
+
+    opts = _update_options(options, remove_button, multiple)
 
     choices_tags = _render_choices(choices_, selected)
 
@@ -192,7 +220,12 @@ def input_select(
             ),
             (
                 TagList(
-                    tags.script("{}", type="application/json", data_for=resolved_id),
+                    tags.script(
+                        dumps(opts),
+                        type="application/json",
+                        data_for=id,
+                        data_eval=dumps(extract_js_keys(opts)),
+                    ),
                     selectize_deps(),
                 )
                 if selectize
@@ -202,6 +235,37 @@ def input_select(
         class_="form-group shiny-input-container",
         style=css(width=width),
     )
+
+
+def _resolve_remove_button(remove_button: Optional[bool], multiple: bool) -> bool:
+    if remove_button is None:
+        if multiple:
+            return True
+        else:
+            return False
+    return remove_button
+
+
+def _update_options(
+    options: dict[str, Any], remove_button: bool, multiple: bool
+) -> dict[str, Any]:
+    opts = copy.deepcopy(options)
+    plugins = opts.get("plugins", [])
+
+    if remove_button:
+        if multiple:
+            to_add = "remove_button"
+        else:
+            to_add = "clear_button"
+
+        if to_add not in plugins:
+            plugins.append(to_add)
+
+    if not plugins:
+        return options
+
+    opts["plugins"] = plugins
+    return opts
 
 
 def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:

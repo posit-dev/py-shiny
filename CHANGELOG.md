@@ -8,17 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+* Fixed `render.download` not working in Express. (#1085)
+
+
+## [0.7.0] - 2024-01-25
+
 ### Breaking Changes
 
 * Closed #938: `page_sidebar()` and `page_navbar()` now use `fillable=False` by default. (#990)
 
 ### New features
 
+* Added `shiny.ui.input_task_button()` for creating buttons that launch longer-running tasks than `shiny.ui.input_action_button()` was designed for. Task buttons give visual feedback that the task is running, and cannot be clicked again until the task is complete. (#907)
+
+* Added `@extended_task` decorator for creating long-running tasks that can be cancelled. (#907)
+
 * Added `@render.download` as a replacement for `@session.download`, which is now deprecated. (#977)
 
 * Added `ui.output_code()`, which is currently an alias for `ui.output_text_verbatim()`. (#997)
 
 * Added `@render.code`, which is an alias for `@render.text`, but in Express mode, it displays the result using `ui.output_code()`. (#997)
+
+* Added `App.on_shutdown` method for registering a callback to be called when the app is shutting down. (#907)
+
+* You can now pass options to `ui.input_selectize` see the [selectize.js](https://selectize.dev/docs/API/selectize) docs for available options. (#914, #158)
+
+* `ui.input_selectize` gains the `remove_button` argument which allows you to control the visibility of the remove button.
 
 ### Bug fixes
 

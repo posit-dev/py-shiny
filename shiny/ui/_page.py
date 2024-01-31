@@ -26,7 +26,7 @@ from htmltools import (
     tags,
 )
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
 from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._bootstrap import panel_title
@@ -41,6 +41,7 @@ from .css import CssUnit, as_css_padding, as_css_unit
 from .fill._fill import as_fillable_container
 
 
+@add_example()
 def page_sidebar(
     sidebar: Sidebar,
     *args: TagChild | TagAttrs,
@@ -109,6 +110,7 @@ def page_sidebar(
     )
 
 
+@no_example()
 def page_navbar(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     title: Optional[str | Tag | TagList] = None,
@@ -187,7 +189,7 @@ def page_navbar(
         A UI element.
 
     See Also
-    -------
+    --------
     * :func:`~shiny.ui.nav`
     * :func:`~shiny.ui.nav_menu`
     * :func:`~shiny.ui.navset_bar`
@@ -253,6 +255,7 @@ def page_navbar(
         )
 
 
+@no_example()
 def page_fillable(
     *args: TagChild | TagAttrs,
     padding: Optional[CssUnit | list[CssUnit]] = None,
@@ -270,13 +273,13 @@ def page_fillable(
     *args
         UI elements.
     padding
-        Padding to use for the body. See :func:`~shiny.ui.css_unit.as_css_padding`
+        Padding to use for the body. See :func:`~shiny.ui.css.as_css_padding`
         for more details.
     fillable_mobile
         Whether or not the page should fill the viewport's height on mobile devices
         (i.e., narrow windows).
     gap
-        A CSS length unit passed through :func:`~shiny.ui.css_unit.as_css_unit`
+        A CSS length unit passed through :func:`~shiny.ui.css.as_css_unit`
         defining the `gap` (i.e., spacing) between elements provided to `*args`.
     title
         The browser window title (defaults to the host URL of the page). Can also be set
@@ -292,7 +295,7 @@ def page_fillable(
         A UI element.
 
     See Also
-    -------
+    --------
     * :func:`~shiny.ui.page_fluid`
     * :func:`~shiny.ui.page_fixed`
     """
@@ -351,10 +354,10 @@ def page_fluid(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.page_fixed`
-    :func:`~shiny.ui.page_bootstrap`
-    :func:`~shiny.ui.page_navbar`
+    --------
+    * :func:`~shiny.ui.page_fixed`
+    * :func:`~shiny.ui.page_bootstrap`
+    * :func:`~shiny.ui.page_navbar`
     """
 
     return page_bootstrap(
@@ -392,10 +395,10 @@ def page_fixed(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.page_fluid`
-    :func:`~shiny.ui.page_bootstrap`
-    :func:`~shiny.ui.page_navbar`
+    --------
+    * :func:`~shiny.ui.page_fluid`
+    * :func:`~shiny.ui.page_bootstrap`
+    * :func:`~shiny.ui.page_navbar`
     """
 
     return page_bootstrap(
@@ -404,6 +407,7 @@ def page_fixed(
 
 
 # TODO: implement theme (just Bootswatch for now?)
+@no_example()
 def page_bootstrap(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
@@ -433,9 +437,9 @@ def page_bootstrap(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.page_fluid`
-    :func:`~shiny.ui.page_navbar`
+    --------
+    * :func:`~shiny.ui.page_fluid`
+    * :func:`~shiny.ui.page_navbar`
     """
     head = tags.title(title) if title else None
     return tags.html(
@@ -445,6 +449,7 @@ def page_bootstrap(
     )
 
 
+@no_example()
 def page_auto(
     *args: TagChild | TagAttrs,
     title: str | MISSING_TYPE = MISSING,
@@ -628,6 +633,7 @@ def _page_auto_fixed(
     )
 
 
+@no_example()
 def page_output(id: str) -> Tag:
     """
     Create a page container where the entire body is a UI output.

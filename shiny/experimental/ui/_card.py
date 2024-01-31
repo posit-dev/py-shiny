@@ -17,6 +17,7 @@ from htmltools import (
     tags,
 )
 
+from ..._docstring import add_example
 from ...types import MISSING, MISSING_TYPE
 from ...ui._card import CardItem, WrapperCallable, _card_impl, card_body
 from ...ui.css import CssUnit, as_css_unit
@@ -33,7 +34,6 @@ __all__ = (
 )
 
 
-# TODO-maindocs; @add_example()
 def card(
     *args: TagChild | TagAttrs | CardItem,
     full_screen: bool = False,
@@ -111,7 +111,7 @@ def card(
 ############################################################################
 
 
-# TODO-maindocs; @add_example()
+@add_example()
 def card_title(
     *args: TagChild | TagAttrs,
     container: TagFunction = tags.h5,
@@ -131,7 +131,7 @@ def card_title(
         resolved :class:`~htmltools.Tag` object.
     container
         Method for the returned :class:`~htmltools.Tag` object. Defaults to
-        :func:`~shiny.ui.tags`.h5.
+        :func:`~shiny.ui.tags.h5`.
     **kwargs
         Additional HTML attributes for the returned :class:`~htmltools.Tag` object.
 
@@ -174,7 +174,7 @@ class ImgContainer(Protocol):
         ...
 
 
-# TODO-maindocs; @add_example()
+@add_example()
 def card_image(
     file: str | Path | PurePath | io.BytesIO | None,
     *args: TagAttrs,

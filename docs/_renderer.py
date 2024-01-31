@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import html
+import os
 import re
 from importlib.resources import files
 from pathlib import Path
@@ -20,23 +21,6 @@ from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
 
 SHINY_PATH = Path(files("shiny").joinpath())
 
-SHINYLIVE_CODE_TEMPLATE = """
-```{{shinylive-python}}
-#| standalone: true
-#| components: [editor, viewer]
-#| layout: vertical
-#| viewerHeight: 400{0}
-```
-"""
-
-DOCSTRING_TEMPLATE = """\
-{rendered}
-
-{header} Examples
-
-{examples}
-"""
-
 
 # This is the same as the FileContentJson type in TypeScript.
 class FileContentJson(TypedDict):
@@ -47,6 +31,7 @@ class FileContentJson(TypedDict):
 
 class Renderer(MdRenderer):
     style = "shiny"
+    express_api = os.environ.get("SHINY_MODE", "core") == "express"
 
     @dispatch
     def render(self, el: qast.DocstringSectionSeeAlso):
@@ -68,37 +53,27 @@ class Renderer(MdRenderer):
 
         converted = convert_rst_link_to_md(rendered)
 
-        if isinstance(el, dc.Alias) and "experimental" in el.target_path:
-            p_example_dir = SHINY_PATH / "experimental" / "api-examples" / el.name
-        else:
-            p_example_dir = SHINY_PATH / "api-examples" / el.name
+        # If we're rendering the API reference for Express, try our best to
+        # keep you in the Express site. For example, something like shiny.ui.input_text()
+        # simply gets re-exported as shiny.express.ui.input_text(), but it's docstrings
+        # will link to shiny.ui, not shiny.express.ui. This fixes that.
+        if self.express_api:
+            converted = converted.replace("shiny.ui.", "shiny.express.ui.")
+            # If this el happens to point to itself, it's probably intentionally
+            # pointing to Core (i.e., express context managers mention that they
+            # wrap Core functions), so don't change that.
+            # TODO: we want to be more aggressive about context managers always
+            # pointing to the Core docs?
+            if f"shiny.express.ui.{el.name}" in converted:
+                print(f"Changing Express link to Core for: {el.name}")
+                converted = converted.replace(
+                    f"shiny.express.ui.{el.name}", f"shiny.ui.{el.name}"
+                )
+            converted = converted.replace("shiny.render.", "shiny.express.render.")
 
-        if (p_example_dir / "app.py").exists():
-            example = ""
+        check_if_missing_expected_example(el, converted)
 
-            files = list(p_example_dir.glob("**/*"))
-
-            # Sort, and then move app.py to first position.
-            files.sort()
-            app_py_idx = files.index(p_example_dir / "app.py")
-            files = [files[app_py_idx]] + files[:app_py_idx] + files[app_py_idx + 1 :]
-
-            for f in files:
-                if f.is_dir():
-                    continue
-                file_info = read_file(f, p_example_dir)
-                if file_info["type"] == "text":
-                    example += f"\n## file: {file_info['name']}\n{file_info['content']}"
-                else:
-                    example += f"\n## file: {file_info['name']}\n## type: binary\n{file_info['content']}"
-
-            example = SHINYLIVE_CODE_TEMPLATE.format(example)
-
-            return DOCSTRING_TEMPLATE.format(
-                rendered=converted,
-                examples=example,
-                header="#" * (self.crnt_header_level + 1),
-            )
+        assert_no_sphinx_comments(el, converted)
 
         return converted
 
@@ -160,19 +135,30 @@ class Renderer(MdRenderer):
         ):
             description = docstring_parts[0].value
 
-            # ## Approach: Always return the full description!
-            return description
+            # # ## Approach: Always return the full description!
+            # return description
 
-            # ## Alternative: Add ellipsis if the lines are cut off
+            parts = description.split("\n")
 
+            # # Alternative: Add ellipsis if the lines are cut off
             # # If the description is more than one line, only show the first line.
             # # Add `...` to indicate the description was truncated
-            # parts = description.split("\n")
             # short = parts[0]
-            # if len(parts) > 1:
+            # if len(parts) > 1 and parts[1].strip() != "":
             #     short += "&hellip;"
 
-            # return short
+            # Alternative: Add take the first paragraph as the description summary
+            short_parts: list[str] = []
+            # Capture the first paragraph (lines until first empty line)
+            for part in parts:
+                if part.strip() == "":
+                    break
+                short_parts.append(part)
+
+            short = " ".join(short_parts)
+            short = convert_rst_link_to_md(short)
+
+            return short
 
         return ""
 
@@ -282,3 +268,69 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
         "content": file_content,
         "type": type,
     }
+
+
+def check_if_missing_expected_example(el, converted):
+    if os.environ.get("SHINY_MODE", "core") == "express":
+        # TODO: remove once we are done porting express examples
+        return
+
+    if re.search(r"(^|\n)#{2,6} Examples\n", converted):
+        # Manually added examples are fine
+        return
+
+    if not el.canonical_path.startswith("shiny"):
+        # Only check Shiny objects for examples
+        return
+
+    def is_no_ex_decorator(x):
+        if x == "no_example()":
+            return True
+
+        return x == f'no_example("{os.environ.get("SHINY_MODE", "core")}")'
+
+    if hasattr(el, "decorators") and any(
+        [is_no_ex_decorator(d.value.canonical_name) for d in el.decorators]
+    ):
+        # When an example is intentionally omitted, we mark the fn with `@no_example`
+        return
+
+    if not el.is_function:
+        # Don't throw for things that can't be decorated
+        return
+
+    if not el.is_explicitely_exported:
+        # Don't require examples on "implicitly exported" functions
+        # In practice, this covers methods of exported classes (class still needs ex)
+        return
+
+    # TODO: Remove shiny.express from no_req_examples when we have examples ready
+    no_req_examples = ["shiny.express", "shiny.experimental"]
+    if any([el.target_path.startswith(mod) for mod in no_req_examples]):
+        return
+
+    raise RuntimeError(
+        f"{el.name} needs an example, use `@add_example()` or manually add `Examples` section:\n"
+        + (f"> file     : {el.filepath}\n" if hasattr(el, "filepath") else "")
+        + (f"> target   : {el.target_path}\n" if hasattr(el, "target_path") else "")
+        + (f"> canonical: {el.canonical_path}" if hasattr(el, "canonical_path") else "")
+    )
+
+
+def assert_no_sphinx_comments(el, converted: str) -> None:
+    """
+    Sphinx allows `..`-prefixed comments in docstrings, which are not valid markdown.
+    We don't allow Sphinx comments or directives, sorry!
+    """
+    pattern = r"\n[.]{2} .+(\n|$)"
+    if re.search(pattern, converted):
+        raise RuntimeError(
+            f"{el.name} includes Sphinx-styled comments or directives, please remove.\n"
+            + (f"> file     : {el.filepath}\n" if hasattr(el, "filepath") else "")
+            + (f"> target   : {el.target_path}\n" if hasattr(el, "target_path") else "")
+            + (
+                f"> canonical: {el.canonical_path}"
+                if hasattr(el, "canonical_path")
+                else ""
+            )
+        )

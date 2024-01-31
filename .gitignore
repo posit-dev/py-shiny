@@ -113,4 +113,4 @@ docs/source/reference/
 
 # Developer scratch area
 _dev/
-tests/playwright/deploys/apps/*/requirements.txt
+tests/playwright/deploys/**/requirements.txt

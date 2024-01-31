@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 import warnings
-from typing import Literal, Optional, cast
+from typing import TYPE_CHECKING, Literal, Optional, cast
 
 from htmltools import (
     HTML,
@@ -17,7 +17,7 @@ from htmltools import (
 )
 
 from .._deprecated import warn_deprecated
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
 from ..session import require_active_session
 from ._card import CardItem
@@ -26,6 +26,9 @@ from ._tag import consolidate_attrs, trinary
 from ._utils import css_no_sub
 from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
+
+if TYPE_CHECKING:
+    from .. import Session
 
 __all__ = (
     "Sidebar",
@@ -38,6 +41,7 @@ __all__ = (
 )
 
 
+@no_example()
 class Sidebar:
     """
     A sidebar object
@@ -89,8 +93,6 @@ class Sidebar:
         A foreground color.
     color_bg
         A background color.
-
-
     """
 
     def __init__(
@@ -312,7 +314,7 @@ def layout_sidebar(
     Sidebar layout
 
     Create a sidebar layout component which can be dropped inside any Shiny UI page
-    method (e.g. :func:`~shiny.shiny.ui.page_fillable`) or
+    method (e.g. :func:`~shiny.ui.page_fillable`) or
     :func:`~shiny.ui.card` context.
 
     Parameters
@@ -324,10 +326,10 @@ def layout_sidebar(
         :class:`~htmltools.Tag` object.
     fillable
         Whether or not the main content area should be wrapped in a fillable container.
-        See :func:`~shiny.ui.as_fillable_container` for details.
+        See :func:`~shiny.ui.fill.as_fillable_container` for details.
     fill
         Whether or not the sidebar layout should be wrapped in a fillable container. See
-        :func:`~shiny.ui.as_fill_item` for details.
+        :func:`~shiny.ui.fill.as_fill_item` for details.
     bg,fg
         A background or foreground color.
     border
@@ -574,6 +576,7 @@ def _sidebar_init_js() -> Tag:
 
 # Deprecated 2023-06-13
 # Includes: DeprecatedPanelSidebar
+@no_example()
 def panel_sidebar(
     *args: TagChild | TagAttrs,
     width: int = 4,
@@ -596,6 +599,7 @@ def panel_sidebar(
 
 # Deprecated 2023-06-13
 # Includes: DeprecatedPanelMain
+@no_example()
 def panel_main(
     *args: TagChild | TagAttrs,
     width: int = 8,
@@ -665,7 +669,7 @@ class DeprecatedPanelSidebar(
             *args,
             width=f"{int(width / 12 * 100)}%",
             open="always",
-            **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+            **kwargs,  # pyright: ignore[reportArgumentType]
         )
 
     # Hopefully this is never used. But wanted to try to be safe

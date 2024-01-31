@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, BinaryIO, Literal, NamedTuple, Optional, 
 
 from htmltools import TagChild
 
-from ._docstring import add_example
+from ._docstring import add_example, no_example
 from ._typing_extensions import NotRequired, TypedDict
 
 if TYPE_CHECKING:
@@ -35,17 +35,14 @@ MISSING: MISSING_TYPE = MISSING_TYPE()
 #   {'name': 'mtcars.csv', 'size': 1303, 'type': 'text/csv', 'datapath: '/...../mtcars.csv'}
 # The incoming data doesn't include 'datapath'; that field is added by the
 # FileUploadOperation class.
+@add_example(ex_dir="./api-examples/input_file")
 class FileInfo(TypedDict):
     """
     Class for information about a file upload.
 
     See Also
     --------
-    ~shiny.ui.input_file
-
-    Example
-    -------
-    See :func:`~shiny.ui.input_file`.
+    * :func:`~shiny.ui.input_file`
     """
 
     name: str
@@ -58,17 +55,15 @@ class FileInfo(TypedDict):
     """The path to the file on the server."""
 
 
+@add_example(ex_dir="./api-examples/output_image")
+@no_example("express")
 class ImgData(TypedDict):
     """
-    Return type for :func:`~shiny.render.image`.
+    Return type for :class:`~shiny.render.image`.
 
     See Also
     --------
-    ~shiny.render.image
-
-    Example
-    -------
-    See :func:`~shiny.render.image`.
+    * :class:`~shiny.render.image`
     """
 
     src: str
@@ -86,6 +81,7 @@ class ImgData(TypedDict):
 
 
 @add_example()
+@no_example("express")
 class SafeException(Exception):
     """
     Throw a safe exception.
@@ -100,6 +96,7 @@ class SafeException(Exception):
 
 
 @add_example()
+@no_example("express")
 class SilentException(Exception):
     """
     Throw a silent exception.
@@ -107,7 +104,7 @@ class SilentException(Exception):
     Normally, when an exception occurs inside a reactive context, it's either:
 
     - Displayed to the user (as a big red error message)
-        - This happens when the exception is raised from an output context (e.g., :func:`shiny.render.ui`)
+        - This happens when the exception is raised from an output context (e.g., :class:`shiny.render.ui`)
     - Crashes the application
         - This happens when the exception is raised from an :func:`shiny.reactive.Effect`
 
@@ -116,24 +113,35 @@ class SilentException(Exception):
 
     See Also
     --------
-    ~SilentCancelOutputException
+    * :class:`~shiny.types.SilentCancelOutputException`
     """
 
     pass
 
 
 @add_example()
+@no_example("express")
 class SilentCancelOutputException(Exception):
     """
     Throw a silent exception and don't clear output
 
-    Similar to :class:`~SilentException`, but if thrown in an output context,
+    Similar to :class:`~shiny.types.SilentException`, but if thrown in an output context,
     existing output isn't cleared.
 
     See Also
     --------
-    ~SilentException
+    * :class:`~shiny.types.SilentException`
     """
+
+    pass
+
+
+class SilentOperationInProgressException(SilentException):
+    # Throw a silent exception to indicate that an operation is in progress
+
+    # Similar to :class:`~SilentException`, but if thrown in an output context, existing
+    # output isn't cleared and stays in recalculating mode until the next time it is
+    # invalidated.
 
     pass
 

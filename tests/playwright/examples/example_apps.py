@@ -20,24 +20,22 @@ def get_apps(path: str) -> typing.List[str]:
     for folder in os.listdir(full_path):
         folder_path = os.path.join(full_path, folder)
         if os.path.isdir(folder_path):
-            app_path = os.path.join(folder_path, "app.py")
-            if os.path.isfile(app_path):
-                # Return relative app path
-                app_paths.append(os.path.join(path, folder, "app.py"))
+            folder_files = os.listdir(folder_path)
+            for file in folder_files:
+                if os.path.isdir(os.path.join(folder_path, file)):
+                    continue
+                if not file.endswith(".py"):
+                    continue
+                if file == "app.py" or file.startswith("app-"):
+                    # Return relative app path
+                    app_paths.append(os.path.join(path, folder, file))
     return app_paths
 
 
-example_apps: typing.List[str] = [
-    *get_apps("examples"),
-    *get_apps("shiny/api-examples"),
-    *get_apps("shiny/templates/app-templates"),
-    *get_apps("tests/playwright/deploys"),
-]
-
 app_idle_wait = {"duration": 300, "timeout": 5 * 1000}
 app_hard_wait: typing.Dict[str, int] = {
-    "brownian": 250,
-    "ui-func": 250,
+    "examples/brownian": 250,
+    "examples/ui-func": 250,
 }
 output_transformer_errors = [
     "ShinyDeprecationWarning: `shiny.render.transformer.output_transformer()`",
@@ -56,26 +54,37 @@ express_warnings = ["Detected Shiny Express app. "]
 app_allow_shiny_errors: typing.Dict[
     str, typing.Union[Literal[True], typing.List[str]]
 ] = {
-    "SafeException": True,
-    "global_pyplot": True,
-    "static_plots": [
+    "api-examples/SafeException": True,
+    "examples/global_pyplot": True,
+    "examples/static_plots": [
         # acceptable warning
         "PlotnineWarning: Smoothing requires 2 or more points",
         "RuntimeWarning: divide by zero encountered",
         "UserWarning: This figure includes Axes that are not compatible with tight_layout",
     ],
     # Remove after shinywidgets accepts `Renderer` PR
-    "airmass": [*output_transformer_errors, *session_warnings],
-    "brownian": [*output_transformer_errors, *session_warnings],
-    "multi-page": [*output_transformer_errors],
-    "model-score": [*output_transformer_errors],
-    "data_frame": [*output_transformer_errors],
-    "output_transformer": [*output_transformer_errors],
-    "render_display": [*express_warnings],
+    "api-examples/data_frame": [*output_transformer_errors],
+    "api-examples/output_transformer": [*output_transformer_errors],
+    "api-examples/render_express": [*express_warnings],
+    "app-templates/multi-page": [*output_transformer_errors],
+    "examples/airmass": [*output_transformer_errors, *session_warnings],
+    "examples/brownian": [*output_transformer_errors, *session_warnings],
+    "examples/model-score": [*output_transformer_errors],
+    "deploys/plotly": [*output_transformer_errors],
 }
 app_allow_external_errors: typing.List[str] = [
+    # TODO-garrick-future: Remove after fixing sidebar max_height_mobile warning
+    "UserWarning: The `shiny.ui.sidebar(max_height_mobile=)`",
+    "res = self.fn(*self.args, **self.kwargs)",
     # if shiny express app detected
     "Detected Shiny Express app",
+    # pandas >= 2.2.0
+    # https://github.com/pandas-dev/pandas/blame/5740667a55aabffc660936079268cee2f2800225/pandas/core/groupby/groupby.py#L1129
+    "FutureWarning: When grouping with a length-1 list-like",
+    "sf: grouped.get_group",  # continutation of line above
+    "FutureWarning:",
+    "When grouping with a length-1 list-like",  # continutation of line above
+    "data_subset = grouped_data.get_group(pd_key)",  # continutation of line above
     # plotnine: https://github.com/has2k1/plotnine/issues/713
     # mizani: https://github.com/has2k1/mizani/issues/34
     # seaborn: https://github.com/mwaskom/seaborn/issues/3457
@@ -88,8 +97,10 @@ app_allow_external_errors: typing.List[str] = [
     "pd.option_context('mode.use_inf_as_na",  # continutation of line above
 ]
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
-    "airmass": ["Failed to load resource: the server responded with a status of 404"],
-    "brownian": ["Failed to acquire camera feed:"],
+    "examples/airmass": [
+        "Failed to load resource: the server responded with a status of 404"
+    ],
+    "examples/brownian": ["Failed to acquire camera feed:"],
 }
 
 
@@ -167,11 +178,12 @@ def validate_example(page: Page, ex_app_path: str) -> None:
         page.goto(app.url)
 
         app_name = os.path.basename(os.path.dirname(ex_app_path))
+        short_app_path = f"{os.path.basename(os.path.dirname(os.path.dirname(ex_app_path)))}/{app_name}"
 
-        if app_name in app_hard_wait.keys():
+        if short_app_path in app_hard_wait.keys():
             # Apps are constantly invalidating and will not stabilize
             # Instead, wait for specific amount of time
-            page.wait_for_timeout(app_hard_wait[app_name])
+            page.wait_for_timeout(app_hard_wait[short_app_path])
         else:
             # Wait for app to stop updating
             wait_for_idle_app(
@@ -191,8 +203,8 @@ def validate_example(page: Page, ex_app_path: str) -> None:
         ]
 
         # Remove any app specific errors that are allowed
-        if app_name in app_allow_shiny_errors:
-            app_allowable_errors = app_allow_shiny_errors[app_name]
+        if short_app_path in app_allow_shiny_errors:
+            app_allowable_errors = app_allow_shiny_errors[short_app_path]
         else:
             app_allowable_errors = []
 
@@ -217,6 +229,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
                 and not any([error_txt in line for error_txt in app_allowable_errors])
             ]
             if len(error_lines) > 0:
+                print("\nshort_app_path: " + short_app_path)
                 print("\napp_allowable_errors :")
                 print("\n".join(app_allowable_errors))
                 print("\nError lines remaining:")
@@ -224,13 +237,16 @@ def validate_example(page: Page, ex_app_path: str) -> None:
             assert len(error_lines) == 0
 
         # Check for JavaScript errors
-        if app_name in app_allow_js_errors:
+        if short_app_path in app_allow_js_errors:
             # Remove any errors that are allowed
             console_errors = [
                 line
                 for line in console_errors
                 if not any(
-                    [error_txt in line for error_txt in app_allow_js_errors[app_name]]
+                    [
+                        error_txt in line
+                        for error_txt in app_allow_js_errors[short_app_path]
+                    ]
                 )
             ]
         assert len(console_errors) == 0, (

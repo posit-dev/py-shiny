@@ -30,7 +30,7 @@ from typing import (
 )
 
 from .. import _utils
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
 from ..types import MISSING, MISSING_TYPE, ActionButtonValue, SilentException
@@ -74,20 +74,22 @@ class Value(Generic[T]):
 
     Raises
     ------
-    ~shiny.types.SilentException
-        If :func:`~Value.get` is called before a value is provided/set.
+    :class:`~shiny.types.SilentException`
+        If :func:`~shiny.reactive.Value.get` is called before a value is provided/set.
 
     Note
     ----
     A reactive value may only be read from within a reactive function (e.g.,
     :func:`~shiny.reactive.calc`, :func:`~shiny.reactive.effect`,
-    :func:`shiny.render.text`, etc.) and, when doing so, the function takes a reactive
+    :class:`shiny.render.text`, etc.) and, when doing so, the function takes a reactive
     dependency on the value (i.e., when the value changes, the calling reactive function
     will re-execute).
 
     See Also
     --------
-    ~shiny.Inputs ~shiny.reactive.calc ~shiny.reactive.effect
+    * :class:`~shiny.Inputs`
+    * :func:`~shiny.reactive.calc`
+    * :func:`~shiny.reactive.effect`
     """
 
     # These overloads are necessary so that the following hold:
@@ -130,7 +132,7 @@ class Value(Generic[T]):
 
         Raises
         ------
-        ~shiny.types.SilentException
+        :class:`~shiny.types.SilentException`
             If the value is not set.
         RuntimeError
             If called from outside a reactive function.
@@ -428,11 +430,11 @@ def calc(
 
     See Also
     --------
-    ~shiny.Inputs
-    ~shiny.reactive.Value
-    ~shiny.reactive.effect
-    ~shiny.reactive.invalidate_later
-    ~shiny.reactive.event
+    * :class:`~shiny.Inputs`
+    * :class:`~shiny.reactive.Value`
+    * :func:`~shiny.reactive.effect`
+    * :func:`~shiny.reactive.invalidate_later`
+    * :func:`~shiny.reactive.event`
     """
 
     def create_calc(fn: CalcFunction[T] | CalcFunctionAsync[T]) -> Calc_[T]:
@@ -480,6 +482,7 @@ class Effect_:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
 
+        from ..express._mock_session import MockSession
         from ..render.renderer import Renderer
 
         if isinstance(fn, Renderer):
@@ -514,6 +517,12 @@ class Effect_:
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
             session = get_current_session()
+
+        if isinstance(session, MockSession):
+            # If we're in a MockSession, then don't actually set up this Effect -- we
+            # don't want it to try to run later.
+            return
+
         self._session = session
 
         if self._session is not None:
@@ -670,6 +679,7 @@ def effect(
 
 
 @add_example()
+@no_example("express")
 def effect(
     fn: Optional[EffectFunction | EffectFunctionAsync] = None,
     *,
@@ -718,11 +728,11 @@ def effect(
 
     See Also
     --------
-    ~shiny.Inputs
-    ~shiny.reactive.Value
-    ~shiny.reactive.effect
-    ~shiny.reactive.invalidate_later
-    ~shiny.reactive.event
+    * :class:`~shiny.Inputs`
+    * :class:`~shiny.reactive.Value`
+    * :func:`~shiny.reactive.effect`
+    * :func:`~shiny.reactive.invalidate_later`
+    * :func:`~shiny.reactive.event`
     """
 
     def create_effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_:

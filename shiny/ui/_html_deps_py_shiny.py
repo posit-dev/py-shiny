@@ -43,3 +43,12 @@ def page_output_dependency() -> HTMLDependency:
         source={"package": "shiny", "subdir": "www/shared/py-shiny/page-output"},
         script={"src": "page-output.js", "type": "module"},
     )
+
+
+def spin_dependency() -> HTMLDependency:
+    return HTMLDependency(
+        "shiny-spin",
+        __version__,
+        source={"package": "shiny", "subdir": "www/shared/py-shiny/spin"},
+        stylesheet={"href": "spin.css"},
+    )

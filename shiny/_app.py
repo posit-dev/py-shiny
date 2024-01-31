@@ -3,9 +3,10 @@ from __future__ import annotations
 import copy
 import os
 import secrets
+from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Optional, TypeVar, cast
 
 import starlette.applications
 import starlette.exceptions
@@ -31,7 +32,9 @@ from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
 from .http_staticfiles import FileResponse, StaticFiles
-from .session import Inputs, Outputs, Session, session_context
+from .session._session import Inputs, Outputs, Session, session_context
+
+T = TypeVar("T")
 
 # Default values for App options.
 LIB_PREFIX: str = "lib/"
@@ -64,8 +67,8 @@ class App:
     debug
         Whether to enable debug mode.
 
-    Example
-    -------
+    Examples
+    --------
 
     ```{python}
     #| eval: false
@@ -111,6 +114,10 @@ class App:
         static_assets: Optional["str" | "os.PathLike[str]" | dict[str, Path]] = None,
         debug: bool = False,
     ) -> None:
+        # Used to store callbacks to be called when the app is shutting down (according
+        # to the ASGI lifespan protocol)
+        self._exit_stack = AsyncExitStack()
+
         if server is None:
             self.server = noop_server_fn
         elif len(signature(server).parameters) == 1:
@@ -210,9 +217,15 @@ class App:
         starlette_app = starlette.applications.Starlette(
             routes=routes,
             middleware=middleware,
+            lifespan=self._lifespan,
         )
 
         return starlette_app
+
+    @asynccontextmanager
+    async def _lifespan(self, app: starlette.applications.Starlette):
+        async with self._exit_stack:
+            yield
 
     def _create_session(self, conn: Connection) -> Session:
         id = secrets.token_hex(32)
@@ -239,11 +252,32 @@ class App:
         """
         from ._main import run_app
 
-        run_app(self, **kwargs)  # pyright: ignore[reportGeneralTypeIssues]
+        run_app(self, **kwargs)  # pyright: ignore[reportArgumentType]
 
     # ASGI entrypoint. Handles HTTP, WebSocket, and lifespan.
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         await self.starlette_app(scope, receive, send)
+
+    def on_shutdown(self, callback: Callable[[], None]) -> Callable[[], None]:
+        """
+        Register a callback to be called when the app is shutting down. This can be
+        useful for cleaning up app-wide resources, like connection pools, temporary
+        directories, worker threads/processes, etc.
+
+        Parameters
+        ----------
+        callback
+            The callback to call. It should take no arguments, and any return value will
+            be ignored. Try not to raise an exception in the callback, as exceptions
+            during cleanup can hide the original exception that caused the app to shut
+            down.
+
+        Returns
+        -------
+        :
+            The callback, to allow this method to be used as a decorator.
+        """
+        return self._exit_stack.callback(callback)
 
     async def call_pyodide(self, scope: Scope, receive: Receive, send: Send) -> None:
         """
@@ -287,7 +321,7 @@ class App:
 
         See Also
         --------
-        ~shiny.Session.close
+        * :func:`~shiny.Session.close`
         """
         # convert to list to avoid modifying the dict while iterating over it, which
         # throws an error

@@ -1,8 +1,8 @@
-from conftest import ShinyAppProc, create_doc_example_fixture
+from conftest import ShinyAppProc, create_doc_example_core_fixture
 from controls import InputCheckboxGroup
 from playwright.sync_api import Page, expect
 
-app = create_doc_example_fixture("input_checkbox_group")
+app = create_doc_example_core_fixture("input_checkbox_group")
 
 
 def test_input_checkbox_group_kitchen(page: Page, app: ShinyAppProc) -> None:

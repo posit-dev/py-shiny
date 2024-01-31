@@ -47,7 +47,7 @@ class AnimationOptions(TypedDict):
 
     See Also
     --------
-    ~shiny.ui.input_slider
+    * :func:`~shiny.ui.input_slider`
     """
 
     interval: NotRequired[int]
@@ -136,8 +136,8 @@ def input_slider(
     :::
 
     See Also
-    -------
-    ~shiny.ui.update_slider
+    --------
+    * :func:`~shiny.ui.update_slider`
     """
 
     # Thanks to generic typing, max, value, etc. should be of the same type

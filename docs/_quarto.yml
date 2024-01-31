@@ -18,8 +18,10 @@ website:
     pinned: true
     search: true
     left:
-      - text: "API"
-        file: api/index.qmd
+      - text: "Express API"
+        file: api/express/index.qmd
+      - text: "Core API"
+        file: api/core/index.qmd
     right:
       - icon: github
         href: https://github.com/posit-dev/py-shiny
@@ -34,5 +36,9 @@ filters:
 
 interlinks:
   sources:
+    PIL:
+      url: https://pillow.readthedocs.io/en/stable/
+    matplotlib:
+      url: https://matplotlib.org/stable/
     python:
       url: https://docs.python.org/3/
