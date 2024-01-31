@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed `render.download` not working in Express. (#1085)
 
+* Fixed an issue where `input_selectize` would not initialize correctly when created within a Shiny module.
+
 
 ## [0.7.0] - 2024-01-25
 
@@ -56,11 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * `shiny.render.transformer.OutputRendererSync`
     * `shiny.render.transformer.OutputRendererAsync`
 
-
 ### Other changes
 
 * Pinned Starlette to version <0.35.0; versions 0.35.0 and 0.35.1 caused problems when deploying on Posit Connect. (#1009
 )
+
 
 ## [0.6.1.1] - 2023-12-22
 
