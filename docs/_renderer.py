@@ -283,7 +283,12 @@ def check_if_missing_expected_example(el, converted):
         if x == "no_example()":
             return True
 
-        return x == f'no_example("{os.environ.get("SHINY_MODE", "core")}")'
+        no_ex_decorators = [
+            f'no_example("{os.environ.get("SHINY_MODE", "core")}")',
+            f"no_example('{os.environ.get('SHINY_MODE', 'core')}')",
+        ]
+
+        return x in no_ex_decorators
 
     if hasattr(el, "decorators") and any(
         [is_no_ex_decorator(d.value.canonical_name) for d in el.decorators]
