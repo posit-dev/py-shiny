@@ -108,7 +108,7 @@ def wrap_recall_context_manager(
     return wrapped_fn
 
 
-def filter_ui_objects(x: object) -> TypeGuard[TagChild | TagAttrs]:
+def filter_ui_objects(x: object) -> TypeGuard[TagChild | TagAttrs | None]:
     # Can't seem to figure out how to get typing to work
     valid_types = (  # type: ignore
         dict,
