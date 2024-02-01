@@ -12,6 +12,7 @@ pyshiny_root = here_tests_e2e_examples.parent.parent.parent
 
 is_interactive = hasattr(sys, "ps1")
 reruns = 1 if is_interactive else 3
+reruns_delay = 0
 
 
 def get_apps(path: str) -> typing.List[str]:
