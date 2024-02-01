@@ -1,6 +1,6 @@
 from html import escape  # noqa: F401
 
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, render, ui
 
 states = {
     "East Coast": {"NY": "New York", "NJ": "New Jersey", "CT": "Connecticut"},
@@ -41,7 +41,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @render.text
     def value():
         return "You choose: " + str(input.state())

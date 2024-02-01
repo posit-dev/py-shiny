@@ -2,7 +2,7 @@ from __future__ import annotations
 
 __all__ = ("notification_show", "notification_remove")
 
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import Any, Literal, Optional
 
 from htmltools import TagChild
 
@@ -11,9 +11,6 @@ from .._docstring import add_example, doc_format, no_example
 from .._utils import rand_hex
 from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE
-
-if TYPE_CHECKING:
-    from .. import Session
 
 
 @add_example()

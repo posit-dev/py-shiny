@@ -169,7 +169,8 @@ def _(value: dict[str, object], name: str, session: Session) -> ActionButtonValu
             # opted out using set_task_button_manual_reset(), we should reset after a
             # flush cycle where a bslib.taskbutton value is seen.
             if ResolvedId(name) not in manual_task_reset_buttons:
-                update_task_button(name, state="ready", session=session)
+                with session_context(session):
+                    update_task_button(name, state="ready")
 
     return ActionButtonValue(cast(int, value["value"]))
 
@@ -655,9 +656,13 @@ def update_selectize(
     active_session = require_active_session(session)
 
     if not server:
-        return update_select(
-            id, label=label, choices=choices, selected=selected, session=session
-        )
+        with session_context(active_session):
+            return update_select(
+                id,
+                label=label,
+                choices=choices,
+                selected=selected,
+            )
 
     if options is not None:
         cfg = TagList(
@@ -668,7 +673,10 @@ def update_selectize(
                 data_eval=json.dumps(extract_js_keys(options)),
             )
         )
-        session.send_input_message(id, drop_none({"config": cfg.get_html_string()}))
+        active_session.send_input_message(
+            id,
+            drop_none({"config": cfg.get_html_string()}),
+        )
 
     # Transform choices to a list of dicts (this is the form the client wants)
     # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]

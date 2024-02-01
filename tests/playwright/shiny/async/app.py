@@ -2,7 +2,7 @@ import asyncio
 import hashlib
 import time
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 
 def calc(value: str) -> str:

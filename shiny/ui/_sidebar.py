@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 import warnings
-from typing import TYPE_CHECKING, Literal, Optional, cast
+from typing import Literal, Optional, cast
 
 from htmltools import (
     HTML,
@@ -26,9 +26,6 @@ from ._tag import consolidate_attrs, trinary
 from ._utils import css_no_sub
 from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
-
-if TYPE_CHECKING:
-    from .. import Session
 
 __all__ = (
     "Sidebar",

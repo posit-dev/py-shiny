@@ -73,7 +73,10 @@ def data_view_ui():
 
 @module.server
 def data_view_server(
-    input: Inputs, output: Outputs, session: Session, df: Callable[[], pd.DataFrame]
+    input: Inputs,
+    output: Outputs,
+    session: Session,
+    df: Callable[[], pd.DataFrame],
 ):
     @render.text
     def row_count():

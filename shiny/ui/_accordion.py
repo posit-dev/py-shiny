@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING, Literal, Optional, TypeVar
+from typing import Literal, Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
@@ -13,9 +13,6 @@ from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import components_dependency
 from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit
-
-if TYPE_CHECKING:
-    from .. import Session
 
 __all__ = (
     "accordion",

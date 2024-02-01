@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from shiny import App, Inputs, Outputs, Session, ui
+from shiny import App, Inputs, ui
 from shiny.render.renderer import Renderer, ValueFn
 
 #######
@@ -155,7 +155,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     # Hovering over `@render_upper` will display the class documentation
     @render_upper
     def upper():

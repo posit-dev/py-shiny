@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import seaborn as sns
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Session, reactive, render, ui
 
 sns.set_theme(style="white")
 df = pd.read_csv(Path(__file__).parent / "penguins.csv", na_values="NA")
@@ -45,7 +45,7 @@ app_ui = ui.page_sidebar(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.Calc
     def filtered_df() -> pd.DataFrame:
         filt_df = df[df["Species"].isin(input.species())]

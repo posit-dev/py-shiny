@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 from modules import data_view_server, data_view_ui, training_server, training_ui
 
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, reactive, ui
 
 df = pd.read_csv(Path(__file__).parent / "scores.csv")
 
@@ -31,7 +31,7 @@ app_ui = ui.page_navbar(
 )
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input: Inputs):
     @reactive.Calc()
     def filtered_data() -> pd.DataFrame:
         return df.loc[df["account"] == input.account()]
