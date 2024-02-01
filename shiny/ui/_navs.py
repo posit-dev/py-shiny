@@ -406,7 +406,7 @@ class NavSet:
 # -----------------------------------------------------------------------------
 @no_example()
 def navset_tab(
-    *args: NavSetArg,
+    *args: NavSetArg | MetadataNode,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -463,7 +463,7 @@ def navset_tab(
 
 @no_example()
 def navset_pill(
-    *args: NavSetArg,
+    *args: NavSetArg | MetadataNode,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -519,7 +519,7 @@ def navset_pill(
 
 @no_example()
 def navset_underline(
-    *args: NavSetArg,
+    *args: NavSetArg | MetadataNode,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -574,7 +574,7 @@ def navset_underline(
 
 @add_example()
 def navset_hidden(
-    *args: NavSetArg,
+    *args: NavSetArg | MetadataNode,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -631,7 +631,7 @@ class NavSetCard(NavSet):
 
     def __init__(
         self,
-        *args: NavSetArg,
+        *args: NavSetArg | MetadataNode,
         ul_class: str,
         id: Optional[str],
         selected: Optional[str],
@@ -686,7 +686,7 @@ class NavSetCard(NavSet):
 
 @no_example()
 def navset_card_tab(
-    *args: NavSetArg,
+    *args: NavSetArg | MetadataNode,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
@@ -749,7 +749,7 @@ def navset_card_tab(
 
 @no_example()
 def navset_card_pill(
-    *args: NavSetArg,
+    *args: NavSetArg | MetadataNode,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
@@ -815,7 +815,7 @@ def navset_card_pill(
 
 @no_example()
 def navset_card_underline(
-    *args: NavSetArg,
+    *args: NavSetArg | MetadataNode,
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
