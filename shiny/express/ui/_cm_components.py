@@ -39,7 +39,7 @@ __all__ = (
 # ======================================================================================
 # Shiny layout components
 # ======================================================================================
-@add_example("app-express.py")
+@add_example()
 def sidebar(
     *,
     width: CssUnit = 250,
@@ -129,7 +129,7 @@ def sidebar(
 
 
 # TODO: Figure out sidebar arg for ui.layout_sidebar
-@add_example("app-express.py")
+@add_example()
 def layout_sidebar(
     *,
     fillable: bool = True,
@@ -207,7 +207,7 @@ def layout_sidebar(
     )
 
 
-@add_example("app-express.py")
+@add_example()
 def layout_column_wrap(
     *,
     width: CssUnit | None | MISSING_TYPE = MISSING,
@@ -290,7 +290,7 @@ def layout_column_wrap(
     )
 
 
-@add_example("app-express.py")
+@add_example()
 def layout_columns(
     *,
     col_widths: BreakpointsUser[int] = None,
@@ -398,7 +398,7 @@ def layout_columns(
     )
 
 
-@add_example("app-express.py")
+@add_example()
 def card(
     *,
     full_screen: bool = False,
@@ -458,7 +458,7 @@ def card(
     )
 
 
-@add_example("app-express.py")
+@add_example()
 def card_header(
     *args: TagChild | TagAttrs,
     container: TagFunction = ui.tags.div,
@@ -494,7 +494,7 @@ def card_header(
     )
 
 
-@add_example("app-express.py")
+@add_example()
 def card_footer(
     *args: TagChild | TagAttrs,
     **kwargs: TagAttrValue,
@@ -526,7 +526,7 @@ def card_footer(
     )
 
 
-@add_example("app-express.py")
+@add_example()
 def accordion(
     *,
     id: Optional[str] = None,
@@ -581,7 +581,7 @@ def accordion(
     )
 
 
-@add_example("app-express.py")
+@add_example()
 def accordion_panel(
     title: TagChild,
     *,
@@ -734,7 +734,7 @@ def navset_underline(
     )
 
 
-@add_example("app-express.py")
+@add_example()
 def navset_hidden(
     *,
     id: Optional[str] = None,
@@ -1048,7 +1048,7 @@ def navset_bar(
     )
 
 
-@add_example("app-express.py")
+@add_example()
 def nav_panel(
     title: TagChild,
     *,
@@ -1136,7 +1136,7 @@ def nav_menu(
 # ======================================================================================
 # Value boxes
 # ======================================================================================
-@add_example("app-express.py")
+@add_example()
 def value_box(
     *,
     showcase: Optional[TagChild] = None,
@@ -1240,7 +1240,7 @@ def panel_well(**kwargs: TagAttrValue) -> RecallContextManager[Tag]:
     )
 
 
-@add_example("app-express.py")
+@add_example()
 def panel_conditional(
     condition: str,
     **kwargs: TagAttrValue,
@@ -1331,7 +1331,7 @@ def panel_fixed(
     )
 
 
-@add_example("app-express.py")
+@add_example()
 def panel_absolute(
     *,
     top: Optional[str] = None,
@@ -1426,7 +1426,7 @@ def panel_absolute(
 # ======================================================================================
 
 
-@add_example("app-express.py")
+@add_example()
 def tooltip(
     *,
     id: Optional[str] = None,
@@ -1465,7 +1465,7 @@ def tooltip(
     )
 
 
-@add_example("app-express.py")
+@add_example()
 def popover(
     *,
     title: Optional[TagChild] = None,
