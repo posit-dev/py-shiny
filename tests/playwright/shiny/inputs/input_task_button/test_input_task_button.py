@@ -6,7 +6,7 @@ from playwright.sync_api import Page
 def click_extended_task_button(
     button: InputTaskButton,
     current_time: OutputText,
-    button_label: list[str],
+    button_label: list["str"],
 ) -> str:
     button.expect_state("ready")
     button.expect_label_text(button_label)
