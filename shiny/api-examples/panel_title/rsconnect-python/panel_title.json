@@ -1,0 +1,12 @@
+{
+    "https://api.shinyapps.io": {
+        "server_url": "https://api.shinyapps.io",
+        "filename": "/Users/cpsievert/github/py-shiny/shiny/api-examples/panel_title",
+        "app_url": "https://testing-apps.shinyapps.io/panel_title1/",
+        "app_id": 11093813,
+        "app_guid": null,
+        "title": "panel_title",
+        "app_mode": "python-shiny",
+        "app_store_version": 1
+    }
+}
