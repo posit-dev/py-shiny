@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from conftest import ShinyAppProc
 from controls import InputNumeric, InputTaskButton, OutputText
 from playwright.sync_api import Page
