@@ -271,10 +271,6 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
 
 
 def check_if_missing_expected_example(el, converted):
-    if os.environ.get("SHINY_MODE", "core") == "express":
-        # TODO: remove once we are done porting express examples
-        return
-
     if re.search(r"(^|\n)#{2,6} Examples\n", converted):
         # Manually added examples are fine
         return
@@ -305,7 +301,7 @@ def check_if_missing_expected_example(el, converted):
         return
 
     # TODO: Remove shiny.express from no_req_examples when we have examples ready
-    no_req_examples = ["shiny.express", "shiny.experimental"]
+    no_req_examples = ["shiny.experimental"]
     if any([el.target_path.startswith(mod) for mod in no_req_examples]):
         return
 
