@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, render, ui
 
 
 def make_items():

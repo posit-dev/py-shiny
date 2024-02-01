@@ -5,8 +5,8 @@ from shiny.express import input, render, ui
 with ui.popover(id="btn_popover"):
     ui.input_action_button("btn", "A button", class_="mt-3")
 
-    "A popover with more context and information than should be used in a tooltip.",
-    "You can even have multiple DOM elements in a popover!",
+    "A popover with more context and information than should be used in a tooltip."
+    "You can even have multiple DOM elements in a popover!"
 
 
 with ui.card(class_="mt-3"):

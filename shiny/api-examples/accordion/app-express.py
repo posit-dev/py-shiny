@@ -1,4 +1,3 @@
-from shiny import reactive
 from shiny.express import expressify, input, render, ui
 
 
