@@ -8,9 +8,9 @@ ui.h5("Current time")
 
 
 @render.text()
-def current_time():
+def current_time() -> str:
     reactive.invalidate_later(0.1)
-    return datetime.now().utcnow()
+    return str(datetime.now().utcnow())
 
 
 with ui.p():
