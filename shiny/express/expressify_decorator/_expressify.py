@@ -17,6 +17,7 @@ from typing import (
     runtime_checkable,
 )
 
+from ..._docstring import no_example
 from ..._shinyenv import is_pyodide
 from ._func_displayhook import _expressify_decorator_function_def
 from ._helpers import find_code_for_func
@@ -101,6 +102,7 @@ def expressify() -> Callable[[TFunc], TFunc]:
     ...
 
 
+@no_example()
 def expressify(fn: TFunc | None = None) -> TFunc | Callable[[TFunc], TFunc]:
     """
     Decorate a function so that output is captured as in Shiny Express

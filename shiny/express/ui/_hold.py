@@ -7,6 +7,7 @@ from typing import Callable, Optional, Type, TypeVar
 from htmltools import wrap_displayhook_handler
 
 from ... import ui
+from ..._docstring import no_example
 from ..._typing_extensions import ParamSpec
 
 __all__ = ("hold",)
@@ -16,6 +17,7 @@ R = TypeVar("R")
 CallableT = TypeVar("CallableT", bound=Callable[..., object])
 
 
+@no_example()
 def hold() -> HoldContextManager:
     """Prevent the display of UI elements in various ways.
 
