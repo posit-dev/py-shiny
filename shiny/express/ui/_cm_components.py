@@ -2,18 +2,26 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Any, Literal, Optional, TypeGuard
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagList
+from htmltools import (
+    MetadataNode,
+    Tag,
+    TagAttrs,
+    TagAttrValue,
+    TagChild,
+    TagFunction,
+    TagList,
+)
 
 from ... import ui
-from ...types import MISSING, MISSING_TYPE
+from ...types import MISSING, MISSING_TYPE, NavSetArg
 from ...ui._accordion import AccordionPanel
 from ...ui._card import CardItem
 from ...ui._layout_columns import BreakpointsUser
 from ...ui._navs import NavMenu, NavPanel, NavSet, NavSetBar, NavSetCard
 from ...ui.css import CssUnit
-from .._recall_context import RecallContextManager
+from .._recall_context import RecallContextManager, UiRecallContextManager
 
 __all__ = (
     "sidebar",
@@ -108,7 +116,7 @@ def sidebar(
         * If four, then the values will be interpreted as top, right, bottom, and left
           respectively.
     """
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.sidebar,
         kwargs=dict(
             width=width,
@@ -186,7 +194,7 @@ def layout_sidebar(
     height
         Any valid CSS unit to use for the height.
     """
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.layout_sidebar,
         kwargs=dict(
             fillable=fillable,
@@ -269,7 +277,7 @@ def layout_column_wrap(
     **kwargs
         Additional attributes to apply to the containing element.
     """
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.layout_column_wrap,
         kwargs=dict(
             width=width,
@@ -378,7 +386,7 @@ def layout_columns(
     * [Bootstrap CSS Grid](https://getbootstrap.com/docs/5.3/layout/grid/)
     * [Bootstrap Breakpoints](https://getbootstrap.com/docs/5.3/layout/breakpoints/)
     """
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.layout_columns,
         kwargs=dict(
             col_widths=col_widths,
@@ -438,7 +446,7 @@ def card(
     #     card_body("c"), "d")`, `wrapper` would be called twice, once with `"a"` and
     #     `"b"` and once with `"d"`).
 
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.card,
         kwargs=dict(
             full_screen=full_screen,
@@ -477,7 +485,7 @@ def card_header(
     **kwargs
         Additional HTML attributes for the returned Tag.
     """
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.card_header,
         args=args,
         kwargs=dict(
@@ -511,7 +519,7 @@ def card_footer(
         Additional HTML attributes for the returned Tag.
 
     """
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.card_footer,
         args=args,
         kwargs=kwargs,
@@ -558,6 +566,10 @@ def accordion(
     **kwargs
         Attributes to this tag.
     """
+
+    def _accordion_filter(x: object) -> bool:
+        return isinstance(x, (AccordionPanel, dict))
+
     return RecallContextManager(
         ui.accordion,
         kwargs=dict(
@@ -569,6 +581,7 @@ def accordion(
             height=height,
             **kwargs,
         ),
+        filter=_accordion_filter,
     )
 
 
@@ -596,7 +609,7 @@ def accordion_panel(
     **kwargs
         Tag attributes to the `accordion-body` div Tag.
     """
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.accordion_panel,
         args=(title,),
         kwargs=dict(
@@ -645,6 +658,7 @@ def navset_tab(
             header=header,
             footer=footer,
         ),
+        filter=_navset_filter,
     )
 
 
@@ -681,6 +695,7 @@ def navset_pill(
             header=header,
             footer=footer,
         ),
+        filter=_navset_filter,
     )
 
 
@@ -718,6 +733,7 @@ def navset_underline(
             header=header,
             footer=footer,
         ),
+        filter=_navset_filter,
     )
 
 
@@ -754,6 +770,7 @@ def navset_hidden(
             header=header,
             footer=footer,
         ),
+        filter=_navset_filter,
     )
 
 
@@ -796,6 +813,7 @@ def navset_card_tab(
             header=header,
             footer=footer,
         ),
+        filter=_navset_filter,
     )
 
 
@@ -838,6 +856,7 @@ def navset_card_pill(
             header=header,
             footer=footer,
         ),
+        filter=_navset_filter,
     )
 
 
@@ -884,6 +903,7 @@ def navset_card_underline(
             footer=footer,
             placement=placement,
         ),
+        filter=_navset_filter,
     )
 
 
@@ -928,6 +948,7 @@ def navset_pill_list(
             well=well,
             widths=widths,
         ),
+        filter=_navset_filter,
     )
 
 
@@ -1026,6 +1047,7 @@ def navset_bar(
             collapsible=collapsible,
             fluid=fluid,
         ),
+        filter=_navset_filter,
     )
 
 
@@ -1053,7 +1075,7 @@ def nav_panel(
     icon
         An icon to appear inline with the button/link.
     """
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.nav_panel,
         args=(title,),
         kwargs=dict(
@@ -1069,7 +1091,7 @@ def nav_control() -> RecallContextManager[NavPanel]:
 
     This function wraps :func:`~shiny.ui.nav_control`.
     """
-    return RecallContextManager(ui.nav_control)
+    return UiRecallContextManager(ui.nav_control)
 
 
 def nav_menu(
@@ -1100,6 +1122,9 @@ def nav_menu(
         Horizontal alignment of the dropdown menu relative to dropdown toggle.
     """
 
+    def _nav_menu_filter(x: object) -> TypeGuard[NavPanel | str]:
+        return isinstance(x, (NavPanel, str))
+
     return RecallContextManager(
         ui.nav_menu,
         args=(title,),
@@ -1108,7 +1133,12 @@ def nav_menu(
             icon=icon,
             align=align,
         ),
+        filter=_nav_menu_filter,
     )
+
+
+def _navset_filter(x: object) -> TypeGuard[NavSet | MetadataNode]:
+    return isinstance(x, (NavSetArg, MetadataNode))
 
 
 # ======================================================================================
@@ -1178,7 +1208,7 @@ def value_box(
     **kwargs
         Additional attributes to pass to :func:`~shiny.ui.card`.
     """
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.value_box,
         kwargs=dict(
             showcase=showcase,
@@ -1208,7 +1238,7 @@ def panel_well(**kwargs: TagAttrValue) -> RecallContextManager[Tag]:
     A well panel is a simple container with a border and some padding. It's useful for
     grouping related content together.
     """
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.panel_well,
         kwargs=dict(
             **kwargs,
@@ -1252,7 +1282,7 @@ def panel_conditional(
     A more powerful (but slower) way to conditionally show UI content is to use
     :class:`~shiny.render.ui`.
     """
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.panel_conditional,
         args=(condition,),
         kwargs=dict(**kwargs),
@@ -1289,7 +1319,7 @@ def panel_fixed(
     --------
     * :func:`~shiny.ui.panel_absolute`
     """
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.panel_fixed,
         kwargs=dict(
             top=top,
@@ -1377,7 +1407,7 @@ def panel_absolute(
     specify 0 for ``top``, ``left``, ``right``, and ``bottom`` rather than the more
     obvious ``width = "100%"`` and ``height = "100%"``.
     """
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.panel_absolute,
         kwargs=dict(
             top=top,
@@ -1426,7 +1456,7 @@ def tooltip(
         options](https://getbootstrap.com/docs/5.3/components/tooltips/#options).
     """
 
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.tooltip,
         kwargs=dict(
             id=id,
@@ -1469,7 +1499,7 @@ def popover(
         options](https://getbootstrap.com/docs/5.3/components/popovers/#options).
     """
 
-    return RecallContextManager(
+    return UiRecallContextManager(
         ui.popover,
         kwargs=dict(
             title=title,
