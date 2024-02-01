@@ -2170,7 +2170,21 @@ class OutputText(_OutputInlineContainerM, _OutputTextValue):
         super().__init__(page, id=id, loc=f"#{id}.shiny-text-output")
 
 
-# TODO-Karan: Add OutputCode class
+class OutputCode(_OutputTextValue):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
+
+    def expect_has_placeholder(
+        self, placeholder: bool = False, *, timeout: Timeout = None
+    ) -> None:
+        _expect_class_value(
+            self.loc,
+            cls="noplaceholder",
+            has_class=not placeholder,
+            timeout=timeout,
+        )
+
+
 class OutputTextVerbatim(_OutputTextValue):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
@@ -2826,18 +2840,30 @@ class _OverlayBase(_InputBase):
         loc_el.scroll_into_view_if_needed(timeout=timeout)
         return loc_el.get_attribute("aria-describedby")
 
-    @property
-    def loc_overlay_body(self) -> Locator:
+    # @property
+    # def loc_overlay_body(self) -> Locator:
+    #     # Can not leverage `self.loc_overlay_container` as `self._overlay_selector` must
+    #     # be concatenated directly to the result of `self._get_overlay_id()`
+    #     return self.page.locator(f"#{self._get_overlay_id()}{self._overlay_selector}")
+
+    # @property
+    # def loc_overlay_container(self) -> Locator:
+    #     return self.page.locator(f"#{self._get_overlay_id()}")
+
+    def get_loc_overlay_body(self, *, timeout: Timeout = None) -> Locator:
         # Can not leverage `self.loc_overlay_container` as `self._overlay_selector` must
         # be concatenated directly to the result of `self._get_overlay_id()`
-        return self.page.locator(f"#{self._get_overlay_id()}{self._overlay_selector}")
+        return self.page.locator(
+            f"#{self._get_overlay_id(timeout=timeout)}{self._overlay_selector}"
+        )
 
-    @property
-    def loc_overlay_container(self) -> Locator:
-        return self.page.locator(f"#{self._get_overlay_id()}")
+    def get_loc_overlay_container(self, *, timeout: Timeout = None) -> Locator:
+        return self.page.locator(f"#{self._get_overlay_id(timeout=timeout)}")
 
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc_overlay_body).to_have_text(value, timeout=timeout)
+        playwright_expect(self.get_loc_overlay_body(timeout=timeout)).to_have_text(
+            value, timeout=timeout
+        )
 
     def expect_active(self, active: bool, *, timeout: Timeout = None) -> None:
         value = re.compile(r".*") if active else None
@@ -2850,7 +2876,7 @@ class _OverlayBase(_InputBase):
 
     def expect_placement(self, value: str, *, timeout: Timeout = None) -> None:
         return expect_attr(
-            loc=self.loc_overlay_container,
+            loc=self.get_loc_overlay_container(timeout=timeout),
             timeout=timeout,
             name="data-popper-placement",
             value=value,
@@ -2875,7 +2901,7 @@ class Popover(_OverlayBase):
         )
 
     def set(self, open: bool, timeout: Timeout = None) -> None:
-        if open ^ self.loc_overlay_body.count() > 0:
+        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
             self.toggle()
 
     def toggle(self, timeout: Timeout = None) -> None:
@@ -2901,10 +2927,10 @@ class Tooltip(_OverlayBase):
         )
 
     def set(self, open: bool, timeout: Timeout = None) -> None:
-        if open ^ self.loc_overlay_body.count() > 0:
+        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
             self.toggle(timeout=timeout)
         if not open:
-            self.loc_overlay_body.click()
+            self.get_loc_overlay_body(timeout=timeout).click()
 
     def toggle(self, timeout: Timeout = None) -> None:
         self.loc_trigger.wait_for(state="visible", timeout=timeout)
@@ -2928,17 +2954,25 @@ class _LayoutNavItemBase(_InputWithContainer):
             self.loc_container.locator('a[role="tab"].active')
         ).to_have_attribute("data-value", value, timeout=timeout)
 
-    # TODO-future: Make it a single locator expectation
-    # get active content instead of assertion
-    @property
-    def loc_active_content(self) -> Locator:
-        datatab_id = self.loc_container.get_attribute("data-tabsetid")
+    # # TODO-future: Make it a single locator expectation
+    # # get active content instead of assertion
+    # @property
+    # def loc_active_content(self) -> Locator:
+    #     datatab_id = self.loc_container.get_attribute("data-tabsetid")
+    #     return self.page.locator(
+    #         f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
+    #     )
+
+    def get_loc_active_content(self, *, timeout: Timeout = None) -> Locator:
+        datatab_id = self.loc_container.get_attribute("data-tabsetid", timeout=timeout)
         return self.page.locator(
             f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
         )
 
     def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc_active_content).to_have_text(value, timeout=timeout)
+        playwright_expect(self.get_loc_active_content()).to_have_text(
+            value, timeout=timeout
+        )
 
     def expect_nav_values(
         self,
