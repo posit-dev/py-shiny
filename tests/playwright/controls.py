@@ -816,11 +816,17 @@ class InputTaskButton(
         )
 
     def expect_state(self, state: str, *, timeout: Timeout = None):
-        expect_attr(self.loc.locator("> bslib-switch-inline"), name="case", value=state, timeout=timeout)
+        expect_attr(
+            self.loc.locator("> bslib-switch-inline"),
+            name="case",
+            value=state,
+            timeout=timeout,
+        )
 
     def expect_label_text(self, value: list[str], *, timeout: Timeout = None):
-        playwright_expect(self.loc.locator("> bslib-switch-inline > span")).to_have_text(value, timeout=timeout)
-
+        playwright_expect(
+            self.loc.locator("> bslib-switch-inline > span")
+        ).to_have_text(value, timeout=timeout)
 
 
 class InputActionLink(_InputActionBase):
@@ -2204,7 +2210,6 @@ class OutputText(_OutputInlineContainerM, _OutputTextValue):
 
     def get_value(self, *, timeout: Timeout = None) -> str:
         return self.loc.inner_text(timeout=timeout)
-
 
 
 class OutputCode(_OutputTextValue):
