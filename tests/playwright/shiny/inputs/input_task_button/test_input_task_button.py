@@ -42,5 +42,4 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     time2 = click_extended_task_button(
         button2, current_time, button_label=["Compute 2 slowly", "\n  \n Blocking..."]
     )
-    # page.wait_for_timeout(500)
     current_time.expect_value(time2, timeout=0)
