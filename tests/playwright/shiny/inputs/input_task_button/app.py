@@ -9,8 +9,8 @@ ui.h5("Current time")
 
 @render.text()
 def current_time():
-    reactive.invalidate_later(1)
-    return datetime.now().strftime("%H:%M:%S")
+    reactive.invalidate_later(0.1)
+    return datetime.now().utcnow()
 
 
 with ui.p():
@@ -48,7 +48,7 @@ with ui.layout_sidebar():
     @reactive.event(input.btn2, ignore_none=False)
     async def handle_click2():
         # slow_compute.cancel()
-        val = await slow_input_compute(input.x(), input.y())
+        await slow_input_compute(input.x(), input.y())
 
     @reactive.Effect
     @reactive.event(input.btn_cancel)

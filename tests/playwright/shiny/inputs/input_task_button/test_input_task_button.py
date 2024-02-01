@@ -1,29 +1,18 @@
-import re
-import time
-from datetime import datetime
-
 from conftest import ShinyAppProc
-from controls import InputTaskButton, OutputText, InputNumeric
+from controls import InputNumeric, InputTaskButton, OutputText
 from playwright.sync_api import Page
 
 
-def click_button_and_assert_time_difference(
+def click_extended_task_button(
     button: InputTaskButton,
     current_time: OutputText,
     button_label: list[str],
-) -> float:
+) -> str:
     button.expect_state("ready")
     button.expect_label_text(button_label)
-    time1 = current_time.get_value()
-    button.click()
-    time.sleep(1.5)
-    button.expect_state("busy")
-    time2 = current_time.get_value()
-    original_time = datetime.strptime(time1, "%H:%M:%S")
-    new_time = datetime.strptime(time2, "%H:%M:%S")
-    time_difference = new_time - original_time
-    time_difference_seconds = time_difference.total_seconds()
-    return time_difference_seconds
+    button.click(timeout=0)
+    button.expect_state("busy", timeout=0)
+    return current_time.get_value(timeout=0)
 
 
 def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
@@ -32,17 +21,26 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     y.set("4")
     result = OutputText(page, "show_result")
     current_time = OutputText(page, "current_time")
-    current_time.expect_value(re.compile(r"\d{2}:\d{2}:\d{2}"))
+    current_time.expect.not_to_be_empty()
+
+    result.expect_value("3")
 
     # extended task
     button1 = InputTaskButton(page, "btn")
-    time_diff = click_button_and_assert_time_difference(button1, current_time, button_label=["Compute, slowly", "\n  \n Processing..."])
-    assert time_diff > 1
+    time1 = click_extended_task_button(
+        button1, current_time, button_label=["Compute, slowly", "\n  \n Processing..."]
+    )
+    current_time.expect.not_to_have_text(time1, timeout=500)
 
-    time.sleep(2)
-    assert int(result.get_value()) == 5
+    result.expect_value("3", timeout=0)
+    result.expect_value("5", timeout=(3 + 1) * 1000)
+    y.set("15")
+    result.expect_value("5")
 
     # extended task with blocking
     button2 = InputTaskButton(page, "btn2")
-    time_diff = click_button_and_assert_time_difference(button2, current_time, button_label=["Compute 2 slowly", "\n  \n Blocking..."])
-    assert time_diff < 1
+    time2 = click_extended_task_button(
+        button2, current_time, button_label=["Compute 2 slowly", "\n  \n Blocking..."]
+    )
+    # page.wait_for_timeout(500)
+    current_time.expect_value(time2, timeout=0)
