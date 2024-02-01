@@ -2,7 +2,7 @@
 
 This directory contains end-to-end (i.e. browser based) tests for Shiny for Python.
 
-The Python files directly in this subdirectory are for Pytest fixtures and helper code
+The Python files directly in this subdirectory (and `./utils`) are for Pytest fixtures and helper code
 to make test writing easier. (Eventually this logic may move to the `shiny` package
 itself or its own dedicated package, so that Shiny app authors can set up their own e2e
 tests against their apps.)
@@ -17,14 +17,21 @@ optional, because the tests may also be for apps in the `../examples` or `../shi
 The following commands can be run from the repo root:
 
 ```sh
-# Run all e2e tests
+# Run tests related to shiny (in `./shiny` folder)
 make playwright-shiny
+# Run tests related to examples (in `./examples` folder)
+make playwright-examples
+# Run tests on apps that should be deployed (in `./deploys` folder)
+make playwright-deploys
 
 # Run just the tests in playwright/shiny/async/
 make playwright-shiny SUB_FILE=e2e/async
 
 # Run just the tests in playwright/shiny/async/, in headed mode
 make playwright-shiny SUB_FILE="--headed e2e/async"
+
+# Run **all** tests on with pytest options best for debugging
+make playwright-debug
 ```
 
 ## Shiny app fixtures
@@ -73,3 +80,5 @@ def test_airmass(page: Page, airmass_app: ShinyAppProc):
     plot = page.locator("#plot")
     expect(plot).to_have_class(re.compile(r"\bshiny-bound-output\b"))
 ```
+
+However, it is suggested to alter the example app for testing and use a local app for testing.
