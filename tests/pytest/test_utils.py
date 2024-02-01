@@ -3,6 +3,7 @@ import socketserver
 from typing import List, Set
 
 import pytest
+from playwright.examples.example_apps import reruns, reruns_delay
 
 from shiny._utils import AsyncCallbacks, Callbacks, private_seed, random_port
 from shiny.ui._utils import extract_js_keys, js_eval
@@ -139,7 +140,7 @@ async def test_async_callbacks():
 
 # Timeout within 2 seconds
 @pytest.mark.timeout(2)
-@pytest.mark.flaky(reruns=3, reruns_delay=1)
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_random_port():
     assert random_port(9000, 9000) == 9000
 
