@@ -72,8 +72,6 @@ app_allow_external_errors: typing.List[str] = [
     # TODO-garrick-future: Remove after fixing sidebar max_height_mobile warning
     "UserWarning: The `shiny.ui.sidebar(max_height_mobile=)`",
     "res = self.fn(*self.args, **self.kwargs)",
-    # if shiny express app detected
-    "Detected Shiny Express app",
     # pandas >= 2.2.0
     # https://github.com/pandas-dev/pandas/blame/5740667a55aabffc660936079268cee2f2800225/pandas/core/groupby/groupby.py#L1129
     "FutureWarning: When grouping with a length-1 list-like",
@@ -162,6 +160,9 @@ def validate_example(page: Page, ex_app_path: str) -> None:
 
     def on_console_msg(msg: ConsoleMessage) -> None:
         if msg.type == "error":
+            # Do not report missing favicon errors
+            if msg.location["url"].endswith("favicon.ico"):
+                return
             console_errors.append(msg.text)
 
     page.on("console", on_console_msg)
