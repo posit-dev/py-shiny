@@ -184,6 +184,7 @@ quartodoc:
         - reactive.event
         - reactive.isolate
         - reactive.invalidate_later
+        - reactive.extended_task
         - reactive.flush
         - reactive.poll
         - reactive.file_reader
@@ -259,6 +260,17 @@ quartodoc:
               dynamic: false
             - name: htmltools.css
               dynamic: false
+        - kind: page
+          path: ExtendedTask
+          flatten: true
+          summary:
+            name: "ExtendedTask"
+            desc: "Supervise an extended, long-running task"
+          contents:
+            - reactive.ExtendedTask
+            - reactive.ExtendedTask.invoke
+            - reactive.ExtendedTask.result
+            - reactive.ExtendedTask.cancel
     - title: Types
       desc: ""
       contents:
