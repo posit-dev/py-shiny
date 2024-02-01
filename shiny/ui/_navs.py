@@ -20,6 +20,7 @@ __all__ = (
     "nav",
 )
 
+import collections.abc
 import copy
 import re
 from typing import Any, Literal, Optional, Sequence, cast
@@ -363,7 +364,7 @@ def nav_menu(
 
 
 class NavSet:
-    args: tuple[NavSetArg | MetadataNode, ...]
+    args: tuple[NavSetArg | MetadataNode | Sequence[MetadataNode], ...]
     ul_class: str
     id: Optional[str]
     selected: Optional[str]
@@ -372,7 +373,7 @@ class NavSet:
 
     def __init__(
         self,
-        *args: NavSetArg | MetadataNode,
+        *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
         ul_class: str,
         id: Optional[str],
         selected: Optional[str],
@@ -406,7 +407,7 @@ class NavSet:
 # -----------------------------------------------------------------------------
 @no_example()
 def navset_tab(
-    *args: NavSetArg | MetadataNode,
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -463,7 +464,7 @@ def navset_tab(
 
 @no_example()
 def navset_pill(
-    *args: NavSetArg | MetadataNode,
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -519,7 +520,7 @@ def navset_pill(
 
 @no_example()
 def navset_underline(
-    *args: NavSetArg | MetadataNode,
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -574,7 +575,7 @@ def navset_underline(
 
 @add_example()
 def navset_hidden(
-    *args: NavSetArg | MetadataNode,
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -631,7 +632,7 @@ class NavSetCard(NavSet):
 
     def __init__(
         self,
-        *args: NavSetArg | MetadataNode,
+        *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
         ul_class: str,
         id: Optional[str],
         selected: Optional[str],
@@ -686,7 +687,7 @@ class NavSetCard(NavSet):
 
 @no_example()
 def navset_card_tab(
-    *args: NavSetArg | MetadataNode,
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
@@ -749,7 +750,7 @@ def navset_card_tab(
 
 @no_example()
 def navset_card_pill(
-    *args: NavSetArg | MetadataNode,
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
@@ -815,7 +816,7 @@ def navset_card_pill(
 
 @no_example()
 def navset_card_underline(
-    *args: NavSetArg | MetadataNode,
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
     selected: Optional[str] = None,
     title: Optional[TagChild] = None,
@@ -884,7 +885,7 @@ class NavSetPillList(NavSet):
 
     def __init__(
         self,
-        *args: NavSetArg | MetadataNode,
+        *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
         ul_class: str,
         id: Optional[str],
         selected: Optional[str],
@@ -914,7 +915,7 @@ class NavSetPillList(NavSet):
 
 @no_example()
 def navset_pill_list(
-    *args: NavSetArg | MetadataNode,
+    *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     id: Optional[str] = None,
     selected: Optional[str] = None,
     header: TagChild = None,
@@ -991,7 +992,7 @@ class NavSetBar(NavSet):
 
     def __init__(
         self,
-        *args: NavSetArg | MetadataNode,
+        *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
         ul_class: str,
         title: TagChild,
         id: Optional[str],
@@ -1281,7 +1282,7 @@ def navset_bar(
 # Utilities for rendering navs
 # -----------------------------------------------------------------------------\
 def render_navset(
-    *items: NavSetArg | MetadataNode,
+    *items: NavSetArg | MetadataNode | Sequence[MetadataNode],
     ul_class: str,
     id: Optional[str],
     selected: Optional[str],
@@ -1290,8 +1291,21 @@ def render_navset(
     tabsetid = private_random_int(1000, 10000)
 
     # Separate MetadataNodes from NavSetArgs.
-    metadata_args = [x for x in items if isinstance(x, MetadataNode)]
-    navset_args = [x for x in items if not isinstance(x, MetadataNode)]
+    metadata_args: list[MetadataNode] = []
+    navset_args: list[NavSetArg] = []
+
+    for item in items:
+        if isinstance(item, MetadataNode):
+            metadata_args.append(item)
+        elif isinstance(item, collections.abc.Sequence) and all(
+            isinstance(x, MetadataNode) for x in item
+        ):
+            # Above we needed to use collections.abc.Sequence for runtime checks, as
+            # typing.Sequence does not work for runtime checks.
+            metadata_args.extend(item)
+        else:
+            # pyright needs a little help with type inference here.
+            navset_args.append(cast(NavSetArg, item))
 
     # If the user hasn't provided a selected value, use the first one
     if selected is None:
