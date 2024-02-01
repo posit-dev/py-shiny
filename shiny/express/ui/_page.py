@@ -6,14 +6,14 @@ from htmltools import Tag
 
 from ... import ui
 from ...types import MISSING, MISSING_TYPE
-from .._recall_context import RecallContextManager
+from .._recall_context import RecallContextManager, UiRecallContextManager
 from .._run import get_top_level_recall_context_manager
 
 __all__ = ("page_opts",)
 
 
 def page_auto_cm() -> RecallContextManager[Tag]:
-    return RecallContextManager(ui.page_auto)
+    return UiRecallContextManager(ui.page_auto)
 
 
 def page_opts(

@@ -5,9 +5,17 @@ import sys
 from types import TracebackType
 from typing import Callable, Generic, Mapping, Optional, Type, TypeVar
 
-from htmltools import MetadataNode, Tag, TagList, wrap_displayhook_handler
+from htmltools import (
+    MetadataNode,
+    Tag,
+    TagAttrs,
+    TagChild,
+    Tagifiable,
+    TagList,
+    wrap_displayhook_handler,
+)
 
-from .._typing_extensions import ParamSpec
+from .._typing_extensions import ParamSpec, TypeGuard
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -21,14 +29,22 @@ class RecallContextManager(Generic[R]):
         *,
         args: tuple[object, ...] | None = None,
         kwargs: Mapping[str, object] | None = None,
+        filter: Callable[[object], bool] | None = None,
     ):
         self.fn = fn
+
         if args is None:
             args = tuple()
+        self.args: list[object] = list(args)
+
         if kwargs is None:
             kwargs = {}
-        self.args: list[object] = list(args)
         self.kwargs: dict[str, object] = dict(kwargs)
+
+        if filter is None:
+            filter = lambda x: True
+        self.filter = filter
+
         # Let htmltools.wrap_displayhook_handler decide what to do with objects before
         # we append them.
         self.wrapped_append = wrap_displayhook_handler(self.args.append)
@@ -63,6 +79,8 @@ class RecallContextManager(Generic[R]):
             # the result from the RecallContextManager.
             with x:
                 pass
+        elif not self.filter(x):
+            pass
         else:
             self.wrapped_append(x)
 
@@ -88,3 +106,39 @@ def wrap_recall_context_manager(
         return RecallContextManager(fn, args=args, kwargs=kwargs)
 
     return wrapped_fn
+
+
+def filter_ui_objects(x: object) -> TypeGuard[TagChild | TagAttrs]:
+    # Can't seem to figure out how to get typing to work
+    valid_types = (  # type: ignore
+        dict,
+        str,
+        Tagifiable,
+        Tag,
+        TagList,
+        MetadataNode,
+        str,
+        float,
+        list,
+        tuple,
+    )
+
+    return (
+        x is None
+        or isinstance(x, valid_types)
+        # TODO: Should export ReprHtml protocol class from htmltools and add it to
+        # valid_types, and remove line below.
+        or callable(getattr(x, "_repr_html_", None))
+    )
+
+
+class UiRecallContextManager(RecallContextManager[R]):
+    def __init__(
+        self,
+        fn: Callable[..., R],
+        *,
+        args: tuple[object, ...] | None = None,
+        kwargs: Mapping[str, object] | None = None,
+        filter: Callable[[object], bool] | None = filter_ui_objects,
+    ):
+        super().__init__(fn, args=args, kwargs=kwargs, filter=filter)
