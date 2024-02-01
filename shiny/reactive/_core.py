@@ -200,7 +200,6 @@ _reactive_environment = ReactiveEnvironment()
 
 
 @add_example()
-@no_example("express")
 @contextlib.contextmanager
 def isolate() -> Generator[None, None, None]:
     """

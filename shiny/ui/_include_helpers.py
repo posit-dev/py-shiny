@@ -13,14 +13,13 @@ from typing import Literal
 # TODO: maybe these include_*() functions should actually live in htmltools?
 from htmltools import HTMLDependency, Tag, TagAttrValue, tags
 
-from .._docstring import add_example, no_example
+from .._docstring import add_example
 
 # TODO: it's bummer that, when method="link_files" and path is in the same directory
 # as the app, the app's source will be included. Should we just not copy .py/.r files?
 
 
 @add_example()
-@no_example("express")
 def include_js(
     path: Path | str,
     *,

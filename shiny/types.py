@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, BinaryIO, Literal, NamedTuple, Optional, 
 
 from htmltools import TagChild
 
-from ._docstring import add_example, no_example
+from ._docstring import add_example
 from ._typing_extensions import NotRequired, TypedDict
 
 if TYPE_CHECKING:
@@ -56,7 +56,6 @@ class FileInfo(TypedDict):
 
 
 @add_example(ex_dir="./api-examples/output_image")
-@no_example("express")
 class ImgData(TypedDict):
     """
     Return type for :class:`~shiny.render.image`.
@@ -81,7 +80,6 @@ class ImgData(TypedDict):
 
 
 @add_example()
-@no_example("express")
 class SafeException(Exception):
     """
     Throw a safe exception.
@@ -96,7 +94,6 @@ class SafeException(Exception):
 
 
 @add_example()
-@no_example("express")
 class SilentException(Exception):
     """
     Throw a silent exception.
@@ -120,7 +117,6 @@ class SilentException(Exception):
 
 
 @add_example()
-@no_example("express")
 class SilentCancelOutputException(Exception):
     """
     Throw a silent exception and don't clear output
