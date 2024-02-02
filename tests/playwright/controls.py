@@ -1,4 +1,5 @@
 """Facade classes for working with Shiny inputs/outputs in Playwright"""
+
 from __future__ import annotations
 
 import json
@@ -790,6 +791,67 @@ class InputActionButton(
         )
 
 
+class InputTaskButton(
+    _WidthLocM,
+    _InputActionBase,
+):
+    # TODO-Karan: Test auto_reset functionality
+    # id: str,
+    # label: TagChild,
+    # *args: TagChild,
+    # icon: TagChild = None,
+    # label_busy: TagChild = "Processing...",
+    # icon_busy: TagChild | MISSING_TYPE = MISSING,
+    # width: Optional[str] = None,
+    # type: Optional[str] = "primary",
+    # auto_reset: bool = True,
+    # **kwargs: TagAttrValue,
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+    ) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"button#{id}.bslib-task-button.shiny-bound-input",
+        )
+
+    def expect_state(
+        self, value: Literal["ready", "busy"] | str, *, timeout: Timeout = None
+    ):
+        expect_attr(
+            self.loc.locator("> bslib-switch-inline"),
+            name="case",
+            value=value,
+            timeout=timeout,
+        )
+
+    def expect_label(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        self.expect_label_ready(value, timeout=timeout)
+
+    def expect_label_ready(self, value: PatternOrStr, *, timeout: Timeout = None):
+        self.expect_label_state("ready", value, timeout=timeout)
+
+    def expect_label_busy(self, value: PatternOrStr, *, timeout: Timeout = None):
+        self.expect_label_state("busy", value, timeout=timeout)
+
+    def expect_label_state(
+        self, state: str, value: PatternOrStr, *, timeout: Timeout = None
+    ):
+        playwright_expect(
+            self.loc.locator(f"> bslib-switch-inline > span[slot='{state}']")
+        ).to_have_text(value, timeout=timeout)
+
+    def expect_auto_reset(self, value: bool, timeout: Timeout = None):
+        expect_attr(
+            self.loc,
+            name="data-auto-reset",
+            value="" if value else None,
+            timeout=timeout,
+        )
+
+
 class InputActionLink(_InputActionBase):
     # label: TagChild,
     # icon: TagChild = None,
@@ -1309,11 +1371,13 @@ class InputFile(
 
     def set(
         self,
-        file_path: str
-        | pathlib.Path
-        | FilePayload
-        | list[str | pathlib.Path]
-        | list[FilePayload],
+        file_path: (
+            str
+            | pathlib.Path
+            | FilePayload
+            | list[str | pathlib.Path]
+            | list[FilePayload]
+        ),
         *,
         timeout: Timeout = None,
         expect_complete_timeout: Timeout = 30 * 1000,
@@ -1668,9 +1732,11 @@ class InputSliderRange(_InputSliderBase):
 
     def expect_value(
         self,
-        value: typing.Tuple[PatternOrStr, PatternOrStr]
-        | typing.Tuple[PatternOrStr, MISSING_TYPE]
-        | typing.Tuple[MISSING_TYPE, PatternOrStr],
+        value: (
+            typing.Tuple[PatternOrStr, PatternOrStr]
+            | typing.Tuple[PatternOrStr, MISSING_TYPE]
+            | typing.Tuple[MISSING_TYPE, PatternOrStr]
+        ),
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1713,9 +1779,11 @@ class InputSliderRange(_InputSliderBase):
 
     def set(
         self,
-        value: typing.Tuple[str, str]
-        | typing.Tuple[str, MISSING_TYPE]
-        | typing.Tuple[MISSING_TYPE, str],
+        value: (
+            typing.Tuple[str, str]
+            | typing.Tuple[str, MISSING_TYPE]
+            | typing.Tuple[MISSING_TYPE, str]
+        ),
         *,
         max_err_values: int = 15,
         timeout: Timeout = None,
@@ -1974,9 +2042,11 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
 
     def expect_value(
         self,
-        value: typing.Tuple[PatternOrStr, PatternOrStr]
-        | typing.Tuple[PatternOrStr, MISSING_TYPE]
-        | typing.Tuple[MISSING_TYPE, PatternOrStr],
+        value: (
+            typing.Tuple[PatternOrStr, PatternOrStr]
+            | typing.Tuple[PatternOrStr, MISSING_TYPE]
+            | typing.Tuple[MISSING_TYPE, PatternOrStr]
+        ),
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2168,6 +2238,9 @@ class OutputText(_OutputInlineContainerM, _OutputTextValue):
         id: str,
     ) -> None:
         super().__init__(page, id=id, loc=f"#{id}.shiny-text-output")
+
+    def get_value(self, *, timeout: Timeout = None) -> str:
+        return self.loc.inner_text(timeout=timeout)
 
 
 class OutputCode(_OutputTextValue):
