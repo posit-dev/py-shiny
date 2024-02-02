@@ -23,6 +23,7 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     y.set("4")
     result = OutputText(page, "show_result")
     current_time = OutputText(page, "current_time")
+    # Make sure the time has content
     current_time.expect.not_to_be_empty()
 
     # Wait until shiny is stable
