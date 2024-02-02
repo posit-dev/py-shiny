@@ -12,7 +12,16 @@ __all__ = (
     "SilentCancelOutputException",
 )
 
-from typing import TYPE_CHECKING, Any, BinaryIO, Literal, NamedTuple, Optional, Protocol
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Literal,
+    NamedTuple,
+    Optional,
+    Protocol,
+    runtime_checkable,
+)
 
 from htmltools import TagChild
 
@@ -150,6 +159,7 @@ class ActionButtonValue(int):
     pass
 
 
+@runtime_checkable
 class NavSetArg(Protocol):
     """
     A value suitable for passing to a navigation container (e.g.,
