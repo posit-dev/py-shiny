@@ -104,6 +104,9 @@ playwright-deploys: install-playwright install-rsconnect ## end-to-end tests on 
 playwright-examples: install-playwright ## end-to-end tests on examples with playwright
 	pytest tests/playwright/examples/$(SUB_FILE)
 
+playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed
+	pytest -c tests/playwright/playwright-pytest.ini tests/playwright/$(SUB_FILE)
+
 testrail-junit: install-playwright install-trcli ## end-to-end tests with playwright and generate junit report
 	pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml
 

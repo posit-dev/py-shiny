@@ -7,9 +7,12 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from .._docstring import no_example
+
 __all__ = ("is_express_app",)
 
 
+@no_example()
 def is_express_app(app: str, app_dir: str | None) -> bool:
     """Detect whether an app file is a Shiny express app
 

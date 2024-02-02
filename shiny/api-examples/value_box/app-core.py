@@ -9,7 +9,7 @@ app_ui = ui.page_fluid(
             "$1 Billion Dollars",
             "Up 30% VS PREVIOUS 30 DAYS",
             showcase=piggy_bank,
-            theme="bg-gradient-orange-cyan",
+            theme="bg-gradient-orange-red",
             full_screen=True,
         ),
         ui.value_box(

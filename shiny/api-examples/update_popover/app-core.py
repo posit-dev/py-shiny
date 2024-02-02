@@ -1,4 +1,4 @@
-from shiny import App, Inputs, Outputs, Session, reactive, req, ui
+from shiny import App, Inputs, Outputs, Session, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.input_action_button("btn_show", "Show popover", class_="mt-3 me-3"),
@@ -14,21 +14,19 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
+    @reactive.effect
+    @reactive.event(input.btn_show)
     def _():
-        req(input.btn_show())
-
         ui.update_popover("popover_id", show=True)
 
-    @reactive.Effect
+    @reactive.effect
+    @reactive.event(input.btn_close)
     def _():
-        req(input.btn_close())
-
         ui.update_popover("popover_id", show=False)
 
-    @reactive.Effect
+    @reactive.effect
+    @reactive.event(input.btn_w_popover)
     def _():
-        req(input.btn_w_popover())
         ui.notification_show("Button clicked!", duration=3, type="message")
 
 
