@@ -823,7 +823,10 @@ class InputTaskButton(
             timeout=timeout,
         )
 
-    def expect_label_text(self, value: list[str], *, timeout: Timeout = None):
+    def expect_label(self, value: str, *, timeout: Timeout = None):
+        raise NotImplemented("Please use expect_labels()")
+    
+    def expect_labels(self, value: list[str], *, timeout: Timeout = None):
         playwright_expect(
             self.loc.locator("> bslib-switch-inline > span")
         ).to_have_text(value, timeout=timeout)
