@@ -751,7 +751,7 @@ class InputSelectize(_InputSelectBase):
         super().__init__(
             page,
             id=id,
-            select_class="",
+            select_class=".selectized",
         )
 
 
