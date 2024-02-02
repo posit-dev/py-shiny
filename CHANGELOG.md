@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed `render.download` not working in Express. (#1085)
 
 * `express.ui.hold()` can now accept any type of object, instead of just `TagChild` objects. (#1089)
-* Fixed an issue where `input_selectize` would not initialize correctly when created within a Shiny module.
+* Fixed an issue where `input_selectize` would not initialize correctly when created within a Shiny module. (#1091)
 
 
 ## [0.7.0] - 2024-01-25
