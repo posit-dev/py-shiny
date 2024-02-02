@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 from conftest import ShinyAppProc
 from controls import InputNumeric, InputTaskButton, OutputText
 from playwright.sync_api import Page
@@ -48,9 +50,10 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     # Blocking verification
     button_block = InputTaskButton(page, "btn_block")
     time_block = click_extended_task_button(
-        button_block, current_time, button_label=["Compute 2 slowly", "\n  \n Blocking..."]
+        button_block,
+        current_time,
+        button_label=["Compute 2 slowly", "\n  \n Blocking..."],
     )
     # Make sure time value has not changed after 500ms has ellapsed
-    import time # TODO-karan: move this line to the top
     time.sleep(0.5)
     current_time.expect_value(time_block, timeout=0)
