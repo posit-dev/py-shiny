@@ -16,6 +16,7 @@ from ._output import (  # noqa: F401
     suspend_display,  # pyright: ignore[reportUnusedImport] - Deprecated
 )
 from ._run import wrap_express_app
+from ._app_globals import app_globals
 from .expressify_decorator import expressify
 
 
@@ -27,6 +28,7 @@ __all__ = (
     "is_express_app",
     "wrap_express_app",
     "ui",
+    "app_globals",
     "expressify",
 )
 
