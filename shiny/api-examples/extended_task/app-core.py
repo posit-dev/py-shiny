@@ -34,7 +34,7 @@ with ui.layout_sidebar():
         ui.input_numeric("x", "x", 1)
         ui.input_numeric("y", "y", 2)
         ui.input_task_button("btn", "Compute, slowly")
-        ui.input_task_button("btn2", "Compute 2 slowly")
+        ui.input_task_button("btn_block", "Block timer")
         ui.input_action_button("btn_cancel", "Cancel")
 
     @reactive.Effect
