@@ -24,7 +24,6 @@ async def slow_compute(a: int, b: int) -> int:
     return a + b
 
 
-# @ui.bind_task_button(button_id="btn2")
 async def blocking_input_compute(a: int, b: int) -> int:
     await asyncio.sleep(3)
     return a + b
