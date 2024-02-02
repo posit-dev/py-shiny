@@ -13,13 +13,13 @@ def state():
     return f"input.sidebar(): {input.sidebar()}"
 
 
-@reactive.Effect
+@reactive.effect
 @reactive.event(input.open_sidebar)
 def _():
     ui.update_sidebar("sidebar", show=True)
 
 
-@reactive.Effect
+@reactive.effect
 @reactive.event(input.close_sidebar)
 def _():
     ui.update_sidebar("sidebar", show=False)

@@ -305,7 +305,6 @@ def check_if_missing_expected_example(el, converted):
         # In practice, this covers methods of exported classes (class still needs ex)
         return
 
-    # TODO: Remove shiny.express from no_req_examples when we have examples ready
     no_req_examples = ["shiny.experimental"]
     if any([el.target_path.startswith(mod) for mod in no_req_examples]):
         return

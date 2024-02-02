@@ -13,7 +13,7 @@ ui.markdown(
     * the item must have `as_fill_item()` be called on it
     * the parent container must have `as_fillable_container()` called on it
 
-    Iff both methods are called, the inner child will naturally expand into its parent container.
+    If both methods are called, the inner child will naturally expand into its parent container.
     """
 )
 
