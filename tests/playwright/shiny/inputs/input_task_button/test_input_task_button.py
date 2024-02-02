@@ -29,11 +29,13 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     # Wait until shiny is stable
     result.expect_value("3")
 
-    # extended task
+    # Extended task
     button1 = InputTaskButton(page, "btn")
+    # Click button and collect the current time from the app
     time1 = click_extended_task_button(
         button1, current_time, button_label=["Compute, slowly", "\n  \n Processing..."]
     )
+    # Make sure time value updates (before the calculation finishes
     current_time.expect.not_to_have_text(time1, timeout=500)
 
     result.expect_value("3", timeout=0)
