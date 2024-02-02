@@ -24,17 +24,11 @@ async def slow_compute(a: int, b: int) -> int:
     return a + b
 
 
-async def blocking_input_compute(a: int, b: int) -> int:
-    await asyncio.sleep(3)
-    return a + b
-
-
 with ui.layout_sidebar():
     with ui.sidebar():
         ui.input_numeric("x", "x", 1)
         ui.input_numeric("y", "y", 2)
-        ui.input_task_button("btn_task", "Compute task")
-        ui.input_task_button("btn_block", "Block timer")
+        ui.input_task_button("btn", "Compute, slowly")
         ui.input_action_button("btn_cancel", "Cancel")
 
     @reactive.Effect
@@ -42,13 +36,6 @@ with ui.layout_sidebar():
     def handle_click():
         # slow_compute.cancel()
         slow_compute(input.x(), input.y())
-
-    @reactive.Effect
-    @reactive.event(input.btn2, ignore_none=False)
-    async def handle_click2():
-        # slow_compute.cancel()
-        val = await slow_input_compute(input.x(), input.y())
-        print(val)
 
     @reactive.Effect
     @reactive.event(input.btn_cancel)
