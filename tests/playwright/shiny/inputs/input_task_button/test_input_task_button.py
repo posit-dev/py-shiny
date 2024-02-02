@@ -37,9 +37,11 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     )
     # Make sure time value updates (before the calculation finishes
     current_time.expect.not_to_have_text(time1, timeout=500)
-
     result.expect_value("3", timeout=0)
+    # After the calculation time plus a buffer, make sure the calculation finishes
     result.expect_value("5", timeout=(3 + 1) * 1000)
+
+    # set up Blocking test
     y.set("15")
     result.expect_value("5")
 
