@@ -6,7 +6,6 @@ from typing import Callable, Optional, Type, TypeVar
 
 from htmltools import wrap_displayhook_handler
 
-from ... import ui
 from ..._docstring import no_example
 from ..._typing_extensions import ParamSpec
 
@@ -47,9 +46,9 @@ def hold() -> HoldContextManager:
 
 class HoldContextManager:
     def __init__(self):
-        self.content = ui.TagList()
+        self.content: list[object] = list()
 
-    def __enter__(self) -> ui.TagList:
+    def __enter__(self) -> list[object]:
         self.prev_displayhook = sys.displayhook
         sys.displayhook = wrap_displayhook_handler(
             self.content.append  # pyright: ignore[reportArgumentType]

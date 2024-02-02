@@ -223,7 +223,7 @@ def input_select(
                     tags.script(
                         dumps(opts),
                         type="application/json",
-                        data_for=id,
+                        data_for=resolved_id,
                         data_eval=dumps(extract_js_keys(opts)),
                     ),
                     selectize_deps(),
