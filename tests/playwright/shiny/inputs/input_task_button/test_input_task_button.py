@@ -25,6 +25,7 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     current_time = OutputText(page, "current_time")
     current_time.expect.not_to_be_empty()
 
+    # Wait until shiny is stable
     result.expect_value("3")
 
     # extended task
