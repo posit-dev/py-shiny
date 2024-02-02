@@ -1,4 +1,5 @@
 """Facade classes for working with Shiny inputs/outputs in Playwright"""
+
 from __future__ import annotations
 
 import json
@@ -794,6 +795,7 @@ class InputTaskButton(
     _WidthLocM,
     _InputActionBase,
 ):
+    # TODO-Karan: Test auto_reset functionality
     # id: str,
     # label: TagChild,
     # *args: TagChild,
@@ -815,22 +817,37 @@ class InputTaskButton(
             loc=f"button#{id}.bslib-task-button.shiny-bound-input",
         )
 
-    def expect_state(self, state: str, *, timeout: Timeout = None):
+    def expect_state(self, value: Literal["ready", "busy"] | str, *, timeout: Timeout = None):
         expect_attr(
             self.loc.locator("> bslib-switch-inline"),
             name="case",
-            value=state,
+            value=value,
             timeout=timeout,
         )
 
-    def expect_label(self, value: str, *, timeout: Timeout = None):
-        raise NotImplemented("Please use expect_labels()")
-    
-    def expect_labels(self, value: list[str], *, timeout: Timeout = None):
+    def expect_label(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        self.expect_label_ready(value, timeout=timeout)
+
+    def expect_label_ready(self, value: PatternOrStr, *, timeout: Timeout = None):
+        self.expect_label_state("ready", value, timeout=timeout)
+
+    def expect_label_busy(self, value: PatternOrStr, *, timeout: Timeout = None):
+        self.expect_label_state("busy", value, timeout=timeout)
+
+    def expect_label_state(
+        self, state: str, value: PatternOrStr, *, timeout: Timeout = None
+    ):
         playwright_expect(
-            self.loc.locator("> bslib-switch-inline > span")
+            self.loc.locator(f"> bslib-switch-inline > span[slot='{state}']")
         ).to_have_text(value, timeout=timeout)
 
+    def expect_auto_reset(self, value: bool, timeout: Timeout = None):
+        expect_attr(
+            self.loc,
+            name="data-auto-reset",
+            value="" if value else None,
+            timeout=timeout,
+        )
 
 class InputActionLink(_InputActionBase):
     # label: TagChild,
@@ -1351,11 +1368,13 @@ class InputFile(
 
     def set(
         self,
-        file_path: str
-        | pathlib.Path
-        | FilePayload
-        | list[str | pathlib.Path]
-        | list[FilePayload],
+        file_path: (
+            str
+            | pathlib.Path
+            | FilePayload
+            | list[str | pathlib.Path]
+            | list[FilePayload]
+        ),
         *,
         timeout: Timeout = None,
         expect_complete_timeout: Timeout = 30 * 1000,
@@ -1710,9 +1729,11 @@ class InputSliderRange(_InputSliderBase):
 
     def expect_value(
         self,
-        value: typing.Tuple[PatternOrStr, PatternOrStr]
-        | typing.Tuple[PatternOrStr, MISSING_TYPE]
-        | typing.Tuple[MISSING_TYPE, PatternOrStr],
+        value: (
+            typing.Tuple[PatternOrStr, PatternOrStr]
+            | typing.Tuple[PatternOrStr, MISSING_TYPE]
+            | typing.Tuple[MISSING_TYPE, PatternOrStr]
+        ),
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1755,9 +1776,11 @@ class InputSliderRange(_InputSliderBase):
 
     def set(
         self,
-        value: typing.Tuple[str, str]
-        | typing.Tuple[str, MISSING_TYPE]
-        | typing.Tuple[MISSING_TYPE, str],
+        value: (
+            typing.Tuple[str, str]
+            | typing.Tuple[str, MISSING_TYPE]
+            | typing.Tuple[MISSING_TYPE, str]
+        ),
         *,
         max_err_values: int = 15,
         timeout: Timeout = None,
@@ -2016,9 +2039,11 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
 
     def expect_value(
         self,
-        value: typing.Tuple[PatternOrStr, PatternOrStr]
-        | typing.Tuple[PatternOrStr, MISSING_TYPE]
-        | typing.Tuple[MISSING_TYPE, PatternOrStr],
+        value: (
+            typing.Tuple[PatternOrStr, PatternOrStr]
+            | typing.Tuple[PatternOrStr, MISSING_TYPE]
+            | typing.Tuple[MISSING_TYPE, PatternOrStr]
+        ),
         *,
         timeout: Timeout = None,
     ) -> None:
