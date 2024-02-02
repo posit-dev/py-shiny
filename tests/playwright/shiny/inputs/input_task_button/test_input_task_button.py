@@ -45,9 +45,12 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     y.set("15")
     result.expect_value("5")
 
-    # extended task with blocking
-    button2 = InputTaskButton(page, "btn2")
-    time2 = click_extended_task_button(
-        button2, current_time, button_label=["Compute 2 slowly", "\n  \n Blocking..."]
+    # Blocking verification
+    button_block = InputTaskButton(page, "btn_block")
+    time_block = click_extended_task_button(
+        button_block, current_time, button_label=["Compute 2 slowly", "\n  \n Blocking..."]
     )
-    current_time.expect_value(time2, timeout=0)
+    # Make sure time value has not changed after 500ms has ellapsed
+    import time # TODO-karan: move this line to the top
+    time.sleep(0.5)
+    current_time.expect_value(time_block, timeout=0)
