@@ -817,7 +817,9 @@ class InputTaskButton(
             loc=f"button#{id}.bslib-task-button.shiny-bound-input",
         )
 
-    def expect_state(self, value: Literal["ready", "busy"] | str, *, timeout: Timeout = None):
+    def expect_state(
+        self, value: Literal["ready", "busy"] | str, *, timeout: Timeout = None
+    ):
         expect_attr(
             self.loc.locator("> bslib-switch-inline"),
             name="case",
@@ -848,6 +850,7 @@ class InputTaskButton(
             value="" if value else None,
             timeout=timeout,
         )
+
 
 class InputActionLink(_InputActionBase):
     # label: TagChild,
