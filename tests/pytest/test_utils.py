@@ -139,7 +139,7 @@ async def test_async_callbacks():
 
 # Timeout within 2 seconds
 @pytest.mark.timeout(2)
-@pytest.mark.flaky(reruns=3, reruns_delay=1)
+@pytest.mark.flaky(reruns=3)
 def test_random_port():
     assert random_port(9000, 9000) == 9000
 
