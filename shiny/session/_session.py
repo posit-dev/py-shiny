@@ -334,6 +334,7 @@ class Session(object, metaclass=SessionMeta):
                 ...
             except Exception as e:
                 try:
+                    traceback.print_exception(e)
                     self._send_error_response(str(e))
                 except Exception:
                     pass
@@ -351,7 +352,9 @@ class Session(object, metaclass=SessionMeta):
                     + key
                 )
             if len(keys) == 2:
-                val = input_handlers._process_value(keys[1], val, keys[0], self)
+                val = input_handlers._process_value(
+                    keys[1], val, ResolvedId(keys[0]), self
+                )
 
             # The keys[0] value is already a fully namespaced id; make that explicit by
             # wrapping it in ResolvedId, otherwise self.input will throw an id

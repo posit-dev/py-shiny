@@ -10,9 +10,10 @@ from typing import TYPE_CHECKING, Any, Callable, Dict
 if TYPE_CHECKING:
     from .session import Session
 
+from .module import ResolvedId
 from .types import ActionButtonValue
 
-InputHandlerType = Callable[[Any, str, "Session"], Any]
+InputHandlerType = Callable[[Any, ResolvedId, "Session"], Any]
 
 
 class _InputHandlers(Dict[str, InputHandlerType]):
@@ -31,7 +32,9 @@ class _InputHandlers(Dict[str, InputHandlerType]):
     def remove(self, type: str) -> None:
         del self[type]
 
-    def _process_value(self, type: str, value: Any, name: str, session: Session) -> Any:
+    def _process_value(
+        self, type: str, value: Any, name: ResolvedId, session: Session
+    ) -> Any:
         handler = self.get(type)
         if handler is None:
             raise ValueError("No input handler registered for type: " + type)
@@ -94,27 +97,31 @@ getType: function(el) {
 
 
 @input_handlers.add("shiny.date")
-def _(value: str | list[str], name: str, session: Session) -> date | tuple[date, date]:
+def _(
+    value: str | list[str], name: ResolvedId, session: Session
+) -> date | tuple[date, date]:
     if isinstance(value, str):
         return datetime.strptime(value, "%Y-%m-%d").date()
-    return tuple(  # pyright: ignore[reportReturnType]
-        datetime.strptime(v, "%Y-%m-%d").date() for v in value
+    return (
+        datetime.strptime(value[0], "%Y-%m-%d").date(),
+        datetime.strptime(value[1], "%Y-%m-%d").date(),
     )
 
 
 @input_handlers.add("shiny.datetime")
 def _(
-    value: int | float | list[int] | list[float], name: str, session: Session
+    value: int | float | list[int] | list[float], name: ResolvedId, session: Session
 ) -> datetime | tuple[datetime, datetime]:
     if isinstance(value, (int, float)):
         return datetime.utcfromtimestamp(value)
-    return tuple(
-        datetime.utcfromtimestamp(v) for v in value  # pyright: ignore[reportReturnType]
+    return (
+        datetime.utcfromtimestamp(value[0]),
+        datetime.utcfromtimestamp(value[1]),
     )
 
 
 @input_handlers.add("shiny.action")
-def _(value: int, name: str, session: Session) -> ActionButtonValue:
+def _(value: int, name: ResolvedId, session: Session) -> ActionButtonValue:
     # TODO: ActionButtonValue() class can probably be removed
     return ActionButtonValue(value)
 
@@ -124,17 +131,17 @@ def _(value: int, name: str, session: Session) -> ActionButtonValue:
 
 
 @input_handlers.add("shiny.number")
-def _(value: str, name: str, session: Session) -> str:
+def _(value: str, name: ResolvedId, session: Session) -> str:
     return value
 
 
 # TODO: implement when we have bookmarking
 @input_handlers.add("shiny.password")
-def _(value: str, name: str, session: Session) -> str:
+def _(value: str, name: ResolvedId, session: Session) -> str:
     return value
 
 
 # TODO: implement when we have bookmarking
 @input_handlers.add("shiny.file")
-def _(value: Any, name: str, session: Session) -> Any:
+def _(value: Any, name: ResolvedId, session: Session) -> Any:
     return value
