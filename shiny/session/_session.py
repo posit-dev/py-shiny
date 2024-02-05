@@ -11,6 +11,7 @@ import functools
 import json
 import os
 import re
+import sys
 import traceback
 import typing
 import urllib.parse
@@ -334,7 +335,7 @@ class Session(object, metaclass=SessionMeta):
                 ...
             except Exception as e:
                 try:
-                    traceback.print_exception(e)
+                    traceback.print_exception(*sys.exc_info())
                     self._send_error_response(str(e))
                 except Exception:
                     pass
