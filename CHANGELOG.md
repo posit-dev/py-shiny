@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [UNRELEASED] - YYYY-MM-DD
+
+### Bug fixes
+
+* Fixed `input_task_button` not working in a Shiny module. (#1108)
+
+
 ## [0.7.1] - 2024-02-05
 
 ### Bug fixes

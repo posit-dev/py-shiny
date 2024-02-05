@@ -158,7 +158,9 @@ manual_task_reset_buttons: set[ResolvedId] = set()
 
 
 @input_handlers.add("bslib.taskbutton")
-def _(value: dict[str, object], name: str, session: Session) -> ActionButtonValue:
+def _(
+    value: dict[str, object], name: ResolvedId, session: Session
+) -> ActionButtonValue:
     if value["autoReset"]:
 
         @session.on_flush
@@ -166,7 +168,7 @@ def _(value: dict[str, object], name: str, session: Session) -> ActionButtonValu
             # This is input_task_button's auto-reset feature: unless the button has
             # opted out using set_task_button_manual_reset(), we should reset after a
             # flush cycle where a bslib.taskbutton value is seen.
-            if ResolvedId(name) not in manual_task_reset_buttons:
+            if name not in manual_task_reset_buttons:
                 update_task_button(name, state="ready", session=session)
 
     return ActionButtonValue(cast(int, value["value"]))
@@ -1010,9 +1012,11 @@ def update_tooltip(
         drop_none(
             {
                 "method": "update",
-                "title": require_active_session(session)._process_ui(TagList(*args))
-                if len(args) > 0
-                else None,
+                "title": (
+                    require_active_session(session)._process_ui(TagList(*args))
+                    if len(args) > 0
+                    else None
+                ),
             }
         ),
     )
@@ -1069,9 +1073,9 @@ def update_popover(
             drop_none(
                 {
                     "method": "update",
-                    "content": session._process_ui(TagList(*args))
-                    if len(args) > 0
-                    else None,
+                    "content": (
+                        session._process_ui(TagList(*args)) if len(args) > 0 else None
+                    ),
                     "header": session._process_ui(title) if title is not None else None,
                 },
             ),

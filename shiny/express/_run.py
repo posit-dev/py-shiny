@@ -55,6 +55,7 @@ def wrap_express_app(file: Path) -> App:
         except Exception:
             import traceback
 
+            # Starting in Python 3.10 this could be traceback.print_exception(e)
             traceback.print_exception(*sys.exc_info())
             raise
 
