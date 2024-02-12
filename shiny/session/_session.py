@@ -214,9 +214,9 @@ class Session(object, metaclass=SessionMeta):
 
         self._outbound_message_queues = OutBoundMessageQueues()
 
-        self._message_handlers: dict[str, Callable[..., Awaitable[object]]] = (
-            self._create_message_handlers()
-        )
+        self._message_handlers: dict[
+            str, Callable[..., Awaitable[object]]
+        ] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
         self._has_run_session_end_tasks: bool = False

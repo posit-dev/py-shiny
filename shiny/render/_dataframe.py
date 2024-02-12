@@ -2,12 +2,22 @@ from __future__ import annotations
 
 import abc
 import json
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, cast, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Optional,
+    Protocol,
+    Union,
+    cast,
+    runtime_checkable,
+)
 
 from htmltools import Tag
 
 from .. import ui
 from .._docstring import add_example, no_example
+from ..session._utils import require_active_session
 from ._dataframe_unsafe import serialize_numpy_dtypes
 from .renderer import Jsonifiable, Renderer
 
@@ -238,7 +248,7 @@ class data_frame(Renderer[DataFrameResult]):
     Row selection
     -------------
     When using the row selection feature, you can access the selected rows by using the
-    `input.<id>_selected_rows()` function, where `<id>` is the `id` of the
+    `<id>.input_selected_rows()` method, where `<id>` is the `id` of the
     :func:`~shiny.ui.output_data_frame`. The value returned will be `None` if no rows
     are selected, or a tuple of integers representing the indices of the selected rows.
     To filter a pandas data frame down to the selected rows, use
@@ -271,12 +281,21 @@ class data_frame(Renderer[DataFrameResult]):
             )
         return value.to_payload()
 
+    def input_selected_rows(self) -> Optional[tuple[int]]:
+        """
+        When `row_selection_mode` is set to "single" or "multiple" this will return
+        a tuple of integers representing the rows selected by a user.
+        """
+
+        active_session = require_active_session(None)
+        return active_session.input[self.output_id + "_selected_rows"]()
+
 
 @runtime_checkable
 class PandasCompatible(Protocol):
     # Signature doesn't matter, runtime_checkable won't look at it anyway
     def to_pandas(self) -> object:
-        ...
+        pass
 
 
 def cast_to_pandas(x: object, error_message_begin: str) -> object:
