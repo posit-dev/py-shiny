@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
     def to_payload(self) -> Jsonifiable:
-        ...
+        pass
 
 
 @add_example(ex_dir="../api-examples/data_frame")

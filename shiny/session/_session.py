@@ -608,22 +608,26 @@ class Session(object, metaclass=SessionMeta):
     @overload
     def _send_progress(
         self, type: Literal["binding"], message: BindingProgressMessage
-    ) -> None: ...
+    ) -> None:
+        pass
 
     @overload
     def _send_progress(
         self, type: Literal["open"], message: OpenProgressMessage
-    ) -> None: ...
+    ) -> None:
+        pass
 
     @overload
     def _send_progress(
         self, type: Literal["close"], message: CloseProgressMessage
-    ) -> None: ...
+    ) -> None:
+        pass
 
     @overload
     def _send_progress(
         self, type: Literal["update"], message: UpdateProgressMessage
-    ) -> None: ...
+    ) -> None:
+        pass
 
     def _send_progress(self, type: str, message: object) -> None:
         msg: dict[str, object] = {"progress": {"type": type, "message": message}}
@@ -1033,7 +1037,8 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    def __call__(self, renderer: RendererT) -> RendererT: ...
+    def __call__(self, renderer: RendererT) -> RendererT:
+        pass
 
     @overload
     def __call__(
@@ -1042,7 +1047,8 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-    ) -> Callable[[RendererT], RendererT]: ...
+    ) -> Callable[[RendererT], RendererT]:
+        pass
 
     def __call__(
         self,
