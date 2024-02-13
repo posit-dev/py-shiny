@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import seaborn as sns
 
-from shiny import App, Session, reactive, render, ui
+from shiny import App, Inputs, reactive, render, ui
 
 sns.set_theme(style="white")
 df = pd.read_csv(Path(__file__).parent / "penguins.csv", na_values="NA")
