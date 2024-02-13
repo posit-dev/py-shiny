@@ -179,6 +179,17 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   );
 
   useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      rowSelection.clear();
+    };
+    window.addEventListener("clearRows", handleMessage);
+
+    return () => {
+      window.removeEventListener("clearRows", handleMessage);
+    };
+  }, [containerRef.current]);
+
+  useEffect(() => {
     if (id) {
       if (rowSelectionMode === SelectionMode.None) {
         Shiny.setInputValue(`${id}_selected_rows`, null);
@@ -522,3 +533,15 @@ export class ShinyDataFrameOutput extends HTMLElement {
 }
 
 customElements.define("shiny-data-frame", ShinyDataFrameOutput);
+
+$(function () {
+  Shiny.addCustomMessageHandler("receiveMessage", function (message) {
+    console.log(message);
+    const evt = new CustomEvent(message.handler, {
+      detail: message.obj,
+      bubbles: true,
+    });
+    const el = document.getElementById(message.id);
+    el.dispatchEvent(evt);
+  });
+});

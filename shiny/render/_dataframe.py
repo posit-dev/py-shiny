@@ -2,12 +2,22 @@ from __future__ import annotations
 
 import abc
 import json
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, cast, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Optional,
+    Protocol,
+    Union,
+    cast,
+    runtime_checkable,
+)
 
 from htmltools import Tag
 
 from .. import ui
 from .._docstring import add_example, no_example
+from ..session._utils import require_active_session
 from ._dataframe_unsafe import serialize_numpy_dtypes
 from .renderer import Jsonifiable, Renderer
 
@@ -17,8 +27,7 @@ if TYPE_CHECKING:
 
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
-    def to_payload(self) -> Jsonifiable:
-        ...
+    def to_payload(self) -> Jsonifiable: ...
 
 
 @add_example(ex_dir="../api-examples/data_frame")
@@ -271,12 +280,23 @@ class data_frame(Renderer[DataFrameResult]):
             )
         return value.to_payload()
 
+    async def __send_message(self, type: str, obj: dict[str, Any] = {}):
+        active_session = require_active_session(None)
+        id = active_session.ns(self.output_id)
+        print(type)
+        await active_session.send_custom_message(
+            "receiveMessage",
+            {"id": id, "handler": type, "obj": obj},
+        )
+
+    async def clear_row_selection(self) -> None:
+        await self.__send_message("clearRows")
+
 
 @runtime_checkable
 class PandasCompatible(Protocol):
     # Signature doesn't matter, runtime_checkable won't look at it anyway
-    def to_pandas(self) -> object:
-        ...
+    def to_pandas(self) -> object: ...
 
 
 def cast_to_pandas(x: object, error_message_begin: str) -> object:
