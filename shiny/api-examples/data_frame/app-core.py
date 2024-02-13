@@ -44,6 +44,8 @@ def server(input, output, session):
 
     @reactive.calc
     def filtered_df():
+        req(summary_data.input_selected_rows())
+
         # summary_data.selected_rows() is a tuple, so we must convert it to list,
         # as that's what Pandas requires for indexing.
         selected_idx = list(req(summary_data.input_selected_rows()))
