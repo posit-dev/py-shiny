@@ -448,9 +448,11 @@ def value_box(
         },
         {"class": theme.class_} if theme.class_ else None,
         {"class": class_} if class_ else None,
-        {"class": showcase_layout.class_}
-        if showcase and isinstance(showcase_layout, ShowcaseLayout)
-        else None,
+        (
+            {"class": showcase_layout.class_}
+            if showcase and isinstance(showcase_layout, ShowcaseLayout)
+            else None
+        ),
         attrs,
         contents,
         full_screen=full_screen,
