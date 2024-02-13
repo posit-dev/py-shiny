@@ -5,13 +5,11 @@ from shiny import App, Inputs, render, ui
 
 app_ui = ui.page_fluid(
     ui.layout_sidebar(
-        ui.panel_sidebar(
+        ui.sidebar(
             ui.input_slider("n", "N", min=0, max=100, value=20),
         ),
-        ui.panel_main(
-            ui.output_plot("plot"),
-        ),
-    ),
+        ui.output_plot("plot"),
+    )
 )
 
 

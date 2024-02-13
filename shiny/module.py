@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-__all__ = ("current_namespace", "resolve_id", "ui", "server")
+__all__ = ("current_namespace", "resolve_id", "ui", "server", "ResolvedId")
 
 from typing import TYPE_CHECKING, Callable, TypeVar
 
 from ._docstring import no_example
-from ._namespaces import Id, current_namespace, namespace_context, resolve_id
+from ._namespaces import (
+    Id,
+    ResolvedId,
+    current_namespace,
+    namespace_context,
+    resolve_id,
+)
 from ._typing_extensions import Concatenate, ParamSpec
 
 if TYPE_CHECKING:

@@ -1,20 +1,30 @@
 from shiny import App, Inputs, reactive, ui
 
 app_ui = ui.page_fluid(
-    ui.input_slider("controller", "Controller", min=0, max=20, value=10),
-    ui.input_text("inText", "Input text"),
-    ui.input_text("inText2", "Input text 2"),
+    ui.layout_column_wrap(
+        ui.input_radio_buttons(
+            "pet_type", "Pet type", ["Dog", "Cat", "Bird"], inline=True
+        ),
+        ui.input_radio_buttons("pet_sex", "Pet sex", ["Male", "Female"], inline=True),
+        ui.input_text("name", "Pet name", "Charlie"),
+        ui.input_text("royal_name", "Royal Name", "King Charlie"),
+        width=1 / 2,
+    )
 )
 
 
 def server(input: Inputs):
-    @reactive.Effect
+    @reactive.effect
+    @reactive.event(input.pet_type)
     def _():
-        x = str(input.controller())
-        # This will change the value of input$inText, based on x
-        ui.update_text("inText", value="New text " + x)
-        # Can also set the label, this time for input$inText2
-        ui.update_text("inText2", label="New label " + x, value="New text" + x)
+        # Update the label of the pet name input
+        ui.update_text("name", label=f"{input.pet_type()}'s name")
+
+    @reactive.effect
+    def _():
+        # Update the value of the royal name input
+        royal_noun = "King" if input.pet_sex() == "Male" else "Queen"
+        ui.update_text("royal_name", value=f"{royal_noun} {input.name()}")
 
 
 app = App(app_ui, server)

@@ -1,25 +1,29 @@
 from shiny import App, Inputs, reactive, ui
 
 app_ui = ui.page_fixed(
-    ui.layout_sidebar(
-        ui.panel_sidebar(
-            ui.tags.p("The first slider controls the second"),
-            ui.input_slider("control", "Controller:", min=0, max=20, value=10, step=1),
-            ui.input_slider("receive", "Receiver:", min=0, max=20, value=10, step=1),
-        ),
-        ui.panel_main("Main app content"),
-    )
+    ui.input_slider(
+        "receiver", "Receiver:", min=0, max=100, value=50, step=1, width="100%"
+    ),
+    ui.p(
+        "Change the min and max values below to see the receiver slider above update."
+    ),
+    ui.layout_column_wrap(
+        ui.input_slider("min", "Min:", min=0, max=50, value=0, step=1),
+        ui.input_slider("max", "Max:", min=50, max=100, value=100, step=1),
+        width=1 / 2,
+    ),
 )
 
 
 def server(input: Inputs):
-    @reactive.Effect
+    @reactive.effect
     def _():
-        val = input.control()
-        # Control the value, min, max, and step.
-        # Step size is 2 when input value is even; 1 when value is odd.
+        # You can update the value, min, max, and step.
         ui.update_slider(
-            "receive", value=val, min=int(val / 2), max=val + 4, step=(val + 1) % 2 + 1
+            "receiver",
+            value=max(min(input.receiver(), input.max()), input.min()),
+            min=input.min(),
+            max=input.max(),
         )
 
 

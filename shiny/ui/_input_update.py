@@ -160,7 +160,9 @@ manual_task_reset_buttons: set[ResolvedId] = set()
 
 
 @input_handlers.add("bslib.taskbutton")
-def _(value: dict[str, object], name: str, session: Session) -> ActionButtonValue:
+def _(
+    value: dict[str, object], name: ResolvedId, session: Session
+) -> ActionButtonValue:
     if value["autoReset"]:
 
         @session.on_flush
@@ -999,9 +1001,11 @@ def update_tooltip(
         drop_none(
             {
                 "method": "update",
-                "title": require_active_session()._process_ui(TagList(*args))
-                if len(args) > 0
-                else None,
+                "title": (
+                    require_active_session()._process_ui(TagList(*args))
+                    if len(args) > 0
+                    else None
+                ),
             }
         ),
     )
@@ -1054,9 +1058,9 @@ def update_popover(
             drop_none(
                 {
                     "method": "update",
-                    "content": session._process_ui(TagList(*args))
-                    if len(args) > 0
-                    else None,
+                    "content": (
+                        session._process_ui(TagList(*args)) if len(args) > 0 else None
+                    ),
                     "header": session._process_ui(title) if title is not None else None,
                 },
             ),
@@ -1072,13 +1076,11 @@ def update_popover(
 
 
 @overload
-def _normalize_show_value(show: None) -> Literal["toggle"]:
-    ...
+def _normalize_show_value(show: None) -> Literal["toggle"]: ...
 
 
 @overload
-def _normalize_show_value(show: bool) -> Literal["show", "hide"]:
-    ...
+def _normalize_show_value(show: bool) -> Literal["show", "hide"]: ...
 
 
 def _normalize_show_value(show: bool | None) -> Literal["toggle", "show", "hide"]:

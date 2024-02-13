@@ -1,4 +1,4 @@
-from shiny import App, Inputs, reactive, render, ui
+from shiny import App, Inputs, render, ui
 
 
 def make_items():
@@ -34,17 +34,13 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs):
-    @reactive.Effect
-    def _():
-        print(input.acc())
+    @render.text
+    def acc_single_val():
+        return "input.acc_single(): " + str(input.acc_single())
 
     @render.text
     def acc_multiple_val():
         return "input.acc_multiple(): " + str(input.acc_multiple())
-
-    @render.text
-    def acc_single_val():
-        return "input.acc_single(): " + str(input.acc_single())
 
 
 app = App(app_ui, server)

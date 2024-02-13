@@ -8,6 +8,7 @@ from typing import cast
 from htmltools import Tag, TagList
 
 from .._app import App
+from .._docstring import no_example
 from ..session import Inputs, Outputs, Session, session_context
 from ._mock_session import MockSession
 from ._recall_context import RecallContextManager
@@ -20,6 +21,7 @@ from .expressify_decorator._node_transformers import (
 __all__ = ("wrap_express_app",)
 
 
+@no_example()
 def wrap_express_app(file: Path) -> App:
     """Wrap a Shiny Express mode app into a Shiny `App` object.
 
@@ -53,6 +55,7 @@ def wrap_express_app(file: Path) -> App:
         except Exception:
             import traceback
 
+            # Starting in Python 3.10 this could be traceback.print_exception(e)
             traceback.print_exception(*sys.exc_info())
             raise
 

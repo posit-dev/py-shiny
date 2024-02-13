@@ -1,16 +1,15 @@
-from shiny import App, Inputs, reactive, req, ui
+from shiny import App, Inputs, reactive, ui
 
 app_ui = ui.page_fluid(
     ui.input_action_button("btn_show", "Show tooltip", class_="mt-3 me-3"),
     ui.input_action_button("btn_close", "Close tooltip", class_="mt-3 me-3"),
-    ui.br(),
     ui.input_action_button(
         "btn_update", "Update tooltip phrase (and show tooltip)", class_="mt-3 me-3"
     ),
-    ui.br(),
-    ui.br(),
     ui.tooltip(
-        ui.input_action_button("btn_w_tooltip", "A button w/ a tooltip", class_="mt-3"),
+        ui.input_action_button(
+            "btn_w_tooltip", "A button w/ a tooltip", class_="btn-primary mt-5"
+        ),
         "A message",
         id="tooltip_id",
     ),
@@ -18,19 +17,17 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs):
-    @reactive.Effect
+    @reactive.effect
+    @reactive.event(input.btn_show)
     def _():
-        req(input.btn_show())
-
         ui.update_tooltip("tooltip_id", show=True)
 
-    @reactive.Effect
+    @reactive.effect
+    @reactive.event(input.btn_close)
     def _():
-        req(input.btn_close())
-
         ui.update_tooltip("tooltip_id", show=False)
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.btn_update)
     def _():
         content = (
@@ -39,9 +36,9 @@ def server(input: Inputs):
 
         ui.update_tooltip("tooltip_id", content, show=True)
 
-    @reactive.Effect
+    @reactive.effect
+    @reactive.event(input.btn_w_tooltip)
     def _():
-        req(input.btn_w_tooltip())
         ui.notification_show("Button clicked!", duration=3, type="message")
 
 

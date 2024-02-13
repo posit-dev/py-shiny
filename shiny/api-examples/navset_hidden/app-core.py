@@ -1,21 +1,17 @@
 from shiny import App, Inputs, reactive, ui
 
-app_ui = ui.page_fluid(
-    ui.layout_sidebar(
-        ui.panel_sidebar(
-            ui.input_radio_buttons(
-                "controller", "Controller", ["1", "2", "3"], selected="1"
-            )
-        ),
-        ui.panel_main(
-            ui.navset_hidden(
-                ui.nav_panel(None, "Panel 1 content", value="panel1"),
-                ui.nav_panel(None, "Panel 2 content", value="panel2"),
-                ui.nav_panel(None, "Panel 3 content", value="panel3"),
-                id="hidden_tabs",
-            ),
-        ),
-    )
+app_ui = ui.page_sidebar(
+    ui.sidebar(
+        ui.input_radio_buttons(
+            "controller", "Controller", ["1", "2", "3"], selected="1"
+        )
+    ),
+    ui.navset_hidden(
+        ui.nav_panel(None, "Panel 1 content", value="panel1"),
+        ui.nav_panel(None, "Panel 2 content", value="panel2"),
+        ui.nav_panel(None, "Panel 3 content", value="panel3"),
+        id="hidden_tabs",
+    ),
 )
 
 

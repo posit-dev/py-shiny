@@ -138,7 +138,8 @@ def add_example(
         app_file_name = app_file or "app.py"
         try:
             example_file = app_choose_core_or_express(
-                os.path.join(example_dir, app_file_name)
+                os.path.join(example_dir, app_file_name),
+                mode="express" if "shiny/express/" in func_dir else None,
             )
         except ExampleNotFoundException as e:
             file = "shiny/" + func_dir.split("shiny/")[1]
@@ -248,10 +249,17 @@ class ExpressExampleNotFoundException(ExampleNotFoundException):
         super().__init__(file_names, dir, "express")
 
 
-def app_choose_core_or_express(app_path: Optional[str] = None) -> str:
+def app_choose_core_or_express(
+    app_path: Optional[str] = None,
+    mode: Optional[Literal["express", "core"]] = None,
+) -> str:
     app_path = app_path or "app.py"
 
-    if os.environ.get("SHINY_MODE") == "express":
+    if mode is None:
+        mode_env = os.environ.get("SHINY_MODE", "core")
+        mode = "express" if mode_env == "express" else "core"
+
+    if mode == "express":
         if is_express_app(app_path):
             return app_path
 
