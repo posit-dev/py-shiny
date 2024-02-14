@@ -95,7 +95,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         selected_rows = grid.input_selected_rows() or ()
         if len(selected_rows) > 0:
             # "split", "records", "index", "columns", "values", "table"
-            return df.iloc[list(selected_rows)]
             return df().iloc[list(grid.input_selected_rows())]
 
 
