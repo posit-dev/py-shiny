@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug fixes
 
 * Fixed `input_task_button` not working in a Shiny module. (#1108)
-
+* Fixed several issues with `page_navbar()` styling. (#1124)
 
 ## [0.7.1] - 2024-02-05
 
