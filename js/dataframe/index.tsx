@@ -180,19 +180,27 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
 
   useEffect(() => {
     const handleMessage = (event: CustomEvent<{ keys: number[] }>) => {
+      if (rowSelectionMode === SelectionMode.None) {
+        throw new Error(
+          "You can't modify selected rows when row selection is set to 'None.'"
+        );
+      }
+
       if (event.detail.keys === null) {
         rowSelection.clear();
       } else {
         rowSelection.setMultiple(event.detail.keys.map(String));
       }
     };
-    window.addEventListener(
+
+    const element = document.getElementById(id);
+    element.addEventListener(
       "updateRowSelection",
       handleMessage as EventListener
     );
 
     return () => {
-      window.removeEventListener(
+      element.removeEventListener(
         "updateRowSelection",
         handleMessage as EventListener
       );
@@ -554,7 +562,6 @@ $(function () {
   Shiny.addCustomMessageHandler("receiveMessage", function (message) {
     const evt = new CustomEvent(message.handler, {
       detail: message.obj,
-      bubbles: true,
     });
     const el = document.getElementById(message.id);
     el.dispatchEvent(evt);
