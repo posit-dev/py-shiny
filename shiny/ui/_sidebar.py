@@ -168,7 +168,7 @@ class Sidebar:
         self.padding = as_css_padding(padding)
         self._open = open
         self.position = position
-        self.width = width
+        self.width = as_css_unit(width)
         self.max_height_mobile = max_height_mobile
         self.color = color
         self.attributes = attributes
@@ -468,7 +468,6 @@ def layout_sidebar(
     main = div(
         {
             "class": f"main{' bslib-gap-spacing' if fillable else ''}",
-            ""
             "style": css(
                 gap=as_css_unit(gap),
                 padding=as_css_padding(padding),
@@ -480,33 +479,33 @@ def layout_sidebar(
     if fillable:
         main = as_fillable_container(main)
 
-    max_height_mobile = sidebar.max_height_mobile or (
-        "250px" if height is None else "50%"
-    )
-
     res = div(
         {"class": "bslib-sidebar-layout bslib-mb-spacing"},
         {"class": "sidebar-right"} if sidebar.position == "right" else None,
-        {"class": "sidebar-collapsed"} if sidebar.open == "closed" else None,
+        {"class": "sidebar-collapsed"} if sidebar.open.desktop == "closed" else None,
         main,
-        sidebar.tag,
-        sidebar.collapse_tag,
+        sidebar,
         components_dependency(),
         _sidebar_init_js(),
         data_bslib_sidebar_init="true",
-        data_bslib_sidebar_open=sidebar.open,
+        data_open_desktop=sidebar.open.desktop,
+        data_open_mobile=sidebar.open.mobile,
+        data_collapsible_mobile="true" if sidebar.open.mobile != "always" else "false",
+        data_collapsible_desktop=(
+            "true" if sidebar.open.desktop != "always" else "false"
+        ),
         data_bslib_sidebar_border=trinary(border),
         data_bslib_sidebar_border_radius=trinary(border_radius),
         style=css_no_sub(
             **{
-                "--_sidebar-width": as_css_unit(sidebar.width),
-                "--_sidebar-bg": sidebar.color_bg,
-                "--_sidebar-fg": sidebar.color_fg,
+                "--_sidebar-width": sidebar.width,
+                "--_sidebar-bg": sidebar.color["bg"],
+                "--_sidebar-fg": sidebar.color["fg"],
                 "--_main-fg": fg,
                 "--_main-bg": bg,
                 "--bs-card-border-color": border_color,
                 "height": as_css_unit(height),
-                "--_mobile-max-height": as_css_unit(max_height_mobile),
+                "--_mobile-max-height": sidebar.max_height_mobile,
             },
         ),
     )
