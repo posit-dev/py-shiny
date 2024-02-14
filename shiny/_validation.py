@@ -13,13 +13,11 @@ T = TypeVar("T")
 
 
 @overload
-def req(*, cancel_output: bool | Literal["progress"] = False) -> None:
-    ...
+def req(*, cancel_output: bool | Literal["progress"] = False) -> None: ...
 
 
 @overload
-def req(*args: T, cancel_output: bool | Literal["progress"] = False) -> T:
-    ...
+def req(*args: T, cancel_output: bool | Literal["progress"] = False) -> T: ...
 
 
 @add_example()

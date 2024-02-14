@@ -1098,58 +1098,49 @@ async def test_event_type_check():
     with pytest.raises(TypeError):
         # Should complain about missing argument to @event().
         @event()
-        async def _():
-            ...
+        async def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain that @event() can't take the result of @Effect (which returns
         # None).
         @event(lambda: 1)  # pyright: ignore[reportArgumentType]
         @effect()
-        async def _():
-            ...
+        async def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain that @event must be applied before @Calc.
         @event(lambda: 1)
         @calc()
-        async def _():
-            ...
+        async def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain that @event must be applied before @render.text. At some point
         # in the future, this may be allowed.
         @event(lambda: 1)  # pyright: ignore[reportArgumentType]
         @render.text
-        async def _():
-            ...
+        async def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain that @event must be applied before @output.
         @event(lambda: 1)  # pyright: ignore[reportArgumentType]
         @render.text
-        async def _():
-            ...
+        async def _(): ...
 
     # These are OK
     @event(lambda: 1)
-    async def _():
-        ...
+    async def _(): ...
 
     @effect()
     @event(lambda: 1)
-    async def _():
-        ...
+    async def _(): ...
 
     @calc()
     @event(lambda: 1)
-    async def _():
-        ...
+    async def _(): ...
 
     @render.text
     @event(lambda: 1)
-    async def _():
-        ...
+    async def _(): ...
 
 
 # ------------------------------------------------------------
@@ -1164,15 +1155,13 @@ async def test_output_type_check():
     with pytest.raises(TypeError):
         # Should complain about bare function
         @output  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
-        def _():
-            ...
+        def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain about @event
         @output  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
         @event(lambda: 1)
-        def _():
-            ...
+        def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain about @event, even with render.text. Although maybe in the
@@ -1180,31 +1169,26 @@ async def test_output_type_check():
         @output  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
         @event(lambda: 1)  # pyright: ignore[reportArgumentType]
         @render.text
-        def _():
-            ...
+        def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain about @Calc
         @output  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
         @calc
-        def _():
-            ...
+        def _(): ...
 
     with pytest.raises(TypeError):
         # Should complain about @Effet
         @output  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
         @effect
-        def _():
-            ...
+        def _(): ...
 
     @render.text
-    def _():
-        ...
+    def _(): ...
 
     @render.plot
     @event(lambda: 1)
-    def _():
-        ...
+    def _(): ...
 
 
 # ------------------------------------------------------------

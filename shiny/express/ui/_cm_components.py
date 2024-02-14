@@ -1140,8 +1140,9 @@ def nav_menu(
 def value_box(
     *,
     showcase: Optional[TagChild] = None,
-    showcase_layout: ui._valuebox.SHOWCASE_LAYOUTS_STR
-    | ui.ShowcaseLayout = "left center",
+    showcase_layout: (
+        ui._valuebox.SHOWCASE_LAYOUTS_STR | ui.ShowcaseLayout
+    ) = "left center",
     full_screen: bool = False,
     theme: Optional[str | ui.ValueBoxTheme] = None,
     height: Optional[CssUnit] = None,

@@ -65,8 +65,7 @@ async def CapitalizeTransformer(
 def render_capitalize(
     *,
     to: Literal["upper", "lower"] = "upper",
-) -> CapitalizeTransformer.OutputRendererDecorator:
-    ...
+) -> CapitalizeTransformer.OutputRendererDecorator: ...
 
 
 # Second, create an overload where users are not using parentheses to the method.
@@ -82,8 +81,7 @@ def render_capitalize(
 @overload
 def render_capitalize(
     _fn: CapitalizeTransformer.ValueFn,
-) -> CapitalizeTransformer.OutputRenderer:
-    ...
+) -> CapitalizeTransformer.OutputRenderer: ...
 
 
 # Lastly, implement the renderer.
