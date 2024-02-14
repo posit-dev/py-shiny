@@ -103,6 +103,7 @@ class DataGrid(AbstractTabularData):
             filters=self.filters,
             row_selection_mode=self.row_selection_mode,
             style="grid",
+            fill=self.height is None,
         )
         return res
 
@@ -192,7 +193,6 @@ class DataTable(AbstractTabularData):
             filters=self.filters,
             row_selection_mode=self.row_selection_mode,
             style="table",
-            fill=self.height is None,
         )
         return res
 
