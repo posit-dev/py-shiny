@@ -214,9 +214,9 @@ class Session(object, metaclass=SessionMeta):
 
         self._outbound_message_queues = OutBoundMessageQueues()
 
-        self._message_handlers: dict[
-            str, Callable[..., Awaitable[object]]
-        ] = self._create_message_handlers()
+        self._message_handlers: dict[str, Callable[..., Awaitable[object]]] = (
+            self._create_message_handlers()
+        )
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
         self._has_run_session_end_tasks: bool = False
@@ -608,26 +608,22 @@ class Session(object, metaclass=SessionMeta):
     @overload
     def _send_progress(
         self, type: Literal["binding"], message: BindingProgressMessage
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     def _send_progress(
         self, type: Literal["open"], message: OpenProgressMessage
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     def _send_progress(
         self, type: Literal["close"], message: CloseProgressMessage
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     def _send_progress(
         self, type: Literal["update"], message: UpdateProgressMessage
-    ) -> None:
-        ...
+    ) -> None: ...
 
     def _send_progress(self, type: str, message: object) -> None:
         msg: dict[str, object] = {"progress": {"type": type, "message": message}}
@@ -1037,8 +1033,7 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    def __call__(self, renderer: RendererT) -> RendererT:
-        ...
+    def __call__(self, renderer: RendererT) -> RendererT: ...
 
     @overload
     def __call__(
@@ -1047,8 +1042,7 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-    ) -> Callable[[RendererT], RendererT]:
-        ...
+    ) -> Callable[[RendererT], RendererT]: ...
 
     def __call__(
         self,
