@@ -13,6 +13,7 @@ from ...ui._accordion import AccordionPanel
 from ...ui._card import CardItem
 from ...ui._layout_columns import BreakpointsUser
 from ...ui._navs import NavMenu, NavPanel, NavSet, NavSetBar, NavSetCard
+from ...ui._sidebar import SidebarOpen, SidebarOpenValues
 from ...ui.css import CssUnit
 from .._recall_context import RecallContextManager
 
@@ -44,13 +45,13 @@ def sidebar(
     *,
     width: CssUnit = 250,
     position: Literal["left", "right"] = "left",
-    open: Literal["desktop", "open", "closed", "always"] = "always",
+    open: SidebarOpenValues | SidebarOpen = SidebarOpen("open", "always"),
     id: Optional[str] = None,
     title: TagChild | str = None,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
-    class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
-    max_height_mobile: Optional[str | float] = "auto",
+    class_: Optional[str] = None,
+    max_height_mobile: Optional[str | float] = None,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
 ) -> RecallContextManager[ui.Sidebar]:
@@ -58,6 +59,8 @@ def sidebar(
     Context manager for sidebar element
 
     This function wraps :func:`~shiny.ui.sidebar`.
+
+    TODO garrick-docs: update from shiny.ui docs
 
     Parameters
     ----------
