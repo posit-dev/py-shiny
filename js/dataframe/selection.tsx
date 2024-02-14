@@ -5,6 +5,7 @@ import { ImmutableSet } from "./immutable-set";
 export interface SelectionSet<TKey, TElement extends HTMLElement> {
   has(key: TKey): boolean;
   set(key: TKey, selected: boolean): void;
+  setMultiple(key_arr: TKey[]): void;
   clear(): void;
   keys(): ImmutableSet<TKey>;
   itemHandlers(): {
@@ -109,6 +110,10 @@ export function useSelection<TKey, TElement extends HTMLElement>(
       } else {
         setSelectedKeys(selectedKeys.delete(key));
       }
+    },
+
+    setMultiple(key_arr: TKey[]) {
+      setSelectedKeys(ImmutableSet.just(...key_arr));
     },
 
     clear() {

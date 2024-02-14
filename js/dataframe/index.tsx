@@ -179,15 +179,25 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   );
 
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      rowSelection.clear();
+    const handleMessage = (event: CustomEvent<{ keys: number[] }>) => {
+      if (event.detail.keys === null) {
+        rowSelection.clear();
+      } else {
+        rowSelection.setMultiple(event.detail.keys.map(String));
+      }
     };
-    window.addEventListener("clearRows", handleMessage);
+    window.addEventListener(
+      "updateRowSelection",
+      handleMessage as EventListener
+    );
 
     return () => {
-      window.removeEventListener("clearRows", handleMessage);
+      window.removeEventListener(
+        "updateRowSelection",
+        handleMessage as EventListener
+      );
     };
-  }, [containerRef.current]);
+  }, [rowSelection]);
 
   useEffect(() => {
     if (id) {
@@ -534,9 +544,14 @@ export class ShinyDataFrameOutput extends HTMLElement {
 
 customElements.define("shiny-data-frame", ShinyDataFrameOutput);
 
+// This is the shim between Shiny's messaging passing behaviour and React.
+// The python code sends a custom message which includes an id, handler
+// and obbject and we use that information to dispatch it to the
+// react listener.
+// It would be better to have something similar to session.send_input_message
+// for updating outputs, but that requires changes to ShinyJS.
 $(function () {
   Shiny.addCustomMessageHandler("receiveMessage", function (message) {
-    console.log(message);
     const evt = new CustomEvent(message.handler, {
       detail: message.obj,
       bubbles: true,

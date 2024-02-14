@@ -25,6 +25,7 @@ def app_ui(req):
         ui.input_switch("gridstyle", "Grid", True),
         ui.input_switch("fullwidth", "Take full width", True),
         ui.input_action_button("clear", "Clear selection"),
+        ui.input_action_button("select", "Select row 1, 2, 5"),
         ui.output_data_frame("grid"),
         ui.panel_fixed(
             ui.output_text_verbatim("detail"),
@@ -86,7 +87,12 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.clear)
     async def clear_sel():
-        await grid.clear_row_selection()
+        await grid.update_row_selection(None)
+
+    @reactive.effect
+    @reactive.event(input.select)
+    async def clear_sel():
+        await grid.update_row_selection([1, 2, 5])
 
     @reactive.Effect
     @reactive.event(input.grid_cell_edit)
