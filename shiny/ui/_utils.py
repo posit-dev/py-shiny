@@ -26,24 +26,21 @@ def shiny_input_label(id: str, label: TagChild = None) -> Tag:
 def get_window_title(
     title: None,
     window_title: MISSING_TYPE,
-) -> None:
-    ...
+) -> None: ...
 
 
 @overload
 def get_window_title(
     title: None,
     window_title: str,
-) -> HTMLDependency:
-    ...
+) -> HTMLDependency: ...
 
 
 @overload
 def get_window_title(
     title: str | Tag | TagList,
     window_title: str | MISSING_TYPE,
-) -> HTMLDependency:
-    ...
+) -> HTMLDependency: ...
 
 
 def get_window_title(

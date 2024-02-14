@@ -203,11 +203,9 @@ class PlotnineFigure(Protocol):
         height: float,
         verbose: bool,
         bbox_inches: object = None,
-    ):
-        ...
+    ): ...
 
-    def draw(self, show: bool) -> Figure:
-        ...
+    def draw(self, show: bool) -> Figure: ...
 
 
 class PlotnineTheme(NamedTuple):

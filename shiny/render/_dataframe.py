@@ -27,8 +27,7 @@ if TYPE_CHECKING:
 
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
-    def to_payload(self) -> Jsonifiable:
-        pass
+    def to_payload(self) -> Jsonifiable: ...
 
 
 @add_example(ex_dir="../api-examples/data_frame")
@@ -293,8 +292,7 @@ class data_frame(Renderer[DataFrameResult]):
 @runtime_checkable
 class PandasCompatible(Protocol):
     # Signature doesn't matter, runtime_checkable won't look at it anyway
-    def to_pandas(self) -> object:
-        pass
+    def to_pandas(self) -> object: ...
 
 
 def cast_to_pandas(x: object, error_message_begin: str) -> object:
