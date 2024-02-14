@@ -101,12 +101,10 @@ class Value(Generic[T]):
     @overload
     def __init__(
         self, value: MISSING_TYPE = MISSING, *, read_only: bool = False
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
-    def __init__(self, value: T, *, read_only: bool = False) -> None:
-        ...
+    def __init__(self, value: T, *, read_only: bool = False) -> None: ...
 
     # If `value` is MISSING, then `get()` will raise a SilentException, until a new
     # value is set. Calling `unset()` will set the value to MISSING.
@@ -358,13 +356,11 @@ class CalcAsync_(Calc_[T]):
 
 
 @overload
-def calc(fn: CalcFunctionAsync[T]) -> CalcAsync_[T]:
-    ...
+def calc(fn: CalcFunctionAsync[T]) -> CalcAsync_[T]: ...
 
 
 @overload
-def calc(fn: CalcFunction[T]) -> Calc_[T]:
-    ...
+def calc(fn: CalcFunction[T]) -> Calc_[T]: ...
 
 
 # Note that the specified return type of this Calc() overload (with a `session`) isn't
@@ -390,8 +386,7 @@ def calc(fn: CalcFunction[T]) -> Calc_[T]:
 @overload
 def calc(
     *, session: "MISSING_TYPE | Session | None" = MISSING
-) -> Callable[[CalcFunction[T]], Calc_[T]]:
-    ...
+) -> Callable[[CalcFunction[T]], Calc_[T]]: ...
 
 
 @add_example()
@@ -664,8 +659,7 @@ class Effect_:
 
 
 @overload
-def effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_:
-    ...
+def effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_: ...
 
 
 @overload
@@ -674,8 +668,7 @@ def effect(
     suspended: bool = False,
     priority: int = 0,
     session: "MISSING_TYPE | Session | None" = MISSING,
-) -> Callable[[EffectFunction | EffectFunctionAsync], Effect_]:
-    ...
+) -> Callable[[EffectFunction | EffectFunctionAsync], Effect_]: ...
 
 
 @add_example()

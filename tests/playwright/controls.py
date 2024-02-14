@@ -2208,8 +2208,7 @@ class _OutputContainerP(_OutputBaseP, Protocol):
         tag_name: Literal["span", "div"] | str,
         *,
         timeout: Timeout = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class _OutputContainerM:

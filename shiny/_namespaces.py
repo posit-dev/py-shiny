@@ -48,13 +48,11 @@ def resolve_id(id: Id) -> ResolvedId:
 
 
 @overload
-def resolve_id_or_none(id: None) -> None:
-    ...
+def resolve_id_or_none(id: None) -> None: ...
 
 
 @overload
-def resolve_id_or_none(id: Id) -> ResolvedId:
-    ...
+def resolve_id_or_none(id: Id) -> ResolvedId: ...
 
 
 # Do not export this method from `shiny`. Let developers handle it themselves.

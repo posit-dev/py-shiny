@@ -1092,13 +1092,11 @@ def update_popover(
 
 
 @overload
-def _normalize_show_value(show: None) -> Literal["toggle"]:
-    ...
+def _normalize_show_value(show: None) -> Literal["toggle"]: ...
 
 
 @overload
-def _normalize_show_value(show: bool) -> Literal["show", "hide"]:
-    ...
+def _normalize_show_value(show: bool) -> Literal["show", "hide"]: ...
 
 
 def _normalize_show_value(show: bool | None) -> Literal["toggle", "show", "hide"]:
