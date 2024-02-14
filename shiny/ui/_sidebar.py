@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import random
 import warnings
-from typing import TYPE_CHECKING, Literal, Optional, cast
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Literal, Optional, cast, get_args
 
 from htmltools import (
     HTML,
@@ -40,6 +41,42 @@ __all__ = (
     "panel_main",
 )
 
+SidebarOpenValues = Literal["desktop", "open", "closed", "always"]
+"""
+The possible values for the `open` parameter in :func:`~shiny.ui.sidebar`.
+
+* `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
+* `"open"`: the sidebar starts open
+* `"closed"`: the sidebar starts closed
+* `"always"`: the sidebar is always open and cannot be closed
+"""
+
+
+@dataclass
+class SidebarOpen:
+    """
+    The initial state of the sidebar.
+
+    TODO garrick-docs: Document this.
+    """
+
+    desktop: SidebarOpen._VALUES_TYPE = "open"
+    mobile: SidebarOpen._VALUES_TYPE = "closed"
+
+    _VALUES_TYPE = Literal["open", "closed", "always"]
+    _VALUES: tuple[SidebarOpen._VALUES_TYPE, ...] = ("open", "closed", "always")
+
+    @classmethod
+    def _from_string(cls, open: SidebarOpenValues) -> SidebarOpen:
+        if open == "desktop":
+            return cls(desktop="open", mobile="closed")
+        elif open in cls._VALUES:
+            return cls(desktop=open, mobile=open)
+        else:
+            raise ValueError(
+                f"`open` must be one of {', '.join(cls._VALUES)}, or 'desktop'"
+            )
+
 
 @no_example()
 class Sidebar:
@@ -49,6 +86,8 @@ class Sidebar:
     Class returned from :func:`~shiny.ui.sidebar`. Please do not use this
     class directly. Instead, supply the :func:`~shiny.ui.sidebar` object to
     :func:`~shiny.ui.layout_sidebar`.
+
+    TODO: garrick-docs: update after class restructuring
 
     Attributes
     ----------
@@ -97,32 +136,110 @@ class Sidebar:
 
     def __init__(
         self,
-        tag: Tag,
-        collapse_tag: Optional[Tag],
-        position: Literal["left", "right"],
-        open: Literal["desktop", "open", "closed", "always"],
-        width: CssUnit,
-        max_height_mobile: Optional[str | float],
-        color_fg: Optional[str],
-        color_bg: Optional[str],
+        children: tuple[TagChild | TagAttrs, ...],
+        attributes: dict[str, TagAttrValue],
+        width: CssUnit = 250,
+        position: Literal["left", "right"] = "left",
+        open: SidebarOpenValues | SidebarOpen = "desktop",
+        id: Optional[str] = None,
+        title: TagChild | str = None,
+        color: dict[Literal["fg", "bg"], Optional[str]] = {},
+        class_: Optional[str] = None,
+        max_height_mobile: Optional[str | float] = None,
+        gap: Optional[CssUnit] = None,
+        padding: Optional[CssUnit | list[CssUnit]] = None,
     ):
-        self.tag = tag
-        self.collapse_tag = collapse_tag
-        self.position = position
+        if not isinstance(open, SidebarOpen):
+            open = SidebarOpen._from_string(open)
+
+        if isinstance(title, (str, int, float)):
+            title = tags.header(str(title), class_="sidebar-title")
+
+        if id is not None:
+            if not isinstance(id, str):
+                raise ValueError("`id` must be a single string")
+            if isinstance(id, str) and len(id) == 0:
+                raise ValueError("`id` must be a non-empty string")
+
+        self.id = id
+        self.title = title
+        self.class_ = class_
+        self.gap = as_css_unit(gap)
+        self.padding = as_css_padding(padding)
         self.open = open
+        self.position = position
         self.width = width
         self.max_height_mobile = max_height_mobile
-        self.color_fg = color_fg
-        self.color_bg = color_bg
+        self.color = color
+        self.attributes = attributes
+        self.children = children
 
-    # The `Sidebar` class should use it's fields, not this method
-    def tagify(self) -> Tag:
-        """
-        Not implemented
-        """
-        # Similar to `NavMenu.tagify()`
-        raise NotImplementedError(
-            "`Sidebar` objects must be handled by `layout_sidebar(*args)`."
+    def _resolved_sidebar_id(self) -> Optional[str]:
+        if self.id is not None:
+            return resolve_id_or_none(self.id)
+        if not (self.open.desktop == "always" and self.open.mobile == "always"):
+            return None
+
+        # Provide a random id when sidebar is collapsible for accessibility reasons
+        return f"bslib_sidebar_{random.randint(1000, 10000)}"
+
+    def _collapse_tag(self) -> Tag:
+        is_expanded = self.open.desktop == "open" or self.open.mobile == "open"
+
+        return tags.button(
+            _collapse_icon(),
+            class_="collapse-toggle",
+            type="button",
+            title="Toggle sidebar",
+            aria_expanded="true" if is_expanded else "false",
+            aria_controls=resolve_id_or_none(self.id),
+        )
+
+    def _sidebar_tag(self) -> Tag:
+        is_hidden_initially = (
+            self.open.desktop == "closed" or self.open.mobile == "closed"
+        )
+
+        return tags.aside(
+            {
+                "id": self._resolved_sidebar_id(),
+                "class": "sidebar",
+                "hidden": "true" if is_hidden_initially else None,
+            },
+            # If the user provided an id, we make the sidebar an input to report state
+            {"class": "bslib-sidebar-input"} if self.id is not None else None,
+            div(
+                {
+                    "class": "sidebar-content bslib-gap-spacing",
+                    "style": css(
+                        gap=self.gap,
+                        padding=self.padding,
+                    ),
+                },
+                self.title,
+                *self.children,
+                **self.attributes,
+            ),
+            class_=self.class_,
+        )
+
+    def tagify(self) -> TagList:
+        max_height_mobile = self.max_height_mobile
+
+        if max_height_mobile is not None and self.open.mobile != "always":
+            warnings.warn(
+                "The `shiny.ui.sidebar(max_height_mobile=)` argument only applies to "
+                + "the sidebar when `open` is `'always'` on mobile, but "
+                + f"`open` is `'{self.open.mobile}'`. "
+                + "The `max_height_mobile` argument will be ignored.",
+                # `stacklevel=2`: Refers to the caller of `sidebar()`
+                stacklevel=2,
+            )
+            max_height_mobile = None
+
+        return TagList(
+            self._sidebar_tag(),
+            self._collapse_tag(),
         )
 
 
@@ -131,15 +248,16 @@ def sidebar(
     *args: TagChild | TagAttrs,
     width: CssUnit = 250,
     position: Literal["left", "right"] = "left",
-    open: Literal["desktop", "open", "closed", "always"] = "desktop",
+    open: SidebarOpenValues | SidebarOpen = "desktop",
     id: Optional[str] = None,
     title: TagChild | str = None,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
-    class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
+    class_: Optional[str] = None,
     max_height_mobile: Optional[str | float] = None,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
+    **kwargs: TagAttrValue,
 ) -> Sidebar:
     # See [this article](https://rstudio.github.io/bslib/articles/sidebars.html)
     #   to learn more.
@@ -226,20 +344,7 @@ def sidebar(
     * :func:`~shiny.ui.navset_card_tab`
     * :func:`~shiny.ui.navset_card_pill`
     """
-    # TODO-future; validate `open`, bg, fg, class_, max_height_mobile
-
-    if max_height_mobile is not None and open != "always":
-        warnings.warn(
-            "The `shiny.ui.sidebar(max_height_mobile=)` argument only applies to the sidebar when `open = 'always'`. The `max_height_mobile` argument will be ignored.",
-            # `stacklevel=2`: Refers to the caller of `sidebar()`
-            stacklevel=2,
-        )
-        max_height_mobile = None
-
-    if id is None and open != "always":
-        # but always provide id when collapsible for accessibility reasons
-        id = f"bslib_sidebar_{random.randint(1000, 10000)}"
-    resolved_id = resolve_id_or_none(id)
+    # TODO-future; validate bg, fg, class_
 
     # TODO-future; implement
     # if fg is None and bg is not None:
@@ -247,50 +352,19 @@ def sidebar(
     # if bg is None and fg is not None:
     #     bg = get_color_contrast(fg)
 
-    if isinstance(title, (str, int, float)):
-        title = tags.header(str(title), class_="sidebar-title")
-
-    collapse_tag = None
-    if open != "always":
-        collapse_tag = tags.button(
-            _collapse_icon(),
-            class_="collapse-toggle",
-            type="button",
-            title="Toggle sidebar",
-            aria_expanded=trinary(open in ["open", "desktop"]),
-            aria_controls=resolved_id,
-        )
-
-    tag = tags.aside(
-        div(
-            title,
-            {
-                "class": "sidebar-content bslib-gap-spacing",
-                "style": css(
-                    gap=as_css_unit(gap),
-                    padding=as_css_padding(padding),
-                ),
-            },
-            *args,
-        ),
-        {"class": "bslib-sidebar-input"} if resolved_id is not None else None,
-        {
-            "class": "sidebar",
-            "hidden": True if (open in ["closed", "desktop"]) else None,
-        },
-        id=resolved_id,
-        class_=class_,
-    )
-
     return Sidebar(
-        tag=tag,
-        collapse_tag=collapse_tag,
+        children=args,
+        attributes=kwargs,
+        width=width,
         position=position,
         open=open,
-        width=width,
+        id=id,
+        title=title,
+        color={"bg": bg, "fg": fg},
+        class_=class_,
         max_height_mobile=max_height_mobile,
-        color_fg=fg,
-        color_bg=bg,
+        gap=gap,
+        padding=padding,
     )
 
 
