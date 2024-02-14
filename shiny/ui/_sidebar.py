@@ -67,7 +67,10 @@ class SidebarOpen:
     _VALUES: tuple[SidebarOpen._VALUES_TYPE, ...] = ("open", "closed", "always")
 
     @classmethod
-    def _from_string(cls, open: SidebarOpenValues) -> SidebarOpen:
+    def _from_string(cls, open: str) -> SidebarOpen:
+        if not isinstance(open, str) or len(open) == 0:
+            raise ValueError("`open` must be a non-empty string")
+
         if open == "desktop":
             return cls(desktop="open", mobile="closed")
         elif open in cls._VALUES:
@@ -140,7 +143,7 @@ class Sidebar:
         attributes: dict[str, TagAttrValue],
         width: CssUnit = 250,
         position: Literal["left", "right"] = "left",
-        open: SidebarOpenValues | SidebarOpen = "desktop",
+        open: Optional[SidebarOpenValues | SidebarOpen] = None,
         id: Optional[str] = None,
         title: TagChild | str = None,
         color: dict[Literal["fg", "bg"], Optional[str]] = {},
@@ -149,9 +152,6 @@ class Sidebar:
         gap: Optional[CssUnit] = None,
         padding: Optional[CssUnit | list[CssUnit]] = None,
     ):
-        if not isinstance(open, SidebarOpen):
-            open = SidebarOpen._from_string(open)
-
         if isinstance(title, (str, int, float)):
             title = tags.header(str(title), class_="sidebar-title")
 
@@ -166,13 +166,23 @@ class Sidebar:
         self.class_ = class_
         self.gap = as_css_unit(gap)
         self.padding = as_css_padding(padding)
-        self.open = open
+        self._open = open
         self.position = position
         self.width = width
         self.max_height_mobile = max_height_mobile
         self.color = color
         self.attributes = attributes
         self.children = children
+
+    @property
+    def open(self) -> SidebarOpen:
+        if isinstance(self._open, SidebarOpen):
+            return self._open
+
+        if self._open is None:
+            return SidebarOpen()
+
+        return SidebarOpen._from_string(self._open)
 
     def _resolved_sidebar_id(self) -> Optional[str]:
         if self.id is not None:
