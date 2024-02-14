@@ -50,6 +50,8 @@ session_warnings = [
     # shinywidgets.register_widget() uses `session` when registering widget
     "ShinyDeprecationWarning: `session=` is deprecated",
     "session_type_warning()",  # continutation of line above
+    # Brownian
+    "`session=` is deprecated",
 ]
 express_warnings = ["Detected Shiny Express app. "]
 app_allow_shiny_errors: typing.Dict[
