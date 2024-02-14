@@ -16,6 +16,7 @@ export interface DataGridOptions {
   filters?: boolean;
   width?: string;
   height?: string;
+  fill?: boolean;
 }
 
 export interface PandasData<TIndex> {

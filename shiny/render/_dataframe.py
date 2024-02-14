@@ -74,7 +74,7 @@ class DataGrid(AbstractTabularData):
         data: object,
         *,
         width: str | float | None = "fit-content",
-        height: Union[str, float, None] = "500px",
+        height: Union[str, float, None] = None,
         summary: Union[bool, str] = True,
         filters: bool = False,
         row_selection_mode: Literal["none", "single", "multiple"] = "none",
@@ -193,6 +193,7 @@ class DataTable(AbstractTabularData):
             filters=self.filters,
             row_selection_mode=self.row_selection_mode,
             style="table",
+            fill=self.height is None,
         )
         return res
 
