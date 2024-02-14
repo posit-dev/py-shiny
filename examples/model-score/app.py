@@ -195,11 +195,11 @@ def server(input: Inputs, output: Outputs, session: Session):
                 ui.value_box(
                     model,
                     ui.h2(score),
-                    theme="text-success"
-                    if score > THRESHOLD_MID
-                    else "text-warning"
-                    if score > THRESHOLD_LOW
-                    else "bg-danger",
+                    theme=(
+                        "text-success"
+                        if score > THRESHOLD_MID
+                        else "text-warning" if score > THRESHOLD_LOW else "bg-danger"
+                    ),
                 )
                 for model, score in scores_by_model.items()
             ],

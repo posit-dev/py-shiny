@@ -23,13 +23,11 @@ Possible python types that can be converted into a CSS unit. Numeric values will
 
 
 @overload
-def as_css_unit(value: None) -> None:
-    ...
+def as_css_unit(value: None) -> None: ...
 
 
 @overload
-def as_css_unit(value: CssUnit) -> str:
-    ...
+def as_css_unit(value: CssUnit) -> str: ...
 
 
 def as_css_unit(value: None | CssUnit) -> None | str:
@@ -73,13 +71,11 @@ def as_css_unit(value: None | CssUnit) -> None | str:
 
 
 @overload
-def as_css_padding(padding: CssUnit | list[CssUnit]) -> str:
-    ...
+def as_css_padding(padding: CssUnit | list[CssUnit]) -> str: ...
 
 
 @overload
-def as_css_padding(padding: None) -> None:
-    ...
+def as_css_padding(padding: None) -> None: ...
 
 
 def as_css_padding(padding: CssUnit | list[CssUnit] | None) -> str | None:
@@ -135,13 +131,11 @@ def isinstance_cssunit(x: object) -> bool:
 
 
 @overload
-def as_grid_unit(x: CssUnit) -> str:
-    ...
+def as_grid_unit(x: CssUnit) -> str: ...
 
 
 @overload
-def as_grid_unit(x: None) -> None:
-    ...
+def as_grid_unit(x: None) -> None: ...
 
 
 def as_grid_unit(x: CssUnit | None) -> str | None:

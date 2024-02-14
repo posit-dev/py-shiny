@@ -48,11 +48,11 @@ def get_proxy_url(url: str) -> str:
     port = (
         parts.port
         if parts.port
-        else 80
-        if parts.scheme in ["ws", "http"]
-        else 443
-        if parts.scheme in ["wss", "https"]
-        else 0
+        else (
+            80
+            if parts.scheme in ["ws", "http"]
+            else 443 if parts.scheme in ["wss", "https"] else 0
+        )
     )
     if port == 0:
         return url
