@@ -16,8 +16,7 @@ mod_ui = module.ui(my_ui)
 
 
 @module.server
-def mod_server(input: Inputs, output: Outputs, session: Session):
-    ...
+def mod_server(input: Inputs, output: Outputs, session: Session): ...
 
 
 app_ui = ui.page_fluid(

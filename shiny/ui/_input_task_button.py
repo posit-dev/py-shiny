@@ -158,13 +158,13 @@ def input_task_button(
 @overload
 def bind_task_button(
     *, button_id: str
-) -> Callable[[ExtendedTask[P, R]], ExtendedTask[P, R]]:
-    ...
+) -> Callable[[ExtendedTask[P, R]], ExtendedTask[P, R]]: ...
 
 
 @overload
-def bind_task_button(task: ExtendedTask[P, R], *, button_id: str) -> ExtendedTask[P, R]:
-    ...
+def bind_task_button(
+    task: ExtendedTask[P, R], *, button_id: str
+) -> ExtendedTask[P, R]: ...
 
 
 def bind_task_button(

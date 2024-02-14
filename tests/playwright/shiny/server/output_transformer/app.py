@@ -31,15 +31,13 @@ async def TestTextTransformer(
 @overload
 def render_test_text(
     *, extra_txt: Optional[str] = None
-) -> TestTextTransformer.OutputRendererDecorator:
-    ...
+) -> TestTextTransformer.OutputRendererDecorator: ...
 
 
 @overload
 def render_test_text(
     _fn: TestTextTransformer.ValueFn,
-) -> TestTextTransformer.OutputRenderer:
-    ...
+) -> TestTextTransformer.OutputRenderer: ...
 
 
 def render_test_text(

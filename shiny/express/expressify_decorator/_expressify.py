@@ -93,13 +93,11 @@ def expressify_unwrap_inplace() -> Callable[[TFunc], TFunc]:
 
 
 @overload
-def expressify(fn: TFunc) -> TFunc:
-    ...
+def expressify(fn: TFunc) -> TFunc: ...
 
 
 @overload
-def expressify() -> Callable[[TFunc], TFunc]:
-    ...
+def expressify() -> Callable[[TFunc], TFunc]: ...
 
 
 @no_example()

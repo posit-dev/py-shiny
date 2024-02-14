@@ -456,8 +456,7 @@ class image(Renderer[ImgData]):
 @runtime_checkable
 class PandasCompatible(Protocol):
     # Signature doesn't matter, runtime_checkable won't look at it anyway
-    def to_pandas(self) -> "pd.DataFrame":
-        ...
+    def to_pandas(self) -> "pd.DataFrame": ...
 
 
 TableResult = Union["pd.DataFrame", PandasCompatible, None]

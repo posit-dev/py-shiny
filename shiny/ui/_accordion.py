@@ -143,9 +143,11 @@ class AccordionPanel:
                     "class": "accordion-collapse collapse",
                 },
                 {"class": "show"} if self._is_open else None,
-                {"data-bs-parent": f"#{self._accordion_id}"}
-                if not self._is_multiple
-                else None,
+                (
+                    {"data-bs-parent": f"#{self._accordion_id}"}
+                    if not self._is_multiple
+                    else None
+                ),
                 tags.div(
                     {"class": "accordion-body"},
                     attrs,

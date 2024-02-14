@@ -54,8 +54,7 @@ def no_example(mode: Optional[Literal["express", "core"]] = None) -> Callable[[F
 # will be thrown if @doc_format() is used afterward. This is to avoid an error when
 # the example contains curly braces -- the @doc_format() decorator will try to evaluate
 # the code in {}.
-class DocStringWithExample(str):
-    ...
+class DocStringWithExample(str): ...
 
 
 class ExampleWriter:
