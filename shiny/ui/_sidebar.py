@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
 __all__ = (
     "Sidebar",
+    "SidebarOpen",
     "sidebar",
     "layout_sidebar",
     "update_sidebar",
