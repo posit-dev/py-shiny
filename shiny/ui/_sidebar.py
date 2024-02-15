@@ -376,7 +376,7 @@ class Sidebar:
 def sidebar(
     *args: TagChild | TagAttrs,
     position: Literal["left", "right"] = "left",
-    open: SidebarOpenValues | SidebarOpen = "desktop",
+    open: Optional[SidebarOpenValues | SidebarOpen] = None,
     width: CssUnit = 250,
     id: Optional[str] = None,
     title: TagChild | str = None,
