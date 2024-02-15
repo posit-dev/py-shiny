@@ -4,10 +4,11 @@ import typing
 
 
 def compare_annotations(
-    ui_fn: typing.Callable[..., typing.Any], layout_fn: typing.Callable[..., typing.Any]
+    core_fn: typing.Callable[..., typing.Any],
+    express_fn: typing.Callable[..., typing.Any],
 ) -> None:
-    ui_a = ui_fn.__annotations__
-    layout_a = layout_fn.__annotations__
+    ui_a = core_fn.__annotations__
+    layout_a = express_fn.__annotations__
     keys: list[str] = []
     for key, _ in ui_a.items():
         keys.append(key)
@@ -25,4 +26,6 @@ def compare_annotations(
             )
             assert layout_val.endswith(ui_val)
         else:
-            assert ui_a[key] == layout_a[key]
+            assert (
+                ui_a[key] == layout_a[key]
+            ), f"Type annotations for {key} in {core_fn} (Core) don't match {express_fn} (Express)"
