@@ -147,7 +147,8 @@ class Sidebar:
         open: Optional[SidebarOpenValues | SidebarOpen] = None,
         id: Optional[str] = None,
         title: TagChild | str = None,
-        color: dict[Literal["fg", "bg"], Optional[str]] = {},
+        fg: Optional[str] = None,
+        bg: Optional[str] = None,
         class_: Optional[str] = None,
         max_height_mobile: Optional[str | float] = None,
         gap: Optional[CssUnit] = None,
@@ -174,7 +175,7 @@ class Sidebar:
         self.position = position
         self.width = as_css_unit(width)
         self.max_height_mobile = max_height_mobile
-        self.color = color
+        self.color = {"fg": fg, "bg": bg}
         self.attributes = attributes
         self.children = children
 
@@ -378,7 +379,8 @@ def sidebar(
         open=open,
         id=id,
         title=title,
-        color={"bg": bg, "fg": fg},
+        fg=fg,
+        bg=bg,
         class_=class_,
         max_height_mobile=max_height_mobile,
         gap=gap,
