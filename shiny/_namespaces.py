@@ -48,11 +48,13 @@ def resolve_id(id: Id) -> ResolvedId:
 
 
 @overload
-def resolve_id_or_none(id: None) -> None: ...
+def resolve_id_or_none(id: None) -> None:
+    ...
 
 
 @overload
-def resolve_id_or_none(id: Id) -> ResolvedId: ...
+def resolve_id_or_none(id: Id) -> ResolvedId:
+    ...
 
 
 # Do not export this method from `shiny`. Let developers handle it themselves.
@@ -81,6 +83,10 @@ re_valid_id: Pattern[str] = re.compile("^\\.?\\w+$")
 
 
 def validate_id(id: str) -> None:
+    if not isinstance(id, str):
+        raise ValueError("`id` must be a single string")
+    if isinstance(id, str) and len(id) == 0:
+        raise ValueError("`id` must be a non-empty string")
     if not re_valid_id.match(id):
         raise ValueError(
             f"The string '{id}' is not a valid id; only letters, numbers, and "
