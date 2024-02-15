@@ -275,7 +275,7 @@ class Sidebar:
                 + "the sidebar when `open` is `'always'` on mobile, but "
                 + f"`open` is `'{self.open.mobile}'`. "
                 + "The `max_height_mobile` argument will be ignored.",
-                # `stacklevel=2`: Refers to the caller of `sidebar()`
+                # `stacklevel=2`: Refers to the caller of `.max_height_mobile` property method
                 stacklevel=2,
             )
             max_height_mobile = None
@@ -363,7 +363,8 @@ class Sidebar:
         )
 
     def tagify(self) -> TagList:
-        return TagList(self._sidebar_tag(), self._collapse_tag()).tagify()
+        taglist = TagList(self._sidebar_tag(), self._collapse_tag())
+        return taglist.tagify()
 
 
 @add_example()

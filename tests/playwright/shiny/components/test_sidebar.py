@@ -48,9 +48,5 @@ def test_sidebar_position_and_open(page: Page, app: ShinyAppProc) -> None:
     output_txt_always.expect_value("input.sidebar_always(): True")
     # Handle is included but it should have `display: none`
     always_sidebar.expect_handle(True)
-    handle_display = always_sidebar.loc_handle.evaluate(
-        "el => window.getComputedStyle(el).display"
-    )
-    assert (
-        handle_display == "none"
-    ), "The collapse toggle should be hidden when the sidebar is always open"
+    from playwright.sync_api import expect
+    expect(always_sidebar.loc_handle).to_have_css("display", "none")

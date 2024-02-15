@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 
-* Page-level sidebars used in `ui.page_sidebar()` and `ui.page_navbar()` will now default to being initially open, but collapsible, on desktop devices and always open on mobile devices. You can adjust this default choice by providing `open` to `ui.sidebar()`. (#1129)
+* Page-level sidebars used in `ui.page_sidebar()` and `ui.page_navbar()` will now default to being initially open, but collapsible, on desktop devices and always open on mobile devices. You can adjust this default choice by setting `ui.sidebar(open=)`. (#1129)
 
 * `ui.sidebar()` is now a thin wrapper for the internal `ui.Sidebar` class. The `ui.Sidebar` class has been updated to store the sidebar's contents and settings and to delay rendering until the sidebar HTML is actually used. Because most users call `ui.sidebar()` instead of using the class directly, this change is not expected to affect many apps. (#1129)
 
