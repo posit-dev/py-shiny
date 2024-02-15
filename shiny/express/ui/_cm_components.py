@@ -43,9 +43,9 @@ __all__ = (
 @add_example()
 def sidebar(
     *,
-    width: CssUnit = 250,
     position: Literal["left", "right"] = "left",
     open: Optional[SidebarOpenValues | SidebarOpen] = None,
+    width: CssUnit = 250,
     id: Optional[str] = None,
     title: TagChild | str = None,
     bg: Optional[str] = None,

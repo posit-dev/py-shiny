@@ -353,9 +353,9 @@ class Sidebar:
 @add_example()
 def sidebar(
     *args: TagChild | TagAttrs,
-    width: CssUnit = 250,
     position: Literal["left", "right"] = "left",
     open: SidebarOpenValues | SidebarOpen = "desktop",
+    width: CssUnit = 250,
     id: Optional[str] = None,
     title: TagChild | str = None,
     bg: Optional[str] = None,
