@@ -180,13 +180,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
 
   useEffect(() => {
     const handleMessage = (event: CustomEvent<{ keys: number[] }>) => {
-      if (rowSelectionMode === SelectionMode.None) {
-        throw new Error(
-          "You can't modify selected rows when row selection is set to 'None.'"
-        );
-      }
-
-      if (event.detail.keys === null) {
+      // We convert "None" to an empty tuple on the python side
+      // so an empty array indicates that selection should be cleared.
+      if (!event.detail.keys.length) {
         rowSelection.clear();
       } else {
         rowSelection.setMultiple(event.detail.keys.map(String));

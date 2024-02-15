@@ -8,6 +8,7 @@ from typing import (
     Literal,
     Optional,
     Protocol,
+    Sequence,
     Union,
     cast,
     runtime_checkable,
@@ -27,7 +28,8 @@ if TYPE_CHECKING:
 
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
-    def to_payload(self) -> Jsonifiable: ...
+    def to_payload(self) -> Jsonifiable:
+        ...
 
 
 @add_example(ex_dir="../api-examples/data_frame")
@@ -266,10 +268,16 @@ class data_frame(Renderer[DataFrameResult]):
       objects you can return from the rendering function to specify options.
     """
 
+    _row_selection_mode: Optional[str]
+
     def auto_output_ui(self) -> Tag:
         return ui.output_data_frame(id=self.output_id)
 
-    async def transform(self, value: DataFrameResult) -> Jsonifiable:
+    async def render(self) -> Jsonifiable:
+        self._row_selection_mode = None
+        value = await self.fn()
+        if value is None:
+            return None
         if not isinstance(value, AbstractTabularData):
             value = DataGrid(
                 cast_to_pandas(
@@ -277,6 +285,7 @@ class data_frame(Renderer[DataFrameResult]):
                     "@render.data_frame doesn't know how to render objects of type",
                 )
             )
+        self._row_selection_mode = value.row_selection_mode
         return value.to_payload()
 
     async def __send_message(self, type: str, obj: dict[str, Any] = {}):
@@ -293,17 +302,33 @@ class data_frame(Renderer[DataFrameResult]):
         a tuple of integers representing the rows selected by a user.
         """
 
-    async def update_row_selection(self, idx: Optional[list[int]] = None) -> None:
-        await self.__send_message("updateRowSelection", {"keys": idx})
+    async def update_row_selection(
+        self, idx: Optional[Sequence[int] | int] = None
+    ) -> None:
+        if idx is None:
+            idx = ()
+        elif isinstance(idx, int):
+            idx = (idx,)
 
-        active_session = require_active_session(None)
-        return active_session.input[self.output_id + "_selected_rows"]()
+        mode = self._row_selection_mode
+        if mode == "none":
+            raise ValueError(
+                "You can't update row selections when row_selection_mode is 'none'"
+            )
+
+        if mode == "single" and len(idx) > 1:
+            raise ValueError(
+                "Attempted to set multiple row selection values when row_selection_mode is 'single'"
+            )
+
+        await self.__send_message("updateRowSelection", {"keys": idx})
 
 
 @runtime_checkable
 class PandasCompatible(Protocol):
     # Signature doesn't matter, runtime_checkable won't look at it anyway
-    def to_pandas(self) -> object: ...
+    def to_pandas(self) -> object:
+        ...
 
 
 def cast_to_pandas(x: object, error_message_begin: str) -> object:
