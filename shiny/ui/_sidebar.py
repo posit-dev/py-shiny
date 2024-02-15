@@ -191,7 +191,8 @@ class Sidebar:
     def _resolved_sidebar_id(self) -> Optional[str]:
         if self.id is not None:
             return resolve_id_or_none(self.id)
-        if not (self.open.desktop == "always" and self.open.mobile == "always"):
+
+        if self.open.desktop == "always" and self.open.mobile == "always":
             return None
 
         # Provide a random id when sidebar is collapsible for accessibility reasons
