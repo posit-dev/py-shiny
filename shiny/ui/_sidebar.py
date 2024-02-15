@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 import warnings
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, Optional, cast, get_args
+from typing import TYPE_CHECKING, Literal, Optional, cast
 
 from htmltools import (
     HTML,
