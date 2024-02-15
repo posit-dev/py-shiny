@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from typing import Optional, Protocol
 
 from htmltools import (
@@ -130,6 +131,9 @@ def _card_impl(
     attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
     children = _wrap_children_in_card(*children, wrapper=wrapper)
 
+    if full_screen and "id" not in attrs:
+        attrs["id"] = f"bslib_card_{random.randint(1000, 10000)}"
+
     tag = div(
         {
             "class": "card bslib-card bslib-mb-spacing",
@@ -143,7 +147,7 @@ def _card_impl(
         },
         *children,
         attrs,
-        _full_screen_toggle() if full_screen else None,
+        _full_screen_toggle(str(attrs["id"])) if full_screen else None,
         components_dependency(),
         _card_js_init(),
     )
@@ -161,10 +165,15 @@ def _card_js_init() -> Tag:
     )
 
 
-def _full_screen_toggle() -> Tag:
+def _full_screen_toggle(id_controls: str) -> Tag:
     return tooltip(
-        tags.span(
-            {"class": "bslib-full-screen-enter badge rounded-pill"},
+        tags.button(
+            {
+                "class": "bslib-full-screen-enter badge rounded-pill",
+                "aria-expanded": "false",
+                "aria-controls": id_controls,
+                "aria-label": "Expand card",
+            },
             _full_screen_toggle_icon(),
         ),
         "Expand",
