@@ -54,6 +54,7 @@ def sidebar(
     max_height_mobile: Optional[str | float] = None,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
+    **kwargs: TagAttrValue,
 ) -> RecallContextManager[ui.Sidebar]:
     """
     Context manager for sidebar element
@@ -127,6 +128,7 @@ def sidebar(
             max_height_mobile=max_height_mobile,
             gap=gap,
             padding=padding,
+            **kwargs,
         ),
     )
 
