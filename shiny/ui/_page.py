@@ -94,8 +94,7 @@ def page_sidebar(
             "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
         )
 
-    if sidebar._open is None:
-        sidebar._open = page_sidebar_default
+    sidebar = sidebar._set_default_open(page_sidebar_default)
 
     attrs, children = consolidate_attrs(*args, **kwargs)
 
@@ -218,8 +217,7 @@ def page_navbar(
             )
 
         pageClass += " has-page-sidebar"
-        if sidebar._open is None:
-            sidebar._open = page_sidebar_default
+        sidebar = sidebar._set_default_open(page_sidebar_default)
 
     tagAttrs: TagAttrs = {"class": pageClass}
 

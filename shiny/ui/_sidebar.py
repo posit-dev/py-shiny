@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 import warnings
+from copy import copy
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, Optional, cast
 
@@ -127,16 +128,7 @@ class Sidebar:
         Where the sidebar should appear relative to the main content, one of `"left"` or
         `"right"`.
     open
-        The initial state of the sidebar, either a string or a
-        :class:`~shiny.ui.SidebarOpen` object. The possible values are:
-
-        * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
-        * `"open"`: the sidebar starts open
-        * `"closed"`: the sidebar starts closed
-        * `"always"`: the sidebar is always open and cannot be closed
-
-        Use a :class:`~shiny.ui.SidebarOpen` object to set different initial states for
-        desktop and mobile.
+        The initial state of the sidebar as a :class:`~shiny.ui.SidebarOpen` object.
     id
         A character string. Required if wanting to reactively read (or update) the
         `collapsible` state in a Shiny app.
@@ -254,31 +246,77 @@ class Sidebar:
             if isinstance(id, str) and len(id) == 0:
                 raise ValueError("`id` must be a non-empty string")
 
-        if open is not None and not isinstance(open, SidebarOpen):
-            open = SidebarOpen._from_string(open)
-
         self.id = id
         self.title = title
         self.class_ = class_
         self.gap = as_css_unit(gap)
         self.padding = as_css_padding(padding)
-        self._open = open
+        self._open: SidebarOpen | None = self._as_open(open)
+        self._default_open = SidebarOpen()
         self.position = position
         self.width = as_css_unit(width)
-        self.max_height_mobile = max_height_mobile
+        self._max_height_mobile = max_height_mobile
         self.color = {"fg": fg, "bg": bg}
         self.attributes = attributes
         self.children = children
 
     @property
     def open(self) -> SidebarOpen:
-        if isinstance(self._open, SidebarOpen):
-            return self._open
-
         if self._open is None:
-            return SidebarOpen()
+            return self._default_open
 
-        return SidebarOpen._from_string(self._open)
+        return self._open
+
+    @open.setter
+    def open(self, open: SidebarOpen | SidebarOpenValues | None) -> None:
+        self._open = self._as_open(open)
+
+    @property
+    def max_height_mobile(self) -> Optional[str]:
+        max_height_mobile = self._max_height_mobile
+
+        if max_height_mobile is not None and self.open.mobile != "always":
+            warnings.warn(
+                "The `shiny.ui.sidebar(max_height_mobile=)` argument only applies to "
+                + "the sidebar when `open` is `'always'` on mobile, but "
+                + f"`open` is `'{self.open.mobile}'`. "
+                + "The `max_height_mobile` argument will be ignored.",
+                # `stacklevel=2`: Refers to the caller of `sidebar()`
+                stacklevel=2,
+            )
+            max_height_mobile = None
+
+        return as_css_unit(max_height_mobile)
+
+    @max_height_mobile.setter
+    def max_height_mobile(self, max_height_mobile: str | float | None) -> None:
+        self._max_height_mobile = max_height_mobile
+
+    def _as_open(
+        self,
+        open: Optional[SidebarOpen | SidebarOpenValues] = None,
+    ) -> SidebarOpen | None:
+        if open is None:
+            return None
+
+        if isinstance(open, str):
+            return SidebarOpen._from_string(open)
+
+        if isinstance(open, SidebarOpen):
+            return open
+
+        raise ValueError("`open` must be a string or a `SidebarOpen` object")
+
+    def _set_default_open(self, open: SidebarOpen | SidebarOpenValues) -> Sidebar:
+        new_default = self._as_open(open)
+
+        if new_default is None:
+            raise ValueError("`open` must be a string or a `SidebarOpen` object")
+
+        new = copy(self)
+        new._default_open = new_default
+
+        return new
 
     def _resolved_sidebar_id(self) -> Optional[str]:
         if self.id is not None:
@@ -331,23 +369,7 @@ class Sidebar:
         )
 
     def tagify(self) -> TagList:
-        max_height_mobile = self.max_height_mobile
-
-        if max_height_mobile is not None and self.open.mobile != "always":
-            warnings.warn(
-                "The `shiny.ui.sidebar(max_height_mobile=)` argument only applies to "
-                + "the sidebar when `open` is `'always'` on mobile, but "
-                + f"`open` is `'{self.open.mobile}'`. "
-                + "The `max_height_mobile` argument will be ignored.",
-                # `stacklevel=2`: Refers to the caller of `sidebar()`
-                stacklevel=2,
-            )
-            max_height_mobile = None
-
-        return TagList(
-            self._sidebar_tag(),
-            self._collapse_tag(),
-        )
+        return TagList(self._sidebar_tag(), self._collapse_tag()).tagify()
 
 
 @add_example()
