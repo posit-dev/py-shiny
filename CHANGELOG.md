@@ -20,9 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
-* We improved the accessibility of the full screen toggle button in cards created with `ui.card(full_sceen=True)`. Full-screen cards are now also supported on mobile devices. (#1129)
+* We improved the accessibility of the full screen toggle button in cards created with `ui.card(full_screen=True)`. Full-screen cards are now also supported on mobile devices. (#1129)
 
-* When entering and exiting full screen card mode, Shiny now emits a client-side custom `bslib.card` event that JavaScript-oriented users can use to react to the full-screen state change. (#1129)
+* When entering and exiting full-screen card mode, Shiny now emits a client-side custom `bslib.card` event that JavaScript-oriented users can use to react to the full screen state change. (#1129)
 
 * The sidebar's collapse toggle now has a high `z-index` value to ensure it always appears above elements in the main content area of `ui.layout_sidebar()`. The sidebar overlay also now receives the same high `z-index` on mobile layouts. (#1129)
 
