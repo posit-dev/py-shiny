@@ -162,6 +162,9 @@ class Sidebar:
             if isinstance(id, str) and len(id) == 0:
                 raise ValueError("`id` must be a non-empty string")
 
+        if open is not None and not isinstance(open, SidebarOpen):
+            open = SidebarOpen._from_string(open)
+
         self.id = id
         self.title = title
         self.class_ = class_
