@@ -20,7 +20,7 @@ from htmltools import (
 
 from .._deprecated import warn_deprecated
 from .._docstring import add_example, no_example
-from .._namespaces import resolve_id_or_none
+from .._namespaces import ResolvedId, resolve_id_or_none
 from ..session import require_active_session
 from ._card import CardItem
 from ._html_deps_shinyverse import components_dependency
@@ -130,7 +130,7 @@ class Sidebar:
     open
         The initial state of the sidebar as a :class:`~shiny.ui.SidebarOpen` object.
     id
-        A character string. Required if wanting to reactively read (or update) the
+        The resolved ID. Required if wanting to reactively read (or update) the
         `collapsible` state in a Shiny app.
     title
         A character title to be used as the sidebar title, which will be wrapped in a
@@ -240,13 +240,7 @@ class Sidebar:
         if isinstance(title, (str, int, float)):
             title = tags.header(str(title), class_="sidebar-title")
 
-        if id is not None:
-            if not isinstance(id, str):
-                raise ValueError("`id` must be a single string")
-            if isinstance(id, str) and len(id) == 0:
-                raise ValueError("`id` must be a non-empty string")
-
-        self.id = id
+        self.id: ResolvedId | None = resolve_id_or_none(id)
         self.title = title
         self.class_ = class_
         self.gap = as_css_unit(gap)
@@ -319,8 +313,8 @@ class Sidebar:
         return new
 
     def _resolved_sidebar_id(self) -> Optional[str]:
-        if self.id is not None:
-            return resolve_id_or_none(self.id)
+        if isinstance(self.id, ResolvedId):
+            return self.id
 
         if self.open.desktop == "always" and self.open.mobile == "always":
             return None
@@ -337,7 +331,7 @@ class Sidebar:
             type="button",
             title="Toggle sidebar",
             aria_expanded="true" if is_expanded else "false",
-            aria_controls=resolve_id_or_none(self.id),
+            aria_controls=self._resolved_sidebar_id(),
         )
 
     def _sidebar_tag(self) -> Tag:
