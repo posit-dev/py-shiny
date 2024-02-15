@@ -34,11 +34,13 @@ from ._html_deps_external import bootstrap_deps
 from ._html_deps_py_shiny import page_output_dependency
 from ._html_deps_shinyverse import components_dependency
 from ._navs import NavMenu, NavPanel, navset_bar
-from ._sidebar import Sidebar, layout_sidebar
+from ._sidebar import Sidebar, SidebarOpen, layout_sidebar
 from ._tag import consolidate_attrs
 from ._utils import get_window_title
 from .css import CssUnit, as_css_padding, as_css_unit
 from .fill._fill import as_fillable_container
+
+page_sidebar_default = SidebarOpen(desktop="open", mobile="always")
 
 
 @add_example()
@@ -86,6 +88,14 @@ def page_sidebar(
 
     if isinstance(title, str):
         title = tags.h1(title, class_="bslib-page-title")
+
+    if not isinstance(sidebar, Sidebar):
+        raise TypeError(
+            "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
+        )
+
+    if sidebar._open is None:
+        sidebar._open = page_sidebar_default
 
     attrs, children = consolidate_attrs(*args, **kwargs)
 
@@ -199,14 +209,17 @@ def page_navbar(
     -------
     See :func:`~shiny.ui.nav`.
     """
-    if sidebar is not None and not isinstance(sidebar, Sidebar):
-        raise TypeError(
-            "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
-        )
-
     pageClass = "bslib-page-navbar"
+
     if sidebar is not None:
+        if not isinstance(sidebar, Sidebar):
+            raise TypeError(
+                "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
+            )
+
         pageClass += " has-page-sidebar"
+        if sidebar._open is None:
+            sidebar._open = page_sidebar_default
 
     tagAttrs: TagAttrs = {"class": pageClass}
 
