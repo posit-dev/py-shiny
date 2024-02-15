@@ -91,60 +91,128 @@ class Sidebar:
     class directly. Instead, supply the :func:`~shiny.ui.sidebar` object to
     :func:`~shiny.ui.layout_sidebar`.
 
-    TODO: garrick-docs: update after class restructuring
-
     Attributes
     ----------
-    tag
-        The :class:`~htmltools.Tag` object that represents the sidebar.
-    collapse_tag
-        The :class:`~htmltools.Tag` object that represents the collapse button.
-    position
-        Where the sidebar should appear relative to the main content.
-    open
-        The initial state of the sidebar (open or collapsed).
+    children
+        A tuple of :class:`~htmltools.Tag` objects that are the contents of the sidebar.
+    attributes
+        A dictionary of attributes that are supplied to the sidebar contents
+        :class:`~htmltools.Tag` container.
     width
         A valid CSS unit used for the width of the sidebar.
+    position
+        Where the sidebar should appear relative to the main content, one of `"left"` or
+        `"right"`.
+    open
+        The initial state of the sidebar, either a string or a
+        :class:`~shiny.ui.SidebarOpen` object. The possible values are:
+
+        * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
+        * `"open"`: the sidebar starts open
+        * `"closed"`: the sidebar starts closed
+        * `"always"`: the sidebar is always open and cannot be closed
+
+        Use a :class:`~shiny.ui.SidebarOpen` object to set different initial states for
+        desktop and mobile.
+    id
+        A character string. Required if wanting to reactively read (or update) the
+        `collapsible` state in a Shiny app.
+    title
+        A character title to be used as the sidebar title, which will be wrapped in a
+        `<div>` element with class `sidebar-title`. You can also provide a custom
+        :class:`~htmltools.Tag` for the title element, in which case you'll
+        likely want to give this element `class = "sidebar-title"`.
+    color
+        A dictionary with items `"bg"` for background or `"fg"` for foreground color.
+    class_
+        CSS classes for the sidebar container element, in addition to the fixed
+        `.sidebar` class.
     max_height_mobile
-        The maximum height of the horizontal sidebar when viewed on mobile devices.
-        The default is `250px` unless the sidebar is included in a
-        :func:`~shiny.ui.layout_sidebar` with a specified height, in
-        which case the default is to take up no more than 50% of the layout container.
-    color_fg
-        A foreground color.
-    color_bg
-        A background color.
+        A CSS length unit (passed through :func:`~shiny.ui.css.as_css_unit`) defining
+        the maximum height of the horizontal sidebar when viewed on mobile devices. Only
+        applies to always-open sidebars on mobile, where by default the sidebar
+        container is placed below the main content container on mobile devices.
+    gap
+        A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
+        provided to `*args`.
+    padding
+        Padding within the sidebar itself. This can be a numeric vector (which will be
+        interpreted as pixels) or a character vector with valid CSS lengths. `padding`
+        may be one to four values.
+
+        * If a single value, then that value will be used for all four sides.
+        * If two, then the first value will be used for the top and bottom, while
+          the second value will be used for left and right.
+        * If three values, then the first will be used for top, the second will be left
+          and right, and the third will be bottom.
+        * If four, then the values will be interpreted as top, right, bottom, and left
+          respectively.
 
     Parameters
     ----------
-    tag
-        The :class:`~htmltools.Tag` object that represents the sidebar.
-    collapse_tag
-        The :class:`~htmltools.Tag` object that represents the collapse button.
-    position
-        Where the sidebar should appear relative to the main content.
-    open
-        The initial state of the sidebar (open or collapsed).
+    children
+        A tuple of :class:`~htmltools.Tag` objects that are the contents of the sidebar.
+    attributes
+        A dictionary of attributes that are supplied to the sidebar contents
+        :class:`~htmltools.Tag` container.
     width
         A valid CSS unit used for the width of the sidebar.
+    position
+        Where the sidebar should appear relative to the main content, one of `"left"` or
+        `"right"`.
+    open
+        The initial state of the sidebar, either a string or a
+        :class:`~shiny.ui.SidebarOpen` object. The possible values are:
+
+        * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
+        * `"open"`: the sidebar starts open
+        * `"closed"`: the sidebar starts closed
+        * `"always"`: the sidebar is always open and cannot be closed
+
+        Use a :class:`~shiny.ui.SidebarOpen` object to set different initial states for
+        desktop and mobile.
+    id
+        A character string. Required if wanting to reactively read (or update) the
+        `collapsible` state in a Shiny app.
+    title
+        A character title to be used as the sidebar title, which will be wrapped in a
+        `<div>` element with class `sidebar-title`. You can also provide a custom
+        :class:`~htmltools.Tag` for the title element, in which case you'll
+        likely want to give this element `class = "sidebar-title"`.
+    bg,fg
+        A background or foreground color.
+    class_
+        CSS classes for the sidebar container element, in addition to the fixed
+        `.sidebar` class.
     max_height_mobile
-        The maximum height of the horizontal sidebar when viewed on mobile devices.
-        The default is `250px` unless the sidebar is included in a
-        :func:`~shiny.ui.layout_sidebar` with a specified height, in
-        which case the default is to take up no more than 50% of the layout container.
-    color_fg
-        A foreground color.
-    color_bg
-        A background color.
+        A CSS length unit (passed through :func:`~shiny.ui.css.as_css_unit`) defining
+        the maximum height of the horizontal sidebar when viewed on mobile devices. Only
+        applies to always-open sidebars on mobile, where by default the sidebar
+        container is placed below the main content container on mobile devices.
+    gap
+        A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
+        provided to `*args`.
+    padding
+        Padding within the sidebar itself. This can be a numeric vector (which will be
+        interpreted as pixels) or a character vector with valid CSS lengths. `padding`
+        may be one to four values.
+
+        * If a single value, then that value will be used for all four sides.
+        * If two, then the first value will be used for the top and bottom, while
+          the second value will be used for left and right.
+        * If three values, then the first will be used for top, the second will be left
+          and right, and the third will be bottom.
+        * If four, then the values will be interpreted as top, right, bottom, and left
+          respectively.
     """
 
     def __init__(
         self,
         children: tuple[TagChild | TagAttrs, ...],
         attributes: dict[str, TagAttrValue],
-        width: CssUnit = 250,
         position: Literal["left", "right"] = "left",
         open: Optional[SidebarOpenValues | SidebarOpen] = None,
+        width: CssUnit = 250,
         id: Optional[str] = None,
         title: TagChild | str = None,
         fg: Optional[str] = None,
@@ -316,7 +384,7 @@ def sidebar(
         Use a :class:`~shiny.ui.SidebarOpen` object to set different initial states for
         desktop and mobile.
     id
-        A character string. Required if wanting to re-actively read (or update) the
+        A character string. Required if wanting to reactively read (or update) the
         `collapsible` state in a Shiny app.
     title
         A character title to be used as the sidebar title, which will be wrapped in a

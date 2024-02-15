@@ -80,7 +80,7 @@ def sidebar(
         Use a :class:`~shiny.ui.SidebarOpen` object to set different initial states for
         desktop and mobile.
     id
-        A character string. Required if wanting to re-actively read (or update) the
+        A character string. Required if wanting to reactively read (or update) the
         `collapsible` state in a Shiny app.
     title
         A character title to be used as the sidebar title, which will be wrapped in a
