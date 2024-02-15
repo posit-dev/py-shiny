@@ -295,23 +295,24 @@ def sidebar(
     Parameters
     ----------
     *args
-        Contents to the sidebar. Or tag attributes that are supplied to the
+        Contents of the sidebar. Or tag attributes that are supplied to the
         resolved :class:`~htmltools.Tag` object.
     width
         A valid CSS unit used for the width of the sidebar.
     position
-        Where the sidebar should appear relative to the main content.
+        Where the sidebar should appear relative to the main content, one of `"left"` or
+        `"right"`.
     open
-        The initial state of the sidebar.
+        The initial state of the sidebar, either a string or a
+        :class:`~shiny.ui.SidebarOpen` object. The possible values are:
 
         * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
-        * `"open"` or `True`: the sidebar starts open
-        * `"closed"` or `False`: the sidebar starts closed
-        * `"always"` or `None`: the sidebar is always open and cannot be closed
+        * `"open"`: the sidebar starts open
+        * `"closed"`: the sidebar starts closed
+        * `"always"`: the sidebar is always open and cannot be closed
 
-        In :func:`~shiny.ui.update_sidebar`, `open` indicates the desired state of the
-        sidebar. Note that :func:`~shiny.ui.update_sidebar` can only open or close the
-        sidebar, so it does not support the `"desktop"` and `"always"` options.
+        Use a :class:`~shiny.ui.SidebarOpen` object to set different initial states for
+        desktop and mobile.
     id
         A character string. Required if wanting to re-actively read (or update) the
         `collapsible` state in a Shiny app.
@@ -328,8 +329,8 @@ def sidebar(
     max_height_mobile
         A CSS length unit (passed through :func:`~shiny.ui.css.as_css_unit`) defining
         the maximum height of the horizontal sidebar when viewed on mobile devices. Only
-        applies to always-open sidebars that use `open = "always"`, where by default the
-        sidebar container is placed below the main content container on mobile devices.
+        applies to always-open sidebars on mobile, where by default the sidebar
+        container is placed below the main content container on mobile devices.
     gap
         A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
         provided to `*args`.
@@ -345,6 +346,8 @@ def sidebar(
           and right, and the third will be bottom.
         * If four, then the values will be interpreted as top, right, bottom, and left
           respectively.
+    **kwargs
+        Named attributes are supplied to the sidebar content container.
 
     Returns
     -------
