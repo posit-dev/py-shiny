@@ -45,7 +45,7 @@ def sidebar(
     *,
     width: CssUnit = 250,
     position: Literal["left", "right"] = "left",
-    open: SidebarOpenValues | SidebarOpen = SidebarOpen("open", "always"),
+    open: Optional[SidebarOpenValues | SidebarOpen] = None,
     id: Optional[str] = None,
     title: TagChild | str = None,
     bg: Optional[str] = None,
