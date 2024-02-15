@@ -52,6 +52,8 @@ from ...ui._plot_output_opts import DblClickOpts as MainDblClickOpts
 from ...ui._plot_output_opts import HoverOpts as MainHoverOpts
 from ...ui._sidebar import DeprecatedPanelMain, DeprecatedPanelSidebar
 from ...ui._sidebar import Sidebar as MainSidebar
+from ...ui._sidebar import SidebarOpen as MainSidebarOpen
+from ...ui._sidebar import SidebarOpenValues as MainSidebarOpenValues
 from ...ui._sidebar import layout_sidebar as main_layout_sidebar
 from ...ui._sidebar import panel_main as main_panel_main
 from ...ui._sidebar import panel_sidebar as main_panel_sidebar
@@ -398,14 +400,19 @@ class Sidebar(MainSidebar):
 
     def __init__(
         self,
-        tag: Tag,
-        collapse_tag: Optional[Tag],
-        position: Literal["left", "right"],
-        open: Literal["desktop", "open", "closed", "always"],
-        width: CssUnit,
-        max_height_mobile: Optional[str | float],
-        color_fg: Optional[str],
-        color_bg: Optional[str],
+        children: tuple[TagChild | TagAttrs, ...],
+        attributes: dict[str, TagAttrValue],
+        position: Literal["left", "right"] = "left",
+        open: Optional[MainSidebarOpenValues | MainSidebarOpen] = None,
+        width: CssUnit = 250,
+        id: Optional[str] = None,
+        title: TagChild | str = None,
+        fg: Optional[str] = None,
+        bg: Optional[str] = None,
+        class_: Optional[str] = None,
+        max_height_mobile: Optional[str | float] = None,
+        gap: Optional[CssUnit] = None,
+        padding: Optional[CssUnit | list[CssUnit]] = None,
     ):
         warn_deprecated(
             "`shiny.experimental.ui.Sidebar` is deprecated. "
@@ -413,14 +420,19 @@ class Sidebar(MainSidebar):
             "please use :class:`shiny.ui.Sidebar` instead."
         )
         super().__init__(
-            tag,
-            collapse_tag,
+            children,
+            attributes,
             position,
             open,
             width,
+            id,
+            title,
+            fg,
+            bg,
+            class_,
             max_height_mobile,
-            color_fg,
-            color_bg,
+            gap,
+            padding,
         )
 
 
