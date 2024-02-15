@@ -882,11 +882,11 @@ class DeprecatedPanelSidebar(
         )
 
     # Hopefully this is never used. But wanted to try to be safe
-    def tagify(self) -> Tag:
+    def tagify(self) -> TagList:
         """
         Tagify the `self.sidebar.tag` and return the result in a TagList
         """
-        return self.sidebar.tag.tagify()
+        return TagList(self.sidebar._sidebar_tag().tagify())
 
 
 # This class should be removed when `panel_main()` is removed
