@@ -56,19 +56,42 @@ The possible values for the `open` parameter in :func:`~shiny.ui.sidebar`.
 @dataclass
 class SidebarOpen:
     """
-    The initial state of the sidebar.
-
-    TODO garrick-docs: Document this.
+    The initial state of the sidebar at `desktop` and `mobile` screen sizes.
     """
 
     desktop: SidebarOpen._VALUES_TYPE = "open"
+    """The initial state of the sidebar on desktop screen sizes."""
+
     mobile: SidebarOpen._VALUES_TYPE = "closed"
+    """The initial state of the sidebar on mobile screen sizes."""
 
     _VALUES_TYPE = Literal["open", "closed", "always"]
     _VALUES: tuple[SidebarOpen._VALUES_TYPE, ...] = ("open", "closed", "always")
 
     @classmethod
     def _from_string(cls, open: str) -> SidebarOpen:
+        """
+        Takes a single string describing the initial sidebar state and returns a
+        :class:`~shiny.ui.SidebarOpen` object. In general, the value of `open` becomes
+        the initial state for both desktop and mobile screen sizes, unless `open` is
+        `"desktop"`, in which case the sidebar starts open on desktop screen, closed on
+        mobile.
+
+        Parameters
+        ----------
+        open
+            The initial state of the sidebar. The possible values are:
+
+            * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
+            * `"open"`: the sidebar starts open
+            * `"closed"`: the sidebar starts closed
+            * `"always"`: the sidebar is always open and cannot be closed
+
+        Returns
+        -------
+        :
+            A :class:`~shiny.ui.SidebarOpen` object.
+        """
         if not isinstance(open, str) or len(open) == 0:
             raise ValueError("`open` must be a non-empty string")
 
