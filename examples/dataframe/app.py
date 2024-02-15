@@ -104,13 +104,10 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.text
     def detail():
-        if (
-            input.grid_selected_rows() is not None
-            and len(input.grid_selected_rows()) > 0
-        ):
+        selected_rows = grid.input_selected_rows() or ()
+        if len(selected_rows) > 0:
             # "split", "records", "index", "columns", "values", "table"
-
-            return df().iloc[list(input.grid_selected_rows())]
+            return df().iloc[list(grid.input_selected_rows())]
 
 
 app = App(app_ui, server)

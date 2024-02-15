@@ -247,8 +247,7 @@ class data_frame(Renderer[DataFrameResult]):
     Row selection
     -------------
     When using the row selection feature, you can access the selected rows by using the
-    `input.<id>_selected_rows()` function, where `<id>` is the `id` of the
-    :func:`~shiny.ui.output_data_frame`. The value returned will be `None` if no rows
+    `<data_frame_renderer>.input_selected_rows()` method, where `<data_frame_renderer>` is the render function name that corresponds with the `id=` used in :func:`~shiny.ui.outout_data_frame`. Internally, this method retrieves the selected row value from session's `input.<id>_selected_rows()` value. The value returned will be `None` if no rows
     are selected, or a tuple of integers representing the indices of the selected rows.
     To filter a pandas data frame down to the selected rows, use
     `df.iloc[list(input.<id>_selected_rows())]`.
@@ -288,8 +287,17 @@ class data_frame(Renderer[DataFrameResult]):
             {"id": id, "handler": type, "obj": obj},
         )
 
+    def input_selected_rows(self) -> Optional[tuple[int]]:
+        """
+        When `row_selection_mode` is set to "single" or "multiple" this will return
+        a tuple of integers representing the rows selected by a user.
+        """
+
     async def update_row_selection(self, idx: Optional[list[int]] = None) -> None:
         await self.__send_message("updateRowSelection", {"keys": idx})
+
+        active_session = require_active_session(None)
+        return active_session.input[self.output_id + "_selected_rows"]()
 
 
 @runtime_checkable

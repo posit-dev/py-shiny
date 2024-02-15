@@ -198,13 +198,11 @@ class ExtendedTask(Generic[P, R]):
 
 
 @overload
-def extended_task() -> Callable[[Callable[P, Awaitable[R]]], ExtendedTask[P, R]]:
-    ...
+def extended_task() -> Callable[[Callable[P, Awaitable[R]]], ExtendedTask[P, R]]: ...
 
 
 @overload
-def extended_task(func: Callable[P, Awaitable[R]]) -> ExtendedTask[P, R]:
-    ...
+def extended_task(func: Callable[P, Awaitable[R]]) -> ExtendedTask[P, R]: ...
 
 
 @add_example()

@@ -1060,12 +1060,12 @@ class NavSetBar(NavSet):
         if self.position != "static-top":
             nav_final.add_class(self.position)
 
-        nav_final.add_class(f"navbar-{'dark' if self.inverse else 'light'}")
+        # bslib supports navbar-default/navbar-inverse (which is no longer
+        # a thing in Bootstrap 5) in a way that's still useful, especially Bootswatch.
+        nav_final.add_class(f"navbar-{'inverse' if self.inverse else 'default'}")
 
         if self.bg:
-            nav_final.attrs["style"] = "background-color: " + self.bg
-        else:
-            nav_final.add_class(f"bg-{'dark' if self.inverse else 'light'}")
+            nav_final.add_style(f"background-color: {self.bg} !important;")
 
         content = _make_tabs_fillable(
             content,

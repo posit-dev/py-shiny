@@ -205,10 +205,9 @@ def poll(
 
 @add_example()
 def file_reader(
-    filepath: str
-    | os.PathLike[str]
-    | Callable[[], str]
-    | Callable[[], os.PathLike[str]],
+    filepath: (
+        str | os.PathLike[str] | Callable[[], str] | Callable[[], os.PathLike[str]]
+    ),
     interval_secs: float = 1,
     *,
     priority: int = 1,

@@ -13,8 +13,7 @@ TagChildT = TypeVar("TagChildT", bound=TagChild)
 def consolidate_attrs(
     *args: TagAttrs,
     **kwargs: TagAttrValue,
-) -> tuple[TagAttrs, list[TagChild]]:
-    ...
+) -> tuple[TagAttrs, list[TagChild]]: ...
 
 
 # Same as original definition
@@ -22,8 +21,7 @@ def consolidate_attrs(
 def consolidate_attrs(
     *args: TagChildT | TagAttrs,
     **kwargs: TagAttrValue,
-) -> tuple[TagAttrs, list[TagChildT]]:
-    ...
+) -> tuple[TagAttrs, list[TagChildT]]: ...
 
 
 def consolidate_attrs(
@@ -44,13 +42,11 @@ def consolidate_attrs(
 
 
 @overload
-def trinary(x: None) -> None:
-    ...
+def trinary(x: None) -> None: ...
 
 
 @overload
-def trinary(x: bool | str) -> str:
-    ...
+def trinary(x: bool | str) -> str: ...
 
 
 def trinary(x: bool | str | None) -> None | str:

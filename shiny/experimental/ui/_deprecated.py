@@ -600,13 +600,11 @@ Deprecated. Please use `shiny.ui.css.CssUnit` instead.
 
 
 @overload
-def as_css_unit(value: None) -> None:
-    ...
+def as_css_unit(value: None) -> None: ...
 
 
 @overload
-def as_css_unit(value: CssUnit) -> str:
-    ...
+def as_css_unit(value: CssUnit) -> str: ...
 
 
 # Deprecated 2023-09-12
@@ -623,13 +621,11 @@ def as_css_unit(value: None | CssUnit) -> None | str:
 
 
 @overload
-def as_css_padding(padding: CssUnit | list[CssUnit]) -> str:
-    ...
+def as_css_padding(padding: CssUnit | list[CssUnit]) -> str: ...
 
 
 @overload
-def as_css_padding(padding: None) -> None:
-    ...
+def as_css_padding(padding: None) -> None: ...
 
 
 # Deprecated 2023-09-12
