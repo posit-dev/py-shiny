@@ -33,7 +33,8 @@ if __name__ == "__main__":
 
     # Doing this instead of "import shiny" so no linter is tempted to remove it
     importlib.import_module("shiny")
-    sys.stderr.write(
+    print(
         "Success; shiny module loading did not attempt to access an asyncio event "
-        "loop\n"
+        "loop\n",
+        file=sys.stderr,
     )
