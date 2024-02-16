@@ -49,4 +49,5 @@ def test_sidebar_position_and_open(page: Page, app: ShinyAppProc) -> None:
     # Handle is included but it should have `display: none`
     always_sidebar.expect_handle(True)
     from playwright.sync_api import expect
+
     expect(always_sidebar.loc_handle).to_have_css("display", "none")
