@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 from typing import TYPE_CHECKING, Literal, Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
@@ -349,7 +348,7 @@ def accordion_panel(
     if not isinstance(value, str):
         raise TypeError("`value` must be a string")
 
-    id = f"bslib-accordion-panel-{random.randint(1000, 10000)}"
+    id = private_random_id("bslib_accordion_panel")
 
     return AccordionPanel(
         *args,
