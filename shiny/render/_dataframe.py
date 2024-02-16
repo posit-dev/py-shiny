@@ -288,7 +288,11 @@ class data_frame(Renderer[DataFrameResult]):
         self._row_selection_mode = value.row_selection_mode
         return value.to_payload()
 
-    async def __send_message(self, type: str, obj: dict[str, Any] = {}):
+    async def _send_message(self, type: str, obj: dict[str, Any]):
+        # TODO-barret; capture session in init method
+        # TODO-barret; capture data in render method
+        # TODO-barret; invalidate data in render method before user fn has been called
+        #
         active_session = require_active_session(None)
         id = active_session.ns(self.output_id)
         await active_session.send_custom_message(
