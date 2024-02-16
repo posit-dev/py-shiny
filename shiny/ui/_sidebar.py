@@ -358,7 +358,7 @@ class Sidebar:
                 },
                 self.title,
                 *self.children,
-                **self.attrs,
+                self.attrs,
             ),
             class_=self.class_,
         )
