@@ -99,13 +99,24 @@ getType: function(el) {
 @input_handlers.add("shiny.date")
 def _(
     value: str | list[str], name: ResolvedId, session: Session
-) -> date | tuple[date, date]:
+) -> date | None | tuple[date | None, date | None]:
+
     if isinstance(value, str):
+        return _safe_strptime_date(value)
+    else:
+        return (
+            _safe_strptime_date(value[0]),
+            _safe_strptime_date(value[1]),
+        )
+
+
+def _safe_strptime_date(value: str | None) -> date | None:
+    if value is None:
+        return None
+    try:
         return datetime.strptime(value, "%Y-%m-%d").date()
-    return (
-        datetime.strptime(value[0], "%Y-%m-%d").date(),
-        datetime.strptime(value[1], "%Y-%m-%d").date(),
-    )
+    except ValueError:
+        return None
 
 
 @input_handlers.add("shiny.datetime")
