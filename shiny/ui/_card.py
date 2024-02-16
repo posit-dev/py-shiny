@@ -147,7 +147,7 @@ def _card_impl(
         },
         *children,
         attrs,
-        _full_screen_toggle(str(attrs["id"])) if full_screen else None,
+        _full_screen_toggle(attrs["id"]) if full_screen else None,
         components_dependency(),
         _card_js_init(),
     )
@@ -165,7 +165,7 @@ def _card_js_init() -> Tag:
     )
 
 
-def _full_screen_toggle(id_controls: str) -> Tag:
+def _full_screen_toggle(id_controls: TagAttrValue) -> Tag:
     return tooltip(
         tags.button(
             {
