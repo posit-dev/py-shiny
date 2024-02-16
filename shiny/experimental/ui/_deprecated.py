@@ -400,8 +400,8 @@ class Sidebar(MainSidebar):
 
     def __init__(
         self,
-        children: tuple[TagChild | TagAttrs, ...],
-        attributes: dict[str, TagAttrValue],
+        children: list[TagChild],
+        attrs: TagAttrs,
         position: Literal["left", "right"] = "left",
         open: Optional[MainSidebarOpenValues | MainSidebarOpen] = None,
         width: CssUnit = 250,
@@ -420,19 +420,19 @@ class Sidebar(MainSidebar):
             "please use :class:`shiny.ui.Sidebar` instead."
         )
         super().__init__(
-            children,
-            attributes,
-            position,
-            open,
-            width,
-            id,
-            title,
-            fg,
-            bg,
-            class_,
-            max_height_mobile,
-            gap,
-            padding,
+            children=children,
+            attrs=attrs,
+            position=position,
+            open=open,
+            width=width,
+            id=id,
+            title=title,
+            fg=fg,
+            bg=bg,
+            class_=class_,
+            max_height_mobile=max_height_mobile,
+            gap=gap,
+            padding=padding,
         )
 
 
@@ -612,11 +612,13 @@ Deprecated. Please use `shiny.ui.css.CssUnit` instead.
 
 
 @overload
-def as_css_unit(value: None) -> None: ...
+def as_css_unit(value: None) -> None:
+    ...
 
 
 @overload
-def as_css_unit(value: CssUnit) -> str: ...
+def as_css_unit(value: CssUnit) -> str:
+    ...
 
 
 # Deprecated 2023-09-12
@@ -633,11 +635,13 @@ def as_css_unit(value: None | CssUnit) -> None | str:
 
 
 @overload
-def as_css_padding(padding: CssUnit | list[CssUnit]) -> str: ...
+def as_css_padding(padding: CssUnit | list[CssUnit]) -> str:
+    ...
 
 
 @overload
-def as_css_padding(padding: None) -> None: ...
+def as_css_padding(padding: None) -> None:
+    ...
 
 
 # Deprecated 2023-09-12

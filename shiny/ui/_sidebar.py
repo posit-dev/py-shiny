@@ -119,7 +119,7 @@ class Sidebar:
     ----------
     children
         A tuple of :class:`~htmltools.Tag` objects that are the contents of the sidebar.
-    attributes
+    attrs
         A dictionary of attributes that are supplied to the sidebar contents
         :class:`~htmltools.Tag` container.
     width
@@ -167,7 +167,7 @@ class Sidebar:
     ----------
     children
         A tuple of :class:`~htmltools.Tag` objects that are the contents of the sidebar.
-    attributes
+    attrs
         A dictionary of attributes that are supplied to the sidebar contents
         :class:`~htmltools.Tag` container.
     width
@@ -223,8 +223,9 @@ class Sidebar:
 
     def __init__(
         self,
-        children: tuple[TagChild | TagAttrs, ...],
-        attributes: dict[str, TagAttrValue],
+        *,
+        children: list[TagChild],
+        attrs: TagAttrs,
         position: Literal["left", "right"] = "left",
         open: Optional[SidebarOpenValues | SidebarOpen] = None,
         width: CssUnit = 250,
@@ -251,7 +252,7 @@ class Sidebar:
         self.width = as_css_unit(width)
         self._max_height_mobile = max_height_mobile
         self.color = {"fg": fg, "bg": bg}
-        self.attributes = attributes
+        self.attrs = attrs
         self.children = children
 
     @property
@@ -357,7 +358,7 @@ class Sidebar:
                 },
                 self.title,
                 *self.children,
-                **self.attributes,
+                **self.attrs,
             ),
             class_=self.class_,
         )
@@ -479,9 +480,11 @@ def sidebar(
     # if bg is None and fg is not None:
     #     bg = get_color_contrast(fg)
 
+    attrs, children = consolidate_attrs(*args, **kwargs)
+
     return Sidebar(
-        children=args,
-        attributes=kwargs,
+        children=children,
+        attrs=attrs,
         width=width,
         position=position,
         open=open,
