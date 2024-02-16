@@ -300,10 +300,19 @@ class data_frame(Renderer[DataFrameResult]):
             {"id": id, "handler": type, "obj": obj},
         )
 
-    def input_selected_rows(self) -> Optional[tuple[int]]:
+    def input_selected_rows(self) -> tuple[int] | None:
         """
-        When `row_selection_mode` is set to "single" or "multiple" this will return
-        a tuple of integers representing the rows selected by a user.
+        Reactive selected rows of the data frame output.
+
+        This method is a wrapper around `input.<id>_selected_rows()`, where `<id>` is
+        the `id` of the data frame output. This method returns the selected rows and
+        will cause reactive updates as the selected rows change.
+
+        Returns
+        -------
+        :
+            * `None` if the row selection mode is None
+            * `tuple[int]`a tuple of integers representing the indices of the selected rows
         """
 
     async def update_row_selection(
