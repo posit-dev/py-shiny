@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed `input_task_button` not working in a Shiny module. (#1108)
 * Fixed several issues with `page_navbar()` styling. (#1124)
+* Fixed `Renderer.output_id` to not contain the module namespace prefix, only the output id. (#1130)
+
+### Other changes
+
+* Replaced use of `sys.stderr.write()` with `print(file=sys.stderr)`, because on some platforms `sys.stderr` can be `None`. (#1131)
+
 
 ## [0.7.1] - 2024-02-05
 
