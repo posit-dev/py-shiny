@@ -17,6 +17,7 @@ from htmltools import (
 )
 
 from .._docstring import add_example
+from .._utils import private_random_id
 from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import components_dependency
 from ._tag import consolidate_attrs
@@ -132,7 +133,7 @@ def _card_impl(
     children = _wrap_children_in_card(*children, wrapper=wrapper)
 
     if full_screen and "id" not in attrs:
-        attrs["id"] = f"bslib_card_{random.randint(1000, 10000)}"
+        attrs["id"] = private_random_id("bslib_card")
 
     tag = div(
         {

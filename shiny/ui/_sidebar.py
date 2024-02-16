@@ -21,6 +21,7 @@ from htmltools import (
 from .._deprecated import warn_deprecated
 from .._docstring import add_example, no_example
 from .._namespaces import ResolvedId, resolve_id_or_none
+from .._utils import private_random_id
 from ..session import require_active_session
 from ._card import CardItem
 from ._html_deps_shinyverse import components_dependency
@@ -321,7 +322,7 @@ class Sidebar:
             return None
 
         # Provide a random id when sidebar is collapsible for accessibility reasons
-        return f"bslib_sidebar_{random.randint(1000, 10000)}"
+        return private_random_id("bslib_sidebar")
 
     def _collapse_tag(self) -> Tag:
         is_expanded = self.open.desktop == "open" or self.open.mobile == "open"
