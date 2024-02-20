@@ -37,8 +37,8 @@ def test_slider_app(page: Page, local_app: ShinyAppProc) -> None:
 
     page.goto(local_app.url)
 
-    start_time = "2023-07-01 00:00:00"
-    end_time = "2023-07-01 01:00:00"
+    start_time = "2023-07-01 00:00:00+00:00"
+    end_time = "2023-07-01 01:00:00+00:00"
 
     check_case("one", value=(start_time, end_time))
     check_case(
