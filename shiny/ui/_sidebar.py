@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from copy import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal, Optional, TypedDict, cast
 
 from htmltools import (
@@ -70,7 +70,12 @@ class SidebarOpen:
     mobile: SidebarOpenValue = "closed"
     """The initial state of the sidebar on mobile screen sizes."""
 
-    _VALUES: tuple[SidebarOpenValue, ...] = ("open", "closed", "always")
+    _VALUES: tuple[SidebarOpenValue, ...] = field(
+        default=("open", "closed", "always"),
+        repr=False,
+        hash=False,
+        compare=False,
+    )
 
     def __post_init__(self):
         if self.desktop not in self._VALUES:
