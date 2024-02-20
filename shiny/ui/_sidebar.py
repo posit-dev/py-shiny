@@ -300,7 +300,9 @@ class Sidebar:
 
     def _as_open(
         self,
-        open: Optional[SidebarOpen | SidebarOpenSpec | SidebarOpenValue] = None,
+        open: Optional[
+            SidebarOpen | SidebarOpenSpec | SidebarOpenValue | Literal["desktop"]
+        ] = None,
     ) -> SidebarOpen | None:
         if open is None:
             return None
