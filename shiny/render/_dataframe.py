@@ -18,18 +18,21 @@ from htmltools import Tag
 
 from .. import ui
 from .._docstring import add_example, no_example
-from ..session._utils import require_active_session
+from ..reactive import Value as ReactiveValue
+from ..reactive import isolate
+from ..session._utils import get_current_session, require_active_session
 from ._dataframe_unsafe import serialize_numpy_dtypes
-from .renderer import Jsonifiable, Renderer
+from .renderer import Jsonifiable, Renderer, ValueFn
 
 if TYPE_CHECKING:
     import pandas as pd
 
+    from ..session._utils import Session
+
 
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
-    def to_payload(self) -> Jsonifiable:
-        ...
+    def to_payload(self) -> Jsonifiable: ...
 
 
 @add_example(ex_dir="../api-examples/data_frame")
@@ -249,9 +252,12 @@ class data_frame(Renderer[DataFrameResult]):
     Row selection
     -------------
     When using the row selection feature, you can access the selected rows by using the
-    `<data_frame_renderer>.input_selected_rows()` method, where `<data_frame_renderer>` is the render function name that corresponds with the `id=` used in :func:`~shiny.ui.outout_data_frame`. Internally, this method retrieves the selected row value from session's `input.<id>_selected_rows()` value. The value returned will be `None` if no rows
-    are selected, or a tuple of integers representing the indices of the selected rows.
-    To filter a pandas data frame down to the selected rows, use
+    `<data_frame_renderer>.input_selected_rows()` method, where `<data_frame_renderer>`
+    is the render function name that corresponds with the `id=` used in
+    :func:`~shiny.ui.outout_data_frame`. Internally, this method retrieves the selected
+    row value from session's `input.<id>_selected_rows()` value. The value returned will
+    be `None` if no rows are selected, or a tuple of integers representing the indices
+    of the selected rows. To filter a pandas data frame down to the selected rows, use
     `df.iloc[list(input.<id>_selected_rows())]`.
 
     Tip
@@ -268,16 +274,72 @@ class data_frame(Renderer[DataFrameResult]):
       objects you can return from the rendering function to specify options.
     """
 
-    _row_selection_mode: Optional[str]
+    _row_selection_mode: str | None
+    _session: Session | None
+    _value: DataFrameResult
+    _data: ReactiveValue[pd.DataFrame | None]
+
+    # Reactive!
+    def data(self) -> pd.DataFrame | None:
+        """
+        Reactive value of the data frame output data.
+        """
+        data = self._data()
+        if data is None:
+            return None
+
+        import pandas as pd
+
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError(f"Unexpected type for self._data: {type(data)}")
+        return data
+
+    def _get_session(self) -> Session:
+        if self._session is None:
+            raise RuntimeError(
+                "The input_selected_rows method can only be used within a reactive context"
+            )
+        return self._session
 
     def auto_output_ui(self) -> Tag:
         return ui.output_data_frame(id=self.output_id)
 
-    async def render(self) -> Jsonifiable:
+    def __init__(self, fn: ValueFn[DataFrameResult]):
+        # Must be done before super().__init__ is called
+        session = get_current_session()
+        self._session = session
+
+        super().__init__(fn)
+
         self._row_selection_mode = None
+        self._data = ReactiveValue(None)
+
+    def _set_output_metadata(self, *, output_id: str) -> None:
+        super()._set_output_metadata(output_id=output_id)
+
+        # Verify that the session used when creating the renderer is the same session used
+        # when executing the renderer. This is to prevent a user from creating a renderer
+        # in one module and setting an output on another.
+
+        active_session = require_active_session(None)
+        if self._get_session() != active_session:
+            raise RuntimeError(
+                "The session used when creating the renderer "
+                "is not the same session used when executing the renderer. "
+                "Please file an issue on GitHub with an example of how to reproduce this error. "
+                "We would be curious to know your use case!"
+            )
+
+    async def render(self) -> Jsonifiable:
+        with isolate():
+            self._data.set(None)
+        self._row_selection_mode = None
+
         value = await self.fn()
         if value is None:
+            self._data.set(None)
             return None
+
         if not isinstance(value, AbstractTabularData):
             value = DataGrid(
                 cast_to_pandas(
@@ -285,24 +347,34 @@ class data_frame(Renderer[DataFrameResult]):
                     "@render.data_frame doesn't know how to render objects of type",
                 )
             )
+
+        if isinstance(value, (DataGrid, DataTable)):
+            self._data.set(value.data)
+        else:
+            self._data.set(value)
         self._row_selection_mode = value.row_selection_mode
+
         return value.to_payload()
 
-    async def _send_message(self, type: str, obj: dict[str, Any]):
-        # TODO-barret; capture session in init method
+    async def _send_message(self, handler: str, obj: dict[str, Any]):
         # TODO-barret; capture data in render method
         # TODO-barret; invalidate data in render method before user fn has been called
-        #
-        active_session = require_active_session(None)
-        id = active_session.ns(self.output_id)
-        await active_session.send_custom_message(
+
+        session = self._get_session()
+        id = session.ns(self.output_id)
+
+        await session.send_custom_message(
             "receiveMessage",
-            {"id": id, "handler": type, "obj": obj},
+            {
+                "id": id,
+                "handler": handler,
+                "obj": obj,
+            },
         )
 
     def input_selected_rows(self) -> tuple[int] | None:
         """
-        Reactive selected rows of the data frame output.
+        Reactive input value of selected rows indicies.
 
         This method is a wrapper around `input.<id>_selected_rows()`, where `<id>` is
         the `id` of the data frame output. This method returns the selected rows and
@@ -314,6 +386,31 @@ class data_frame(Renderer[DataFrameResult]):
             * `None` if the row selection mode is None
             * `tuple[int]`a tuple of integers representing the indices of the selected rows
         """
+        return self._get_session().input[f"{self.output_id}_selected_rows"]()
+
+    def data_selected_rows(self) -> pd.DataFrame | None:
+        """
+        Reactive input value of the selected rows in the data frame output.
+
+        This method is a wrapper around `input.<id>_selected_rows()`, where `<id>` is
+        the `id` of the data frame output. This method returns the selected rows and
+        will cause reactive updates as the selected rows change.
+
+        Returns
+        -------
+        :
+            * `None` if the row selection mode is None
+            * `tuple[int]`a tuple of integers representing the indices of the selected rows
+        """
+        indicies = self.input_selected_rows()
+        if indicies is None:
+            return None
+
+        data = self.data()
+        if data is None:
+            return None
+
+        return data.iloc[list(indicies)]
 
     async def update_row_selection(
         self, idx: Optional[Sequence[int] | int] = None
@@ -333,15 +430,13 @@ class data_frame(Renderer[DataFrameResult]):
             raise ValueError(
                 "Attempted to set multiple row selection values when row_selection_mode is 'single'"
             )
-
-        await self.__send_message("updateRowSelection", {"keys": idx})
+        await self._send_message("updateRowSelection", {"keys": idx})
 
 
 @runtime_checkable
 class PandasCompatible(Protocol):
     # Signature doesn't matter, runtime_checkable won't look at it anyway
-    def to_pandas(self) -> object:
-        ...
+    def to_pandas(self) -> object: ...
 
 
 def cast_to_pandas(x: object, error_message_begin: str) -> object:
