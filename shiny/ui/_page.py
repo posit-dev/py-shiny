@@ -34,13 +34,13 @@ from ._html_deps_external import bootstrap_deps
 from ._html_deps_py_shiny import page_output_dependency
 from ._html_deps_shinyverse import components_dependency
 from ._navs import NavMenu, NavPanel, navset_bar
-from ._sidebar import Sidebar, SidebarOpen, layout_sidebar
+from ._sidebar import Sidebar, SidebarOpenSpec, layout_sidebar
 from ._tag import consolidate_attrs
 from ._utils import get_window_title
 from .css import CssUnit, as_css_padding, as_css_unit
 from .fill._fill import as_fillable_container
 
-page_sidebar_default = SidebarOpen(desktop="open", mobile="always")
+page_sidebar_default: SidebarOpenSpec = {"desktop": "open", "mobile": "always"}
 
 
 @add_example()

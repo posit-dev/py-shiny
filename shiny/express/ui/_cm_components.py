@@ -13,7 +13,7 @@ from ...ui._accordion import AccordionPanel
 from ...ui._card import CardItem
 from ...ui._layout_columns import BreakpointsUser
 from ...ui._navs import NavMenu, NavPanel, NavSet, NavSetBar, NavSetCard
-from ...ui._sidebar import SidebarOpen, SidebarOpenValues
+from ...ui._sidebar import SidebarOpenSpec, SidebarOpenValue
 from ...ui.css import CssUnit
 from .._recall_context import RecallContextManager
 
@@ -44,7 +44,7 @@ __all__ = (
 def sidebar(
     *,
     position: Literal["left", "right"] = "left",
-    open: Optional[SidebarOpenValues | SidebarOpen] = None,
+    open: Optional[SidebarOpenSpec | SidebarOpenValue | Literal["desktop"]] = None,
     width: CssUnit = 250,
     id: Optional[str] = None,
     title: TagChild | str = None,
@@ -69,16 +69,16 @@ def sidebar(
         Where the sidebar should appear relative to the main content, one of `"left"` or
         `"right"`.
     open
-        The initial state of the sidebar, either a string or a
-        :class:`~shiny.ui.SidebarOpen` object. The possible values are:
+        The initial state of the sidebar. If a string, the possible values are:
 
-        * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
         * `"open"`: the sidebar starts open
         * `"closed"`: the sidebar starts closed
         * `"always"`: the sidebar is always open and cannot be closed
 
-        Use a :class:`~shiny.ui.SidebarOpen` object to set different initial states for
-        desktop and mobile.
+        Alternatively, you can provide a dictionary with keys `"desktop"` and `"mobile"`
+        to set different initial states for desktop and mobile. For example, when
+        `{"desktop": "open", "mobile": "closed"}` the sidebar is initialized in the
+        open state on desktop screens or in the closed state on mobile screens.
     id
         A character string. Required if wanting to reactively read (or update) the
         `collapsible` state in a Shiny app.

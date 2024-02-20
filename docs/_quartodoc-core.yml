@@ -287,7 +287,6 @@ quartodoc:
             - types.ImgData
             - types.NavSetArg
             - ui.Sidebar
-            - ui.SidebarOpen
             - ui.CardItem
             - ui.AccordionPanel
             - reactive.Context

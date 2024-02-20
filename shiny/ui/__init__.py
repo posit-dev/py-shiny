@@ -148,7 +148,6 @@ from ._popover import popover
 from ._progress import Progress
 from ._sidebar import (
     Sidebar,
-    SidebarOpen,
     layout_sidebar,
     panel_main,
     panel_sidebar,
@@ -180,7 +179,6 @@ __all__ = (
     "help_text",
     # _sidebar
     "Sidebar",
-    "SidebarOpen",
     "sidebar",
     "layout_sidebar",
     "update_sidebar",

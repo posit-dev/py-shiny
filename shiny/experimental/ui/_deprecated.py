@@ -52,8 +52,8 @@ from ...ui._plot_output_opts import DblClickOpts as MainDblClickOpts
 from ...ui._plot_output_opts import HoverOpts as MainHoverOpts
 from ...ui._sidebar import DeprecatedPanelMain, DeprecatedPanelSidebar
 from ...ui._sidebar import Sidebar as MainSidebar
-from ...ui._sidebar import SidebarOpen as MainSidebarOpen
-from ...ui._sidebar import SidebarOpenValues as MainSidebarOpenValues
+from ...ui._sidebar import SidebarOpenSpec as MainSidebarOpenSpec
+from ...ui._sidebar import SidebarOpenValue as MainSidebarOpenValue
 from ...ui._sidebar import layout_sidebar as main_layout_sidebar
 from ...ui._sidebar import panel_main as main_panel_main
 from ...ui._sidebar import panel_sidebar as main_panel_sidebar
@@ -403,7 +403,7 @@ class Sidebar(MainSidebar):
         children: list[TagChild],
         attrs: TagAttrs,
         position: Literal["left", "right"] = "left",
-        open: Optional[MainSidebarOpenValues | MainSidebarOpen] = None,
+        open: Optional[MainSidebarOpenValue | MainSidebarOpenSpec] = None,
         width: CssUnit = 250,
         id: Optional[str] = None,
         title: TagChild | str = None,

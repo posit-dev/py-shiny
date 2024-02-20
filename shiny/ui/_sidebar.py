@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from copy import copy
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, Optional, cast
+from typing import TYPE_CHECKING, Literal, Optional, TypedDict, cast
 
 from htmltools import (
     HTML,
@@ -43,15 +43,19 @@ __all__ = (
     "panel_main",
 )
 
-SidebarOpenValues = Literal["desktop", "open", "closed", "always"]
+SidebarOpenValue = Literal["open", "closed", "always"]
 """
-The possible values for the `open` parameter in :func:`~shiny.ui.sidebar`.
+A possible value for the `open` parameter in :func:`~shiny.ui.sidebar`:
 
-* `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
 * `"open"`: the sidebar starts open
 * `"closed"`: the sidebar starts closed
 * `"always"`: the sidebar is always open and cannot be closed
 """
+
+
+class SidebarOpenSpec(TypedDict):
+    desktop: SidebarOpenValue
+    mobile: SidebarOpenValue
 
 
 @dataclass
@@ -60,14 +64,19 @@ class SidebarOpen:
     The initial state of the sidebar at `desktop` and `mobile` screen sizes.
     """
 
-    desktop: SidebarOpen._VALUES_TYPE = "open"
+    desktop: SidebarOpenValue = "open"
     """The initial state of the sidebar on desktop screen sizes."""
 
-    mobile: SidebarOpen._VALUES_TYPE = "closed"
+    mobile: SidebarOpenValue = "closed"
     """The initial state of the sidebar on mobile screen sizes."""
 
-    _VALUES_TYPE = Literal["open", "closed", "always"]
-    _VALUES: tuple[SidebarOpen._VALUES_TYPE, ...] = ("open", "closed", "always")
+    _VALUES: tuple[SidebarOpenValue, ...] = ("open", "closed", "always")
+
+    def __post_init__(self):
+        if self.desktop not in self._VALUES:
+            raise ValueError(f"`desktop` must be one of {', '.join(self._VALUES)}")
+        if self.mobile not in self._VALUES:
+            raise ValueError(f"`mobile` must be one of {', '.join(self._VALUES)}")
 
     @classmethod
     def _from_string(cls, open: str) -> SidebarOpen:
@@ -128,7 +137,7 @@ class Sidebar:
         Where the sidebar should appear relative to the main content, one of `"left"` or
         `"right"`.
     open
-        The initial state of the sidebar as a :class:`~shiny.ui.SidebarOpen` object.
+        The initial state of the sidebar.
     id
         The resolved ID. Required if wanting to reactively read (or update) the
         `collapsible` state in a Shiny app.
@@ -176,16 +185,16 @@ class Sidebar:
         Where the sidebar should appear relative to the main content, one of `"left"` or
         `"right"`.
     open
-        The initial state of the sidebar, either a string or a
-        :class:`~shiny.ui.SidebarOpen` object. The possible values are:
+        The initial state of the sidebar. If a string, the possible values are:
 
-        * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
         * `"open"`: the sidebar starts open
         * `"closed"`: the sidebar starts closed
         * `"always"`: the sidebar is always open and cannot be closed
 
-        Use a :class:`~shiny.ui.SidebarOpen` object to set different initial states for
-        desktop and mobile.
+        Alternatively, you can provide a dictionary with keys `"desktop"` and `"mobile"`
+        to set different initial states for desktop and mobile. For example, when
+        `{"desktop": "open", "mobile": "closed"}` the sidebar is initialized in the
+        open state on desktop screens or in the closed state on mobile screens.
     id
         A character string. Required if wanting to reactively read (or update) the
         `collapsible` state in a Shiny app.
@@ -227,7 +236,7 @@ class Sidebar:
         children: list[TagChild],
         attrs: TagAttrs,
         position: Literal["left", "right"] = "left",
-        open: Optional[SidebarOpenValues | SidebarOpen] = None,
+        open: Optional[SidebarOpenSpec | SidebarOpenValue | Literal["desktop"]] = None,
         width: CssUnit = 250,
         id: Optional[str] = None,
         title: TagChild | str = None,
@@ -263,7 +272,9 @@ class Sidebar:
         return self._open
 
     @open.setter
-    def open(self, open: SidebarOpen | SidebarOpenValues | None) -> None:
+    def open(
+        self, open: SidebarOpen | SidebarOpenSpec | SidebarOpenValue | None
+    ) -> None:
         self._open = self._as_open(open)
 
     @property
@@ -289,7 +300,7 @@ class Sidebar:
 
     def _as_open(
         self,
-        open: Optional[SidebarOpen | SidebarOpenValues] = None,
+        open: Optional[SidebarOpen | SidebarOpenSpec | SidebarOpenValue] = None,
     ) -> SidebarOpen | None:
         if open is None:
             return None
@@ -297,16 +308,23 @@ class Sidebar:
         if isinstance(open, str):
             return SidebarOpen._from_string(open)
 
+        if isinstance(open, dict):
+            return SidebarOpen(**open)
+
         if isinstance(open, SidebarOpen):
             return open
 
         raise ValueError("`open` must be a string or a `SidebarOpen` object")
 
-    def _set_default_open(self, open: SidebarOpen | SidebarOpenValues) -> Sidebar:
+    def _set_default_open(
+        self, open: SidebarOpen | SidebarOpenSpec | SidebarOpenValue
+    ) -> Sidebar:
         new_default = self._as_open(open)
 
         if new_default is None:
-            raise ValueError("`open` must be a string or a `SidebarOpen` object")
+            raise ValueError(
+                "`open` must be a string, a `SidebarOpen` object, or a dictionary with keys `desktop` and `mobile`."
+            )
 
         new = copy(self)
         new._default_open = new_default
@@ -372,7 +390,7 @@ class Sidebar:
 def sidebar(
     *args: TagChild | TagAttrs,
     position: Literal["left", "right"] = "left",
-    open: Optional[SidebarOpenValues | SidebarOpen] = None,
+    open: Optional[SidebarOpenSpec | SidebarOpenValue | Literal["desktop"]] = None,
     width: CssUnit = 250,
     id: Optional[str] = None,
     title: TagChild | str = None,
@@ -414,16 +432,16 @@ def sidebar(
         Where the sidebar should appear relative to the main content, one of `"left"` or
         `"right"`.
     open
-        The initial state of the sidebar, either a string or a
-        :class:`~shiny.ui.SidebarOpen` object. The possible values are:
+        The initial state of the sidebar. If a string, the possible values are:
 
-        * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
         * `"open"`: the sidebar starts open
         * `"closed"`: the sidebar starts closed
         * `"always"`: the sidebar is always open and cannot be closed
 
-        Use a :class:`~shiny.ui.SidebarOpen` object to set different initial states for
-        desktop and mobile.
+        Alternatively, you can provide a dictionary with keys `"desktop"` and `"mobile"`
+        to set different initial states for desktop and mobile. For example, when
+        `{"desktop": "open", "mobile": "closed"}` the sidebar is initialized in the
+        open state on desktop screens or in the closed state on mobile screens.
     id
         A character string. Required if wanting to reactively read (or update) the
         `collapsible` state in a Shiny app.

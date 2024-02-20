@@ -53,7 +53,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 ),
                 title="Settings",
                 id="sidebar_dynamic",
-                open=ui.SidebarOpen(input.desktop(), input.mobile()),
+                open={"desktop": input.desktop(), "mobile": input.mobile()},
                 position=input.position(),
             ),
             ui.h2("Dynamic sidebar"),
@@ -69,9 +69,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         if input.desktop() == input.mobile():
             open = f'"{input.desktop()}"'
         elif input.desktop() == "open" and input.mobile() == "closed":
-            open = '"desktop"'
+            open = '{"desktop": "open", "mobile": "closed"}'
         else:
-            open = f'ui.SidebarOpen(desktop="{input.desktop()}", mobile="{input.mobile()}")'
+            open = f'{{"desktop": "{input.desktop()}", "mobile": "{input.mobile()}}}'
 
         return f"""\
 ui.layout_sidebar(
