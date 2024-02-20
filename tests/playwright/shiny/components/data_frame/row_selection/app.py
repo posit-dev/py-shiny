@@ -1,5 +1,4 @@
-import pandas as pd
-from palmerpenguins import load_penguins
+from palmerpenguins import load_penguins  # pyright: ignore[reportMissingTypeStubs]
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 
@@ -34,7 +33,7 @@ def make_server(input: Inputs):
     @render.data_frame
     def grid():
         return render.DataGrid(
-            data=load_penguins(),
+            data=load_penguins(),  # pyright: ignore[reportUnknownArgumentType]
             row_selection_mode=input.selection_mode(),
         )
 
