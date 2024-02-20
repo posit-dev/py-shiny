@@ -49,15 +49,20 @@ clean-test: ## remove test and coverage artifacts
 	rm -rf typings/
 
 typings/appdirs:
+	echo "Creating appdirs stubs"
 	pyright --createstub appdirs
 typings/folium:
+	echo "Creating folium stubs"
 	pyright --createstub folium
 typings/uvicorn:
+	echo "Creating uvicorn stubs"
 	pyright --createstub uvicorn
 typings/seaborn:
+	echo "Creating seaborn stubs"
 	pyright --createstub seaborn
 
 typings/matplotlib/__init__.pyi: ## grab type stubs from GitHub
+	echo "Creating matplotlib stubs"
 	mkdir -p typings
 	git clone --depth 1 https://github.com/microsoft/python-type-stubs typings/python-type-stubs
 	mv typings/python-type-stubs/stubs/matplotlib typings/
@@ -69,19 +74,19 @@ pyright: pyright-typings ## type check with pyright
 	pyright
 
 lint: ## check style with flake8
-	echo "Checking style with flake8."
+	echo "Checking style with flake8"
 	flake8 --show-source .
 
 format: ## format code with black and isort
-	echo "Formatting code with black."
+	echo "Formatting code with black"
 	black .
-	echo "Sorting imports with isort."
+	echo "Sorting imports with isort"
 	isort .
 
 check: ## check code quality with black and isort
-	echo "Checking code with black."
+	echo "Checking code with black"
 	black --check .
-	echo "Sorting imports with isort."
+	echo "Sorting imports with isort"
 	isort --check-only --diff .
 
 test: ## run tests quickly with the default Python
