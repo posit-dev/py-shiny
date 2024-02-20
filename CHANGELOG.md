@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Other changes
 
 * Replaced use of `sys.stderr.write()` with `print(file=sys.stderr)`, because on some platforms `sys.stderr` can be `None`. (#1131)
+* Replaced deprecated `datetime` method calls with `datetime.fromtimestamp(tz=timezone.utc)` and `datetime.now(timezone.utc)`. (#1142)
 
 
 ## [0.7.1] - 2024-02-05

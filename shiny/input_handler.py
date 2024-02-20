@@ -4,7 +4,7 @@ from __future__ import annotations
 
 __all__ = ("input_handlers",)
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING, Any, Callable, Dict
 
 if TYPE_CHECKING:
@@ -113,10 +113,10 @@ def _(
     value: int | float | list[int] | list[float], name: ResolvedId, session: Session
 ) -> datetime | tuple[datetime, datetime]:
     if isinstance(value, (int, float)):
-        return datetime.utcfromtimestamp(value)
+        return datetime.fromtimestamp(value, timezone.utc)
     return (
-        datetime.utcfromtimestamp(value[0]),
-        datetime.utcfromtimestamp(value[1]),
+        datetime.fromtimestamp(value[0], timezone.utc),
+        datetime.fromtimestamp(value[1], timezone.utc),
     )
 
 
