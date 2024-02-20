@@ -484,6 +484,8 @@ export class ShinyDataFrameOutput extends HTMLElement {
 
     const myDiv = document.createElement("div");
     myDiv.classList.add("html-fill-container", "html-fill-item");
+    myDiv.style.marginLeft = "auto";
+    myDiv.style.marginRight = "auto";
     target.appendChild(myDiv);
 
     this.reactRoot = createRoot(myDiv);

@@ -41,6 +41,7 @@
   height: 500px;
   &:not(.scrolling) {
     height: auto;
+    flex-basis: 500px;
   }
 
   > table {
