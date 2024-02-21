@@ -338,6 +338,9 @@ class Sidebar:
                 "`open` must be a string, a `SidebarOpen` object, or a dictionary with keys `desktop` and `mobile`."
             )
 
+        if new_default == self._default_open:
+            return self
+
         new = copy(self)
         new._default_open = new_default
 
