@@ -385,14 +385,15 @@ class Sidebar:
     def _collapse_tag(self, id: str | None) -> Tag:
         """Create the <button> tag for the collapse button."""
         is_expanded = self.open().desktop == "open" or self.open().mobile == "open"
+        is_always = self.open() == SidebarOpen(desktop="always", mobile="always")
 
         return tags.button(
             _collapse_icon(),
             class_="collapse-toggle",
             type="button",
             title="Toggle sidebar",
-            aria_expanded="true" if is_expanded else "false",
-            aria_controls=id,
+            aria_expanded=("true" if is_expanded else "false") if not is_always else None,
+            aria_controls=id if not is_always else None,
         )
 
     def _sidebar_tag(self, id: str | None) -> Tag:
