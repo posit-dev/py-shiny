@@ -110,14 +110,20 @@ def _(
 
 @input_handlers.add("shiny.datetime")
 def _(
-    value: int | float | list[int] | list[float], name: ResolvedId, session: Session
+    value: int | float | list[int] | list[float],
+    name: ResolvedId,
+    session: Session,
 ) -> datetime | tuple[datetime, datetime]:
+    def as_utc_date(x: int | float) -> datetime:
+        dt = datetime.fromtimestamp(x, timezone.utc)
+        # Remove hour offset from print method by removing the timezone
+        # Ex: 2021-08-01T00:00:00+00:00 -> 2021-08-01T00:00:00
+        # This is done as all dates are in UTC
+        return dt.replace(tzinfo=None)
+
     if isinstance(value, (int, float)):
-        return datetime.fromtimestamp(value, timezone.utc)
-    return (
-        datetime.fromtimestamp(value[0], timezone.utc),
-        datetime.fromtimestamp(value[1], timezone.utc),
-    )
+        return as_utc_date(value)
+    return (as_utc_date(value[0]), as_utc_date(value[1]))
 
 
 @input_handlers.add("shiny.action")
