@@ -141,8 +141,6 @@ class Sidebar:
     position
         Where the sidebar should appear relative to the main content, one of `"left"` or
         `"right"`.
-    open
-        The initial state of the sidebar.
     id
         The resolved ID. Required if wanting to reactively read (or update) the
         `collapsible` state in a Shiny app.
@@ -176,6 +174,12 @@ class Sidebar:
           and right, and the third will be bottom.
         * If four, then the values will be interpreted as top, right, bottom, and left
           respectively.
+
+    Methods
+    -------
+    open
+        Get or set the initial state of the sidebar. Returns a dataclass with `desktop`
+        and `mobile` attributes.
 
     Parameters
     ----------
@@ -269,28 +273,29 @@ class Sidebar:
         self.attrs = attrs
         self.children = children
 
-    @property
-    def open(self) -> SidebarOpen:
+    def open(
+        self,
+        value: Optional[
+            SidebarOpen | SidebarOpenSpec | SidebarOpenValue | Literal["desktop"]
+        ] = None,
+    ) -> SidebarOpen:
+        if value is not None:
+            self._open = self._as_open(value)
+
         if self._open is None:
             return self._default_open
-
-        return self._open
-
-    @open.setter
-    def open(
-        self, open: SidebarOpen | SidebarOpenSpec | SidebarOpenValue | None
-    ) -> None:
-        self._open = self._as_open(open)
+        else:
+            return self._open
 
     @property
     def max_height_mobile(self) -> Optional[str]:
         max_height_mobile = self._max_height_mobile
 
-        if max_height_mobile is not None and self.open.mobile != "always":
+        if max_height_mobile is not None and self.open().mobile != "always":
             warnings.warn(
                 "The `shiny.ui.sidebar(max_height_mobile=)` argument only applies to "
                 + "the sidebar when `open` is `'always'` on mobile, but "
-                + f"`open` is `'{self.open.mobile}'`. "
+                + f"`open` is `'{self.open().mobile}'`. "
                 + "The `max_height_mobile` argument will be ignored.",
                 # `stacklevel=2`: Refers to the caller of `.max_height_mobile` property method
                 stacklevel=2,
@@ -342,14 +347,14 @@ class Sidebar:
         if isinstance(self.id, ResolvedId):
             return self.id
 
-        if self.open.desktop == "always" and self.open.mobile == "always":
+        if self.open().desktop == "always" and self.open().mobile == "always":
             return None
 
         # Provide a random id when sidebar is collapsible for accessibility reasons
         return private_random_id("bslib_sidebar")
 
     def _collapse_tag(self) -> Tag:
-        is_expanded = self.open.desktop == "open" or self.open.mobile == "open"
+        is_expanded = self.open().desktop == "open" or self.open().mobile == "open"
 
         return tags.button(
             _collapse_icon(),
@@ -362,7 +367,7 @@ class Sidebar:
 
     def _sidebar_tag(self) -> Tag:
         is_hidden_initially = (
-            self.open.desktop == "closed" or self.open.mobile == "closed"
+            self.open().desktop == "closed" or self.open().mobile == "closed"
         )
 
         return tags.aside(
@@ -628,17 +633,19 @@ def layout_sidebar(
     res = div(
         {"class": "bslib-sidebar-layout bslib-mb-spacing"},
         {"class": "sidebar-right"} if sidebar.position == "right" else None,
-        {"class": "sidebar-collapsed"} if sidebar.open.desktop == "closed" else None,
+        {"class": "sidebar-collapsed"} if sidebar.open().desktop == "closed" else None,
         main,
         sidebar,
         components_dependency(),
         _sidebar_init_js(),
         data_bslib_sidebar_init="true",
-        data_open_desktop=sidebar.open.desktop,
-        data_open_mobile=sidebar.open.mobile,
-        data_collapsible_mobile="true" if sidebar.open.mobile != "always" else "false",
+        data_open_desktop=sidebar.open().desktop,
+        data_open_mobile=sidebar.open().mobile,
+        data_collapsible_mobile="true"
+        if sidebar.open().mobile != "always"
+        else "false",
         data_collapsible_desktop=(
-            "true" if sidebar.open.desktop != "always" else "false"
+            "true" if sidebar.open().desktop != "always" else "false"
         ),
         data_bslib_sidebar_border=trinary(border),
         data_bslib_sidebar_border_radius=trinary(border_radius),
