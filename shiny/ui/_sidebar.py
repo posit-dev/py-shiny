@@ -17,6 +17,8 @@ from htmltools import (
     tags,
 )
 
+from shiny.types import MISSING, MISSING_TYPE
+
 from .._deprecated import warn_deprecated
 from .._docstring import add_example, no_example
 from .._namespaces import ResolvedId, resolve_id_or_none
@@ -277,12 +279,17 @@ class Sidebar:
 
     def open(
         self,
-        value: Optional[
-            SidebarOpen | SidebarOpenSpec | SidebarOpenValue | Literal["desktop"]
-        ] = None,
+        value: (
+            SidebarOpen
+            | SidebarOpenSpec
+            | SidebarOpenValue
+            | Literal["desktop"]
+            | None
+            | MISSING_TYPE
+        ) = MISSING,
     ) -> SidebarOpen:
         """Get or set the initial state of the sidebar."""
-        if value is not None:
+        if not isinstance(value, MISSING_TYPE):
             self._open = self._as_open(value)
 
         if self._open is None:
