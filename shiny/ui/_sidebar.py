@@ -79,11 +79,14 @@ class SidebarOpen:
         compare=False,
     )
 
+    def _values_str(self) -> str:
+        return f"""'{"', '".join(self._VALUES)}'"""
+
     def __post_init__(self):
         if self.desktop not in self._VALUES:
-            raise ValueError(f"`desktop` must be one of {', '.join(self._VALUES)}")
+            raise ValueError(f"`desktop` must be one of {self._values_str()}")
         if self.mobile not in self._VALUES:
-            raise ValueError(f"`mobile` must be one of {', '.join(self._VALUES)}")
+            raise ValueError(f"`mobile` must be one of {self._values_str()}")
 
     @classmethod
     def _from_string(cls, open: str) -> SidebarOpen:
@@ -118,7 +121,8 @@ class SidebarOpen:
             return cls(desktop=open, mobile=open)
         else:
             raise ValueError(
-                f"`open` must be one of {', '.join(cls._VALUES)}, or 'desktop'"
+                f"`open` must be one of {cls._values_str(cls)}, or a dictionary "
+                + "with keys `desktop` and `mobile` using these values."
             )
 
 
