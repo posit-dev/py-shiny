@@ -647,9 +647,9 @@ def layout_sidebar(
         data_bslib_sidebar_init="true",
         data_open_desktop=sidebar.open().desktop,
         data_open_mobile=sidebar.open().mobile,
-        data_collapsible_mobile="true"
-        if sidebar.open().mobile != "always"
-        else "false",
+        data_collapsible_mobile=(
+            "true" if sidebar.open().mobile != "always" else "false"
+        ),
         data_collapsible_desktop=(
             "true" if sidebar.open().desktop != "always" else "false"
         ),
