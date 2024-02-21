@@ -112,18 +112,35 @@ class SidebarOpen:
         :
             A :class:`~shiny.ui.SidebarOpen` object.
         """
+        bad_value = ValueError(
+            f"`open` must be a non-empty string of one of {cls._values_str(cls)}."
+        )
+
         if not isinstance(open, str) or len(open) == 0:
-            raise ValueError("`open` must be a non-empty string")
+            raise bad_value
 
         if open == "desktop":
             return cls(desktop="open", mobile="closed")
         elif open in cls._VALUES:
             return cls(desktop=open, mobile=open)
         else:
-            raise ValueError(
-                f"`open` must be one of {cls._values_str(cls)}, or a dictionary "
-                + "with keys `desktop` and `mobile` using these values."
-            )
+            raise bad_value
+
+    @classmethod
+    def _as_open(
+        cls,
+        open: SidebarOpenSpec | SidebarOpenValue | Literal["desktop"],
+    ) -> SidebarOpen:
+        if isinstance(open, dict):
+            return cls(**open)
+
+        if isinstance(open, str):
+            return cls._from_string(open)
+
+        raise ValueError(
+            f"`open` must be one of {cls._values_str(cls)}, "
+            + "or a dictionary with keys `desktop` and `mobile` using these values."
+        )
 
 
 @no_example()
@@ -331,16 +348,10 @@ class Sidebar:
         if open is None:
             return None
 
-        if isinstance(open, str):
-            return SidebarOpen._from_string(open)
-
-        if isinstance(open, dict):
-            return SidebarOpen(**open)
-
         if isinstance(open, SidebarOpen):
             return open
 
-        raise ValueError("`open` must be a string or a `SidebarOpen` object")
+        return SidebarOpen._as_open(open)
 
     def _set_default_open(
         self, open: SidebarOpen | SidebarOpenSpec | SidebarOpenValue
@@ -392,7 +403,9 @@ class Sidebar:
             class_="collapse-toggle",
             type="button",
             title="Toggle sidebar",
-            aria_expanded=("true" if is_expanded else "false") if not is_always else None,
+            aria_expanded=("true" if is_expanded else "false")
+            if not is_always
+            else None,
             aria_controls=id if not is_always else None,
         )
 
