@@ -358,7 +358,7 @@ class Sidebar:
         # Provide a random id when sidebar is collapsible for accessibility reasons
         return private_random_id("bslib_sidebar")
 
-    def _collapse_tag(self) -> Tag:
+    def _collapse_tag(self, id: str | None) -> Tag:
         is_expanded = self.open().desktop == "open" or self.open().mobile == "open"
 
         return tags.button(
@@ -367,17 +367,17 @@ class Sidebar:
             type="button",
             title="Toggle sidebar",
             aria_expanded="true" if is_expanded else "false",
-            aria_controls=self._resolved_sidebar_id(),
+            aria_controls=id,
         )
 
-    def _sidebar_tag(self) -> Tag:
+    def _sidebar_tag(self, id: str | None) -> Tag:
         is_hidden_initially = (
             self.open().desktop == "closed" or self.open().mobile == "closed"
         )
 
         return tags.aside(
             {
-                "id": self._resolved_sidebar_id(),
+                "id": id,
                 "class": "sidebar",
                 "hidden": "true" if is_hidden_initially else None,
             },
@@ -399,7 +399,8 @@ class Sidebar:
         )
 
     def tagify(self) -> TagList:
-        taglist = TagList(self._sidebar_tag(), self._collapse_tag())
+        id = self._resolved_sidebar_id()
+        taglist = TagList(self._sidebar_tag(id), self._collapse_tag(id))
         return taglist.tagify()
 
 
@@ -921,7 +922,7 @@ class DeprecatedPanelSidebar(
         """
         Tagify the `self.sidebar.tag` and return the result in a TagList
         """
-        return TagList(self.sidebar._sidebar_tag().tagify())
+        return TagList(self.sidebar._sidebar_tag(id=None).tagify())
 
 
 # This class should be removed when `panel_main()` is removed
