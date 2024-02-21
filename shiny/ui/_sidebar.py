@@ -267,7 +267,7 @@ class Sidebar:
         # User-provided initial open state
         self._open: SidebarOpen | None = self._as_open(open)
         # Shiny or consumer-provided default open state, change with `_set_default_open()`
-        self._default_open = SidebarOpen()
+        self._default_open = SidebarOpen(desktop="open", mobile="closed")
         self.position = position
         self.width = as_css_unit(width)
         self._max_height_mobile = max_height_mobile
