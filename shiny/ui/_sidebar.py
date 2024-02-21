@@ -281,6 +281,7 @@ class Sidebar:
             SidebarOpen | SidebarOpenSpec | SidebarOpenValue | Literal["desktop"]
         ] = None,
     ) -> SidebarOpen:
+        """Get or set the initial state of the sidebar."""
         if value is not None:
             self._open = self._as_open(value)
 
@@ -333,6 +334,14 @@ class Sidebar:
     def _set_default_open(
         self, open: SidebarOpen | SidebarOpenSpec | SidebarOpenValue
     ) -> Sidebar:
+        """
+        Sets the default or fallback value of `open` for the sidebar. In other words,
+        this determines the fallback value of `open` if the user did not set `open` when
+        they called `sidebar()`.
+
+        This method avoids modifying the original object in place and returns a new copy
+        of the sidebar object if needed.
+        """
         new_default = self._as_open(open)
 
         if new_default is None:
@@ -349,16 +358,21 @@ class Sidebar:
         return new
 
     def _resolved_sidebar_id(self) -> Optional[str]:
+        """
+        Returns the resolved ID of the sidebar, or `None` if the sidebar is always open.
+        When the sidebar is collapsible, but the user hasn't provided an ID, a random ID
+        is generated and returned.
+        """
         if isinstance(self.id, ResolvedId):
             return self.id
 
         if self.open().desktop == "always" and self.open().mobile == "always":
             return None
 
-        # Provide a random id when sidebar is collapsible for accessibility reasons
         return private_random_id("bslib_sidebar")
 
     def _collapse_tag(self, id: str | None) -> Tag:
+        """Create the <button> tag for the collapse button."""
         is_expanded = self.open().desktop == "open" or self.open().mobile == "open"
 
         return tags.button(
@@ -371,6 +385,7 @@ class Sidebar:
         )
 
     def _sidebar_tag(self, id: str | None) -> Tag:
+        """Create the `<aside>` tag for the sidebar."""
         is_hidden_initially = (
             self.open().desktop == "closed" or self.open().mobile == "closed"
         )
