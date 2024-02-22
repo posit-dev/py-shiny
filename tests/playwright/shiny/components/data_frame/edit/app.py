@@ -1,7 +1,7 @@
 import pandas as pd
 from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 
-from shiny import App, Inputs, reactive, render, req, ui
+from shiny import App, Inputs, reactive, render, ui
 
 # Load the dataset
 df = reactive.value(load_penguins_raw())
@@ -62,7 +62,7 @@ def server(input: Inputs):
 
     @summary_data.on_cell_update
     async def handle_edit(
-        # Drop this param for now!
+        # TODO-barret; Drop this param for now!
         data: pd.DataFrame,
         *,
         row_index: int,
@@ -92,18 +92,29 @@ def server(input: Inputs):
         #     for updated_cell_info in
         #     return
 
+        from typing import TypedDict
+
+        class CellUpdate(TypedDict):
+            row_index: int
+            column_id: str
+            value: str
+            prev: str
+
         @summary_data.on_cell_update_full
-        async def handle_edit(
+        async def handle_edit_full(
             # data: pd.DataFrame,
             *,
-            cell_changes: list[dict],
+            cell_changes: list[CellUpdate],
             # row_index: int,
             # column_id: str,
             # value: str,
             # prev: str,
         ):
             data_local = summary_data.data_patched()
-            for change in cell_changes:
+            for change in cell_changes:  # typing: ignore
+                row_index = change["row_index"]
+                column_id = change["column_id"]
+                value = change["value"]
                 data_local.iat[row_index, column_id] = value
             return data_local
 
@@ -121,7 +132,7 @@ def server(input: Inputs):
         #     ...
 
         @summary_data.on_cell_update
-        async def handle_edit(
+        async def handle_edit_simple(
             data: pd.DataFrame,
             *,
             row_index: int,
@@ -147,7 +158,7 @@ def server(input: Inputs):
             # # df
             # df_copy = df.copy()
             # df_copy.iat[edit["row"], edit["col"]] = edit["new_value"]
-            return df_copy
+            # return df_copy
 
 
 app = App(app_ui, server)

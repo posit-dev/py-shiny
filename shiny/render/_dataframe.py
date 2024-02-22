@@ -5,8 +5,6 @@ import json
 from typing import (
     TYPE_CHECKING,
     Any,
-    Awaitable,
-    Callable,
     Literal,
     Optional,
     Protocol,
@@ -21,7 +19,6 @@ from htmltools import Tag
 
 from .. import ui
 from .._docstring import add_example, no_example
-from .._utils import wrap_async
 from ..reactive import Value as ReactiveValue
 from ..reactive import isolate
 from ..session._utils import (
