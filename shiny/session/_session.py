@@ -386,6 +386,9 @@ class Session(object, metaclass=SessionMeta):
     async def _dispatch(self, message: ClientMessageOther) -> None:
         try:
             func = self._message_handlers[message["method"]]
+        except KeyError:
+            self._send_error_response("Unknown method: " + message["method"])
+            return
         except AttributeError:
             self._send_error_response("Unknown method: " + message["method"])
             return
