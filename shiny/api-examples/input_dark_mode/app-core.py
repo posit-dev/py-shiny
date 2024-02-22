@@ -27,6 +27,7 @@ app_ui = ui.page_navbar(
     ui.nav_spacer(),
     ui.nav_control(ui.input_dark_mode(id="mode")),
     title="Shiny Dark Mode",
+    id="page",
     fillable="One",
 )
 
