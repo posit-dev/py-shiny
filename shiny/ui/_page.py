@@ -11,6 +11,7 @@ __all__ = (
     "page_output",
 )
 
+from copy import copy
 from typing import Any, Callable, Literal, Optional, Sequence, cast
 
 from htmltools import (
@@ -34,13 +35,13 @@ from ._html_deps_external import bootstrap_deps
 from ._html_deps_py_shiny import page_output_dependency
 from ._html_deps_shinyverse import components_dependency
 from ._navs import NavMenu, NavPanel, navset_bar
-from ._sidebar import Sidebar, SidebarOpenSpec, layout_sidebar
+from ._sidebar import Sidebar, SidebarOpen, layout_sidebar
 from ._tag import consolidate_attrs
 from ._utils import get_window_title
 from .css import CssUnit, as_css_padding, as_css_unit
 from .fill._fill import as_fillable_container
 
-page_sidebar_default: SidebarOpenSpec = {"desktop": "open", "mobile": "always"}
+page_sidebar_default: SidebarOpen = SidebarOpen(desktop="open", mobile="always")
 
 
 @add_example()
@@ -94,7 +95,9 @@ def page_sidebar(
             "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
         )
 
-    sidebar = sidebar._set_default_open(page_sidebar_default)
+    if sidebar._default_open != page_sidebar_default:
+        sidebar = copy(sidebar)
+        sidebar._default_open = page_sidebar_default
 
     attrs, children = consolidate_attrs(*args, **kwargs)
 
@@ -217,7 +220,9 @@ def page_navbar(
             )
 
         pageClass += " has-page-sidebar"
-        sidebar = sidebar._set_default_open(page_sidebar_default)
+        if sidebar._default_open != page_sidebar_default:
+            sidebar = copy(sidebar)
+            sidebar._default_open = page_sidebar_default
 
     tagAttrs: TagAttrs = {"class": pageClass}
 

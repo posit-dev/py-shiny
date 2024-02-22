@@ -126,19 +126,3 @@ def test_sidebar_throws_for_invalid_open():
 
     with pytest.raises(TypeError, match="widescreen"):
         ui.sidebar(open={"widescreen": "open"})  # pyright: ignore[reportArgumentType]
-
-
-def test_sidebar_updates_default_without_modifying_original():
-    s1 = ui.sidebar()
-    s2 = s1._set_default_open("closed")
-
-    assert s1.open() == ui.sidebar().open()
-    assert s2.open() == ui.sidebar(open="closed").open()
-
-    # Insert user preference in front of default
-    s1.open({"desktop": "always"})  # pyright: ignore[reportArgumentType]
-    assert s1.open().desktop == "always"
-
-    # Remove user preference, should revert to default
-    s1.open(None)
-    assert s1.open() == ui.sidebar().open()

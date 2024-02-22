@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from copy import copy
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal, Optional, TypedDict, cast
 
@@ -349,32 +348,6 @@ class Sidebar:
             return open
 
         return SidebarOpen._as_open(open)
-
-    def _set_default_open(
-        self, open: SidebarOpen | SidebarOpenSpec | SidebarOpenValue
-    ) -> Sidebar:
-        """
-        Sets the default or fallback value of `open` for the sidebar. In other words,
-        this determines the fallback value of `open` if the user did not set `open` when
-        they called `sidebar()`.
-
-        This method avoids modifying the original object in place and returns a new copy
-        of the sidebar object if needed.
-        """
-        new_default = self._as_open(open)
-
-        if new_default is None:
-            raise ValueError(
-                "`open` must be a string, a `SidebarOpen` object, or a dictionary with keys `desktop` and `mobile`."
-            )
-
-        if new_default == self._default_open:
-            return self
-
-        new = copy(self)
-        new._default_open = new_default
-
-        return new
 
     def _get_sidebar_id(self) -> Optional[str]:
         """
