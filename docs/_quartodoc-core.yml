@@ -56,6 +56,7 @@ quartodoc:
         - ui.input_password
         - ui.input_action_button
         - ui.input_action_link
+        - ui.input_task_button
     - title: Value boxes
       desc: Prominently display a value and label in a box that can be expanded to show more information.
       contents:
@@ -140,6 +141,9 @@ quartodoc:
           dynamic: "shiny.ui.update_text"
         - name: ui.update_navs
           dynamic: true
+        - ui.update_action_button
+        - ui.update_action_link
+        - ui.update_task_button
     - title: Update UI Layouts
       desc: ""
       contents:
