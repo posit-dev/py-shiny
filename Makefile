@@ -1,4 +1,4 @@
-.PHONY: help clean clean-test clean-pyc clean-build help lint test playwright-shiny playwright-examples playwright-deploys install-trcli install-playwright
+.PHONY: help clean% check% format% help lint test playwright-shiny playwright-examples playwright-deploys install-trcli install-playwright
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
