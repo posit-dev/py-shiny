@@ -92,6 +92,7 @@ def test_sidebar_sets_aria_expanded_on_collapse_toggle():
     assert get_sidebar_collapse_aria_expanded("desktop") == "true"
     assert "aria-expanded" not in ui.sidebar(open="always").tagify()[1].attrs
 
+
 def test_sidebar_throws_for_invalid_open():
     try:
         ui.sidebar(open="bad")
@@ -116,6 +117,7 @@ def test_sidebar_throws_for_invalid_open():
         raise AssertionError("Should have raised TypeError")
     except TypeError as e:
         assert "widescreen" in str(e)
+
 
 def test_sidebar_updates_default_without_modifying_original():
     s1 = ui.sidebar()

@@ -403,9 +403,9 @@ class Sidebar:
             class_="collapse-toggle",
             type="button",
             title="Toggle sidebar",
-            aria_expanded=("true" if is_expanded else "false")
-            if not is_always
-            else None,
+            aria_expanded=(
+                ("true" if is_expanded else "false") if not is_always else None
+            ),
             aria_controls=id if not is_always else None,
         )
 
