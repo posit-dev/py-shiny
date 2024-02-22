@@ -112,8 +112,9 @@ class SidebarOpen:
         :
             A :class:`~shiny.ui.SidebarOpen` object.
         """
+        values_str = f"""'{"', '".join(cls._VALUES)}'"""
         bad_value = ValueError(
-            f"`open` must be a non-empty string of one of {cls._values_str(cls)}."
+            f"`open` must be a non-empty string of one of {values_str}."
         )
 
         if not isinstance(open, str) or len(open) == 0:
@@ -138,7 +139,7 @@ class SidebarOpen:
             return cls._from_string(open)
 
         raise ValueError(
-            f"`open` must be one of {cls._values_str(cls)}, "
+            f"""`open` must be one of '{"', '".join(cls._VALUES)}', """
             + "or a dictionary with keys `desktop` and `mobile` using these values."
         )
 
