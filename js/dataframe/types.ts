@@ -13,6 +13,7 @@ export interface DataGridOptions {
   style?: "table" | "grid";
   summary?: boolean | string;
   row_selection_mode?: SelectionMode;
+  editable?: boolean;
   filters?: boolean;
   width?: string;
   height?: string;

@@ -1,3 +1,5 @@
+import { useImmer } from "use-immer";
+import { ImmutableSet } from "./immutable-set";
 import css from "./styles.scss";
 
 import {
@@ -31,9 +33,43 @@ import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
 import { PandasData, TypeHint } from "./types";
 
+import { ResponseValue, makeRequest } from "./request";
+// setTimeout(() => {
+//   console.log("Making request!");
+//   makeRequest(
+//     "dataframeUpdateCell",
+//     [1, 2, 3],
+//     (value: ResponseValue) => {
+//       console.log("success!", value);
+//     },
+//     (err: string) => {
+//       console.error("error!", err);
+//     },
+//     undefined
+//   );
+// }, 2000);
+
+// TODO-barret;
+
+// export interface PandasData<TIndex> {
+//   columns: ReadonlyArray<string>;
+//   // index: ReadonlyArray<TIndex>;
+//   data: unknown[][];
+//   type_hints?: ReadonlyArray<TypeHint>;
+//   options: DataGridOptions;
+// }
+
 declare module "@tanstack/table-core" {
   interface ColumnMeta<TData extends RowData, TValue> {
     typeHint: TypeHint;
+  }
+  interface TableMeta<TData extends RowData> {
+    updateData: (params: {
+      rowIndex: number;
+      columnId: string;
+      value: unknown;
+      prev: unknown;
+    }) => void;
   }
 }
 // TODO: Right-align numeric columns, maybe change font
@@ -81,23 +117,190 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
           meta: {
             typeHint: typeHint,
           },
+          cell: ({
+            getValue,
+            row: { index: rowIndex },
+            column: { id: columnId },
+            table,
+          }) => {
+            const initialValue = getValue();
+            // We need to keep and update the state of the cell normally
+            const [value, setValue] = useImmer(initialValue);
+
+            const [target, setTarget] = useImmer(null);
+
+            // When the input is blurred, we'll call our table meta's updateData function
+            // console.log("rendering cell", rowIndex, id, initialValue, value);
+            const onBlur = () => {
+              // console.log("on blur!", initialValue, value);
+              // Only update if the value has changed
+              if (initialValue !== value) {
+                table.options.meta?.updateData({
+                  rowIndex,
+                  columnId,
+                  value,
+                  prev: initialValue,
+                });
+              }
+            };
+
+            useEffect(() => {
+              if (!target) return;
+
+              target.focus();
+              const onEsc = (e: KeyboardEvent) => {
+                if (e.key !== "Escape") return;
+                target.blur();
+              };
+              const onEnter = (e: KeyboardEvent) => {
+                if (e.key !== "Enter") return;
+                const hasShift = e.shiftKey;
+
+                // Unselect the cell
+                target.blur();
+
+                // console.log(target, target.parentElement);
+                const cellEl = target.parentElement as HTMLTableCellElement;
+                const rowEl = cellEl.parentElement as HTMLTableRowElement;
+
+                let nextRowEl = hasShift
+                  ? (rowEl.previousSibling as HTMLTableRowElement)
+                  : (rowEl.nextSibling as HTMLTableRowElement);
+                // If there is no next row, set to self as to not exit the table
+                nextRowEl = nextRowEl ?? rowEl;
+
+                // Get current col index of td so that we can select the same col in the
+                // _next_ row
+                const cellElColIndex = Array.from(rowEl.children).indexOf(
+                  cellEl
+                );
+                // Focus and highlight the next cell
+                const nextInputEl = nextRowEl.cells
+                  .item(cellElColIndex)
+                  .querySelector("input");
+                nextInputEl?.focus();
+                nextInputEl?.select();
+              };
+              target.addEventListener("keydown", onEsc);
+              target.addEventListener("keydown", onEnter);
+
+              return () => {
+                target.removeEventListener("keydown", onEsc);
+                target.removeEventListener("keydown", onEnter);
+              };
+            }, [target]);
+
+            // Add esc listener on focus
+            const onFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+              setTarget(e.target);
+            };
+
+            // If the initialValue is changed external, sync it up with our state
+            React.useEffect(() => {
+              setValue(initialValue);
+            }, [initialValue]);
+
+            return (
+              <input
+                value={value as string}
+                onChange={(e) => {
+                  console.log("on change!");
+                  setValue(e.target.value);
+                }}
+                onBlur={onBlur}
+                onFocus={onFocus}
+              />
+            );
+          },
         };
       }),
     [columns]
   );
 
-  // Not sure if it's even necessary to clone
-  const dataClone = useMemo(() => [...rowData], [rowData]);
+  // function useSkipper() {
+  //   const shouldSkipRef = React.useRef(true);
+  //   const shouldSkip = shouldSkipRef.current;
+
+  //   // Wrap a function with this to skip a pagination reset temporarily
+  //   const skip = React.useCallback(() => {
+  //     shouldSkipRef.current = false;
+  //   }, []);
+
+  //   React.useEffect(() => {
+  //     shouldSkipRef.current = true;
+  //   });
+
+  //   return [shouldSkip, skip] as const;
+  // }
+  // const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper();
+
+  const dataOriginal = useMemo(() => rowData, [rowData]);
+  const [dataState, setData] = useImmer(rowData);
 
   const filterOpts = useFilter<unknown[]>(withFilters);
 
   const options: TableOptions<unknown[]> = {
-    data: dataClone,
+    data: dataState,
     columns: coldefs,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     ...filterOpts,
-    //debugAll: true,
+    debugAll: true,
+    // Provide our updateData function to our table meta
+    // autoResetPageIndex,
+    meta: {
+      updateData: ({
+        rowIndex,
+        columnId,
+        value,
+        prev,
+      }: {
+        rowIndex: number;
+        columnId: string;
+        value: unknown;
+        prev: unknown;
+      }) => {
+        // // Skip page index reset until after next rerender
+        // skipAutoResetPageIndex();
+
+        const colIndex = columns.indexOf(columnId);
+        console.log(
+          "Set data here! (Send info back to shiny)",
+          rowIndex,
+          columnId,
+          colIndex,
+          value
+        );
+        makeRequest(
+          "dataframeUpdateCell",
+          [{ rowIndex, columnId, value, prev }],
+          (value: ResponseValue) => {
+            console.log("success!", value, rowIndex, columnId, prev);
+            setData((draft) => {
+              const row = draft[rowIndex];
+              console.log(
+                "Setting new value!",
+                value,
+                columnId,
+                draft[rowIndex]
+              );
+              row[colIndex] = value;
+              // console.log(draft[rowIndex][columnId]);
+              // draft.forEach((row, index) => {
+              //   if (index === rowIndex) {
+              //     console.log("Setting new value!", value, columnId, row);
+              //     row[columnId] = value;
+              //   }
+              // });
+            });
+          },
+          (err: string) => {
+            console.error("error!", err);
+          },
+          undefined
+        );
+      },
+    },
   };
   const table = useReactTable(options);
 
@@ -144,6 +347,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
     tableStyle === "grid" ? "shiny-data-grid-grid" : "shiny-data-grid-table";
   const tableClass = tableStyle === "table" ? "table table-sm" : null;
 
+  // ### Row selection ###############################################################
   const rowSelectionMode =
     data.options["row_selection_mode"] ?? SelectionMode.MultiNative;
   const canSelect = rowSelectionMode !== SelectionMode.None;
@@ -220,6 +424,133 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
     }
   }, [[...rowSelection.keys()]]);
 
+  // ### End row selection ############################################################
+
+  // ### Editable cells ###############################################################
+  // type TKey = DOMStringMap[string]: string
+  type TKey = typeof HTMLTableRowElement.prototype.dataset.key;
+  type TElement = HTMLTableRowElement;
+
+  const editable = data.options["editable"] ?? false;
+  if (editable && canSelect) {
+    // TODO-barret; maybe listen for a double click?
+    // Is is possible to rerender on double click independent of the row selection?
+    console.error(
+      "Should not have editable and row selection at the same time"
+    );
+  }
+
+  // const [selectedKeys, setSelectedKeys] = useImmer<ImmutableSet<TKey>>(
+  //   ImmutableSet.empty()
+  // );
+
+  // // The anchor is the item that was most recently selected with a click or ctrl-click,
+  // // and is used to determine the "other end" of a shift-click selection operation.
+  // const [anchor, setAnchor] = useImmer<TKey | null>(null);
+
+  // const onMouseDown = (event: React.MouseEvent<TElement, MouseEvent>): void => {
+  //   if (mode === SelectionMode.None) {
+  //     return;
+  //   }
+
+  //   const el = event.currentTarget as TElement;
+  //   const key = keyAccessor(el);
+
+  //   const result = performMouseDownAction<TKey, TElement>(
+  //     mode,
+  //     between,
+  //     selectedKeys,
+  //     event,
+  //     key,
+  //     anchor
+  //   );
+  //   if (result) {
+  //     setSelectedKeys(result.selection);
+  //     if (result.anchor) {
+  //       setAnchor(key);
+  //       el.focus();
+  //     }
+  //     event.preventDefault();
+  //   }
+  // };
+
+  // const onKeyDown = (event: React.KeyboardEvent<TElement>): void => {
+  //   if (mode === SelectionMode.None) {
+  //     return;
+  //   }
+
+  //   const el = event.currentTarget as TElement;
+  //   const key = keyAccessor(el);
+  //   const selected = selectedKeys.has(key);
+
+  //   if (mode === SelectionMode.Single) {
+  //     if (event.key === " " || event.key === "Enter") {
+  //       if (selectedKeys.has(key)) {
+  //         setSelectedKeys(ImmutableSet.empty());
+  //       } else {
+  //         setSelectedKeys(ImmutableSet.just(key));
+  //       }
+  //       event.preventDefault();
+  //     } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+  //       const targetKey = focusOffset(key, event.key === "ArrowUp" ? -1 : 1);
+  //       if (targetKey) {
+  //         event.preventDefault();
+  //         if (selected) {
+  //           setSelectedKeys(ImmutableSet.just(targetKey));
+  //         }
+  //       }
+  //     }
+  //   } else if (mode === SelectionMode.Multiple) {
+  //     if (event.key === " " || event.key === "Enter") {
+  //       setSelectedKeys(selectedKeys.toggle(key));
+  //       event.preventDefault();
+  //     } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+  //       if (focusOffset(key, event.key === "ArrowUp" ? -1 : 1)) {
+  //         event.preventDefault();
+  //       }
+  //     }
+  //   }
+  // };
+
+  // const barret2 = () => {
+  //   return {
+  //     has(key: TKey): boolean {
+  //       return selectedKeys.has(key);
+  //     },
+
+  //     set(key: TKey, selected: boolean) {
+  //       if (selected) {
+  //         setSelectedKeys(selectedKeys.add(key));
+  //       } else {
+  //         setSelectedKeys(selectedKeys.delete(key));
+  //       }
+  //     },
+
+  //     setMultiple(key_arr: TKey[]) {
+  //       setSelectedKeys(ImmutableSet.just(...key_arr));
+  //     },
+
+  //     clear() {
+  //       setSelectedKeys(selectedKeys.clear());
+  //     },
+
+  //     keys() {
+  //       return selectedKeys;
+  //     },
+
+  //     itemHandlers() {
+  //       return { onMouseDown, onKeyDown };
+  //     },
+  //   };
+  // };
+
+  // ### End editable cells ###########################################################
+
+  //
+
+  //
+
+  //
   const tbodyTabItems = React.useCallback(
     () => tbodyRef.current.querySelectorAll("[tabindex='-1']"),
     [tbodyRef.current]
@@ -229,6 +560,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   });
 
   // Reset sorting and selection whenever dataset changes. (Should we do this?)
+  // NOTE-2024-02-21-barret; Maybe only reset sorting if the column information changes?
   useEffect(() => {
     return () => {
       table.resetSorting();
@@ -261,7 +593,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
       >
         <table
           className={tableClass + (withFilters ? " filtering" : "")}
-          aria-rowcount={rowData.length}
+          aria-rowcount={dataState.length}
           aria-multiselectable={canMultiSelect}
           style={{ width: width === null || width === "auto" ? null : "100%" }}
         >
