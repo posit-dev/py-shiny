@@ -1,4 +1,4 @@
-.PHONY: help clean clean-test clean-pyc clean-build help lint test playwright-shiny playwright-examples playwright-deploys install-trcli install-playwright
+.PHONY: help clean% check% format% lint test pyright playwright% install% testrail% coverage release
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -60,28 +60,37 @@ typings/matplotlib/__init__.pyi: ## grab type stubs from GitHub
 typings/seaborn:
 	pyright --createstub seaborn
 
-pyright: typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn ## type check with pyright
-	pyright
-
-lint: ## check style with flake8
-	echo "Checking style with flake8."
+check: check-format check-lint check-types check-tests  ## check code, style, types, and test (basic CI)
+check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
+check-format: check-black check-isort
+check-lint:
+	@echo "-------- Checking style with flake8 --------"
 	flake8 --show-source .
-
-format: ## format code with black and isort
-	echo "Formatting code with black."
-	black .
-	echo "Sorting imports with isort."
-	isort .
-
-check: ## check code quality with black and isort
-	echo "Checking code with black."
+check-black:
+	@echo "-------- Checking code with black --------"
 	black --check .
-	echo "Sorting imports with isort."
+check-isort:
+	@echo "-------- Sorting imports with isort --------"
 	isort --check-only --diff .
-
-test: ## run tests quickly with the default Python
+check-types: typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn
+	@echo "-------- Checking types with pyright --------"
+	pyright
+check-tests:
+	@echo "-------- Running tests with pytest --------"
 	python3 tests/pytest/asyncio_prevent.py
 	pytest
+
+pyright: check-types ## check types with pyright
+lint: check-lint ## check style with flake8
+test: check-tests ## check tests quickly with the default Python
+
+format: format-black format-isort ## format code with black and isort
+format-black:
+	@echo "-------- Formatting code with black --------"
+	black .
+format-isort:
+	@echo "-------- Sorting imports with isort --------"
+	isort .
 
 # Default `SUB_FILE` to empty
 SUB_FILE:=
