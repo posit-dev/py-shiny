@@ -16,6 +16,7 @@ quartodoc:
         - express.ui.input_select
         - express.ui.input_selectize
         - express.ui.input_slider
+        - express.ui.input_dark_mode
         - express.ui.input_date
         - express.ui.input_date_range
         - express.ui.input_checkbox
@@ -103,6 +104,7 @@ quartodoc:
           dynamic: true
         - name: express.ui.update_slider
           dynamic: true
+        - express.ui.update_dark_mode
         - ui.update_date
         - name: express.ui.update_date_range
           dynamic: true
