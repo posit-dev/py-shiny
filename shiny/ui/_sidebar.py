@@ -376,7 +376,7 @@ class Sidebar:
 
         return new
 
-    def _resolved_sidebar_id(self) -> Optional[str]:
+    def _get_sidebar_id(self) -> Optional[str]:
         """
         Returns the resolved ID of the sidebar, or `None` if the sidebar is always open.
         When the sidebar is collapsible, but the user hasn't provided an ID, a random ID
@@ -436,7 +436,7 @@ class Sidebar:
         )
 
     def tagify(self) -> TagList:
-        id = self._resolved_sidebar_id()
+        id = self._get_sidebar_id()
         taglist = TagList(self._sidebar_tag(id), self._collapse_tag(id))
         return taglist.tagify()
 
