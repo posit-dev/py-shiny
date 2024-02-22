@@ -7,7 +7,7 @@
     "bundle": "tsx build.ts",
     "build": "npm run lint && npm run bundle",
     "watch": "npx nodemon --exec 'npm run build' --ext '*' --ignore dist/ --ignore esbuild-metadata.json",
-    "build-fast": "tsx build.ts",
+    "build-fast": "tsx build.ts --minify=false",
     "watch-fast": "npx nodemon --exec 'npm run build-fast' --ext '*' --ignore dist/ --ignore esbuild-metadata.json"
   },
   "devDependencies": {
