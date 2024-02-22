@@ -60,8 +60,8 @@ typings/matplotlib/__init__.pyi: ## grab type stubs from GitHub
 typings/seaborn:
 	pyright --createstub seaborn
 
-check: check-format check-lint check-types check-tests  ## check code, style, pyright, test (basic CI)
-check-fix: format check-lint check-types check-tests ## check and format code, style, lint, test
+check: check-format check-lint check-types check-tests  ## check code, style, types, and test (basic CI)
+check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
 check-format: check-black check-isort
 check-lint:
 	@echo "-------- Checking style with flake8 --------"
