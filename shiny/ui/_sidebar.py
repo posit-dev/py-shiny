@@ -17,13 +17,12 @@ from htmltools import (
     tags,
 )
 
-from shiny.types import MISSING, MISSING_TYPE
-
 from .._deprecated import warn_deprecated
 from .._docstring import add_example, no_example
 from .._namespaces import ResolvedId, resolve_id_or_none
 from .._utils import private_random_id
 from ..session import require_active_session
+from ..types import MISSING, MISSING_TYPE
 from ._card import CardItem
 from ._html_deps_shinyverse import components_dependency
 from ._tag import consolidate_attrs, trinary
@@ -79,8 +78,9 @@ class SidebarOpen:
         compare=False,
     )
 
-    def _values_str(self) -> str:
-        return f"""'{"', '".join(self._VALUES)}'"""
+    @staticmethod
+    def _values_str() -> str:
+        return f"""'{"', '".join(SidebarOpen._VALUES)}'"""
 
     def __post_init__(self):
         if self.desktop not in self._VALUES:
@@ -112,9 +112,8 @@ class SidebarOpen:
         :
             A :class:`~shiny.ui.SidebarOpen` object.
         """
-        values_str = f"""'{"', '".join(cls._VALUES)}'"""
         bad_value = ValueError(
-            f"`open` must be a non-empty string of one of {values_str}."
+            f"`open` must be a non-empty string of one of {SidebarOpen._values_str()}."
         )
 
         if not isinstance(open, str) or len(open) == 0:
@@ -139,7 +138,7 @@ class SidebarOpen:
             return cls._from_string(open)
 
         raise ValueError(
-            f"""`open` must be one of '{"', '".join(cls._VALUES)}', """
+            f"""`open` must be one of {SidebarOpen._values_str()}, """
             + "or a dictionary with keys `desktop` and `mobile` using these values."
         )
 
@@ -198,12 +197,6 @@ class Sidebar:
           and right, and the third will be bottom.
         * If four, then the values will be interpreted as top, right, bottom, and left
           respectively.
-
-    Methods
-    -------
-    open
-        Get or set the initial state of the sidebar. Returns a dataclass with `desktop`
-        and `mobile` attributes.
 
     Parameters
     ----------
@@ -310,7 +303,10 @@ class Sidebar:
             | MISSING_TYPE
         ) = MISSING,
     ) -> SidebarOpen:
-        """Get or set the initial state of the sidebar."""
+        """
+        Get or set the initial state of the sidebar. Returns a dataclass with `desktop`
+        and `mobile` attributes.
+        """
         if not isinstance(value, MISSING_TYPE):
             self._open = self._as_open(value)
 
