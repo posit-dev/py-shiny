@@ -61,7 +61,7 @@ typings/seaborn:
 	echo "Creating seaborn stubs"
 	pyright --createstub seaborn
 
-typings/matplotlib/__init__.pyi: ## grab type stubs from GitHub
+typings/matplotlib/__init__.pyi:
 	echo "Creating matplotlib stubs"
 	mkdir -p typings
 	git clone --depth 1 https://github.com/microsoft/python-type-stubs typings/python-type-stubs
