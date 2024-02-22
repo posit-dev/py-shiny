@@ -5,9 +5,12 @@ import json
 from typing import (
     TYPE_CHECKING,
     Any,
+    Awaitable,
+    Callable,
     Literal,
     Optional,
     Protocol,
+    Self,
     Sequence,
     Union,
     cast,
@@ -18,9 +21,14 @@ from htmltools import Tag
 
 from .. import ui
 from .._docstring import add_example, no_example
+from .._utils import wrap_async
 from ..reactive import Value as ReactiveValue
 from ..reactive import isolate
-from ..session._utils import get_current_session, require_active_session
+from ..session._utils import (
+    get_current_session,
+    require_active_session,
+    session_context,
+)
 from ._dataframe_unsafe import serialize_numpy_dtypes
 from .renderer import Jsonifiable, Renderer, ValueFn
 
@@ -92,6 +100,7 @@ class DataGrid(AbstractTabularData):
         summary: Union[bool, str] = True,
         filters: bool = False,
         row_selection_mode: Literal["none", "single", "multiple"] = "none",
+        editable: bool = False,
     ):
         import pandas as pd
 
@@ -108,6 +117,7 @@ class DataGrid(AbstractTabularData):
         self.summary = summary
         self.filters = filters
         self.row_selection_mode = row_selection_mode
+        self.editable = editable
 
     def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
@@ -117,6 +127,7 @@ class DataGrid(AbstractTabularData):
             summary=self.summary,
             filters=self.filters,
             row_selection_mode=self.row_selection_mode,
+            editable=self.editable,
             style="grid",
         )
         return res
@@ -229,6 +240,18 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
 DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
 
+class OnCellUpdateFn(Protocol):
+    async def __call__(
+        self,
+        data: "pd.DataFrame",
+        *,
+        row_index: int,
+        column_id: str,
+        value: str,
+        prev: str,
+    ) -> Any: ...
+
+
 @add_example()
 class data_frame(Renderer[DataFrameResult]):
     """
@@ -280,7 +303,8 @@ class data_frame(Renderer[DataFrameResult]):
     _data: ReactiveValue[pd.DataFrame | None]
 
     # Reactive!
-    def data(self) -> pd.DataFrame | None:
+    # Turn this into a reactive calc value!
+    def data_patched(self) -> pd.DataFrame | None:
         """
         Reactive value of the data frame output data.
         """
@@ -304,6 +328,79 @@ class data_frame(Renderer[DataFrameResult]):
     def auto_output_ui(self) -> Tag:
         return ui.output_data_frame(id=self.output_id)
 
+    _on_cell_update_fn: OnCellUpdateFn | None
+
+    def on_cell_update(self, fn: OnCellUpdateFn | None) -> Self:
+        self._on_cell_update_fn = fn
+        return self
+
+    def _add_message_handlers(self) -> None:
+        self._on_cell_update_fn = None
+
+        session = self._session
+        if session is None:
+            return
+
+        UPDATE_CELL = "dataframeUpdateCell"
+        if UPDATE_CELL not in session._message_handlers:
+
+            from typing import TypedDict
+
+            class UpdateDFParams(TypedDict):
+                id: str
+                rowIndex: int
+                columnId: str
+                value: str
+                prev: str
+
+            async def dataframe_update_cell(*args: UpdateDFParams):
+                # TODO-barret; This should be a generic update method that dispatches to the output's on_cell_update method
+                if self._on_cell_update_fn is None:
+                    raise RuntimeError(
+                        "`@render.data_frame` class has not set `on_cell_update` method."
+                    )
+                with session_context(session):
+                    with isolate():
+                        data = self.data_patched()
+                        if data is None:
+                            raise RuntimeError(
+                                "`@render.data_frame` has no data to update. Please file an issue on GitHub with a reprex."
+                            )
+                        for arg in args:
+                            row_index = arg["rowIndex"]
+                            column_id = arg["columnId"]
+                            value = arg["value"]
+                            prev = arg["prev"]
+
+                            formatted_value = await self._on_cell_update_fn(
+                                data,
+                                row_index=row_index,
+                                column_id=column_id,
+                                value=value,
+                                prev=prev,
+                            )
+                            return formatted_value
+                        # if active_session._debug:
+                        #     print("Update cell: " + str(arg), flush=True)
+                    # if active_session._debug:
+                    #     print("Upload init: " + str(file_infos), flush=True)
+
+                    # # TODO: Don't alter message in place?
+                    # for fi in file_infos:
+                    #     if fi["type"] == "":
+                    #         fi["type"] = _utils.guess_mime_type(fi["name"])
+
+                    # job_id = self._file_upload_manager.create_upload_operation(file_infos)
+                    # worker_id = ""
+                    # return {
+                    #     "jobId": job_id,
+                    #     "uploadUrl": f"session/{self.id}/upload/{job_id}?w={worker_id}",
+                    # }
+                    return None
+
+            print("Adding message handler: ", UPDATE_CELL)
+            session._message_handlers[UPDATE_CELL] = dataframe_update_cell
+
     def __init__(self, fn: ValueFn[DataFrameResult]):
         # Must be done before super().__init__ is called
         session = get_current_session()
@@ -313,6 +410,8 @@ class data_frame(Renderer[DataFrameResult]):
 
         self._row_selection_mode = None
         self._data = ReactiveValue(None)
+
+        self._add_message_handlers()
 
     def _set_output_metadata(self, *, output_id: str) -> None:
         super()._set_output_metadata(output_id=output_id)
@@ -406,7 +505,7 @@ class data_frame(Renderer[DataFrameResult]):
         if indicies is None:
             return None
 
-        data = self.data()
+        data = self.data_patched()
         if data is None:
             return None
 
