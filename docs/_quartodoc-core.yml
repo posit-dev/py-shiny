@@ -44,6 +44,7 @@ quartodoc:
         - ui.input_select
         - ui.input_selectize
         - ui.input_slider
+        - ui.input_dark_mode
         - ui.input_date
         - ui.input_date_range
         - ui.input_checkbox
@@ -123,6 +124,7 @@ quartodoc:
           dynamic: true
         - name: ui.update_slider
           dynamic: true
+        - ui.update_dark_mode
         - ui.update_date
         - name: ui.update_date_range
           dynamic: true
