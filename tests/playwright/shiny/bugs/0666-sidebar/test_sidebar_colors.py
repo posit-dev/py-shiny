@@ -20,10 +20,12 @@ def test_sidebar_bg_colors(page: Page, local_app: ShinyAppProc) -> None:
 
         main_layout = sidebar.locator("..")
 
-        open_val = "always" if i <= 2 else "desktop"
+        open_desktop = "always" if i <= 2 else "open"
+        open_mobile = "always" if i <= 2 else "closed"
         position_val = "left" if i % 2 == 1 else "right"
 
-        expect(main_layout).to_have_attribute("data-bslib-sidebar-open", open_val)
+        expect(main_layout).to_have_attribute("data-open-desktop", open_desktop)
+        expect(main_layout).to_have_attribute("data-open-mobile", open_mobile)
 
         _expect_class_value(main_layout, "sidebar-right", position_val == "right")
 

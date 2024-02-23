@@ -281,6 +281,8 @@ class plot(Renderer[object]):
         is_userfn_async = self.fn.is_async()
         name = self.output_id
         session = require_active_session(None)
+        # Module support
+        name = session.ns(name)
         width = self.width
         height = self.height
         alt = self.alt

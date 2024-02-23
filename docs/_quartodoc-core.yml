@@ -44,6 +44,7 @@ quartodoc:
         - ui.input_select
         - ui.input_selectize
         - ui.input_slider
+        - ui.input_dark_mode
         - ui.input_date
         - ui.input_date_range
         - ui.input_checkbox
@@ -56,6 +57,7 @@ quartodoc:
         - ui.input_password
         - ui.input_action_button
         - ui.input_action_link
+        - ui.input_task_button
     - title: Value boxes
       desc: Prominently display a value and label in a box that can be expanded to show more information.
       contents:
@@ -122,6 +124,7 @@ quartodoc:
           dynamic: true
         - name: ui.update_slider
           dynamic: true
+        - ui.update_dark_mode
         - ui.update_date
         - name: ui.update_date_range
           dynamic: true
@@ -140,6 +143,9 @@ quartodoc:
           dynamic: "shiny.ui.update_text"
         - name: ui.update_navs
           dynamic: true
+        - ui.update_action_button
+        - ui.update_action_link
+        - ui.update_task_button
     - title: Update UI Layouts
       desc: ""
       contents:
