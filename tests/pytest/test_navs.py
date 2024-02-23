@@ -19,19 +19,20 @@ def private_seed_n(n: int = 0) -> Generator[None, None, None]:
         yield
 
 
-def test_nav_markup():
-    a = ui.nav_panel("a", "a")
-    b = ui.nav_panel("b", "b")
-    c = ui.nav_panel("c", "c")
-    menu = ui.nav_menu(
-        "Menu",
-        c,
-        "----",
-        "Plain text",
-        "----",
-        ui.nav_control("Other item"),
-    )
+a = ui.nav_panel("a", "a")
+b = ui.nav_panel("b", "b")
+c = ui.nav_panel("c", "c")
+menu = ui.nav_menu(
+    "Menu",
+    c,
+    "----",
+    "Plain text",
+    "----",
+    ui.nav_control("Other item"),
+)
 
+
+def test_navset_tab_markup():
     with private_seed_n():
         x = ui.navset_tab(a, b, ui.nav_control("Some item"), menu)
 
@@ -65,6 +66,8 @@ def test_nav_markup():
         </div>"""
     )
 
+
+def test_navset_pill_markup():
     with private_seed_n():
         x = ui.navset_pill(menu, a, id="navset_pill_id")
 
@@ -93,6 +96,8 @@ def test_nav_markup():
         </div>"""
     )
 
+
+def test_navset_card_pill_markup():
     with private_seed_n():
         x = ui.navset_card_pill(
             a,
@@ -133,6 +138,8 @@ def test_nav_markup():
         </div>"""
     )
 
+
+def test_navset_bar_markup():
     with private_seed_n():
         x = ui.navset_bar(
             ui.nav_menu("Menu", "Plain text", c),
