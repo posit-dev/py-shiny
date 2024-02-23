@@ -1140,8 +1140,9 @@ def _make_tabs_fillable(
             padding=as_css_padding(padding),
             __bslib_navbar_margin="0;" if navbar else None,
         )
-        child.add_style(cast(str, styles))
         child = as_fillable_container(as_fill_item(child))
+        child.add_style(cast(str, styles))
+        child.add_class("bslib-gap-spacing")
 
         content.children[i] = child
 

@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed `input_task_button` not working in a Shiny module. (#1108)
 * Fixed several issues with `page_navbar()` styling. (#1124)
 * Fixed `Renderer.output_id` to not contain the module namespace prefix, only the output id. (#1130)
+* Fixed gap-driven spacing between children in fillable `nav_panel()` containers. (#1152)
 
 ### Other changes
 
