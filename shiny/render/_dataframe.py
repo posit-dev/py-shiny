@@ -50,7 +50,7 @@ class DataGrid(AbstractTabularData):
         A _maximum_ amount of vertical space for the data grid to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. If there
         are more rows than can fit in this space, the grid will scroll. Set the height
-        to `None` to allow the grid to grow to fit all of the rows (this is not
+        to `"auto"` to allow the grid to grow to fit all of the rows (this is not
         recommended for large data sets, as it may crash the browser).
     summary
         If `True` (the default), shows a message like "Viewing rows 1 through 10 of 20"
