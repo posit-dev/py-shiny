@@ -1142,6 +1142,7 @@ def _make_tabs_fillable(
         )
         child = as_fillable_container(as_fill_item(child))
         child.add_style(cast(str, styles))
+        child.add_class("bslib-gap-spacing")
 
         content.children[i] = child
 
