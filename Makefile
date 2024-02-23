@@ -1,4 +1,4 @@
-.PHONY: help clean% check% format% docs lint test pyright playwright% install% testrail% coverage release
+.PHONY: help clean% check% format% docs% lint test pyright playwright% install% testrail% coverage release
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
