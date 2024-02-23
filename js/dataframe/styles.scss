@@ -41,7 +41,6 @@
   height: 500px;
   &:not(.scrolling) {
     height: auto;
-    flex-basis: 500px;
   }
 
   > table {
@@ -202,4 +201,10 @@
       border-right-style: none;
     }
   }
+}
+
+/* Center the table when inside of a card */
+.card-body .shiny-data-grid {
+  margin-left: auto;
+  margin-right: auto;
 }
