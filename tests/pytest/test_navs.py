@@ -129,9 +129,9 @@ def test_navset_card_pill_markup():
           </div>
           <div class="card-body bslib-gap-spacing html-fill-item html-fill-container" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
             <div class="tab-content html-fill-item html-fill-container" data-tabsetid="7311">
-              <div class="tab-pane html-fill-item html-fill-container" role="tabpanel" data-value="a" id="tab-7311-0" style="gap:0;padding:0;">a</div>
-              <div class="tab-pane active html-fill-item html-fill-container" role="tabpanel" data-value="c" id="tab-7890-0" style="gap:0;padding:0;">c</div>
-              <div class="tab-pane html-fill-item html-fill-container" role="tabpanel" data-value="b" id="tab-7311-2" style="gap:0;padding:0;">b</div>
+              <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="a" id="tab-7311-0" style="gap:0;padding:0;">a</div>
+              <div class="tab-pane active html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="c" id="tab-7890-0" style="gap:0;padding:0;">c</div>
+              <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="b" id="tab-7311-2" style="gap:0;padding:0;">b</div>
             </div>
           </div>
           <script data-bslib-card-init="">window.bslib.Card.initializeAllCards();</script>
@@ -171,7 +171,7 @@ def test_navset_bar_markup():
         <div class="container-fluid html-fill-item html-fill-container">
           Page header
           <div class="tab-content html-fill-item html-fill-container" data-tabsetid="7311">
-            <div class="tab-pane active html-fill-item html-fill-container" role="tabpanel" data-value="c" id="tab-7890-1" style="--bslib-navbar-margin:0;;">c</div>
+            <div class="tab-pane active html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="c" id="tab-7890-1" style="--bslib-navbar-margin:0;;">c</div>
           </div>
           Page footer
         </div>"""
