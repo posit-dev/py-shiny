@@ -16,6 +16,7 @@ from htmltools import (
 )
 
 from .._docstring import add_example
+from .._utils import private_random_id
 from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import components_dependency
 from ._tag import consolidate_attrs
@@ -130,6 +131,9 @@ def _card_impl(
     attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
     children = _wrap_children_in_card(*children, wrapper=wrapper)
 
+    if full_screen and "id" not in attrs:
+        attrs["id"] = private_random_id("bslib_card")
+
     tag = div(
         {
             "class": "card bslib-card bslib-mb-spacing",
@@ -143,7 +147,7 @@ def _card_impl(
         },
         *children,
         attrs,
-        _full_screen_toggle() if full_screen else None,
+        _full_screen_toggle(attrs["id"]) if full_screen else None,
         components_dependency(),
         _card_js_init(),
     )
@@ -161,10 +165,15 @@ def _card_js_init() -> Tag:
     )
 
 
-def _full_screen_toggle() -> Tag:
+def _full_screen_toggle(id_controls: TagAttrValue) -> Tag:
     return tooltip(
-        tags.span(
-            {"class": "bslib-full-screen-enter badge rounded-pill"},
+        tags.button(
+            {
+                "class": "bslib-full-screen-enter badge rounded-pill",
+                "aria-expanded": "false",
+                "aria-controls": id_controls,
+                "aria-label": "Expand card",
+            },
             _full_screen_toggle_icon(),
         ),
         "Expand",
