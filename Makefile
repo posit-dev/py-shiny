@@ -1,4 +1,4 @@
-.PHONY: help clean% check% format% lint test pyright playwright% install% testrail% coverage release
+.PHONY: help clean% check% format% docs% lint test pyright playwright% install% testrail% coverage release
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -91,6 +91,14 @@ format-black:
 format-isort:
 	@echo "-------- Sorting imports with isort --------"
 	isort .
+
+docs: ## docs: build docs with quartodoc
+	@echo "-------- Building docs with quartodoc --------"
+	@cd docs && make quartodoc
+
+docs-preview: ## docs: preview docs in browser
+	@echo "-------- Previewing docs in browser --------"
+	@cd docs && make serve
 
 # Default `SUB_FILE` to empty
 SUB_FILE:=
