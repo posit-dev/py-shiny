@@ -42,7 +42,7 @@ class DataGrid(AbstractTabularData):
         A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
         (e.g., a Polars data frame or Arrow table).
     width
-        A _maximum_ amount of vertical space for the data grid to occupy, in CSS units
+        A _maximum_ amount of horizontal space for the data grid to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
         default is `fit-content`, which sets the grid's width according to its contents.
         Set this to `100%` to use the maximum available horizontal space.
