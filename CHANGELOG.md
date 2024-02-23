@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED] - YYYY-MM-DD
 
+### Breaking Changes
+
+* Page-level sidebars used in `ui.page_sidebar()` and `ui.page_navbar()` will now default to being initially open but collapsible on desktop devices and always open on mobile devices. You can adjust this default choice by setting `ui.sidebar(open=)`. (#1129)
+
+* `ui.sidebar()` is now a thin wrapper for the internal `ui.Sidebar` class. The `ui.Sidebar` class has been updated to store the sidebar's contents and settings and to delay rendering until the sidebar HTML is actually used. Because most users call `ui.sidebar()` instead of using the class directly, this change is not expected to affect many apps. (#1129)
+
+### New features
+
+* `ui.sidebar(open=)` now accepts a dictionary with keys `desktop` and `mobile`, allowing you to independently control the initial state of the sidebar at desktop and mobile screen sizes. (#1129)
+
+### Other changes
+
+* We improved the accessibility of the full screen toggle button in cards created with `ui.card(full_screen=True)`. Full-screen cards are now also supported on mobile devices. (#1129)
+
+* When entering and exiting full-screen card mode, Shiny now emits a client-side custom `bslib.card` event that JavaScript-oriented users can use to react to the full screen state change. (#1129)
+
+* The sidebar's collapse toggle now has a high `z-index` value to ensure it always appears above elements in the main content area of `ui.layout_sidebar()`. The sidebar overlay also now receives the same high `z-index` on mobile layouts. (#1129)
+
 ### Bug fixes
 
 * Fixed `input_task_button` not working in a Shiny module. (#1108)

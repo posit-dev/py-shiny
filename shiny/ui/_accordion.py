@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import random
 from typing import TYPE_CHECKING, Literal, Optional, TypeVar
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
-from .._utils import drop_none
+from .._utils import drop_none, private_random_id
 from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE
 from ._html_deps_shinyverse import components_dependency
@@ -266,7 +265,7 @@ def accordion(
     # but only create a binding when it is provided
     binding_class_value: TagAttrs | None = None
     if id is None:
-        id = f"bslib_accordion_{random.randint(1000, 10000)}"
+        id = private_random_id("bslib_accordion")
         binding_class_value = None
     else:
         binding_class_value = {"class": "bslib-accordion-input"}
@@ -349,7 +348,7 @@ def accordion_panel(
     if not isinstance(value, str):
         raise TypeError("`value` must be a string")
 
-    id = f"bslib-accordion-panel-{random.randint(1000, 10000)}"
+    id = private_random_id("bslib_accordion_panel")
 
     return AccordionPanel(
         *args,

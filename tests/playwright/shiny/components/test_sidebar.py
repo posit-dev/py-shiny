@@ -19,8 +19,8 @@ def test_sidebar_position_and_open(page: Page, app: ShinyAppProc) -> None:
     left_sidebar.expect_handle(True)
     left_sidebar.expect_open(False)
     left_sidebar.loc_handle.click()
-    left_sidebar.expect_open(False)
-    output_txt_left.expect_value("input.sidebar_left(): False")
+    left_sidebar.expect_open(True)
+    output_txt_left.expect_value("input.sidebar_left(): True")
 
     right_sidebar = Sidebar(page, "sidebar_right")
     output_txt_right = OutputTextVerbatim(page, "state_right")
@@ -46,4 +46,8 @@ def test_sidebar_position_and_open(page: Page, app: ShinyAppProc) -> None:
     output_txt_always = OutputTextVerbatim(page, "state_always")
     always_sidebar.expect_text("Always sidebar content")
     output_txt_always.expect_value("input.sidebar_always(): True")
-    always_sidebar.expect_handle(False)
+    # Handle is included but it should have `display: none`
+    always_sidebar.expect_handle(True)
+    from playwright.sync_api import expect
+
+    expect(always_sidebar.loc_handle).to_have_css("display", "none")
