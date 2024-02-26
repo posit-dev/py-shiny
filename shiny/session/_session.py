@@ -191,7 +191,7 @@ class Session(object, metaclass=SessionMeta):
         self.http_conn: HTTPConnection = conn.get_http_conn()
 
         self.input: Inputs = Inputs(dict())
-        self.output: Outputs = Outputs(self, self.ns, dict(), dict())
+        self.output: Outputs = Outputs(self, self.ns, outputs=dict())
 
         self.user: str | None = None
         self.groups: list[str] | None = None
@@ -407,6 +407,44 @@ class Session(object, metaclass=SessionMeta):
 
     # This is called during __init__.
     def _create_message_handlers(self) -> dict[str, Callable[..., Awaitable[object]]]:
+        # TODO-future; Make sure these methods work within MockSession
+
+        async def outputRPC(
+            outputId: str,
+            handler: str,
+            msg: object,
+        ) -> object:
+            """
+            Used to handle request messages from an Output Renderer.
+
+            Typically, this is used when an Output Renderer needs to set an input value.
+            E.g. a @render.data_frame with an editable=True parameter will use this to
+            set the value of the data frame when a cell is edited.
+            """
+            with session_context(self):
+                if not (outputId in self.output._outputs):
+                    # asdf
+                    raise RuntimeError(
+                        f"Received request message for an unknown Output Renderer with id `{outputId}`"
+                    )
+
+                output_info = self.output._outputs[outputId]
+                renderer = output_info.renderer
+                handler = f"_handle_{handler}"
+                if not (
+                    hasattr(renderer, handler) and callable(getattr(renderer, handler))
+                ):
+                    raise RuntimeError(
+                        f"Output Renderer with id `{outputId}` does not have method `{handler}` to handler request message"
+                    )
+                try:
+                    return await getattr(renderer, handler)(msg)
+                except Exception as e:
+                    print(e)
+                    raise RuntimeError(
+                        f"Error while handling request message for Output Renderer with id `{outputId}`"
+                    )
+
         async def uploadInit(file_infos: list[FileInfo]) -> dict[str, object]:
             with session_context(self):
                 if self._debug:
@@ -442,6 +480,7 @@ class Session(object, metaclass=SessionMeta):
             return None
 
         return {
+            "outputRPC": outputRPC,
             "uploadInit": uploadInit,
             "uploadEnd": uploadEnd,
         }
@@ -916,10 +955,9 @@ class SessionProxy:
         self.ns = ns
         self.input = Inputs(values=parent.input._map, ns=ns)
         self.output = Outputs(
-            session=cast(Session, self),
-            effects=self.output._effects,
-            suspend_when_hidden=self.output._suspend_when_hidden,
+            cast(Session, self),
             ns=ns,
+            outputs=self.output._outputs,
         )
 
     def __getattr__(self, attr: str) -> Any:
@@ -1023,6 +1061,13 @@ class Inputs:
 # ======================================================================================
 
 
+@dataclasses.dataclass
+class OutputInfo:
+    renderer: Renderer[Any]
+    effect: Effect_
+    suspend_when_hidden: bool
+
+
 class Outputs:
     """
     A class representing Shiny output definitions.
@@ -1032,13 +1077,12 @@ class Outputs:
         self,
         session: Session,
         ns: Callable[[str], ResolvedId],
-        effects: dict[str, Effect_],
-        suspend_when_hidden: dict[str, bool],
+        *,
+        outputs: dict[str, OutputInfo],
     ) -> None:
         self._session = session
         self._ns = ns
-        self._effects = effects
-        self._suspend_when_hidden = suspend_when_hidden
+        self._outputs = outputs
 
     @overload
     def __call__(self, renderer: RendererT) -> RendererT:
@@ -1079,8 +1123,6 @@ class Outputs:
             renderer._on_register()
 
             self.remove(output_name)
-
-            self._suspend_when_hidden[output_name] = suspend_when_hidden
 
             @effect(
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
@@ -1139,7 +1181,12 @@ class Outputs:
                 lambda: self._session._send_progress("binding", {"id": output_name})
             )
 
-            self._effects[output_name] = output_obs
+            # Store the renderer and effect info
+            self._outputs[output_name] = OutputInfo(
+                renderer=renderer,
+                effect=output_obs,
+                suspend_when_hidden=suspend_when_hidden,
+            )
 
             return renderer
 
@@ -1150,19 +1197,20 @@ class Outputs:
 
     def remove(self, id: Id) -> None:
         output_name = self._ns(id)
-        if output_name in self._effects:
-            self._effects[output_name].destroy()
-            del self._effects[output_name]
-            del self._suspend_when_hidden[output_name]
+        if output_name in self._outputs:
+            self._outputs[output_name].effect.destroy()
+            del self._outputs[output_name]
 
     def _manage_hidden(self) -> None:
         "Suspends execution of hidden outputs and resumes execution of visible outputs."
-        output_names = list(self._suspend_when_hidden.keys())
-        for name in output_names:
+        for name in self._outputs:
+            output_info = self._outputs[name]
             if self._should_suspend(name):
-                self._effects[name].suspend()
+                output_info.effect.suspend()
             else:
-                self._effects[name].resume()
+                output_info.effect.resume()
 
     def _should_suspend(self, name: str) -> bool:
-        return self._suspend_when_hidden[name] and self._session._is_hidden(name)
+        return self._outputs[name].suspend_when_hidden and self._session._is_hidden(
+            name
+        )
