@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed several issues with `page_navbar()` styling. (#1124)
 * Fixed `Renderer.output_id` to not contain the module namespace prefix, only the output id. (#1130)
 * Fixed gap-driven spacing between children in fillable `nav_panel()` containers. (#1152)
+* Fixed #1138: An empty value in a date or date range input would cause an error; now it is treated as `None`. (#1139)
 
 ### Other changes
 
