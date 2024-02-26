@@ -791,6 +791,40 @@ class InputActionButton(
         )
 
 
+class InputDarkMode(_InputBase):
+    def __init__(
+        self,
+        page: Page,
+        id: Optional[str] | None,
+    ) -> None:
+        id_selector = "" if id is None else f"#{id}"
+
+        super().__init__(
+            page,
+            id="" if id is None else id,
+            loc=f"bslib-input-dark-mode{id_selector}",
+        )
+
+    def click(self, *, timeout: Timeout = None):
+        self.loc.click(timeout=timeout)
+        return self
+
+    def expect_mode(self, value: str, *, timeout: Timeout = None):
+        expect_attr(self.loc, "mode", value=value, timeout=timeout)
+        self.expect_page_mode(value, timeout=timeout)
+        return self
+
+    def expect_page_mode(self, value: str, *, timeout: Timeout = None):
+        expect_attr(
+            self.page.locator("html"), "data-bs-theme", value=value, timeout=timeout
+        )
+        return self
+
+    def expect_wc_attribute(self, value: str, *, timeout: Timeout = None):
+        expect_attr(self.loc, "attribute", value=value, timeout=timeout)
+        return self
+
+
 class InputTaskButton(
     _WidthLocM,
     _InputActionBase,

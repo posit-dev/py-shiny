@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 
 from shiny import reactive, render
 from shiny.express import input, ui
@@ -10,7 +10,7 @@ ui.h5("Current time")
 @render.text()
 def current_time() -> str:
     reactive.invalidate_later(0.1)
-    return str(datetime.now().utcnow())
+    return str(datetime.now(timezone.utc).isoformat())
 
 
 with ui.p():

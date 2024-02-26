@@ -8,15 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED] - YYYY-MM-DD
 
+### Breaking Changes
+
+* Page-level sidebars used in `ui.page_sidebar()` and `ui.page_navbar()` will now default to being initially open but collapsible on desktop devices and always open on mobile devices. You can adjust this default choice by setting `ui.sidebar(open=)`. (#1129)
+
+* `ui.sidebar()` is now a thin wrapper for the internal `ui.Sidebar` class. The `ui.Sidebar` class has been updated to store the sidebar's contents and settings and to delay rendering until the sidebar HTML is actually used. Because most users call `ui.sidebar()` instead of using the class directly, this change is not expected to affect many apps. (#1129)
+
+### New features
+
+* Added `ui.input_dark_mode()`, a toggle switch that allows users to switch between light and dark mode. By default, when `ui.input_dark_mode()` is added to an app, the app's color mode follows the users's system preferences, unless the app author sets the `mode` argument. When `ui.input_dark_mode(id=)` is set, the color mode is reported to the server, and server-side color mode updating is possible using `ui.update_dark_mode()`. (#1149)
+
+* `ui.sidebar(open=)` now accepts a dictionary with keys `desktop` and `mobile`, allowing you to independently control the initial state of the sidebar at desktop and mobile screen sizes. (#1129)
+
+### Other changes
+
+* We improved the accessibility of the full screen toggle button in cards created with `ui.card(full_screen=True)`. Full-screen cards are now also supported on mobile devices. (#1129)
+
+* When entering and exiting full-screen card mode, Shiny now emits a client-side custom `bslib.card` event that JavaScript-oriented users can use to react to the full screen state change. (#1129)
+
+* The sidebar's collapse toggle now has a high `z-index` value to ensure it always appears above elements in the main content area of `ui.layout_sidebar()`. The sidebar overlay also now receives the same high `z-index` on mobile layouts. (#1129)
+
 ### Bug fixes
 
 * Fixed `input_task_button` not working in a Shiny module. (#1108)
 * Fixed several issues with `page_navbar()` styling. (#1124)
 * Fixed `Renderer.output_id` to not contain the module namespace prefix, only the output id. (#1130)
+* Fixed gap-driven spacing between children in fillable `nav_panel()` containers. (#1152)
 
 ### Other changes
 
 * Replaced use of `sys.stderr.write()` with `print(file=sys.stderr)`, because on some platforms `sys.stderr` can be `None`. (#1131)
+* Replaced soon-to-be deprecated `datetime` method calls when handling `shiny.datetime` inputs. (#1146)
 
 
 ## [0.7.1] - 2024-02-05
