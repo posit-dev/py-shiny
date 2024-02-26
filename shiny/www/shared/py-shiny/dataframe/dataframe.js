@@ -6020,12 +6020,26 @@ var ShinyDataGrid = (props) => {
           const onEsc = (e3) => {
             if (e3.key !== "Escape")
               return;
+            e3.preventDefault();
             setEditRowIndex(null);
             setEditColumnId(null);
+          };
+          const onTab = (e3) => {
+            if (e3.key !== "Tab")
+              return;
+            e3.preventDefault();
+            const hasShift = e3.shiftKey;
+            const newColumnIndex = columns.indexOf(editColumnId) + (hasShift ? -1 : 1);
+            if (newColumnIndex < 0 || newColumnIndex >= columns.length) {
+              return;
+            }
+            const newColumnId = columns[newColumnIndex];
+            setEditColumnId(newColumnId);
           };
           const onEnter = (e3) => {
             if (e3.key !== "Enter")
               return;
+            e3.preventDefault();
             const hasShift = e3.shiftKey;
             const newRowIndex = editRowIndex + (hasShift ? -1 : 1);
             if (newRowIndex < 0 || newRowIndex >= table2.getSortedRowModel().rows.length) {
@@ -6034,49 +6048,57 @@ var ShinyDataGrid = (props) => {
             setEditRowIndex(newRowIndex);
           };
           const onInputKeyDown = (e3) => {
-            onEsc(e3);
-            onEnter(e3);
+            [onEsc, onEnter, onTab].forEach((fn2) => fn2(e3));
           };
           const onBlur = () => {
             if (initialValue !== value) {
-              table2.options.meta?.updateData({
-                rowIndex,
-                columnId,
-                value,
-                prev: initialValue
-              });
+              table2.options.meta?.updateCellsData([
+                {
+                  rowIndex,
+                  columnId,
+                  value,
+                  prev: initialValue
+                }
+              ]);
             }
-          };
-          const onReadyClick = (e3) => {
-            console.trace("on ready click!", e3.target);
-            setEditRowIndex(rowIndex);
-            setEditColumnId(columnId);
           };
           Cn.useEffect(() => {
             setValue(initialValue);
           }, [initialValue, setValue]);
           Cn.useEffect(() => {
             if (editable2) {
-              console.log("use effect3!", inputRef.current);
               inputRef.current.focus();
+              inputRef.current.select();
             }
           }, [editable2]);
+          function onFocus(e3) {
+            if (editable2) {
+              e3.target.select();
+            }
+          }
+          function onChange(e3) {
+            console.log("on change!");
+            setValue(e3.target.value);
+          }
           if (editable2) {
             return /* @__PURE__ */ Cn.createElement(
               "input",
               {
                 value,
-                onChange: (e3) => {
-                  console.log("on change!");
-                  setValue(e3.target.value);
-                },
+                onChange,
                 onBlur,
-                ref: inputRef,
-                onKeyDown: onInputKeyDown
+                onFocus,
+                onKeyDown: onInputKeyDown,
+                ref: inputRef
               }
             );
           } else {
-            return /* @__PURE__ */ Cn.createElement("div", { onClick: onReadyClick, ref: inputRef }, value);
+            const onReadyClick = (e3) => {
+              console.trace("on ready click!", e3.target);
+              setEditRowIndex(rowIndex);
+              setEditColumnId(columnId);
+            };
+            return /* @__PURE__ */ Cn.createElement("div", { onClick: onReadyClick }, value);
           }
         }
       };
@@ -6093,30 +6115,46 @@ var ShinyDataGrid = (props) => {
     getSortedRowModel: getSortedRowModel(),
     ...filterOpts,
     debugAll: true,
-    // Provide our updateData function to our table meta
+    // Provide our updateCellsData function to our table meta
     // autoResetPageIndex,
     meta: {
-      updateData: ({
-        rowIndex,
-        columnId,
-        value,
-        prev
-      }) => {
-        const colIndex = columns.indexOf(columnId);
-        console.log(
-          "Set data here! (Send info back to shiny)",
-          rowIndex,
-          columnId,
-          colIndex,
-          value
+      updateCellsData: (cellInfos) => {
+        const updateInfos = cellInfos.map(
+          (cellInfo) => {
+            return {
+              row_index: cellInfo.rowIndex,
+              column_id: cellInfo.columnId,
+              value: cellInfo.value,
+              prev: cellInfo.prev
+            };
+          }
         );
+        console.log("Set data here! (Send info back to shiny)", cellInfos);
         makeRequest(
-          "dataframeUpdateCell",
-          [{ rowIndex, columnId, value, prev }],
-          (value2) => {
-            console.log("success!", value2, rowIndex, columnId, prev);
+          "outputRPC",
+          [
+            // id: string
+            id,
+            // handler: string
+            "cells_update",
+            // list[OnCellUpdateParams]
+            updateInfos
+          ],
+          (values) => {
+            console.log("cellsUpdate - success!", values);
             setData((draft) => {
-              draft[rowIndex][colIndex] = value2;
+              values.forEach((value, i4) => {
+                const { rowIndex, columnId } = cellInfos[i4];
+                const colIndex = columns.indexOf(columnId);
+                const row = draft[rowIndex];
+                console.log(
+                  "Setting new value!",
+                  value,
+                  columnId,
+                  draft[rowIndex]
+                );
+                draft[rowIndex][colIndex] = value;
+              });
             });
           },
           (err) => {
