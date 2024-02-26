@@ -61,19 +61,40 @@ import { ResponseValue, makeRequest } from "./request";
 //   options: DataGridOptions;
 // }
 
+type UpdateCellData = {
+  rowIndex: number;
+  columnId: string;
+  value: unknown;
+  prev: unknown;
+};
+type UpdateCellDataRequest = {
+  row_index: number;
+  column_id: string;
+  value: unknown;
+  prev: unknown;
+};
+
 declare module "@tanstack/table-core" {
   interface ColumnMeta<TData extends RowData, TValue> {
     typeHint: TypeHint;
   }
   interface TableMeta<TData extends RowData> {
-    updateData: (params: {
-      rowIndex: number;
-      columnId: string;
-      value: unknown;
-      prev: unknown;
-    }) => void;
+    updateCellsData: (cellInfos: UpdateCellData[]) => void;
   }
 }
+
+// // TODO-barret-future; Use window.setSelectionRange() and this method to reselect text when scrolling out of view
+// const useSelectedText = () => {
+//   const [text, setText] = useState("");
+//   const select = () => {
+//     const selected = window.getSelection() as Selection;
+//     setText(selected.toString());
+//   };
+//   return [select, text] as const;
+// };
+
+//
+
 // TODO: Right-align numeric columns, maybe change font
 // TODO: Explicit column widths
 // TODO: Filtering
@@ -144,131 +165,60 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
             // We need to keep and update the state of the cell normally
             const [value, setValue] = useImmer(initialValue);
             const inputRef = useRef(null);
-            // const [editable, setEditable] = useState(false);
             const editable =
               editRowIndex === rowIndex && editColumnId === columnId;
 
-            // console.log("editable?", rowIndex, columnId, editable, {
-            //   editRowIndex,
-            //   editColumnId,
-            // });
-
             const onEsc = (e: React.KeyboardEvent<HTMLInputElement>) => {
               if (e.key !== "Escape") return;
+              // Prevent default behavior
+              e.preventDefault();
+
               // inputRef.current.blur();
               setEditRowIndex(null);
               setEditColumnId(null);
+              // TODO-barret-future; Set focus to table? (state: Editing was aborted)
+            };
+            const onTab = (e: React.KeyboardEvent<HTMLInputElement>) => {
+              if (e.key !== "Tab") return;
+              // Prevent default behavior
+              e.preventDefault();
+
+              const hasShift = e.shiftKey;
+
+              const newColumnIndex =
+                columns.indexOf(editColumnId) + (hasShift ? -1 : 1);
+              if (newColumnIndex < 0 || newColumnIndex >= columns.length) {
+                // If the new column index is out of bounds, quit
+                return;
+              }
+              const newColumnId = columns[newColumnIndex];
+
+              setEditColumnId(newColumnId);
             };
             const onEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
               if (e.key !== "Enter") return;
-              const hasShift = e.shiftKey;
+              // Prevent default behavior
+              e.preventDefault();
 
-              // // Unselect the cell
-              // inputRef.current.blur();
+              const hasShift = e.shiftKey;
 
               const newRowIndex = editRowIndex + (hasShift ? -1 : 1);
               if (
                 newRowIndex < 0 ||
                 newRowIndex >= table.getSortedRowModel().rows.length
               ) {
+                // If the new row index is out of bounds, quit
                 return;
               }
 
               setEditRowIndex(newRowIndex);
-
-              //   // console.log(target, target.parentElement);
-              //   const cellEl = inputRef.current
-              //     .parentElement as HTMLTableCellElement;
-              //   const rowEl = cellEl.parentElement as HTMLTableRowElement;
-
-              //   let nextRowEl = hasShift
-              //     ? (rowEl.previousSibling as HTMLTableRowElement)
-              //     : (rowEl.nextSibling as HTMLTableRowElement);
-              //   // If there is no next row, set to self as to not exit the table
-              //   nextRowEl = nextRowEl ?? rowEl;
-
-              //   // Get current col index of td so that we can select the same col in the
-              //   // _next_ row
-              //   const cellElColIndex = Array.from(rowEl.children).indexOf(cellEl);
-              //   // Focus and highlight the next cell
-              //   const nextInputEl = nextRowEl.cells
-              //     .item(cellElColIndex)
-              //     .querySelector("input");
-
-              //   setTarget(nextInputEl);
-
-              //   // updateCellFocus(i,j, true);
-
-              //   // setTarget(null);
-              //   // nextInputEl?.focus();
-              //   // nextInputEl?.select();
             };
 
             const onInputKeyDown = (
               e: React.KeyboardEvent<HTMLInputElement>
             ) => {
-              onEsc(e);
-              onEnter(e);
+              [onEsc, onEnter, onTab].forEach((fn) => fn(e));
             };
-
-            // useEffect(() => {
-            //   if (!editable) return;
-
-            //   inputRef.current.focus();
-            //   // const onEsc = (e: KeyboardEvent) => {
-            //   //   if (e.key !== "Escape") return;
-            //   //   inputRef.current.blur();
-            //   // };
-            //   // const onEnter = (e: KeyboardEvent) => {
-            //   //   if (e.key !== "Enter") return;
-            //   //   const hasShift = e.shiftKey;
-
-            //   //   // Unselect the cell
-            //   //   inputRef.current.blur();
-
-            //   //   setEditRowIndex(editRowIndex + (hasShift ? -1 : 1));
-
-            //   //   // console.log(target, target.parentElement);
-            //   //   const cellEl = inputRef.current
-            //   //     .parentElement as HTMLTableCellElement;
-            //   //   const rowEl = cellEl.parentElement as HTMLTableRowElement;
-
-            //   //   let nextRowEl = hasShift
-            //   //     ? (rowEl.previousSibling as HTMLTableRowElement)
-            //   //     : (rowEl.nextSibling as HTMLTableRowElement);
-            //   //   // If there is no next row, set to self as to not exit the table
-            //   //   nextRowEl = nextRowEl ?? rowEl;
-
-            //   //   // Get current col index of td so that we can select the same col in the
-            //   //   // _next_ row
-            //   //   const cellElColIndex = Array.from(rowEl.children).indexOf(
-            //   //     cellEl
-            //   //   );
-            //   //   // Focus and highlight the next cell
-            //   //   const nextInputEl = nextRowEl.cells
-            //   //     .item(cellElColIndex)
-            //   //     .querySelector("input");
-
-            //   //   setTarget(nextInputEl);
-
-            //   //   // updateCellFocus(i,j, true);
-
-            //   //   // setTarget(null);
-            //   //   // nextInputEl?.focus();
-            //   //   // nextInputEl?.select();
-            //   // };
-            //   // target.addEventListener("keydown", onEsc);
-            //   // target.addEventListener("keydown", onEnter);
-            //   console.log("here!", target);
-
-            //   // return () => {
-            //   //   console.log("cleaning up!", target);
-            //   //   target.removeEventListener("keydown", onEsc);
-            //   //   target.removeEventListener("keydown", onEnter);
-            //   // };
-            // }, [target]);
-
-            // const editable = false;
 
             // When the input is blurred, we'll call our table meta's updateData function
             // console.log("rendering cell", rowIndex, id, initialValue, value);
@@ -276,31 +226,15 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
               // console.log("on blur!", initialValue, value);
               // Only update if the value has changed
               if (initialValue !== value) {
-                table.options.meta?.updateData({
-                  rowIndex,
-                  columnId,
-                  value,
-                  prev: initialValue,
-                });
+                table.options.meta?.updateCellsData([
+                  {
+                    rowIndex,
+                    columnId,
+                    value,
+                    prev: initialValue,
+                  },
+                ]);
               }
-            };
-
-            // Add esc listener on focus
-            // const onFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-            //   console.log("on focus!", e.target);
-            //   setTarget(e.target);
-            // };
-
-            const onReadyClick = (e: React.MouseEvent<HTMLInputElement>) => {
-              console.trace("on ready click!", e.target);
-              setEditRowIndex(rowIndex);
-              setEditColumnId(columnId);
-              // setEdtingInfo((draft) => {
-              //   draft.rowIndex = rowIndex;
-              //   draft.columnId = columnId;
-              // });
-              // setTarget(inputRef.current);
-              // setEditable(true);
             };
 
             // If the initialValue is changed external, sync it up with our state
@@ -308,63 +242,46 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
               setValue(initialValue);
             }, [initialValue, setValue]);
 
-            // useEffect(() => {
-            //   setTarget(inputRef.current);
-            // }, [editable]);
-
+            // Select the input when it becomes editable
             React.useEffect(() => {
-              // if (editable) {
-              //   console.log("use effect0!", inputRef.current, "hasFocus" in inputRef.current, inputRef.current.hasFocus();
-
-              // }
-              // if (
-              //   editable &&
-              //   "hasFocus" in inputRef.current &&
-              //   !inputRef.current.hasFocus()
-              // ) {
-              //   console.trace("use effect1!", inputRef.current);
-              // }
               if (editable) {
-                console.log("use effect3!", inputRef.current);
                 inputRef.current.focus();
+                inputRef.current.select();
               }
-              // inputRef.current.focus();
             }, [editable]);
+
+            // Reselect the input when it comes into view!
+            // (It could be scrolled out of view and then back into view)
+            function onFocus(e: React.FocusEvent<HTMLInputElement>) {
+              if (editable) {
+                e.target.select();
+              }
+            }
+
+            function onChange(e: React.ChangeEvent<HTMLInputElement>) {
+              console.log("on change!");
+              setValue(e.target.value);
+            }
 
             if (editable) {
               return (
                 <input
                   value={value as string}
-                  onChange={(e) => {
-                    console.log("on change!");
-                    setValue(e.target.value);
-                  }}
+                  onChange={onChange}
                   onBlur={onBlur}
-                  // onFocus={onFocus}
-                  ref={inputRef}
+                  onFocus={onFocus}
                   onKeyDown={onInputKeyDown}
+                  ref={inputRef}
                 />
               );
             } else {
-              return (
-                <div onClick={onReadyClick} ref={inputRef}>
-                  {value as string}
-                </div>
-              );
+              const onReadyClick = (e: React.MouseEvent<HTMLInputElement>) => {
+                console.trace("on ready click!", e.target);
+                setEditRowIndex(rowIndex);
+                setEditColumnId(columnId);
+              };
+              return <div onClick={onReadyClick}>{value as string}</div>;
             }
-
-            // return (
-            //   <input
-            //     value={value as string}
-            //     onChange={(e) => {
-            //       console.log("on change!");
-            //       setValue(e.target.value);
-            //     }}
-            //     onBlur={onBlur}
-            //     onFocus={onFocus}
-            //     ref={inputRef}
-            //   />
-            // );
           },
         };
       }),
@@ -400,57 +317,51 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
     getSortedRowModel: getSortedRowModel(),
     ...filterOpts,
     debugAll: true,
-    // Provide our updateData function to our table meta
+    // Provide our updateCellsData function to our table meta
     // autoResetPageIndex,
     meta: {
-      updateData: ({
-        rowIndex,
-        columnId,
-        value,
-        prev,
-      }: {
-        rowIndex: number;
-        columnId: string;
-        value: unknown;
-        prev: unknown;
-      }) => {
+      updateCellsData: (cellInfos: UpdateCellData[]) => {
         // // Skip page index reset until after next rerender
         // skipAutoResetPageIndex();
 
-        const colIndex = columns.indexOf(columnId);
-        console.log(
-          "Set data here! (Send info back to shiny)",
-          rowIndex,
-          columnId,
-          colIndex,
-          value
+        const updateInfos: UpdateCellDataRequest[] = cellInfos.map(
+          (cellInfo) => {
+            return {
+              row_index: cellInfo.rowIndex,
+              column_id: cellInfo.columnId,
+              value: cellInfo.value,
+              prev: cellInfo.prev,
+            };
+          }
         );
-        makeRequest(
-          "dataframeUpdateCell",
-          [{ rowIndex, columnId, value, prev }],
-          (value: ResponseValue) => {
-            console.log("success!", value, rowIndex, columnId, prev);
-            setData((draft) => {
-              // const row = draft[rowIndex];
-              // console.log(
-              //   "Setting new value!",
-              //   value,
-              //   columnId,
-              //   draft[rowIndex]
-              // );
 
-              // draft[rowIndex] = {
-              //   ...row,
-              //   [colIndex]: value,
-              // };
-              draft[rowIndex][colIndex] = value;
-              // console.log(draft[rowIndex][columnId]);
-              // draft.forEach((row, index) => {
-              //   if (index === rowIndex) {
-              //     console.log("Setting new value!", value, columnId, row);
-              //     row[columnId] = value;
-              //   }
-              // });
+        console.log("Set data here! (Send info back to shiny)", cellInfos);
+        makeRequest(
+          "outputRPC",
+          [
+            // id: string
+            id,
+            // handler: string
+            "cells_update",
+            // list[OnCellUpdateParams]
+            updateInfos,
+          ],
+          (values: ResponseValue[]) => {
+            console.log("cellsUpdate - success!", values);
+            setData((draft) => {
+              values.forEach((value: string, i: number) => {
+                const { rowIndex, columnId } = cellInfos[i];
+                const colIndex = columns.indexOf(columnId);
+                const row = draft[rowIndex];
+                console.log(
+                  "Setting new value!",
+                  value,
+                  columnId,
+                  draft[rowIndex]
+                );
+
+                draft[rowIndex][colIndex] = value;
+              });
             });
           },
           (err: string) => {
