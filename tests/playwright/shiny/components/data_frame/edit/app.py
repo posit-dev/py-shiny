@@ -1,3 +1,5 @@
+from typing import Any
+
 import pandas as pd
 from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 
@@ -29,6 +31,16 @@ app_ui = ui.page_fillable(
         //     }
         //     $("#barret").append(txt + "\\n");
         // };
+        const window_console_trace = console.trace;
+        console.trace = function() {
+            window_console_trace.apply(console, arguments);
+            let txt = "trace - " + Date.now() + ": ";
+            for (let i = 0; i < arguments.length; i++) {
+                if (i > 0) txt += ", ";
+                txt += arguments[i];
+            }
+            $("#barret").append(txt + "\\n");
+        };
         const window_console_error = console.error;
         console.error = function() {
             window_console_error.apply(console, arguments);
@@ -53,44 +65,25 @@ def server(input: Inputs):
         return render.DataGrid(df(), row_selection_mode="none", editable=True)
         # return render.DataTable(df, row_selection_mode="multiple")
 
-    @reactive.calc
-    def patched_df() -> pd.DataFrame:
-        df_local = df.get()
-        # apply patch here!
-
-        return df_local
-
     @summary_data.on_cell_update
     async def handle_edit(
         # TODO-barret; Drop this param for now!
-        data: pd.DataFrame,
+        # data: pd.DataFrame,
         *,
         row_index: int,
         column_id: str,
         value: str,
         prev: str,
+        **kwargs: Any,
     ):
-        # The return value should be coerced by pandas to the correct type
-        return "formatted_" + value
+        return "demo_" + value
+
+    # summary_data.data_patched()  # ~ patched_df()
 
     if False:
         # Reactive value with current data
         # Make this a reactive calc
-        summary_data.data_patched()  # ~ patched_df()
         # summary_data.data_selected_rows()
-
-        # @summary_data.on_cell_update_method
-        # async def handle_edit(
-        #     data: pd.DataFrame,
-        #     *,
-        #     row_index: int,
-        #     column_id: str,
-        #     value: str,
-        #     prev: str,
-        # ):
-        #     # summary_data.update_cell(row_index, column_id, value)
-        #     for updated_cell_info in
-        #     return
 
         from typing import TypedDict
 
@@ -100,7 +93,7 @@ def server(input: Inputs):
             value: str
             prev: str
 
-        @summary_data.on_cell_update_full
+        @summary_data.on_cells_update
         async def handle_edit_full(
             # data: pd.DataFrame,
             *,

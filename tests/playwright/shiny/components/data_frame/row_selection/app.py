@@ -40,7 +40,7 @@ def make_server(input: Inputs):
     @render.data_frame
     def grid_selected():
         return render.DataGrid(
-            data=grid.data_selected_rows(),
+            data=grid.data_selected(),
             row_selection_mode=input.selection_mode(),
         )
 
@@ -61,12 +61,8 @@ def make_server(input: Inputs):
     # Test for selected rows data
     @render.code
     def selected_row_count():
-        grid_data = grid.data_selected_rows()
-        if grid_data is None:
-            raise ValueError("No rows selected")
-        grid_selected_data = grid_selected._data()
-        if grid_selected_data is None:
-            raise ValueError("No rows selected")
+        grid_data = grid.data()
+        grid_selected_data = grid_selected.data()
         return (
             "grid: "
             + str(grid_data.index.size)  # pyright: ignore[reportUnknownMemberType]
