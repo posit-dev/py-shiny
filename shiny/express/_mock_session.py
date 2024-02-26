@@ -15,7 +15,7 @@ class MockSession:
     def __init__(self):
         self.ns = Root
         self.input = Inputs({})
-        self.output = Outputs(cast(Session, self), self.ns, {}, {})
+        self.output = Outputs(cast(Session, self), self.ns, outputs={})
 
     # This is needed so that Outputs don't throw an error.
     def _is_hidden(self, name: str) -> bool:
