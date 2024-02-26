@@ -208,3 +208,14 @@
   margin-left: auto;
   margin-right: auto;
 }
+
+
+/* When .shiny-data-grid is not scrolling, the containers shouldn't flex */
+shiny-data-frame {
+  &:has(> div > .shiny-data-grid:not(.scrolling)) {
+    flex: 0 0 auto;
+  }
+  > div:has(> .shiny-data-grid:not(.scrolling)) {
+    flex: 0 0 auto;
+  }
+}
