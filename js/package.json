@@ -23,6 +23,7 @@
     "esbuild": "^0.18.11",
     "esbuild-sass-plugin": "^2.9.0",
     "eslint-plugin-react": "^7.25.3",
+    "eslint-plugin-react-hooks": "^4.6.0",
     "postcss": "^8.4.24",
     "postcss-modules": "^6.0.0",
     "preact": "^10.15.1",
