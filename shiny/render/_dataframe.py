@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import json
+from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -10,6 +11,7 @@ from typing import (
     Protocol,
     Self,
     Sequence,
+    TypedDict,
     Union,
     cast,
     runtime_checkable,
@@ -17,10 +19,8 @@ from typing import (
 
 from htmltools import Tag
 
-from .. import ui
+from .. import reactive, ui
 from .._docstring import add_example, no_example
-from ..reactive import Value as ReactiveValue
-from ..reactive import isolate
 from ..session._utils import (
     get_current_session,
     require_active_session,
@@ -38,6 +38,9 @@ if TYPE_CHECKING:
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
     def to_payload(self) -> Jsonifiable: ...
+
+
+RowSelectionMode = Literal["none", "single", "multiple"]
 
 
 @add_example(ex_dir="../api-examples/data_frame")
@@ -96,7 +99,7 @@ class DataGrid(AbstractTabularData):
         height: Union[str, float, None] = "500px",
         summary: Union[bool, str] = True,
         filters: bool = False,
-        row_selection_mode: Literal["none", "single", "multiple"] = "none",
+        row_selection_mode: RowSelectionMode = "none",
         editable: bool = False,
     ):
         import pandas as pd
@@ -113,7 +116,7 @@ class DataGrid(AbstractTabularData):
         self.height = height
         self.summary = summary
         self.filters = filters
-        self.row_selection_mode = row_selection_mode
+        self.row_selection_mode: RowSelectionMode = row_selection_mode
         self.editable = editable
 
     def to_payload(self) -> Jsonifiable:
@@ -186,9 +189,7 @@ class DataTable(AbstractTabularData):
         height: Union[str, float, None] = "500px",
         summary: Union[bool, str] = True,
         filters: bool = False,
-        row_selection_mode: Union[
-            Literal["none"], Literal["single"], Literal["multiple"]
-        ] = "none",
+        row_selection_mode: RowSelectionMode = "none",
     ):
         import pandas as pd
 
@@ -204,7 +205,7 @@ class DataTable(AbstractTabularData):
         self.height = height
         self.summary = summary
         self.filters = filters
-        self.row_selection_mode = row_selection_mode
+        self.row_selection_mode: RowSelectionMode = row_selection_mode
 
     def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
@@ -234,19 +235,40 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
     return res
 
 
+# TODO-barret; make generic
 DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
 
 class OnCellUpdateFn(Protocol):
     async def __call__(
         self,
-        data: "pd.DataFrame",
         *,
         row_index: int,
         column_id: str,
         value: str,
         prev: str,
+        **kwargs: Any,  # future proofing
     ) -> Any: ...
+class OnCellUpdateParams(TypedDict):
+    row_index: int
+    column_id: str
+    value: str
+    prev: str
+
+
+class OnCellsUpdateFn(Protocol):
+    async def __call__(
+        self,
+        *,
+        update_infos: list[OnCellUpdateParams],
+        **kwargs: Any,  # future proofing
+    ) -> Any: ...
+@dataclass
+class CellPatch:
+    row_index: int
+    column_id: str
+    value: str
+    prev: str
 
 
 @add_example()
@@ -294,109 +316,222 @@ class data_frame(Renderer[DataFrameResult]):
       objects you can return from the rendering function to specify options.
     """
 
-    _row_selection_mode: str | None
-    _session: Session | None
-    _value: DataFrameResult
-    _data: ReactiveValue[pd.DataFrame | None]
+    _session: Session | None  # Do not use. Use `_get_session()` instead
 
-    # Reactive!
-    # Turn this into a reactive calc value!
-    def data_patched(self) -> pd.DataFrame | None:
-        """
-        Reactive value of the data frame output data.
-        """
-        data = self._data()
-        if data is None:
-            return None
+    _value: reactive.Value[DataFrameResult | None]
+    # _data: reactive.Value[pd.DataFrame | None]
+
+    handle_cell_update: OnCellUpdateFn
+    handle_cells_update: OnCellsUpdateFn
+
+    cell_patches: reactive.Value[list[CellPatch]]
+
+    data: reactive.Calc_[pd.DataFrame]
+    """
+    Reactive value of the data frame's output data.
+    """
+    data_patched: reactive.Calc_[pd.DataFrame]
+    """
+    Reactive value of the data frame's edited output data.
+    """
+    row_selection_mode: reactive.Calc_[RowSelectionMode]
+    """
+    Reactive value of the data frame's row selection mode.
+    """
+
+    input_selected_rows: reactive.Calc_[tuple[int] | None]
+    """
+    Reactive value of selected rows indicies.
+
+    This method is a wrapper around `input.<id>_selected_rows()`, where `<id>` is
+    the `id` of the data frame output. This method returns the selected rows and
+    will cause reactive updates as the selected rows change.
+
+    Returns
+    -------
+    :
+        * `None` if the row selection mode is None
+        * `tuple[int]`representing the indices of the selected rows
+    """
+
+    data_selected: reactive.Calc_[pd.DataFrame]
+    """
+    Reactive value that returns the edited data frame subsetted to the selected area.
+
+    Returns
+    -------
+    :
+        * If the row selection mode is `None`, the calculation will throw a silent error (`req(False)`)
+        * The edited data (`.data_patched()`) at the indices of the selected rows
+    """
+
+    def _init_reactives(self) -> None:
 
         import pandas as pd
 
-        if not isinstance(data, pd.DataFrame):
-            raise TypeError(f"Unexpected type for self._data: {type(data)}")
-        return data
+        from .. import req
+
+        # Init
+        self._value = reactive.Value[DataFrameResult | None](None)
+
+        @reactive.calc
+        def self_data() -> pd.DataFrame:
+            value = self._value()
+            req(value)
+
+            if not isinstance(value, (DataGrid, DataTable)):
+                raise TypeError(
+                    f"Unsupported type returned from render function: {type(value)}. Expected `DataGrid` or `DataTable`"
+                )
+
+            if not isinstance(value.data, pd.DataFrame):
+                raise TypeError(f"Unexpected type for self._data: {type(value.data)}")
+
+            return value.data
+
+        self.data = self_data
+
+        @reactive.calc
+        def self_row_selection_mode() -> RowSelectionMode:
+            value = self._value()
+            req(value)
+            if not isinstance(value, (DataGrid, DataTable)):
+                raise TypeError(
+                    f"Unsupported type returned from render function: {type(value)}. Expected `DataGrid` or `DataTable`"
+                )
+
+            return value.row_selection_mode
+
+        self.row_selection_mode = self_row_selection_mode
+
+        @reactive.calc
+        def self_input_selected_rows() -> tuple[int] | None:
+            mode = self.row_selection_mode()
+            if mode == "none":
+                return None
+            return self._get_session().input[f"{self.output_id}_selected_rows"]()
+
+        self.input_selected_rows = self_input_selected_rows
+
+        @reactive.calc
+        def self_data_selected() -> pd.DataFrame:
+            indicies = self.input_selected_rows()
+            if indicies is None:
+                req(False)
+                raise RuntimeError("This should never be reached for typing purposes")
+
+            data = self.data_patched()
+            return data.iloc[list(indicies)]
+
+        self.data_selected = self_data_selected
+
+        self.cell_patches = reactive.Value[list[CellPatch]]([])
+
+        @reactive.calc
+        def self_data_patched() -> pd.DataFrame:
+            data = self.data()
+
+            with pd.option_context("mode.copy_on_write", True):
+                for cell_patch in self.cell_patches():
+                    data.iat[cell_patch.row_index, cell_patch.column_id] = (
+                        cell_patch.value
+                    )
+            return data
+
+        self.data_patched = self_data_patched
 
     def _get_session(self) -> Session:
         if self._session is None:
             raise RuntimeError(
-                "The input_selected_rows method can only be used within a reactive context"
+                "The data frame's session can only be accessed within a reactive context"
             )
         return self._session
 
-    def auto_output_ui(self) -> Tag:
-        return ui.output_data_frame(id=self.output_id)
-
-    _on_cell_update_fn: OnCellUpdateFn | None
-
-    def on_cell_update(self, fn: OnCellUpdateFn | None) -> Self:
-        self._on_cell_update_fn = fn
+    def on_cell_update(self, fn: OnCellUpdateFn) -> Self:
+        self.handle_cell_update = fn
         return self
 
-    def _add_message_handlers(self) -> None:
-        self._on_cell_update_fn = None
+    def on_cells_update(self, fn: OnCellsUpdateFn) -> Self:
+        self.handle_cells_update = fn
+        return self
 
-        session = self._session
-        if session is None:
-            return
+    def _init_handlers(self) -> None:
+        async def _on_cell_update_default(
+            *,
+            row_index: int,
+            column_id: str,
+            value: str,
+            prev: str,
+            **kwargs: Any,
+        ) -> str:
+            return value
 
-        UPDATE_CELL = "dataframeUpdateCell"
-        if UPDATE_CELL not in session._message_handlers:
+        async def _on_cells_update_default(
+            *,
+            update_infos: list[OnCellUpdateParams],
+            **kwargs: Any,
+        ):
+            with reactive.isolate():
+                formatted_values: list[Any] = []
+                for update_info in update_infos:
+                    row_index = update_info["row_index"]
+                    column_id = update_info["column_id"]
+                    value = update_info["value"]
+                    prev = update_info["prev"]
 
-            from typing import TypedDict
-
-            class UpdateDFParams(TypedDict):
-                id: str
-                rowIndex: int
-                columnId: str
-                value: str
-                prev: str
-
-            async def dataframe_update_cell(*args: UpdateDFParams):
-                # TODO-barret; This should be a generic update method that dispatches to the output's on_cell_update method
-                if self._on_cell_update_fn is None:
-                    raise RuntimeError(
-                        "`@render.data_frame` class has not set `on_cell_update` method."
+                    formatted_value = await self.handle_cell_update(
+                        row_index=row_index,
+                        column_id=column_id,
+                        value=value,
+                        prev=prev,
                     )
-                with session_context(session):
-                    with isolate():
-                        data = self.data_patched()
-                        if data is None:
-                            raise RuntimeError(
-                                "`@render.data_frame` has no data to update. Please file an issue on GitHub with a reprex."
-                            )
-                        for arg in args:
-                            row_index = arg["rowIndex"]
-                            column_id = arg["columnId"]
-                            value = arg["value"]
-                            prev = arg["prev"]
+                    # TODO-barret; check type here?
+                    # TODO-barret; The return value should be coerced by pandas to the correct type
+                    formatted_values.append(formatted_value)
 
-                            formatted_value = await self._on_cell_update_fn(
-                                data,
-                                row_index=row_index,
-                                column_id=column_id,
-                                value=value,
-                                prev=prev,
-                            )
-                            return formatted_value
-                        # if active_session._debug:
-                        #     print("Update cell: " + str(arg), flush=True)
-                    # if active_session._debug:
-                    #     print("Upload init: " + str(file_infos), flush=True)
+                return formatted_values
 
-                    # # TODO: Don't alter message in place?
-                    # for fi in file_infos:
-                    #     if fi["type"] == "":
-                    #         fi["type"] = _utils.guess_mime_type(fi["name"])
+        self.on_cell_update(_on_cell_update_default)
+        self.on_cells_update(_on_cells_update_default)
+        # self._add_message_handlers()
 
-                    # job_id = self._file_upload_manager.create_upload_operation(file_infos)
-                    # worker_id = ""
-                    # return {
-                    #     "jobId": job_id,
-                    #     "uploadUrl": f"session/{self.id}/upload/{job_id}?w={worker_id}",
-                    # }
-                    return None
+    # To be called by session's outputRPC message handler on this data_frame
+    # Do not change this method unless you update corresponding code in `/js/dataframe/`!!
+    async def _handle_cells_update(self, update_infos: list[OnCellUpdateParams]):
+        with session_context(self._get_session()):
+            with reactive.isolate():
+                # Make new array to trigger reactive update
+                patches = [p for p in self.cell_patches()]
 
-            print("Adding message handler: ", UPDATE_CELL)
-            session._message_handlers[UPDATE_CELL] = dataframe_update_cell
+                # Call on_cells_update
+                formatted_values = await self.handle_cells_update(
+                    update_infos=update_infos
+                )
+
+                if len(formatted_values) != len(update_infos):
+                    raise ValueError(
+                        f"The return value of {self.output_id}'s `handle_cells_update()` (typically set by `@{self.output_id}.on_cells_update`) must be a list of the same length as the input list of cell updates. Received {len(formatted_values)} items and expected {len(update_infos)}."
+                    )
+
+                # Add new patches
+                # TODO-barret-future; Reduce the set to unique patches (by location)?
+                for formatted_value, update_info in zip(formatted_values, update_infos):
+                    patches.append(
+                        CellPatch(
+                            row_index=update_info["row_index"],
+                            column_id=update_info["column_id"],
+                            value=formatted_value,
+                            prev=update_info["prev"],
+                        )
+                    )
+
+                # Set new patches
+                self.cell_patches.set(patches)
+
+                return formatted_values
+
+    def auto_output_ui(self) -> Tag:
+        return ui.output_data_frame(id=self.output_id)
 
     def __init__(self, fn: ValueFn[DataFrameResult]):
         # Must be done before super().__init__ is called
@@ -405,10 +540,10 @@ class data_frame(Renderer[DataFrameResult]):
 
         super().__init__(fn)
 
-        self._row_selection_mode = None
-        self._data = ReactiveValue(None)
-
-        self._add_message_handlers()
+        # Set reactives from calculated properties
+        self._init_reactives()
+        # Set update functions
+        self._init_handlers()
 
     def _set_output_metadata(self, *, output_id: str) -> None:
         super()._set_output_metadata(output_id=output_id)
@@ -422,18 +557,20 @@ class data_frame(Renderer[DataFrameResult]):
             raise RuntimeError(
                 "The session used when creating the renderer "
                 "is not the same session used when executing the renderer. "
-                "Please file an issue on GitHub with an example of how to reproduce this error. "
+                "Please file an issue on "
+                "GitHub <https://github.com/posit-dev/py-shiny/issues/new> "
+                "with an example of how you are reproducing this error. "
                 "We would be curious to know your use case!"
             )
 
     async def render(self) -> Jsonifiable:
-        with isolate():
-            self._data.set(None)
-        self._row_selection_mode = None
+        # Reset value
+        self._value.set(None)
 
         value = await self.fn()
         if value is None:
-            self._data.set(None)
+            # Quit early
+            self._value.set(None)
             return None
 
         if not isinstance(value, AbstractTabularData):
@@ -444,15 +581,10 @@ class data_frame(Renderer[DataFrameResult]):
                 )
             )
 
-        if isinstance(value, (DataGrid, DataTable)):
-            self._data.set(value.data)
-        else:
-            self._data.set(value)
-        self._row_selection_mode = value.row_selection_mode
-
+        self._value.set(value)
         return value.to_payload()
 
-    async def _send_message(self, handler: str, obj: dict[str, Any]):
+    async def _send_message_to_browser(self, handler: str, obj: dict[str, Any]):
         # TODO-barret; capture data in render method
         # TODO-barret; invalidate data in render method before user fn has been called
 
@@ -468,46 +600,6 @@ class data_frame(Renderer[DataFrameResult]):
             },
         )
 
-    def input_selected_rows(self) -> tuple[int] | None:
-        """
-        Reactive input value of selected rows indicies.
-
-        This method is a wrapper around `input.<id>_selected_rows()`, where `<id>` is
-        the `id` of the data frame output. This method returns the selected rows and
-        will cause reactive updates as the selected rows change.
-
-        Returns
-        -------
-        :
-            * `None` if the row selection mode is None
-            * `tuple[int]`a tuple of integers representing the indices of the selected rows
-        """
-        return self._get_session().input[f"{self.output_id}_selected_rows"]()
-
-    def data_selected_rows(self) -> pd.DataFrame | None:
-        """
-        Reactive input value of the selected rows in the data frame output.
-
-        This method is a wrapper around `input.<id>_selected_rows()`, where `<id>` is
-        the `id` of the data frame output. This method returns the selected rows and
-        will cause reactive updates as the selected rows change.
-
-        Returns
-        -------
-        :
-            * `None` if the row selection mode is None
-            * `tuple[int]`a tuple of integers representing the indices of the selected rows
-        """
-        indicies = self.input_selected_rows()
-        if indicies is None:
-            return None
-
-        data = self.data_patched()
-        if data is None:
-            return None
-
-        return data.iloc[list(indicies)]
-
     async def update_row_selection(
         self, idx: Optional[Sequence[int] | int] = None
     ) -> None:
@@ -516,7 +608,8 @@ class data_frame(Renderer[DataFrameResult]):
         elif isinstance(idx, int):
             idx = (idx,)
 
-        mode = self._row_selection_mode
+        with reactive.isolate():
+            mode = self.row_selection_mode()
         if mode == "none":
             raise ValueError(
                 "You can't update row selections when row_selection_mode is 'none'"
@@ -526,7 +619,7 @@ class data_frame(Renderer[DataFrameResult]):
             raise ValueError(
                 "Attempted to set multiple row selection values when row_selection_mode is 'single'"
             )
-        await self._send_message("updateRowSelection", {"keys": idx})
+        await self._send_message_to_browser("updateRowSelection", {"keys": idx})
 
 
 @runtime_checkable
