@@ -265,7 +265,7 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
     return res
 
 
-# TODO-barret; make generic
+# TODO-barret-future; make generic
 DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
 
@@ -546,7 +546,6 @@ class data_frame(Renderer[DataFrameResult]):
                     )
 
                 # Add new patches
-                # TODO-barret-future; Reduce the set to unique patches (by location)?
                 for formatted_value, update_info in zip(formatted_values, update_infos):
                     patches.append(
                         CellPatch(
@@ -556,6 +555,12 @@ class data_frame(Renderer[DataFrameResult]):
                             prev=update_info["prev"],
                         )
                     )
+
+                # Remove duplicate patches
+                patch_map: dict[tuple[int, str], CellPatch] = {}
+                for patch in patches:
+                    patch_map[(patch.row_index, patch.column_id)] = patch
+                patches = list(patch_map.values())
 
                 # Set new patches
                 self.cell_patches.set(patches)
