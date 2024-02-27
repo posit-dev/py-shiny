@@ -387,7 +387,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   // Reset scroll when dataset changes
   useLayoutEffect(() => {
     rowVirtualizer.scrollToOffset(0);
-  }, [data]);
+  }, [data, rowVirtualizer]);
 
   const totalSize = rowVirtualizer.getTotalSize();
   const virtualRows = rowVirtualizer.getVirtualItems();
@@ -475,7 +475,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
         handleMessage as EventListener
       );
     };
-  }, [rowSelection]);
+  }, [id, rowSelection]);
 
   useEffect(() => {
     if (id) {
@@ -492,7 +492,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
         );
       }
     }
-  }, [[...rowSelection.keys()]]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, rowSelectionMode, [...rowSelection.keys()]]);
 
   // ### End row selection ############################################################
 
@@ -651,6 +652,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
       table.resetSorting();
       rowSelection.clear();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
   const headerRowCount = table.getHeaderGroups().length;

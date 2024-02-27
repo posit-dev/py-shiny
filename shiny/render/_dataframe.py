@@ -435,9 +435,10 @@ class data_frame(Renderer[DataFrameResult]):
 
             with pd.option_context("mode.copy_on_write", True):
                 for cell_patch in self.cell_patches():
-                    data.iat[cell_patch.row_index, cell_patch.column_id] = (
-                        cell_patch.value
-                    )
+                    data.iat[  # pyright: ignore[reportUnknownMemberType]
+                        cell_patch.row_index,
+                        cell_patch.column_id,
+                    ] = cell_patch.value
             return data
 
         self.data_patched = self_data_patched
