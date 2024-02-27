@@ -1,4 +1,4 @@
-.PHONY: help clean clean-test clean-pyc clean-build help lint test playwright-shiny playwright-examples playwright-deploys install-trcli install-playwright
+.PHONY: help clean% check% format% docs% lint test pyright playwright% install% testrail% coverage release
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -70,28 +70,48 @@ typings/matplotlib/__init__.pyi:
 
 pyright-typings: typings/appdirs typings/folium typings/uvicorn typings/seaborn typings/matplotlib/__init__.pyi
 
-pyright: pyright-typings ## type check with pyright
-	pyright
+check: check-format check-lint check-types check-tests  ## check code, style, types, and test (basic CI)
+check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
+check-format: check-black check-isort
+check-types: check-pyright
+check-tests: check-pytest
 
-lint: ## check style with flake8
-	echo "Checking style with flake8"
+check-lint:
+	@echo "-------- Checking style with flake8 ---------"
 	flake8 --show-source .
-
-format: ## format code with black and isort
-	echo "Formatting code with black"
-	black .
-	echo "Sorting imports with isort"
-	isort .
-
-check: ## check code quality with black and isort
-	echo "Checking code with black"
+check-black:
+	@echo "-------- Checking code with black -----------"
 	black --check .
-	echo "Sorting imports with isort"
+check-isort:
+	@echo "-------- Sorting imports with isort ---------"
 	isort --check-only --diff .
-
-test: ## run tests quickly with the default Python
+check-pyright: typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn
+	@echo "-------- Checking types with pyright --------"
+	pyright
+check-pytest:
+	@echo "-------- Running tests with pytest ----------"
 	python3 tests/pytest/asyncio_prevent.py
 	pytest
+
+pyright: check-types ## check types with pyright
+lint: check-lint ## check style with flake8
+test: check-tests ## check tests quickly with the default Python
+
+format: format-black format-isort ## format code with black and isort
+format-black:
+	@echo "-------- Formatting code with black --------"
+	black .
+format-isort:
+	@echo "-------- Sorting imports with isort --------"
+	isort .
+
+docs: ## docs: build docs with quartodoc
+	@echo "-------- Building docs with quartodoc --------"
+	@cd docs && make quartodoc
+
+docs-preview: ## docs: preview docs in browser
+	@echo "-------- Previewing docs in browser --------"
+	@cd docs && make serve
 
 # Default `SUB_FILE` to empty
 SUB_FILE:=

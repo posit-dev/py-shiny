@@ -13,6 +13,7 @@ from ...ui._accordion import AccordionPanel
 from ...ui._card import CardItem
 from ...ui._layout_columns import BreakpointsUser
 from ...ui._navs import NavMenu, NavPanel, NavSet, NavSetBar, NavSetCard
+from ...ui._sidebar import SidebarOpenSpec, SidebarOpenValue
 from ...ui.css import CssUnit
 from .._recall_context import RecallContextManager
 
@@ -42,17 +43,18 @@ __all__ = (
 @add_example()
 def sidebar(
     *,
-    width: CssUnit = 250,
     position: Literal["left", "right"] = "left",
-    open: Literal["desktop", "open", "closed", "always"] = "always",
+    open: Optional[SidebarOpenSpec | SidebarOpenValue | Literal["desktop"]] = None,
+    width: CssUnit = 250,
     id: Optional[str] = None,
     title: TagChild | str = None,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
-    class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
-    max_height_mobile: Optional[str | float] = "auto",
+    class_: Optional[str] = None,
+    max_height_mobile: Optional[str | float] = None,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
+    **kwargs: TagAttrValue,
 ) -> RecallContextManager[ui.Sidebar]:
     """
     Context manager for sidebar element
@@ -64,20 +66,21 @@ def sidebar(
     width
         A valid CSS unit used for the width of the sidebar.
     position
-        Where the sidebar should appear relative to the main content.
+        Where the sidebar should appear relative to the main content, one of `"left"` or
+        `"right"`.
     open
-        The initial state of the sidebar.
+        The initial state of the sidebar. If a string, the possible values are:
 
-        * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
-        * `"open"` or `True`: the sidebar starts open
-        * `"closed"` or `False`: the sidebar starts closed
-        * `"always"` or `None`: the sidebar is always open and cannot be closed
+        * `"open"`: the sidebar starts open
+        * `"closed"`: the sidebar starts closed
+        * `"always"`: the sidebar is always open and cannot be closed
 
-        In :func:`~shiny.ui.update_sidebar`, `open` indicates the desired state of the
-        sidebar. Note that :func:`~shiny.ui.update_sidebar` can only open or close the
-        sidebar, so it does not support the `"desktop"` and `"always"` options.
+        Alternatively, you can provide a dictionary with keys `"desktop"` and `"mobile"`
+        to set different initial states for desktop and mobile. For example, when
+        `{"desktop": "open", "mobile": "closed"}` the sidebar is initialized in the
+        open state on desktop screens or in the closed state on mobile screens.
     id
-        A character string. Required if wanting to re-actively read (or update) the
+        A character string. Required if wanting to reactively read (or update) the
         `collapsible` state in a Shiny app.
     title
         A character title to be used as the sidebar title, which will be wrapped in a
@@ -92,8 +95,8 @@ def sidebar(
     max_height_mobile
         A CSS length unit (passed through :func:`~shiny.ui.css.as_css_unit`) defining
         the maximum height of the horizontal sidebar when viewed on mobile devices. Only
-        applies to always-open sidebars that use `open = "always"`, where by default the
-        sidebar container is placed below the main content container on mobile devices.
+        applies to always-open sidebars on mobile, where by default the sidebar
+        container is placed below the main content container on mobile devices.
     gap
         A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
         provided to `*args`.
@@ -109,6 +112,8 @@ def sidebar(
           and right, and the third will be bottom.
         * If four, then the values will be interpreted as top, right, bottom, and left
           respectively.
+    **kwargs
+        Named attributes are supplied to the sidebar content container.
     """
     return RecallContextManager(
         ui.sidebar,
@@ -124,6 +129,7 @@ def sidebar(
             max_height_mobile=max_height_mobile,
             gap=gap,
             padding=padding,
+            **kwargs,
         ),
     )
 

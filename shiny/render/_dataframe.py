@@ -55,7 +55,7 @@ class DataGrid(AbstractTabularData):
         A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
         (e.g., a Polars data frame or Arrow table).
     width
-        A _maximum_ amount of vertical space for the data grid to occupy, in CSS units
+        A _maximum_ amount of horizontal space for the data grid to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
         default is `fit-content`, which sets the grid's width according to its contents.
         Set this to `100%` to use the maximum available horizontal space.
@@ -63,7 +63,7 @@ class DataGrid(AbstractTabularData):
         A _maximum_ amount of vertical space for the data grid to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. If there
         are more rows than can fit in this space, the grid will scroll. Set the height
-        to `None` to allow the grid to grow to fit all of the rows (this is not
+        to `"auto"` to allow the grid to grow to fit all of the rows (this is not
         recommended for large data sets, as it may crash the browser).
     summary
         If `True` (the default), shows a message like "Viewing rows 1 through 10 of 20"
@@ -96,7 +96,7 @@ class DataGrid(AbstractTabularData):
         data: object,
         *,
         width: str | float | None = "fit-content",
-        height: Union[str, float, None] = "500px",
+        height: Union[str, float, None] = None,
         summary: Union[bool, str] = True,
         filters: bool = False,
         row_selection_mode: RowSelectionMode = "none",
@@ -129,6 +129,7 @@ class DataGrid(AbstractTabularData):
             row_selection_mode=self.row_selection_mode,
             editable=self.editable,
             style="grid",
+            fill=self.height is None,
         )
         return res
 

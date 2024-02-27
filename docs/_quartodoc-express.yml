@@ -16,6 +16,7 @@ quartodoc:
         - express.ui.input_select
         - express.ui.input_selectize
         - express.ui.input_slider
+        - express.ui.input_dark_mode
         - express.ui.input_date
         - express.ui.input_date_range
         - express.ui.input_checkbox
@@ -28,6 +29,7 @@ quartodoc:
         - express.ui.input_password
         - express.ui.input_action_button
         - express.ui.input_action_link
+        - express.ui.input_task_button
     - title: Output components
       desc: Reactively render output.
       contents:
@@ -103,6 +105,7 @@ quartodoc:
           dynamic: true
         - name: express.ui.update_slider
           dynamic: true
+        - express.ui.update_dark_mode
         - ui.update_date
         - name: express.ui.update_date_range
           dynamic: true
@@ -121,6 +124,9 @@ quartodoc:
           dynamic: "shiny.ui.update_text"
         - name: express.ui.update_navs
           dynamic: true
+        - express.ui.update_action_button
+        - express.ui.update_action_link
+        - express.ui.update_task_button
     - title: Update UI Layouts
       desc: ""
       contents:

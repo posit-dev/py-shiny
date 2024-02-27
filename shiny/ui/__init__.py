@@ -71,6 +71,7 @@ from ._input_check_radio import (
     input_radio_buttons,
     input_switch,
 )
+from ._input_dark_mode import input_dark_mode, update_dark_mode
 from ._input_date import input_date, input_date_range
 from ._input_file import input_file
 from ._input_numeric import input_numeric
@@ -219,6 +220,9 @@ __all__ = (
     "input_checkbox_group",
     "input_switch",
     "input_radio_buttons",
+    # _input_dark_mode
+    "input_dark_mode",
+    "update_dark_mode",
     # _input_date
     "input_date",
     "input_date_range",
