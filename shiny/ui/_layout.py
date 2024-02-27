@@ -7,7 +7,7 @@ from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from ..types import MISSING, MISSING_TYPE
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 from ._utils import is_01_scalar
 from .css import CssUnit, as_css_unit
@@ -155,7 +155,7 @@ def layout_column_wrap(
         },
         attrs,
         *wrap_all_in_gap_spaced_container(children, fillable),
-        components_dependency(),
+        components_dependencies(),
     )
     if fill:
         tag = as_fill_item(tag)

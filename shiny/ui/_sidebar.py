@@ -23,7 +23,7 @@ from .._utils import private_random_id
 from ..session import require_active_session
 from ..types import MISSING, MISSING_TYPE
 from ._card import CardItem
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs, trinary
 from ._utils import css_no_sub
 from .css import CssUnit, as_css_padding, as_css_unit
@@ -652,7 +652,7 @@ def layout_sidebar(
         {"class": "sidebar-collapsed"} if sidebar.open().desktop == "closed" else None,
         main,
         sidebar,
-        components_dependency(),
+        components_dependencies(),
         _sidebar_init_js(),
         data_bslib_sidebar_init="true",
         data_open_desktop=sidebar.open().desktop,

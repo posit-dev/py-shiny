@@ -34,7 +34,7 @@ from .._utils import private_random_int
 from ..types import NavSetArg
 from ._bootstrap import column, row
 from ._card import CardItem, WrapperCallable, card, card_body, card_footer, card_header
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._sidebar import Sidebar, layout_sidebar
 from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
@@ -215,7 +215,7 @@ def nav_spacer() -> NavPanel:
     See :func:`~shiny.ui.nav_panel`
     """
 
-    return NavPanel(tags.li(components_dependency(), class_="bslib-nav-spacer"))
+    return NavPanel(tags.li(components_dependencies(), class_="bslib-nav-spacer"))
 
 
 class NavMenu:

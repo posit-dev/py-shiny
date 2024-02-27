@@ -15,7 +15,7 @@ from .._typing_extensions import ParamSpec
 from ..reactive._extended_task import ExtendedTask
 from ..reactive._reactives import effect
 from ._html_deps_py_shiny import spin_dependency
-from ._html_deps_shinyverse import components_dependency, web_component_dependency
+from ._html_deps_shinyverse import components_dependencies
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -146,8 +146,7 @@ def input_task_button(
             *args,
             case="ready",
         ),
-        components_dependency(),
-        web_component_dependency(),
+        components_dependencies(),
         spin_dependency(),
         id=resolve_id(id),
         type="button",
