@@ -55,14 +55,14 @@ def test_nav(page: Page, local_app: ShinyAppProc) -> None:
         }
     }
 
-    def tester(tab_name):
-        tab = nav_data[tab_name]['control'](page, tab_name)
-        tab.expect_nav_values(["a", "b", "c"])
-        tab.expect_value("a")
-        tab.expect_content(nav_data[tab_name]['verify'] + ": tab a content")
-        tab.set("b")
-        tab.expect_value("b")
-        tab.expect_content(nav_data[tab_name]['verify'] + ": tab b content")
+    def tester(el_name):
+        element = nav_data[el_name]['control'](page, el_name)
+        element.expect_nav_values(["a", "b", "c"])
+        element.expect_value("a")
+        element.expect_content(nav_data[el_name]['verify'] + ": tab a content")
+        element.set("b")
+        element.expect_value("b")
+        element.expect_content(nav_data[el_name]['verify'] + ": tab b content")
 
     nav_list = [
         "navset_tab", "navset_pill", "navset_underline", "navset_card_tab",
