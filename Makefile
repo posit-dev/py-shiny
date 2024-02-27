@@ -1,4 +1,4 @@
-.PHONY: help clean% check% format% docs% lint test pyright playwright% install% testrail% coverage release
+.PHONY: help clean% check% format% docs% lint test pyright playwright% install% testrail% coverage release js-*
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -28,20 +28,23 @@ help:
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
-clean-build: ## remove build artifacts
+# Remove build artifacts
+clean-build:
 	rm -fr build/
 	rm -fr dist/
 	rm -fr .eggs/
 	find . -name '*.egg-info' -exec rm -fr {} +
 	find . -name '*.egg' -exec rm -f {} +
 
-clean-pyc: ## remove Python file artifacts
+# Remove Python file artifacts
+clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
 	find . -name '*.pyo' -exec rm -f {} +
 	find . -name '*~' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -fr {} +
 
-clean-test: ## remove test and coverage artifacts
+# Remove test and coverage artifacts
+clean-test:
 	rm -fr .tox/
 	rm -f .coverage
 	rm -fr htmlcov/
@@ -73,10 +76,11 @@ pyright-typings: typings/appdirs typings/folium typings/uvicorn typings/seaborn 
 check: check-format check-lint check-types check-tests  ## check code, style, types, and test (basic CI)
 check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
 check-format: check-black check-isort
+check-lint: check-flake8
 check-types: check-pyright
 check-tests: check-pytest
 
-check-lint:
+check-flake8:
 	@echo "-------- Checking style with flake8 ---------"
 	flake8 --show-source .
 check-black:
@@ -93,8 +97,10 @@ check-pytest:
 	python3 tests/pytest/asyncio_prevent.py
 	pytest
 
-pyright: check-types ## check types with pyright
-lint: check-lint ## check style with flake8
+# Check types with pyright
+pyright: check-types
+# Check style with flake8
+lint: check-lint
 test: check-tests ## check tests quickly with the default Python
 
 format: format-black format-isort ## format code with black and isort
@@ -106,12 +112,31 @@ format-isort:
 	isort .
 
 docs: ## docs: build docs with quartodoc
-	@echo "-------- Building docs with quartodoc --------"
+	@echo "-------- Building docs with quartodoc ------"
 	@cd docs && make quartodoc
 
 docs-preview: ## docs: preview docs in browser
 	@echo "-------- Previewing docs in browser --------"
 	@cd docs && make serve
+
+
+install-npm:
+	$(if $(shell which npm), , $(error Please install node.js and npm first. See https://nodejs.org/en/download/ for instructions.))
+js/node_modules: install-npm
+	@echo "-------- Installing node_modules -----------"
+	@cd js && npm install
+js-build: js/node_modules ## Build JS assets
+	@echo "-------- Building JS assets ----------------"
+	@cd js && npm run build
+js-watch: js/node_modules
+	@echo "-------- Continuously building JS assets ---"
+	@cd js && npm run watch
+js-watch-fast: js/node_modules ## Continuously build JS assets (development)
+	@echo "-------- Previewing docs in browser --------"
+	@cd js && npm run watch-fast
+clean-js:
+	@echo "-------- Removing js/node_modules ----------"
+	rm -rf js/node_modules
 
 # Default `SUB_FILE` to empty
 SUB_FILE:=
@@ -122,22 +147,27 @@ install-playwright:
 install-trcli:
 	which trcli || pip install trcli
 
-install-rsconnect: ## install the main version of rsconnect till pypi version supports shiny express
+# Installs the main version of rsconnect till pypi version supports shiny express
+install-rsconnect:
 	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
 
-playwright-shiny: install-playwright ## end-to-end tests with playwright
+# end-to-end tests with playwright; (SUB_FILE="" within tests/playwright/shiny/)
+playwright-shiny: install-playwright
 	pytest tests/playwright/shiny/$(SUB_FILE)
 
-playwright-deploys: install-playwright install-rsconnect ## end-to-end tests on examples with playwright
+# end-to-end tests on deployed apps with playwright; (SUB_FILE="" within tests/playwright/deploys/)
+playwright-deploys: install-playwright install-rsconnect
 	pytest tests/playwright/deploys/$(SUB_FILE)
 
-playwright-examples: install-playwright ## end-to-end tests on examples with playwright
+# end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)
+playwright-examples: install-playwright
 	pytest tests/playwright/examples/$(SUB_FILE)
 
-playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed
+playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed; (SUB_FILE="" within tests/playwright/)
 	pytest -c tests/playwright/playwright-pytest.ini tests/playwright/$(SUB_FILE)
 
-testrail-junit: install-playwright install-trcli ## end-to-end tests with playwright and generate junit report
+# end-to-end tests with playwright and generate junit report
+testrail-junit: install-playwright install-trcli
 	pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml
 
 coverage: ## check combined code coverage (must run e2e last)

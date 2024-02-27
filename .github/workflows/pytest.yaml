@@ -31,22 +31,22 @@ jobs:
       - name: Run unit tests
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make test
+          make check-tests
 
-      - name: Type check with pyright
+      - name: Type check
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make pyright
+          make check-types
 
-      - name: Lint with flake8
+      - name: Lint code
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make lint
+          make check-lint
 
-      - name: black and isort
+      - name: Verify code formatting
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make check
+          make check-format
 
   playwright-shiny:
     runs-on: ${{ matrix.os }}
