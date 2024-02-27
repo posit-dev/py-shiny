@@ -67,8 +67,6 @@ def server(input: Inputs):
 
     @summary_data.on_cell_update
     async def handle_edit(
-        # TODO-barret; Drop this param for now!
-        # data: pd.DataFrame,
         *,
         row_index: int,
         column_id: str,
