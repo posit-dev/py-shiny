@@ -133,6 +133,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const [editRowIndex, setEditRowIndex] = useState<number>(null);
   const [editColumnId, setEditColumnId] = useState<string>(null);
 
+  const canEdit = data.options["editable"] ?? false;
+
   useEffect(() => {
     console.trace("editing info!", editRowIndex, editColumnId);
   }, [editColumnId, editRowIndex]);
@@ -280,7 +282,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
                 setEditRowIndex(rowIndex);
                 setEditColumnId(columnId);
               };
-              return <div onClick={onReadyClick}>{value as string}</div>;
+              const onClick = canEdit ? onReadyClick : undefined;
+              return <div onClick={onClick}>{value as string}</div>;
             }
           },
         };
@@ -502,8 +505,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   type TKey = typeof HTMLTableRowElement.prototype.dataset.key;
   type TElement = HTMLTableRowElement;
 
-  const editable = data.options["editable"] ?? false;
-  if (editable && canSelect) {
+  if (canEdit && canSelect) {
     // TODO-barret; maybe listen for a double click?
     // Is is possible to rerender on double click independent of the row selection?
     console.error(
