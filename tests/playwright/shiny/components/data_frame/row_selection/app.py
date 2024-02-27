@@ -17,9 +17,11 @@ def make_ui(title: str):
         ),
         ui.layout_columns(
             ui.h5("Selected Rows:"),
-            ui.output_text_verbatim("selected_rows"),
-            ui.h5("Selected Row count:"),
-            ui.output_text_verbatim("selected_row_count"),
+            ui.output_code("selected_rows"),
+            ui.h5("Selected row count:"),
+            ui.output_code("selected_row_count"),
+            ui.h5("Total row count:"),
+            ui.output_code("grid_row_count"),
         ),
         ui.hr(),
         ui.h5("Selected Data Frame"),
@@ -35,6 +37,7 @@ def make_server(input: Inputs):
         return render.DataGrid(
             data=load_penguins(),  # pyright: ignore[reportUnknownArgumentType]
             row_selection_mode=input.selection_mode(),
+            height="300px",
         )
 
     @render.data_frame
@@ -60,16 +63,15 @@ def make_server(input: Inputs):
 
     # Test for selected rows data
     @render.code
-    def selected_row_count():
+    def grid_row_count():
         grid_data = grid.data()
+        return str(grid_data.index.size)  # pyright: ignore[reportUnknownMemberType]
+
+    @render.code
+    def selected_row_count():
         grid_selected_data = grid_selected.data()
-        return (
-            "grid: "
-            + str(grid_data.index.size)  # pyright: ignore[reportUnknownMemberType]
-            + "; selected: "
-            + str(
-                grid_selected_data.index.size  # pyright: ignore[reportUnknownMemberType]
-            )
+        return str(
+            grid_selected_data.index.size  # pyright: ignore[reportUnknownMemberType]
         )
 
 
