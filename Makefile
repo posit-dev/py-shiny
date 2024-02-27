@@ -94,7 +94,7 @@ check-black: FORCE
 check-isort: FORCE
 	@echo "-------- Sorting imports with isort ---------"
 	isort --check-only --diff .
-check-pyright: typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn
+check-pyright: pyright-typings
 	@echo "-------- Checking types with pyright --------"
 	pyright
 check-pytest: FORCE

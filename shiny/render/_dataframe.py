@@ -9,7 +9,6 @@ from typing import (
     Literal,
     Optional,
     Protocol,
-    Self,
     Sequence,
     TypedDict,
     Union,
@@ -21,6 +20,7 @@ from htmltools import Tag
 
 from .. import reactive, ui
 from .._docstring import add_example, no_example
+from .._typing_extensions import Self
 from ..session._utils import (
     get_current_session,
     require_active_session,
@@ -374,7 +374,7 @@ class data_frame(Renderer[DataFrameResult]):
         from .. import req
 
         # Init
-        self._value = reactive.Value[DataFrameResult | None](None)
+        self._value: reactive.Value[Union[DataFrameResult, None]] = reactive.Value(None)
 
         @reactive.calc
         def self_data() -> pd.DataFrame:
@@ -427,7 +427,7 @@ class data_frame(Renderer[DataFrameResult]):
 
         self.data_selected = self_data_selected
 
-        self.cell_patches = reactive.Value[list[CellPatch]]([])
+        self.cell_patches: reactive.Value[list[CellPatch]] = reactive.Value([])
 
         @reactive.calc
         def self_data_patched() -> pd.DataFrame:
