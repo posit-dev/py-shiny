@@ -298,9 +298,10 @@ class data_frame(Renderer[DataFrameResult]):
     is the render function name that corresponds with the `id=` used in
     :func:`~shiny.ui.outout_data_frame`. Internally, this method retrieves the selected
     row value from session's `input.<id>_selected_rows()` value. The value returned will
-    be `None` if no rows are selected, or a tuple of integers representing the indices
-    of the selected rows. To filter a pandas data frame down to the selected rows, use
-    `df.iloc[list(input.<id>_selected_rows())]`.
+    be `None` if the row selection mode is `"none"`, or a tuple of integers representing
+    the indices of the selected rows. If no rows have been selected (while in a non-`"none"`
+    row selection mode), an empty tuple will be returned. To filter a pandas data frame
+    down to the selected rows, use `df.iloc[list(input.<id>_selected_rows())]`.
 
     Tip
     ----
@@ -351,7 +352,7 @@ class data_frame(Renderer[DataFrameResult]):
     -------
     :
         * `None` if the row selection mode is None
-        * `tuple[int]`representing the indices of the selected rows
+        * `tuple[int]` representing the indices of the selected rows. If no rowws are selected
     """
 
     data_selected: reactive.Calc_[pd.DataFrame]
