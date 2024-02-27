@@ -20,75 +20,60 @@ def test_nav(page: Page, local_app: ShinyAppProc) -> None:
     # Update the page size to be wider
     page.set_viewport_size({"width": 1500, "height": 800})
 
-    # make it in a funcn and then loop through it
-    # navset_tab
-    navset_tab = LayoutNavsetTab(page, "navset_tab")
-    navset_tab.expect_nav_values(["a", "b", "c"])
-    navset_tab.expect_value("a")
-    navset_tab.expect_content("navset_tab(): tab a content")
-    navset_tab.set("b")
-    navset_tab.expect_value("b")
-    navset_tab.expect_content("navset_tab(): tab b content")
+    nav_data = {
+        "navset_tab": {
+            "control": LayoutNavsetTab,
+            "verify": "navset_tab()"
+        },
+        "navset_pill": {
+            "control": LayoutNavSetPill,
+            "verify": "navset_pill()"
+        },
+        "navset_underline": {
+            "control": LayoutNavSetUnderline,
+            "verify": "navset_underline()"
+        },
+        "navset_card_tab": {
+            "control": LayoutNavSetCardTab,
+            "verify": "navset_card_tab()"
+        },
+        "navset_card_pill": {
+            "control": LayoutNavSetCardPill,
+            "verify": "navset_card_pill()"
+        },
+        "navset_card_underline": {
+            "control": LayoutNavSetCardUnderline,
+            "verify": "navset_card_underline()"
+        },
+        "navset_pill_list": {
+            "control": LayoutNavSetPillList,
+            "verify": "navset_pill_list()"
+        },
+        "page_navbar": {
+            "control": LayoutNavSetBar,
+            "verify": "page_navbar"
+        }
+    }
 
-    # # navset_pill
-    navset_pill = LayoutNavSetPill(page, "navset_pill")
-    navset_pill.expect_nav_values(["a", "b", "c"])
-    navset_pill.expect_value("a")
-    navset_pill.expect_content("navset_pill(): tab a content")
-    navset_pill.set("b")
-    navset_pill.expect_value("b")
-    navset_pill.expect_content("navset_pill(): tab b content")
+    def tester(tab_name):
+        tab = nav_data[tab_name]['control'](page, tab_name)
+        tab.expect_nav_values(["a", "b", "c"])
+        tab.expect_value("a")
+        tab.expect_content(nav_data[tab_name]['verify'] + ": tab a content")
+        tab.set("b")
+        tab.expect_value("b")
+        tab.expect_content(nav_data[tab_name]['verify'] + ": tab b content")
 
-    # navset_underline
-    navset_underline = LayoutNavSetUnderline(page, "navset_underline")
-    navset_underline.expect_nav_values(["a", "b", "c"])
-    navset_underline.expect_value("a")
-    navset_underline.expect_content("navset_underline(): tab a content")
-    navset_underline.set("b")
-    navset_underline.expect_value("b")
-    navset_underline.expect_content("navset_underline(): tab b content")
+    nav_list = [
+        "navset_tab", "navset_pill", "navset_underline", "navset_card_tab",
+        "navset_card_pill", "navset_card_underline", "navset_pill_list", "page_navbar"
+    ]
+    failures = []
+    # soft assert
+    for nav in nav_list:
+        try:
+            tester(nav)
+        except Exception as e:
+            failures.append({"element": nav, "error": e})
+    assert failures == []
 
-    # navset_card_tab
-    navset_card_tab = LayoutNavSetCardTab(page, "navset_card_tab")
-    navset_card_tab.expect_nav_values(["a", "b", "c"])
-    navset_card_tab.expect_value("a")
-    navset_card_tab.expect_content("navset_card_tab(): tab a content")
-    navset_card_tab.set("b")
-    navset_card_tab.expect_value("b")
-    navset_card_tab.expect_content("navset_card_tab(): tab b content")
-
-    # navset_card_pill
-    navset_card_pill = LayoutNavSetCardPill(page, "navset_card_pill")
-    navset_card_pill.expect_nav_values(["a", "b", "c"])
-    navset_card_pill.expect_value("a")
-    navset_card_pill.expect_content("navset_card_pill(): tab a content")
-    navset_card_pill.set("b")
-    navset_card_pill.expect_value("b")
-    navset_card_pill.expect_content("navset_card_pill(): tab b content")
-
-    # navset_card_underline
-    navset_card_underline = LayoutNavSetCardUnderline(page, "navset_card_underline")
-    navset_card_underline.expect_nav_values(["a", "b", "c"])
-    navset_card_underline.expect_value("a")
-    navset_card_underline.expect_content("navset_card_underline(): tab a content")
-    navset_card_underline.set("b")
-    navset_card_underline.expect_value("b")
-    navset_card_underline.expect_content("navset_card_underline(): tab b content")
-
-    # navset_pill_list
-    navset_card_pill = LayoutNavSetPillList(page, "navset_pill_list")
-    navset_card_pill.expect_nav_values(["a", "b", "c"])
-    navset_card_pill.expect_value("a")
-    navset_card_pill.expect_content("navset_pill_list(): tab a content")
-    navset_card_pill.set("b")
-    navset_card_pill.expect_value("b")
-    navset_card_pill.expect_content("navset_pill_list(): tab b content")
-
-    # Page_navbar
-    navset_bar = LayoutNavSetBar(page, "page_navbar")
-    navset_bar.expect_nav_values(["a", "b", "c"])
-    navset_bar.expect_value("a")
-    navset_bar.expect_content("page_navbar: tab a content")
-    navset_bar.set("b")
-    navset_bar.expect_value("b")
-    navset_bar.expect_content("page_navbar: tab b content")
