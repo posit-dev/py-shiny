@@ -1,4 +1,9 @@
-.PHONY: help clean% check% format% docs% lint test pyright playwright% install% testrail% coverage release js-*
+# https://www.gnu.org/software/make/manual/make.html#Phony-Targets
+# Prerequisites of .PHONY are always interpreted as literal target names, never as patterns (even if they contain ‘%’ characters).
+# # .PHONY: help clean% check% format% docs% lint test pyright playwright% install% testrail% coverage release js-*
+# Using `FORCE` as prerequisite to _force_ the target to always run; https://www.gnu.org/software/make/manual/make.html#index-FORCE
+FORCE: ;
+
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -23,13 +28,13 @@ export PRINT_HELP_PYSCRIPT
 
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
-help:
+help: FORCE
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
 # Remove build artifacts
-clean-build:
+clean-build: FORCE
 	rm -fr build/
 	rm -fr dist/
 	rm -fr .eggs/
@@ -37,14 +42,14 @@ clean-build:
 	find . -name '*.egg' -exec rm -f {} +
 
 # Remove Python file artifacts
-clean-pyc:
+clean-pyc: FORCE
 	find . -name '*.pyc' -exec rm -f {} +
 	find . -name '*.pyo' -exec rm -f {} +
 	find . -name '*~' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -fr {} +
 
 # Remove test and coverage artifacts
-clean-test:
+clean-test: FORCE
 	rm -fr .tox/
 	rm -f .coverage
 	rm -fr htmlcov/
@@ -80,19 +85,19 @@ check-lint: check-flake8
 check-types: check-pyright
 check-tests: check-pytest
 
-check-flake8:
+check-flake8: FORCE
 	@echo "-------- Checking style with flake8 ---------"
 	flake8 --show-source .
-check-black:
+check-black: FORCE
 	@echo "-------- Checking code with black -----------"
 	black --check .
-check-isort:
+check-isort: FORCE
 	@echo "-------- Sorting imports with isort ---------"
 	isort --check-only --diff .
 check-pyright: typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn
 	@echo "-------- Checking types with pyright --------"
 	pyright
-check-pytest:
+check-pytest: FORCE
 	@echo "-------- Running tests with pytest ----------"
 	python3 tests/pytest/asyncio_prevent.py
 	pytest
@@ -104,24 +109,24 @@ lint: check-lint
 test: check-tests ## check tests quickly with the default Python
 
 format: format-black format-isort ## format code with black and isort
-format-black:
+format-black: FORCE
 	@echo "-------- Formatting code with black --------"
 	black .
-format-isort:
+format-isort: FORCE
 	@echo "-------- Sorting imports with isort --------"
 	isort .
 
-docs: ## docs: build docs with quartodoc
+docs: FORCE ## docs: build docs with quartodoc
 	@echo "-------- Building docs with quartodoc ------"
 	@cd docs && make quartodoc
 
-docs-preview: ## docs: preview docs in browser
+docs-preview: FORCE ## docs: preview docs in browser
 	@echo "-------- Previewing docs in browser --------"
 	@cd docs && make serve
 
 
-install-npm:
-	$(if $(shell which npm), , $(error Please install node.js and npm first. See https://nodejs.org/en/download/ for instructions.))
+install-npm: FORCE
+	$(if $(shell which npm), @echo -n, $(error Please install node.js and npm first. See https://nodejs.org/en/download/ for instructions.))
 js/node_modules: install-npm
 	@echo "-------- Installing node_modules -----------"
 	@cd js && npm install
@@ -134,21 +139,21 @@ js-watch: js/node_modules
 js-watch-fast: js/node_modules ## Continuously build JS assets (development)
 	@echo "-------- Previewing docs in browser --------"
 	@cd js && npm run watch-fast
-clean-js:
+clean-js: FORCE
 	@echo "-------- Removing js/node_modules ----------"
 	rm -rf js/node_modules
 
 # Default `SUB_FILE` to empty
 SUB_FILE:=
 
-install-playwright:
+install-playwright: FORCE
 	playwright install --with-deps
 
-install-trcli:
-	which trcli || pip install trcli
+install-trcli: FORCE
+	$(if $(shell which trcli), @echo -n, $(shell pip install trcli))
 
 # Installs the main version of rsconnect till pypi version supports shiny express
-install-rsconnect:
+install-rsconnect: FORCE
 	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
 
 # end-to-end tests with playwright; (SUB_FILE="" within tests/playwright/shiny/)
@@ -170,7 +175,7 @@ playwright-debug: install-playwright ## All end-to-end tests, chrome only, heade
 testrail-junit: install-playwright install-trcli
 	pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml
 
-coverage: ## check combined code coverage (must run e2e last)
+coverage: FORCE ## check combined code coverage (must run e2e last)
 	pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/playwright/shiny/$(SUB_FILE)
 	coverage html
 	$(BROWSER) htmlcov/index.html
@@ -191,9 +196,9 @@ install: dist
 	pip uninstall -y shiny
 	python3 -m pip install dist/shiny*.whl
 
-install-deps: ## install dependencies
+install-deps: FORCE ## install dependencies
 	pip install -e ".[dev,test]" --upgrade
 
 # ## If caching is ever used, we could run:
-# install-deps: ## install latest dependencies
+# install-deps: FORCE ## install latest dependencies
 # 	pip install --editable ".[dev,test]" --upgrade --upgrade-strategy eager
