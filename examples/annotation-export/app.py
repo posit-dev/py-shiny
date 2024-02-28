@@ -39,7 +39,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    annotated_data = reactive.Value(weather_df)
+    annotated_data = reactive.value(weather_df)
 
     @reactive.calc
     def selected_data():

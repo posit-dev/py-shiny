@@ -13,7 +13,7 @@ def button_ui():
 
 @module.server
 def button_server(input: Inputs, output: Outputs, session: Session):
-    counter = reactive.Value(0)
+    counter = reactive.value(0)
 
     @render.text
     def text_counter():

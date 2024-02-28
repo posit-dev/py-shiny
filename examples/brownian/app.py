@@ -112,7 +112,7 @@ def reactive_smooth(n_samples, smoother, *, filter_none=True):
 
     def wrapper(calc):
         buffer = []  # Ring buffer of capacity `n_samples`
-        result = reactive.Value(None)  # Holds the most recent smoothed result
+        result = reactive.value(None)  # Holds the most recent smoothed result
 
         @reactive.effect
         def _():

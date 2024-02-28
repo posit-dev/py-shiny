@@ -21,8 +21,8 @@ app_ui = ui.page_fixed(
 
 
 def server(input, output, session):
-    finished_tasks = reactive.Value(0)
-    task_counter = reactive.Value(0)
+    finished_tasks = reactive.value(0)
+    task_counter = reactive.value(0)
 
     @render.text
     def cleared_tasks():
@@ -65,7 +65,7 @@ def task_ui():
 
 @module.server
 def task_server(input, output, session, text):
-    finished = reactive.Value(False)
+    finished = reactive.value(False)
 
     @render.ui
     def button_row():

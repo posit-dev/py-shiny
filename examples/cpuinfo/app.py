@@ -109,7 +109,7 @@ def cpu_current():
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    cpu_history = reactive.Value(None)
+    cpu_history = reactive.value(None)
 
     @reactive.calc
     def cpu_history_with_hold():

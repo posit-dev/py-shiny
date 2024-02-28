@@ -83,7 +83,7 @@ def render_plotly_streaming(
 
 def deduplicate(func):
     with reactive.isolate():
-        rv = reactive.Value(func())
+        rv = reactive.value(func())
 
     @reactive.effect
     def update():

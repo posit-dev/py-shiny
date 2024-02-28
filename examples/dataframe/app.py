@@ -55,7 +55,7 @@ def light_dark_switcher(dark):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    df: reactive.Value[pd.DataFrame] = reactive.Value()
+    df: reactive.value[pd.DataFrame] = reactive.value()
 
     @reactive.effect
     def update_df():
