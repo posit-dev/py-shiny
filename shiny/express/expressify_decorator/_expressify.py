@@ -97,11 +97,15 @@ def expressify(fn: TFunc) -> TFunc: ...
 
 
 @overload
-def expressify() -> Callable[[TFunc], TFunc]: ...
+def expressify(*, has_docstring: bool = False) -> Callable[[TFunc], TFunc]: ...
 
 
 @no_example()
-def expressify(fn: TFunc | None = None) -> TFunc | Callable[[TFunc], TFunc]:
+def expressify(
+    fn: TFunc | None = None,
+    *,
+    has_docstring: bool = False,
+) -> TFunc | Callable[[TFunc], TFunc]:
     """
     Decorate a function so that output is captured as in Shiny Express
 
@@ -133,13 +137,13 @@ def expressify(fn: TFunc | None = None) -> TFunc | Callable[[TFunc], TFunc]:
             # Disable code caching on Pyodide due to bug in hashing bytecode in 0.22.1.
             # When Pyodide is updated to a newer version, this will be not be needed.
             # https://github.com/posit-dev/py-shiny/issues/1042#issuecomment-1901945787
-            fcode = _transform_body(cast(types.FunctionType, fn))
+            fcode = _transform_body(cast(types.FunctionType, fn), has_docstring)
         else:
             if fn.__code__ in code_cache:
                 fcode = code_cache[fn.__code__]
             else:
                 # Save for next time
-                fcode = _transform_body(cast(types.FunctionType, fn))
+                fcode = _transform_body(cast(types.FunctionType, fn), has_docstring)
                 code_cache[fn.__code__] = fcode
 
         # Create a new function from the code object
@@ -169,7 +173,10 @@ def expressify(fn: TFunc | None = None) -> TFunc | Callable[[TFunc], TFunc]:
     return decorator
 
 
-def _transform_body(fn: types.FunctionType) -> types.CodeType:
+def _transform_body(
+    fn: types.FunctionType,
+    has_docstring: bool = False,
+) -> types.CodeType:
     # The approach we take here is much more complicated than what you'd expect.
     #
     # The simple approach is to use ast.parse() to get an AST for the function,
@@ -200,7 +207,9 @@ def _transform_body(fn: types.FunctionType) -> types.CodeType:
     tft = TargetFunctionTransformer(
         fn,
         # If we find `fn` in the AST, use transform its body to use displayhook
-        _transform_function_ast,
+        # TODO: This lambda is kind of an awkward way to pass has_docstring - think
+        # about a better way?
+        lambda node: _transform_function_ast(node, has_docstring),
     )
 
     new_ast = tft.visit(parsed_ast)
@@ -248,10 +257,13 @@ def read_ast(filename: str) -> ast.Module | None:
     return ast.parse("".join(lines), filename=filename)
 
 
-def _transform_function_ast(node: ast.AST) -> ast.AST:
+def _transform_function_ast(node: ast.AST, has_docstring: bool = False) -> ast.AST:
     if not isinstance(node, ast.FunctionDef):
         return node
-    func_node = cast(ast.FunctionDef, FuncBodyDisplayHookTransformer().visit(node))
+    func_node = cast(
+        ast.FunctionDef,
+        FuncBodyDisplayHookTransformer(has_docstring).visit(node),
+    )
     func_node.body = [
         DisplayFuncsTransformer().visit(child) for child in func_node.body
     ]
