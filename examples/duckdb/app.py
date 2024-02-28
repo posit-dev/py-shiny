@@ -71,7 +71,7 @@ def server(input, output, session):
 
     query_output_server("initial_query", con=con, remove_id="initial_query")
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.add_query)
     def _():
         counter = mod_counter.get() + 1
@@ -84,7 +84,7 @@ def server(input, output, session):
         )
         query_output_server(id, con=con, remove_id=id)
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.show_meta)
     def _():
         counter = mod_counter.get() + 1
@@ -99,7 +99,7 @@ def server(input, output, session):
         )
         query_output_server(id, con=con, remove_id=id)
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.rmv)
     def _():
         ui.remove_ui(selector="div:has(> #txt)")

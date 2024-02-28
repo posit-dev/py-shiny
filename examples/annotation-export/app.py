@@ -41,12 +41,12 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
     annotated_data = reactive.Value(weather_df)
 
-    @reactive.Calc
+    @reactive.calc
     def selected_data():
         out = brushed_points(annotated_data(), input.time_series_brush(), xvar="date")
         return out
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.annotate_button)
     def _():
         selected = selected_data()

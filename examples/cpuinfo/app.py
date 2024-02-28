@@ -102,7 +102,7 @@ app_ui = ui.page_fluid(
 )
 
 
-@reactive.Calc
+@reactive.calc
 def cpu_current():
     reactive.invalidate_later(SAMPLE_PERIOD)
     return cpu_percent(percpu=True)
@@ -111,7 +111,7 @@ def cpu_current():
 def server(input: Inputs, output: Outputs, session: Session):
     cpu_history = reactive.Value(None)
 
-    @reactive.Calc
+    @reactive.calc
     def cpu_history_with_hold():
         # If "hold" is on, grab an isolated snapshot of cpu_history; if not, then do a
         # regular read
@@ -123,7 +123,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             with reactive.isolate():
                 return cpu_history()
 
-    @reactive.Effect
+    @reactive.effect
     def collect_cpu_samples():
         """cpu_percent() reports just the current CPU usage sample; this Effect gathers
         them up and stores them in the cpu_history reactive value, in a numpy 2D array

@@ -22,7 +22,7 @@ with ui.sidebar():
     ui.input_checkbox_group("species", "Filter by species", species, selected=species)
 
 
-@reactive.Calc
+@reactive.calc
 def filtered_df() -> pd.DataFrame:
     filt_df = df[df["Species"].isin(input.species())]
     filt_df = filt_df.loc[filt_df["Body Mass (g)"] > input.mass()]

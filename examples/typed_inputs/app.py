@@ -32,7 +32,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     # The type checker knows that r() returns an int, which you can see if you hover
     # over it.
-    @reactive.Calc
+    @reactive.calc
     def r():
         if input.n() is None:
             return 0

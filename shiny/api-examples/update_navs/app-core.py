@@ -12,7 +12,7 @@ app_ui = ui.page_sidebar(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
+    @reactive.effect
     def _():
         ui.update_navs("inTabset", selected="panel" + str(input.controller()))
 

@@ -103,7 +103,7 @@ class SilentException(Exception):
     - Displayed to the user (as a big red error message)
         - This happens when the exception is raised from an output context (e.g., :class:`shiny.render.ui`)
     - Crashes the application
-        - This happens when the exception is raised from an :func:`shiny.reactive.Effect`
+        - This happens when the exception is raised from an :func:`shiny.reactive.effect`
 
     This exception is used to silently throw inside a reactive context, meaning that
     execution is paused, and no output is shown to users (or the python console).

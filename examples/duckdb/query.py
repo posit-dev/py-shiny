@@ -57,7 +57,7 @@ def query_output_server(
 
         return result
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.rmv)
     def _():
         ui.remove_ui(selector=f"div#{remove_id}")

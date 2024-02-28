@@ -7,7 +7,7 @@ ui.input_slider("n", "Day of month", min=1, max=30, value=10)
 ui.input_date("inDate", "Input date")
 
 
-@reactive.Effect
+@reactive.effect
 def _():
     d = date(2013, 4, input.n())
     ui.update_date(
