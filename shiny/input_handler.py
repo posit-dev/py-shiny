@@ -4,15 +4,16 @@ from __future__ import annotations
 
 __all__ = ("input_handlers",)
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING, Any, Callable, Dict
 
 if TYPE_CHECKING:
     from .session import Session
 
+from .module import ResolvedId
 from .types import ActionButtonValue
 
-InputHandlerType = Callable[[Any, str, "Session"], Any]
+InputHandlerType = Callable[[Any, ResolvedId, "Session"], Any]
 
 
 class _InputHandlers(Dict[str, InputHandlerType]):
@@ -31,7 +32,9 @@ class _InputHandlers(Dict[str, InputHandlerType]):
     def remove(self, type: str) -> None:
         del self[type]
 
-    def _process_value(self, type: str, value: Any, name: str, session: Session) -> Any:
+    def _process_value(
+        self, type: str, value: Any, name: ResolvedId, session: Session
+    ) -> Any:
         handler = self.get(type)
         if handler is None:
             raise ValueError("No input handler registered for type: " + type)
@@ -44,7 +47,7 @@ Manage Shiny input handlers.
 
 Add and/or remove input handlers of a given ``type``. Shiny uses these handlers to
 pre-process input values from the client (after being deserialized) before passing them
-to the ``input`` argument of an :func:`~shiny.App`'s ``server`` function.
+to the ``input`` argument of an :class:`~shiny.App`'s ``server`` function.
 
 The ``type`` is based on the ``getType()`` JavaScript method on the relevant Shiny
 input binding. See `this article <https://shiny.posit.co/articles/js-custom-input.html>`_
@@ -94,27 +97,48 @@ getType: function(el) {
 
 
 @input_handlers.add("shiny.date")
-def _(value: str | list[str], name: str, session: Session) -> date | tuple[date, date]:
+def _(
+    value: str | list[str], name: ResolvedId, session: Session
+) -> date | None | tuple[date | None, date | None]:
+
     if isinstance(value, str):
+        return _safe_strptime_date(value)
+    else:
+        return (
+            _safe_strptime_date(value[0]),
+            _safe_strptime_date(value[1]),
+        )
+
+
+def _safe_strptime_date(value: str | None) -> date | None:
+    if value is None:
+        return None
+    try:
         return datetime.strptime(value, "%Y-%m-%d").date()
-    return tuple(  # pyright: ignore[reportReturnType]
-        datetime.strptime(v, "%Y-%m-%d").date() for v in value
-    )
+    except ValueError:
+        return None
 
 
 @input_handlers.add("shiny.datetime")
 def _(
-    value: int | float | list[int] | list[float], name: str, session: Session
+    value: int | float | list[int] | list[float],
+    name: ResolvedId,
+    session: Session,
 ) -> datetime | tuple[datetime, datetime]:
+    def as_utc_date(x: int | float) -> datetime:
+        dt = datetime.fromtimestamp(x, timezone.utc)
+        # Remove hour offset from print method by removing the timezone
+        # Ex: 2021-08-01T00:00:00+00:00 -> 2021-08-01T00:00:00
+        # This is done as all dates are in UTC
+        return dt.replace(tzinfo=None)
+
     if isinstance(value, (int, float)):
-        return datetime.utcfromtimestamp(value)
-    return tuple(
-        datetime.utcfromtimestamp(v) for v in value  # pyright: ignore[reportReturnType]
-    )
+        return as_utc_date(value)
+    return (as_utc_date(value[0]), as_utc_date(value[1]))
 
 
 @input_handlers.add("shiny.action")
-def _(value: int, name: str, session: Session) -> ActionButtonValue:
+def _(value: int, name: ResolvedId, session: Session) -> ActionButtonValue:
     # TODO: ActionButtonValue() class can probably be removed
     return ActionButtonValue(value)
 
@@ -124,17 +148,17 @@ def _(value: int, name: str, session: Session) -> ActionButtonValue:
 
 
 @input_handlers.add("shiny.number")
-def _(value: str, name: str, session: Session) -> str:
+def _(value: str, name: ResolvedId, session: Session) -> str:
     return value
 
 
 # TODO: implement when we have bookmarking
 @input_handlers.add("shiny.password")
-def _(value: str, name: str, session: Session) -> str:
+def _(value: str, name: ResolvedId, session: Session) -> str:
     return value
 
 
 # TODO: implement when we have bookmarking
 @input_handlers.add("shiny.file")
-def _(value: Any, name: str, session: Session) -> Any:
+def _(value: Any, name: ResolvedId, session: Session) -> Any:
     return value

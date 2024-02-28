@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import TypeVar
 
-from conftest import ShinyAppProc, create_doc_example_fixture
+from conftest import ShinyAppProc, create_doc_example_core_fixture
 from playwright.sync_api import Page
 
 T = TypeVar("T")
 
-app = create_doc_example_fixture("layout_columns")
+app = create_doc_example_core_fixture("layout_columns")
 
 
 def not_null(x: T | None) -> T:

@@ -31,8 +31,12 @@ from htmltools import (
     tags,
 )
 
-# Expose the following modules for extended usage: ex: ui.fill.as_fill_item(x)
-from . import css, fill  # noqa: F401  # pyright: ignore[reportUnusedImport]
+# The css module is for internal use, so we won't re-export it.
+from . import css  # noqa: F401  # pyright: ignore[reportUnusedImport]
+
+# Expose the fill module for extended usage: ex: ui.fill.as_fill_item(x).
+from . import fill
+
 from ._accordion import (
     AccordionPanel,
     accordion,
@@ -67,6 +71,7 @@ from ._input_check_radio import (
     input_radio_buttons,
     input_switch,
 )
+from ._input_dark_mode import input_dark_mode, update_dark_mode
 from ._input_date import input_date, input_date_range
 from ._input_file import input_file
 from ._input_numeric import input_numeric
@@ -215,6 +220,9 @@ __all__ = (
     "input_checkbox_group",
     "input_switch",
     "input_radio_buttons",
+    # _input_dark_mode
+    "input_dark_mode",
+    "update_dark_mode",
     # _input_date
     "input_date",
     "input_date_range",
@@ -346,6 +354,8 @@ __all__ = (
     "strong",
     "em",
     "hr",
+    # Submodules
+    "fill",
     # utils
     "js_eval",
 )

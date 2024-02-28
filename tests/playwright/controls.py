@@ -1,4 +1,5 @@
 """Facade classes for working with Shiny inputs/outputs in Playwright"""
+
 from __future__ import annotations
 
 import json
@@ -751,7 +752,7 @@ class InputSelectize(_InputSelectBase):
         super().__init__(
             page,
             id=id,
-            select_class="",
+            select_class=".selectized",
         )
 
 
@@ -787,6 +788,101 @@ class InputActionButton(
             page,
             id=id,
             loc=f"button#{id}.action-button.shiny-bound-input",
+        )
+
+
+class InputDarkMode(_InputBase):
+    def __init__(
+        self,
+        page: Page,
+        id: Optional[str] | None,
+    ) -> None:
+        id_selector = "" if id is None else f"#{id}"
+
+        super().__init__(
+            page,
+            id="" if id is None else id,
+            loc=f"bslib-input-dark-mode{id_selector}",
+        )
+
+    def click(self, *, timeout: Timeout = None):
+        self.loc.click(timeout=timeout)
+        return self
+
+    def expect_mode(self, value: str, *, timeout: Timeout = None):
+        expect_attr(self.loc, "mode", value=value, timeout=timeout)
+        self.expect_page_mode(value, timeout=timeout)
+        return self
+
+    def expect_page_mode(self, value: str, *, timeout: Timeout = None):
+        expect_attr(
+            self.page.locator("html"), "data-bs-theme", value=value, timeout=timeout
+        )
+        return self
+
+    def expect_wc_attribute(self, value: str, *, timeout: Timeout = None):
+        expect_attr(self.loc, "attribute", value=value, timeout=timeout)
+        return self
+
+
+class InputTaskButton(
+    _WidthLocM,
+    _InputActionBase,
+):
+    # TODO-Karan: Test auto_reset functionality
+    # id: str,
+    # label: TagChild,
+    # *args: TagChild,
+    # icon: TagChild = None,
+    # label_busy: TagChild = "Processing...",
+    # icon_busy: TagChild | MISSING_TYPE = MISSING,
+    # width: Optional[str] = None,
+    # type: Optional[str] = "primary",
+    # auto_reset: bool = True,
+    # **kwargs: TagAttrValue,
+    def __init__(
+        self,
+        page: Page,
+        id: str,
+    ) -> None:
+        super().__init__(
+            page,
+            id=id,
+            loc=f"button#{id}.bslib-task-button.shiny-bound-input",
+        )
+
+    def expect_state(
+        self, value: Literal["ready", "busy"] | str, *, timeout: Timeout = None
+    ):
+        expect_attr(
+            self.loc.locator("> bslib-switch-inline"),
+            name="case",
+            value=value,
+            timeout=timeout,
+        )
+
+    def expect_label(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        self.expect_label_ready(value, timeout=timeout)
+
+    def expect_label_ready(self, value: PatternOrStr, *, timeout: Timeout = None):
+        self.expect_label_state("ready", value, timeout=timeout)
+
+    def expect_label_busy(self, value: PatternOrStr, *, timeout: Timeout = None):
+        self.expect_label_state("busy", value, timeout=timeout)
+
+    def expect_label_state(
+        self, state: str, value: PatternOrStr, *, timeout: Timeout = None
+    ):
+        playwright_expect(
+            self.loc.locator(f"> bslib-switch-inline > span[slot='{state}']")
+        ).to_have_text(value, timeout=timeout)
+
+    def expect_auto_reset(self, value: bool, timeout: Timeout = None):
+        expect_attr(
+            self.loc,
+            name="data-auto-reset",
+            value="" if value else None,
+            timeout=timeout,
         )
 
 
@@ -1309,11 +1405,13 @@ class InputFile(
 
     def set(
         self,
-        file_path: str
-        | pathlib.Path
-        | FilePayload
-        | list[str | pathlib.Path]
-        | list[FilePayload],
+        file_path: (
+            str
+            | pathlib.Path
+            | FilePayload
+            | list[str | pathlib.Path]
+            | list[FilePayload]
+        ),
         *,
         timeout: Timeout = None,
         expect_complete_timeout: Timeout = 30 * 1000,
@@ -1668,9 +1766,11 @@ class InputSliderRange(_InputSliderBase):
 
     def expect_value(
         self,
-        value: typing.Tuple[PatternOrStr, PatternOrStr]
-        | typing.Tuple[PatternOrStr, MISSING_TYPE]
-        | typing.Tuple[MISSING_TYPE, PatternOrStr],
+        value: (
+            typing.Tuple[PatternOrStr, PatternOrStr]
+            | typing.Tuple[PatternOrStr, MISSING_TYPE]
+            | typing.Tuple[MISSING_TYPE, PatternOrStr]
+        ),
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -1713,9 +1813,11 @@ class InputSliderRange(_InputSliderBase):
 
     def set(
         self,
-        value: typing.Tuple[str, str]
-        | typing.Tuple[str, MISSING_TYPE]
-        | typing.Tuple[MISSING_TYPE, str],
+        value: (
+            typing.Tuple[str, str]
+            | typing.Tuple[str, MISSING_TYPE]
+            | typing.Tuple[MISSING_TYPE, str]
+        ),
         *,
         max_err_values: int = 15,
         timeout: Timeout = None,
@@ -1974,9 +2076,11 @@ class InputDateRange(_WidthContainerM, _InputWithLabel):
 
     def expect_value(
         self,
-        value: typing.Tuple[PatternOrStr, PatternOrStr]
-        | typing.Tuple[PatternOrStr, MISSING_TYPE]
-        | typing.Tuple[MISSING_TYPE, PatternOrStr],
+        value: (
+            typing.Tuple[PatternOrStr, PatternOrStr]
+            | typing.Tuple[PatternOrStr, MISSING_TYPE]
+            | typing.Tuple[MISSING_TYPE, PatternOrStr]
+        ),
         *,
         timeout: Timeout = None,
     ) -> None:
@@ -2138,8 +2242,7 @@ class _OutputContainerP(_OutputBaseP, Protocol):
         tag_name: Literal["span", "div"] | str,
         *,
         timeout: Timeout = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class _OutputContainerM:
@@ -2169,8 +2272,25 @@ class OutputText(_OutputInlineContainerM, _OutputTextValue):
     ) -> None:
         super().__init__(page, id=id, loc=f"#{id}.shiny-text-output")
 
+    def get_value(self, *, timeout: Timeout = None) -> str:
+        return self.loc.inner_text(timeout=timeout)
 
-# TODO-Karan: Add OutputCode class
+
+class OutputCode(_OutputTextValue):
+    def __init__(self, page: Page, id: str) -> None:
+        super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
+
+    def expect_has_placeholder(
+        self, placeholder: bool = False, *, timeout: Timeout = None
+    ) -> None:
+        _expect_class_value(
+            self.loc,
+            cls="noplaceholder",
+            has_class=not placeholder,
+            timeout=timeout,
+        )
+
+
 class OutputTextVerbatim(_OutputTextValue):
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
@@ -2826,18 +2946,30 @@ class _OverlayBase(_InputBase):
         loc_el.scroll_into_view_if_needed(timeout=timeout)
         return loc_el.get_attribute("aria-describedby")
 
-    @property
-    def loc_overlay_body(self) -> Locator:
+    # @property
+    # def loc_overlay_body(self) -> Locator:
+    #     # Can not leverage `self.loc_overlay_container` as `self._overlay_selector` must
+    #     # be concatenated directly to the result of `self._get_overlay_id()`
+    #     return self.page.locator(f"#{self._get_overlay_id()}{self._overlay_selector}")
+
+    # @property
+    # def loc_overlay_container(self) -> Locator:
+    #     return self.page.locator(f"#{self._get_overlay_id()}")
+
+    def get_loc_overlay_body(self, *, timeout: Timeout = None) -> Locator:
         # Can not leverage `self.loc_overlay_container` as `self._overlay_selector` must
         # be concatenated directly to the result of `self._get_overlay_id()`
-        return self.page.locator(f"#{self._get_overlay_id()}{self._overlay_selector}")
+        return self.page.locator(
+            f"#{self._get_overlay_id(timeout=timeout)}{self._overlay_selector}"
+        )
 
-    @property
-    def loc_overlay_container(self) -> Locator:
-        return self.page.locator(f"#{self._get_overlay_id()}")
+    def get_loc_overlay_container(self, *, timeout: Timeout = None) -> Locator:
+        return self.page.locator(f"#{self._get_overlay_id(timeout=timeout)}")
 
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc_overlay_body).to_have_text(value, timeout=timeout)
+        playwright_expect(self.get_loc_overlay_body(timeout=timeout)).to_have_text(
+            value, timeout=timeout
+        )
 
     def expect_active(self, active: bool, *, timeout: Timeout = None) -> None:
         value = re.compile(r".*") if active else None
@@ -2850,7 +2982,7 @@ class _OverlayBase(_InputBase):
 
     def expect_placement(self, value: str, *, timeout: Timeout = None) -> None:
         return expect_attr(
-            loc=self.loc_overlay_container,
+            loc=self.get_loc_overlay_container(timeout=timeout),
             timeout=timeout,
             name="data-popper-placement",
             value=value,
@@ -2875,7 +3007,7 @@ class Popover(_OverlayBase):
         )
 
     def set(self, open: bool, timeout: Timeout = None) -> None:
-        if open ^ self.loc_overlay_body.count() > 0:
+        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
             self.toggle()
 
     def toggle(self, timeout: Timeout = None) -> None:
@@ -2901,10 +3033,10 @@ class Tooltip(_OverlayBase):
         )
 
     def set(self, open: bool, timeout: Timeout = None) -> None:
-        if open ^ self.loc_overlay_body.count() > 0:
+        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
             self.toggle(timeout=timeout)
         if not open:
-            self.loc_overlay_body.click()
+            self.get_loc_overlay_body(timeout=timeout).click()
 
     def toggle(self, timeout: Timeout = None) -> None:
         self.loc_trigger.wait_for(state="visible", timeout=timeout)
@@ -2928,17 +3060,25 @@ class _LayoutNavItemBase(_InputWithContainer):
             self.loc_container.locator('a[role="tab"].active')
         ).to_have_attribute("data-value", value, timeout=timeout)
 
-    # TODO-future: Make it a single locator expectation
-    # get active content instead of assertion
-    @property
-    def loc_active_content(self) -> Locator:
-        datatab_id = self.loc_container.get_attribute("data-tabsetid")
+    # # TODO-future: Make it a single locator expectation
+    # # get active content instead of assertion
+    # @property
+    # def loc_active_content(self) -> Locator:
+    #     datatab_id = self.loc_container.get_attribute("data-tabsetid")
+    #     return self.page.locator(
+    #         f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
+    #     )
+
+    def get_loc_active_content(self, *, timeout: Timeout = None) -> Locator:
+        datatab_id = self.loc_container.get_attribute("data-tabsetid", timeout=timeout)
         return self.page.locator(
             f"div.tab-content[data-tabsetid='{datatab_id}'] > div.tab-pane.active"
         )
 
     def expect_content(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
-        playwright_expect(self.loc_active_content).to_have_text(value, timeout=timeout)
+        playwright_expect(self.get_loc_active_content()).to_have_text(
+            value, timeout=timeout
+        )
 
     def expect_nav_values(
         self,

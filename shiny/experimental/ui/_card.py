@@ -131,7 +131,7 @@ def card_title(
         resolved :class:`~htmltools.Tag` object.
     container
         Method for the returned :class:`~htmltools.Tag` object. Defaults to
-        :func:`~shiny.ui.tags`.h5.
+        :func:`~shiny.ui.tags.h5`.
     **kwargs
         Additional HTML attributes for the returned :class:`~htmltools.Tag` object.
 

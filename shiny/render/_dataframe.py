@@ -2,12 +2,22 @@ from __future__ import annotations
 
 import abc
 import json
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, cast, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Optional,
+    Protocol,
+    Union,
+    cast,
+    runtime_checkable,
+)
 
 from htmltools import Tag
 
 from .. import ui
 from .._docstring import add_example, no_example
+from ..session._utils import require_active_session
 from ._dataframe_unsafe import serialize_numpy_dtypes
 from .renderer import Jsonifiable, Renderer
 
@@ -17,14 +27,13 @@ if TYPE_CHECKING:
 
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
-    def to_payload(self) -> Jsonifiable:
-        ...
+    def to_payload(self) -> Jsonifiable: ...
 
 
 @add_example(ex_dir="../api-examples/data_frame")
 class DataGrid(AbstractTabularData):
     """
-    Holds the data and options for a ``shiny.render.data_frame`` output, for a
+    Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
 
     Parameters
@@ -64,9 +73,9 @@ class DataGrid(AbstractTabularData):
 
     See Also
     --------
-    :func:`~shiny.ui.output_data_frame`
-    :func:`~shiny.render.data_frame`
-    :class:`~shiny.render.DataTable`
+    * :func:`~shiny.ui.output_data_frame`
+    * :class:`~shiny.render.data_frame`
+    * :class:`~shiny.render.DataTable`
     """
 
     def __init__(
@@ -108,10 +117,10 @@ class DataGrid(AbstractTabularData):
         return res
 
 
-@no_example
+@no_example()
 class DataTable(AbstractTabularData):
     """
-    Holds the data and options for a ``shiny.render.data_frame`` output, for a
+    Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
 
     Parameters
@@ -151,9 +160,9 @@ class DataTable(AbstractTabularData):
 
     See Also
     --------
-    :func:`~shiny.ui.output_data_frame`
-    :func:`~shiny.render.data_frame`
-    :class:`~shiny.render.DataGrid`
+    * :func:`~shiny.ui.output_data_frame`
+    * :class:`~shiny.render.data_frame`
+    * :class:`~shiny.render.DataGrid`
     """
 
     def __init__(
@@ -230,7 +239,7 @@ class data_frame(Renderer[DataFrameResult]):
         1. A :class:`~shiny.render.DataGrid` or :class:`~shiny.render.DataTable` object,
            which can be used to customize the appearance and behavior of the data frame
            output.
-        2. A pandas :class:`DataFrame` object. (Equivalent to
+        2. A pandas `DataFrame` object. (Equivalent to
            `shiny.render.DataGrid(df)`.)
         3. Any object that has a `.to_pandas()` method (e.g., a Polars data frame or
            Arrow table). (Equivalent to `shiny.render.DataGrid(df.to_pandas())`.)
@@ -238,8 +247,7 @@ class data_frame(Renderer[DataFrameResult]):
     Row selection
     -------------
     When using the row selection feature, you can access the selected rows by using the
-    `input.<id>_selected_rows()` function, where `<id>` is the `id` of the
-    :func:`~shiny.ui.output_data_frame`. The value returned will be `None` if no rows
+    `<data_frame_renderer>.input_selected_rows()` method, where `<data_frame_renderer>` is the render function name that corresponds with the `id=` used in :func:`~shiny.ui.outout_data_frame`. Internally, this method retrieves the selected row value from session's `input.<id>_selected_rows()` value. The value returned will be `None` if no rows
     are selected, or a tuple of integers representing the indices of the selected rows.
     To filter a pandas data frame down to the selected rows, use
     `df.iloc[list(input.<id>_selected_rows())]`.
@@ -271,12 +279,20 @@ class data_frame(Renderer[DataFrameResult]):
             )
         return value.to_payload()
 
+    def input_selected_rows(self) -> Optional[tuple[int]]:
+        """
+        When `row_selection_mode` is set to "single" or "multiple" this will return
+        a tuple of integers representing the rows selected by a user.
+        """
+
+        active_session = require_active_session(None)
+        return active_session.input[self.output_id + "_selected_rows"]()
+
 
 @runtime_checkable
 class PandasCompatible(Protocol):
     # Signature doesn't matter, runtime_checkable won't look at it anyway
-    def to_pandas(self) -> object:
-        ...
+    def to_pandas(self) -> object: ...
 
 
 def cast_to_pandas(x: object, error_message_begin: str) -> object:

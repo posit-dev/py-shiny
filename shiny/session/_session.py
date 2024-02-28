@@ -11,6 +11,7 @@ import functools
 import json
 import os
 import re
+import sys
 import traceback
 import typing
 import urllib.parse
@@ -214,7 +215,8 @@ class Session(object, metaclass=SessionMeta):
         self._outbound_message_queues = OutBoundMessageQueues()
 
         self._message_handlers: dict[
-            str, Callable[..., Awaitable[object]]
+            str,
+            Callable[..., Awaitable[object]],
         ] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
@@ -334,6 +336,8 @@ class Session(object, metaclass=SessionMeta):
                 ...
             except Exception as e:
                 try:
+                    # Starting in Python 3.10 this could be traceback.print_exception(e)
+                    traceback.print_exception(*sys.exc_info())
                     self._send_error_response(str(e))
                 except Exception:
                     pass
@@ -351,7 +355,9 @@ class Session(object, metaclass=SessionMeta):
                     + key
                 )
             if len(keys) == 2:
-                val = input_handlers._process_value(keys[1], val, keys[0], self)
+                val = input_handlers._process_value(
+                    keys[1], val, ResolvedId(keys[0]), self
+                )
 
             # The keys[0] value is already a fully namespaced id; make that explicit by
             # wrapping it in ResolvedId, otherwise self.input will throw an id
@@ -604,25 +610,25 @@ class Session(object, metaclass=SessionMeta):
     def _send_progress(
         self, type: Literal["binding"], message: BindingProgressMessage
     ) -> None:
-        ...
+        pass
 
     @overload
     def _send_progress(
         self, type: Literal["open"], message: OpenProgressMessage
     ) -> None:
-        ...
+        pass
 
     @overload
     def _send_progress(
         self, type: Literal["close"], message: CloseProgressMessage
     ) -> None:
-        ...
+        pass
 
     @overload
     def _send_progress(
         self, type: Literal["update"], message: UpdateProgressMessage
     ) -> None:
-        ...
+        pass
 
     def _send_progress(self, type: str, message: object) -> None:
         msg: dict[str, object] = {"progress": {"type": type, "message": message}}
@@ -1033,7 +1039,7 @@ class Outputs:
 
     @overload
     def __call__(self, renderer: RendererT) -> RendererT:
-        ...
+        pass
 
     @overload
     def __call__(
@@ -1043,7 +1049,7 @@ class Outputs:
         suspend_when_hidden: bool = True,
         priority: int = 0,
     ) -> Callable[[RendererT], RendererT]:
-        ...
+        pass
 
     def __call__(
         self,
@@ -1065,7 +1071,7 @@ class Outputs:
             output_name = self._ns(output_id)
 
             # renderer is a Renderer object. Give it a bit of metadata.
-            renderer._set_output_metadata(output_id=output_name)
+            renderer._set_output_metadata(output_id=output_id)
 
             renderer._on_register()
 

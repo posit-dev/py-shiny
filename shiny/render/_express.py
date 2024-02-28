@@ -18,6 +18,28 @@ from .renderer._utils import (
 
 
 class express(Renderer[None]):
+    """
+    Reactively render HTML content with output captured as in Shiny Express
+
+    This is similar to :class:`~shiny.render.ui`, except that :class:`~shiny.render.ui`
+    uses the return value from the the decorated function, whereas this function works
+    like Shiny Express: as it executes each line of the decorated function, it calls
+    :func:`~sys.displayhook()` on the result. This has the effet of "capturing" the
+    output of each line.
+
+    Returns
+    -------
+    :
+        A decorator for a function that returns `None`.
+
+    See Also
+    --------
+    * ~shiny.render.ui
+    * ~shiny.ui.output_ui
+    * ~shiny.express.expressify
+    * ~shiny.express.ui.hold
+    """
+
     def auto_output_ui(
         self,
         *,

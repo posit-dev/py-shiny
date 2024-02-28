@@ -17,6 +17,7 @@ from typing import (
     runtime_checkable,
 )
 
+from ..._docstring import no_example
 from ..._shinyenv import is_pyodide
 from ._func_displayhook import _expressify_decorator_function_def
 from ._helpers import find_code_for_func
@@ -92,16 +93,41 @@ def expressify_unwrap_inplace() -> Callable[[TFunc], TFunc]:
 
 
 @overload
-def expressify(fn: TFunc) -> TFunc:
-    ...
+def expressify(fn: TFunc) -> TFunc: ...
 
 
 @overload
-def expressify() -> Callable[[TFunc], TFunc]:
-    ...
+def expressify() -> Callable[[TFunc], TFunc]: ...
 
 
+@no_example()
 def expressify(fn: TFunc | None = None) -> TFunc | Callable[[TFunc], TFunc]:
+    """
+    Decorate a function so that output is captured as in Shiny Express
+
+    In a Shiny Express app, the output of each line of the app file is captured and
+    displayed in the UI. However, if the app calls a function, only the return value of
+    the function is displayed. This decorator changes the behavior of the function so
+    that when it is executed, the result of each line is captured and displayed, just
+    like code at the top level of a Shiny Express app.
+
+    Parameters
+    ----------
+    fn :
+        The function to decorate. If not provided, this is a decorator factory.
+
+    Returns
+    -------
+    :
+        A function that returns `None`, or a decorator for a function that returns
+        `None`.
+
+    See Also
+    --------
+    * ~shiny.render.express
+    * ~shiny.express.ui.hold
+    """
+
     def decorator(fn: TFunc) -> TFunc:
         if is_pyodide:
             # Disable code caching on Pyodide due to bug in hashing bytecode in 0.22.1.

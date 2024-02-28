@@ -199,6 +199,14 @@ def private_random_int(min: int, max: int) -> str:
         return str(random.randint(min, max))
 
 
+def private_random_id(prefix: str = "", bytes: int = 3) -> str:
+    if prefix != "" and not prefix.endswith("_"):
+        prefix += "_"
+
+    with private_seed():
+        return prefix + rand_hex(bytes)
+
+
 @contextlib.contextmanager
 def private_seed() -> Generator[None, None, None]:
     state = random.getstate()

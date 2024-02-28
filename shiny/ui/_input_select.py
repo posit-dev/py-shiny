@@ -104,8 +104,10 @@ def input_selectize(
     :::
 
     See Also
-    -------
-    ~shiny.ui.input_select ~shiny.ui.input_radio_buttons ~shiny.ui.input_checkbox_group
+    --------
+    * :func:`~shiny.ui.input_select`
+    * :func:`~shiny.ui.input_radio_buttons`
+    * :func:`~shiny.ui.input_checkbox_group`
     """
 
     x = input_select(
@@ -181,11 +183,11 @@ def input_select(
     :::
 
     See Also
-    -------
-    ~shiny.ui.input_selectize
-    ~shiny.ui.update_select
-    ~shiny.ui.input_radio_buttons
-    ~shiny.ui.input_checkbox_group
+    --------
+    * :func:`~shiny.ui.input_selectize`
+    * :func:`~shiny.ui.update_select`
+    * :func:`~shiny.ui.input_radio_buttons`
+    * :func:`~shiny.ui.input_checkbox_group`
     """
     if options is not None and selectize is False:
         raise Exception("Options can only be set when selectize is `True`.")
@@ -221,7 +223,7 @@ def input_select(
                     tags.script(
                         dumps(opts),
                         type="application/json",
-                        data_for=id,
+                        data_for=resolved_id,
                         data_eval=dumps(extract_js_keys(opts)),
                     ),
                     selectize_deps(),

@@ -6,7 +6,7 @@ from typing import Callable, Optional, Type, TypeVar
 
 from htmltools import wrap_displayhook_handler
 
-from ... import ui
+from ..._docstring import no_example
 from ..._typing_extensions import ParamSpec
 
 __all__ = ("hold",)
@@ -16,35 +16,29 @@ R = TypeVar("R")
 CallableT = TypeVar("CallableT", bound=Callable[..., object])
 
 
+@no_example()
 def hold() -> HoldContextManager:
     """Prevent the display of UI elements in various ways.
 
-    If used as a context manager (`with hide():`), it prevents the display of all UI
-    elements within the context block. (This is useful when you want to temporarily
-    prevent the display of a large number of UI elements, or when you want to prevent
-    the display of UI elements that are not directly under your control.)
+    This is used as a context manager, as in `with hold():`. It prevents the display of
+    all UI elements within the context block. (This is useful when you want to
+    temporarily prevent the display of a large number of UI elements, or when you want
+    to prevent the display of UI elements that are not directly under your control.)
 
-    If used as a decorator (without parentheses) on a Shiny rendering function, it
-    prevents that function from automatically outputting itself at the point of its
-    declaration. (This is useful when you want to define the rendering logic for an
-    output, but want to explicitly call a UI output function to indicate where and how
-    it should be displayed.)
-
-    If used as a decorator (without parentheses) on any other function, it turns
-    Python's `sys.displayhook` into a no-op for the duration of the function call.
-
-    Parameters
-    ----------
-    fn
-        The function to decorate. If `None`, returns a context manager that prevents the
-        display of UI elements within the context block.
+    It can also be used as `with hold() as content:` to capture the UI elements that
+    would be displayed within the context block. Then, later, you can put `content` on a
+    line by itself to display the captured UI elements.
 
     Returns
     -------
     :
-        If `fn` is `None`, returns a context manager that prevents the display of UI
-        elements within the context block. Otherwise, returns a decorated version of
-        `fn`.
+        A context manager that prevents the display of UI elements within the context
+        block.
+
+    See Also
+    --------
+    * ~shiny.render.express
+    * ~shiny.express.expressify
     """
 
     return HoldContextManager()
@@ -52,9 +46,9 @@ def hold() -> HoldContextManager:
 
 class HoldContextManager:
     def __init__(self):
-        self.content = ui.TagList()
+        self.content: list[object] = list()
 
-    def __enter__(self) -> ui.TagList:
+    def __enter__(self) -> list[object]:
         self.prev_displayhook = sys.displayhook
         sys.displayhook = wrap_displayhook_handler(
             self.content.append  # pyright: ignore[reportArgumentType]

@@ -150,7 +150,7 @@ any of the following will work:
     help="Dev mode",
     show_default=True,
 )
-@no_example
+@no_example()
 def run(
     app: str | shiny.App,
     host: str,
@@ -257,7 +257,7 @@ def run_app(
     Tip
     ---
     The ``shiny run`` command-line interface (which comes installed with Shiny) provides
-    the same functionality as :func:`~shiny.run_app`.
+    the same functionality as `shiny.run_app()`.
 
     Examples
     --------
@@ -326,8 +326,9 @@ def run_app(
             autoreload_port = _utils.random_port(host=host)
 
         if autoreload_port == port:
-            sys.stderr.write(
-                "Autoreload port is already being used by the app; disabling autoreload\n"
+            print(
+                "Autoreload port is already being used by the app; disabling autoreload\n",
+                file=sys.stderr,
             )
             reload = False
         else:
@@ -438,10 +439,10 @@ def resolve_app(app: str, app_dir: str | None) -> tuple[str, str | None]:
         #       unfriendly. We should probably throw a custom error that the shiny run
         #       entrypoint knows not to print the stack trace for.
         if not os.path.exists(module_path):
-            sys.stderr.write(f"Error: {module_path} not found\n")
+            print(f"Error: {module_path} not found\n", file=sys.stderr)
             sys.exit(1)
         if not os.path.isfile(module_path):
-            sys.stderr.write(f"Error: {module_path} is not a file\n")
+            print(f"Error: {module_path} is not a file\n", file=sys.stderr)
             sys.exit(1)
         dirname, filename = os.path.split(module_path)
         module = filename[:-3] if filename.endswith(".py") else filename

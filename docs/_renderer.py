@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import html
+import os
 import re
 from importlib.resources import files
 from pathlib import Path
@@ -30,6 +31,7 @@ class FileContentJson(TypedDict):
 
 class Renderer(MdRenderer):
     style = "shiny"
+    express_api = os.environ.get("SHINY_MODE", "core") == "express"
 
     @dispatch
     def render(self, el: qast.DocstringSectionSeeAlso):
@@ -50,6 +52,24 @@ class Renderer(MdRenderer):
         rendered = super().render(el)
 
         converted = convert_rst_link_to_md(rendered)
+
+        # If we're rendering the API reference for Express, try our best to
+        # keep you in the Express site. For example, something like shiny.ui.input_text()
+        # simply gets re-exported as shiny.express.ui.input_text(), but it's docstrings
+        # will link to shiny.ui, not shiny.express.ui. This fixes that.
+        if self.express_api:
+            converted = converted.replace("shiny.ui.", "shiny.express.ui.")
+            # If this el happens to point to itself, it's probably intentionally
+            # pointing to Core (i.e., express context managers mention that they
+            # wrap Core functions), so don't change that.
+            # TODO: we want to be more aggressive about context managers always
+            # pointing to the Core docs?
+            if f"shiny.express.ui.{el.name}" in converted:
+                print(f"Changing Express link to Core for: {el.name}")
+                converted = converted.replace(
+                    f"shiny.express.ui.{el.name}", f"shiny.ui.{el.name}"
+                )
+            converted = converted.replace("shiny.render.", "shiny.express.render.")
 
         check_if_missing_expected_example(el, converted)
 
@@ -115,19 +135,30 @@ class Renderer(MdRenderer):
         ):
             description = docstring_parts[0].value
 
-            # ## Approach: Always return the full description!
-            return description
+            # # ## Approach: Always return the full description!
+            # return description
 
-            # ## Alternative: Add ellipsis if the lines are cut off
+            parts = description.split("\n")
 
+            # # Alternative: Add ellipsis if the lines are cut off
             # # If the description is more than one line, only show the first line.
             # # Add `...` to indicate the description was truncated
-            # parts = description.split("\n")
             # short = parts[0]
-            # if len(parts) > 1:
+            # if len(parts) > 1 and parts[1].strip() != "":
             #     short += "&hellip;"
 
-            # return short
+            # Alternative: Add take the first paragraph as the description summary
+            short_parts: list[str] = []
+            # Capture the first paragraph (lines until first empty line)
+            for part in parts:
+                if part.strip() == "":
+                    break
+                short_parts.append(part)
+
+            short = " ".join(short_parts)
+            short = convert_rst_link_to_md(short)
+
+            return short
 
         return ""
 
@@ -248,9 +279,20 @@ def check_if_missing_expected_example(el, converted):
         # Only check Shiny objects for examples
         return
 
-    if hasattr(el, "decorators") and "no_example" in [
-        d.value.canonical_name for d in el.decorators
-    ]:
+    def is_no_ex_decorator(x):
+        if x == "no_example()":
+            return True
+
+        no_ex_decorators = [
+            f'no_example("{os.environ.get("SHINY_MODE", "core")}")',
+            f"no_example('{os.environ.get('SHINY_MODE', 'core')}')",
+        ]
+
+        return x in no_ex_decorators
+
+    if hasattr(el, "decorators") and any(
+        [is_no_ex_decorator(d.value.canonical_name) for d in el.decorators]
+    ):
         # When an example is intentionally omitted, we mark the fn with `@no_example`
         return
 
@@ -263,8 +305,7 @@ def check_if_missing_expected_example(el, converted):
         # In practice, this covers methods of exported classes (class still needs ex)
         return
 
-    # TODO: Remove shiny.express from no_req_examples when we have examples ready
-    no_req_examples = ["shiny.express", "shiny.experimental"]
+    no_req_examples = ["shiny.experimental"]
     if any([el.target_path.startswith(mod) for mod in no_req_examples]):
         return
 

@@ -30,6 +30,10 @@ from htmltools import (
 )
 
 from ...ui import (
+    fill,
+)
+
+from ...ui import (
     AccordionPanel,
     AnimationOptions,
     CardItem,
@@ -51,6 +55,7 @@ from ...ui import (
     input_checkbox_group,
     input_switch,
     input_radio_buttons,
+    input_dark_mode,
     input_date,
     input_date_range,
     input_file,
@@ -75,6 +80,7 @@ from ...ui import (
     update_switch,
     update_checkbox_group,
     update_radio_buttons,
+    update_dark_mode,
     update_date,
     update_date_range,
     update_numeric,
@@ -169,6 +175,8 @@ __all__ = (
     "span",
     "strong",
     "tags",
+    # Submodules
+    "fill",
     # Imports from ...ui
     "AccordionPanel",
     "AnimationOptions",
@@ -191,6 +199,7 @@ __all__ = (
     "input_checkbox_group",
     "input_switch",
     "input_radio_buttons",
+    "input_dark_mode",
     "input_date",
     "input_date_range",
     "input_file",
@@ -215,6 +224,7 @@ __all__ = (
     "update_switch",
     "update_checkbox_group",
     "update_radio_buttons",
+    "update_dark_mode",
     "update_date",
     "update_date_range",
     "update_numeric",

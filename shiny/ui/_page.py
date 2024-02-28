@@ -11,6 +11,7 @@ __all__ = (
     "page_output",
 )
 
+from copy import copy
 from typing import Any, Callable, Literal, Optional, Sequence, cast
 
 from htmltools import (
@@ -34,11 +35,13 @@ from ._html_deps_external import bootstrap_deps
 from ._html_deps_py_shiny import page_output_dependency
 from ._html_deps_shinyverse import components_dependency
 from ._navs import NavMenu, NavPanel, navset_bar
-from ._sidebar import Sidebar, layout_sidebar
+from ._sidebar import Sidebar, SidebarOpen, layout_sidebar
 from ._tag import consolidate_attrs
 from ._utils import get_window_title
 from .css import CssUnit, as_css_padding, as_css_unit
 from .fill._fill import as_fillable_container
+
+page_sidebar_default: SidebarOpen = SidebarOpen(desktop="open", mobile="always")
 
 
 @add_example()
@@ -87,6 +90,15 @@ def page_sidebar(
     if isinstance(title, str):
         title = tags.h1(title, class_="bslib-page-title")
 
+    if not isinstance(sidebar, Sidebar):
+        raise TypeError(
+            "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
+        )
+
+    if sidebar._default_open != page_sidebar_default:
+        sidebar = copy(sidebar)
+        sidebar._default_open = page_sidebar_default
+
     attrs, children = consolidate_attrs(*args, **kwargs)
 
     return page_fillable(
@@ -110,7 +122,7 @@ def page_sidebar(
     )
 
 
-@no_example
+@no_example()
 def page_navbar(
     *args: NavSetArg | MetadataNode | Sequence[MetadataNode],
     title: Optional[str | Tag | TagList] = None,
@@ -189,7 +201,7 @@ def page_navbar(
         A UI element.
 
     See Also
-    -------
+    --------
     * :func:`~shiny.ui.nav`
     * :func:`~shiny.ui.nav_menu`
     * :func:`~shiny.ui.navset_bar`
@@ -199,14 +211,18 @@ def page_navbar(
     -------
     See :func:`~shiny.ui.nav`.
     """
-    if sidebar is not None and not isinstance(sidebar, Sidebar):
-        raise TypeError(
-            "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
-        )
-
     pageClass = "bslib-page-navbar"
+
     if sidebar is not None:
+        if not isinstance(sidebar, Sidebar):
+            raise TypeError(
+                "`sidebar=` is not a `Sidebar` instance. Use `ui.sidebar(...)` to create one."
+            )
+
         pageClass += " has-page-sidebar"
+        if sidebar._default_open != page_sidebar_default:
+            sidebar = copy(sidebar)
+            sidebar._default_open = page_sidebar_default
 
     tagAttrs: TagAttrs = {"class": pageClass}
 
@@ -255,7 +271,7 @@ def page_navbar(
         )
 
 
-@no_example
+@no_example()
 def page_fillable(
     *args: TagChild | TagAttrs,
     padding: Optional[CssUnit | list[CssUnit]] = None,
@@ -273,13 +289,13 @@ def page_fillable(
     *args
         UI elements.
     padding
-        Padding to use for the body. See :func:`~shiny.ui.css_unit.as_css_padding`
+        Padding to use for the body. See :func:`~shiny.ui.css.as_css_padding`
         for more details.
     fillable_mobile
         Whether or not the page should fill the viewport's height on mobile devices
         (i.e., narrow windows).
     gap
-        A CSS length unit passed through :func:`~shiny.ui.css_unit.as_css_unit`
+        A CSS length unit passed through :func:`~shiny.ui.css.as_css_unit`
         defining the `gap` (i.e., spacing) between elements provided to `*args`.
     title
         The browser window title (defaults to the host URL of the page). Can also be set
@@ -295,7 +311,7 @@ def page_fillable(
         A UI element.
 
     See Also
-    -------
+    --------
     * :func:`~shiny.ui.page_fluid`
     * :func:`~shiny.ui.page_fixed`
     """
@@ -354,10 +370,10 @@ def page_fluid(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.page_fixed`
-    :func:`~shiny.ui.page_bootstrap`
-    :func:`~shiny.ui.page_navbar`
+    --------
+    * :func:`~shiny.ui.page_fixed`
+    * :func:`~shiny.ui.page_bootstrap`
+    * :func:`~shiny.ui.page_navbar`
     """
 
     return page_bootstrap(
@@ -395,10 +411,10 @@ def page_fixed(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.page_fluid`
-    :func:`~shiny.ui.page_bootstrap`
-    :func:`~shiny.ui.page_navbar`
+    --------
+    * :func:`~shiny.ui.page_fluid`
+    * :func:`~shiny.ui.page_bootstrap`
+    * :func:`~shiny.ui.page_navbar`
     """
 
     return page_bootstrap(
@@ -407,7 +423,7 @@ def page_fixed(
 
 
 # TODO: implement theme (just Bootswatch for now?)
-@no_example
+@no_example()
 def page_bootstrap(
     *args: TagChild | TagAttrs,
     title: Optional[str] = None,
@@ -437,9 +453,9 @@ def page_bootstrap(
         A UI element.
 
     See Also
-    -------
-    :func:`~shiny.ui.page_fluid`
-    :func:`~shiny.ui.page_navbar`
+    --------
+    * :func:`~shiny.ui.page_fluid`
+    * :func:`~shiny.ui.page_navbar`
     """
     head = tags.title(title) if title else None
     return tags.html(
@@ -449,7 +465,7 @@ def page_bootstrap(
     )
 
 
-@no_example
+@no_example()
 def page_auto(
     *args: TagChild | TagAttrs,
     title: str | MISSING_TYPE = MISSING,
@@ -633,7 +649,7 @@ def _page_auto_fixed(
     )
 
 
-@no_example
+@no_example()
 def page_output(id: str) -> Tag:
     """
     Create a page container where the entire body is a UI output.

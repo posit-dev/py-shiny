@@ -568,15 +568,13 @@ def output_transformer(
     *,
     default_ui: Optional[DefaultUIFn] = None,
     default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
-) -> Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]:
-    ...
+) -> Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]: ...
 
 
 @overload
 def output_transformer(
     transform_fn: TransformFn[IT, P, OT],
-) -> OutputTransformer[IT, OT, P]:
-    ...
+) -> OutputTransformer[IT, OT, P]: ...
 
 
 @add_example()
@@ -590,7 +588,9 @@ def output_transformer(
     | Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]
 ):
     """
-    Output transformer decorator
+    Deprecated. Please use :class:`~shiny.render.renderer.Renderer` instead.
+
+    Output transformer decorator.
 
     This decorator method is a convenience method to generate the appropriate types and
     internal implementation for an overloaded renderer method. This method will provide

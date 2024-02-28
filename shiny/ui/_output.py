@@ -47,8 +47,8 @@ def output_plot(
     """
     Create a output container for a static plot.
 
-    Place a :func:`~shiny.render.plot` result in the user interface. See
-    :func:`~shiny.render.plot` for more details on what types of plots are supported.
+    Place a :class:`~shiny.render.plot` result in the user interface. See
+    :class:`~shiny.render.plot` for more details on what types of plots are supported.
 
     Parameters
     ----------
@@ -101,7 +101,7 @@ def output_plot(
 
     See Also
     --------
-    * :func:`~shiny.render.plot`
+    * :class:`~shiny.render.plot`
     * :func:`~shiny.ui.output_image`
     """
     if isinstance(fill, MISSING_TYPE):
@@ -187,7 +187,7 @@ def output_image(
 
     See Also
     --------
-    * :func:`~shiny.render.image`
+    * :class:`~shiny.render.image`
     * :func:`~shiny.ui.output_plot`
     """
     func = tags.span if inline else div
@@ -262,7 +262,7 @@ def output_text(
 
     See Also
     --------
-    * :func:`~shiny.render.text`
+    * :class:`~shiny.render.text`
     * :func:`~shiny.ui.output_text_verbatim`
     """
 
@@ -271,7 +271,7 @@ def output_text(
     return container(id=resolve_id(id), class_="shiny-text-output")
 
 
-@no_example
+@no_example()
 def output_code(id: str, placeholder: bool = True) -> Tag:
     """
     Create a output container for code (monospaced text).
@@ -300,7 +300,7 @@ def output_code(id: str, placeholder: bool = True) -> Tag:
 
     See Also
     --------
-    * :func:`~shiny.render.text`
+    * :class:`~shiny.render.text`
     * :func:`~shiny.ui.output_text`
     * :func:`~shiny.ui.output_text_verbatim`
 
@@ -318,7 +318,7 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     """
     Create a output container for some text.
 
-    Place a :func:`~shiny.render.text` result in the user interface.
+    Place a :class:`~shiny.render.text` result in the user interface.
     Differs from :func:`~shiny.ui.output_text` in that it wraps the text in a
     fixed-width container with a gray-ish background color and border.
 
@@ -338,7 +338,7 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
 
     See Also
     --------
-    * :func:`~shiny.render.text`
+    * :class:`~shiny.render.text`
     * :func:`~shiny.ui.output_text`
 
     Example
@@ -368,7 +368,7 @@ def output_table(id: str, **kwargs: TagAttrValue) -> Tag:
 
     See Also
     --------
-    * :func:`~shiny.render.table`
+    * :class:`~shiny.render.table`
     """
     return tags.div({"class": "shiny-html-output"}, id=resolve_id(id), **kwargs)
 
@@ -409,7 +409,7 @@ def output_ui(
 
     See Also
     --------
-    * :func:`~shiny.render.ui`
+    * :class:`~shiny.render.ui`
     * :func:`~shiny.ui.output_text`
     """
 

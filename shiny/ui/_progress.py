@@ -3,13 +3,16 @@ from __future__ import annotations
 __all__ = ("Progress",)
 
 from types import TracebackType
-from typing import Optional, Type
+from typing import TYPE_CHECKING, Optional, Type
 from warnings import warn
 
 from .._docstring import add_example
 from .._utils import rand_hex
-from ..session import Session, require_active_session
+from ..session import require_active_session
 from ..session._session import UpdateProgressMessage
+
+if TYPE_CHECKING:
+    from .. import Session
 
 
 @add_example()
@@ -17,7 +20,7 @@ class Progress:
     """
     Initialize a progress bar.
 
-    :func:`~shiny.ui.Progress` creates a computation manager that can be used with `with` to
+    `Progress` creates a computation manager that can be used with `with` to
     run a block of code. Shiny will display a progress bar while the code runs, which
     you can update by calling the `set()` and `message()` methods of the computation
     manager at strategic points in the code block.

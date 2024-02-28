@@ -32,14 +32,16 @@ from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
 from .http_staticfiles import FileResponse, StaticFiles
-from .session import Inputs, Outputs, Session, session_context
+from .session._session import Inputs, Outputs, Session, session_context
 
 T = TypeVar("T")
 
 # Default values for App options.
 LIB_PREFIX: str = "lib/"
 SANITIZE_ERRORS: bool = False
-SANITIZE_ERROR_MSG: str = "An error has occurred. Check your logs or contact the app author for clarification."
+SANITIZE_ERROR_MSG: str = (
+    "An error has occurred. Check your logs or contact the app author for clarification."
+)
 
 
 class App:
@@ -94,7 +96,9 @@ class App:
     may default to ``True`` in some production environments (e.g., Posit Connect).
     """
 
-    sanitize_error_msg: str = "An error has occurred. Check your logs or contact the app author for clarification."
+    sanitize_error_msg: str = (
+        "An error has occurred. Check your logs or contact the app author for clarification."
+    )
     """
     The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
     """
@@ -105,9 +109,9 @@ class App:
     def __init__(
         self,
         ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
-        server: Callable[[Inputs], None]
-        | Callable[[Inputs, Outputs, Session], None]
-        | None,
+        server: (
+            Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None] | None
+        ),
         *,
         static_assets: Optional["str" | "os.PathLike[str]" | dict[str, Path]] = None,
         debug: bool = False,
@@ -319,7 +323,7 @@ class App:
 
         See Also
         --------
-        ~shiny.Session.close
+        * :func:`~shiny.Session.close`
         """
         # convert to list to avoid modifying the dict while iterating over it, which
         # throws an error
