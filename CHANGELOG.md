@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The sidebar's collapse toggle now has a high `z-index` value to ensure it always appears above elements in the main content area of `ui.layout_sidebar()`. The sidebar overlay also now receives the same high `z-index` on mobile layouts. (#1129)
 
+* Updated example apps to use lower-case versions of `reactive.Calc`->`reactive.calc`, `reactive.Effect`->`reactive.effect`, and `reactive.Value`->`reactive.value`. (#1164)
+
 ### Bug fixes
 
 * Fixed `input_task_button` not working in a Shiny module. (#1108)
