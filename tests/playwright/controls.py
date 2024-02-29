@@ -13,7 +13,7 @@ from typing import Literal, Optional, Protocol
 from playwright.sync_api import FilePayload, FloatRect, Locator, Page, Position
 from playwright.sync_api import expect as playwright_expect
 
-# Import `shiny`'s typing extentions.
+# Import `shiny`'s typing extensions.
 # Since this is a private file, tell pyright to ignore the import
 # (Imports split over many import statements due to auto formatting)
 from shiny._typing_extensions import (
@@ -1090,31 +1090,29 @@ class _MultipleDomItems:
         loc_container_orig = loc_container
 
         # Find all items in set
-        for item, i in zip(arr, range(len(arr))):
-            # Get all elements of type
-            has_locator = loc_item
-            # Get the `n`th matching element
-            has_locator = has_locator.nth(i)
-            # Make sure that element has the correct attribute value
-            has_locator = has_locator.locator(
-                f"xpath=self::*[{_xpath_match_str(key, item)}]"
-            )
+        for i in range(len(arr)):
+            # Get ith element of type
+            loc_item.nth(i)
+            # # Make sure that element has the correct attribute value
+            # has_locator = has_locator.locator(
+            #     f"xpath=self::*[{_xpath_match_str(key, item)}]"
+            # )
+            #
+            # # Given the container, make sure it contains this locator
+            # loc_container = loc_container.locator(
+            #     # Return self
+            #     "xpath=.",
+            #     has=has_locator,
+            # )
 
-            # Given the container, make sure it contains this locator
-            loc_container = loc_container.locator(
-                # Return self
-                "xpath=.",
-                has=has_locator,
-            )
-
-        # Make sure other items are not in set
-        # If we know all elements are contained in the container,
-        # and all elements all unique, then it should have a count of `len(arr)`
+        # Make sure other items are not in the set.
+        # If we know all elements are contained in the container
+        # and all elements are unique, then it should have a count of `len(arr)`
         loc_inputs = loc_container.locator(loc_item)
         try:
             playwright_expect(loc_inputs).to_have_count(len(arr), timeout=timeout)
         except AssertionError as e:
-            # Debug expections
+            # Debug expectations
 
             # Expecting container to exist (count = 1)
             playwright_expect(loc_container_orig).to_have_count(1, timeout=timeout)
