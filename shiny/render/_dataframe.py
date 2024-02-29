@@ -19,6 +19,7 @@ from typing import (
 from htmltools import Tag
 
 from .. import reactive, ui
+from .._deprecated import ShinyDeprecationWarning
 from .._docstring import add_example, no_example
 from .._typing_extensions import Self
 from ..session._utils import (
@@ -40,7 +41,17 @@ class AbstractTabularData(abc.ABC):
     def to_payload(self) -> Jsonifiable: ...
 
 
-RowSelectionMode = Literal["none", "single", "multiple"]
+EditMode = Literal["none", "edit"]
+RowSelectionMode = Literal["none", "single_row", "multiple_row"]
+# ColumnSelectionMode = Literal["single_col", "multiple_col"]
+DataFrameMode = Union[
+    EditMode,
+    RowSelectionMode,
+    # ColumnSelectionMode,
+    Literal["none"],
+]
+
+RowSelectionModeDeprecated = Literal["single", "multiple", "none", "deprecated"]
 
 # # TODO-future; Use `dataframe-api-compat>=0.2.6` to injest dataframes and return standardized dataframe structures
 # # TODO-future: Find this type definition: https://github.com/data-apis/dataframe-api-compat/blob/273c0be45962573985b3a420869d0505a3f9f55d/dataframe_api_compat/polars_standard/dataframe_object.py#L22
@@ -70,6 +81,24 @@ RowSelectionMode = Literal["none", "single", "multiple"]
 #             "Expected Standard-compliant DataFrame, or DataFrame with Standard-compliant implementation"
 #         )
 #     return df
+
+
+def as_mode(
+    mode: DataFrameMode,
+    *,
+    row_selection_mode: RowSelectionModeDeprecated,
+) -> DataFrameMode:
+    if row_selection_mode == "deprecated":
+        return mode
+    ShinyDeprecationWarning(
+        "`DataGraid(row_selection_mode=)` has been superseded by `DataGrid(mode=)`."
+        ' Please use `DataGrid(mode="{row_selection_mode}_row")` instead.'
+    )
+    if row_selection_mode == "none":
+        return "none"
+
+    mode = cast(RowSelectionMode, f"{row_selection_mode}_row")
+    return mode
 
 
 @add_example(ex_dir="../api-examples/data_frame")
@@ -102,10 +131,16 @@ class DataGrid(AbstractTabularData):
         `"Viendo filas {start} a {end} de {total}"`.
     filters
         If `True`, shows a row of filter inputs below the headers, one for each column.
+    mode
+        Single string to set the mode of the table.
+
+        Supported values:
+        * Use `"none"` to disable any cell selections or editing.
+        * Use `"single_row"` to allow a single row to be selected at a time.
+        * Use `"multiple_row"` to allow multiple rows to be selected by clicking on them individually.
+        * Use `"edit"` to allow editing of the cells in the table.
     row_selection_mode
-        Use `"none"` to disable row selection, `"single"` to allow a single row to be
-        selected at a time, and `"multiple"` to allow multiple rows to be selected by
-        clicking on them individually.
+        Deprecated. Please use `mode={row_selection_mode}_row` instead.
 
     Returns
     -------
@@ -128,8 +163,8 @@ class DataGrid(AbstractTabularData):
         height: Union[str, float, None] = None,
         summary: Union[bool, str] = True,
         filters: bool = False,
-        row_selection_mode: RowSelectionMode = "none",
-        editable: bool = False,
+        mode: DataFrameMode = "none",
+        row_selection_mode: RowSelectionModeDeprecated = "deprecated",
     ):
         import pandas as pd
 
@@ -145,8 +180,7 @@ class DataGrid(AbstractTabularData):
         self.height = height
         self.summary = summary
         self.filters = filters
-        self.row_selection_mode: RowSelectionMode = row_selection_mode
-        self.editable = editable
+        self.mode = as_mode(mode, row_selection_mode=row_selection_mode)
 
     def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
@@ -155,8 +189,7 @@ class DataGrid(AbstractTabularData):
             height=self.height,
             summary=self.summary,
             filters=self.filters,
-            row_selection_mode=self.row_selection_mode,
-            editable=self.editable,
+            mode=self.mode,
             style="grid",
             fill=self.height is None,
         )
@@ -193,10 +226,16 @@ class DataTable(AbstractTabularData):
         `"Viendo filas {start} a {end} de {total}"`.
     filters
         If `True`, shows a row of filter inputs below the headers, one for each column.
+    mode
+        Single string to set the mode of the table.
+
+        Supported values:
+        * Use `"none"` to disable any cell selections or editing.
+        * Use `"single_row"` to allow a single row to be selected at a time.
+        * Use `"multiple_row"` to allow multiple rows to be selected by clicking on them individually.
+        * Use `"edit"` to allow editing of the cells in the table.
     row_selection_mode
-        Use `"none"` to disable row selection, `"single"` to allow a single row to be
-        selected at a time, and `"multiple"` to allow multiple rows to be selected by
-        clicking on them individually.
+        Deprecated. Please use `mode={row_selection_mode}_row` instead.
 
     Returns
     -------
@@ -219,7 +258,8 @@ class DataTable(AbstractTabularData):
         height: Union[str, float, None] = "500px",
         summary: Union[bool, str] = True,
         filters: bool = False,
-        row_selection_mode: RowSelectionMode = "none",
+        mode: DataFrameMode = "none",
+        row_selection_mode: Literal["deprecated"] = "deprecated",
     ):
         import pandas as pd
 
@@ -235,7 +275,7 @@ class DataTable(AbstractTabularData):
         self.height = height
         self.summary = summary
         self.filters = filters
-        self.row_selection_mode: RowSelectionMode = row_selection_mode
+        self.mode = as_mode(mode, row_selection_mode=row_selection_mode)
 
     def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
@@ -244,7 +284,7 @@ class DataTable(AbstractTabularData):
             height=self.height,
             summary=self.summary,
             filters=self.filters,
-            row_selection_mode=self.row_selection_mode,
+            mode=self.mode,
             style="table",
         )
         return res
@@ -265,7 +305,7 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
     return res
 
 
-# TODO-barret-future; make generic
+# TODO-barret-future; make generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
 DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
 
 

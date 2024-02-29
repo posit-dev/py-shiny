@@ -62,7 +62,7 @@ def server(input: Inputs):
     @render.data_frame
     def summary_data():
         # return df
-        return render.DataGrid(df(), row_selection_mode="none", editable=True)
+        return render.DataGrid(df(), mode="edit")
         # return render.DataTable(df, row_selection_mode="multiple")
 
     @summary_data.on_cell_update
