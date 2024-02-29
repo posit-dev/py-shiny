@@ -119,6 +119,10 @@ def expressify(
     ----------
     fn :
         The function to decorate. If not provided, this is a decorator factory.
+    has_docstring :
+        Whether the function has a docstring. Set this to `True` if the function to
+        decorate has a docstring. This tells `expressify()` to *not* capture the
+        docstring and display it in the UI.
 
     Returns
     -------
@@ -204,12 +208,14 @@ def _transform_body(
             " This should never happen, please file an issue!"
         )
 
+    # A wrapper for _transform_function_ast that conveys the value of has_docstring.
+    def transform_function_ast_local(node: ast.AST) -> ast.AST:
+        return _transform_function_ast(node, has_docstring)
+
     tft = TargetFunctionTransformer(
         fn,
         # If we find `fn` in the AST, use transform its body to use displayhook
-        # TODO: This lambda is kind of an awkward way to pass has_docstring - think
-        # about a better way?
-        lambda node: _transform_function_ast(node, has_docstring),
+        transform_function_ast_local,
     )
 
     new_ast = tft.visit(parsed_ast)

@@ -84,7 +84,8 @@ class FuncBodyDisplayHookTransformer(TopLevelTransformer):
             self.has_visited_first_node = True
 
             # If the first node is meant to be treated as a docstring, first make sure
-            # it actually is a static string, and don't call the displayhook on it.
+            # it actually is a static string, and return it without wrapping it with the
+            # displayhook.
             if (
                 self.has_docstring
                 and isinstance(node.value, ast.Constant)
