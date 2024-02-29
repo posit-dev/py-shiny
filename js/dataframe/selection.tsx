@@ -16,9 +16,9 @@ export interface SelectionSet<TKey, TElement extends HTMLElement> {
 
 export enum SelectionMode {
   None = "none",
-  Single = "single",
-  Multiple = "multiple",
-  MultiNative = "multi-native",
+  Single = "single_row",
+  Multiple = "multiple_row",
+  MultiNative = "multi-native_row",
 }
 
 export function useSelection<TKey, TElement extends HTMLElement>(

@@ -1,5 +1,10 @@
 import { SelectionMode } from "./selection";
 
+export enum EditMode {
+  None = "none",
+  Edit = "edit",
+}
+
 export interface TypeHint {
   type: "string" | "numeric" | "categorical" | "unknown";
 }
@@ -12,8 +17,9 @@ export interface CategoricalTypeHint extends TypeHint {
 export interface DataGridOptions {
   style?: "table" | "grid";
   summary?: boolean | string;
-  row_selection_mode?: SelectionMode;
-  editable?: boolean;
+  mode?: SelectionMode | EditMode;
+  // row_selection_mode?: SelectionMode;
+  // editable?: boolean;
   filters?: boolean;
   width?: string;
   height?: string;

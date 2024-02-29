@@ -219,3 +219,18 @@ shiny-data-frame {
     flex: 0 0 auto;
   }
 }
+
+shiny-data-frame {
+  .cell-edit-success {
+    background-color: #ddffdd; /* Light green */
+  }
+  .cell-edit-saving {
+    background-color: #e8e8e8; /* Light grey */
+  }
+  .cell-edit-failure {
+    background-color: #ffdddd; /* Light red */
+  }
+  .cell-edit-editing {
+    background-color: #ffffcc; /* Light yellow */
+  }
+}

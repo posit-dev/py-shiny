@@ -1,9 +1,4 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import { useState } from "react";
-import { useImmer } from "use-immer";
-import { ImmutableSet } from "./immutable-set";
-import css from "./styles.scss";
-
 import {
   Column,
   ColumnDef,
@@ -16,6 +11,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Virtualizer, useVirtualizer } from "@tanstack/react-virtual";
+import { enableMapSet } from "immer";
 import React, {
   FC,
   StrictMode,
@@ -24,18 +20,20 @@ import React, {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { Root, createRoot } from "react-dom/client";
 import { ErrorsMessageValue } from "rstudio-shiny/srcts/types/src/shiny/shinyapp";
+import { useImmer } from "use-immer";
+import { CellState, TableBodyCell } from "./cell";
 import { findFirstItemInView, getStyle } from "./dom-utils";
 import { Filter, useFilter } from "./filter";
 import { SelectionMode, useSelection } from "./selection";
 import { SortArrow } from "./sort-arrows";
+import css from "./styles.scss";
 import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
-import { PandasData, TypeHint } from "./types";
-
-import { ResponseValue, makeRequest } from "./request";
+import { EditMode, PandasData, TypeHint } from "./types";
 // setTimeout(() => {
 //   console.log("Making request!");
 //   makeRequest(
@@ -61,26 +59,13 @@ import { ResponseValue, makeRequest } from "./request";
 //   options: DataGridOptions;
 // }
 
-type UpdateCellData = {
-  rowIndex: number;
-  columnId: string;
-  value: unknown;
-  prev: unknown;
-};
-type UpdateCellDataRequest = {
-  row_index: number;
-  column_id: string;
-  value: unknown;
-  prev: unknown;
-};
-
 declare module "@tanstack/table-core" {
   interface ColumnMeta<TData extends RowData, TValue> {
     typeHint: TypeHint;
   }
-  interface TableMeta<TData extends RowData> {
-    updateCellsData: (cellInfos: UpdateCellData[]) => void;
-  }
+  // interface TableMeta<TData extends RowData> {
+  //   updateCellsData: (cellInfos: UpdateCellData[]) => void;
+  // }
 }
 
 // // TODO-barret-future; Use window.setSelectionRange() and this method to reselect text when scrolling out of view
@@ -133,10 +118,22 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const [editRowIndex, setEditRowIndex] = useState<number>(null);
   const [editColumnId, setEditColumnId] = useState<string>(null);
 
-  const canEdit = data.options["editable"] ?? false;
+  useEffect(() => {
+    console.log("editing info!", editRowIndex, editColumnId);
+  }, [editColumnId, editRowIndex]);
+
+  const dataFrameModeIsMissing = data.options["mode"] ? false : true;
+  const dataFrameMode = data.options["mode"] ?? "none";
+
+  const canEdit = dataFrameMode === EditMode.Edit;
+
+  const [cellEditMap, setCellEditMap] = useImmer<
+    Map<string, { value: string; state: CellState }>
+  >(new Map<string, { value: string; state: CellState }>());
+  enableMapSet();
 
   useEffect(() => {
-    console.trace("editing info!", editRowIndex, editColumnId);
+    console.log("editing info!", editRowIndex, editColumnId);
   }, [editColumnId, editRowIndex]);
 
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
@@ -161,134 +158,11 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
             column: { id: columnId },
             table,
           }) => {
-            // return <EditableCell {onclick}{}{}{}{}>  </EditableCell>
-
-            const initialValue = getValue();
-            // We need to keep and update the state of the cell normally
-            const [value, setValue] = useImmer(initialValue);
-            const inputRef = useRef(null);
-            const editable =
-              editRowIndex === rowIndex && editColumnId === columnId;
-
-            const onEsc = (e: React.KeyboardEvent<HTMLInputElement>) => {
-              if (e.key !== "Escape") return;
-              // Prevent default behavior
-              e.preventDefault();
-
-              // inputRef.current.blur();
-              setEditRowIndex(null);
-              setEditColumnId(null);
-              // TODO-barret-future; Set focus to table? (state: Editing was aborted)
-            };
-            const onTab = (e: React.KeyboardEvent<HTMLInputElement>) => {
-              if (e.key !== "Tab") return;
-              // Prevent default behavior
-              e.preventDefault();
-
-              const hasShift = e.shiftKey;
-
-              const newColumnIndex =
-                columns.indexOf(editColumnId) + (hasShift ? -1 : 1);
-              if (newColumnIndex < 0 || newColumnIndex >= columns.length) {
-                // If the new column index is out of bounds, quit
-                return;
-              }
-              const newColumnId = columns[newColumnIndex];
-
-              setEditColumnId(newColumnId);
-            };
-            const onEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
-              if (e.key !== "Enter") return;
-              // Prevent default behavior
-              e.preventDefault();
-
-              const hasShift = e.shiftKey;
-
-              const newRowIndex = editRowIndex + (hasShift ? -1 : 1);
-              if (
-                newRowIndex < 0 ||
-                newRowIndex >= table.getSortedRowModel().rows.length
-              ) {
-                // If the new row index is out of bounds, quit
-                return;
-              }
-
-              setEditRowIndex(newRowIndex);
-            };
-
-            const onInputKeyDown = (
-              e: React.KeyboardEvent<HTMLInputElement>
-            ) => {
-              [onEsc, onEnter, onTab].forEach((fn) => fn(e));
-            };
-
-            // When the input is blurred, we'll call our table meta's updateData function
-            // console.log("rendering cell", rowIndex, id, initialValue, value);
-            const onBlur = () => {
-              // console.log("on blur!", initialValue, value);
-              // Only update if the value has changed
-              if (initialValue !== value) {
-                table.options.meta?.updateCellsData([
-                  {
-                    rowIndex,
-                    columnId,
-                    value,
-                    prev: initialValue,
-                  },
-                ]);
-              }
-            };
-
-            // If the initialValue is changed external, sync it up with our state
-            React.useEffect(() => {
-              setValue(initialValue);
-            }, [initialValue, setValue]);
-
-            // Select the input when it becomes editable
-            React.useEffect(() => {
-              if (editable) {
-                inputRef.current.focus();
-                inputRef.current.select();
-              }
-            }, [editable]);
-
-            // Reselect the input when it comes into view!
-            // (It could be scrolled out of view and then back into view)
-            function onFocus(e: React.FocusEvent<HTMLInputElement>) {
-              if (editable) {
-                e.target.select();
-              }
-            }
-
-            function onChange(e: React.ChangeEvent<HTMLInputElement>) {
-              console.log("on change!");
-              setValue(e.target.value);
-            }
-
-            if (editable) {
-              return (
-                <input
-                  value={value as string}
-                  onChange={onChange}
-                  onBlur={onBlur}
-                  onFocus={onFocus}
-                  onKeyDown={onInputKeyDown}
-                  ref={inputRef}
-                />
-              );
-            } else {
-              const onReadyClick = (e: React.MouseEvent<HTMLInputElement>) => {
-                console.trace("on ready click!", e.target);
-                setEditRowIndex(rowIndex);
-                setEditColumnId(columnId);
-              };
-              const onClick = canEdit ? onReadyClick : undefined;
-              return <div onClick={onClick}>{value as string}</div>;
-            }
+            return getValue() as string;
           },
         };
       }),
-    [columns, editColumnId, editRowIndex, type_hints]
+    [columns, type_hints, editRowIndex, editColumnId, cellEditMap]
   );
 
   // function useSkipper() {
@@ -319,61 +193,12 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     ...filterOpts,
-    debugAll: true,
+    // debugAll: true,
     // Provide our updateCellsData function to our table meta
     // autoResetPageIndex,
-    meta: {
-      updateCellsData: (cellInfos: UpdateCellData[]) => {
-        // // Skip page index reset until after next rerender
-        // skipAutoResetPageIndex();
-
-        const updateInfos: UpdateCellDataRequest[] = cellInfos.map(
-          (cellInfo) => {
-            return {
-              row_index: cellInfo.rowIndex,
-              column_id: cellInfo.columnId,
-              value: cellInfo.value,
-              prev: cellInfo.prev,
-            };
-          }
-        );
-
-        console.log("Set data here! (Send info back to shiny)", cellInfos);
-        makeRequest(
-          "outputRPC",
-          [
-            // id: string
-            id,
-            // handler: string
-            "cells_update",
-            // list[OnCellUpdateParams]
-            updateInfos,
-          ],
-          (values: ResponseValue[]) => {
-            console.log("cellsUpdate - success!", values);
-            setData((draft) => {
-              values.forEach((value: string, i: number) => {
-                const { rowIndex, columnId } = cellInfos[i];
-                const colIndex = columns.indexOf(columnId);
-                const row = draft[rowIndex];
-                console.log(
-                  "Setting new value!",
-                  value,
-                  columnId,
-                  draft[rowIndex]
-                );
-
-                draft[rowIndex][colIndex] = value;
-              });
-            });
-          },
-          (err: string) => {
-            console.error("error!", err);
-          },
-          undefined
-        );
-      },
-    },
+    // meta: {
+    //   updateCellsData: (cellInfos: UpdateCellData[]) => {},
+    // },
   };
   const table = useReactTable(options);
 
@@ -421,8 +246,19 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const tableClass = tableStyle === "table" ? "table table-sm" : null;
 
   // ### Row selection ###############################################################
-  const rowSelectionMode =
-    data.options["row_selection_mode"] ?? SelectionMode.MultiNative;
+  // rowSelectionMode
+
+  // If a row selection mode matches one of the enum values, use it. Otherwise, default to none (e.g. `dataFrameMode == "edit"`).
+  const rowSelectionModeValue = Object.values(SelectionMode).includes(
+    dataFrameMode as SelectionMode
+  )
+    ? (dataFrameMode as SelectionMode)
+    : SelectionMode.None;
+  // If nothing is provided, default to multinative mode
+  const rowSelectionMode = dataFrameModeIsMissing
+    ? SelectionMode.None
+    : rowSelectionModeValue;
+
   const canSelect = rowSelectionMode !== SelectionMode.None;
   const canMultiSelect =
     rowSelectionMode === SelectionMode.MultiNative ||
@@ -513,125 +349,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
     );
   }
 
-  // const [selectedKeys, setSelectedKeys] = useImmer<ImmutableSet<TKey>>(
-  //   ImmutableSet.empty()
-  // );
-
-  // // The anchor is the item that was most recently selected with a click or ctrl-click,
-  // // and is used to determine the "other end" of a shift-click selection operation.
-  // const [anchor, setAnchor] = useImmer<TKey | null>(null);
-
-  // const onMouseDown = (event: React.MouseEvent<TElement, MouseEvent>): void => {
-  //   if (mode === SelectionMode.None) {
-  //     return;
-  //   }
-
-  //   const el = event.currentTarget as TElement;
-  //   const key = keyAccessor(el);
-
-  //   const result = performMouseDownAction<TKey, TElement>(
-  //     mode,
-  //     between,
-  //     selectedKeys,
-  //     event,
-  //     key,
-  //     anchor
-  //   );
-  //   if (result) {
-  //     setSelectedKeys(result.selection);
-  //     if (result.anchor) {
-  //       setAnchor(key);
-  //       el.focus();
-  //     }
-  //     event.preventDefault();
-  //   }
-  // };
-
-  // const onKeyDown = (event: React.KeyboardEvent<TElement>): void => {
-  //   if (mode === SelectionMode.None) {
-  //     return;
-  //   }
-
-  //   const el = event.currentTarget as TElement;
-  //   const key = keyAccessor(el);
-  //   const selected = selectedKeys.has(key);
-
-  //   if (mode === SelectionMode.Single) {
-  //     if (event.key === " " || event.key === "Enter") {
-  //       if (selectedKeys.has(key)) {
-  //         setSelectedKeys(ImmutableSet.empty());
-  //       } else {
-  //         setSelectedKeys(ImmutableSet.just(key));
-  //       }
-  //       event.preventDefault();
-  //     } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-  //       const targetKey = focusOffset(key, event.key === "ArrowUp" ? -1 : 1);
-  //       if (targetKey) {
-  //         event.preventDefault();
-  //         if (selected) {
-  //           setSelectedKeys(ImmutableSet.just(targetKey));
-  //         }
-  //       }
-  //     }
-  //   } else if (mode === SelectionMode.Multiple) {
-  //     if (event.key === " " || event.key === "Enter") {
-  //       setSelectedKeys(selectedKeys.toggle(key));
-  //       event.preventDefault();
-  //     } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-  //       if (focusOffset(key, event.key === "ArrowUp" ? -1 : 1)) {
-  //         event.preventDefault();
-  //       }
-  //     }
-  //   }
-  // };
-
-  // const barret2 = () => {
-  //   return {
-  //     has(key: TKey): boolean {
-  //       return selectedKeys.has(key);
-  //     },
-
-  //     set(key: TKey, selected: boolean) {
-  //       if (selected) {
-  //         setSelectedKeys(selectedKeys.add(key));
-  //       } else {
-  //         setSelectedKeys(selectedKeys.delete(key));
-  //       }
-  //     },
-
-  //     setMultiple(key_arr: TKey[]) {
-  //       setSelectedKeys(ImmutableSet.just(...key_arr));
-  //     },
-
-  //     clear() {
-  //       setSelectedKeys(selectedKeys.clear());
-  //     },
-
-  //     keys() {
-  //       return selectedKeys;
-  //     },
-
-  //     itemHandlers() {
-  //       return { onMouseDown, onKeyDown };
-  //     },
-  //   };
-  // };
-
-  const EditableCell = function () {
-    // States
-    // # Ready
-    // # Editing
-    // # Saving / Disabled
-    // # Error
-    // # Saved
-    // # Cancelled
-    // # New
-    // # Added
-    // # Removed
-
-    return <input />;
-  };
-
   // ### End editable cells ###########################################################
 
   //
@@ -680,6 +397,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   if (fill) {
     className += " html-fill-item";
   }
+
+  const maxRowSize = table.getSortedRowModel().rows.length;
 
   return (
     <>
@@ -765,12 +484,22 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
                   >
                     {row.getVisibleCells().map((cell) => {
                       return (
-                        <td key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </td>
+                        <TableBodyCell
+                          id={id}
+                          key={cell.id}
+                          cell={cell}
+                          canEdit={canEdit}
+                          columns={columns}
+                          editRowIndex={editRowIndex}
+                          editColumnId={editColumnId}
+                          setEditRowIndex={setEditRowIndex}
+                          setEditColumnId={setEditColumnId}
+                          cellEditMap={cellEditMap}
+                          maxRowSize={maxRowSize}
+                          setData={setData}
+                          setCellEditMap={setCellEditMap}
+                          // updateCellsData={updateCellsData}
+                        ></TableBodyCell>
                       );
                     })}
                   </tr>
