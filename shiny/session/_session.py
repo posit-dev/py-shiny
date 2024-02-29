@@ -289,7 +289,10 @@ class Session(object, metaclass=SessionMeta):
                         return
 
                     if "method" not in message_obj:
-                        self._send_error_response("Message does not contain 'method'.")
+                        await self._send_error_response(
+                            message_obj,
+                            "Message does not contain 'method'.",
+                        )
                         return
 
                     async with lock():
@@ -338,7 +341,7 @@ class Session(object, metaclass=SessionMeta):
                 try:
                     # Starting in Python 3.10 this could be traceback.print_exception(e)
                     traceback.print_exception(*sys.exc_info())
-                    self._send_error_response(str(e))
+                    await self._send_error_response(None, str(e))
                 except Exception:
                     pass
                 finally:
@@ -387,17 +390,24 @@ class Session(object, metaclass=SessionMeta):
         try:
             func = self._message_handlers[message["method"]]
         except KeyError:
-            self._send_error_response("Unknown method: " + message["method"])
+            await self._send_error_response(
+                message, "Unknown method: " + message["method"]
+            )
             return
         except AttributeError:
-            self._send_error_response("Unknown method: " + message["method"])
+            await self._send_error_response(
+                message, "Unknown method: " + message["method"]
+            )
             return
 
         try:
             # TODO: handle `blobs`
             value: object = await func(*message["args"])
         except Exception as e:
-            self._send_error_response("Error: " + str(e))
+            print("\n\n")
+            print(message, message["tag"])
+
+            await self._send_error_response(message, "Error: " + str(e))
             return
 
         await self._send_response(message, value)
@@ -418,12 +428,11 @@ class Session(object, metaclass=SessionMeta):
             Used to handle request messages from an Output Renderer.
 
             Typically, this is used when an Output Renderer needs to set an input value.
-            E.g. a @render.data_frame with an editable=True parameter will use this to
-            set the value of the data frame when a cell is edited.
+            E.g. a @render.data_frame result with a `mode="edit"` parameter will use
+            this to set the value of the data frame when a cell is edited.
             """
             with session_context(self):
                 if not (outputId in self.output._outputs):
-                    # asdf
                     raise RuntimeError(
                         f"Received request message for an unknown Output Renderer with id `{outputId}`"
                     )
@@ -717,9 +726,17 @@ class Session(object, metaclass=SessionMeta):
         """
         _utils.run_coro_hybrid(self._send_message(message))
 
-    def _send_error_response(self, message_str: str) -> None:
-        print("_send_error_response: " + message_str)
-        pass
+    async def _send_error_response(
+        self,
+        message: ClientMessageOther | None,
+        error: object,
+    ) -> None:
+        # { tag: number; value?: ResponseValue; error?: string }
+        tag = None
+        if message is not None:
+            if "tag" in message:
+                tag = message["tag"]
+        await self._send_message({"response": {"tag": tag, "error": error}})
 
     # ==========================================================================
     # Flush
