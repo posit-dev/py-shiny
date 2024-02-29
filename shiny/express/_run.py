@@ -35,6 +35,13 @@ def wrap_express_app(file: Path) -> App:
     :
         A :class:`shiny.App` object.
     """
+
+    extra_kwargs: dict[str, object] = {}
+
+    www_dir = file.parent / "www"
+    if www_dir.is_dir():
+        extra_kwargs["static_assets"] = str(www_dir)
+
     try:
         with session_context(cast(Session, MockSession())):
             # We tagify here, instead of waiting for the App object to do it when it wraps
@@ -59,7 +66,11 @@ def wrap_express_app(file: Path) -> App:
             traceback.print_exception(*sys.exc_info())
             raise
 
-    app = App(app_ui, express_server)
+    app = App(
+        app_ui,
+        express_server,
+        **extra_kwargs,  # pyright: ignore[reportArgumentType]
+    )
 
     return app
 
