@@ -310,6 +310,19 @@ def run_app(
             shinypath = Path(inspect.getfile(shiny)).parent
             reload_dirs.append(str(shinypath))
 
+        # This is necessary for GitHub Codespaces. The autoreload port must be public,
+        # which can't be controlled from here--it must be done in devcontainer.json and
+        # then we use that port. Private ports are authenticated in one of two ways:
+        # either visit the proxied host over https in a browser (which sets cookies) or
+        # attach an X-Github-Token HTTP header, neither of which we have the ability to
+        # do for our autoreload port.
+        #
+        # This is only a problem for our autoreload endpoint, not our normal Shiny app
+        # endpoint, because the former never makes a regular HTTP request, only WS;
+        # whereas the latter always browses to an HTTP page first.
+        if autoreload_port == 0 and os.getenv("SHINY_AUTORELOAD_PORT", "").isdecimal():
+            autoreload_port = int(os.getenv("SHINY_AUTORELOAD_PORT", ""))
+
         if autoreload_port == 0:
             autoreload_port = _utils.random_port(host=host)
 
