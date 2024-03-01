@@ -17,6 +17,8 @@ from ._typing_extensions import ParamSpec, TypeGuard
 
 CancelledError = asyncio.CancelledError
 
+T = TypeVar("T")
+
 
 # ==============================================================================
 # Misc utility functions
@@ -47,6 +49,12 @@ def lists_to_tuples(x: object) -> object:
     else:
         # TODO: are there other mutable iterators that we want to make read only?
         return x
+
+
+# Given a dictionary, return a new dictionary with the keys sorted by length.
+def sort_keys_length(x: dict[str, T], descending: bool = False) -> dict[str, T]:
+    sorted_keys = sorted(x.keys(), key=len, reverse=descending)
+    return {key: x[key] for key in sorted_keys}
 
 
 def guess_mime_type(

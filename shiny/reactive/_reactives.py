@@ -477,7 +477,7 @@ class Effect_:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
 
-        from ..express._mock_session import MockSession
+        from ..express._mock_session import ExpressMockSession
         from ..render.renderer import Renderer
 
         if isinstance(fn, Renderer):
@@ -513,9 +513,9 @@ class Effect_:
             # could be None if outside of a session).
             session = get_current_session()
 
-        if isinstance(session, MockSession):
-            # If we're in a MockSession, then don't actually set up this Effect -- we
-            # don't want it to try to run later.
+        if isinstance(session, ExpressMockSession):
+            # If we're in an ExpressMockSession, then don't actually set up this effect
+            # -- we don't want it to try to run later.
             return
 
         self._session = session
