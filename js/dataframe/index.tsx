@@ -61,6 +61,7 @@ import { EditMode, PandasData, TypeHint } from "./types";
 
 declare module "@tanstack/table-core" {
   interface ColumnMeta<TData extends RowData, TValue> {
+    colIndex: number;
     typeHint: TypeHint;
   }
   // interface TableMeta<TData extends RowData> {
@@ -116,11 +117,11 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   //   columnId: null,
   // });
   const [editRowIndex, setEditRowIndex] = useState<number>(null);
-  const [editColumnId, setEditColumnId] = useState<string>(null);
+  const [editColumnIndex, setEditColumnIndex] = useState<number>(null);
 
   useEffect(() => {
-    console.log("editing info!", editRowIndex, editColumnId);
-  }, [editColumnId, editRowIndex]);
+    console.log("editing info!", editRowIndex, editColumnIndex);
+  }, [editColumnIndex, editRowIndex]);
 
   const dataFrameModeIsMissing = data.options["mode"] ? false : true;
   const dataFrameMode = data.options["mode"] ?? "none";
@@ -133,8 +134,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   enableMapSet();
 
   useEffect(() => {
-    console.log("editing info!", editRowIndex, editColumnId);
-  }, [editColumnId, editRowIndex]);
+    console.log("editing info!", editRowIndex, editColumnIndex);
+  }, [editColumnIndex, editRowIndex]);
 
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
     () =>
@@ -150,19 +151,15 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
             typeHint.type === "numeric" ? "inNumberRange" : "includesString",
           header: colname,
           meta: {
+            colIndex: i,
             typeHint: typeHint,
           },
-          cell: ({
-            getValue,
-            row: { index: rowIndex },
-            column: { id: columnId },
-            table,
-          }) => {
+          cell: ({ getValue }) => {
             return getValue() as string;
           },
         };
       }),
-    [columns, type_hints, editRowIndex, editColumnId, cellEditMap]
+    [columns, type_hints, editRowIndex, editColumnIndex, cellEditMap]
   );
 
   // function useSkipper() {
@@ -491,9 +488,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
                           canEdit={canEdit}
                           columns={columns}
                           editRowIndex={editRowIndex}
-                          editColumnId={editColumnId}
+                          editColumnIndex={editColumnIndex}
                           setEditRowIndex={setEditRowIndex}
-                          setEditColumnId={setEditColumnId}
+                          setEditColumnIndex={setEditColumnIndex}
                           cellEditMap={cellEditMap}
                           maxRowSize={maxRowSize}
                           setData={setData}

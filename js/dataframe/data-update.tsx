@@ -4,18 +4,26 @@ import { CellState } from "./cell";
 
 export type UpdateCellData = {
   rowIndex: number;
-  columnId: string;
+  columnIndex: number;
   value: unknown;
   prev: unknown;
 };
 export type UpdateCellDataRequest = {
   row_index: number;
-  column_id: string;
+  column_index: number;
   value: unknown;
   prev: unknown;
 };
 
-export function updateCellsData(props: {
+export function updateCellsData({
+  id,
+  cellInfos,
+  onSuccess,
+  onError,
+  columns,
+  setData,
+  setCellEditMap,
+}: {
   id: string;
   cellInfos: UpdateCellData[];
   onSuccess: (values: ResponseValue[]) => void;
@@ -26,28 +34,17 @@ export function updateCellsData(props: {
     fn: (draft: Map<string, { value: string; state: CellState }>) => void
   ) => void;
 }) {
-  const {
-    id,
-    cellInfos,
-    onSuccess,
-    onError,
-    columns,
-    setData,
-    setCellEditMap,
-  } = props;
   // // Skip page index reset until after next rerender
   // skipAutoResetPageIndex();
 
   const updateInfos: UpdateCellDataRequest[] = cellInfos.map((cellInfo) => {
     return {
       row_index: cellInfo.rowIndex,
-      column_id: cellInfo.columnId,
+      column_index: cellInfo.columnIndex,
       value: cellInfo.value,
       prev: cellInfo.prev,
     };
   });
-
-  console.log("Set data here! (Send info back to shiny)", cellInfos);
 
   makeRequest(
     "outputRPC",
@@ -60,39 +57,36 @@ export function updateCellsData(props: {
       updateInfos,
     ],
     (values: ResponseValue[]) => {
-      // console.log("cellsUpdate - success!", values);
       setData((draft) => {
         values.forEach((value: string, i: number) => {
-          const { rowIndex, columnId } = cellInfos[i];
-          const colIndex = columns.indexOf(columnId);
-          const row = draft[rowIndex];
-          // console.log(
-          //   "Setting new value!",
-          //   value,
-          //   columnId,
-          //   draft[rowIndex]
-          // );
+          const { rowIndex, columnIndex } = cellInfos[i];
+          // const row = draft[rowIndex];
+          // // console.log(
+          // //   "Setting new value!",
+          // //   value,
+          // //   columnId,
+          // //   draft[rowIndex]
+          // // );
 
-          draft[rowIndex][colIndex] = value;
+          draft[rowIndex][columnIndex] = value;
         });
       });
       setCellEditMap((draft) => {
         values.forEach((value: string, i: number) => {
-          const { rowIndex, columnId } = cellInfos[i];
-          const key = `[${rowIndex}, ${columnId}]`;
+          const { rowIndex, columnIndex } = cellInfos[i];
+          const key = `[${rowIndex}, ${columnIndex}]`;
 
           const obj =
             draft.get(key) ?? ({} as { value: string; state: CellState });
           obj.value = value;
           obj.state = CellState.EditSuccess;
-          console.log("Setting cell edit map");
+          // console.log("Setting cell edit map");
           draft.set(key, obj);
         });
       });
       onSuccess(values);
     },
     (err: string) => {
-      console.error("error!", err);
       onError(err);
     },
     undefined

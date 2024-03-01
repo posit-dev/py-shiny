@@ -22,11 +22,7 @@ from .. import reactive, ui
 from .._deprecated import ShinyDeprecationWarning
 from .._docstring import add_example, no_example
 from .._typing_extensions import Self
-from ..session._utils import (
-    get_current_session,
-    require_active_session,
-    session_context,
-)
+from ..session._utils import get_current_session, require_active_session
 from ._dataframe_unsafe import serialize_numpy_dtypes
 from .renderer import Jsonifiable, Renderer, ValueFn
 
@@ -34,6 +30,43 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from ..session._utils import Session
+
+# TODO-barret-future; make generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
+DataFrameResult = Union[None, "pd.DataFrame", "DataGrid", "DataTable"]
+
+
+class OnCellUpdateFn(Protocol):
+    async def __call__(
+        self,
+        *,
+        row_index: int,
+        column_index: int,
+        value: str,
+        prev: str,
+        **kwargs: Any,  # future proofing
+    ) -> Any: ...
+class OnCellUpdateParams(TypedDict):
+    row_index: int
+    column_index: int
+    value: str
+    prev: str
+
+
+class OnCellsUpdateFn(Protocol):
+    async def __call__(
+        self,
+        *,
+        update_infos: list[OnCellUpdateParams],
+        **kwargs: Any,  # future proofing
+    ) -> Any: ...
+@dataclass
+class CellPatch:
+    row_index: int
+    # TODO-barret; Safeguard against columns with the same name
+    # TODO-barret; Use column index instead of name
+    column_index: int
+    value: str
+    prev: str
 
 
 class AbstractTabularData(abc.ABC):
@@ -52,6 +85,12 @@ DataFrameMode = Union[
 ]
 
 RowSelectionModeDeprecated = Literal["single", "multiple", "none", "deprecated"]
+
+
+class SelectedIndicies(TypedDict):
+    rows: tuple[int] | None
+    columns: tuple[int] | None
+
 
 # # TODO-future; Use `dataframe-api-compat>=0.2.6` to injest dataframes and return standardized dataframe structures
 # # TODO-future: Find this type definition: https://github.com/data-apis/dataframe-api-compat/blob/273c0be45962573985b3a420869d0505a3f9f55d/dataframe_api_compat/polars_standard/dataframe_object.py#L22
@@ -180,7 +219,7 @@ class DataGrid(AbstractTabularData):
         self.height = height
         self.summary = summary
         self.filters = filters
-        self.mode = as_mode(mode, row_selection_mode=row_selection_mode)
+        self.mode: DataFrameMode = as_mode(mode, row_selection_mode=row_selection_mode)
 
     def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
@@ -275,7 +314,7 @@ class DataTable(AbstractTabularData):
         self.height = height
         self.summary = summary
         self.filters = filters
-        self.mode = as_mode(mode, row_selection_mode=row_selection_mode)
+        self.mode: DataFrameMode = as_mode(mode, row_selection_mode=row_selection_mode)
 
     def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
@@ -291,6 +330,14 @@ class DataTable(AbstractTabularData):
 
 
 def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
+    columns = df.columns.tolist()
+    columns_set = set(columns)
+    if len(columns_set) != len(columns):
+        raise ValueError(
+            "The column names of the pandas DataFrame are not unique."
+            " This is not supported by the data_frame renderer."
+        )
+
     # Currently, we don't make use of the index; drop it so we don't error trying to
     # serialize it or something
     df = df.reset_index(drop=True)
@@ -303,42 +350,6 @@ def serialize_pandas_df(df: "pd.DataFrame") -> dict[str, Any]:
     res["type_hints"] = serialize_numpy_dtypes(df)
 
     return res
-
-
-# TODO-barret-future; make generic? By currently accepting `object`, it is difficult to capture the generic type of the data.
-DataFrameResult = Union[None, "pd.DataFrame", DataGrid, DataTable]
-
-
-class OnCellUpdateFn(Protocol):
-    async def __call__(
-        self,
-        *,
-        row_index: int,
-        column_id: str,
-        value: str,
-        prev: str,
-        **kwargs: Any,  # future proofing
-    ) -> Any: ...
-class OnCellUpdateParams(TypedDict):
-    row_index: int
-    column_id: str
-    value: str
-    prev: str
-
-
-class OnCellsUpdateFn(Protocol):
-    async def __call__(
-        self,
-        *,
-        update_infos: list[OnCellUpdateParams],
-        **kwargs: Any,  # future proofing
-    ) -> Any: ...
-@dataclass
-class CellPatch:
-    row_index: int
-    column_id: str
-    value: str
-    prev: str
 
 
 @add_example()
@@ -405,12 +416,12 @@ class data_frame(Renderer[DataFrameResult]):
     """
     Reactive value of the data frame's edited output data.
     """
-    row_selection_mode: reactive.Calc_[RowSelectionMode]
+    table_mode: reactive.Calc_[DataFrameMode]
     """
     Reactive value of the data frame's row selection mode.
     """
 
-    input_selected_rows: reactive.Calc_[tuple[int] | None]
+    input_selected: reactive.Calc_[SelectedIndicies | None]
     """
     Reactive value of selected rows indicies.
 
@@ -463,7 +474,7 @@ class data_frame(Renderer[DataFrameResult]):
         self.data = self_data
 
         @reactive.calc
-        def self_row_selection_mode() -> RowSelectionMode:
+        def self_table_mode() -> DataFrameMode:
             value = self._value()
             req(value)
             if not isinstance(value, (DataGrid, DataTable)):
@@ -471,28 +482,35 @@ class data_frame(Renderer[DataFrameResult]):
                     f"Unsupported type returned from render function: {type(value)}. Expected `DataGrid` or `DataTable`"
                 )
 
-            return value.row_selection_mode
+            return value.mode
 
-        self.row_selection_mode = self_row_selection_mode
+        self.table_mode = self_table_mode
 
         @reactive.calc
-        def self_input_selected_rows() -> tuple[int] | None:
-            mode = self.row_selection_mode()
+        def self_input_selected() -> SelectedIndicies | None:
+            mode = self.table_mode()
             if mode == "none":
                 return None
-            return self._get_session().input[f"{self.output_id}_selected_rows"]()
+            return {
+                "rows": self._get_session().input[f"{self.output_id}_selected_rows"](),
+                "columns": None,
+            }
 
-        self.input_selected_rows = self_input_selected_rows
+        self.input_selected = self_input_selected
 
         @reactive.calc
         def self_data_selected() -> pd.DataFrame:
-            indicies = self.input_selected_rows()
+            indicies = self.input_selected()
             if indicies is None:
                 req(False)
                 raise RuntimeError("This should never be reached for typing purposes")
 
-            data = self.data_patched()
-            return data.iloc[list(indicies)]
+            data_selected = self.data_patched()
+            if indicies["rows"] is not None:
+                data_selected = data_selected.iloc[list(indicies["rows"])]
+            if indicies["columns"] is not None:
+                data_selected = data_selected.iloc[:, list(indicies["columns"])]
+            return data_selected
 
         self.data_selected = self_data_selected
 
@@ -506,7 +524,7 @@ class data_frame(Renderer[DataFrameResult]):
                 for cell_patch in self.cell_patches():
                     data.iat[  # pyright: ignore[reportUnknownMemberType]
                         cell_patch.row_index,
-                        cell_patch.column_id,
+                        cell_patch.column_index,
                     ] = cell_patch.value
             return data
 
@@ -531,7 +549,7 @@ class data_frame(Renderer[DataFrameResult]):
         async def _on_cell_update_default(
             *,
             row_index: int,
-            column_id: str,
+            column_index: int,
             value: str,
             prev: str,
             **kwargs: Any,
@@ -547,13 +565,13 @@ class data_frame(Renderer[DataFrameResult]):
                 formatted_values: list[Any] = []
                 for update_info in update_infos:
                     row_index = update_info["row_index"]
-                    column_id = update_info["column_id"]
+                    column_index = update_info["column_index"]
                     value = update_info["value"]
                     prev = update_info["prev"]
 
                     formatted_value = await self.handle_cell_update(
                         row_index=row_index,
-                        column_id=column_id,
+                        column_index=column_index,
                         value=value,
                         prev=prev,
                     )

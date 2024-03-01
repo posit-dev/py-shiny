@@ -27,9 +27,9 @@ interface TableBodyCellProps {
   columns: readonly string[];
   canEdit: boolean;
   editRowIndex: number;
-  editColumnId: string;
+  editColumnIndex: number;
   setEditRowIndex: (index: number) => void;
-  setEditColumnId: (id: string) => void;
+  setEditColumnIndex: (index: number) => void;
   cellEditMap: Map<string, { value: string; state: CellState }>;
   setData: (fn: (draft: unknown[][]) => void) => void;
   setCellEditMap: (
@@ -44,17 +44,17 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   columns,
   canEdit,
   editRowIndex,
-  editColumnId,
+  editColumnIndex,
   setEditRowIndex,
-  setEditColumnId,
+  setEditColumnIndex,
   cellEditMap,
   setData,
   setCellEditMap,
   maxRowSize,
 }) => {
   const rowIndex = cell.row.index;
-  const columnId = cell.column.id;
-  // const backgroundColor = cellEditMap.has(`[${rowIndex}, ${columnId}]`)
+  const columnIndex = cell.column.columnDef.meta.colIndex;
+  // const backgroundColor = cellEditMap.has(`[${rowIndex}, ${columnIndex}]`)
   //   ? "red"
   //   : null;
 
@@ -67,19 +67,19 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   // interface EditableCellProps {
   //   rowIndex: number;
-  //   columnId: string;
+  //   columnIndex: string;
   //   getValue: () => unknown;
   //   editRowIndex: number;
-  //   editColumnId: string;
+  //   editColumnIndex: string;
   //   cellEditMap: Map<string, { value: string; state: CellState }>;
   // }
   // return (
   //   <EditableCell
   //     rowIndex={rowIndex}
-  //     columnId={columnId}
+  //     columnIndex={columnIndex}
   //     getValue={getValue}
   //     editRowIndex={editRowIndex}
-  //     editColumnId={editColumnId}
+  //     editColumnIndex={editColumnIndex}
   //     cellEditMap={cellEditMap}
   //   ></EditableCell>
   // );
@@ -87,10 +87,10 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   // const EditableCell: FC<EditableCellProps> = (props) => {
   // const {
   //   rowIndex,
-  //   columnId,
+  //   columnIndex,
   //   getValue,
   //   editRowIndex,
-  //   editColumnId,
+  //   editColumnIndex,
   //   cellEditMap,
   // } = props;
 
@@ -111,16 +111,16 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   const [cellState, setCellState] = useState<CellState>(CellState.Ready);
 
-  const editable = editRowIndex === rowIndex && editColumnId === columnId;
+  const editable = editRowIndex === rowIndex && editColumnIndex === columnIndex;
   if (editable) {
     setCellState(CellState.Editing);
   }
-  const hasUpdated = cellEditMap.has(`[${rowIndex}, ${columnId}]`);
-  if (editable) {
-    if (hasUpdated) {
-      console.log("Has updated!", rowIndex, columnId, cellEditMap);
-    }
-  }
+  const hasUpdated = cellEditMap.has(`[${rowIndex}, ${columnIndex}]`);
+  // if (editable) {
+  //   if (hasUpdated) {
+  //     console.log("Has updated!", rowIndex, columnIndex, cellEditMap);
+  //   }
+  // }
 
   // useEffect(() => {
   //   if (editable) {
@@ -128,25 +128,25 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   //       "cell background color: ",
   //       cellBackground,
   //       rowIndex,
-  //       columnId
+  //       columnIndex
   //     );
   //   }
-  // }, [cellBackground, editable, rowIndex, columnId]);
+  // }, [cellBackground, editable, rowIndex, columnIndex]);
 
   // useEffect(() => {
 
   //   setCellState(CellState.Ready);
-  // }, [cellEditMap, rowIndex, columnId]);
-  useEffect(() => {
-    if (!editable) return;
-    console.log(
-      "Cell map:",
-      rowIndex,
-      columnId,
-      cellEditMap,
-      cellEditMap.has(`[${rowIndex}, ${columnId}]`)
-    );
-  }, [cellEditMap, rowIndex, editable, columnId]);
+  // }, [cellEditMap, rowIndex, columnIndex]);
+  // useEffect(() => {
+  //   if (!editable) return;
+  //   console.log(
+  //     "Cell map:",
+  //     rowIndex,
+  //     columnIndex,
+  //     cellEditMap,
+  //     cellEditMap.has(`[${rowIndex}, ${columnIndex}]`)
+  //   );
+  // }, [cellEditMap, rowIndex, editable, columnIndex]);
 
   // useEffect(() => {
   //   if (editable) {
@@ -189,16 +189,16 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   const tableCellClass = tableCellMap[cellState];
 
-  useEffect(() => {
-    console.log("Cell background:", tableCellClass, rowIndex, columnId);
-  }, [tableCellClass, rowIndex, columnId]);
-  useEffect(() => {
-    console.log("Cell state:", cellState, hasUpdated);
-  }, [hasUpdated, cellState]);
+  // useEffect(() => {
+  //   console.log("Cell background:", tableCellClass, rowIndex, columnIndex);
+  // }, [tableCellClass, rowIndex, columnIndex]);
+  // useEffect(() => {
+  //   console.log("Cell state:", cellState, hasUpdated);
+  // }, [hasUpdated, cellState]);
 
   function resetEditInfo() {
     setEditRowIndex(null);
-    setEditColumnId(null);
+    setEditColumnIndex(null);
   }
 
   const onEsc = (e: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -217,14 +217,13 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     const hasShift = e.shiftKey;
 
-    const newColumnIndex = columns.indexOf(editColumnId) + (hasShift ? -1 : 1);
+    const newColumnIndex = editColumnIndex + (hasShift ? -1 : 1);
     if (newColumnIndex < 0 || newColumnIndex >= columns.length) {
       // If the new column index is out of bounds, quit
       return;
     }
-    const newColumnId = columns[newColumnIndex];
 
-    setEditColumnId(newColumnId);
+    setEditColumnIndex(newColumnIndex);
   };
   const onEnter = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Enter") return;
@@ -233,9 +232,12 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     const hasShift = e.shiftKey;
 
+    console.log(maxRowSize);
+
     const newRowIndex = editRowIndex + (hasShift ? -1 : 1);
     if (newRowIndex < 0 || newRowIndex >= maxRowSize) {
       // If the new row index is out of bounds, quit
+      // attemptUpdate();
       return;
     }
 
@@ -246,10 +248,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     [onEsc, onEnter, onTab].forEach((fn) => fn(e));
   };
 
-  // When the input is blurred, we'll call our table meta's updateData function
-  // console.log("rendering cell", rowIndex, id, initialValue, value);
-  const onBlur = () => {
-    // console.log("on blur!", initialValue, value, e);
+  const attemptUpdate = () => {
     // Only update if the string form of the value has changed
     if (`${initialValue}` !== `${value}`) {
       setCellState(CellState.EditSaving);
@@ -260,17 +259,18 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
         cellInfos: [
           {
             rowIndex,
-            columnId,
+            columnIndex,
             value,
             prev: initialValue,
           },
         ],
         onSuccess: (values) => {
-          console.log("success!", values);
+          // console.log("success!", values);
           setCellState(CellState.EditSuccess);
         },
         onError: (err) => {
-          console.log("error!", err);
+          // console.log("error!", err);
+          console.error("Error saving tabel cell value!", err);
           setCellState(CellState.EditFailure);
         },
         columns,
@@ -278,6 +278,13 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
         setCellEditMap,
       });
     }
+  };
+
+  // When the input is blurred, we'll call our table meta's updateData function
+  // console.log("rendering cell", rowIndex, id, initialValue, value);
+  const onBlur = () => {
+    // console.log("on blur!", initialValue, value, e);
+    attemptUpdate();
   };
 
   // If the initialValue is changed external, sync it up with our state
@@ -343,7 +350,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     onClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
       console.log("on ready click!", e.target);
       setEditRowIndex(rowIndex);
-      setEditColumnId(columnId);
+      setEditColumnIndex(columnIndex);
     };
     if (cellState === CellState.EditFailure) {
       console.log("Render edit failure");
