@@ -12,7 +12,19 @@ __all__ = (
     "SilentCancelOutputException",
 )
 
-from typing import TYPE_CHECKING, Any, BinaryIO, Literal, NamedTuple, Optional, Protocol
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Dict,
+    List,
+    Literal,
+    NamedTuple,
+    Optional,
+    Protocol,
+    Tuple,
+    Union,
+)
 
 from htmltools import TagChild
 
@@ -310,3 +322,33 @@ class BrushInfo(TypedDict):
     log: CoordmapPanelLog
     direction: Literal["x", "y", "xy"]
     # .nonce: float
+
+
+# https://github.com/python/cpython/blob/df1eec3dae3b1eddff819fd70f58b03b3fbd0eda/Lib/json/encoder.py#L77-L95
+# +-------------------+---------------+
+# | Python            | JSON          |
+# +===================+===============+
+# | dict              | object        |
+# +-------------------+---------------+
+# | list, tuple       | array         |
+# +-------------------+---------------+
+# | str               | string        |
+# +-------------------+---------------+
+# | int, float        | number        |
+# +-------------------+---------------+
+# | True              | true          |
+# +-------------------+---------------+
+# | False             | false         |
+# +-------------------+---------------+
+# | None              | null          |
+# +-------------------+---------------+
+Jsonifiable = Union[
+    str,
+    int,
+    float,
+    bool,
+    None,
+    List["Jsonifiable"],
+    Tuple["Jsonifiable"],
+    Dict[str, "Jsonifiable"],
+]
