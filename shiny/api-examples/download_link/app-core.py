@@ -11,7 +11,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @render.download(
-        filename=lambda: f"新型-{date.today().isoformat()}-{random.randint(100,999)}.csv"
+        filename=lambda: f"新型-{date.today().isoformat()}-{random.randint(100, 999)}.csv"
     )
     async def downloadData():
         await asyncio.sleep(0.25)
