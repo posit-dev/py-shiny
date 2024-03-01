@@ -65,6 +65,7 @@ def get_proxy_url(url: str) -> str:
         return _get_proxy_url_workbench(parts, port) or url
     if is_codespaces():
         return _get_proxy_url_codespaces(parts, port) or url
+    return url
 
 
 def _get_proxy_url_codespaces(parts: ParseResult, port: int) -> str | None:
