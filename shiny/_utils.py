@@ -10,7 +10,9 @@ import os
 import random
 import secrets
 import socketserver
+import sys
 import tempfile
+from pathlib import Path
 from typing import Any, Awaitable, Callable, Generator, Optional, TypeVar, cast
 
 from ._typing_extensions import ParamSpec, TypeGuard
@@ -537,3 +539,16 @@ def package_dir(package: str) -> str:
         if pkg_file is None:
             raise RuntimeError(f"Could not find package dir for '{package}'")
         return os.path.dirname(pkg_file)
+
+
+def import_module_from_path(module_name: str, path: Path):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not import module {module_name} from path: {path}")
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
