@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.sidebar(open=)` now accepts a dictionary with keys `desktop` and `mobile`, allowing you to independently control the initial state of the sidebar at desktop and mobile screen sizes. (#1129)
 
+* Closed #984: In Shiny Express apps, if there is a `"www"` subdirectory in the app's directory, Shiny will serve the files in that directory as static assets, mounted at `/`. (#1170)
+
+* For Shiny Express apps, added `express.app_opts()`, which allows setting application-level options, like `static_assets` and `debug`. (#1170)
+
 ### Other changes
 
 * `@render.data_frame` now properly fills its container by default. (#1126)
