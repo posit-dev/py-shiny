@@ -74,6 +74,7 @@ def wrap_express_app(file: Path) -> App:
         app_opts["static_assets"] = {"/": www_dir}
 
     app_opts = _merge_app_opts(app_opts, mock_session.app_opts)
+    app_opts = _normalize_app_opts(app_opts, file.parent)
 
     app = App(
         app_ui,
@@ -192,7 +193,9 @@ class AppOpts(TypedDict):
 
 
 def app_opts(
-    static_assets: str | os.PathLike[str] | dict[str, Path] | MISSING_TYPE = MISSING,
+    static_assets: (
+        str | os.PathLike[str] | dict[str, str | Path] | MISSING_TYPE
+    ) = MISSING,
     debug: bool | MISSING_TYPE = MISSING,
 ):
     """
@@ -221,13 +224,12 @@ def app_opts(
 
     if not isinstance(static_assets, MISSING_TYPE):
         if isinstance(static_assets, (str, os.PathLike)):
-            if not os.path.isabs(static_assets):
-                raise ValueError(
-                    f"static_assets must be an absolute path: {static_assets}"
-                )
             static_assets = {"/": Path(static_assets)}
 
-        mock_session.app_opts["static_assets"] = static_assets
+        # Convert string values to Paths. (Need new var name to help type checker.)
+        static_assets_paths = {k: Path(v) for k, v in static_assets.items()}
+
+        mock_session.app_opts["static_assets"] = static_assets_paths
 
     if not isinstance(debug, MISSING_TYPE):
         mock_session.app_opts["debug"] = debug
@@ -249,5 +251,19 @@ def _merge_app_opts(app_opts: AppOpts, app_opts_new: AppOpts) -> AppOpts:
 
     if "debug" in app_opts_new:
         app_opts["debug"] = app_opts_new["debug"]
+
+    return app_opts
+
+
+def _normalize_app_opts(app_opts: AppOpts, parent_dir: Path) -> AppOpts:
+    """
+    Normalize the app options, ensuring that all paths in static_assets are absolute.
+    Modifies the original in place.
+    """
+    if "static_assets" in app_opts:
+        for mount_point, path in app_opts["static_assets"].items():
+            if not path.is_absolute():
+                path = parent_dir / path
+            app_opts["static_assets"][mount_point] = path
 
     return app_opts
