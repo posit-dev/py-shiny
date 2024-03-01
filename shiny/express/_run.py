@@ -192,6 +192,7 @@ class AppOpts(TypedDict):
     debug: NotRequired[bool]
 
 
+@no_example()
 def app_opts(
     static_assets: (
         str | os.PathLike[str] | dict[str, str | Path] | MISSING_TYPE
