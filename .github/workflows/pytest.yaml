@@ -46,7 +46,8 @@ jobs:
       - name: black and isort
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make check
+          make check-black
+          make check-isort
 
   playwright-shiny:
     runs-on: ${{ matrix.os }}
