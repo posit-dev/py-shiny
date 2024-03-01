@@ -148,7 +148,7 @@ class App:
         else:
             static_assets_map = {"/": Path(static_assets)}
 
-        for mount_point, static_asset_path in static_assets_map.items():
+        for _, static_asset_path in static_assets_map.items():
             if not static_asset_path.is_absolute():
                 raise ValueError(
                     f'static_assets must be an absolute path: "{static_asset_path}".'
