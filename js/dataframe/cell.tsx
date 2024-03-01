@@ -327,7 +327,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   let content = undefined;
 
   if (cellState === CellState.EditSaving) {
-    content = <em>Saving...</em>;
+    content = <em>{value as string}</em>;
   } else if (editable) {
     content = (
       <input
