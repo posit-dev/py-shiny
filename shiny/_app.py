@@ -29,7 +29,7 @@ from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
-from ._utils import guess_mime_type, is_async_callable
+from ._utils import guess_mime_type, is_async_callable, sort_keys_length
 from .html_dependencies import jquery_deps, require_deps, shiny_deps
 from .http_staticfiles import FileResponse, StaticFiles
 from .session._session import Inputs, Outputs, Session, session_context
@@ -149,6 +149,12 @@ class App:
                 )
             static_assets = {"/": Path(static_assets)}
 
+        # Sort the static assets keys by descending length, to ensure that the most
+        # specific paths are mounted first. Suppose there are mounts "/foo" and "/". If
+        # "/" is first in the dict, then requests to "/foo/file.html" will never reach
+        # the second mount. We need to put "/foo" first and "/" second so that it will
+        # actually look in the "/foo" mount.
+        static_assets = sort_keys_length(static_assets, descending=True)
         self._static_assets: dict[str, Path] = static_assets
 
         self._sessions: dict[str, Session] = {}

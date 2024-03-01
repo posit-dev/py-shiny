@@ -177,6 +177,10 @@ quartodoc:
         # - express.ui.fill.remove_all_fill
         # - express.ui.css.as_css_unit
         # - express.ui.css.as_css_padding
+    - title: Application-level settings
+      desc: Set application-level settings.
+      contents:
+        - express.app_opts
     - title: Express developer tooling
       desc:
       contents:
