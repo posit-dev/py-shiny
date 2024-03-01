@@ -33,7 +33,7 @@ from ..types import MISSING, MISSING_TYPE, NavSetArg
 from ._bootstrap import panel_title
 from ._html_deps_external import bootstrap_deps
 from ._html_deps_py_shiny import page_output_dependency
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._navs import NavMenu, NavPanel, navset_bar
 from ._sidebar import Sidebar, SidebarOpen, layout_sidebar
 from ._tag import consolidate_attrs
@@ -325,7 +325,7 @@ def page_fillable(
         {"class": "bslib-flow-mobile"} if not fillable_mobile else None,
         attrs,
         *children,
-        components_dependency(),
+        components_dependencies(),
         title=title,
         lang=lang,
     )

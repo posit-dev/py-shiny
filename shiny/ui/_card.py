@@ -18,7 +18,7 @@ from htmltools import (
 from .._docstring import add_example
 from .._utils import private_random_id
 from ..types import MISSING, MISSING_TYPE
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 from ._tooltip import tooltip
 from .css._css_unit import CssUnit, as_css_padding, as_css_unit
@@ -148,7 +148,7 @@ def _card_impl(
         *children,
         attrs,
         _full_screen_toggle(attrs["id"]) if full_screen else None,
-        components_dependency(),
+        components_dependencies(),
         _card_js_init(),
     )
     if fill:
