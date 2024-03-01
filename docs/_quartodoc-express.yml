@@ -178,7 +178,7 @@ quartodoc:
         # - express.ui.css.as_css_unit
         # - express.ui.css.as_css_padding
     - title: Application-level settings
-      desc: Set application-level settings.
+      desc:
       contents:
         - express.app_opts
     - title: Express developer tooling
