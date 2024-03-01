@@ -50,7 +50,7 @@ app_ui = ui.page_fluid(
             text-align: center;
         }
         """
-        % f"{ncpu*4}em"
+        % f"{ncpu * 4}em"
     ),
     ui.h3("CPU Usage %", class_="mt-2"),
     ui.layout_sidebar(
