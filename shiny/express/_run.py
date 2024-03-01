@@ -79,7 +79,7 @@ def wrap_express_app(file: Path) -> App:
     app = App(
         app_ui,
         express_server,
-        **app_opts,
+        **app_opts,  # pyright: ignore[reportArgumentType]
     )
 
     return app

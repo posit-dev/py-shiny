@@ -113,7 +113,7 @@ class App:
             Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None] | None
         ),
         *,
-        static_assets: Optional["str" | "os.PathLike[str]" | dict[str, Path]] = None,
+        static_assets: Optional[str | Path | dict[str, str | Path]] = None,
         debug: bool = False,
     ) -> None:
         # Used to store callbacks to be called when the app is shutting down (according
@@ -142,20 +142,28 @@ class App:
 
         if static_assets is None:
             static_assets = {}
-        if isinstance(static_assets, (str, os.PathLike)):
-            if not os.path.isabs(static_assets):
+
+        if isinstance(static_assets, dict):
+            static_assets_map = {k: Path(v) for k, v in static_assets.items()}
+        else:
+            static_assets_map = {"/": Path(static_assets)}
+
+        for mount_point, static_asset_path in static_assets_map.items():
+            if not static_asset_path.is_absolute():
                 raise ValueError(
-                    f"static_assets must be an absolute path: {static_assets}"
+                    f'static_assets must be an absolute path: "{static_asset_path}".'
+                    " Consider using one of the following instead:\n"
+                    f'  os.path.join(__file__, "{static_asset_path}")  OR'
+                    f'  pathlib.Path(__file__).parent/"{static_asset_path}"'
                 )
-            static_assets = {"/": Path(static_assets)}
 
         # Sort the static assets keys by descending length, to ensure that the most
         # specific paths are mounted first. Suppose there are mounts "/foo" and "/". If
         # "/" is first in the dict, then requests to "/foo/file.html" will never reach
         # the second mount. We need to put "/foo" first and "/" second so that it will
         # actually look in the "/foo" mount.
-        static_assets = sort_keys_length(static_assets, descending=True)
-        self._static_assets: dict[str, Path] = static_assets
+        static_assets_map = sort_keys_length(static_assets_map, descending=True)
+        self._static_assets: dict[str, Path] = static_assets_map
 
         self._sessions: dict[str, Session] = {}
 
