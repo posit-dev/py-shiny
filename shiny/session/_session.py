@@ -37,6 +37,7 @@ from starlette.responses import HTMLResponse, PlainTextResponse, StreamingRespon
 from starlette.types import ASGIApp
 
 from .._typing_extensions import NotRequired
+from ..types import Jsonifiable
 
 if TYPE_CHECKING:
     from .._app import App
@@ -216,7 +217,7 @@ class Session(object, metaclass=SessionMeta):
 
         self._message_handlers: dict[
             str,
-            Callable[..., Awaitable[object]],
+            Callable[..., Awaitable[Jsonifiable]],
         ] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
@@ -402,11 +403,8 @@ class Session(object, metaclass=SessionMeta):
 
         try:
             # TODO: handle `blobs`
-            value: object = await func(*message["args"])
+            value = await func(*message["args"])
         except Exception as e:
-            print("\n\n")
-            print(message, message["tag"])
-
             await self._send_error_response(message, "Error: " + str(e))
             return
 
@@ -416,21 +414,27 @@ class Session(object, metaclass=SessionMeta):
         await self._send_message({"response": {"tag": message["tag"], "value": value}})
 
     # This is called during __init__.
-    def _create_message_handlers(self) -> dict[str, Callable[..., Awaitable[object]]]:
+    def _create_message_handlers(
+        self,
+    ) -> dict[str, Callable[..., Awaitable[Jsonifiable]]]:
         # TODO-future; Make sure these methods work within MockSession
 
+        # TODO-barret; Move this to Outputs class
         async def outputRPC(
             outputId: str,
             handler: str,
             msg: object,
-        ) -> object:
+        ) -> Jsonifiable:
             """
             Used to handle request messages from an Output Renderer.
 
             Typically, this is used when an Output Renderer needs to set an input value.
             E.g. a @render.data_frame result with a `mode="edit"` parameter will use
             this to set the value of the data frame when a cell is edited.
+
+            The value returned by the handler is sent back to the client with the original unique id (`tag`).
             """
+            # TODO-barret; can this be used right before calling the function?
             with session_context(self):
                 if not (outputId in self.output._outputs):
                     raise RuntimeError(
@@ -454,7 +458,7 @@ class Session(object, metaclass=SessionMeta):
                         f"Error while handling request message for Output Renderer with id `{outputId}`"
                     )
 
-        async def uploadInit(file_infos: list[FileInfo]) -> dict[str, object]:
+        async def uploadInit(file_infos: list[FileInfo]) -> dict[str, Jsonifiable]:
             with session_context(self):
                 if self._debug:
                     print("Upload init: " + str(file_infos), flush=True)
@@ -1220,12 +1224,11 @@ class Outputs:
 
     def _manage_hidden(self) -> None:
         "Suspends execution of hidden outputs and resumes execution of visible outputs."
-        for name in self._outputs:
-            output_info = self._outputs[name]
+        for name, output in self._outputs.items():
             if self._should_suspend(name):
-                output_info.effect.suspend()
+                output.effect.suspend()
             else:
-                output_info.effect.resume()
+                output.effect.resume()
 
     def _should_suspend(self, name: str) -> bool:
         return self._outputs[name].suspend_when_hidden and self._session._is_hidden(
