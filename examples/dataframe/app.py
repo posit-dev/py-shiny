@@ -55,9 +55,9 @@ def light_dark_switcher(dark):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    df: reactive.Value[pd.DataFrame] = reactive.Value()
+    df: reactive.value[pd.DataFrame] = reactive.value()
 
-    @reactive.Effect
+    @reactive.effect
     def update_df():
         return df.set(sns.load_dataset(req(input.dataset())))
 
@@ -82,7 +82,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 row_selection_mode=input.selection_mode(),
             )
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.grid_cell_edit)
     def handle_edit():
         edit = input.grid_cell_edit()

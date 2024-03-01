@@ -6,7 +6,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.add)
     def _():
         ui.insert_ui(

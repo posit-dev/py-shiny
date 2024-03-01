@@ -30,7 +30,7 @@ def _():
         ui.notification_show("No more panels to remove!")
         return
 
-    ui.remove_accordion_panel("acc", f"Section { user_choices.pop() }")
+    ui.remove_accordion_panel("acc", f"Section {user_choices.pop()}")
 
     label = "No more panels to remove!"
     if len(user_choices) > 0:

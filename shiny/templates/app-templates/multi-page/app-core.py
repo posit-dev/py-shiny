@@ -32,7 +32,7 @@ app_ui = ui.page_navbar(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Calc()
+    @reactive.calc()
     def filtered_data() -> pd.DataFrame:
         return df.loc[df["account"] == input.account()]
 

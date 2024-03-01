@@ -37,19 +37,19 @@ with ui.layout_sidebar():
         ui.input_task_button("btn_block", "Block compute", label_busy="Blocking...")
         ui.input_action_button("btn_cancel", "Cancel")
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.btn_task, ignore_none=False)
     def handle_click():
         # slow_compute.cancel()
         slow_compute(input.x(), input.y())
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.btn_block, ignore_none=False)
     async def handle_click2():
         # slow_compute.cancel()
         await slow_input_compute(input.x(), input.y())
 
-    @reactive.Effect
+    @reactive.effect
     @reactive.event(input.btn_cancel)
     def handle_cancel():
         slow_compute.cancel()

@@ -59,7 +59,7 @@ interface ShinyDataGridProps<TIndex> {
 const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const { id, data, bgcolor } = props;
   const { columns, type_hints, data: rowData } = data;
-  const { width, height, filters: withFilters } = data.options;
+  const { width, height, fill, filters: withFilters } = data.options;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const theadRef = useRef<HTMLTableSectionElement>(null);
@@ -213,10 +213,13 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
 
   const headerRowCount = table.getHeaderGroups().length;
 
-  const scrollingClass =
-    containerRef.current?.scrollHeight > containerRef.current?.clientHeight
-      ? "scrolling"
-      : "";
+  // Assume we're scrolling until proven otherwise
+  let scrollingClass = "scrolling";
+  const scrollHeight = containerRef.current?.scrollHeight;
+  const clientHeight = containerRef.current?.clientHeight;
+  if (scrollHeight && clientHeight && scrollHeight <= clientHeight) {
+    scrollingClass = "";
+  }
 
   const makeHeaderKeyDown =
     (column: Column<unknown[], unknown>) => (event: React.KeyboardEvent) => {
@@ -227,12 +230,17 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
 
   const measureEl = useVirtualizerMeasureWorkaround(rowVirtualizer);
 
+  let className = `shiny-data-grid ${containerClass} ${scrollingClass}`;
+  if (fill) {
+    className += " html-fill-item";
+  }
+
   return (
     <>
       <div
-        className={`shiny-data-grid ${containerClass} ${scrollingClass}`}
+        className={className}
         ref={containerRef}
-        style={{ width, maxHeight: height, overflow: "auto" }}
+        style={{ width, height, overflow: "auto" }}
       >
         <table
           className={tableClass + (withFilters ? " filtering" : "")}

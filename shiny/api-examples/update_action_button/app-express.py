@@ -11,7 +11,7 @@ with ui.layout_column_wrap():
     ui.input_action_link("goLink", "Go Link")
 
 
-@reactive.Effect
+@reactive.effect
 def _():
     req(input.update())
     # Updates goButton's label and icon

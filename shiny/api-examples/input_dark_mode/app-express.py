@@ -50,11 +50,11 @@ with ui.nav_control():
 
 @reactive.effect
 @reactive.event(input.make_light)
-async def _():
-    await ui.update_dark_mode("light")
+def _():
+    ui.update_dark_mode("light")
 
 
 @reactive.effect
 @reactive.event(input.make_dark)
-async def _():
-    await ui.update_dark_mode("dark")
+def _():
+    ui.update_dark_mode("dark")
