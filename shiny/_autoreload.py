@@ -10,15 +10,15 @@ import threading
 import webbrowser
 from typing import Callable, Optional, cast
 
+import starlette.types
 from asgiref.typing import (
     ASGI3Application,
     ASGIReceiveCallable,
     ASGISendCallable,
     ASGISendEvent,
     HTTPResponseStartEvent,
+    Scope,
 )
-from asgiref.typing import Scope as ASGIScope
-from starlette.types import ASGIApp, Receive, Scope, Send
 
 from ._hostenv import get_proxy_url
 
@@ -91,11 +91,18 @@ class InjectAutoreloadMiddleware:
     because we want autoreload to be effective even when displaying an error page.
     """
 
-    def __init__(self, app: ASGIApp, *args: object, **kwargs: object):
+    def __init__(
+        self,
+        app: starlette.types.ASGIApp | ASGI3Application,
+        *args: object,
+        **kwargs: object,
+    ):
         if len(args) > 0 or len(kwargs) > 0:
             raise TypeError(
                 f"InjectAutoreloadMiddleware does not support positional or keyword arguments, received {args}, {kwargs}"
             )
+        # The starlette types and the asgiref types are compatible, but we'll use the
+        # latter internally. See the note in the __call__ method for more details.
         self.app = cast(ASGI3Application, app)
         ws_url = autoreload_url()
         self.script = (
@@ -109,17 +116,21 @@ class InjectAutoreloadMiddleware:
 
     async def __call__(
         self,
-        scope: Scope,
-        receive: Receive,
-        send: Send,
+        scope: starlette.types.Scope | Scope,
+        receive: starlette.types.Receive | ASGIReceiveCallable,
+        send: starlette.types.Send | ASGISendCallable,
     ) -> None:
-        scope_casted = cast(ASGIScope, scope)
+        # The starlette types and the asgiref types are compatible, but the latter are
+        # more rigorous. In the call interface, we accept both types for compatibility
+        # with both. But internally we'll use the more rigorous types.
+        # See https://github.com/encode/starlette/blob/39dccd9/docs/middleware.md#type-annotations
+        scope = cast(Scope, scope)
         receive_casted = cast(ASGIReceiveCallable, receive)
         send_casted = cast(ASGISendCallable, send)
         if scope["type"] != "http":
-            return await self.app(scope_casted, receive_casted, send_casted)
+            return await self.app(scope, receive_casted, send_casted)
         if scope["path"] != "/" or len(self.script) == 0:
-            return await self.app(scope_casted, receive_casted, send_casted)
+            return await self.app(scope, receive_casted, send_casted)
 
         def mangle_callback(body: bytes) -> tuple[bytes, bool]:
             if b"</head>" in body:
@@ -128,7 +139,7 @@ class InjectAutoreloadMiddleware:
                 return (body, False)
 
         mangler = ResponseMangler(send_casted, mangle_callback)
-        await self.app(scope_casted, receive_casted, mangler.send)
+        await self.app(scope, receive_casted, mangler.send)
 
 
 # PARENT PROCESS ------------------------------------------------------------
