@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * For Shiny Express apps, added `express.app_opts()`, which allows setting application-level options, like `static_assets` and `debug`. (#1170)
 
+* Closed #1079: For Shiny Express apps, automatically run a `globals.py` file in the same directory as the app file, if it exists. The code in `globals.py` will be run with the session context set to `None`. (#1172)
+
 ### Other changes
 
 * `@render.data_frame` now properly fills its container by default. (#1126)
