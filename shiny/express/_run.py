@@ -11,6 +11,7 @@ from htmltools import Tag, TagList
 from .._app import App
 from .._docstring import no_example
 from .._typing_extensions import NotRequired, TypedDict
+from .._utils import import_module_from_path
 from ..session import Inputs, Outputs, Session, get_current_session, session_context
 from ..types import MISSING, MISSING_TYPE
 from ._mock_session import ExpressMockSession
@@ -43,6 +44,11 @@ def wrap_express_app(file: Path) -> App:
     """
 
     try:
+        globals_file = file.parent / "globals.py"
+        if globals_file.is_file():
+            with session_context(None):
+                import_module_from_path("globals", globals_file)
+
         mock_session = ExpressMockSession()
         with session_context(cast(Session, mock_session)):
             # We tagify here, instead of waiting for the App object to do it when it wraps

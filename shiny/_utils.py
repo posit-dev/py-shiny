@@ -10,7 +10,11 @@ import os
 import random
 import secrets
 import socketserver
+import sys
 import tempfile
+import warnings
+from pathlib import Path
+from types import ModuleType
 from typing import Any, Awaitable, Callable, Generator, Optional, TypeVar, cast
 
 from ._typing_extensions import ParamSpec, TypeGuard
@@ -537,3 +541,45 @@ def package_dir(package: str) -> str:
         if pkg_file is None:
             raise RuntimeError(f"Could not find package dir for '{package}'")
         return os.path.dirname(pkg_file)
+
+
+class ModuleImportWarning(ImportWarning):
+    pass
+
+
+warnings.simplefilter("always", ModuleImportWarning)
+
+
+def import_module_from_path(module_name: str, path: Path):
+    import importlib.util
+
+    if not path.is_absolute():
+        raise ValueError("Path must be absolute")
+
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not import module {module_name} from path: {path}")
+
+    module = importlib.util.module_from_spec(spec)
+
+    prev_module: ModuleType | None = None
+
+    if module_name in sys.modules:
+        prev_module = sys.modules[module_name]
+        warnings.warn(
+            f"A module named {module_name} is already loaded, but is being loaded again.",
+            ModuleImportWarning,
+            stacklevel=1,
+        )
+
+    sys.modules[module_name] = module
+
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        if prev_module is None:
+            del sys.modules[module_name]
+        else:
+            sys.modules[module_name] = prev_module
+        raise
+    return module
