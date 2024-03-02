@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
-        python-version: ["3.11", "3.10", "3.9", "3.8"]
+        python-version: ["3.12", "3.11", "3.10", "3.9", "3.8"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
       fail-fast: false
 
@@ -31,29 +31,34 @@ jobs:
       - name: Run unit tests
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make test
+          make check-tests
 
       - name: Type check with pyright
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make pyright
+          make check-types
 
       - name: Lint with flake8
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make lint
+          make check-lint
 
-      - name: black and isort
+      - name: black
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
-          make check
+          make check-black
+
+      - name: isort
+        if: steps.install.outcome == 'success' && (success() || failure())
+        run: |
+          make check-isort
 
   playwright-shiny:
     runs-on: ${{ matrix.os }}
     if: github.event_name != 'release'
     strategy:
       matrix:
-        python-version: ["3.11", "3.10", "3.9", "3.8"]
+        python-version: ["3.12", "3.11", "3.10", "3.9", "3.8"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -67,7 +72,7 @@ jobs:
       - name: Run End-to-End tests
         timeout-minutes: 20
         run: |
-          make playwright-shiny
+          make playwright-shiny SUB_FILE=". -vv"
 
   playwright-examples:
     runs-on: ${{ matrix.os }}
@@ -99,15 +104,15 @@ jobs:
       - name: Run example app tests
         timeout-minutes: 20
         run: |
-          make playwright-examples
+          make playwright-examples SUB_FILE=". -vv"
 
   playwright-deploys:
     # Only allow one `playwright-deploys` job to run at a time. (Independent of branch / PR)
     concurrency: playwright-deploys
     runs-on: ${{ matrix.os }}
-    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'deploy')) }}
     strategy:
       matrix:
+        # Matches deploy server python version
         python-version: ["3.10"]
         os: [ubuntu-latest]
       fail-fast: false
@@ -119,16 +124,27 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Run tests for deploys
+      - name: Test deploys example apps locally
+        timeout-minutes: 5
         env:
+          DEPLOY_APPS: "false"
+        run: |
+          make playwright-deploys SUB_FILE=". -vv"
+
+      - name: Deploy apps and run tests (on `push` or on `pull_request` w/ `deploy**` branch)
+        if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'deploy')) }}
+        env:
+          DEPLOY_APPS: "true"
           DEPLOY_CONNECT_SERVER_URL: "https://rsc.radixu.com/"
           DEPLOY_CONNECT_SERVER_API_KEY: "${{ secrets.DEPLOY_CONNECT_SERVER_API_KEY }}"
           DEPLOY_SHINYAPPS_NAME: "${{ secrets.DEPLOY_SHINYAPPS_NAME }}"
           DEPLOY_SHINYAPPS_TOKEN: "${{ secrets.DEPLOY_SHINYAPPS_TOKEN }}"
           DEPLOY_SHINYAPPS_SECRET: "${{ secrets.DEPLOY_SHINYAPPS_SECRET }}"
         timeout-minutes: 30
+        # Given we are waiting for external servers to finish,
+        # we can have many local processes waiting for deployment to finish
         run: |
-          make playwright-deploys
+          make playwright-deploys SUB_FILE=". -vv --numprocesses 12"
 
   pypi:
     name: "Deploy to PyPI"

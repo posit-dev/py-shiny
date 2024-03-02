@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 if TYPE_CHECKING:
     from ._session import Session
 
+from .._docstring import no_example
 from .._namespaces import namespace_context
 from .._typing_extensions import TypedDict
 
@@ -33,6 +34,7 @@ _current_session: ContextVar[Optional[Session]] = ContextVar(
 _default_session: Optional[Session] = None
 
 
+@no_example()
 def get_current_session() -> Optional[Session]:
     """
     Get the current user session.
@@ -49,8 +51,8 @@ def get_current_session() -> Optional[Session]:
     called from within an active Shiny session.
 
     See Also
-    -------
-    ~require_active_session
+    --------
+    * :func:`~shiny.session.require_active_session`
     """
     return _current_session.get() or _default_session
 
@@ -74,6 +76,7 @@ def session_context(session: Optional[Session]):
         _current_session.reset(token)
 
 
+@no_example()
 def require_active_session(session: Optional[Session]) -> Session:
     """
     Raise an exception if no Shiny session is currently active.
@@ -101,8 +104,8 @@ def require_active_session(session: Optional[Session]) -> Session:
         If session is not active.
 
     See Also
-    -------
-    ~get_current_session
+    --------
+    * :func:`~shiny.session.get_current_session`
     """
 
     if session is None:

@@ -5,6 +5,7 @@ from typing import Callable
 from htmltools import Tag
 
 from ... import ui
+from ..._docstring import no_example
 from ...types import MISSING, MISSING_TYPE
 from .._recall_context import RecallContextManager
 from .._run import get_top_level_recall_context_manager
@@ -16,9 +17,11 @@ def page_auto_cm() -> RecallContextManager[Tag]:
     return RecallContextManager(ui.page_auto)
 
 
+@no_example()
 def page_opts(
     *,
     title: str | MISSING_TYPE = MISSING,
+    window_title: str | MISSING_TYPE = MISSING,
     lang: str | MISSING_TYPE = MISSING,
     page_fn: Callable[..., Tag] | None | MISSING_TYPE = MISSING,
     fillable: bool | MISSING_TYPE = MISSING,
@@ -32,7 +35,10 @@ def page_opts(
     Parameters
     ----------
     title
-        The browser window title (defaults to the host URL of the page).
+        A title shown on the page.
+    window_title
+        The browser window title. If no value is provided, this will use the value of
+        ``title``.
     lang
         ISO 639-1 language code for the HTML page, such as ``"en"`` or ``"ko"``. This
         will be used as the lang in the ``<html>`` tag, as in ``<html lang="en">``. The
@@ -56,6 +62,8 @@ def page_opts(
 
     if not isinstance(title, MISSING_TYPE):
         cm.kwargs["title"] = title
+    if not isinstance(window_title, MISSING_TYPE):
+        cm.kwargs["window_title"] = window_title
     if not isinstance(lang, MISSING_TYPE):
         cm.kwargs["lang"] = lang
     if not isinstance(page_fn, MISSING_TYPE):

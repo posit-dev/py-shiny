@@ -16,14 +16,17 @@ from htmltools import (
 )
 
 from .._docstring import add_example
+from .._utils import private_random_id
 from ..types import MISSING, MISSING_TYPE
-from ._html_deps_shinyverse import components_dependency
+from ._html_deps_shinyverse import components_dependencies
 from ._tag import consolidate_attrs
 from ._tooltip import tooltip
 from .css._css_unit import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
-# TODO-barret-future; Update header to return CardHeader class. Same for footer. Then we can check `*args` for a CardHeader class and move it to the top. And footer to the bottom. Can throw error if multiple headers/footers are provided or could concatenate.
+# TODO-barret-future; Update header to return CardHeader class. Same for footer. Then we
+# can check `*args` for a CardHeader class and move it to the top. And footer to the
+# bottom. Can throw error if multiple headers/footers are provided or could concatenate.
 
 
 __all__ = (
@@ -128,6 +131,9 @@ def _card_impl(
     attrs, children = consolidate_attrs(*args, class_=class_, **kwargs)
     children = _wrap_children_in_card(*children, wrapper=wrapper)
 
+    if full_screen and "id" not in attrs:
+        attrs["id"] = private_random_id("bslib_card")
+
     tag = div(
         {
             "class": "card bslib-card bslib-mb-spacing",
@@ -141,8 +147,8 @@ def _card_impl(
         },
         *children,
         attrs,
-        _full_screen_toggle() if full_screen else None,
-        components_dependency(),
+        _full_screen_toggle(attrs["id"]) if full_screen else None,
+        components_dependencies(),
         _card_js_init(),
     )
     if fill:
@@ -159,10 +165,15 @@ def _card_js_init() -> Tag:
     )
 
 
-def _full_screen_toggle() -> Tag:
+def _full_screen_toggle(id_controls: TagAttrValue) -> Tag:
     return tooltip(
-        tags.span(
-            {"class": "bslib-full-screen-enter badge rounded-pill"},
+        tags.button(
+            {
+                "class": "bslib-full-screen-enter badge rounded-pill",
+                "aria-expanded": "false",
+                "aria-controls": id_controls,
+                "aria-label": "Expand card",
+            },
             _full_screen_toggle_icon(),
         ),
         "Expand",
@@ -259,7 +270,7 @@ def _wrap_children_in_card(
     return tag_children
 
 
-# TODO-maindocs; @add_example()
+@add_example()
 def card_body(
     *args: TagChild | TagAttrs,
     fillable: bool = True,
@@ -293,7 +304,7 @@ def card_body(
     height
         Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
         `full_screen` (in this case, consider setting a `height` in
-        :func:`~shiny.ui.card_body`).
+        `card_body()`).
     padding
         Padding to use for the body. This can be a numeric vector
         (which will be interpreted as pixels) or a character vector with valid CSS
@@ -324,7 +335,7 @@ def card_body(
         (or multiple columns inside a card).
     * :func:`~shiny.ui.card` for creating a card component.
     * :func:`~shiny.ui.card_header` for creating a header within the card.
-    * :func:`~shiny.ui.card_title` for creating a title within the card body.
+    * :func:`~shiny.experimental.ui.card_title` for creating a title within the card body.
     * :func:`~shiny.ui.card_footer` for creating a footer within the card.
     """
     if isinstance(max_height_full_screen, MISSING_TYPE):
@@ -369,7 +380,7 @@ class CardItem:
     """
     A wrapper around a :class:`~htmltools.Tag` object that represents the content of a
     card item (e.g., :func:`~shiny.ui.card_header` or
-    :func:`~shiny.card_footer`).
+    :func:`~shiny.ui.card_footer`).
 
     This class is used to allow for consecutive non-card items to be bundled into a
     single group within :func:`~shiny.ui.card`.
@@ -379,7 +390,7 @@ class CardItem:
     item
         A :class:`~htmltools.Tag` object that represents the content of a card item
         (e.g., :func:`~shiny.ui.card_header` or
-        :func:`~shiny.card_footer`).
+        :func:`~shiny.ui.card_footer`).
 
     See Also
     --------

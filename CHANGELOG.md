@@ -6,7 +6,66 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [UNRELEASED]
+## [UNRELEASED] - YYYY-MM-DD
+
+### Breaking Changes
+
+* Page-level sidebars used in `ui.page_sidebar()` and `ui.page_navbar()` will now default to being initially open but collapsible on desktop devices and always open on mobile devices. You can adjust this default choice by setting `ui.sidebar(open=)`. (#1129)
+
+* `ui.sidebar()` is now a thin wrapper for the internal `ui.Sidebar` class. The `ui.Sidebar` class has been updated to store the sidebar's contents and settings and to delay rendering until the sidebar HTML is actually used. Because most users call `ui.sidebar()` instead of using the class directly, this change is not expected to affect many apps. (#1129)
+
+### New features
+
+* Added `ui.input_dark_mode()`, a toggle switch that allows users to switch between light and dark mode. By default, when `ui.input_dark_mode()` is added to an app, the app's color mode follows the users's system preferences, unless the app author sets the `mode` argument. When `ui.input_dark_mode(id=)` is set, the color mode is reported to the server, and server-side color mode updating is possible using `ui.update_dark_mode()`. (#1149)
+
+* `ui.sidebar(open=)` now accepts a dictionary with keys `desktop` and `mobile`, allowing you to independently control the initial state of the sidebar at desktop and mobile screen sizes. (#1129)
+
+* Closed #984: In Shiny Express apps, if there is a `"www"` subdirectory in the app's directory, Shiny will serve the files in that directory as static assets, mounted at `/`. (#1170)
+
+* For Shiny Express apps, added `express.app_opts()`, which allows setting application-level options, like `static_assets` and `debug`. (#1170)
+
+* Closed #1079: For Shiny Express apps, automatically run a `globals.py` file in the same directory as the app file, if it exists. The code in `globals.py` will be run with the session context set to `None`. (#1172)
+
+### Other changes
+
+* `@render.data_frame` now properly fills its container by default. (#1126)
+
+* We improved the accessibility of the full screen toggle button in cards created with `ui.card(full_screen=True)`. Full-screen cards are now also supported on mobile devices. (#1129)
+
+* When entering and exiting full-screen card mode, Shiny now emits a client-side custom `bslib.card` event that JavaScript-oriented users can use to react to the full screen state change. (#1129)
+
+* The sidebar's collapse toggle now has a high `z-index` value to ensure it always appears above elements in the main content area of `ui.layout_sidebar()`. The sidebar overlay also now receives the same high `z-index` on mobile layouts. (#1129)
+
+* Updated example apps to use lower-case versions of `reactive.Calc`->`reactive.calc`, `reactive.Effect`->`reactive.effect`, and `reactive.Value`->`reactive.value`. (#1164)
+
+* Closed #1081: The `@expressify()` function now has an option `has_docstring`. This allows the decorator to be used with functions that contain a docstring. (#1163)
+
+### Bug fixes
+
+* Fixed `input_task_button` not working in a Shiny module. (#1108)
+* Fixed several issues with `page_navbar()` styling. (#1124)
+* Fixed `Renderer.output_id` to not contain the module namespace prefix, only the output id. (#1130)
+* Fixed gap-driven spacing between children in fillable `nav_panel()` containers. (#1152)
+* Fixed #1138: An empty value in a date or date range input would cause an error; now it is treated as `None`. (#1139)
+
+### Other changes
+
+* Replaced use of `sys.stderr.write()` with `print(file=sys.stderr)`, because on some platforms `sys.stderr` can be `None`. (#1131)
+* Replaced soon-to-be deprecated `datetime` method calls when handling `shiny.datetime` inputs. (#1146)
+
+
+## [0.7.1] - 2024-02-05
+
+### Bug fixes
+
+* Fixed `render.download` not working in Express. (#1085)
+
+* `express.ui.hold()` can now accept any type of object, instead of just `TagChild` objects. (#1089)
+
+* Fixed an issue where `input_selectize` would not initialize correctly when created within a Shiny module. (#1091)
+
+
+## [0.7.0] - 2024-01-25
 
 ### Breaking Changes
 
@@ -14,7 +73,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added `shiny.ui.input_task_button()` for creating buttons that launch longer-running tasks than `shiny.ui.input_action_button()` was designed for. Task buttons give visual feedback that the task is running, and cannot be clicked again until the task is complete. (#907)
+
+* Added `@extended_task` decorator for creating long-running tasks that can be cancelled. (#907)
+
 * Added `@render.download` as a replacement for `@session.download`, which is now deprecated. (#977)
+
+* Added `ui.output_code()`, which is currently an alias for `ui.output_text_verbatim()`. (#997)
+
+* Added `@render.code`, which is an alias for `@render.text`, but in Express mode, it displays the result using `ui.output_code()`. (#997)
+
+* Added `App.on_shutdown` method for registering a callback to be called when the app is shutting down. (#907)
+
+* You can now pass options to `ui.input_selectize` see the [selectize.js](https://selectize.dev/docs/API/selectize) docs for available options. (#914, #158)
+
+* `ui.input_selectize` gains the `remove_button` argument which allows you to control the visibility of the remove button.
 
 ### Bug fixes
 
@@ -22,20 +95,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * has added a `-d`/`--dir` flag for saving to a specific output directory
   * will raise an error if if will overwrite existing files
   * prompt users to install `requirements.txt`
+
 * Fixed `js-react` template build error. (#965)
+
+* Fixed #1007: Plot interaction with plotnine provided incorrect values. (#999)
 
 ### Developer features
 
 * Output renderers should now be created with the `shiny.render.renderer.Renderer` class. This class should contain either a `.transform(self, value)` method (common) or a `.render(self)` (rare). These two methods should return something can be converted to JSON. In addition, `.default_ui(self, id)` should be implemented by returning `htmltools.Tag`-like content for use within Shiny Express. To make your own output renderer, please inherit from the `Renderer[IT]` class where `IT` is the type (excluding `None`) required to be returned from the App author. (#964)
-
-* `shiny.render.RenderFunction` and `shiny.render.RenderFunctionAsync` have been removed. They were deprecated in v0.6.0. Instead, please use `shiny.render.renderer.Renderer`. (#964)
-
-* `shiny.render.OutputRendererSync` and `shiny.render.OutputRendererAsync` helper classes have been removed in favor of an updated `shiny.render.OutputRenderer` class. Now, the app's output value function will be transformed into an asynchronous function for simplified, consistent execution behavior. If redesigning your code, instead please create a new renderer that inherits from `shiny.render.renderer.Renderer`. `shiny.render.*` will be removed in the near future. (#964)
+  * Legacy renderers that will be removed in the near future:
+    * `shiny.render.RenderFunction`
+    * `shiny.render.RenderFunctionAsync`
+    * `shiny.render.transformer.OutputRenderer`
+    * `shiny.render.transformer.OutputRendererSync`
+    * `shiny.render.transformer.OutputRendererAsync`
 
 ### Other changes
 
 * Pinned Starlette to version <0.35.0; versions 0.35.0 and 0.35.1 caused problems when deploying on Posit Connect. (#1009
 )
+
 
 ## [0.6.1.1] - 2023-12-22
 

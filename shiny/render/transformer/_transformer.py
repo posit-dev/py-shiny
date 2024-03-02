@@ -19,6 +19,7 @@ __all__ = (
 import inspect
 from typing import (
     TYPE_CHECKING,
+    Any,
     Awaitable,
     Callable,
     Generic,
@@ -31,7 +32,7 @@ from typing import (
     overload,
 )
 
-from ..renderer import AsyncValueFn, Jsonifiable, RendererBase
+from ..renderer import Jsonifiable, Renderer
 from ..renderer._renderer import DefaultUIFn, DefaultUIFnResultOrNone
 
 if TYPE_CHECKING:
@@ -45,7 +46,7 @@ from ...types import MISSING
 
 # Input type for the user-spplied function that is passed to a render.xx
 IT = TypeVar("IT")
-# Output type after the Renderer.__call__ method is called on the IT object.
+# Output type after the OutputRenderer._exec method has been called on the IT object.
 OT = TypeVar("OT")
 # Param specification for value_fn function
 P = ParamSpec("P")
@@ -164,12 +165,15 @@ synchronous or asynchronous.
 # type `OT`.
 TransformFn = Callable[Concatenate[TransformerMetadata, ValueFn[IT], P], Awaitable[OT]]
 """
-Package author function that transforms an object of type `IT` into type `OT`. It should
-be defined as an asynchronous function.
+Package author function that transforms an object of type `IT` into type `OT`.
 """
 
 
-class OutputRenderer(RendererBase, Generic[OT]):
+class OutputRenderer(
+    # Inherit from `[Any]` to not change the type signature of `OutputRenderer[OT]` to `OuputRenderer[IT, OT]`.
+    Renderer[Any],
+    Generic[OT],
+):
     """
     Output Renderer
 
@@ -177,7 +181,7 @@ class OutputRenderer(RendererBase, Generic[OT]):
     (`value_fn`) into type (`OT`). This transformed value is then sent to be an
     :class:`~shiny.Outputs` output value.
 
-    When the `.__call__` method is invoked, the transform function (`transform_fn`)
+    When the `._run` method is invoked, the transform function (`transform_fn`)
     (typically defined by package authors) is invoked.
 
     The transform function (`transform_fn`) is given `meta` information
@@ -201,18 +205,12 @@ class OutputRenderer(RendererBase, Generic[OT]):
         * The parameter specification defined by the transform function (`transform_fn`).
           It should **not** contain any `*args`. All keyword arguments should have a type
           and default value.
+
+    See Also
+    --------
+    * :class:`~shiny.render.transformer.OutputRendererSync`
+    * :class:`~shiny.render.transformer.OutputRendererAsync`
     """
-
-    async def __call__(self) -> OT:
-        """
-        Asynchronously executes the output renderer (both the app's output value function and transformer).
-
-        All output renderers are asynchronous to accomodate that users can supply
-        asyncronous output value functions and package authors can supply asynchronous
-        transformer functions. To handle both possible situations cleanly, the
-        `.__call__` method is executed as asynchronous.
-        """
-        return await self._run()
 
     def __init__(
         self,
@@ -244,25 +242,21 @@ class OutputRenderer(RendererBase, Generic[OT]):
             "`shiny.render.transformer.output_transformer()` and `shiny.render.transformer.OutputRenderer()` output render function utilities have been superseded by `shiny.render.renderer.Renderer` and will be removed in the near future."
         )
 
-        # Copy over function name as it is consistent with how Session and Output
-        # retrieve function names
-        self.__name__ = value_fn.__name__
-
         if not is_async_callable(transform_fn):
             raise TypeError(
-                "OutputRenderer requires an async tranformer function (`transform_fn`)."
+                self.__class__.__name__
+                + " requires an async tranformer function (`transform_fn`)."
                 " Please define your transform function as asynchronous."
                 " Ex `async def my_transformer(....`"
             )
 
-        # Upgrade value function to be async;
-        # Calling an async function has a ~35ns overhead (barret's machine)
-        # Checking if a function is async has a 180+ns overhead (barret's machine)
-        # -> It is faster to always call an async function than to always check if it is async
-        # Always being async simplifies the execution
-        self._fn = AsyncValueFn(value_fn)
-        self._value_fn_is_async = self._fn.is_async()  # legacy key
+        self._value_fn = value_fn
+        self._value_fn_is_async = is_async_callable(value_fn)  # legacy key
+        # Copy over function name as it is consistent with how Session and Output
+        # retrieve function names
         self.__name__ = value_fn.__name__
+        # Initial value for output_id until it is set by the Session
+        self.output_id = value_fn.__name__
 
         self._transformer = transform_fn
         self._params = params
@@ -302,14 +296,11 @@ class OutputRenderer(RendererBase, Generic[OT]):
         `*args` is required to use with `**kwargs` when using
         `typing.ParamSpec`.
         """
-        value_fn = (
-            self._fn.get_async_fn() if self._fn.is_async() else self._fn.get_sync_fn()
-        )
         ret = await self._transformer(
             # TransformerMetadata
             self._meta(),
             # Callable[[], IT] | Callable[[], Awaitable[IT]]
-            value_fn,
+            self._value_fn,
             # P
             *self._params.args,
             **self._params.kwargs,
@@ -318,9 +309,8 @@ class OutputRenderer(RendererBase, Generic[OT]):
 
     # # Shims for Renderer class #############################
 
-    def default_ui(
+    def auto_output_ui(
         self,
-        id: str,
         **kwargs: object,
     ) -> DefaultUIFnResultOrNone:
         if self._default_ui is None:
@@ -335,7 +325,7 @@ class OutputRenderer(RendererBase, Generic[OT]):
                 }
             )
 
-        return self._default_ui(id, *self._default_ui_args, **kwargs)
+        return self._default_ui(self.output_id, *self._default_ui_args, **kwargs)
 
     async def render(self) -> Jsonifiable:
         ret = await self._run()
@@ -344,6 +334,75 @@ class OutputRenderer(RendererBase, Generic[OT]):
         # (We also don't really care as we're moving to `Renderer` class)
         jsonifiable_ret = cast(Jsonifiable, ret)
         return jsonifiable_ret
+
+
+# Using a second class to help clarify that it is of a particular type
+class OutputRendererSync(OutputRenderer[OT]):
+    """
+    Output Renderer (Synchronous)
+
+    See Also
+    --------
+    * :class:`~shiny.render.transformer.OutputRenderer`
+    * :class:`~shiny.render.transformer.OutputRendererAsync`
+    """
+
+    def __init__(
+        self,
+        value_fn: ValueFnSync[IT],
+        transform_fn: TransformFn[IT, P, OT],
+        params: TransformerParams[P],
+        default_ui: Optional[DefaultUIFn] = None,
+        default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
+    ) -> None:
+        if is_async_callable(value_fn):
+            raise TypeError(
+                self.__class__.__name__ + " requires a synchronous render function"
+            )
+        # super == OutputRenderer[OT]
+        super().__init__(
+            value_fn=value_fn,
+            transform_fn=transform_fn,
+            params=params,
+            default_ui=default_ui,
+            default_ui_passthrough_args=default_ui_passthrough_args,
+        )
+
+
+# The reason for having a separate RendererAsync class is because the _run
+# method is marked here as async; you can't have a single class where one method could
+# be either sync or async.
+class OutputRendererAsync(OutputRenderer[OT]):
+    """
+    Output Renderer (Asynchronous)
+
+    See Also
+    --------
+    * :class:`~shiny.render.transformer.OutputRenderer`
+    * :class:`~shiny.render.transformer.OutputRendererSync`
+    """
+
+    def __init__(
+        self,
+        value_fn: ValueFnAsync[IT],
+        transform_fn: TransformFn[IT, P, OT],
+        params: TransformerParams[P],
+        default_ui: Optional[DefaultUIFn] = None,
+        default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
+    ) -> None:
+        if not is_async_callable(value_fn):
+            raise TypeError(
+                self.__class__.__name__ + " requires an asynchronous render function"
+            )
+
+        # super == OutputRenderer[OT]
+        super().__init__(
+            value_fn=value_fn,
+            transform_fn=transform_fn,
+            params=params,
+            default_ui=default_ui,
+            default_ui_passthrough_args=default_ui_passthrough_args,
+        )
 
 
 # ======================================================================================
@@ -509,15 +568,13 @@ def output_transformer(
     *,
     default_ui: Optional[DefaultUIFn] = None,
     default_ui_passthrough_args: Optional[tuple[str, ...]] = None,
-) -> Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]:
-    ...
+) -> Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]: ...
 
 
 @overload
 def output_transformer(
     transform_fn: TransformFn[IT, P, OT],
-) -> OutputTransformer[IT, OT, P]:
-    ...
+) -> OutputTransformer[IT, OT, P]: ...
 
 
 @add_example()
@@ -531,7 +588,9 @@ def output_transformer(
     | Callable[[TransformFn[IT, P, OT]], OutputTransformer[IT, OT, P]]
 ):
     """
-    Output transformer decorator
+    Deprecated. Please use :class:`~shiny.render.renderer.Renderer` instead.
+
+    Output transformer decorator.
 
     This decorator method is a convenience method to generate the appropriate types and
     internal implementation for an overloaded renderer method. This method will provide
@@ -581,6 +640,11 @@ def output_transformer(
       this, you can use `**kwargs: Any` instead or add `_fn: None = None` as the first
       parameter in the overload containing the `**kwargs: object`.
 
+    * The `transform_fn` should be defined as an asynchronous function but should only
+      asynchronously yield (i.e. use `await` syntax) when the value function (the second
+      parameter of type `ValueFn[IT]`) is awaitable. If the value function is not
+      awaitable (i.e. it is a _synchronous_ function), then the execution of the
+      transform function should also be synchronous.
 
     Parameters
     ----------
@@ -616,13 +680,24 @@ def output_transformer(
             def as_value_fn(
                 fn: ValueFn[IT],
             ) -> OutputRenderer[OT]:
-                return OutputRenderer(
-                    value_fn=fn,
-                    transform_fn=transform_fn,
-                    params=params,
-                    default_ui=default_ui,
-                    default_ui_passthrough_args=default_ui_passthrough_args,
-                )
+                if is_async_callable(fn):
+                    return OutputRendererAsync(
+                        fn,
+                        transform_fn,
+                        params,
+                        default_ui,
+                        default_ui_passthrough_args,
+                    )
+                else:
+                    # To avoid duplicate work just for a typeguard, we cast the function
+                    fn = cast(ValueFnSync[IT], fn)
+                    return OutputRendererSync(
+                        fn,
+                        transform_fn,
+                        params,
+                        default_ui,
+                        default_ui_passthrough_args,
+                    )
 
             if value_fn is None:
                 return as_value_fn

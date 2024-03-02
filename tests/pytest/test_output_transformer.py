@@ -37,18 +37,15 @@ def test_output_transformer_works():
     async def TestTransformer(
         _meta: TransformerMetadata,
         _fn: ValueFn[str],
-    ):
-        ...
+    ): ...
 
     @overload
-    def test_renderer() -> TestTransformer.OutputRendererDecorator:
-        ...
+    def test_renderer() -> TestTransformer.OutputRendererDecorator: ...
 
     @overload
     def test_renderer(
         _fn: TestTransformer.ValueFn,
-    ) -> TestTransformer.OutputRenderer:
-        ...
+    ) -> TestTransformer.OutputRenderer: ...
 
     def test_renderer(
         _fn: TestTransformer.ValueFn | None = None,
@@ -64,18 +61,15 @@ def test_output_transformer_kwargs_are_allowed():
         _fn: ValueFn[str],
         *,
         y: str = "42",
-    ):
-        ...
+    ): ...
 
     @overload
-    def test_renderer(*, y: str = "42") -> TestTransformer.OutputRendererDecorator:
-        ...
+    def test_renderer(*, y: str = "42") -> TestTransformer.OutputRendererDecorator: ...
 
     @overload
     def test_renderer(
         _fn: TestTransformer.ValueFn,
-    ) -> TestTransformer.OutputRenderer:
-        ...
+    ) -> TestTransformer.OutputRenderer: ...
 
     def test_renderer(
         _fn: TestTransformer.ValueFn | None = None,
@@ -97,20 +91,17 @@ def test_output_transformer_with_pass_through_kwargs():
         *,
         y: str = "42",
         **kwargs: float,
-    ):
-        ...
+    ): ...
 
     @overload
     def test_renderer(
         *, y: str = "42", **kwargs: Any
-    ) -> TestTransformer.OutputRendererDecorator:
-        ...
+    ) -> TestTransformer.OutputRendererDecorator: ...
 
     @overload
     def test_renderer(
         _fn: TestTransformer.ValueFn,
-    ) -> TestTransformer.OutputRenderer:
-        ...
+    ) -> TestTransformer.OutputRenderer: ...
 
     def test_renderer(
         _fn: TestTransformer.ValueFn | None = None,
@@ -127,11 +118,10 @@ def test_output_transformer_with_pass_through_kwargs():
 def test_output_transformer_pos_args():
     try:
 
-        @output_transformer  # pyright: ignore[reportGeneralTypeIssues]
+        @output_transformer  # pyright: ignore[reportArgumentType]
         async def TestTransformer(
             _meta: TransformerMetadata,
-        ):
-            ...
+        ): ...
 
         raise RuntimeError()
     except TypeError as e:
@@ -146,8 +136,7 @@ def test_output_transformer_limits_positional_arg_count():
             _meta: TransformerMetadata,
             _fn: ValueFn[str],
             y: str,
-        ):
-            ...
+        ): ...
 
         raise RuntimeError()
     except TypeError as e:
@@ -162,8 +151,7 @@ def test_output_transformer_does_not_allow_args():
             _meta: TransformerMetadata,
             _fn: ValueFn[str],
             *args: str,
-        ):
-            ...
+        ): ...
 
         raise RuntimeError()
 
@@ -180,8 +168,7 @@ def test_output_transformer_kwargs_have_defaults():
             _fn: ValueFn[str],
             *,
             y: str,
-        ):
-            ...
+        ): ...
 
         raise RuntimeError()
 
@@ -194,8 +181,7 @@ def test_output_transformer_result_does_not_allow_args():
     async def TestTransformer(
         _meta: TransformerMetadata,
         _fn: ValueFn[str],
-    ):
-        ...
+    ): ...
 
     # Test that args can **not** be supplied
     def render_fn_sync(*args: str):
@@ -204,7 +190,7 @@ def test_output_transformer_result_does_not_allow_args():
     try:
         TestTransformer(
             render_fn_sync,
-            "X",  # pyright: ignore[reportGeneralTypeIssues]
+            "X",  # pyright: ignore[reportArgumentType]
         )
         raise RuntimeError()
     except TypeError as e:
@@ -218,22 +204,21 @@ async def test_renderer_handler_or_transform_fn_can_be_async():
         _meta: TransformerMetadata,
         _fn: ValueFn[str],
     ) -> str:
-        # Actually sleep to test that the handler is truly async
-        await asyncio.sleep(0)
+        if is_async_callable(_fn):
+            # Conditionally sleep to test that the handler is truly async
+            await asyncio.sleep(0)
         ret = await resolve_value_fn(_fn)
         return ret
 
     # ## Setup overloads =============================================
 
     @overload
-    def async_renderer() -> AsyncTransformer.OutputRendererDecorator:
-        ...
+    def async_renderer() -> AsyncTransformer.OutputRendererDecorator: ...
 
     @overload
     def async_renderer(
         _fn: AsyncTransformer.ValueFn,
-    ) -> AsyncTransformer.OutputRenderer:
-        ...
+    ) -> AsyncTransformer.OutputRenderer: ...
 
     def async_renderer(
         _fn: AsyncTransformer.ValueFn | None = None,
@@ -243,39 +228,33 @@ async def test_renderer_handler_or_transform_fn_can_be_async():
 
     test_val = "Test: Hello World!"
 
-    def app_render_fn() -> str:
-        return test_val
-
     # ## Test Sync: X =============================================
 
-    renderer_sync = async_renderer(app_render_fn)
-    renderer_sync._set_output_metadata(
-        output_name="renderer_sync",
-    )
+    @async_renderer
+    def renderer_sync() -> str:
+        return test_val
+
     # All renderers are async in execution.
-    assert is_async_callable(renderer_sync)
+    assert not is_async_callable(renderer_sync._value_fn)
 
     with session_context(test_session):
-        val = await renderer_sync()
+        val = await renderer_sync._run()
         assert val == test_val
 
     # ## Test Async: √ =============================================
 
     async_test_val = "Async: Hello World!"
 
-    async def async_app_render_fn() -> str:
+    @async_renderer
+    async def renderer_async() -> str:
         await asyncio.sleep(0)
         return async_test_val
 
-    renderer_async = async_renderer(async_app_render_fn)
-    renderer_async._set_output_metadata(
-        output_name="renderer_async",
-    )
-    if not is_async_callable(renderer_async):
+    if not is_async_callable(renderer_async._value_fn):
         raise RuntimeError("Expected `renderer_async` to be a coro function")
 
     with session_context(test_session):
-        ret = await renderer_async()
+        ret = await renderer_async._run()
         assert ret == async_test_val
 
 

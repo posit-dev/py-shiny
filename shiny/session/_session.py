@@ -11,6 +11,7 @@ import functools
 import json
 import os
 import re
+import sys
 import traceback
 import typing
 import urllib.parse
@@ -23,6 +24,7 @@ from typing import (
     Awaitable,
     Callable,
     Iterable,
+    Literal,
     Optional,
     Union,
     cast,
@@ -33,6 +35,8 @@ from htmltools import TagChild, TagList
 from starlette.requests import HTTPConnection, Request
 from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 from starlette.types import ASGIApp
+
+from .._typing_extensions import NotRequired
 
 if TYPE_CHECKING:
     from .._app import App
@@ -49,8 +53,13 @@ from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
-from ..render.renderer import Jsonifiable, RendererBase, RendererBaseT
-from ..types import SafeException, SilentCancelOutputException, SilentException
+from ..render.renderer import Renderer, RendererT
+from ..types import (
+    SafeException,
+    SilentCancelOutputException,
+    SilentException,
+    SilentOperationInProgressException,
+)
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
 
@@ -121,14 +130,26 @@ class DownloadInfo:
     encoding: str
 
 
-class OutBoundMessageQueues(TypedDict):
-    values: list[dict[str, Any]]
-    input_messages: list[dict[str, Any]]
-    errors: list[dict[str, Any]]
+class OutBoundMessageQueues:
+    def __init__(self):
+        self.values: dict[str, Any] = {}
+        self.errors: dict[str, Any] = {}
+        self.input_messages: list[dict[str, Any]] = []
 
+    def set_value(self, id: str, value: Any) -> None:
+        self.values[id] = value
+        # remove from self.errors
+        if id in self.errors:
+            del self.errors[id]
 
-def empty_outbound_message_queues() -> OutBoundMessageQueues:
-    return {"values": [], "input_messages": [], "errors": []}
+    def set_error(self, id: str, error: Any) -> None:
+        self.errors[id] = error
+        # remove from self.values
+        if id in self.values:
+            del self.values[id]
+
+    def add_input_message(self, id: str, message: dict[str, Any]) -> None:
+        self.input_messages.append({"id": id, "message": message})
 
 
 # Makes isinstance(x, Session) also return True when x is a SessionProxy (i.e., a module
@@ -191,10 +212,11 @@ class Session(object, metaclass=SessionMeta):
             except Exception as e:
                 print("Error parsing credentials header: " + str(e))
 
-        self._outbound_message_queues = empty_outbound_message_queues()
+        self._outbound_message_queues = OutBoundMessageQueues()
 
         self._message_handlers: dict[
-            str, Callable[..., Awaitable[object]]
+            str,
+            Callable[..., Awaitable[object]],
         ] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
@@ -224,6 +246,7 @@ class Session(object, metaclass=SessionMeta):
         finally:
             self.app._remove_session(self)
 
+    @add_example()
     async def close(self, code: int = 1001) -> None:
         """
         Close the session.
@@ -313,6 +336,8 @@ class Session(object, metaclass=SessionMeta):
                 ...
             except Exception as e:
                 try:
+                    # Starting in Python 3.10 this could be traceback.print_exception(e)
+                    traceback.print_exception(*sys.exc_info())
                     self._send_error_response(str(e))
                 except Exception:
                     pass
@@ -330,7 +355,9 @@ class Session(object, metaclass=SessionMeta):
                     + key
                 )
             if len(keys) == 2:
-                val = input_handlers._process_value(keys[1], val, keys[0], self)
+                val = input_handlers._process_value(
+                    keys[1], val, ResolvedId(keys[0]), self
+                )
 
             # The keys[0] value is already a fully namespaced id; make that explicit by
             # wrapping it in ResolvedId, otherwise self.input will throw an id
@@ -561,8 +588,7 @@ class Session(object, metaclass=SessionMeta):
         message
             The message to send.
         """
-        msg: dict[str, object] = {"id": id, "message": message}
-        self._outbound_message_queues["input_messages"].append(msg)
+        self._outbound_message_queues.add_input_message(id, message)
         self._request_flush()
 
     def _send_insert_ui(
@@ -579,6 +605,30 @@ class Session(object, metaclass=SessionMeta):
     def _send_remove_ui(self, selector: str, multiple: bool) -> None:
         msg = {"selector": selector, "multiple": multiple}
         self._send_message_sync({"shiny-remove-ui": msg})
+
+    @overload
+    def _send_progress(
+        self, type: Literal["binding"], message: BindingProgressMessage
+    ) -> None:
+        pass
+
+    @overload
+    def _send_progress(
+        self, type: Literal["open"], message: OpenProgressMessage
+    ) -> None:
+        pass
+
+    @overload
+    def _send_progress(
+        self, type: Literal["close"], message: CloseProgressMessage
+    ) -> None:
+        pass
+
+    @overload
+    def _send_progress(
+        self, type: Literal["update"], message: UpdateProgressMessage
+    ) -> None:
+        pass
 
     def _send_progress(self, type: str, message: object) -> None:
         msg: dict[str, object] = {"progress": {"type": type, "message": message}}
@@ -688,24 +738,16 @@ class Session(object, metaclass=SessionMeta):
         try:
             omq = self._outbound_message_queues
 
-            values: dict[str, object] = {}
-            for v in omq["values"]:
-                values.update(v)
-
-            errors: dict[str, object] = {}
-            for err in omq["errors"]:
-                errors.update(err)
-
             message: dict[str, object] = {
-                "values": values,
-                "inputMessages": omq["input_messages"],
-                "errors": errors,
+                "values": omq.values,
+                "inputMessages": omq.input_messages,
+                "errors": omq.errors,
             }
 
             try:
                 await self._send_message(message)
             finally:
-                self._outbound_message_queues = empty_outbound_message_queues()
+                self._outbound_message_queues = OutBoundMessageQueues()
         finally:
             with session_context(self):
                 await self._flushed_callbacks.invoke()
@@ -838,6 +880,29 @@ class Session(object, metaclass=SessionMeta):
         return self
 
 
+class BindingProgressMessage(TypedDict):
+    id: ResolvedId
+    persistent: NotRequired[bool]
+
+
+class OpenProgressMessage(TypedDict):
+    id: ResolvedId
+    style: str
+
+
+class CloseProgressMessage(TypedDict):
+    id: ResolvedId
+    style: str
+
+
+class UpdateProgressMessage(TypedDict):
+    id: ResolvedId
+    message: NotRequired[str | None]
+    detail: NotRequired[str | None]
+    value: NotRequired[float | int | None]
+    style: str
+
+
 class SessionProxy:
     ns: ResolvedId
     input: Inputs
@@ -878,7 +943,7 @@ class SessionProxy:
         def wrapper(fn: DownloadHandler):
             id_ = self.ns(id or fn.__name__)
             return self._parent.download(
-                id=id_, **kwargs  # pyright: ignore[reportGeneralTypeIssues]
+                id=id_, **kwargs  # pyright: ignore[reportArgumentType]
             )(fn)
 
         return wrapper
@@ -973,8 +1038,8 @@ class Outputs:
         self._suspend_when_hidden = suspend_when_hidden
 
     @overload
-    def __call__(self, renderer: RendererBaseT) -> RendererBaseT:
-        ...
+    def __call__(self, renderer: RendererT) -> RendererT:
+        pass
 
     @overload
     def __call__(
@@ -983,29 +1048,30 @@ class Outputs:
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-    ) -> Callable[[RendererBaseT], RendererBaseT]:
-        ...
+    ) -> Callable[[RendererT], RendererT]:
+        pass
 
     def __call__(
         self,
-        renderer: Optional[RendererBaseT] = None,
+        renderer: Optional[RendererT] = None,
         *,
         id: Optional[str] = None,
         suspend_when_hidden: bool = True,
         priority: int = 0,
-    ) -> RendererBaseT | Callable[[RendererBaseT], RendererBaseT]:
-        def set_renderer(renderer: RendererBaseT) -> RendererBaseT:
-            if not isinstance(renderer, RendererBase):
+    ) -> RendererT | Callable[[RendererT], RendererT]:
+        def set_renderer(renderer: RendererT) -> RendererT:
+            if not isinstance(renderer, Renderer):
                 raise TypeError(
                     "`@output` must be applied to a `@render.xx` function.\n"
                     + "In other words, `@output` must be above `@render.xx`."
                 )
 
             # Get the (possibly namespaced) output id
-            output_name = self._ns(id or renderer.__name__)
+            output_id = id or renderer.__name__
+            output_name = self._ns(output_id)
 
             # renderer is a Renderer object. Give it a bit of metadata.
-            renderer._set_output_metadata(output_name=output_name)
+            renderer._set_output_metadata(output_id=output_id)
 
             renderer._on_register()
 
@@ -1022,13 +1088,18 @@ class Outputs:
                     {"recalculating": {"name": output_name, "status": "recalculating"}}
                 )
 
-                message: dict[str, Jsonifiable] = {}
                 try:
-                    message[output_name] = await renderer.render()
+                    value = await renderer.render()
+                    self._session._outbound_message_queues.set_value(output_name, value)
+                except SilentOperationInProgressException:
+                    self._session._send_progress(
+                        "binding", {"id": output_name, "persistent": True}
+                    )
+                    return
                 except SilentCancelOutputException:
                     return
                 except SilentException:
-                    message[output_name] = None
+                    self._session._outbound_message_queues.set_value(output_name, None)
                 except Exception as e:
                     # Print traceback to the console
                     traceback.print_exc()
@@ -1041,21 +1112,25 @@ class Outputs:
                         err_msg = str(e)
                     # Register the outbound error message
                     err_message = {
-                        str(output_name): {
-                            "message": err_msg,
-                            # TODO: is it possible to get the call?
-                            "call": None,
-                            # TODO: I don't think we actually use this for anything client-side
-                            "type": None,
-                        }
+                        "message": err_msg,
+                        # TODO: is it possible to get the call?
+                        "call": None,
+                        # TODO: I don't think we actually use this for anything client-side
+                        "type": None,
                     }
-                    self._session._outbound_message_queues["errors"].append(err_message)
-
-                self._session._outbound_message_queues["values"].append(message)
-
-                await self._session._send_message(
-                    {"recalculating": {"name": output_name, "status": "recalculated"}}
-                )
+                    self._session._outbound_message_queues.set_error(
+                        output_name, err_message
+                    )
+                    return
+                finally:
+                    await self._session._send_message(
+                        {
+                            "recalculating": {
+                                "name": output_name,
+                                "status": "recalculated",
+                            }
+                        }
+                    )
 
             output_obs.on_invalidate(
                 lambda: self._session._send_progress("binding", {"id": output_name})

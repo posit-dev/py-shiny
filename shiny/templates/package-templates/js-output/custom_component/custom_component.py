@@ -27,8 +27,8 @@ class render_custom_component(Renderer[int]):
     """
 
     # The UI used within Shiny Express mode
-    def default_ui(self, id: str) -> Tag:
-        return custom_component(id, height=self.height)
+    def auto_output_ui(self) -> Tag:
+        return custom_component(self.output_id, height=self.height)
 
     # The init method is used to set up the renderer's parameters.
     # If no parameters are needed, then the `__init__()` method can be omitted.
@@ -37,8 +37,8 @@ class render_custom_component(Renderer[int]):
         self.height: str = height
 
     # Transforms non-`None` values into a `Jsonifiable` object.
-    # If you'd like more control on when and how the value is resolved,
-    # please use the `async def resolve(self)` method.
+    # If you'd like more control on when and how the value is rendered,
+    # please use the `async def render(self)` method.
     async def transform(self, value: int) -> Jsonifiable:
         # Send the results to the client. Make sure that this is a serializable
         # object and matches what is expected in the javascript code.

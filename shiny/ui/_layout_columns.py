@@ -6,7 +6,8 @@ from warnings import warn
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css
 
-from ._html_deps_shinyverse import web_component_dependency
+from .._docstring import add_example
+from ._html_deps_shinyverse import components_dependencies
 from ._layout import wrap_all_in_gap_spaced_container
 from ._tag import consolidate_attrs
 from .css import CssUnit, as_css_unit
@@ -32,6 +33,7 @@ BreakpointsComplete = Dict[Breakpoint, Iterable[T]]
 BreakpointsUser = Union[BreakpointsSoft[T], Iterable[T], T, None]
 
 
+@add_example()
 def layout_columns(
     *args: TagChild | TagAttrs,
     col_widths: BreakpointsUser[int] = None,
@@ -133,7 +135,7 @@ def layout_columns(
         attrs,
         row_heights_attrs(row_heights),
         *wrap_all_in_gap_spaced_container(children, fillable, "bslib-grid-item"),
-        web_component_dependency(),
+        components_dependencies(),
     )
 
     # Apply fill to the outer layout (fillable is applied to the children)

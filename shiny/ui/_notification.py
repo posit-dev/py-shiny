@@ -2,13 +2,16 @@ from __future__ import annotations
 
 __all__ = ("notification_show", "notification_remove")
 
-from typing import Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from htmltools import TagChild
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._utils import rand_hex
-from ..session import Session, require_active_session
+from ..session import require_active_session
+
+if TYPE_CHECKING:
+    from .. import Session
 
 
 @add_example()
@@ -61,9 +64,9 @@ def notification_show(
         The notification's ``id``.
 
     See Also
-    -------
-    ~shiny.ui.notification_remove
-    ~shiny.ui.modal
+    --------
+    * :func:`~shiny.ui.notification_remove`
+    * :func:`~shiny.ui.modal`
     """
 
     session = require_active_session(session)
@@ -90,6 +93,7 @@ def notification_show(
     return id
 
 
+@no_example()
 def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
     """
     Remove a notification.
@@ -112,13 +116,13 @@ def notification_remove(id: str, *, session: Optional[Session] = None) -> str:
         The notification's ``id``.
 
     See Also
-    -------
-    ~shiny.ui.notification_show
-    ~shiny.ui.modal
+    --------
+    * :func:`~shiny.ui.notification_show`
+    * :func:`~shiny.ui.modal`
 
     Example
     -------
-    See :func:`notification_show`.
+    See :func:`shiny.ui.notification_show`.
     """
     session = require_active_session(session)
     session._send_message_sync({"notification": {"type": "remove", "message": id}})

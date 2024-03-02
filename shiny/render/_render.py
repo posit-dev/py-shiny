@@ -9,6 +9,7 @@ import typing
 # Can use `dict` in python >= 3.9
 from typing import (
     TYPE_CHECKING,
+    Any,
     Callable,
     Literal,
     Optional,
@@ -26,8 +27,10 @@ if TYPE_CHECKING:
 
 from .. import _utils
 from .. import ui as _ui
+from .._docstring import add_example, no_example
 from .._namespaces import ResolvedId
 from .._typing_extensions import Self
+from ..express._mock_session import ExpressMockSession
 from ..session import get_current_session, require_active_session
 from ..session._session import DownloadHandler, DownloadInfo
 from ..types import MISSING, MISSING_TYPE, ImgData
@@ -46,6 +49,7 @@ from .renderer._utils import (
 
 __all__ = (
     "text",
+    "code",
     "plot",
     "image",
     "table",
@@ -57,9 +61,22 @@ __all__ = (
 # ======================================================================================
 
 
+@add_example(ex_dir="../api-examples/output_text")
+@no_example("express")
 class text(Renderer[str]):
     """
     Reactively render text.
+
+    When used in Shiny Express applications, this defaults to displaying the text as
+    normal text on the web page. When used in Shiny Core applications, this should be
+    paired with :func:`~shiny.ui.output_text` in the UI.
+
+
+    Parameters
+    ----------
+    inline
+        (Express only). If ``True``, the result is displayed inline. (This argument is
+        passed to :func:`~shiny.ui.output_text`.)
 
     Returns
     -------
@@ -74,13 +91,88 @@ class text(Renderer[str]):
 
     See Also
     --------
-    ~shiny.ui.output_text
+    * :class:`~shiny.render.code`
+    * :func:`~shiny.ui.output_text`
     """
 
-    def default_ui(self, id: str, placeholder: bool | MISSING_TYPE = MISSING) -> Tag:
+    def auto_output_ui(
+        self,
+        *,
+        inline: bool | MISSING_TYPE = MISSING,
+    ) -> Tag:
+        kwargs: dict[str, Any] = {}
+        set_kwargs_value(kwargs, "inline", inline, self.inline)
+
+        return _ui.output_text(self.output_id, **kwargs)
+
+    def __init__(
+        self,
+        _fn: Optional[ValueFn[str]] = None,
+        *,
+        inline: bool = False,
+    ) -> None:
+        super().__init__(_fn)
+        self.inline: bool = inline
+
+    async def transform(self, value: str) -> Jsonifiable:
+        return str(value)
+
+
+# ======================================================================================
+# RenderCode
+# ======================================================================================
+
+
+class code(Renderer[str]):
+    """
+    Reactively render text as code (monospaced).
+
+    When used in Shiny Express applications, this defaults to displaying the text in a
+    monospace font in a code block. When used in Shiny Core applications, this should be
+    paired with :func:`~shiny.ui.output_code` in the UI.
+
+    Parameters
+    ----------
+    placeholder
+        (Express only) If the output is empty or ``None``, should an empty rectangle be
+        displayed to serve as a placeholder? This does not affect behavior when the
+        output is nonempty. (This argument is passed to :func:`~shiny.ui.output_code`.)
+
+
+    Returns
+    -------
+    :
+        A decorator for a function that returns a string.
+
+    Tip
+    ----
+    The name of the decorated function (or ``@output(id=...)``) should match the ``id``
+    of a :func:`~shiny.ui.output_code` container (see :func:`~shiny.ui.output_code` for
+    example usage).
+
+    See Also
+    --------
+    * :class:`~shiny.render.code`
+    * :func:`~shiny.ui.output_code`
+    """
+
+    def auto_output_ui(
+        self,
+        *,
+        placeholder: bool | MISSING_TYPE = MISSING,
+    ) -> Tag:
         kwargs: dict[str, bool] = {}
-        set_kwargs_value(kwargs, "placeholder", placeholder, None)
-        return _ui.output_text_verbatim(id, **kwargs)
+        set_kwargs_value(kwargs, "placeholder", placeholder, self.placeholder)
+        return _ui.output_code(self.output_id, **kwargs)
+
+    def __init__(
+        self,
+        _fn: Optional[ValueFn[str]] = None,
+        *,
+        placeholder: bool = True,
+    ) -> None:
+        super().__init__(_fn)
+        self.placeholder = placeholder
 
     async def transform(self, value: str) -> Jsonifiable:
         return str(value)
@@ -97,6 +189,8 @@ class text(Renderer[str]):
 # a nontrivial amount of overhead. So for now, we're just using `object`.
 
 
+@add_example(ex_dir="../api-examples/output_plot")
+@no_example("express")
 class plot(Renderer[object]):
     """
     Reactively render a plot object as an HTML image.
@@ -147,12 +241,12 @@ class plot(Renderer[object]):
 
     See Also
     --------
-    ~shiny.ui.output_plot ~shiny.render.image
+    * :func:`~shiny.ui.output_plot`
+    * :class:`~shiny.render.image`
     """
 
-    def default_ui(
+    def auto_output_ui(
         self,
-        id: str,
         *,
         width: str | float | int | MISSING_TYPE = MISSING,
         height: str | float | int | MISSING_TYPE = MISSING,
@@ -162,10 +256,11 @@ class plot(Renderer[object]):
         set_kwargs_value(kwargs, "width", width, self.width)
         set_kwargs_value(kwargs, "height", height, self.height)
         return _ui.output_plot(
-            id,
+            self.output_id,
             # (possibly) contains `width` and `height` keys!
-            **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+            **kwargs,  # pyright: ignore[reportArgumentType]
         )
+        # TODO: Deal with output width/height separately from render width/height?
 
     def __init__(
         self,
@@ -186,6 +281,8 @@ class plot(Renderer[object]):
         is_userfn_async = self.fn.is_async()
         name = self.output_id
         session = require_active_session(None)
+        # Module support
+        name = session.ns(name)
         width = self.width
         height = self.height
         alt = self.alt
@@ -294,6 +391,7 @@ class plot(Renderer[object]):
 # ======================================================================================
 # RenderImage
 # ======================================================================================
+@add_example(ex_dir="../api-examples/output_image")
 class image(Renderer[ImgData]):
     """
     Reactively render a image file as an HTML image.
@@ -316,16 +414,17 @@ class image(Renderer[ImgData]):
 
     See Also
     --------
-    ~shiny.ui.output_image
-    ~shiny.types.ImgData
-    ~shiny.render.plot
+    * :func:`~shiny.ui.output_image`
+    * :class:`~shiny.types.ImgData`
+    * :class:`~shiny.render.plot`
     """
 
-    def default_ui(self, id: str, **kwargs: object):
+    def auto_output_ui(self, **kwargs: object):
         return _ui.output_image(
-            id,
-            **kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+            self.output_id,
+            **kwargs,  # pyright: ignore[reportArgumentType]
         )
+        # TODO: Make width/height handling consistent with render_plot
 
     def __init__(
         self,
@@ -334,7 +433,8 @@ class image(Renderer[ImgData]):
         delete_file: bool = False,
     ) -> None:
         super().__init__(_fn)
-        self.delete_file: bool = delete_file
+
+        self.delete_file = delete_file
 
     async def transform(self, value: ImgData) -> dict[str, Jsonifiable] | None:
         src: str = value.get("src")
@@ -358,33 +458,33 @@ class image(Renderer[ImgData]):
 @runtime_checkable
 class PandasCompatible(Protocol):
     # Signature doesn't matter, runtime_checkable won't look at it anyway
-    def to_pandas(self) -> "pd.DataFrame":
-        ...
+    def to_pandas(self) -> "pd.DataFrame": ...
 
 
 TableResult = Union["pd.DataFrame", PandasCompatible, None]
 
 
+@add_example(ex_dir="../api-examples/output_table")
 class table(Renderer[TableResult]):
     """
     Reactively render a pandas ``DataFrame`` object (or similar) as a basic HTML
     table.
 
-    Consider using :func:`~shiny.render.data_frame` instead of this renderer, as
+    Consider using :class:`~shiny.render.data_frame` instead of this renderer, as
     it provides high performance virtual scrolling, built-in filtering and sorting,
     and a better default appearance. This renderer may still be helpful if you
     use pandas styling features that are not currently supported by
-    :func:`~shiny.render.data_frame`.
+    :class:`~shiny.render.data_frame`.
 
     Parameters
     ----------
     index
-        Whether to print index (row) labels. (Ignored for pandas :class:`Styler`
+        Whether to print index (row) labels. (Ignored for pandas :class:`~pandas.io.formats.style.Styler`
         objects; call ``style.hide(axis="index")`` from user code instead.)
     classes
         CSS classes (space separated) to apply to the resulting table. By default, we
         use `table shiny-table w-auto` which is designed to look reasonable with
-        Bootstrap 5. (Ignored for pandas :class:`Styler` objects; call
+        Bootstrap 5. (Ignored for pandas :class:`~pandas.io.formats.style.Styler` objects; call
         ``style.set_table_attributes('class="dataframe table shiny-table w-auto"')``
         from user code instead.)
     **kwargs
@@ -396,8 +496,8 @@ class table(Renderer[TableResult]):
     :
         A decorator for a function that returns any of the following:
 
-        1. A pandas :class:`DataFrame` object.
-        2. A pandas :class:`Styler` object.
+        1. A pandas :class:`~pandas.DataFrame` object.
+        2. A pandas :class:`~pandas.io.formats.style.Styler` object.
         3. Any object that has a `.to_pandas()` method (e.g., a Polars data frame or
            Arrow table).
 
@@ -409,11 +509,12 @@ class table(Renderer[TableResult]):
 
     See Also
     --------
-    ~shiny.ui.output_table for the corresponding UI component to this render function.
+    * :func:`~shiny.ui.output_table` for the corresponding UI component to this render function.
     """
 
-    def default_ui(self, id: str, **kwargs: TagAttrValue) -> Tag:
-        return _ui.output_table(id, **kwargs)
+    def auto_output_ui(self, **kwargs: TagAttrValue) -> Tag:
+        return _ui.output_table(self.output_id, **kwargs)
+        # TODO: Deal with kwargs
 
     def __init__(
         self,
@@ -429,6 +530,8 @@ class table(Renderer[TableResult]):
         self.classes: str = classes
         self.border: int = border
         self.kwargs: dict[str, object] = kwargs
+
+        # TODO: deal with kwargs collision with output_table
 
     async def transform(self, value: TableResult) -> dict[str, Jsonifiable]:
         import pandas
@@ -456,7 +559,7 @@ class table(Renderer[TableResult]):
                     index=self.index,
                     classes=self.classes,
                     border=self.border,
-                    **self.kwargs,  # pyright: ignore[reportGeneralTypeIssues]
+                    **self.kwargs,  # pyright: ignore[reportArgumentType]
                 ),
             )
         # Use typing to make sure the return shape matches
@@ -467,6 +570,7 @@ class table(Renderer[TableResult]):
 # ======================================================================================
 # RenderUI
 # ======================================================================================
+@add_example(ex_dir="../api-examples/output_ui")
 class ui(Renderer[TagChild]):
     """
     Reactively render HTML content.
@@ -475,9 +579,9 @@ class ui(Renderer[TagChild]):
     -------
     :
         A decorator for a function that returns an object of type
-        :class:`~shiny.ui.TagChild`.
+        :class:`~htmltools.TagChild`.
 
-    Tip
+    Tips
     ----
     The name of the decorated function (or ``@output(id=...)``) should match the ``id``
     of a :func:`~shiny.ui.output_ui` container (see :func:`~shiny.ui.output_ui` for
@@ -485,11 +589,11 @@ class ui(Renderer[TagChild]):
 
     See Also
     --------
-    ~shiny.ui.output_ui
+    * :func:`~shiny.ui.output_ui`
     """
 
-    def default_ui(self, id: str) -> Tag:
-        return _ui.output_ui(id)
+    def auto_output_ui(self) -> Tag:
+        return _ui.output_ui(self.output_id)
 
     async def transform(self, value: TagChild) -> Jsonifiable:
         session = require_active_session(None)
@@ -509,12 +613,12 @@ class download(Renderer[str]):
     ----------
     filename
         The filename of the download.
-    label
-        A label for the button, when used in Express mode. Defaults to "Download".
     media_type
         The media type of the download.
     encoding
         The encoding of the download.
+    label
+        (Express only) A label for the button. Defaults to "Download".
 
     Returns
     -------
@@ -523,27 +627,30 @@ class download(Renderer[str]):
 
     See Also
     --------
-    ~shiny.ui.download_button
+    * :func:`~shiny.ui.download_button`
     """
 
-    def default_ui(self, id: str) -> Tag:
-        return _ui.download_button(id, label=self.label)
+    def auto_output_ui(self) -> Tag:
+        return _ui.download_button(
+            self.output_id,
+            label=self.label,
+        )
 
     def __init__(
         self,
         fn: Optional[DownloadHandler] = None,
         *,
         filename: Optional[str | Callable[[], str]] = None,
-        label: TagChild = "Download",
         media_type: None | str | Callable[[], str] = None,
         encoding: str = "utf-8",
+        label: TagChild = "Download",
     ) -> None:
         super().__init__()
 
-        self.label = label
         self.filename = filename
         self.media_type = media_type
         self.encoding = encoding
+        self.label = label
 
         if fn is not None:
             self(fn)
@@ -583,7 +690,7 @@ class download(Renderer[str]):
         # not being None is because in Express, when the UI is rendered, this function
         # `render.download()()`  called once before any sessions have been started.
         session = get_current_session()
-        if session is not None:
+        if session is not None and not isinstance(session, ExpressMockSession):
             session._downloads[self.output_id] = DownloadInfo(
                 filename=self.filename,
                 content_type=self.media_type,

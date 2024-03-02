@@ -6,10 +6,9 @@ from typing import Any, Callable
 
 import pytest
 from conftest import ShinyAppProc, create_example_fixture, expect_to_change
-from controls import InputSelectize, InputSwitch
+from controls import InputSelect, InputSwitch
+from examples.example_apps import reruns, reruns_delay
 from playwright.sync_api import Locator, Page, expect
-
-RERUNS = 3
 
 data_frame_app = create_example_fixture("dataframe")
 
@@ -35,10 +34,19 @@ def scroll_to_end(page: Page, grid_container: Locator) -> Callable[[], None]:
         grid_container.locator("tbody tr:first-child td:first-child").click()
         page.keyboard.press("End")
 
+        # Starting some time around January 19, 2024, Firefox doesn't scroll to the end
+        # of the table when the End button is pressed. Repros on real Firefox 121.0.1
+        # (64-bit) on macOS. This is a workaround to get the test suite to pass.
+        if page.context.browser and page.context.browser.browser_type.name == "firefox":
+            time.sleep(0.1)
+            page.keyboard.press("End")
+            time.sleep(0.1)
+            page.keyboard.press("End")
+
     return do
 
 
-@pytest.mark.flaky(reruns=RERUNS)
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_grid_mode(
     page: Page, data_frame_app: ShinyAppProc, grid: Locator, grid_container: Locator
 ):
@@ -52,9 +60,13 @@ def test_grid_mode(
     expect(grid_container).to_have_class(re.compile(r"\bshiny-data-grid-grid\b"))
 
 
-@pytest.mark.flaky(reruns=RERUNS)
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_summary_navigation(
-    page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, summary: Locator
+    page: Page,
+    data_frame_app: ShinyAppProc,
+    grid_container: Locator,
+    summary: Locator,
+    scroll_to_end: Callable[[], None],
 ):
     page.goto(data_frame_app.url)
 
@@ -63,12 +75,12 @@ def test_summary_navigation(
     # Put focus in the table and hit End keystroke
     grid_container.locator("tbody tr:first-child td:first-child").click()
     with expect_to_change(lambda: summary.inner_text()):
-        page.keyboard.press("End")
+        scroll_to_end()
     # Ensure that summary updated
     expect(summary).to_have_text(re.compile("^Viewing rows \\d+ through 20 of 20$"))
 
 
-@pytest.mark.flaky(reruns=RERUNS)
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_full_width(page: Page, data_frame_app: ShinyAppProc, grid_container: Locator):
     page.goto(data_frame_app.url)
 
@@ -88,7 +100,7 @@ def test_full_width(page: Page, data_frame_app: ShinyAppProc, grid_container: Lo
     InputSwitch(page, "fullwidth").toggle()
 
 
-@pytest.mark.flaky(reruns=RERUNS)
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_table_switch(
     page: Page,
     data_frame_app: ShinyAppProc,
@@ -98,7 +110,7 @@ def test_table_switch(
     scroll_to_end: Callable[[], None],
 ):
     page.goto(data_frame_app.url)
-    select_dataset = InputSelectize(page, "dataset")
+    select_dataset = InputSelect(page, "dataset")
 
     scroll_to_end()
 
@@ -121,14 +133,14 @@ def test_table_switch(
     )
 
 
-@pytest.mark.flaky(reruns=RERUNS)
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_sort(
     page: Page,
     data_frame_app: ShinyAppProc,
     grid_container: Locator,
 ):
     page.goto(data_frame_app.url)
-    select_dataset = InputSelectize(page, "dataset")
+    select_dataset = InputSelect(page, "dataset")
     select_dataset.set("diamonds")
     select_dataset.expect.to_have_value("diamonds")
 
@@ -158,7 +170,7 @@ def test_sort(
     expect(first_cell_depth).to_have_text("67.6")
 
 
-@pytest.mark.flaky(reruns=RERUNS)
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_multi_selection(
     page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, snapshot: Any
 ):
@@ -188,12 +200,12 @@ def test_multi_selection(
     assert detail_text() == snapshot
 
 
-@pytest.mark.flaky(reruns=RERUNS)
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_single_selection(
     page: Page, data_frame_app: ShinyAppProc, grid_container: Locator, snapshot: Any
 ):
     page.goto(data_frame_app.url)
-    InputSelectize(page, "selection_mode").set("single")
+    InputSelect(page, "selection_mode").set("single")
     first_cell = grid_container.locator("tbody tr:first-child td:first-child")
 
     def detail_text():
@@ -333,7 +345,7 @@ def _filter_test_impl(
     expect(grid.locator("tbody tr")).to_have_count(5)
 
     # Ensure changing dataset resets filters
-    select_dataset = InputSelectize(page, "dataset")
+    select_dataset = InputSelect(page, "dataset")
     select_dataset.set("attention")
     select_dataset.expect.to_have_value("attention")
     expect(page.get_by_text("Unnamed: 0")).to_be_attached()

@@ -46,9 +46,9 @@ def input_action_button(
     :::
 
     See Also
-    -------
-    ~shiny.ui.input_action_link
-    ~shiny.reactive.event
+    --------
+    * :func:`~shiny.ui.input_action_link`
+    * :func:`~shiny.reactive.event`
     """
 
     if "_add_ws" not in kwargs:
@@ -100,9 +100,9 @@ def input_action_link(
     :::
 
     See Also
-    -------
-    ~shiny.ui.input_action_button
-    ~shiny.reactive.event
+    --------
+    * :func:`~shiny.ui.input_action_button`
+    * :func:`~shiny.reactive.event`
     """
 
     return tags.a(

@@ -7,11 +7,13 @@ from typing import Literal, Optional
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagList
 
 from ... import ui
+from ..._docstring import add_example, no_example
 from ...types import MISSING, MISSING_TYPE
 from ...ui._accordion import AccordionPanel
 from ...ui._card import CardItem
 from ...ui._layout_columns import BreakpointsUser
 from ...ui._navs import NavMenu, NavPanel, NavSet, NavSetBar, NavSetCard
+from ...ui._sidebar import SidebarOpenSpec, SidebarOpenValue
 from ...ui.css import CssUnit
 from .._recall_context import RecallContextManager
 
@@ -38,19 +40,21 @@ __all__ = (
 # ======================================================================================
 # Shiny layout components
 # ======================================================================================
+@add_example()
 def sidebar(
     *,
-    width: CssUnit = 250,
     position: Literal["left", "right"] = "left",
-    open: Literal["desktop", "open", "closed", "always"] = "always",
+    open: Optional[SidebarOpenSpec | SidebarOpenValue | Literal["desktop"]] = None,
+    width: CssUnit = 250,
     id: Optional[str] = None,
     title: TagChild | str = None,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
-    class_: Optional[str] = None,  # TODO-future; Consider using `**kwargs` instead
-    max_height_mobile: Optional[str | float] = "auto",
+    class_: Optional[str] = None,
+    max_height_mobile: Optional[str | float] = None,
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
+    **kwargs: TagAttrValue,
 ) -> RecallContextManager[ui.Sidebar]:
     """
     Context manager for sidebar element
@@ -62,20 +66,21 @@ def sidebar(
     width
         A valid CSS unit used for the width of the sidebar.
     position
-        Where the sidebar should appear relative to the main content.
+        Where the sidebar should appear relative to the main content, one of `"left"` or
+        `"right"`.
     open
-        The initial state of the sidebar.
+        The initial state of the sidebar. If a string, the possible values are:
 
-        * `"desktop"`: the sidebar starts open on desktop screen, closed on mobile
-        * `"open"` or `True`: the sidebar starts open
-        * `"closed"` or `False`: the sidebar starts closed
-        * `"always"` or `None`: the sidebar is always open and cannot be closed
+        * `"open"`: the sidebar starts open
+        * `"closed"`: the sidebar starts closed
+        * `"always"`: the sidebar is always open and cannot be closed
 
-        In :func:`~shiny.ui.update_sidebar`, `open` indicates the desired state of the
-        sidebar. Note that :func:`~shiny.ui.update_sidebar` can only open or close the
-        sidebar, so it does not support the `"desktop"` and `"always"` options.
+        Alternatively, you can provide a dictionary with keys `"desktop"` and `"mobile"`
+        to set different initial states for desktop and mobile. For example, when
+        `{"desktop": "open", "mobile": "closed"}` the sidebar is initialized in the
+        open state on desktop screens or in the closed state on mobile screens.
     id
-        A character string. Required if wanting to re-actively read (or update) the
+        A character string. Required if wanting to reactively read (or update) the
         `collapsible` state in a Shiny app.
     title
         A character title to be used as the sidebar title, which will be wrapped in a
@@ -90,8 +95,8 @@ def sidebar(
     max_height_mobile
         A CSS length unit (passed through :func:`~shiny.ui.css.as_css_unit`) defining
         the maximum height of the horizontal sidebar when viewed on mobile devices. Only
-        applies to always-open sidebars that use `open = "always"`, where by default the
-        sidebar container is placed below the main content container on mobile devices.
+        applies to always-open sidebars on mobile, where by default the sidebar
+        container is placed below the main content container on mobile devices.
     gap
         A CSS length unit defining the vertical `gap` (i.e., spacing) between elements
         provided to `*args`.
@@ -107,6 +112,8 @@ def sidebar(
           and right, and the third will be bottom.
         * If four, then the values will be interpreted as top, right, bottom, and left
           respectively.
+    **kwargs
+        Named attributes are supplied to the sidebar content container.
     """
     return RecallContextManager(
         ui.sidebar,
@@ -122,11 +129,13 @@ def sidebar(
             max_height_mobile=max_height_mobile,
             gap=gap,
             padding=padding,
+            **kwargs,
         ),
     )
 
 
 # TODO: Figure out sidebar arg for ui.layout_sidebar
+@add_example()
 def layout_sidebar(
     *,
     fillable: bool = True,
@@ -147,7 +156,7 @@ def layout_sidebar(
     This function wraps :func:`~shiny.ui.layout_sidebar`.
 
     Create a sidebar layout component which can be dropped inside any Shiny UI page
-    method (e.g. :func:`~shiny.shiny.ui.page_fillable`) or :func:`~shiny.ui.card`
+    method (e.g. :func:`~shiny.ui.page_fillable`) or :func:`~shiny.ui.card`
     context.
 
     The first child needs to be of class :class:`~shiny.ui.Sidebar` object created by
@@ -159,10 +168,10 @@ def layout_sidebar(
     ----------
     fillable
         Whether or not the main content area should be wrapped in a fillable container.
-        See :func:`~shiny.ui.as_fillable_container` for details.
+        See :func:`~shiny.ui.fill.as_fillable_container` for details.
     fill
         Whether or not the sidebar layout should be wrapped in a fillable container. See
-        :func:`~shiny.ui.as_fill_item` for details.
+        :func:`~shiny.ui.fill.as_fill_item` for details.
     bg,fg
         A background or foreground color.
     border
@@ -204,6 +213,7 @@ def layout_sidebar(
     )
 
 
+@add_example()
 def layout_column_wrap(
     *,
     width: CssUnit | None | MISSING_TYPE = MISSING,
@@ -286,6 +296,7 @@ def layout_column_wrap(
     )
 
 
+@add_example()
 def layout_columns(
     *,
     col_widths: BreakpointsUser[int] = None,
@@ -370,7 +381,7 @@ def layout_columns(
 
     See Also
     --------
-    * :func:`~shiny.express.layout.layout_column_wrap` for laying out elements into a
+    * :func:`~shiny.express.ui.layout_column_wrap` for laying out elements into a
       uniform grid.
 
     Reference
@@ -393,6 +404,7 @@ def layout_columns(
     )
 
 
+@add_example()
 def card(
     *,
     full_screen: bool = False,
@@ -452,6 +464,7 @@ def card(
     )
 
 
+@add_example()
 def card_header(
     *args: TagChild | TagAttrs,
     container: TagFunction = ui.tags.div,
@@ -487,6 +500,7 @@ def card_header(
     )
 
 
+@add_example()
 def card_footer(
     *args: TagChild | TagAttrs,
     **kwargs: TagAttrValue,
@@ -518,6 +532,7 @@ def card_footer(
     )
 
 
+@add_example()
 def accordion(
     *,
     id: Optional[str] = None,
@@ -572,6 +587,7 @@ def accordion(
     )
 
 
+@add_example()
 def accordion_panel(
     title: TagChild,
     *,
@@ -612,6 +628,7 @@ def accordion_panel(
 # ======================================================================================
 
 
+@no_example()
 def navset_tab(
     *,
     id: Optional[str] = None,
@@ -648,6 +665,7 @@ def navset_tab(
     )
 
 
+@no_example()
 def navset_pill(
     *,
     id: Optional[str] = None,
@@ -684,6 +702,7 @@ def navset_pill(
     )
 
 
+@no_example()
 def navset_underline(
     *,
     id: Optional[str] = None,
@@ -721,6 +740,7 @@ def navset_underline(
     )
 
 
+@add_example()
 def navset_hidden(
     *,
     id: Optional[str] = None,
@@ -757,6 +777,7 @@ def navset_hidden(
     )
 
 
+@no_example()
 def navset_card_tab(
     *,
     id: Optional[str] = None,
@@ -799,6 +820,7 @@ def navset_card_tab(
     )
 
 
+@no_example()
 def navset_card_pill(
     *,
     id: Optional[str] = None,
@@ -841,6 +863,7 @@ def navset_card_pill(
     )
 
 
+@no_example()
 def navset_card_underline(
     *,
     id: Optional[str] = None,
@@ -887,6 +910,7 @@ def navset_card_underline(
     )
 
 
+@no_example()
 def navset_pill_list(
     *,
     id: Optional[str] = None,
@@ -931,6 +955,7 @@ def navset_pill_list(
     )
 
 
+@no_example()
 def navset_bar(
     *,
     title: TagChild,
@@ -1029,6 +1054,7 @@ def navset_bar(
     )
 
 
+@add_example()
 def nav_panel(
     title: TagChild,
     *,
@@ -1063,6 +1089,7 @@ def nav_panel(
     )
 
 
+@no_example()
 def nav_control() -> RecallContextManager[NavPanel]:
     """
     Context manager for a control in the navigation container.
@@ -1072,6 +1099,7 @@ def nav_control() -> RecallContextManager[NavPanel]:
     return RecallContextManager(ui.nav_control)
 
 
+@no_example()
 def nav_menu(
     title: TagChild,
     *,
@@ -1114,11 +1142,13 @@ def nav_menu(
 # ======================================================================================
 # Value boxes
 # ======================================================================================
+@add_example()
 def value_box(
     *,
     showcase: Optional[TagChild] = None,
-    showcase_layout: ui._valuebox.SHOWCASE_LAYOUTS_STR
-    | ui.ShowcaseLayout = "left center",
+    showcase_layout: (
+        ui._valuebox.SHOWCASE_LAYOUTS_STR | ui.ShowcaseLayout
+    ) = "left center",
     full_screen: bool = False,
     theme: Optional[str | ui.ValueBoxTheme] = None,
     height: Optional[CssUnit] = None,
@@ -1199,6 +1229,7 @@ def value_box(
 # ======================================================================================
 
 
+@no_example()
 def panel_well(**kwargs: TagAttrValue) -> RecallContextManager[Tag]:
     """
     Context manager for a well panel
@@ -1216,6 +1247,7 @@ def panel_well(**kwargs: TagAttrValue) -> RecallContextManager[Tag]:
     )
 
 
+@add_example()
 def panel_conditional(
     condition: str,
     **kwargs: TagAttrValue,
@@ -1250,7 +1282,7 @@ def panel_conditional(
     Tip
     ---
     A more powerful (but slower) way to conditionally show UI content is to use
-    :func:`~shiny.render.ui`.
+    :class:`~shiny.render.ui`.
     """
     return RecallContextManager(
         ui.panel_conditional,
@@ -1259,6 +1291,7 @@ def panel_conditional(
     )
 
 
+@no_example()
 def panel_fixed(
     *,
     top: Optional[str] = None,
@@ -1286,8 +1319,8 @@ def panel_fixed(
         Arguments passed along to :func:`~shiny.ui.panel_absolute`.
 
     See Also
-    -------
-    :func:`~shiny.ui.panel_absolute`
+    --------
+    * :func:`~shiny.ui.panel_absolute`
     """
     return RecallContextManager(
         ui.panel_fixed,
@@ -1305,6 +1338,7 @@ def panel_fixed(
     )
 
 
+@add_example()
 def panel_absolute(
     *,
     top: Optional[str] = None,
@@ -1399,6 +1433,7 @@ def panel_absolute(
 # ======================================================================================
 
 
+@add_example()
 def tooltip(
     *,
     id: Optional[str] = None,
@@ -1437,6 +1472,7 @@ def tooltip(
     )
 
 
+@add_example()
 def popover(
     *,
     title: Optional[TagChild] = None,

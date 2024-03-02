@@ -20,8 +20,8 @@ app_ui = ui.page_fluid(
 # But it is possible to specify the type of the input value, by creating a subclass of
 # Inputs. We'll do that for input.n2() and input.checkbox():
 class ShinyInputs(Inputs):
-    n2: reactive.Value[int]
-    check: reactive.Value[bool]
+    n2: reactive.value[int]
+    check: reactive.value[bool]
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -32,7 +32,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     # The type checker knows that r() returns an int, which you can see if you hover
     # over it.
-    @reactive.Calc
+    @reactive.calc
     def r():
         if input.n() is None:
             return 0

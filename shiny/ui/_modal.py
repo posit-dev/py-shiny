@@ -12,13 +12,17 @@ from typing import Literal, Optional
 from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, div, tags
 
 from .._docstring import add_example
-from ..session import Session, require_active_session
+from ..session import require_active_session
+from ..session._session import Session
 from ..types import MISSING, MISSING_TYPE
 
 
+@add_example(ex_dir="../api-examples/modal")
 def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue) -> Tag:
     """
-    Creates a button that will dismiss a :func:`modal`. :func:`~shiny.ui.modal_button` is usually
+    Creates a button that will dismiss a :func:`~shiny.ui.modal`.
+
+    :func:`~shiny.ui.modal_button` is usually
     passed to the `footer` of a :func:`~shiny.ui.modal` to add a button to the footer that will close
     the :func:`~shiny.ui.modal`.
 
@@ -37,14 +41,10 @@ def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue)
         A UI element
 
     See Also
-    -------
-    ~shiny.ui.modal
-    ~shiny.ui.modal_show
-    ~shiny.ui.modal_remove
-
-    Example
-    -------
-    See :func:`modal`.
+    --------
+    * :func:`~shiny.ui.modal`
+    * :func:`~shiny.ui.modal_show`
+    * :func:`~shiny.ui.modal_remove`
     """
     return tags.button(
         icon,
@@ -102,10 +102,10 @@ def modal(
         A UI element
 
     See Also
-    -------
-    ~shiny.ui.modal_show
-    ~shiny.ui.modal_remove
-    ~shiny.ui.modal_button
+    --------
+    * :func:`~shiny.ui.modal_show`
+    * :func:`~shiny.ui.modal_remove`
+    * :func:`~shiny.ui.modal_button`
     """
 
     title_div = None
@@ -156,6 +156,7 @@ def modal(
     )
 
 
+@add_example(ex_dir="../api-examples/modal")
 def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     """
     Show a modal dialog.
@@ -166,25 +167,22 @@ def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     Parameters
     ----------
     modal
-        Typically a :func:`modal` instance.
+        Typically a :func:`~shiny.ui.modal` instance.
     session
         The :class:`~shiny.Session` instance to display the modal in. If not provided,
         the session is inferred via :func:`~shiny.session.get_current_session`.
 
     See Also
-    -------
-    ~shiny.ui.modal_remove
-    ~shiny.ui.modal
-
-    Example
-    -------
-    See :func:`modal`.
+    --------
+    * :func:`~shiny.ui.modal_remove`
+    * :func:`~shiny.ui.modal`
     """
     session = require_active_session(session)
     msg = session._process_ui(modal)
     session._send_message_sync({"modal": {"type": "show", "message": msg}})
 
 
+@add_example(ex_dir="../api-examples/modal")
 def modal_remove(session: Optional[Session] = None) -> None:
     """
     Remove a modal dialog box.
@@ -200,13 +198,9 @@ def modal_remove(session: Optional[Session] = None) -> None:
         provided, the session is inferred via :func:`~shiny.session.get_current_session`.
 
     See Also
-    -------
-    ~shiny.ui.modal_show
-    ~shiny.ui.modal
-
-    Example
-    -------
-    See :func:`modal`.
+    --------
+    * :func:`~shiny.ui.modal_show`
+    * :func:`~shiny.ui.modal`
     """
     session = require_active_session(session)
     session._send_message_sync({"modal": {"type": "remove", "message": None}})

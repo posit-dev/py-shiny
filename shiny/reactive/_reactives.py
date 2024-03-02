@@ -74,20 +74,22 @@ class Value(Generic[T]):
 
     Raises
     ------
-    ~shiny.types.SilentException
-        If :func:`~Value.get` is called before a value is provided/set.
+    :class:`~shiny.types.SilentException`
+        If :func:`~shiny.reactive.Value.get` is called before a value is provided/set.
 
     Note
     ----
     A reactive value may only be read from within a reactive function (e.g.,
     :func:`~shiny.reactive.calc`, :func:`~shiny.reactive.effect`,
-    :func:`shiny.render.text`, etc.) and, when doing so, the function takes a reactive
+    :class:`shiny.render.text`, etc.) and, when doing so, the function takes a reactive
     dependency on the value (i.e., when the value changes, the calling reactive function
     will re-execute).
 
     See Also
     --------
-    ~shiny.Inputs ~shiny.reactive.calc ~shiny.reactive.effect
+    * :class:`~shiny.Inputs`
+    * :func:`~shiny.reactive.calc`
+    * :func:`~shiny.reactive.effect`
     """
 
     # These overloads are necessary so that the following hold:
@@ -99,12 +101,10 @@ class Value(Generic[T]):
     @overload
     def __init__(
         self, value: MISSING_TYPE = MISSING, *, read_only: bool = False
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
-    def __init__(self, value: T, *, read_only: bool = False) -> None:
-        ...
+    def __init__(self, value: T, *, read_only: bool = False) -> None: ...
 
     # If `value` is MISSING, then `get()` will raise a SilentException, until a new
     # value is set. Calling `unset()` will set the value to MISSING.
@@ -130,7 +130,7 @@ class Value(Generic[T]):
 
         Raises
         ------
-        ~shiny.types.SilentException
+        :class:`~shiny.types.SilentException`
             If the value is not set.
         RuntimeError
             If called from outside a reactive function.
@@ -356,13 +356,11 @@ class CalcAsync_(Calc_[T]):
 
 
 @overload
-def calc(fn: CalcFunctionAsync[T]) -> CalcAsync_[T]:
-    ...
+def calc(fn: CalcFunctionAsync[T]) -> CalcAsync_[T]: ...
 
 
 @overload
-def calc(fn: CalcFunction[T]) -> Calc_[T]:
-    ...
+def calc(fn: CalcFunction[T]) -> Calc_[T]: ...
 
 
 # Note that the specified return type of this Calc() overload (with a `session`) isn't
@@ -388,8 +386,7 @@ def calc(fn: CalcFunction[T]) -> Calc_[T]:
 @overload
 def calc(
     *, session: "MISSING_TYPE | Session | None" = MISSING
-) -> Callable[[CalcFunction[T]], Calc_[T]]:
-    ...
+) -> Callable[[CalcFunction[T]], Calc_[T]]: ...
 
 
 @add_example()
@@ -428,11 +425,11 @@ def calc(
 
     See Also
     --------
-    ~shiny.Inputs
-    ~shiny.reactive.Value
-    ~shiny.reactive.effect
-    ~shiny.reactive.invalidate_later
-    ~shiny.reactive.event
+    * :class:`~shiny.Inputs`
+    * :class:`~shiny.reactive.Value`
+    * :func:`~shiny.reactive.effect`
+    * :func:`~shiny.reactive.invalidate_later`
+    * :func:`~shiny.reactive.event`
     """
 
     def create_calc(fn: CalcFunction[T] | CalcFunctionAsync[T]) -> Calc_[T]:
@@ -480,6 +477,15 @@ class Effect_:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
 
+        from ..express._mock_session import ExpressMockSession
+        from ..render.renderer import Renderer
+
+        if isinstance(fn, Renderer):
+            raise TypeError(
+                "`@reactive.effect` can not be combined with `@render.xx`.\n"
+                + "Please remove your call of `@reactive.effect`."
+            )
+
         # The EffectAsync subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
         # passed an async function, it will not change it.
@@ -506,6 +512,12 @@ class Effect_:
             # If no session is provided, autodetect the current session (this
             # could be None if outside of a session).
             session = get_current_session()
+
+        if isinstance(session, ExpressMockSession):
+            # If we're in an ExpressMockSession, then don't actually set up this effect
+            # -- we don't want it to try to run later.
+            return
+
         self._session = session
 
         if self._session is not None:
@@ -647,8 +659,7 @@ class Effect_:
 
 
 @overload
-def effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_:
-    ...
+def effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_: ...
 
 
 @overload
@@ -657,8 +668,7 @@ def effect(
     suspended: bool = False,
     priority: int = 0,
     session: "MISSING_TYPE | Session | None" = MISSING,
-) -> Callable[[EffectFunction | EffectFunctionAsync], Effect_]:
-    ...
+) -> Callable[[EffectFunction | EffectFunctionAsync], Effect_]: ...
 
 
 @add_example()
@@ -710,11 +720,11 @@ def effect(
 
     See Also
     --------
-    ~shiny.Inputs
-    ~shiny.reactive.Value
-    ~shiny.reactive.effect
-    ~shiny.reactive.invalidate_later
-    ~shiny.reactive.event
+    * :class:`~shiny.Inputs`
+    * :class:`~shiny.reactive.Value`
+    * :func:`~shiny.reactive.effect`
+    * :func:`~shiny.reactive.invalidate_later`
+    * :func:`~shiny.reactive.event`
     """
 
     def create_effect(fn: EffectFunction | EffectFunctionAsync) -> Effect_:
@@ -811,9 +821,9 @@ def event(
 
         # This is here instead of at the top of the .py file in order to avoid a
         # circular dependency.
-        from ..render.renderer import RendererBase
+        from ..render.renderer import Renderer
 
-        if isinstance(user_fn, RendererBase):
+        if isinstance(user_fn, Renderer):
             # At some point in the future, we may allow this condition, if we find an
             # use case. For now we'll disallow it, for simplicity.
             raise TypeError(

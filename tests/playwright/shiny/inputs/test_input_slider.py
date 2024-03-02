@@ -1,9 +1,9 @@
-from conftest import ShinyAppProc, create_doc_example_fixture
+from conftest import ShinyAppProc, create_doc_example_core_fixture
 from controls import InputSlider, OutputTextVerbatim
 from playwright.sync_api import Page, expect
 
-slider_app = create_doc_example_fixture("input_slider")
-template_app = create_doc_example_fixture("template")
+slider_app = create_doc_example_core_fixture("input_slider")
+template_app = create_doc_example_core_fixture("template")
 
 
 def test_input_slider_kitchen(page: Page, slider_app: ShinyAppProc) -> None:

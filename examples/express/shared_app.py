@@ -20,7 +20,7 @@ def histogram():
 ui.input_slider("n", "N", 1, 100, 50)
 
 
-@reactive.Effect
+@reactive.effect
 def _():
     shared.rv.set(input.n())
 
@@ -33,3 +33,9 @@ def rv_value():
 @render.text
 def text_data():
     return "shared.data = " + str(shared.data)
+
+
+# If another session changes the slider, make sure the slider also reflects that change.
+@reactive.effect
+def _():
+    ui.update_slider("n", value=shared.rv())

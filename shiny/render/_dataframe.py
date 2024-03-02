@@ -2,12 +2,22 @@ from __future__ import annotations
 
 import abc
 import json
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, cast, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Optional,
+    Protocol,
+    Union,
+    cast,
+    runtime_checkable,
+)
 
 from htmltools import Tag
 
 from .. import ui
-from .._docstring import add_example
+from .._docstring import add_example, no_example
+from ..session._utils import require_active_session
 from ._dataframe_unsafe import serialize_numpy_dtypes
 from .renderer import Jsonifiable, Renderer
 
@@ -17,13 +27,13 @@ if TYPE_CHECKING:
 
 class AbstractTabularData(abc.ABC):
     @abc.abstractmethod
-    def to_payload(self) -> Jsonifiable:
-        ...
+    def to_payload(self) -> Jsonifiable: ...
 
 
+@add_example(ex_dir="../api-examples/data_frame")
 class DataGrid(AbstractTabularData):
     """
-    Holds the data and options for a ``shiny.render.data_frame`` output, for a
+    Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
 
     Parameters
@@ -32,7 +42,7 @@ class DataGrid(AbstractTabularData):
         A pandas `DataFrame` object, or any object that has a `.to_pandas()` method
         (e.g., a Polars data frame or Arrow table).
     width
-        A _maximum_ amount of vertical space for the data grid to occupy, in CSS units
+        A _maximum_ amount of horizontal space for the data grid to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. The
         default is `fit-content`, which sets the grid's width according to its contents.
         Set this to `100%` to use the maximum available horizontal space.
@@ -40,7 +50,7 @@ class DataGrid(AbstractTabularData):
         A _maximum_ amount of vertical space for the data grid to occupy, in CSS units
         (e.g. `"400px"`) or as a number, which will be interpreted as pixels. If there
         are more rows than can fit in this space, the grid will scroll. Set the height
-        to `None` to allow the grid to grow to fit all of the rows (this is not
+        to `"auto"` to allow the grid to grow to fit all of the rows (this is not
         recommended for large data sets, as it may crash the browser).
     summary
         If `True` (the default), shows a message like "Viewing rows 1 through 10 of 20"
@@ -63,9 +73,9 @@ class DataGrid(AbstractTabularData):
 
     See Also
     --------
-    :func:`~shiny.ui.output_data_frame`
-    :func:`~shiny.render.data_frame`
-    :class:`~shiny.render.DataTable`
+    * :func:`~shiny.ui.output_data_frame`
+    * :class:`~shiny.render.data_frame`
+    * :class:`~shiny.render.DataTable`
     """
 
     def __init__(
@@ -73,7 +83,7 @@ class DataGrid(AbstractTabularData):
         data: object,
         *,
         width: str | float | None = "fit-content",
-        height: Union[str, float, None] = "500px",
+        height: Union[str, float, None] = None,
         summary: Union[bool, str] = True,
         filters: bool = False,
         row_selection_mode: Literal["none", "single", "multiple"] = "none",
@@ -103,13 +113,15 @@ class DataGrid(AbstractTabularData):
             filters=self.filters,
             row_selection_mode=self.row_selection_mode,
             style="grid",
+            fill=self.height is None,
         )
         return res
 
 
+@no_example()
 class DataTable(AbstractTabularData):
     """
-    Holds the data and options for a ``shiny.render.data_frame`` output, for a
+    Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
     spreadsheet-like view.
 
     Parameters
@@ -149,9 +161,9 @@ class DataTable(AbstractTabularData):
 
     See Also
     --------
-    :func:`~shiny.ui.output_data_frame`
-    :func:`~shiny.render.data_frame`
-    :class:`~shiny.render.DataGrid`
+    * :func:`~shiny.ui.output_data_frame`
+    * :class:`~shiny.render.data_frame`
+    * :class:`~shiny.render.DataGrid`
     """
 
     def __init__(
@@ -228,7 +240,7 @@ class data_frame(Renderer[DataFrameResult]):
         1. A :class:`~shiny.render.DataGrid` or :class:`~shiny.render.DataTable` object,
            which can be used to customize the appearance and behavior of the data frame
            output.
-        2. A pandas :class:`DataFrame` object. (Equivalent to
+        2. A pandas `DataFrame` object. (Equivalent to
            `shiny.render.DataGrid(df)`.)
         3. Any object that has a `.to_pandas()` method (e.g., a Polars data frame or
            Arrow table). (Equivalent to `shiny.render.DataGrid(df.to_pandas())`.)
@@ -236,8 +248,7 @@ class data_frame(Renderer[DataFrameResult]):
     Row selection
     -------------
     When using the row selection feature, you can access the selected rows by using the
-    `input.<id>_selected_rows()` function, where `<id>` is the `id` of the
-    :func:`~shiny.ui.output_data_frame`. The value returned will be `None` if no rows
+    `<data_frame_renderer>.input_selected_rows()` method, where `<data_frame_renderer>` is the render function name that corresponds with the `id=` used in :func:`~shiny.ui.outout_data_frame`. Internally, this method retrieves the selected row value from session's `input.<id>_selected_rows()` value. The value returned will be `None` if no rows
     are selected, or a tuple of integers representing the indices of the selected rows.
     To filter a pandas data frame down to the selected rows, use
     `df.iloc[list(input.<id>_selected_rows())]`.
@@ -256,8 +267,8 @@ class data_frame(Renderer[DataFrameResult]):
       objects you can return from the rendering function to specify options.
     """
 
-    def default_ui(self, id: str) -> Tag:
-        return ui.output_data_frame(id=id)
+    def auto_output_ui(self) -> Tag:
+        return ui.output_data_frame(id=self.output_id)
 
     async def transform(self, value: DataFrameResult) -> Jsonifiable:
         if not isinstance(value, AbstractTabularData):
@@ -269,12 +280,20 @@ class data_frame(Renderer[DataFrameResult]):
             )
         return value.to_payload()
 
+    def input_selected_rows(self) -> Optional[tuple[int]]:
+        """
+        When `row_selection_mode` is set to "single" or "multiple" this will return
+        a tuple of integers representing the rows selected by a user.
+        """
+
+        active_session = require_active_session(None)
+        return active_session.input[self.output_id + "_selected_rows"]()
+
 
 @runtime_checkable
 class PandasCompatible(Protocol):
     # Signature doesn't matter, runtime_checkable won't look at it anyway
-    def to_pandas(self) -> object:
-        ...
+    def to_pandas(self) -> object: ...
 
 
 def cast_to_pandas(x: object, error_message_begin: str) -> object:

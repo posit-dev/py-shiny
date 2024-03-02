@@ -6,7 +6,8 @@ from typing import Any
 import pytest
 
 from shiny import render, ui
-from shiny.express import suspend_display, ui_kwargs
+from shiny.express import output_args
+from shiny.express import ui as xui
 from shiny.express._run import run_express
 
 
@@ -16,9 +17,6 @@ def test_express_ui_is_complete():
     the item in `_known_missing`.
     These entries are in `_known_missing` in shiny/express/ui/__init__.py
     """
-
-    from shiny import ui
-    from shiny.express import ui as xui
 
     ui_all = set(ui.__all__)
     xui_all = set(xui.__all__)
@@ -50,36 +48,29 @@ def test_render_output_controls():
 
     assert (
         ui.TagList(text1.tagify()).get_html_string()
-        == ui.output_text_verbatim("text1").get_html_string()
+        == ui.output_text("text1").get_html_string()
     )
 
-    @suspend_display
-    @render.text
-    def text2():
-        return "text"
-
-    assert ui.TagList(text2.tagify()).get_html_string() == ""
-
-    @ui_kwargs(placeholder=True)
-    @render.text
-    def text3():
+    @output_args(placeholder=False)
+    @render.code
+    def code1():
         return "text"
 
     assert (
-        ui.TagList(text3.tagify()).get_html_string()
-        == ui.output_text_verbatim("text3", placeholder=True).get_html_string()
+        ui.TagList(code1.tagify()).get_html_string()
+        == ui.output_code("code1", placeholder=False).get_html_string()
     )
 
-    @ui_kwargs(width=100)
-    @render.text
-    def text4():
+    @output_args(width=100)
+    @render.code
+    def code2():
         return "text"
 
     with pytest.raises(TypeError, match="width"):
-        text4.tagify()
+        code2.tagify()
 
 
-def test_suspend_display():
+def test_hold():
     old_displayhook = sys.displayhook
     try:
         called = False
@@ -90,19 +81,19 @@ def test_suspend_display():
 
         sys.displayhook = display_hook_spy
 
-        with suspend_display():
+        with xui.hold():
             sys.displayhook("foo")
-        suspend_display(lambda: sys.displayhook("bar"))()
-
-        @suspend_display
-        def whatever(x: Any):
-            sys.displayhook(x)
-
-        whatever(100)
 
         assert not called
 
         sys.displayhook("baz")
+        assert called
+
+        called = False
+        with xui.hold() as held:
+            sys.displayhook("foo")
+        assert not called
+        sys.displayhook(held)
         assert called
 
     finally:

@@ -1,8 +1,8 @@
-from conftest import ShinyAppProc, create_doc_example_fixture
+from conftest import ShinyAppProc, create_doc_example_core_fixture
 from controls import InputRadioButtons
 from playwright.sync_api import Page, expect
 
-app = create_doc_example_fixture("input_radio_buttons")
+app = create_doc_example_core_fixture("input_radio_buttons")
 
 
 def test_input_checkbox_group_kitchen(page: Page, app: ShinyAppProc) -> None:

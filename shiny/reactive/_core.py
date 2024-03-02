@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Generator, Optional, Type
 
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
@@ -161,7 +161,7 @@ class ReactiveEnvironment:
             self._current_context.reset(old)
 
     def current_context(self) -> Context:
-        """Return the current Context object"""
+        """Return the current `Context` object"""
         ctx = self._current_context.get()
         if ctx is None:
             raise RuntimeError("No current reactive context")
@@ -224,7 +224,7 @@ def isolate() -> Generator[None, None, None]:
 
     See Also
     --------
-    ~shiny.reactive.event
+    * :func:`~shiny.reactive.event`
     """
     with _reactive_environment.isolate():
         yield
@@ -237,7 +237,7 @@ def get_current_context() -> Context:
     Returns
     -------
     :
-        A :class:`~Context`.
+        A `~shiny.reactive.Context` class.
 
     Raises
     ------
@@ -247,6 +247,7 @@ def get_current_context() -> Context:
     return _reactive_environment.current_context()
 
 
+@no_example()
 async def flush() -> None:
     """
     Run any pending invalidations (i.e., flush the reactive environment).
@@ -259,6 +260,7 @@ async def flush() -> None:
     await _reactive_environment.flush()
 
 
+@no_example()
 def on_flushed(
     func: Callable[[], Awaitable[None]], once: bool = False
 ) -> Callable[[], None]:
@@ -280,19 +282,21 @@ def on_flushed(
 
     See Also
     --------
-    flush
+    * :func:`~shiny.reactive.flush`
     """
 
     return _reactive_environment.on_flushed(func, once)
 
 
+@no_example()
 def lock() -> asyncio.Lock:
     """
     A lock that should be held whenever manipulating the reactive graph.
 
-    For example, :func:`~shiny.reactive.lock` makes it safe to set a :class:`~reactive.Value` and call
-    :func:`~shiny.reactive.flush` from a different :class:`~asyncio.Task` than the one that
-    is running the Shiny :class:`~shiny.Session`.
+    For example, :func:`~shiny.reactive.lock` makes it safe to set a
+    :class:`~reactive.value` and call :func:`~shiny.reactive.flush` from a different
+    :class:`~asyncio.Task` than the one that is running the Shiny
+    :class:`~shiny.Session`.
     """
     return _reactive_environment.lock
 
@@ -314,12 +318,13 @@ def invalidate_later(
 
     Note
     ----
-    When called within a reactive function (i.e., :func:`~reactive.effect`, :func:`~reactive.calc`,
-    :func:`render.ui`, etc.), that reactive context is invalidated (and re-executes)
-    after the interval has passed. The re-execution will reset the invalidation flag, so
-    in a typical use case, the object will keep re-executing and waiting for the
-    specified interval. It's possible to stop this cycle by adding conditional logic
-    that prevents the ``invalidate_later`` from being run.
+    When called within a reactive function (i.e., :func:`~shiny.reactive.effect`,
+    :func:`~shiny.reactive.calc`, :class:`shiny.render.ui`, etc.), that reactive context
+    is invalidated (and re-executes) after the interval has passed. The re-execution
+    will reset the invalidation flag, so in a typical use case, the object will keep
+    re-executing and waiting for the specified interval. It's possible to stop this
+    cycle by adding conditional logic that prevents the ``invalidate_later`` from being
+    run.
     """
 
     if isinstance(session, MISSING_TYPE):

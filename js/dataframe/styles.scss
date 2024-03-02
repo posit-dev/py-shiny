@@ -38,6 +38,10 @@
 
 .shiny-data-grid {
   max-width: 100%;
+  height: 500px;
+  &:not(.scrolling) {
+    height: auto;
+  }
 
   > table {
     border-collapse: separate;
@@ -196,5 +200,22 @@
     > table > tbody > tr > td:last-child {
       border-right-style: none;
     }
+  }
+}
+
+/* Center the table when inside of a card */
+.card-body .shiny-data-grid {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+
+/* When .shiny-data-grid is not scrolling, the containers shouldn't flex */
+shiny-data-frame {
+  &:has(> div > .shiny-data-grid:not(.scrolling)) {
+    flex: 0 0 auto;
+  }
+  > div:has(> .shiny-data-grid:not(.scrolling)) {
+    flex: 0 0 auto;
   }
 }

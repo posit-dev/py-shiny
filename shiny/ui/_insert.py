@@ -5,7 +5,8 @@ from typing import Literal, Optional
 from htmltools import TagChild
 
 from .._docstring import add_example
-from ..session import Session, require_active_session
+from ..session import require_active_session
+from ..session._session import Session
 
 
 @add_example()
@@ -25,10 +26,10 @@ def insert_ui(
     ui
         The UI object you want to insert. This can be anything that you usually put
         inside your app's UI function. If you're inserting multiple elements in one
-        call, make sure to wrap them in either a :func:`~shiny.ui.TagList` or a
+        call, make sure to wrap them in either a :func:`~htmltools.TagList` or a
         :func:`~shiny.ui.tags.div` (the latter option has the advantage that you can
         give it an id to make it easier to reference or remove it later on). If you want
-        to insert raw HTML, use :func:`~shiny.ui.HTML`.
+        to insert raw HTML, use :class:`~shiny.ui.HTML`.
     selector
         A string that is accepted by jQuery's selector (i.e. the string ``s`` to be
         placed in a ``$(s)`` jQuery call) which determines the element(s) relative to
@@ -54,17 +55,17 @@ def insert_ui(
     Note
     ----
     This function allows you to dynamically add arbitrary UI into your app, whenever you
-    want, as many times as you want. Unlike :func:`~shiny.render.ui`, the UI generated
+    want, as many times as you want. Unlike :class:`~shiny.render.ui`, the UI generated
     with `insert_ui` is persistent: once it's created, it stays there until removed by
-    :func:`remove_ui`. Each new call to `insert_ui` creates more UI objects, in addition
+    :func:`~shiny.ui.remove_ui`. Each new call to `insert_ui` creates more UI objects, in addition
     to the ones already there (all independent from one another). To update a part of
     the UI (ex: an input object), you must use the appropriate render function or a
     customized reactive function.
 
     See Also
     --------
-    ~shiny.ui.remove_ui
-    ~shiny.render.ui
+    * :func:`~shiny.ui.remove_ui`
+    * :class:`~shiny.render.ui`
     """
 
     session = require_active_session(session)
@@ -115,9 +116,9 @@ def remove_ui(
         :func:`~shiny.session.get_current_session`.
 
     See Also
-    -------
-    ~shiny.ui.insert_ui
-    ~shiny.render.ui
+    --------
+    * :func:`~shiny.ui.insert_ui`
+    * :class:`~shiny.render.ui`
     """
 
     session = require_active_session(session)
