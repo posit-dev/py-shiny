@@ -544,6 +544,9 @@ def package_dir(package: str) -> str:
 def import_module_from_path(module_name: str, path: Path):
     import importlib.util
 
+    if not path.is_absolute():
+        raise ValueError("Path must be absolute")
+
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Could not import module {module_name} from path: {path}")
