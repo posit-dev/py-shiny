@@ -33,7 +33,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.table
     def detail():
-        selected_rows = grid.input_selected_rows() or ()
+        selected_rows = input.grid_selected_rows() or ()
         if len(selected_rows) > 0:
             return df.iloc[list(selected_rows)]
 
