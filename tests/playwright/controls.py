@@ -1090,20 +1090,18 @@ class _MultipleDomItems:
         loc_container_orig = loc_container
 
         # Find all items in set
-        for i in range(len(arr)):
-            # Get ith element of type
-            loc_item.nth(i)
-            # # Make sure that element has the correct attribute value
-            # has_locator = has_locator.locator(
-            #     f"xpath=self::*[{_xpath_match_str(key, item)}]"
-            # )
-            #
-            # # Given the container, make sure it contains this locator
-            # loc_container = loc_container.locator(
-            #     # Return self
-            #     "xpath=.",
-            #     has=has_locator,
-            # )
+        xpath = f"""xpath=self::*[{
+            " or ".join([
+                _xpath_match_str(key, item)
+                for item in arr
+            ])
+        }]"""
+
+        loc_container = loc_container.locator(
+            # Return self
+            "xpath=.",
+            has=loc_item.locator(xpath),
+        )
 
         # Make sure other items are not in the set.
         # If we know all elements are contained in the container
