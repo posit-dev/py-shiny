@@ -64,13 +64,9 @@ def test_nav(page: Page, local_app: ShinyAppProc) -> None:
         element.expect_value("b")
         element.expect_content(nav_data[el_name]['verify'] + ": tab b content")
 
-    nav_list = [
-        "navset_tab", "navset_pill", "navset_underline", "navset_card_tab",
-        "navset_card_pill", "navset_card_underline", "navset_pill_list", "page_navbar"
-    ]
     failures = []
     # soft assert
-    for nav in nav_list:
+    for nav in list(nav_data.keys()):
         try:
             tester(nav)
         except Exception as e:
