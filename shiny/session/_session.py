@@ -36,19 +36,13 @@ from starlette.requests import HTTPConnection, Request
 from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 from starlette.types import ASGIApp
 
-from .._typing_extensions import NotRequired
-from ..types import Jsonifiable
-
-if TYPE_CHECKING:
-    from .._app import App
-
 from .. import _utils, reactive, render
 from .._connection import Connection, ConnectionClosed
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from .._namespaces import Id, ResolvedId, Root
-from .._typing_extensions import TypedDict
+from .._typing_extensions import NotRequired, TypedDict
 from .._utils import wrap_async
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
@@ -56,12 +50,16 @@ from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
 from ..render.renderer import Renderer, RendererT
 from ..types import (
+    Jsonifiable,
     SafeException,
     SilentCancelOutputException,
     SilentException,
     SilentOperationInProgressException,
 )
 from ._utils import RenderedDeps, read_thunk_opt, session_context
+
+if TYPE_CHECKING:
+    from .._app import App
 
 
 class ConnectionState(enum.Enum):
@@ -186,6 +184,10 @@ class Session(object, metaclass=SessionMeta):
         self.id: str = id
         self._conn: Connection = conn
         self._debug: bool = debug
+        self._message_handlers: dict[
+            str,
+            Callable[..., Awaitable[Jsonifiable]],
+        ] = self._create_message_handlers()
 
         # The HTTPConnection representing the WebSocket. This is used so that we can
         # query information about the request, like headers, cookies, etc.
@@ -215,10 +217,6 @@ class Session(object, metaclass=SessionMeta):
 
         self._outbound_message_queues = OutBoundMessageQueues()
 
-        self._message_handlers: dict[
-            str,
-            Callable[..., Awaitable[Jsonifiable]],
-        ] = self._create_message_handlers()
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
         self._has_run_session_end_tasks: bool = False
@@ -405,7 +403,7 @@ class Session(object, metaclass=SessionMeta):
             # TODO: handle `blobs`
             value = await func(*message["args"])
         except Exception as e:
-            await self._send_error_response(message, "Error: " + str(e))
+            await self._send_error_response(message, str(e))
             return
 
         await self._send_response(message, value)
@@ -418,45 +416,6 @@ class Session(object, metaclass=SessionMeta):
         self,
     ) -> dict[str, Callable[..., Awaitable[Jsonifiable]]]:
         # TODO-future; Make sure these methods work within MockSession
-
-        # TODO-barret; Move this to Outputs class
-        async def outputRPC(
-            outputId: str,
-            handler: str,
-            msg: object,
-        ) -> Jsonifiable:
-            """
-            Used to handle request messages from an Output Renderer.
-
-            Typically, this is used when an Output Renderer needs to set an input value.
-            E.g. a @render.data_frame result with a `mode="edit"` parameter will use
-            this to set the value of the data frame when a cell is edited.
-
-            The value returned by the handler is sent back to the client with the original unique id (`tag`).
-            """
-            # TODO-barret; can this be used right before calling the function?
-            with session_context(self):
-                if not (outputId in self.output._outputs):
-                    raise RuntimeError(
-                        f"Received request message for an unknown Output Renderer with id `{outputId}`"
-                    )
-
-                output_info = self.output._outputs[outputId]
-                renderer = output_info.renderer
-                handler = f"_handle_{handler}"
-                if not (
-                    hasattr(renderer, handler) and callable(getattr(renderer, handler))
-                ):
-                    raise RuntimeError(
-                        f"Output Renderer with id `{outputId}` does not have method `{handler}` to handler request message"
-                    )
-                try:
-                    return await getattr(renderer, handler)(msg)
-                except Exception as e:
-                    print(e)
-                    raise RuntimeError(
-                        f"Error while handling request message for Output Renderer with id `{outputId}`"
-                    )
 
         async def uploadInit(file_infos: list[FileInfo]) -> dict[str, Jsonifiable]:
             with session_context(self):
@@ -493,7 +452,6 @@ class Session(object, metaclass=SessionMeta):
             return None
 
         return {
-            "outputRPC": outputRPC,
             "uploadInit": uploadInit,
             "uploadEnd": uploadEnd,
         }
@@ -1104,6 +1062,58 @@ class Outputs:
         self._session = session
         self._ns = ns
         self._outputs = outputs
+
+        self._init_message_handlers()
+
+    def _init_message_handlers(self) -> None:
+        async def outputRPC(
+            outputId: str,
+            handler: str,
+            msg: object,
+        ) -> Jsonifiable:
+            """
+            Used to handle request messages from an Output Renderer.
+
+            Typically, this is used when an Output Renderer needs to set an input value.
+            E.g. a @render.data_frame result with a `mode="edit"` parameter will use
+            this to set the value of the data frame when a cell is edited.
+
+            The value returned by the handler is sent back to the client with the original unique id (`tag`).
+            """
+            if not (outputId in self._outputs):
+                raise RuntimeError(
+                    f"Received request message for an unknown Output Renderer with id `{outputId}`"
+                )
+
+            output_info = self._outputs[outputId]
+            renderer = output_info.renderer
+            handler = f"_handle_{handler}"
+            if not (
+                hasattr(renderer, handler) and callable(getattr(renderer, handler))
+            ):
+                raise RuntimeError(
+                    f"Output Renderer with id `{outputId}` does not have method `{handler}` to handler request message"
+                )
+
+            # Make a new session proxy if the output is namespaced;
+            # No need to make recursive proxies as the important part is a prefix exists
+            sessProxy = self._session
+            if "-" in outputId:
+                modPrefix, _ = outputId.rsplit("-", 1)
+                sessProxy = self._session.make_scope(modPrefix)
+            with session_context(sessProxy):
+                with isolate():
+                    try:
+                        # TODO-barret assert that the function has been marked as an outputRPC handler
+                        return await getattr(renderer, handler)(msg)
+                    except Exception as e:
+                        print("error: ", e)
+                        raise RuntimeError(
+                            f"Error while handling request message for Output Renderer with id `{outputId}`"
+                        )
+
+        # Add the message handler
+        self._session._message_handlers["outputRPC"] = outputRPC
 
     @overload
     def __call__(self, renderer: RendererT) -> RendererT:
