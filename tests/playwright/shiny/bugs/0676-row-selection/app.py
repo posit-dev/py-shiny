@@ -37,7 +37,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.table
     def detail():
-        selected_rows = cast(tuple[int], input.grid_selected_rows() or ())
+        selected_rows = cast("tuple[int]", input.grid_selected_rows() or ())
         if len(selected_rows) > 0:
             return df.iloc[list(selected_rows)]
 
