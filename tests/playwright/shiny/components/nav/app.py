@@ -91,7 +91,7 @@ def make_navset(
 
 
 app_ui = ui.page_navbar(
-    *nav_controls("page_navbar"),
+    *nav_controls("page_navbar()"),
     # bg="#0062cc",
     # inverse=True,
     id="page_navbar",
