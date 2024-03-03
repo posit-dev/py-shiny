@@ -5,6 +5,10 @@ inputs:
     description: 'Python version to use'
     required: false
     default: "3.11"
+  local:
+    description: 'If true, use `pip install -e .` instead of `make install`'
+    required: false
+    default: "false"
 runs:
   using: "composite"
   steps:
@@ -27,7 +31,14 @@ runs:
           pip install https://github.com/rstudio/py-htmltools/tarball/main
           make install-deps
 
-      - name: Install
+      - name: Install py-shiny using `make install`
+        if: ${{ inputs.local == 'false' }}
         shell: bash
         run: |
           make install
+      - name: Install py-shiny using `pip install -e`
+        if: ${{ inputs.local == 'true'}}
+        shell: bash
+        run: |
+          make clean
+          pip install -e .

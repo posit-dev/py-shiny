@@ -27,6 +27,7 @@ jobs:
         uses: ./.github/py-shiny/setup
         with:
           python-version: ${{ matrix.python-version }}
+          local: "true"
 
       - name: Run unit tests
         if: steps.install.outcome == 'success' && (success() || failure())
