@@ -35,28 +35,29 @@ if TYPE_CHECKING:
 DataFrameResult = Union[None, "pd.DataFrame", "DataGrid", "DataTable"]
 
 
-class OnCellUpdateFn(Protocol):
+class CellUpdateFn(Protocol):
     async def __call__(
         self,
         *,
-        row_index: int,
-        column_index: int,
-        value: str,
-        prev: str,
+        info: CellUpdateInfo,
+        # TODO-barret; Remove `**kwargs`
         **kwargs: Any,  # future proofing
     ) -> Any: ...
-class OnCellUpdateParams(TypedDict):
+
+
+class CellUpdateInfo(TypedDict):
     row_index: int
     column_index: int
     value: str
     prev: str
 
 
-class OnCellsUpdateFn(Protocol):
+class CellsUpdateFn(Protocol):
     async def __call__(
         self,
         *,
-        update_infos: list[OnCellUpdateParams],
+        infos: list[CellUpdateInfo],
+        # TODO-barret; Remove `**kwargs`
         **kwargs: Any,  # future proofing
     ) -> Any: ...
 @dataclass
@@ -403,8 +404,8 @@ class data_frame(Renderer[DataFrameResult]):
     _value: reactive.Value[DataFrameResult | None]
     # _data: reactive.Value[pd.DataFrame | None]
 
-    handle_cell_update: OnCellUpdateFn
-    handle_cells_update: OnCellsUpdateFn
+    handle_cell_update: CellUpdateFn
+    handle_cells_update: CellsUpdateFn
 
     cell_patches: reactive.Value[list[CellPatch]]
 
@@ -455,6 +456,7 @@ class data_frame(Renderer[DataFrameResult]):
 
         # Init
         self._value: reactive.Value[Union[DataFrameResult, None]] = reactive.Value(None)
+        self.cell_patches: reactive.Value[list[CellPatch]] = reactive.Value([])
 
         @reactive.calc
         def self_data() -> pd.DataFrame:
@@ -514,8 +516,6 @@ class data_frame(Renderer[DataFrameResult]):
 
         self.data_selected = self_data_selected
 
-        self.cell_patches: reactive.Value[list[CellPatch]] = reactive.Value([])
-
         @reactive.calc
         def self_data_patched() -> pd.DataFrame:
             data = self.data()
@@ -537,44 +537,46 @@ class data_frame(Renderer[DataFrameResult]):
             )
         return self._session
 
-    def on_cell_update(self, fn: OnCellUpdateFn) -> Self:
+    # TODO-barret; `on` sounds like a registration. Maybe use `set` instead? `set_cell_update_fn`?
+    def on_cell_update(self, fn: CellUpdateFn) -> Self:
         self.handle_cell_update = fn
         return self
 
-    def on_cells_update(self, fn: OnCellsUpdateFn) -> Self:
+    def on_cells_update(self, fn: CellsUpdateFn) -> Self:
         self.handle_cells_update = fn
         return self
 
     def _init_handlers(self) -> None:
         async def _on_cell_update_default(
             *,
-            row_index: int,
-            column_index: int,
-            value: str,
-            prev: str,
+            info: CellUpdateInfo,
+            # row_index: int,
+            # column_index: int,
+            # value: str,
+            # prev: str,
             **kwargs: Any,
         ) -> str:
-            return value
+            return info["value"]
 
         async def _on_cells_update_default(
             *,
-            update_infos: list[OnCellUpdateParams],
+            infos: list[CellUpdateInfo],
             **kwargs: Any,
         ):
             with reactive.isolate():
                 formatted_values: list[Any] = []
-                for update_info in update_infos:
-                    row_index = update_info["row_index"]
-                    column_index = update_info["column_index"]
-                    value = update_info["value"]
-                    prev = update_info["prev"]
+                for update_info in infos:
+                    # row_index = update_info["row_index"]
+                    # column_index = update_info["column_index"]
+                    # value = update_info["value"]
+                    # prev = update_info["prev"]
 
-                    formatted_value = await self.handle_cell_update(
-                        row_index=row_index,
-                        column_index=column_index,
-                        value=value,
-                        prev=prev,
-                    )
+                    formatted_value = await self.handle_cell_update(info=update_info)
+                    #     row_index=row_index,
+                    #     column_index=column_index,
+                    #     value=value,
+                    #     prev=prev,
+                    # )
                     # TODO-barret; check type here?
                     # TODO-barret; The return value should be coerced by pandas to the correct type
                     formatted_values.append(formatted_value)
@@ -587,43 +589,45 @@ class data_frame(Renderer[DataFrameResult]):
 
     # To be called by session's outputRPC message handler on this data_frame
     # Do not change this method unless you update corresponding code in `/js/dataframe/`!!
-    async def _handle_cells_update(self, update_infos: list[OnCellUpdateParams]):
-        with session_context(self._get_session()):
-            with reactive.isolate():
-                # Make new array to trigger reactive update
-                patches = [p for p in self.cell_patches()]
+    # @outputRPC_handler
+    async def _handle_cells_update(self, update_infos: list[CellUpdateInfo]):
 
-                # Call on_cells_update
-                formatted_values = await self.handle_cells_update(
-                    update_infos=update_infos
+        # if len(self.cell_patches()) > 1:
+        #     raise RuntimeError("Barret testing!")
+
+        # Make new array to trigger reactive update
+        patches = [p for p in self.cell_patches()]
+
+        # Call user's on_cells_update method to retrieve formatted values
+        # TODO-barret; REname `formatted` to `raw_values`
+        formatted_values = await self.handle_cells_update(infos=update_infos)
+
+        if len(formatted_values) != len(update_infos):
+            raise ValueError(
+                f"The return value of {self.output_id}'s `handle_cells_update()` (typically set by `@{self.output_id}.on_cells_update`) must be a list of the same length as the input list of cell updates. Received {len(formatted_values)} items and expected {len(update_infos)}."
+            )
+
+        # Add new patches
+        for formatted_value, update_info in zip(formatted_values, update_infos):
+            patches.append(
+                CellPatch(
+                    row_index=update_info["row_index"],
+                    column_index=update_info["column_index"],
+                    value=formatted_value,
+                    prev=update_info["prev"],
                 )
+            )
 
-                if len(formatted_values) != len(update_infos):
-                    raise ValueError(
-                        f"The return value of {self.output_id}'s `handle_cells_update()` (typically set by `@{self.output_id}.on_cells_update`) must be a list of the same length as the input list of cell updates. Received {len(formatted_values)} items and expected {len(update_infos)}."
-                    )
+        # Remove duplicate patches
+        patch_map: dict[tuple[int, int], CellPatch] = {}
+        for patch in patches:
+            patch_map[(patch.row_index, patch.column_index)] = patch
+        patches = list(patch_map.values())
 
-                # Add new patches
-                for formatted_value, update_info in zip(formatted_values, update_infos):
-                    patches.append(
-                        CellPatch(
-                            row_index=update_info["row_index"],
-                            column_id=update_info["column_id"],
-                            value=formatted_value,
-                            prev=update_info["prev"],
-                        )
-                    )
+        # Set new patches
+        self.cell_patches.set(patches)
 
-                # Remove duplicate patches
-                patch_map: dict[tuple[int, str], CellPatch] = {}
-                for patch in patches:
-                    patch_map[(patch.row_index, patch.column_id)] = patch
-                patches = list(patch_map.values())
-
-                # Set new patches
-                self.cell_patches.set(patches)
-
-                return formatted_values
+        return formatted_values
 
     def auto_output_ui(self) -> Tag:
         return ui.output_data_frame(id=self.output_id)
@@ -661,11 +665,10 @@ class data_frame(Renderer[DataFrameResult]):
     async def render(self) -> Jsonifiable:
         # Reset value
         self._value.set(None)
+        self.cell_patches.set([])
 
         value = await self.fn()
         if value is None:
-            # Quit early
-            self._value.set(None)
             return None
 
         if not isinstance(value, AbstractTabularData):

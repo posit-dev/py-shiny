@@ -3,10 +3,36 @@ from typing import Any
 import pandas as pd
 from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 
-from shiny import App, Inputs, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
+from shiny.render._dataframe import CellUpdateInfo
+
+# TODO-barret; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
+# TODO-barret-future; When "updating" data, try to maintain the scroll, filter info when a new `df` is supplied;
+
 
 # Load the dataset
-df = reactive.value(load_penguins_raw())
+penguins = load_penguins_raw()
+
+df1 = pd.DataFrame(data={"a": [1, 2]})
+df1.insert(1, "a", [3, 4], True)  # pyright: ignore
+
+df = penguins
+# df = df1
+
+
+# df = reactive.value(df1)df = reactive.value(load_penguins_raw())
+
+MOD_ID = "testing"
+
+
+@module.ui
+def mod_ui():
+    return ui.TagList(
+        ui.card(
+            ui.output_data_frame("summary_data"),
+            height="400px",
+        ),
+    )
 
 
 app_ui = ui.page_fillable(
@@ -14,67 +40,34 @@ app_ui = ui.page_fillable(
     # ui.markdown(
     #     "**Instructions**: Select one or more countries in the table below to see more information."
     # ),
-    ui.card(
-        ui.output_data_frame("summary_data"),
-        height="400px",
-    ),
-    ui.pre(id="barret"),
-    ui.tags.script(
-        """
-        // const window_console_log = console.log;
-        // console.log = function() {
-        //     window_console_log.apply(console, arguments);
-        //     let txt = "log - " + Date.now() + ": ";
-        //     for (let i = 0; i < arguments.length; i++) {
-        //         if (i > 0) txt += ", ";
-        //         txt += arguments[i];
-        //     }
-        //     $("#barret").append(txt + "\\n");
-        // };
-        const window_console_trace = console.trace;
-        console.trace = function() {
-            window_console_trace.apply(console, arguments);
-            let txt = "trace - " + Date.now() + ": ";
-            for (let i = 0; i < arguments.length; i++) {
-                if (i > 0) txt += ", ";
-                txt += arguments[i];
-            }
-            $("#barret").append(txt + "\\n");
-        };
-        const window_console_error = console.error;
-        console.error = function() {
-            window_console_error.apply(console, arguments);
-            let txt = "error - " + Date.now() + ": ";
-            for (let i = 0; i < arguments.length; i++) {
-                if (i > 0) txt += ", ";
-                txt += arguments[i];
-            }
-            $("#barret").append(txt + "\\n");
-        };
-        // console.log("Hello, World!");
-        // console.error("Hello, World!");
-        """
-    ),
+    mod_ui(MOD_ID),
 )
 
 
-def server(input: Inputs):
+@module.server
+def mod_server(input: Inputs, output: Outputs, session: Session):
     @render.data_frame
     def summary_data():
         # return df
-        return render.DataGrid(df(), mode="edit")
-        # return render.DataTable(df, row_selection_mode="multiple")
+        return render.DataGrid(df, mode="edit")
+        return render.DataTable(df, mode="edit")
 
     @summary_data.on_cell_update
     async def handle_edit(
         *,
-        row_index: int,
-        column_id: str,
-        value: str,
-        prev: str,
-        **kwargs: Any,
+        info: CellUpdateInfo,
+        # info: int,
+        # column_index: int,
+        # value: str,
+        # prev: str,
     ):
-        return "demo_" + value
+        return "demo_" + info["value"]
+
+    @reactive.effect
+    def _():
+        summary_data.data()
+        summary_data.data_patched()
+        print(summary_data.data_patched(), summary_data.cell_patches())
 
     # summary_data.data_patched()  # ~ patched_df()
 
@@ -152,4 +145,8 @@ def server(input: Inputs):
             # return df_copy
 
 
-app = App(app_ui, server)
+def server(input: Inputs, output: Outputs, session: Session):
+    mod_server(MOD_ID)
+
+
+app = App(app_ui, server, debug=False)
