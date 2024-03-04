@@ -28,20 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Closed #1079: For Shiny Express apps, automatically run a `globals.py` file in the same directory as the app file, if it exists. The code in `globals.py` will be run with the session context set to `None`. (#1172)
 
-### Other changes
-
-* `@render.data_frame` now properly fills its container by default. (#1126)
-
-* We improved the accessibility of the full screen toggle button in cards created with `ui.card(full_screen=True)`. Full-screen cards are now also supported on mobile devices. (#1129)
-
-* When entering and exiting full-screen card mode, Shiny now emits a client-side custom `bslib.card` event that JavaScript-oriented users can use to react to the full screen state change. (#1129)
-
-* The sidebar's collapse toggle now has a high `z-index` value to ensure it always appears above elements in the main content area of `ui.layout_sidebar()`. The sidebar overlay also now receives the same high `z-index` on mobile layouts. (#1129)
-
-* Updated example apps to use lower-case versions of `reactive.Calc`->`reactive.calc`, `reactive.Effect`->`reactive.effect`, and `reactive.Value`->`reactive.value`. (#1164)
-
-* Closed #1081: The `@expressify()` function now has an option `has_docstring`. This allows the decorator to be used with functions that contain a docstring. (#1163)
-
 ### Bug fixes
 
 * Fixed `input_task_button` not working in a Shiny module. (#1108)
@@ -55,6 +41,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed #1138: An empty value in a date or date range input would cause an error; now it is treated as `None`. (#1139)
 
 ### Other changes
+
+* `@render.data_frame` now properly fills its container by default. (#1126)
+
+* We improved the accessibility of the full screen toggle button in cards created with `ui.card(full_screen=True)`. Full-screen cards are now also supported on mobile devices. (#1129)
+
+* When entering and exiting full-screen card mode, Shiny now emits a client-side custom `bslib.card` event that JavaScript-oriented users can use to react to the full screen state change. (#1129)
+
+* The sidebar's collapse toggle now has a high `z-index` value to ensure it always appears above elements in the main content area of `ui.layout_sidebar()`. The sidebar overlay also now receives the same high `z-index` on mobile layouts. (#1129)
+
+* Updated example apps to use lower-case versions of `reactive.Calc`->`reactive.calc`, `reactive.Effect`->`reactive.effect`, and `reactive.Value`->`reactive.value`. (#1164)
+
+* Closed #1081: The `@expressify()` function now has an option `has_docstring`. This allows the decorator to be used with functions that contain a docstring. (#1163)
 
 * Replaced use of `sys.stderr.write()` with `print(file=sys.stderr)`, because on some platforms `sys.stderr` can be `None`. (#1131)
 
