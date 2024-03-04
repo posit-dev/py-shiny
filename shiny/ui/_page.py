@@ -88,7 +88,15 @@ def page_sidebar(
     """
 
     if isinstance(title, str):
-        title = tags.h1(title, class_="bslib-page-title")
+        title = tags.h1(title, class_="bslib-page-title navbar-brand")
+
+    if title is not None:
+        navbar_title = tags.div(
+            tags.div(title, class_="container-fluid"),
+            class_="navbar navbar-static-top",
+        )
+    else:
+        navbar_title = None
 
     if not isinstance(sidebar, Sidebar):
         raise TypeError(
@@ -103,7 +111,7 @@ def page_sidebar(
 
     return page_fillable(
         {"class": "bslib-page-sidebar"},
-        title,
+        navbar_title,
         layout_sidebar(
             sidebar,
             *children,
