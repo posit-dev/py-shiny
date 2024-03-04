@@ -107,6 +107,7 @@ jobs:
           make playwright-examples SUB_FILE=". -vv"
 
   playwright-deploys:
+    if: github.event_name != 'release'
     # Only allow one `playwright-deploys` job to run at a time. (Independent of branch / PR)
     concurrency: playwright-deploys
     runs-on: ${{ matrix.os }}
