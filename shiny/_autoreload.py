@@ -8,17 +8,18 @@ import os
 import secrets
 import threading
 import webbrowser
-from typing import Callable, Optional, cast
+from typing import TYPE_CHECKING, Callable, Optional, cast
 
-import starlette.types
-from asgiref.typing import (
-    ASGI3Application,
-    ASGIReceiveCallable,
-    ASGISendCallable,
-    ASGISendEvent,
-    HTTPResponseStartEvent,
-    Scope,
-)
+if TYPE_CHECKING:
+    import starlette.types
+    from asgiref.typing import (
+        ASGI3Application,
+        ASGIReceiveCallable,
+        ASGISendCallable,
+        ASGISendEvent,
+        HTTPResponseStartEvent,
+        Scope,
+    )
 
 from ._hostenv import get_proxy_url
 
