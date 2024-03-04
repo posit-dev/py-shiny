@@ -35,10 +35,12 @@ runs:
         if: ${{ inputs.local == 'false' }}
         shell: bash
         run: |
+          echo "Installing py-shiny using make install"
           make install
       - name: Install py-shiny using `pip install -e`
         if: ${{ inputs.local == 'true'}}
         shell: bash
         run: |
+          echo "Installing py-shiny using pip install -e ."
           make clean
           pip install -e .
