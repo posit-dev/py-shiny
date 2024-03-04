@@ -8,9 +8,6 @@ This directory contains files to generate Shiny for Python API documentation, us
 To build the docs, first install the Python dependencies and Quarto extensions:
 
 ```bash
-# Install development version of htmltools (do this if you are using a development version of shiny)
-make dev-htmltools
-
 # Install build dependencies
 make deps
 ```

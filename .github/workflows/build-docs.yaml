@@ -34,7 +34,6 @@ jobs:
         run: |
           cd docs
           make ../venv
-          . ../venv/bin/activate && pip install https://github.com/posit-dev/py-htmltools/tarball/main https://github.com/posit-dev/py-shinylive/tarball/main
           make deps
 
       - name: Run quartodoc
