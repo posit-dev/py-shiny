@@ -224,6 +224,11 @@ async def _coro_main(
     ) -> Optional[tuple[http.HTTPStatus, websockets.datastructures.HeadersLike, bytes]]:
         # If there's no Upgrade header, it's not a WebSocket request.
         if request_headers.get("Upgrade") is None:
+            # For some unknown reason, this fixes a tendency on GitHub Codespaces to
+            # correctly proxy through this request, but give a 404 when the redirect is
+            # followed and app_url is requested. With the sleep, both requests tend to
+            # succeed reliably.
+            await asyncio.sleep(1)
             return (http.HTTPStatus.MOVED_PERMANENTLY, [("Location", app_url)], b"")
 
     async with websockets.serve(
