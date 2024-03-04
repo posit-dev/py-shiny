@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Closed #1178: Removed run-time dependency on asgiref. (#1183)
 
+* The uvicorn and click packages are no longer needed when running on Emscripten. (#1187)
+
 ## [0.8.0] - 2024-03-04
 
 ### Breaking Changes
