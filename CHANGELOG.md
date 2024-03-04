@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED] - YYYY-MM-DD
 
+### Breaking Changes
+
+* `ui.page_sidebar()` now places the `title` element in a `.navbar` container that matches the structure of `page_navbar()`. This ensures that the title elements of `page_sidebar()` and `page_navbar()` have consistent appearance. (#1176)
+
+### Other changes
+
+* We adjusted the shadows used for cards and popovers. Cards now use a slightly smaller shadow and the same shadow style is also now used by popovers. (#1176)
+
+* We increased the spacing between elements just slightly. This change is most noticeable in the `layout_columns()` or `layout_column_wrap()` component. In these and other components, you can use `gap` and `padding` arguments to choose your own values, or you can set the `$bslib-spacer` (Sass) or `--bslib-spacer` (CSS) variable. (#1176)
+
+### Bug fixes
+
+* Fixed the CSS for `ui.output_ui()` to avoid unwanted double padding when its parent container uses `gap` for spacing multiple elements (e.g., `ui.layout_columns()`, `ui.page_fillable()`, etc). (#1176)
 
 ## [0.8.0] - 2024-03-04
 
