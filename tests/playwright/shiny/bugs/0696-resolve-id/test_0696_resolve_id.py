@@ -109,6 +109,7 @@ def expect_default_outputs(page: Page, module_id: str):
 # Sidebars do not seem to work on webkit. Skipping test on webkit
 @pytest.mark.skip_browser("webkit")
 def test_module_support(page: Page, local_app: ShinyAppProc) -> None:
+    page.set_viewport_size({"width": 3000, "height": 6000})
     page.goto(local_app.url)
 
     # Verify reset state
