@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED] - YYYY-MM-DD
 
+### Breaking Changes
+
+### New features
+
+### Bug fixes
+
+### Other changes
+
+* Closed #1178: Removed run-time dependency on asgiref. (#1183)
 
 ## [0.8.0] - 2024-03-04
 
