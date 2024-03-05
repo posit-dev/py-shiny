@@ -106,7 +106,7 @@ quartodoc:
         - name: express.ui.update_slider
           dynamic: true
         - express.ui.update_dark_mode
-        - ui.update_date
+        - express.ui.update_date
         - name: express.ui.update_date_range
           dynamic: true
         - name: express.ui.update_checkbox
@@ -119,7 +119,7 @@ quartodoc:
           dynamic: true
         - name: express.ui.update_numeric
           dynamic: true
-        - ui.update_text
+        - express.ui.update_text
         - name: express.ui.update_text_area
           dynamic: "shiny.ui.update_text"
         - name: express.ui.update_navs
