@@ -104,7 +104,9 @@ class InjectAutoreloadMiddleware:
             )
         # The starlette types and the asgiref types are compatible, but we'll use the
         # latter internally. See the note in the __call__ method for more details.
-        self.app = cast(ASGI3Application, app)
+        if TYPE_CHECKING:
+            app = cast(ASGI3Application, app)
+        self.app = app
         ws_url = autoreload_url()
         self.script = (
             f"""  <script src="__shared/shiny-autoreload.js" data-ws-url="{html.escape(ws_url)}"></script>
@@ -125,13 +127,15 @@ class InjectAutoreloadMiddleware:
         # more rigorous. In the call interface, we accept both types for compatibility
         # with both. But internally we'll use the more rigorous types.
         # See https://github.com/encode/starlette/blob/39dccd9/docs/middleware.md#type-annotations
-        scope = cast(Scope, scope)
-        receive_casted = cast(ASGIReceiveCallable, receive)
-        send_casted = cast(ASGISendCallable, send)
+        if TYPE_CHECKING:
+            scope = cast(Scope, scope)
+            receive = cast(ASGIReceiveCallable, receive)
+            send = cast(ASGISendCallable, send)
+
         if scope["type"] != "http":
-            return await self.app(scope, receive_casted, send_casted)
+            return await self.app(scope, receive, send)
         if scope["path"] != "/" or len(self.script) == 0:
-            return await self.app(scope, receive_casted, send_casted)
+            return await self.app(scope, receive, send)
 
         def mangle_callback(body: bytes) -> tuple[bytes, bool]:
             if b"</head>" in body:
@@ -139,8 +143,8 @@ class InjectAutoreloadMiddleware:
             else:
                 return (body, False)
 
-        mangler = ResponseMangler(send_casted, mangle_callback)
-        await self.app(scope, receive_casted, mangler.send)
+        mangler = ResponseMangler(send, mangle_callback)
+        await self.app(scope, receive, mangler.send)
 
 
 # PARENT PROCESS ------------------------------------------------------------
