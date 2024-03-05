@@ -212,15 +212,18 @@ ignored <- lapply(woff_files, function(woff_file) {
   }
 })
 
+# ------------------------------------------------------------------------------
 message("Render shiny.min.css with bs_theme()")
 with_sass_options <- withr::with_(function(x) rlang::exec(sass::sass_options_set, !!!x))
 
+sass_opts_minify <- list(
+  output_style = "compressed",
+  source_comments = FALSE,
+  source_map_embed = FALSE
+)
+
 shiny_css_dep <- with_sass_options(
-  list(
-    output_style = "compressed",
-    source_comments = FALSE,
-    source_map_embed = FALSE
-  ),
+  sass_opts_minify,
   shiny:::shinyDependencyCSS(shiny_theme)
 )
 shiny_css_bslib <- fs::path(shiny_css_dep$src$file, shiny_css_dep$stylesheet)
@@ -233,6 +236,22 @@ writeLines(
   con = shiny_css_shared
 )
 
+message("Render selectize.min.js with bs_theme()")
+selectize_css_dep <- with_sass_options(
+  sass_opts_minify,
+  shiny:::selectizeDependencyFunc(shiny_theme)
+)
+selectize_css_bslib <- fs::path(
+  selectize_css_dep$src$file,
+  selectize_css_dep$stylesheet
+)
+selectize_shared <- fs::path(www_shared, "selectize", "css")
+fs::file_delete(fs::path(selectize_shared, "selectize.bootstrap3.css"))
+fs::file_copy(
+  selectize_css_bslib,
+  fs::path(selectize_shared, "selectize.min.css"),
+  overwrite = TRUE
+)
 
 # ------------------------------------------------------------------------------
 message("Cleanup bootstrap bundle")

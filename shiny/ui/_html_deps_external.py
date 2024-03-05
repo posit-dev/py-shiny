@@ -76,8 +76,7 @@ def selectize_deps() -> HTMLDependency:
             {"src": "js/selectize.min.js"},
             {"src": "accessibility/js/selectize-plugin-a11y.min.js"},
         ],
-        # TODO: pre-compile the Bootstrap 5 version?
-        stylesheet={"href": "css/selectize.bootstrap3.css"},
+        stylesheet={"href": "css/selectize.min.css"},
     )
 
 
