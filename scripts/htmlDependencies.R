@@ -206,6 +206,27 @@ ignored <- lapply(woff_files, function(woff_file) {
   }
 })
 
+message("Render shiny.min.css with bs_theme()")
+with_sass_options <- withr::with_(function(x) rlang::exec(sass::sass_options_set, !!!x))
+
+shiny_css_dep <- with_sass_options(
+  list(
+    output_style = "compressed",
+    source_comments = FALSE,
+    source_map_embed = FALSE
+  ),
+  shiny:::shinyDependencyCSS(shiny_theme)
+)
+shiny_css_bslib <- fs::path(shiny_css_dep$src$file, shiny_css_dep$stylesheet)
+shiny_css_shared <- fs::path(www_shared, "shiny.min.css")
+writeLines(
+  c(
+    readLines(shiny_css_shared, n = 1), # keep header of original minified css
+    readLines(shiny_css_bslib)
+  ),
+  con = shiny_css_shared
+)
+
 
 # ------------------------------------------------------------------------------
 message("Cleanup bootstrap bundle")
