@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Shiny now compiles the Bootstrap 5-based stylesheets for component styles imported from https://github.com/rstudio/shiny. (#1191)
+
 ### Other changes
 
 * Closed #1178: Removed run-time dependency on asgiref. (#1183)
