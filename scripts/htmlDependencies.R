@@ -1,7 +1,9 @@
 #!/usr/bin/env Rscript
 
 if (requireNamespace("cli", quietly = TRUE)) {
-  message <- function(...) cli::cli_progress_step(paste0(...))
+  message <- function(..., .envir = parent.frame()) {
+    cli::cli_progress_step(paste0(...), .envir = .envir)
+  }
 }
 
 message("Checking for node / npm")
