@@ -1,5 +1,9 @@
 #!/usr/bin/env Rscript
 
+if (requireNamespace("cli", quietly = TRUE)) {
+  message <- function(...) cli::cli_progress_step(paste0(...))
+}
+
 message("Checking for node / npm")
 if (Sys.which("npm")[["npm"]] == "") {
   stop("Please install node / npm before running script")
