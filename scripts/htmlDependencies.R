@@ -253,6 +253,22 @@ fs::file_copy(
   overwrite = TRUE
 )
 
+message("Render datepicker.min.css with bs_theme()")
+datepicker_css_dep <- with_sass_options(
+  sass_opts_minify,
+  shiny:::datePickerCSS(shiny_theme)
+)
+datepicker_css_bslib <- fs::path(
+  datepicker_css_dep$src$file,
+  datepicker_css_dep$stylesheet
+)
+datepicker_shared <- fs::path(www_shared, "datepicker", "css")
+fs::file_copy(
+  datepicker_css_bslib,
+  fs::path(datepicker_shared, "bootstrap-datepicker3.min.css"),
+  overwrite = TRUE
+)
+
 # ------------------------------------------------------------------------------
 message("Cleanup bootstrap bundle")
 # This additional bs3compat HTMLDependency() only holds

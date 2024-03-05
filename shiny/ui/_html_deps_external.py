@@ -57,7 +57,6 @@ def datepicker_deps() -> HTMLDependency:
         name="bootstrap-datepicker",
         version="1.9.0",
         source={"package": "shiny", "subdir": "www/shared/datepicker/"},
-        # TODO: pre-compile the Bootstrap 5 version?
         stylesheet={"href": "css/bootstrap-datepicker3.min.css"},
         script={"src": "js/bootstrap-datepicker.min.js"},
         # Need to enable noConflict mode. See #1346.
