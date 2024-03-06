@@ -374,11 +374,11 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const headerRowCount = table.getHeaderGroups().length;
 
   // Assume we're scrolling until proven otherwise
-  let scrollingClass = "scrolling";
+  let scrollingClass = "";
   const scrollHeight = containerRef.current?.scrollHeight;
   const clientHeight = containerRef.current?.clientHeight;
-  if (scrollHeight && clientHeight && scrollHeight <= clientHeight) {
-    scrollingClass = "";
+  if (scrollHeight && clientHeight && scrollHeight > clientHeight) {
+    scrollingClass = "scrolling";
   }
 
   const makeHeaderKeyDown =
