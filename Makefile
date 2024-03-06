@@ -124,6 +124,9 @@ playwright-examples: install-playwright ## end-to-end tests on examples with pla
 playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed
 	pytest -c tests/playwright/playwright-pytest.ini tests/playwright/$(SUB_FILE)
 
+playwright-show-trace: ## Show trace of failed tests
+	npx playwright show-trace test-results/*/trace.zip
+
 testrail-junit: install-playwright install-trcli ## end-to-end tests with playwright and generate junit report
 	pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml
 

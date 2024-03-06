@@ -73,6 +73,12 @@ jobs:
         timeout-minutes: 20
         run: |
           make playwright-shiny SUB_FILE=". -vv"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: "playright-shiny-${{ matrix.os }}-${{ matrix.python-version }}-results"
+          path: test-results/
+          retention-days: 5
 
   playwright-examples:
     runs-on: ${{ matrix.os }}
@@ -105,6 +111,12 @@ jobs:
         timeout-minutes: 20
         run: |
           make playwright-examples SUB_FILE=". -vv"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: "playright-examples-${{ matrix.os }}-${{ matrix.python-version }}-results"
+          path: test-results/
+          retention-days: 5
 
   playwright-deploys:
     if: github.event_name != 'release'
@@ -146,6 +158,13 @@ jobs:
         # we can have many local processes waiting for deployment to finish
         run: |
           make playwright-deploys SUB_FILE=". -vv --numprocesses 12"
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: "playright-deploys-${{ matrix.os }}-${{ matrix.python-version }}-results"
+          path: test-results/
+          retention-days: 5
 
   pypi:
     name: "Deploy to PyPI"
