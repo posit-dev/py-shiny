@@ -1,5 +1,3 @@
-from typing import Any
-
 import pandas as pd
 from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 

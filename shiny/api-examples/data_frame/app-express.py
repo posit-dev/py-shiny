@@ -3,7 +3,7 @@ import plotly.express as px
 from shinywidgets import render_widget
 
 from shiny import reactive, req
-from shiny.express import input, render, ui
+from shiny.express import render, ui
 
 # Load the Gapminder dataset
 df = px.data.gapminder()
