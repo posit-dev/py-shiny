@@ -20,7 +20,7 @@ def histogram():
 ui.input_slider("n", "N", 1, 100, 50)
 
 
-@reactive.Effect
+@reactive.effect
 def _():
     shared.rv.set(input.n())
 

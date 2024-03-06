@@ -59,13 +59,13 @@ def server(input, output, session):
             height="100%",
         )
 
-    @reactive.Calc
+    @reactive.calc
     def filtered_df():
-        req(summary_data.input_selected_rows())
+        req(input.summary_data_selected_rows())
 
         # input.summary_data_selected_rows() is a tuple, so we must convert it to list,
         # as that's what Pandas requires for indexing.
-        selected_idx = list(summary_data.input_selected_rows())
+        selected_idx = list(input.summary_data_selected_rows())
         countries = summary_df.iloc[selected_idx]["country"]
         # Filter data for selected countries
         return df[df["country"].isin(countries)]
@@ -116,7 +116,7 @@ def synchronize_size(output_id):
     def wrapper(func):
         input = session.get_current_session().input
 
-        @reactive.Effect
+        @reactive.effect
         def size_updater():
             func(
                 input[f".clientdata_output_{output_id}_width"](),

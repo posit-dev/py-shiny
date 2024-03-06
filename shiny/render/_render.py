@@ -30,7 +30,7 @@ from .. import ui as _ui
 from .._docstring import add_example, no_example
 from .._namespaces import ResolvedId
 from .._typing_extensions import Self
-from ..express._mock_session import MockSession
+from ..express._mock_session import ExpressMockSession
 from ..session import get_current_session, require_active_session
 from ..session._session import DownloadHandler, DownloadInfo
 from ..types import MISSING, MISSING_TYPE, ImgData
@@ -605,9 +605,27 @@ class ui(Renderer[TagChild]):
 # ======================================================================================
 # RenderDownload
 # ======================================================================================
+@add_example(ex_dir="../api-examples/download")
 class download(Renderer[str]):
     """
     Decorator to register a function to handle a download.
+
+    This decorator is used to register a function that will be called when the user
+    clicks a download link or button. The decorated function may be sync or async, and
+    should do one of the following:
+
+    * Return a string. This will be assumed to be a filename; Shiny will return this
+      file to the browser, and the downloaded file will have the same filename as the
+      original, with an inferred mime type. This is the most convenient IF the file
+      already exists on disk. But if the function must create a temporary file, then
+      this method should not be used, because the temporary file will not be deleted by
+      Shiny. Use the `yield` method instead.
+    * `yield` one or more strings or bytestrings (`b"..."` or
+      `io.BytesIO().getvalue()`). If strings are yielded, they'll be encoded in UTF-8.
+      (This is better for temp files as after you're done yielding you can delete the
+      temp file, or use a tempfile.TemporaryFile context manager) With this method, it's
+      important that the `@render.download` decorator have a `filename` argument, as the
+      decorated function won't help with that.
 
     Parameters
     ----------
@@ -628,6 +646,7 @@ class download(Renderer[str]):
     See Also
     --------
     * :func:`~shiny.ui.download_button`
+    * :func:`~shiny.ui.download_link`
     """
 
     def auto_output_ui(self) -> Tag:
@@ -690,7 +709,7 @@ class download(Renderer[str]):
         # not being None is because in Express, when the UI is rendered, this function
         # `render.download()()`  called once before any sessions have been started.
         session = get_current_session()
-        if session is not None and not isinstance(session, MockSession):
+        if session is not None and not isinstance(session, ExpressMockSession):
             session._downloads[self.output_id] = DownloadInfo(
                 filename=self.filename,
                 content_type=self.media_type,

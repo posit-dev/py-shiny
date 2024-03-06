@@ -1,21 +1,33 @@
 from __future__ import annotations
 
 import textwrap
-from typing import Awaitable, Callable, cast
+from typing import TYPE_CHECKING, Awaitable, Callable, cast
 
 from .._namespaces import Root
 from ..session import Inputs, Outputs, Session
 
-all = ("MockSession",)
+if TYPE_CHECKING:
+    from ._run import AppOpts
+
+all = ("ExpressMockSession",)
 
 
-# A very bare-bones mock session class that is used only in shiny.express's UI rendering
-# phase.
-class MockSession:
+class ExpressMockSession:
+    """
+    A very bare-bones mock session class that is used only in shiny.express's UI
+    rendering phase.
+
+    Note that this class is also used to hold application-level options that are set via
+    the `app_opts()` function.
+    """
+
     def __init__(self):
         self.ns = Root
         self.input = Inputs({})
         self.output = Outputs(cast(Session, self), self.ns, outputs={})
+
+        # Application-level (not session-level) options that may be set via app_opts().
+        self.app_opts: AppOpts = {}
 
     # This is needed so that Outputs don't throw an error.
     def _is_hidden(self, name: str) -> bool:

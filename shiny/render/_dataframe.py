@@ -707,17 +707,26 @@ class data_frame(Renderer[DataFrameResult]):
             idx = (idx,)
 
         with reactive.isolate():
-            mode = self.row_selection_mode()
+            mode = self.table_mode()
         if mode == "none":
             raise ValueError(
                 "You can't update row selections when row_selection_mode is 'none'"
             )
 
-        if mode == "single" and len(idx) > 1:
+        if mode == "single_row" and len(idx) > 1:
             raise ValueError(
                 "Attempted to set multiple row selection values when row_selection_mode is 'single'"
             )
         await self._send_message_to_browser("updateRowSelection", {"keys": idx})
+
+    def input_selected_rows(self) -> Optional[tuple[int]]:
+        """
+        When `row_selection_mode` is set to "single" or "multiple" this will return
+        a tuple of integers representing the rows selected by a user.
+        """
+
+        active_session = require_active_session(None)
+        return active_session.input[self.output_id + "_selected_rows"]()
 
 
 @runtime_checkable

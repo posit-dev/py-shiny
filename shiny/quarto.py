@@ -74,11 +74,11 @@ from __future__ import annotations
 from pathlib import Path
 from shiny import App, Inputs, Outputs, Session, ui
 
-{ "".join(global_code_cell_texts) }
+{"".join(global_code_cell_texts)}
 
 
 def server(input: Inputs, output: Outputs, session: Session) -> None:
-{ "".join(session_code_cell_texts) }
+{"".join(session_code_cell_texts)}
 
     return None
 
@@ -87,7 +87,7 @@ _static_assets = ##STATIC_ASSETS_PLACEHOLDER##
 _static_assets = {{"/" + sa: Path(__file__).parent / sa for sa in _static_assets}}
 
 app = App(
-    Path(__file__).parent / "{ data["html_file"] }",
+    Path(__file__).parent / "{data["html_file"]}",
     server,
     static_assets=_static_assets,
 )

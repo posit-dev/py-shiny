@@ -14,7 +14,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.Effect
+    @reactive.effect
     def _():
         print(input.acc())
 

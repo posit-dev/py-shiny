@@ -77,7 +77,7 @@ def validate_dark_mode_option(mode: BootstrapColorMode) -> BootstrapColorMode:
 
 
 @no_example()
-async def update_dark_mode(
+def update_dark_mode(
     mode: BootstrapColorMode, *, session: Optional[Session] = None
 ) -> None:
     session = require_active_session(session)
@@ -88,5 +88,4 @@ async def update_dark_mode(
         "method": "toggle",
         "value": mode,
     }
-
-    await session.send_custom_message("bslib.toggle-dark-mode", msg)
+    session._send_message_sync({"custom": {"bslib.toggle-dark-mode": msg}})

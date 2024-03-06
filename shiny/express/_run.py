@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import os
 import sys
 from pathlib import Path
 from typing import cast
@@ -9,8 +10,11 @@ from htmltools import Tag, TagList
 
 from .._app import App
 from .._docstring import no_example
-from ..session import Inputs, Outputs, Session, session_context
-from ._mock_session import MockSession
+from .._typing_extensions import NotRequired, TypedDict
+from .._utils import import_module_from_path
+from ..session import Inputs, Outputs, Session, get_current_session, session_context
+from ..types import MISSING, MISSING_TYPE
+from ._mock_session import ExpressMockSession
 from ._recall_context import RecallContextManager
 from .expressify_decorator._func_displayhook import _expressify_decorator_function_def
 from .expressify_decorator._node_transformers import (
@@ -18,7 +22,10 @@ from .expressify_decorator._node_transformers import (
     expressify_decorator_func_name,
 )
 
-__all__ = ("wrap_express_app",)
+__all__ = (
+    "app_opts",
+    "wrap_express_app",
+)
 
 
 @no_example()
@@ -35,8 +42,15 @@ def wrap_express_app(file: Path) -> App:
     :
         A :class:`shiny.App` object.
     """
+
     try:
-        with session_context(cast(Session, MockSession())):
+        globals_file = file.parent / "globals.py"
+        if globals_file.is_file():
+            with session_context(None):
+                import_module_from_path("globals", globals_file)
+
+        mock_session = ExpressMockSession()
+        with session_context(cast(Session, mock_session)):
             # We tagify here, instead of waiting for the App object to do it when it wraps
             # the UI in a HTMLDocument and calls render() on it. This is because
             # AttributeErrors can be thrown during the tagification process, and we need to
@@ -59,7 +73,20 @@ def wrap_express_app(file: Path) -> App:
             traceback.print_exception(*sys.exc_info())
             raise
 
-    app = App(app_ui, express_server)
+    app_opts: AppOpts = {}
+
+    www_dir = file.parent / "www"
+    if www_dir.is_dir():
+        app_opts["static_assets"] = {"/": www_dir}
+
+    app_opts = _merge_app_opts(app_opts, mock_session.app_opts)
+    app_opts = _normalize_app_opts(app_opts, file.parent)
+
+    app = App(
+        app_ui,
+        express_server,
+        **app_opts,  # pyright: ignore[reportArgumentType]
+    )
 
     return app
 
@@ -164,3 +191,86 @@ class InputNotImportedShim:
             "Tried to access `input`, but it was not imported. "
             "Perhaps you need `from shiny.express import input`?"
         )
+
+
+class AppOpts(TypedDict):
+    static_assets: NotRequired[dict[str, Path]]
+    debug: NotRequired[bool]
+
+
+@no_example()
+def app_opts(
+    static_assets: (
+        str | os.PathLike[str] | dict[str, str | Path] | MISSING_TYPE
+    ) = MISSING,
+    debug: bool | MISSING_TYPE = MISSING,
+):
+    """
+    Set App-level options in Shiny Express
+
+    This function sets application-level options for Shiny Express. These options are
+    the same as those from the :class:`shiny.App` constructor.
+
+    Parameters
+    ----------
+    static_assets
+        Static files to be served by the app. If this is a string or Path object, it
+        must be a directory, and it will be mounted at `/`. If this is a dictionary,
+        each key is a mount point and each value is a file or directory to be served at
+        that mount point. In Shiny Express, if there is a `www` subdirectory of the
+        directory containing the app file, it will automatically be mounted at `/`, even
+        without needing to set the option here.
+    debug
+        Whether to enable debug mode.
+    """
+
+    # Store these options only if we're in the UI-rendering phase of Shiny Express.
+    mock_session = get_current_session()
+    if not isinstance(mock_session, ExpressMockSession):
+        return
+
+    if not isinstance(static_assets, MISSING_TYPE):
+        if isinstance(static_assets, (str, os.PathLike)):
+            static_assets = {"/": Path(static_assets)}
+
+        # Convert string values to Paths. (Need new var name to help type checker.)
+        static_assets_paths = {k: Path(v) for k, v in static_assets.items()}
+
+        mock_session.app_opts["static_assets"] = static_assets_paths
+
+    if not isinstance(debug, MISSING_TYPE):
+        mock_session.app_opts["debug"] = debug
+
+
+def _merge_app_opts(app_opts: AppOpts, app_opts_new: AppOpts) -> AppOpts:
+    """
+    Merge a set of app options into an existing set of app options. The values from
+    `app_opts_new` take precedence. This will alter the original app_opts and return it.
+    """
+
+    # We can't just do a `app_opts.update(app_opts_new)` because we need to handle the
+    # case where app_opts["static_assets"] and app_opts_new["static_assets"] are
+    # dictionaries, and we need to merge those dictionaries.
+    if "static_assets" in app_opts and "static_assets" in app_opts_new:
+        app_opts["static_assets"].update(app_opts_new["static_assets"])
+    elif "static_assets" in app_opts_new:
+        app_opts["static_assets"] = app_opts_new["static_assets"].copy()
+
+    if "debug" in app_opts_new:
+        app_opts["debug"] = app_opts_new["debug"]
+
+    return app_opts
+
+
+def _normalize_app_opts(app_opts: AppOpts, parent_dir: Path) -> AppOpts:
+    """
+    Normalize the app options, ensuring that all paths in static_assets are absolute.
+    Modifies the original in place.
+    """
+    if "static_assets" in app_opts:
+        for mount_point, path in app_opts["static_assets"].items():
+            if not path.is_absolute():
+                path = parent_dir / path
+            app_opts["static_assets"][mount_point] = path
+
+    return app_opts

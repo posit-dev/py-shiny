@@ -8,16 +8,18 @@ import os
 import secrets
 import threading
 import webbrowser
-from typing import Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional, cast
 
-from asgiref.typing import (
-    ASGI3Application,
-    ASGIReceiveCallable,
-    ASGISendCallable,
-    ASGISendEvent,
-    HTTPResponseStartEvent,
-    Scope,
-)
+if TYPE_CHECKING:
+    import starlette.types
+    from asgiref.typing import (
+        ASGI3Application,
+        ASGIReceiveCallable,
+        ASGISendCallable,
+        ASGISendEvent,
+        HTTPResponseStartEvent,
+        Scope,
+    )
 
 from ._hostenv import get_proxy_url
 
@@ -90,7 +92,20 @@ class InjectAutoreloadMiddleware:
     because we want autoreload to be effective even when displaying an error page.
     """
 
-    def __init__(self, app: ASGI3Application):
+    def __init__(
+        self,
+        app: starlette.types.ASGIApp | ASGI3Application,
+        *args: object,
+        **kwargs: object,
+    ):
+        if len(args) > 0 or len(kwargs) > 0:
+            raise TypeError(
+                f"InjectAutoreloadMiddleware does not support positional or keyword arguments, received {args}, {kwargs}"
+            )
+        # The starlette types and the asgiref types are compatible, but we'll use the
+        # latter internally. See the note in the __call__ method for more details.
+        if TYPE_CHECKING:
+            app = cast(ASGI3Application, app)
         self.app = app
         ws_url = autoreload_url()
         self.script = (
@@ -103,9 +118,23 @@ class InjectAutoreloadMiddleware:
         )
 
     async def __call__(
-        self, scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable
+        self,
+        scope: starlette.types.Scope | Scope,
+        receive: starlette.types.Receive | ASGIReceiveCallable,
+        send: starlette.types.Send | ASGISendCallable,
     ) -> None:
-        if scope["type"] != "http" or scope["path"] != "/" or len(self.script) == 0:
+        # The starlette types and the asgiref types are compatible, but the latter are
+        # more rigorous. In the call interface, we accept both types for compatibility
+        # with both. But internally we'll use the more rigorous types.
+        # See https://github.com/encode/starlette/blob/39dccd9/docs/middleware.md#type-annotations
+        if TYPE_CHECKING:
+            scope = cast(Scope, scope)
+            receive = cast(ASGIReceiveCallable, receive)
+            send = cast(ASGISendCallable, send)
+
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        if scope["path"] != "/" or len(self.script) == 0:
             return await self.app(scope, receive, send)
 
         def mangle_callback(body: bytes) -> tuple[bytes, bool]:
@@ -200,6 +229,11 @@ async def _coro_main(
     ) -> Optional[tuple[http.HTTPStatus, websockets.datastructures.HeadersLike, bytes]]:
         # If there's no Upgrade header, it's not a WebSocket request.
         if request_headers.get("Upgrade") is None:
+            # For some unknown reason, this fixes a tendency on GitHub Codespaces to
+            # correctly proxy through this request, but give a 404 when the redirect is
+            # followed and app_url is requested. With the sleep, both requests tend to
+            # succeed reliably.
+            await asyncio.sleep(1)
             return (http.HTTPStatus.MOVED_PERMANENTLY, [("Location", app_url)], b"")
 
     async with websockets.serve(
