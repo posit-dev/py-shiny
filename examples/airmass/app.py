@@ -76,9 +76,10 @@ def server(input: Inputs, output: Outputs, session: Session):
         req(input.date())
         lat, long = loc()
         sun = suntime.Sun(lat, long)
+        day = datetime.datetime.combine(input.date(), datetime.time())
         return (
-            sun.get_sunset_time(input.date()),
-            sun.get_sunrise_time(input.date() + datetime.timedelta(days=1)),
+            sun.get_sunset_time(day),
+            sun.get_sunrise_time(day + datetime.timedelta(days=1)),
         )
 
     @reactive.calc
