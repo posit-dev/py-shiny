@@ -43,10 +43,19 @@ from playwright.sync_api import BrowserContext, Page
 
 
 # Make a single page fixture that can be used by all tests
-# By using a single page, the browser is only launched once and all tests run in the same tab / page.
 @pytest.fixture(scope="session")
-def page(browser: BrowserContext) -> Page:
+# By using a single page, the browser is only launched once and all tests run in the same tab / page.
+def session_page(browser: BrowserContext) -> Page:
     return browser.new_page()
+
+
+@pytest.fixture(scope="function")
+# By going to `about:blank`, we _reset_ the page to a known state before each test.
+# It is not perfect, but it is faster than making a new page for each test.
+# This must be done before each test
+def page(session_page: Page) -> Page:
+    session_page.goto("about:blank")
+    return session_page
 
 
 here = PurePath(__file__).parent
