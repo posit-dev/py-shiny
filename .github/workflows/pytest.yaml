@@ -118,10 +118,8 @@ jobs:
           path: test-results/
           retention-days: 5
 
-  playwright-deploys:
+  playwright-deploys-local:
     if: github.event_name != 'release'
-    # Only allow one `playwright-deploys` job to run at a time. (Independent of branch / PR)
-    concurrency: playwright-deploys
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -139,6 +137,35 @@ jobs:
 
       - name: Test deploys example apps locally
         timeout-minutes: 5
+        env:
+          DEPLOY_APPS: "false"
+        run: |
+          make playwright-deploys SUB_FILE=". -vv"
+
+  playwright-deploys:
+    needs: [playwright-deploys-local]
+    if: github.event_name != 'release' && (github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'deploy')))
+    # Only allow one `playwright-deploys` job to run at a time. (Independent of branch / PR)
+    # Only one is allowed to run at a time because it is deploying to the same server location.
+    concurrency: playwright-deploys
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # Matches deploy server python version
+        python-version: ["3.10"]
+        os: [ubuntu-latest]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Make sure the apps pass locally
+      - name: Test deploys example apps locally
+        timeout-minutes: 5 # ~10s locally
         env:
           DEPLOY_APPS: "false"
         run: |
