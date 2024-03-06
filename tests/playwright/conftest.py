@@ -39,6 +39,16 @@ __all__ = (
     "retry_with_timeout",
 )
 
+from playwright.sync_api import BrowserContext, Page
+
+
+# Make a single page fixture that can be used by all tests
+# By using a single page, the browser is only launched once and all tests run in the same tab / page.
+@pytest.fixture(scope="session")
+def page(browser: BrowserContext) -> Page:
+    return browser.new_page()
+
+
 here = PurePath(__file__).parent
 here_root = here.parent.parent
 
