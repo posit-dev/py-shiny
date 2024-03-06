@@ -11,8 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.page_sidebar()` now places the `title` element in a `.navbar` container that matches the structure of `page_navbar()`. This ensures that the title elements of `page_sidebar()` and `page_navbar()` have consistent appearance. (#1176)
 
-### New features
-
 ### Bug fixes
 
 * Shiny now compiles the Bootstrap 5-based stylesheets for component styles imported from https://github.com/rstudio/shiny. (#1191)
