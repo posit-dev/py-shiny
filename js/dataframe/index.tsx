@@ -119,9 +119,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const [editRowIndex, setEditRowIndex] = useState<number>(null);
   const [editColumnIndex, setEditColumnIndex] = useState<number>(null);
 
-  useEffect(() => {
-    console.log("editing info!", editRowIndex, editColumnIndex);
-  }, [editColumnIndex, editRowIndex]);
+  // useEffect(() => {
+  //   console.log("editing info!", editRowIndex, editColumnIndex);
+  // }, [editColumnIndex, editRowIndex]);
 
   const dataFrameModeIsMissing = data.options["mode"] ? false : true;
   const dataFrameMode = data.options["mode"] ?? "none";
@@ -132,10 +132,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
     Map<string, { value: string; state: CellState }>
   >(new Map<string, { value: string; state: CellState }>());
   enableMapSet();
-
-  useEffect(() => {
-    console.log("editing info!", editRowIndex, editColumnIndex);
-  }, [editColumnIndex, editRowIndex]);
 
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
     () =>

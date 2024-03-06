@@ -40,8 +40,6 @@ class CellUpdateFn(Protocol):
         self,
         *,
         info: CellUpdateInfo,
-        # TODO-barret; Remove `**kwargs`
-        **kwargs: Any,  # future proofing
     ) -> Any: ...
 
 
@@ -57,14 +55,10 @@ class CellsUpdateFn(Protocol):
         self,
         *,
         infos: list[CellUpdateInfo],
-        # TODO-barret; Remove `**kwargs`
-        **kwargs: Any,  # future proofing
     ) -> Any: ...
 @dataclass
 class CellPatch:
     row_index: int
-    # TODO-barret; Safeguard against columns with the same name
-    # TODO-barret; Use column index instead of name
     column_index: int
     value: str
     prev: str
@@ -537,17 +531,16 @@ class data_frame(Renderer[DataFrameResult]):
             )
         return self._session
 
-    # TODO-barret; `on` sounds like a registration. Maybe use `set` instead? `set_cell_update_fn`?
-    def on_cell_update(self, fn: CellUpdateFn) -> Self:
+    def set_cell_update_fn(self, fn: CellUpdateFn) -> Self:
         self.handle_cell_update = fn
         return self
 
-    def on_cells_update(self, fn: CellsUpdateFn) -> Self:
+    def set_cells_update_fn(self, fn: CellsUpdateFn) -> Self:
         self.handle_cells_update = fn
         return self
 
     def _init_handlers(self) -> None:
-        async def _on_cell_update_default(
+        async def _set_cell_update_default(
             *,
             info: CellUpdateInfo,
             # row_index: int,
@@ -558,7 +551,7 @@ class data_frame(Renderer[DataFrameResult]):
         ) -> str:
             return info["value"]
 
-        async def _on_cells_update_default(
+        async def _set_cells_update_default(
             *,
             infos: list[CellUpdateInfo],
             **kwargs: Any,
@@ -583,12 +576,13 @@ class data_frame(Renderer[DataFrameResult]):
 
                 return formatted_values
 
-        self.on_cell_update(_on_cell_update_default)
-        self.on_cells_update(_on_cells_update_default)
+        self.set_cell_update_fn(_set_cell_update_default)
+        self.set_cells_update_fn(_set_cells_update_default)
         # self._add_message_handlers()
 
     # To be called by session's outputRPC message handler on this data_frame
     # Do not change this method unless you update corresponding code in `/js/dataframe/`!!
+    # TODO-barret; mark functions for outputRPC
     # @outputRPC_handler
     async def _handle_cells_update(self, update_infos: list[CellUpdateInfo]):
 
@@ -598,22 +592,21 @@ class data_frame(Renderer[DataFrameResult]):
         # Make new array to trigger reactive update
         patches = [p for p in self.cell_patches()]
 
-        # Call user's on_cells_update method to retrieve formatted values
-        # TODO-barret; REname `formatted` to `raw_values`
-        formatted_values = await self.handle_cells_update(infos=update_infos)
+        # Call user's cell update method to retrieve formatted values
+        updated_raw_values = await self.handle_cells_update(infos=update_infos)
 
-        if len(formatted_values) != len(update_infos):
+        if len(updated_raw_values) != len(update_infos):
             raise ValueError(
-                f"The return value of {self.output_id}'s `handle_cells_update()` (typically set by `@{self.output_id}.on_cells_update`) must be a list of the same length as the input list of cell updates. Received {len(formatted_values)} items and expected {len(update_infos)}."
+                f"The return value of {self.output_id}'s `handle_cells_update()` (typically set by `@{self.output_id}.set_cells_update_fn`) must be a list of the same length as the input list of cell updates. Received {len(updated_raw_values)} items and expected {len(update_infos)}."
             )
 
         # Add new patches
-        for formatted_value, update_info in zip(formatted_values, update_infos):
+        for updated_raw_value, update_info in zip(updated_raw_values, update_infos):
             patches.append(
                 CellPatch(
                     row_index=update_info["row_index"],
                     column_index=update_info["column_index"],
-                    value=formatted_value,
+                    value=updated_raw_value,
                     prev=update_info["prev"],
                 )
             )
@@ -627,7 +620,7 @@ class data_frame(Renderer[DataFrameResult]):
         # Set new patches
         self.cell_patches.set(patches)
 
-        return formatted_values
+        return updated_raw_values
 
     def auto_output_ui(self) -> Tag:
         return ui.output_data_frame(id=self.output_id)
@@ -683,8 +676,6 @@ class data_frame(Renderer[DataFrameResult]):
         return value.to_payload()
 
     async def _send_message_to_browser(self, handler: str, obj: dict[str, Any]):
-        # TODO-barret; capture data in render method
-        # TODO-barret; invalidate data in render method before user fn has been called
 
         session = self._get_session()
         id = session.ns(self.output_id)

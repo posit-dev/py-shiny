@@ -29,8 +29,11 @@ MOD_ID = "testing"
 def mod_ui():
     return ui.TagList(
         ui.card(
-            ui.output_data_frame("summary_data"),
+            ui.fill.as_fill_item(
+                ui.output_data_frame("summary_data"),
+            ),
             height="400px",
+            fillable=True,
         ),
     )
 
@@ -52,14 +55,10 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         return render.DataGrid(df, mode="edit")
         return render.DataTable(df, mode="edit")
 
-    @summary_data.on_cell_update
+    @summary_data.set_cell_update_fn
     async def handle_edit(
         *,
         info: CellUpdateInfo,
-        # info: int,
-        # column_index: int,
-        # value: str,
-        # prev: str,
     ):
         return "demo_" + info["value"]
 
@@ -150,3 +149,4 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 app = App(app_ui, server, debug=False)
+app.sanitize_errors = True

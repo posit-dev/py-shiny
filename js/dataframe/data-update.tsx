@@ -60,14 +60,6 @@ export function updateCellsData({
       setData((draft) => {
         values.forEach((value: string, i: number) => {
           const { rowIndex, columnIndex } = cellInfos[i];
-          // const row = draft[rowIndex];
-          // // console.log(
-          // //   "Setting new value!",
-          // //   value,
-          // //   columnId,
-          // //   draft[rowIndex]
-          // // );
-
           draft[rowIndex][columnIndex] = value;
         });
       });

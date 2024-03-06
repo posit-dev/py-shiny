@@ -111,7 +111,14 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   const [cellState, setCellState] = useState<CellState>(CellState.Ready);
 
-  const editable = editRowIndex === rowIndex && editColumnIndex === columnIndex;
+  const [editable, setEditable] = useState(false);
+  useEffect(() => {
+    const cellIsEditable =
+      editRowIndex === rowIndex && editColumnIndex === columnIndex;
+    setEditable(cellIsEditable);
+  }, [editRowIndex, editColumnIndex, rowIndex, columnIndex]);
+
+  // const editable = editRowIndex === rowIndex && editColumnIndex === columnIndex;
   if (editable) {
     setCellState(CellState.Editing);
   }
@@ -189,6 +196,8 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   const tableCellClass = tableCellMap[cellState];
 
+  const [errorTitle, setErrorTitle] = useState<string | null>(undefined);
+
   // useEffect(() => {
   //   console.log("Cell background:", tableCellClass, rowIndex, columnIndex);
   // }, [tableCellClass, rowIndex, columnIndex]);
@@ -196,10 +205,15 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   //   console.log("Cell state:", cellState, hasUpdated);
   // }, [hasUpdated, cellState]);
 
-  function resetEditInfo() {
+  // function resetEditInfo() {
+  //   console.log("Resetting edit info!", rowIndex, columnIndex);
+  //   setEditRowIndex(null);
+  //   setEditColumnIndex(null);
+  // }
+  const resetEditInfo = React.useCallback(() => {
     setEditRowIndex(null);
     setEditColumnIndex(null);
-  }
+  }, [editRowIndex, editColumnIndex]);
 
   const onEsc = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Escape") return;
@@ -232,8 +246,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     const hasShift = e.shiftKey;
 
-    console.log(maxRowSize);
-
     const newRowIndex = editRowIndex + (hasShift ? -1 : 1);
     if (newRowIndex < 0 || newRowIndex >= maxRowSize) {
       // If the new row index is out of bounds, quit
@@ -250,34 +262,34 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   const attemptUpdate = () => {
     // Only update if the string form of the value has changed
-    if (`${initialValue}` !== `${value}`) {
-      setCellState(CellState.EditSaving);
-      // console.log("Setting update count");
-      // setUpdateCount(updateCount + 1);
-      updateCellsData({
-        id,
-        cellInfos: [
-          {
-            rowIndex,
-            columnIndex,
-            value,
-            prev: initialValue,
-          },
-        ],
-        onSuccess: (values) => {
-          // console.log("success!", values);
-          setCellState(CellState.EditSuccess);
+    if (`${initialValue}` === `${value}`) return;
+
+    setCellState(CellState.EditSaving);
+    // console.log("Setting update count");
+    // setUpdateCount(updateCount + 1);
+    updateCellsData({
+      id,
+      cellInfos: [
+        {
+          rowIndex,
+          columnIndex,
+          value,
+          prev: initialValue,
         },
-        onError: (err) => {
-          // console.log("error!", err);
-          console.error("Error saving tabel cell value!", err);
-          setCellState(CellState.EditFailure);
-        },
-        columns,
-        setData,
-        setCellEditMap,
-      });
-    }
+      ],
+      onSuccess: (values) => {
+        // console.log("success!", values);
+        setCellState(CellState.EditSuccess);
+      },
+      onError: (err) => {
+        console.error("Error saving tabel cell value!", err);
+        setErrorTitle(String(err));
+        setCellState(CellState.EditFailure);
+      },
+      columns,
+      setData,
+      setCellEditMap,
+    });
   };
 
   // When the input is blurred, we'll call our table meta's updateData function
@@ -294,27 +306,28 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   // Select the input when it becomes editable
   useEffect(() => {
-    if (editable) {
-      inputRef.current.focus();
-      inputRef.current.select();
+    if (!editable) return;
 
-      // Setup global click listener to reset edit info
+    inputRef.current.focus();
+    inputRef.current.select();
+
+    // Setup global click listener to reset edit info
+    const onBodyClick = (e: MouseEvent) => {
+      if (e.target === inputRef.current) {
+        return;
+      }
+      resetEditInfo();
+    };
+    window.document
+      .querySelector("body")
+      .addEventListener("click", onBodyClick);
+
+    // Tear down global click listener when we're done
+    return () => {
       window.document
         .querySelector("body")
-        .addEventListener("click", (e: MouseEvent) => {
-          // console.log("body click!", e.target, inputRef.current);
-          // TODO-barret; Do not reset if target is another table cell!
-          // Or skip the reset?
-          resetEditInfo();
-        });
-
-      // Tear down global click listener when we're done
-      return () => {
-        window.document
-          .querySelector("body")
-          .removeEventListener("click", resetEditInfo);
-      };
-    }
+        .removeEventListener("click", onBodyClick);
+    };
   }, [editable]);
 
   // Reselect the input when it comes into view!
@@ -326,18 +339,20 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   }
 
   function onChange(e: ReactChangeEvent<HTMLInputElement>) {
-    console.log("on change!");
+    // console.log("on change!");
     setValue(e.target.value);
   }
 
   let onClick = undefined;
   let content = undefined;
+  let cellTitle = errorTitle;
 
   if (cellState === CellState.EditSaving) {
     content = <em>{value as string}</em>;
   } else if (editable) {
     content = (
       <input
+        className="cell-edit-input"
         value={value as string}
         onChange={onChange}
         onBlur={onBlur}
@@ -348,18 +363,26 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     );
   } else {
     onClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
-      console.log("on ready click!", e.target);
       setEditRowIndex(rowIndex);
       setEditColumnIndex(columnIndex);
+      e.preventDefault();
+      e.stopPropagation();
     };
     if (cellState === CellState.EditFailure) {
-      console.log("Render edit failure");
+      // TODO-barret; Handle edit failure?
+      // console.log("Render edit failure");
+      cellTitle = errorTitle;
     }
     content = flexRender(cell.column.columnDef.cell, cell.getContext());
   }
 
   return (
-    <td key={cell.id} onClick={onClick} className={tableCellClass}>
+    <td
+      key={cell.id}
+      onClick={onClick}
+      title={cellTitle}
+      className={tableCellClass}
+    >
       {content}
     </td>
   );

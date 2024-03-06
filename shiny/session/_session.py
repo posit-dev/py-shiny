@@ -1067,7 +1067,7 @@ class Outputs:
 
     def _init_message_handlers(self) -> None:
         async def outputRPC(
-            outputId: str,
+            output_id: str,
             handler: str,
             msg: object,
         ) -> Jsonifiable:
@@ -1080,37 +1080,49 @@ class Outputs:
 
             The value returned by the handler is sent back to the client with the original unique id (`tag`).
             """
-            if not (outputId in self._outputs):
+            if not (output_id in self._outputs):
                 raise RuntimeError(
-                    f"Received request message for an unknown Output Renderer with id `{outputId}`"
+                    f"Received request message for an unknown Output Renderer with id `{output_id}`"
                 )
 
-            output_info = self._outputs[outputId]
+            output_info = self._outputs[output_id]
             renderer = output_info.renderer
             handler = f"_handle_{handler}"
             if not (
                 hasattr(renderer, handler) and callable(getattr(renderer, handler))
             ):
                 raise RuntimeError(
-                    f"Output Renderer with id `{outputId}` does not have method `{handler}` to handler request message"
+                    f"Output Renderer with id `{output_id}` does not have method `{handler}` to handler request message"
                 )
 
             # Make a new session proxy if the output is namespaced;
             # No need to make recursive proxies as the important part is a prefix exists
-            sessProxy = self._session
-            if "-" in outputId:
-                modPrefix, _ = outputId.rsplit("-", 1)
-                sessProxy = self._session.make_scope(modPrefix)
-            with session_context(sessProxy):
+            sess_proxy = self._session
+            if "-" in output_id:
+                modPrefix, _ = output_id.rsplit("-", 1)
+                sess_proxy = self._session.make_scope(modPrefix)
+            with session_context(sess_proxy):
                 with isolate():
                     try:
                         # TODO-barret assert that the function has been marked as an outputRPC handler
                         return await getattr(renderer, handler)(msg)
                     except Exception as e:
-                        print("error: ", e)
-                        raise RuntimeError(
-                            f"Error while handling request message for Output Renderer with id `{outputId}`"
+                        # Ex:
+                        # ```
+                        # Exception while handling `data_frame[id=testing-summary_data]._handle_cells_update()`: Barret testing!
+                        # ```
+                        print(
+                            "Exception while handling "
+                            f"`{renderer.__class__.__name__}[id={output_id}].{handler}()`:",
+                            e,
                         )
+                        if self._session.app.sanitize_errors and not isinstance(
+                            e, SafeException
+                        ):
+                            err_msg = self._session.app.sanitize_error_msg
+                        else:
+                            err_msg = str(e)
+                        raise RuntimeError(err_msg)
 
         # Add the message handler
         self._session._message_handlers["outputRPC"] = outputRPC
