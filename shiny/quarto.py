@@ -72,7 +72,7 @@ def convert_code_cells_to_app_py(json_file: str | Path, app_file: str | Path) ->
 from __future__ import annotations
 
 from pathlib import Path
-from shiny import App, Inputs, Outputs, Session, ui
+from shiny import App, Inputs, Outputs, Session
 
 {"".join(global_code_cell_texts)}
 
