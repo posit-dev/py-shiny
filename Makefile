@@ -21,10 +21,56 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 
+
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
+
+
+PYTHON_VERSION := $(shell python3 -c "from platform import python_version; print(python_version())")
+VENV = .venv-$(PYTHON_VERSION)
+PYBIN = $(VENV)/bin
+PIP = $(PYBIN)/pip
+UV = $(PYBIN)/uv
+PYBIN_ACTIVATE = $(PYBIN)/activate
+
+
+# Any targets that depend on $(VENV) or $(PYBIN) will cause the venv to be
+# created. To use the venv, python scripts should run with the prefix $(PYBIN),
+# as in `$(PYBIN)/pip`.
+$(VENV):
+	python3 -m venv $(VENV)
+
+$(PYBIN): $(VENV)
+$(PYBIN_ACTIVATE): $(PYBIN)
+
+$(UV): install-deps
+	touch $(UV) # update timestamp
+
+$(PYBIN)/flake8: install-deps
+  touch $(PYBIN)/flake8 # update timestamp
+$(PYBIN)/black: install-deps
+  touch $(PYBIN)/black # update timestamp
+$(PYBIN)/isort: install-deps
+  touch $(PYBIN)/isort # update timestamp
+$(PYBIN)/pytest: install-deps
+  touch $(PYBIN)/pytest # update timestamp
+$(PYBIN)/coverage: install-deps
+  touch $(PYBIN)/coverage # update timestamp
+$(PYBIN)/pyright: install-deps
+  touch $(PYBIN)/pyright # update timestamp
+$(PYBIN)/playwright: install-deps
+  touch $(PYBIN)/playwright # update timestamp
+
+
+$(PYBIN)/trcli: $(UV)
+	$(UV) pip install trcli
+	touch $(PYBIN)/trcli # update timestamp
+$(PYBIN)/twine: $(UV)
+	$(UV) pip install twine
+	touch $(PYBIN)/twine # update timestamp
+
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
@@ -63,34 +109,34 @@ typings/seaborn:
 check: check-format check-lint check-types check-tests  ## check code, style, types, and test (basic CI)
 check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
 check-format: check-black check-isort
-check-lint:
+check-lint: $(PYBIN)/flake8
 	@echo "-------- Checking style with flake8 --------"
-	flake8 --show-source .
-check-black:
+	$(PYBIN)/flake8 --show-source .
+check-black: $(PYBIN)/black
 	@echo "-------- Checking code with black --------"
-	black --check .
-check-isort:
+	$(PYBIN)/black --check .
+check-isort: $(PYBIN)/isort
 	@echo "-------- Sorting imports with isort --------"
-	isort --check-only --diff .
-check-types: typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn
+	$(PYBIN)/isort --check-only --diff .
+check-types: typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn $(PYBIN)/pyright
 	@echo "-------- Checking types with pyright --------"
-	pyright
-check-tests:
+	$(PYBIN)/pyright
+check-tests: $(PYBIN)/pytest $(PYBIN)
 	@echo "-------- Running tests with pytest --------"
-	python3 tests/pytest/asyncio_prevent.py
-	pytest
+	$(PYBIN)/python tests/pytest/asyncio_prevent.py
+	$(PYBIN)/pytest
 
 pyright: check-types ## check types with pyright
 lint: check-lint ## check style with flake8
 test: check-tests ## check tests quickly with the default Python
 
 format: format-black format-isort ## format code with black and isort
-format-black:
+format-black: $(PYBIN)/black
 	@echo "-------- Formatting code with black --------"
-	black .
-format-isort:
+	$(PYBIN)/black .
+format-isort: $(PYBIN)/isort
 	@echo "-------- Sorting imports with isort --------"
-	isort .
+	$(PYBIN)/isort .
 
 docs: ## docs: build docs with quartodoc
 	@echo "-------- Building docs with quartodoc --------"
@@ -103,56 +149,53 @@ docs-preview: ## docs: preview docs in browser
 # Default `SUB_FILE` to empty
 SUB_FILE:=
 
-install-playwright:
-	playwright install --with-deps
+install-playwright: $(PYBIN)/playwright $(PYBIN)/pytest
+	$(PYBIN)/playwright install --with-deps
 
-install-trcli:
-	which trcli || pip install trcli
+install-rsconnect: $(UV) ## install the main version of rsconnect till pypi version supports shiny express
+	$(UV) pip install rsconnect @ git+https://github.com/rstudio/rsconnect-python.git
 
-install-rsconnect: ## install the main version of rsconnect till pypi version supports shiny express
-	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
+playwright-shiny: install-playwright $(PYBIN)/pytest ## end-to-end tests with playwright
+	$(PYBIN)/pytest tests/playwright/shiny/$(SUB_FILE)
 
-playwright-shiny: install-playwright ## end-to-end tests with playwright
-	pytest tests/playwright/shiny/$(SUB_FILE)
+playwright-deploys: install-playwright install-rsconnect $(PYBIN)/pytest ## end-to-end tests on examples with playwright
+	$(PYBIN)/pytest tests/playwright/deploys/$(SUB_FILE)
 
-playwright-deploys: install-playwright install-rsconnect ## end-to-end tests on examples with playwright
-	pytest tests/playwright/deploys/$(SUB_FILE)
+playwright-examples: install-playwright $(PYBIN)/pytest ## end-to-end tests on examples with playwright
+	$(PYBIN)/pytest tests/playwright/examples/$(SUB_FILE)
 
-playwright-examples: install-playwright ## end-to-end tests on examples with playwright
-	pytest tests/playwright/examples/$(SUB_FILE)
-
-playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed
-	pytest -c tests/playwright/playwright-pytest.ini tests/playwright/$(SUB_FILE)
+playwright-debug: install-playwright $(PYBIN)/pytest ## All end-to-end tests, chrome only, headed
+	$(PYBIN)/pytest -c tests/playwright/playwright-pytest.ini tests/playwright/$(SUB_FILE)
 
 playwright-show-trace: ## Show trace of failed tests
 	npx playwright show-trace test-results/*/trace.zip
 
-testrail-junit: install-playwright install-trcli ## end-to-end tests with playwright and generate junit report
-	pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml
+testrail-junit: install-playwright $(PYBIN)/trcli $(PYBIN)/pytest ## end-to-end tests with playwright and generate junit report
+	$(PYBIN)/pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml
 
-coverage: ## check combined code coverage (must run e2e last)
-	pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/playwright/shiny/$(SUB_FILE)
-	coverage html
+coverage: $(PYBIN)/pytest $(PYBIN)/coverage ## check combined code coverage (must run e2e last)
+	$(PYBIN)/pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/playwright/shiny/$(SUB_FILE)
+	$(PYBIN)/coverage html
 	$(BROWSER) htmlcov/index.html
 
-release: dist ## package and upload a release
-	twine upload dist/*
+release: $(PYBIN)/twine dist ## package and upload a release
+	$(PYBIN)/twine upload dist/*
 
-dist: clean ## builds source and wheel package
-	python3 setup.py sdist
-	python3 setup.py bdist_wheel
+dist: clean $(PYBIN) $(PYBIN)/pytest ## builds source and wheel package
+	$(PYBIN)/python setup.py sdist \
+	$(PYBIN)/pytest setup.py bdist_wheel \
 	ls -l dist
 
 ## install the package to the active Python's site-packages
 # Note that instead of --force-reinstall, we uninstall and then install, because
 # --force-reinstall also reinstalls all deps. And if we also used --no-deps, then the
 # deps wouldn't be installed the first time.
-install: dist
-	pip uninstall -y shiny
-	python3 -m pip install dist/shiny*.whl
+install: dist $(UV)
+	$(UV) pip uninstall -y shiny
+	$(PYBIN)/python -m pip install dist/shiny*.whl
 
-install-deps: ## install dependencies
-	pip install -e ".[dev,test]" --upgrade
+install-deps: $(UV) ## install dependencies
+	$(UV) pip install -e ".[dev,test]" --refresh
 
 # ## If caching is ever used, we could run:
 # install-deps: ## install latest dependencies
