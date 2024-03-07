@@ -1,6 +1,6 @@
 from conftest import ShinyAppProc, create_doc_example_core_fixture
 from controls import OutputTextVerbatim, Sidebar
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 app = create_doc_example_core_fixture("sidebar")
 
@@ -48,6 +48,5 @@ def test_sidebar_position_and_open(page: Page, app: ShinyAppProc) -> None:
     output_txt_always.expect_value("input.sidebar_always(): True")
     # Handle is included but it should have `display: none`
     always_sidebar.expect_handle(True)
-    from playwright.sync_api import expect
 
     expect(always_sidebar.loc_handle).to_have_css("display", "none")
