@@ -30,4 +30,3 @@ def test_valuebox(page: Page, local_app: ShinyAppProc, value_box_id: str) -> Non
         assert title_tag_name == "p"
     value_box.close_full_screen()
     value_box.expect_full_screen(False)
-
