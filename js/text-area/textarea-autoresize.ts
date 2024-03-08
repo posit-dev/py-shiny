@@ -8,11 +8,12 @@ export interface DOMEvent<T extends EventTarget> extends Event {
 function onDelegatedEvent(
   eventName: string,
   selector: string,
-  callback: (target: EventTarget) => void
+  callback: (target: HTMLTextAreaElement) => void
 ) {
-  document.addEventListener(eventName, (e: DOMEvent<HTMLTextAreaElement>) => {
-    if (e.target.matches(selector)) {
-      callback(e.target);
+  document.addEventListener(eventName, (e) => {
+    const e2 = e as DOMEvent<HTMLTextAreaElement>;
+    if (e2.target.matches(selector)) {
+      callback(e2.target);
     }
   });
 }
@@ -41,8 +42,9 @@ function update_on_load() {
   }
 
   // document.readyState in ["interactive", "complete"];\
-  document
-    .querySelectorAll("textarea.textarea-autoresize")
-    .forEach(update_height);
+  const textAreas = document.querySelectorAll(
+    "textarea.textarea-autoresize"
+  ) as NodeListOf<HTMLTextAreaElement>;
+  textAreas.forEach(update_height);
 }
 update_on_load();
