@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* `input_dark_mode()` now accepts a `style` argument that can be used to customize the appearance and position of the dark mode toggle switch. (#1207)
+
 ### Other changes
 
 ## [0.8.1] - 2024-03-06
