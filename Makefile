@@ -146,6 +146,11 @@ install-deps: $(UV) FORCE ## install dependencies
 	. $(PYBIN)/activate && \
 	  uv pip install -e ".[dev,test]" --refresh
 
+install-ci: $(UV) FORCE ## install dependencies for CI
+	. $(PYBIN)/activate && \
+	  uv pip install -e ".[dev,test]" --refresh \
+	  "htmltools @ git+https://github.com/posit-dev/py-htmltools.git"
+
 
 
 # ## If caching is ever used, we could run:
@@ -237,15 +242,23 @@ install-docs: $(UV) FORCE
 	  "htmltools @ git+https://github.com/posit-dev/py-htmltools.git" \
 	  "shinylive @ git+https://github.com/posit-dev/py-shinylive.git"
 
-docs: $(PYBIN) FORCE ## docs: build quartodoc docs
+docs: docs-serve FORCE ## docs: build and serve docs in browser
+
+docs-serve: $(PYBIN) FORCE ## docs: serve docs in browser
+	$(MAKE) docs-quartodoc
+	@echo "-------- Previewing docs in browser --------"
+	@cd docs && make serve
+
+docs-site: $(PYBIN) FORCE ## docs: render quarto site
+	$(MAKE) docs-quartodoc
+	@echo "-------- Previewing docs in browser --------"
+	@cd docs && make serve
+
+docs-quartodoc: $(PYBIN) FORCE ## docs: build quartodoc docs
 	$(MAKE) install-docs
 	@echo "-------- Building docs with quartodoc --------"
 	@cd docs && make quartodoc
 
-docs-preview: $(PYBIN) FORCE ## docs: preview docs in browser
-	$(MAKE) install-docs
-	@echo "-------- Previewing docs in browser --------"
-	@cd docs && make serve
 
 # -----------------
 # Testing with playwright

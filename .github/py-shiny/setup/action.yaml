@@ -17,15 +17,10 @@ runs:
           # cache-dependency-path: |
           #   setup.cfg
 
-      - name: Upgrade pip
-        shell: bash
-        run: python -m pip install --upgrade pip
-
       - name: Install dependencies
         shell: bash
         run: |
-          pip install https://github.com/rstudio/py-htmltools/tarball/main
-          make install-deps
+          make install-ci
 
       - name: Install
         shell: bash
