@@ -76,7 +76,8 @@ def reload_end():
         }
         try:
             async with websockets.connect(
-                url, **options  # pyright: ignore[reportArgumentType]
+                url,
+                **options,  # pyright: ignore[reportArgumentType]
             ) as websocket:
                 await websocket.send("reload_end")
         except websockets.exceptions.ConnectionClosed:
@@ -110,9 +111,7 @@ class InjectAutoreloadMiddleware:
         ws_url = autoreload_url()
         self.script = (
             f"""  <script src="__shared/shiny-autoreload.js" data-ws-url="{html.escape(ws_url)}"></script>
-</head>""".encode(
-                "ascii"
-            )
+</head>""".encode("ascii")
             if ws_url
             else bytes()
         )

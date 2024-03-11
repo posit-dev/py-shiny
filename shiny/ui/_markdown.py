@@ -52,7 +52,7 @@ def markdown(
 
 
 def default_md_renderer(
-    preset: Literal["commonmark", "gfm"] = "gfm"
+    preset: Literal["commonmark", "gfm"] = "gfm",
 ) -> Callable[[str], str]:
     try:
         from markdown_it.main import MarkdownIt

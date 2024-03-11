@@ -39,9 +39,7 @@ T = TypeVar("T")
 # Default values for App options.
 LIB_PREFIX: str = "lib/"
 SANITIZE_ERRORS: bool = False
-SANITIZE_ERROR_MSG: str = (
-    "An error has occurred. Check your logs or contact the app author for clarification."
-)
+SANITIZE_ERROR_MSG: str = "An error has occurred. Check your logs or contact the app author for clarification."
 
 
 class App:
@@ -96,9 +94,7 @@ class App:
     may default to ``True`` in some production environments (e.g., Posit Connect).
     """
 
-    sanitize_error_msg: str = (
-        "An error has occurred. Check your logs or contact the app author for clarification."
-    )
+    sanitize_error_msg: str = "An error has occurred. Check your logs or contact the app author for clarification."
     """
     The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
     """
@@ -512,7 +508,7 @@ def noop_server_fn(input: Inputs, output: Outputs, session: Session) -> None:
 
 
 def wrap_server_fn_with_output_session(
-    server: Callable[[Inputs], None]
+    server: Callable[[Inputs], None],
 ) -> Callable[[Inputs, Outputs, Session], None]:
     def _server(input: Inputs, output: Outputs, session: Session):
         # Only has 1 parameter, ignore output, session

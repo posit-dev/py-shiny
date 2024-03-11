@@ -32,10 +32,10 @@ from controls import (
     OutputTextVerbatim,
     OutputUi,
 )
-from examples.example_apps import reruns, reruns_delay
 from mod_state import expect_default_mod_state, expect_mod_state
 from playwright.sync_api import Page
 
+from examples.example_apps import reruns, reruns_delay
 from shiny._utils import guess_mime_type
 
 img_path = Path(__file__).parent / "imgs"

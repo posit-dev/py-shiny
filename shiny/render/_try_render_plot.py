@@ -231,9 +231,7 @@ def try_render_matplotlib(
         matplotlib.pyplot.close(fig)  # pyright: ignore[reportUnknownMemberType]
 
 
-def get_matplotlib_figure(
-    x: object, allow_global: bool
-) -> Figure | None:  # pyright: ignore
+def get_matplotlib_figure(x: object, allow_global: bool) -> Figure | None:  # pyright: ignore
     import matplotlib.pyplot as plt
     from matplotlib.animation import Animation
     from matplotlib.artist import Artist

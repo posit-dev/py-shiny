@@ -207,7 +207,7 @@ def extended_task(func: Callable[P, Awaitable[R]]) -> ExtendedTask[P, R]: ...
 
 @add_example()
 def extended_task(
-    func: Optional[Callable[P, Awaitable[R]]] = None
+    func: Optional[Callable[P, Awaitable[R]]] = None,
 ) -> ExtendedTask[P, R] | Callable[[Callable[P, Awaitable[R]]], ExtendedTask[P, R]]:
     """
     Decorator to mark an async function as a slow computation. This will cause the

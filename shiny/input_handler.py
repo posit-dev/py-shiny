@@ -100,7 +100,6 @@ getType: function(el) {
 def _(
     value: str | list[str], name: ResolvedId, session: Session
 ) -> date | None | tuple[date | None, date | None]:
-
     if isinstance(value, str):
         return _safe_strptime_date(value)
     else:

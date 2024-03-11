@@ -18,8 +18,6 @@ from playwright.sync_api import expect as playwright_expect
 # (Imports split over many import statements due to auto formatting)
 from shiny._typing_extensions import (
     TypeGuard,  # pyright: ignore[reportPrivateImportUsage]
-)
-from shiny._typing_extensions import (
     assert_type,  # pyright: ignore[reportPrivateImportUsage]
 )
 from shiny.types import MISSING, MISSING_TYPE
@@ -928,7 +926,9 @@ class _InputCheckboxBase(
         self.loc.wait_for(state="visible", timeout=timeout)
         self.loc.scroll_into_view_if_needed(timeout=timeout)
         self.loc.set_checked(
-            value, timeout=timeout, **kwargs  # pyright: ignore[reportArgumentType]
+            value,
+            timeout=timeout,
+            **kwargs,  # pyright: ignore[reportArgumentType]
         )
 
     def toggle(self, *, timeout: Timeout = None, **kwargs: object) -> None:

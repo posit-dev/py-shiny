@@ -1,4 +1,4 @@
-from ._hand import dependencies, input_hand, hand_options
+from ._hand import dependencies, hand_options, input_hand
 
 __all__ = (
     "dependencies",

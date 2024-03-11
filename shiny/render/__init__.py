@@ -10,21 +10,21 @@ from ._dataframe import (
     DataTable,
     data_frame,
 )
+from ._deprecated import (  # noqa: F401
+    RenderFunction,  # pyright: ignore[reportUnusedImport]
+    RenderFunctionAsync,  # pyright: ignore[reportUnusedImport]
+)
 from ._express import (
     express,
 )
 from ._render import (
     code,
+    download,
     image,
     plot,
     table,
     text,
     ui,
-    download,
-)
-from ._deprecated import (  # noqa: F401
-    RenderFunction,  # pyright: ignore[reportUnusedImport]
-    RenderFunctionAsync,  # pyright: ignore[reportUnusedImport]
 )
 
 __all__ = (

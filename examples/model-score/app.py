@@ -198,7 +198,9 @@ def server(input: Inputs, output: Outputs, session: Session):
                     theme=(
                         "text-success"
                         if score > THRESHOLD_MID
-                        else "text-warning" if score > THRESHOLD_LOW else "bg-danger"
+                        else "text-warning"
+                        if score > THRESHOLD_LOW
+                        else "bg-danger"
                     ),
                 )
                 for model, score in scores_by_model.items()

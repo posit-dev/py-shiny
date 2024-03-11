@@ -353,7 +353,8 @@ def to_float(x: DataFrameColumn) -> pd.Series[float]:
         return cast("pd.Series[float]", x.cat.codes + 1)  # pyright: ignore
     elif ptypes.is_string_dtype(x):  # pyright: ignore[reportUnknownMemberType]
         return cast(
-            "pd.Series[float]", x.astype("category").cat.codes + 1  # pyright: ignore
+            "pd.Series[float]",
+            x.astype("category").cat.codes + 1,  # pyright: ignore
         )
     elif ptypes.is_datetime64_any_dtype(x):  # pyright: ignore[reportUnknownMemberType]
         # We need to convert the pandas datetimes, which are in nanoseconds since epoch,

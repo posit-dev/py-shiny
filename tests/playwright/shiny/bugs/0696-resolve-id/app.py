@@ -229,7 +229,8 @@ def mod_x_server(
     def out_plot():
         dt = [1, 2, 3, 4, 5]
         plt.bar(  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
-            dt[: ((n() + 1) % len(dt))], dt[: ((n() + 1) % len(dt))]  # pyright: ignore
+            dt[: ((n() + 1) % len(dt))],
+            dt[: ((n() + 1) % len(dt))],  # pyright: ignore
         )
 
     @render.table
