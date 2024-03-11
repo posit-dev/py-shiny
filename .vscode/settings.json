@@ -25,14 +25,13 @@
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
     "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.defaultFormatter": "charliermarsh.ruff",
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
         "editor.codeActionsOnSave": {
             "source.organizeImports": "explicit"
         }
     },
-    "isort.args": ["--profile", "black"],
     "editor.rulers": [88],
     "files.exclude": {
         "**/__pycache__": true,
