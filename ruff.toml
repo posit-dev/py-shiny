@@ -11,7 +11,37 @@ extend-exclude = [
 
 [lint]
 # E501: Line too long
-extend-ignore = ["E501"]
+# Conflicting lint rules: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+# * indentation-with-invalid-multiple (E111)
+# * indentation-with-invalid-multiple-comment (E114)
+# * over-indented (E117)
+# * indent-with-spaces (D206)
+# * triple-single-quotes (D300)
+# * bad-quotes-inline-string (Q000)
+# * bad-quotes-multiline-string (Q001)
+# * bad-quotes-docstring (Q002)
+# * avoidable-escaped-quote (Q003)
+# * missing-trailing-comma (COM812)
+# * prohibited-trailing-comma (COM819)
+# * single-line-implicit-string-concatenation (ISC001)
+# * multi-line-implicit-string-concatenation (ISC002)
+extend-ignore = [
+  "E501",
+  "E111",
+  "E114",
+  "E117",
+  "D206",
+  "D300",
+  "Q000",
+  "Q001",
+  "Q002",
+  "Q003",
+  "COM812",
+  "COM819",
+  "ISC001",
+  "ISC002",
+]
+
 
 # Rules to add https://docs.astral.sh/ruff/rules/
 # Default `select = ["E4", "E7", "E9", "F"]`
