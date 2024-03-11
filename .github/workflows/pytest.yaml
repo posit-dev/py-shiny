@@ -38,20 +38,10 @@ jobs:
         run: |
           make check-types
 
-      - name: Lint with flake8
+      - name: Lint with ruff
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           make check-lint
-
-      - name: black
-        if: steps.install.outcome == 'success' && (success() || failure())
-        run: |
-          make check-black
-
-      - name: isort
-        if: steps.install.outcome == 'success' && (success() || failure())
-        run: |
-          make check-isort
 
   playwright-shiny:
     runs-on: ${{ matrix.os }}
