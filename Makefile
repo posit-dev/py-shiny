@@ -3,8 +3,6 @@
 # Depend on `FORCE` to ensure the target is always run
 FORCE:
 
-# TODO-barret; Use `pybin/activate && COMMAND` approach, not `$(COMMAND)` approach
-
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -46,12 +44,7 @@ VENV = .venv
 PYBIN = $(VENV)/bin
 PIP = $(PYBIN)/pip
 PYTHON = $(PYBIN)/python
-UV = $(PYBIN)/uv
-PYBIN_ACTIVATE = $(PYBIN)/activate
 SITE_PACKAGES=$(VENV)/lib/python$(PYTHON_VERSION)/site-packages
-
-# /----------------
-
 
 
 # -----------------
@@ -67,78 +60,61 @@ $(VENV):
 	$(PYBIN)/pip install --upgrade pip
 
 $(PYBIN): $(VENV)
-$(PYBIN_ACTIVATE): $(PYBIN)
 $(PIP): $(PYBIN)
 
-UV_PKG = $(SITE_PACKAGES)/uv
-$(UV): $(UV_PKG)
-$(UV_PKG): $(PIP)
+UV = $(SITE_PACKAGES)/uv
+$(UV):
+	$(MAKE) $(PYBIN)
 	@echo "-------- Installing uv --------"
-	$(PIP) install uv # avoid circular dependency
-
-# /----------------
+	. $(PYBIN)/activate && \
+	  pip install uv
 
 # -----------------
 # Python package executables
 # -----------------
 # Use `FOO=$(PYBIN)/foo` to define the path to a package's executable
-# Use `FOO_PKG=$(SITE_PACKAGES)/foo` to define the path to a package's site-packages directory
-
-# Depend on `$(FOO_PKG)` to ensure the package is installed,
-# but use `$(FOO)` to actually run the package's executable
-
-# BLACK = $(PYTHON) -m black
-BLACK_PKG = $(SITE_PACKAGES)/black
-ISORT = $(PYBIN)/isort
-ISORT_PKG = $(SITE_PACKAGES)/isort
-FLAKE8 = $(PYBIN)/flake8
-FLAKE8_PKG = $(SITE_PACKAGES)/flake8
-PYTEST = $(PYBIN)/pytest
-PYTEST_PKG = $(SITE_PACKAGES)/pytest
-COVERAGE = $(PYBIN)/coverage
-COVERAGE_PKG = $(SITE_PACKAGES)/coverage
-PYRIGHT = $(PYBIN)/pyright
-PYRIGHT_PKG = $(SITE_PACKAGES)/pyright
-PLAYWRIGHT = $(PYBIN)/playwright
-PLAYWRIGHT_PKG = $(SITE_PACKAGES)/playwright
-$(BLACK_PKG) $(ISORT_PKG) $(FLAKE8_PKG) $(PYTEST_PKG) $(COVERAGE_PKG) $(PYRIGHT_PKG) $(PLAYWRIGHT_PKG):
+# Depend on `$(FOO)` to ensure the package is installed,
+# but use `$(PYBIN)/foo` to actually run the package's executable
+RUFF = $(SITE_PACKAGES)/ruff
+PYTEST = $(SITE_PACKAGES)/pytest
+COVERAGE = $(SITE_PACKAGES)/coverage
+PYRIGHT = $(SITE_PACKAGES)/pyright
+PLAYWRIGHT = $(SITE_PACKAGES)/playwright
+$(PYTEST) $(COVERAGE) $(PYRIGHT) $(PLAYWRIGHT):
 	@$(MAKE) install-deps
-# 	touch $@ # update timestamp of target file
 
-# /----------------
 
 # -----------------
 # Helper packages not defined in `setup.cfg`
 # -----------------
 
-TRCLI_PKG = $(SITE_PACKAGES)/trcli
-$(TRCLI_PKG):
-	@$(MAKE) $(UV)
+TRCLI = $(SITE_PACKAGES)/trcli
+$(TRCLI): $(UV)
 	@echo "-------- Installing trcli --------"
-	$(UV) pip install trcli
-	# @touch $(PYBIN)/trcli # update timestamp
+	. $(PYBIN)/activate && \
+	  uv pip install trcli
 
-TWINE_PKG = $(SITE_PACKAGES)/twine
-$(TWINE_PKG):
-	@$(MAKE) $(UV)
+TWINE = $(SITE_PACKAGES)/twine
+$(TWINE): $(UV)
 	@echo "-------- Installing twine --------"
-	$(UV) pip install twine
-	# @touch $(PYBIN)/twine # update timestamp
+	. $(PYBIN)/activate && \
+	  uv pip install twine
 
-RSCONNECT_PKG = $(SITE_PACKAGES)/rsconnect
-$(RSCONNECT_PKG): ## install the main version of rsconnect till pypi version supports shiny express
-	@$(MAKE) $(UV)
-	$(UV) pip install rsconnect @ git+https://github.com/rstudio/rsconnect-python.git
+RSCONNECT = $(SITE_PACKAGES)/rsconnect
+$(RSCONNECT): $(UV) ## install the main version of rsconnect till pypi version supports shiny express
+	@echo "-------- Installing rsconnect --------"
+	. $(PYBIN)/activate && \
+	  uv pip install rsconnect @ git+https://github.com/rstudio/rsconnect-python.git
 
-# /----------------
 
 # -----------------
 # Type stubs
 # -----------------
 
-typings/uvicorn: $(PYRIGHT_PKG)
+typings/uvicorn: $(PYRIGHT)
 	@echo "-------- Creating stub for uvicorn --------"
-	$(PYRIGHT) --createstub uvicorn
+	. $(PYBIN)/activate && \
+	  pyright --createstub uvicorn
 
 typings/matplotlib/__init__.pyi: ## grab type stubs from GitHub
 	@echo "-------- Creating stub for matplotlib --------"
@@ -147,14 +123,38 @@ typings/matplotlib/__init__.pyi: ## grab type stubs from GitHub
 	mv typings/python-type-stubs/stubs/matplotlib typings/
 	rm -rf typings/python-type-stubs
 
-typings/seaborn: $(PYRIGHT_PKG)
+typings/seaborn: $(PYRIGHT)
 	@echo "-------- Creating stub for seaborn --------"
-	$(PYRIGHT) --createstub seaborn
+	. $(PYBIN)/activate && \
+	  pyright --createstub seaborn
 
 pyright-typings: typings/uvicorn typings/matplotlib/__init__.pyi typings/seaborn
-# /----------------
+
+# -----------------
+# Install
+# -----------------
+## install the package to the active Python's site-packages
+# Note that instead of --force-reinstall, we uninstall and then install, because
+# --force-reinstall also reinstalls all deps. And if we also used --no-deps, then the
+# deps wouldn't be installed the first time.
+install: dist $(PIP) FORCE
+	. $(PYBIN)/activate && \
+	  pip uninstall -y shiny && \
+	  pip install dist/shiny*.whl
+
+install-deps: $(UV) FORCE ## install dependencies
+	. $(PYBIN)/activate && \
+	  uv pip install -e ".[dev,test]" --refresh
 
 
+
+# ## If caching is ever used, we could run:
+# install-deps: ## install latest dependencies
+# 	pip install --editable ".[dev,test]" --upgrade --upgrade-strategy eager
+
+# -----------------
+# Clean files
+# -----------------
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
 clean-build: FORCE ## remove build artifacts
@@ -177,110 +177,126 @@ clean-test: FORCE ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 	rm -rf typings/
 
-
-
+# -----------------
+# Check lint, test, and format of code
+# -----------------
 check: check-lint check-types check-tests ## check code, style, types, and test (basic CI)
 check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
 check-lint: check-ruff ## check code formatting and style
 
-check-ruff: $(PYBIN) FORCE
+check-ruff: $(RUFF) FORCE
 	@echo "-------- Running ruff lint and formatting checks --------"
 	@# Check imports in addition to code
 	@# Reason for two commands: https://github.com/astral-sh/ruff/issues/8232
-	# $(PYBIN)/ruff check --select I .
+	# . $(PYBIN)/activate && \
+	#   ruff check --select I --fix .
 	# Check lints
-	$(PYBIN)/ruff check .
+	. $(PYBIN)/activate && \
+	  ruff check .
 	# Check formatting
-	$(PYBIN)/ruff format --check .
-check-types: pyright-typings $(PYRIGHT_PKG) FORCE
+	. $(PYBIN)/activate && \
+	  ruff format --check .
+check-types: pyright-typings $(PYRIGHT) FORCE  ## check types with pyright
 	@echo "-------- Checking types with pyright --------"
-	$(PYBIN)/pyright
-check-tests: $(PYTEST_PKG) FORCE
+	. $(PYBIN)/activate && \
+	  pyright
+check-tests: $(PYTEST) FORCE
 	@echo "-------- Running tests with pytest --------"
-	$(PYTHON) tests/pytest/asyncio_prevent.py
-	$(PYTEST)
+	. $(PYBIN)/activate && \
+	  python tests/pytest/asyncio_prevent.py
+	. $(PYBIN)/activate && \
+	  pytest
 
 
-pyright: check-types ## check types with pyright
-lint: check-lint ## check style with flake8
+pyright: check-types
+lint: check-lint
 test: check-tests ## check tests quickly with the default Python
 
+# -----------------
+# Fix formatting of code
+# -----------------
 format: format-ruff ## format code
 
-format-ruff: $(PYBIN) FORCE
+format-ruff: $(RUFF) FORCE
 	@echo "-------- Formatting code with ruff --------"
 	@# Reason for two commands: https://github.com/astral-sh/ruff/issues/8232
 	@# Fix imports
-	$(PYBIN)/ruff check --select I --fix .
+	. $(PYBIN)/activate && \
+	  ruff check --select I --fix .
 	@# Fix formatting
-	$(PYBIN)/ruff format .
+	. $(PYBIN)/activate && \
+	  ruff format .
 
+# -----------------
+# Documentation
+# -----------------
+# Install docs deps; Used in `./docs/Makefile`
+install-docs: $(UV) FORCE
+	. $(PYBIN)/activate && \
+	  uv pip install -e ".[dev,test,doc]" \
+	  "htmltools @ git+https://github.com/posit-dev/py-htmltools.git" \
+	  "shinylive @ git+https://github.com/posit-dev/py-shinylive.git"
 
-# format: format-black format-isort ## format code with black and isort
-# format-black: $(BLACK_PKG) FORCE
-# 	@echo "-------- Formatting code with black --------"
-# 	$(PYTHON) -m black .
-# format-isort: $(ISORT_PKG) FORCE
-# 	@echo "-------- Sorting imports with isort --------"
-# 	$(ISORT) .
-
-docs: FORCE ## docs: build docs with quartodoc
+docs: $(PYBIN) FORCE ## docs: build quartodoc docs
+	$(MAKE) install-docs
 	@echo "-------- Building docs with quartodoc --------"
 	@cd docs && make quartodoc
 
-docs-preview: FORCE ## docs: preview docs in browser
+docs-preview: $(PYBIN) FORCE ## docs: preview docs in browser
+	$(MAKE) install-docs
 	@echo "-------- Previewing docs in browser --------"
 	@cd docs && make serve
+
+# -----------------
+# Testing with playwright
+# -----------------
 
 # Default `SUB_FILE` to empty
 SUB_FILE:=
 
-install-playwright: $(PLAYWRIGHT_PKG) FORCE
+install-playwright: $(PLAYWRIGHT) FORCE
 	@echo "-------- Installing playwright browsers --------"
-	@$(PLAYWRIGHT) install --with-deps
+	@. $(PYBIN)/activate && \
+	  playwright install --with-deps
 
-playwright-shiny: install-playwright $(PYTEST_PKG) FORCE ## end-to-end tests with playwright
-	$(PYTEST) tests/playwright/shiny/$(SUB_FILE)
+playwright-shiny: install-playwright $(PYTEST) FORCE ## end-to-end tests with playwright
+	. $(PYBIN)/activate && \
+	  pytest tests/playwright/shiny/$(SUB_FILE)
 
-playwright-deploys: install-playwright $(RSCONNECT_PKG) $(PYTEST_PKG) FORCE ## end-to-end tests on examples with playwright
-	$(PYTEST) tests/playwright/deploys/$(SUB_FILE)
+playwright-deploys: install-playwright $(RSCONNECT) $(PYTEST) FORCE ## end-to-end tests on examples with playwright
+	. $(PYBIN)/activate && \
+	  pytest tests/playwright/deploys/$(SUB_FILE)
 
-playwright-examples: install-playwright $(PYTEST_PKG) FORCE ## end-to-end tests on examples with playwright
-	$(PYTEST) tests/playwright/examples/$(SUB_FILE)
+playwright-examples: install-playwright $(PYTEST) FORCE ## end-to-end tests on examples with playwright
+	. $(PYBIN)/activate && \
+	  pytest tests/playwright/examples/$(SUB_FILE)
 
-playwright-debug: install-playwright $(PYTEST_PKG) FORCE ## All end-to-end tests, chrome only, headed
-	$(PYTEST) -c tests/playwright/playwright-pytest.ini tests/playwright/$(SUB_FILE)
+playwright-debug: install-playwright $(PYTEST) FORCE ## All end-to-end tests, chrome only, headed
+	. $(PYBIN)/activate && \
+	  pytest -c tests/playwright/playwright-pytest.ini tests/playwright/$(SUB_FILE)
 
 playwright-show-trace: FORCE ## Show trace of failed tests
 	npx playwright show-trace test-results/*/trace.zip
 
-testrail-junit: install-playwright $(TRCLI_PKG) $(PYTEST_PKG) FORCE ## end-to-end tests with playwright and generate junit report
-	$(PYTEST) tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml
+testrail-junit: install-playwright $(TRCLI) $(PYTEST) FORCE ## end-to-end tests with playwright and generate junit report
+	. $(PYBIN)/activate && \
+	  pytest tests/playwright/shiny/$(SUB_FILE) --junitxml=report.xml
 
-coverage: $(PYTEST_PKG) $(COVERAGE_PKG) FORCE ## check combined code coverage (must run e2e last)
-	$(PYTEST) --cov-report term-missing --cov=shiny tests/pytest/ tests/playwright/shiny/$(SUB_FILE)
-	$(PYBIN)/coverage html
-	$(BROWSER) htmlcov/index.html
+coverage: $(PYTEST) $(COVERAGE) FORCE ## check combined code coverage (must run e2e last)
+	. $(PYBIN)/activate && \
+	  pytest --cov-report term-missing --cov=shiny tests/pytest/ tests/playwright/shiny/$(SUB_FILE) && \
+	  coverage html && \
+	  $(BROWSER) htmlcov/index.html
 
-release: $(TWINE_PKG) dist FORCE ## package and upload a release
-	$(PYBIN)/twine upload dist/*
+# -----------------
+# Release
+# -----------------
+release: $(TWINE) dist FORCE ## package and upload a release
+	. $(PYBIN)/activate && \
+	  twine upload dist/*
 
 dist: clean $(PYTHON) FORCE ## builds source and wheel package
-	$(PYTHON) setup.py sdist
-	$(PYTHON) setup.py bdist_wheel
+	. $(PYBIN)/activate && \
+	  python setup.py sdist && \
+	  python setup.py bdist_wheel
 	ls -l dist
-
-## install the package to the active Python's site-packages
-# Note that instead of --force-reinstall, we uninstall and then install, because
-# --force-reinstall also reinstalls all deps. And if we also used --no-deps, then the
-# deps wouldn't be installed the first time.
-install: dist $(PIP) FORCE
-	$(PIP) uninstall -y shiny
-	$(PIP) install dist/shiny*.whl
-
-install-deps: $(UV) FORCE ## install dependencies
-	$(UV) pip install -e ".[dev,test]" --refresh
-
-# ## If caching is ever used, we could run:
-# install-deps: ## install latest dependencies
-# 	pip install --editable ".[dev,test]" --upgrade --upgrade-strategy eager
