@@ -44,12 +44,29 @@ def is_express_app(app: str, app_dir: str | None) -> bool:
         # Read the file, parse it, and look for any imports of shiny.express.
         with open(app_path) as f:
             content = f.read()
-        tree = ast.parse(content, app_path)
-        detector = DetectShinyExpressVisitor()
-        detector.visit(tree)
+            return is_express_app_content(content)
 
     except Exception:
         return False
+
+
+def is_express_app_content(content: str) -> bool:
+    """
+    Given Python code provided as a string, detect whether it is a Shiny express app.
+
+    Parameters
+    ----------
+    content
+        Python code for the app, provided as a string.
+
+    Returns
+    -------
+    :
+        `True` if it is a Shiny express app, `False` otherwise.
+    """
+    tree = ast.parse(content)
+    detector = DetectShinyExpressVisitor()
+    detector.visit(tree)
 
     return detector.found_shiny_express_import
 
