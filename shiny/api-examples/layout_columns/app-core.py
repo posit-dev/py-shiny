@@ -1,4 +1,12 @@
-from model_plots import *  # model plots and cards
+# model plots and cards
+from model_plots import (
+    card_acc,
+    card_feat,
+    card_loss,
+    plot_accuracy_over_time,
+    plot_feature_importance,
+    plot_loss_over_time,
+)
 
 from shiny import App, Inputs, Outputs, Session, render, ui
 
