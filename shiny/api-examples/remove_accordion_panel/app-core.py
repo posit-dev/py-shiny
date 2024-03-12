@@ -27,7 +27,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     # Copy the list for user
-    user_choices = list(choices)
+    user_choices = choices.copy()
 
     @reactive.effect
     @reactive.event(input.remove_panel)

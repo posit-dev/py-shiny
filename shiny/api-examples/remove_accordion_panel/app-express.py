@@ -20,19 +20,16 @@ with ui.accordion(id="acc", multiple=True):
             f"Some narrative for section {letter}"
 
 
-user_choices = list(choices)
-
-
 @reactive.effect
 @reactive.event(input.remove_panel)
 def _():
-    if len(user_choices) == 0:
+    if len(choices) == 0:
         ui.notification_show("No more panels to remove!")
         return
 
-    ui.remove_accordion_panel("acc", f"Section {user_choices.pop()}")
+    ui.remove_accordion_panel("acc", f"Section {choices.pop()}")
 
     label = "No more panels to remove!"
-    if len(user_choices) > 0:
-        label = f"Remove Section {user_choices[-1]}"
+    if len(choices) > 0:
+        label = f"Remove Section {choices[-1]}"
     ui.update_action_button("remove_panel", label=label)
