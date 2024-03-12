@@ -384,8 +384,8 @@ class plot(Renderer[object]):
 
         raise Exception(
             f"@render.plot doesn't know to render objects of type '{str(type(x))}'. "
-            + "Consider either requesting support for this type of plot object, and/or "
-            + " explictly saving the object to a (png) file and using @render.image."
+            "Consider either requesting support for this type of plot object, and/or "
+            " explictly saving the object to a (png) file and using @render.image."
         )
 
 

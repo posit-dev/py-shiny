@@ -1685,7 +1685,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
             values_found_txt = ", ".join([f'"{key}"' for key in key_arr])
             raise ValueError(
                 f"Could not find value '{value}' when moving slider from {error_msg_direction}\n"
-                + f"Values found:\n{values_found_txt}{trail_txt}"
+                f"Values found:\n{values_found_txt}{trail_txt}"
             )
 
     def _grid_bb(self, *, timeout: Timeout = None) -> FloatRect:

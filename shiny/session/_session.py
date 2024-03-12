@@ -1064,7 +1064,7 @@ class Outputs:
             if not isinstance(renderer, Renderer):
                 raise TypeError(
                     "`@output` must be applied to a `@render.xx` function.\n"
-                    + "In other words, `@output` must be above `@render.xx`."
+                    "In other words, `@output` must be above `@render.xx`."
                 )
 
             # Get the (possibly namespaced) output id

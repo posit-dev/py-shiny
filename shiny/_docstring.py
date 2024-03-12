@@ -238,7 +238,7 @@ class ExampleNotFoundException(FileNotFoundError):
 
         return (
             f"Could not find {type} example file named "
-            + f"{' or '.join(self.file_names)} in {self.dir}."
+            f"{' or '.join(self.file_names)} in {self.dir}."
         )
 
 

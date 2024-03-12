@@ -258,8 +258,8 @@ def get_matplotlib_figure(x: object, allow_global: bool) -> Figure | None:  # py
     if isinstance(x, Animation):
         raise RuntimeError(
             "Matplotlib's Animation class isn't supported by @render.plot. "
-            + "Consider explictly saving the animation to a file and "
-            + "then using @render.image instead to render it."
+            "Consider explictly saving the animation to a file and "
+            "then using @render.image instead to render it."
         )
 
     # Libraries like pandas, xarray, etc have plot() methods that can return a wide

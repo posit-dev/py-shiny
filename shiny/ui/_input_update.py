@@ -754,7 +754,7 @@ def update_selectize(
         if set(search_fields).difference({"label", "value", "optgroup"}):
             raise ValueError(
                 "The selectize.js searchFields option must contain some combination of: "
-                + "'label', 'value', and 'optgroup'"
+                "'label', 'value', and 'optgroup'"
             )
 
         # i.e. valueField (defaults to 'value')
