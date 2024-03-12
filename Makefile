@@ -186,7 +186,7 @@ clean-test: FORCE ## remove test and coverage artifacts
 # Check lint, test, and format of code
 # -----------------
 check: check-lint check-types check-tests ## check code, style, types, and test (basic CI)
-check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
+check-fix: format check-types check-tests ## check and format code, style, types, and test
 check-lint: check-ruff ## check code lints and format
 
 check-ruff: $(RUFF) FORCE
