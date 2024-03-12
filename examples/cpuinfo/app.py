@@ -8,7 +8,7 @@ else:
 
 from math import ceil
 
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -17,7 +17,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 # The agg matplotlib backend seems to be a little more efficient than the default when
 # running on macOS, and also gives more consistent results across operating systems
-matplotlib.use("agg")
+mpl.use("agg")
 
 # max number of samples to retain
 MAX_SAMPLES = 1000

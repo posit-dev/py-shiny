@@ -1,5 +1,5 @@
 # App altered from: https://github.com/rstudio/py-shiny/blob/main/shiny/api-examples/data_frame/app.py
-import pandas  # noqa: F401 (this line needed for Shinylive to load plotly.express)
+import pandas as pd  # noqa: F401 (this line needed for Shinylive to load plotly.express)
 import plotly.express as px
 import plotly.graph_objs as go
 from shinywidgets import output_widget, render_widget

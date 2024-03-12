@@ -137,7 +137,6 @@ def try_render_matplotlib(
         return (False, None)
 
     try:
-        import matplotlib
         import matplotlib.pyplot as plt  # pyright: ignore[reportUnusedImport] # noqa: F401
 
         pixelratio = plot_size_info.pixelratio
@@ -226,9 +225,9 @@ def try_render_matplotlib(
         return (True, res)
 
     finally:
-        import matplotlib.pyplot
+        import matplotlib.pyplot as plt
 
-        matplotlib.pyplot.close(fig)  # pyright: ignore[reportUnknownMemberType]
+        plt.close(fig)  # pyright: ignore[reportUnknownMemberType]
 
 
 def get_matplotlib_figure(x: object, allow_global: bool) -> Figure | None:  # pyright: ignore

@@ -535,7 +535,7 @@ class table(Renderer[TableResult]):
         # TODO: deal with kwargs collision with output_table
 
     async def transform(self, value: TableResult) -> dict[str, Jsonifiable]:
-        import pandas
+        import pandas as pd
         import pandas.io.formats.style
 
         html: str
@@ -545,7 +545,7 @@ class table(Renderer[TableResult]):
                 value.to_html(**self.kwargs),  # pyright: ignore
             )
         else:
-            if not isinstance(value, pandas.DataFrame):
+            if not isinstance(value, pd.DataFrame):
                 if not isinstance(value, PandasCompatible):
                     raise TypeError(
                         "@render.table doesn't know how to render objects of type "

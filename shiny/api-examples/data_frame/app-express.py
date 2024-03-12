@@ -1,4 +1,4 @@
-import pandas  # noqa: F401 (this line needed for Shinylive to load plotly.express)
+import pandas as pd  # noqa: F401 (this line needed for Shinylive to load plotly.express)
 import plotly.express as px
 from shinywidgets import render_widget
 
