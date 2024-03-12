@@ -25,21 +25,23 @@ def test_panel_main_and_panel_sidebar():
     ui.layout_sidebar(_s)
     ui.layout_sidebar(_s, None)
 
-    with pytest.raises(ValueError, match="multiple `sidebar()` objects"):
+    with pytest.raises(ValueError) as e:
         ui.layout_sidebar(_s, _s)
+    assert "multiple `sidebar()` objects" in str(e)
 
-    with pytest.raises(
-        ValueError, match="not being supplied with a `sidebar()` object"
-    ):
+    with pytest.raises(ValueError) as e:
         ui.layout_sidebar(None, _ps)  # pyright: ignore[reportArgumentType]
+    assert "not being supplied with a `sidebar()` object" in str(e)
 
-    with pytest.raises(ValueError, match="is not being used with `panel_sidebar()`"):
+    with pytest.raises(ValueError) as e:
         ui.layout_sidebar(_s, _pm)
+    assert "is not being used with `panel_sidebar()`" in str(e)
 
     with pytest.raises(ValueError, match="not being supplied as the second argument"):
         ui.layout_sidebar(_ps, None, _pm)
-    with pytest.raises(ValueError, match="Unexpected extra legacy `*args`"):
+    with pytest.raises(ValueError) as e:
         ui.layout_sidebar(_ps, _pm, None, "42")
+    assert "Unexpected extra legacy `*args`" in str(e)
 
 
 @pytest.mark.parametrize(

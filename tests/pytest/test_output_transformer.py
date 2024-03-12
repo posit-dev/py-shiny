@@ -116,7 +116,7 @@ def test_output_transformer_with_pass_through_kwargs():
 
 
 def test_output_transformer_pos_args():
-    with pytest.raises(TypeError, match="must have 2 positional arguments"):
+    with pytest.raises(TypeError, match="must have 2 positional parameters"):
 
         @output_transformer  # pyright: ignore[reportArgumentType]
         async def TestTransformer(
