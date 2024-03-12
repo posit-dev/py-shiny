@@ -18,7 +18,7 @@ message("Installing GitHub packages: bslib, shiny, htmltools")
 withr::local_temp_libpaths()
 ignore <- capture.output({
   pak::pkg_install(c(
-    "rstudio/bslib@main",
+    "rstudio/bslib@card/shiny-input-full-screen",
     "rstudio/shiny@main",
     "cran::htmltools"
   ))
