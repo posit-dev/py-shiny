@@ -131,16 +131,7 @@ def modal(
     )
 
     # jQuery plugin doesn't work in Bootstrap 5, but vanilla JS doesn't work in Bootstrap 4 :sob:
-    js = "\n".join(
-        [
-            "if (window.bootstrap && !window.bootstrap.Modal.VERSION.match(/^4\\. /)) {",
-            "  var modal=new bootstrap.Modal(document.getElementById('shiny-modal'))",
-            "  modal.show()",
-            "} else {",
-            "  $('#shiny-modal').modal().focus()",
-            "}",
-        ]
-    )
+    js = "if (window.bootstrap && !window.bootstrap.Modal.VERSION.match(/^4\\. /)) {\n  var modal=new bootstrap.Modal(document.getElementById('shiny-modal'))\n  modal.show()\n} else {\n  $('#shiny-modal').modal().focus()\n}"
 
     backdrop = None if easy_close else "static"
     keyboard = None if easy_close else "false"
