@@ -3,7 +3,7 @@ Tools for working within a (user) session context.
 """
 
 from ._session import Inputs, Outputs, Session
-from ._utils import (  # noqa: F401
+from ._utils import (
     get_current_session,
     require_active_session,
 )

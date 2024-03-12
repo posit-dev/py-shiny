@@ -137,7 +137,7 @@ def try_render_matplotlib(
         return (False, None)
 
     try:
-        import matplotlib.pyplot as plt  # pyright: ignore[reportUnusedImport] # noqa: F401
+        import matplotlib.pyplot as plt  # pyright: ignore[reportUnusedImport]
 
         pixelratio = plot_size_info.pixelratio
 

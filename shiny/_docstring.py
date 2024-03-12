@@ -45,7 +45,7 @@ def no_example(mode: Optional[Literal["express", "core"]] = None) -> Callable[[F
             current.extend(["express", "core"])
         else:
             current.append(mode)
-        setattr(func, "__no_example", current)  # noqa: B010
+        setattr(func, "__no_example", current)
         return func
 
     return decorator

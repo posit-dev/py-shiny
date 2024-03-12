@@ -91,8 +91,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     ):
         def _():
             with reactive.isolate():
-                all_vals.set(all_vals.get() + (f"a-{suffix}",))
-                vals.set(vals.get() + (f"a-{suffix}",))
+                all_vals.set((*all_vals.get(), f"a-{suffix}"))
+                vals.set((*vals.get(), f"a-{suffix}"))
 
         return _
 
@@ -102,12 +102,12 @@ def server(input: Inputs, output: Outputs, session: Session):
     ):
         async def _():
             with reactive.isolate():
-                all_vals.set(all_vals.get() + (f"bx-{suffix}",))
-                vals.set(vals.get() + (f"bx-{suffix}",))
+                all_vals.set((*all_vals.get(), f"bx-{suffix}"))
+                vals.set((*vals.get(), f"bx-{suffix}"))
             await asyncio.sleep(0)
             with reactive.isolate():
-                all_vals.set(all_vals.get() + (f"by-{suffix}",))
-                vals.set(vals.get() + (f"by-{suffix}",))
+                all_vals.set((*all_vals.get(), f"by-{suffix}"))
+                vals.set((*vals.get(), f"by-{suffix}"))
 
         return _
 
@@ -117,8 +117,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     ):
         def _():
             with reactive.isolate():
-                all_vals.set(all_vals.get() + (f"c-{suffix}",))
-                vals.set(vals.get() + (f"c-{suffix}",))
+                all_vals.set((*all_vals.get(), f"c-{suffix}"))
+                vals.set((*vals.get(), f"c-{suffix}"))
 
         return _
 
