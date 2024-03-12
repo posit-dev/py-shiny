@@ -60,7 +60,9 @@ $(VENV):
 	$(PYBIN)/pip install --upgrade pip
 
 $(PYBIN): $(VENV)
+$(PYTHON): $(PYBIN)
 $(PIP): $(PYBIN)
+
 
 UV = $(SITE_PACKAGES)/uv
 $(UV):
