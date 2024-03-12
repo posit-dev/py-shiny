@@ -81,7 +81,7 @@ extend-select = [
   # "FIX",
   # "PGH",
   "FLY",
-  # "NPY",
+  "NPY",
   # "RUF100",
   # "RUF005",
 ]
