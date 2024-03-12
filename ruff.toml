@@ -59,7 +59,6 @@ extend-select = [
   "TCH",    # TCH; flake8-type-checking: https://docs.astral.sh/ruff/rules/#flake8-type-checking-tch
   # "FIX", # FIX; flake8-fixme: https://docs.astral.sh/ruff/rules/#flake8-fixme-fix
   # "PGH", # PGH; pygrep-hooks: https://docs.astral.sh/ruff/rules/#pygrep-hooks-pgh
-  "FLY",    # FLY; flynt: https://docs.astral.sh/ruff/rules/#flynt-fly
   "NPY",    # NPY; NumPy-specific rules: https://docs.astral.sh/ruff/rules/#numpy-specific-rules-npy
   "RUF005", # RUF005; Ruff specific rules Consider {expression} instead of concatenation: https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
   "RUF100", # RUF100; Ruff specific rules Unused `noqa` directive https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
