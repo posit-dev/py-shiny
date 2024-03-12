@@ -2,6 +2,8 @@ from ._fill import (
     as_fill_item,
     as_fillable_container,
     remove_all_fill,
+    # is_fill_item,
+    # is_fillable_container,
 )
 
 __all__ = (
