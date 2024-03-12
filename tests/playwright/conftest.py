@@ -27,6 +27,7 @@ from typing import (
 import pytest
 
 import shiny._utils
+from shiny._typing_extensions import Self
 
 __all__ = (
     "ShinyAppProc",
@@ -149,7 +150,7 @@ class ShinyAppProc:
         sleep(0.5)
         self.proc.terminate()
 
-    def __enter__(self) -> ShinyAppProc:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(
