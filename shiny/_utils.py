@@ -13,11 +13,22 @@ import socketserver
 import sys
 import tempfile
 import warnings
-from pathlib import Path
-from types import ModuleType
-from typing import Any, Awaitable, Callable, Generator, Optional, TypeVar, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Generator,
+    Optional,
+    TypeVar,
+    cast,
+)
 
 from ._typing_extensions import ParamSpec, TypeGuard
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from types import ModuleType
 
 CancelledError = asyncio.CancelledError
 

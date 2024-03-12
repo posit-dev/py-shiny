@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import pathlib
 import re
 import sys
 import time
@@ -21,6 +20,9 @@ from shiny._typing_extensions import (
     assert_type,  # pyright: ignore[reportPrivateImportUsage]
 )
 from shiny.types import MISSING, MISSING_TYPE
+
+if typing.TYPE_CHECKING:
+    import pathlib
 
 """
 Questions:

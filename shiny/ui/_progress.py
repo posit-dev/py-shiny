@@ -2,17 +2,18 @@ from __future__ import annotations
 
 __all__ = ("Progress",)
 
-from types import TracebackType
 from typing import TYPE_CHECKING, Optional, Type
 from warnings import warn
 
 from .._docstring import add_example
 from .._utils import rand_hex
 from ..session import require_active_session
-from ..session._session import UpdateProgressMessage
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from .. import Session
+    from ..session._session import UpdateProgressMessage
 
 
 @add_example()

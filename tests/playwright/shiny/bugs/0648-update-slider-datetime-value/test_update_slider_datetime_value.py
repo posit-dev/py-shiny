@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from conftest import ShinyAppProc
 from controls import InputActionButton, InputSlider, OutputTextVerbatim
 from playwright.sync_api import Page, expect
+
+if TYPE_CHECKING:
+    from conftest import ShinyAppProc
 
 
 def test_slider_app(page: Page, local_app: ShinyAppProc) -> None:

@@ -24,13 +24,13 @@ from htmltools import Tag, TagAttrValue, TagChild
 if TYPE_CHECKING:
     import pandas as pd
 
+    from .._typing_extensions import Self
     from ..session._utils import RenderedDeps
 
 from .. import _utils
 from .. import ui as _ui
 from .._docstring import add_example, no_example
 from .._namespaces import ResolvedId
-from .._typing_extensions import Self
 from ..express._mock_session import ExpressMockSession
 from ..session import get_current_session, require_active_session
 from ..session._session import DownloadHandler, DownloadInfo

@@ -4,8 +4,6 @@ import abc
 import json
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, cast, runtime_checkable
 
-from htmltools import Tag
-
 from .. import ui
 from .._docstring import add_example, no_example
 from ._dataframe_unsafe import serialize_numpy_dtypes
@@ -13,6 +11,7 @@ from .renderer import Jsonifiable, Renderer
 
 if TYPE_CHECKING:
     import pandas as pd
+    from htmltools import Tag
 
 
 class AbstractTabularData(abc.ABC):

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import ast
-import types
-from typing import Any, Callable, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 from ._helpers import ast_matches_func
+
+if TYPE_CHECKING:
+    import types
 
 sys_alias = "__auto_displayhook_sys__"
 expressify_decorator_func_name = "_expressify_decorator_function_def"

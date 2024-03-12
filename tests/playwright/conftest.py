@@ -10,9 +10,9 @@ import time
 from contextlib import contextmanager
 from pathlib import PurePath
 from time import sleep
-from types import TracebackType
 from typing import (
     IO,
+    TYPE_CHECKING,
     Any,
     Callable,
     Generator,
@@ -27,7 +27,6 @@ from typing import (
 import pytest
 
 import shiny._utils
-from shiny._typing_extensions import Self
 
 __all__ = (
     "ShinyAppProc",
@@ -40,7 +39,13 @@ __all__ = (
     "retry_with_timeout",
 )
 
-from playwright.sync_api import BrowserContext, Page
+
+if TYPE_CHECKING:
+    from types import TracebackType
+
+    from playwright.sync_api import BrowserContext, Page
+
+    from shiny._typing_extensions import Self
 
 
 # Make a single page fixture that can be used by all tests

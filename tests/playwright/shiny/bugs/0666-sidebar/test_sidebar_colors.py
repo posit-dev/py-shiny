@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from colors import bg_color, fg_color
-from conftest import ShinyAppProc
 from controls import Sidebar, _expect_class_value
 from playwright.sync_api import Page, expect
+
+if TYPE_CHECKING:
+    from conftest import ShinyAppProc
 
 
 def test_colors_are_rgb() -> None:

@@ -14,12 +14,11 @@ __all__ = (
 
 from typing import TYPE_CHECKING, Any, BinaryIO, Literal, NamedTuple, Optional, Protocol
 
-from htmltools import TagChild
-
 from ._docstring import add_example
 from ._typing_extensions import NotRequired, TypedDict
 
 if TYPE_CHECKING:
+    from htmltools import TagChild
     from matplotlib.figure import Figure
 
 

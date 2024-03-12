@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pandas as pd
 
 from shiny import reactive
 from shiny.express import input, render, ui
-from shiny.types import FileInfo
+
+if TYPE_CHECKING:
+    from shiny.types import FileInfo
 
 ui.input_file("file1", "Choose CSV File", accept=[".csv"], multiple=False)
 ui.input_checkbox_group(

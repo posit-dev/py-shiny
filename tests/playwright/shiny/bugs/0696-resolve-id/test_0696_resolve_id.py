@@ -4,9 +4,9 @@ import base64
 import datetime
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
-from conftest import ShinyAppProc
 from controls import (
     DownloadButton,
     DownloadLink,
@@ -33,10 +33,13 @@ from controls import (
     OutputUi,
 )
 from mod_state import expect_default_mod_state, expect_mod_state
-from playwright.sync_api import Page
 
 from examples.example_apps import reruns, reruns_delay
 from shiny._utils import guess_mime_type
+
+if TYPE_CHECKING:
+    from conftest import ShinyAppProc
+    from playwright.sync_api import Page
 
 img_path = Path(__file__).parent / "imgs"
 penguin_imgs = [str(img_path / img) for img in os.listdir(img_path)]

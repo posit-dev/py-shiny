@@ -33,10 +33,10 @@ from typing import (
 )
 
 from ..renderer import Jsonifiable, Renderer
-from ..renderer._renderer import DefaultUIFn, DefaultUIFnResultOrNone
 
 if TYPE_CHECKING:
     from ...session import Session
+    from ..renderer._renderer import DefaultUIFn, DefaultUIFnResultOrNone
 
 from ..._deprecated import warn_deprecated
 from ..._docstring import add_example

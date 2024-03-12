@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import starlette.exceptions as exceptions
 import starlette.responses as responses
-from starlette.types import ASGIApp, Receive, Scope, Send
+
+if TYPE_CHECKING:
+    from starlette.types import ASGIApp, Receive, Scope, Send
 
 
 class ErrorMiddleware:

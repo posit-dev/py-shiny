@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from contextlib import AbstractContextManager
-from typing import Callable, TypeVar
+from typing import TYPE_CHECKING, Callable, TypeVar
 
 from .._deprecated import warn_deprecated
 from .._typing_extensions import ParamSpec
-from ..render.renderer import RendererT
 from .ui import hold
+
+if TYPE_CHECKING:
+    from contextlib import AbstractContextManager
+
+    from ..render.renderer import RendererT
 
 __all__ = ("suspend_display",)
 

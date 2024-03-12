@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-from conftest import ShinyAppProc
+from typing import TYPE_CHECKING
+
 from controls import InputTaskButton, OutputText
-from playwright.sync_api import Page
+
+if TYPE_CHECKING:
+    from conftest import ShinyAppProc
+    from playwright.sync_api import Page
 
 
 def click_extended_task_button(

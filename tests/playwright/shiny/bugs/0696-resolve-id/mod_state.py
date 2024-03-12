@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import datetime
+from typing import TYPE_CHECKING
 
 from controls import OutputTextVerbatim
-from playwright.sync_api import Page
+
+if TYPE_CHECKING:
+    from playwright.sync_api import Page
 
 
 def expect_state(

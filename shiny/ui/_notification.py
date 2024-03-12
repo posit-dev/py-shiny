@@ -4,13 +4,13 @@ __all__ = ("notification_show", "notification_remove")
 
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
-from htmltools import TagChild
-
 from .._docstring import add_example, no_example
 from .._utils import rand_hex
 from ..session import require_active_session
 
 if TYPE_CHECKING:
+    from htmltools import TagChild
+
     from .. import Session
 
 

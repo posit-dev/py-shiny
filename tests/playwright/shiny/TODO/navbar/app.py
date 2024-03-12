@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from shiny import App, ui
-from shiny.types import NavSetArg
+
+if TYPE_CHECKING:
+    from shiny.types import NavSetArg
 
 my_sidebar = ui.sidebar("Sidebar content", open="open", title="Sidebar title")
 

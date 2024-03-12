@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import pytest
 from htmltools import Tag, TagAttrValue
 
 from shiny import ui
-from shiny.ui._sidebar import SidebarOpenSpec, SidebarOpenValue
+
+if TYPE_CHECKING:
+    from shiny.ui._sidebar import SidebarOpenSpec, SidebarOpenValue
 
 _s = ui.sidebar("Sidebar!")
 _m = "Body"

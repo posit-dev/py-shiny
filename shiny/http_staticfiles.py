@@ -17,8 +17,11 @@ __all__ = (
 )
 
 import sys
+from typing import TYPE_CHECKING
 
-from starlette.background import BackgroundTask
+if TYPE_CHECKING:
+    from starlette.background import BackgroundTask
+    from starlette.types import Receive, Scope, Send
 
 if "pyodide" not in sys.modules:
     # Running in native mode; use starlette StaticFiles
@@ -39,7 +42,6 @@ else:
     from typing import Iterable, MutableMapping, Optional
 
     from starlette.responses import PlainTextResponse
-    from starlette.types import Receive, Scope, Send
 
     from . import _utils
 

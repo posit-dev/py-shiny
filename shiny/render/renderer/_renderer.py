@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import (
+    TYPE_CHECKING,
     Any,
     Awaitable,
     Callable,
@@ -17,8 +18,10 @@ from typing import (
 from htmltools import MetadataNode, Tag, TagList
 
 from ..._docstring import add_example
-from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
+
+if TYPE_CHECKING:
+    from ..._typing_extensions import Self
 
 # TODO-barret-future: Double check docs are rendererd
 # Missing first paragraph from some classes: Example: TransformerMetadata.

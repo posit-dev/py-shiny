@@ -20,11 +20,9 @@ __all__ = (
 
 import json
 import re
-from datetime import date
 from typing import TYPE_CHECKING, Literal, Mapping, Optional, cast, overload
 
 from htmltools import TagChild, TagList, tags
-from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from .._docstring import add_example, doc_format, no_example
@@ -41,6 +39,10 @@ from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_t
 from ._utils import JSEval, _session_on_flush_send_msg, extract_js_keys
 
 if TYPE_CHECKING:
+    from datetime import date
+
+    from starlette.requests import Request
+
     from .. import Session
 
 

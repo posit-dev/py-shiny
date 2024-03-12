@@ -8,9 +8,8 @@ import os
 import platform
 import re
 import sys
-import types
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import click
 import uvicorn
@@ -23,6 +22,9 @@ from ._docstring import no_example
 from ._typing_extensions import NotRequired, TypedDict
 from .express import is_express_app
 from .express._utils import escape_to_var_name
+
+if TYPE_CHECKING:
+    import types
 
 
 @click.group("main")

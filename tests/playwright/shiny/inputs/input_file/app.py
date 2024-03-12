@@ -5,7 +5,9 @@ import typing
 import pandas as pd
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
-from shiny.types import FileInfo
+
+if typing.TYPE_CHECKING:
+    from shiny.types import FileInfo
 
 app_ui = ui.page_fluid(
     ui.input_file("file1", "Choose CSV File", accept=[".csv"], multiple=False),

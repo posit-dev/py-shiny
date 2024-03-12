@@ -17,7 +17,9 @@ from htmltools import TagList
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 from shiny.session import session_context
-from shiny.types import ImgData
+
+if typing.TYPE_CHECKING:
+    from shiny.types import ImgData
 
 pandas_df = pd.DataFrame(
     {
