@@ -54,6 +54,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    rnd = np.random.RandomState()
+
     @reactive.calc
     def fake_data():
         n = 5000
@@ -98,7 +100,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.plot
     def pandas():
         ts = pd.Series(
-            np.random.randn(1000), index=pd.date_range("1/1/2000", periods=1000)
+            rnd.randn(1000),
+            index=pd.date_range("1/1/2000", periods=1000),
         )
         ts = ts.cumsum()
         return ts.plot()
