@@ -58,7 +58,7 @@ def df():
         params=[150],
     )
     # Convert timestamp to datetime object, which SQLite doesn't support natively
-    tbl["timestamp"] = pd.to_datetime(tbl["timestamp"], utc=True)
+    tbl["timestamp"] = pd.to_datetime(tbl["timestamp"], utc=True, format="ISO8601")
     # Create a short label for readability
     tbl["time"] = tbl["timestamp"].dt.strftime("%H:%M:%S")
     # Reverse order of rows
