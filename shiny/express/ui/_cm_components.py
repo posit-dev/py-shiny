@@ -656,12 +656,12 @@ def navset_tab(
     """
     return RecallContextManager(
         ui.navset_tab,
-        kwargs=dict(
-            id=id,
-            selected=selected,
-            header=header,
-            footer=footer,
-        ),
+        kwargs={
+            "id": id,
+            "selected": selected,
+            "header": header,
+            "footer": footer,
+        },
     )
 
 
@@ -693,12 +693,12 @@ def navset_pill(
     """
     return RecallContextManager(
         ui.navset_pill,
-        kwargs=dict(
-            id=id,
-            selected=selected,
-            header=header,
-            footer=footer,
-        ),
+        kwargs={
+            "id": id,
+            "selected": selected,
+            "header": header,
+            "footer": footer,
+        },
     )
 
 
@@ -731,12 +731,12 @@ def navset_underline(
     """
     return RecallContextManager(
         ui.navset_underline,
-        kwargs=dict(
-            id=id,
-            selected=selected,
-            header=header,
-            footer=footer,
-        ),
+        kwargs={
+            "id": id,
+            "selected": selected,
+            "header": header,
+            "footer": footer,
+        },
     )
 
 
@@ -768,12 +768,12 @@ def navset_hidden(
     """
     return RecallContextManager(
         ui.navset_hidden,
-        kwargs=dict(
-            id=id,
-            selected=selected,
-            header=header,
-            footer=footer,
-        ),
+        kwargs={
+            "id": id,
+            "selected": selected,
+            "header": header,
+            "footer": footer,
+        },
     )
 
 
@@ -809,14 +809,14 @@ def navset_card_tab(
     """
     return RecallContextManager(
         ui.navset_card_tab,
-        kwargs=dict(
-            id=id,
-            selected=selected,
-            title=title,
-            sidebar=sidebar,
-            header=header,
-            footer=footer,
-        ),
+        kwargs={
+            "id": id,
+            "selected": selected,
+            "title": title,
+            "sidebar": sidebar,
+            "header": header,
+            "footer": footer,
+        },
     )
 
 
@@ -852,14 +852,14 @@ def navset_card_pill(
     """
     return RecallContextManager(
         ui.navset_card_pill,
-        kwargs=dict(
-            id=id,
-            selected=selected,
-            title=title,
-            sidebar=sidebar,
-            header=header,
-            footer=footer,
-        ),
+        kwargs={
+            "id": id,
+            "selected": selected,
+            "title": title,
+            "sidebar": sidebar,
+            "header": header,
+            "footer": footer,
+        },
     )
 
 
@@ -898,15 +898,15 @@ def navset_card_underline(
     """
     return RecallContextManager(
         ui.navset_card_underline,
-        kwargs=dict(
-            id=id,
-            selected=selected,
-            title=title,
-            sidebar=sidebar,
-            header=header,
-            footer=footer,
-            placement=placement,
-        ),
+        kwargs={
+            "id": id,
+            "selected": selected,
+            "title": title,
+            "sidebar": sidebar,
+            "header": header,
+            "footer": footer,
+            "placement": placement,
+        },
     )
 
 
@@ -944,14 +944,14 @@ def navset_pill_list(
     """
     return RecallContextManager(
         ui.navset_pill_list,
-        kwargs=dict(
-            id=id,
-            selected=selected,
-            header=header,
-            footer=footer,
-            well=well,
-            widths=widths,
-        ),
+        kwargs={
+            "id": id,
+            "selected": selected,
+            "header": header,
+            "footer": footer,
+            "well": well,
+            "widths": widths,
+        },
     )
 
 
@@ -1034,23 +1034,23 @@ def navset_bar(
     """
     return RecallContextManager(
         ui.navset_bar,
-        kwargs=dict(
-            title=title,
-            id=id,
-            selected=selected,
-            sidebar=sidebar,
-            fillable=fillable,
-            gap=gap,
-            padding=padding,
-            position=position,
-            header=header,
-            footer=footer,
-            bg=bg,
-            inverse=inverse,
-            underline=underline,
-            collapsible=collapsible,
-            fluid=fluid,
-        ),
+        kwargs={
+            "title": title,
+            "id": id,
+            "selected": selected,
+            "sidebar": sidebar,
+            "fillable": fillable,
+            "gap": gap,
+            "padding": padding,
+            "position": position,
+            "header": header,
+            "footer": footer,
+            "bg": bg,
+            "inverse": inverse,
+            "underline": underline,
+            "collapsible": collapsible,
+            "fluid": fluid,
+        },
     )
 
 
@@ -1082,10 +1082,10 @@ def nav_panel(
     return RecallContextManager(
         ui.nav_panel,
         args=(title,),
-        kwargs=dict(
-            value=value,
-            icon=icon,
-        ),
+        kwargs={
+            "value": value,
+            "icon": icon,
+        },
     )
 
 
@@ -1131,11 +1131,11 @@ def nav_menu(
     return RecallContextManager(
         ui.nav_menu,
         args=(title,),
-        kwargs=dict(
-            value=value,
-            icon=icon,
-            align=align,
-        ),
+        kwargs={
+            "value": value,
+            "icon": icon,
+            "align": align,
+        },
     )
 
 

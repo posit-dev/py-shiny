@@ -263,8 +263,8 @@ class OutputRenderer(
         self._default_ui = default_ui
         self._default_ui_passthrough_args = default_ui_passthrough_args
 
-        self._default_ui_args: tuple[object, ...] = tuple()
-        self._default_ui_kwargs: dict[str, object] = dict()
+        self._default_ui_args: tuple[object, ...] = ()
+        self._default_ui_kwargs: dict[str, object] = {}
 
         # Allow for App authors to not require `@output`
         self._auto_register()

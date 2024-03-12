@@ -24,7 +24,7 @@ def brownian_data(n=100, mu=(0.0, 0.00), sigma=(0.1, 0.1), S0=(1.0, 1.0)):
         "x": brownian_motion(T=1, N=n, mu=mu[0], sigma=sigma[0], S0=S0[0]),
         "y": brownian_motion(T=1, N=n, mu=mu[1], sigma=sigma[1], S0=S0[1]),
         # "y": [i for i in range(n)],
-        "z": [i for i in range(n)],
+        "z": list(range(n)),
     }
 
 
@@ -35,12 +35,12 @@ def brownian_widget(width=600, height=600):
                 x=[],
                 y=[],
                 z=[],
-                marker=dict(
-                    size=4,
-                    color=[],
-                    colorscale="Viridis",
-                ),
-                line=dict(color="darkblue", width=2),
+                marker={
+                    "size": 4,
+                    "color": [],
+                    "colorscale": "Viridis",
+                },
+                line={"color": "darkblue", "width": 2},
             )
         ],
         layout={"showlegend": False, "width": width, "height": height},

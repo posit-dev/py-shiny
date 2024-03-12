@@ -60,8 +60,8 @@ def hand_to_camera_eye(hands, detect_ok=False):
     normal_unit_vec = normal_vec / np.linalg.norm(normal_vec)
 
     def list_to_xyz(x):
-        x = list(map(lambda y: round(y, 2), x))
-        return dict(x=x[0], y=x[1], z=x[2])
+        x = [round(y, 2) for y in x]
+        return {"x": x[0], "y": x[1], "z": x[2]}
 
     # Invert, for some reason
     normal_unit_vec = normal_unit_vec * -1.0
@@ -82,8 +82,8 @@ def hand_to_camera_eye(hands, detect_ok=False):
 
 
 def xyz_mean(points):
-    return dict(
-        x=mean([p["x"] for p in points]),
-        y=mean([p["y"] for p in points]),
-        z=mean([p["z"] for p in points]),
-    )
+    return {
+        "x": mean([p["x"] for p in points]),
+        "y": mean([p["y"] for p in points]),
+        "z": mean([p["z"] for p in points]),
+    }

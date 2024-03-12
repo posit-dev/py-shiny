@@ -137,7 +137,7 @@ class Renderer(Generic[IT]):
     # Q: Could we do this with typing without putting `P` in the Generic?
     # A: No. Even if we had a `P` in the Generic, the calling decorator would not have access to it.
     # Idea: Possibly use a chained method of `.ui_kwargs()`? https://github.com/posit-dev/py-shiny/issues/971
-    _auto_output_ui_kwargs: dict[str, Any] = dict()
+    _auto_output_ui_kwargs: dict[str, Any] = {}
 
     __name__: str
     """

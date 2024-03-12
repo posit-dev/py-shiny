@@ -96,15 +96,15 @@ class DataGrid(AbstractTabularData):
 
     def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
-        res["options"] = dict(
-            width=self.width,
-            height=self.height,
-            summary=self.summary,
-            filters=self.filters,
-            row_selection_mode=self.row_selection_mode,
-            style="grid",
-            fill=self.height is None,
-        )
+        res["options"] = {
+            "width": self.width,
+            "height": self.height,
+            "summary": self.summary,
+            "filters": self.filters,
+            "row_selection_mode": self.row_selection_mode,
+            "style": "grid",
+            "fill": self.height is None,
+        }
         return res
 
 
@@ -186,14 +186,14 @@ class DataTable(AbstractTabularData):
 
     def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
-        res["options"] = dict(
-            width=self.width,
-            height=self.height,
-            summary=self.summary,
-            filters=self.filters,
-            row_selection_mode=self.row_selection_mode,
-            style="table",
-        )
+        res["options"] = {
+            "width": self.width,
+            "height": self.height,
+            "summary": self.summary,
+            "filters": self.filters,
+            "row_selection_mode": self.row_selection_mode,
+            "style": "table",
+        }
         return res
 
 

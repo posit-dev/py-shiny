@@ -182,7 +182,7 @@ def random_port(
         10080,
     ]
 
-    unusable = set([x for x in unsafe_ports if x >= min and x <= max])
+    unusable = {x for x in unsafe_ports if x >= min and x <= max}
     while n > 0:
         if (max - min + 1) <= len(unusable):
             break

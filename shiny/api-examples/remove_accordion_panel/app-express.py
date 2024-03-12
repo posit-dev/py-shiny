@@ -20,7 +20,7 @@ with ui.accordion(id="acc", multiple=True):
             f"Some narrative for section {letter}"
 
 
-user_choices = [choice for choice in choices]
+user_choices = list(choices)
 
 
 @reactive.effect

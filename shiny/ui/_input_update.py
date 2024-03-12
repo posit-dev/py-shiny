@@ -751,7 +751,7 @@ def update_selectize(
         if isinstance(search_fields[0], list):
             search_fields = search_fields[0]
 
-        if set(search_fields).difference(set(["label", "value", "optgroup"])):
+        if set(search_fields).difference({"label", "value", "optgroup"}):
             raise ValueError(
                 "The selectize.js searchFields option must contain some combination of: "
                 + "'label', 'value', and 'optgroup'"

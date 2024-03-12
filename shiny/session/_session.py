@@ -190,8 +190,8 @@ class Session(object, metaclass=SessionMeta):
         # query information about the request, like headers, cookies, etc.
         self.http_conn: HTTPConnection = conn.get_http_conn()
 
-        self.input: Inputs = Inputs(dict())
-        self.output: Outputs = Outputs(self, self.ns, dict(), dict())
+        self.input: Inputs = Inputs({})
+        self.output: Outputs = Outputs(self, self.ns, {}, {})
 
         self.user: str | None = None
         self.groups: list[str] | None = None

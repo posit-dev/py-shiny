@@ -794,7 +794,7 @@ def event(
     ``@render.ui``, etc).
     """
 
-    if any([not callable(arg) for arg in args]):
+    if any(not callable(arg) for arg in args):
         raise TypeError(
             "All objects passed to event decorator must be callable.\n"
             + "If you are calling `@reactive.event(f())`, try calling `@reactive.event(f)` instead."
@@ -862,7 +862,7 @@ def event(
 
             return new_user_async_fn  # type: ignore
 
-        elif any([is_async_callable(arg) for arg in args]):
+        elif any(is_async_callable(arg) for arg in args):
             raise TypeError(
                 "When decorating a synchronous function with @reactive.event(), all"
                 + "arguments to @reactive.event() must be synchronous functions."

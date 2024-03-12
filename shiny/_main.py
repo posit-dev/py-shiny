@@ -561,10 +561,10 @@ Please install shinylive and use `shinylive export` instead of `shiny static`:
   shinylive export APPDIR DESTDIR
 
 """,
-    context_settings=dict(
-        ignore_unknown_options=True,
-        allow_extra_args=True,
-    ),
+    context_settings={
+        "ignore_unknown_options": True,
+        "allow_extra_args": True,
+    },
 )
 def static() -> None:
     print(

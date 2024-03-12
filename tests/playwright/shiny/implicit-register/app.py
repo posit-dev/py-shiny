@@ -1,11 +1,11 @@
 from shiny import App, Inputs, Outputs, Session, render, ui
 
-scenarios = dict(
-    out1="The following output should be empty",
-    out2='The following output should have the word "One"',
-    out3='The following output should have the word "Two"',
-    out4='The following output should also have the word "Two"',
-)
+scenarios = {
+    "out1": "The following output should be empty",
+    "out2": 'The following output should have the word "One"',
+    "out3": 'The following output should have the word "Two"',
+    "out4": 'The following output should also have the word "Two"',
+}
 
 app_ui = ui.page_fluid(
     [

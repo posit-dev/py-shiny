@@ -31,7 +31,7 @@ pandas_df = pd.DataFrame(
 img_path = pathlib.Path(__file__).parent / "imgs"
 penguin_imgs = [str(img_path / img) for img in os.listdir(img_path)]
 assert len(penguin_imgs) > 0
-letters = [letter for letter in "abcdefghijklmnopqrstuvwxyz"][: len(penguin_imgs)]
+letters = list("abcdefghijklmnopqrstuvwxyz")[: len(penguin_imgs)]
 
 input_keys = (
     "input_action_button",

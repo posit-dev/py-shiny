@@ -46,7 +46,7 @@ def hold() -> HoldContextManager:
 
 class HoldContextManager:
     def __init__(self):
-        self.content: list[object] = list()
+        self.content: list[object] = []
 
     def __enter__(self) -> list[object]:
         self.prev_displayhook = sys.displayhook
