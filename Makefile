@@ -232,6 +232,10 @@ format-ruff: $(RUFF) FORCE
 	. $(PYBIN)/activate && \
 	  ruff format .
 
+format-ruff-unsafe: $(RUFF) FORCE
+	@echo "-------- Formatting code with ruff (unsafe) --------"
+	. $(PYBIN)/activate && \
+	  ruff check --fix --unsafe-fixes .
 # -----------------
 # Documentation
 # -----------------
