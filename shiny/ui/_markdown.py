@@ -60,7 +60,7 @@ def default_md_renderer(
         raise ModuleNotFoundError(
             "The default markdown parser requires the markdown-it-py package"
             " to be installed. Install it with `pip install markdown-it`."
-        )
+        ) from None
 
     if preset == "commonmark":
         parser = MarkdownIt("commonmark")

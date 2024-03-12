@@ -201,7 +201,8 @@ def validate_col_width(
 
     if len(list(y)) > n_kids:
         warn(
-            f"More column widths than children at breakpoint '{break_name}', extra widths will be ignored."
+            f"More column widths than children at breakpoint '{break_name}', extra widths will be ignored.",
+            stacklevel=2,
         )
 
     return y

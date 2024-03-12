@@ -130,6 +130,6 @@ def location_server(
                 long = (long + 180) % 360 - 180
             return (input.lat(), long)
         except ValueError:
-            raise ValueError("Invalid latitude/longitude specification")
+            raise ValueError("Invalid latitude/longitude specification") from None
 
     return location
