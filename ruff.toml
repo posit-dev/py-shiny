@@ -1,13 +1,5 @@
 
-extend-exclude = [
-  "docs",
-  ".venv",
-  "venv",
-  "typings",
-  "build",
-  "_dev",
-  "shiny/__init__.py",
-]
+extend-exclude = ["docs", ".venv", "venv", "typings", "build", "_dev"]
 
 [lint]
 
@@ -69,7 +61,7 @@ extend-select = [
 "**/__init__.py" = ["I"]
 # F403: 'from module import *' used; unable to detect undefined names
 # Also ignore `F403` in all `__init__.py` files.
-"shiny/__init__.py" = ["F403"]
+"shiny/__init__.py" = ["F403", "F405"]
 # B018: Found useless expression. Either assign it to a variable or remove it.
 # This check is incompatible with the `express` framework.
 "**/app-express.py" = ["B018"]
