@@ -15,7 +15,7 @@ def plot():
 
     # ...but don't take a reactive dependency on the slider
     with reactive.isolate():
-        x = 100 + 15 * np.random.RandomState(seed=19680801).randn(input.n())
+        x = 100 + 15 * np.random.default_rng(seed=19680801).randn(input.n())
 
     fig, ax = plt.subplots()
     ax.hist(x, bins=30, density=True)

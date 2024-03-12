@@ -77,7 +77,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    rnd = np.random.RandomState()
+    rng = np.random.default_rng()
 
     @render.download()
     def download1():
@@ -100,8 +100,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         """
 
         print(input.num_points())
-        x = rnd.uniform(size=input.num_points())
-        y = rnd.uniform(size=input.num_points())
+        x = rng.uniform(size=input.num_points())
+        y = rng.uniform(size=input.num_points())
         plt.figure()
         plt.scatter(x, y)
         plt.title(input.title())
@@ -110,7 +110,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             yield buf.getvalue()
 
     @render.download(
-        filename=lambda: f"新型-{date.today().isoformat()}-{rnd.randint(100, 999)}.csv"
+        filename=lambda: f"新型-{date.today().isoformat()}-{rng.randint(100, 999)}.csv"
     )
     async def download3():
         await asyncio.sleep(0.25)

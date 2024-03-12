@@ -8,7 +8,7 @@ import numpy as np
 
 from shiny.express import render, ui
 
-rnd = np.random.RandomState()
+rng = np.random.default_rng()
 
 ui.page_opts(title="Various download examples")
 
@@ -43,8 +43,8 @@ with ui.accordion(open=True):
             """
 
             print(input.num_points())
-            x = rnd.uniform(size=input.num_points())
-            y = rnd.uniform(size=input.num_points())
+            x = rng.uniform(size=input.num_points())
+            y = rng.uniform(size=input.num_points())
             plt.figure()
             plt.scatter(x, y)
             plt.title(input.title())
@@ -59,7 +59,7 @@ with ui.accordion(open=True):
 
         @render.download(
             label="Download filename",
-            filename=lambda: f"新型-{date.today().isoformat()}-{rnd.randint(100, 999)}.csv",
+            filename=lambda: f"新型-{date.today().isoformat()}-{rng.randint(100, 999)}.csv",
         )
         async def download3():
             await asyncio.sleep(0.25)

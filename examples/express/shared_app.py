@@ -12,7 +12,7 @@ from shiny.express import input, ui
 
 @render.plot
 def histogram():
-    x = 100 + 15 * np.random.RandomState(seed=19680801).randn(437)
+    x = 100 + 15 * np.random.default_rng(seed=19680801).randn(437)
     plt.hist(x, shared.rv(), density=True)
 
 

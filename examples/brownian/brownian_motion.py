@@ -5,14 +5,14 @@ from plotly import graph_objects as go
 # * `brownian_motion()` is a function that generates a random walk
 # * `brownian_widget()` uses restructured plotting code given in article
 
-rs = np.random.RandomState()
+rng = np.random.default_rng()
 
 
 # https://plotly.com/python/3d-line-plots/
 def brownian_motion(T=1, N=100, mu=0.1, sigma=0.01, S0=20):
     dt = float(T) / N
     t = np.linspace(0, T, N)
-    W = rs.standard_normal(size=N)
+    W = rng.standard_normal(size=N)
     W = np.cumsum(W) * np.sqrt(dt)  # standard brownian motion
     X = (mu - 0.5 * sigma**2) * t + sigma * W
     S = S0 * np.exp(X)  # geometric brownian motion
