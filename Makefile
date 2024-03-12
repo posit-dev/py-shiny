@@ -227,7 +227,7 @@ format-ruff: $(RUFF) FORCE
 	@# Reason for two commands: https://github.com/astral-sh/ruff/issues/8232
 	@# Fix imports
 	. $(PYBIN)/activate && \
-	  ruff check --select I --fix .
+	  ruff check --fix .
 	@# Fix formatting
 	. $(PYBIN)/activate && \
 	  ruff format .
