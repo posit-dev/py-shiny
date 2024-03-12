@@ -77,7 +77,7 @@ extend-select = [
   "PYI030",
   "PYI034",
   "PT",
-  # "SIM118",
+  "SIM118",
   # "TCH",
   # "FIX",
   # "PD",
