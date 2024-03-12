@@ -1,5 +1,3 @@
-# .PHONY: help clean% check% format% docs% lint test pyright playwright% install% testrail% coverage release
-
 # Depend on `FORCE` to ensure the target is always run
 FORCE:
 
@@ -82,7 +80,7 @@ PYTEST = $(SITE_PACKAGES)/pytest
 COVERAGE = $(SITE_PACKAGES)/coverage
 PYRIGHT = $(SITE_PACKAGES)/pyright
 PLAYWRIGHT = $(SITE_PACKAGES)/playwright
-$(PYTEST) $(COVERAGE) $(PYRIGHT) $(PLAYWRIGHT):
+$(RUFF) $(PYTEST) $(COVERAGE) $(PYRIGHT) $(PLAYWRIGHT):
 	@$(MAKE) install-deps
 
 
