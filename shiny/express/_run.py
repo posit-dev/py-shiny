@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import ast
-import os
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Mapping, cast
 
 from htmltools import Tag, TagList
 
@@ -200,9 +199,7 @@ class AppOpts(TypedDict):
 
 @no_example()
 def app_opts(
-    static_assets: (
-        str | os.PathLike[str] | dict[str, str | Path] | MISSING_TYPE
-    ) = MISSING,
+    static_assets: str | Path | Mapping[str, str | Path] | MISSING_TYPE = MISSING,
     debug: bool | MISSING_TYPE = MISSING,
 ):
     """
@@ -230,7 +227,7 @@ def app_opts(
         return
 
     if not isinstance(static_assets, MISSING_TYPE):
-        if isinstance(static_assets, (str, os.PathLike)):
+        if isinstance(static_assets, (str, Path)):
             static_assets = {"/": Path(static_assets)}
 
         # Convert string values to Paths. (Need new var name to help type checker.)
