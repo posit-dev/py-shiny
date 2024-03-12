@@ -99,7 +99,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.plot
     def pandas():
         ts = pd.Series(
-            rng.randn(1000),
+            rng.standard_normal(1000),
             index=pd.date_range("1/1/2000", periods=1000),
         )
         ts = ts.cumsum()

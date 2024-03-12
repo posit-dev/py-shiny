@@ -14,7 +14,7 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
     @render.plot
     def p():
-        x_rand = 100 + 15 * np.random.default_rng(seed=19680801).randn(437)
+        x_rand = 100 + 15 * np.random.default_rng(seed=19680801).standard_normal(437)
         fig, ax = plt.subplots()
         ax.hist(x_rand, int(input.n()), density=True)
         return fig

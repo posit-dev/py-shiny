@@ -16,7 +16,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     # (not when the slider is changed)
     @reactive.event(input.go, ignore_none=False)
     def plot():
-        x = 100 + 15 * np.random.default_rng(seed=19680801).randn(input.n())
+        x = 100 + 15 * np.random.default_rng(seed=19680801).standard_normal(input.n())
         fig, ax = plt.subplots()
         ax.hist(x, bins=30, density=True)
         return fig

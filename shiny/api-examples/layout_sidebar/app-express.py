@@ -9,7 +9,7 @@ with ui.layout_sidebar():
 
     @render.plot(alt="A histogram")
     def plot() -> object:
-        x = 100 + 15 * np.random.default_rng(seed=19680801).randn(437)
+        x = 100 + 15 * np.random.default_rng(seed=19680801).standard_normal(437)
 
         fig, ax = plt.subplots()
         ax.hist(x, input.n(), density=True)
