@@ -82,8 +82,8 @@ extend-select = [
   # "PGH",
   "FLY",
   "NPY",
-  # "RUF100",
-  # "RUF005",
+  "RUF005",
+  "RUF100",
 ]
 
 [lint.extend-per-file-ignores]
