@@ -73,8 +73,8 @@ extend-ignore = [
 # NPY; NumPy-specific rules: https://docs.astral.sh/ruff/rules/#numpy-specific-rules-npy
 # RUF005; Ruff specific rules Consider {expression} instead of concatenation: https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
 # RUF100; Ruff specific rules Unused `noqa` directive https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
-extend-select = ["E", "I"]
-# "B", "Q", "C90", "COM", "C4", "DTZ", "FA", "ISC", "ICN", "G", "PIE", "T20", "PYI013", "PYI030", "PYI034", "PT", "SIM118", "TCH", "FIX", "PD", "PGH", "FLY", "NPY", "RUF100", "RUF005"]
+extend-select = ["E", "I", "B"]
+# "Q", "C90", "COM", "C4", "DTZ", "FA", "ISC", "ICN", "G", "PIE", "T20", "PYI013", "PYI030", "PYI034", "PT", "SIM118", "TCH", "FIX", "PD", "PGH", "FLY", "NPY", "RUF100", "RUF005"]
 
 [lint.extend-per-file-ignores]
 # F403: 'from module import *' used; unable to detect undefined names
