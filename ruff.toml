@@ -14,6 +14,7 @@ extend-exclude = [
 extend-ignore = [
   "E501",  # E501: Line too long
   "PT011", # PT011 `pytest.raises(ValueError)` is too broad
+  "PT022", # PT022 [*] No teardown in fixture
   # Conflicting lint rules: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
   "E111",   # * indentation-with-invalid-multiple (E111)
   "E114",   # * indentation-with-invalid-multiple-comment (E114)
