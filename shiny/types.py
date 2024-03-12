@@ -91,7 +91,6 @@ class SafeException(Exception):
     """
 
 
-
 @add_example()
 class SilentException(Exception):
     """
@@ -113,7 +112,6 @@ class SilentException(Exception):
     """
 
 
-
 @add_example()
 class SilentCancelOutputException(Exception):
     """
@@ -126,7 +124,6 @@ class SilentCancelOutputException(Exception):
     --------
     * :class:`~shiny.types.SilentException`
     """
-
 
 
 class SilentOperationInProgressException(SilentException):

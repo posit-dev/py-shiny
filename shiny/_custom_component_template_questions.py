@@ -61,9 +61,7 @@ class ComponentNameValidator(Validator):
 
         # Check for quotations
 
-        if (
-            name.startswith(('"', "'")) or name.endswith(('"', "'"))
-        ):
+        if name.startswith(('"', "'")) or name.endswith(('"', "'")):
             raise ValidationError(
                 message="The name should be unquoted.",
                 cursor_position=len(name),

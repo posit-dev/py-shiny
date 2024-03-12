@@ -164,9 +164,7 @@ class DataTable(AbstractTabularData):
         height: Union[str, float, None] = "500px",
         summary: Union[bool, str] = True,
         filters: bool = False,
-        row_selection_mode: Union[
-            Literal["none"], Literal["single"], Literal["multiple"]
-        ] = "none",
+        row_selection_mode: Literal["none", "single", "multiple"] = "none",
     ):
         import pandas as pd
 

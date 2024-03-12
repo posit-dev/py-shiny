@@ -728,7 +728,6 @@ class AccordionPanel(MainAccordionPanel):
     """
 
 
-
 # Deprecated 2023-09-12
 def accordion(
     *args: AccordionPanel | TagAttrs,
