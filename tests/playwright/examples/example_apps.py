@@ -208,11 +208,11 @@ def validate_example(page: Page, ex_app_path: str) -> None:
                 app_allowable_errors = [app_allowable_errors]
             app_allowable_errors = (
                 # Remove ^INFO lines
-                ["INFO:"]
+                *["INFO:"],
                 # Remove any known errors caused by external packages
-                + app_allow_external_errors
+                *app_allow_external_errors,
                 # Remove any known errors allowed by the app
-                + app_allowable_errors
+                *app_allowable_errors,
             )
 
             # If there is an array of allowable errors, remove them from errors. Ex: `PlotnineWarning`
