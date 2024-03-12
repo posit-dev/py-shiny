@@ -58,7 +58,6 @@ extend-ignore = [
 # ISC; flake8-implicit-str-concat: https://docs.astral.sh/ruff/rules/#flake8-implicit-str-concat-isc
 # ICN; flake8-import-conventions: https://docs.astral.sh/ruff/rules/#flake8-import-conventions-icn
 # PIE; flake8-pie: https://docs.astral.sh/ruff/rules/#flake8-pie-pie
-# T20; flake8-print: https://docs.astral.sh/ruff/rules/#flake8-print-t20
 # PYI013; flake8-pyi Non-empty class body must not contain `...`: https://docs.astral.sh/ruff/rules/#flake8-pyi-pyi
 # PYI030; flake8-pyi Multiple literal members in a union: https://docs.astral.sh/ruff/rules/#flake8-pyi-pyi
 # PYI034; flake8-pyi `__new__` methods usually reutrn `Self`: https://docs.astral.sh/ruff/rules/#flake8-pyi-pyi
@@ -75,7 +74,7 @@ extend-ignore = [
 extend-select = ["E", "I", "B", "Q", "COM", "C4", "FA102", "ISC", "ICN", "PIE"]
 # "C90" - Many false positives
 # "DTZ" - dates with timezones are different from dates without timezones
-# "T20", "PYI013", "PYI030", "PYI034", "PT", "SIM118", "TCH", "FIX", "PD", "PGH", "FLY", "NPY", "RUF100", "RUF005"]
+#  "PYI013", "PYI030", "PYI034", "PT", "SIM118", "TCH", "FIX", "PD", "PGH", "FLY", "NPY", "RUF100", "RUF005"]
 
 [lint.extend-per-file-ignores]
 # F403: 'from module import *' used; unable to detect undefined names
