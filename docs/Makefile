@@ -83,11 +83,11 @@ quartodoc_post: $(PYBIN) FORCE
 	. $(PYBIN)/activate \
 	  && python _combine_objects_json.py
 
-site: FORCE ## Build website
+site: $(PYBIN) FORCE ## Build website
 	. $(PYBIN)/activate \
 	  && quarto render
 
-serve: FORCE ## Build website and serve
+serve: $(PYBIN) FORCE ## Build website and serve
 	. $(PYBIN)/activate \
 	  && quarto preview --port 8080
 
