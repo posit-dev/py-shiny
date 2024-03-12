@@ -56,7 +56,7 @@ def test_panel_main_and_panel_sidebar():
 
 
 @pytest.mark.parametrize(
-    "open_value, expected",
+    ("open_value", "expected"),
     [
         ("closed", {"desktop": "closed", "mobile": "closed"}),
         ("open", {"desktop": "open", "mobile": "open"}),

@@ -50,7 +50,7 @@ def session_page(browser: BrowserContext) -> Page:
     return browser.new_page()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 # By going to `about:blank`, we _reset_ the page to a known state before each test.
 # It is not perfect, but it is faster than making a new page for each test.
 # This must be done before each test
