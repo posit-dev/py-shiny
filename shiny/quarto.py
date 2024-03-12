@@ -87,7 +87,7 @@ from shiny.express import app_opts
 _static_assets = ##STATIC_ASSETS_PLACEHOLDER##
 _static_assets = {{"/" + sa: Path(__file__).parent / sa for sa in _static_assets}}
 app_opts(
-    # ui_html=Path(__file__).parent / "{data["html_file"]}",
+    ui=Path(__file__).parent / "{data["html_file"]}",
     static_assets=_static_assets
 )
 
