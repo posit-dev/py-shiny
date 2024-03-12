@@ -1,5 +1,7 @@
 """Tests for `shiny.utils` async-related functions."""
 
+from __future__ import annotations
+
 import asyncio
 import contextvars
 from typing import Iterator, List

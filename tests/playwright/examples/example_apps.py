@@ -238,7 +238,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
                 for line in console_errors
                 if not any(
                     error_txt in line
-                        for error_txt in app_allow_js_errors[short_app_path]
+                    for error_txt in app_allow_js_errors[short_app_path]
                 )
             ]
         assert len(console_errors) == 0, (

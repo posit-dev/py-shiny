@@ -1,5 +1,7 @@
 """Tests for `shiny.reactive`."""
 
+from __future__ import annotations
+
 import asyncio
 from typing import List
 

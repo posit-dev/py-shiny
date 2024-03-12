@@ -1,6 +1,7 @@
 # # Within file flags to ignore unused imports
 # flake8: noqa: F401
 # pyright: reportUnusedImport=false
+from __future__ import annotations
 
 __all__ = (
     "Concatenate",
