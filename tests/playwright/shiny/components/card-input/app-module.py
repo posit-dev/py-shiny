@@ -1,5 +1,3 @@
-from htmltools import css
-
 from shiny import App, Inputs, Outputs, Session, module, render, ui
 
 
