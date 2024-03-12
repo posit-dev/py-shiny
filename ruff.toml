@@ -57,7 +57,6 @@ extend-ignore = [
 # FA102; flake8-future-annotations: https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
 # ISC; flake8-implicit-str-concat: https://docs.astral.sh/ruff/rules/#flake8-implicit-str-concat-isc
 # ICN; flake8-import-conventions: https://docs.astral.sh/ruff/rules/#flake8-import-conventions-icn
-# G; flake8-logging-format: https://docs.astral.sh/ruff/rules/#flake8-logging-format-g
 # PIE; flake8-pie: https://docs.astral.sh/ruff/rules/#flake8-pie-pie
 # T20; flake8-print: https://docs.astral.sh/ruff/rules/#flake8-print-t20
 # PYI013; flake8-pyi Non-empty class body must not contain `...`: https://docs.astral.sh/ruff/rules/#flake8-pyi-pyi
@@ -74,8 +73,9 @@ extend-ignore = [
 # RUF005; Ruff specific rules Consider {expression} instead of concatenation: https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
 # RUF100; Ruff specific rules Unused `noqa` directive https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
 extend-select = ["E", "I", "B", "Q", "COM", "C4", "FA102", "ISC", "ICN"]
-# "C90", "DTZ"
-# "G", "PIE", "T20", "PYI013", "PYI030", "PYI034", "PT", "SIM118", "TCH", "FIX", "PD", "PGH", "FLY", "NPY", "RUF100", "RUF005"]
+# "C90" - Many false positives
+# "DTZ" - dates with timezones are different from dates without timezones
+# "PIE", "T20", "PYI013", "PYI030", "PYI034", "PT", "SIM118", "TCH", "FIX", "PD", "PGH", "FLY", "NPY", "RUF100", "RUF005"]
 
 [lint.extend-per-file-ignores]
 # F403: 'from module import *' used; unable to detect undefined names
