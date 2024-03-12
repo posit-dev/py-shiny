@@ -321,9 +321,9 @@ if not TYPE_CHECKING and os.environ.get("IN_QUARTODOC") == "true":
     except ImportError:
         raise RuntimeError(
             "Please install the latest version of shinylive to build the docs."
-        ) from None
+        )
     except ModuleNotFoundError:
-        raise RuntimeError("Please install shinylive to build the docs.") from None
+        raise RuntimeError("Please install shinylive to build the docs.")
 
     class ShinyliveExampleWriter(ExampleWriter):
         def write_example(self, app_files: list[str]) -> str:

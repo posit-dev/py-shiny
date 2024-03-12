@@ -15,6 +15,7 @@ extend-ignore = [
   "E501",  # E501: Line too long
   "PT011", # PT011 `pytest.raises(ValueError)` is too broad
   "PT022", # PT022 [*] No teardown in fixture
+  "B904",  # B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
   # Conflicting lint rules: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
   "E111",   # * indentation-with-invalid-multiple (E111)
   "E114",   # * indentation-with-invalid-multiple-comment (E114)

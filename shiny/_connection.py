@@ -94,7 +94,7 @@ class StarletteConnection(Connection):
         try:
             return await self.conn.receive_text()
         except starlette.websockets.WebSocketDisconnect:
-            raise ConnectionClosed() from None
+            raise ConnectionClosed()
         except Exception:
             # From RFC6455:
             # 1008 indicates that an endpoint is terminating the connection because it
