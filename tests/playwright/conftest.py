@@ -229,7 +229,7 @@ def create_app_fixture(
         # Pass through `yield` via `next(...)` call
         # (`yield` must be on same line as `next`!)
         app_gen = local_app_fixture_gen(app)
-        yield next(app_gen)
+        return next(app_gen)
 
     return fixture_func
 
@@ -280,9 +280,9 @@ def x_create_doc_example_fixture(example_name: str, scope: ScopeName = "module")
 
 
 @pytest.fixture(scope="module")
-def local_app(request: pytest.FixtureRequest) -> Generator[ShinyAppProc, None, None]:
+def local_app(request: pytest.FixtureRequest) -> ShinyAppProc:
     app_gen = local_app_fixture_gen(PurePath(request.path).parent / "app.py")
-    yield next(app_gen)
+    return next(app_gen)
 
 
 @contextmanager

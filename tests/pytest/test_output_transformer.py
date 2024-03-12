@@ -197,7 +197,7 @@ def test_output_transformer_result_does_not_allow_args():
         assert "Expected `params` to be of type `TransformerParams`" in str(e)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_renderer_handler_or_transform_fn_can_be_async():
     @output_transformer
     async def AsyncTransformer(

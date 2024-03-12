@@ -144,7 +144,7 @@ def test_create_task():
         asyncio.run(create_task_wrapper2())
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_coro_hybrid():
     state = 0
 
@@ -167,7 +167,7 @@ async def test_coro_hybrid():
     assert await fut == 100
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_coro_hybrid_throw():
     async def test_task_throw():
         raise ValueError("boom")
@@ -177,7 +177,7 @@ async def test_coro_hybrid_throw():
         await fut
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_coro_hybrid_throw_later():
     state = 0
 
@@ -193,7 +193,7 @@ async def test_coro_hybrid_throw_later():
         await fut
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_coro_hybrid_cancel():
     state = 0
 
@@ -210,7 +210,7 @@ async def test_coro_hybrid_cancel():
     assert state == 1
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_coro_hybrid_self_cancel():
     state = 0
 
@@ -233,7 +233,7 @@ async def test_coro_hybrid_self_cancel():
     assert state == 1
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_coro_hybrid_self_cancel2():
     state = 0
 
@@ -252,7 +252,7 @@ async def test_coro_hybrid_self_cancel2():
     assert state == 1
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_coro_hybrid_context():
     test = contextvars.ContextVar("test", default=False)
 

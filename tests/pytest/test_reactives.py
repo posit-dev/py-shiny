@@ -16,7 +16,7 @@ from shiny.types import ActionButtonValue, SilentException
 from .mocktime import MockTime
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_flush_runs_newly_invalidated():
     """
     Make sure that a flush will also run any calcs that were invalidated during the
@@ -45,7 +45,7 @@ async def test_flush_runs_newly_invalidated():
     assert o1._exec_count == 1
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_flush_runs_newly_invalidated_async():
     """
     Make sure that a flush will also run any calcs that were invalidated during the
@@ -77,7 +77,7 @@ async def test_flush_runs_newly_invalidated_async():
 # ======================================================================
 # Setting Value to same value doesn't invalidate downstream
 # ======================================================================
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_reactive_value_same_no_invalidate():
     v = Value(1)
 
@@ -96,7 +96,7 @@ async def test_reactive_value_same_no_invalidate():
 # ======================================================================
 # Intializing reactive.Value to MISSING, and unsetting
 # ======================================================================
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_reactive_value_unset():
     v = Value[int]()
 
@@ -136,7 +136,7 @@ async def test_reactive_value_unset():
 # ======================================================================
 # reactive.Value.is_set() invalidates dependents only when set state changes
 # ======================================================================
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_reactive_value_is_set():
     v = Value[int]()
     v_is_set: bool = False
@@ -179,7 +179,7 @@ async def test_reactive_value_is_set():
 # ======================================================================
 # Recursive calls to calcs
 # ======================================================================
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_recursive_calc():
     v = Value(5)
 
@@ -201,7 +201,7 @@ async def test_recursive_calc():
         assert v() == 0
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_recursive_async_calc():
     v = Value(5)
 
@@ -228,7 +228,7 @@ async def test_recursive_async_calc():
 # ======================================================================
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_async_sequential():
     x: Value[int] = Value(1)
     results: list[int] = []
@@ -276,7 +276,7 @@ async def test_async_sequential():
 # ======================================================================
 # isolate()
 # ======================================================================
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_isolate_basic_without_context():
     # isolate() works with calc and Value; allows executing without a reactive context.
     v = Value(1)
@@ -296,7 +296,7 @@ async def test_isolate_basic_without_context():
         assert get_r() == 11
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_isolate_prevents_dependency():
     v = Value(1)
 
@@ -333,7 +333,7 @@ async def test_isolate_prevents_dependency():
 # ======================================================================
 # async isolate
 # ======================================================================
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_isolate_async_basic_value():
     async def f():
         return 123
@@ -342,7 +342,7 @@ async def test_isolate_async_basic_value():
         assert await f() == 123
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_isolate_async_basic_without_context():
     # async isolate works with calc and Value; allows executing without a reactive
     # context.
@@ -360,7 +360,7 @@ async def test_isolate_async_basic_without_context():
         assert await get_r() == 11
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_isolate_async_prevents_dependency():
     v = Value(1)
 
@@ -397,7 +397,7 @@ async def test_isolate_async_prevents_dependency():
 # ======================================================================
 # Priority for effects
 # ======================================================================
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_effect_priority():
     v = Value(1)
     results: list[int] = []
@@ -448,7 +448,7 @@ async def test_effect_priority():
 
 
 # Same as previous, but with async
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_async_effect_priority():
     v = Value(1)
     results: list[int] = []
@@ -501,7 +501,7 @@ async def test_async_effect_priority():
 # ======================================================================
 # Destroying effects
 # ======================================================================
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_effect_destroy():
     v = Value(1)
     results: list[int] = []
@@ -538,7 +538,7 @@ async def test_effect_destroy():
 # ======================================================================
 # Error handling
 # ======================================================================
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_error_handling():
     vals: List[str] = []
 
@@ -585,7 +585,7 @@ async def test_error_handling():
     assert vals == ["o1-1", "r", "o2"]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_calc_error_rethrow():
     # Make sure calcs re-throw errors.
     vals: List[str] = []
@@ -624,7 +624,7 @@ async def test_calc_error_rethrow():
 # Invalidating dependents
 # ======================================================================
 # For https://github.com/posit-dev/py-shiny/issues/26
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_dependent_invalidation():
     trigger = Value(0)
     v = Value(0)
@@ -665,7 +665,7 @@ async def test_dependent_invalidation():
 # ------------------------------------------------------------
 # req() pauses execution in @effect() and @calc()
 # ------------------------------------------------------------
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_req():
     n_times = 0
 
@@ -716,7 +716,7 @@ async def test_req():
     assert val == 1
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_invalidate_later():
     mock_time = MockTime()
     with mock_time():
@@ -747,7 +747,7 @@ async def test_invalidate_later():
         assert obs1._exec_count == 12
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_invalidate_later_invalidation():
     mock_time = MockTime()
     with mock_time():
@@ -775,7 +775,7 @@ async def test_invalidate_later_invalidation():
         assert obs1._exec_count == 2
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_mock_time():
     mock_time = MockTime()
 
@@ -800,7 +800,7 @@ async def test_mock_time():
 # ------------------------------------------------------------
 # @reactive.event() works as expected
 # ------------------------------------------------------------
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_event_decorator():
     n_times = 0
 
@@ -911,7 +911,7 @@ async def test_event_decorator():
 # ------------------------------------------------------------
 # @event() works as expected with async
 # ------------------------------------------------------------
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_event_async_decorator():
     n_times = 0
 
@@ -1029,7 +1029,7 @@ async def test_event_async_decorator():
 # ------------------------------------------------------------
 # @event() handles silent exceptions in event function
 # ------------------------------------------------------------
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_event_silent_exception():
     n_times = 0
     x = Value[bool]()
@@ -1059,7 +1059,7 @@ async def test_event_silent_exception():
 # ------------------------------------------------------------
 # @event() handles silent exceptions in event function, async
 # ------------------------------------------------------------
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_event_silent_exception_async():
     n_times = 0
     x = Value[bool]()
@@ -1095,7 +1095,7 @@ async def test_event_silent_exception_async():
 # ------------------------------------------------------------
 # @event() throws runtime errors if passed wrong type
 # ------------------------------------------------------------
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_event_type_check():
     with pytest.raises(TypeError):
         # Should complain about missing argument to @event().
@@ -1148,7 +1148,7 @@ async def test_event_type_check():
 # ------------------------------------------------------------
 # @output() throws runtime errors if passed wrong type
 # ------------------------------------------------------------
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_output_type_check():
     conn = MockConnection()
     session = App(ui.TagList(), None)._create_session(conn)
@@ -1196,7 +1196,7 @@ async def test_output_type_check():
 # ------------------------------------------------------------
 # @effect()'s .suspend()/.resume() works as expected
 # ------------------------------------------------------------
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_effect_pausing():
     a = Value(float(1))
 
@@ -1278,7 +1278,7 @@ async def test_effect_pausing():
 # ------------------------------------------------------------
 # @effect()'s .suspend()/.resume() works as expected (with async)
 # ------------------------------------------------------------
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_effect_async_pausing():
     a = Value(float(1))
 
@@ -1357,7 +1357,7 @@ async def test_effect_async_pausing():
     assert obsB._exec_count == 3
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_observer_async_suspended_resumed_observers_run_at_most_once():
     a = Value(1)
 

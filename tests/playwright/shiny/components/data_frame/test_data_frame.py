@@ -14,22 +14,22 @@ from examples.example_apps import reruns, reruns_delay
 data_frame_app = create_example_fixture("dataframe")
 
 
-@pytest.fixture
+@pytest.fixture()
 def grid(page: Page) -> Locator:
     return page.locator("#grid")
 
 
-@pytest.fixture
+@pytest.fixture()
 def grid_container(page: Page, grid: Locator) -> Locator:
     return grid.locator("> div > div.shiny-data-grid")
 
 
-@pytest.fixture
+@pytest.fixture()
 def summary(page: Page, grid: Locator) -> Locator:
     return grid.locator("div.shiny-data-grid-summary")
 
 
-@pytest.fixture
+@pytest.fixture()
 def scroll_to_end(page: Page, grid_container: Locator) -> Callable[[], None]:
     def do():
         grid_container.locator("tbody tr:first-child td:first-child").click()

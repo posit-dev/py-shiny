@@ -93,7 +93,7 @@ def test_callbacks():
     assert cb4.exec_count == 1  # Registered during previous invoke(), was called
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_async_callbacks():
     class AsyncMockCallback:
         def __init__(self):

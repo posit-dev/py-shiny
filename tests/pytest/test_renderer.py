@@ -8,7 +8,7 @@ from shiny import reactive, render
 from shiny.render.renderer import Renderer, ValueFn
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_renderer_works():
     # No args works
     class test_renderer(Renderer[str]):
@@ -30,7 +30,7 @@ async def test_renderer_works():
     assert val == "Hello World! Hello World!"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_renderer_works_with_args():
     # No args works
     class test_renderer_with_args(Renderer[str]):
