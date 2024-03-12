@@ -187,14 +187,11 @@ clean-test: FORCE ## remove test and coverage artifacts
 # -----------------
 check: check-lint check-types check-tests ## check code, style, types, and test (basic CI)
 check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
-check-lint: check-ruff ## check code formatting and style
+check-lint: check-ruff ## check code lints and format
 
 check-ruff: $(RUFF) FORCE
-	@echo "-------- Running ruff lint and formatting checks --------"
+	@echo "-------- Running ruff lint and format checks --------"
 	@# Check imports in addition to code
-	@# Reason for two commands: https://github.com/astral-sh/ruff/issues/8232
-	# . $(PYBIN)/activate && \
-	#   ruff check --select I --fix .
 	# Check lints
 	. $(PYBIN)/activate && \
 	  ruff check .
@@ -225,7 +222,7 @@ format: format-ruff ## format code
 format-ruff: $(RUFF) FORCE
 	@echo "-------- Formatting code with ruff --------"
 	@# Reason for two commands: https://github.com/astral-sh/ruff/issues/8232
-	@# Fix imports
+	@# Fix lints
 	. $(PYBIN)/activate && \
 	  ruff check --fix .
 	@# Fix formatting
