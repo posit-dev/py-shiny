@@ -727,7 +727,6 @@ class AccordionPanel(MainAccordionPanel):
     Deprecated. Please use `shiny.ui.AccordionPanel` instead.
     """
 
-    ...
 
 
 # Deprecated 2023-09-12

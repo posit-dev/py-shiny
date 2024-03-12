@@ -138,4 +138,3 @@ class StarletteConnection(Connection):
 class ConnectionClosed(Exception):
     """Raised when a Connection is closed from the other side."""
 
-    pass

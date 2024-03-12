@@ -90,7 +90,6 @@ class SafeException(Exception):
     generate an error that is OK to be displayed to the user.
     """
 
-    pass
 
 
 @add_example()
@@ -113,7 +112,6 @@ class SilentException(Exception):
     * :class:`~shiny.types.SilentCancelOutputException`
     """
 
-    pass
 
 
 @add_example()
@@ -129,7 +127,6 @@ class SilentCancelOutputException(Exception):
     * :class:`~shiny.types.SilentException`
     """
 
-    pass
 
 
 class SilentOperationInProgressException(SilentException):

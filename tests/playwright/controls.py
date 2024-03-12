@@ -497,7 +497,6 @@ class InputPassword(
     # *,
     # width: Optional[str] = None,
     # placeholder: Optional[str] = None,
-    ...
 
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(

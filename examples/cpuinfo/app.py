@@ -166,7 +166,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             ncols=ncols,
             squeeze=False,
         )
-        for i in range(0, ncols * nrows):
+        for i in range(ncols * nrows):
             row = i // ncols
             col = i % ncols
             axes = axeses[row, col]

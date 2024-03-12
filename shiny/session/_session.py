@@ -677,7 +677,6 @@ class Session(object, metaclass=SessionMeta):
 
     def _send_error_response(self, message_str: str) -> None:
         print("_send_error_response: " + message_str)
-        pass
 
     # ==========================================================================
     # Flush

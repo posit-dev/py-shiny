@@ -290,7 +290,7 @@ def value_box_theme(
             """e.g. `"primary"`, `"danger"`, `"purple"`, etc."""
         )
 
-    if not (name.startswith("bg-") or name.startswith("text-")):
+    if not (name.startswith(("bg-", "text-"))):
         name = "bg-" + name
 
     return ValueBoxTheme(class_=name, bg=bg, fg=fg)
