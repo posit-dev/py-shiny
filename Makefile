@@ -253,7 +253,7 @@ docs-serve: $(PYBIN) FORCE ## docs: serve docs in browser
 docs-site: $(PYBIN) FORCE ## docs: render quarto site
 	$(MAKE) docs-quartodoc
 	@echo "-------- Previewing docs in browser --------"
-	@cd docs && make serve
+	@cd docs && make site
 
 docs-quartodoc: $(PYBIN) FORCE ## docs: build quartodoc docs
 	$(MAKE) install-docs
