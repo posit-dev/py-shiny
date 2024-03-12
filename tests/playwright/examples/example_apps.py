@@ -174,7 +174,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
         app_name = os.path.basename(os.path.dirname(ex_app_path))
         short_app_path = f"{os.path.basename(os.path.dirname(os.path.dirname(ex_app_path)))}/{app_name}"
 
-        if short_app_path in app_hard_wait.keys():
+        if short_app_path in app_hard_wait:
             # Apps are constantly invalidating and will not stabilize
             # Instead, wait for specific amount of time
             page.wait_for_timeout(app_hard_wait[short_app_path])

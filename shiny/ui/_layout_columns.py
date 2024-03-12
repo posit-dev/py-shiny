@@ -263,9 +263,7 @@ def row_heights_attrs(
     # We use classes to activate CSS variables at the right breakpoints. Note: Mobile
     # row height is derived from xs or defaults to auto in the CSS, so we don't need the
     # class to activate it
-    classes = [
-        f"bslib-grid--row-heights--{brk}" for brk in x_complete.keys() if brk != "xs"
-    ]
+    classes = [f"bslib-grid--row-heights--{brk}" for brk in x_complete if brk != "xs"]
 
     # Create CSS variables, treating numeric values as fractional units, passing strings
     css_vars: Dict[str, str] = {}
