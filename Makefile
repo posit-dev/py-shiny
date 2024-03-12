@@ -104,7 +104,7 @@ RSCONNECT = $(SITE_PACKAGES)/rsconnect
 $(RSCONNECT): $(UV) ## install the main version of rsconnect till pypi version supports shiny express
 	@echo "-------- Installing rsconnect --------"
 	. $(PYBIN)/activate && \
-	  uv pip install rsconnect @ git+https://github.com/rstudio/rsconnect-python.git
+	  uv pip install "rsconnect-python @ git+https://github.com/rstudio/rsconnect-python.git"
 
 
 # -----------------
