@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Mapping, cast
 
 from htmltools import Tag, TagList
 
@@ -207,7 +207,7 @@ class AppOpts(TypedDict):
 @no_example()
 def app_opts(
     *,
-    static_assets: str | Path | dict[str, str | Path] | MISSING_TYPE = MISSING,
+    static_assets: str | Path | Mapping[str, str | Path] | MISSING_TYPE = MISSING,
     ui: str | Path | MISSING_TYPE = MISSING,
     debug: bool | MISSING_TYPE = MISSING,
 ):
