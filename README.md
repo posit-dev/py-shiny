@@ -57,3 +57,5 @@ pre-commit install
 # To disable:
 # pre-commit uninstall
 ```
+
+If you absolutely need to skip the pre-commit hooks, you can use the [`--no-verify` flag when you commit](https://git-scm.com/docs/githooks#_pre_commit) (`git commit --no-verify -m "MSG"`).

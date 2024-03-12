@@ -1,9 +1,10 @@
 from ._renderer import (
-    AsyncValueFn,
-    Jsonifiable,
     Renderer,
-    RendererT,
     ValueFn,
+    Jsonifiable,
+    RendererT,
+    AsyncValueFn,
+    # IT,  # pyright: ignore[reportUnusedImport]
 )
 
 __all__ = (

@@ -88,6 +88,8 @@ extend-select = [
 ]
 
 [lint.extend-per-file-ignores]
+# I: isort; Do not reformat imports in `__init__.py` files.
+"**/__init__.py" = ["I"]
 # F403: 'from module import *' used; unable to detect undefined names
 # Also ignore `F403` in all `__init__.py` files.
 "shiny/__init__.py" = ["F403"]
@@ -102,8 +104,6 @@ extend-select = [
 "shiny/templates/**" = ["T20"]
 "shiny/api-examples/**" = ["T20"]
 "tests/**" = ["T20"]
-# I: isort
-"shiny/experimental/ui/__init__.py" = ["I"]
 # PT019: pytest
 "tests/pytest/test_output_transformer.py" = ["PT019"]
 

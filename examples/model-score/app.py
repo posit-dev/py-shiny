@@ -16,6 +16,16 @@ THRESHOLD_MID_COLOR = "rgb(0, 137, 26)"
 THRESHOLD_LOW = 0.5
 THRESHOLD_LOW_COLOR = "rgb(193, 0, 0)"
 
+
+def value_box_theme(score):
+    if score > THRESHOLD_MID:
+        return "text-success"
+    elif score < THRESHOLD_LOW:
+        return "bg-danger"
+    else:
+        return "text-warning"
+
+
 # Start a background thread that writes fake data to the SQLite database every second
 scoredata.begin()
 
@@ -192,13 +202,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 ui.value_box(
                     model,
                     ui.h2(score),
-                    theme=(
-                        "text-success"
-                        if score > THRESHOLD_MID
-                        else "text-warning"
-                        if score > THRESHOLD_LOW
-                        else "bg-danger"
-                    ),
+                    theme=value_box_theme(score),
                 )
                 for model, score in scores_by_model.items()
             ],

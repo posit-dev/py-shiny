@@ -32,11 +32,11 @@ from htmltools import (
 )
 
 # The css module is for internal use, so we won't re-export it.
+from . import css  # noqa: F401  # pyright: ignore[reportUnusedImport]
+
 # Expose the fill module for extended usage: ex: ui.fill.as_fill_item(x).
-from . import (
-    css,  # noqa: F401  # pyright: ignore[reportUnusedImport]
-    fill,
-)
+from . import fill
+
 from ._accordion import (
     AccordionPanel,
     accordion,
