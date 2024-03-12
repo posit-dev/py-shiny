@@ -37,6 +37,16 @@ output: _Outputs
 session: _Session
 
 
+allow_express_in_core = False
+"""
+Control whether Shiny Express imports are allowed in Shiny Core apps.
+
+Normally Shiny Express imports are not allowed in Shiny Core apps because the mixing of
+the two could lead to confusion. However, there are special cases where we do allow
+this, like when using Shiny Express syntax in a Quarto Dashboard.
+"""
+
+
 # Note that users should use `from shiny.express import input` instead of `from shiny
 # import express` and acces via `express.input`. The former provides a static value for
 # `input`, but the latter is dynamic -- every time `express.input` is accessed, it

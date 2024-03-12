@@ -51,13 +51,17 @@ def is_express_app(app: str, app_dir: str | None) -> bool:
     except Exception:
         return False
 
-    return detector.found_shiny_express_import
+    return detector.is_express_app()
 
 
 class DetectShinyExpressVisitor(ast.NodeVisitor):
     def __init__(self):
         super().__init__()
         self.found_shiny_express_import = False
+        self.found_shiny_express_in_core = False
+
+    def is_express_app(self) -> bool:
+        return self.found_shiny_express_import and not self.found_shiny_express_in_core
 
     def visit_Import(self, node: ast.Import) -> None:
         if any(alias.name == "shiny.express" for alias in node.names):
@@ -70,6 +74,20 @@ class DetectShinyExpressVisitor(ast.NodeVisitor):
             alias.name == "express" for alias in node.names
         ):
             self.found_shiny_express_import = True
+
+    def visit_Assign(self, node: ast.Assign) -> None:
+        for target in node.targets:
+            # Look for the statement `shiny.express.allow_express_in_core = True` at the
+            # top level.
+            if (
+                isinstance(target, ast.Attribute)
+                and isinstance(target.value, ast.Attribute)
+                and target.value.attr == "express"
+                and isinstance(target.value.value, ast.Name)
+                and target.value.value.id == "shiny"
+                and target.attr == "allow_express_in_core"
+            ):
+                self.found_shiny_express_in_core = True
 
     # Visit top-level nodes.
     def visit_Module(self, node: ast.Module) -> None:

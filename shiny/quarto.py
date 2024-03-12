@@ -73,6 +73,9 @@ from __future__ import annotations
 
 from pathlib import Path
 from shiny import App, Inputs, Outputs, Session, ui
+import shiny.express
+
+shiny.express.allow_express_in_core = True
 
 {"".join(global_code_cell_texts)}
 
