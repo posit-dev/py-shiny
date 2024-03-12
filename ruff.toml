@@ -53,7 +53,6 @@ extend-ignore = [
 # SIM118; flake8-simplify Use `key {operator} dict`: https://docs.astral.sh/ruff/rules/#flake8-simplify-sim
 # TCH; flake8-type-checking: https://docs.astral.sh/ruff/rules/#flake8-type-checking-tch
 # FIX; flake8-fixme: https://docs.astral.sh/ruff/rules/#flake8-fixme-fix
-# PD; pandas-vet: https://docs.astral.sh/ruff/rules/#pandas-vet-pd
 # PGH; pygrep-hooks: https://docs.astral.sh/ruff/rules/#pygrep-hooks-pgh
 # FLY; flynt: https://docs.astral.sh/ruff/rules/#flynt-fly
 # NPY; NumPy-specific rules: https://docs.astral.sh/ruff/rules/#numpy-specific-rules-npy
@@ -80,7 +79,6 @@ extend-select = [
   "SIM118",
   "TCH",
   # "FIX",
-  # "PD",
   # "PGH",
   # "FLY",
   # "NPY",
