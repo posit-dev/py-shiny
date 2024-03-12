@@ -52,7 +52,7 @@ class OnEndedSessionCallbacks:
         self._on_ended_callbacks.invoke()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_poll():
     async with OnEndedSessionCallbacks():
         poll_invocations = 0
@@ -126,7 +126,7 @@ async def test_poll():
             assert (poll_invocations, value_invocations) == (6, 4)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_poll_errors():
     async with OnEndedSessionCallbacks():
 
@@ -194,7 +194,7 @@ async def test_poll_errors():
                 assert invocations == 3
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_file_reader():
     tmpfile = tempfile.NamedTemporaryFile(delete=False)
     try:
@@ -240,7 +240,7 @@ async def test_file_reader():
         os.unlink(tmpfile.name)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_file_reader_error():
     async with OnEndedSessionCallbacks():
         tmpfile1 = tempfile.NamedTemporaryFile(delete=False)

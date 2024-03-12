@@ -17,7 +17,9 @@ from htmltools import TagList
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 from shiny.session import session_context
-from shiny.types import ImgData
+
+if typing.TYPE_CHECKING:
+    from shiny.types import ImgData
 
 pandas_df = pd.DataFrame(
     {
@@ -31,7 +33,7 @@ pandas_df = pd.DataFrame(
 img_path = pathlib.Path(__file__).parent / "imgs"
 penguin_imgs = [str(img_path / img) for img in os.listdir(img_path)]
 assert len(penguin_imgs) > 0
-letters = [letter for letter in "abcdefghijklmnopqrstuvwxyz"][: len(penguin_imgs)]
+letters = list("abcdefghijklmnopqrstuvwxyz")[: len(penguin_imgs)]
 
 input_keys = (
     "input_action_button",

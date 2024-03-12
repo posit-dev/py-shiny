@@ -24,13 +24,13 @@ from htmltools import Tag, TagAttrValue, TagChild
 if TYPE_CHECKING:
     import pandas as pd
 
+    from .._typing_extensions import Self
     from ..session._utils import RenderedDeps
 
 from .. import _utils
 from .. import ui as _ui
 from .._docstring import add_example, no_example
 from .._namespaces import ResolvedId
-from .._typing_extensions import Self
 from ..express._mock_session import ExpressMockSession
 from ..session import get_current_session, require_active_session
 from ..session._session import DownloadHandler, DownloadInfo
@@ -384,8 +384,8 @@ class plot(Renderer[object]):
 
         raise Exception(
             f"@render.plot doesn't know to render objects of type '{str(type(x))}'. "
-            + "Consider either requesting support for this type of plot object, and/or "
-            + " explictly saving the object to a (png) file and using @render.image."
+            "Consider either requesting support for this type of plot object, and/or "
+            " explictly saving the object to a (png) file and using @render.image."
         )
 
 
@@ -535,7 +535,7 @@ class table(Renderer[TableResult]):
         # TODO: deal with kwargs collision with output_table
 
     async def transform(self, value: TableResult) -> dict[str, Jsonifiable]:
-        import pandas
+        import pandas as pd
         import pandas.io.formats.style
 
         html: str
@@ -545,7 +545,7 @@ class table(Renderer[TableResult]):
                 value.to_html(**self.kwargs),  # pyright: ignore
             )
         else:
-            if not isinstance(value, pandas.DataFrame):
+            if not isinstance(value, pd.DataFrame):
                 if not isinstance(value, PandasCompatible):
                     raise TypeError(
                         "@render.table doesn't know how to render objects of type "

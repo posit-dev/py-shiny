@@ -7,11 +7,11 @@ import pandas as pd
 from shiny import App, Inputs, Outputs, Session, render, ui
 
 df = pd.DataFrame(
-    dict(
-        id=["one", "two", "three"],
-        fname=["Alice", "Bob", "Charlie"],
-        lname=["Smith", "Jones", "Brown"],
-    )
+    {
+        "id": ["one", "two", "three"],
+        "fname": ["Alice", "Bob", "Charlie"],
+        "lname": ["Smith", "Jones", "Brown"],
+    }
 ).set_index(  # type: ignore
     "id",
     drop=False,

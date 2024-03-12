@@ -99,7 +99,7 @@ app_ui = ui.page_fluid(
             """
         ),
         ui.input_selectize(
-            "symbols", "Filter by symbol", [""] + SYMBOLS, multiple=True
+            "symbols", "Filter by symbol", ["", *SYMBOLS], multiple=True
         ),
         ui.output_data_frame("table"),
         fill=False,

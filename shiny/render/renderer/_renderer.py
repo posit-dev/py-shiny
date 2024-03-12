@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import (
+    TYPE_CHECKING,
     Any,
     Awaitable,
     Callable,
@@ -17,8 +18,10 @@ from typing import (
 from htmltools import MetadataNode, Tag, TagList
 
 from ..._docstring import add_example
-from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
+
+if TYPE_CHECKING:
+    from ..._typing_extensions import Self
 
 # TODO-barret-future: Double check docs are rendererd
 # Missing first paragraph from some classes: Example: TransformerMetadata.
@@ -137,7 +140,7 @@ class Renderer(Generic[IT]):
     # Q: Could we do this with typing without putting `P` in the Generic?
     # A: No. Even if we had a `P` in the Generic, the calling decorator would not have access to it.
     # Idea: Possibly use a chained method of `.ui_kwargs()`? https://github.com/posit-dev/py-shiny/issues/971
-    _auto_output_ui_kwargs: dict[str, Any] = dict()
+    _auto_output_ui_kwargs: dict[str, Any] = {}
 
     __name__: str
     """

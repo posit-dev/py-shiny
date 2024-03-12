@@ -138,7 +138,7 @@ class SidebarOpen:
 
         raise ValueError(
             f"""`open` must be one of {SidebarOpen._values_str()}, """
-            + "or a dictionary with keys `desktop` and `mobile` using these values."
+            "or a dictionary with keys `desktop` and `mobile` using these values."
         )
 
 
@@ -321,9 +321,9 @@ class Sidebar:
         if max_height_mobile is not None and self.open().mobile != "always":
             warnings.warn(
                 "The `shiny.ui.sidebar(max_height_mobile=)` argument only applies to "
-                + "the sidebar when `open` is `'always'` on mobile, but "
-                + f"`open` is `'{self.open().mobile}'`. "
-                + "The `max_height_mobile` argument will be ignored.",
+                "the sidebar when `open` is `'always'` on mobile, but "
+                f"`open` is `'{self.open().mobile}'`. "
+                "The `max_height_mobile` argument will be ignored.",
                 # `stacklevel=2`: Refers to the caller of `.max_height_mobile` property method
                 stacklevel=2,
             )

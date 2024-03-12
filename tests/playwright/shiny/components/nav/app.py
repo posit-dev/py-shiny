@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Callable, List
-
-from htmltools import Tag
+from typing import TYPE_CHECKING, Any, Callable, List
 
 from shiny import App, ui
-from shiny.types import NavSetArg
-from shiny.ui import Sidebar
+
+if TYPE_CHECKING:
+    from htmltools import Tag
+
+    from shiny.types import NavSetArg
+    from shiny.ui import Sidebar
 
 # TODO-karan; Make test that uses sidebar / no sidebar (where possible)
 # TODO-karan; Make test that has/does not have a header & footer (where possible)

@@ -1,3 +1,4 @@
+import pytest
 from conftest import ShinyAppProc, create_doc_example_core_fixture
 from controls import InputSlider, OutputTextVerbatim
 from playwright.sync_api import Page, expect
@@ -49,13 +50,12 @@ def test_input_slider_kitchen(page: Page, slider_app: ShinyAppProc) -> None:
     #         e
     #     ), "Error message should contain the list of first 15 valid values"
 
-    try:
+    with pytest.raises(ValueError) as e:
         obs.set("not-a-number", timeout=800, max_err_values=4)
-    except ValueError as e:
-        values_found = '"10", "11", "12", "13", ...'
-        assert values_found in str(
-            e
-        ), "Error message should contain the list of first 4 valid values"
+    values_found = '"10", "11", "12", "13", ...'
+    assert values_found in str(
+        e
+    ), "Error message should contain the list of first 4 valid values"
 
 
 def test_input_slider_output(page: Page, template_app: ShinyAppProc) -> None:

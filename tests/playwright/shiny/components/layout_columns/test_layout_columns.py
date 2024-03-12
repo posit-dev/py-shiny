@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from conftest import ShinyAppProc, create_doc_example_core_fixture
-from playwright.sync_api import Page
+
+if TYPE_CHECKING:
+    from playwright.sync_api import Page
 
 T = TypeVar("T")
 

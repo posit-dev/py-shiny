@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Optional, Sequence, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeVar, overload
 
 from htmltools import (
     MetadataNode,
@@ -46,10 +46,6 @@ from ...ui._output import output_ui as main_output_ui
 from ...ui._page import page_fillable as main_page_fillable
 from ...ui._page import page_navbar as main_page_navbar
 from ...ui._page import page_sidebar as main_page_sidebar
-from ...ui._plot_output_opts import BrushOpts as MainBrushOpts
-from ...ui._plot_output_opts import ClickOpts as MainClickOpts
-from ...ui._plot_output_opts import DblClickOpts as MainDblClickOpts
-from ...ui._plot_output_opts import HoverOpts as MainHoverOpts
 from ...ui._sidebar import DeprecatedPanelMain, DeprecatedPanelSidebar
 from ...ui._sidebar import Sidebar as MainSidebar
 from ...ui._sidebar import SidebarOpenSpec as MainSidebarOpenSpec
@@ -71,6 +67,12 @@ from ...ui.fill import as_fillable_container as main_as_fillable_container
 from ...ui.fill import remove_all_fill as main_remove_all_fill
 from ...ui.fill._fill import is_fill_item as main_is_fill_item
 from ...ui.fill._fill import is_fillable_container as main_is_fillable_container
+
+if TYPE_CHECKING:
+    from ...ui._plot_output_opts import BrushOpts as MainBrushOpts
+    from ...ui._plot_output_opts import ClickOpts as MainClickOpts
+    from ...ui._plot_output_opts import DblClickOpts as MainDblClickOpts
+    from ...ui._plot_output_opts import HoverOpts as MainHoverOpts
 
 __all__ = (
     # Input Switch
@@ -726,8 +728,6 @@ class AccordionPanel(MainAccordionPanel):
     """
     Deprecated. Please use `shiny.ui.AccordionPanel` instead.
     """
-
-    ...
 
 
 # Deprecated 2023-09-12

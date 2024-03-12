@@ -5,23 +5,23 @@ import re
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, cast
 
-from ..types import (
-    Coordmap,
-    CoordmapDims,
-    CoordmapPanel,
-    CoordmapPanelDomain,
-    CoordmapPanelLog,
-    CoordmapPanelMapping,
-    CoordmapPanelRange,
-    PlotnineFigure,
-)
-
 if TYPE_CHECKING:
     import numpy as np
     import numpy.typing as npt
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
     from matplotlib.gridspec import SubplotSpec
+
+    from ..types import (
+        Coordmap,
+        CoordmapDims,
+        CoordmapPanel,
+        CoordmapPanelDomain,
+        CoordmapPanelLog,
+        CoordmapPanelMapping,
+        CoordmapPanelRange,
+        PlotnineFigure,
+    )
 
 
 def get_coordmap(fig: Figure) -> Coordmap | None:

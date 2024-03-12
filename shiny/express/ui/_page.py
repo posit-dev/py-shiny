@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import Callable
-
-from htmltools import Tag
+from typing import TYPE_CHECKING, Callable
 
 from ... import ui
 from ..._docstring import no_example
 from ...types import MISSING, MISSING_TYPE
 from .._recall_context import RecallContextManager
 from .._run import get_top_level_recall_context_manager
+
+if TYPE_CHECKING:
+    from htmltools import Tag
 
 __all__ = ("page_opts",)
 

@@ -10,9 +10,9 @@ import time
 from contextlib import contextmanager
 from pathlib import PurePath
 from time import sleep
-from types import TracebackType
 from typing import (
     IO,
+    TYPE_CHECKING,
     Any,
     Callable,
     Generator,
@@ -39,7 +39,13 @@ __all__ = (
     "retry_with_timeout",
 )
 
-from playwright.sync_api import BrowserContext, Page
+
+if TYPE_CHECKING:
+    from types import TracebackType
+
+    from playwright.sync_api import BrowserContext, Page
+
+    from shiny._typing_extensions import Self
 
 
 # Make a single page fixture that can be used by all tests
@@ -49,7 +55,7 @@ def session_page(browser: BrowserContext) -> Page:
     return browser.new_page()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 # By going to `about:blank`, we _reset_ the page to a known state before each test.
 # It is not perfect, but it is faster than making a new page for each test.
 # This must be done before each test
@@ -149,7 +155,7 @@ class ShinyAppProc:
         sleep(0.5)
         self.proc.terminate()
 
-    def __enter__(self) -> ShinyAppProc:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(

@@ -53,7 +53,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                     }
                 )
                 .set_table_styles(
-                    [dict(selector="th", props=[("text-align", "right")])]
+                    [{"selector": "th", "props": [("text-align", "right")]}]
                 )
                 .highlight_min(color="silver")
                 .highlight_max(color="yellow")

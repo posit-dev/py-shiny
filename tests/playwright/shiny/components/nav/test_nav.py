@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import pytest
-from conftest import ShinyAppProc
 from controls import (
     LayoutNavSetBar,
     LayoutNavSetCardPill,
@@ -14,7 +14,10 @@ from controls import (
     LayoutNavsetTab,
     LayoutNavSetUnderline,
 )
-from playwright.sync_api import Page
+
+if TYPE_CHECKING:
+    from conftest import ShinyAppProc
+    from playwright.sync_api import Page
 
 
 @pytest.mark.skip_browser("webkit")

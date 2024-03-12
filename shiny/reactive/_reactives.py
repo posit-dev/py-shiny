@@ -483,7 +483,7 @@ class Effect_:
         if isinstance(fn, Renderer):
             raise TypeError(
                 "`@reactive.effect` can not be combined with `@render.xx`.\n"
-                + "Please remove your call of `@reactive.effect`."
+                "Please remove your call of `@reactive.effect`."
             )
 
         # The EffectAsync subclass will pass in an async function, but it tells the
@@ -794,10 +794,10 @@ def event(
     ``@render.ui``, etc).
     """
 
-    if any([not callable(arg) for arg in args]):
+    if any(not callable(arg) for arg in args):
         raise TypeError(
             "All objects passed to event decorator must be callable.\n"
-            + "If you are calling `@reactive.event(f())`, try calling `@reactive.event(f)` instead."
+            "If you are calling `@reactive.event(f())`, try calling `@reactive.event(f)` instead."
         )
 
     if len(args) == 0:
@@ -809,14 +809,14 @@ def event(
         if not callable(user_fn):
             raise TypeError(
                 "`@reactive.event()` must be applied to a function or Callable object.\n"
-                + "It should usually be applied before `@Calc`,` @Effect`, or `@render.xx` function.\n"
-                + "In other words, `@reactive.event()` goes below the other decorators."
+                "It should usually be applied before `@Calc`,` @Effect`, or `@render.xx` function.\n"
+                "In other words, `@reactive.event()` goes below the other decorators."
             )
 
         if isinstance(user_fn, Calc_):
             raise TypeError(
                 "`@reactive.event()` must be applied before `@reactive.calc`.\n"
-                + "In other words, `@reactive.calc` must be above `@reactive.event()`."
+                "In other words, `@reactive.calc` must be above `@reactive.event()`."
             )
 
         # This is here instead of at the top of the .py file in order to avoid a
@@ -828,7 +828,7 @@ def event(
             # use case. For now we'll disallow it, for simplicity.
             raise TypeError(
                 "`@reactive.event()` must be applied before `@render.xx` .\n"
-                + "In other words, `@render.xx` must be above `@reactive.event()`."
+                "In other words, `@render.xx` must be above `@reactive.event()`."
             )
 
         initialized = False
@@ -862,10 +862,10 @@ def event(
 
             return new_user_async_fn  # type: ignore
 
-        elif any([is_async_callable(arg) for arg in args]):
+        elif any(is_async_callable(arg) for arg in args):
             raise TypeError(
-                "When decorating a synchronous function with @reactive.event(), all"
-                + "arguments to @reactive.event() must be synchronous functions."
+                "When decorating a synchronous function with @reactive.event(), all "
+                "arguments to @reactive.event() must be synchronous functions."
             )
 
         else:

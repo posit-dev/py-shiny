@@ -54,13 +54,14 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    rng = np.random.default_rng()
+
     @reactive.calc
     def fake_data():
         n = 5000
         mean = [0, 0]
-        rng = np.random.RandomState(0)
         cov = [(input.var(), input.cov()), (input.cov(), 1 / input.var())]
-        return rng.multivariate_normal(mean, cov, n).T
+        return np.random.default_rng(seed=0).multivariate_normal(mean, cov, n).T
 
     @render.plot
     def seaborn():
@@ -98,7 +99,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.plot
     def pandas():
         ts = pd.Series(
-            np.random.randn(1000), index=pd.date_range("1/1/2000", periods=1000)
+            rng.standard_normal(1000),
+            index=pd.date_range("1/1/2000", periods=1000),
         )
         ts = ts.cumsum()
         return ts.plot()

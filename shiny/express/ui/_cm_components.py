@@ -1,21 +1,24 @@
 "Context manager components for Shiny Express"
+# ruff: noqa: C408 # https://docs.astral.sh/ruff/rules/unnecessary-literal-dict/
 
 from __future__ import annotations
 
-from typing import Literal, Optional
-
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagList
+from typing import TYPE_CHECKING, Literal, Optional
 
 from ... import ui
 from ..._docstring import add_example, no_example
 from ...types import MISSING, MISSING_TYPE
-from ...ui._accordion import AccordionPanel
-from ...ui._card import CardItem
-from ...ui._layout_columns import BreakpointsUser
-from ...ui._navs import NavMenu, NavPanel, NavSet, NavSetBar, NavSetCard
-from ...ui._sidebar import SidebarOpenSpec, SidebarOpenValue
-from ...ui.css import CssUnit
 from .._recall_context import RecallContextManager
+
+if TYPE_CHECKING:
+    from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagFunction, TagList
+
+    from ...ui._accordion import AccordionPanel
+    from ...ui._card import CardItem
+    from ...ui._layout_columns import BreakpointsUser
+    from ...ui._navs import NavMenu, NavPanel, NavSet, NavSetBar, NavSetCard
+    from ...ui._sidebar import SidebarOpenSpec, SidebarOpenValue
+    from ...ui.css import CssUnit
 
 __all__ = (
     "sidebar",

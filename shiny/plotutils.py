@@ -10,11 +10,12 @@ __all__ = ("brushed_points", "near_points")
 from typing import TYPE_CHECKING, Literal, Optional, Union, cast
 
 from ._typing_extensions import TypedDict
-from .types import BrushInfo, CoordInfo, CoordXY
 
 if TYPE_CHECKING:
     import numpy.typing as npt
     import pandas as pd
+
+    from .types import BrushInfo, CoordInfo, CoordXY
 
 DataFrameColumn = Union[
     "pd.Series[int]",
@@ -227,7 +228,7 @@ def near_points(
     # For no current coordinfo
     if coordinfo is None:
         if add_dist:
-            new_df["dist"] = np.NaN
+            new_df["dist"] = np.nan
 
         if all_rows:
             new_df["selected_"] = False

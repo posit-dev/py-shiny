@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from conftest import ShinyAppProc, create_doc_example_core_fixture
 from controls import InputActionButton, InputDarkMode, LayoutNavSetBar
-from playwright.sync_api import Page
+
+if TYPE_CHECKING:
+    from playwright.sync_api import Page
 
 app = create_doc_example_core_fixture("input_dark_mode")
 

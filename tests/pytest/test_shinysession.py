@@ -49,7 +49,7 @@ def test_input_nonexistent():
         assert "y" not in input
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_input_nonexistent_deps():
     # Make sure that `"x" in input` causes a reactive dependency to be created.
     input = Inputs({})

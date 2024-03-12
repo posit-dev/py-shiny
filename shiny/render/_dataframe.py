@@ -4,8 +4,6 @@ import abc
 import json
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Union, cast, runtime_checkable
 
-from htmltools import Tag
-
 from .. import ui
 from .._docstring import add_example, no_example
 from ._dataframe_unsafe import serialize_numpy_dtypes
@@ -13,6 +11,7 @@ from .renderer import Jsonifiable, Renderer
 
 if TYPE_CHECKING:
     import pandas as pd
+    from htmltools import Tag
 
 
 class AbstractTabularData(abc.ABC):
@@ -96,15 +95,15 @@ class DataGrid(AbstractTabularData):
 
     def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
-        res["options"] = dict(
-            width=self.width,
-            height=self.height,
-            summary=self.summary,
-            filters=self.filters,
-            row_selection_mode=self.row_selection_mode,
-            style="grid",
-            fill=self.height is None,
-        )
+        res["options"] = {
+            "width": self.width,
+            "height": self.height,
+            "summary": self.summary,
+            "filters": self.filters,
+            "row_selection_mode": self.row_selection_mode,
+            "style": "grid",
+            "fill": self.height is None,
+        }
         return res
 
 
@@ -164,9 +163,7 @@ class DataTable(AbstractTabularData):
         height: Union[str, float, None] = "500px",
         summary: Union[bool, str] = True,
         filters: bool = False,
-        row_selection_mode: Union[
-            Literal["none"], Literal["single"], Literal["multiple"]
-        ] = "none",
+        row_selection_mode: Literal["none", "single", "multiple"] = "none",
     ):
         import pandas as pd
 
@@ -186,14 +183,14 @@ class DataTable(AbstractTabularData):
 
     def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
-        res["options"] = dict(
-            width=self.width,
-            height=self.height,
-            summary=self.summary,
-            filters=self.filters,
-            row_selection_mode=self.row_selection_mode,
-            style="table",
-        )
+        res["options"] = {
+            "width": self.width,
+            "height": self.height,
+            "summary": self.summary,
+            "filters": self.filters,
+            "row_selection_mode": self.row_selection_mode,
+            "style": "table",
+        }
         return res
 
 

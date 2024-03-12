@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import os
 import re
 import typing
@@ -8,6 +7,9 @@ from ipaddress import ip_address
 from subprocess import run
 from typing import Pattern
 from urllib.parse import ParseResult, urlparse
+
+if typing.TYPE_CHECKING:
+    import logging
 
 
 def is_workbench() -> bool:

@@ -37,7 +37,7 @@ def result():
                     "qsec": "{0:0.2f}",
                 }
             )
-            .set_table_styles([dict(selector="th", props=[("text-align", "right")])])
+            .set_table_styles([{"selector": "th", "props": [("text-align", "right")]}])
             .highlight_min(color="silver")
             .highlight_max(color="yellow")
         )

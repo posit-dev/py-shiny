@@ -1,5 +1,5 @@
 # pyright: reportUnusedExpression=false
-# flake8: noqa
+# ruff: noqa: B018
 from __future__ import annotations
 
 import contextlib

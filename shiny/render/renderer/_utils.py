@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Dict, cast
+from typing import TYPE_CHECKING, Any, Dict, cast
 
-from htmltools import TagFunction
-
-from ...session._utils import RenderedDeps
 from ...types import MISSING_TYPE, ImgData
 from ._renderer import Jsonifiable
+
+if TYPE_CHECKING:
+    from htmltools import TagFunction
+
+    from ...session._utils import RenderedDeps
 
 JsonifiableDict = Dict[str, Jsonifiable]
 

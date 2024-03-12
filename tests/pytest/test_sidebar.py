@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import pytest
 from htmltools import Tag, TagAttrValue
 
 from shiny import ui
-from shiny.ui._sidebar import SidebarOpenSpec, SidebarOpenValue
+
+if TYPE_CHECKING:
+    from shiny.ui._sidebar import SidebarOpenSpec, SidebarOpenValue
 
 _s = ui.sidebar("Sidebar!")
 _m = "Body"
@@ -25,38 +27,27 @@ def test_panel_main_and_panel_sidebar():
     ui.layout_sidebar(_s)
     ui.layout_sidebar(_s, None)
 
-    try:
+    with pytest.raises(ValueError) as e:
         ui.layout_sidebar(_s, _s)
-        raise AssertionError("Should have raised ValueError")
-    except ValueError as e:
-        assert "multiple `sidebar()` objects" in str(e)
+    assert "multiple `sidebar()` objects" in str(e.value)
 
-    try:
+    with pytest.raises(ValueError) as e:
         ui.layout_sidebar(None, _ps)  # pyright: ignore[reportArgumentType]
-        raise AssertionError("Should have raised ValueError")
-    except ValueError as e:
-        assert "not being supplied with a `sidebar()` object." in str(e)
+    assert "not being supplied with a `sidebar()` object" in str(e.value)
 
-    try:
+    with pytest.raises(ValueError) as e:
         ui.layout_sidebar(_s, _pm)
-        raise AssertionError("Should have raised ValueError")
-    except ValueError as e:
-        assert "is not being used with `panel_sidebar()`" in str(e)
+    assert "is not being used with `panel_sidebar()`" in str(e.value)
 
-    try:
+    with pytest.raises(ValueError, match="not being supplied as the second argument"):
         ui.layout_sidebar(_ps, None, _pm)
-        raise AssertionError("Should have raised ValueError")
-    except ValueError as e:
-        assert "not being supplied as the second argument" in str(e)
-    try:
+    with pytest.raises(ValueError) as e:
         ui.layout_sidebar(_ps, _pm, None, "42")
-        raise AssertionError("Should have raised ValueError")
-    except ValueError as e:
-        assert "Unexpected extra legacy `*args`" in str(e)
+    assert "Unexpected extra legacy `*args`" in str(e.value)
 
 
 @pytest.mark.parametrize(
-    "open_value, expected",
+    ("open_value", "expected"),
     [
         ("closed", {"desktop": "closed", "mobile": "closed"}),
         ("open", {"desktop": "open", "mobile": "open"}),

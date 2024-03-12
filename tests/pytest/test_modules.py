@@ -39,7 +39,7 @@ def test_module_ui():
     assert get_id(y, 2) == "outer-out2"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_session_scoping():
     sessions: Dict[str, Union[Session, None, str]] = {}
 

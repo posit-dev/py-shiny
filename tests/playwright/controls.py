@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import pathlib
 import re
 import sys
 import time
@@ -21,6 +20,9 @@ from shiny._typing_extensions import (
     assert_type,  # pyright: ignore[reportPrivateImportUsage]
 )
 from shiny.types import MISSING, MISSING_TYPE
+
+if typing.TYPE_CHECKING:
+    import pathlib
 
 """
 Questions:
@@ -497,7 +499,6 @@ class InputPassword(
     # *,
     # width: Optional[str] = None,
     # placeholder: Optional[str] = None,
-    ...
 
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(
@@ -1685,7 +1686,7 @@ class _InputSliderBase(_WidthLocM, _InputWithLabel):
             values_found_txt = ", ".join([f'"{key}"' for key in key_arr])
             raise ValueError(
                 f"Could not find value '{value}' when moving slider from {error_msg_direction}\n"
-                + f"Values found:\n{values_found_txt}{trail_txt}"
+                f"Values found:\n{values_found_txt}{trail_txt}"
             )
 
     def _grid_bb(self, *, timeout: Timeout = None) -> FloatRect:

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import sys
-from types import TracebackType
-from typing import Callable, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Callable, Optional, Type, TypeVar
 
 from htmltools import wrap_displayhook_handler
 
 from ..._docstring import no_example
 from ..._typing_extensions import ParamSpec
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 __all__ = ("hold",)
 
@@ -46,7 +48,7 @@ def hold() -> HoldContextManager:
 
 class HoldContextManager:
     def __init__(self):
-        self.content: list[object] = list()
+        self.content: list[object] = []
 
     def __enter__(self) -> list[object]:
         self.prev_displayhook = sys.displayhook

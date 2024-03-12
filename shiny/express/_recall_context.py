@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import functools
 import sys
-from types import TracebackType
-from typing import Callable, Generic, Mapping, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, Mapping, Optional, Type, TypeVar
 
 from htmltools import MetadataNode, Tag, TagList, wrap_displayhook_handler
 
 from .._typing_extensions import ParamSpec
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -24,7 +26,7 @@ class RecallContextManager(Generic[R]):
     ):
         self.fn = fn
         if args is None:
-            args = tuple()
+            args = ()
         if kwargs is None:
             kwargs = {}
         self.args: list[object] = list(args)

@@ -13,11 +13,22 @@ import socketserver
 import sys
 import tempfile
 import warnings
-from pathlib import Path
-from types import ModuleType
-from typing import Any, Awaitable, Callable, Generator, Optional, TypeVar, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Generator,
+    Optional,
+    TypeVar,
+    cast,
+)
 
 from ._typing_extensions import ParamSpec, TypeGuard
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from types import ModuleType
 
 CancelledError = asyncio.CancelledError
 
@@ -182,7 +193,7 @@ def random_port(
         10080,
     ]
 
-    unusable = set([x for x in unsafe_ports if x >= min and x <= max])
+    unusable = {x for x in unsafe_ports if x >= min and x <= max}
     while n > 0:
         if (max - min + 1) <= len(unusable):
             break
@@ -413,7 +424,7 @@ def run_coro_hybrid(coro: Awaitable[R]) -> "asyncio.Future[R]":
             assert fut.done()
             try:
                 fut.result()
-            except BaseException as e:  # noqa: B036
+            except BaseException as e:
                 exc = e
 
         if result_future.cancelled():
@@ -439,7 +450,7 @@ def run_coro_hybrid(coro: Awaitable[R]) -> "asyncio.Future[R]":
         except (KeyboardInterrupt, SystemExit) as e:
             result_future.set_exception(e)
             raise
-        except BaseException as e:  # noqa: B036
+        except BaseException as e:
             result_future.set_exception(e)
         else:
             # If we get here, the coro didn't finish. Schedule it for completion.

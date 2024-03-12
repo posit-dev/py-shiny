@@ -9,7 +9,6 @@ def test_input_switch_kitchen(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
     somevalue = InputSwitch(page, "somevalue")
-    somevalue.expect_label
 
     expect(somevalue.loc_label).to_have_text("Some value")
     somevalue.expect_label("Some value")
