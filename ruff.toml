@@ -10,36 +10,24 @@ extend-exclude = [
 ]
 
 [lint]
-# E501: Line too long
-# Conflicting lint rules: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
-# * indentation-with-invalid-multiple (E111)
-# * indentation-with-invalid-multiple-comment (E114)
-# * over-indented (E117)
-# * indent-with-spaces (D206)
-# * triple-single-quotes (D300)
-# * bad-quotes-inline-string (Q000)
-# * bad-quotes-multiline-string (Q001)
-# * bad-quotes-docstring (Q002)
-# * avoidable-escaped-quote (Q003)
-# * missing-trailing-comma (COM812)
-# * prohibited-trailing-comma (COM819)
-# * single-line-implicit-string-concatenation (ISC001)
-# * multi-line-implicit-string-concatenation (ISC002)
+
 extend-ignore = [
-  "E501",
-  "E111",
-  "E114",
-  "E117",
-  "D206",
-  "D300",
-  "Q000",
-  "Q001",
-  "Q002",
-  "Q003",
-  "COM812",
-  "COM819",
-  "ISC001",
-  "ISC002",
+  "E501",  # E501: Line too long
+  "PT011", # PT011 `pytest.raises(ValueError)` is too broad
+  # Conflicting lint rules: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+  "E111",   # * indentation-with-invalid-multiple (E111)
+  "E114",   # * indentation-with-invalid-multiple-comment (E114)
+  "E117",   # * over-indented (E117)
+  "D206",   # * indent-with-spaces (D206)
+  "D300",   # * triple-single-quotes (D300)
+  "Q000",   # * bad-quotes-inline-string (Q000)
+  "Q001",   # * bad-quotes-multiline-string (Q001)
+  "Q002",   # * bad-quotes-docstring (Q002)
+  "Q003",   # * avoidable-escaped-quote (Q003)
+  "COM812", # * missing-trailing-comma (COM812)
+  "COM819", # * prohibited-trailing-comma (COM819)
+  "ISC001", # * single-line-implicit-string-concatenation (ISC001)
+  "ISC002", # * multi-line-implicit-string-concatenation (ISC002)
 ]
 
 
@@ -117,6 +105,8 @@ extend-select = [
 "tests/**" = ["T20"]
 # I: isort
 "shiny/experimental/ui/__init__.py" = ["I"]
+# PT019: pytest
+"tests/pytest/test_output_transformer.py" = ["PT019"]
 
 
 [format]

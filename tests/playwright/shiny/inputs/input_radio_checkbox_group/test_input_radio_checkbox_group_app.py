@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from conftest import ShinyAppProc
 from controls import InputCheckboxGroup, InputRadioButtons, PatternOrStr
 from playwright.sync_api import Page, expect
@@ -87,35 +88,32 @@ def test_locator_debugging(page: Page, local_app: ShinyAppProc) -> None:
     timeout = 100
 
     # Non-existent div
-    try:
-        not_exist = InputRadioButtons(page, "does-not-exist")
+    not_exist = InputRadioButtons(page, "does-not-exist")
+    with pytest.raises(AssertionError) as e:
         not_exist.expect_choices(["a", "b", "c"], timeout=timeout)
-    except AssertionError as e:
-        assert "expected to have count '1'" in str(e)
-        assert "Actual value: 0" in str(e)
+
+    assert "expected to have count '1'" in str(e)
+    assert "Actual value: 0" in str(e)
 
     check1 = InputCheckboxGroup(page, "check1")
 
     # Make sure it works
     check1.expect_choices(["red", "green", "blue"])
     # Too many
-    try:
+    with pytest.raises(AssertionError) as e:
         check1.expect_choices(["red", "green", "blue", "test_value"], timeout=timeout)
-    except AssertionError as e:
-        assert "expected to have count '4'" in str(e)
-        assert "Actual value: 3" in str(e)
+    assert "expected to have count '4'" in str(e)
+    assert "Actual value: 3" in str(e)
     # Not enough
-    try:
+    with pytest.raises(AssertionError) as e:
         check1.expect_choices(["red", "green"], timeout=timeout)
-    except AssertionError as e:
-        assert "expected to have count '2'" in str(e)
-        assert "Actual value: 3" in str(e)
+    assert "expected to have count '2'" in str(e)
+    assert "Actual value: 3" in str(e)
     # Wrong value
-    try:
+    with pytest.raises(AssertionError) as e:
         check1.expect_choices(["red", "green", "test_value"], timeout=timeout)
-    except AssertionError as e:
-        assert "attribute 'test_value'" in str(e)
-        assert "Actual value: blue" in str(e)
+    assert "attribute 'test_value'" in str(e)
+    assert "Actual value: blue" in str(e)
 
 
 def test_locator_existance(page: Page, local_app: ShinyAppProc) -> None:
@@ -124,12 +122,11 @@ def test_locator_existance(page: Page, local_app: ShinyAppProc) -> None:
     timeout = 100
 
     # Non-existent div
-    try:
-        not_exist = InputCheckboxGroup(page, "does-not-exist")
+    not_exist = InputCheckboxGroup(page, "does-not-exist")
+    with pytest.raises(AssertionError) as e:
         not_exist.set(["green"], timeout=timeout)
-    except AssertionError as e:
-        assert "expected to have count '1'" in str(e)
-        assert "Actual value: 0" in str(e)
+    assert "expected to have count '1'" in str(e)
+    assert "Actual value: 0" in str(e)
 
     check1 = InputCheckboxGroup(page, "check1")
 
@@ -140,17 +137,16 @@ def test_locator_existance(page: Page, local_app: ShinyAppProc) -> None:
     check1.expect_selected(["green"])
 
     # Different value
-    try:
+    with pytest.raises(AssertionError) as e:
         check1.set(["test_value"], timeout=timeout)
-    except AssertionError as e:
-        assert "expected to have count '1'" in str(e)
-        assert "Actual value: 0" in str(e)
+    assert "expected to have count '1'" in str(e)
+    assert "Actual value: 0" in str(e)
 
     # Extra value
-    try:
+    with pytest.raises(AssertionError) as e:
         check1.set(["blue", "test_value"], timeout=timeout)
-    except AssertionError as e:
-        assert "expected to have count '1'" in str(e)
-        assert "Actual value: 0" in str(e)
+
+    assert "expected to have count '1'" in str(e)
+    assert "Actual value: 0" in str(e)
 
     check1.expect_selected(["green"])

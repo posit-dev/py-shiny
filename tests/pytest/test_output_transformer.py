@@ -116,20 +116,16 @@ def test_output_transformer_with_pass_through_kwargs():
 
 
 def test_output_transformer_pos_args():
-    try:
+    with pytest.raises(TypeError, match="must have 2 positional arguments"):
 
         @output_transformer  # pyright: ignore[reportArgumentType]
         async def TestTransformer(
             _meta: TransformerMetadata,
         ): ...
 
-        raise RuntimeError()
-    except TypeError as e:
-        assert "must have 2 positional parameters" in str(e)
-
 
 def test_output_transformer_limits_positional_arg_count():
-    try:
+    with pytest.raises(TypeError, match="more than 2 positional"):
 
         @output_transformer
         async def TestTransformer(
@@ -138,13 +134,9 @@ def test_output_transformer_limits_positional_arg_count():
             y: str,
         ): ...
 
-        raise RuntimeError()
-    except TypeError as e:
-        assert "more than 2 positional" in str(e)
-
 
 def test_output_transformer_does_not_allow_args():
-    try:
+    with pytest.raises(TypeError, match="No variadic positional parameters"):
 
         @output_transformer
         async def TestTransformer(
@@ -153,14 +145,9 @@ def test_output_transformer_does_not_allow_args():
             *args: str,
         ): ...
 
-        raise RuntimeError()
-
-    except TypeError as e:
-        assert "No variadic positional parameters" in str(e)
-
 
 def test_output_transformer_kwargs_have_defaults():
-    try:
+    with pytest.raises(TypeError, match="did not have a default value"):
 
         @output_transformer
         async def TestTransformer(
@@ -169,11 +156,6 @@ def test_output_transformer_kwargs_have_defaults():
             *,
             y: str,
         ): ...
-
-        raise RuntimeError()
-
-    except TypeError as e:
-        assert "did not have a default value" in str(e)
 
 
 def test_output_transformer_result_does_not_allow_args():
@@ -187,14 +169,13 @@ def test_output_transformer_result_does_not_allow_args():
     def render_fn_sync(*args: str):
         return " ".join(args)
 
-    try:
+    with pytest.raises(
+        TypeError, match="Expected `params` to be of type `TransformerParams`"
+    ):
         TestTransformer(
             render_fn_sync,
             "X",  # pyright: ignore[reportArgumentType]
         )
-        raise RuntimeError()
-    except TypeError as e:
-        assert "Expected `params` to be of type `TransformerParams`" in str(e)
 
 
 @pytest.mark.asyncio()
