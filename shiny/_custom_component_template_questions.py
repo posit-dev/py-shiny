@@ -138,7 +138,7 @@ def update_component_name_in_template(template_dir: Path, new_component_name: st
         for item in dir.iterdir():
             if item.is_file():
                 # Only do this for files
-                with open(item, "r") as f:
+                with open(item, "r", encoding="utf-8") as f:
                     file_contents = f.read()
                 # First, "custom_component" -> "new_component_name"
                 file_contents = file_contents.replace(
@@ -151,7 +151,7 @@ def update_component_name_in_template(template_dir: Path, new_component_name: st
                     old_capital_case_name, capital_case_name
                 )
 
-                with open(item, "w") as f:
+                with open(item, "w", encoding="utf-8") as f:
                     f.write(file_contents)
 
     # Loop over dirs_to_update and run the update function on them

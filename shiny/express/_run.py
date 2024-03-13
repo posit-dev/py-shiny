@@ -91,7 +91,7 @@ def wrap_express_app(file: Path) -> App:
 
 
 def run_express(file: Path) -> Tag | TagList:
-    with open(file) as f:
+    with open(file, encoding="utf-8") as f:
         content = f.read()
 
     tree = ast.parse(content, file)
