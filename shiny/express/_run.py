@@ -144,15 +144,8 @@ def run_express(file: Path) -> Tag | TagList:
         get_top_level_recall_context_manager().__exit__(None, None, None)
 
         # If we're running as an Express app but there's also a top-level item named app
-        # which is a shiny.App object, the user probably made a mistake. The exception
-        # is if allow_express_in_core is True, which happens with Quarto Dashboards.
-        from . import allow_express_in_core
-
-        if (
-            not allow_express_in_core
-            and "app" in var_context
-            and isinstance(var_context["app"], App)
-        ):
+        # which is a shiny.App object, the user probably made a mistake.
+        if "app" in var_context and isinstance(var_context["app"], App):
             raise RuntimeError(
                 "This looks like a Shiny Express app because it imports shiny.express, "
                 "but it also looks like a Shiny Core app because it has a variable named "
