@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.card()` and `ui.value_box()` now take an `id` argument that, when provided, is used to report the full screen state of the card or value box to the server. For example, when using `ui.card(id = "my_card", full_screen = TRUE)` you can determine if the card is currently in full screen mode by reading the boolean value of `input.my_card()["full_screen"]`. (#1215)
 
+* `shiny run` now respects `.env` files in the current directory. Use this at development time to set environment variables that will be available in production environments. `.env` files should not be committed to source control, so it's a good idea to add them to `.gitignore`. See https://pypi.org/project/python-dotenv/ to learn more about `.env` files. Note that server environments like Posit Connect, Shiny Server, and ShinyApps.io generally do not support `.env` files.
+
 ### Bug fixes
 
 ### Other changes
