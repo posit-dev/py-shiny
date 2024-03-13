@@ -5,7 +5,9 @@
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
+from typing import Literal
 
 from .._docstring import no_example
 
@@ -46,12 +48,11 @@ def is_express_app(app: str, app_dir: str | None) -> bool:
             content = f.read()
 
         # Check for magic comment in the first 1000 characters
-        for line in content[:1000].splitlines():
-            line = line.rstrip()
-            if line == "# shiny_mode: express":
-                return True
-            elif line == "# shiny_mode: core":
-                return False
+        forced_mode = find_magic_comment_mode(content[:1000])
+        if forced_mode == "express":
+            return True
+        elif forced_mode == "core":
+            return False
 
         tree = ast.parse(content, app_path)
         detector = DetectShinyExpressVisitor()
@@ -87,3 +88,24 @@ class DetectShinyExpressVisitor(ast.NodeVisitor):
     # Don't recurse into any nodes, so the we'll only ever look at top-level nodes.
     def generic_visit(self, node: ast.AST) -> None:
         pass
+
+
+def find_magic_comment_mode(content: str) -> Literal["core", "express"] | None:
+    """
+    Look for a magic comment of the form "# shiny_mode: express" or "# shiny_mode:
+    core".
+
+    Returns
+    -------
+    :
+        `True` if Shiny Express comment is found, `False` if Shiny Core comment is
+        found, and `None` if no magic comment is found.
+    """
+
+    for line in content[:1000].splitlines():
+        if re.search(r"^#\s*shiny_mode:\s*express\s*$", line):
+            return "express"
+        if re.search(r"^#\s*shiny_mode:\s*core\s*$", line):
+            return "core"
+
+    return None
