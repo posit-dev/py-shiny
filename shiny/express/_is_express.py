@@ -45,7 +45,7 @@ def is_express_app(app: str, app_dir: str | None) -> bool:
 
     try:
         # Read the file, parse it, and look for any imports of shiny.express.
-        with open(app_path) as f:
+        with open(app_path, encoding="utf-8") as f:
             content = f.read()
 
         # Check for magic comment in the first 1000 characters
