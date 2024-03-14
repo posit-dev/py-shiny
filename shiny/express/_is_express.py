@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import ast
 import re
+import sys
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from .._docstring import no_example
 
@@ -95,17 +96,21 @@ def find_magic_comment_mode(content: str) -> Literal["core", "express"] | None:
     Look for a magic comment of the form "# shiny_mode: express" or "# shiny_mode:
     core".
 
+    If a line of the form "# shiny_mode: x" is found, where "x" is not "express" or
+    "core", then a message will be printed to stderr.
+
     Returns
     -------
     :
         `True` if Shiny Express comment is found, `False` if Shiny Core comment is
         found, and `None` if no magic comment is found.
     """
-
-    for line in content[:1000].splitlines():
-        if re.search(r"^#\s*shiny_mode:\s*express\s*$", line):
-            return "express"
-        if re.search(r"^#\s*shiny_mode:\s*core\s*$", line):
-            return "core"
+    m = re.search(r"^#[ \t]*shiny_mode:[ \t]*(\S*)[ \t]*$", content, re.MULTILINE)
+    if m is not None:
+        shiny_mode = cast(str, m.group(1))
+        if shiny_mode in ("express", "core"):
+            return shiny_mode
+        else:
+            print(f'Invalid shiny_mode: "{shiny_mode}"', file=sys.stderr)
 
     return None
