@@ -172,7 +172,7 @@ def run_express(file: Path) -> Tag | TagList:
         sys.displayhook = prev_displayhook
 
 
-_top_level_recall_context_manager: RecallContextManager[Tag]
+_top_level_recall_context_manager: RecallContextManager[Tag] | None = None
 
 
 def reset_top_level_recall_context_manager() -> None:
@@ -183,6 +183,9 @@ def reset_top_level_recall_context_manager() -> None:
 
 
 def get_top_level_recall_context_manager() -> RecallContextManager[Tag]:
+    if _top_level_recall_context_manager is None:
+        raise RuntimeError("No top-level recall context manager has been set.")
+
     return _top_level_recall_context_manager
 
 
@@ -228,8 +231,16 @@ def app_opts(
         Whether to enable debug mode.
     """
 
-    # Store these options only if we're in the UI-rendering phase of Shiny Express.
     mock_session = get_current_session()
+
+    if mock_session is None:
+        # We can get here if a Shiny Core app, or if we're in the UI rendering phase of
+        # a Quarto-Shiny dashboard.
+        raise RuntimeError(
+            "express.app_opts() can only be used in a standalone Shiny Express app."
+        )
+
+    # Store these options only if we're in the UI-rendering phase of Shiny Express.
     if not isinstance(mock_session, ExpressMockSession):
         return
 
