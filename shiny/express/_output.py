@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from contextlib import AbstractContextManager
-from typing import Callable, TypeVar
+from typing import TYPE_CHECKING, Callable, TypeVar
 
 from .._deprecated import warn_deprecated
 from .._typing_extensions import ParamSpec
-from ..render.renderer import RendererT
 from .ui import hold
+
+if TYPE_CHECKING:
+    from contextlib import AbstractContextManager
+
+    from ..render.renderer import RendererT
 
 __all__ = ("suspend_display",)
 
@@ -48,7 +51,7 @@ def output_args(
 
 
 def suspend_display(
-    fn: Callable[P, R] | RendererT | None = None
+    fn: Callable[P, R] | RendererT | None = None,
 ) -> Callable[P, R] | RendererT | AbstractContextManager[None]:
     warn_deprecated(
         "`suspend_display` is deprecated. Please use `ui.hold` instead. "

@@ -1,5 +1,9 @@
+from typing import TYPE_CHECKING
+
 from shiny import App, Inputs, Outputs, Session, render, ui
-from shiny.types import ImgData
+
+if TYPE_CHECKING:
+    from shiny.types import ImgData
 
 app_ui = ui.page_fluid(ui.output_image("image"))
 

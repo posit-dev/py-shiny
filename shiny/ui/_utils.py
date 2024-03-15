@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, cast, overload
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast, overload
 
 from htmltools import (
     HTMLDependency,
@@ -12,9 +12,11 @@ from htmltools import (
     tags,
 )
 
-from .._typing_extensions import TypeGuard
 from ..session import Session, require_active_session
 from ..types import MISSING, MISSING_TYPE
+
+if TYPE_CHECKING:
+    from .._typing_extensions import TypeGuard
 
 
 def shiny_input_label(id: str, label: TagChild = None) -> Tag:

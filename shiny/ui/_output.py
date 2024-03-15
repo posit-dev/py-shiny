@@ -195,7 +195,7 @@ def output_image(
     height = f"{height}px" if isinstance(height, (float, int)) else height
     style = None if inline else css(width=width, height=height)
 
-    args: dict[str, str] = dict()
+    args: dict[str, str] = {}
 
     id_resolved = resolve_id(id)
 

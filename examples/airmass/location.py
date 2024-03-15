@@ -58,9 +58,7 @@ def location_server(
                         },
                         {maximumAge: Infinity, timeout: Infinity}
                     )
-                    """.replace(
-                        "#HERE#", module.resolve_id("here")
-                    )
+                    """.replace("#HERE#", module.resolve_id("here"))
                 ),
                 selector="body",
                 where="beforeEnd",

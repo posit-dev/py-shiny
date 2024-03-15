@@ -10,6 +10,5 @@ with ui.sidebar():
 
 @render.plot
 def histogram():
-    np.random.seed(19680801)
-    x = 100 + 15 * np.random.randn(437)
+    x = 100 + 15 * np.random.default_rng(seed=19680801).standard_normal(437)
     plt.hist(x, input.n(), density=True)

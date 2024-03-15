@@ -7,14 +7,16 @@ __all__ = (
     "modal_remove",
 )
 
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
 from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, div, tags
 
 from .._docstring import add_example
 from ..session import require_active_session
-from ..session._session import Session
 from ..types import MISSING, MISSING_TYPE
+
+if TYPE_CHECKING:
+    from ..session._session import Session
 
 
 @add_example(ex_dir="../api-examples/modal")
@@ -129,16 +131,13 @@ def modal(
     )
 
     # jQuery plugin doesn't work in Bootstrap 5, but vanilla JS doesn't work in Bootstrap 4 :sob:
-    js = "\n".join(
-        [
-            "if (window.bootstrap && !window.bootstrap.Modal.VERSION.match(/^4\\. /)) {",
-            "  var modal=new bootstrap.Modal(document.getElementById('shiny-modal'))",
-            "  modal.show()",
-            "} else {",
-            "  $('#shiny-modal').modal().focus()",
-            "}",
-        ]
-    )
+    js = """\
+if (window.bootstrap && !window.bootstrap.Modal.VERSION.match(/^4\\. /)) {
+  var modal=new bootstrap.Modal(document.getElementById('shiny-modal'))
+  modal.show()
+} else {
+  $('#shiny-modal').modal().focus()
+}"""
 
     backdrop = None if easy_close else "static"
     keyboard = None if easy_close else "false"

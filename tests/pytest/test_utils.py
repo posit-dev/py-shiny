@@ -19,7 +19,9 @@ def test_randomness():
         pub2 = random.randint(0, 100000000)
         with private_seed():
             priv2 = random.randint(0, 100000000)
-        assert pub != priv and priv != pub2 and pub2 != priv2
+        assert pub != priv
+        assert priv != pub2
+        assert pub2 != priv2
 
         # By setting the same seed, we should get the same randomness
         random.seed(0)
@@ -93,7 +95,7 @@ def test_callbacks():
     assert cb4.exec_count == 1  # Registered during previous invoke(), was called
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_async_callbacks():
     class AsyncMockCallback:
         def __init__(self):

@@ -29,3 +29,10 @@ def compare_annotations(
             assert (
                 ui_a[key] == layout_a[key]
             ), f"Type annotations for {key} in {core_fn} (Core) don't match {express_fn} (Express)"
+
+
+def test_sidebar_annotations() -> None:
+    from shiny import ui
+    from shiny.express import ui as xui
+
+    compare_annotations(ui.sidebar, xui.sidebar)

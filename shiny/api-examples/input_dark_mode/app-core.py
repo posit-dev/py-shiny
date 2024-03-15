@@ -45,8 +45,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.plot(alt="A histogram")
     def plot() -> object:
-        np.random.seed(19680801)
-        x = 100 + 15 * np.random.randn(437)
+        x = 100 + 15 * np.random.default_rng(seed=19680801).standard_normal(437)
 
         fig, ax = plt.subplots()
         ax.hist(x, input.n(), density=True)

@@ -190,8 +190,8 @@ class Session(object, metaclass=SessionMeta):
         # query information about the request, like headers, cookies, etc.
         self.http_conn: HTTPConnection = conn.get_http_conn()
 
-        self.input: Inputs = Inputs(dict())
-        self.output: Outputs = Outputs(self, self.ns, dict(), dict())
+        self.input: Inputs = Inputs({})
+        self.output: Outputs = Outputs(self, self.ns, {}, {})
 
         self.user: str | None = None
         self.groups: list[str] | None = None
@@ -677,7 +677,6 @@ class Session(object, metaclass=SessionMeta):
 
     def _send_error_response(self, message_str: str) -> None:
         print("_send_error_response: " + message_str)
-        pass
 
     # ==========================================================================
     # Flush
@@ -943,7 +942,8 @@ class SessionProxy:
         def wrapper(fn: DownloadHandler):
             id_ = self.ns(id or fn.__name__)
             return self._parent.download(
-                id=id_, **kwargs  # pyright: ignore[reportArgumentType]
+                id=id_,
+                **kwargs,  # pyright: ignore[reportArgumentType]
             )(fn)
 
         return wrapper
@@ -1063,7 +1063,7 @@ class Outputs:
             if not isinstance(renderer, Renderer):
                 raise TypeError(
                     "`@output` must be applied to a `@render.xx` function.\n"
-                    + "In other words, `@output` must be above `@render.xx`."
+                    "In other words, `@output` must be above `@render.xx`."
                 )
 
             # Get the (possibly namespaced) output id

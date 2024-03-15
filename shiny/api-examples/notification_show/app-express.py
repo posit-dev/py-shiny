@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from shiny import reactive
 from shiny.express import input, ui
 

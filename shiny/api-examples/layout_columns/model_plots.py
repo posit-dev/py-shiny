@@ -3,10 +3,12 @@ import numpy as np
 
 from shiny import ui
 
+rng = np.random.default_rng()
+
 
 def plot_loss_over_time():
     epochs = np.arange(1, 101)
-    loss = 1000 / np.sqrt(epochs) + np.random.rand(100) * 25
+    loss = 1000 / np.sqrt(epochs) + rng.uniform(size=100) * 25
 
     fig = plt.figure(figsize=(10, 6))
     plt.plot(epochs, loss)
@@ -17,7 +19,7 @@ def plot_loss_over_time():
 
 def plot_accuracy_over_time():
     epochs = np.arange(1, 101)
-    accuracy = np.sqrt(epochs) / 12 + np.random.rand(100) * 0.15
+    accuracy = np.sqrt(epochs) / 12 + rng.uniform(size=100) * 0.15
     accuracy = [np.min([np.max(accuracy[:i]), 1]) for i in range(1, 101)]
 
     fig = plt.figure(figsize=(10, 6))
@@ -29,7 +31,7 @@ def plot_accuracy_over_time():
 
 def plot_feature_importance():
     features = ["Product Category", "Price", "Brand", "Rating", "Number of Reviews"]
-    importance = np.random.rand(5)
+    importance = rng.uniform(size=5)
 
     fig = plt.figure(figsize=(10, 6))
     plt.barh(features, importance)

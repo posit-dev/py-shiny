@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 import sys
 from pathlib import Path
-from typing import Mapping, cast
+from typing import Mapping, TYPE_CHECKING, cast
 
 from htmltools import Tag, TagList
 
@@ -15,12 +15,14 @@ from ..session import Inputs, Outputs, Session, get_current_session, session_con
 from ..types import MISSING, MISSING_TYPE
 from ._is_express import find_magic_comment_mode
 from ._mock_session import ExpressMockSession
-from ._recall_context import RecallContextManager
 from .expressify_decorator._func_displayhook import _expressify_decorator_function_def
 from .expressify_decorator._node_transformers import (
     DisplayFuncsTransformer,
     expressify_decorator_func_name,
 )
+
+if TYPE_CHECKING:
+    from ._recall_context import RecallContextManager
 
 __all__ = (
     "app_opts",

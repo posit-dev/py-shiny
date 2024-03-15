@@ -137,8 +137,7 @@ def try_render_matplotlib(
         return (False, None)
 
     try:
-        import matplotlib
-        import matplotlib.pyplot as plt  # pyright: ignore[reportUnusedImport] # noqa: F401
+        import matplotlib.pyplot as plt  # pyright: ignore[reportUnusedImport]
 
         pixelratio = plot_size_info.pixelratio
 
@@ -226,14 +225,12 @@ def try_render_matplotlib(
         return (True, res)
 
     finally:
-        import matplotlib.pyplot
+        import matplotlib.pyplot as plt
 
-        matplotlib.pyplot.close(fig)  # pyright: ignore[reportUnknownMemberType]
+        plt.close(fig)  # pyright: ignore[reportUnknownMemberType]
 
 
-def get_matplotlib_figure(
-    x: object, allow_global: bool
-) -> Figure | None:  # pyright: ignore
+def get_matplotlib_figure(x: object, allow_global: bool) -> Figure | None:  # pyright: ignore
     import matplotlib.pyplot as plt
     from matplotlib.animation import Animation
     from matplotlib.artist import Artist
@@ -260,8 +257,8 @@ def get_matplotlib_figure(
     if isinstance(x, Animation):
         raise RuntimeError(
             "Matplotlib's Animation class isn't supported by @render.plot. "
-            + "Consider explictly saving the animation to a file and "
-            + "then using @render.image instead to render it."
+            "Consider explictly saving the animation to a file and "
+            "then using @render.image instead to render it."
         )
 
     # Libraries like pandas, xarray, etc have plot() methods that can return a wide

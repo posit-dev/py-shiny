@@ -43,7 +43,7 @@ def skip_if_not_chrome(fn: CallableT) -> CallableT:
 
 
 def exception_swallower(
-    function: Callable[[str, str], str]
+    function: Callable[[str, str], str],
 ) -> Callable[[str, str], str]:
     def wrapper(app_name: str, app_dir: str) -> str:
         runtime_e: Exception | None = None

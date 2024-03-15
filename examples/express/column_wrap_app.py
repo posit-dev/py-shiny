@@ -12,14 +12,12 @@ with ui.layout_column_wrap(width=1 / 2):
 
         @render.plot
         def histogram():
-            np.random.seed(19680801)
-            x = 100 + 15 * np.random.randn(437)
+            x = 100 + 15 * np.random.default_rng(seed=19680801).standard_normal(437)
             plt.hist(x, input.n(), density=True)
 
     with ui.card():
 
         @render.plot
         def histogram2():
-            np.random.seed(19680801)
-            x = 100 + 15 * np.random.randn(437)
+            x = 100 + 15 * np.random.default_rng(seed=19680801).standard_normal(437)
             plt.hist(x, input.n(), density=True, color="red")

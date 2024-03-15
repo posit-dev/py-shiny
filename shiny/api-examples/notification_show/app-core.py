@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from shiny import App, Inputs, Outputs, Session, reactive, ui
 
 app_ui = ui.page_fluid(

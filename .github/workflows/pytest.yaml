@@ -38,20 +38,10 @@ jobs:
         run: |
           make check-types
 
-      - name: Lint with flake8
+      - name: Lint with ruff
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           make check-lint
-
-      - name: black
-        if: steps.install.outcome == 'success' && (success() || failure())
-        run: |
-          make check-black
-
-      - name: isort
-        if: steps.install.outcome == 'success' && (success() || failure())
-        run: |
-          make check-isort
 
   playwright-shiny:
     runs-on: ${{ matrix.os }}
@@ -211,9 +201,7 @@ jobs:
           python-version: "3.10"
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install https://github.com/rstudio/py-htmltools/tarball/main
-          make install-deps
+          make install-ci
           make install
       - name: "Build Package"
         run: |

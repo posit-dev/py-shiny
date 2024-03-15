@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = ("input_task_button",)
 
 from functools import partial
-from typing import Callable, Optional, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Callable, Optional, TypeVar, cast, overload
 
 from htmltools import HTML, Tag, TagAttrValue, TagChild, css, tags
 
@@ -12,10 +12,12 @@ from shiny.types import MISSING, MISSING_TYPE
 from .._docstring import add_example
 from .._namespaces import resolve_id
 from .._typing_extensions import ParamSpec
-from ..reactive._extended_task import ExtendedTask
 from ..reactive._reactives import effect
 from ._html_deps_py_shiny import spin_dependency
 from ._html_deps_shinyverse import components_dependencies
+
+if TYPE_CHECKING:
+    from ..reactive._extended_task import ExtendedTask
 
 P = ParamSpec("P")
 R = TypeVar("R")

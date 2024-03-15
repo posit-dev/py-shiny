@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-from conftest import ShinyAppProc
+from typing import TYPE_CHECKING
+
 from playwright.sync_api import Page, expect
+
+if TYPE_CHECKING:
+    from conftest import ShinyAppProc
 
 
 def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:

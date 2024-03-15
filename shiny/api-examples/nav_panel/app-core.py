@@ -61,7 +61,7 @@ app_ui = ui.page_navbar(
         ui.navset_card_underline(*nav_controls("navset_card_underline()")),
         ui.h4("navset_pill_list()"),
         ui.navset_pill_list(*nav_controls("navset_pill_list()")),
-    )
+    ),
 )
 
 

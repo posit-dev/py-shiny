@@ -1,6 +1,11 @@
+# For the rare case that you'd like to commit with no pre-commit hooks, you can use `--no-verify` in the commit call.
+# ```
+# git commit --no-verify -m "MSG"
+# ```
 repos:
-  - repo: https://github.com/psf/black
-    rev: "24.2.0"
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.2
     hooks:
-      - id: black
-        language_version: python3
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format

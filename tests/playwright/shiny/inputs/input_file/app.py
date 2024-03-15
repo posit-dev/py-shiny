@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import typing
 
 import pandas as pd
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
-from shiny.types import FileInfo
+
+if typing.TYPE_CHECKING:
+    from shiny.types import FileInfo
 
 app_ui = ui.page_fluid(
     ui.input_file("file1", "Choose CSV File", accept=[".csv"], multiple=False),
@@ -39,9 +43,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         # Get the row count, column count, and column names of the DataFrame
         row_count = df.shape[0]
         column_count = df.shape[1]
-        names: list[str] = (
-            df.columns.tolist()
-        )  # pyright: ignore[reportUnknownMemberType]
+        names: list[str] = df.columns.tolist()  # pyright: ignore[reportUnknownMemberType]
         column_names = ", ".join(str(name) for name in names)
 
         # Create a new DataFrame to display the information

@@ -1,8 +1,12 @@
-import pandas as pd
+from typing import TYPE_CHECKING
+
 import seaborn as sns
 from shinyswatch.theme import darkly
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 def app_ui(req):

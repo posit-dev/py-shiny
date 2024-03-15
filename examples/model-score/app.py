@@ -16,6 +16,16 @@ THRESHOLD_MID_COLOR = "rgb(0, 137, 26)"
 THRESHOLD_LOW = 0.5
 THRESHOLD_LOW_COLOR = "rgb(193, 0, 0)"
 
+
+def value_box_theme(score):
+    if score > THRESHOLD_MID:
+        return "text-success"
+    elif score < THRESHOLD_LOW:
+        return "bg-danger"
+    else:
+        return "text-warning"
+
+
 # Start a background thread that writes fake data to the SQLite database every second
 scoredata.begin()
 
@@ -48,7 +58,7 @@ def df():
         params=[150],
     )
     # Convert timestamp to datetime object, which SQLite doesn't support natively
-    tbl["timestamp"] = pd.to_datetime(tbl["timestamp"], utc=True)
+    tbl["timestamp"] = pd.to_datetime(tbl["timestamp"], utc=True, format="ISO8601")
     # Create a short label for readability
     tbl["time"] = tbl["timestamp"].dt.strftime("%H:%M:%S")
     # Reverse order of rows
@@ -71,10 +81,7 @@ def read_time_period(from_time, to_time):
 
 
 model_names = ["model_1", "model_2", "model_3", "model_4"]
-model_colors = {
-    name: color
-    for name, color in zip(model_names, px.colors.qualitative.D3[0 : len(model_names)])
-}
+model_colors = dict(zip(model_names, px.colors.qualitative.D3[0 : len(model_names)]))
 
 
 def app_ui(req):
@@ -195,11 +202,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 ui.value_box(
                     model,
                     ui.h2(score),
-                    theme=(
-                        "text-success"
-                        if score > THRESHOLD_MID
-                        else "text-warning" if score > THRESHOLD_LOW else "bg-danger"
-                    ),
+                    theme=value_box_theme(score),
                 )
                 for model, score in scores_by_model.items()
             ],
@@ -218,7 +221,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             filtered_df(),
             x="time",
             y="score",
-            labels=dict(score="accuracy"),
+            labels={"score": "accuracy"},
             color="model",
             color_discrete_map=model_colors,
             # The default for render_mode is "auto", which switches between
@@ -232,13 +235,13 @@ def server(input: Inputs, output: Outputs, session: Session):
         fig.add_hline(
             THRESHOLD_LOW,
             line_dash="dash",
-            line=dict(color=THRESHOLD_LOW_COLOR, width=2),
+            line={"color": THRESHOLD_LOW_COLOR, "width": 2},
             opacity=0.3,
         )
         fig.add_hline(
             THRESHOLD_MID,
             line_dash="dash",
-            line=dict(color=THRESHOLD_MID_COLOR, width=2),
+            line={"color": THRESHOLD_MID_COLOR, "width": 2},
             opacity=0.3,
         )
 
@@ -254,7 +257,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             facet_row="model",
             nbins=20,
             x="score",
-            labels=dict(score="accuracy"),
+            labels={"score": "accuracy"},
             color="model",
             color_discrete_map=model_colors,
             template="simple_white",
@@ -263,13 +266,13 @@ def server(input: Inputs, output: Outputs, session: Session):
         fig.add_vline(
             THRESHOLD_LOW,
             line_dash="dash",
-            line=dict(color=THRESHOLD_LOW_COLOR, width=2),
+            line={"color": THRESHOLD_LOW_COLOR, "width": 2},
             opacity=0.3,
         )
         fig.add_vline(
             THRESHOLD_MID,
             line_dash="dash",
-            line=dict(color=THRESHOLD_MID_COLOR, width=2),
+            line={"color": THRESHOLD_MID_COLOR, "width": 2},
             opacity=0.3,
         )
 

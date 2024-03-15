@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-from conftest import ShinyAppProc
+from typing import TYPE_CHECKING
+
 from controls import InputFile, OutputTable, OutputTextVerbatim
 from playwright.sync_api import FilePayload, Page, expect
+
+if TYPE_CHECKING:
+    from conftest import ShinyAppProc
 
 
 def test_input_file_kitchen(page: Page, local_app: ShinyAppProc) -> None:

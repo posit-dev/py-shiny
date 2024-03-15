@@ -96,7 +96,7 @@ with ui.card():
         case, an in-memory sqlite3) with the help of `shiny.reactive.poll`.
         """
     )
-    ui.input_selectize("symbols", "Filter by symbol", [""] + SYMBOLS, multiple=True)
+    ui.input_selectize("symbols", "Filter by symbol", ["", *SYMBOLS], multiple=True)
 
     @render.data_frame
     def table():
