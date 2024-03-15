@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 
+* `@render.data_frame` return values of `DataTable` and `DataGrid` had their parameter of `row_selection: Literal["single", "multiple"]` become deprecated. Please use `mode="row_single"` or `mode="row_multiple"` instead. (#1198)
+
 ### New features
+
+* Experimental: `@render.data_frame` return values of `DataTable` and `DataGrid` support `mode="edit"` to enable editing of the data table cells. (#1198)
 
 * `ui.card()` and `ui.value_box()` now take an `id` argument that, when provided, is used to report the full screen state of the card or value box to the server. For example, when using `ui.card(id = "my_card", full_screen = TRUE)` you can determine if the card is currently in full screen mode by reading the boolean value of `input.my_card()["full_screen"]`. (#1215)
 
