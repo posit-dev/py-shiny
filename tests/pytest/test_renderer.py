@@ -7,7 +7,7 @@ import pytest
 from shiny import reactive, render
 from shiny._namespaces import ResolvedId, Root
 from shiny.render.renderer import Renderer, ValueFn, output_dispatch_handler
-from shiny.session import Inputs, Outputs, Session
+from shiny.session import Outputs, Session
 from shiny.session._session import OutputInfo
 
 
@@ -105,7 +105,7 @@ async def test_output_handler():
         outputs={
             "app_fn": OutputInfo(
                 app_fn,
-                None,  # pyright: ignore[reportGeneralTypeIssues]
+                None,  # pyright: ignore[reportGeneralTypeIssues,reportArgumentType]
                 True,
             )
         },
