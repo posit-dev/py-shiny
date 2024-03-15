@@ -24,7 +24,7 @@ export function updateCellsData({
   setData,
   setCellEditMap,
 }: {
-  id: string;
+  id: string | null;
   cellInfos: UpdateCellData[];
   onSuccess: (values: ResponseValue[]) => void;
   onError: (err: string) => void;

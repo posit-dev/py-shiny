@@ -11,10 +11,10 @@ import React, { useMemo } from "react";
  * @param nrows Number of total rows of data that exist
  */
 export function useSummary(
-  summaryTemplate: string | boolean | null,
+  summaryTemplate: string | boolean | undefined,
   scrollContainer: HTMLElement | null,
   virtualRows: VirtualItem[],
-  thead: HTMLTableSectionElement,
+  thead: HTMLTableSectionElement | null,
   nrows: number
 ): JSX.Element | null {
   return useMemo(() => {
@@ -34,6 +34,8 @@ export function useSummary(
     if (virtualRows.length === 0) {
       return null;
     }
+
+    if (!thead) return null;
 
     const top = scrollContainer.scrollTop + thead.clientHeight;
     const bot = scrollContainer.scrollTop + scrollContainer.clientHeight;

@@ -3,6 +3,7 @@
 // type UploadInitValue = { jobId: JobId; uploadUrl: UploadUrl };
 // type UploadEndValue = never;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ResponseValue = any;
 
 export type OnSuccessRequest = (value: ResponseValue) => void;
@@ -35,5 +36,5 @@ export function makeRequest(
   onError: OnErrorRequest,
   blobs: Array<ArrayBuffer | Blob | string> | undefined
 ) {
-  window.Shiny.shinyapp.makeRequest(method, args, onSuccess, onError, blobs);
+  window.Shiny.shinyapp!.makeRequest(method, args, onSuccess, onError, blobs);
 }

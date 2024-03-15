@@ -62,7 +62,7 @@ import { EditMode, PandasData, TypeHint } from "./types";
 declare module "@tanstack/table-core" {
   interface ColumnMeta<TData extends RowData, TValue> {
     colIndex: number;
-    typeHint: TypeHint;
+    typeHint: TypeHint | undefined;
   }
   // interface TableMeta<TData extends RowData> {
   //   updateCellsData: (cellInfos: UpdateCellData[]) => void;
@@ -103,7 +103,7 @@ interface ShinyDataGridProps<TIndex> {
 
 const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const { id, data, bgcolor } = props;
-  const { columns, type_hints, data: rowData } = data;
+  const { columns, type_hints: typeHints, data: rowData } = data;
   const { width, height, fill, filters: withFilters } = data.options;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -116,8 +116,8 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   //   rowIndex: null,
   //   columnId: null,
   // });
-  const [editRowIndex, setEditRowIndex] = useState<number>(null);
-  const [editColumnIndex, setEditColumnIndex] = useState<number>(null);
+  const [editRowIndex, setEditRowIndex] = useState<number | null>(null);
+  const [editColumnIndex, setEditColumnIndex] = useState<number | null>(null);
 
   // useEffect(() => {
   //   console.log("editing info!", editRowIndex, editColumnIndex);
@@ -127,6 +127,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const dataFrameMode = data.options["mode"] ?? "none";
 
   const canEdit = dataFrameMode === EditMode.Edit;
+  console.log("canEdit", canEdit);
 
   const [cellEditMap, setCellEditMap] = useImmer<
     Map<string, { value: string; state: CellState }>
@@ -136,7 +137,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
     () =>
       columns.map((colname, i) => {
-        const typeHint = type_hints?.[i];
+        const typeHint = typeHints?.[i];
 
         return {
           accessorFn: (row, index) => {
@@ -144,7 +145,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
           },
           // TODO: delegate this decision to something in filter.tsx
           filterFn:
-            typeHint.type === "numeric" ? "inNumberRange" : "includesString",
+            typeHint?.type === "numeric" ? "inNumberRange" : "includesString",
           header: colname,
           meta: {
             colIndex: i,
@@ -155,7 +156,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
           },
         };
       }),
-    [columns, type_hints, editRowIndex, editColumnIndex, cellEditMap]
+    [columns, typeHints]
   );
 
   // function useSkipper() {
@@ -219,7 +220,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   // container but not virtualized.
   const paddingTop =
     (virtualRows.length > 0 ? virtualRows?.[0]?.start || 0 : 0) -
-      theadRef.current?.clientHeight ?? 0;
+      (theadRef.current?.clientHeight ?? 0) ?? 0;
   const paddingBottom =
     virtualRows.length > 0
       ? totalSize - (virtualRows?.[virtualRows.length - 1]?.end || 0)
@@ -259,7 +260,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
 
   const rowSelection = useSelection<string, HTMLTableRowElement>(
     rowSelectionMode,
-    (el) => el.dataset.key,
+    (el) => el.dataset.key!,
     (key, offset) => {
       const rowModel = table.getSortedRowModel();
       let index = rowModel.rows.findIndex((row) => row.id === key);
@@ -295,7 +296,11 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
       }
     };
 
+    if (!id) return;
+
     const element = document.getElementById(id);
+    if (!element) return;
+
     element.addEventListener(
       "updateRowSelection",
       handleMessage as EventListener
@@ -310,19 +315,18 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   }, [id, rowSelection]);
 
   useEffect(() => {
-    if (id) {
-      if (rowSelectionMode === SelectionMode.None) {
-        Shiny.setInputValue(`${id}_selected_rows`, null);
-      } else {
-        Shiny.setInputValue(
-          `${id}_selected_rows`,
-          rowSelection
-            .keys()
-            .toList()
-            .map((key) => parseInt(key))
-            .sort()
-        );
-      }
+    if (!id) return;
+    if (rowSelectionMode === SelectionMode.None) {
+      Shiny.setInputValue!(`${id}_selected_rows`, null);
+    } else {
+      Shiny.setInputValue!(
+        `${id}_selected_rows`,
+        rowSelection
+          .keys()
+          .toList()
+          .map((key) => parseInt(key))
+          .sort()
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, rowSelectionMode, [...rowSelection.keys()]]);
@@ -350,7 +354,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
 
   //
   const tbodyTabItems = React.useCallback(
-    () => tbodyRef.current.querySelectorAll("[tabindex='-1']"),
+    () => tbodyRef.current!.querySelectorAll("[tabindex='-1']"),
     [tbodyRef.current]
   );
   const tbodyTabGroup = useTabindexGroup(containerRef.current, tbodyTabItems, {
@@ -404,7 +408,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
           className={tableClass + (withFilters ? " filtering" : "")}
           aria-rowcount={dataState.length}
           aria-multiselectable={canMultiSelect}
-          style={{ width: width === null || width === "auto" ? null : "100%" }}
+          style={{
+            width: width === null || width === "auto" ? undefined : "100%",
+          }}
         >
           <thead ref={theadRef} style={{ backgroundColor: bgcolor }}>
             {table.getHeaderGroups().map((headerGroup, i) => (
@@ -425,10 +431,10 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
                           style={{
                             cursor: header.column.getCanSort()
                               ? "pointer"
-                              : null,
+                              : undefined,
                             userSelect: header.column.getCanSort()
                               ? "none"
-                              : null,
+                              : undefined,
                           }}
                         >
                           {flexRender(
@@ -548,7 +554,7 @@ function useVirtualizerMeasureWorkaround(
   // This is the callback that will be passed back to the caller, intended to be used as
   // a ref for each virtual item's element.
   const measureElementWithRetry = useCallback(
-    (el: Element) => {
+    (el: Element | null) => {
       if (!el) {
         return;
       }

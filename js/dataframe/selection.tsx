@@ -24,7 +24,7 @@ export enum SelectionMode {
 export function useSelection<TKey, TElement extends HTMLElement>(
   mode: SelectionMode,
   keyAccessor: (el: TElement) => TKey,
-  focusOffset: (start: TKey, offset: number) => TKey,
+  focusOffset: (start: TKey, offset: number) => TKey | null,
   between?: (from: TKey, to: TKey) => ReadonlyArray<TKey>
 ): SelectionSet<TKey, TElement> {
   const [selectedKeys, setSelectedKeys] = useState<ImmutableSet<TKey>>(

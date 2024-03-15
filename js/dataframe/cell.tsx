@@ -3,6 +3,7 @@ import { Cell } from "@tanstack/table-core";
 import React, {
   FC,
   ChangeEvent as ReactChangeEvent,
+  ReactElement,
   FocusEvent as ReactFocusEvent,
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
@@ -22,14 +23,14 @@ export enum CellState {
 }
 
 interface TableBodyCellProps {
-  id: string;
+  id: string | null;
   cell: Cell<unknown[], unknown>;
   columns: readonly string[];
   canEdit: boolean;
-  editRowIndex: number;
-  editColumnIndex: number;
-  setEditRowIndex: (index: number) => void;
-  setEditColumnIndex: (index: number) => void;
+  editRowIndex: number | null;
+  editColumnIndex: number | null;
+  setEditRowIndex: (index: number | null) => void;
+  setEditColumnIndex: (index: number | null) => void;
   cellEditMap: Map<string, { value: string; state: CellState }>;
   setData: (fn: (draft: unknown[][]) => void) => void;
   setCellEditMap: (
@@ -53,7 +54,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   maxRowSize,
 }) => {
   const rowIndex = cell.row.index;
-  const columnIndex = cell.column.columnDef.meta.colIndex;
+  const columnIndex = cell.column.columnDef.meta!.colIndex;
   // const backgroundColor = cellEditMap.has(`[${rowIndex}, ${columnIndex}]`)
   //   ? "red"
   //   : null;
@@ -107,7 +108,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   const initialValue = cell.getValue();
   // We need to keep and update the state of the cell normally
   const [value, setValue] = useImmer(initialValue);
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [cellState, setCellState] = useState<CellState>(CellState.Ready);
 
@@ -196,7 +197,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   const tableCellClass = tableCellMap[cellState];
 
-  const [errorTitle, setErrorTitle] = useState<string | null>(undefined);
+  const [errorTitle, setErrorTitle] = useState<string | undefined>(undefined);
 
   // useEffect(() => {
   //   console.log("Cell background:", tableCellClass, rowIndex, columnIndex);
@@ -213,7 +214,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   const resetEditInfo = React.useCallback(() => {
     setEditRowIndex(null);
     setEditColumnIndex(null);
-  }, [editRowIndex, editColumnIndex]);
+  }, [setEditRowIndex, setEditColumnIndex]);
 
   const onEsc = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Escape") return;
@@ -231,7 +232,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     const hasShift = e.shiftKey;
 
-    const newColumnIndex = editColumnIndex + (hasShift ? -1 : 1);
+    const newColumnIndex = editColumnIndex! + (hasShift ? -1 : 1);
     if (newColumnIndex < 0 || newColumnIndex >= columns.length) {
       // If the new column index is out of bounds, quit
       return;
@@ -246,7 +247,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     const hasShift = e.shiftKey;
 
-    const newRowIndex = editRowIndex + (hasShift ? -1 : 1);
+    const newRowIndex = editRowIndex! + (hasShift ? -1 : 1);
     if (newRowIndex < 0 || newRowIndex >= maxRowSize) {
       // If the new row index is out of bounds, quit
       // attemptUpdate();
@@ -307,6 +308,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   // Select the input when it becomes editable
   useEffect(() => {
     if (!editable) return;
+    if (!inputRef.current) return;
 
     inputRef.current.focus();
     inputRef.current.select();
@@ -319,16 +321,16 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       resetEditInfo();
     };
     window.document
-      .querySelector("body")
+      .querySelector("body")!
       .addEventListener("click", onBodyClick);
 
     // Tear down global click listener when we're done
     return () => {
       window.document
-        .querySelector("body")
+        .querySelector("body")!
         .removeEventListener("click", onBodyClick);
     };
-  }, [editable]);
+  }, [editable, resetEditInfo]);
 
   // Reselect the input when it comes into view!
   // (It could be scrolled out of view and then back into view)
@@ -343,8 +345,11 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     setValue(e.target.value);
   }
 
-  let onClick = undefined;
-  let content = undefined;
+  let onClick:
+    | ((e: ReactMouseEvent<HTMLTableCellElement>) => void)
+    | undefined = undefined;
+  let content: ReactElement | ReturnType<typeof flexRender> | undefined =
+    undefined;
   let cellTitle = errorTitle;
 
   if (cellState === CellState.EditSaving) {
@@ -372,8 +377,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       };
     }
     if (cellState === CellState.EditFailure) {
-      // TODO-barret; Handle edit failure?
-      // console.log("Render edit failure");
       cellTitle = errorTitle;
     }
     content = flexRender(cell.column.columnDef.cell, cell.getContext());

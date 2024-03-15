@@ -1080,7 +1080,7 @@ class Outputs:
 
         The value returned by the handler is sent back to the client with the original unique id (`tag`).
         """
-        if not (output_id in self._outputs):
+        if output_id not in self._outputs:
             raise RuntimeError(
                 f"Received request message for an unknown Output Renderer with id `{output_id}`"
             )
