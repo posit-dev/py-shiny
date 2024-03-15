@@ -362,12 +362,15 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       />
     );
   } else {
-    onClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
-      setEditRowIndex(rowIndex);
-      setEditColumnIndex(columnIndex);
-      e.preventDefault();
-      e.stopPropagation();
-    };
+    // Only allow transition to edit mode if the cell can be edited
+    if (canEdit) {
+      onClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
+        setEditRowIndex(rowIndex);
+        setEditColumnIndex(columnIndex);
+        e.preventDefault();
+        e.stopPropagation();
+      };
+    }
     if (cellState === CellState.EditFailure) {
       // TODO-barret; Handle edit failure?
       // console.log("Render edit failure");
