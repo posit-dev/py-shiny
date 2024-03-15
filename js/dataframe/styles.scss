@@ -239,8 +239,8 @@ shiny-data-frame .shiny-data-grid-summary {
 }
 .shiny-data-grid > table > tbody > tr > td {
   @keyframes fadeSuccessBorder {
-    0%   { border: 2px var(--shiny-datagrid-table-cell-edit-success-border-style) var(--shiny-datagrid-table-cell-edit-success-border-color); }
-    50%   { border: 2px var(--shiny-datagrid-table-cell-edit-success-border-style) var(--shiny-datagrid-table-cell-edit-success-border-color); }
+    0%   { outline: 2px var(--shiny-datagrid-table-cell-edit-success-border-style) var(--shiny-datagrid-table-cell-edit-success-border-color); }
+    50%   { outline: 2px var(--shiny-datagrid-table-cell-edit-success-border-style) var(--shiny-datagrid-table-cell-edit-success-border-color); }
   }
   &.cell-edit-success {
     animation: fadeSuccessBorder 6s;
@@ -251,7 +251,7 @@ shiny-data-frame .shiny-data-grid-summary {
   }
 
   &.cell-edit-failure {
-    border: 2px var(--shiny-datagrid-table-cell-edit-failure-border-style) var(--shiny-datagrid-table-cell-edit-failure-border-color);
+    outline: 2px var(--shiny-datagrid-table-cell-edit-failure-border-style) var(--shiny-datagrid-table-cell-edit-failure-border-color);
     background-color: var(--shiny-datagrid-table-cell-edit-failure-bgcolor);
   }
 }
