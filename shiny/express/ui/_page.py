@@ -58,7 +58,14 @@ def page_opts(
         one based on the arguments provided. If not ``None``, this will override all
         heuristics for choosing page functions.
     """
-    cm = get_top_level_recall_context_manager()
+    try:
+        cm = get_top_level_recall_context_manager()
+    except RuntimeError:
+        # We can get here if a Shiny Core app, or if we're in the UI rendering phase of
+        # a Quarto-Shiny dashboard.
+        raise RuntimeError(
+            "express.ui.page_opts() can only be used inside of a standalone Shiny Express app."
+        )
 
     if not isinstance(title, MISSING_TYPE):
         cm.kwargs["title"] = title

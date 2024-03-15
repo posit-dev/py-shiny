@@ -55,6 +55,8 @@ def session_page(browser: BrowserContext) -> Page:
 # This must be done before each test
 def page(session_page: Page) -> Page:
     session_page.goto("about:blank")
+    # Reset screen size to 1080p
+    session_page.set_viewport_size({"width": 1920, "height": 1080})
     return session_page
 
 
