@@ -6,7 +6,7 @@ const outDir = "../shiny/www/shared/py-shiny";
 
 async function bundle_helper(
   options: BuildOptions
-): Promise<ReturnType<typeof build>> {
+): Promise<ReturnType<typeof build> | undefined> {
   try {
     const result = await build({
       format: "esm",

@@ -6,7 +6,7 @@ import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
-from typing import Any, Callable, Optional, TypeVar, cast
+from typing import Any, Callable, Mapping, Optional, TypeVar, cast
 
 import starlette.applications
 import starlette.exceptions
@@ -109,7 +109,7 @@ class App:
             Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None] | None
         ),
         *,
-        static_assets: Optional[str | Path | dict[str, str | Path]] = None,
+        static_assets: Optional[str | Path | Mapping[str, str | Path]] = None,
         debug: bool = False,
     ) -> None:
         # Used to store callbacks to be called when the app is shutting down (according
@@ -139,7 +139,7 @@ class App:
         if static_assets is None:
             static_assets = {}
 
-        if isinstance(static_assets, dict):
+        if isinstance(static_assets, Mapping):
             static_assets_map = {k: Path(v) for k, v in static_assets.items()}
         else:
             static_assets_map = {"/": Path(static_assets)}

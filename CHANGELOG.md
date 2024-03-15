@@ -5,6 +5,22 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED] - YYYY-MM-DD
+
+### Breaking Changes
+
+### New features
+
+* `ui.card()` and `ui.value_box()` now take an `id` argument that, when provided, is used to report the full screen state of the card or value box to the server. For example, when using `ui.card(id = "my_card", full_screen = TRUE)` you can determine if the card is currently in full screen mode by reading the boolean value of `input.my_card()["full_screen"]`. (#1215)
+
+* Added support for using `shiny.express` in Quarto Dashboards. (#1217)
+
+### Bug fixes
+
+* On Windows, Shiny Express app files are now read in as UTF-8. (#1203)
+
+### Other changes
+
 ## [0.8.1] - 2024-03-06
 
 ### Breaking Changes
