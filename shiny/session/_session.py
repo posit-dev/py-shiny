@@ -1135,7 +1135,10 @@ class Outputs:
 
     def _init_message_handlers(self) -> None:
         # Add the message handler
-        self._session._message_handlers["output_handler"] = self._output_message_handler
+        if isinstance(self._session, Session):
+            self._session._message_handlers["output_handler"] = (
+                self._output_message_handler
+            )
 
     @overload
     def __call__(self, renderer: RendererT) -> RendererT:
