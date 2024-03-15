@@ -60,11 +60,11 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     ):
         return "demo_" + info["value"]
 
-    @reactive.effect
-    def _():
-        print(session.id)
-        print(summary_data.data_patched())
-        print("patches: ", summary_data.cell_patches())
+    # @reactive.effect
+    # def _():
+    #     print(session.id)
+    #     print(summary_data.data_patched())
+    #     print("patches: ", summary_data.cell_patches())
 
     # summary_data.data_patched()  # ~ patched_df()
 

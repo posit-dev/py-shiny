@@ -521,15 +521,17 @@ class data_frame(Renderer[DataFrameResult]):
 
         @reactive.calc
         def self_data_patched() -> pd.DataFrame:
-            data = self.data()
-
+            # Enable copy-on-write mode for the data;
+            # Use `deep=False` to avoid copying the full data; CoW will copy the necessary data when modified
             with pd.option_context("mode.copy_on_write", True):
+                data = self.data().copy(deep=False)
                 for cell_patch in self.cell_patches():
                     data.iat[  # pyright: ignore[reportUnknownMemberType]
                         cell_patch.row_index,
                         cell_patch.column_index,
                     ] = cell_patch.value
-            return data
+
+                return data
 
         self.data_patched = self_data_patched
 
