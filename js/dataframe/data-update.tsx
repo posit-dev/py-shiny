@@ -47,7 +47,7 @@ export function updateCellsData({
   });
 
   makeRequest(
-    "outputRPC",
+    "output_handler",
     [
       // id: string
       id,

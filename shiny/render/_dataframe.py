@@ -24,7 +24,7 @@ from .._docstring import add_example, no_example
 from .._typing_extensions import Self
 from ..session._utils import get_current_session, require_active_session
 from ._dataframe_unsafe import serialize_numpy_dtypes
-from .renderer import Jsonifiable, Renderer, ValueFn
+from .renderer import Jsonifiable, Renderer, ValueFn, output_dispatch_handler
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -55,7 +55,7 @@ class CellsUpdateFn(Protocol):
         self,
         *,
         infos: list[CellUpdateInfo],
-    ) -> Any: ...
+    ) -> list[Any]: ...
 @dataclass
 class CellPatch:
     row_index: int
@@ -120,9 +120,14 @@ class SelectedIndicies(TypedDict):
 def as_mode(
     mode: DataFrameMode,
     *,
+    name: str,
     row_selection_mode: RowSelectionModeDeprecated,
 ) -> DataFrameMode:
     if row_selection_mode == "deprecated":
+        if mode == "edit":
+            print(
+                f"`{name}(mode='edit')` is an expirmental feature. If you find any bugs or would like different behavior, please make an issue at https://github.com/posit-dev/py-shiny/issues/new"
+            )
         return mode
     ShinyDeprecationWarning(
         "`DataGraid(row_selection_mode=)` has been superseded by `DataGrid(mode=)`."
@@ -214,7 +219,9 @@ class DataGrid(AbstractTabularData):
         self.height = height
         self.summary = summary
         self.filters = filters
-        self.mode: DataFrameMode = as_mode(mode, row_selection_mode=row_selection_mode)
+        self.mode: DataFrameMode = as_mode(
+            mode, name="DataGrid", row_selection_mode=row_selection_mode
+        )
 
     def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
@@ -309,7 +316,9 @@ class DataTable(AbstractTabularData):
         self.height = height
         self.summary = summary
         self.filters = filters
-        self.mode: DataFrameMode = as_mode(mode, row_selection_mode=row_selection_mode)
+        self.mode: DataFrameMode = as_mode(
+            mode, name="DataTable", row_selection_mode=row_selection_mode
+        )
 
     def to_payload(self) -> Jsonifiable:
         res = serialize_pandas_df(self.data)
@@ -398,8 +407,8 @@ class data_frame(Renderer[DataFrameResult]):
     _value: reactive.Value[DataFrameResult | None]
     # _data: reactive.Value[pd.DataFrame | None]
 
-    handle_cell_update: CellUpdateFn
-    handle_cells_update: CellsUpdateFn
+    _cell_update_fn: CellUpdateFn
+    _cells_update_fn: CellsUpdateFn
 
     cell_patches: reactive.Value[list[CellPatch]]
 
@@ -532,11 +541,11 @@ class data_frame(Renderer[DataFrameResult]):
         return self._session
 
     def set_cell_update_fn(self, fn: CellUpdateFn) -> Self:
-        self.handle_cell_update = fn
+        self._cell_update_fn = fn
         return self
 
     def set_cells_update_fn(self, fn: CellsUpdateFn) -> Self:
-        self.handle_cells_update = fn
+        self._cells_update_fn = fn
         return self
 
     def _init_handlers(self) -> None:
@@ -564,7 +573,7 @@ class data_frame(Renderer[DataFrameResult]):
                     # value = update_info["value"]
                     # prev = update_info["prev"]
 
-                    formatted_value = await self.handle_cell_update(info=update_info)
+                    formatted_value = await self._cell_update_fn(info=update_info)
                     #     row_index=row_index,
                     #     column_index=column_index,
                     #     value=value,
@@ -580,24 +589,28 @@ class data_frame(Renderer[DataFrameResult]):
         self.set_cells_update_fn(_set_cells_update_default)
         # self._add_message_handlers()
 
-    # To be called by session's outputRPC message handler on this data_frame
-    # Do not change this method unless you update corresponding code in `/js/dataframe/`!!
-    # TODO-barret; mark functions for outputRPC
-    # @outputRPC_handler
+    # To be called by session's output_handler message handler on this data_frame instance
+    @output_dispatch_handler
+    # Do not change this method name unless you update corresponding code in `/js/dataframe/`!!
     async def _handle_cells_update(self, update_infos: list[CellUpdateInfo]):
 
-        # if len(self.cell_patches()) > 1:
-        #     raise RuntimeError("Barret testing!")
+        if len(self.cell_patches()) > 1:
+            raise RuntimeError("Barret testing!")
 
         # Make new array to trigger reactive update
         patches = [p for p in self.cell_patches()]
 
         # Call user's cell update method to retrieve formatted values
-        updated_raw_values = await self.handle_cells_update(infos=update_infos)
+        updated_raw_values = await self._cells_update_fn(infos=update_infos)
 
-        if len(updated_raw_values) != len(update_infos):
+        if (not isinstance(updated_raw_values, list)) or len(updated_raw_values) != len(
+            update_infos
+        ):
             raise ValueError(
-                f"The return value of {self.output_id}'s `handle_cells_update()` (typically set by `@{self.output_id}.set_cells_update_fn`) must be a list of the same length as the input list of cell updates. Received {len(updated_raw_values)} items and expected {len(update_infos)}."
+                f"The return value of {self.output_id}'s `handle_cells_update()` "
+                f"(typically set by `@{self.output_id}.set_cells_update_fn`) "
+                "must be a list of the same length as the input list of cell updates. "
+                f"Received {len(updated_raw_values)} items and expected {len(update_infos)}."
             )
 
         # Add new patches

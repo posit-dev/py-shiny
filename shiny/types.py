@@ -5,6 +5,7 @@ from __future__ import annotations
 __all__ = (
     "MISSING",
     "MISSING_TYPE",
+    "Jsonifiable",
     "FileInfo",
     "ImgData",
     "SafeException",

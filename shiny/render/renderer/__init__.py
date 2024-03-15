@@ -1,3 +1,5 @@
+from ._dispatch import output_dispatch_handler
+
 from ._renderer import (  # noqa: F401
     Renderer,
     ValueFn,
@@ -13,4 +15,5 @@ __all__ = (
     "Jsonifiable",
     "AsyncValueFn",
     "RendererT",
+    "output_dispatch_handler",
 )

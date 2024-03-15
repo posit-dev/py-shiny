@@ -48,7 +48,7 @@ from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
-from ..render.renderer import Renderer, RendererT
+from ..render.renderer import Renderer, RendererT, output_dispatch_handler
 from ..types import (
     Jsonifiable,
     SafeException,
@@ -1065,67 +1065,77 @@ class Outputs:
 
         self._init_message_handlers()
 
+    async def _output_message_handler(
+        self,
+        output_id: str,
+        handler: str,
+        msg: object,
+    ) -> Jsonifiable:
+        """
+        Used to handle request messages from an Output Renderer.
+
+        Typically, this is used when an Output Renderer needs to set an input value.
+        E.g. a @render.data_frame result with a `mode="edit"` parameter will use
+        this to set the value of the data frame when a cell is edited.
+
+        The value returned by the handler is sent back to the client with the original unique id (`tag`).
+        """
+        if not (output_id in self._outputs):
+            raise RuntimeError(
+                f"Received request message for an unknown Output Renderer with id `{output_id}`"
+            )
+
+        output_info = self._outputs[output_id]
+        renderer = output_info.renderer
+        handler = f"_handle_{handler}"
+        if not hasattr(renderer, handler):
+            raise RuntimeError(
+                f"Output Renderer with id `{output_id}` does not have method `{handler}` to handle request message"
+            )
+        handler_fn = getattr(renderer, handler)
+        if not callable(handler_fn):
+            raise RuntimeError(
+                f"Output Renderer with id `{output_id}` does not have callable method `{handler}` to handle request message"
+            )
+        if not isinstance(handler_fn, output_dispatch_handler):
+            raise RuntimeError(
+                f"Output Renderer with id `{output_id}` did not mark method `{handler}` as an output handler"
+            )
+
+        dispatch_handler_fn = cast(
+            output_dispatch_handler[Renderer[Any], object, Jsonifiable], handler_fn
+        )
+
+        # Make a new session proxy if the output is namespaced;
+        # No need to make recursive proxies as the important part is a prefix exists
+        sess_proxy = self._session
+        if "-" in output_id:
+            modPrefix, _ = output_id.rsplit("-", 1)
+            sess_proxy = self._session.make_scope(modPrefix)
+        with session_context(sess_proxy), isolate():
+            try:
+                return await dispatch_handler_fn(renderer, msg)
+            except Exception as e:
+                # Ex:
+                # ```
+                # Exception while handling `data_frame[id=testing-summary_data]._handle_cells_update()`: boom!
+                # ```
+                print(
+                    "Exception while handling "
+                    f"`{renderer.__class__.__name__}[id={output_id}].{handler}()`:",
+                    e,
+                )
+                if self._session.app.sanitize_errors and not isinstance(
+                    e, SafeException
+                ):
+                    err_msg = self._session.app.sanitize_error_msg
+                else:
+                    err_msg = str(e)
+                raise RuntimeError(err_msg)
+
     def _init_message_handlers(self) -> None:
-        async def outputRPC(
-            output_id: str,
-            handler: str,
-            msg: object,
-        ) -> Jsonifiable:
-            """
-            Used to handle request messages from an Output Renderer.
-
-            Typically, this is used when an Output Renderer needs to set an input value.
-            E.g. a @render.data_frame result with a `mode="edit"` parameter will use
-            this to set the value of the data frame when a cell is edited.
-
-            The value returned by the handler is sent back to the client with the original unique id (`tag`).
-            """
-            if not (output_id in self._outputs):
-                raise RuntimeError(
-                    f"Received request message for an unknown Output Renderer with id `{output_id}`"
-                )
-
-            output_info = self._outputs[output_id]
-            renderer = output_info.renderer
-            handler = f"_handle_{handler}"
-            if not (
-                hasattr(renderer, handler) and callable(getattr(renderer, handler))
-            ):
-                raise RuntimeError(
-                    f"Output Renderer with id `{output_id}` does not have method `{handler}` to handler request message"
-                )
-
-            # Make a new session proxy if the output is namespaced;
-            # No need to make recursive proxies as the important part is a prefix exists
-            sess_proxy = self._session
-            if "-" in output_id:
-                modPrefix, _ = output_id.rsplit("-", 1)
-                sess_proxy = self._session.make_scope(modPrefix)
-            with session_context(sess_proxy):
-                with isolate():
-                    try:
-                        # TODO-barret assert that the function has been marked as an outputRPC handler
-                        return await getattr(renderer, handler)(msg)
-                    except Exception as e:
-                        # Ex:
-                        # ```
-                        # Exception while handling `data_frame[id=testing-summary_data]._handle_cells_update()`: Barret testing!
-                        # ```
-                        print(
-                            "Exception while handling "
-                            f"`{renderer.__class__.__name__}[id={output_id}].{handler}()`:",
-                            e,
-                        )
-                        if self._session.app.sanitize_errors and not isinstance(
-                            e, SafeException
-                        ):
-                            err_msg = self._session.app.sanitize_error_msg
-                        else:
-                            err_msg = str(e)
-                        raise RuntimeError(err_msg)
-
         # Add the message handler
-        self._session._message_handlers["outputRPC"] = outputRPC
+        self._session._message_handlers["output_handler"] = self._output_message_handler
 
     @overload
     def __call__(self, renderer: RendererT) -> RendererT:

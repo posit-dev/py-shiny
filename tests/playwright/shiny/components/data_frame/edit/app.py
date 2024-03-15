@@ -62,9 +62,9 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.effect
     def _():
-        summary_data.data()
-        summary_data.data_patched()
-        print(summary_data.data_patched(), summary_data.cell_patches())
+        print(session.id)
+        print(summary_data.data_patched())
+        print("patches: ", summary_data.cell_patches())
 
     # summary_data.data_patched()  # ~ patched_df()
 
