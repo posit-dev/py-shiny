@@ -1,7 +1,7 @@
 import pandas as pd
 from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
 
-from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, module, render, ui
 from shiny.render._dataframe import CellUpdateInfo
 
 # TODO-barret; Make an example that uses a dataframe that then updates a higher level reactive, that causes the df to update... which causes the table to render completely
