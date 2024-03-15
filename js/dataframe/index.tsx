@@ -34,20 +34,6 @@ import css from "./styles.scss";
 import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
 import { EditMode, PandasData, TypeHint } from "./types";
-// setTimeout(() => {
-//   console.log("Making request!");
-//   makeRequest(
-//     "dataframeUpdateCell",
-//     [1, 2, 3],
-//     (value: ResponseValue) => {
-//       console.log("success!", value);
-//     },
-//     (err: string) => {
-//       console.error("error!", err);
-//     },
-//     undefined
-//   );
-// }, 2000);
 
 // TODO-barret;
 

@@ -55,45 +55,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 }) => {
   const rowIndex = cell.row.index;
   const columnIndex = cell.column.columnDef.meta!.colIndex;
-  // const backgroundColor = cellEditMap.has(`[${rowIndex}, ${columnIndex}]`)
-  //   ? "red"
-  //   : null;
-
-  // return (
-  //   <td key={cell.id} style={{ backgroundColor }}>
-  //     {flexRender(cell.column.columnDef.cell, cell.getContext())}
-  //   </td>
-  // );
-  // };
-
-  // interface EditableCellProps {
-  //   rowIndex: number;
-  //   columnIndex: string;
-  //   getValue: () => unknown;
-  //   editRowIndex: number;
-  //   editColumnIndex: string;
-  //   cellEditMap: Map<string, { value: string; state: CellState }>;
-  // }
-  // return (
-  //   <EditableCell
-  //     rowIndex={rowIndex}
-  //     columnIndex={columnIndex}
-  //     getValue={getValue}
-  //     editRowIndex={editRowIndex}
-  //     editColumnIndex={editColumnIndex}
-  //     cellEditMap={cellEditMap}
-  //   ></EditableCell>
-  // );
-
-  // const EditableCell: FC<EditableCellProps> = (props) => {
-  // const {
-  //   rowIndex,
-  //   columnIndex,
-  //   getValue,
-  //   editRowIndex,
-  //   editColumnIndex,
-  //   cellEditMap,
-  // } = props;
 
   // States
   // # Ready
@@ -124,64 +85,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     setCellState(CellState.Editing);
   }
   const hasUpdated = cellEditMap.has(`[${rowIndex}, ${columnIndex}]`);
-  // if (editable) {
-  //   if (hasUpdated) {
-  //     console.log("Has updated!", rowIndex, columnIndex, cellEditMap);
-  //   }
-  // }
-
-  // useEffect(() => {
-  //   if (editable) {
-  //     console.log(
-  //       "cell background color: ",
-  //       cellBackground,
-  //       rowIndex,
-  //       columnIndex
-  //     );
-  //   }
-  // }, [cellBackground, editable, rowIndex, columnIndex]);
-
-  // useEffect(() => {
-
-  //   setCellState(CellState.Ready);
-  // }, [cellEditMap, rowIndex, columnIndex]);
-  // useEffect(() => {
-  //   if (!editable) return;
-  //   console.log(
-  //     "Cell map:",
-  //     rowIndex,
-  //     columnIndex,
-  //     cellEditMap,
-  //     cellEditMap.has(`[${rowIndex}, ${columnIndex}]`)
-  //   );
-  // }, [cellEditMap, rowIndex, editable, columnIndex]);
-
-  // useEffect(() => {
-  //   if (editable) {
-  //     setCellBackground("red");
-  //     return;
-  //   }
-  //   // if (!hasUpdated) {
-  //   //   setCellBackground("transparent");
-  //   //   return;
-  //   // }
-  //   switch (cellState) {
-  //     case CellState.EditSaving:
-  //       setCellBackground("lightgrey");
-  //       break;
-  //     case CellState.EditSuccess:
-  //       setCellBackground("#ddffdd");
-  //       break;
-  //     case CellState.EditFailure:
-  //       setCellBackground("lightcoral");
-  //       break;
-  //     case CellState.Editing:
-  //       setCellBackground("lightblue");
-  //       break;
-  //     default:
-  //       setCellBackground("transparent");
-  //   }
-  // }, [cellState, editable, hasUpdated]);
 
   type TableCellClassMap = {
     [key in CellState]: string;
@@ -199,18 +102,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   const [errorTitle, setErrorTitle] = useState<string | undefined>(undefined);
 
-  // useEffect(() => {
-  //   console.log("Cell background:", tableCellClass, rowIndex, columnIndex);
-  // }, [tableCellClass, rowIndex, columnIndex]);
-  // useEffect(() => {
-  //   console.log("Cell state:", cellState, hasUpdated);
-  // }, [hasUpdated, cellState]);
-
-  // function resetEditInfo() {
-  //   console.log("Resetting edit info!", rowIndex, columnIndex);
-  //   setEditRowIndex(null);
-  //   setEditColumnIndex(null);
-  // }
   const resetEditInfo = React.useCallback(() => {
     setEditRowIndex(null);
     setEditColumnIndex(null);
