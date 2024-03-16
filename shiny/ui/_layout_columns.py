@@ -153,7 +153,7 @@ def as_col_spec(
         return None
 
     if not isinstance(col_widths, Dict):
-        return {"md": validate_col_width(col_widths, n_kids, "md")}
+        return {"sm": validate_col_width(col_widths, n_kids, "sm")}
 
     ret: BreakpointsOptional[int] = {}
     col_widths_items = cast(BreakpointsSoft[int], col_widths).items()
