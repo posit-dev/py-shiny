@@ -259,12 +259,8 @@ def row_heights_attrs(
     # Remove any None values from x
     x_complete = {k: v for k, v in x.items() if v is not None}
 
-    # We use classes to activate CSS variables at the right breakpoints. Note: Mobile
-    # row height is derived from xs or defaults to auto in the CSS, so we don't need the
-    # class to activate it
-    classes = [
-        f"bslib-grid--row-heights--{brk}" for brk in x_complete.keys() if brk != "xs"
-    ]
+    # We use classes to activate CSS variables at the right breakpoints.
+    classes = [f"bslib-grid--row-heights--{brk}" for brk in x_complete.keys()]
 
     # Create CSS variables, treating numeric values as fractional units, passing strings
     css_vars: Dict[str, str] = {}
