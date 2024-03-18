@@ -148,7 +148,6 @@ def deploy_app(
         or not (branch_name.startswith("deploy") or branch_name == "main")
     ):
         pytest.skip("Not on CI or posit-dev/py-shiny repo or deploy* or main branch")
-        raise RuntimeError()
 
     app_dir = os.path.dirname(app_file_path)
     write_requirements_txt(app_dir)
