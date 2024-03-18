@@ -3,7 +3,7 @@ name: Run tests
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "rc-*"]
+    branches: ["main", "rc-*", "test-ci-logic"]
   pull_request:
   release:
     types: [published]
