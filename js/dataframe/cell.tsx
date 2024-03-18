@@ -31,12 +31,12 @@ export const CellStateEnum = {
   Editing: "Editing",
   Ready: "Ready",
 } as const;
-const CellStateClassMap = {
-  EditSaving: "edit-waiting",
-  EditSuccess: "edit-success",
-  EditFailure: "edit-failure",
-  Editing: "editing",
-  Ready: "ready",
+const CellStateClassEnum = {
+  EditSaving: "cell-edit-saving",
+  EditSuccess: "cell-edit-success",
+  EditFailure: "cell-edit-failure",
+  Editing: "cell-editing",
+  Ready: undefined,
 } as const;
 export type CellState = keyof typeof CellStateEnum;
 
