@@ -14,13 +14,31 @@ import React, {
 import { useImmer } from "use-immer";
 import { updateCellsData } from "./data-update";
 
-export enum CellState {
-  EditSaving = "edit-waiting",
-  EditSuccess = "edit-success",
-  EditFailure = "edit-failure",
-  Editing = "editing",
-  Ready = "ready",
-}
+// States
+// # √ Ready
+// # √ Editing
+// # √ Saving / Disabled
+// # √ Error
+// # √ Saved
+// # Cancelled (is Ready state?)
+// # New
+// # Added
+// # Removed
+export const CellStateMap = {
+  EditSaving: "EditSaving",
+  EditSuccess: "EditSuccess",
+  EditFailure: "EditFailure",
+  Editing: "Editing",
+  Ready: "Ready",
+} as const;
+const CellStateClassMap = {
+  EditSaving: "edit-waiting",
+  EditSuccess: "edit-success",
+  EditFailure: "edit-failure",
+  Editing: "editing",
+  Ready: "ready",
+} as const;
+export type CellState = keyof typeof CellStateMap;
 
 interface TableBodyCellProps {
   id: string | null;
@@ -56,49 +74,24 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   const rowIndex = cell.row.index;
   const columnIndex = cell.column.columnDef.meta!.colIndex;
 
-  // States
-  // # Ready
-  // # Editing
-  // # Saving / Disabled
-  // # Error
-  // # Saved
-  // # Cancelled (is Ready state?)
-  // # New
-  // # Added
-  // # Removed
   const initialValue = cell.getValue();
   // We need to keep and update the state of the cell normally
   const [value, setValue] = useImmer(initialValue);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const [cellState, setCellState] = useState<CellState>(CellState.Ready);
+  const [cellState, setCellState] = useState<CellState>(CellStateMap.Ready);
 
-  const [editable, setEditable] = useState(false);
   useEffect(() => {
     const cellIsEditable =
       editRowIndex === rowIndex && editColumnIndex === columnIndex;
-    setEditable(cellIsEditable);
+    if (cellIsEditable) {
+      setCellState(CellStateMap.Editing);
+    }
   }, [editRowIndex, editColumnIndex, rowIndex, columnIndex]);
 
-  // const editable = editRowIndex === rowIndex && editColumnIndex === columnIndex;
-  if (editable) {
-    setCellState(CellState.Editing);
-  }
   const hasUpdated = cellEditMap.has(`[${rowIndex}, ${columnIndex}]`);
 
-  type TableCellClassMap = {
-    [key in CellState]: string;
-  };
-  const tableCellClassMap_: Record<string, string | null> = {};
-  tableCellClassMap_[CellState.Ready] = null;
-  tableCellClassMap_[CellState.Editing] = "cell-edit-editing";
-  tableCellClassMap_[CellState.EditSaving] = "cell-edit-saving";
-  tableCellClassMap_[CellState.EditSuccess] = "cell-edit-success";
-  tableCellClassMap_[CellState.EditFailure] = "cell-edit-failure";
-  const tableCellMap: TableCellClassMap =
-    tableCellClassMap_ as TableCellClassMap;
-
-  const tableCellClass = tableCellMap[cellState];
+  const tableCellClass = CellStateClassMap[cellState];
 
   const [errorTitle, setErrorTitle] = useState<string | undefined>(undefined);
 
@@ -156,7 +149,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     // Only update if the string form of the value has changed
     if (`${initialValue}` === `${value}`) return;
 
-    setCellState(CellState.EditSaving);
+    setCellState(CellStateMap.EditSaving);
     // console.log("Setting update count");
     // setUpdateCount(updateCount + 1);
     updateCellsData({
@@ -171,12 +164,12 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       ],
       onSuccess: (values) => {
         // console.log("success!", values);
-        setCellState(CellState.EditSuccess);
+        setCellState(CellStateMap.EditSuccess);
       },
       onError: (err) => {
         console.error("Error saving tabel cell value!", err);
         setErrorTitle(String(err));
-        setCellState(CellState.EditFailure);
+        setCellState(CellStateMap.EditFailure);
       },
       columns,
       setData,
@@ -198,7 +191,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   // Select the input when it becomes editable
   useEffect(() => {
-    if (!editable) return;
+    if (cellState !== CellStateMap.Editing) return;
     if (!inputRef.current) return;
 
     inputRef.current.focus();
@@ -221,12 +214,12 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
         .querySelector("body")!
         .removeEventListener("click", onBodyClick);
     };
-  }, [editable, resetEditInfo]);
+  }, [cellState, resetEditInfo]);
 
   // Reselect the input when it comes into view!
   // (It could be scrolled out of view and then back into view)
   function onFocus(e: ReactFocusEvent<HTMLInputElement>) {
-    if (editable) {
+    if (cellState !== CellStateMap.Editing) {
       e.target.select();
     }
   }
@@ -243,9 +236,9 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     undefined;
   let cellTitle = errorTitle;
 
-  if (cellState === CellState.EditSaving) {
+  if (cellState === CellStateMap.EditSaving) {
     content = <em>{value as string}</em>;
-  } else if (editable) {
+  } else if (cellState === CellStateMap.Editing) {
     content = (
       <input
         className="cell-edit-input"
@@ -267,7 +260,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
         e.stopPropagation();
       };
     }
-    if (cellState === CellState.EditFailure) {
+    if (cellState === CellStateMap.EditFailure) {
       cellTitle = errorTitle;
     }
     content = flexRender(cell.column.columnDef.cell, cell.getContext());

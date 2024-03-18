@@ -1,6 +1,7 @@
 import { ResponseValue, makeRequest } from "./request";
 
-import { CellState } from "./cell";
+import type { CellState } from "./cell";
+import { CellStateMap } from "./cell";
 
 export type UpdateCellData = {
   rowIndex: number;
@@ -71,7 +72,7 @@ export function updateCellsData({
           const obj =
             draft.get(key) ?? ({} as { value: string; state: CellState });
           obj.value = value;
-          obj.state = CellState.EditSuccess;
+          obj.state = CellStateMap.EditSuccess;
           // console.log("Setting cell edit map");
           draft.set(key, obj);
         });
