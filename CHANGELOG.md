@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added support for using `shiny.express` in Quarto Dashboards. (#1217)
 
+* `ui.value_box()`, `ui.layout_columns()` and `ui.layout_column_wrap()` now all have `min_height` and `max_height` arguments. These are useful in filling layouts, like `ui.page_fillable()`, `ui.page_sidebar(fillable=True)` or `ui.page_navbar(fillable=True)`. For example, you can use `ui.layout_columns(min_height=300, max_height=500)` to ensure that a set of items (likely arranged in a row of columns) are always between 300 and 500 pixels tall. (#1223)
+
 ### Bug fixes
 
 * On Windows, Shiny Express app files are now read in as UTF-8. (#1203)
