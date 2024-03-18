@@ -7,6 +7,7 @@ import React, {
   FocusEvent as ReactFocusEvent,
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -77,8 +78,12 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   const initialValue = cell.getValue();
   // We need to keep and update the state of the cell normally
   const [value, setValue] = useImmer(initialValue);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  // If the initialValue (defined by `cell.getValue()`) is changed externally
+  // (e.g. copy/**paste**), sync it up with our state
+  // (This method only runs if `initialValue` has changed)
+  useEffect(() => setValue(initialValue), [initialValue, setValue]);
 
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [cellState, setCellState] = useState<CellState>(CellStateEnum.Ready);
 
   useEffect(() => {
@@ -91,14 +96,12 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   const hasUpdated = cellEditMap.has(`[${rowIndex}, ${columnIndex}]`);
 
-  const tableCellClass = CellStateClassEnum[cellState];
-
   const [errorTitle, setErrorTitle] = useState<string | undefined>(undefined);
 
-  const resetEditInfo = () => {
+  const resetEditInfo = useCallback(() => {
     setEditRowIndex(null);
     setEditColumnIndex(null);
-  };
+  }, [setEditColumnIndex, setEditRowIndex]);
 
   const handleEsc = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Escape") return;
@@ -151,8 +154,8 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     if (`${initialValue}` === `${value}`) return;
 
     setCellState(CellStateEnum.EditSaving);
-    // console.log("Setting update count");
-    // setUpdateCount(updateCount + 1);
+    // Update the data!
+    // updateCellsData updates the underlying data via `setData` and `setCellEditMap`
     updateCellsData({
       id,
       cellInfos: [
@@ -164,11 +167,11 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
         },
       ],
       onSuccess: (values) => {
-        // console.log("success!", values);
+        // Update cell state
         setCellState(CellStateEnum.EditSuccess);
       },
       onError: (err) => {
-        console.error("Error saving tabel cell value!", err);
+        // Update error info
         setErrorTitle(String(err));
         setCellState(CellStateEnum.EditFailure);
       },
@@ -184,11 +187,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     // console.log("on blur!", initialValue, value, e);
     attemptUpdate();
   };
-
-  // If the initialValue is changed external, sync it up with our state
-  useEffect(() => {
-    setValue(initialValue);
-  }, [initialValue, setValue]);
 
   // Select the input when it becomes editable
   useEffect(() => {
@@ -216,6 +214,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   // Reselect the input when it comes into view!
   // (It could be scrolled out of view and then back into view)
   function onFocus(e: ReactFocusEvent<HTMLInputElement>) {
+    console.log("focus cellState: ", cellState);
     if (cellState !== CellStateEnum.Editing) {
       // TODO-barret; Restore cursor position and selection
       e.target.select();
@@ -233,6 +232,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   let content: ReactElement | ReturnType<typeof flexRender> | undefined =
     undefined;
   let cellTitle = errorTitle;
+  const tableCellClass = CellStateClassEnum[cellState];
 
   if (cellState === CellStateEnum.EditSaving) {
     content = <em>{value as string}</em>;
