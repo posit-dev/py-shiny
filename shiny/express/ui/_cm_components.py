@@ -1230,6 +1230,7 @@ def value_box(
             theme=theme,
             height=height,
             max_height=max_height,
+            min_height=min_height,
             fill=fill,
             class_=class_,
             **kwargs,
