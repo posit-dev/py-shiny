@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import time
 from typing import Any, Callable, TypeVar
 
 import pytest
@@ -128,6 +129,18 @@ def write_requirements_txt(app_dir: str) -> None:
         f.write(f"git+https://github.com/posit-dev/py-shiny.git@{git_hash}\n")
 
 
+def assert_rsconnect_file_updated(file_path: str, max_minutes: int) -> None:
+    """
+    Asserts that the specified file has been updated within the last `max_minutes` minutes.
+    """
+    current_time = time.time()
+    mod_time = os.path.getmtime(file_path)
+    time_diff = (current_time - mod_time) / 60
+    assert (
+        time_diff < max_minutes
+    ), f"File '{file_path}' was not updated within the last {max_minutes} minutes which means the deployment failed or was skipped"
+
+
 def deploy_app(
     app_file_path: str,
     location: str,
@@ -152,6 +165,10 @@ def deploy_app(
     }[location]
 
     url = deployment_function(app_name, app_dir)
+    rsconnect_dir = os.path.join(
+        app_dir, "rsconnect-python", f"{os.path.basename(app_dir)}.json"
+    )
+    assert_rsconnect_file_updated(rsconnect_dir, 10)
     return url
 
 
