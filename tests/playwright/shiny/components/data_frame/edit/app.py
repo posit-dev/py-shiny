@@ -58,6 +58,16 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         *,
         info: CellUpdateInfo,
     ):
+        if len(summary_data.cell_patches()) > 1:
+            import random
+
+            from shiny.types import SafeException
+
+            if random.sample([0, 1], 1)[0]:
+                raise SafeException("Safe error message!")
+            else:
+                raise RuntimeError("Barret testing!")
+
         return "demo_" + info["value"]
 
     # @reactive.effect

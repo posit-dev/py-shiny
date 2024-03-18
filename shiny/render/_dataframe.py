@@ -596,9 +596,6 @@ class data_frame(Renderer[DataFrameResult]):
     # Do not change this method name unless you update corresponding code in `/js/dataframe/`!!
     async def _handle_cells_update(self, update_infos: list[CellUpdateInfo]):
 
-        if len(self.cell_patches()) > 1:
-            raise RuntimeError("Barret testing!")
-
         # Make new array to trigger reactive update
         patches = [p for p in self.cell_patches()]
 
