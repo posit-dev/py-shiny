@@ -222,6 +222,8 @@ def layout_column_wrap(
     fill: bool = True,
     fillable: bool = True,
     height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
     height_mobile: Optional[CssUnit] = None,
     gap: Optional[CssUnit] = None,
     class_: Optional[str] = None,
@@ -267,8 +269,10 @@ def layout_column_wrap(
         with an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
     fillable
         Whether or not each element is wrapped in a fillable container.
-    height
-        Any valid CSS unit to use for the height.
+    height,max_height,min_height
+        A valid CSS unit (e.g., `height="200px"`). Use `min_height` and `max_height` in
+        a filling layout to ensure that the layout container does not shrink below a
+        `min_height` or grow beyond a `max_height`.
     height_mobile
         Any valid CSS unit to use for the height when on mobile devices (or narrow
         windows).
@@ -288,6 +292,8 @@ def layout_column_wrap(
             fill=fill,
             fillable=fillable,
             height=height,
+            min_height=min_height,
+            max_height=max_height,
             height_mobile=height_mobile,
             gap=gap,
             class_=class_,
