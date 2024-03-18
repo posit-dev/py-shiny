@@ -139,14 +139,8 @@ def deploy_app(
         pytest.skip("`DEPLOY_APPS` does not equal `true`")
 
     run_on_ci = os.environ.get("CI", "False") == "true"
-    repo = os.environ.get("GITHUB_REPOSITORY", "unknown")
-    branch_name = os.environ.get("GITHUB_HEAD_REF", "unknown")
 
-    if (
-        not run_on_ci
-        or repo != "posit-dev/py-shiny"
-        or not (branch_name.startswith("deploy") or branch_name == "main")
-    ):
+    if not run_on_ci:
         pytest.skip("Not on CI or posit-dev/py-shiny repo or deploy* or main branch")
 
     app_dir = os.path.dirname(app_file_path)
