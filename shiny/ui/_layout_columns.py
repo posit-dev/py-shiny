@@ -43,6 +43,8 @@ def layout_columns(
     gap: Optional[CssUnit] = None,
     class_: Optional[str] = None,
     height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
+    max_height: Optional[CssUnit] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -98,8 +100,10 @@ def layout_columns(
         Any valid CSS unit to use for the gap between columns.
     class_
         CSS class(es) to apply to the containing element.
-    height
-        Any valid CSS unit to use for the height.
+    height,max_height,min_height
+        A valid CSS unit (e.g., `height="200px"`). Use `min_height` and `max_height` in
+        a filling layout to ensure that the layout container does not shrink below a
+        `min_height` or grow beyond a `max_height`.
     **kwargs
         Additional attributes to apply to the containing element.
 
@@ -129,6 +133,8 @@ def layout_columns(
             "style": css(
                 gap=as_css_unit(gap),
                 height=as_css_unit(height),
+                min_height=as_css_unit(min_height),
+                max_height=as_css_unit(max_height),
             ),
         },
         col_widths_attrs(col_widths_spec),
