@@ -112,8 +112,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const dataFrameModeIsMissing = data.options["mode"] ? false : true;
   const dataFrameMode = data.options["mode"] ?? "none";
 
-  const canEdit = dataFrameMode === EditMode.Edit;
-  console.log("canEdit", canEdit);
+  const editCellsIsAllowed = dataFrameMode === EditMode.Edit;
 
   const [cellEditMap, setCellEditMap] = useImmer<
     Map<string, { value: string; state: CellState }>
@@ -324,7 +323,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   type TKey = typeof HTMLTableRowElement.prototype.dataset.key;
   type TElement = HTMLTableRowElement;
 
-  if (canEdit && canSelect) {
+  if (editCellsIsAllowed && canSelect) {
     // TODO-barret; maybe listen for a double click?
     // Is is possible to rerender on double click independent of the row selection?
     console.error(
@@ -473,7 +472,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
                           id={id}
                           key={cell.id}
                           cell={cell}
-                          canEdit={canEdit}
+                          editCellsIsAllowed={editCellsIsAllowed}
                           columns={columns}
                           editRowIndex={editRowIndex}
                           editColumnIndex={editColumnIndex}
