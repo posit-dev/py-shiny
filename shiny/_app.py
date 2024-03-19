@@ -153,7 +153,7 @@ class App:
                 raise ValueError(
                     f'static_assets must be an absolute path: "{static_asset_path}".'
                     " Consider using one of the following instead:\n"
-                    f'  os.path.join(__file__, "{static_asset_path}")  OR'
+                    f'  os.path.join(os.path.dirname(__file__), "{static_asset_path}")  OR'
                     f'  pathlib.Path(__file__).parent/"{static_asset_path}"'
                 )
 
