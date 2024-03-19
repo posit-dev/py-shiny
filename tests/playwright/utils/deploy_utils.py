@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import tempfile
 import time
+from distutils.dir_util import copy_tree
+from distutils.file_util import copy_file
 from typing import Any, Callable, TypeVar
 
 import pytest
@@ -156,20 +159,35 @@ def deploy_app(
         pytest.skip("Not on CI and within posit-dev/py-shiny repo")
 
     app_dir = os.path.dirname(app_file_path)
-    write_requirements_txt(app_dir)
 
-    deployment_function = {
-        "connect": quiet_deploy_to_connect,
-        "shinyapps": quiet_deploy_to_shinyapps,
-    }[location]
+    # Use temporary directory to avoid modifying the original app directory
+    # This allows us to run tests in parallel when deploying apps both modify the same rsconnect config file
+    with tempfile.TemporaryDirectory("deploy_app") as tmpdir:
 
-    pre_deployment_time = time.time()
-    url = deployment_function(app_name, app_dir)
-    rsconnect_dir = os.path.join(
-        app_dir, "rsconnect-python", f"{os.path.basename(app_dir)}.json"
-    )
-    assert_rsconnect_file_updated(rsconnect_dir, pre_deployment_time)
-    return url
+        copy_tree(app_dir, tmpdir)
+
+        write_requirements_txt(tmpdir)
+
+        deployment_function = {
+            "connect": quiet_deploy_to_connect,
+            "shinyapps": quiet_deploy_to_shinyapps,
+        }[location]
+
+        pre_deployment_time = time.time()
+        url = deployment_function(app_name, tmpdir)
+        tmp_rsconnect_dir = os.path.join(
+            tmpdir, "rsconnect-python", f"{os.path.basename(tmpdir)}.json"
+        )
+        assert_rsconnect_file_updated(tmp_rsconnect_dir, pre_deployment_time)
+        local_rsconnect_dir = os.path.join(
+            app_dir, "rsconnect-python", f"{os.path.basename(app_dir)}.json"
+        )
+        # Copy file back if it doesn't exist locally (Helpful for local development and deployment)
+        if not os.path.exists(local_rsconnect_dir):
+
+            copy_file(tmp_rsconnect_dir, local_rsconnect_dir)
+
+        return url
 
 
 def create_deploys_app_url_fixture(
