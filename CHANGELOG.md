@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 
+* The `col_widths` argument of `ui.layout_columns()` now sets the `sm` breakpoint by default, rather than the `md` breakpoint. For example, `col_widths=(12, 6, 6)` is now equivalent to `{"sm": (12, 6, 6)}` rather than `{"md": (12, 6, 6)}`. (#1222)
+
 ### New features
 
 * `ui.card()` and `ui.value_box()` now take an `id` argument that, when provided, is used to report the full screen state of the card or value box to the server. For example, when using `ui.card(id = "my_card", full_screen = TRUE)` you can determine if the card is currently in full screen mode by reading the boolean value of `input.my_card()["full_screen"]`. (#1215)
@@ -22,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Calling `ui.update_selectize()` with `choices` and `selected` now clears the current selection before updating the choices and selected value. (#1221)
 
 * Fixed an issue that could happen with a `ui.card()` or `ui.value_box()` that is rendered dynamically via `@render.ui` when an updated card replaces a card that the user has expanded into full screen mode. Now the full screen state is reset for the new card or value box. If you want to update a card without potentially exiting the full-screen mode, update specific parts of the card using `ui.output_ui()` or `ui.output_text()`. (#1221)
+
+* `ui.layout_columns()` now correctly applies the `row_heights` at the `xs` breakpoint, if supplied. (#1222)
 
 ### Other changes
 
