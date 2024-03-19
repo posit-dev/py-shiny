@@ -309,6 +309,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     undefined;
   let cellTitle = errorTitle;
   const tableCellClass = CellStateClassEnum[cellState];
+  // let cellContentEditable: boolean = false;
 
   if (cellState === CellStateEnum.EditSaving) {
     content = <em>{value as string}</em>;
@@ -340,6 +341,25 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       cellTitle = errorTitle;
     }
     content = flexRender(cell.column.columnDef.cell, cell.getContext());
+    // // TODO-barret; Consider using https://www.npmjs.com/package/react-contenteditable !
+    // const cellValue = cell.getValue();
+    // const cellValueType = typeof cellValue;
+    // const cellContentIsEditable =
+    //   cellValueType === "string" ||
+    //   cellValueType === "number" ||
+    //   cellValueType === "boolean" ||
+    //   cellValueType === "undefined" ||
+    //   cellValue === null;
+    // if (cellContentIsEditable) {
+    //   // cellContentEditable = ""plaintext-only";
+    //   cellContentEditable = true;
+    // }
+    // const onInput = (e: ReactChangeEvent<HTMLTableCellElement>) => {
+    //   console.log("on input!", e, rowIndex, columnIndex, e.target.textContent);
+    // };
+    // td attrs for below
+    // contentEditable={cellContentEditable}
+    // onInput={onInput}
   }
 
   return (
@@ -348,7 +368,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       onClick={onClick}
       title={cellTitle}
       className={tableCellClass}
-      // contentEditable={cellContentEditable}
     >
       {content}
     </td>
