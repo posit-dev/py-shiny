@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * On Windows, Shiny Express app files are now read in as UTF-8. (#1203)
 
+* `input_dark_mode()` now accepts a `style` argument that can be used to customize the appearance and position of the dark mode toggle switch. (#1207)
+
 * Calling `ui.update_selectize()` with `choices` and `selected` now clears the current selection before updating the choices and selected value. (#1221)
 
 * Fixed an issue that could happen with a `ui.card()` or `ui.value_box()` that is rendered dynamically via `@render.ui` when an updated card replaces a card that the user has expanded into full screen mode. Now the full screen state is reset for the new card or value box. If you want to update a card without potentially exiting the full-screen mode, update specific parts of the card using `ui.output_ui()` or `ui.output_text()`. (#1221)
