@@ -307,8 +307,10 @@ def value_box(
     theme: Optional[str | ValueBoxTheme] = None,
     height: Optional[CssUnit] = None,
     max_height: Optional[CssUnit] = None,
+    min_height: Optional[CssUnit] = None,
     fill: bool = True,
     class_: Optional[str] = None,
+    id: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -357,9 +359,9 @@ def value_box(
     full_screen
         If `True`, an icon will appear when hovering over the card body. Clicking the
         icon expands the card to fit viewport size.
-    height,max_height
-        Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a card is made
-        `full_screen`.
+    height,max_height,min_height
+        Any valid CSS unit (e.g., `height="200px"`). Doesn't apply when a value box is
+        made `full_screen`.
     fill
         Whether to allow the value box to grow/shrink to fit a fillable container with
         an opinionated height (e.g., :func:`~shiny.ui.page_fillable`).
@@ -367,6 +369,10 @@ def value_box(
         Utility classes for customizing the appearance of the summary card. Use `bg-*`
         and `text-*` classes (e.g, `"bg-danger"` and `"text-light"`) to customize the
         background/foreground colors.
+    id
+        Provide a unique identifier for the :func:`~shiny.ui.value_box()` to report its
+        state to Shiny. For example, using `id="my_value_box"`, you can observe the
+        value box's full screen state with `input.my_value_box()["full_screen"]`.
     **kwargs
         Additional attributes to pass to :func:`~shiny.ui.card`.
 
@@ -458,7 +464,9 @@ def value_box(
         full_screen=full_screen,
         height=height,
         max_height=max_height,
+        min_height=min_height,
         fill=fill,
+        id=id,
     )
 
 
