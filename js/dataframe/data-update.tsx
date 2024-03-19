@@ -2,6 +2,7 @@ import { ResponseValue, makeRequest } from "./request";
 
 import type { CellState } from "./cell";
 import { CellStateEnum } from "./cell";
+import { CellEdit, SetCellEditMap, makeCellEditMapKey } from "./cell-edit-map";
 
 export type UpdateCellData = {
   rowIndex: number;
@@ -31,9 +32,7 @@ export function updateCellsData({
   onError: (err: string) => void;
   columns: readonly string[];
   setData: (fn: (draft: unknown[][]) => void) => void;
-  setCellEditMap: (
-    fn: (draft: Map<string, { value: string; state: CellState }>) => void
-  ) => void;
+  setCellEditMap: SetCellEditMap;
 }) {
   // // Skip page index reset until after next rerender
   // skipAutoResetPageIndex();
@@ -67,19 +66,34 @@ export function updateCellsData({
       setCellEditMap((draft) => {
         values.forEach((value: string, i: number) => {
           const { rowIndex, columnIndex } = cellInfos[i];
-          const key = `[${rowIndex}, ${columnIndex}]`;
 
-          const obj =
-            draft.get(key) ?? ({} as { value: string; state: CellState });
+          const key = makeCellEditMapKey(rowIndex, columnIndex);
+          const obj = draft.get(key) ?? ({} as CellEdit);
           obj.value = value;
           obj.state = CellStateEnum.EditSuccess;
-          // console.log("Setting cell edit map");
+          // Remove save_error if it exists
+          delete obj.save_error;
+
           draft.set(key, obj);
         });
       });
       onSuccess(values);
     },
     (err: string) => {
+      setCellEditMap((draft) => {
+        cellInfos.forEach(({ rowIndex, columnIndex, value }) => {
+          const key = makeCellEditMapKey(rowIndex, columnIndex);
+          const obj = draft.get(key) ?? ({} as CellEdit);
+
+          // Do not overwrite value!
+          obj.value = String(value);
+
+          obj.state = CellStateEnum.EditFailure;
+          obj.save_error = String(err);
+          // console.log("Setting cell edit map");
+          draft.set(key, obj);
+        });
+      });
       onError(err);
     },
     undefined

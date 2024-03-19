@@ -11,7 +11,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Virtualizer, useVirtualizer } from "@tanstack/react-virtual";
-import { enableMapSet } from "immer";
 import React, {
   FC,
   StrictMode,
@@ -25,15 +24,16 @@ import React, {
 import { Root, createRoot } from "react-dom/client";
 import { ErrorsMessageValue } from "rstudio-shiny/srcts/types/src/shiny/shinyapp";
 import { useImmer } from "use-immer";
-import { CellState, TableBodyCell } from "./cell";
+import { TableBodyCell } from "./cell";
+import { useCellEditMap } from "./cell-edit-map";
 import { findFirstItemInView, getStyle } from "./dom-utils";
 import { Filter, useFilter } from "./filter";
-import { SelectionMode, useSelection } from "./selection";
+import { SelectionModeEnum, useSelection } from "./selection";
 import { SortArrow } from "./sort-arrows";
 import css from "./styles.scss";
 import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
-import { EditMode, PandasData, TypeHint } from "./types";
+import { EditModeEnum, PandasData, TypeHint } from "./types";
 
 // TODO-barret;
 
@@ -96,28 +96,23 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const theadRef = useRef<HTMLTableSectionElement>(null);
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
-  // const [target, setTarget] = useState(null);
-
-  // const [editingInfo, setEdtingInfo] = useImmer({
-  //   rowIndex: null,
-  //   columnId: null,
-  // });
   const [editRowIndex, setEditRowIndex] = useState<number | null>(null);
   const [editColumnIndex, setEditColumnIndex] = useState<number | null>(null);
 
+  // TODO-barret; Next row should use the sorted row order, not the current order
+
   // useEffect(() => {
   //   console.log("editing info!", editRowIndex, editColumnIndex);
+  //   const rowModel = table.getSortedRowModel();
+  //   console.log("rowModel", rowModel);
   // }, [editColumnIndex, editRowIndex]);
 
   const dataFrameModeIsMissing = data.options["mode"] ? false : true;
   const dataFrameMode = data.options["mode"] ?? "none";
 
-  const editCellsIsAllowed = dataFrameMode === EditMode.Edit;
+  const editCellsIsAllowed = dataFrameMode === EditModeEnum.Edit;
 
-  const [cellEditMap, setCellEditMap] = useImmer<
-    Map<string, { value: string; state: CellState }>
-  >(new Map<string, { value: string; state: CellState }>());
-  enableMapSet();
+  const [cellEditMap, setCellEditMap] = useCellEditMap();
 
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
     () =>
@@ -144,6 +139,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
     [columns, typeHints]
   );
 
+  // TODO-barret-future; Possible pagination helper
   // function useSkipper() {
   //   const shouldSkipRef = React.useRef(true);
   //   const shouldSkip = shouldSkipRef.current;
@@ -227,21 +223,16 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   // ### Row selection ###############################################################
   // rowSelectionMode
 
-  // If a row selection mode matches one of the enum values, use it. Otherwise, default to none (e.g. `dataFrameMode == "edit"`).
-  const rowSelectionModeValue = Object.values(SelectionMode).includes(
-    dataFrameMode as SelectionMode
-  )
-    ? (dataFrameMode as SelectionMode)
-    : SelectionMode.None;
-  // If nothing is provided, default to multinative mode
   const rowSelectionMode = dataFrameModeIsMissing
-    ? SelectionMode.None
-    : rowSelectionModeValue;
+    ? // If no option was provided, default to multinative mode
+      SelectionModeEnum.MultiNative
+    : // If a row selection mode matches one of the enum values, use it. Otherwise, fall back to none (e.g. `dataFrameMode == "edit"`).
+      SelectionModeEnum[dataFrameMode] ?? SelectionModeEnum.None;
 
-  const canSelect = rowSelectionMode !== SelectionMode.None;
+  const canSelect = rowSelectionMode !== SelectionModeEnum.None;
   const canMultiSelect =
-    rowSelectionMode === SelectionMode.MultiNative ||
-    rowSelectionMode === SelectionMode.Multiple;
+    rowSelectionMode === SelectionModeEnum.MultiNative ||
+    rowSelectionMode === SelectionModeEnum.Multiple;
 
   const rowSelection = useSelection<string, HTMLTableRowElement>(
     rowSelectionMode,
@@ -301,7 +292,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
 
   useEffect(() => {
     if (!id) return;
-    if (rowSelectionMode === SelectionMode.None) {
+    if (rowSelectionMode === SelectionModeEnum.None) {
       Shiny.setInputValue!(`${id}_selected_rows`, null);
     } else {
       Shiny.setInputValue!(
@@ -478,6 +469,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
                           editColumnIndex={editColumnIndex}
                           setEditRowIndex={setEditRowIndex}
                           setEditColumnIndex={setEditColumnIndex}
+                          virtualRows={virtualRows}
                           cellEditMap={cellEditMap}
                           maxRowSize={maxRowSize}
                           setData={setData}

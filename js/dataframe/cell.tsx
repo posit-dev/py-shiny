@@ -1,4 +1,5 @@
 import { flexRender } from "@tanstack/react-table";
+import { VirtualItem } from "@tanstack/react-virtual";
 import { Cell } from "@tanstack/table-core";
 import React, {
   FC,
@@ -13,6 +14,7 @@ import React, {
   useState,
 } from "react";
 import { useImmer } from "use-immer";
+import { CellEditMap, SetCellEditMap } from "./cell-edit-map";
 import { updateCellsData } from "./data-update";
 
 // States
@@ -48,13 +50,12 @@ interface TableBodyCellProps {
   editCellsIsAllowed: boolean;
   editRowIndex: number | null;
   editColumnIndex: number | null;
+  virtualRows: VirtualItem[];
   setEditRowIndex: (index: number | null) => void;
   setEditColumnIndex: (index: number | null) => void;
-  cellEditMap: Map<string, { value: string; state: CellState }>;
   setData: (fn: (draft: unknown[][]) => void) => void;
-  setCellEditMap: (
-    fn: (draft: Map<string, { value: string; state: CellState }>) => void
-  ) => void;
+  cellEditMap: CellEditMap;
+  setCellEditMap: SetCellEditMap;
   maxRowSize: number;
 }
 
@@ -65,6 +66,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   editCellsIsAllowed,
   editRowIndex,
   editColumnIndex,
+  virtualRows,
   setEditRowIndex,
   setEditColumnIndex,
   cellEditMap,
@@ -94,8 +96,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     }
   }, [editRowIndex, editColumnIndex, rowIndex, columnIndex]);
 
-  const hasUpdated = cellEditMap.has(`[${rowIndex}, ${columnIndex}]`);
-
   const [errorTitle, setErrorTitle] = useState<string | undefined>(undefined);
 
   const resetEditInfo = useCallback(() => {
@@ -109,6 +109,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     e.preventDefault();
 
     // inputRef.current.blur();
+    attemptUpdate();
     resetEditInfo();
     // TODO-barret-future; Set focus to table? (state: Editing was aborted)
   };
@@ -125,6 +126,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       return;
     }
 
+    attemptUpdate();
     setEditColumnIndex(newColumnIndex);
   };
   // TODO future: Make Cmd-Enter add a newline in a cell.
@@ -138,10 +140,10 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     const newRowIndex = editRowIndex! + (hasShift ? -1 : 1);
     if (newRowIndex < 0 || newRowIndex >= maxRowSize) {
       // If the new row index is out of bounds, quit
-      // attemptUpdate();
       return;
     }
 
+    attemptUpdate();
     setEditRowIndex(newRowIndex);
   };
 
@@ -149,9 +151,14 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     [handleEsc, handleEnter, handleTab].forEach((fn) => fn(e));
   };
 
-  const attemptUpdate = () => {
+  const attemptUpdate = useCallback(() => {
+    console.log("attemptUpdate", rowIndex, columnIndex, value, initialValue);
+
     // Only update if the string form of the value has changed
-    if (`${initialValue}` === `${value}`) return;
+    if (`${initialValue}` === `${value}`) {
+      setCellState(CellStateEnum.Ready);
+      return;
+    }
 
     setCellState(CellStateEnum.EditSaving);
     // Update the data!
@@ -166,7 +173,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
           prev: initialValue,
         },
       ],
-      onSuccess: (values) => {
+      onSuccess: (_values) => {
         // Update cell state
         setCellState(CellStateEnum.EditSuccess);
       },
@@ -179,14 +186,23 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       setData,
       setCellEditMap,
     });
-  };
+  }, [
+    id,
+    rowIndex,
+    columnIndex,
+    value,
+    initialValue,
+    columns,
+    setData,
+    setCellEditMap,
+  ]);
 
-  // When the input is blurred, we'll call our table meta's updateData function
-  // console.log("rendering cell", rowIndex, id, initialValue, value);
-  const onBlur = () => {
-    // console.log("on blur!", initialValue, value, e);
-    attemptUpdate();
-  };
+  // // When the input is blurred, we'll call our table meta's updateData function
+  // // console.log("rendering cell", rowIndex, id, initialValue, value);
+  // const onBlur = () => {
+  //   // console.log("on blur!", initialValue, value, e);
+  //   attemptUpdate();
+  // };
 
   // Select the input when it becomes editable
   useEffect(() => {
@@ -195,12 +211,18 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     inputRef.current.focus();
     inputRef.current.select();
+  }, [cellState]);
+
+  useEffect(() => {
+    if (cellState !== CellStateEnum.Editing) return;
+    if (!inputRef.current) return;
 
     // Setup global click listener to reset edit info
     const onBodyClick = (e: MouseEvent) => {
       if (e.target === inputRef.current) {
         return;
       }
+      attemptUpdate();
       resetEditInfo();
     };
     document.body.addEventListener("click", onBodyClick);
@@ -209,13 +231,13 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     return () => {
       document.body.removeEventListener("click", onBodyClick);
     };
-  }, [cellState, resetEditInfo]);
+  }, [cellState, attemptUpdate, resetEditInfo, value]);
 
   // Reselect the input when it comes into view!
   // (It could be scrolled out of view and then back into view)
   function onFocus(e: ReactFocusEvent<HTMLInputElement>) {
-    console.log("focus cellState: ", cellState);
-    if (cellState !== CellStateEnum.Editing) {
+    console.log("focus cellState: ", cellState, rowIndex, columnIndex);
+    if (cellState === CellStateEnum.Editing) {
       // TODO-barret; Restore cursor position and selection
       e.target.select();
     }
@@ -242,7 +264,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
         className="cell-edit-input"
         value={value as string}
         onChange={onChange}
-        onBlur={onBlur}
+        // onBlur={onBlur}
         onFocus={onFocus}
         onKeyDown={onInputKeyDown}
         ref={inputRef}
