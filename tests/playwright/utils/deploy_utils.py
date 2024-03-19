@@ -134,7 +134,6 @@ def assert_rsconnect_file_updated(file_path: str, min_mtime: float) -> None:
     Asserts that the specified file has been updated since `min_mtime` (seconds since epoch).
     """
     mtime = os.path.getmtime(file_path)
-    time_diff = (mtime - min_mtime)
     assert (
         mtime > min_mtime
     ), f"File '{file_path}' was not updated during app deployment which means the deployment failed"
