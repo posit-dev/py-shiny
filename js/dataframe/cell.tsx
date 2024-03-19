@@ -42,7 +42,7 @@ const CellStateClassEnum = {
   EditSaving: "cell-edit-saving",
   EditSuccess: "cell-edit-success",
   EditFailure: "cell-edit-failure",
-  Editing: "cell-editing",
+  Editing: "cell-edit-editing",
   Ready: undefined,
 } as const;
 export type CellState = keyof typeof CellStateEnum;
@@ -89,7 +89,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   // (This method only runs if `initialValue` has changed)
   useEffect(() => setValue(initialValue), [initialValue, setValue]);
 
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [cellState, setCellState] = useState<CellState>(CellStateEnum.Ready);
 
   // Keyboard navigation:
@@ -129,7 +129,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     setEditColumnIndex(null);
   }, [setEditColumnIndex, setEditRowIndex]);
 
-  const handleEsc = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+  const handleEsc = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key !== "Escape") return;
     // Prevent default behavior
     e.preventDefault();
@@ -149,7 +149,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     // Remove editing info
     resetEditInfo();
   };
-  const handleTab = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+  const handleTab = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key !== "Tab") return;
     // Prevent default behavior
     e.preventDefault();
@@ -166,7 +166,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     setEditColumnIndex(newColumnIndex);
   };
   // TODO future: Make Cmd-Enter add a newline in a cell.
-  const handleEnter = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+  const handleEnter = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key !== "Enter") return;
     // Prevent default behavior
     e.preventDefault();
@@ -183,7 +183,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     setEditRowIndex(newRowIndex);
   };
 
-  const onInputKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+  const onInputKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     [handleEsc, handleEnter, handleTab].forEach((fn) => fn(e));
   };
 
@@ -251,6 +251,8 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     if (cellState !== CellStateEnum.Editing) return;
     if (!inputRef.current) return;
 
+    // TODO-barret; Restore cursor position and text selection here
+
     // Setup global click listener to reset edit info
     const onBodyClick = (e: MouseEvent) => {
       if (e.target === inputRef.current) return;
@@ -268,15 +270,14 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
   // Reselect the input when it comes into view!
   // (It could be scrolled out of view and then back into view)
-  function onFocus(e: ReactFocusEvent<HTMLInputElement>) {
+  function onFocus(e: ReactFocusEvent<HTMLTextAreaElement>) {
     console.log("focus cellState: ", cellState, rowIndex, columnIndex);
     if (cellState === CellStateEnum.Editing) {
-      // TODO-barret; Restore cursor position and selection
       e.target.select();
     }
   }
 
-  function onChange(e: ReactChangeEvent<HTMLInputElement>) {
+  function onChange(e: ReactChangeEvent<HTMLTextAreaElement>) {
     // console.log("on change!");
     setValue(e.target.value);
   }
@@ -293,14 +294,14 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     content = <em>{value as string}</em>;
   } else if (cellState === CellStateEnum.Editing) {
     content = (
-      <input
-        className="cell-edit-input"
+      <textarea
         value={value as string}
         onChange={onChange}
         // onBlur={onBlur}
         onFocus={onFocus}
         onKeyDown={onInputKeyDown}
         ref={inputRef}
+        style={{ width: "100%", height: "100%" }}
       />
     );
   } else {
@@ -327,6 +328,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       onClick={onClick}
       title={cellTitle}
       className={tableCellClass}
+      // contentEditable={cellContentEditable}
     >
       {content}
     </td>
