@@ -1,6 +1,6 @@
-from shiny import App, ui
 import faicons as fa
 
+from shiny import App, ui
 
 app_ui = ui.page_fluid(
     ui.value_box(
