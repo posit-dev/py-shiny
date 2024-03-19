@@ -129,16 +129,15 @@ def write_requirements_txt(app_dir: str) -> None:
         f.write(f"git+https://github.com/posit-dev/py-shiny.git@{git_hash}\n")
 
 
-def assert_rsconnect_file_updated(file_path: str, max_minutes: int) -> None:
+def assert_rsconnect_file_updated(file_path: str, min_mtime: float) -> None:
     """
-    Asserts that the specified file has been updated within the last `max_minutes` minutes.
+    Asserts that the specified file has been updated since `min_mtime` (seconds since epoch).
     """
-    current_time = time.time()
-    mod_time = os.path.getmtime(file_path)
-    time_diff = (current_time - mod_time) / 60
+    mtime = os.path.getmtime(file_path)
+    time_diff = (mtime - min_mtime)
     assert (
-        time_diff < max_minutes
-    ), f"File '{file_path}' was not updated within the last {max_minutes} minutes which means the deployment failed or was skipped"
+        mtime > min_mtime
+    ), f"File '{file_path}' was not updated during app deployment which means the deployment failed"
 
 
 def deploy_app(
@@ -152,9 +151,10 @@ def deploy_app(
         pytest.skip("`DEPLOY_APPS` does not equal `true`")
 
     run_on_ci = os.environ.get("CI", "False") == "true"
+    repo = os.environ.get("GITHUB_REPOSITORY", "unknown")
 
-    if not run_on_ci:
-        pytest.skip("Not on CI or posit-dev/py-shiny repo or deploy* or main branch")
+    if not (run_on_ci and repo == "posit-dev/py-shiny"):
+        pytest.skip("Not on CI and within posit-dev/py-shiny repo")
 
     app_dir = os.path.dirname(app_file_path)
     write_requirements_txt(app_dir)
@@ -164,11 +164,12 @@ def deploy_app(
         "shinyapps": quiet_deploy_to_shinyapps,
     }[location]
 
+    pre_deployment_time = time.time()
     url = deployment_function(app_name, app_dir)
     rsconnect_dir = os.path.join(
         app_dir, "rsconnect-python", f"{os.path.basename(app_dir)}.json"
     )
-    assert_rsconnect_file_updated(rsconnect_dir, 10)
+    assert_rsconnect_file_updated(rsconnect_dir, pre_deployment_time)
     return url
 
 
