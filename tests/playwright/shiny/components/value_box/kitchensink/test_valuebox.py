@@ -9,11 +9,13 @@ def get_value_box_bg_color(value_box: ValueBox) -> str:
     )
     return value_box_bg_color
 
+
 def get_value_box_fg_color(value_box: ValueBox) -> str:
     value_box_fg_color = value_box.loc_container.evaluate(
         "el => window.getComputedStyle(el).getPropertyValue('color');"
     )
     return value_box_fg_color
+
 
 def get_title_tag_name(value_box: ValueBox) -> str:
     title_tag_name = (
