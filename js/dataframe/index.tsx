@@ -35,8 +35,7 @@ import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
 import { EditModeEnum, PandasData, TypeHint } from "./types";
 
-// TODO-barret;
-
+// TODO-barret; Type support
 // export interface PandasData<TIndex> {
 //   columns: ReadonlyArray<string>;
 //   // index: ReadonlyArray<TIndex>;
@@ -99,12 +98,11 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   const [editRowIndex, setEditRowIndex] = useState<number | null>(null);
   const [editColumnIndex, setEditColumnIndex] = useState<number | null>(null);
 
-  // TODO-barret; Next row should use the sorted row order, not the current order
-
+  // // TODO-barret; Next row should use the sorted row order, not the current order
   // useEffect(() => {
   //   console.log("editing info!", editRowIndex, editColumnIndex);
-  //   const rowModel = table.getSortedRowModel();
-  //   console.log("rowModel", rowModel);
+  //   // const rowModel = table.getSortedRowModel();
+  //   // console.log("rowModel", rowModel);
   // }, [editColumnIndex, editRowIndex]);
 
   const dataFrameModeIsMissing = data.options["mode"] ? false : true;

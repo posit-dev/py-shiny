@@ -14,7 +14,11 @@ import React, {
   useState,
 } from "react";
 import { useImmer } from "use-immer";
-import { CellEditMap, SetCellEditMap } from "./cell-edit-map";
+import {
+  CellEditMap,
+  SetCellEditMap,
+  getCellEditMapValue,
+} from "./cell-edit-map";
 import { updateCellsData } from "./data-update";
 
 // States
@@ -88,6 +92,28 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [cellState, setCellState] = useState<CellState>(CellStateEnum.Ready);
 
+  // Keyboard navigation:
+  // * When editing a cell:
+  //   * On esc key:
+  //     * √ Restore prior value / state / error
+  //     * Move focus from input to td
+  //   * On enter key:
+  //     * √ Save value
+  //     * √ Move to the cell below (or above w/ shift) and edit the new cell
+  //   * On tab key:
+  //     * √ Save value
+  //     * √ Move to the cell to the right (or left w/ shift) and edit the new cell
+  //   * Scrolls out of view:
+  //     * Intercept keyboard events and execute the above actions
+  //     * (Currently, there literally is no input DOM element to accept keyboard events)
+  // TODO-barret-future; More keyboard navigation!
+  //   * https://www.npmjs.com/package/@table-nav/react ?
+  // * When focused on a td:
+  //   * Allow for arrow key navigation
+  //   * Have enter key enter edit mode for a cell
+  //   * When a td is focused, Have esc key move focus to the table
+  //   * When table is focused, Have esc key blur the focus
+
   useEffect(() => {
     const cellIsEditable =
       editRowIndex === rowIndex && editColumnIndex === columnIndex;
@@ -108,10 +134,20 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     // Prevent default behavior
     e.preventDefault();
 
-    // inputRef.current.blur();
-    attemptUpdate();
+    // Try to restore the previous value, state, and error
+    // If there is no previous state info, reset the cell to the inital value
+    const stateInfo = getCellEditMapValue(cellEditMap, rowIndex, columnIndex);
+    if (stateInfo) {
+      setValue(initialValue);
+      setCellState(stateInfo.state);
+      setErrorTitle(stateInfo.save_error);
+    } else {
+      setValue(initialValue);
+      setCellState(CellStateEnum.Ready);
+      setErrorTitle(undefined);
+    }
+    // Remove editing info
     resetEditInfo();
-    // TODO-barret-future; Set focus to table? (state: Editing was aborted)
   };
   const handleTab = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Tab") return;
@@ -152,8 +188,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   };
 
   const attemptUpdate = useCallback(() => {
-    console.log("attemptUpdate", rowIndex, columnIndex, value, initialValue);
-
     // Only update if the string form of the value has changed
     if (`${initialValue}` === `${value}`) {
       setCellState(CellStateEnum.Ready);
@@ -219,9 +253,8 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
     // Setup global click listener to reset edit info
     const onBodyClick = (e: MouseEvent) => {
-      if (e.target === inputRef.current) {
-        return;
-      }
+      if (e.target === inputRef.current) return;
+
       attemptUpdate();
       resetEditInfo();
     };
@@ -276,8 +309,10 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
       onClick = (e: ReactMouseEvent<HTMLTableCellElement>) => {
         setEditRowIndex(rowIndex);
         setEditColumnIndex(columnIndex);
-        e.preventDefault();
-        e.stopPropagation();
+        // Do not prevent default or stop propagation here!
+        // Other methods need to be able to handle the event as well. e.g. `onBodyClick` above.
+        // e.preventDefault();
+        // e.stopPropagation();
       };
     }
     if (cellState === CellStateEnum.EditFailure) {
