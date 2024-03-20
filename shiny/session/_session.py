@@ -213,7 +213,7 @@ class Session(object, metaclass=SessionMeta):
                 self.user = creds["user"]
                 self.groups = creds["groups"]
             except Exception as e:
-                print("Error parsing credentials header: " + str(e))
+                print("Error parsing credentials header: " + str(e), file=sys.stderr)
 
         self._outbound_message_queues = OutBoundMessageQueues()
 
@@ -800,7 +800,7 @@ class Session(object, metaclass=SessionMeta):
     # Misc
     # ==========================================================================
     async def _unhandled_error(self, e: Exception) -> None:
-        print("Unhandled error: " + str(e))
+        print("Unhandled error: " + str(e), file=sys.stderr)
         await self.close()
 
     @add_example()
@@ -1124,6 +1124,7 @@ class Outputs:
                     "Exception while handling "
                     f"`{renderer.__class__.__name__}[id={output_id}].{handler_fn_name}()`:",
                     e,
+                    file=sys.stderr,
                 )
                 if self._session.app.sanitize_errors and not isinstance(
                     e, SafeException
