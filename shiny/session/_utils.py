@@ -54,7 +54,8 @@ def get_current_session() -> Optional[Session]:
     --------
     * :func:`~shiny.session.require_active_session`
     """
-    return _current_session.get() or _default_session
+    session = _current_session.get()
+    return session if session is not None else _default_session
 
 
 @contextmanager
