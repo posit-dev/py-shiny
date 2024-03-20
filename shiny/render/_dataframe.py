@@ -737,8 +737,7 @@ class data_frame(Renderer[DataFrameResult]):
         a tuple of integers representing the rows selected by a user.
         """
 
-        active_session = require_active_session(None)
-        return active_session.input[self.output_id + "_selected_rows"]()
+        return self._get_session().input[self.output_id + "_selected_rows"]()
 
 
 @runtime_checkable
