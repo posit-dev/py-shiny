@@ -1087,19 +1087,19 @@ class Outputs:
 
         output_info = self._outputs[output_id]
         renderer = output_info.renderer
-        handler = f"_handle_{handler}"
-        if not hasattr(renderer, handler):
+        handler_fn_name = f"_handle_{handler}"
+        if not hasattr(renderer, handler_fn_name):
             raise RuntimeError(
-                f"Output Renderer with id `{output_id}` does not have method `{handler}` to handle request message"
+                f"Output Renderer with id `{output_id}` does not have method `{handler_fn_name}` to handle request message"
             )
-        handler_fn = getattr(renderer, handler)
+        handler_fn = getattr(renderer, handler_fn_name)
         if not callable(handler_fn):
             raise RuntimeError(
-                f"Output Renderer with id `{output_id}` does not have callable method `{handler}` to handle request message"
+                f"Output Renderer with id `{output_id}` does not have callable method `{handler_fn_name}` to handle request message"
             )
         if not isinstance(handler_fn, output_dispatch_handler):
             raise RuntimeError(
-                f"Output Renderer with id `{output_id}` did not mark method `{handler}` as an output handler"
+                f"Output Renderer with id `{output_id}` did not mark method `{handler_fn_name}` as an output handler"
             )
 
         dispatch_handler_fn = cast(
@@ -1122,7 +1122,7 @@ class Outputs:
                 # ```
                 print(
                     "Exception while handling "
-                    f"`{renderer.__class__.__name__}[id={output_id}].{handler}()`:",
+                    f"`{renderer.__class__.__name__}[id={output_id}].{handler_fn_name}()`:",
                     e,
                 )
                 if self._session.app.sanitize_errors and not isinstance(
