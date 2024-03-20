@@ -1,3 +1,4 @@
 {
-  "organizeImportsSkipDestructiveCodeActions": true
+  "organizeImportsSkipDestructiveCodeActions": true,
+  "printWidth": 150
 }
