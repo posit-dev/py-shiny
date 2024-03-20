@@ -1129,10 +1129,9 @@ class Outputs:
                 if self._session.app.sanitize_errors and not isinstance(
                     e, SafeException
                 ):
-                    err_msg = self._session.app.sanitize_error_msg
-                else:
-                    err_msg = str(e)
-                raise RuntimeError(err_msg)
+                    raise RuntimeError(self._session.app.sanitize_error_msg)
+
+                raise  # reraise the original exception
 
     def _init_message_handlers(self) -> None:
         # Add the message handler
