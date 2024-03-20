@@ -415,10 +415,18 @@ class data_frame(Renderer[DataFrameResult]):
     data: reactive.Calc_[pd.DataFrame]
     """
     Reactive value of the data frame's output data.
+
+    This is a quick reference to the original data frame that was returned from the app's render function. If it is mutated in place, it **will** modify the original data.
     """
     data_patched: reactive.Calc_[pd.DataFrame]
     """
     Reactive value of the data frame's edited output data.
+
+    This is a shallow copy of the original data frame. It is possible that alterations to `data_patched` could alter the original `data` data frame. Please be cautious when using this value directly.
+
+    See Also
+    --------
+    * [`pandas.DataFrame.copy` API documentation]h(ttps://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html)
     """
     table_mode: reactive.Calc_[DataFrameMode]
     """
@@ -597,7 +605,7 @@ class data_frame(Renderer[DataFrameResult]):
     async def _handle_cells_update(self, update_infos: list[CellUpdateInfo]):
 
         # Make new array to trigger reactive update
-        patches = [p for p in self.cell_patches()]
+        patches = self.cell_patches().copy()
 
         # Call user's cell update method to retrieve formatted values
         updated_raw_values = await self._cells_update_fn(infos=update_infos)
