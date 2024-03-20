@@ -82,7 +82,7 @@ DataFrameMode = Union[
 RowSelectionModeDeprecated = Literal["single", "multiple", "none", "deprecated"]
 
 
-class SelectedIndicies(TypedDict):
+class SelectedIndices(TypedDict):
     rows: tuple[int] | None
     columns: tuple[int] | None
 
@@ -425,9 +425,9 @@ class data_frame(Renderer[DataFrameResult]):
     Reactive value of the data frame's row selection mode.
     """
 
-    input_selected: reactive.Calc_[SelectedIndicies | None]
+    input_selected: reactive.Calc_[SelectedIndices | None]
     """
-    Reactive value of selected rows indicies.
+    Reactive value of selected rows indices.
 
     This method is a wrapper around `input.<id>_selected_rows()`, where `<id>` is
     the `id` of the data frame output. This method returns the selected rows and
@@ -492,7 +492,7 @@ class data_frame(Renderer[DataFrameResult]):
         self.table_mode = self_table_mode
 
         @reactive.calc
-        def self_input_selected() -> SelectedIndicies | None:
+        def self_input_selected() -> SelectedIndices | None:
             mode = self.table_mode()
             if mode == "none":
                 return None
@@ -505,16 +505,16 @@ class data_frame(Renderer[DataFrameResult]):
 
         @reactive.calc
         def self_data_selected() -> pd.DataFrame:
-            indicies = self.input_selected()
-            if indicies is None:
+            indices = self.input_selected()
+            if indices is None:
                 req(False)
                 raise RuntimeError("This should never be reached for typing purposes")
 
             data_selected = self.data_patched()
-            if indicies["rows"] is not None:
-                data_selected = data_selected.iloc[list(indicies["rows"])]
-            if indicies["columns"] is not None:
-                data_selected = data_selected.iloc[:, list(indicies["columns"])]
+            if indices["rows"] is not None:
+                data_selected = data_selected.iloc[list(indices["rows"])]
+            if indices["columns"] is not None:
+                data_selected = data_selected.iloc[:, list(indices["columns"])]
             return data_selected
 
         self.data_selected = self_data_selected
