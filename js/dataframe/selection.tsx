@@ -22,8 +22,22 @@ export const SelectionModeEnum = {
   Multiple: "multiple_row",
   MultiNative: "multi-native_row",
 } as const;
-
+const selectionModes = Object.values(SelectionModeEnum);
 export type SelectionMode = ValueOf<typeof SelectionModeEnum>;
+
+export function initRowSelectionMode(
+  mode_option: string | undefined
+): SelectionMode {
+  // If no option was provided, default to multinative mode
+  const selectionMode = mode_option ?? SelectionModeEnum.MultiNative;
+
+  // If a row selection mode matches one of the enum values, use it. Otherwise, fall back to none (e.g. `dataFrameMode == "edit"`).
+  if (!selectionModes.includes(selectionMode as SelectionMode)) {
+    return SelectionModeEnum.None;
+  } else {
+    return selectionMode as SelectionMode;
+  }
+}
 
 export function useSelection<TKey, TElement extends HTMLElement>(
   mode: SelectionMode,

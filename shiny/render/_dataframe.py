@@ -19,7 +19,7 @@ from typing import (
 from htmltools import Tag
 
 from .. import reactive, ui
-from .._deprecated import ShinyDeprecationWarning
+from .._deprecated import warn_deprecated
 from .._docstring import add_example, no_example
 from .._typing_extensions import Self
 from ..session._utils import get_current_session, require_active_session
@@ -129,7 +129,7 @@ def as_mode(
                 f"`{name}(mode='edit')` is an expirmental feature. If you find any bugs or would like different behavior, please make an issue at https://github.com/posit-dev/py-shiny/issues/new"
             )
         return mode
-    ShinyDeprecationWarning(
+    warn_deprecated(
         "`DataGraid(row_selection_mode=)` has been superseded by `DataGrid(mode=)`."
         ' Please use `DataGrid(mode="{row_selection_mode}_row")` instead.'
     )

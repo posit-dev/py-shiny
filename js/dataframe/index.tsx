@@ -28,7 +28,11 @@ import { TableBodyCell } from "./cell";
 import { useCellEditMap } from "./cell-edit-map";
 import { findFirstItemInView, getStyle } from "./dom-utils";
 import { Filter, useFilter } from "./filter";
-import { SelectionModeEnum, useSelection } from "./selection";
+import {
+  SelectionModeEnum,
+  initRowSelectionMode,
+  useSelection,
+} from "./selection";
 import { SortArrow } from "./sort-arrows";
 import css from "./styles.scss";
 import { useTabindexGroup } from "./tabindex-group";
@@ -105,10 +109,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   //   // console.log("rowModel", rowModel);
   // }, [editColumnIndex, editRowIndex]);
 
-  const dataFrameModeIsMissing = data.options["mode"] ? false : true;
-  const dataFrameMode = data.options["mode"] ?? "none";
-
-  const editCellsIsAllowed = dataFrameMode === EditModeEnum.Edit;
+  const editCellsIsAllowed = data.options["mode"] === EditModeEnum.Edit;
 
   const [cellEditMap, setCellEditMap] = useCellEditMap();
 
@@ -221,11 +222,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = (props) => {
   // ### Row selection ###############################################################
   // rowSelectionMode
 
-  const rowSelectionMode = dataFrameModeIsMissing
-    ? // If no option was provided, default to multinative mode
-      SelectionModeEnum.MultiNative
-    : // If a row selection mode matches one of the enum values, use it. Otherwise, fall back to none (e.g. `dataFrameMode == "edit"`).
-      SelectionModeEnum[dataFrameMode] ?? SelectionModeEnum.None;
+  const rowSelectionMode = initRowSelectionMode(data.options["mode"]);
 
   const canSelect = rowSelectionMode !== SelectionModeEnum.None;
   const canMultiSelect =
