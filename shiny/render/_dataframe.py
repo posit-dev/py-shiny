@@ -646,7 +646,7 @@ class data_frame(Renderer[DataFrameResult]):
         return ui.output_data_frame(id=self.output_id)
 
     def __init__(self, fn: ValueFn[DataFrameResult]):
-        # Must be done before super().__init__ is called
+        # MUST be done before super().__init__ is called as `_set_output_metadata` is called in `super().__init__` during auto registration of the output
         session = get_current_session()
         self._session = session
 
@@ -660,9 +660,10 @@ class data_frame(Renderer[DataFrameResult]):
     def _set_output_metadata(self, *, output_id: str) -> None:
         super()._set_output_metadata(output_id=output_id)
 
-        # Verify that the session used when creating the renderer is the same session used
-        # when executing the renderer. This is to prevent a user from creating a renderer
-        # in one module and setting an output on another.
+        # Verify that the session used (during `__init__`) when creating the renderer is
+        # the same session used when executing the renderer. This is to prevent a user
+        # from creating a renderer in one module and registering it on an output with a
+        # different session.
 
         active_session = require_active_session(None)
         if self._get_session() != active_session:
