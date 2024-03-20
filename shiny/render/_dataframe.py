@@ -693,7 +693,7 @@ class data_frame(Renderer[DataFrameResult]):
         id = session.ns(self.output_id)
 
         await session.send_custom_message(
-            "receiveMessage",
+            "shinyDataFrameMessage",
             {
                 "id": id,
                 "handler": handler,

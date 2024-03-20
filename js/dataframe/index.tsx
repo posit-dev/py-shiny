@@ -687,7 +687,7 @@ customElements.define("shiny-data-frame", ShinyDataFrameOutput);
 // It would be better to have something similar to session.send_input_message
 // for updating outputs, but that requires changes to ShinyJS.
 $(function () {
-  Shiny.addCustomMessageHandler("receiveMessage", function (message) {
+  Shiny.addCustomMessageHandler("shinyDataFrameMessage", function (message) {
     const evt = new CustomEvent(message.handler, {
       detail: message.obj,
     });
