@@ -546,7 +546,7 @@ class data_frame(Renderer[DataFrameResult]):
     def _get_session(self) -> Session:
         if self._session is None:
             raise RuntimeError(
-                "The data frame's session can only be accessed within a reactive context"
+                "The data frame being used was not initialized within a reactive context / session. Please call `@render.data_frame` where `shiny.session.get_current_context()` returns a non-`None` value."
             )
         return self._session
 
