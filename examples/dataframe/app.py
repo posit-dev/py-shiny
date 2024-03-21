@@ -18,9 +18,14 @@ def app_ui(req):
         ui.input_select(
             "selection_mode",
             "Selection mode",
-            {"none": "(None)", "single": "Single", "multiple": "Multiple"},
+            {
+                "none": "(None)",
+                "single_row": "Single",
+                "multiple_row": "Multiple",
+            },
             selected="multiple",
         ),
+        ui.input_switch("editable", "Edit", False),
         ui.input_switch("filters", "Filters", True),
         ui.input_switch("gridstyle", "Grid", True),
         ui.input_switch("fullwidth", "Take full width", True),
@@ -61,6 +66,12 @@ def server(input: Inputs, output: Outputs, session: Session):
     def update_df():
         return df.set(sns.load_dataset(req(input.dataset())))
 
+    @reactive.calc
+    def selection_mode():
+        if input.editable():
+            return "edit"
+        return input.selection_mode()
+
     @render.data_frame
     def grid():
         height = 350
@@ -71,7 +82,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 width=width,
                 height=height,
                 filters=input.filters(),
-                row_selection_mode=input.selection_mode(),
+                mode=selection_mode(),
             )
         else:
             return render.DataTable(
@@ -79,7 +90,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 width=width,
                 height=height,
                 filters=input.filters(),
-                row_selection_mode=input.selection_mode(),
+                mode=selection_mode(),
             )
 
     @reactive.effect
