@@ -49,7 +49,10 @@ from ..input_handler import input_handlers
 from ..reactive import Effect_, Value, effect, flush, isolate
 from ..reactive._core import lock, on_flushed
 from ..render.renderer import Renderer, RendererT
-from ..render.renderer._dispatch import OutputBindingRequestHandler, RendererHasSession
+from ..render.renderer._dispatch import (
+    RendererHasSession,
+    is_output_binding_request_handler,
+)
 from ..types import (
     Jsonifiable,
     SafeException,
@@ -1115,32 +1118,38 @@ class Outputs:
                 f"Output Renderer with id `{output_id}` does not have callable method `{handler_fn_name}` to handle request message"
             )
 
-        if not isinstance(handler_fn, OutputBindingRequestHandler):
+        if is_output_binding_request_handler(handler_fn):
+
+            with session_context(renderer._session), isolate():
+                try:
+                    return await handler_fn(msg)
+                except Exception as e:
+                    # Ex:
+                    # ```
+                    # Exception while handling `data_frame[id=testing-summary_data]._patch_fn()`: boom!
+                    # ```
+                    print(
+                        "Exception while handling "
+                        f"`{renderer.__class__.__name__}[id={output_id}].{handler_fn_name}()`:",
+                        e,
+                        file=sys.stderr,
+                    )
+                    # TODO-barret-future; Should this logic be moved to the dispatch handler?
+                    if self._session.app.sanitize_errors and not isinstance(
+                        e, SafeException
+                    ):
+                        raise RuntimeError(self._session.app.sanitize_error_msg)
+
+                    raise  # reraise the original exception
+
+        else:
+            # This if/else is poorly arranged as TypeGuards only work within the truthy
+            # section of the if statement. We could do a comparison of
+            # `isinstance(handler_fn, OutputBindingRequestHandler)` but it seems to not
+            # work on Python 3.12
             raise RuntimeError(
                 f"Output Renderer with id `{output_id}` did not mark method `{handler_fn_name}` as an output handler via `@output_binding_request_handler` from `shiny.render.renderer.output_binding_request_handler`"
             )
-
-        with session_context(renderer._session), isolate():
-            try:
-                return await handler_fn(msg)
-            except Exception as e:
-                # Ex:
-                # ```
-                # Exception while handling `data_frame[id=testing-summary_data]._patch_fn()`: boom!
-                # ```
-                print(
-                    "Exception while handling "
-                    f"`{renderer.__class__.__name__}[id={output_id}].{handler_fn_name}()`:",
-                    e,
-                    file=sys.stderr,
-                )
-                # TODO-barret-future; Should this logic be moved to the dispatch handler?
-                if self._session.app.sanitize_errors and not isinstance(
-                    e, SafeException
-                ):
-                    raise RuntimeError(self._session.app.sanitize_error_msg)
-
-                raise  # reraise the original exception
 
     def _init_message_handlers(self) -> None:
         # Add the message handler

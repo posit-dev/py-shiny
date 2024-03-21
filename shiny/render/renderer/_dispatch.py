@@ -7,6 +7,7 @@ from typing import (
     Callable,
     Literal,
     Protocol,
+    TypeGuard,
     TypeVar,
     runtime_checkable,
 )
@@ -35,6 +36,10 @@ class OutputBindingRequestHandler(Protocol):
     _outputBindingRequestHandler: Literal[True]
 
     async def __call__(self, arg: Any) -> Jsonifiable: ...
+
+
+def is_output_binding_request_handler(x: Any) -> TypeGuard[OutputBindingRequestHandler]:
+    return callable(x) and (getattr(x, "_outputBindingRequestHandler", False) == True)
 
 
 # Cast value for within `output_binding_request_handler` dispatching
