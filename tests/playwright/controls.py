@@ -2702,6 +2702,7 @@ class ValueBox(
     """
     ValueBox control for shiny.ui.value_box - https://shiny.posit.co/py/api/core/ui.value_box.html
     """
+
     loc: Locator
     """
     Locator for the value box's value
